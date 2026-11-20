@@ -174,9 +174,6 @@ export class LyraConnectorManager extends LyraElement<LyraConnectorManagerEventM
   private hostAnnouncements: string[] = [];
   private focusedRowId: string | null = null;
 
-  override connectedCallback(): void {
-    super.connectedCallback();
-  }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();

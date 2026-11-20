@@ -3,6 +3,7 @@ import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { collectionSupport, writeNormalizedOwnedCollection } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -781,7 +782,7 @@ export class LyraSourcePicker extends LyraElement<LyraSourcePickerEventMap> {
               aria-label=${label}
               @keydown=${this.onTreeKeyDown}
             >
-              ${rows.map((row) =>
+              ${repeat(rows, (row) => row.entry.id, (row) =>
                 this.renderRow(row, row.entry.id === activeId, selectedIdSet)
               )}
             </div>`}

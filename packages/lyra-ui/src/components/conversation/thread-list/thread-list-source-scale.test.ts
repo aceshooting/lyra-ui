@@ -109,7 +109,7 @@ it('reuses pages for named paints, refreshes same-source/keyless once and replay
   await list(el, 't0'); el.label = 'Other label'; el.rowActions = ['pin']; el.size = 's'; await el.updateComplete;
   expect(queries).to.equal(1); el.dataSource = provider; await waitUntil(() => queries === 2); await list(el, 't0');
   el.requestUpdate(); await waitUntil(() => queries === 3); await list(el, 't0');
-  const parent = el.parentNode!; el.remove(); parent.appendChild(el); await waitUntil(() => queries === 4); await list(el, 't0');
+  const parent = el.parentNode!; el.remove(); await new Promise(resolve => setTimeout(resolve)); parent.appendChild(el); await waitUntil(() => queries === 4); await list(el, 't0');
   expect(queries).to.equal(4);
 });
 it('retains cancelable current error retry and rejects obsolete error controls after replacement', async () => {

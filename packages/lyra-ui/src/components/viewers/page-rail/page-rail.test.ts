@@ -9,7 +9,7 @@ import type {
   PageThumbnailSource,
 } from '../../lr-page-rail.js';
 import type { LyraVirtualList } from '../../lr-virtual-list.js';
-import type { LyraHighlight, LyraHighlightTone } from '../document-viewer/anchors.js';
+import type { LyraHighlight, LyraHighlightTone } from '../../../internal/document-anchors.js';
 import '../../lr-pdf-viewer.js';
 import type { LyraPdfViewer } from '../../lr-pdf-viewer.js';
 import '../../lr-pptx-viewer.js';

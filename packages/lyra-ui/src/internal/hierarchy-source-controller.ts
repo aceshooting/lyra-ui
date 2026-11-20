@@ -8,7 +8,7 @@ import { SourceRequestController, sourceCount, sourceRevision, type SourceReques
 import { SourceWindowController, type SourceWindowSlot } from './source-window-controller.js';
 import { yieldViewerTask } from './resource-loader.js';
 import { deepActiveElementIn } from './active-element.js';
-import { shouldIgnoreNavigationKey } from './list-navigation.js';
+import { isRepeatedActivationKey, shouldIgnoreNavigationKey } from './list-navigation.js';
 import { requireOwnDataValue } from './data-descriptors.js';
 
 /** Reads only an own data descriptor; hierarchy values never invoke authored getters. */
@@ -582,7 +582,7 @@ export class HierarchySourceController<T> implements ReactiveController {
     else if (event.key === 'End') { target = (this.projection?.rows.count ?? 0) - 1; step = -1; }
     else if (event.key === 'ArrowDown') { target = index + 1; step = 1; }
     else if (event.key === 'ArrowUp') { target = index - 1; step = -1; }
-    else if (row && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); select(row); return; }
+    else if (row && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); if (!isRepeatedActivationKey(event)) select(row); return; }
     else if (row && event.key === (rtl ? 'ArrowLeft' : 'ArrowRight')) {
       event.preventDefault();
       if (row.childCount && !row.expanded) void this.project({ type: 'toggle', key: row.key, expanded: true }, true, row);

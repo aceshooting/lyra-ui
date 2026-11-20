@@ -55,7 +55,7 @@ export interface EpubBook {
   destroy(): void;
 }
 
-export type EpubFactory = (data: ArrayBuffer) => EpubBook;
+type EpubFactory = (data: ArrayBuffer) => EpubBook;
 
 function isEpubFactory(value: unknown): value is EpubFactory {
   return typeof value === 'function';

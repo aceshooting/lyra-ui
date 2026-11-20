@@ -9,6 +9,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { ref } from 'lit/directives/ref.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
@@ -31,6 +32,7 @@ import { finiteRange } from '../../../internal/numbers.js';
 import { restoreComposedFocus } from '../../../internal/focus-repair.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { discardBody } from '../../../internal/viewer-source-controller.js';
 import { readResponseText, resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import type { ThumbnailCue } from './video-thumbnails.js';
@@ -38,7 +40,7 @@ import { styles } from './video.styles.js';
 import { repairControlFocusOnUpdate } from '../../../internal/control-focus-repair.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_avPlayerPlaybackRate, LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_avPlayerRateOption, LYRA_DEFAULT_panoramaHotspotsLabel, LYRA_DEFAULT_panoramaInstructions, LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition, LYRA_DEFAULT_videoCaptions, LYRA_DEFAULT_videoCaptionsOff, LYRA_DEFAULT_videoEnterFullscreen, LYRA_DEFAULT_videoExitFullscreen, LYRA_DEFAULT_videoExitPictureInPicture, LYRA_DEFAULT_videoMute, LYRA_DEFAULT_videoPictureInPicture, LYRA_DEFAULT_videoPlayerLabel, LYRA_DEFAULT_videoTimeReadout, LYRA_DEFAULT_videoUnmute, LYRA_DEFAULT_videoVolume } from '../../../internal/default-strings/media.generated.js';
+import { LYRA_DEFAULT_avPlayerFailedToLoad, LYRA_DEFAULT_avPlayerPlaybackRate, LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_avPlayerRateOption, LYRA_DEFAULT_panoramaHotspotsLabel, LYRA_DEFAULT_panoramaInstructions, LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition, LYRA_DEFAULT_videoCaptions, LYRA_DEFAULT_videoCaptionsOff, LYRA_DEFAULT_videoEnterFullscreen, LYRA_DEFAULT_videoExitFullscreen, LYRA_DEFAULT_videoExitPictureInPicture, LYRA_DEFAULT_videoMute, LYRA_DEFAULT_videoPictureInPicture, LYRA_DEFAULT_videoPlayerLabel, LYRA_DEFAULT_videoTimeReadout, LYRA_DEFAULT_videoUnmute, LYRA_DEFAULT_videoVolume } from '../../../internal/default-strings/media.generated.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_duration, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_model, LYRA_DEFAULT_navigation, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_previous, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -131,7 +133,8 @@ function unsupportedPromise(host: Element, message: string): Promise<never> {
  * @slot poster-icon - Decorative poster-play glyph override; rendered through the same inert sibling layer.
  * @slot volume-icon - Decorative audible-state glyph override; rendered through the same inert sibling layer.
  * @event {Event} ended - Relayed native video event; non-bubbling, non-composed, and non-cancelable.
- * @event {Event} error - Relayed native video event; non-bubbling, non-composed, and non-cancelable.
+ * @event {Event} error - Relayed native video event, also fired when a non-empty `src` or `<source>` set has
+ *   no allowlisted URL and so never reaches the native element; non-bubbling, non-composed, and non-cancelable.
  * @event {Event} loadedmetadata - Relayed native video event; non-bubbling, non-composed, and non-cancelable.
  * @event {Event} pause - Relayed native video event; non-bubbling, non-composed, and non-cancelable.
  * @event {Event} play - Relayed native video event; non-bubbling, non-composed, and non-cancelable.
@@ -150,6 +153,7 @@ function unsupportedPromise(host: Element, message: string): Promise<never> {
  * @csspart caption-overlay - Caption positioning layer.
  * @csspart controls - Custom control bar.
  * @csspart controls-overlay - Bottom controls positioning layer.
+ * @csspart error - Localized notice shown when the source failed to load or no source was allowlisted.
  * @csspart poster-overlay - Poster positioning layer.
  * @csspart poster-play-button - Poster play action.
  * @csspart progress - Native range input used to scrub. When disabled, its timeline track retains resting paint.
@@ -187,6 +191,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    avPlayerFailedToLoad: LYRA_DEFAULT_avPlayerFailedToLoad,
     avPlayerPlaybackRate: LYRA_DEFAULT_avPlayerPlaybackRate,
     avPlayerPosition: LYRA_DEFAULT_avPlayerPosition,
     avPlayerRateOption: LYRA_DEFAULT_avPlayerRateOption,
@@ -336,6 +341,9 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   @property({ type: Number, attribute: 'playback-rate' }) playbackRate = 1;
 
   @state() private posterVisible = true;
+  /** The current source failed: rejected before load (unsafe or no allowlisted source) or a native error. */
+  @state() private sourceFailed = false;
+  private readonly failureAnnouncements = new AnnouncementSinkController(this);
   @state() private captionText = '';
   @state() private captionTracks: CaptionTrack[] = [];
   @state() private fullscreen = false;
@@ -384,6 +392,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   };
 
   override adoptedCallback(): void {
+    this.detached.flush();
     super.adoptedCallback(); this.panorama.adopted(); super.requestUpdate('panoramaAdopted', undefined, { hasChanged: () => true });
   }
 
@@ -459,6 +468,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.detached.cancel()) return;
     super.requestUpdate('panoramaReconnect', undefined, { hasChanged: () => true });
     this.mediaController.reconnect();
     const doc = (this.listenerDocument = this.ownerDocument);
@@ -479,7 +489,19 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     void this.loadThumbnails();
   }
 
+  private hostDisconnecting = false;
+  /** A same-task DOM move keeps playback, captions and thumbnails; a genuine disconnect releases them. */
+  private readonly detached = new DeferredTeardown(() => this.releaseConnection());
+
   override disconnectedCallback(): void {
+    // Custom element reactions run after a move's insertion, so `isConnected` cannot tell a
+    // move from a removal here; flag the host-driven ref unset instead.
+    this.hostDisconnecting = true;
+    try { super.disconnectedCallback(); } finally { this.hostDisconnecting = false; }
+    this.detached.schedule();
+  }
+
+  private releaseConnection(): void {
     this.panorama.disconnect();
     this.mediaController.disconnect();
     this.thumbnailGeneration += 1;
@@ -496,7 +518,6 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     if (this.pictureInPicture) this.pictureInPicture = false;
     const doc = this.listenerDocument;
     doc?.removeEventListener('fullscreenchange', this.onFullscreenChange);
-    super.disconnectedCallback();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -560,6 +581,9 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   }
 
   private mediaRef = (element?: Element): void => {
+    // A host disconnect also unsets the ref; the deferred teardown owns that release, so a
+    // same-task DOM move keeps the native element attached and playing.
+    if (!element && this.hostDisconnecting) return;
     const video = element?.localName === 'video' ? element as HTMLVideoElement : undefined;
     this.mediaController.attach(video);
     if (!video) return;
@@ -604,7 +628,17 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     this.unbindCaptionTracks();
     if (this.captionTracks.length) this.captionTracks = [];
     if (this.captionText) this.captionText = '';
-    this.mediaController.setSources({ src: this.src, nodes: this.children });
+    const accepted = this.mediaController.setSources({ src: this.src, nodes: this.children });
+    // A non-empty request with nothing allowlisted never reaches the native element, so it would
+    // fail silently; report it through the same error event, visible state and announcement.
+    const rejected = !accepted &&
+      (this.src.trim() !== '' || [...this.children].some((child) => child.localName === 'source'));
+    // Sources sync after an update; apply the outcome after it so the state change is its own update.
+    queueMicrotask(() => {
+      if (this.lastSourceSignature !== signature) return;
+      this.sourceFailed = false;
+      if (rejected) this.reportSourceFailure(true);
+    });
     // `setSources()` intentionally starts a fresh generation; restore an authored pre-mount seek
     // as a pending currentTime so metadata can clamp/apply it instead of dropping it.
     this.mediaController.currentTime = this.currentTime;
@@ -778,6 +812,15 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     return this.ownerDocument.exitFullscreen();
   }
 
+  /** Shows and announces a failed source; a pre-load rejection also emits the host `error` event
+   *  a native failure would have relayed. */
+  private reportSourceFailure(rejected: boolean): void {
+    if (this.sourceFailed) return;
+    this.sourceFailed = true;
+    this.failureAnnouncements.announceAssertive(this.localize('avPlayerFailedToLoad'));
+    if (rejected) this.dispatchEvent(new (this.ownerDocument.defaultView?.Event ?? Event)('error'));
+  }
+
   private onNativeMediaEvent(event: Event): void {
     const video = this.videoEl;
     if (!video) return;
@@ -800,6 +843,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
         this.isPlaying = false;
         this.duration = 0;
         this.currentTime = 0;
+        this.reportSourceFailure(false);
         break;
       case 'timeupdate':
         this.synchronizeCurrentTime();
@@ -1300,6 +1344,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
           aria-label=${label}
         ></video>
         ${this.panorama.renderViewport(label, this.panoramaEnabled)}
+        ${this.sourceFailed ? html`<div part="error">${this.localize('avPlayerFailedToLoad')}</div>` : nothing}
         ${posterActive
           ? html`<div part="poster-overlay">
               <img src=${safePoster} alt="">

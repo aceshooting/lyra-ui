@@ -1,4 +1,4 @@
-export type { LyraAnchorKind } from './viewers/document-viewer/anchors.js';
+export type { LyraAnchorKind } from '../internal/document-anchors.js';
 export type { TableViewerScrollMode } from './viewers/table-viewer-shared.js';
 export type { LyraAnchorTargetEventMap } from '../internal/anchor-target-base.js';
 export type { LyraSearchChangeDetail } from '../internal/text-viewer-target.js';

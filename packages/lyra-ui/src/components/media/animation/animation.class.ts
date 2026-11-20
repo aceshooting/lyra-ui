@@ -3,6 +3,7 @@ import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import {
@@ -433,8 +434,16 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
       : 'linear';
   }
 
+  /** A same-task DOM move keeps the running or finished `Animation`; a genuine disconnect cancels it. */
+  private readonly detached = new DeferredTeardown(() => {
+    this.destroyAnimation();
+    this.disconnectVisibilityObserver();
+    this.unbindMotionPreference();
+  });
+
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.detached.cancel()) return;
     this.bindMotionPreference();
     this.scheduleAfterUpdate(() => {
       if (!this.animation) this.createAnimation();
@@ -443,14 +452,13 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   }
 
   override disconnectedCallback(): void {
-    this.destroyAnimation();
-    this.disconnectVisibilityObserver();
-    this.unbindMotionPreference();
     super.disconnectedCallback();
+    this.detached.schedule();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
+    this.detached.flush();
     // Adoption normally brackets this hook with disconnect/connect callbacks. Repeat the teardown
     // here as a defensive boundary so no old-realm callback can survive an unusual adoption path.
     this.destroyAnimation();

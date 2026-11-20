@@ -43,7 +43,7 @@ import {
   isLyraToolbarActionProvider,
   type LyraToolbarAction,
   type LyraToolbarActionProvider,
-} from './toolbar-actions.js';
+} from '../../../internal/toolbar-actions.js';
 import type {
   LyraMessageFeedback,
   MessageFeedbackSubmitDetail,

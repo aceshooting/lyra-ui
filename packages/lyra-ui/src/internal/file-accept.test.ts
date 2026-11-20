@@ -1,6 +1,6 @@
 import { expect } from '@open-wc/testing';
 import * as fc from 'fast-check';
-import { matchesAccept } from './accept.js';
+import { matchesAccept } from './file-accept.js';
 
 const file = (name: string, type: string) => new File(['x'], name, { type });
 

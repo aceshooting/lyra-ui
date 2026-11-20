@@ -114,7 +114,7 @@ describe('non-looping replay', () => {
     expect(el.currentIndex).to.equal(1);
   });
 
-  it('retires a start across synchronous removal and reconnection', async () => {
+  it('keeps a start running across a synchronous DOM move', async () => {
     const el = await fixture<LyraSequencePlayback>(html`
       <lr-sequence-playback item-count="3" current-index="2" interval-ms="20" without-loop></lr-sequence-playback>
     `);
@@ -122,12 +122,11 @@ describe('non-looping replay', () => {
     const events = record(el);
     el.addEventListener('lr-play', () => { el.remove(); parent.append(el); }, { once: true });
     el.play();
-    expect(events).to.deep.equal(['lr-play:0', 'lr-pause:0']);
-    // wait-reason: reconnection must not revive a timer retired by the synchronous disconnect.
-    await aTimeout(80);
-    expect(el.playing).to.equal(false);
-    expect(el.currentIndex).to.equal(0);
-    expect(events).to.deep.equal(['lr-play:0', 'lr-pause:0']);
+    expect(events).to.deep.equal(['lr-play:0', 'lr-sequence-step:0']);
+    const tick = oneEvent(el, 'lr-sequence-step');
+    expect((await tick).detail).to.deep.equal({ currentIndex: 1 });
+    expect(el.playing).to.equal(true);
+    el.pause();
   });
 
   it('does not emit a stale standalone reset after a play listener attaches a clock', async () => {

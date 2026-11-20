@@ -1,4 +1,4 @@
-export type { LyraAnchorKind } from './viewers/document-viewer/anchors.js';
+export type { LyraAnchorKind } from '../internal/document-anchors.js';
 export type { LyraAnchorTargetEventMap } from '../internal/anchor-target-base.js';
 export * from './viewers/svg-viewer/svg-viewer.class.js';
 import { LyraSvgViewer } from './viewers/svg-viewer/svg-viewer.class.js';

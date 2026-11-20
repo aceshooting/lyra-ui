@@ -29,3 +29,11 @@ export async function captureDevWarnings(run: () => unknown): Promise<string[]> 
   }
   return messages;
 }
+
+/** Forgets every page-wide `devWarnOnce()` key that starts with one of `prefixes`, so a test whose
+ *  subject is that warning sees it again no matter which earlier test already triggered it. */
+export function rearmDevWarnings(...prefixes: string[]): void {
+  const issued = (globalThis as LitWarningGlobal).litIssuedWarnings;
+  if (!issued) return;
+  for (const key of [...issued]) if (prefixes.some(prefix => key.startsWith(prefix))) issued.delete(key);
+}

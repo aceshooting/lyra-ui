@@ -235,6 +235,7 @@ it('auto-pauses on disconnect', async () => {
   )) as LyraSequencePlayback;
   el.play();
   el.remove();
+  await aTimeout(0);
   expect(el.playing).to.be.false;
 });
 
@@ -287,6 +288,7 @@ it('schedules and cancels timers in the current owner window across iframe adopt
     el.play();
     expect(frameTimerIds.size, 'the adopted timer belongs to the iframe window').to.equal(1);
     el.remove();
+    await aTimeout(0);
     expect(frameCancellations, 'disconnect cancels the iframe-window timer').to.equal(1);
   } finally {
     el?.remove();

@@ -81,7 +81,7 @@ it("keeps an explicitly empty aria-label distinct from an omitted one", async ()
   const omitted = (await fixture(
     html`<lr-command-palette></lr-command-palette>`
   )) as LyraCommandPalette;
-  expect(omitted.accessibleLabel).to.equal(undefined);
+  expect(omitted.accessibleLabel).to.equal(null);
   omitted.openPalette();
   await omitted.updateComplete;
   expect(

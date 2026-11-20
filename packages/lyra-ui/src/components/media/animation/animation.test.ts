@@ -226,6 +226,7 @@ it("rebinds animation, motion, styles, and visibility to the adopted realm and i
 
     const frameObserver = frameIo.instances.at(-1)!;
     el.remove();
+    await aTimeout(0);
     expect(frameObserver.disconnected).to.be.true;
     expect(frameMotion.listenerCount()).to.equal(0);
     expect(frameTarget.getAnimations().length).to.equal(0);
@@ -993,7 +994,8 @@ it("createAnimation() no-ops when a rebuild-triggering property changes after th
   const target = el.querySelector("p")!;
   expect(target.getAnimations().length).to.equal(1);
 
-  el.remove(); // disconnectedCallback destroys the animation synchronously
+  el.remove(); // a genuine disconnect destroys the animation once the task's microtasks run
+  await aTimeout(0);
   expect(target.getAnimations().length).to.equal(0);
 
   el.name = "zoom-in"; // a rebuild key -- updated() still runs even while disconnected
@@ -1531,6 +1533,7 @@ it("play-on-visible: passes a custom Element `root` through, and re-observes (di
     expect(second.options?.rootMargin).to.equal("20px");
 
     el.remove();
+    await aTimeout(0);
     expect(
       second.disconnected,
       "disconnectedCallback should tear down the still-active observer"

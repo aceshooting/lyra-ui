@@ -351,7 +351,7 @@ it('formats negative sub-byte values without selecting a negative unit index', a
     <lr-format-bytes value="-0.5" locale="en-US"></lr-format-bytes>
   `)) as LyraFormatBytes;
   await el.updateComplete;
-  expect(el.shadowRoot?.textContent?.trim()).to.match(/-0\.5\s*byte/i);
+  expect(el.shadowRoot?.textContent?.trim()).to.match(/^-0\.5\s*B$/);
 });
 
 it('falls back safely when lr-format-bytes receives a malformed locale', async () => {

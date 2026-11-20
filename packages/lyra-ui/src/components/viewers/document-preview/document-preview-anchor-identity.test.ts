@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import type { LyraAnchor, LyraHighlight } from '../document-viewer/anchors.js';
+import type { LyraAnchor, LyraHighlight } from '../../../internal/document-anchors.js';
 import type { LyraDocumentPreview } from './document-preview.class.js';
 import '../../lr-document-preview.js';
 

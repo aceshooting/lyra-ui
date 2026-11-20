@@ -1,5 +1,5 @@
 import type { Feature, Geometry } from 'geojson';
-import { DEV_DIAGNOSTICS, litDevWarnings } from '../../../internal/dev-warning.js';
+import { DEV_DIAGNOSTICS, devWarnOnce } from '../../../internal/dev-warning.js';
 import { isConstructor, isObjectLike } from '../../../internal/object-guards.js';
 import {
   createOptionalPeerLoader,
@@ -257,13 +257,9 @@ export function createMapEngineLoader<T>(
       if (module) return { module };
       capability = missing(unwrapOptionalPeerDefault(value)) ?? capability;
     } catch { /* The namespace may have unusable accessors. */ }
-    const warnings = DEV_DIAGNOSTICS ? litDevWarnings() : undefined;
-    const key = `lyra-map:${peer}:${capability}`;
-    if (DEV_DIAGNOSTICS && warnings && !warnings.has(key)) {
-      warnings.add(key);
-      console.warn(`<lr-map> found \`${peer}\`, but it lacks a capability the map needs. Check its version.`,
-        new Error(`Invalid optional peer \`${peer}\`: missing or invalid \`${capability}\` capability.`));
-    }
+    if (DEV_DIAGNOSTICS) devWarnOnce(`lyra-map:${peer}:${capability}`,
+      `<lr-map> found \`${peer}\`, but it lacks a capability the map needs. Check its version.`,
+      new Error(`Invalid optional peer \`${peer}\`: missing or invalid \`${capability}\` capability.`));
     return { module: null };
   };
   const loader = createOptionalPeerLoader<Inspection>({
@@ -381,7 +377,7 @@ export async function loadMapControl(
     const control = isObjectLike(candidate) ? (candidate as Record<string, unknown>)[name] : undefined;
     return isConstructor(control) ? control as MapLibreControlConstructor : null;
   } catch (error) {
-    console.warn(`<lr-map> could not load the ${kind} control from \`@aceshooting/lyra-map\`.`, error);
+    if (DEV_DIAGNOSTICS) devWarnOnce(`lyra-map:control:${kind}`, `<lr-map> could not load the ${kind} control from \`@aceshooting/lyra-map\`.`, error);
     return null;
   }
 }

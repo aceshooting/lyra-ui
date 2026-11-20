@@ -1,6 +1,7 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
 import { property } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -658,8 +659,7 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
                   >${numberFormat.format(citations.length)}</span
                 >
                 <ul part="evidence-list" role="list">
-                  ${renderedCitations
-                    .map((citation, index) =>
+                  ${repeat(renderedCitations, (citation) => citation.id, (citation, index) =>
                       this.renderEvidenceItem(citation, index, renderedCitations.length, rovingEvidenceId)
                     )}
                 </ul>

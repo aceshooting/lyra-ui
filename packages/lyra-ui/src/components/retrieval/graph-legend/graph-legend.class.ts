@@ -3,6 +3,8 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, svg, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import {
   canonicalIdentityList,
   firstByRetrievalIdentity,
@@ -114,9 +116,16 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
   @property({ attribute: false }) types: readonly LyraNodeTypeStyle[] = [];
   /** Optional per-type node counts keyed by type id; a type with no entry renders no count. */
   @property({ attribute: false }) counts?: Readonly<Record<string, number>>;
+  /** Observes every `hiddenTypes` write, including one an `lr-visibility-change-request` listener makes. */
+  private readonly hiddenTypesGuard = new VetoWriteGuard();
   /** Currently-hidden type ids. The legend toggles its own copy on activation *then* emits; a host
    *  may also treat this as controlled by reassigning it after each event. */
   @property({ attribute: false }) hiddenTypes: readonly string[] = [];
+
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    if (args[0] === 'hiddenTypes') markVetoGuardWrite(this.hiddenTypesGuard);
+    super.requestUpdate(...args);
+  }
   /** Renders a read-only legend (no buttons, no toggling). */
   @property({ type: Boolean, attribute: 'without-interaction', reflect: true })
   withoutInteraction = false;
@@ -151,23 +160,25 @@ export class LyraGraphLegend extends LyraElement<LyraGraphLegendEventMap> {
     const next = wasVisible
       ? [...hiddenTypes, type.id]
       : hiddenTypes.filter((id) => id !== type.id);
-    const proposal = this.emit(
-      'lr-visibility-change-request',
-      { hiddenTypes: next },
-      { cancelable: true },
-    );
-    if (proposal.defaultPrevented || this.withoutInteraction || !this.isConnected || this.connectionEpoch !== epoch ||
-        this.types !== types || this.hiddenTypes !== previous) return;
-    this.hiddenTypes = next;
-    this.liveText = this.localize(
-      wasVisible ? 'legendTypeHidden' : 'legendTypeShown',
-      undefined,
-      {
-        label: type.label,
-      }
-    );
-    this.announcementSink.announcePolite(this.liveText);
-    this.emit('lr-visibility-change', { hiddenTypes: next });
+    requestThenCommit({
+      requestDetail: { hiddenTypes: next },
+      emitRequest: (detail, init: { cancelable: true }) => this.emit('lr-visibility-change-request', detail, init),
+      guard: this.hiddenTypesGuard,
+      commit: () => {
+        if (this.withoutInteraction || !this.isConnected || this.connectionEpoch !== epoch ||
+            this.types !== types || this.hiddenTypes !== previous) return;
+        this.hiddenTypes = next;
+        this.liveText = this.localize(
+          wasVisible ? 'legendTypeHidden' : 'legendTypeShown',
+          undefined,
+          {
+            label: type.label,
+          }
+        );
+        this.announcementSink.announcePolite(this.liveText);
+        this.emit('lr-visibility-change', { hiddenTypes: next });
+      },
+    });
   }
 
   private renderSwatchShape(

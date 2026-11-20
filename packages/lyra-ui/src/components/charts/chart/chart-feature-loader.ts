@@ -1,5 +1,5 @@
 import { isObjectLike } from '../../../internal/object-guards.js';
-import { warnChartPeerImport } from './chart-peer.js';
+import { warnChartPeer, warnChartPeerImport } from './chart-peer.js';
 import { resolveOptionalPeerCapability } from '../../../internal/optional-peer-capabilities.js';
 import {
   loadChartJs,
@@ -71,7 +71,7 @@ async function loadPlugin(importer: ImportPeer, name: string): Promise<ChartPlug
   try { module = await importer(); }
   catch (error) { warnChartPeerImport(name, error); return undefined; }
   try { return resolveChartPlugin(module, name); }
-  catch (error) { console.warn(`<lr-chart> incompatible ${name} plugin.`, error); return undefined; }
+  catch (error) { warnChartPeer(`plugin:${name}`, `<lr-chart> incompatible ${name} plugin.`, error); return undefined; }
 }
 
 export async function loadChartAndZoom(
@@ -106,7 +106,7 @@ function createPluginLoader(
       registration?.(mod, capability);
       return { kind: 'available', mod, plugin: capability };
     } catch (error) {
-      console.warn(`<lr-chart> could not register ${name}.`, error);
+      warnChartPeer(`register:${name}`, `<lr-chart> could not register ${name}.`, error);
       return { kind: 'feature-unavailable', mod };
     }
   };

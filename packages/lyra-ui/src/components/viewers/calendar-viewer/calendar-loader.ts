@@ -12,7 +12,7 @@ export interface IcalTimeApi {
   day?: number;
 }
 
-export interface IcalEventApi {
+interface IcalEventApi {
   uid?: string;
   summary?: string;
   startDate?: IcalTimeApi;
@@ -21,11 +21,11 @@ export interface IcalEventApi {
   description?: string;
 }
 
-export interface IcalComponentApi {
+interface IcalComponentApi {
   getAllSubcomponents(name: string): unknown[];
 }
 
-export interface IcalApi {
+interface IcalApi {
   parse(source: string): unknown;
   Component: new (data: unknown) => IcalComponentApi;
   Event: new (component: unknown) => IcalEventApi;

@@ -2,7 +2,7 @@ import { expect, fixture, html } from '@open-wc/testing';
 import '../../lr-code-block.js';
 import '../../lr-code-block-core.js';
 import type { LyraCodeBlockBase } from './code-block-base.class.js';
-import type { TextSelectRect } from '../../viewers/document-viewer/anchors.js';
+import type { TextSelectRect } from '../../../internal/document-anchors.js';
 
 async function mount(tag: 'lr-code-block' | 'lr-code-block-core'): Promise<LyraCodeBlockBase> {
   const wrapper = await fixture<HTMLDivElement>(html`<div></div>`);

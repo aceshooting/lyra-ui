@@ -2,7 +2,7 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import '../../lr-notebook-viewer.js';
 import type { LyraNotebookViewer } from '../../lr-notebook-viewer.js';
 import type { LyraVirtualList } from '../../lr-virtual-list.js';
-import type { LyraAnchor } from '../document-viewer/anchors.js';
+import type { LyraAnchor } from '../../../internal/document-anchors.js';
 
 async function notebook() {
   const el = await fixture<LyraNotebookViewer>(html`<lr-notebook-viewer max-height="160px"

@@ -18,7 +18,8 @@ import { finiteCount, finiteInteger, finiteNumber, finiteRange, minMax } from '.
 import { activateNonmodalOverlay, type OverlayHandle } from '../../../internal/nonmodal-overlay-manager.js';
 import { armClickSuppression, capturePointer, consumeSuppressedClick, releasePointer } from '../../../internal/pointer-capture.js';
 import { watchDevicePixelRatio } from '../../../internal/owned-observer.js';
-import { isHandledOrComposingKey, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { isHandledOrComposingKey, isRepeatedActivationKey, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { LYRA_CONTEXT_UPDATE } from '../../../internal/context-update.js';
 import { formatChartValue } from '../../../internal/chart-number-format.js';
 import { getScratchCtx, resolveBoundedCanvasAllocation } from '../../../internal/canvas.js';
 import { resolveCanvasColor } from '../../../internal/canvas-color.js';
@@ -1319,6 +1320,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     oldValue?: unknown,
     options?: PropertyDeclaration
   ): void {
+    // Writing its own generated host semantics happens inside this update; that is not a new
+    // presentation change, and naming it would defeat the selection-only repaint below.
+    if (name === LYRA_CONTEXT_UPDATE && this.syncingGeneratedSemantics) return;
     // `changed.has()` in willUpdate() also reports the first update's declared defaults, so it
     // cannot tell an explicit assignment apart from the default; the setter call can.
     if (this.calendarSpacingTrackingArmed && name !== undefined && CALENDAR_SPACING_PROPERTIES.has(name)) {
@@ -4494,7 +4498,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if (rows === 0 || cols === 0) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      if (this.focusedCell) this.emitCellClick(this.focusedCell, 'keyboard');
+      if (this.focusedCell && !isRepeatedActivationKey(e)) this.emitCellClick(this.focusedCell, 'keyboard');
       return;
     }
     if (!ARROW_KEYS.has(e.key)) return;
@@ -4535,7 +4539,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if (weekCount === 0) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      if (this.focusedCell) this.emitCellClick(this.focusedCell, 'keyboard');
+      if (this.focusedCell && !isRepeatedActivationKey(e)) this.emitCellClick(this.focusedCell, 'keyboard');
       return;
     }
     if (!ARROW_KEYS.has(e.key)) return;

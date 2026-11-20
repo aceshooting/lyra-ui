@@ -20,7 +20,7 @@ import type {
   LyraHighlight,
   HighlightActivateDetail,
   AnchorResultDetail,
-} from '../../viewers/document-viewer/anchors.js';
+} from '../../../internal/document-anchors.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { clamp, finiteNumber } from '../../../internal/numbers.js';

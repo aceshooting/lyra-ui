@@ -21,7 +21,7 @@ export type { LyraCodeBlockToggleDetail } from './code-block-shared.js';
 import type {
   LyraAnchor,
   LyraHighlight,
-} from '../../viewers/document-viewer/anchors.js';
+} from '../../../internal/document-anchors.js';
 import '../../overlays/skeleton/skeleton.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -368,17 +368,7 @@ export class LyraCodeBlock extends LyraCodeBlockBase {
     return codeBlockShowsSkeleton(this.shikiReady, this.language, !this.hasPreSuppliedGrammar());
   }
 
-  /** Resolves a `line-range` anchor (or a `highlights` id string resolving to one) by scrolling
-   *  its start line into view within `[part="body"]`. Resolves `false` when the anchor isn't a
-   *  `line-range`, the id isn't found, or the start line is out of bounds. */
-  override async scrollToAnchor(target: LyraAnchor | string): Promise<boolean> {
-    return super.scrollToAnchor(target);
-  }
 
-  /** Recomputes Shiki palette selection after an imperative CSSOM theme change. */
-  override refreshTheme(): void {
-    super.refreshTheme();
-  }
 
   // Mutating `highlightedHtml` here (rather than in `updated()`) absorbs the
   // synchronous case -- language already loaded, see `syncHighlight()` --

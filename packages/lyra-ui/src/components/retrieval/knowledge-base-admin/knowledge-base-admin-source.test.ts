@@ -124,11 +124,11 @@ it('restores provider-unset legacy inputs and leaves no page or total protocol o
   expect(ingestionChild.items[0]!.id).to.equal('old'); expect(ingestionChild.sourceTotal).to.equal(null); expect(host.sources[0]!.id).to.equal('legacy');
   expect('sourcePage' in host).to.equal(false); expect('sourcePageSize' in host).to.equal(false); expect('sourceTotal' in host).to.equal(false);
 });
-it('reconnects and adopts without duplicating child refreshes or reviving captured old events', async () => {
+it('keeps the page across a same-task move and refetches once after adoption without reviving captured old events', async () => {
   const data = knowledge(); const wrapper = await fixture<HTMLDivElement>(html`<div><iframe title="New document"></iframe><lr-knowledge-base-admin .dataSource=${data.source}></lr-knowledge-base-admin></div>`);
   const host = wrapper.querySelector<LyraKnowledgeBaseAdmin>('lr-knowledge-base-admin')!; await inventory(host);
-  host.remove(); wrapper.append(host); await inventory(host); expect(data.pages.length).to.equal(2);
-  const doc = wrapper.querySelector('iframe')!.contentDocument!; doc.body.appendChild(doc.adoptNode(host)); await inventory(host); expect(data.pages.length).to.equal(3);
+  host.remove(); wrapper.append(host); await inventory(host); expect(data.pages.length).to.equal(1);
+  const doc = wrapper.querySelector('iframe')!.contentDocument!; doc.body.appendChild(doc.adoptNode(host)); await inventory(host); expect(data.pages.length).to.equal(2);
 });
 it('keeps focused tab normalization and only queries the newly active provider', async () => {
   const data = knowledge(); const items = ingestion(); const host = await fixture<LyraKnowledgeBaseAdmin>(html`<lr-knowledge-base-admin dir="rtl" .dataSource=${data.source} .ingestionSource=${items.source}></lr-knowledge-base-admin>`);

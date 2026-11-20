@@ -29,6 +29,19 @@ describe('table reserved and held keys', () => {
     expect(activations).to.equal(1);
   });
 
+  it('keeps moving focus on a held ArrowDown', async () => {
+    const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rowKey = (r) => r.id;
+    el.rows = rows;
+    await el.updateComplete;
+    const bodyRows = [...el.shadowRoot!.querySelectorAll<HTMLElement>('tbody [data-row-key]')];
+    const held = press(bodyRows[0]!, 'ArrowDown', { repeat: true });
+    await el.updateComplete;
+    expect(held.defaultPrevented).to.equal(true);
+    expect(el.shadowRoot!.activeElement?.getAttribute('data-row-key')).to.equal(bodyRows[1]!.dataset['rowKey']);
+  });
+
   it('does not resize from a modified Arrow on the separator', async () => {
     const el = (await fixture(html`<lr-table></lr-table>`)) as LyraTable<Row>;
     el.columns = columns.map((column) => ({ ...column, resizable: true })) as TableColumn<Row>[];

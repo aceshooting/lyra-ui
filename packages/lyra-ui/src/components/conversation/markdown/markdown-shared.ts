@@ -1,6 +1,7 @@
+import type { MarkdownHtmlMode, MarkdownStreamingRender } from '../../../internal/markdown-render-types.js';
 import { escapeHtml } from '../../../internal/escape-html.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
-import { progressiveMarkdownBlocks, streamingTailText } from './markdown-streaming-tail.js';
+import { progressiveMarkdownBlocks, streamingTailText } from '../../../internal/markdown-streaming-tail.js';
 import { MARKDOWN_CODE_HEADER_MAX, sanitizeCodeLanguageLabel, type MarkdownCodeBlockRecord } from './markdown-code-header.js';
 /**
  * Pure parsing, rendering, cache, anchor, and highlight helpers shared by `<lr-markdown>` and
@@ -26,7 +27,7 @@ import { rangeFromTextQuoteMatch } from '../../../internal/text-quote.js';
 import type { TextQuoteIndex } from '../../../internal/text-quote-index.js';
 import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { safeLinkHref, safeLinkHrefWithin, safeMediaSrc } from '../../../internal/safe-url.js';
-import type { LyraAnchor } from '../../viewers/document-viewer/anchors.js';
+import type { LyraAnchor } from '../../../internal/document-anchors.js';
 import { normalizeShikiLanguage, SHIKI_THEMES, type ShikiHighlighter } from '../code-block/shiki-types.js';
 import type { ShikiTransformer } from '../code-block/shiki-types.js';
 import {
@@ -203,9 +204,9 @@ export interface MarkdownHeadingItem {
 
 /** Page-wide LRU entry bound, also the per-document distinct highlight admission ceiling. */
 export const HIGHLIGHT_CACHE_MAX = 100;
-export const MARKDOWN_HIGHLIGHT_SOURCE_MAX = 8192;
+const MARKDOWN_HIGHLIGHT_SOURCE_MAX = 8192;
 export const HIGHLIGHT_CACHE_MAX_BYTES = 2 * 1024 * 1024;
-export const HIGHLIGHT_CACHE_ENTRY_MAX_BYTES = 512 * 1024;
+const HIGHLIGHT_CACHE_ENTRY_MAX_BYTES = 512 * 1024;
 export const FAILED_HIGHLIGHT_MAX = 256;
 
 /** Bounded content key: raw source never remains retained merely because it was used as a cache
@@ -461,7 +462,7 @@ export interface MarkdownLexToken {
   type: string; raw: string; text?: string; lang?: string; title?: string | null;
   [key: string]: unknown;
 }
-export type MarkdownLexTokens = MarkdownLexToken[] & { links: Record<string, MarkdownDefinition> };
+type MarkdownLexTokens = MarkdownLexToken[] & { links: Record<string, MarkdownDefinition> };
 export interface MarkdownBlockLexer {
   tokens: MarkdownLexTokens;
   state: MarkdownLexicalState;
@@ -476,17 +477,17 @@ export interface MarkdownParserCapabilities extends LyraMarkedParser {
   parser(tokens: MarkdownLexTokens, options: Record<string, unknown>): string;
   walkTokens(tokens: unknown[], visit: unknown): unknown;
 }
-export interface MarkdownGroupSeed {
+interface MarkdownGroupSeed {
   links: Record<string, MarkdownDefinition>;
   state: MarkdownLexicalState;
 }
-export interface MarkdownGroupResult {
+interface MarkdownGroupResult {
   html: string;
   hadMathFallback: boolean;
   hasRawHtml: boolean;
   state: MarkdownLexicalState;
 }
-export interface MarkdownRenderContext {
+interface MarkdownRenderContext {
   instance: MarkdownParserCapabilities;
   render(source: string, seed?: MarkdownGroupSeed): MarkdownGroupResult;
 }
@@ -1146,7 +1147,7 @@ export function markdownLanguageSetChanged(changed: Map<PropertyKey, unknown>): 
 /** The rendered outcome of one `renderMarkdownDocument()` pass. `headingTree` is non-`null`
  *  whenever the parse itself succeeded -- including the `fallback` produced by a missing
  *  `dompurify`, which still computed a real outline before refusing to render. */
-export type MarkdownRenderOutcome =
+type MarkdownRenderOutcome =
   | {
       status: 'fallback';
       error: unknown;
@@ -1164,8 +1165,7 @@ export type MarkdownRenderOutcome =
       pendingKeys: PendingHighlight[];
     };
 
-export type MarkdownHtmlMode = 'sanitize' | 'escape' | 'trusted';
-export type MarkdownStreamingRender = 'plain' | 'progressive';
+export type { MarkdownHtmlMode, MarkdownStreamingRender };
 export function normalizeMarkdownStreamingRender(value: unknown): MarkdownStreamingRender {
   return value === 'progressive' ? 'progressive' : 'plain';
 }
@@ -1174,7 +1174,7 @@ export function normalizeMarkdownHtmlMode(value: unknown): MarkdownHtmlMode {
   return value === 'escape' || value === 'trusted' ? value : 'sanitize';
 }
 
-export interface RenderMarkdownOptions {
+interface RenderMarkdownOptions {
   /** This variant's own tag, for the peer-failure diagnostics below. */
   tag: 'lr-markdown' | 'lr-markdown-core';
   deps: MarkdownDeps;
@@ -1434,7 +1434,7 @@ export function labelMarkdownTableWrappers(
   });
 }
 
-export interface MarkdownContentOptions {
+interface MarkdownContentOptions {
   fallbackSegments?: readonly MarkdownFallbackSegment[] | null;
   /** The Markdown source -- also the plain-text fallback rendering when `renderedHtml` is `null`. */
   content: string;

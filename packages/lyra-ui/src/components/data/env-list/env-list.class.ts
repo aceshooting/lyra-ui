@@ -1,5 +1,6 @@
 import { SnapshotProperty } from '../../../internal/collection-source-tracker.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
 import { property, state } from 'lit/decorators.js';
 import { ifDefined } from 'lit/directives/if-defined.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -254,7 +255,7 @@ export class LyraEnvList extends LyraElement<LyraEnvListEventMap> {
     }
     return html`
       <dl part="base" aria-label=${this.accessibleLabel}>
-        ${this.entries.slice(0, MAX_RENDERED_ENV_ENTRIES).map((entry) => {
+        ${repeat(this.entries.slice(0, MAX_RENDERED_ENV_ENTRIES), (entry) => entry.name, (entry) => {
           const secret = entry.secret ?? true;
           const isRevealed = this.revealed.get(entry.name) ?? false;
           const masked = secret && !isRevealed;

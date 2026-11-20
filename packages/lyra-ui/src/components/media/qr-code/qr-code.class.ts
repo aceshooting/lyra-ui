@@ -7,6 +7,7 @@ import {
 } from '../../../internal/canvas.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { resolveCanvasColor } from '../../../internal/canvas-color.js';
 import { finiteRange } from '../../../internal/numbers.js';
@@ -318,6 +319,7 @@ export class LyraQrCode extends LyraElement {
     if (this.value && this.loadState.kind === 'empty') this.transitionTo({ kind: 'loading' });
     else this.setAttribute('aria-busy', this.loadState.kind === 'loading' ? 'true' : 'false');
     super.connectedCallback();
+    if (this.detached.cancel()) return;
     // If an in-flight peer result settled while detached, generate() correctly discarded it at
     // the post-await `isConnected` guard and left the visible state at `loading`. Reconnects do
     // not inherently re-run updated(), so explicitly restart that discarded work. A still-pending
@@ -330,14 +332,20 @@ export class LyraQrCode extends LyraElement {
     ) this.generate();
   }
 
-  override disconnectedCallback(): void {
+  /** A same-task DOM move keeps the generated code and embedded image; a genuine disconnect drops them. */
+  private readonly detached = new DeferredTeardown(() => {
     this.generation++;
     this.clearEmbeddedImage();
+  });
+
+  override disconnectedCallback(): void {
     this.pendingLoadingAnnouncement = false;
     super.disconnectedCallback();
+    this.detached.schedule();
   }
 
   override adoptedCallback(): void {
+    this.detached.flush();
     super.adoptedCallback();
     this.generation++;
     this.clearEmbeddedImage();

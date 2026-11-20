@@ -5,6 +5,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { resolveAccessibleName } from '../../../internal/accessible-name.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { tag } from '../../../internal/prefix.js';
 import { isHandledOrComposingKey } from '../../../internal/list-navigation.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
@@ -132,10 +133,6 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     () => this.renderRoot?.querySelector<HTMLElement>('[part="base"]') ?? null,
   );
 
-  override adoptedCallback(): void {
-    super.adoptedCallback();
-    this.hostDescription.adopted();
-  }
   protected static override collectionSupport = eventCollectionSupport;
   protected static override readonly immutableEventDetails = Object.freeze([
     'lr-reorder-request',
@@ -310,6 +307,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.detached.cancel();
     this.syncBoundaryState();
   }
 
@@ -325,16 +323,30 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
     }
   }
 
+  /** A same-task DOM move keeps a held move and its item state; a genuine disconnect drops them. */
+  private readonly detached = new DeferredTeardown(() => this.releaseConnection());
+
   override disconnectedCallback(): void {
-    this.boundarySnapshot = [];
+    // Focus left with the element, so a scheduled restore must not pull it back after any reinsertion.
     this.pendingFocusTarget = null;
     this.focusRestoreGeneration += 1;
+    super.disconnectedCallback();
+    this.detached.schedule();
+  }
+
+  override adoptedCallback(): void {
+    this.detached.flush();
+    super.adoptedCallback();
+    this.hostDescription.adopted();
+  }
+
+  private releaseConnection(): void {
+    this.boundarySnapshot = [];
     this.pendingMove = null;
     this.pendingReconciliation = null;
     this.moveToken += 1;
     for (const item of this.stateItems) releaseReorderOwnerState(item, this);
     this.stateItems.clear();
-    super.disconnectedCallback();
   }
 
   private orderValues(items: LyraReorderItem[]): readonly string[] {
@@ -481,6 +493,7 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
       expectedValues,
     };
     this.pendingMove = transaction;
+    const wasConnected = this.isConnected;
 
     const request = this.emit(
       'lr-reorder-request',
@@ -488,6 +501,11 @@ export class LyraReorderList extends LyraElement<LyraReorderListEventMap> {
       { cancelable: true }
     );
     if (this.pendingMove !== transaction || transaction.token !== this.moveToken) return;
+    // A listener that removed the list (rather than moving it) leaves nothing to reorder.
+    if (wasConnected && !this.isConnected) {
+      this.pendingMove = null;
+      return;
+    }
     if (!this.pendingMembershipIsCurrent()) {
       this.pendingMove = null;
       this.syncBoundaryState();

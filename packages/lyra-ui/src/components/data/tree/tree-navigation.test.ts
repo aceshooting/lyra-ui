@@ -177,3 +177,17 @@ it('swaps which arrow key expands/collapses under dir="rtl"', async () => {
   await el.updateComplete;
   expect(root.expanded).to.be.false;
 });
+
+it('a held Enter selects the focused item once', async () => {
+  const el = (await fixture(html`<lr-tree selection="multiple"></lr-tree>`)) as LyraTree;
+  el.data = data;
+  await el.updateComplete;
+  const root = el.querySelector('lr-tree-item') as unknown as LyraTreeItem;
+  let selects = 0;
+  el.addEventListener('lr-node-select', () => { selects += 1; });
+  for (const repeat of [false, true, true]) {
+    root.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', repeat, bubbles: true, composed: true, cancelable: true }));
+  }
+  await el.updateComplete;
+  expect(selects).to.equal(1);
+});

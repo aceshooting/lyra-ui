@@ -23,7 +23,7 @@ import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
-import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
+import type { AnchorResultDetail, TextSelectDetail } from '../../../internal/document-anchors.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -185,11 +185,6 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
   @property() name = '';
   /** CSS length that caps the scrollable event body; invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
-  /** Shared text search and anchor-target API for the rendered calendar body. */
-  override async search(query: string): Promise<number> { return super.search(query); }
-  override async searchNext(): Promise<boolean> { return super.searchNext(); }
-  override async searchPrevious(): Promise<boolean> { return super.searchPrevious(); }
-  override clearSearch(): void { super.clearSearch(); }
   @state() private fetchState: CalendarFetchState = { kind: 'idle' };
   private readonly transport = new ViewerSourceController(this, {
     load: (response, token) => this.readDocument(response, token),

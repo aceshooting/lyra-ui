@@ -12,7 +12,7 @@ import { loadDompurify } from '../../../internal/dompurify-loader.js';
 import { sanitizePassiveMarkup } from '../../../internal/passive-markup.js';
 
 export type LyraIncludeMode = 'cors' | 'no-cors' | 'same-origin';
-export type IncludeResourceErrorReason =
+type IncludeResourceErrorReason =
   | 'network'
   | 'http'
   | 'missing-sanitizer'

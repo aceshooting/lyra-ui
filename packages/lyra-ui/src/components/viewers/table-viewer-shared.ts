@@ -6,7 +6,7 @@ import type { LyraTabularSource, LyraWorkbookSource, LyraTabularColumn, LyraSour
 import { SourceRequestController, sourceCount, sourceRevision, type SourceRequestLease } from '../../internal/source-request-controller.js';
 import { LyraResourceLimitError, isResourceLimitError } from '../../internal/resource-loader.js';
 import type { LyraVirtualList, LyraVirtualListRange } from '../layout/virtual-list/virtual-list.class.js';
-import type { LyraAnchor } from './document-viewer/anchors.js';
+import type { LyraAnchor } from '../../internal/document-anchors.js';
 import { ThemeWatcher } from '../../internal/theme-watcher.js';
 import { tag } from '../../internal/prefix.js';
 import { resolveCssTokenLength } from '../../internal/css-token-length.js';
@@ -18,7 +18,7 @@ import { OwnerAnimationFrameWaiter } from '../../internal/owner-animation-frame.
 import type { LyraSearchChangeDetail } from '../../internal/text-viewer-target.js';
 import { ViewerSearchState } from '../../internal/viewer-search.js';
 import { DeferredTeardown } from '../../internal/deferred-teardown.js';
-import type { LyraHighlight } from './document-viewer/anchors.js';
+import type { LyraHighlight } from '../../internal/document-anchors.js';
 import { ViewerAnnouncementController } from './viewer-announcements.js';
 import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from './viewer-search-limits.js';
 

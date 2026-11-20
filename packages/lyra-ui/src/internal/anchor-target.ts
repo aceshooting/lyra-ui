@@ -6,7 +6,7 @@ import {
   type LyraAnchorTarget,
   type LyraAnchorTargetEventMap,
 } from './anchor-target-base.js';
-import type { LyraAnchor } from '../components/viewers/document-viewer/anchors.js';
+import type { LyraAnchor } from './document-anchors.js';
 
 export {
   DocumentAnchorTargetBase,

@@ -3,6 +3,8 @@ import '../../lr-chart.js';
 import type { LyraChart } from './chart.class.js';
 import { loadBoxPlotAndRegister, loadBoxPlotPlugin } from './box-plot-loader.js';
 import { loadChartJs } from './chart-core-loader.js';
+import { rearmDevWarnings } from '../../../../test/expected-dev-warnings.js';
+beforeEach(() => rearmDevWarnings('lr-chart-peer:'));
 
 it('retries core and box registration failures and registers once across concurrent consumers', async () => {
   const { Chart } = await import('chart.js');

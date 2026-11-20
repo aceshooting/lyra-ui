@@ -1,5 +1,5 @@
-import type { LyraAnchor } from '../components/viewers/document-viewer/anchors.js';
-import { TEXT_QUOTE_CONTEXT_CHARS } from '../components/viewers/document-viewer/anchors.js';
+import type { LyraAnchor } from './document-anchors.js';
+import { TEXT_QUOTE_CONTEXT_CHARS } from './document-anchors.js';
 import { getSegmenter } from './intl-cache.js';
 import {
   SOFT_HYPHEN,

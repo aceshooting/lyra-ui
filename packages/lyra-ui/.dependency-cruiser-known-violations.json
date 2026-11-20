@@ -15,20 +15,6 @@
   },
   {
     "type": "dependency",
-    "from": "src/internal/text-quote.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../components/viewers/document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "internal-not-to-components"
-    }
-  },
-  {
-    "type": "dependency",
     "from": "src/components/agent-tools/agent-question/agent-question.class.ts",
     "to": "src/components/agent-tools/tool-param-form/tool-param-snapshot.ts",
     "unresolvedTo": "../tool-param-form/tool-param-snapshot.js",
@@ -100,131 +86,11 @@
   },
   {
     "type": "dependency",
-    "from": "src/components/agent-tools/terminal/terminal.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../../viewers/document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/conversation/agent-workspace/agent-workspace.class.ts",
-    "to": "src/components/conversation/markdown/markdown-shared.ts",
-    "unresolvedTo": "../markdown/markdown-shared.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/conversation/branch-picker/branch-picker.class.ts",
-    "to": "src/components/conversation/message-actions/toolbar-actions.ts",
-    "unresolvedTo": "../message-actions/toolbar-actions.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/conversation/code-block/code-block-base.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../../viewers/document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/conversation/code-block/code-block-core.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../../viewers/document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/conversation/code-block/code-block-shared.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../../viewers/document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/conversation/code-block/code-block.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../../viewers/document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
     "from": "src/components/conversation/markdown/markdown-base.class.ts",
     "to": "src/components/conversation/code-block/shiki-types.ts",
     "unresolvedTo": "../code-block/shiki-types.js",
     "dependencyTypes": [
       "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/conversation/markdown/markdown-base.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../../viewers/document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
       "import"
     ],
     "rule": {
@@ -262,21 +128,6 @@
   },
   {
     "type": "dependency",
-    "from": "src/components/conversation/markdown/markdown-shared.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../../viewers/document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
     "from": "src/components/conversation/markdown/markdown.class.ts",
     "to": "src/components/conversation/code-block/code-loader.ts",
     "unresolvedTo": "../code-block/code-loader.js",
@@ -294,65 +145,6 @@
     "from": "src/components/conversation/markdown/markdown.class.ts",
     "to": "src/components/conversation/code-block/shiki-types.ts",
     "unresolvedTo": "../code-block/shiki-types.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/conversation/message-feedback/message-feedback.class.ts",
-    "to": "src/components/conversation/message-actions/toolbar-actions.ts",
-    "unresolvedTo": "../message-actions/toolbar-actions.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/conversation/message-parts/message-parts.class.ts",
-    "to": "src/components/conversation/markdown/markdown-shared.ts",
-    "unresolvedTo": "../markdown/markdown-shared.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/conversation/streaming-text/streaming-text-base.class.ts",
-    "to": "src/components/conversation/markdown/markdown-shared.ts",
-    "unresolvedTo": "../markdown/markdown-shared.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/conversation/streaming-text/streaming-text-base.class.ts",
-    "to": "src/components/conversation/markdown/markdown-streaming-tail.ts",
-    "unresolvedTo": "../markdown/markdown-streaming-tail.js",
     "dependencyTypes": [
       "local",
       "import"
@@ -550,41 +342,11 @@
   },
   {
     "type": "dependency",
-    "from": "src/components/forms/icon-button/icon-button.class.ts",
-    "to": "src/components/conversation/message-actions/toolbar-actions.ts",
-    "unresolvedTo": "../../conversation/message-actions/toolbar-actions.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
     "from": "src/components/forms/locale-picker/locale-picker.class.ts",
     "to": "src/components/media/flag/language-map.ts",
     "unresolvedTo": "../../media/flag/language-map.js",
     "dependencyTypes": [
       "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/forms/toggle/toggle.class.ts",
-    "to": "src/components/conversation/message-actions/toolbar-actions.ts",
-    "unresolvedTo": "../../conversation/message-actions/toolbar-actions.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
       "import"
     ],
     "rule": {
@@ -671,64 +433,6 @@
     "unresolvedTo": "../navigation-menu/navigation-menu-owner.js",
     "dependencyTypes": [
       "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/media/attachment-trigger/attachment-trigger.class.ts",
-    "to": "src/components/media/file-input/accept.ts",
-    "unresolvedTo": "../file-input/accept.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/media/av-player/av-player.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../../viewers/document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/media/drop-zone/drop-zone.class.ts",
-    "to": "src/components/media/file-input/file-intake.ts",
-    "unresolvedTo": "../file-input/file-intake.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/media/image-viewer/image-viewer.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../../viewers/document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
       "import"
     ],
     "rule": {
@@ -853,56 +557,11 @@
   },
   {
     "type": "dependency",
-    "from": "src/components/utility/copy-button/copy-button.class.ts",
-    "to": "src/components/conversation/message-actions/toolbar-actions.ts",
-    "unresolvedTo": "../../conversation/message-actions/toolbar-actions.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/utility/diff-view/diff-view.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../../viewers/document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
     "from": "src/components/viewers/archive-viewer/archive-viewer-register.ts",
     "to": "src/components/viewers/document-viewer/registry.ts",
     "unresolvedTo": "../document-viewer/registry.js",
     "dependencyTypes": [
       "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/viewers/archive-viewer/archive-viewer.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
       "import"
     ],
     "rule": {
@@ -926,41 +585,11 @@
   },
   {
     "type": "dependency",
-    "from": "src/components/viewers/calendar-viewer/calendar-viewer.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
     "from": "src/components/viewers/contact-viewer/contact-viewer-register.ts",
     "to": "src/components/viewers/document-viewer/registry.ts",
     "unresolvedTo": "../document-viewer/registry.js",
     "dependencyTypes": [
       "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/viewers/contact-viewer/contact-viewer.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
       "import"
     ],
     "rule": {
@@ -984,71 +613,11 @@
   },
   {
     "type": "dependency",
-    "from": "src/components/viewers/csv-viewer/csv-viewer.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
     "from": "src/components/viewers/dataset-viewer/dataset-viewer-register.ts",
     "to": "src/components/viewers/document-viewer/registry.ts",
     "unresolvedTo": "../document-viewer/registry.js",
     "dependencyTypes": [
       "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/viewers/dataset-viewer/dataset-viewer.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/viewers/document-compare/document-compare.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/viewers/document-preview/document-preview.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
       "import"
     ],
     "rule": {
@@ -1100,38 +669,9 @@
   },
   {
     "type": "dependency",
-    "from": "src/components/viewers/docx-viewer/docx-viewer.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
     "from": "src/components/viewers/ebook-viewer/ebook-viewer-register.ts",
     "to": "src/components/viewers/document-viewer/registry.ts",
     "unresolvedTo": "../document-viewer/registry.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/viewers/ebook-viewer/ebook-viewer.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../document-viewer/anchors.js",
     "dependencyTypes": [
       "local",
       "import"
@@ -1171,56 +711,11 @@
   },
   {
     "type": "dependency",
-    "from": "src/components/viewers/email-viewer/email-viewer.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
     "from": "src/components/viewers/geojson-view/geojson-viewer.class.ts",
     "to": "src/components/media/map/map-loader.ts",
     "unresolvedTo": "../../media/map/map-loader.js",
     "dependencyTypes": [
       "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/viewers/geojson-view/geojson-viewer.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/viewers/highlight-layer/highlight-layer.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
       "import"
     ],
     "rule": {
@@ -1244,36 +739,6 @@
   },
   {
     "type": "dependency",
-    "from": "src/components/viewers/html-viewer/html-viewer.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/viewers/include/include.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
     "from": "src/components/viewers/notebook-viewer/notebook-viewer-register.ts",
     "to": "src/components/viewers/document-viewer/registry.ts",
     "unresolvedTo": "../document-viewer/registry.js",
@@ -1288,56 +753,11 @@
   },
   {
     "type": "dependency",
-    "from": "src/components/viewers/notebook-viewer/notebook-viewer.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/viewers/page-rail/page-rail.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
     "from": "src/components/viewers/pdf-viewer/pdf-viewer-register.ts",
     "to": "src/components/viewers/document-viewer/registry.ts",
     "unresolvedTo": "../document-viewer/registry.js",
     "dependencyTypes": [
       "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/viewers/pdf-viewer/pdf-viewer.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
       "import"
     ],
     "rule": {
@@ -1390,20 +810,6 @@
   {
     "type": "dependency",
     "from": "src/components/viewers/pptx-viewer/pptx-viewer.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/viewers/pptx-viewer/pptx-viewer.class.ts",
     "to": "src/components/viewers/page-rail/page-viewer-snapshot.ts",
     "unresolvedTo": "../page-rail/page-viewer-snapshot.js",
     "dependencyTypes": [
@@ -1422,21 +828,6 @@
     "unresolvedTo": "../document-viewer/registry.js",
     "dependencyTypes": [
       "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/viewers/spreadsheet-viewer/spreadsheet-viewer.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
       "import"
     ],
     "rule": {
@@ -1474,41 +865,11 @@
   },
   {
     "type": "dependency",
-    "from": "src/components/viewers/svg-viewer/svg-viewer.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
     "from": "src/components/viewers/xml-viewer/xml-viewer-register.ts",
     "to": "src/components/viewers/document-viewer/registry.ts",
     "unresolvedTo": "../document-viewer/registry.js",
     "dependencyTypes": [
       "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/viewers/xml-viewer/xml-viewer.class.ts",
-    "to": "src/components/viewers/document-viewer/anchors.ts",
-    "unresolvedTo": "../document-viewer/anchors.js",
-    "dependencyTypes": [
-      "local",
-      "type-only",
       "import"
     ],
     "rule": {

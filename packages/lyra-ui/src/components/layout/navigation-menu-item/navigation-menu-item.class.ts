@@ -148,7 +148,7 @@ export class LyraNavigationMenuItem extends LyraElement<LyraNavigationMenuItemEv
 
   /** Accessible-name override for the link or button, mapped to the host `aria-label` attribute.
    * Attribute presence wins, so an explicitly empty `aria-label=""` stays empty. */
-  @property({ attribute: 'aria-label' }) accessibleLabel?: string;
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   /** Link URL. A safe URL makes this a link item, rendered as a native `<a>`; unsafe schemes such
    * as `javascript:` are ignored and the item renders as a button. */

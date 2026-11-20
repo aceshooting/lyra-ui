@@ -1,4 +1,4 @@
-export type { TextSelectRect } from './viewers/document-viewer/anchors.js';
+export type { TextSelectRect } from '../internal/document-anchors.js';
 export type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../internal/clipboard.js';
 export type { LyraSearchChangeDetail } from '../internal/text-viewer-target.js';
 export * from './agent-tools/terminal/terminal.class.js';

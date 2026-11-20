@@ -1,4 +1,4 @@
-import type { LyraHighlight, LyraHighlightTone } from '../components/viewers/document-viewer/anchors.js';
+import type { LyraHighlight, LyraHighlightTone } from './document-anchors.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,

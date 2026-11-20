@@ -77,7 +77,7 @@ through an activatable gutter reuses the source lines and updates the previous a
   Has no effect while `lineNumbers` is unset. If controlled `code` shrinks while a line owns
   focus, focus follows the clamped surviving line; moving focus elsewhere during that update wins.
 - `highlights: readonly LyraHighlight[] = []` (attribute: false) — host-supplied highlights to paint over the
-  code (the shared anchor-target `LyraHighlight` contract from `document-viewer/anchors.ts`). Only
+  code (the shared anchor-target `LyraHighlight` contract from `internal/document-anchors.ts`). Only
   `line-range` anchors are meaningful here — every other `LyraAnchor` kind is ignored.
 - `activeHighlightId: string | null = null` (attribute `active-highlight-id`) — the `highlights`
   entry, if any, currently treated as active (`data-active` on its lines).

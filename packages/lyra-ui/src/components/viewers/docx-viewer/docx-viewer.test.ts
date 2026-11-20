@@ -5,7 +5,7 @@ import { render } from 'lit';
 import '../../lr-docx-viewer.js';
 import type { LyraDocxViewer, DocxHeadingItem } from '../../lr-docx-viewer.js';
 import { findDocumentRenderer, getDefaultDocumentRendererRegistry } from '../document-viewer/registry.js';
-import type { LyraHighlight } from '../document-viewer/anchors.js';
+import type { LyraHighlight } from '../../../internal/document-anchors.js';
 import { supportsCustomHighlights } from '../../../internal/text-highlights.js';
 import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
 import { MINIMAL_DOCX_BASE64 } from './fixtures/minimal-docx-fixture.js';

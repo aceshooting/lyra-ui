@@ -7,7 +7,7 @@ import "../../lr-pdf-viewer.js";
 import "../../lr-av-player.js";
 import "../../lr-citation-badge.js";
 import type { CitationActivateDetail } from "../../retrieval/citation-badge/citation-badge.class.js";
-import type { AnchorResultDetail } from "./anchors.js";
+import type { AnchorResultDetail } from "../../../internal/document-anchors.js";
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = {

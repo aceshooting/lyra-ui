@@ -32,7 +32,7 @@ import {
 } from '../../../internal/icon-only-content.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import type { AdjacentRunPosition } from '../../../internal/adjacent-runs.js';
-import type { LyraToolbarAction } from '../../conversation/message-actions/toolbar-actions.js';
+import type { LyraToolbarAction } from '../../../internal/toolbar-actions.js';
 import { styles } from './toggle.styles.js';
 
 /** The two fill treatments a toggle takes: text-only chrome, or a bounded outline. */

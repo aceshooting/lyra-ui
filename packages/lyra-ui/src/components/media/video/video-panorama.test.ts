@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import '../../lr-video.js';
 import type { LyraVideo } from './video.class.js';
 import type { Engine3dHost, Engine3dInstance } from '../../../internal/engine-3d-loader.js';
@@ -26,7 +26,9 @@ describe('lr-video panorama', function () {
   let creates: number, disposed: number;
   let media: HTMLVideoElement | undefined;
   let host: Engine3dHost;
-  beforeEach(() => {
+  beforeEach(async () => {
+    // Let the previous fixture's deferred disconnect teardown land before the counters reset.
+    await aTimeout(0);
     creates = disposed = 0; media = undefined;
     panoramaEnvironment.available = () => true;
     panoramaLoader.override(async () => ({ createEngine: (): Engine3dInstance => {
@@ -142,7 +144,7 @@ describe('lr-video panorama', function () {
       await waitUntil(() => creates === 2 && el.shadowRoot!.querySelector('[part="panorama"]')?.hasAttribute('data-ready') === true);
       expect(host === admitted).to.equal(false); expect(el.getVideoElement() === video).to.equal(true);
       const parent = el.parentNode!;
-      el.remove(); expect(disposed).to.equal(2);
+      el.remove(); await aTimeout(0); expect(disposed).to.equal(2);
       readyState = 1;
       parent.appendChild(el); await el.updateComplete;
       expect(creates, 'reconnection must wait for a decoded frame').to.equal(2);

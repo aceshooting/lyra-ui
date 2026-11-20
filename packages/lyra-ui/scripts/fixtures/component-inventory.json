@@ -14960,11 +14960,12 @@
           {
             "name": "aria-label",
             "property": "accessibleLabel",
-            "type": "string | undefined",
+            "type": "string | null",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "label",
@@ -14990,11 +14991,12 @@
           {
             "name": "accessibleLabel",
             "attribute": "aria-label",
-            "type": "string | undefined",
+            "type": "string | null",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "label",
@@ -34574,11 +34576,12 @@
           {
             "name": "aria-label",
             "property": "accessibleLabel",
-            "type": "string | undefined",
+            "type": "string | null",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "hotkey",
@@ -34615,11 +34618,12 @@
           {
             "name": "accessibleLabel",
             "attribute": "aria-label",
-            "type": "string | undefined",
+            "type": "string | null",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "commands",
@@ -86132,6 +86136,12 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-load-error",
+            "type": "CustomEvent<{ value: string; error: unknown }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-show",
             "type": "CustomEvent<null>",
             "cancelable": "always",
@@ -99709,11 +99719,12 @@
           {
             "name": "aria-label",
             "property": "accessibleLabel",
-            "type": "string | undefined",
+            "type": "string | null",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "distance",
@@ -99828,11 +99839,12 @@
           {
             "name": "accessibleLabel",
             "attribute": "aria-label",
-            "type": "string | undefined",
+            "type": "string | null",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "collapsed",
@@ -100139,11 +100151,12 @@
           {
             "name": "aria-label",
             "property": "accessibleLabel",
-            "type": "string | undefined",
+            "type": "string | null",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "current",
@@ -100210,11 +100223,12 @@
           {
             "name": "accessibleLabel",
             "attribute": "aria-label",
-            "type": "string | undefined",
+            "type": "string | null",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "current",
@@ -153693,11 +153707,12 @@
           {
             "name": "aria-label",
             "property": "accessibleLabel",
-            "type": "string | undefined",
+            "type": "string | null",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "collision",
@@ -153764,11 +153779,12 @@
           {
             "name": "accessibleLabel",
             "attribute": "aria-label",
-            "type": "string | undefined",
+            "type": "string | null",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "collision",
@@ -165889,6 +165905,10 @@
           },
           {
             "name": "controls-overlay",
+            "deprecated": null
+          },
+          {
+            "name": "error",
             "deprecated": null
           },
           {

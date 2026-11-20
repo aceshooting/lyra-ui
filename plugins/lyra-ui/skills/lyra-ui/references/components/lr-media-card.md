@@ -179,6 +179,6 @@ the video's own native controls bubble up and spuriously fire `lr-media-open`.
   auto-detected resolved kind should target the rendered `[part]`/element (e.g. `video[part="media"]`),
   not `:host([kind=...])`, since the latter won't see an auto-detected kind.
 
-`--lr-media-card-hover-border-color` sets the hovered border of an image or file action.
+`--lr-media-card-hover-border-color` sets the hovered border of an image or file action. With `frame="plain"` (no border) hover and press instead draw an outline in `--lr-media-card-hover-border-color` and `--lr-media-card-active-border-color`.
 
 ---

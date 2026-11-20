@@ -1,4 +1,4 @@
-export type { HighlightActivateDetail, LyraAnchor, LyraHighlight } from './viewers/document-viewer/anchors.js';
+export type { HighlightActivateDetail, LyraAnchor, LyraHighlight } from '../internal/document-anchors.js';
 export * from './viewers/document-preview/document-preview.class.js';
 import { LyraDocumentPreview } from './viewers/document-preview/document-preview.class.js';
 import { defineElement } from '../internal/prefix.js';

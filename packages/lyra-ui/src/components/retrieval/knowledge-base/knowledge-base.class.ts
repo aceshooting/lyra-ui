@@ -16,6 +16,7 @@ import {
 } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { tag } from '../../../internal/prefix.js';
 import { firstByRetrievalIdentity } from '../retrieval-identity.js';
 import { finiteCount } from '../../../internal/numbers.js';
@@ -394,7 +395,6 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
   private sourceVersion = 0;
   private sourceSyncing = false;
   private sourceResync = false;
-  private sourceLocaleUpdate = false;
   private sourceInputs?: readonly unknown[];
   private sourceResult?: LyraPageResult<KnowledgeSource, KnowledgeBaseSourceSummary>;
   private sourceRows: KnowledgeSource[] = [];
@@ -439,18 +439,14 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
     return () => this.isConnected && this.ownerDocument === owner && this.sourceVersion === version && this.sourceEpoch === epoch && this.dataSource === source;
   }
   override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
-    if (this.sourceLocaleUpdate) { super.requestUpdate(...args); this.syncSource(); return; }
-    if (args[0] === undefined && (!this.sourceInputs || this.effectiveLocale === this.sourceInputs[3])) this.sourceEpoch = (this.sourceEpoch ?? 0) + 1;
+    if (args[0] === undefined) this.sourceEpoch = (this.sourceEpoch ?? 0) + 1;
     if (args[0] === undefined || ['dataSource', 'sourcePage', 'sourcePageSize'].includes(String(args[0]))) this.syncSource();
     super.requestUpdate(...args);
   }
-  override attributeChangedCallback(name: string, old: string | null, value: string | null): void {
-    const previous = this.sourceLocaleUpdate;
-    if (name === 'lang' || name === 'locale') this.sourceLocaleUpdate = true;
-    try { super.attributeChangedCallback(name, old, value); } finally { this.sourceLocaleUpdate = previous; }
-  }
-  override connectedCallback(): void { super.connectedCallback(); this.syncSource(); }
-  override adoptedCallback(): void { this.clearSourceLifecycle(); this.sourcePages.adopted(); super.adoptedCallback(); this.syncSource(); }
+  override connectedCallback(): void { this.detached.cancel(); super.connectedCallback(); this.syncSource(); }
+  /** A same-task DOM move keeps the accepted page; a real disconnect clears it. */
+  private readonly detached = new DeferredTeardown(() => this.clearSourceLifecycle());
+  override adoptedCallback(): void { this.detached.cancel(); this.clearSourceLifecycle(); this.sourcePages.adopted(); super.adoptedCallback(); this.syncSource(); }
   protected override willUpdate(changed: PropertyValues): void { super.willUpdate(changed); this.syncSource(); }
   private clearSourceLifecycle(): void {
     this.sourceEpoch++; this.sourceVersion++; this.sourceInputs = undefined;
@@ -738,7 +734,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
   }
 
   override disconnectedCallback(): void {
-    this.clearSourceLifecycle();
+    this.detached.schedule();
     super.disconnectedCallback();
   }
 

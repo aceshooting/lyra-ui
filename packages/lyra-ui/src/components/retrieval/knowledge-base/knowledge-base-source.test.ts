@@ -187,7 +187,7 @@ it('retries a current failure and preserves external error copy and retry veto',
 it('reconnects the same provider and prevents old detached menus from regaining authority', async () => {
   const data = provider(1); const el = await fixture<LyraKnowledgeBase>(html`<lr-knowledge-base .strings=${{ loading: 'Loading', tableLoadFailed: 'Load failed' }} .dataSource=${data.source}></lr-knowledge-base>`);
   const grid = await table(el, 's0'); const dropdown = grid.shadowRoot!.querySelector<LyraDropdown>('lr-dropdown')!; await dropdown.show(); const menu = dropdown.querySelector('lr-menu')!;
-  let actions = 0; el.addEventListener('lr-source-delete', () => actions++); const parent = el.parentElement!; el.remove(); parent.append(el); await table(el, 's0');
+  let actions = 0; el.addEventListener('lr-source-delete', () => actions++); const parent = el.parentElement!; el.remove(); await new Promise(resolve => setTimeout(resolve)); parent.append(el); await table(el, 's0');
   menu.dispatchEvent(new CustomEvent('lr-select', { detail: { item: { value: 'delete' } } })); expect(actions).to.equal(0); expect(data.calls.length).to.equal(2);
 });
 it('retains the retry reentry guard across a synchronous host repaint', async () => {
@@ -264,4 +264,12 @@ it('announces a later provider reload through the polite status channel but stay
   el.dataSource = next.source;
   await waitUntil(() => sinkTexts('polite').includes('Loading sources'));
   release();
+});
+it('does not refetch for a host aria-label, aria-describedby or dir change', async () => {
+  const data = provider(4); const el = await fixture<LyraKnowledgeBase>(html`<lr-knowledge-base .dataSource=${data.source}></lr-knowledge-base>`);
+  await table(el, 's0'); expect(data.calls.length).to.equal(1);
+  el.setAttribute('aria-label', 'Sources'); el.setAttribute('aria-describedby', 'nowhere'); el.dir = 'rtl';
+  await el.updateComplete; await new Promise(resolve => setTimeout(resolve, 50)); await table(el, 's0');
+  expect(data.calls.length).to.equal(1);
+  el.requestUpdate(); await waitUntil(() => data.calls.length === 2); await table(el, 's0');
 });

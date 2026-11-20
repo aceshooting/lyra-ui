@@ -126,13 +126,7 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
     return this.pathOccurrenceSnapshot;
   }
 
-  override connectedCallback(): void {
-    super.connectedCallback();
-  }
 
-  override disconnectedCallback(): void {
-    super.disconnectedCallback();
-  }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);

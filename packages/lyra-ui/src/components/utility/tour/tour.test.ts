@@ -2704,3 +2704,26 @@ it('keeps the step chosen by a synchronous request listener', async () => {
   await el.updateComplete;
   expect(el.activeIndex).to.equal(2);
 });
+
+it('keeps a declarative open pending until steps arrive, whichever is assigned first', async () => {
+  const el = await fixture<LyraTour>(html`<lr-tour open></lr-tour>`);
+  let ended = 0;
+  el.addEventListener('lr-tour-end', () => { ended++; });
+  await new Promise(resolve => setTimeout(resolve, 20));
+  expect(el.open, 'open survives an empty first update').to.equal(true);
+  expect(el.hasAttribute('open')).to.equal(true);
+  el.steps = makeSteps(2);
+  await el.updateComplete;
+  expect(el.open).to.equal(true);
+  expect(el.shadowRoot!.querySelector('[part="heading"]')?.textContent).to.equal('Heading 0');
+  expect(ended).to.equal(0);
+});
+
+it('does not report a step activation while the tour is closed', async () => {
+  const el = await fixture<LyraTour>(html`<lr-tour .steps=${makeSteps(4)}></lr-tour>`);
+  const events: unknown[] = [];
+  el.addEventListener('lr-tour-step-activate', event => events.push((event as CustomEvent).detail.index));
+  el.activeIndex = 3;
+  await el.updateComplete;
+  expect(events).to.deep.equal([]);
+});

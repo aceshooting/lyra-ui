@@ -1,3 +1,4 @@
+import { DEV_DIAGNOSTICS, devWarnOnce } from '../../../internal/dev-warning.js';
 import { classifyOptionalPeerImportError, type OptionalPeerFailure } from '../../../internal/optional-peer-failure.js';
 import type { EmojiPickerGroup, EmojiPickerItem } from './emoji-types.js';
 
@@ -61,7 +62,7 @@ const FAILED_WARNING =
 /**
  * Loads the optional peer dependency `emoji-picker-element-data` and adapts its JSON export into
  * this component's own `EmojiPickerGroup[]` shape via `adaptEmojiPickerElementData()` below. Never
- * throws: a failure resolves `{ reason }` with one `console.warn` that names the cause --
+ * throws: a failure resolves `{ reason }` with one development-only `console.warn` that names the cause --
  * `'missing'` when the module cannot be resolved (not installed, see
  * `classifyOptionalPeerImportError()`), `'failed'` when the import otherwise rejects or the resolved
  * module matches neither the expected bare-array nor `{ default: [...] }` namespace shape (a broken
@@ -84,15 +85,18 @@ export async function loadEmojiDataOutcome(
     raw = await importData(resolveEmojiDataLocale(locale));
   } catch (error) {
     const reason = classifyOptionalPeerImportError(error);
-    if (reason === 'missing') console.warn(MISSING_WARNING);
-    else console.warn(FAILED_WARNING, error);
+    if (DEV_DIAGNOSTICS) {
+      if (reason === 'missing') devWarnOnce('lr-emoji-data:missing', MISSING_WARNING);
+      else devWarnOnce('lr-emoji-data:failed', FAILED_WARNING, error);
+    }
     return { reason };
   }
   const adapted = adaptEmojiPickerElementData(raw);
   if (adapted === null) {
     // Neither a bare array nor a `{ default: [...] }` namespace: a broken or spoofed peer, not a
     // legitimately-installed one with zero entries.
-    console.warn(
+    if (DEV_DIAGNOSTICS) devWarnOnce(
+      'lr-emoji-data:failed',
       FAILED_WARNING,
       new TypeError('The emoji-picker-element-data peer does not expose the expected array (or { default: array }) shape.'),
     );

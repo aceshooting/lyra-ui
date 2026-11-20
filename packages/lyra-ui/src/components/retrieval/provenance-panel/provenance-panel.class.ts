@@ -1,5 +1,6 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, nothing, type TemplateResult } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -284,7 +285,7 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
           'provenanceEntities',
           entities.length,
           () => html`<div part="entity-row" class="entity-row">
-            ${entities.slice(0, MAX_SECTION_ROWS).map((entity) => {
+            ${repeat(entities.slice(0, MAX_SECTION_ROWS), (entity) => entity.id, (entity) => {
               const typeLabel =
                 typeLabels.get(entity.type as string) ?? entity.type ?? '';
               return html`<lr-entity-chip
@@ -311,7 +312,9 @@ export class LyraProvenancePanel extends LyraElement<LyraProvenancePanelEventMap
           'provenanceCommunities',
           communities.length,
           () => html`<div class="stack">
-            ${communities.slice(0, MAX_SECTION_ROWS).map(
+            ${repeat(
+              communities.slice(0, MAX_SECTION_ROWS),
+              (c) => c.id,
               (c) =>
                 html`<lr-community-card
                   size="s"

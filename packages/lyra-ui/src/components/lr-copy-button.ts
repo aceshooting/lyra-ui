@@ -1,4 +1,4 @@
-export type { LyraToolbarAction } from './conversation/message-actions/toolbar-actions.js';
+export type { LyraToolbarAction } from '../internal/toolbar-actions.js';
 export * from './utility/copy-button/copy-button.class.js';
 import './lr-tooltip.js';
 // The lean icon-button entry: this component only ever slots its own SVG glyphs, so it must not

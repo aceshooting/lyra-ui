@@ -16,6 +16,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { repeat } from 'lit/directives/repeat.js';
 import type { Feature, FeatureCollection } from 'geojson';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { LYRA_CONTEXT_UPDATE } from '../../../internal/context-update.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import {
@@ -6016,7 +6017,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (valueChanged && (args[0] === undefined || ['mapStyle', 'dataLayers', 'choropleth', 'overlays', 'images', 'styleOverrides', 'interactiveBasemapLayers'].includes(String(args[0])))) {
       this.drawingConfigRevision = (this.drawingConfigRevision ?? 0) + 1;
     }
-    if (valueChanged && (args[0] === undefined || ['anchorLngLat', 'anchorBoundary', 'anchorSafeArea', 'anchorClosable', 'mapStyle', 'dir'].includes(String(args[0])))) {
+    // A library context update (host aria/dir, inherited locale or direction) re-derives presentation only.
+    const contextUpdate = args[0] === LYRA_CONTEXT_UPDATE;
+    if (valueChanged && (args[0] === undefined || contextUpdate || ['anchorLngLat', 'anchorBoundary', 'anchorSafeArea', 'anchorClosable', 'mapStyle', 'dir'].includes(String(args[0])))) {
       this.anchorSyncRequested = true;
       // A new coordinate retries an anchor runtime whose import failed.
       if (args[0] === 'anchorLngLat' && this.anchorLoad === 'failed') this.anchorLoad = undefined;
@@ -6047,9 +6050,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this.cameraUpdatePending = true;
     }
     // A no-op property write schedules nothing and must not mark the semantics stale.
-    if (this.isUpdatePending && (args[0] === undefined || ['label', 'lang', 'locale', 'strings', 'markers',
+    if (this.isUpdatePending && (args[0] === undefined || contextUpdate || ['label', 'lang', 'locale', 'strings', 'markers',
       'legend', 'legendGradient', 'hasLegendSlot', 'hasLegendStartSlot', 'choropleth', 'choroplethLegend'].includes(String(args[0])))) this.semanticsStale = true;
-    if (this.isUpdatePending && (args[0] === undefined || ['label', 'lang', 'locale', 'strings', 'markers'].includes(String(args[0])))) this.markerSemanticsStale = true;
+    if (this.isUpdatePending && (args[0] === undefined || contextUpdate || ['label', 'lang', 'locale', 'strings', 'markers'].includes(String(args[0])))) this.markerSemanticsStale = true;
   }
 
   private mapUpdateActive = false;

@@ -15,6 +15,7 @@ import {
 } from './composed-tree.js';
 import { nodeContainsSlot, someListedNode } from './dom-guards.js';
 import { addAncestorSubscriber, removeAncestorSubscriber, subscribeInheritedAttributes } from './inherited-attribute-hub.js';
+import { requestContextUpdate } from './context-update.js';
 
 const INHERITED_CONTEXT_ATTRIBUTES = [
   'locale',
@@ -552,7 +553,7 @@ function flushInheritedContextChanges(): void {
         // Keep the previous rendered baseline so a later mutation can retry.
       }
     }
-    if (changed) subscription.host.requestUpdate();
+    if (changed) requestContextUpdate(subscription.host);
   }
 }
 

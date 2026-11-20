@@ -284,6 +284,8 @@ describe('SourcePageController', () => {
     const test = setup(); const source = provider(); let calls = 0; const query = source.query;
     source.query = request => { calls++; return query(request); }; test.bind(source);
     await test.control.request({ search: '' }, 5000, 1); test.disconnect(); test.reconnect(); await tick();
+    expect(calls, 'a same-task move keeps the accepted page').to.equal(1); expect(test.control.state.result?.rows[0]?.order).to.equal(5000);
+    test.disconnect(); await tick(); expect(test.control.state.result).to.equal(undefined); test.reconnect(); await tick();
     expect(calls).to.equal(2); expect(test.control.state.result?.rows[0]?.order).to.equal(5000);
     const deferredPage = deferred<LyraPageResult<Row>>(); source.query = () => deferredPage.promise;
     const pending = test.control.request({ search: 'old' }, 0, 1); await tick();

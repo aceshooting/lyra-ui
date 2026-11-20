@@ -15,7 +15,7 @@ import { finiteCount, finiteInteger, finiteRange } from '../../../internal/numbe
 import { resolveCssLength } from '../../../internal/css-length.js';
 import { lengthOrNumberConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import type { LyraHighlight, LyraHighlightTone } from '../document-viewer/anchors.js';
+import type { LyraHighlight, LyraHighlightTone } from '../../../internal/document-anchors.js';
 import type {
   LyraVirtualList,
   LyraVirtualListIndexedSource,

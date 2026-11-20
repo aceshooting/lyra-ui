@@ -1827,13 +1827,14 @@ export type LyraLoadEvent =
 export type LyraLoadChildrenEvent = LyraFileTreeEventMap['lr-load-children'];
 
 /**
- * `lr-load-error` — dispatched by 5 components: `<lr-country-picker>`, `<lr-currency-picker>`,
- * `<lr-emoji-picker>`, `<lr-time-zone-picker>`, `<lr-unit-picker>`; detail union of 2, e.g.
- * `LyraCatalogPickerEventMap['lr-load-error']`.
+ * `lr-load-error` — dispatched by 6 components: `<lr-country-picker>`, `<lr-currency-picker>`,
+ * `<lr-emoji-picker>`, `<lr-locale-picker>`, `<lr-time-zone-picker>`, `<lr-unit-picker>`; detail
+ * union of 3, e.g. `LyraCatalogPickerEventMap['lr-load-error']`.
  */
 export type LyraLoadErrorEvent =
   | LyraCatalogPickerEventMap['lr-load-error']
-  | LyraEmojiPickerEventMap['lr-load-error'];
+  | LyraEmojiPickerEventMap['lr-load-error']
+  | LyraLocalePickerEventMap['lr-load-error'];
 
 /**
  * `lr-load-more` — dispatched by 3 components: `<lr-retrieval-results>`, `<lr-table>`,

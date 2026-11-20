@@ -4,7 +4,7 @@ import '../../lr-page-rail.js';
 import '../../lr-pdf-viewer.js';
 import '../../lr-pptx-viewer.js';
 import '../../lr-multi-split.js';
-import type { LyraHighlight } from '../document-viewer/anchors.js';
+import type { LyraHighlight } from '../../../internal/document-anchors.js';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
 
 const meta: Meta = {

@@ -10,7 +10,7 @@ import '../../utility/live-region/live-region.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './branch-picker.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import type { LyraToolbarAction } from '../message-actions/toolbar-actions.js';
+import type { LyraToolbarAction } from '../../../internal/toolbar-actions.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { repairUnavailableControlFocus } from '../../../internal/focus-navigation.js';
 import { leaseTabIndex } from '../../../internal/roving-toolbar.js';

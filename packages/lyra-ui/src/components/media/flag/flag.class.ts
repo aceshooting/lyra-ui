@@ -2,6 +2,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { getDisplayNames } from '../../../internal/intl-cache.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import type { LyraMessageKey } from '../../../internal/localization.js';
@@ -92,7 +93,7 @@ function displayNameFor(code: string, locale: string): string {
  * a representative country). While that peer package's `flagUrl()` resolves,
  * the host carries `aria-busy="true"`; a decorative skeleton and ordinary, non-live localized
  * loading text render in its place. A missing or failed peer resolver fails closed with a localized visible error and a
- * shared light-DOM assertive announcement, plus a one-time `console.warn` naming the code and the
+ * shared light-DOM assertive announcement, plus a one-time development-only `console.warn` naming the code and the
  * `flag-peer.js` import that registers a resolver -- the visible error alone cannot tell a
  * developer that the fix is a missing import rather than missing flag data;
  * an installed resolver returning no URL for an unknown code remains a valid
@@ -309,23 +310,32 @@ export class LyraFlag extends LyraElement {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.sourceRestartPending = true;
-    this.stopFlagResolverSubscription = subscribeFlagResolver(this.onResolverGeneration);
+    const moved = this.detached.cancel();
+    if (!moved) {
+      this.sourceRestartPending = true;
+      this.stopFlagResolverSubscription = subscribeFlagResolver(this.onResolverGeneration);
+    }
     if (this.resolverGeneration !== getFlagResolverGeneration()) {
       this.resolverGeneration = getFlagResolverGeneration();
     }
-    this.requestUpdate();
+    if (!moved) this.requestUpdate();
   }
 
-  override disconnectedCallback(): void {
+  /** A same-task DOM move keeps the resolved flag; a genuine disconnect restarts resolution on return. */
+  private readonly detached = new DeferredTeardown(() => {
     this.resolveToken++;
     this.sourceRestartPending = true;
     this.stopFlagResolverSubscription?.();
     this.stopFlagResolverSubscription = undefined;
+  });
+
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.detached.schedule();
   }
 
   override adoptedCallback(): void {
+    this.detached.flush();
     super.adoptedCallback();
     this.resolveToken++;
     this.sourceRestartPending = true;

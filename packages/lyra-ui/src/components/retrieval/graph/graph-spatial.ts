@@ -18,7 +18,7 @@ export interface SpatialWorldNode {
   readonly radius: number;
   readonly shape: 'circle' | 'square' | 'diamond';
 }
-export interface SpatialProjectedPoint { readonly x: number; readonly y: number; readonly depth: number; readonly scale: number }
+interface SpatialProjectedPoint { readonly x: number; readonly y: number; readonly depth: number; readonly scale: number }
 export interface SpatialProjectedNode extends SpatialWorldNode, SpatialProjectedPoint { readonly screenRadius: number }
 export interface SpatialSegment {
   readonly edge: LyraGraphEdge;

@@ -11,6 +11,8 @@ import type { LyraSkeleton } from '../../overlays/skeleton/skeleton.class.js';
 import { resolveLyraLocale } from '../../../localization.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
+import { rearmDevWarnings } from '../../../../test/expected-dev-warnings.js';
+beforeEach(() => rearmDevWarnings('lr-chart-peer:'));
 
 // Locale formatting and RTL fixtures deliberately retain the unregistered English messages.
 expectLocaleFallback('de-DE', [
@@ -439,6 +441,7 @@ it('fails closed with a clear Error for malformed named/default box-plot modules
       ['BoxAndWiskers', { default: { BoxPlotController: class {}, BoxAndWiskers: null } }],
     ] as const) {
       warnings.length = 0;
+      rearmDevWarnings('lr-chart-peer:');
       const result = await loadBoxPlotAndRegister(
         () => Promise.resolve(chart),
         () => Promise.resolve(malformed),
@@ -464,6 +467,7 @@ it('rejects a completely non-object-like box-plot peer, not just a malformed obj
   try {
     for (const nonObjectCandidate of [null, 42, 'not-a-plugin']) {
       warnings.length = 0;
+      rearmDevWarnings('lr-chart-peer:');
       const result = await loadBoxPlotAndRegister(
         () => Promise.resolve(chart),
         () => Promise.resolve(nonObjectCandidate),

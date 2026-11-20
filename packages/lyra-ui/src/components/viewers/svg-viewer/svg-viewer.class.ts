@@ -19,7 +19,7 @@ import { viewerFailureMessage } from '../../../internal/viewer-failure-message.j
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { loadDompurify } from '../../../internal/dompurify-loader.js';
 import { styles } from './svg-viewer.styles.js';
-import type { LyraAnchor, LyraAnchorKind, LyraHighlight } from '../document-viewer/anchors.js';
+import type { LyraAnchor, LyraAnchorKind, LyraHighlight } from '../../../internal/document-anchors.js';
 import { sanitizeCssLength, sanitizePercentRect } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import type { HtmlSanitizer } from '../../../internal/optional-peer-capabilities.js';

@@ -25,7 +25,7 @@ import {
   type LyraAnchorTargetEventMap,
 } from '../../../internal/anchor-target-base.js';
 import { parseCellRange } from '../../../internal/cell-range.js';
-import type { LyraAnchor, LyraAnchorKind } from '../document-viewer/anchors.js';
+import type { LyraAnchor, LyraAnchorKind } from '../../../internal/document-anchors.js';
 import {
   loadPapaParseCached,
   type PapaParseApi,

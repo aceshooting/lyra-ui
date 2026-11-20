@@ -10,8 +10,10 @@ import { tag } from '../../../internal/prefix.js';
 import { loadLazyChildren } from '../../../internal/lazy-children.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import {
   firstByRetrievalIdentity,
   canonicalIdentityList,
@@ -34,6 +36,7 @@ import {
 import { announceAfterFirstPaint } from '../retrieval-announcements.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { DEFAULT_SCORE_THRESHOLDS, type LyraScoreThresholds } from '../../../internal/score-tiers.js';
+import { occurrenceKeys } from '../../../internal/render-keys.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_retrievalResultsInputLimit, LYRA_DEFAULT_retrievalResultsSelectRowOrdinal, LYRA_DEFAULT_retrievalResultsSelectionLimit, LYRA_DEFAULT_untitledSource, LYRA_DEFAULT_valueTruncated } from '../../../internal/default-strings/retrieval.generated.js';
@@ -537,6 +540,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   }
 
   override adoptedCallback(): void {
+    this.detached.flush();
     this.invalidateSourceLifecycle(); this.sourcePages.adopted(); this.announcements.adopted(); super.adoptedCallback();
   }
 
@@ -692,8 +696,9 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
 
 
   override connectedCallback(): void {
+    const moved = this.detached.cancel();
     super.connectedCallback();
-    if (this.hasUpdated) this.requestUpdate();
+    if (!moved && this.hasUpdated) this.requestUpdate();
     const generation = ++this.connectionGeneration;
     void announceAfterFirstPaint(
       this,
@@ -706,12 +711,17 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     );
   }
 
-  override disconnectedCallback(): void {
+  /** A same-task DOM move keeps the accepted page and selection; a real disconnect invalidates them. */
+  private readonly detached = new DeferredTeardown(() => {
     this.invalidateSourceLifecycle();
     this.isMounting = true;
-    this.connectionGeneration += 1;
     this.wasEmptyPresented = false;
+  });
+
+  override disconnectedCallback(): void {
+    this.connectionGeneration += 1;
     super.disconnectedCallback();
+    this.detached.schedule();
   }
 
   private deepActiveElement(): Element | null {
@@ -1332,6 +1342,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     const ordinalById = this.ordinalById;
     const renderVirtualRow = (item: unknown): TemplateResult =>
       this.renderRow(item, ordinalById.get((item as RetrievalChunk).id) ?? 0, processed.chunks.length);
+    const chunkKeys = useVirtualList ? [] : occurrenceKeys(processed.chunks, this.retrievalChunkKey);
     return html`
       <div
         part="base"
@@ -1355,7 +1366,9 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
               @lr-visible-range-change=${this.stopOwnedEvent}
             ></lr-virtual-list>`
           : html`<div role="list">
-                ${processed.chunks.map(
+                ${repeat(
+                  processed.chunks,
+                  (_c, index) => chunkKeys[index],
                   (c) =>
                     html`<div part="row" role="listitem">
                       ${this.renderRow(c, ordinalById.get(c.id) ?? 0, processed.chunks.length)}

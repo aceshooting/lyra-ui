@@ -155,7 +155,7 @@ function detectKind(mimeType: string): LyraMediaCardKind {
  * @cssprop [--lr-media-card-bg=var(--lr-color-surface)] - Background of the RESTING `frame="card"`
  * chrome, the companion to the pressed state's `--lr-media-card-active-bg`. `frame="plain"` still
  * drops the fill entirely.
- * @cssprop [--lr-media-card-hover-border-color=var(--lr-color-brand)] - Hovered border color for image/file card actions.
+ * @cssprop [--lr-media-card-hover-border-color=var(--lr-color-brand)] - Hovered border color for image/file card actions (an outline under `frame="plain"`).
  * @cssprop [--lr-media-card-active-border-color=color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed border color for image/file card actions.
  * @cssprop [--lr-media-card-active-bg=color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Pressed background color for image/file card actions.
  *

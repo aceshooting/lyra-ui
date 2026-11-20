@@ -56,6 +56,16 @@ describe('lr-artifact-panel remediation', () => {
 });
 
 describe('lr-artifact-panel view request', () => {
+  it('keeps the view a request listener wrote back unchanged', async () => {
+    const el = await fixture<LyraArtifactPanel>(html`<lr-artifact-panel>preview<pre slot="code">code</pre></lr-artifact-panel>`);
+    let changes = 0;
+    el.addEventListener('lr-artifact-view-change', () => { changes += 1; });
+    el.addEventListener('lr-artifact-view-change-request', () => { el.view = 'preview'; }, { once: true });
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="view-button"][data-view="code"]')!.click();
+    await el.updateComplete;
+    expect([el.view, changes]).to.deep.equal(['preview', 0]);
+  });
+
   it('asks before a toggle press changes the view and honours a veto', async () => {
     const el = await fixture<LyraArtifactPanel>(html`<lr-artifact-panel>preview<pre slot="code">code</pre></lr-artifact-panel>`);
     const requests: unknown[] = [];

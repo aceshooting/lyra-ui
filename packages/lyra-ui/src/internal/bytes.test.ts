@@ -52,6 +52,16 @@ describe('formatByteSize', () => {
     expect(formatByteSize(-1500, 'en')).to.match(/^-1\.5\s?kB$/);
   });
 
+  it('words the short base rung with the symbol its kilo rung abbreviates to', () => {
+    expect([formatByteSize(1, 'en'), formatByteSize(20, 'en'), formatByteSize(1500, 'en')]).to.deep.equal(['1 B', '20 B', '1.5 kB']);
+    expect(['ja', 'pt-PT', 'fr'].map((locale) => formatByteSize(20, locale).replace(/\s/gu, ' '))).to.deep.equal(['20 B', '20 B', '20 o']);
+    // A locale whose kilo rung is itself a word keeps Intl's consistent short wording.
+    const arabic = (amount: number) => new Intl.NumberFormat('ar', { style: 'unit', unit: 'byte', unitDisplay: 'short' }).format(amount);
+    expect(formatByteSize(20, 'ar')).to.equal(arabic(20));
+    expect(formatByteSize(20, 'en', { unit: 'bit' })).to.equal('20 bit');
+    expect(formatByteSize(20, 'en', { display: 'long' })).to.equal('20 bytes');
+  });
+
   it('returns an empty string for a value that is not a finite number', () => {
     expect(formatByteSize(Number.NaN, 'en')).to.equal('');
     expect(formatByteSize(Number.POSITIVE_INFINITY, 'en')).to.equal('');
@@ -63,8 +73,8 @@ describe('formatFileSize', () => {
   it('scales on binary rungs through PB with Intl unit wording and at most one fraction digit', () => {
     const intl = (amount: number, unit: string) =>
       new Intl.NumberFormat('en', { style: 'unit', unit, unitDisplay: 'short', maximumFractionDigits: 1 }).format(amount);
-    expect(formatFileSize(0, 'en')).to.equal(intl(0, 'byte'));
-    expect(formatFileSize(512, 'en')).to.equal(intl(512, 'byte'));
+    expect(formatFileSize(0, 'en')).to.equal('0 B');
+    expect(formatFileSize(512, 'en')).to.equal('512 B');
     expect(formatFileSize(1023.96, 'en')).to.equal(intl(1, 'kilobyte'));
     expect(formatFileSize(1536, 'en')).to.equal(intl(1.5, 'kilobyte'));
     expect(formatFileSize(2_415_919, 'en')).to.equal(intl(2.3, 'megabyte'));

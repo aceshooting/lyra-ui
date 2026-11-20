@@ -4,6 +4,7 @@ import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraSegmentedItem } from '../../layout/segmented/segmented.class.js';
@@ -513,7 +514,9 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
               role="group"
               aria-label=${this.localize('retrievalFiltersLabel')}
             >
-              ${scope.map(
+              ${repeat(
+                scope,
+                (s) => s,
                 (s) => html`<lr-chip
                   variant="brand"
                   removable
@@ -529,7 +532,9 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
                   >${s}</lr-chip
                 >`
               )}
-              ${Object.entries(filters).map(
+              ${repeat(
+                Object.entries(filters),
+                ([k]) => k,
                 ([k, v]) => html`<lr-chip
                   removable
                   value=${k}

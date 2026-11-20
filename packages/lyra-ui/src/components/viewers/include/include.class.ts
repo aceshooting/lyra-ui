@@ -19,7 +19,7 @@ import {
   type LyraIncludeMode,
 } from './include-resource.js';
 import { styles } from './include.styles.js';
-import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
+import type { AnchorResultDetail, TextSelectDetail } from '../../../internal/document-anchors.js';
 import { sanitizePassiveMarkup } from '../../../internal/passive-markup.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -270,11 +270,6 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
   /** Opts out of sharing bounded, sanitized remote resources with matching Include requests: no
    *  retained values and no in-flight deduplication. By default they are shared. */
   @property({ type: Boolean, attribute: 'without-cache' }) withoutCache = false;
-  /** Shared text search and anchor-target API for sanitized light-DOM includes. */
-  override async search(query: string): Promise<number> { return super.search(query); }
-  override async searchNext(): Promise<boolean> { return super.searchNext(); }
-  override async searchPrevious(): Promise<boolean> { return super.searchPrevious(); }
-  override clearSearch(): void { super.clearSearch(); }
 
   private generation = 0;
   private resourceLease?: ResourceCacheLease<string>;

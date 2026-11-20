@@ -26,14 +26,15 @@ export function devWarn(message: string): void {
  * Dev-mode-only: emits `message` at most once per `key` for the page. Shares the exact gate and
  * dedupe store `warnUnknownAttributes` uses below, so a diagnostic added by a component behaves
  * like the attribute diagnostic: silent in production, silent when Lit itself is not in dev mode,
- * and never repeated for the same key however many instances exist.
+ * and never repeated for the same key however many instances exist. Optional `details` (a caught
+ * error, say) are logged after the message.
  */
-export function devWarnOnce(key: string, message: string): void {
+export function devWarnOnce(key: string, message: string, ...details: unknown[]): void {
   const warnings = litDevWarnings();
   if (!warnings) return;
   if (warnings.has(key)) return;
   warnings.add(key);
-  console.warn(message);
+  console.warn(message, ...details);
 }
 
 const englishDefaultKeys = new Map<string, ReadonlySet<string>>();

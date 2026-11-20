@@ -12741,7 +12741,7 @@
       }
     },
     {
-      "module": "src/components/viewers/document-viewer/anchors.ts",
+      "module": "src/internal/document-anchors.ts",
       "exportName": "AnchorResultDetail",
       "kind": "interface",
       "fingerprint": "f73c288e0a1195f62d8a",
@@ -12761,7 +12761,7 @@
       }
     },
     {
-      "module": "src/components/viewers/document-viewer/anchors.ts",
+      "module": "src/internal/document-anchors.ts",
       "exportName": "AnchorTargetCapabilities",
       "kind": "interface",
       "fingerprint": "3141ec8d62f72a79ea0b",
@@ -12781,7 +12781,7 @@
       }
     },
     {
-      "module": "src/components/viewers/document-viewer/anchors.ts",
+      "module": "src/internal/document-anchors.ts",
       "exportName": "HighlightActivateDetail",
       "kind": "interface",
       "fingerprint": "2e2b23bb6c933d13057b",
@@ -12804,7 +12804,7 @@
       }
     },
     {
-      "module": "src/components/viewers/document-viewer/anchors.ts",
+      "module": "src/internal/document-anchors.ts",
       "exportName": "LyraHighlight",
       "kind": "interface",
       "fingerprint": "1d83bbfffdd5311a9ba8",
@@ -12827,7 +12827,7 @@
       }
     },
     {
-      "module": "src/components/viewers/document-viewer/anchors.ts",
+      "module": "src/internal/document-anchors.ts",
       "exportName": "TextSelectDetail",
       "kind": "interface",
       "fingerprint": "9b6bb755d23773a2bd83",
@@ -12850,7 +12850,7 @@
       }
     },
     {
-      "module": "src/components/viewers/document-viewer/anchors.ts",
+      "module": "src/internal/document-anchors.ts",
       "exportName": "TextSelectRect",
       "kind": "interface",
       "fingerprint": "2a0d3105dacf2f2a20a1",
@@ -22299,7 +22299,7 @@
       }
     },
     {
-      "module": "src/components/media/file-input/accept.ts",
+      "module": "src/internal/file-accept.ts",
       "exportName": "FileIntakeRejected",
       "kind": "interface",
       "fingerprint": "ece14b77504bbfb486dc",
@@ -22317,7 +22317,7 @@
       }
     },
     {
-      "module": "src/components/media/file-input/file-intake.ts",
+      "module": "src/internal/file-intake.ts",
       "exportName": "FileIntakeDetail",
       "kind": "interface",
       "fingerprint": "367f66c95181b3e7f59f",

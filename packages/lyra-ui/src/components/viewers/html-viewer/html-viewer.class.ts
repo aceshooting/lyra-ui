@@ -15,7 +15,7 @@ import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { viewerFrameStyles } from '../viewer-frame.js';
-import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
+import type { AnchorResultDetail, TextSelectDetail } from '../../../internal/document-anchors.js';
 import { sanitizePassiveMarkupFragment } from '../../../internal/passive-markup.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
@@ -103,11 +103,6 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
   @property() name = '';
   /** CSS length that caps the scrollable body; invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
-  /** Shared text search and anchor-target API for sanitized HTML output. */
-  override async search(query: string): Promise<number> { return super.search(query); }
-  override async searchNext(): Promise<boolean> { return super.searchNext(); }
-  override async searchPrevious(): Promise<boolean> { return super.searchPrevious(); }
-  override clearSearch(): void { super.clearSearch(); }
 
   @state() private fetchState: HtmlFetchState = { kind: 'idle' };
   private readonly transport = new ViewerSourceController(this, {

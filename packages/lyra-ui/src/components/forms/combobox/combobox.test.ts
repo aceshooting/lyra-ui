@@ -21,6 +21,8 @@ import { __setAnchoredOverlayRuntimeLoaderForTesting, type AnchoredOverlayRuntim
 import "../../../translations/ar/forms.js";
 import "../../../translations/ar/shared.js";
 import { settleComboboxSource } from '../../../../test/wtr-combobox.js';
+import { rearmDevWarnings } from '../../../../test/expected-dev-warnings.js';
+beforeEach(() => rearmDevWarnings('lr-combobox-source-rejected'));
 
 const requiredItem = <T>(items: ArrayLike<T>, index: number, description: string): T => {
   const item = items[index];

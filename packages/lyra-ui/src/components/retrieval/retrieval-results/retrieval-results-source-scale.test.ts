@@ -121,14 +121,14 @@ it('reconciles globally absent selected IDs silently after reconnect with exactl
   const provider = source(); let lookups = 0; provider.lookup = async () => { lookups++; return lookups === 1 ? [entry(9)] : []; };
   const el = await fixture<LyraRetrievalResults>(html`<lr-retrieval-results .selectedChunkIds=${['c9']} .dataSource=${provider}></lr-retrieval-results>`);
   await list(el, 'c0'); await waitUntil(() => !el.shadowRoot!.querySelector('[part="source-selection-status"]')); let events = 0; el.addEventListener('lr-selection-change', () => events++);
-  const parent = el.parentNode!; el.remove(); parent.appendChild(el); await waitUntil(() => el.selectedChunkIds.length === 0); expect(lookups).to.equal(2); expect(events).to.equal(0);
+  const parent = el.parentNode!; el.remove(); await new Promise(resolve => setTimeout(resolve)); parent.appendChild(el); await waitUntil(() => el.selectedChunkIds.length === 0); expect(lookups).to.equal(2); expect(events).to.equal(0);
 });
 it('does not emit a pending user transaction after disconnect and authoritative replay', async () => {
   const provider = source(); const pending: ((rows: ReturnType<typeof entry>[]) => void)[] = [];
   provider.lookup = () => new Promise(resolve => pending.push(resolve));
   const el = await fixture<LyraRetrievalResults>(html`<lr-retrieval-results .dataSource=${provider}></lr-retrieval-results>`);
   const control = await checkbox(el, 'c0'); let events = 0; el.addEventListener('lr-selection-change', () => events++); control.click(); await waitUntil(() => pending.length === 1);
-  const parent = el.parentNode!; el.remove(); parent.appendChild(el); pending[0]!([entry(0)]); await waitUntil(() => pending.length === 2); pending[1]!([]);
+  const parent = el.parentNode!; el.remove(); await new Promise(resolve => setTimeout(resolve)); parent.appendChild(el); pending[0]!([entry(0)]); await waitUntil(() => pending.length === 2); pending[1]!([]);
   await waitUntil(() => el.selectedChunkIds.length === 0); expect(events).to.equal(0);
 });
 it('uses canonical source order for complete selected records while preserving explicit ID order', async () => {

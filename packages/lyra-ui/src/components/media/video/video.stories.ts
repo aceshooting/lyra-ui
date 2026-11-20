@@ -61,6 +61,13 @@ export const DeclarativeSources: Story = {
   `,
 };
 
+/** A source with no allowlisted URL shows the localized failure notice and fires `error`. */
+export const RejectedSource: Story = {
+  render: () => html`
+    <lr-video src="file:///not-allowed.mp4" title="Rejected source"></lr-video>
+  `,
+};
+
 export const Narrow320: Story = {
   render: () => html`
     <div style="inline-size: var(--lr-size-20rem)">

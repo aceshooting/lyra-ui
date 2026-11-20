@@ -663,6 +663,16 @@ it('announces from a boxless host that explicitly overrides an ancestor hidden v
 });
 
 describe('auto-advance and backspace navigation', () => {
+  it('does not auto-advance after an input listener moved focus elsewhere', async () => {
+    const el = (await fixture(html`<lr-known-date locale="en-GB"></lr-known-date>`)) as LyraKnownDate;
+    await el.updateComplete;
+    fieldFor(el, 'day').focus();
+    el.addEventListener('lr-input', () => fieldFor(el, 'year').focus(), { once: true });
+    typeInto(fieldFor(el, 'day'), '27');
+    await el.updateComplete;
+    expect(el.shadowRoot!.activeElement === fieldFor(el, 'year')).to.equal(true);
+  });
+
   it('auto-advances focus after the 2nd digit in day or month, but not after the 4th digit in year', async () => {
     const el = (await fixture(html`<lr-known-date locale="en-GB"></lr-known-date>`)) as LyraKnownDate;
     await el.updateComplete;

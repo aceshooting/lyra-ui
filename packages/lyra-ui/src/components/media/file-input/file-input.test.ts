@@ -1948,7 +1948,7 @@ describe("reviewed Web Awesome Pro file-input surface", () => {
     }
     expect(
       el.shadowRoot!.querySelector('[part~="file-size"]')!.textContent
-    ).to.contain("byte");
+    ).to.match(/\d B$/);
   });
 
   it("keeps programmatic files silent while synchronizing form submission and required validity", async () => {

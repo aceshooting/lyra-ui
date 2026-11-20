@@ -30,7 +30,7 @@ import type {
   HighlightActivateDetail,
   LyraAnchor,
   LyraHighlight,
-} from '../document-viewer/anchors.js';
+} from '../../../internal/document-anchors.js';
 import {
   sanitizeCssLength,
   sanitizePercentRect,

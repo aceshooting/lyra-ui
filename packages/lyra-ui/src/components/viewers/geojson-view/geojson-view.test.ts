@@ -13,7 +13,7 @@ import { LyraGeojsonView } from './geojson-view.class.js';
 import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
 import { getDefaultDocumentRendererRegistry, loadDocumentRenderer } from '../document-viewer/registry.js';
 import { nothing } from 'lit';
-import type { LyraHighlight } from '../document-viewer/anchors.js';
+import type { LyraHighlight } from '../../../internal/document-anchors.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { viewerHostRole } from '../viewer-semantic-owner.js';
 const GEOJSON_URL = 'https://example.test/zones.geojson';

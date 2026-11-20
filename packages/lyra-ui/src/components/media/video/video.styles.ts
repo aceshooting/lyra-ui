@@ -53,6 +53,18 @@ export const styles = css`
     background: var(--lr-color-overlay-strong);
   }
 
+  [part='error'] {
+    position: absolute;
+    inset: 0;
+    z-index: var(--lr-layer-content);
+    display: grid;
+    place-items: center;
+    padding: var(--lr-space-m);
+    background: var(--lr-color-overlay-strong);
+    color: var(--controls-color, var(--lr-color-text));
+    text-align: center;
+  }
+
   [part='poster-overlay'] img {
     position: absolute;
     inset: 0;

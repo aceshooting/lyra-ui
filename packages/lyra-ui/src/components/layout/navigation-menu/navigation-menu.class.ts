@@ -172,7 +172,7 @@ export class LyraNavigationMenu extends LyraElement<LyraNavigationMenuEventMap> 
   /** Accessible name of the `nav` landmark, mapped to the host `aria-label` attribute. Attribute
    * presence wins, so `aria-label=""` leaves the landmark deliberately unnamed; with no value the
    * landmark is named from `label`, then the localized "Navigation". */
-  @property({ attribute: 'aria-label' }) accessibleLabel?: string;
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   /** Accessible name of the `nav` landmark when no host `aria-label` is set. A blank or
    * whitespace-only string is treated as unset and uses the localized "Navigation". */

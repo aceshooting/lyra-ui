@@ -104,6 +104,8 @@ export class SourcePageController<T, Q, S = undefined> implements ReactiveContro
   /** @internal */ selectionVersion = 0;
   private locateVersion = 0;
   private connected: boolean;
+  /** Set on disconnect, cleared by any reset: a reconnect that finds it still set was a DOM move. */
+  private intact = false;
   private notification?: object;
   private lastPage?: PageIntent<Q>;
   /** @internal */ lastSelection?: readonly string[];
@@ -118,7 +120,7 @@ export class SourcePageController<T, Q, S = undefined> implements ReactiveContro
   constructor(private readonly host: HTMLElement & ReactiveControllerHost, options: SourcePageOptions<T, Q, S>) {
     this.options = Object.freeze({ ...options });
     this.connected = host.isConnected;
-    this.authority = new SourceRequestController(host, { channels: ['page', 'selection', 'locate'], onReset: () => this.reset() });
+    this.authority = new SourceRequestController(host, { channels: ['page', 'selection', 'locate'], onReset: () => this.reset(), deferDisconnect: true });
     host.addController(this);
   }
 
@@ -376,6 +378,7 @@ export class SourcePageController<T, Q, S = undefined> implements ReactiveContro
   }
 
   private reset(): void {
+    this.intact = false;
     this.pageVersion++; this.selectionVersion++; this.locateVersion++;
     this.stop(this.pageLane, false); this.stop(this.selectionLane, false); this.stop(this.locateLane, false);
     this.cache.clear(); this.notification = undefined; this.snapshot = initialState<T, S>();
@@ -383,8 +386,9 @@ export class SourcePageController<T, Q, S = undefined> implements ReactiveContro
 
   adopted(): void { this.authority.adopted(); }
   hostConnected(): void {
-    const reconnecting = !this.connected;
+    const reconnecting = !this.connected && !this.intact;
     this.connected = true;
+    this.intact = false;
     if (reconnecting && this.binding) {
       const page = this.lastPage;
       const selection = this.lastSelection;
@@ -393,7 +397,7 @@ export class SourcePageController<T, Q, S = undefined> implements ReactiveContro
       this.notify();
     }
   }
-  hostDisconnected(): void { this.connected = false; this.reset(); }
+  hostDisconnected(): void { this.connected = false; this.intact = true; }
 }
 
 /**

@@ -1,4 +1,4 @@
-export type { AnchorResultDetail, LyraAnchorKind, TextSelectDetail } from './viewers/document-viewer/anchors.js';
+export type { AnchorResultDetail, LyraAnchorKind, TextSelectDetail } from '../internal/document-anchors.js';
 export type { LyraPageViewerStateChangeDetail, PageThumbnailRenderHandle } from './viewers/page-rail/page-rail.class.js';
 export type { LyraPageViewerSnapshot } from './viewers/page-rail/page-viewer-snapshot.js';
 export type { LyraSearchChangeDetail, LyraTextViewerTargetEventMap } from '../internal/text-viewer-target.js';

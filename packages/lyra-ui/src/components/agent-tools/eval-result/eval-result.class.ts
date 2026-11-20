@@ -154,7 +154,6 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
   private pairVersion = 0;
   private sourceSyncing = false;
   private sourceResync = false;
-  private sourceLocaleUpdate = false;
   private sourceInputs?: readonly unknown[];
   private sourceOrderInputs?: readonly unknown[];
   private pairInputs?: readonly unknown[];
@@ -206,23 +205,13 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
   private get sourceMode(): boolean { return this.dataSource !== undefined; }
 
   override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
-    if (this.sourceLocaleUpdate) {
-      super.requestUpdate(...args);
-      this.syncSource();
-      return;
-    }
-    if (args[0] === undefined && !this.sourceLocaleUpdate && (!this.sourceOrderInputs || this.effectiveLocale === this.sourceOrderInputs[3])) this.sourceEpoch = (this.sourceEpoch ?? 0) + 1;
+    if (args[0] === undefined) this.sourceEpoch = (this.sourceEpoch ?? 0) + 1;
     if (args[0] === undefined || ['dataSource', 'sourcePage', 'sourcePageSize'].includes(String(args[0]))) this.syncSource();
     if (['selectedRunId', 'baselineRunId'].includes(String(args[0])) && this.sourcePages && this.sourceMode) {
       this.syncSource(); this.syncPair();
     }
     if (args[0] === 'rubricKeys') { this.sourceReviewMemo = undefined; this.pairFailure = undefined; }
     super.requestUpdate(...args);
-  }
-  override attributeChangedCallback(name: string, old: string | null, value: string | null): void {
-    const previous = this.sourceLocaleUpdate;
-    if (name === 'lang' || name === 'locale') this.sourceLocaleUpdate = true;
-    try { super.attributeChangedCallback(name, old, value); } finally { this.sourceLocaleUpdate = previous; }
   }
   override connectedCallback(): void { super.connectedCallback(); this.syncSource(); }
   override disconnectedCallback(): void { this.clearSourceLifecycle(); super.disconnectedCallback(); }

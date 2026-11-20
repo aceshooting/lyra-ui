@@ -5,6 +5,7 @@ import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { csvRow } from '../../../internal/csv.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
+import { isRepeatedActivationKey } from '../../../internal/list-navigation.js';
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { sqrtStep } from './heatmap-scale.js';
 import { MAX_HEATMAP_CELLS } from './heatmap-limits.js';
@@ -282,6 +283,7 @@ async function sourceKeydown(h: HeatmapSourceHost, event: KeyboardEvent): Promis
   let row = cursor?.row ?? viewport.rowStart, col = cursor?.col ?? viewport.columnStart;
   if (event.key === 'Enter' || event.key === ' ') {
     event.preventDefault();
+    if (isRepeatedActivationKey(event)) return;
     if (event.shiftKey) { const tile = sourceTileAt(h, row, col); if (tile) sourceRange(h, tile); }
     else await sourceActivate(h, row, col);
     return;

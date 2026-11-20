@@ -7,11 +7,11 @@ export interface MapHashCamera {
   readonly bearing: number;
   readonly pitch: number;
 }
-export type MapInitialBounds = readonly [readonly [number, number], readonly [number, number]];
-export type MapHashOptionResult = { readonly status: 'enabled'; readonly key: string } | { readonly status: 'disabled' | 'invalid' };
+type MapInitialBounds = readonly [readonly [number, number], readonly [number, number]];
+type MapHashOptionResult = { readonly status: 'enabled'; readonly key: string } | { readonly status: 'disabled' | 'invalid' };
 export type MapHashReadResult = { readonly status: 'camera'; readonly camera: MapHashCamera } | { readonly status: 'disabled' | 'none' | 'invalid' };
-export interface MapHashWriteResult { readonly status: 'written' | 'disabled' | 'invalid'; readonly fragment: string; }
-export type MapInitialView = { readonly kind: 'hash' | 'camera'; readonly camera: MapHashCamera } | { readonly kind: 'bounds'; readonly bounds: MapInitialBounds } | { readonly kind: 'none' | 'invalid' };
+interface MapHashWriteResult { readonly status: 'written' | 'disabled' | 'invalid'; readonly fragment: string; }
+type MapInitialView = { readonly kind: 'hash' | 'camera'; readonly camera: MapHashCamera } | { readonly kind: 'bounds'; readonly bounds: MapInitialBounds } | { readonly kind: 'none' | 'invalid' };
 const UNSAFE = Symbol('unsafe-data');
 const MAX_FRAGMENT = 65536, MAX_TOKENS = 1024;
 function own(value: unknown, key: string): unknown {

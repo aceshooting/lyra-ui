@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `@aceshooting/lyra-3d`, `dompurify` — see `llms/peers.md`
-- **Themeable via** 22 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 23 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -89,7 +89,11 @@ play/pause control (absent, and therefore a no-op, under `controls="none"`).
 **Events:** native `ended`, `error`, `loadedmetadata`, `pause`, `play`, `timeupdate`, and
 `volumechange`, relayed exactly once from the host as native `Event` instances. They remain
 non-bubbling, non-composed, and non-cancelable. Scrubbing the custom timeline also dispatches an
-immediate host `timeupdate`, before a browser's eventual native seek notification. The internal
+immediate host `timeupdate`, before a browser's eventual native seek notification. A non-empty `src`
+or `<source>` set with no allowlisted URL never reaches the native element; the host still fires one
+`error` `Event` of the same shape. That rejection and a native media error both show the localized
+`[part="error"]` notice (key `avPlayerFailedToLoad`) and announce it assertively; new sources clear
+it. The internal
 play/pause control's `focus`/`blur` are relayed exactly once as owner-realm native `FocusEvent`s
 (bubbling and composed, preserving `relatedTarget`).
 With the optional panorama, `lr-panorama-camera-change` (`detail: { camera }`, after a user gesture or
@@ -116,7 +120,7 @@ selected for Lyra's custom overlay use native `mode="hidden"`, keeping cue activ
 without asking the browser to paint a duplicate native caption layer.
 
 **CSS parts:** `base` and `video-wrapper` (aliases on the same root node), `caption`,
-`caption-overlay`, `controls`, `controls-overlay`, `poster-overlay`, `poster-play-button`,
+`caption-overlay`, `controls`, `controls-overlay`, `error`, `poster-overlay`, `poster-play-button`,
 `progress`, `thumbnail`, `timeline`, `timeline-indicator`, `timeline-thumb`, `timeline-track`,
 `video`, and `video-title-overlay`.
 Panorama parts (with `projection="equirectangular"`): `panorama` (the keyboard-operable spherical

@@ -1,5 +1,5 @@
 export type { LyraDiffViewLayout } from './utility/diff-view/diff-view.class.js';
-export type { HighlightActivateDetail, LyraAnchor, LyraHighlight } from './viewers/document-viewer/anchors.js';
+export type { HighlightActivateDetail, LyraAnchor, LyraHighlight } from '../internal/document-anchors.js';
 export type { LyraAnchorTargetEventMap } from '../internal/anchor-target-base.js';
 export type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../internal/clipboard.js';
 export type { ShikiLanguageInput } from '../internal/shiki/core.js';

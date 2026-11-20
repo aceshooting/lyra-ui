@@ -317,7 +317,7 @@ function snapshotTourSteps(value: unknown): readonly Readonly<LyraTourStep>[] {
  *   for `lr-tour-step-change-request` and re-renders them) itself, the same "consumer owns slotted
  *   content" pattern `lr-dialog`'s default slot already uses.
  * @event lr-tour-start - Fired by `start()`. `detail: { index }`. Not cancelable.
- * @event lr-tour-step-activate - After rendering a changed index, emits `{ previousIndex, index, step, via }`; direct writes use `via: "api"`.
+ * @event lr-tour-step-activate - While open, after rendering a changed index (never for a closed tour), emits `{ previousIndex, index, step, via }`; direct writes use `via: "api"`.
  * @event lr-tour-step-change-request - Fired by `next()`/`back()`/`goToStep()` before
  *   `activeIndex` changes. `detail: { index, previousIndex, step, via }`. Cancelable -- a listener
  *   calling `preventDefault()` leaves `activeIndex` unchanged, letting a tour gate advancement on a
@@ -499,6 +499,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   private overlayInteractive?: boolean;
   private activeTargetSnapshot: HTMLElement | null = null;
   private focusReturnTarget: HTMLElement | null = null;
+  private openAwaitingSteps = false;
   private escapedInset?: {
     previous: { property: string; value: string; priority: string }[];
     written: string;
@@ -532,12 +533,21 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
       }
       this.nativeModal.prepare(!interactive);
     }
-    const cannotOpen = this.open && this.steps.length === 0;
+    // A declared `open` whose `steps` have not arrived yet stays requested until they do (assignment
+    // order must not matter); an explicit emptying of `steps` while open still ends as unavailable.
+    const noSteps = this.open && this.steps.length === 0;
+    const awaitingSteps = noSteps && (!this.hasUpdated || (this.openAwaitingSteps && !changed.has('steps')));
+    const cannotOpen = noSteps && !awaitingSteps;
+    const stepsArrived = this.open && this.openAwaitingSteps && this.steps.length > 0;
+    this.openAwaitingSteps = awaitingSteps;
+    if (awaitingSteps) {
+      return;
+    }
     if (cannotOpen) {
       this.commitOpen(false);
       this.deactivateOverlayInternal();
       if (this.hasUpdated) this.emit('lr-tour-end', { reason: 'unavailable' });
-    } else if (changed.has('open')) {
+    } else if (changed.has('open') || stepsArrived) {
       if (this.open) {
         const active = deepActiveElement(this.ownerDocument);
         this.focusReturnTarget = isHtmlElement(active) ? active : null;
@@ -574,7 +584,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     super.updated(changed);
     const activationChanged = changed.has('open') || changed.has('activeIndex') || changed.has('steps');
     const geometryChanged = changed.has('placement') || changed.has('distance') || changed.has('spotlightPadding');
-    if (this.open && (activationChanged || geometryChanged)) {
+    if (this.open && this.steps.length > 0 && (activationChanged || geometryChanged)) {
       const preserveInteractiveTargetFocus = changed.has('steps') && this.canPreserveInteractiveTargetFocus();
       const overlayChanged = this.activateOverlayInternal();
       const shouldFocus =
@@ -590,7 +600,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     }
     const previousIndex: unknown = changed.get('activeIndex');
     const step = this.steps[this.activeIndex];
-    if (typeof previousIndex === 'number' && previousIndex !== this.activeIndex && step) {
+    if (this.open && typeof previousIndex === 'number' && previousIndex !== this.activeIndex && step) {
       this.emit('lr-tour-step-activate', Object.freeze({ previousIndex, index: this.activeIndex, step, via: this.stepVia }));
     }
   }

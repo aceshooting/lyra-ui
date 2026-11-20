@@ -1,6 +1,8 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import '../../lr-combobox.js';
 import type { LyraCombobox, ComboboxSource } from '../../lr-combobox.js';
+import { rearmDevWarnings } from '../../../../test/expected-dev-warnings.js';
+beforeEach(() => rearmDevWarnings('lr-combobox-source-rejected'));
 
 /** Every `source` below rejects or resolves deliberately; the component logs a console warning for
  *  a real rejection, which is noise here, not a failure. */

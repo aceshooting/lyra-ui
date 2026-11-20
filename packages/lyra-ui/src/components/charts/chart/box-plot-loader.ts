@@ -1,6 +1,6 @@
 import { loadChartJs, type ChartJsModule } from './chart-core-loader.js';
 import { isObjectLike } from '../../../internal/object-guards.js';
-import { isConstructor, warnChartPeerImport } from './chart-peer.js';
+import { isConstructor, warnChartPeer, warnChartPeerImport } from './chart-peer.js';
 import { createOptionalPeerLoader, resolveOptionalPeerCapability, unwrapOptionalPeerDefault } from '../../../internal/optional-peer-capabilities.js';
 
 interface BoxPlotRegistrationConstructor {
@@ -59,7 +59,7 @@ export async function loadBoxPlotAndRegister(
     chart.Chart.register(plugin.BoxPlotController, plugin.BoxAndWiskers);
     return plugin;
   } catch (error) {
-    console.warn('<lr-box-plot> could not register the box plot renderer.', error);
+    warnChartPeer('box-plot:register', '<lr-box-plot> could not register the box plot renderer.', error);
     return null;
   }
 }
@@ -81,7 +81,7 @@ export async function loadBoxPlotPlugin(): Promise<BoxPlotModule | null> {
       chart.Chart.register(plugin.BoxPlotController, plugin.BoxAndWiskers);
       registered = plugin;
     } catch (error) {
-      console.warn('<lr-box-plot> could not register the box plot renderer.', error);
+      warnChartPeer('box-plot:register', '<lr-box-plot> could not register the box plot renderer.', error);
       return null;
     }
   }

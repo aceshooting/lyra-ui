@@ -4,7 +4,7 @@ import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/t
 import '../../lr-calendar-viewer.js';
 import type { LyraCalendarViewer } from '../../lr-calendar-viewer.js';
 import { getDefaultDocumentRendererRegistry, loadDocumentRenderer } from '../document-viewer/registry.js';
-import type { LyraHighlight } from '../document-viewer/anchors.js';
+import type { LyraHighlight } from '../../../internal/document-anchors.js';
 import { loadIcal } from './calendar-loader.js';
 import { viewerHostRole } from '../viewer-semantic-owner.js';
 

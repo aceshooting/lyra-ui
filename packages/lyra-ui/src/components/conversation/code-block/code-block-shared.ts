@@ -42,7 +42,7 @@ import type {
   LyraAnchor,
   LyraHighlight,
   TextSelectRect,
-} from '../../viewers/document-viewer/anchors.js';
+} from '../../../internal/document-anchors.js';
 import { resolveIsDarkTheme } from '../../../internal/shiki/dark-theme.js';
 
 const INVALID_HIGHLIGHT_LINES_WARNING_KEY = 'lyra-code-block-invalid-highlight-lines';
@@ -119,7 +119,7 @@ export function clampCodeBlockFocusedLine(
   return Math.min(Math.max(1, focusedLine), lineCount);
 }
 
-export interface CodeBlockLineFocusHost extends HTMLElement {
+interface CodeBlockLineFocusHost extends HTMLElement {
   readonly renderRoot: HTMLElement | DocumentFragment;
 }
 
@@ -243,7 +243,7 @@ export function codeBlockPreSuppliedGrammar<T>(
 
 /** The LitElement surface `scrollCodeBlockToAnchor()` reads -- everything it touches is public on
  *  both components, so neither needs to widen a private field to route through this. */
-export interface CodeBlockAnchorHost {
+interface CodeBlockAnchorHost {
   readonly code: string;
   readonly highlights: readonly LyraHighlight[];
   readonly renderRoot: HTMLElement | DocumentFragment;
@@ -391,7 +391,7 @@ export function applyCodeBlockAriaBusy(
   else host.removeAttribute('aria-busy');
 }
 
-export interface CodeBlockTokenizeOptions
+interface CodeBlockTokenizeOptions
   extends CodeBlockLineTransformerOptions {
   code: string;
   lang: string;
@@ -445,7 +445,7 @@ export function parseHighlightLines(
   return lines;
 }
 
-export interface CodeBlockLineTransformerOptions {
+interface CodeBlockLineTransformerOptions {
   lineNumbers: boolean;
   activatableLines: boolean;
   focusedLine: number;
@@ -529,7 +529,7 @@ export function codeBlockLineTransformer(
   };
 }
 
-export interface CodeBlockPlainCodeOptions {
+interface CodeBlockPlainCodeOptions {
   code: string;
   lineNumbers: boolean;
   activatableLines: boolean;
@@ -702,7 +702,7 @@ function renderCodeBlockHeader(
     `;
 }
 
-export interface CodeBlockShellOptions {
+interface CodeBlockShellOptions {
   filename: string;
   language: string;
   copyable: boolean;
@@ -808,7 +808,7 @@ interface CodeBlockInteractionHost extends HTMLElement {
 }
 
 /** Reactive writes and typed events supplied by the code-block host. */
-export interface CodeBlockInteractionOptions {
+interface CodeBlockInteractionOptions {
   host: CodeBlockInteractionHost;
   setFocusedLine: (line: number) => void;
   setJustCopied: (value: boolean) => void;
@@ -967,7 +967,7 @@ export class CodeBlockInteractionController {
  *  component keeps `hasHeaderActions` as its own `@state()` (it reaches the shared render
  *  options this module's `renderCodeBlockShell()` accepts) and hands the setter in as a
  *  callback, like the focused-line setter in `CodeBlockInteractionOptions`. */
-export interface CodeBlockHeaderActionsOptions {
+interface CodeBlockHeaderActionsOptions {
   host: HTMLElement;
   setHasHeaderActions: (value: boolean) => void;
 }

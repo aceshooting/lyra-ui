@@ -1,6 +1,6 @@
 import { captureDevWarnings } from '../../../../test/expected-dev-warnings.js';
 import { expect } from '@open-wc/testing';
-import { loadKatex, getKatex } from './katex-loader.js';
+import { getKatex } from './katex-loader.js';
 import { createMarkdownKatexState } from './markdown-shared.js';
 
 const KATEX_CACHE_GENERATION = Symbol.for('@aceshooting/lyra-ui/markdown-katex-cache-generation');
@@ -8,18 +8,18 @@ function clearKatexCache(): void {
   Reflect.set(globalThis, KATEX_CACHE_GENERATION, {});
 }
 
-describe('loadKatex', () => {
+describe('getKatex', () => {
   afterEach(() => clearKatexCache());
 
   it('resolves the katex module on success', async () => {
     const fakeKatex = { renderToString: () => '<math></math>' };
-    const result = await loadKatex(() => Promise.resolve({ default: fakeKatex } as never));
+    const result = await getKatex(() => Promise.resolve({ default: fakeKatex } as never));
     expect(result).to.equal(fakeKatex);
   });
 
   it('accepts a callable module that carries renderToString', async () => {
     const callableKatex = Object.assign(() => undefined, { renderToString: () => '<math></math>' });
-    expect(await loadKatex(() => Promise.resolve(callableKatex))).to.equal(callableKatex);
+    expect(await getKatex(() => Promise.resolve(callableKatex))).to.equal(callableKatex);
   });
 
   it('uses a fixed, bounded development diagnostic when the optional peer fails and stays silent in production', async () => {
@@ -31,8 +31,8 @@ describe('loadKatex', () => {
     runtime.litIssuedWarnings = new Set();
     console.warn = (...args: unknown[]) => messages.push(args.map(String).join(' '));
     try {
-      expect(await loadKatex(() => Promise.reject(error))).to.equal(null);
-      expect(await loadKatex(() => Promise.reject(error))).to.equal(null);
+      expect(await getKatex(() => Promise.reject(error))).to.equal(null);
+      expect(await getKatex(() => Promise.reject(error))).to.equal(null);
       expect(messages).to.deep.equal([
         '<lr-markdown>/<lr-markdown-core>: Math rendering is unavailable because the optional KaTeX peer could not load. TeX is rendered as literal text.',
       ]);
@@ -40,7 +40,7 @@ describe('loadKatex', () => {
 
       messages.length = 0;
       delete runtime.litIssuedWarnings;
-      expect(await loadKatex(() => Promise.reject(error))).to.equal(null);
+      expect(await getKatex(() => Promise.reject(error))).to.equal(null);
       expect(messages).to.deep.equal([]);
     } finally {
       if (originalIssuedWarnings === undefined) delete runtime.litIssuedWarnings;
@@ -80,7 +80,7 @@ it('distinguishes missing KaTeX from an import that failed', async () => {
   for (const missing of [true, false]) {
     const failure = Object.assign(new Error('private import failure'), { code: missing ? 'ERR_MODULE_NOT_FOUND' : 'NETWORK' });
     const warnings = await captureDevWarnings(async () => {
-      expect(await loadKatex(() => Promise.reject(failure))).to.equal(null);
+      expect(await getKatex(() => Promise.reject(failure))).to.equal(null);
     });
     expect(warnings).to.have.lengthOf(1);
     expect(warnings[0]).to.include(missing ? 'could not be resolved' : 'could not load');

@@ -13,7 +13,7 @@
  */
 
 import {
-  byteFormat, safeByteUnitStep, type LyraFormatDisplay, type LyraFormatBytesUnit,
+  byteFormat, formatByteAmount, safeByteUnitStep, type LyraFormatDisplay, type LyraFormatBytesUnit,
 } from '../internal/bytes.js';
 import { getDateTimeFormat, getNumberFormat, getRelativeTimeFormat } from '../internal/intl-cache.js';
 import { resolveActiveOrExplicitLocale } from '../internal/localization-runtime.js';
@@ -206,9 +206,9 @@ export function formatBytes(
   // and its scale separately would divide Infinity by Infinity for long, bounded fractions.
   const numeric = Number(value);
   if (!exact && !Number.isFinite(numeric)) return undefined;
-  const { index, amount, options: formatOptions } = byteFormat(numeric, unit, display, unitStep, decimals);
+  const result = byteFormat(numeric, unit, display, unitStep, decimals);
   const scaled = exact
-    ? divideExact(exact.numerator, exact.scale, BigInt(unitStep) ** BigInt(index), decimals)
-    : amount;
-  return formatNumber(scaled, locale, formatOptions);
+    ? divideExact(exact.numerator, exact.scale, BigInt(unitStep) ** BigInt(result.index), decimals)
+    : result.amount;
+  return formatByteAmount(locale, scaled, result);
 }

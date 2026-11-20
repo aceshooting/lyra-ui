@@ -1,4 +1,4 @@
-export type { LyraAnchor } from './viewers/document-viewer/anchors.js';
+export type { LyraAnchor } from '../internal/document-anchors.js';
 export type { LyraPageViewerStateChangeDetail } from './viewers/page-rail/page-rail.class.js';
 export type { LyraPageViewerSnapshot } from './viewers/page-rail/page-viewer-snapshot.js';
 export type { LyraAnchorTargetEventMap } from '../internal/anchor-target-base.js';

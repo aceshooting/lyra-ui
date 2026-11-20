@@ -1,5 +1,5 @@
-import { AggregateFileLimitTracker } from '../../../internal/aggregate-file-limits.js';
-import { finiteCount, finiteRange } from '../../../internal/numbers.js';
+import { AggregateFileLimitTracker } from './aggregate-file-limits.js';
+import { finiteCount, finiteRange } from './numbers.js';
 
 /**
  * Parses a native-`accept`-style string (`".csv,.xlsx"`, `"text/csv"`,

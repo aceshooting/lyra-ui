@@ -30,7 +30,7 @@ import {
   type LyraAnchorTargetEventMap,
 } from '../../../internal/anchor-target-base.js';
 import { parseCellRange } from '../../../internal/cell-range.js';
-import type { LyraAnchor, LyraAnchorKind } from '../document-viewer/anchors.js';
+import type { LyraAnchor, LyraAnchorKind } from '../../../internal/document-anchors.js';
 import { loadSheetJsCached, type SheetJsApi } from './spreadsheet-loader.js';
 import { styles } from './spreadsheet-viewer.styles.js';
 import { assertXlsxArchiveWithinLimits } from './xlsx-resource-guard.js';

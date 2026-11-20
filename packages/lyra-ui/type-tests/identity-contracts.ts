@@ -14,7 +14,7 @@ import type {
 } from '../src/components/layout/dashboard-grid/dashboard-grid.class.js';
 import type { LyraFilterBarFilterDefinition } from '../src/components/layout/filter-bar/filter-bar.class.js';
 import type { LyraAvCue } from '../src/components/media/av-player/av-metadata.js';
-import type { HighlightActivateDetail } from '../src/components/viewers/document-viewer/anchors.js';
+import type { HighlightActivateDetail } from '../src/internal/document-anchors.js';
 import type { LyraHighlightLayer } from '../src/components/viewers/highlight-layer/highlight-layer.class.js';
 import type { LyraApprovalQueue } from '../src/components/agent-tools/approval-queue/approval-queue.class.js';
 import type { LyraTraceTreeEventMap } from '../src/components/agent-tools/trace-tree/trace-tree.class.js';

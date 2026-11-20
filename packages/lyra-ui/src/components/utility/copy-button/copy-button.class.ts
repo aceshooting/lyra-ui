@@ -24,7 +24,7 @@ import {
   type LyraClipboardWriteFailure,
   type LyraClipboardWriteSuccess,
 } from '../../../internal/clipboard.js';
-import type { LyraToolbarAction } from '../../conversation/message-actions/toolbar-actions.js';
+import type { LyraToolbarAction } from '../../../internal/toolbar-actions.js';
 import type { LyraIconButton } from '../../forms/icon-button/icon-button.class.js';
 import { styles } from './copy-button.styles.js';
 import { COPY_FEEDBACK_MS } from '../../../internal/copy-feedback.js';

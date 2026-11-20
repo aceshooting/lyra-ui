@@ -9,7 +9,7 @@ import {
   prioritizedHighlightCandidates,
   type LyraAnchorTargetEventMap,
 } from './anchor-target-base.js';
-import type { LyraAnchor, LyraAnchorKind } from '../components/viewers/document-viewer/anchors.js';
+import type { LyraAnchor, LyraAnchorKind } from './document-anchors.js';
 import { defineElement } from './prefix.js';
 
 class RegionTargetBase extends LyraElement<LyraAnchorTargetEventMap> {

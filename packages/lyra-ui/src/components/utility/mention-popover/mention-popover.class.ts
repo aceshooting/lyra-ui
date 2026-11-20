@@ -1,3 +1,4 @@
+import { SnapshotProperty } from '../../../internal/collection-source-tracker.js';
 import { getOwnDataDescriptor } from '../../../internal/data-descriptors.js';
 import { createHaystackMemo } from '../../../internal/search-haystack.js';
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
@@ -409,8 +410,10 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
   @property({ attribute: false }) anchor?: HTMLElement;
 
   private itemPositions = new WeakMap<object, number>();
-  private _items: readonly Readonly<LyraMentionItem>[] = Object.freeze([]);
-  private itemsSource?: unknown;
+  private readonly itemsSnapshot = new SnapshotProperty<readonly Readonly<LyraMentionItem>[]>(
+    Object.freeze([]),
+    (input) => this.normalizeItems(input),
+  );
 
   /** The candidate set, pre-`query`-filtering. Admits the first 10,000 array positions and
    *  displays a localized limit notice when additional candidates are omitted. Assignment takes a shallow frozen snapshot;
@@ -418,14 +421,15 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
    *  filtered/rendered projection. Assign a new array to update: mutating an array and assigning it
    *  again does not. */
   get items(): readonly Readonly<LyraMentionItem>[] {
-    return this._items;
+    return this.itemsSnapshot.read();
   }
 
   set items(next: readonly LyraMentionItem[]) {
-    const previous = this._items;
     // Rebinding the same array (or this getter's snapshot) is a no-op: assign a new array to update.
-    if (next === this.itemsSource || next === previous) return;
-    this.itemsSource = next;
+    this.itemsSnapshot.assign(this, 'items', next);
+  }
+
+  private normalizeItems(next: unknown): readonly Readonly<LyraMentionItem>[] {
     const source = Array.isArray(next) ? next : [];
     this.inputLimited = source.length > MAX_MENTION_ITEMS;
     const rows: Readonly<LyraMentionItem>[] = new Array(Math.min(source.length, MAX_MENTION_ITEMS));
@@ -447,8 +451,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
       rows[index] = snapshot;
       this.itemPositions.set(snapshot, index);
     }
-    this._items = Object.freeze(rows);
-    this.requestUpdate('items', previous);
+    return Object.freeze(rows);
   }
 
   /** The text typed since the trigger character (`@`/`/`/…) — drives the

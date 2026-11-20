@@ -4,6 +4,7 @@ import { property, state } from 'lit/decorators.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { formatMediaTime } from '../../../internal/media-time.js';
 import { LyraElement, type LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
@@ -228,6 +229,7 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.detached.cancel()) return;
     // A browser-only mount can derive its rows synchronously and never paint the seed. Hydration
     // must reproduce the server's deterministic `items` pass first, then adopt the live children
     // in a corrective update so Lit can reuse the server-rendered row nodes.
@@ -240,7 +242,20 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
     }
   }
 
+  /** A same-task DOM move keeps the active video playing; a genuine disconnect pauses and unloads. */
+  private readonly detached = new DeferredTeardown(() => this.releaseConnection());
+
   override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.detached.schedule();
+  }
+
+  override adoptedCallback(): void {
+    this.detached.flush();
+    super.adoptedCallback();
+  }
+
+  private releaseConnection(): void {
     this.activationGeneration += 1;
     this.reconcileGeneration += 1;
     this.pendingPlay = undefined;
@@ -254,7 +269,6 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
       video.hidden = true;
       this.pauseAndUnload(video);
     }
-    super.disconnectedCallback();
   }
 
   private readonly semanticInternals = attachInternalsSafely(this);

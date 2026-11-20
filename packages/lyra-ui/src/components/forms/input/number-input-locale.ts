@@ -15,7 +15,7 @@
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 
 /** Separators and digits a locale uses, derived from `Intl.NumberFormat`. */
-export interface LocaleNumberSymbols {
+interface LocaleNumberSymbols {
   readonly decimal: string;
   /** Every character accepted as a group separator (a space-like group accepts all spaces). */
   readonly groups: ReadonlySet<string>;

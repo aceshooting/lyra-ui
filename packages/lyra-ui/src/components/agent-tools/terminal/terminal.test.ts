@@ -15,7 +15,7 @@ async function settleClipboard(el: LyraTerminal): Promise<void> {
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
-import type { LyraHighlight } from '../../viewers/document-viewer/anchors.js';
+import type { LyraHighlight } from '../../../internal/document-anchors.js';
 
 /** Reference oracle mirroring the *original* `highlightForLine()` implementation exactly (first
  *  match in array order wins any overlap) -- kept independent of the production code under test

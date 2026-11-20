@@ -26,7 +26,7 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { syncValidityStates } from '../../../internal/custom-states.js';
 import { TypeAheadBuffer } from '../../../internal/type-ahead-buffer.js';
-import { resolveListMove, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
+import { isRepeatedActivationKey, resolveListMove, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { getDisplayNames } from '../../../internal/intl-cache.js';
 import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import {
@@ -173,6 +173,7 @@ export interface LyraLocalePickerEventMap {
   'lr-change-request': CustomEvent<LyraLocaleChangeDetail>;
   'lr-input': CustomEvent<LyraLocaleChangeDetail>;
   'lr-change': CustomEvent<LyraLocaleChangeDetail>;
+  'lr-load-error': CustomEvent<{ value: string; error: unknown }>;
   input: Event;
   change: Event;
   blur: FocusEvent;
@@ -241,6 +242,9 @@ export interface LyraLocalePickerEventMap {
  *   positioning force-close with a non-cancelable notification; ordinary closes can be vetoed.
  * @event lr-after-show - The current opening finished positioning and its transition settled.
  * @event lr-after-hide - The current closing settled and left layout. Not emitted after disconnect.
+ * @event lr-load-error - `localeLoader` rejected for a picked locale. `detail: { value, error }`, where `value`
+ *   is the locale that failed and `error` the rejection reason. The previous value stays committed and
+ *   a retry control is shown.
  * @event lr-change-request - Cancelable before selection, popup, and global locale changes. Same detail as `lr-change`.
  * @event {Event} input - Native event after an accepted selection commits, before `lr-input`.
  * @event lr-input - Non-cancelable notification after an accepted selection commits. Same detail as `lr-change`.
@@ -1267,11 +1271,12 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
         return loader(tag);
       }).then(() => {
         if (ownsSelection()) commitValue();
-      }, () => {
+      }, (error: unknown) => {
         if (!ownsSelection()) return;
         this.loadingTag = undefined;
         this.loadFailureTag = tag;
         this.announceLoad('statusError');
+        this.emit('lr-load-error', { value: tag, error });
       });
     } finally {
       this.commitDispatching = false;
@@ -1346,6 +1351,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
         : Math.max(0, this.activeIndex - 1));
     } else if (event.key === 'Enter') {
       event.preventDefault();
+      if (isRepeatedActivationKey(event)) return;
       const row = rows[this.activeIndex];
       if (row) this.commit(row.tag);
     } else if (event.key === 'Escape' &&
@@ -1428,6 +1434,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
         // (onTriggerClick) to open -- only intercept here to commit/dismiss while already open.
         if (this.open) {
           e.preventDefault();
+          if (isRepeatedActivationKey(e)) return;
           const activeRow = rows[this.activeIndex];
           if (this.activeIndex >= 0 && activeRow) {
             this.commit(activeRow.tag);

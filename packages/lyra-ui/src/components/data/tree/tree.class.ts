@@ -24,7 +24,7 @@ import {
   type LyraSize,
 } from '../../../internal/variants.js';
 import { tag } from '../../../internal/prefix.js';
-import { isHandledOrComposingKey, resolveListMove } from '../../../internal/list-navigation.js';
+import { isHandledOrComposingKey, isRepeatedActivationKey, resolveListMove } from '../../../internal/list-navigation.js';
 import { TreePointerReorder } from './tree-pointer-reorder.js';
 import { styles } from './tree.styles.js';
 import { TreeDataExpansion } from './tree-data-expansion.js';
@@ -1980,7 +1980,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
       case 'Enter':
       case ' ':
         e.preventDefault();
-        current.select();
+        if (!isRepeatedActivationKey(e)) current.select();
         break;
       default:
         return;

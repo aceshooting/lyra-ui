@@ -1,5 +1,5 @@
 import { snapshotStructuredData, admitSnapshotArray, projectSnapshotArray, type SnapshotArrayAdmission as ChartArrayAdmission } from '../../../internal/structured-snapshot.js';
-import { devWarnOnce } from '../../../internal/dev-warning.js';
+import { DEV_DIAGNOSTICS, devWarnOnce } from '../../../internal/dev-warning.js';
 import { getOwnDataDescriptor, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 import type { LyraChartAnnotation, LyraChartConfiguration, LyraChartDataConfiguration, LyraChartDatasetConfiguration, LyraChartPlugin, LyraChartPoint, LyraChartSeries } from './chart-types.js';
@@ -11,7 +11,7 @@ export const MAX_CHART_CONFIGURATION_DEPTH = 32;
 const OMIT_CHART_CONFIGURATION_VALUE = Symbol('omit-chart-configuration-value');
 
 function warnChartInputCap(): void {
-  devWarnOnce(CHART_INPUT_CAP_WARNING_KEY,
+  if (DEV_DIAGNOSTICS) devWarnOnce(CHART_INPUT_CAP_WARNING_KEY,
     'lr-chart: an input array exceeded 10,000 entries; only the first 10,000 are used.');
 }
 

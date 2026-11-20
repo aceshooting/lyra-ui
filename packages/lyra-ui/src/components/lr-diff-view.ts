@@ -1,4 +1,4 @@
-export type { AnchorResultDetail, HighlightActivateDetail, LyraAnchorKind } from './viewers/document-viewer/anchors.js';
+export type { AnchorResultDetail, HighlightActivateDetail, LyraAnchorKind } from '../internal/document-anchors.js';
 export type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../internal/clipboard.js';
 export type { ShikiLanguageInput, ShikiLanguageLoader } from '../internal/shiki/core.js';
 export type { LyraSearchChangeDetail } from '../internal/text-viewer-target.js';

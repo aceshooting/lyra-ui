@@ -34,7 +34,7 @@ import type { LyraTextWrap } from '../../../internal/shared-unions.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { styles } from './message-feedback.styles.js';
-import type { LyraToolbarAction } from '../message-actions/toolbar-actions.js';
+import type { LyraToolbarAction } from '../../../internal/toolbar-actions.js';
 import { leaseTabIndex } from '../../../internal/roving-toolbar.js';
 import { isRuntimeArray } from '../../../internal/object-guards.js';
 import { loadLazyChildren } from '../../../internal/lazy-children.js';
@@ -480,9 +480,6 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
     super.requestUpdate(name, oldValue, options);
   }
 
-  override connectedCallback(): void {
-    super.connectedCallback();
-  }
 
   override disconnectedCallback(): void {
     this.lifecycleGeneration += 1;

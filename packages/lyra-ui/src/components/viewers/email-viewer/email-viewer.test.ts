@@ -8,7 +8,7 @@ import type { LyraEmailViewer } from "../../lr-email-viewer.js";
 import type { PostalMessageApi } from './email-loader.js';
 import { DEFAULT_MAX_RESOURCE_BYTES } from "../../../internal/resource-loader.js";
 import { getDefaultDocumentRendererRegistry, loadDocumentRenderer } from "../document-viewer/registry.js";
-import type { LyraHighlight } from "../document-viewer/anchors.js";
+import type { LyraHighlight } from "../../../internal/document-anchors.js";
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
@@ -1006,7 +1006,7 @@ describe("lr-email-viewer", () => {
         ).to.equal('Unnamed attachment');
         expect(
           el.shadowRoot!.querySelector('[part="attachment-button"]')!.getAttribute('aria-label')
-        ).to.equal('Open Unnamed attachment 1 byte');
+        ).to.equal('Open Unnamed attachment 1 B');
 
         el.strings = {
           emailViewerUnnamedAttachment: 'pièce jointe sans nom',
@@ -1019,7 +1019,7 @@ describe("lr-email-viewer", () => {
         ).to.equal('pièce jointe sans nom');
         expect(
           el.shadowRoot!.querySelector('[part="attachment-button"]')!.getAttribute('aria-label')
-        ).to.equal('Ouvrir pièce jointe sans nom 1 byte');
+        ).to.equal('Ouvrir pièce jointe sans nom 1 B');
       } finally {
         restore();
       }
@@ -1082,7 +1082,7 @@ describe("lr-email-viewer", () => {
           '[part="attachment-button"]'
         ) as HTMLButtonElement;
         const sizeText = button.querySelectorAll("span")[1]!.textContent;
-        expect(sizeText).to.equal("16 byte");
+        expect(sizeText).to.equal("16 B");
       } finally {
         restore();
       }

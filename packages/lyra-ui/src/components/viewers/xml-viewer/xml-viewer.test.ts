@@ -775,7 +775,7 @@ describe('copy', () => {
 
 // `search`/`searchNext`/`searchPrevious`/`clearSearch` are a purely imperative API here -- the
 // same uniform contract `lr-pdf-viewer`/`lr-ebook-viewer`/`lr-notebook-viewer` implement
-// (see `AnchorTargetCapabilities.search`'s doc comment in `document-viewer/anchors.ts`), not a
+// (see `AnchorTargetCapabilities.search`'s doc comment in `internal/document-anchors.ts`), not a
 // settable `search` property/attribute like `lr-json-viewer`'s -- a single class member can't
 // be both a plain string field (readable bare) and a callable method, so this viewer, which
 // mirrors the anchor-target family's search surface, picks the imperative form.

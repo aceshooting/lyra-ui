@@ -1,7 +1,7 @@
 import { LyraElement } from '../src/internal/lyra-element.js';
 import { DocumentAnchorTarget, type LyraAnchorTargetEventMap } from '../src/internal/anchor-target.js';
 import { TextViewerTarget, type LyraTextViewerTargetEventMap } from '../src/internal/text-viewer-target.js';
-import type { LyraAnchor } from '../src/components/viewers/document-viewer/anchors.js';
+import type { LyraAnchor } from '../src/internal/document-anchors.js';
 import type { TextQuoteScope } from '../src/internal/text-quote.js';
 
 class AnchorBase extends LyraElement<LyraAnchorTargetEventMap> {

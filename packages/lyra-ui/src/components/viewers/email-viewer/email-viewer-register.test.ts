@@ -2,7 +2,7 @@ import { expect } from '@open-wc/testing';
 import { render } from 'lit';
 import { EMAIL_VIEWER_TAG } from './email-viewer-register.js';
 import { findDocumentRenderer, loadDocumentRenderer, type LyraDocumentFile } from '../document-viewer/registry.js';
-import type { LyraHighlight } from '../document-viewer/anchors.js';
+import type { LyraHighlight } from '../../../internal/document-anchors.js';
 
 const eml: LyraDocumentFile = { name: 'Thread.EML', mimeType: 'application/octet-stream', src: 'https://example.test/thread.eml' };
 

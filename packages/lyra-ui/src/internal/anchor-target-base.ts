@@ -13,7 +13,7 @@ import type {
   HighlightActivateDetail,
   TextSelectDetail,
   AnchorResultDetail,
-} from '../components/viewers/document-viewer/anchors.js';
+} from './document-anchors.js';
 
 type PublicConstructor<T> = new (...args: never[]) => T;
 type InternalMixinConstructor<T> = new (...args: any[]) => T;

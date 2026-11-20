@@ -94,7 +94,7 @@ Loaded native MapLibre styles retain synchronous inline diffs. The live peer det
 `engine` changes apply after reconnect. Map and camera identity are preserved.
 
 **On-demand runtimes:** optional `lr-map` features load their code on first use, so a bundler that
-splits chunks keeps them out of the initial bundle. Drawing and vertex editing load when `drawMode`
+splits chunks keeps them out of the initial bundle. Drawing and vertex editing load when `drawMode` (attribute `draw-mode`)
 becomes `line` or `polygon` or `editDrawing()` is first called; `exportImage()` loads export
 capture; `hash` loads URL ownership when it is anything but `false`, `null` or `undefined`;
 `overlays`, `images`, `styleOverrides`, external data layers and `interactiveBasemapLayers` load
@@ -469,7 +469,7 @@ Equal paint produces no repaint; camera movement is not needed to show a metric 
 **Interactions:** opt in with `interactive` and optional `priority` on a data layer, choropleth or
 owned overlay layer; `interactiveBasemapLayers = []` explicitly enrolls basemap layers.
 `lr-map-click`, `lr-map-contextmenu`, `lr-map-feature-enter`, and `lr-map-feature-leave` report routed interaction data;
-legacy `lr-map-click` and cluster payloads remain available. `pickMode = false` enables a temporary
+legacy `lr-map-click` and cluster payloads remain available. `pickMode = false` (attribute `pick-mode`) enables a temporary
 coordinate-picking session when set to true; `lr-map-pick` also supports keyboard center selection.
 `keyboardActivation = false` (attribute `keyboard-activation`) opts in to keyboard activation: while
 the map canvas has focus, an unmodified, non-repeated Enter or Space activates the interactive feature
@@ -508,7 +508,7 @@ geometry is the rendered one, so a large feature may be clipped to the tiles aro
 `geometry` is `null` above 100,000 coordinate values. Disconnecting the map clears its hover state without emitting
 `lr-map-feature-leave` or `lr-map-pointer-leave`. Clear any tooltip or highlight when removing the map.
 
-**Drawing:** `drawMode: LyraMapDrawingMode = 'none'` arms `line` or `polygon` drawing. The
+**Drawing:** `drawMode: LyraMapDrawingMode = 'none'` (attribute `draw-mode`) arms `line` or `polygon` drawing. The
 controls render as soon as a mode is armed; the session starts once the drawing runtime has loaded
 and the style is ready, and `whenIdle()` covers that load. Pointer
 vertices and the keyboard center/undo/finish/cancel controls share one temporary session.
@@ -554,7 +554,7 @@ zero, explicitly invalid edges fail closed. Placement intersects boundaries with
 and retains its 8px padding. If the geographic target remains on the map but lies outside that
 intersection, the panel shifts fully inside the available area; changing the safe area never
 moves the map camera or changes `anchorLngLat`. An off-map target or collapsed allocation hides
-the panel. `anchorClosable = false` leaves content passive; enabling it adds a
+the panel. `anchorClosable = false` (attribute `anchor-closable`) leaves content passive; enabling it adds a
 close button and nonmodal Escape handling. `focusAnchor()` explicitly focuses eligible visible
 content synchronously; `closeAnchor()` closes a currently visible anchor. Both return booleans.
 `lr-map-anchor-close` reports `api`, `close-button`, or `escape`; focus return respects ownership.

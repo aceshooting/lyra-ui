@@ -1,5 +1,5 @@
 import { getOwnDataDescriptor, readOwnArrayLength, readOwnDataValue } from '../../../internal/data-descriptors.js';
-import { devWarnOnce } from '../../../internal/dev-warning.js';
+import { DEV_DIAGNOSTICS, devWarnOnce } from '../../../internal/dev-warning.js';
 
 /** Values one series keeps: the shared collection snapshot's per-array bound. */
 const MAX_CHART_SERIES_VALUES = 10_000;
@@ -42,7 +42,7 @@ export function boundChartSeriesValues(value: unknown, weight = 1): unknown[] | 
       }
       bounded[index] = copy;
     }
-    if (bounded)
+    if (bounded && DEV_DIAGNOSTICS)
       devWarnOnce('lr-chart-series-cap', 'A chart series past the value bound kept only its first values.');
     return bounded;
   } catch {

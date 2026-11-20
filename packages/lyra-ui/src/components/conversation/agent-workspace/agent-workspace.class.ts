@@ -5,7 +5,7 @@ import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/he
 import { ref } from 'lit/directives/ref.js';
 import { acquireResolvedAriaRelationship, HostDescriptionController, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
-import type { MarkdownStreamingRender } from '../markdown/markdown-shared.js';
+import type { MarkdownStreamingRender } from '../../../internal/markdown-render-types.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';

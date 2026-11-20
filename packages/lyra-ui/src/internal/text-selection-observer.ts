@@ -6,7 +6,7 @@
  */
 import { isShadowRootNode } from './dom-guards.js';
 import { listenUntilPointerEnd } from './document-pointer.js';
-import type { TextSelectRect } from '../components/viewers/document-viewer/anchors.js';
+import type { TextSelectRect } from './document-anchors.js';
 import { boundedSelectionRects, boundedSelectionText } from './text-selection.js';
 
 type ComposedSelection = Selection & {

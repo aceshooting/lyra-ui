@@ -18,7 +18,7 @@ import { assertMarkdownTemplateWhitespace } from '../../../../test/contracts/mar
 import { assertMarkdownSanitizerDiagnostics } from '../../../../test/contracts/markdown-diagnostics.js';
 import { assertMarkdownTextSelection } from '../../../../test/contracts/markdown-text-selection.js';
 import { supportsCustomHighlights } from "../../../internal/text-highlights.js";
-import type { LyraAnchor } from "../../viewers/document-viewer/anchors.js";
+import type { LyraAnchor } from "../../../internal/document-anchors.js";
 import type { KatexApi } from "./katex-loader.js";
 import {
   markdownHighlightKey,

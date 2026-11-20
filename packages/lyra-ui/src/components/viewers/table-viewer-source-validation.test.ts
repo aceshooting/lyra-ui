@@ -3,7 +3,7 @@ import { shrinkAnchorRetry } from '../../../test/viewer-scroll-test-support.js';
 import type { LyraTabularSource, LyraWorkbookSource } from '../../data-sources.js';
 import type { LyraCsvViewer } from '../lr-csv-viewer.js';
 import type { LyraSpreadsheetViewer } from '../lr-spreadsheet-viewer.js';
-import type { LyraAnchor } from './document-viewer/anchors.js';
+import type { LyraAnchor } from '../../internal/document-anchors.js';
 import { tableHighlightsForColumn, tableHighlightsForRow } from './table-viewer-shared.js';
 import '../lr-csv-viewer.js';
 import '../lr-spreadsheet-viewer.js';

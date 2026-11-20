@@ -2,6 +2,7 @@ import { snapshotStructuredData, isSnapshotArrayIndex as isArrayIndex, type Snap
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
 import { property } from 'lit/decorators.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -588,6 +589,11 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
         });
       }
     }
+    // Rendered eagerly, before this node's template, so the shared budget is debited in document
+    // order; `repeat()` would defer the child renders until commit.
+    const renderedChildren = children.map((child) => [child.path, this.renderNode(
+      child.name, child.node, child.path, child.required, depth + 1, nextAncestors, budget, issuesByPath,
+    )] as const);
     const nodePart = selected ? 'node node-selected' : 'node';
     return html`
       <li part=${nodePart} style=${`--_lr-schema-depth:${depth}`}>
@@ -631,18 +637,7 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
         )}
         ${children.length
           ? html`<ul>
-              ${children.map((child) =>
-                this.renderNode(
-                  child.name,
-                  child.node,
-                  child.path,
-                  child.required,
-                  depth + 1,
-                  nextAncestors,
-                  budget,
-                  issuesByPath
-                )
-              )}
+              ${repeat(renderedChildren, ([childPath]) => childPath, ([, template]) => template)}
             </ul>`
           : nothing}
       </li>

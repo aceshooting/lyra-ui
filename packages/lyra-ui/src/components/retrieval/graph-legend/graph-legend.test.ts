@@ -691,3 +691,13 @@ it('paints the configured hover fill on its item', async () => {
   await hoverUntilMatched(button, 'hover the control');
   await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(32, 74, 96)', 'configured control hover fill');
 });
+
+it('keeps the hidden types a request listener wrote back unchanged', async () => {
+  const el = await fixture<LyraGraphLegend>(html`<lr-graph-legend .types=${types}></lr-graph-legend>`);
+  let changes = 0;
+  el.addEventListener('lr-visibility-change', () => { changes++; });
+  el.addEventListener('lr-visibility-change-request', () => { el.hiddenTypes = [...el.hiddenTypes]; }, { once: true });
+  el.shadowRoot!.querySelector<HTMLButtonElement>('button')!.click();
+  await el.updateComplete;
+  expect([el.hiddenTypes.length, changes]).to.deep.equal([0, 0]);
+});

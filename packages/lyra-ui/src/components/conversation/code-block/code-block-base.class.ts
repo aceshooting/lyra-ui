@@ -10,7 +10,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
-import type { LyraHighlight, LyraAnchor, TextSelectRect } from '../../viewers/document-viewer/anchors.js';
+import type { LyraHighlight, LyraAnchor, TextSelectRect } from '../../../internal/document-anchors.js';
 import { SHIKI_SOURCE_MAX_CODE_UNITS, type ShikiHighlighter } from './shiki-types.js';
 import {
   CodeBlockHeaderActionsController,
@@ -199,8 +199,9 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
     });
   };
 
-  /** Resolves a `line-range` anchor (or a highlights id resolving to one) by scrolling the code
-   *  body. */
+  /** Resolves a `line-range` anchor (or a `highlights` id string resolving to one) by scrolling
+   *  its start line into view within `[part="body"]`. Resolves `false` when the anchor isn't a
+   *  `line-range`, the id isn't found, or the start line is out of bounds. */
   async scrollToAnchor(target: LyraAnchor | string): Promise<boolean> {
     return scrollCodeBlockToAnchor(this, target);
   }

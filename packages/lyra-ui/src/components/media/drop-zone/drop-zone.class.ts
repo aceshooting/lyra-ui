@@ -17,7 +17,7 @@ import {
 import {
   classifyFiles, dragInstruction, EMPTY_MIME_TYPES, freezeDetail, handleDrop, mimeTypeFilter, rejectionMessages, selectionMessage, snapshotMimeTypes,
   type FileIntakeResult,
-} from '../file-input/file-intake.js';
+} from '../../../internal/file-intake.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './drop-zone.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START

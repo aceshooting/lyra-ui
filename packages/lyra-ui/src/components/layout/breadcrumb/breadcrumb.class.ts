@@ -113,7 +113,7 @@ export class LyraBreadcrumb extends LyraElement {
    *  (`el.accessibleLabel = 'Docs trail'`). Wins over `label` and over the localized default
    *  ("Breadcrumb"); an explicitly empty `aria-label` attribute or `accessibleLabel` assignment stays empty
    *  rather than falling through, while a blank or whitespace-only `label` is treated as unset. */
-  @property({ attribute: 'aria-label' }) accessibleLabel?: string;
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   /** Accessible name matching both pinned upstream breadcrumb contracts. A host `aria-label`
    * remains the highest-priority override. A blank or whitespace-only string is treated as

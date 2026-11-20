@@ -7,6 +7,7 @@ import type { LyraVideo } from '../../lr-video.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { setForcedColors, setReducedMotion } from '../../../../test/wtr-media.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { sinkTexts } from '../../../../test/announcements.js';
 
 const VIDEO_SRC = 'https://example.test/video.mp4';
 
@@ -603,6 +604,22 @@ describe('lr-video public contract', () => {
     `);
     expect(nativeVideo(el).hasAttribute('src')).to.be.false;
     expect((el.shadowRoot!.querySelector('img')) === (null)).to.equal(true);
+  });
+
+  it('reports a rejected source with the host error event, a visible notice and an announcement', async () => {
+    const el = document.createElement('lr-video') as LyraVideo;
+    el.src = 'javascript:alert(1)';
+    let errors = 0;
+    el.addEventListener('error', () => { errors += 1; });
+    const host = await fixture(html`<div></div>`);
+    host.append(el);
+    await waitUntil(() => errors === 1, 'the rejected source fired an error event');
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal('The media failed to load.');
+    await waitUntil(() => sinkTexts('assertive').includes('The media failed to load.'), 'the failure was announced');
+    el.src = '';
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="error"]') === null, 'clearing the source clears the notice');
+    expect(errors).to.equal(1);
   });
 
   it('proxies playback methods, preserves the native play promise, and guards numeric inputs', async () => {
@@ -1458,6 +1475,7 @@ describe('lr-video public contract', () => {
       await el.updateComplete;
       await waitUntil(() => ownerSignals.length === 3, 'the pending owner request did not start');
       el.remove();
+      await aTimeout(0);
       expect(ownerSignals[2]?.aborted, 'disconnect must abort the retained owner signal').to.be.true;
     } finally {
       el?.remove();
@@ -1869,6 +1887,7 @@ describe('lr-video public contract', () => {
         pauseCallsBeforeStaleDelivery + 1,
       );
       el.remove();
+      await aTimeout(0);
       expect(frameDisconnects, 'disconnect tears down the current-realm observer').to.equal(1);
     } finally {
       el?.remove();
@@ -2589,7 +2608,12 @@ describe('lr-video coverage gap-filling', () => {
       `);
       await waitUntil(() => calls === 1, 'the initial thumbnail fetch did not start');
       const parent = el.parentElement!;
+      parent.append(el);
+      // wait-reason: a same-task DOM move must keep the loaded thumbnail track.
+      await aTimeout(20);
+      expect(calls, 'a same-task move does not refetch thumbnails').to.equal(1);
       el.remove();
+      await aTimeout(0);
       parent.append(el);
       await waitUntil(() => calls === 2, 'reconnecting did not reload thumbnails');
     } finally {

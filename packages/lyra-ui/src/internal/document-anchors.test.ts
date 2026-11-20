@@ -9,7 +9,7 @@ import {
   type HighlightActivateDetail,
   type TextSelectDetail,
   type AnchorResultDetail,
-} from './anchors.js';
+} from './document-anchors.js';
 
 // Compile-time exhaustiveness check: if a new `LyraAnchor` variant is ever added without updating
 // this switch, TypeScript's `never` assignment fails the build -- this function's mere existence

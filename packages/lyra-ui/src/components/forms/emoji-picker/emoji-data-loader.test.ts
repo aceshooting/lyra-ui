@@ -8,6 +8,9 @@ import {
   resolveEmojiDataLocale,
 } from './emoji-data-loader.js';
 
+import { rearmDevWarnings } from '../../../../test/expected-dev-warnings.js';
+beforeEach(() => rearmDevWarnings('lr-emoji-data:'));
+
 afterEach(() => {
   clearEmojiDataCache();
 });

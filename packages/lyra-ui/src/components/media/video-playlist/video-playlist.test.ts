@@ -1202,6 +1202,7 @@ describe('lr-video-playlist public contract', () => {
     let changes = 0;
     el.addEventListener('lr-video-change', () => { changes += 1; });
     el.remove();
+    await aTimeout(0);
     expect(aPlayback.pauseCalls).to.be.greaterThan(0);
     wrapper.append(el);
     await settle(el);

@@ -3,7 +3,7 @@ import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import '../../lr-message-actions.js';
 import type { LyraMessageActions } from '../../lr-message-actions.js';
-import type { LyraToolbarAction } from './toolbar-actions.js';
+import type { LyraToolbarAction } from '../../../internal/toolbar-actions.js';
 
 async function toolbarWithProvider(actions: unknown): Promise<{ toolbar: LyraMessageActions; survivor: HTMLButtonElement }> {
   const toolbar = await fixture<LyraMessageActions>(html`<lr-message-actions .controls=${[]}>

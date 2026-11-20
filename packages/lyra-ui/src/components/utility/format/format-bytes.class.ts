@@ -4,8 +4,7 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import { styles } from './format.styles.js';
-import { formatNumber } from '../../../utilities/format.js';
-import { byteFormat, type LyraFormatBytesUnit, type LyraFormatDisplay } from './format-options.js';
+import { byteFormat, formatByteAmount, type LyraFormatBytesUnit, type LyraFormatDisplay } from './format-options.js';
 
 export type { LyraFormatBytesUnit, LyraFormatDisplay } from './format-options.js';
 
@@ -14,6 +13,9 @@ const DEFAULT_DECIMALS = 1;
 
 /**
  * `<lr-format-bytes>` — locale-aware byte-size formatting.
+ *
+ * The short base rung uses the locale's narrow symbol when the short kilo rung abbreviates to it
+ * (`20 B` beside `1.5 kB`), rather than Intl's short `20 byte`.
  *
  * @customElement lr-format-bytes
  * @slot - Fallback content when the value is not finite.
@@ -40,7 +42,7 @@ export class LyraFormatBytes extends LyraElement {
       // Guaranteed finite by the check above; routed through the shared helper anyway so this
       // arithmetic can never see a non-finite value even if the guard above it changes shape.
       const value = finiteNumber(this.value, 0);
-      const { amount, options } = byteFormat(
+      const result = byteFormat(
         value,
         this.unit,
         this.display,
@@ -48,11 +50,11 @@ export class LyraFormatBytes extends LyraElement {
         this.decimals,
       );
       try {
-        text = formatNumber(amount, this.effectiveLocale || undefined, options);
+        text = formatByteAmount(this.effectiveLocale || undefined, result.amount, result);
       } catch {
         // A malformed runtime locale is reachable from untyped JS/markup. The unit/options are
         // already normalized above, so retrying with the runtime locale keeps the value useful.
-        text = formatNumber(amount, undefined, options);
+        text = formatByteAmount(undefined, result.amount, result);
       }
     }
     return text ? bdi(text) : html`<slot></slot>`;

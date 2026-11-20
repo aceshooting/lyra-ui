@@ -182,9 +182,6 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
   private settledAnnouncements: string[] = [];
   private focusAnchorId: string | null = null;
 
-  override connectedCallback(): void {
-    super.connectedCallback();
-  }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();

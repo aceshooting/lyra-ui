@@ -1,5 +1,7 @@
 import { expect } from '@open-wc/testing';
 import { loadMaplibre, loadMaplibreModule, loadModularMap, loadModularMapModule, type MaplibreModule } from './map-loader.js';
+import { rearmDevWarnings } from '../../../../test/expected-dev-warnings.js';
+beforeEach(() => rearmDevWarnings('lyra-map:'));
 
 const MAP_METHODS = [
   'getCanvas',

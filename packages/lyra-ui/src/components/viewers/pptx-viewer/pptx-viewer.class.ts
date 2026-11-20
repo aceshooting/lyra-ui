@@ -27,8 +27,8 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { ViewerSourceController, ViewerSourceHttpError, ViewerSourceUrlNotAllowedError, type ViewerSourceToken } from '../../../internal/viewer-source-controller.js';
-import type { AnchorResultDetail, LyraAnchor, LyraAnchorKind, TextSelectDetail } from '../document-viewer/anchors.js';
-import { textQuoteContextScore } from '../document-viewer/anchors.js';
+import type { AnchorResultDetail, LyraAnchor, LyraAnchorKind, TextSelectDetail } from '../../../internal/document-anchors.js';
+import { textQuoteContextScore } from '../../../internal/document-anchors.js';
 import type { LyraViewerDiagnosticEventDetail } from '../viewer-diagnostics.js';
 import { PageViewerSnapshotController } from '../page-rail/page-viewer-snapshot.js';
 import type {

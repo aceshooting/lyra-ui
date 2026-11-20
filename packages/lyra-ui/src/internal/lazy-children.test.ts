@@ -43,6 +43,29 @@ describe('loadLazyChildren', () => {
     root.remove();
   });
 
+  it('settles each root own children when another root started the shared load', async () => {
+    const name = `lazy-child-shared-${Math.random().toString(36).slice(2)}`;
+    class SlowChild extends HTMLElement {
+      rendered = false;
+      readonly updateComplete = new Promise<void>(resolve => setTimeout(() => { this.rendered = true; resolve(); }, 30));
+    }
+    const loaders: LazyChildLoaders = {
+      [name]: () => { customElements.define(tag(name), SlowChild); return Promise.resolve(); },
+    };
+    const first = document.createElement('div');
+    const second = document.createElement('div');
+    first.append(document.createElement(tag(name)));
+    second.append(document.createElement(tag(name)));
+    document.body.append(first, second);
+    const a = loadLazyChildren(loaders, first);
+    const b = loadLazyChildren(loaders, second);
+    await Promise.all([a, b]);
+    expect((second.firstElementChild as SlowChild).rendered, 'second root child rendered').to.equal(true);
+    expect((first.firstElementChild as SlowChild).rendered).to.equal(true);
+    first.remove();
+    second.remove();
+  });
+
   it('skips loaders whose child is absent from the root', () => {
     let attempts = 0;
     const loaders: LazyChildLoaders = { 'lazy-child-absent': () => { attempts += 1; return Promise.resolve(); } };

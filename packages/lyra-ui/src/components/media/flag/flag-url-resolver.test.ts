@@ -1,5 +1,7 @@
 import { expect } from '@open-wc/testing';
 import { loadBulkFlagUrl } from './flag-url-resolver.js';
+import { rearmDevWarnings } from '../../../../test/expected-dev-warnings.js';
+beforeEach(() => rearmDevWarnings('lr-flag-peer'));
 
 for (const [name, result] of [
   ['missing', undefined], ['null', null], ['object', {}], ['string', 'not a resolver'],

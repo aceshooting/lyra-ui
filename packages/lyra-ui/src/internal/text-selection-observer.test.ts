@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import * as anchorTarget from './anchor-target.js';
 import { observeTextSelection, textSelectionShadowRoots } from './text-selection-observer.js';
-import type { TextSelectRect } from '../components/viewers/document-viewer/anchors.js';
+import type { TextSelectRect } from './document-anchors.js';
 
 type SelectionStub = Partial<Selection> & {
   getComposedRanges?: (options: { shadowRoots: ShadowRoot[] }) => StaticRange[];

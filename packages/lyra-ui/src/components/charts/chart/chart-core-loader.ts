@@ -1,5 +1,5 @@
 import { isObjectLike } from '../../../internal/object-guards.js';
-import { isConstructor, warnChartPeerImport } from './chart-peer.js';
+import { isConstructor, warnChartPeer, warnChartPeerImport } from './chart-peer.js';
 import {
   createOptionalPeerLoader,
   resolveOptionalPeerCapability,
@@ -124,10 +124,7 @@ export async function loadChartModule(
   try {
     return resolveChartJsModule(imported);
   } catch (err) {
-    console.warn(
-      '<lr-chart> incompatible chart.js module:',
-      err,
-    );
+    warnChartPeer('core:incompatible', '<lr-chart> incompatible chart.js module:', err);
     return null;
   }
 }
@@ -175,10 +172,7 @@ function registerChart(mod: ChartJsModule | null, register: (mod: ChartJsModule)
     register(mod);
     return mod;
   } catch (error: unknown) {
-    console.warn(
-      '<lr-chart> could not register the optional `chart.js` peer:',
-      error,
-    );
+    warnChartPeer('core:register', '<lr-chart> could not register the optional `chart.js` peer:', error);
     return null;
   }
 }

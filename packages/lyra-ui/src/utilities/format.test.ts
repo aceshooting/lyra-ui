@@ -92,7 +92,7 @@ it('formatNumber accepts a bigint or decimal string without first collapsing thr
 
 it('formats byte counts and picks a unit exactly like <lr-format-bytes>', () => {
   expect(formatBytes(1024, 'en-US')).to.match(/1\s?kB/i);
-  expect(formatBytes(0, 'en-US')).to.match(/0\s?byte/i);
+  expect(formatBytes(0, 'en-US')).to.match(/^0\s?B$/);
 });
 
 it('switches byte units exactly at numeric powers of the step', () => {
@@ -123,12 +123,12 @@ it('formatBytes accepts a decimal string input and preserves its fractional digi
   const exact = formatBytes(value, 'en-US', { unitStep: 1e35, decimals: 2 });
   // unitStep is large enough that no unit scaling occurs (index 0): the exact source digits
   // reach the formatter completely unscaled.
-  expect(exact).to.equal('123,456,789,012,345,678,901,234,567,890.25 byte');
+  expect(exact).to.equal('123,456,789,012,345,678,901,234,567,890.25 B');
 });
 
 it('formats a bounded value with a decimal fraction longer than the numeric exponent range', () => {
   const fraction = '1'.repeat(320);
-  expect(formatBytes(`1.${fraction}`, 'en-US', { decimals: 10 })).to.equal('1.1111111111 byte');
+  expect(formatBytes(`1.${fraction}`, 'en-US', { decimals: 10 })).to.equal('1.1111111111 B');
   expect(formatBytes(`1234.${fraction}`, 'en-US', { decimals: 2 })).to.equal('1.23 kB');
 });
 

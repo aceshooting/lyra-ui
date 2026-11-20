@@ -193,9 +193,6 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
     super.connectedCallback();
     this.isMounting = !this.hasUpdated;
   }
-  override disconnectedCallback(): void {
-    super.disconnectedCallback();
-  }
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     const registration = loadLazyChildren(AGENT_QUESTION_CHILDREN, this.renderRoot);

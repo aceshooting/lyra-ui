@@ -11,6 +11,9 @@ import { boundedRecordString, normalizeLabeledOptions } from '../../../internal/
 import { tag } from '../../../internal/prefix.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
+import { requestThenCommit } from '../../../internal/request-commit.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { LyraFormControlElement } from '../../../internal/form-control-element.js';
@@ -510,6 +513,8 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
   declare customError: string | null;
   private _fieldsetDisabled = false;
   private _name = '';
+  /** Observes every `value` write, including one an `lr-query-load-request` listener makes. */
+  private readonly valueGuard = new VetoWriteGuard();
   private readonly valueSnapshot = new SnapshotProperty(EMPTY_VALUE, normalizeGraphQuery);
   private defaultValue: GraphQuery = normalizeGraphQuery(EMPTY_VALUE);
   private defaultValueCaptured = false;
@@ -582,6 +587,7 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
   }
   set value(next: GraphQuery) {
     this.valueSnapshot.assign(this.valueUpdateHost, 'value', next);
+    markVetoGuardWrite(this.valueGuard);
   }
 
   private readonly valueUpdateHost = {
@@ -884,7 +890,7 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
     if (!this.reportValidity()) return;
     const detail = Object.freeze({ query: this._value });
     const request = this.emit('lr-query-run-request', detail, { cancelable: true });
-    if (request.defaultPrevented) return;
+    if (request.defaultPrevented || this.effectiveDisabled || !this.isConnected) return;
     this.emit('lr-query-run', detail);
   }
 
@@ -894,7 +900,7 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
     if (!name) return;
     const detail = Object.freeze({ name, query: this._value });
     const request = this.emit('lr-query-save-request', detail, { cancelable: true });
-    if (request.defaultPrevented) return;
+    if (request.defaultPrevented || this.effectiveDisabled || !this.isConnected) return;
     this.saveName = '';
     this.emit('lr-query-save', detail);
   }
@@ -906,17 +912,23 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
       queryId: item.id,
       query: normalizeGraphQuery(item.query),
     });
-    const request = this.emit('lr-query-load-request', detail(), { cancelable: true });
-    if (request.defaultPrevented) return;
-    this.setValue({ ...EMPTY_VALUE, ...item.query });
-    this.emit('lr-query-load', detail());
+    requestThenCommit({
+      requestDetail: detail(),
+      emitRequest: (requestDetail, init: { cancelable: true }) => this.emit('lr-query-load-request', requestDetail, init),
+      guard: this.valueGuard,
+      commit: () => {
+        if (this.effectiveDisabled || !this.isConnected) return;
+        this.setValue({ ...EMPTY_VALUE, ...item.query });
+        this.emit('lr-query-load', detail());
+      },
+    });
   }
 
   private deleteQuery(item: GraphQuerySavedItem): void {
     if (this.effectiveDisabled) return;
     const detail = (): GraphQueryDeleteDetail => Object.freeze({ queryId: item.id });
     const request = this.emit('lr-query-delete-request', detail(), { cancelable: true });
-    if (request.defaultPrevented) return;
+    if (request.defaultPrevented || this.effectiveDisabled || !this.isConnected) return;
     this.emit('lr-query-delete', detail());
   }
 
@@ -1036,7 +1048,9 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
           ${available.map((o) => html`<lr-option value=${o.value}>${o.label ?? o.value}</lr-option>`)}
         </lr-select>
         <lr-chip-group part=${chipsPart}>
-          ${selected.map(
+          ${repeat(
+            selectedValues,
+            (t) => t,
             (t) => html`<lr-chip
               ?removable=${!disabled}
               value=${t}
@@ -1210,7 +1224,9 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
           ${this.savedQueries.length === 0
             ? html`<p part="saved-empty">${this.localize('noData')}</p>`
             : html`<ul part="saved-list">
-                ${this.savedQueries.map(
+                ${repeat(
+                  this.savedQueries,
+                  (item) => item.id,
                   (item) => html`<li part="saved-item" data-query-id=${item.id}>
                     <button
                       part="saved-load-button"

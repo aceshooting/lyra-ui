@@ -9,7 +9,7 @@ import {
 import "../../lr-message-actions.js";
 import "../../lr-branch-picker.js";
 import type { LyraMessageActions } from "../../lr-message-actions.js";
-import type { LyraToolbarAction } from "./toolbar-actions.js";
+import type { LyraToolbarAction } from "../../../internal/toolbar-actions.js";
 import { forceCoarsePointer } from '../../../../test/coarse-pointer-media.js';
 
 it('projects a live host description onto the toolbar role owner', async function () {
@@ -1356,7 +1356,7 @@ it('continues releasing later provider actions when one optional lease release t
 });
 
 it('recognizes a callable toolbar provider structurally', async () => {
-  const { isLyraToolbarActionProvider } = await import('./toolbar-actions.js');
+  const { isLyraToolbarActionProvider } = await import('../../../internal/toolbar-actions.js');
   const provider = (() => {}) as (() => void) & {
     getToolbarActions?: () => readonly LyraToolbarAction[];
   };

@@ -10,7 +10,7 @@ import type {
   HighlightActivateDetail,
   LyraAnchor,
   LyraHighlight,
-} from '../document-viewer/anchors.js';
+} from '../../../internal/document-anchors.js';
 import type { LyraDocumentPreview } from '../document-preview/document-preview.class.js';
 import type { ShikiLanguageInput } from '../../../internal/shiki/core.js';
 import type { LyraDiffView, LyraDiffViewLayout } from '../../utility/diff-view/diff-view.class.js';

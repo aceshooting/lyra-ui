@@ -294,3 +294,21 @@ it('leaves expandAll and collapseAll as no-ops while a source owns the rows', as
   await el.collapseAll();
   expect(parent.expanded).to.equal(false);
 });
+
+it('sends one select request while Enter is held on a source row', async () => {
+  let selects = 0;
+  const provider = source(3);
+  const project = provider.project.bind(provider);
+  provider.project = async request => {
+    if (request.action.type === 'select') selects++;
+    return project(request);
+  };
+  const el = await fixture<LyraTree>(html`<lr-tree label="Held" selection="multiple" .treeSource=${provider}></lr-tree>`);
+  await waitUntil(() => Boolean(el.shadowRoot!.querySelector('[data-source-key="n0"]')));
+  const row = el.shadowRoot!.querySelector<HTMLElement>('[data-source-key="n0"]')!;
+  for (const repeat of [false, true, true]) {
+    row.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', repeat, bubbles: true, composed: true, cancelable: true }));
+  }
+  await new Promise(resolve => setTimeout(resolve, 50));
+  expect(selects).to.equal(1);
+});

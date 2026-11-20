@@ -7498,6 +7498,9 @@ that stylesheet it retains an opaque scrim. Native audio/video controls stay bro
 Use the host `aria-label` attribute or native `ariaLabel` property to name a component. Where the
 component owns an internal role, it forwards that host name to the semantic element. An explicitly
 present host name, including `aria-label=""`, is honored as given.
+A component that mirrors the `aria-label` attribute as an `accessibleLabel` property types it `string | null`
+with a `null` default: `null` falls back to `label` and then the localized name, and an explicit empty
+string suppresses the name.
 This applies to `lr-table`'s grid and `lr-sequence-strip`'s list as well.
 
 Name components with the host `aria-label` / `ariaLabel`. The former `accessible-label` attribute and

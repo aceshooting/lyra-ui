@@ -1843,6 +1843,11 @@ unit covers all larger values. A non-finite `unitStep` or a step of `1` or less 
 `decimals` clamps to `[0, 10]`. Setting `unitStep="1024"` prints SI-named units such as `kB` and
 `MB` through `Intl`.
 
+With `display="short"` the base rung uses the locale's narrow unit symbol whenever that symbol is
+how the short kilo rung ends, so sizes read `20 B`, `1.5 kB` (French `20 o`, `1,5 ko`) instead of
+Intl's short `20 byte`. A locale whose kilo rung is itself a word keeps Intl's short base wording;
+`long` and `narrow` displays are Intl's own. `formatBytes()` and `formatFileSize()` share this.
+
 ## `lr-relative-time`
 
 `Intl.RelativeTimeFormat` output ("3 hours ago", "in 2 days"), relative to `Date.now()` at render.

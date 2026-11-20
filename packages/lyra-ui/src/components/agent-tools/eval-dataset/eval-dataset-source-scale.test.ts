@@ -99,7 +99,7 @@ it('clears page-local selection once when reconnect replays a changed provider p
   const grid = await table(el, 'e0');
   grid.dispatchEvent(new CustomEvent('lr-row-activate', { detail: { row: grid.rows[0] } })); await el.updateComplete;
   const selected: (string | null)[] = []; el.addEventListener('lr-example-select', e => selected.push(e.detail.exampleId));
-  const parent = el.parentNode!; el.remove(); changed = true; parent.appendChild(el); await table(el, 'e1');
+  const parent = el.parentNode!; el.remove(); changed = true; await new Promise(resolve => setTimeout(resolve)); parent.appendChild(el); await table(el, 'e1');
   expect(el.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]')!.disabled).to.equal(true);
   expect(selected).to.deep.equal([null]); expect(queries).to.equal(2);
 });

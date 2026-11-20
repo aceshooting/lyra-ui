@@ -44,7 +44,7 @@ export function observeAncestorFences(start: Element, onChange: () => void): () 
   };
 }
 
-export interface EngineAdmissionOptions {
+interface EngineAdmissionOptions {
   /** Checked before every admission attempt; `false` keeps waiting for the next report. */
   isReady(): boolean;
   /** Runs once, after every observer is released. It can run before `observeAdmission` returns. */

@@ -12,7 +12,7 @@ const MARKDOWN_PROGRESSIVE_HIGHLIGHT_MAX = 8192;
 const MARKDOWN_PROGRESSIVE_REF_RECOMPUTE_MAX = 8;
 
 type Definitions = Record<string, MarkdownDefinition>;
-export interface MarkdownProgressiveRender {
+interface MarkdownProgressiveRender {
   html: string;
   rawHtml: string;
   state: MarkdownLexicalState;
@@ -22,7 +22,7 @@ export interface MarkdownProgressiveRender {
   codeBlocks: MarkdownCodeBlockRecord[];
   pendingKeys: PendingHighlight[];
 }
-export interface MarkdownProgressiveBlock extends Omit<MarkdownProgressiveRender, 'rawHtml' | 'pendingKeys'> {
+interface MarkdownProgressiveBlock extends Omit<MarkdownProgressiveRender, 'rawHtml' | 'pendingKeys'> {
   pendingKeys: Array<Pick<PendingHighlight, 'key'>>;
   definitions: Definitions;
   source: string;

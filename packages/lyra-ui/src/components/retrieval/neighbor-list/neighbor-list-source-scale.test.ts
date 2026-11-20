@@ -86,7 +86,7 @@ it('rejects stale retry buttons after provider replacement and reconnects curren
   expect(list.shadowRoot!.textContent).not.to.contain('Private detail');
   list.graphSource = data.source; await ready(list); retry.click(); await list.updateComplete;
   expect(data.queries.length).to.equal(1);
-  const parent = list.parentNode!; list.remove(); parent.appendChild(list); await ready(list);
+  const parent = list.parentNode!; list.remove(); await new Promise(resolve => setTimeout(resolve)); parent.appendChild(list); await ready(list);
   await waitUntil(() => data.queries.length === 2);
 });
 it('validates type and page envelopes and permits recovery by reassignment', async () => {

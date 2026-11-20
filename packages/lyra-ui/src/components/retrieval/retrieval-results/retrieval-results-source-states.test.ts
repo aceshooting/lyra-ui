@@ -102,3 +102,20 @@ describe('lr-retrieval-results provider error announcements', () => {
     expect(sinkTexts('assertive')).to.include('Provider failed');
   });
 });
+
+describe('lr-retrieval-results presentation-only host changes', () => {
+  it('does not refetch for a host aria-label or dir change, but refetches on requestUpdate()', async () => {
+    let calls = 0;
+    const el = await fixture<LyraRetrievalResults>(html`
+      <lr-retrieval-results .dataSource=${provider(async () => { calls += 1; return { total: 1, rows: [entry(0)] }; })}></lr-retrieval-results>
+    `);
+    await waitUntil(() => calls === 1 && el.shadowRoot!.querySelector('[part="source-status"]') === null);
+    el.setAttribute('aria-label', 'Passages');
+    el.dir = 'rtl';
+    await el.updateComplete;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(calls).to.equal(1);
+    el.requestUpdate();
+    await waitUntil(() => calls === 2);
+  });
+});

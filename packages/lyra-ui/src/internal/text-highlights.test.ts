@@ -13,7 +13,7 @@ import {
 } from './text-highlights.js';
 import { scopeFromElement, TEXT_QUOTE_PAINT_LIMIT } from './text-quote.js';
 import { createTextQuoteIndex } from './text-quote-index.js';
-import type { LyraHighlight, LyraHighlightTone } from '../components/viewers/document-viewer/anchors.js';
+import type { LyraHighlight, LyraHighlightTone } from './document-anchors.js';
 
 function makeContent(html: string): HTMLElement {
   const el = document.createElement('div');

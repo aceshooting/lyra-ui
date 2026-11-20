@@ -835,6 +835,7 @@ export class LyraRating extends LyraFormControlElement<LyraRatingEventMap> {
     if (!this.effectiveDisabled) super.focus(options);
   }
 
+  /** Removes focus from the rating. Declared here so the mirrored public method surface lists it. */
   override blur(): void {
     super.blur();
   }

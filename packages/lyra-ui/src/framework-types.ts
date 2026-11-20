@@ -8001,6 +8001,7 @@ export interface LyraComponentTypeMap {
       | 'lr-hide'
       | 'lr-input'
       | 'lr-invalid'
+      | 'lr-load-error'
       | 'lr-show';
     cssNames:       | '--lr-form-control-focus-shadow'
       | '--lr-form-control-font-size'

@@ -1,6 +1,6 @@
 import { MODEL_FORMATS, snapshotModelCamera, type LyraModelCamera, type LyraModelFormat } from './model-viewer-contract.js';
 import { rememberDocumentRendererRegistry } from './document-renderer-registry-ownership.js';
-import type { AnchorTargetCapabilities, LyraAnchor, LyraHighlight } from '../components/viewers/document-viewer/anchors.js';
+import type { AnchorTargetCapabilities, LyraAnchor, LyraHighlight } from './document-anchors.js';
 import {
   snapshotLyraAvCues,
   snapshotLyraAvTracks,

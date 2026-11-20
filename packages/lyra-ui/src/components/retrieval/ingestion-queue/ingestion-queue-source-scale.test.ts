@@ -53,7 +53,7 @@ it('leaves historical failures quiet across browsing, explicit refresh and recon
   const el = await fixture<LyraIngestionQueue>(html`<lr-ingestion-queue announce .dataSource=${provider}></lr-ingestion-queue>`);
   await page(el, 'Document 0'); el.sourcePage = 1; await page(el, 'Document 100');
   el.requestUpdate(); await waitUntil(() => queries === 3); await page(el, 'Document 100');
-  const parent = el.parentNode!; el.remove(); parent.appendChild(el); await waitUntil(() => queries === 4); await page(el, 'Document 100');
+  const parent = el.parentNode!; el.remove(); await new Promise(resolve => setTimeout(resolve)); parent.appendChild(el); await waitUntil(() => queries === 4); await page(el, 'Document 100');
   expect(sinkTexts('assertive').some(text => text.includes('Historical failure'))).to.equal(false);
   expect(el.shadowRoot!.querySelector('[part="failure-live"]')?.textContent?.trim() ?? '').to.equal('');
 });
@@ -108,7 +108,7 @@ it('reuses provider pages on named paints and bypasses legacy item normalization
   expect(queries).to.equal(1); expect(admissions).to.equal(0);
   el.dataSource = provider; await waitUntil(() => queries === 2); await page(el, 'Document 0');
   el.requestUpdate(); await waitUntil(() => queries === 3); await page(el, 'Document 0');
-  const parent = el.parentNode!; el.remove(); parent.appendChild(el); await waitUntil(() => queries === 4); await page(el, 'Document 0');
+  const parent = el.parentNode!; el.remove(); await new Promise(resolve => setTimeout(resolve)); parent.appendChild(el); await waitUntil(() => queries === 4); await page(el, 'Document 0');
   expect(queries).to.equal(4); expect(admissions).to.equal(0);
 });
 it('corrects a stale page once and keeps a settled empty total distinct from unknown', async () => {
@@ -179,7 +179,7 @@ it('revokes retained provider retry controls after replacement, clear and discon
   let failures = 0; failed.query = () => { failures++; return Promise.reject(undefined); };
   el.dataSource = failed; await el.updateComplete; await waitUntil(() => el.shadowRoot!.querySelector('[part="source-retry"]') !== null);
   const current = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="source-retry"]')!;
-  const parent = el.parentNode!; el.remove(); current.click(); parent.appendChild(el);
+  const parent = el.parentNode!; el.remove(); current.click(); await new Promise(resolve => setTimeout(resolve)); parent.appendChild(el);
   await waitUntil(() => failures === 2); await el.updateComplete;
   const disconnectedCalls = failures; current.click(); await el.updateComplete;
   await new Promise(resolve => setTimeout(resolve, 20)); expect(failures).to.equal(disconnectedCalls);
@@ -207,4 +207,14 @@ it('stops old row descriptor reads when an early descriptor changes the source p
   await page(el, 'Document 100');
   expect(invalidated).to.equal(true); expect(laterReads).to.equal(0);
   expect(el.sourcePage).to.equal(1); expect(el.sourceTotal).to.equal(1_000_000);
+});
+it('does not refetch for a host aria-label or dir change, but refetches on requestUpdate()', async () => {
+  const provider = source(); const query = provider.query; let calls = 0;
+  provider.query = request => { calls += 1; return query(request); };
+  const el = await fixture<LyraIngestionQueue>(html`<lr-ingestion-queue .dataSource=${provider}></lr-ingestion-queue>`);
+  await page(el, 'Document 0'); expect(calls).to.equal(1);
+  el.setAttribute('aria-label', 'Queue'); el.dir = 'rtl';
+  await el.updateComplete; await new Promise(resolve => setTimeout(resolve, 50));
+  expect([calls, el.shadowRoot!.querySelectorAll('[part="item"]').length]).to.deep.equal([1, 100]);
+  el.requestUpdate(); await waitUntil(() => calls === 2);
 });

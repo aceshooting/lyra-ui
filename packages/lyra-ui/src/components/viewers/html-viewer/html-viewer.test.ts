@@ -7,7 +7,7 @@ import type { LyraHtmlViewer } from '../../lr-html-viewer.js';
 import { __setDompurifyImporterForTesting } from '../../../internal/dompurify-loader.js';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { getDefaultDocumentRendererRegistry, loadDocumentRenderer } from '../document-viewer/registry.js';
-import type { LyraHighlight } from '../document-viewer/anchors.js';
+import type { LyraHighlight } from '../../../internal/document-anchors.js';
 
 function response(body: string, ok = true): Response { return { ok, status: ok ? 200 : 500, statusText: ok ? 'OK' : 'Error', text: () => Promise.resolve(body) } as Response; }
 

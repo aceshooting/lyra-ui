@@ -17,6 +17,7 @@ import { firstByIdentity } from '../../../internal/collection-identity.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { trackScrollRegions } from '../../../internal/scroll-region.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_artifactPanelCode, LYRA_DEFAULT_artifactPanelGenerating, LYRA_DEFAULT_artifactPanelLabel, LYRA_DEFAULT_artifactPanelNextVersion, LYRA_DEFAULT_artifactPanelPreview, LYRA_DEFAULT_artifactPanelPreviousVersion, LYRA_DEFAULT_artifactPanelRestore, LYRA_DEFAULT_artifactPanelVersionPosition } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -137,8 +138,15 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
   /** A short kind label (e.g. `document`, `code`), shown as a badge next to `label`. */
   @property() kind = '';
 
+  /** Observes every `view` write, including one an `lr-artifact-view-change-request` listener makes. */
+  private readonly viewGuard = new VetoWriteGuard();
   /** Which slot is currently visible. */
   @property({ reflect: true }) view: ArtifactPanelView = 'preview';
+
+  override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    if (args[0] === 'view') markVetoGuardWrite(this.viewGuard);
+    super.requestUpdate(...args);
+  }
 
   /** The artifact's version history, oldest first. The last entry is the latest version. Empty/blank
    *  ids are omitted and duplicates normalize first-wins before navigation, counts, and events. */
@@ -245,8 +253,8 @@ export class LyraArtifactPanel extends LyraElement<LyraArtifactPanelEventMap> {
     requestThenCommit({
       requestDetail: { view, previousView },
       emitRequest: (detail, init: { cancelable: true }) => this.emit('lr-artifact-view-change-request', detail, init),
+      guard: this.viewGuard,
       commit: () => {
-        if (this.view !== previousView) return;
         this.view = view;
         this.emit('lr-artifact-view-change', { view });
       },

@@ -1,4 +1,4 @@
-import { devWarn } from '../../../internal/dev-mode-attribute-warning.js';
+import { DEV_DIAGNOSTICS, devWarn, devWarnOnce } from '../../../internal/dev-warning.js';
 import { classifyOptionalPeerImportError } from '../../../internal/optional-peer-failure.js';
 
 export type LyraFlagFidelity = 'compact' | 'standard' | 'detailed';
@@ -28,7 +28,7 @@ function resolverFromModule(module: unknown): LyraFlagUrlResolver | null {
 
 /** The peer could not be imported at all: it is genuinely absent, so say so and how to add it. */
 function warnFlagPeerMissing(): void {
-  console.warn(
+  if (DEV_DIAGNOSTICS) devWarnOnce('lr-flag-peer-missing',
     "<lr-flag> needs the optional peer dependency '@aceshooting/lyra-flags' to render "
       + 'flag images — install it with `pnpm add @aceshooting/lyra-flags`.',
   );
@@ -36,7 +36,7 @@ function warnFlagPeerMissing(): void {
 
 /** The peer imported but lacks the capability this entry needs: a version mismatch, not an absent package. */
 function warnFlagPeerIncapable(capability: string): void {
-  console.warn(
+  if (DEV_DIAGNOSTICS) devWarnOnce(`lr-flag-peer-incapable:${capability}`,
     `<lr-flag> loaded '@aceshooting/lyra-flags' but it does not expose \`${capability}\`. The `
       + 'package is installed, so this is a version mismatch rather than a missing dependency: '
       + 'upgrade it to a release that provides that capability, and check the peer range in '
@@ -46,7 +46,7 @@ function warnFlagPeerIncapable(capability: string): void {
 
 /** The peer resolved but its import rejected (network, chunk or syntax failure): it will be retried. */
 function warnFlagPeerLoadFailed(): void {
-  console.warn(
+  if (DEV_DIAGNOSTICS) devWarnOnce('lr-flag-peer-load-failed',
     "<lr-flag> found the optional peer '@aceshooting/lyra-flags' but could not load it (a network, "
       + 'chunk or module error, not a missing package). Flags retry the import on their next resolution.',
   );
@@ -174,7 +174,7 @@ let warnedMissingFlagResolver = false;
  * itself is missing.
  */
 export function warnMissingFlagResolver(code: string): void {
-  if (warnedMissingFlagResolver) return;
+  if (warnedMissingFlagResolver || !DEV_DIAGNOSTICS) return;
   warnedMissingFlagResolver = true;
   devWarn(
     `<lr-flag> could not resolve the code "${code}" because no flag resolver is registered. `

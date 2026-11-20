@@ -1,5 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import '../../lr-graph-query-builder.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { GraphQuery, GraphQuerySavedItem, GraphQueryTypeOption, LyraGraphQueryBuilder } from '../../lr-graph-query-builder.js';
 
 const RELATIONSHIP_OPTIONS: GraphQueryTypeOption[] = [
@@ -69,5 +70,35 @@ describe('lr-graph-query-builder lifecycle boundaries', () => {
   it('can be blurred before it is ever connected', () => {
     const el = document.createElement('lr-graph-query-builder') as LyraGraphQueryBuilder;
     expect(() => el.blur()).not.to.throw();
+  });
+});
+
+describe('lr-graph-query-builder keyed saved queries', () => {
+  it('keeps a focused Delete button bound to its query when the host prepends a new query', async () => {
+    const saved: GraphQuerySavedItem[] = [{ id: 'a', name: 'A', query: query() }, { id: 'b', name: 'B', query: query() }];
+    const el = await fixture<LyraGraphQueryBuilder>(html`<lr-graph-query-builder .savedQueries=${saved}></lr-graph-query-builder>`);
+    const remove = el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="saved-delete-button"]')[1]!;
+    await focusByKeyboard(remove);
+    el.savedQueries = [{ id: 'c', name: 'C', query: query() }, ...saved];
+    await el.updateComplete;
+    const deleted: string[] = [];
+    el.addEventListener('lr-query-delete', (event) => deleted.push((event as CustomEvent<{ queryId: string }>).detail.queryId));
+    const active = el.shadowRoot!.activeElement as HTMLElement | null;
+    expect(active?.closest<HTMLElement>('[part="saved-item"]')?.dataset['queryId']).to.equal('b');
+    active?.click();
+    expect(deleted).to.deep.equal(['b']);
+  });
+});
+
+describe('lr-graph-query-builder listener-resolved load', () => {
+  it('keeps the value a load-request listener assigned itself', async () => {
+    const saved: GraphQuerySavedItem[] = [{ id: 'a', name: 'A', query: query({ startId: 'saved' }) }];
+    const el = await fixture<LyraGraphQueryBuilder>(html`<lr-graph-query-builder .value=${query({ startId: 'current' })} .savedQueries=${saved}></lr-graph-query-builder>`);
+    let loads = 0;
+    el.addEventListener('lr-query-load', () => { loads += 1; });
+    el.addEventListener('lr-query-load-request', () => { el.value = query({ startId: 'host' }); }, { once: true });
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="saved-load-button"]')!.click();
+    await el.updateComplete;
+    expect([el.value.startId, loads]).to.deep.equal(['host', 0]);
   });
 });

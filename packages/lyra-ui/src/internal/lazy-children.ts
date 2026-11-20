@@ -7,6 +7,7 @@ export type LazyChildLoaders = Readonly<Record<string, () => Promise<unknown>>>;
 interface LazyChildren {
   readonly remaining: Map<string, () => Promise<unknown>>;
   readonly pending: Map<string, Promise<boolean>>;
+  readonly names: readonly string[];
 }
 
 const owners = new Map<string, LazyChildren>();
@@ -15,6 +16,7 @@ const classOwned = new WeakMap<LazyChildLoaders, LazyChildren>();
 const stateFor = (loaders: LazyChildLoaders): LazyChildren => ({
   remaining: new Map(Object.entries(loaders)),
   pending: new Map(),
+  names: Object.keys(loaders),
 });
 
 /**
@@ -51,8 +53,6 @@ export function loadLazyChildren(owner: string | LazyChildLoaders, root: ParentN
     state.remaining.delete(name);
     const attempt = Promise.resolve()
       .then(load)
-      .then(() => Promise.all(Array.from(root.querySelectorAll(tag(name)),
-        (child) => Promise.resolve((child as Element & { updateComplete?: Promise<unknown> }).updateComplete))))
       .then(() => true, (error: unknown) => {
         state.remaining.set(name, load);
         if (DEV_DIAGNOSTICS) devWarn(`Lyra: <${tag(name)}> could not be registered; it is retried on the next render. ${String(error)}`);
@@ -64,5 +64,10 @@ export function loadLazyChildren(owner: string | LazyChildLoaders, root: ParentN
     state.pending.set(name, attempt);
     loads.push(attempt);
   }
-  return loads.length > 0 ? Promise.all(loads).then((results) => results.every(Boolean)) : undefined;
+  if (loads.length === 0) return undefined;
+  // A pending load may have been started by another root, so every caller settles its own children.
+  return Promise.all(loads)
+    .then((results) => Promise.all(state.names.flatMap((name) => Array.from(root.querySelectorAll(tag(name)),
+      (child) => Promise.resolve((child as Element & { updateComplete?: Promise<unknown> }).updateComplete))))
+      .then(() => results.every(Boolean)));
 }

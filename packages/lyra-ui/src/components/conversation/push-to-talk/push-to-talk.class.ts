@@ -686,6 +686,12 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
         this.recorderStopRequested
       ) return true;
       this.emit('lr-record-start', { stream });
+      // An lr-record-start listener may retire this take; then nothing further is armed.
+      if (
+        this.activeCapture !== active ||
+        !this.ownsCurrentLifecycle(active.owner) ||
+        this.recorderStopRequested
+      ) return true;
       this.announce(this.localize('pushToTalkStarted'));
       this.syncLevelMeter(owner);
       this.syncMaxDurationTimer(owner, true);

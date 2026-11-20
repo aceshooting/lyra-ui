@@ -16,7 +16,7 @@ import type { MenuItemSelectDetail } from '../../layout/menu/menu.class.js';
 import type { LyraDropdown } from '../../overlays/overlay/dropdown.class.js';
 import { falseDefaultBooleanConverter } from '../../../internal/converters.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
-import { classifyFiles, EMPTY_MIME_TYPES, mimeTypeFilter, snapshotMimeTypes } from '../file-input/accept.js';
+import { classifyFiles, EMPTY_MIME_TYPES, mimeTypeFilter, snapshotMimeTypes } from '../../../internal/file-accept.js';
 import type { LyraFileInputRejectedFile } from '../file-input/file-input.class.js';
 import type { LyraMessageKey } from '../../../internal/localization-types.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START

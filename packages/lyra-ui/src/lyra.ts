@@ -105,11 +105,11 @@ export type {
   MessageActionControl,
   LyraMessageActionsEventMap,
 } from './components/conversation/message-actions/message-actions.class.js';
-export { isLyraToolbarActionProvider } from './components/conversation/message-actions/toolbar-actions.js';
+export { isLyraToolbarActionProvider } from './internal/toolbar-actions.js';
 export type {
   LyraToolbarAction,
   LyraToolbarActionProvider,
-} from './components/conversation/message-actions/toolbar-actions.js';
+} from './internal/toolbar-actions.js';
 export type {
   LyraTranscriptEntry,
   LyraTranscriptFeedEventMap,
@@ -839,7 +839,7 @@ export { LYRA_MAP_EMPTY_STYLE } from './components/media/map/map-empty-style.js'
 export type { MapLibreSourceDataDiff } from './components/media/map/map-loader.js';
 export {
   DEFAULT_MAX_FILE_SIZE_BYTES,
-} from './components/media/file-input/file-intake.js';
+} from './internal/file-intake.js';
 export type {
   LyraFileInputCapture,
   LyraFileInputFilesDetail,
@@ -1533,7 +1533,7 @@ export type {
   LyraHighlightTone,
   TextSelectDetail,
   TextSelectRect,
-} from './components/viewers/document-viewer/anchors.js';
+} from './internal/document-anchors.js';
 export type { LyraSvgViewerEventMap } from './components/viewers/svg-viewer/svg-viewer.class.js';
 export type {
   LyraModelCamera,
@@ -2065,8 +2065,8 @@ export type {
   LyraArchiveViewerEventMap,
 } from './components/viewers/archive-viewer/archive-viewer.class.js';
 export type { LyraExportButtonEventMap } from './components/utility/export-button/export-button.class.js';
-export type { FileIntakeDetail } from './components/media/file-input/file-intake.js';
-export type { FileIntakeRejected } from './components/media/file-input/accept.js';
+export type { FileIntakeDetail } from './internal/file-intake.js';
+export type { FileIntakeRejected } from './internal/file-accept.js';
 export type { LyraFileInputEventMap } from './components/media/file-input/file-input.class.js';
 export type { LyraGraphEventMap } from './components/retrieval/graph/graph.class.js';
 export type {

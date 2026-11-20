@@ -2,7 +2,7 @@ import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "../../lr-image-viewer.js";
 import type { LyraImageViewer, LyraImageRotation } from "../../lr-image-viewer.js";
 import { resolvedInShadow } from "../../../../test/shadow-style.js";
-import type { LyraHighlight } from "../../viewers/document-viewer/anchors.js";
+import type { LyraHighlight } from "../../../internal/document-anchors.js";
 import type { LyraPanZoom } from "../pan-zoom/pan-zoom.class.js";
 import {
   hoverUntilMatched,

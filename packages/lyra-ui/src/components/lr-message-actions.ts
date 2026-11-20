@@ -1,7 +1,7 @@
 export type { MessageFeedbackSubmitDetail, MessageFeedbackValue } from './conversation/message-feedback/message-feedback.class.js';
 export type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../internal/clipboard.js';
 export * from './conversation/message-actions/message-actions.class.js';
-export * from './conversation/message-actions/toolbar-actions.js';
+export * from '../internal/toolbar-actions.js';
 import { LyraMessageActions } from './conversation/message-actions/message-actions.class.js';
 import { defineElement } from '../internal/prefix.js';
 // The lean icon-button entry: the built-in actions slot this component's own glyphs, so they must

@@ -143,9 +143,6 @@ export class LyraTypingIndicator extends LyraElement {
     if (this.hasUpdated) this.announce();
   }
 
-  override disconnectedCallback(): void {
-    super.disconnectedCallback();
-  }
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);

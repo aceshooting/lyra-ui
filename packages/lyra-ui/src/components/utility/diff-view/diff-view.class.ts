@@ -33,7 +33,7 @@ import type {
   LyraAnchor,
   LyraAnchorKind,
   LyraHighlight,
-} from '../../viewers/document-viewer/anchors.js';
+} from '../../../internal/document-anchors.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 import { boundedViewerSearchQuery, ViewerSearchWorkBudget, VIEWER_PAINTED_HIGHLIGHT_LIMIT } from '../../viewers/viewer-search-limits.js';
 import { ViewerAnnouncementController } from '../../viewers/viewer-announcements.js';

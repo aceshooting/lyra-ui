@@ -298,7 +298,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
    *  never inherits a host attribute automatically — same reasoning as `<lr-breadcrumb>`'s
    *  identical property. Unset falls back to the localized default; an explicitly empty
    *  `aria-label` stays empty. */
-  @property({ attribute: 'aria-label' }) accessibleLabel?: string;
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   // Tracks the default slot's assigned-element count purely for the `itemCount` convenience getter
   // below -- copies <lr-source-list>'s sourceCount three-part technique (pre-count in willUpdate to

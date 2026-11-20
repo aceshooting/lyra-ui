@@ -5,6 +5,8 @@ import {
   loadAndRegisterChartModule,
   type ChartJsModule,
 } from './chart-core-loader.js';
+import { rearmDevWarnings } from '../../../../test/expected-dev-warnings.js';
+beforeEach(() => rearmDevWarnings('lr-chart-peer:'));
 
 const CHART_REGISTERABLE_KEYS = [
   'LineController',

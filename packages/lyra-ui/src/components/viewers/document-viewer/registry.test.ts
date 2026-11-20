@@ -14,7 +14,7 @@ import {
   type LyraAvDocumentRendererPayload,
 } from './registry.js';
 import { snapshotLyraAvCues, snapshotLyraAvTracks } from '../../media/av-player/av-metadata.js';
-import type { LyraAnchor, LyraHighlight } from './anchors.js';
+import type { LyraAnchor, LyraHighlight } from '../../../internal/document-anchors.js';
 
 const PDF_FILE: LyraDocumentFile = {
   name: 'report.pdf',

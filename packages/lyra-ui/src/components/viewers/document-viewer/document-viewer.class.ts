@@ -24,7 +24,7 @@ import type {
   AnchorTargetCapabilities,
   LyraAnchor,
   LyraHighlight,
-} from './anchors.js';
+} from '../../../internal/document-anchors.js';
 import type { LyraDocumentPreview } from '../document-preview/document-preview.class.js';
 import type { LyraSearchChangeDetail, LyraTextViewerTarget } from '../../../internal/text-viewer-target.js';
 import type { LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';

@@ -3,6 +3,7 @@ import { hasRealContent } from './a11y.js';
 import { hasSlotContent, isSlotElement } from './slot-content.js';
 import { HostChildrenObserver } from './owned-observer.js';
 import { SEED_FIRST_RENDER_STATE, SLOT_PRESENCE_UNRESOLVED } from './lyra-element.js';
+import { requestContextUpdate } from './context-update.js';
 
 type SlotPresenceHost = ReactiveControllerHost &
   Element & {
@@ -179,6 +180,6 @@ export class SlotPresenceController implements ReactiveController {
   #setPresence(name: string, present: boolean, requestUpdate: boolean): void {
     if (present === (this.#presence.get(name) ?? false)) return;
     this.#presence.set(name, present);
-    if (requestUpdate) this.host.requestUpdate();
+    if (requestUpdate) requestContextUpdate(this.host);
   }
 }

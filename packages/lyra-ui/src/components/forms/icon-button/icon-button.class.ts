@@ -14,7 +14,7 @@ import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { safeActionLinkHref, safeDownloadHref } from '../../../internal/safe-url.js';
 import { isUnsafeSvgCloneAttribute, isUnsafeSvgCloneElement } from '../../../internal/safe-svg.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
-import type { LyraToolbarAction } from '../../conversation/message-actions/toolbar-actions.js';
+import type { LyraToolbarAction } from '../../../internal/toolbar-actions.js';
 import { leaseTabIndex } from '../../../internal/tab-index-lease.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';

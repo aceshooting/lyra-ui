@@ -88,7 +88,7 @@ image when `country` or `language` is used. Import
 that resolver; a pre-resolved `src` works without the peer registration entry. If the peer is not
 installed — or if `flag-peer.js` was simply never imported, which looks identical from the page —
 the component fails closed with localized visible `[part="error"]` text, a shared light-DOM
-assertive announcement, and a one-time `console.warn` naming the unresolved code and this import
+assertive announcement, and a one-time development-only `console.warn` naming the unresolved code and this import
 (see gotchas).
 
 Also exported from the package root:
@@ -183,7 +183,7 @@ import "@aceshooting/lyra-ui/components/media/flag/flag-peer.js";
   `[data-lr-live-region="assertive"]` sink, so the shadow chrome itself is not live and identical
   retries remain separate additions. Importing a peer entry (`flag-peer.js` and its bulk variants)
   asks the library to load `@aceshooting/lyra-flags`, so its outcome is reported once per entry in
-  every build with a cause-specific `console.warn`: a package that cannot be resolved is told to
+  development builds with a cause-specific, once-per-cause `console.warn`: a package that cannot be resolved is told to
   install it; a package that loads without the needed `flagUrl`/`createFlagUrlResolver` is a version
   mismatch to upgrade (both are cached for the page); an import that rejects for another reason (a
   network or chunk failure) is reported as a load failure and retried by the next flag resolution,

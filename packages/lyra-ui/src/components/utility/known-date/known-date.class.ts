@@ -870,12 +870,16 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
       }),
       detail
     );
+    const hadFocus = this.shadowRoot?.activeElement === input;
     this.dispatchEvent(event);
     this.emit('lr-input', detail);
     // Auto-advance is purely digit-count-based (length reaches the field's
     // own cap), not value-based -- this library's own addition layered on
     // top of Web Awesome's bare typing model, see the class doc comment.
-    if (field !== 'year' && digits.length === maxLength)
+    // The input/lr-input listeners above run first: advance only when they left the component
+    // connected and enabled, this field holding the typed digits, and focus where it was.
+    if (field !== 'year' && digits.length === maxLength && this.isConnected && !isLiveDisabled(this) &&
+        input.value === digits && (!hadFocus || this.shadowRoot?.activeElement === input))
       this.focusAdjacentField(field, 1);
   };
 

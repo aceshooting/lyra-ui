@@ -3,6 +3,7 @@ import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { tag } from '../../../internal/prefix.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import {
@@ -957,8 +958,8 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
               heading=${this.localize('noData')}
             ></lr-empty>`
           : html`<div part="list" role="list" aria-labelledby=${headingId}>
-              ${renderedItems
-                .map((item, index) => this.renderItem(item, scope, index, rovingActionKey, promotionTextCounts))}
+              ${repeat(renderedItems, (item) => this.itemKey(item, scope),
+                (item, index) => this.renderItem(item, scope, index, rovingActionKey, promotionTextCounts))}
             </div>
             ${items.length > MAX_RENDERED_MEMORY_ITEMS
               ? html`<p part="limit" role="note">${this.localize(

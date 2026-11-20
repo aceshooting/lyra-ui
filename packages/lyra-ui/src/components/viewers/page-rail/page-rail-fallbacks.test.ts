@@ -1,7 +1,7 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import '../../lr-page-rail.js';
 import type { LyraPageRail, PageThumbnailSource } from '../../lr-page-rail.js';
-import type { LyraHighlight } from '../document-viewer/anchors.js';
+import type { LyraHighlight } from '../../../internal/document-anchors.js';
 
 function rows(el: LyraPageRail): HTMLElement[] {
   const list = el.shadowRoot!.querySelector('lr-virtual-list');

@@ -2745,7 +2745,8 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     if (eventInteractiveTarget(e, table)) return;
     // Composition and Alt/Ctrl/Cmd shortcuts (history, zoom, copy) belong to the platform.
     if (shouldIgnoreNavigationKey(e)) return;
-    if (isRepeatedActivationKey(e)) return;
+    // A held Enter/Space/F2 activates once; held arrows and paging keys keep moving focus.
+    if (isRepeatedActivationKey(e) && (e.key === 'Enter' || e.key === ' ' || e.key === 'F2')) return;
     // Same th-scoping rationale as onTableClick above.
     const th = target.closest('th[data-col-key]') as HTMLElement | null;
     if (th) return this.onHeaderKeyDown(e, th);

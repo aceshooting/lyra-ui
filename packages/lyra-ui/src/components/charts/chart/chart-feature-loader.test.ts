@@ -13,6 +13,8 @@ import {
   loadChartAndAnnotation,
   loadChartJsWithAnnotationResult,
 } from './chart-feature-loader.js';
+import { rearmDevWarnings } from '../../../../test/expected-dev-warnings.js';
+beforeEach(() => rearmDevWarnings('lr-chart-peer:'));
 
 const CHART_REGISTERABLE_KEYS = [
   'LineController',
@@ -55,6 +57,7 @@ async function captureWarnings<T>(operation: () => Promise<T>): Promise<{
   result: T;
   warnings: unknown[][];
 }> {
+  rearmDevWarnings('lr-chart-peer:');
   const originalWarn = console.warn;
   const warnings: unknown[][] = [];
   console.warn = (...args: unknown[]) => warnings.push(args);

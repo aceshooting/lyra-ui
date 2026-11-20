@@ -3,7 +3,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import type { LyraHighlightTone, HighlightActivateDetail } from '../document-viewer/anchors.js';
+import type { LyraHighlightTone, HighlightActivateDetail } from '../../../internal/document-anchors.js';
 import { styles } from './highlight-layer.styles.js';
 import { maxPairedAnimationEndMs } from './highlight-layer-timing.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';

@@ -1,6 +1,7 @@
 import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import '../../lr-env-list.js';
 import type { LyraEnvList } from '../../lr-env-list.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 
 const entries = [
@@ -105,5 +106,17 @@ describe('lr-env-list entry ceiling', () => {
     const el = await fixture<LyraEnvList>(html`<lr-env-list .entries=${null as unknown as []}></lr-env-list>`);
     expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);
     expect(el.entries.length).to.equal(0);
+  });
+});
+
+describe('lr-env-list keyed rows', () => {
+  it('keeps a focused row action bound to its variable when the host prepends an entry', async () => {
+    const el = await fixture<LyraEnvList>(html`<lr-env-list .entries=${entries}></lr-env-list>`);
+    const copy = el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="copy-button"]')[1]!;
+    await focusByKeyboard(copy);
+    el.entries = [{ name: 'FIRST', value: '1', secret: false }, ...entries];
+    await el.updateComplete;
+    const active = el.shadowRoot!.activeElement as HTMLElement | null;
+    expect(active?.getAttribute('aria-label')).to.contain('MODE');
   });
 });

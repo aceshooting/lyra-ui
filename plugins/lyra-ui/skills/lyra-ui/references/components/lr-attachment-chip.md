@@ -159,7 +159,7 @@ Plus shared tokens `--lr-space-xs`, `--lr-space-s`,
 Also exported from the package root (and from `components/media/attachment-chip/file-size.js`):
 `formatFileSize(bytes: number, locale?: string): string`. It scales on binary (1024) rungs through
 PB and words the unit through `Intl.NumberFormat` with at most one fraction digit, exactly like
-`<lr-format-bytes unit-step="1024">`: `512` → `"512 byte"`, `1536` → `"1.5 kB"`, `2415919` →
+`<lr-format-bytes unit-step="1024">`: `512` → `"512 B"`, `1536` → `"1.5 kB"`, `2415919` →
 `"2.3 MB"` in English. An omitted or `'auto'` locale follows the active `setLyraLocale()` locale.
 A negative or non-finite input (`NaN`, `Infinity`) returns `""` so an unknown size renders nothing.
 Every component that shows a file size (`lr-attachment-chip`, `lr-file-input`, `lr-file-icon`,

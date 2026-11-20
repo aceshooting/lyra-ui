@@ -15,7 +15,7 @@ import {
   tokenizeCodeBlock,
 } from "./code-block-shared.js";
 import { SHIKI_SOURCE_MAX_CODE_UNITS, type ShikiHighlighterCore } from './shiki-types.js';
-import type { LyraHighlight } from '../../viewers/document-viewer/anchors.js';
+import type { LyraHighlight } from '../../../internal/document-anchors.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 type LitWarningRuntime = typeof globalThis & { litIssuedWarnings?: Set<string> };

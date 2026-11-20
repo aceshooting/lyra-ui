@@ -61,6 +61,19 @@ export const styles = css`
       ${activeFill('var(--lr-media-card-bg, var(--lr-color-surface))')}
     );
   }
+  /* frame="plain" has no border to tint, so its hover and pressed cues are an outline in the same
+     hooks (declared before :focus-visible, which still wins for a focused card). */
+  :host([frame="plain"]) button[part="base"]:not(:disabled):hover,
+  :host([frame="plain"]) a[part="base"]:not([aria-disabled="true"]):hover {
+    outline: var(--lr-border-width-thin) solid var(--lr-media-card-hover-border-color, var(--lr-color-brand));
+  }
+  :host([frame="plain"]) button[part="base"]:not(:disabled):active,
+  :host([frame="plain"]) a[part="base"]:not([aria-disabled="true"]):active {
+    outline: var(--lr-border-width-medium, var(--lr-border-width-thin)) solid var(
+      --lr-media-card-active-border-color,
+      ${activeFill('var(--lr-color-brand)')}
+    );
+  }
   [part="base"]:focus-visible {
     ${focusRingShorthand}
   }

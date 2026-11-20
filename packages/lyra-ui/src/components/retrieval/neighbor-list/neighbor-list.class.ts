@@ -45,9 +45,11 @@ import { collectionSupport, publicCollectionTruncation } from '../../../internal
 import { revealWithinScrollParent } from '../../../internal/scroll-region.js';
 import { labelWithVisibleText, normalizeLabel } from '../../../internal/accessible-name.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
 import { property, state } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { firstByRetrievalIdentity, isNonBlankIdentity } from '../retrieval-identity.js';
 import { expandIcon } from '../../../internal/icons.js';
 import { finiteCount } from '../../../internal/numbers.js';
@@ -315,10 +317,19 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     revealWithinScrollParent(target); if (!current()) return false;
     target.focus({ preventScroll: true }); return current() && this.renderRoot.querySelector('[data-source-key]:focus') === target;
   }
-  override connectedCallback(): void { super.connectedCallback(); this.sourceEpoch++; this.syncSource(); }
-  override disconnectedCallback(): void {
+  override connectedCallback(): void {
+    super.connectedCallback();
+    if (this.detached.cancel()) return;
+    this.sourceEpoch++; this.syncSource();
+  }
+  /** A same-task DOM move keeps the loaded neighborhood; a real disconnect unbinds it. */
+  private readonly detached = new DeferredTeardown(() => {
     this.sourceEpoch++; this.sourceNavigation++; this.sourcePages.bind(undefined); this.sourceBinding = undefined; this.sourcePageBinding = undefined;
+  });
+  override disconnectedCallback(): void {
+    this.sourceNavigation++;
     super.disconnectedCallback();
+    this.detached.schedule();
   }
 
   /** `virtualizeAt`, normalized to a finite non-negative integer (falling back to the property's
@@ -591,6 +602,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
   }
 
   override adoptedCallback(): void {
+    this.detached.flush();
     super.adoptedCallback();
     this.announcements.adopted();
     this.sourceEpoch++; this.sourceNavigation++; this.sourcePages.adopted(); this.syncSource();
@@ -611,7 +623,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
       ${status ? html`<p part="source-status">${status}</p>` : nothing}
       ${failed ? html`<button part="source-retry" type="button" @click=${() => { if (current() && this.sourcePages.state === state && (this.sourceError || Boolean(state.error))) this.requestUpdate(); }}>${this.localize('retry')}</button>` : nothing}
       ${total !== null ? html`<p part="source-summary">${this.localize('neighborSourceSummary', undefined, { shown: getNumberFormat(this.effectiveLocale).format(rows.length), total: getNumberFormat(this.effectiveLocale).format(total) })}</p>` : nothing}
-      <div role="list">${rows.map((row, index) => {
+      <div role="list">${repeat(rows, (row) => row.key, (row, index) => {
         const visible = row.value.label || row.value.id;
         const custom = normalizeLabel(row.value.accessibleLabel);
         const name = custom === undefined ? visible
@@ -708,7 +720,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
       <div part="base" role=${role ?? nothing} aria-label=${label ?? nothing}>
         ${this.renderInputLimit()}
         <div role="list">
-          ${sorted.map((row, i) => {
+          ${repeat(sorted, relationshipKey, (row, i) => {
             const group = groupsByStartIndex.get(i);
             // `role="presentation"` (not `role="heading"`) -- ARIA's `list` role only owns
             // `listitem` children, so an explicit `heading` role here would be a disallowed child

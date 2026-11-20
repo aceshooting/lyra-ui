@@ -72,7 +72,7 @@ image when `country` or `language` is used. Import
 that resolver; a pre-resolved `src` works without the peer registration entry. If the peer is not
 installed — or if `flag-peer.js` was simply never imported, which looks identical from the page —
 the component fails closed with localized visible `[part="error"]` text, a shared light-DOM
-assertive announcement, and a one-time `console.warn` naming the unresolved code and this import
+assertive announcement, and a one-time development-only `console.warn` naming the unresolved code and this import
 (see gotchas).
 
 Also exported from the package root:
@@ -167,7 +167,7 @@ import "@aceshooting/lyra-ui/components/media/flag/flag-peer.js";
   `[data-lr-live-region="assertive"]` sink, so the shadow chrome itself is not live and identical
   retries remain separate additions. Importing a peer entry (`flag-peer.js` and its bulk variants)
   asks the library to load `@aceshooting/lyra-flags`, so its outcome is reported once per entry in
-  every build with a cause-specific `console.warn`: a package that cannot be resolved is told to
+  development builds with a cause-specific, once-per-cause `console.warn`: a package that cannot be resolved is told to
   install it; a package that loads without the needed `flagUrl`/`createFlagUrlResolver` is a version
   mismatch to upgrade (both are cached for the page); an import that rejects for another reason (a
   network or chunk failure) is reported as a load failure and retried by the next flag resolution,
@@ -511,7 +511,7 @@ Loaded native MapLibre styles retain synchronous inline diffs. The live peer det
 `engine` changes apply after reconnect. Map and camera identity are preserved.
 
 **On-demand runtimes:** optional `lr-map` features load their code on first use, so a bundler that
-splits chunks keeps them out of the initial bundle. Drawing and vertex editing load when `drawMode`
+splits chunks keeps them out of the initial bundle. Drawing and vertex editing load when `drawMode` (attribute `draw-mode`)
 becomes `line` or `polygon` or `editDrawing()` is first called; `exportImage()` loads export
 capture; `hash` loads URL ownership when it is anything but `false`, `null` or `undefined`;
 `overlays`, `images`, `styleOverrides`, external data layers and `interactiveBasemapLayers` load
@@ -886,7 +886,7 @@ Equal paint produces no repaint; camera movement is not needed to show a metric 
 **Interactions:** opt in with `interactive` and optional `priority` on a data layer, choropleth or
 owned overlay layer; `interactiveBasemapLayers = []` explicitly enrolls basemap layers.
 `lr-map-click`, `lr-map-contextmenu`, `lr-map-feature-enter`, and `lr-map-feature-leave` report routed interaction data;
-legacy `lr-map-click` and cluster payloads remain available. `pickMode = false` enables a temporary
+legacy `lr-map-click` and cluster payloads remain available. `pickMode = false` (attribute `pick-mode`) enables a temporary
 coordinate-picking session when set to true; `lr-map-pick` also supports keyboard center selection.
 `keyboardActivation = false` (attribute `keyboard-activation`) opts in to keyboard activation: while
 the map canvas has focus, an unmodified, non-repeated Enter or Space activates the interactive feature
@@ -925,7 +925,7 @@ geometry is the rendered one, so a large feature may be clipped to the tiles aro
 `geometry` is `null` above 100,000 coordinate values. Disconnecting the map clears its hover state without emitting
 `lr-map-feature-leave` or `lr-map-pointer-leave`. Clear any tooltip or highlight when removing the map.
 
-**Drawing:** `drawMode: LyraMapDrawingMode = 'none'` arms `line` or `polygon` drawing. The
+**Drawing:** `drawMode: LyraMapDrawingMode = 'none'` (attribute `draw-mode`) arms `line` or `polygon` drawing. The
 controls render as soon as a mode is armed; the session starts once the drawing runtime has loaded
 and the style is ready, and `whenIdle()` covers that load. Pointer
 vertices and the keyboard center/undo/finish/cancel controls share one temporary session.
@@ -971,7 +971,7 @@ zero, explicitly invalid edges fail closed. Placement intersects boundaries with
 and retains its 8px padding. If the geographic target remains on the map but lies outside that
 intersection, the panel shifts fully inside the available area; changing the safe area never
 moves the map camera or changes `anchorLngLat`. An off-map target or collapsed allocation hides
-the panel. `anchorClosable = false` leaves content passive; enabling it adds a
+the panel. `anchorClosable = false` (attribute `anchor-closable`) leaves content passive; enabling it adds a
 close button and nonmodal Escape handling. `focusAnchor()` explicitly focuses eligible visible
 content synchronously; `closeAnchor()` closes a currently visible anchor. Both return booleans.
 `lr-map-anchor-close` reports `api`, `close-button`, or `escape`; focus return respects ownership.
@@ -3847,7 +3847,7 @@ Plus shared tokens `--lr-space-xs`, `--lr-space-s`,
 Also exported from the package root (and from `components/media/attachment-chip/file-size.js`):
 `formatFileSize(bytes: number, locale?: string): string`. It scales on binary (1024) rungs through
 PB and words the unit through `Intl.NumberFormat` with at most one fraction digit, exactly like
-`<lr-format-bytes unit-step="1024">`: `512` → `"512 byte"`, `1536` → `"1.5 kB"`, `2415919` →
+`<lr-format-bytes unit-step="1024">`: `512` → `"512 B"`, `1536` → `"1.5 kB"`, `2415919` →
 `"2.3 MB"` in English. An omitted or `'auto'` locale follows the active `setLyraLocale()` locale.
 A negative or non-finite input (`NaN`, `Infinity`) returns `""` so an unknown size renders nothing.
 Every component that shows a file size (`lr-attachment-chip`, `lr-file-input`, `lr-file-icon`,
@@ -4141,7 +4141,7 @@ the video's own native controls bubble up and spuriously fire `lr-media-open`.
   auto-detected resolved kind should target the rendered `[part]`/element (e.g. `video[part="media"]`),
   not `:host([kind=...])`, since the latter won't see an auto-detected kind.
 
-`--lr-media-card-hover-border-color` sets the hovered border of an image or file action.
+`--lr-media-card-hover-border-color` sets the hovered border of an image or file action. With `frame="plain"` (no border) hover and press instead draw an outline in `--lr-media-card-hover-border-color` and `--lr-media-card-active-border-color`.
 
 ---
 
@@ -5472,7 +5472,11 @@ play/pause control (absent, and therefore a no-op, under `controls="none"`).
 **Events:** native `ended`, `error`, `loadedmetadata`, `pause`, `play`, `timeupdate`, and
 `volumechange`, relayed exactly once from the host as native `Event` instances. They remain
 non-bubbling, non-composed, and non-cancelable. Scrubbing the custom timeline also dispatches an
-immediate host `timeupdate`, before a browser's eventual native seek notification. The internal
+immediate host `timeupdate`, before a browser's eventual native seek notification. A non-empty `src`
+or `<source>` set with no allowlisted URL never reaches the native element; the host still fires one
+`error` `Event` of the same shape. That rejection and a native media error both show the localized
+`[part="error"]` notice (key `avPlayerFailedToLoad`) and announce it assertively; new sources clear
+it. The internal
 play/pause control's `focus`/`blur` are relayed exactly once as owner-realm native `FocusEvent`s
 (bubbling and composed, preserving `relatedTarget`).
 With the optional panorama, `lr-panorama-camera-change` (`detail: { camera }`, after a user gesture or
@@ -5499,7 +5503,7 @@ selected for Lyra's custom overlay use native `mode="hidden"`, keeping cue activ
 without asking the browser to paint a duplicate native caption layer.
 
 **CSS parts:** `base` and `video-wrapper` (aliases on the same root node), `caption`,
-`caption-overlay`, `controls`, `controls-overlay`, `poster-overlay`, `poster-play-button`,
+`caption-overlay`, `controls`, `controls-overlay`, `error`, `poster-overlay`, `poster-play-button`,
 `progress`, `thumbnail`, `timeline`, `timeline-indicator`, `timeline-thumb`, `timeline-track`,
 `video`, and `video-title-overlay`.
 Panorama parts (with `projection="equirectangular"`): `panorama` (the keyboard-operable spherical

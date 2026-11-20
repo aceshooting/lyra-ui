@@ -34,7 +34,7 @@ import {
 } from '../../../internal/text-quote.js';
 import { createTextQuoteIndex, type TextQuoteIndex, type TextQuoteWorkBudget } from '../../../internal/text-quote-index.js';
 import type { LyraHighlightLayer, HighlightLayerItem, LyraHighlightLayerEventMap } from '../highlight-layer/highlight-layer.class.js';
-import type { LyraAnchor, LyraHighlight } from '../document-viewer/anchors.js';
+import type { LyraAnchor, LyraHighlight } from '../../../internal/document-anchors.js';
 import { PageViewerSnapshotController } from '../page-rail/page-viewer-snapshot.js';
 import type {
   LyraPageViewerSnapshot,

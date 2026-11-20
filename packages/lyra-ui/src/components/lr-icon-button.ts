@@ -1,4 +1,4 @@
-export type { LyraToolbarAction } from './conversation/message-actions/toolbar-actions.js';
+export type { LyraToolbarAction } from '../internal/toolbar-actions.js';
 export * from './forms/icon-button/icon-button.class.js';
 import './lr-icon.js';
 import { LyraIconButton } from './forms/icon-button/icon-button.class.js';

@@ -19,14 +19,14 @@ export type MapHitResult =
   | { readonly status: 'hit'; readonly hit: MapHit; readonly featureIndex: number }
   | { readonly status: 'none' | 'query-error' | 'stale' }
   | { readonly status: 'invalid'; readonly reason: 'rules' | 'layers' | 'features' | 'point' };
-export type MapHitRulesResult =
+type MapHitRulesResult =
   | { readonly status: 'ready'; readonly rules: readonly MapHitRule[] }
   | { readonly status: 'invalid'; readonly reason: 'rules' };
-export interface MapHitQueryService {
+interface MapHitQueryService {
   getLayer(id: string): unknown;
   queryRenderedFeatures(point: { readonly x: number; readonly y: number }, options: { readonly layers: readonly string[] }): unknown;
 }
-export interface MapHitQueryBoundary { readonly signal?: AbortSignal; readonly current?: () => boolean }
+interface MapHitQueryBoundary { readonly signal?: AbortSignal; readonly current?: () => boolean }
 const MAX_LAYERS = 4096, MAX_FEATURES = 10000, MAX_ID = 1024;
 const OMIT = Symbol('omitted-data');
 function object(value: unknown): value is object { return value !== null && typeof value === 'object'; }
@@ -208,7 +208,7 @@ const OPACITY_PROPERTIES: Readonly<Record<string, readonly string[]>> = Object.f
   'fill-extrusion': ['fill-extrusion-opacity'], raster: ['raster-opacity'], heatmap: ['heatmap-opacity'],
 });
 /** The style reads a layer needs to decide whether it is drawn at this zoom. */
-export interface MapLayerStyleReader {
+interface MapLayerStyleReader {
   getLayoutProperty?(id: string, property: string): unknown;
   getPaintProperty?(id: string, property: string): unknown;
 }

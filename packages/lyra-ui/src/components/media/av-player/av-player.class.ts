@@ -11,7 +11,9 @@ import { ref } from 'lit/directives/ref.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { tag } from '../../../internal/prefix.js';
 import { loadLazyChildren } from '../../../internal/lazy-children.js';
+import { isRepeatedActivationKey } from '../../../internal/list-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { DocumentAnchorTargetBase as DocumentAnchorTarget } from '../../../internal/anchor-target-base.js';
 import type {
   LyraAnchor,
@@ -19,7 +21,7 @@ import type {
   LyraHighlight,
   HighlightActivateDetail,
   AnchorResultDetail,
-} from '../../viewers/document-viewer/anchors.js';
+} from '../../../internal/document-anchors.js';
 import {
   MAX_NATIVE_PLAYBACK_RATE as MAX_PLAYBACK_RATE,
   MIN_NATIVE_PLAYBACK_RATE as MIN_PLAYBACK_RATE,
@@ -898,6 +900,12 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.detached.cancel()) {
+      // The cue source controller released its binding on the host disconnect; rebind it.
+      this.cueSourceDirty = true;
+      this.requestUpdate('cueSourceContinuation', null);
+      return;
+    }
     this.connectionEventBaselinePending = true;
     this.mediaController.reconnect();
     // Added here (not in firstUpdated) so every reconnect, including cross-document adoption,
@@ -914,12 +922,25 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     this.drawWaveform();
   }
 
+  private hostDisconnecting = false;
+  /** A same-task DOM move keeps playback and the drawn waveform; a genuine disconnect releases them. */
+  private readonly detached = new DeferredTeardown(() => this.releaseConnection());
+
   override disconnectedCallback(): void {
+    // Writes made while detached, even across a move, are state rather than observable transitions.
+    this.connectionEventBaselinePending = true;
+    // Custom element reactions run after a move's insertion, so `isConnected` cannot tell a
+    // move from a removal here; flag the host-driven ref unset instead.
+    this.hostDisconnecting = true;
+    try { super.disconnectedCallback(); } finally { this.hostDisconnecting = false; }
+    this.detached.schedule();
+  }
+
+  private releaseConnection(): void {
     this.cueSourceController.revoke();
     this.cueSourceDirty = true;
     this.activeCueId = null;
     this.activeCueIndex = -1;
-    this.connectionEventBaselinePending = true;
     this.mediaController.disconnect();
     this.unbindResizeWindow();
     this.unbindWaveformResizeObserver();
@@ -930,10 +951,10 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     this.waveformDetachedObserverWindow = this.waveformObserverWindow;
     this.unbindWaveformVisibilityObserver();
     this.waveformDirty = this.hasWaveform;
-    super.disconnectedCallback();
   }
 
   override adoptedCallback(): void {
+    this.detached.flush();
     super.adoptedCallback();
     this.announcements.adopted();
     this.cueSourceController.adopted();
@@ -1084,6 +1105,9 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   };
 
   private mediaRef = (el?: Element): void => {
+    // A host disconnect also unsets the ref; the deferred teardown owns that release, so a
+    // same-task DOM move keeps the native element attached and playing.
+    if (!el && this.hostDisconnecting) return;
     const media = el?.localName === 'audio' || el?.localName === 'video'
       ? (el as HTMLMediaElement)
       : undefined;
@@ -1569,7 +1593,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
         break;
       case ' ':
         event.preventDefault();
-        this.toggle();
+        if (!isRepeatedActivationKey(event)) this.toggle();
         break;
       default:
         return;

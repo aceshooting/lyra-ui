@@ -300,3 +300,14 @@ it('keeps an in-flight load when the same loader is assigned again', async () =>
   await waitUntil(() => el.value === 'fr');
   expect(getLyraLocale()).to.equal('fr');
 });
+
+it('reports a loader rejection with the failed locale and reason', async () => {
+  const el = await create();
+  const failure = new Error('offline');
+  el.localeLoader = () => Promise.reject(failure);
+  const reports: { value: string; error: unknown }[] = [];
+  el.addEventListener('lr-load-error', (event) => reports.push((event as CustomEvent<{ value: string; error: unknown }>).detail));
+  pick(el, 'fr');
+  await waitUntil(() => reports.length === 1);
+  expect([reports[0]!.value, reports[0]!.error === failure, el.value]).to.deep.equal(['fr', true, 'en']);
+});

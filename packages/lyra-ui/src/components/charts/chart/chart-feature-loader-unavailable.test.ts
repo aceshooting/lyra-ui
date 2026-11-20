@@ -1,5 +1,7 @@
 import { expect } from '@open-wc/testing';
 import { loadChartJsWithDataLabelsResult, loadChartJsWithAnnotationResult, loadChartJsWithZoomResult } from './chart-feature-loader.js';
+import { rearmDevWarnings } from '../../../../test/expected-dev-warnings.js';
+beforeEach(() => rearmDevWarnings('lr-chart-peer:'));
 
 for (const [feature, load] of [
   ['zoom', loadChartJsWithZoomResult], ['data labels', loadChartJsWithDataLabelsResult],

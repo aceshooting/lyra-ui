@@ -11,7 +11,7 @@ import {
   prioritizedHighlightCandidates,
   type LyraAnchorTargetEventMap,
 } from './anchor-target.js';
-import type { LyraAnchor, LyraHighlight } from '../components/viewers/document-viewer/anchors.js';
+import type { LyraAnchor, LyraHighlight } from './document-anchors.js';
 import { defineElement } from './prefix.js';
 import { resetMouse, sendMouse } from '../../test/wtr-mouse.js';
 

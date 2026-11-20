@@ -1,7 +1,7 @@
 import { expect, fixture, html } from '@open-wc/testing';
 import { render } from 'lit';
 import { collectTableSearchMatches, TableViewerController, TableViewerScrollController, tableHighlightsForColumn, tableHighlightsForRow } from './table-viewer-shared.js';
-import type { LyraHighlight } from './document-viewer/anchors.js';
+import type { LyraHighlight } from '../../internal/document-anchors.js';
 import { VIEWER_SEARCH_QUERY_LIMIT, VIEWER_SEARCH_WORK_LIMIT } from './viewer-search-limits.js';
 
 describe('TableViewerScrollController', () => {

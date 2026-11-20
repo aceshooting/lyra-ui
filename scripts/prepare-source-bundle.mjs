@@ -55,7 +55,9 @@ export function bundlePreparedSource(root, environment = process.env) {
   const bytes = jsonBytes(manifest);
   writeFileSync(join(output, 'manifest.json'), bytes);
   writeFileSync(join(output, 'manifest.sha256'), `${sha256(bytes)}  manifest.json\n`);
+  // Intent-to-add makes the diff carry every generated new file, not only tracked edits.
+  if (added.length > 0) git(['add', '-N', '--', ...added]);
   writeFileSync(join(output, 'changes.patch'), git(['diff', 'HEAD', '--binary', '--full-index']));
-  writeFileSync(join(output, 'README.txt'), 'Review manifest.json and every changed path before applying. Verify the repository/baseCommit and all current before hashes/modes (null means absent), then every blob hash/length before any write. A null after means deletion. Apply regular files with the recorded modes. changes.patch previews tracked changes only; the manifest also includes new files. This artifact is generated source, not release qualification.\n');
+  writeFileSync(join(output, 'README.txt'), 'Review manifest.json and every changed path before applying. Verify the repository/baseCommit and all current before hashes/modes (null means absent), then every blob hash/length before any write. A null after means deletion. Apply regular files with the recorded modes. changes.patch previews every change, new files included; the manifest remains the verified source of truth. This artifact is generated source, not release qualification.\n');
   console.log(`Prepared ${changes.length} source changes against ${commit}`);
 }

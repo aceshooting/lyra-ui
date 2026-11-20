@@ -10,7 +10,7 @@ export const DEV_DIAGNOSTICS: boolean = false;
  */
 export function litDevWarnings(): Set<string> | undefined { return undefined; }
 export function devWarn(_message: string): void {}
-export function devWarnOnce(_key: string, _message: string): void {}
+export function devWarnOnce(_key: string, _message: string, ..._details: unknown[]): void {}
 export function warnLocaleFallback(_locale: string, _key: string): void {}
 export function warnDeprecatedUsage(
   _host: Element | string,

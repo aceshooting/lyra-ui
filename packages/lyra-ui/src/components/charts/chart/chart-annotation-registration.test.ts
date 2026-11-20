@@ -4,6 +4,8 @@ import '../../lr-box-plot.js';
 import type { LyraChart } from '../../lr-chart.js';
 import type { LyraBoxPlot } from '../../lr-box-plot.js';
 import { notifyAnnotationPluginRegistered, onAnnotationPluginRegistered } from '../../../internal/chart-annotation-registration.js';
+import { rearmDevWarnings } from '../../../../test/expected-dev-warnings.js';
+beforeEach(() => rearmDevWarnings('lr-chart-peer:'));
 
 type ChartInstance = { update(): void };
 const instanceOf = (el: HTMLElement): ChartInstance | undefined =>

@@ -3,7 +3,7 @@ import { render } from 'lit';
 import './pdf-viewer-register.js';
 import { PDF_VIEWER_TAG } from './pdf-viewer-register.js';
 import { findDocumentRenderer, loadDocumentRenderer, type LyraDocumentFile } from '../document-viewer/registry.js';
-import type { LyraHighlight } from '../document-viewer/anchors.js';
+import type { LyraHighlight } from '../../../internal/document-anchors.js';
 import { fetchedModule } from '../../../../test/resource-entries.js';
 
 const pdf: LyraDocumentFile = { name: 'report.pdf', mimeType: 'application/pdf', src: 'https://example.test/report.pdf' };

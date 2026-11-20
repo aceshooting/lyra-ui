@@ -5,6 +5,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { playIcon, pauseIcon } from '../../../internal/icons.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { finiteCount, finiteDuration, isSliderKey } from '../../../internal/numbers.js';
@@ -191,6 +192,7 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
   }
 
   override adoptedCallback(): void {
+    this.detached.flush();
     this.playbackGeneration++;
     this.releaseBinding?.();
     super.adoptedCallback();
@@ -237,11 +239,21 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
     return Math.max(0, finiteCount(this.itemCount) - 1);
   }
 
-  override disconnectedCallback(): void {
+  /** A same-task DOM move keeps playback running; a genuine disconnect pauses or releases the binding. */
+  private readonly detached = new DeferredTeardown(() => {
     if (this.boundCommands) this.releaseBinding?.();
     else this.pause();
     this.clearTimer();
+  });
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    this.detached.cancel();
+  }
+
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.detached.schedule();
   }
 
   private readonly semanticInternals = attachInternalsSafely(this);

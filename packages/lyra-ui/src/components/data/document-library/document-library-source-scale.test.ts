@@ -82,7 +82,7 @@ it('refreshes same-source and keyless updates once, then reconnects without stal
   await table(el, 'd0'); const parent = el.parentNode!;
   el.dataSource = provider; await table(el, 'd0'); await waitUntil(() => queries === 2);
   el.requestUpdate(); await waitUntil(() => queries === 3); await table(el, 'd0');
-  el.remove(); parent.appendChild(el); await waitUntil(() => queries === 4); await table(el, 'd0');
+  el.remove(); await new Promise(resolve => setTimeout(resolve)); parent.appendChild(el); await waitUntil(() => queries === 4); await table(el, 'd0');
   expect(queries).to.equal(4);
 });
 it('keeps complete off-page selection when page-select-all toggles mounted checkboxes', async () => {
@@ -167,7 +167,7 @@ it('reconciles globally absent selected documents after reconnect lookup', async
   provider.lookup = async () => { lookups++; return exists ? [entry(0)] : []; };
   const el = await fixture<LyraDocumentLibrary>(html`<lr-document-library .dataSource=${provider} .selectedDocumentIds=${['d0']}></lr-document-library>`);
   await table(el, 'd0'); await waitUntil(() => lookups === 1 && !el.shadowRoot!.querySelector('[part="selection-status"]'));
-  const parent = el.parentNode!; el.remove(); exists = false; parent.appendChild(el);
+  const parent = el.parentNode!; el.remove(); exists = false; await new Promise(resolve => setTimeout(resolve)); parent.appendChild(el);
   await waitUntil(() => lookups === 2 && !el.shadowRoot!.querySelector('[part="selection-status"]'));
   expect(el.selectedDocumentIds).to.deep.equal([]); expect(lookups).to.equal(2);
 });

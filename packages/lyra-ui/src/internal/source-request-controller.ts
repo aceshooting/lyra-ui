@@ -1,5 +1,6 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import type { LyraSourceContext, LyraSourceRevision } from '../data-sources.js';
+import { DeferredTeardown } from './deferred-teardown.js';
 
 /** Validates logical counts without turning invalid metadata into a truncated source. */
 export function sourceCount(value: unknown): number {
@@ -26,10 +27,13 @@ export class SourceRequestController<C extends string> implements ReactiveContro
   private active: boolean;
   private sourceEpoch = 0;
   private readonly channels = new Map<C, AbortController | undefined>();
+  private readonly detached?: DeferredTeardown;
 
+  /** `deferDisconnect` keeps in-flight work and accepted state across a same-task DOM move: the
+   * disconnect reset runs a microtask later unless the host is re-inserted first. */
   constructor(
     private readonly host: HTMLElement & ReactiveControllerHost,
-    private readonly options: { readonly channels: readonly C[]; readonly onReset?: () => void },
+    private readonly options: { readonly channels: readonly C[]; readonly onReset?: () => void; readonly deferDisconnect?: boolean },
   ) {
     if (options.channels.length < 1 || options.channels.length > 16) throw new RangeError('Invalid source channels');
     for (const channel of options.channels) {
@@ -37,6 +41,7 @@ export class SourceRequestController<C extends string> implements ReactiveContro
       this.channels.set(channel, undefined);
     }
     this.active = host.isConnected;
+    if (options.deferDisconnect) this.detached = new DeferredTeardown(() => this.refresh());
     host.addController(this);
   }
 
@@ -108,7 +113,11 @@ export class SourceRequestController<C extends string> implements ReactiveContro
     return lease.isCurrent() ? lease : undefined;
   }
 
-  adopted(): void { this.refresh(); }
-  hostConnected(): void { this.active = true; }
-  hostDisconnected(): void { this.active = false; this.refresh(); }
+  adopted(): void { this.detached?.cancel(); this.refresh(); }
+  hostConnected(): void { this.active = true; this.detached?.cancel(); }
+  hostDisconnected(): void {
+    this.active = false;
+    if (this.detached) this.detached.schedule();
+    else this.refresh();
+  }
 }

@@ -28,7 +28,7 @@ import type { LyraNotebookViewer } from './components/lr-notebook-viewer.js';
 import type { LyraDatasetViewer } from './components/lr-dataset-viewer.js';
 import type { LyraCsvViewer } from './components/lr-csv-viewer.js';
 import type { LyraSpreadsheetViewer } from './components/lr-spreadsheet-viewer.js';
-import type { LyraHighlight } from './components/viewers/document-viewer/anchors.js';
+import type { LyraHighlight } from './internal/document-anchors.js';
 
 /**
  * Chromium can dispatch an uncaught `ErrorEvent` reading "ResizeObserver loop completed with

@@ -324,6 +324,7 @@ describe('visibility-gated waveform redraws', () => {
       expect(paints, 'hidden invalidations coalesce into the visibility-entry paint').to.equal(1);
 
       el.remove();
+      await aTimeout(0);
       expect(disconnected, 'the visibility observer is disconnected with its host').to.equal(true);
     } finally {
       el?.remove();
@@ -375,6 +376,7 @@ describe('visibility-gated waveform redraws', () => {
       };
 
       el.remove();
+      await aTimeout(0);
       parent.append(el);
       await el.updateComplete;
 
@@ -526,6 +528,7 @@ describe('visibility-gated waveform redraws', () => {
       expect(paints, 'the current owner-realm callback restores the deferred paint').to.equal(3);
 
       el.remove();
+      await aTimeout(0);
       expect(ownerDisconnects, 'disconnect tears down the current-realm observer').to.equal(1);
     } finally {
       el.remove();
@@ -2633,6 +2636,7 @@ describe('source identity', () => {
     el.addEventListener('timeupdate', () => { timeUpdates += 1; });
 
     el.remove();
+    await aTimeout(0);
     media.dispatchEvent(new Event('timeupdate'));
     parent.append(el);
     await el.updateComplete;
@@ -3339,6 +3343,21 @@ it('forwards host focus()/blur()/click() to the native media element and re-disp
 });
 
 describe('lr-av-player remediation', () => {
+  it('toggles playback once while Space is held on the timeline', async () => {
+    const el = (await fixture(html`<lr-av-player kind="audio"></lr-av-player>`)) as LyraAvPlayer;
+    const media = mediaEl(el);
+    let plays = 0;
+    Object.defineProperty(media, 'play', { value: () => { plays += 1; return Promise.resolve(); }, configurable: true });
+    Object.defineProperty(media, 'duration', { value: 60, configurable: true });
+    media.dispatchEvent(new Event('loadedmetadata'));
+    await el.updateComplete;
+    const timeline = el.shadowRoot!.querySelector('[part="timeline"]') as HTMLElement;
+    for (const repeat of [false, true, true]) {
+      timeline.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', repeat, bubbles: true, cancelable: true }));
+    }
+    expect(plays).to.equal(1);
+  });
+
   async function withDuration(html_: ReturnType<typeof html>, duration = 100): Promise<LyraAvPlayer> {
     const el = (await fixture(html_)) as LyraAvPlayer;
     const media = mediaEl(el);

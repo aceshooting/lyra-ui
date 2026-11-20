@@ -41,7 +41,7 @@ import {
 import type {
   LyraAnchor,
   LyraHighlight,
-} from '../document-viewer/anchors.js';
+} from '../../../internal/document-anchors.js';
 import { loadDocxDeps, type DocxDeps } from './docx-loader.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { regionHighlightLabel } from '../region-highlight-layer.js';

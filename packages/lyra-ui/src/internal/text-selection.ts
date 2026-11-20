@@ -3,7 +3,7 @@
  * rects of a Range under fixed ceilings, without `Range#toString()` or an unbounded rect list. A
  * leaf below `text-quote.ts`, so a selection-only consumer does not pull the quote resolver.
  */
-import type { TextSelectRect } from '../components/viewers/document-viewer/anchors.js';
+import type { TextSelectRect } from './document-anchors.js';
 
 export const SOFT_HYPHEN = '­';
 // ECMAScript's `\s` already covers every Unicode Space_Separator code point plus NBSP and

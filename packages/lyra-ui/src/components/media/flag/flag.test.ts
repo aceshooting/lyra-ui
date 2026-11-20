@@ -8,6 +8,8 @@ import { registerLyraFlagPeer } from './flag-peer.js';
 import type { LyraFlag } from '../../lr-flag.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
+import { rearmDevWarnings } from '../../../../test/expected-dev-warnings.js';
+beforeEach(() => rearmDevWarnings('lr-flag-peer'));
 
 const TEST_FLAG_SRC = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg"%3E%3C/svg%3E';
 const TEST_FLAG_SRC_REPLACEMENT =
@@ -773,6 +775,7 @@ describe('connection-scoped source transactions', () => {
     const firstImage = el.shadowRoot!.querySelector('img')!;
     const parent = el.parentElement!;
     el.remove();
+    await aTimeout(0);
     firstImage.dispatchEvent(new Event('error'));
     expect(el.hasAttribute('data-error')).to.be.false;
 

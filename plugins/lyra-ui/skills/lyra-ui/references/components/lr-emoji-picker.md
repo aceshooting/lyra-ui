@@ -191,7 +191,7 @@ one declaration to retheme every internal scroll container in the library.
 **Optional peer dependency:** install `emoji-picker-element-data` with
 `pnpm add emoji-picker-element-data` for the built-in auto-loaded default emoji set — omit it and
 supply `groups` directly instead. The loader never throws; it leaves `groups` empty and logs one
-`console.warn` that names the cause: the peer **is not installed** (its module cannot be resolved)
+development-only `console.warn` that names the cause: the peer **is not installed** (its module cannot be resolved)
 or it **was found but could not be loaded or validated** (a network or JSON/import-attribute error,
 an incompatible version, or a module without the expected data array). The picker then **fails
 closed and visibly**: the grid renders a distinct localized `[part="load-error"]` surface instead

@@ -2255,3 +2255,21 @@ describe('popup lifecycle notifications', () => {
   });
 
 });
+
+it('commits once while Enter is held on the open trigger', async () => {
+  const el = (await fixture(
+    html`<lr-locale-picker .locales=${['fr', 'de', 'it']}></lr-locale-picker>`,
+  )) as LyraLocalePicker;
+  const btn = trigger(el);
+  el.open = true;
+  await el.updateComplete;
+  btn.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  let changes = 0;
+  el.addEventListener('lr-change', () => { changes += 1; });
+  const held = new KeyboardEvent('keydown', { key: 'Enter', repeat: true, bubbles: true, cancelable: true });
+  btn.dispatchEvent(held);
+  await el.updateComplete;
+  expect(held.defaultPrevented).to.equal(true);
+  expect([changes, el.open, el.value]).to.deep.equal([0, true, '']);
+});

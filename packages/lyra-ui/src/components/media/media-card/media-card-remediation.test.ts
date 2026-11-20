@@ -83,6 +83,25 @@ it('does not paint the pressed fill under frame="plain"', async () => {
   }
 });
 
+it('draws a visible hover and pressed outline under frame="plain"', async () => {
+  const src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="8" height="8"%3E%3C/svg%3E';
+  const el = await fixture<LyraMediaCard>(html`<lr-media-card data-lr-theme-scope kind="image" frame="plain" style="--lr-media-card-hover-border-color: rgb(1, 2, 3); --lr-media-card-active-border-color: rgb(4, 5, 6); --lr-transition-fast: 0s" src=${src}></lr-media-card>`);
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  expect(getComputedStyle(base).outlineStyle).to.equal('none');
+  await resetMouse();
+  try {
+    await hoverUntilMatched(base, 'card receives hover');
+    await waitUntil(() => getComputedStyle(base).outlineStyle === 'solid', 'hover outline');
+    expect(getComputedStyle(base).outlineColor).to.equal('rgb(1, 2, 3)');
+    await sendMouse({ type: 'down' });
+    await waitUntil(() => base.matches(':active'), 'pressed state');
+    expect(getComputedStyle(base).outlineColor).to.equal('rgb(4, 5, 6)');
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
+});
+
 it('ignores a whitespace-only accessible label and filename when naming the action', async () => {
   const src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="8" height="8"%3E%3C/svg%3E';
   const el = await fixture<LyraMediaCard>(html`<lr-media-card kind="image" .accessibleLabel=${'   '} filename="   " src=${src}></lr-media-card>`);

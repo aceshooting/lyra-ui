@@ -1,4 +1,4 @@
-export type { AnchorResultDetail, HighlightActivateDetail, LyraAnchorKind } from './viewers/document-viewer/anchors.js';
+export type { AnchorResultDetail, HighlightActivateDetail, LyraAnchorKind } from '../internal/document-anchors.js';
 export type { LyraSearchChangeDetail } from '../internal/text-viewer-target.js';
 export * from './media/av-player/av-player.class.js';
 import { html } from 'lit';

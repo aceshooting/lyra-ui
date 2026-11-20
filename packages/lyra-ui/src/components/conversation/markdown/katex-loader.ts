@@ -29,13 +29,9 @@ const KATEX_CACHE_GENERATION = Symbol.for('@aceshooting/lyra-ui/markdown-katex-c
  * Loads the optional peer dependency `katex`, used by `<lr-markdown>`'s `math` property to
  * render `$...$`/`$$...$$` TeX as MathML. Resolves `null` with a one-time development diagnostic
  * if the peer isn't installed -- rendering falls back to the literal, unparsed TeX source in that
- * case, a fully supported default rather than a degraded mode.
+ * case, a fully supported default rather than a degraded mode. Shares one import per generation,
+ * retrying a rejected chunk on the next request.
  */
-export function loadKatex(importKatex?: () => Promise<unknown>): Promise<KatexApi | null> {
-  return katex.loadWith(importKatex);
-}
-
-/** Shares one import per generation, retrying a rejected chunk on the next request. */
 export function getKatex(importKatex?: () => Promise<unknown>): Promise<KatexApi | null> {
   const generation = Reflect.get(globalThis, KATEX_CACHE_GENERATION);
   if (generation !== cacheGeneration || (importKatex && importKatex !== configuredImporter)) {

@@ -1083,6 +1083,16 @@ it('lets a non-empty host aria-label own the results group name and role', async
 });
 
 describe('lr-test-results remediation (evals batch)', () => {
+  it('keeps a filter a request listener assigned itself, even the unchanged one', async () => {
+    const el = await fixture<LyraTestResults>(html`<lr-test-results .suites=${suites}></lr-test-results>`);
+    let changes = 0;
+    el.addEventListener('lr-filter-change', () => { changes += 1; });
+    el.addEventListener('lr-filter-request', () => { el.statusFilter = []; }, { once: true });
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="filter-toggle"][data-status="failed"]')!.click();
+    await el.updateComplete;
+    expect([el.statusFilter.length, changes]).to.deep.equal([0, 0]);
+  });
+
   it('lets a listener veto a filter change before the filter or its notification is written', async () => {
     const el = await fixture<LyraTestResults>(html`<lr-test-results .suites=${suites}></lr-test-results>`);
     const changes: unknown[] = [];

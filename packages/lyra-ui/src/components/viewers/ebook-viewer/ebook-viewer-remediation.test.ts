@@ -2,7 +2,7 @@ import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import '../../lr-ebook-viewer.js';
 import { __setEpubJsForTesting, type EpubBook } from './ebook-loader.js';
 import type { LyraEbookViewer } from '../../lr-ebook-viewer.js';
-import type { TextSelectDetail } from '../document-viewer/anchors.js';
+import type { TextSelectDetail } from '../../../internal/document-anchors.js';
 import { TEXT_QUOTE_LIMITS, TEXT_SELECTION_RECT_LIMIT } from '../../../internal/text-quote.js';
 import { MINIMAL_EPUB_BASE64 } from './fixtures/minimal-epub-fixture.js';
 

@@ -28,7 +28,7 @@ import {
   DocumentAnchorTargetBase as DocumentAnchorTarget,
   type LyraAnchorTargetEventMap,
 } from '../../../internal/anchor-target-base.js';
-import type { LyraAnchor, LyraAnchorKind } from '../document-viewer/anchors.js';
+import type { LyraAnchor, LyraAnchorKind } from '../../../internal/document-anchors.js';
 import { styles } from './dataset-viewer.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { TABLE_VIEWER_SOURCE_MESSAGE_KEYS, TableViewerSourceController, TableViewerController, type ResolvedCellHighlight, type TableViewerScrollMode, tableViewerScrollMode } from '../table-viewer-shared.js';

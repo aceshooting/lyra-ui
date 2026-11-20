@@ -16,6 +16,7 @@ import { projectIngestionPresentation, ingestionActionKey, type IngestionPresent
   type IngestionQueueAction, type IngestionQueueStagePresentation, type IngestionItemActionEventDetail } from './ingestion-queue-presentation.js';
 export type { IngestionQueueAction, IngestionQueueStagePresentation, IngestionItemActionEventDetail } from './ingestion-queue-presentation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import {
   firstByRetrievalIdentity,
   isNonBlankIdentity,
@@ -500,6 +501,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   private previouslyInputTruncated = false;
 
   override adoptedCallback(): void {
+    this.detached.flush();
     this.focusRepairGeneration++;
     this.actionFocusRepair = undefined;
     super.adoptedCallback();
@@ -627,18 +629,24 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     (item as IngestionQueueItem).id;
 
   override connectedCallback(): void {
+    const moved = this.detached.cancel();
     super.connectedCallback();
-    if (this.hasUpdated) this.requestUpdate();
+    if (!moved && this.hasUpdated) this.requestUpdate();
   }
+
+  /** A same-task DOM move keeps the accepted page and its announced status; a real disconnect resets them. */
+  private readonly detached = new DeferredTeardown(() => {
+    this.failureLiveText = '';
+    this.sourceStatusInitialized = false;
+    this.previousSourceStatus = '';
+    this.isMounting = true;
+  });
 
   override disconnectedCallback(): void {
     this.focusRepairGeneration++;
     this.actionFocusRepair = undefined;
     super.disconnectedCallback();
-    this.failureLiveText = '';
-    this.sourceStatusInitialized = false;
-    this.previousSourceStatus = '';
-    this.isMounting = true;
+    this.detached.schedule();
   }
 
   protected override willUpdate(changed: PropertyValues): void {

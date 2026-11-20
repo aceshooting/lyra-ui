@@ -9,7 +9,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { specialistTokens } from '../../../internal/specialist-host-tokens.styles.js';
 import { DocumentAnchorTargetBase as DocumentAnchorTarget, prioritizedHighlightCandidates, type LyraAnchorTargetEventMap } from '../../../internal/anchor-target-base.js';
-import type { LyraAnchor, LyraAnchorKind, LyraHighlight } from '../document-viewer/anchors.js';
+import type { LyraAnchor, LyraAnchorKind, LyraHighlight } from '../../../internal/document-anchors.js';
 import { isResourceLimitError, LyraUserFacingError } from '../../../internal/resource-loader.js';
 import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { finiteCount } from '../../../internal/numbers.js';

@@ -13,6 +13,7 @@ import type {
   LyraPluralCategory,
   LyraPluralMessage,
 } from './localization-types.js';
+import { requestContextUpdate } from './context-update.js';
 
 type LocaleCatalog = Readonly<LyraLocaleStrings>;
 
@@ -691,7 +692,7 @@ function registerLocale(
     .map(
       (host) =>
         () =>
-          host.requestUpdate()
+          requestContextUpdate(host)
     );
   const registrySnapshot = isNewLocale ? [...registryListeners] : [];
   deliverLocaleListeners(
@@ -825,7 +826,7 @@ export function setLyraLocale(locale: string): void {
     .map(
       (host) =>
         () =>
-          host.requestUpdate()
+          requestContextUpdate(host)
     );
   deliverLocaleListeners(
     [[...listeners], affectedHostListeners],

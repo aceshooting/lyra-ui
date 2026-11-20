@@ -16,7 +16,7 @@ export type { LyraModelCamera, LyraModelFormat } from '../internal/model-viewer-
 export type { LyraSearchChangeDetail } from '../internal/text-viewer-target.js';
 export * from './viewers/document-viewer/document-viewer.class.js';
 export * from './viewers/document-viewer/registry.js';
-export * from './viewers/document-viewer/anchors.js';
+export * from '../internal/document-anchors.js';
 import { LyraDocumentViewer } from './viewers/document-viewer/document-viewer.class.js';
 import { defineElement } from '../internal/prefix.js';
 import './lr-dialog.js';

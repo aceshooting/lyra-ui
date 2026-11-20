@@ -18,7 +18,7 @@ export type { LyraCodeBlockToggleDetail } from './code-block-shared.js';
 import type {
   LyraAnchor,
   LyraHighlight,
-} from '../../viewers/document-viewer/anchors.js';
+} from '../../../internal/document-anchors.js';
 import '../../overlays/skeleton/skeleton.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -340,17 +340,7 @@ export class LyraCodeBlockCore extends LyraCodeBlockBase {
     if (changed.has('languages')) this.activateLanguages(this.languages);
   }
 
-  /** Resolves a `line-range` anchor (or a `highlights` id string resolving to one) by scrolling
-   *  its start line into view within `[part="body"]`. Resolves `false` when the anchor isn't a
-   *  `line-range`, the id isn't found, or the start line is out of bounds. */
-  override async scrollToAnchor(target: LyraAnchor | string): Promise<boolean> {
-    return super.scrollToAnchor(target);
-  }
 
-  /** Recomputes Shiki palette selection after an imperative CSSOM theme change. */
-  override refreshTheme(): void {
-    super.refreshTheme();
-  }
 
   /** Whether this render shows the loading skeleton instead of the code. Unlike `<lr-code-block>`,
    *  the only highlighter this variant ever waits on is the fine-grained one seeded from

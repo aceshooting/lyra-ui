@@ -1,11 +1,11 @@
-import { getNumberFormat } from '../../../internal/intl-cache.js';
-import type { LyraMessageKey } from '../../../internal/localization-types.js';
-import type { DropSessionController, DropSessionState } from '../../../internal/drop-session-controller.js';
-import type { FileIntakeRejected, FileIntakeResult } from './accept.js';
+import { getNumberFormat } from './intl-cache.js';
+import type { LyraMessageKey } from './localization-types.js';
+import type { DropSessionController, DropSessionState } from './drop-session-controller.js';
+import type { FileIntakeRejected, FileIntakeResult } from './file-accept.js';
 export {
   classifyFiles, EMPTY_MIME_TYPES, mimeTypeFilter, snapshotMimeTypes, DEFAULT_MAX_FILES, DEFAULT_MAX_FILE_SIZE_BYTES, DEFAULT_MAX_TOTAL_SIZE_BYTES,
   type FileIntakeRejected, type FileIntakeResult,
-} from './accept.js';
+} from './file-accept.js';
 
 /** Frozen `lr-files` detail; `remaining*` is the allowance left under the limit (`null` while unset). */
 export interface FileIntakeDetail {

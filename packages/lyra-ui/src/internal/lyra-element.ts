@@ -81,6 +81,7 @@ import {
   recordInheritedDirectionRead,
   recordInheritedLocaleRead,
 } from './inherited-context-observer.js';
+import { requestContextUpdate } from './context-update.js';
 import {
   emptyLyraLocaleStrings,
   enableLyraLocaleCache,
@@ -522,7 +523,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
         resolveLyraLocale(this)
       );
       if (currentCatalogVersion !== this.lastLocalizedCatalogVersion)
-        this.requestUpdate();
+        requestContextUpdate(this);
     }
     const deferred = this.deferredAfterUpdate;
     if (deferred) {
@@ -653,7 +654,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
         name as (typeof REACTIVE_HOST_ATTRIBUTES)[number]
       )
     ) {
-      this.requestUpdate();
+      requestContextUpdate(this);
     } else if (directionHostAttribute) {
       // Capture happened before invalidation, so a same-task getter cannot replace the rendered
       // baseline before the coalesced observer comparison runs.
@@ -711,7 +712,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
           // Presence-driven renderers deliberately expose their slot wrappers while the server's
           // light-DOM answer is unresolved. Even an actually empty slot therefore needs one
           // corrective render after hydration to collapse that progressive fallback.
-          this.requestUpdate();
+          requestContextUpdate(this);
         }, 0);
       },
       () => {

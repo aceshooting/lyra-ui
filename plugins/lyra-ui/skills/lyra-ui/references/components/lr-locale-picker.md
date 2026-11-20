@@ -143,7 +143,8 @@ picker.localeLoader = loadLyraLocale;
 
 The unset callback preserves synchronous selection. A vetoed request never invokes the loader.
 While loading, the previous value stays committed and the trigger exposes `aria-busy`; a visible
-localized status and light-DOM announcement explain progress. Failure retains the value and offers
+localized status and light-DOM announcement explain progress. Failure retains the value, emits
+`lr-load-error` with `detail: { value, error }` (the failed locale and the rejection reason), and offers
 Retry through a fresh callback invocation. Browsers may cache failed native module fetches, so
 Retry does not guarantee another network request. Retain the current locale and failure guidance;
 if a native import remains failed after connectivity returns, offer a user-initiated page reload

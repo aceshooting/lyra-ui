@@ -1,4 +1,4 @@
-import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import '../../lr-animation.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 
@@ -35,6 +35,7 @@ for (const reduced of [false, true]) {
       await waitUntil(() => starts() === 2, 'second lr-start never fired');
       expect(starts()).to.equal(2);
       el.remove();
+      await aTimeout(0);
       el.play = true;
       parent.append(el);
       await el.updateComplete;

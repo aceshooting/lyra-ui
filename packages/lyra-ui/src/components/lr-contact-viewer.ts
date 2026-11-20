@@ -1,4 +1,4 @@
-export type { AnchorResultDetail, TextSelectDetail } from './viewers/document-viewer/anchors.js';
+export type { AnchorResultDetail, TextSelectDetail } from '../internal/document-anchors.js';
 export type { LyraSearchChangeDetail, LyraTextViewerTargetEventMap } from '../internal/text-viewer-target.js';
 export * from './viewers/contact-viewer/contact-viewer.class.js';
 export { parseVCards, type ParseVCardsOptions, type VCardAddress, type VCardContact, type VCardName, type VCardTypedValue } from './viewers/contact-viewer/vcard.js';

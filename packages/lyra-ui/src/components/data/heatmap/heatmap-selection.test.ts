@@ -379,3 +379,14 @@ describe('lr-heatmap selection entries that name no cell', () => {
     expect(selected).to.deep.equal(['2026-03-02']);
   });
 });
+
+it('toggles a multiple selection once while Enter is held on the canvas', async () => {
+  const el = await fixture<LyraHeatmap>(html`<lr-heatmap multiple .data=${data}></lr-heatmap>`);
+  const details = changes(el);
+  const canvas = el.shadowRoot!.querySelector('canvas')!;
+  key(canvas, 'ArrowRight');
+  key(canvas, 'Enter');
+  key(canvas, 'Enter', { repeat: true });
+  key(canvas, 'Enter', { repeat: true });
+  expect(details.map((detail) => detail.selectedCells.length)).to.deep.equal([1]);
+});

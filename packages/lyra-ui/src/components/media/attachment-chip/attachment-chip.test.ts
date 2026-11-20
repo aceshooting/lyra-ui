@@ -224,7 +224,7 @@ describe('independent name/bytes/mime-type props', () => {
     )) as LyraAttachmentChip;
     const emptySize = empty.shadowRoot!.querySelector('[part="size"]') as HTMLElement;
     expect(emptySize.hidden).to.be.false;
-    expect(emptySize.textContent).to.equal('0 byte');
+    expect(emptySize.textContent).to.equal('0 B');
   });
 
   it('treats a negative, NaN, or infinite bytes value as unknown', async () => {

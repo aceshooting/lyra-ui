@@ -13,7 +13,7 @@ import { LyraUserFacingError } from '../../../internal/resource-loader.js';
 import { buildQuoteAnchor, scopeFromElement, TEXT_QUOTE_LIMITS } from '../../../internal/text-quote.js';
 import { createTextQuoteIndex, type TextQuoteWorkBudget } from '../../../internal/text-quote-index.js';
 import { formatFileSize } from '../../../internal/bytes.js';
-import type { LyraAnchor } from '../document-viewer/anchors.js';
+import type { LyraAnchor } from '../../../internal/document-anchors.js';
 import type { LyraVirtualList } from '../../layout/virtual-list/virtual-list.class.js';
 import { assertZipArchiveMetadataWithinLimits } from './zip-resource-guard.js';
 import { styles, virtualListHighlightStyles } from './archive-viewer.styles.js';

@@ -1,6 +1,7 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { resolveTitleHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import { html, nothing, type TemplateResult } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
 import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -223,7 +224,9 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
           ? html`<p part="description">${entity.description}</p>`
           : nothing}
         <div part="properties">
-          ${properties.map(
+          ${repeat(
+            properties,
+            ([key]) => key,
             ([key, value]) => html`<lr-result-field
               part="property"
               label=${key}

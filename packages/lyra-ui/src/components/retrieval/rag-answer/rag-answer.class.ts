@@ -4,6 +4,7 @@ import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
 import { property } from 'lit/decorators.js';
 import { ref } from 'lit/directives/ref.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -405,7 +406,9 @@ export class LyraRagAnswer extends LyraElement<LyraRagAnswerEventMap> {
               ${this.localize('ragAnswerCitations')}
             </div>
             <div part="citation-list">
-              ${citations.map(
+              ${repeat(
+                citations,
+                (citation) => citation.id,
                 (citation, index) =>
                   html`<lr-citation-badge
                     .index=${index + 1}

@@ -30,7 +30,7 @@ import { MarkdownFallbackCodeScanner } from './markdown-fallback-code.js';
 import type {
   LyraAnchor,
   LyraAnchorKind,
-} from '../../viewers/document-viewer/anchors.js';
+} from '../../../internal/document-anchors.js';
 import type { ShikiLanguageSource } from '../code-block/shiki-types.js';
 import type {
   LyraMarkedParser,

@@ -31,8 +31,8 @@ import type {
   LyraAnchor,
   LyraHighlightTone,
   TextSelectRect,
-} from '../document-viewer/anchors.js';
-import { textQuoteContextScore } from '../document-viewer/anchors.js';
+} from '../../../internal/document-anchors.js';
+import { textQuoteContextScore } from '../../../internal/document-anchors.js';
 import {
   getEpubJs,
   type EpubBook,

@@ -1,4 +1,4 @@
-export type { LyraHighlight } from './viewers/document-viewer/anchors.js';
+export type { LyraHighlight } from '../internal/document-anchors.js';
 export * from './viewers/page-rail/page-rail.class.js';
 import { LyraPageRail } from './viewers/page-rail/page-rail.class.js';
 import { defineElement } from '../internal/prefix.js';

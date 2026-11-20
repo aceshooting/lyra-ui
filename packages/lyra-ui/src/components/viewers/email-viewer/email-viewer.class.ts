@@ -30,7 +30,7 @@ import {
 } from '../../../internal/data-descriptors.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
-import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/anchors.js';
+import type { AnchorResultDetail, TextSelectDetail } from '../../../internal/document-anchors.js';
 import { sanitizePassiveMarkupFragment } from '../../../internal/passive-markup.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
@@ -485,9 +485,6 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     }
     return super.search(query);
   }
-  override async searchNext(): Promise<boolean> { return super.searchNext(); }
-  override async searchPrevious(): Promise<boolean> { return super.searchPrevious(); }
-  override clearSearch(): void { super.clearSearch(); }
   @state() private fetchState: EmailFetchState = { kind: 'idle' };
   @state() private textQuoteExpanded = false;
   @state() private expandedHtmlQuoteIndices: number[] = [];

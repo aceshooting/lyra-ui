@@ -3,7 +3,7 @@ import { createOptionalPeerLoader } from '../../../internal/optional-peer-capabi
 const SPREADSHEET_WARNING_KEY = 'lyra-spreadsheet-viewer-xlsx-unavailable';
 const SPREADSHEET_WARNING = '<lr-spreadsheet-viewer> could not load its optional xlsx peer.';
 
-export interface SheetJsWorkbook {
+interface SheetJsWorkbook {
   SheetNames: string[];
   Sheets: Record<string, unknown>;
 }

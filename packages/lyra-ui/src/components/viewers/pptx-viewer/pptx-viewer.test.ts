@@ -17,7 +17,7 @@ import type {
   PptxViewerApi,
 } from "./pptx-loader.js";
 import { getDefaultDocumentRendererRegistry } from "../document-viewer/registry.js";
-import type { LyraHighlight } from "../document-viewer/anchors.js";
+import type { LyraHighlight } from "../../../internal/document-anchors.js";
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { LyraUserFacingError } from '../../../internal/resource-loader.js';

@@ -14,6 +14,7 @@ import { nextId } from '../../../internal/a11y.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
+import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { RovingListController } from '../../../internal/roving-list-controller.js';
 import { styles } from './test-results.styles.js';
 import { testResultDetailSlotName } from './test-results-slots.js';
@@ -353,7 +354,11 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     finally { this.sourceSyncing = false; }
   }
 
+  /** Observes every `statusFilter` write, including one a request listener makes itself. */
+  private readonly filterGuard = new VetoWriteGuard();
+
   override requestUpdate(...args: Parameters<LyraElement['requestUpdate']>): void {
+    if (args[0] === 'statusFilter') markVetoGuardWrite(this.filterGuard);
     if (args[0] === 'suites' && this.legacyGeneration !== undefined) {
       this.cancelLegacy();
       this.legacyNeedsNormalization = true;
@@ -679,6 +684,7 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     requestThenCommit({
       requestDetail: { statuses: next },
       emitRequest: (detail, init: { cancelable: true }) => this.emit('lr-filter-request', detail, init),
+      guard: this.filterGuard,
       commit: () => {
         this.statusFilter = next;
         this.emit('lr-filter-change', { statuses: next });

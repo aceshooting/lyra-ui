@@ -333,7 +333,7 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   @property() hotkey = 'mod+k';
   /** Accessible name for the dialog. Omitted falls back to the localized `commandPaletteLabel`
    *  default. An explicitly empty `aria-label` is used as-is. */
-  @property({ attribute: 'aria-label' }) accessibleLabel?: string;
+  @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
   @state() private queryText = '';
   @state() private activeIndex = 0;
   @state() private listScrollTop = 0;

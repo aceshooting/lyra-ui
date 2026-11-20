@@ -97,6 +97,7 @@ import {
 } from '../../../internal/option-selection.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { bdi } from '../../../internal/bidi.js';
+import { DEV_DIAGNOSTICS, devWarnOnce } from '../../../internal/dev-warning.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_comboboxCreate, LYRA_DEFAULT_comboboxLabel, LYRA_DEFAULT_comboboxLoadError, LYRA_DEFAULT_comboboxOverflow, LYRA_DEFAULT_comboboxRequired, LYRA_DEFAULT_comboboxSelectedOverflow } from '../../../internal/default-strings/forms.generated.js';
@@ -3206,7 +3207,7 @@ export class LyraCombobox<
         // rejection so a host can log or report it -- the rendered copy stays localized and never
         // leaks the message.
         this.emit('lr-source-error', { error: err, query });
-        console.warn('<lr-combobox> source() rejected:', err);
+        if (DEV_DIAGNOSTICS) devWarnOnce('lr-combobox-source-rejected', '<lr-combobox> source() rejected:', err);
       })
       .finally(() => {
         if (token === this.sourceToken) this.sourceLoading = false;

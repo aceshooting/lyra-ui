@@ -1,6 +1,6 @@
 import type { ChatMessageRole, ChatMessageStatus } from '../components/conversation/chat-message/chat-message.class.js';
 import type { ToolStatus } from '../components/agent-tools/tool-status.js';
-import type { LyraAnchor } from '../components/viewers/document-viewer/anchors.js';
+import type { LyraAnchor } from '../internal/document-anchors.js';
 
 export type { ChatMessageRole, ChatMessageStatus, LyraAnchor, ToolStatus };
 

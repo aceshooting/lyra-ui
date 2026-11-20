@@ -389,7 +389,9 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
         ${citations.length
           ? html`
               <div part="evidence">
-                ${citations.map(
+                ${repeat(
+                  citations,
+                  ({ citation }) => citation.id,
                   ({ citation, index }) => html`
                     <lr-citation-badge
                       .index=${index + 1}

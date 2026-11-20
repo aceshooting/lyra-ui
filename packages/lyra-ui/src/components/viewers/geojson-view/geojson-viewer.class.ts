@@ -37,7 +37,7 @@ import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import type {
   AnchorResultDetail,
   TextSelectDetail,
-} from '../document-viewer/anchors.js';
+} from '../../../internal/document-anchors.js';
 import { isSafeNonArrayObject } from '../../../internal/object-guards.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';

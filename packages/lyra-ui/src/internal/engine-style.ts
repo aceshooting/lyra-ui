@@ -48,7 +48,7 @@ export function watchEngineStyle(host: Element, onChange: () => void): () => voi
   return watchThemeChanges(host, onChange, ENGINE_STYLE_MEDIA_QUERIES);
 }
 
-export interface EngineStyleOptions {
+interface EngineStyleOptions {
   /** Custom properties resolved into `palette`, in order. Defaults to {@link ENGINE_CHART_PALETTE}. */
   readonly palette?: readonly string[];
   /** Point size in CSS pixels when no `probe` carries it, or when the probe's is unusable. Defaults to 8. */

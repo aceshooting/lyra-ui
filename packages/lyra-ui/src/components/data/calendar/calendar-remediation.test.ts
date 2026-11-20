@@ -92,3 +92,15 @@ it('buckets events once across renders that do not replace them', async () => {
   await el.updateComplete;
   expect(calls).to.equal(1);
 });
+
+it('selects a day once while Enter is held', async () => {
+  const el = await fixture<LyraCalendar>(html`<lr-calendar view-date="2026-07-01" value="2026-07-10"></lr-calendar>`);
+  let selects = 0;
+  el.addEventListener('lr-date-select', () => { selects += 1; });
+  const day = el.shadowRoot!.querySelector<HTMLElement>('[part="day"][tabindex="0"]')!;
+  for (const repeat of [false, true, true]) {
+    day.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', repeat, bubbles: true, composed: true, cancelable: true }));
+  }
+  await el.updateComplete;
+  expect(selects).to.equal(1);
+});

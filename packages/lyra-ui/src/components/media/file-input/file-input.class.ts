@@ -36,7 +36,7 @@ import { styles } from './file-input.styles.js';
 import {
   classifyFiles, dragInstruction, EMPTY_MIME_TYPES, freezeDetail, handleDrop, mimeTypeFilter, rejectionMessages, selectionMessage, snapshotMimeTypes,
   type FileIntakeResult,
-} from './file-intake.js';
+} from '../../../internal/file-intake.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_dropzoneRejectedType, LYRA_DEFAULT_dropzoneReleaseToAdd, LYRA_DEFAULT_fileInputAcceptedMany, LYRA_DEFAULT_fileInputAcceptedOne, LYRA_DEFAULT_fileInputDefaultLabel, LYRA_DEFAULT_fileInputFolderRejected, LYRA_DEFAULT_fileInputRejectedCount, LYRA_DEFAULT_fileInputRejectedLimit, LYRA_DEFAULT_fileInputRejectedMany, LYRA_DEFAULT_fileInputRejectedMaxFiles, LYRA_DEFAULT_fileInputRejectedMaxTotalSize, LYRA_DEFAULT_fileInputRejectedOne, LYRA_DEFAULT_fileInputRejectedRead, LYRA_DEFAULT_fileInputRejectedSize, LYRA_DEFAULT_fileInputRejectedType, LYRA_DEFAULT_fileInputRejectionsMore } from '../../../internal/default-strings/media.generated.js';
@@ -75,7 +75,7 @@ export {
   DEFAULT_MAX_FILE_SIZE_BYTES,
   DEFAULT_MAX_FILES,
   DEFAULT_MAX_TOTAL_SIZE_BYTES,
-} from './file-intake.js';
+} from '../../../internal/file-intake.js';
 const MAX_DROPPED_FOLDER_ENTRIES = 10_000;
 const MAX_THUMBNAIL_ROWS = 50;
 /** Selected-file rows rendered at once; `[part="file-more"]` counts the held files past it. */

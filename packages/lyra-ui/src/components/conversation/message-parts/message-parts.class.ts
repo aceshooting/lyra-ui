@@ -4,7 +4,7 @@ import { createInputMemo } from '../../../internal/input-memo.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { isolateText } from '../../../internal/bidi.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
-import type { MarkdownHtmlMode, MarkdownStreamingRender } from '../markdown/markdown-shared.js';
+import type { MarkdownHtmlMode, MarkdownStreamingRender } from '../../../internal/markdown-render-types.js';
 import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
