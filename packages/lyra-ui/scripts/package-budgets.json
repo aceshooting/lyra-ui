@@ -34,7 +34,7 @@
     "@aceshooting/lyra-map": {
       "maximum": {
         "packedBytes": 1071936,
-        "unpackedBytes": 4400192,
+        "unpackedBytes": 4400384,
         "fileCount": 692
       }
     },

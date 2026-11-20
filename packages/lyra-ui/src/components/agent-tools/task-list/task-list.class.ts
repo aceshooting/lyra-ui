@@ -336,6 +336,8 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   private sourceAnnouncement?: string;
   private provider?: HierarchySourceController<TaskItem>;
   // Source mode loads its provider controller, view and virtualized list on first use.
+  /** Paints the provider-backed rows from the lazily loaded hierarchy source view.
+   * @renderController HierarchySourceRuntimeGate */
   private readonly sourceRuntime = new HierarchySourceRuntimeGate(this, () => import('../../lr-virtual-list.js'));
   private get sourceControl(): HierarchySourceController<TaskItem> | undefined {
     const runtime = this.sourceRuntime.runtime;

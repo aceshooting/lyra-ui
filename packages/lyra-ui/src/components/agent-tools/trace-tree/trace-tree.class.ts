@@ -232,6 +232,8 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   private wasSource = false;
   private provider?: HierarchySourceController<LyraSpan>;
   // Source mode loads its provider controller, view and virtualized list on first use.
+  /** Paints the provider-backed rows from the lazily loaded hierarchy source view.
+   * @renderController HierarchySourceRuntimeGate */
   private readonly sourceRuntime = new HierarchySourceRuntimeGate(this, () => import('../../lr-virtual-list.js'));
   private get sourceControl(): HierarchySourceController<LyraSpan> | undefined {
     const runtime = this.sourceRuntime.runtime;

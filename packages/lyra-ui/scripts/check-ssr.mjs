@@ -232,13 +232,13 @@ assertIsolatedNodeImport(
     import assert from 'node:assert/strict';
     ${noBrowserGlobals}
     for (const [path, name] of [
-      ['input/input', 'LyraInput'],
-      ['input/number-input', 'LyraNumberInput'],
-      ['input/native-time-input', 'LyraNativeTimeInput'],
-      ['textarea/textarea', 'LyraTextarea'],
-      ['otp-input/otp-input', 'LyraOtpInput'],
+      ['lr-input', 'LyraInput'],
+      ['lr-number-input', 'LyraNumberInput'],
+      ['lr-native-time-input', 'LyraNativeTimeInput'],
+      ['lr-textarea', 'LyraTextarea'],
+      ['lr-otp-input', 'LyraOtpInput'],
     ]) {
-      const module = await import('./dist/components/forms/' + path + '.js');
+      const module = await import('./dist/components/' + path + '.js');
       const control = new module[name]();
       control.disabled = true;
       assert.equal(control.disabled, true, name);
