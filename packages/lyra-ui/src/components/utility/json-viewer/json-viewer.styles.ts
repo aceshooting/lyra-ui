@@ -1,7 +1,8 @@
 import { iconAction } from '../../../internal/icon-action.styles.js';
-import { interactiveTransition, iconHitTarget, focusRing, hoverFill } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
@@ -30,8 +31,7 @@ export const styles = css`
     /* The key/value layout responds to the viewer's own allocation (a tool-call panel, a phone
        column), not the viewport. Inline-size containment drops the content-based intrinsic size,
        so a shrink-to-fit parent gets the tokenized fallback instead of a zero-width viewer. */
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${inlineSizeContainer}
   }
   .source-shell { min-inline-size: 0; }
   .source-shell .source-tree { block-size: var(--lr-json-viewer-max-height, var(--lr-size-20rem)); max-block-size: var(--lr-json-viewer-max-height, var(--lr-size-20rem)); }
@@ -159,11 +159,7 @@ export const styles = css`
     color: var(--lr-json-viewer-toggle-hover-color, var(--lr-color-brand));
   }
   :where([part="toggle"]):active:where(:not([hidden])) {
-    background: var(--lr-json-viewer-toggle-active-bg, color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    ));
+    background: var(--lr-json-viewer-toggle-active-bg, ${activeFill('var(--lr-color-brand-quiet)')});
     color: var(--lr-json-viewer-toggle-active-color, var(--lr-color-brand));
   }
   [part="toggle"]:focus-visible,
@@ -271,11 +267,7 @@ export const styles = css`
      button in when its row is hovered rather than styling the button's own hover, so the button's
      held state belongs here beside its hover. */
   [part="copy-button"]:active {
-    background: var(--lr-json-viewer-copy-active-bg, color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    ));
+    background: var(--lr-json-viewer-copy-active-bg, ${activeFill('var(--lr-color-brand-quiet)')});
     color: var(--lr-json-viewer-copy-active-color, var(--lr-color-brand));
   }
   /* Per-node copy buttons stay out of the way until the row is interacted with; the toolbar's own

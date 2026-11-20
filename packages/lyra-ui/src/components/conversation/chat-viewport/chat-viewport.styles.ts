@@ -1,6 +1,7 @@
-import { focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
@@ -9,8 +10,7 @@ export const styles = css`
     block-size: 100%;
     min-block-size: 0;
     position: relative;
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${inlineSizeContainer}
   }
   [part='base'] {
     display: flex;
@@ -158,11 +158,7 @@ export const styles = css`
     background: var(--lr-chat-viewport-jump-hover-bg, var(--lr-color-brand-quiet));
   }
   [part='jump-pill']:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-chat-viewport-jump-hover-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-chat-viewport-jump-hover-bg, var(--lr-color-brand-quiet))')};
   }
   @container ${compactContainerQuery} {
     [part='jump-pill'] {

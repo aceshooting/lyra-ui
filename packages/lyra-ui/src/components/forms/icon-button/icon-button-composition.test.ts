@@ -185,6 +185,18 @@ describe('lr-icon-button: slotted glyph glow', () => {
 });
 
 
+it('keeps a consumer tabindex takeover when the consumer later writes the leased value back', async () => {
+  const el = await fixture<LyraIconButton>(html`<lr-icon-button label="Close"></lr-icon-button>`);
+  const control = nativeControl(el);
+  const action = el.getToolbarActions()[0]!;
+  action.setTabIndex(-1);
+  control.tabIndex = 2;
+  action.setTabIndex(0);
+  control.tabIndex = -1;
+  action.releaseTabIndex?.();
+  expect(control.getAttribute('tabindex')).to.equal('-1');
+});
+
 it('preserves authored native tabindex takeover through further toolbar writes and release', async () => {
   const el = await fixture<LyraIconButton>(html`<lr-icon-button label="Close"></lr-icon-button>`);
   const control = nativeControl(el);

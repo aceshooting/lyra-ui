@@ -1,9 +1,10 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { wideContainerQuery, compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { containerHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
-  :host { display: block; container-type: inline-size; contain-intrinsic-inline-size: var(--lr-size-20rem); }
+  :host { ${containerHost} }
   [part='base'] { display: flex; flex-direction: column; gap: var(--lr-space-m); }
   [part='size-notice'] { margin: 0; color: var(--lr-color-text-quiet); }
   [part='toolbar'] { display: flex; flex-wrap: wrap; gap: var(--lr-space-s); align-items: center; }
@@ -19,7 +20,7 @@ export const styles = css`
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font: inherit;
-    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast), border-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part='message-content'] { min-block-size: var(--lr-size-6rem); padding: var(--lr-space-s); resize: vertical; }
   .message-role-wrapper { position: relative; display: inline-flex; align-items: center; }
@@ -72,7 +73,7 @@ export const styles = css`
   /* Pressed is the hover tint pushed a further --lr-color-mix-active toward --lr-color-mix-partner,
      which follows the text colour -- a distinctly deeper step in both light and dark themes. */
   [part='version']:where(:active:not(:disabled)) {
-    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-surface-raised)')};
   }
   [part='move-message-up'] { transform: rotate(-90deg); }
   [part='move-message-down'] { transform: rotate(90deg); }
@@ -85,24 +86,17 @@ export const styles = css`
   [part='version']:where([aria-pressed='true']):where(:hover:not(:disabled)) {
     background: var(
       --lr-prompt-studio-version-selected-hover-bg,
-      color-mix(in oklab, var(--lr-prompt-studio-version-selected-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-hover))
+      ${hoverFill('var(--lr-prompt-studio-version-selected-bg, var(--lr-color-brand-quiet))')}
     );
   }
   [part='version']:where([aria-pressed='true']):where(:active:not(:disabled)) {
-    background: color-mix(
-      in oklab,
-      var(
-        --lr-prompt-studio-version-selected-hover-bg,
-        color-mix(in oklab, var(--lr-prompt-studio-version-selected-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-hover))
-      ),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var( --lr-prompt-studio-version-selected-hover-bg, color-mix(in oklab, var(--lr-prompt-studio-version-selected-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-hover)) )')};
   }
   [part='version']:focus-visible,
   [part='message-role']:focus-visible, [part='message-content']:focus-visible, [part='variable'] input:focus-visible {
     ${focusRing}
   }
-  button:disabled, textarea:disabled, input:disabled, select:disabled { cursor: not-allowed; opacity: var(--lr-opacity-disabled); }
+  button:disabled, textarea:disabled, input:disabled, select:disabled { ${disabledControl} }
   [part='preview'] { padding: var(--lr-space-m); border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle); border-radius: var(--lr-radius); }
   [part='preview'] article { display: grid; grid-template-columns: var(--lr-size-6rem) minmax(0, 1fr); gap: var(--lr-space-s); padding-block: var(--lr-space-xs); }
   [part='preview'] pre { min-inline-size: 0; margin: 0; color: var(--lr-color-text); font: inherit; white-space: pre-wrap; overflow-wrap: anywhere; }

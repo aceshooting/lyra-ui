@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'کلیزندر پرانیزئ',
+  item: 'توکی',
   comboboxLoadError: 'غوراوي نه شوې راوړل کېدای.',
   comboboxSelectedOverflow: '+{n} نور',
   checkboxRequired: 'که دوام ورکول غواړئ، دا بکس نښه کړئ.',

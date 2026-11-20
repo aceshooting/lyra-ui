@@ -74,7 +74,10 @@ export const styles = css`
      and dark surfaces alike. :active propagates up from the pressed [part='select-button'], so this
      plain wrapper div answers a press the way it answers hover. */
   :host(:where(:not([disabled])):active) [part~='base'] {
-    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: var(
+      --lr-conversation-item-pressed-bg,
+      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))
+    );
   }
   /* Both rules above are (0,3,0), like this one, so being written last hands this rule BOTH
      contests: an active-and-hovered row keeps the stronger active tint instead of two backgrounds

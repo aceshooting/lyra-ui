@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'פתח את לוח השנה',
+  item: 'פריט',
   comboboxLoadError: 'לא ניתן לטעון אפשרויות.',
   comboboxSelectedOverflow: 'עוד {n}',
   checkboxRequired: 'אנא סמן את התיבה הזו אם ברצונך להמשיך.',

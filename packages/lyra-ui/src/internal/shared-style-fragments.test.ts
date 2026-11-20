@@ -4,13 +4,15 @@ import {
   disabledControl,
   focusRingInset,
   focusRingInsetOffset,
+  activeTint,
   hoverFill,
+  hoverTint,
   interactiveTransition,
 } from './interactive-control.styles.js';
-import { blockHost, containerHost, wrapGuard } from './layout-fragments.styles.js';
+import { blockHost, containerHost, inlineSizeContainer, wrapGuard } from './layout-fragments.styles.js';
 import { dialogChrome } from './modal-surface.styles.js';
 import { anchoredPopupOpen, anchoredPopupReveal } from './overlay-surface.styles.js';
-import { semanticVariantRows } from './semantic-variant-rows.styles.js';
+import { brandVariantRow, neutralVariantRow, semanticVariantRows } from './semantic-variant-rows.styles.js';
 
 const tokens = `--lr-focus-ring-width: 3px; --lr-focus-ring-color: rgb(1, 2, 3); --lr-focus-ring-offset: 2px;
   --lr-color-mix-partner: white; --lr-color-mix-hover: 10%; --lr-color-mix-active: 20%;
@@ -100,4 +102,36 @@ it('reveals an anchored popup from hidden to open', async () => {
 it('keeps the explicit semantic rows resolving to their own semantic grid row', async () => {
   const el = await probe(`${semanticVariantRows.cssText.replaceAll(':host(', '#t(').replaceAll(/#t\(\[variant='(\w+)'\]\)/g, "#t[variant='$1']")} #t { --lr-color-danger-fill-loud: rgb(9, 8, 7); }`, '<div id="t" variant="danger"></div>');
   expect(getComputedStyle(el).getPropertyValue('--lr-color-fill-loud').trim()).to.equal('rgb(9, 8, 7)');
+});
+
+it('tints the accent at the hover and press share over transparent', async () => {
+  const accent = 'rgb(0, 0, 255)';
+  const hover = await probe(`#t { background: ${hoverTint(accent).cssText}; } #r { background: color-mix(in srgb, ${accent} 10%, transparent); }`, '<i id="t"></i><i id="r"></i>');
+  const reference = hover.parentElement!.querySelector<HTMLElement>('[id^="r-"]')!;
+  expect(getComputedStyle(hover).backgroundColor).to.equal(getComputedStyle(reference).backgroundColor);
+  const press = await probe(`#t { background: ${activeTint(accent).cssText}; } #r { background: color-mix(in srgb, ${accent} 20%, transparent); }`, '<i id="t"></i><i id="r"></i>');
+  const pressReference = press.parentElement!.querySelector<HTMLElement>('[id^="r-"]')!;
+  expect(getComputedStyle(press).backgroundColor).to.equal(getComputedStyle(pressReference).backgroundColor);
+  expect(getComputedStyle(press).backgroundColor).not.to.equal(getComputedStyle(hover).backgroundColor);
+});
+
+it('makes the element an inline-size query container with the tokenized intrinsic fallback', async () => {
+  const el = await probe(`#t { ${inlineSizeContainer.cssText} }`);
+  expect(getComputedStyle(el).containerType).to.equal('inline-size');
+  expect(getComputedStyle(el).containIntrinsicInlineSize).to.equal('320px');
+});
+
+it('points the generic colour slots at the neutral and brand rows', async () => {
+  const palette = Object.fromEntries(
+    ['neutral', 'brand'].flatMap(row => ['fill', 'border', 'on'].flatMap(axis => ['quiet', 'normal', 'loud'].map(tier => [`--lr-color-${row}-${axis}-${tier}`, `${row}-${axis}-${tier}`]))),
+  );
+  const declarations = Object.entries(palette).map(([name, value]) => `${name}: ${value};`).join(' ');
+  const neutral = await probe(`#t { ${declarations} ${neutralVariantRow.cssText} } #r { ${declarations} ${brandVariantRow.cssText} }`, '<i id="t"></i><i id="r"></i>');
+  const brand = neutral.parentElement!.querySelector<HTMLElement>('[id^="r-"]')!;
+  for (const axis of ['fill', 'border', 'on']) {
+    for (const tier of ['quiet', 'normal', 'loud']) {
+      expect(getComputedStyle(neutral).getPropertyValue(`--lr-color-${axis}-${tier}`).trim()).to.equal(`neutral-${axis}-${tier}`);
+      expect(getComputedStyle(brand).getPropertyValue(`--lr-color-${axis}-${tier}`).trim()).to.equal(`brand-${axis}-${tier}`);
+    }
+  }
 });

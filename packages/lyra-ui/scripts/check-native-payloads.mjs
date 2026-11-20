@@ -3,7 +3,7 @@ import { gzipSync } from 'node:zlib';
 import { parseProgram, visitAst } from './lib/ast.mjs';
 
 const normalize = (file) => file.replaceAll('\\', '/');
-const toolingRecord = (file) => /(?:^|\/)internal\/(?:tokens\.styles|tokens\/palette\.styles|specialist-tokens\.styles)\.(?:js|d\.ts)$/.test(normalize(file));
+const toolingRecord = (file) => /(?:^|\/)internal\/(?:tokens\.styles|tokens\/palette\.styles|tokens\/specialist-tokens\.styles)\.(?:js|d\.ts)$/.test(normalize(file));
 const defaultSlice = (file) => /\/internal\/default-strings\/[^/]+\.generated\.js$/.test(normalize(file));
 
 /** Native ESM fetches each complete module; named exports are not a byte-saving boundary. */

@@ -440,3 +440,16 @@ for (const [wrap, direction] of [['off', 'ltr'], ['off', 'rtl'], ['soft', 'ltr']
     expect(el.selectionStart).to.equal(0);
   });
 }
+
+it('retints the gutter from its own tokens while it keeps following the frame fill by default', async () => {
+  const el = await fixture<HTMLElement>(html`<lr-code-editor value="a" style="--lr-code-editor-fill: rgb(10, 20, 30)"></lr-code-editor>`);
+  const gutter = el.shadowRoot!.querySelector<HTMLElement>('[part="gutter"]')!;
+  expect(getComputedStyle(gutter).backgroundColor).to.equal('rgb(10, 20, 30)');
+  el.style.setProperty('--lr-code-editor-gutter-bg', 'rgb(1, 2, 3)');
+  el.style.setProperty('--lr-code-editor-gutter-color', 'rgb(4, 5, 6)');
+  el.style.setProperty('--lr-code-editor-gutter-border-color', 'rgb(7, 8, 9)');
+  const style = getComputedStyle(gutter);
+  expect(style.backgroundColor).to.equal('rgb(1, 2, 3)');
+  expect(style.color).to.equal('rgb(4, 5, 6)');
+  expect(style.borderInlineEndColor).to.equal('rgb(7, 8, 9)');
+});

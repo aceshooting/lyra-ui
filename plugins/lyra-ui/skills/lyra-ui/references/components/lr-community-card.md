@@ -45,7 +45,10 @@ activated).
 
 **Slots:** `actions` — extra header actions alongside the built-in drill button.
 
-The host `aria-level` attribute overrides the title heading level live; removing it restores 3.
+The host `aria-level` attribute overrides the title heading level live; removing it restores 3, and
+an out-of-range value uses 3. `headingLevel?: LyraHeadingLevel` (attribute `heading-level`,
+`'1'`-`'6'` or `'none'`) wins whenever it is set; `'none'` keeps the title button without heading
+semantics.
 
 **CSS parts:** `base`, `header`, `title` (`role="heading" aria-level="3"` by default, wrapping a `<button>`),
 `member-count`, `summary` and `members` (both omitted while `size` is `s` or smaller), `member`,

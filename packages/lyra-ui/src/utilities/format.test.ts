@@ -97,7 +97,11 @@ it('formats byte counts and picks a unit exactly like <lr-format-bytes>', () => 
 
 it('switches byte units exactly at numeric powers of the step', () => {
   expect(formatBytes(1000, 'en-US', { unitStep: 10, display: 'long' })).to.equal('1 gigabyte');
-  expect(formatBytes(999.9999999999999, 'en-US', { display: 'long' })).to.equal('1,000 bytes');
+  expect(formatBytes(999, 'en-US', { display: 'long' })).to.equal('999 bytes');
+  expect(formatBytes(999.9999999999999, 'en-US', { display: 'long' })).to.equal('1 kilobyte');
+  expect(formatBytes(999_960, 'en-US', { display: 'long' })).to.equal('1 megabyte');
+  expect(formatBytes(999_940, 'en-US', { display: 'long' })).to.equal('999.9 kilobytes');
+  expect(formatBytes(1_048_575, 'en-US', { unitStep: 1024 })).to.match(/^1\s?MB$/i);
 });
 
 it('formatBytes accepts a bigint input and scales it to exact digits a JS number cannot represent', () => {

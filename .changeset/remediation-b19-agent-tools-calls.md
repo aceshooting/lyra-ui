@@ -1,10 +1,10 @@
 ---
-'@aceshooting/lyra-ui': major
+'@aceshooting/lyra-ui': minor
 ---
 
 - `lr-mcp-app` no longer throws on pages served over plain HTTP, closes a bootstrap port it cannot deliver, and shows its unavailable state if the browser cannot provide secure random bytes.
 - `lr-tool-param-form` marks required enum, array, boolean and number fields as required for assistive technology and paints the required marker, and falls back to the property key for a blank schema title.
-- Listen for `lr-approval-close` on an approval queue or `lr-tool-approval-close` on a timeline when review ends. The nested dialog's `lr-decision-settled` notification stays inside each component.
+- Approval queues emit `lr-approval-close` and tool timelines emit `lr-tool-approval-close` when review ends. The nested dialog's `lr-decision-settled` notification stays inside each component.
 - `lr-confirm-bar` drops a pending `waitUntil()` decision when the proposal is rebound, so a late save can no longer decide the new proposal.
 - `lr-tool-result-dialog`, `lr-tool-approval-dialog` and `lr-tool-select-dialog` make their capped body a named keyboard tab stop only while it overflows.
 - `lr-permission-rules` keeps a read-only decision focusable, names a rule with a blank label from its scope, and isolates the scope text.

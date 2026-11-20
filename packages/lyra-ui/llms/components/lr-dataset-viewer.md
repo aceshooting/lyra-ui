@@ -23,6 +23,10 @@ virtualized, accessible table (a `role="table"` container with a sticky `role="r
 item-role="row">` for the body) using the optional `papaparse` peer. The document registry matches
 `.tsv`, `.psv`, and `.dat` filenames.
 
+With the default `scroll-mode="self"`, the capped `body` becomes a named keyboard scroll region
+(named by `name`, else the localized "Dataset") while its rows exceed the cap, and adds no tab stop
+otherwise.
+
 Adopts `DocumentAnchorTarget`: a `cell-range` anchor addresses the raw file grid, 1-based, with the
 header row always occupying row 1 (this component always parses with a header row, so the first row
 is never part of the virtualized body); `scrollToAnchor()` scrolls the addressed row into view via

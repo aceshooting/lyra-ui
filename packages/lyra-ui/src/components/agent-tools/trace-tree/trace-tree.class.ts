@@ -10,7 +10,7 @@ import { formatShortDuration } from '../../../internal/duration.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { finiteCount, finiteNumber } from '../../../internal/numbers.js';
-import { chevronIcon } from '../../../internal/icons.js';
+import { chevronIcon, iconFrame } from '../../../internal/icons.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './trace-tree.styles.js';
@@ -18,14 +18,14 @@ import { normalizeLyraSpanKind, normalizeLyraSpanStatus, type LyraSpan } from '.
 import { projectLyraSpans } from './span-projection.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import type { LyraHierarchySource, LyraHierarchyQuery, LyraTraceSourceSummary } from '../../../data-sources.js';
-import { HierarchySourceController, hierarchyField, hierarchyKey, hierarchyText } from '../../../internal/hierarchy-source-controller.js';
-import { applyHierarchySourceEffects, captureHierarchySourceEffects, createHierarchySummarySource, traceSourceSummary } from '../../../internal/hierarchy-summary-source.js';
+import { HierarchySourceController, hierarchyKey, hierarchyText } from '../../../internal/hierarchy-source-controller.js';
+import { applyHierarchySourceEffects, captureHierarchySourceEffects, createHierarchySummarySource, traceSourceSummary, hierarchySourceSummary, captureHierarchyRowAuthority, hierarchySourceFieldReader, revealActiveHierarchyKey } from '../../../internal/hierarchy-summary-source.js';
 import { hierarchySourceView } from '../../../internal/hierarchy-source-view.js';
 import { hierarchySourceStyles } from '../../../internal/hierarchy-source-view.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_cost, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanProjectionLimit, LYRA_DEFAULT_traceTree, LYRA_DEFAULT_traceTreeMetricLabel, LYRA_DEFAULT_traceTreeSpanStatus } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_duration, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_expand, LYRA_DEFAULT_item, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_statusUnknown, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut, LYRA_DEFAULT_treeSourceError, LYRA_DEFAULT_treeSourceSummary } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_cost, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanProjectionLimit, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut, LYRA_DEFAULT_traceTree, LYRA_DEFAULT_traceTreeMetricLabel, LYRA_DEFAULT_traceTreeSpanStatus } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_duration, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_retry, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_statusUnknown, LYRA_DEFAULT_treeSourceError, LYRA_DEFAULT_treeSourceSummary } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraSpan } from './span.js';
@@ -52,33 +52,23 @@ interface SpanHierarchy {
   extentEndMs: number;
 }
 
-const ICON_VIEW_BOX = '0 0 24 24';
-const ICON_STROKE_WIDTH = '1.75';
-
-function glyph(paths: SVGTemplateResult): SVGTemplateResult {
-  return svg`
-    <svg width="1em" height="1em" viewBox=${ICON_VIEW_BOX} fill="none" stroke="currentColor"
-      stroke-width=${ICON_STROKE_WIDTH} stroke-linecap="round" stroke-linejoin="round"
-      aria-hidden="true" focusable="false">${paths}</svg>
-  `;
-}
 function agentIcon(): SVGTemplateResult {
-  return glyph(svg`<rect x="5" y="8" width="14" height="10" rx="2"></rect><circle cx="9.5" cy="13" r="1"></circle><circle cx="14.5" cy="13" r="1"></circle><path d="M12 8V5"></path><circle cx="12" cy="4" r="1"></circle>`);
+  return iconFrame(svg`<rect x="5" y="8" width="14" height="10" rx="2"></rect><circle cx="9.5" cy="13" r="1"></circle><circle cx="14.5" cy="13" r="1"></circle><path d="M12 8V5"></path><circle cx="12" cy="4" r="1"></circle>`);
 }
 function llmIcon(): SVGTemplateResult {
-  return glyph(svg`<path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"></path><path d="M18.5 15l.7 1.9 1.9.7-1.9.7-.7 1.9-.7-1.9-1.9-.7 1.9-.7z"></path>`);
+  return iconFrame(svg`<path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"></path><path d="M18.5 15l.7 1.9 1.9.7-1.9.7-.7 1.9-.7-1.9-1.9-.7 1.9-.7z"></path>`);
 }
 function toolIcon(): SVGTemplateResult {
-  return glyph(svg`<path d="M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 1 5.4-5.4l-2.3 2.3-2-2z"></path>`);
+  return iconFrame(svg`<path d="M14.7 6.3a4 4 0 0 1-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 1 5.4-5.4l-2.3 2.3-2-2z"></path>`);
 }
 function retrieverIcon(): SVGTemplateResult {
-  return glyph(svg`<circle cx="10.5" cy="10.5" r="6.5"></circle><line x1="15.5" y1="15.5" x2="20" y2="20"></line>`);
+  return iconFrame(svg`<circle cx="10.5" cy="10.5" r="6.5"></circle><line x1="15.5" y1="15.5" x2="20" y2="20"></line>`);
 }
 function embeddingIcon(): SVGTemplateResult {
-  return glyph(svg`<circle cx="6" cy="6" r="1.6"></circle><circle cx="18" cy="6" r="1.6"></circle><circle cx="6" cy="18" r="1.6"></circle><circle cx="18" cy="18" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><line x1="7.3" y1="7.3" x2="10.8" y2="10.8"></line><line x1="16.7" y1="7.3" x2="13.2" y2="10.8"></line><line x1="7.3" y1="16.7" x2="10.8" y2="13.2"></line><line x1="16.7" y1="16.7" x2="13.2" y2="13.2"></line>`);
+  return iconFrame(svg`<circle cx="6" cy="6" r="1.6"></circle><circle cx="18" cy="6" r="1.6"></circle><circle cx="6" cy="18" r="1.6"></circle><circle cx="18" cy="18" r="1.6"></circle><circle cx="12" cy="12" r="1.6"></circle><line x1="7.3" y1="7.3" x2="10.8" y2="10.8"></line><line x1="16.7" y1="7.3" x2="13.2" y2="10.8"></line><line x1="7.3" y1="16.7" x2="10.8" y2="13.2"></line><line x1="16.7" y1="16.7" x2="13.2" y2="13.2"></line>`);
 }
 function otherIcon(): SVGTemplateResult {
-  return glyph(svg`<circle cx="12" cy="12" r="8"></circle>`);
+  return iconFrame(svg`<circle cx="12" cy="12" r="8"></circle>`);
 }
 
 const KIND_ICON: Record<LyraSpan['kind'], () => SVGTemplateResult> = {
@@ -189,22 +179,14 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     ...super.defaultStrings,
     accessibleLabelSeparator: LYRA_DEFAULT_accessibleLabelSeparator,
     collapse: LYRA_DEFAULT_collapse,
-    copy: LYRA_DEFAULT_copy,
     cost: LYRA_DEFAULT_cost,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
     duration: LYRA_DEFAULT_duration,
     durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
     durationSeconds: LYRA_DEFAULT_durationSeconds,
     expand: LYRA_DEFAULT_expand,
-    item: LYRA_DEFAULT_item,
     loading: LYRA_DEFAULT_loading,
-    map: LYRA_DEFAULT_map,
     noData: LYRA_DEFAULT_noData,
-    open: LYRA_DEFAULT_open,
     retry: LYRA_DEFAULT_retry,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
     spanKindAgent: LYRA_DEFAULT_spanKindAgent,
     spanKindEmbedding: LYRA_DEFAULT_spanKindEmbedding,
     spanKindLlm: LYRA_DEFAULT_spanKindLlm,
@@ -305,18 +287,10 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   }
 
   private normalizeSourceSpan(value: unknown, key: string): LyraSpan {
-    const source = this.treeSource, version = this.sourceVersion, owner = this.ownerDocument;
-    const epoch = this.sourceControl.epoch, projection = this.sourceControl.projection;
-    const owned = () => this.isConnected && this.ownerDocument === owner && this.treeSource === source &&
-      this.sourceVersion === version && this.sourceControl.epoch === epoch && this.sourceControl.projection === projection && !this.sourceControl.loading;
+    const source = this.treeSource, version = this.sourceVersion, projection = this.sourceControl.projection;
     const accepted = projection ? this.sourceSummaries.get(projection.rows) : undefined;
-    const current = () => owned() && Boolean(accepted?.current()) && owned();
-    const field = (name: string) => {
-      if (!current()) throw new Error('Trace source changed');
-      const result = hierarchyField(value, name);
-      if (!current()) throw new Error('Trace source changed');
-      return result;
-    };
+    const field = hierarchySourceFieldReader(value, captureHierarchyRowAuthority(this, this.sourceControl,
+      () => this.treeSource === source && this.sourceVersion === version, accepted?.current), 'Trace source changed');
     const id = hierarchyKey(field('id'));
     if (id !== key) throw new TypeError('Trace key mismatch');
     const startMs = field('startMs');
@@ -353,11 +327,8 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   }
 
   private sourceSummary(): string {
-    const projection = this.sourceControl.projection;
-    return projection ? this.localize('treeSourceSummary', undefined, {
-      visible: this.formatLocaleNumber(projection.rows.count),
-      total: this.formatLocaleNumber(projection.total),
-    }) : '';
+    const summary = hierarchySourceSummary(this.sourceControl.projection, this.effectiveLocale);
+    return summary ? this.localize('treeSourceSummary', undefined, summary) : '';
   }
 
   private updateSourceEffects(): void {
@@ -366,8 +337,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     const version = this.sourceVersion;
     const snapshot = captureHierarchySourceEffects(this, this.sourceControl,
       () => this.treeSource === source && this.sourceWrapper === binding && this.sourceVersion === version);
-    const { epoch, bound, current } = snapshot;
-    if (!current()) return;
+    if (!snapshot.current()) return;
     for (const row of this.renderRoot.querySelectorAll<HTMLElement>('[data-source-key]')) {
       const active = row.dataset['sourceKey'] === this.activeSpanId;
       row.setAttribute('aria-current', String(active));
@@ -382,12 +352,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
     }, this.sourceAnnouncement);
     if (status === undefined) return;
     this.sourceAnnouncement = status;
-    const key = this.activeSpanId;
-    if (!key || (this.sourceReveal?.[0] === epoch && this.sourceReveal[1] === key)) return;
-    this.sourceReveal = [epoch, key];
-    void this.sourceControl.whenReady().then(ready => {
-      if (ready && bound() && this.activeSpanId === key) void this.sourceControl.reveal(key);
-    });
+    this.sourceReveal = revealActiveHierarchyKey(this.sourceControl, snapshot, () => this.activeSpanId, this.sourceReveal);
   }
 
   private sourceSpanLabel(span: LyraSpan): string {

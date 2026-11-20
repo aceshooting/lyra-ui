@@ -98,13 +98,11 @@ export function projectFrozenRows<T>(
 ): readonly T[] {
   try {
     if (!Array.isArray(value)) return empty;
-    const length = getOwnDataDescriptor(value, 'length');
-    if (length === MISSING_OWN_DATA_DESCRIPTOR || length === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof length.value !== 'number' || !Number.isSafeInteger(length.value) || length.value < 0)
-      return empty;
+    const length = readOwnArrayLength(value);
+    if (length === undefined) return empty;
     const rows: T[] = [];
     const seen = new Set<string>();
-    for (let index = 0; index < Math.min(length.value, limit); index += 1) {
+    for (let index = 0; index < Math.min(length, limit); index += 1) {
       const descriptor = getOwnDataDescriptor(value, String(index));
       if (descriptor === MISSING_OWN_DATA_DESCRIPTOR || descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) continue;
       const row = project(descriptor.value, index);
@@ -131,12 +129,10 @@ export function projectStringList(
 ): readonly string[] | undefined {
   try {
     if (!Array.isArray(value)) return undefined;
-    const length = getOwnDataDescriptor(value, 'length');
-    if (length === MISSING_OWN_DATA_DESCRIPTOR || length === UNSAFE_OWN_DATA_DESCRIPTOR ||
-      typeof length.value !== 'number' || !Number.isSafeInteger(length.value) || length.value < 0 ||
-      (options.rejectOversized && length.value > limit)) return undefined;
+    const length = readOwnArrayLength(value);
+    if (length === undefined || (options.rejectOversized && length > limit)) return undefined;
     const strings: string[] = [];
-    for (let index = 0; index < Math.min(length.value, limit); index += 1) {
+    for (let index = 0; index < Math.min(length, limit); index += 1) {
       const descriptor = getOwnDataDescriptor(value, String(index));
       if (descriptor === UNSAFE_OWN_DATA_DESCRIPTOR) return undefined;
       if (descriptor === MISSING_OWN_DATA_DESCRIPTOR || typeof descriptor.value !== 'string') {
@@ -161,11 +157,9 @@ export function isPlainDataRecord(value: unknown): value is Record<string, unkno
     const prototype = Object.getPrototypeOf(value);
     if (prototype === null) return true;
     if (Object.getPrototypeOf(prototype) !== null) return false;
-    const constructor = Object.getOwnPropertyDescriptor(prototype, 'constructor');
-    if (!constructor || !Object.hasOwn(constructor, 'value') || typeof constructor.value !== 'function') return false;
-    const declaredPrototype = Object.getOwnPropertyDescriptor(constructor.value, 'prototype');
-    return Boolean(declaredPrototype && Object.hasOwn(declaredPrototype, 'value') && declaredPrototype.value === prototype &&
-      FUNCTION_TO_STRING.call(constructor.value) === OBJECT_CONSTRUCTOR_SOURCE);
+    const constructor = readOwnDataValue(prototype, 'constructor');
+    return typeof constructor === 'function' && readOwnDataValue(constructor, 'prototype') === prototype &&
+      FUNCTION_TO_STRING.call(constructor) === OBJECT_CONSTRUCTOR_SOURCE;
   } catch { return false; }
 }
 
@@ -175,4 +169,12 @@ export function readOwnArrayLength(value: object): number | undefined {
   return descriptor !== MISSING_OWN_DATA_DESCRIPTOR && descriptor !== UNSAFE_OWN_DATA_DESCRIPTOR &&
     typeof descriptor.value === 'number' && Number.isSafeInteger(descriptor.value) && descriptor.value >= 0
     ? descriptor.value : undefined;
+}
+
+/** Reads an own data property, throwing a `TypeError` with `message` when it is accessor-backed.
+ * A missing property yields `undefined`; reflection traps propagate to the caller. */
+export function requireOwnDataValue(target: object, key: PropertyKey, message: string): unknown {
+  const descriptor = Object.getOwnPropertyDescriptor(target, key);
+  if (descriptor && !Object.hasOwn(descriptor, 'value')) throw new TypeError(message);
+  return descriptor?.value;
 }

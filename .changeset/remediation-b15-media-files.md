@@ -1,5 +1,5 @@
 ---
-'@aceshooting/lyra-ui': major
+'@aceshooting/lyra-ui': minor
 ---
 
 - Keep lightbox loading and error messages legible over the backdrop in dark mode.
@@ -20,7 +20,6 @@
 - Preserve a media card’s plain frame while its action is pressed.
 - Keep file icon labels readable alongside descriptions and sizes in narrow layouts.
 - Let shrink-to-fit iframe previews follow their allocated dimensions.
-- Give each attachment chip its own fallback action id. Set `attachment-id` explicitly for ids that must persist across remounts.
 - Include the visible filename in file-card action names, including localized untitled files.
 - Report the rendered zoom or image index after navigation settles. Synchronous actions in one render report their final destination.
 - Accept read-only file-count and drag-state bindings while keeping the underlying state derived from file and drag operations.

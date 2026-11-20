@@ -1,5 +1,6 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRingShorthand, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { dropzoneSizeLadder, dropzoneVerdictForcedColors } from '../../../internal/dropzone.styles.js';
 import {
   formControlLabelTypography,
   formControlFocusHalo,
@@ -7,43 +8,29 @@ import {
 } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
+  ${dropzoneSizeLadder}
   :host {
     display: flex;
     flex-direction: column;
     min-inline-size: 0;
     max-inline-size: 100%;
     --_lr-file-input-font-size: var(--lr-form-control-font-size);
-    --_lr-file-input-dropzone-font-size: var(--lr-font-size-md-sm);
-    --_lr-file-input-dropzone-icon-size: var(--lr-font-size-xl);
-    --_lr-file-input-dropzone-padding: var(--lr-space-l);
     --_lr-file-input-detail-font-size: var(--lr-font-size-sm);
     --_lr-form-control-focus-shadow: var(--lr-form-control-focus-shadow, none);
   }
   :host([size="2xs"]),
   :host([size="xs"]) {
-    --_lr-file-input-dropzone-font-size: var(--lr-font-size-xs);
-    --_lr-file-input-dropzone-icon-size: var(--lr-font-size-md-sm);
-    --_lr-file-input-dropzone-padding: var(--lr-space-s);
     --_lr-file-input-detail-font-size: var(--lr-font-size-2xs);
   }
   :host([size="s"]),
   :host([size="small"]) {
-    --_lr-file-input-dropzone-font-size: var(--lr-font-size-sm);
-    --_lr-file-input-dropzone-icon-size: var(--lr-font-size-lg);
-    --_lr-file-input-dropzone-padding: var(--lr-space-m);
     --_lr-file-input-detail-font-size: var(--lr-font-size-xs);
   }
   :host([size="l"]),
   :host([size="large"]) {
-    --_lr-file-input-dropzone-font-size: var(--lr-font-size-lg);
-    --_lr-file-input-dropzone-icon-size: var(--lr-font-size-2xl);
-    --_lr-file-input-dropzone-padding: var(--lr-space-2xl);
     --_lr-file-input-detail-font-size: var(--lr-font-size-md-sm);
   }
   :host([size="xl"]) {
-    --_lr-file-input-dropzone-font-size: var(--lr-font-size-xl);
-    --_lr-file-input-dropzone-icon-size: var(--lr-font-size-3xl);
-    --_lr-file-input-dropzone-padding: var(--lr-space-2xl);
     --_lr-file-input-detail-font-size: var(--lr-font-size-m);
   }
   [part="form-control"] {
@@ -84,7 +71,7 @@ export const styles = css`
     appearance: none;
     padding: var(
       --lr-file-input-dropzone-padding,
-      var(--_lr-file-input-dropzone-padding)
+      var(--_lr-dropzone-padding)
     );
     border: var(--lr-border-width-medium) dashed
       var(--lr-file-input-dropzone-border-color, var(--lr-color-border));
@@ -93,7 +80,7 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     font-size: var(
       --lr-file-input-dropzone-font-size,
-      var(--_lr-file-input-dropzone-font-size)
+      var(--_lr-dropzone-font-size)
     );
     transition: border-color var(--lr-transition-fast), background-color var(--lr-transition-fast);
   }
@@ -110,13 +97,13 @@ export const styles = css`
     gap: var(--lr-file-input-gap, var(--lr-space-xs));
     padding: var(
       --lr-file-input-dropzone-padding,
-      var(--_lr-file-input-dropzone-padding)
+      var(--_lr-dropzone-padding)
     );
     color: var(--lr-color-text-quiet);
     text-align: center;
     font-size: var(
       --lr-file-input-dropzone-font-size,
-      var(--_lr-file-input-dropzone-font-size)
+      var(--_lr-dropzone-font-size)
     );
     overflow-wrap: anywhere;
     pointer-events: none;
@@ -127,7 +114,7 @@ export const styles = css`
     justify-content: center;
     font-size: var(
       --lr-file-input-dropzone-icon-size,
-      var(--_lr-file-input-dropzone-icon-size)
+      var(--_lr-dropzone-icon-size)
     );
   }
   [part="dropzone-text"] {
@@ -143,9 +130,9 @@ export const styles = css`
   :host(:is([size='s'], [size='small'])) [part~='file-input'],
   :host(:is([size='s'], [size='small'])) .dropzone-content {
     padding: var(--lr-file-input-compact-padding,
-      var(--lr-file-input-dropzone-padding, var(--_lr-file-input-dropzone-padding)));
+      var(--lr-file-input-dropzone-padding, var(--_lr-dropzone-padding)));
     font-size: var(--lr-file-input-compact-font-size,
-      var(--lr-file-input-dropzone-font-size, var(--_lr-file-input-dropzone-font-size)));
+      var(--lr-file-input-dropzone-font-size, var(--_lr-dropzone-font-size)));
   }
   :host(:is([size='s'], [size='small'])) .dropzone-content {
     gap: var(--lr-file-input-compact-gap, var(--lr-file-input-gap, var(--lr-space-xs)));
@@ -170,20 +157,7 @@ export const styles = css`
       color-mix(in srgb, var(--lr-color-danger) 8%, transparent)
     );
   }
-  @media (forced-colors: active) {
-    [part~="file-input"][data-drag-state="accept"] {
-      border-color: Highlight;
-      border-style: double;
-      outline: var(--lr-border-width-thin) solid Highlight;
-      outline-offset: calc(-1 * var(--lr-border-width-medium));
-    }
-    [part~="file-input"][data-drag-state="reject"] {
-      border-color: CanvasText;
-      border-style: dotted;
-      outline: var(--lr-border-width-medium) double CanvasText;
-      outline-offset: calc(-1 * var(--lr-border-width-medium));
-    }
-  }
+  ${dropzoneVerdictForcedColors('[part~="file-input"]')}
   :host(:not(:disabled)) [part~="file-input"]:hover,
   :host(:not(:disabled)) .dropzone:hover [part~="file-input"] {
     border-color: var(--lr-file-input-dropzone-hover-border-color, var(--lr-color-brand));
@@ -196,16 +170,11 @@ export const styles = css`
     );
     background: var(
       --lr-file-input-dropzone-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-file-input-dropzone-fill, var(--lr-color-surface)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-file-input-dropzone-fill, var(--lr-color-surface))')}
     );
   }
   [part~="file-input"]:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   /* The opt-in focus halo, on :focus rather than :focus-visible: the outline above is the
      accessibility answer to KEYBOARD focus and is untouched, while a halo a consumer deliberately
@@ -214,8 +183,7 @@ export const styles = css`
     ${formControlFocusHalo}
   }
   :host(:disabled) [part~="file-input"] {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   [part="rejection"] {
     min-inline-size: 0;
@@ -303,19 +271,13 @@ export const styles = css`
     color: var(--lr-color-text);
   }
   [part="remove-button"]:active:where(:not(:disabled)) {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-brand-quiet)')};
   }
   [part="remove-button"]:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   [part="remove-button"]:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   [part="hint"] {
     min-inline-size: 0;

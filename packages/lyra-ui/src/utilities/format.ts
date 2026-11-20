@@ -13,7 +13,7 @@
  */
 
 import {
-  byteFormat, safeByteUnitStep, type ByteUnitDisplay as LyraFormatDisplay, type ByteUnitFamily as LyraFormatBytesUnit,
+  byteFormat, safeByteUnitStep, type LyraFormatDisplay, type LyraFormatBytesUnit,
 } from '../internal/bytes.js';
 import { getDateTimeFormat, getNumberFormat, getRelativeTimeFormat } from '../internal/intl-cache.js';
 import { resolveActiveOrExplicitLocale } from '../internal/localization-runtime.js';

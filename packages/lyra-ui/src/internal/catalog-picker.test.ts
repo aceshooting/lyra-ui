@@ -221,9 +221,15 @@ it('reuses normalized rows and lowercased search keys until the catalog, value o
   expect(controller.filteredEntries.map((entry) => entry.id)).to.deep.equal(['Model-0', 'Model-1', 'Model-2']);
   catalog = Object.freeze([Object.freeze({ id: 'ist', label: '\u0130stanbul' })]);
   controller.setQuery('istanbul');
-  expect(controller.filteredEntries, 'English lowercases dotted capital I to i + U+0307').to.have.length(0);
+  expect(controller.filteredEntries.map((entry) => entry.id), 'the folded U+0307 still matches in English').to.deep.equal(['ist']);
   locale = 'tr';
   expect(controller.filteredEntries.map((entry) => entry.id)).to.deep.equal(['ist']);
+  catalog = Object.freeze([Object.freeze({ id: 'cafe', label: 'Café Crème' }), Object.freeze({ id: 'tea', label: 'Tea' })]);
+  locale = 'en';
+  controller.setQuery('cafe creme');
+  expect(controller.filteredEntries.map((entry) => entry.id), 'the picker folds accents like filterCatalogEntries()').to.deep.equal(['cafe']);
+  controller.setQuery('CAFÉ');
+  expect(controller.filteredEntries.map((entry) => entry.id)).to.deep.equal(['cafe']);
 });
 
 describe('catalog boundary shared with the international selectors', () => {

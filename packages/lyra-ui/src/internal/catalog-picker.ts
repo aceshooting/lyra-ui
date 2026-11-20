@@ -1,19 +1,17 @@
 import { setNativeRangeText } from './native-text-control.js';
-import { waitForTransitionSettle } from './css-motion-time.js';
 import { getOwnDataDescriptor, readOwnDataValue } from './data-descriptors.js';
 import { CATALOG_ROW_LIMIT } from './selection-catalog.js';
 import { AnchoredPopoverController } from './anchored-popover-controller.js';
 import { deferredPlace } from './anchored-overlay-runtime.js';
-import { resolveIntlLocale } from './intl-cache.js';
 import { foldSearchText, prepareNeedle } from './search-haystack.js';
-import { prefersReducedMotion } from './motion.js';
 import { dispatchNativeEvent, relayNativeEvent } from './native-event-relay.js';
 import { activateNonmodalOverlay, type OverlayHandle } from './nonmodal-overlay-manager.js';
 import { resolveEffectivePositioningStrategy } from './positioning-strategy.js';
 import { TypeAheadBuffer } from './type-ahead-buffer.js';
 import { resolveListMove, shouldIgnoreNavigationKey } from './list-navigation.js';
 import { emitValueEvents as emitSharedValueEvents } from './value-events.js';
-import { PopupController } from './popup-controller.js';
+import { PopupController, type PopupLifecycleEvent } from './popup-controller.js';
+import { isLiveDisabled } from './form-associated.js';
 
 /** The common public row vocabulary for catalog-backed controls. */
 export interface LyraCatalogEntry {
@@ -143,10 +141,14 @@ interface CatalogPickerChangeDetail {
   inCatalog: boolean;
 }
 
+/** The popup lifecycle a catalog picker reports: two requests and their settled outcomes. */
+export type CatalogPickerPopupEvent = 'lr-show' | 'lr-hide' | PopupLifecycleEvent;
+
 interface CatalogPickerHost extends HTMLElement {
   readonly renderRoot: HTMLElement | DocumentFragment;
   readonly effectiveDisabled: boolean;
   readonly updateComplete: Promise<boolean>;
+  readonly hasUpdated?: boolean;
 }
 
 interface CatalogPickerControllerOptions<T extends LyraCatalogEntry> {
@@ -157,6 +159,14 @@ interface CatalogPickerControllerOptions<T extends LyraCatalogEntry> {
   searchableFields: (entry: T) => readonly string[];
   emitInput: (detail: CatalogPickerChangeDetail & { query?: string }) => void;
   emitChange: (detail: CatalogPickerChangeDetail) => void;
+  /** Dispatches a popup lifecycle event and returns whether a listener cancelled it. When given,
+   *  every connected open/close after the first render requests `lr-show`/`lr-hide` first --
+   *  cancelable unless the close is forced by disabling -- and reports `lr-after-show` once the
+   *  opened listbox settles and `lr-after-hide` once the closed one leaves layout. */
+  emitPopup?: (name: CatalogPickerPopupEvent, cancelable: boolean) => boolean;
+  /** Dispatches the cancelable request ahead of a value commit. A cancelled request, or one whose
+   *  listener disabled, detached, made read-only or re-valued the host, commits nothing. */
+  emitChangeRequest?: (detail: Readonly<CatalogPickerChangeDetail>, init: { cancelable: true }) => Event;
   onValueChange: (value: string, oldValue: string) => void;
   onDefaultValueChange: (value: string, oldValue: string) => void;
   onStateChange: (
@@ -194,7 +204,14 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
   // settled-closed `[part="listbox"]` leaves layout instead of only losing visibility/opacity --
   // see `[part="listbox"][hidden]` in each host's own stylesheet.
   private _listboxHidden = true;
-  private listboxHideWatcher?: () => void;
+  /** A connected close whose `lr-after-hide` is owed once the listbox leaves layout. */
+  private afterHidePending = false;
+  /** Set while a vetoed transition puts the reflected `open` attribute back. */
+  private restoringVetoedOpen = false;
+  /** Set while a change request is being dispatched, so a listener cannot start another. */
+  private requestingChange = false;
+  /** Set while an Escape dismissal closes the popup, so the overlay returns focus. */
+  private closeRestoresFocus = false;
 
   suppressControlEvents = false;
   // Closed-mode type-ahead, matching <lr-select>: printable keystrokes accumulate and the buffer
@@ -208,6 +225,8 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
     this.typeBuffer = new TypeAheadBuffer(host);
     this.popupController = new PopupController({
       host,
+      popup: () => host.renderRoot.querySelector('[part="listbox"]'),
+      emit: (name, cancelable) => this.emitLifecycle(name, cancelable),
       onPointer: (event) => {
         if (!event.composedPath().includes(host)) this.overlay?.dismissBackdrop();
       },
@@ -274,20 +293,19 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
     if (memo && memo.entries === entries && memo.query === query && memo.locale === locale) {
       return memo.result;
     }
-    // Same rule as filterCatalogEntries(), over search keys lowercased once per row and locale.
-    const intlLocale = resolveIntlLocale(locale);
-    const needle = query.trim().toLocaleLowerCase(intlLocale);
+    // Same rule as filterCatalogEntries(), over search keys folded once per row and locale.
+    const needle = prepareNeedle(query, locale);
     let result: DisplayCatalogEntry<T>[];
     if (!needle) {
       result = [...entries];
     } else {
       let keys = this.searchKeysMemo;
-      if (!keys || keys.entries !== entries || keys.locale !== intlLocale) {
+      if (!keys || keys.entries !== entries || keys.locale !== locale) {
         keys = {
           entries,
-          locale: intlLocale,
+          locale,
           keys: entries.map((entry) =>
-            this.options.searchableFields(entry).map((value) => value.toLocaleLowerCase(intlLocale)),
+            this.options.searchableFields(entry).map((value) => foldSearchText(value, locale)),
           ),
         };
         this.searchKeysMemo = keys;
@@ -369,8 +387,9 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
   }
 
   /** `false` while open or mid-close-transition, so the exit animation still has a real box to
-   *  animate; settles to `true` once the closed listbox's transition has visually finished (or
-   *  immediately, for reduced motion / a zero-duration override). Bound to `[part="listbox"]`'s
+   *  animate; settles to `true` once the closed listbox's transition has visually finished (after
+   *  the next frame, for reduced motion / a zero-duration override), through the same
+   *  `PopupController` settle that orders `lr-select`'s close. Bound to `[part="listbox"]`'s
    *  `?hidden=` by each host -- see `catalog-picker.ts`'s own module doc and the paired
    *  `[part="listbox"][hidden] { display: none; }` rule in each host's stylesheet. */
   get listboxHidden(): boolean {
@@ -384,62 +403,83 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
     this.options.onStateChange('listboxHidden', old);
   }
 
-  private cancelListboxHideWatch(): void {
-    this.listboxHideWatcher?.();
-    this.listboxHideWatcher = undefined;
+  /** Dispatches a lifecycle event for the shared settle; an unannounced close settles silently. */
+  private emitLifecycle(name: CatalogPickerPopupEvent, cancelable: boolean): boolean {
+    if (name === 'lr-after-hide') {
+      if (!this.afterHidePending) return false;
+      this.afterHidePending = false;
+    }
+    return this.options.emitPopup?.(name, cancelable) ?? false;
   }
 
-  /** Removes the listbox from layout after its real CSS exit transition. */
-  private scheduleListboxHide(): void {
-    this.cancelListboxHideWatch();
-    const listbox = this.host.renderRoot.querySelector<HTMLElement>('[part="listbox"]');
-    const watch = waitForTransitionSettle(listbox, this.host, {
-      reducedMotion: prefersReducedMotion(this.host),
-    });
-    if (!watch.pending) {
-      this.setListboxHidden(true);
-      return;
+  private get liveDisabled(): boolean {
+    return this.host.effectiveDisabled ||
+      (typeof this.host.matches === 'function' && this.host.matches(':disabled'));
+  }
+
+  /** Puts a reflected `open` attribute back in step with the state a veto kept. */
+  private restoreVetoedOpenAttribute(): void {
+    if (this.host.hasAttribute('open') === this._open) return;
+    this.restoringVetoedOpen = true;
+    try {
+      this.host.toggleAttribute('open', this._open);
+    } finally {
+      this.restoringVetoedOpen = false;
     }
-    const cancel = (): void => watch.cancel();
-    this.listboxHideWatcher = cancel;
-    void watch.finished.then(() => {
-      if (this.listboxHideWatcher !== cancel) return;
-      this.listboxHideWatcher = undefined;
-      this.setListboxHidden(true);
-    });
   }
 
   setOpen(next: boolean): void {
-    const liveDisabled =
-      this.host.effectiveDisabled ||
-      (typeof this.host.matches === 'function' && this.host.matches(':disabled'));
-    const resolved = Boolean(next) && !liveDisabled;
+    if (this.restoringVetoedOpen) return;
+    let liveDisabled = isLiveDisabled(this.host);
+    let resolved = Boolean(next) && !liveDisabled;
     if (resolved === this._open) {
       if (!resolved) this.deactivateOverlay(false);
       if (next && !resolved && this.host.hasAttribute('open')) this.host.removeAttribute('open');
       return;
     }
+    // A connected transition after the first render is requested first. Closing a control that
+    // has just become disabled is announced but cannot be vetoed: a disabled control must not keep
+    // an interactive popup open.
+    const announced = Boolean(this.options.emitPopup) && this.host.isConnected && this.host.hasUpdated !== false;
+    if (announced) {
+      const forced = !resolved && liveDisabled;
+      const vetoed = this.options.emitPopup!(resolved ? 'lr-show' : 'lr-hide', !forced);
+      // A listener may have moved the state itself, detached the host or disabled it.
+      if (vetoed && !forced) {
+        this.restoreVetoedOpenAttribute();
+        return;
+      }
+      liveDisabled = this.liveDisabled;
+      resolved = Boolean(next) && !liveDisabled && this.host.isConnected;
+      if (resolved === this._open) {
+        this.restoreVetoedOpenAttribute();
+        return;
+      }
+    }
     const old = this._open;
+    this.afterHidePending = false;
+    this.popupController.cancel();
     if (!resolved) {
       this.setActiveIndex(-1);
-      this.deactivateOverlay(false);
+      this.deactivateOverlay(this.closeRestoresFocus);
     }
     this._open = resolved;
     if (resolved) {
-      this.cancelListboxHideWatch();
       this.setListboxHidden(false);
       if (this.closedMode) {
         this.setActiveIndex(
           this.entryFor(this._value)?.disabled === true ? -1 : (this.indexesFor(this.effectiveEntries).get(this._value) ?? -1),
         );
       }
+      if (announced) void this.popupController.settle('lr-after-show');
     } else {
-      // Deferred past the host's next render: that render is what drops `:host([open])` and
-      // actually starts the CSS exit transition `scheduleListboxHide()` needs to observe.
-      void this.host.updateComplete.then(() => {
-        if (this._open || !this.host.isConnected) return;
-        this.scheduleListboxHide();
-      });
+      this.afterHidePending = announced;
+      // The shared settle first waits for the host's next render -- the one that drops
+      // `:host([open])` and starts the CSS exit transition -- and then for that transition, before
+      // the listbox leaves layout and an announced close reports `lr-after-hide`.
+      if (this.host.isConnected) {
+        void this.popupController.settle('lr-after-hide', { conceal: () => this.setListboxHidden(true) });
+      }
     }
     this.options.onStateChange('open', old);
   }
@@ -512,11 +552,30 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
   }
 
   commitValue(next: string): void {
-    if (this.isReadonly) return;
+    if (this.isReadonly || this.requestingChange) return;
     if (next === this._value) {
       this.hide();
       return;
     }
+    if (this.options.emitChangeRequest) {
+      const previous = this._value;
+      const connected = this.host.isConnected;
+      const ownerDocument = this.host.ownerDocument;
+      const proposed = Object.freeze({ value: next, inCatalog: this.indexesFor(this.normalizedCatalog).has(next) });
+      this.requestingChange = true;
+      let request: Event;
+      try {
+        request = this.options.emitChangeRequest(proposed, { cancelable: true });
+      } finally {
+        this.requestingChange = false;
+      }
+      if (
+        request.defaultPrevented || this.host.isConnected !== connected ||
+        this.host.ownerDocument !== ownerDocument || this.isReadonly ||
+        this.liveDisabled || this._value !== previous
+      ) return;
+    }
+    // Read after any request: a listener may have replaced the catalog.
     const inCatalog = this.indexesFor(this.normalizedCatalog).has(next);
     this.value = next;
     this.hide();
@@ -811,15 +870,18 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
   }
 
   disconnected(): void {
+    this.afterHidePending = false;
+    this.popupController.cancel();
     this.typeBuffer.clear();
     this.popupPosition.disconnect();
     this.deactivateOverlay(false);
-    this.cancelListboxHideWatch();
     this.setListboxHidden(true);
     this.setOpen(false);
   }
 
   adopted(): void {
+    // A close settle in flight belongs to the old document and is abandoned with it.
+    if (!this._open) this.setListboxHidden(true);
     this.typeBuffer.clear();
     this.popupPosition.disconnect();
     this.popupController.unbindPointer();
@@ -867,9 +929,14 @@ export class CatalogPickerController<T extends LyraCatalogEntry> {
 
   private dismissFromEscape(): void {
     if (!this._open) return;
-    if (!this.closedMode) this.setQuery(this.labelFor(this._value));
-    this.deactivateOverlay(true);
-    this.setOpen(false);
+    // The close is requested first; a vetoed Escape keeps the popup, its overlay and the draft.
+    this.closeRestoresFocus = true;
+    try {
+      this.setOpen(false);
+    } finally {
+      this.closeRestoresFocus = false;
+    }
+    if (!this._open && !this.closedMode) this.setQuery(this.labelFor(this._value));
   }
 
   private syncPopup(): void {

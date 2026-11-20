@@ -184,3 +184,36 @@ it('discards a message if applying its sanitizer detaches the viewer', async () 
     expect(el.shadowRoot!.querySelectorAll('[part="headers"]').length).to.equal(0);
   } finally { setEmailDeps(undefined); restoreFetch(); }
 });
+
+describe('lr-email-viewer empty bodies', () => {
+  afterEach(() => setEmailDeps(undefined));
+
+  it('explains an HTML-only message whose markup sanitizes to nothing', async () => {
+    const { el, restore } = await mountWith(
+      { PostalMime: { parse: () => Promise.resolve({ subject: 'Pixel', html: '<img src="x">' }) as never }, DOMPurify: { sanitize: () => '' } as never },
+      '[part="headers"]',
+    );
+    try {
+      const note = el.shadowRoot!.querySelector('[part="body"] .empty-note');
+      expect(note?.textContent).to.equal('This message has no displayable content.');
+      el.strings = { emailViewerEmptyBody: 'Aucun contenu affichable.' };
+      await el.updateComplete;
+      expect(el.shadowRoot!.querySelector('[part="body"] .empty-note')!.textContent).to.equal('Aucun contenu affichable.');
+    } finally {
+      restore();
+    }
+  });
+
+  it('falls back to the text alternative when the HTML part sanitizes to nothing', async () => {
+    const { el, restore } = await mountWith(
+      { PostalMime: { parse: () => Promise.resolve({ html: '<img src="x">', text: 'Plain words' }) as never }, DOMPurify: { sanitize: () => '' } as never },
+      '[part="headers"]',
+    );
+    try {
+      expect(el.shadowRoot!.querySelector('[part="body-text"]')!.textContent).to.contain('Plain words');
+      expect(el.shadowRoot!.querySelector('[part="body"] .empty-note') === null).to.equal(true);
+    } finally {
+      restore();
+    }
+  });
+});

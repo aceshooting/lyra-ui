@@ -1,5 +1,5 @@
 import { iconActionStyles } from '../../../internal/icon-action.styles.js';
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -140,7 +140,7 @@ export const styles = css`
     color: 'var(--lr-color-text-quiet)',
     hoverBackground: 'var(--lr-color-surface-raised)',
     hoverColor: 'var(--lr-color-text)',
-    activeBackground: 'color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised)), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+    activeBackground: activeFill('var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised))').cssText,
     activeColor: 'var(--lr-icon-button-color-hover, var(--lr-color-text))',
   })}
   [part='collapse-button'] {
@@ -287,7 +287,7 @@ export const styles = css`
     background: var(--lr-chat-message-retry-hover-bg, var(--lr-color-danger-quiet));
   }
   [part='retry-button']:active {
-    background: color-mix(in oklab, var(--lr-chat-message-retry-hover-bg, var(--lr-color-danger-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-chat-message-retry-hover-bg, var(--lr-color-danger-quiet))')};
   }
   [part='retry-button'] svg {
     inline-size: var(--lr-size-0-875em);

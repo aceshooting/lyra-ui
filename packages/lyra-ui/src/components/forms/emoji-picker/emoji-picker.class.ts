@@ -1,7 +1,7 @@
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { OwnedFrame } from '../../../internal/owned-timer.js';
 import { OwnedResizeObserver } from '../../../internal/owned-observer.js';
-import { renderFormControlHintError } from '../../../internal/form-control-template.js';
+import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { isRepeatedActivationKey, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state, query } from 'lit/decorators.js';
@@ -36,8 +36,8 @@ import type { OptionalPeerFailure } from '../../../internal/optional-peer-failur
 import type { EmojiPickerItem, EmojiPickerGroup } from './emoji-types.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_emojiPickerEmpty, LYRA_DEFAULT_emojiPickerGridLabel, LYRA_DEFAULT_emojiPickerGroupActivities, LYRA_DEFAULT_emojiPickerGroupAnimalsNature, LYRA_DEFAULT_emojiPickerGroupComponent, LYRA_DEFAULT_emojiPickerGroupFlags, LYRA_DEFAULT_emojiPickerGroupFoodDrink, LYRA_DEFAULT_emojiPickerGroupObjects, LYRA_DEFAULT_emojiPickerGroupPeopleBody, LYRA_DEFAULT_emojiPickerGroupSmileysEmotion, LYRA_DEFAULT_emojiPickerGroupSymbols, LYRA_DEFAULT_emojiPickerGroupTravelPlaces, LYRA_DEFAULT_emojiPickerGroupUnknown, LYRA_DEFAULT_emojiPickerInputLimit, LYRA_DEFAULT_emojiPickerLoadError, LYRA_DEFAULT_emojiPickerPeerMissing, LYRA_DEFAULT_emojiPickerSearchLabel, LYRA_DEFAULT_emojiPickerSearchPlaceholder } from '../../../internal/default-strings/forms.generated.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_item, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_retry, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_emojiPickerEmpty, LYRA_DEFAULT_emojiPickerGridLabel, LYRA_DEFAULT_emojiPickerGroupActivities, LYRA_DEFAULT_emojiPickerGroupAnimalsNature, LYRA_DEFAULT_emojiPickerGroupComponent, LYRA_DEFAULT_emojiPickerGroupFlags, LYRA_DEFAULT_emojiPickerGroupFoodDrink, LYRA_DEFAULT_emojiPickerGroupObjects, LYRA_DEFAULT_emojiPickerGroupPeopleBody, LYRA_DEFAULT_emojiPickerGroupSmileysEmotion, LYRA_DEFAULT_emojiPickerGroupSymbols, LYRA_DEFAULT_emojiPickerGroupTravelPlaces, LYRA_DEFAULT_emojiPickerGroupUnknown, LYRA_DEFAULT_emojiPickerInputLimit, LYRA_DEFAULT_emojiPickerLoadError, LYRA_DEFAULT_emojiPickerPeerMissing, LYRA_DEFAULT_emojiPickerSearchLabel, LYRA_DEFAULT_emojiPickerSearchPlaceholder, LYRA_DEFAULT_item } from '../../../internal/default-strings/forms.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_retry, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { EmojiPickerItem, EmojiPickerGroup };
@@ -1229,9 +1229,13 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     const selectedIndex = this.selectedIndex;
     let index = -1;
     const hasLabel = this.slotPresence.has('label') || (this.label ?? '').length > 0;
-    const hasHint = this.slotPresence.has('hint') || (this.hint ?? '').length > 0;
-    const hasError = this.slotPresence.has('error') || (this.errorText ?? '').length > 0;
-    const describedBy = [hasError ? 'emoji-picker-error' : '', hasHint ? 'emoji-picker-hint' : ''].filter(Boolean).join(' ');
+    const { hasHint, hasError, describedBy } = formControlSupportingState({
+      presence: this.slotPresence,
+      idPrefix: 'emoji-picker',
+      hint: this.hint,
+      errorText: this.errorText,
+      helpTextSlot: false,
+    });
     const invalid = hasError || (this.touched && !this.internals.validity.valid);
     const gridLabel = hostAriaLabel(this);
     const searchLabel = this.localize('emojiPickerSearchLabel');
@@ -1279,7 +1283,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
             role="listbox"
             aria-label=${gridLabel ?? (hasLabel ? nothing : this.localize('emojiPickerGridLabel'))}
             aria-labelledby=${gridLabel === null && hasLabel ? this.labelId : nothing}
-            aria-describedby=${describedBy || nothing}
+            aria-describedby=${describedBy ?? nothing}
             aria-required=${this.required ? 'true' : 'false'}
             aria-invalid=${invalid ? 'true' : 'false'}
             @keydown=${this.onNavigationKeyDown}

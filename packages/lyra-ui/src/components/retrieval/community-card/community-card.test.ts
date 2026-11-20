@@ -488,6 +488,22 @@ it('pluralizes the member count and falls back to level 3 for an invalid aria-le
   expect(el.shadowRoot!.querySelector('[part="title"]')!.getAttribute('aria-level')).to.equal('3');
 });
 
+it('takes its title level from heading-level ahead of a host aria-level and honours none', async () => {
+  const el = await fixture<LyraCommunityCard>(html`<lr-community-card aria-level="4" heading-level="2" .community=${community}></lr-community-card>`);
+  const title = () => el.shadowRoot!.querySelector('[part="title"]')!;
+  expect([title().getAttribute('role'), title().getAttribute('aria-level')]).to.deep.equal(['heading', '2']);
+  el.headingLevel = 'none';
+  await el.updateComplete;
+  expect([title().hasAttribute('role'), title().hasAttribute('aria-level')]).to.deep.equal([false, false]);
+  expect(title().textContent!.trim()).to.equal(community.label);
+  el.headingLevel = '9' as never;
+  await el.updateComplete;
+  expect(title().getAttribute('aria-level')).to.equal('3');
+  el.headingLevel = undefined;
+  await el.updateComplete;
+  expect(title().getAttribute('aria-level')).to.equal('4');
+});
+
 describe('lr-community-card layout guards', () => {
   it('paints the member hover wash on the pill shape', async () => {
     const el = await fixture<LyraCommunityCard>(html`<lr-community-card .community=${community} .members=${members}></lr-community-card>`);

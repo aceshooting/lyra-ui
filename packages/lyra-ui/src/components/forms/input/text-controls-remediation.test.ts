@@ -4,6 +4,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import './input.js';
 import './number-input.js';
 import './time-input.js';
+import './native-time-input.js';
 import '../code-editor/code-editor.js';
 import '../otp-input/otp-input.js';
 import '../phone-input/phone-input.js';
@@ -172,6 +173,26 @@ describe('shared field rendering', () => {
     ]) {
       expect(getComputedStyle(part(wrapper.querySelector(tag!)!, selector!)).direction).to.equal('ltr');
     }
+  });
+
+  it('keeps empty text and native time fields in the surrounding direction', async () => {
+    const wrapper = await fixture(html`<div dir="rtl">
+      <lr-input placeholder="you@example.com"></lr-input>
+      <lr-native-time-input value="09:30"></lr-native-time-input>
+    </div>`);
+    const time = part(wrapper.querySelector('lr-native-time-input')!, '[part="input"]');
+    // Engines paint native time fields left to right whatever the computed direction; the field's
+    // directionality still decides where the platform places its picker indicator.
+    expect(time.matches(':dir(rtl)')).to.equal(true);
+    const control = wrapper.querySelector('lr-input')!;
+    const input = part(control, '[part="input"]');
+    expect(getComputedStyle(input).direction).to.equal('rtl');
+    control.value = 'Latine';
+    await control.updateComplete;
+    expect(getComputedStyle(input).direction).to.equal('ltr');
+    control.value = '';
+    await control.updateComplete;
+    expect(getComputedStyle(input).direction).to.equal('rtl');
   });
 
   it('uses the shared transition for time segments and both input actions', async () => {

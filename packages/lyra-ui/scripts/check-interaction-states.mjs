@@ -111,6 +111,56 @@ function styleFiles(directory) {
   });
 }
 
+/**
+ * What each shared style helper writes, so a stylesheet that interpolates it is read as the CSS it
+ * renders. The fill and tint helpers expand to the color-mix they build; fragments expand to the
+ * outline they carry; every other interpolation is left as written. Offsets and line numbers are preserved because no expansion contains a newline.
+ */
+const FOCUS_RING_CSS = 'outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset);';
+const INTERPOLATION_FRAGMENTS = new Map([
+  ['focusRing', FOCUS_RING_CSS],
+  ['focusRingShorthand', 'outline: var(--lr-focus-ring); outline-offset: var(--lr-focus-ring-offset);'],
+  ['focusRingInset', FOCUS_RING_CSS],
+  ['focusRingInsetOffset', FOCUS_RING_CSS],
+  ['focusRingInwardOffset', FOCUS_RING_CSS],
+  ['interactiveTransition', 'transition: var(--lr-transition-interactive);'],
+  ['blockHost', 'display: block; min-inline-size: 0; max-inline-size: 100%;'],
+  ['inlineSizeContainer', 'container-type: inline-size; contain-intrinsic-inline-size: var(--lr-size-20rem);'],
+  ['containerHost', 'display: block; container-type: inline-size; contain-intrinsic-inline-size: var(--lr-size-20rem);'],
+  ['disabledControl', 'opacity: var(--lr-opacity-disabled); cursor: not-allowed;'],
+]);
+const INTERPOLATION_FUNCTIONS = new Map([
+  ['hoverFill', (base) => `color-mix(in oklab, ${base}, var(--lr-color-mix-partner) var(--lr-color-mix-hover))`],
+  ['activeFill', (base) => `color-mix(in oklab, ${base}, var(--lr-color-mix-partner) var(--lr-color-mix-active))`],
+  ['hoverTint', (base) => `color-mix(in srgb, ${base} var(--lr-color-mix-hover), transparent)`],
+  ['activeTint', (base) => `color-mix(in srgb, ${base} var(--lr-color-mix-active), transparent)`],
+]);
+
+export function expandInterpolations(source) {
+  let out = '';
+  let index = 0;
+  while (index < source.length) {
+    const start = source.indexOf('${', index);
+    if (start < 0) { out += source.slice(index); break; }
+    out += source.slice(index, start);
+    let depth = 0;
+    let end = -1;
+    for (let cursor = start + 1; cursor < source.length; cursor += 1) {
+      if (source[cursor] === '{') depth += 1;
+      else if (source[cursor] === '}') { depth -= 1; if (depth === 0) { end = cursor; break; } }
+    }
+    if (end < 0) { out += source.slice(start); break; }
+    const expression = source.slice(start + 2, end).trim();
+    const call = /^(\w+)\(\s*'([^'\n]*)'\s*\)$/.exec(expression);
+    const replacement = INTERPOLATION_FRAGMENTS.get(expression) ??
+      (call ? INTERPOLATION_FUNCTIONS.get(call[1])?.(call[2]) : undefined);
+    const original = source.slice(start, end + 1);
+    out += replacement !== undefined && !original.includes('\n') ? replacement : original;
+    index = end + 1;
+  }
+  return out;
+}
+
 const OPT_OUT = /no-pressed-state:/;
 const HOVER_OPT_OUT = /no-hover-state:/;
 const TRANSITION_OPT_OUT = /no-transition-needed:/;
@@ -244,7 +294,7 @@ export function readHoverRules(source) {
   source.split('\n').forEach((line, index) => {
     if (OPT_OUT.test(line)) optOutLines.add(index + 1);
   });
-  const stripped = source.replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, ' '));
+  const stripped = expandInterpolations(source.replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, ' ')));
   const lines = stripped.split('\n');
   let pendingOptOut = false;
   let buffer = '';
@@ -293,7 +343,7 @@ export const pressedForm = (selector) => selector.replace(/:hover/g, ':active');
 
 /** Blank every CSS comment in place, keeping offsets and line numbers intact. */
 const blankComments = (source) =>
-  source.replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, ' '));
+  expandInterpolations(source.replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, ' ')));
 
 /**
  * Every leaf rule (a block with declarations rather than nested rules) as
@@ -910,7 +960,7 @@ if (isMainModule(import.meta.url)) {
 
   for (const file of files) {
     const raw = readFileSync(file, 'utf8');
-    const source = raw.replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, ' '));
+    const source = expandInterpolations(raw.replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, ' ')));
     const where = relative(packageDir, file);
     // Normalised so a sibling written with different whitespace still counts as present.
     const normalise = (text) => text.replace(/\s+/g, ' ').trim();

@@ -1,4 +1,4 @@
-import { createOptionalPeerLoader } from '../../../internal/optional-peer-capabilities.js';
+import { createOptionalPeerLoader, hasPeerMethods, isPeerObject } from '../../../internal/optional-peer-capabilities.js';
 
 const PDF_JS_WARNING_KEY = 'lyra-pdf-viewer-pdfjs-unavailable';
 const PDF_JS_WARNING = '<lr-pdf-viewer> could not load its optional pdfjs-dist peer.';
@@ -57,16 +57,7 @@ export interface PdfJsApi {
 }
 
 function isPdfJsApi(value: unknown): value is PdfJsApi {
-  return (
-    (typeof value === 'object' || typeof value === 'function') &&
-    value !== null &&
-    'getDocument' in value &&
-    typeof value.getDocument === 'function' &&
-    'GlobalWorkerOptions' in value &&
-    (typeof value.GlobalWorkerOptions === 'object' ||
-      typeof value.GlobalWorkerOptions === 'function') &&
-    value.GlobalWorkerOptions !== null
-  );
+  return hasPeerMethods(value, 'getDocument') && isPeerObject((value as { GlobalWorkerOptions?: unknown }).GlobalWorkerOptions);
 }
 
 const pdfjs = /* @__PURE__ */ createOptionalPeerLoader<PdfJsApi>({

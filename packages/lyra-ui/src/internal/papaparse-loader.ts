@@ -1,4 +1,4 @@
-import { createOptionalPeerLoader } from './optional-peer-capabilities.js';
+import { createOptionalPeerLoader, hasPeerMethods } from './optional-peer-capabilities.js';
 
 const PAPAPARSE_WARNING_KEY = 'lyra-papaparse-unavailable';
 const PAPAPARSE_WARNING = 'A lyra-ui component could not load its optional papaparse peer.';
@@ -8,12 +8,7 @@ export interface PapaParseApi {
 }
 
 function isPapaParseApi(value: unknown): value is PapaParseApi {
-  return (
-    (typeof value === 'object' || typeof value === 'function') &&
-    value !== null &&
-    'parse' in value &&
-    typeof value.parse === 'function'
-  );
+  return hasPeerMethods(value, 'parse');
 }
 
 const papaParse = /* @__PURE__ */ createOptionalPeerLoader<PapaParseApi>({

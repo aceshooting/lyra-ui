@@ -1,5 +1,6 @@
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
@@ -7,8 +8,7 @@ export const styles = css`
     min-inline-size: 0;
     /* Query container, so the narrow-allocation rule below reacts to the component's own
        allocated width -- a sidebar, a split pane, a dialog -- rather than the viewport. */
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${inlineSizeContainer}
   }
 
   [part='base'] {

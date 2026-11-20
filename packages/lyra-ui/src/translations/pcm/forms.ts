@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'Open di calendar',
+  item: 'thing',
   comboboxLoadError: 'E no fit load di options.',
   comboboxSelectedOverflow: '+{n} still dey',
   checkboxRequired: 'Abeg tick dis box if you wan continue.',

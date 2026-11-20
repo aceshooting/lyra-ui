@@ -1,10 +1,9 @@
 import { css } from 'lit';
+import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
   }
   [part="body"] {
     min-block-size: var(--lr-size-10rem);

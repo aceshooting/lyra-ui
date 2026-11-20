@@ -2960,6 +2960,25 @@ describe('lr-video remediation', () => {
     expect(Number.parseFloat(style.outlineWidth)).to.be.greaterThan(0);
   });
 
+  it('keeps the timeline rail painted apart from the page under forced colors', async () => {
+    await setForcedColors('active');
+    try {
+      if (!matchMedia('(forced-colors: active)').matches) return;
+      const el = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
+      withDuration(el);
+      await el.updateComplete;
+      const track = el.shadowRoot!.querySelector<HTMLElement>('[part="timeline-track"]')!;
+      const probe = document.createElement('span');
+      probe.style.backgroundColor = 'Canvas';
+      document.body.append(probe);
+      const canvas = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      expect(getComputedStyle(track).backgroundColor).to.not.equal(canvas);
+    } finally {
+      await setForcedColors('none');
+    }
+  });
+
   it('keeps pointer hover on the timeline visible under forced colors', async () => {
     await setForcedColors('active');
     try {

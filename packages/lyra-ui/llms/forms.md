@@ -138,6 +138,12 @@ required field still matches `:state(required)`, exactly like native `:required`
 case through `:state(disabled)`/`:disabled` and `:state(readonly)` instead. Full description in
 `llms/shared.md` → "CSS custom states".
 
+`lr-select`, `lr-checkbox`, `lr-switch`, `lr-radio-group` and `lr-checkbox-group` deliberately
+have no `readonly`, matching their native counterparts, which have none either; `lr-combobox`,
+`lr-slider` and the text-entry controls do. For a read-only form view, render the committed value
+as text, with a hidden input when it must still submit, rather than `disabled`, which also removes
+the value from submission.
+
 ## Forms guide index
 
 This index links to detailed contracts below and the shared form/accessibility foundations; each
@@ -608,7 +614,8 @@ validity fails — see "The validity alias is cancelable in 8.0.0" above.
 async `source` call plus the exact query string that call was made with (the rejected call's own
 query, not necessarily the live `query`/`inputValue`, which may have moved on — or been cleared by
 closing the listbox — by the time the rejection settles). The rendered copy stays localized and
-never shows the raw error. A current request that rejects with `AbortError` settles silently.
+never shows the raw error. A current request that rejects with `AbortError` settles silently, with no rows: the previous
+query's results are not kept as its answer.
 Rejections from superseded or disconnected requests are ignored.
 `lr-retry-request` is cancelable; the built-in failed-load action calls `refresh()`, and `preventDefault()`
 leaves the failure on screen. While the failure state is the only popup content, the popup swaps
@@ -6403,6 +6410,9 @@ spaces — the Tab key keeps inserting `tabSize` spaces in that case.
 `--lr-code-editor-border` (default `var(--lr-color-border)`) and `--lr-code-editor-fill` (default
 `var(--lr-color-surface)`) retint the frame's resting border and background. Setting the fill also
 colors the line-number gutter during scrolling.
+`--lr-code-editor-gutter-bg` (default: the fill), `--lr-code-editor-gutter-color` (default
+`var(--lr-color-text-quiet)`) and `--lr-code-editor-gutter-border-color` (default
+`var(--lr-color-border)`) retint the gutter alone without a `::part(gutter)` rule.
 `--lr-code-editor-hover-border` (default `var(--lr-color-brand)`) and
 `--lr-code-editor-invalid-border` retint those frame states. The invalid border falls back to
 `--lr-form-control-invalid-border-color`, then `--lr-color-danger`.

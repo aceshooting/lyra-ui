@@ -1,6 +1,6 @@
 import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { visuallyHidden } from '../../../internal/a11y.js';
 import { minimumPointerTarget } from '../../../internal/minimum-pointer-target.styles.js';
@@ -76,11 +76,7 @@ export const styles = css`
   [part="base"][aria-current="page"]:not([aria-disabled="true"]):hover:not(:active) {
     background: var(
       --lr-app-rail-item-current-hover-bg,
-      color-mix(
-        in oklab,
-        var(--lr-app-rail-item-current-bg, var(--lr-color-brand-quiet)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-      )
+      ${hoverFill('var(--lr-app-rail-item-current-bg, var(--lr-color-brand-quiet))')}
     );
   }
   /* Pressed travels further along hover's own axis: the same brand-quiet fill mixed toward
@@ -89,11 +85,7 @@ export const styles = css`
   [part="base"]:not([aria-disabled="true"]):active {
     background: var(
       --lr-app-rail-item-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-color-brand-quiet),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-color-brand-quiet)')}
     );
     color: var(--lr-app-rail-item-active-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
   }
@@ -101,8 +93,7 @@ export const styles = css`
     ${focusRing}
   }
   [part="base"][aria-disabled="true"] {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   /* Inline var() fallbacks rather than :host-declared properties, so a consumer can set them on any
      ancestor and no :host declaration shadows that. ::part(base)[aria-current='page'] is invalid
@@ -268,11 +259,7 @@ export const styles = css`
   [part="toggle"]:active {
     background: var(
       --lr-app-rail-item-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-color-brand-quiet),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-color-brand-quiet)')}
     );
     color: var(--lr-app-rail-item-active-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
   }

@@ -201,7 +201,7 @@ OS media rule) and their cross-engine trap are gone.
 Rules when you touch tokens:
 
 - **Edit the canonical data, then regenerate.** `tokens.styles.ts`, `tokens/palette.styles.ts` and
-  `specialist-tokens.styles.ts` remain the per-mode *records* the palette, chart, terminal, contrast
+  `tokens/specialist-tokens.styles.ts` remain the per-mode *records* the palette, chart, terminal, contrast
   and style-axes tooling read and write, and `verifyRuntimeTokenParity()` /
   `verifyRecordPartition()` keep them equal to canonical data, but no component adopts them. The
   runtime is the generated module: `LyraElement.styles` is `host-tokens.styles.ts` (host-local

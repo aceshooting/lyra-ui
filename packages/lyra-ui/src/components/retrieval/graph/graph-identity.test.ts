@@ -166,7 +166,7 @@ it('projects the same canonical graph model through the explorer and graph', asy
 
 it('omits blank and duplicate relationships and activates every distinct relationship', async () => {
   const list = await fixture<LyraNeighborList>(
-    html`<lr-neighbor-list></lr-neighbor-list>`
+    html`<lr-neighbor-list separate-relations></lr-neighbor-list>`
   );
   list.rows = [
     {

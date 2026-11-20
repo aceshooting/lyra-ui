@@ -142,7 +142,7 @@ Source-mode parts: `source-status` (loading, failure, empty or missing-center fe
 - A row is exactly one `[part="row"]` element in both rendering paths. Above `virtualizeAt` that
   element is the internal virtual-list's own row wrapper (the component renders only the row's
   content into it), so a `::part(row)` rule applies once, not twice.
-- Rows are identified by node id, relation and direction. Each distinct relationship appears once. Blank node ids are omitted.
+- Rows are identified by node id: later rows repeating the same node id are omitted first-wins. Set `separate-relations` (`separateRelations: boolean = false`) to identify rows by node id, relation and direction instead, so each distinct relationship to the same neighbor appears once. Blank node ids are omitted either way.
 - A missing, blank, or nonstring `node.type` is omitted from that row's secondary metadata instead
   of being passed to locale formatting; the neighbor label and any valid degree remain visible.
 

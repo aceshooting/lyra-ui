@@ -214,10 +214,12 @@ function sharedAnchorTargetEnrolls(source, classNode, eventName) {
   return (
     ownHeritage.includes('DocumentAnchorTarget(') ||
     ownHeritage.includes('TextViewerTarget(') ||
-    new RegExp(`DocumentAnchorTarget\\(\\s*${className}\\s*\\)`).test(
+    // The mixins take optional trailing configuration (for example a highlight mode), so the
+    // wrapped class is matched as the first argument whether or not more arguments follow.
+    new RegExp(`DocumentAnchorTarget\\(\\s*${className}\\s*[,)]`).test(
       sourceText,
     ) ||
-    new RegExp(`TextViewerTarget\\(\\s*${className}\\s*\\)`).test(sourceText)
+    new RegExp(`TextViewerTarget\\(\\s*${className}\\s*[,)]`).test(sourceText)
   );
 }
 

@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'Otvori kalendar',
+  item: 'stavka',
   comboboxLoadError: 'Učitavanje mogućnosti nije uspjelo.',
   comboboxSelectedOverflow: '+{n} više',
   checkboxRequired: 'Označite ovaj okvir ako želite nastaviti.',

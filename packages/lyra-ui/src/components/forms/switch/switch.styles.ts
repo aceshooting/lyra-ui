@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing, interactiveTransition } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import {
   formControlSupportingText,
 } from '../../../internal/form-control.styles.js';
@@ -46,26 +46,17 @@ export const styles = css`
   :host(:not(:disabled)) .switch-layout:hover [part~="track"] {
     background: var(
       --lr-switch-track-hover-fill,
-      color-mix(
-        in oklab,
-        var(--_lr-switch-track-fill),
-        var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-      )
+      ${hoverFill('var(--_lr-switch-track-fill)')}
     );
   }
   :host(:not(:disabled)) .switch-layout:active [part~="track"] {
     background: var(
       --lr-switch-track-active-fill,
-      color-mix(
-        in oklab,
-        var(--_lr-switch-track-fill),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--_lr-switch-track-fill)')}
     );
   }
   :host(:disabled) .switch-layout {
-    cursor: not-allowed;
-    opacity: var(--lr-opacity-disabled);
+    ${disabledControl}
   }
   :host(:state(user-invalid)) [part~="track"] {
     outline: var(--lr-border-width-thin) solid var(--lr-switch-invalid-border, var(--lr-color-danger));

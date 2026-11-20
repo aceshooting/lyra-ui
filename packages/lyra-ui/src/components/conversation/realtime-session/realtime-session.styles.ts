@@ -1,5 +1,7 @@
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { activeFill, disabledControl, focusRing } from '../../../internal/interactive-control.styles.js';
+import { containerHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   [part='input-limit'], [part='slices-limit'] {
@@ -9,7 +11,7 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
 
-  :host { display: block; container-type: inline-size; contain-intrinsic-inline-size: var(--lr-size-20rem); }
+  :host { ${containerHost} }
   [part='base'] { display: flex; flex-direction: column; gap: var(--lr-space-m); }
   [part='header'] { display: grid; grid-template-columns: auto minmax(var(--lr-size-8rem), 1fr) auto; gap: var(--lr-space-s); align-items: center; }
   [part='activity'] { min-inline-size: 0; }
@@ -21,9 +23,9 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast);
   }
   [part='controls'] button:hover:where(:not(:disabled)) { background: var(--lr-color-surface-raised); }
-  [part='controls'] button:active:where(:not(:disabled)) { background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
-  [part='controls'] button:disabled { opacity: var(--lr-opacity-disabled); cursor: not-allowed; }
-  [part='controls'] button:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
+  [part='controls'] button:active:where(:not(:disabled)) { background: ${activeFill('var(--lr-color-surface-raised)')}; }
+  [part='controls'] button:disabled { ${disabledControl} }
+  [part='controls'] button:focus-visible { ${focusRing} }
   [part='error'] { margin: 0; padding: var(--lr-space-s); border-inline-start: var(--lr-border-width-thick) solid var(--lr-color-danger); background: var(--lr-color-danger-quiet); color: var(--lr-color-text); }
   [part='capture'] { align-self: center; }
   [part='transcript'] { min-block-size: var(--lr-size-8rem); min-inline-size: 0; }

@@ -245,7 +245,7 @@ test('rejects tooling-only token records in publish emit and runtime references 
   const modules = new Map([
     ['/workspace/dist/internal/tokens.styles.js', 'export const tokens = 1;'],
     ['/workspace/dist/internal/tokens/palette.styles.js', 'export const palette = 1;'],
-    ['/workspace/dist/internal/specialist-tokens.styles.js', 'export const specialist = 1;'],
+    ['/workspace/dist/internal/tokens/specialist-tokens.styles.js', 'export const specialist = 1;'],
     ['/workspace/dist/consumer.js', "export { tokens } from './internal/tokens.styles.js';"],
   ]);
   const findings = findBuildArtifactFindings([...modules.keys()], (file) => modules.get(file));

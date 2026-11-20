@@ -1,5 +1,5 @@
 import { nativeSearchStyles } from '../../../internal/native-search.styles.js';
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRingInset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -59,8 +59,7 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast);
   }
   [part='item'][aria-disabled='true'] {
-    cursor: not-allowed;
-    opacity: var(--lr-opacity-disabled);
+    ${disabledControl}
   }
   /* :where() zeroes the wrapped attribute-selector and pseudo-class, leaving :hover/:focus-visible
      alone at (0,1,0). Unwrapped, [part='item']:not([aria-disabled='true']):hover is (0,3,0) and
@@ -77,12 +76,11 @@ export const styles = css`
      deeper fill plus the grabbing cursor. Same :where() shape as the hover rule, so the two tie at
      (0,1,0) and source order hands this one the press. */
   :where([part='item']):active:where(:not([aria-disabled='true'])) {
-    background: color-mix(in oklab, var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet))')};
     cursor: grabbing;
   }
   [part='item']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingInset}
   }
   [part='item-icon'] {
     grid-column: 1;

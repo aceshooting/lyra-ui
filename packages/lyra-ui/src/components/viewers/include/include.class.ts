@@ -457,7 +457,11 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
       let markup: string | null;
       let fragmentId = source.fragment;
       if (source.kind === 'same-page') {
-        const target = this.ownerDocument.getElementById(source.fragment);
+        // Resolve against the tree this element lives in first (a shadow root keeps its own ids),
+        // then the owner document.
+        const root = this.getRootNode();
+        const scoped = root instanceof ShadowRoot ? root.getElementById(source.fragment) : null;
+        const target = scoped ?? this.ownerDocument.getElementById(source.fragment);
         if (!target) {
           this.fail(0, 'missing-fragment');
           return;

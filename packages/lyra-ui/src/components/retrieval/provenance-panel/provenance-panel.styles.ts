@@ -1,7 +1,4 @@
-import {
-  disclosureChevron,
-  iconHitTarget,
-} from '../../../internal/interactive-control.styles.js';
+import { activeFill, disclosureChevron, focusRingInset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -35,11 +32,10 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
   }
   [part='header']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-brand-quiet)')};
   }
   [part='header']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingInset}
   }
   ${disclosureChevron({
     glyph: "[part='toggle']",

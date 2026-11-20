@@ -1,11 +1,6 @@
-import { activeFill, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, focusRingInset, focusRingInwardOffset, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
-import {
-  formControlLabelTypography,
-  formControlTextWrap,
-  formControlFocusHalo,
-  formControlRequiredMarker,
-} from '../../../internal/form-control.styles.js';
+import { formControlFocusHalo, formControlLabelTypography, formControlRequiredMarker, formControlSupportingTone, formControlTextWrap } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   [part='limit'] {
@@ -74,14 +69,7 @@ export const styles = css`
     display: none;
   }
   ${formControlRequiredMarker}
-  [part='hint'] {
-    color: var(--lr-color-text-quiet);
-    font-size: var(--lr-font-size-sm);
-  }
-  [part='error'] {
-    color: var(--lr-color-danger);
-    font-size: var(--lr-font-size-sm);
-  }
+  ${formControlSupportingTone}
   [part='base'] {
     display: flex;
     flex-direction: column;
@@ -95,8 +83,7 @@ export const styles = css`
      static formAssociated = true), :disabled tracks its own disabled attribute or an ancestor
      <fieldset disabled>'s cascade, exactly like a native control. */
   :host(:disabled) [part='base'] {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   [part='search']:disabled,
   [part='emoji']:disabled {
@@ -178,19 +165,13 @@ export const styles = css`
   }
   [part='search-clear']:not(:disabled):active {
     color: var(--lr-color-text);
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-surface)')};
   }
   [part='search-clear']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingInset}
   }
   [part='search-clear']:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   [part='grid'] {
     position: relative;
@@ -313,11 +294,7 @@ export const styles = css`
   [part='emoji']:active:not(:disabled) {
     background: var(
       --lr-emoji-picker-pressed-bg,
-      color-mix(
-        in oklab,
-        var(--lr-emoji-picker-hover-bg, var(--lr-emoji-picker-active-bg, var(--lr-color-brand-quiet))),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-emoji-picker-hover-bg, var(--lr-emoji-picker-active-bg, var(--lr-color-brand-quiet)))')}
     );
     outline-color: var(--lr-emoji-picker-pressed-outline-color, var(--lr-color-brand));
     outline-style: double;
@@ -333,8 +310,7 @@ export const styles = css`
      --lr-emoji-picker-gap-default (2px) equals --lr-focus-ring-offset, so a positive offset would
      bleed the ring into the neighboring cell. */
   [part='emoji']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(var(--lr-focus-ring-offset) * -1);
+    ${focusRingInwardOffset}
   }
   [part='empty'],
   [part='load-error'] {

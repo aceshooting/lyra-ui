@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'Oscail an féilire',
+  item: 'mír',
   comboboxLoadError: 'Níorbh fhéidir na roghanna a lódáil.',
   comboboxSelectedOverflow: '+{n} eile',
   checkboxRequired: 'Cuir tic sa bhosca seo más mian leat leanúint ar aghaidh.',

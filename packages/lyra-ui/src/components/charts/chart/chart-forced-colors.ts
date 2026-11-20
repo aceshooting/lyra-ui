@@ -7,7 +7,7 @@ import { css } from 'lit';
  *
  * Forced-colors mode exposes only a handful of system colors, so the eight-entry
  * `--lr-color-chart-*` ramp is deliberately remapped onto a repeating three-value cycle in
- * `internal/specialist-tokens.styles.ts`. Series 1/4/7 then paint in literally the same color.
+ * `internal/tokens/specialist-tokens.styles.ts`. Series 1/4/7 then paint in literally the same color.
  * Texture, line dash, and point shape are the channels that keep those repeated colors apart
  * without substituting an arbitrary author color the user's high-contrast theme never asked for.
  * Nothing here is opt-in: the encodings only exist while the media query matches.

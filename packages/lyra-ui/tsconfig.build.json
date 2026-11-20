@@ -28,6 +28,6 @@
     "src/internal/strip-host-title.ts",
     "src/internal/tokens.styles.ts",
     "src/internal/tokens/palette.styles.ts",
-    "src/internal/specialist-tokens.styles.ts"
+    "src/internal/tokens/specialist-tokens.styles.ts"
   ]
 }

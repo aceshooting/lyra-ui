@@ -1,5 +1,5 @@
 import { forcedColorsSelected } from '../../../internal/forced-colors.styles.js';
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
@@ -146,11 +146,7 @@ export const styles = css`
   :where([part="trigger"]):active:where(:not(:disabled)) {
     background: var(
       --lr-select-trigger-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-select-trigger-hover-bg, var(--lr-color-brand-quiet)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-select-trigger-hover-bg, var(--lr-color-brand-quiet))')}
     );
   }
   /* Appearance treatments. outlined is the base rule above, so the other four restate only what
@@ -223,11 +219,7 @@ export const styles = css`
     :where([part="trigger"]):active:where(:not(:disabled)) {
     background: var(
       --lr-select-trigger-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-select-trigger-hover-bg, var(--lr-color-brand-quiet)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-select-trigger-hover-bg, var(--lr-color-brand-quiet))')}
     );
   }
   /* The loud fill has no quieter tint to move to, so it shifts toward --lr-color-mix-partner, which
@@ -238,11 +230,7 @@ export const styles = css`
     :where([part="trigger"]):hover:where(:not(:disabled)) {
     background: var(
       --lr-select-trigger-hover-bg,
-      color-mix(
-        in oklab,
-        var(--lr-color-brand),
-        var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-      )
+      ${hoverFill('var(--lr-color-brand)')}
     );
     border-color: var(
       --lr-select-trigger-hover-border-color,
@@ -253,11 +241,7 @@ export const styles = css`
     :where([part="trigger"]):active:where(:not(:disabled)) {
     background: var(
       --lr-select-trigger-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-color-brand),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-color-brand)')}
     );
   }
   :host([open]) [part="trigger"] {
@@ -266,8 +250,7 @@ export const styles = css`
   }
   :host(:disabled) [part="trigger"] {
     /* Shared library-wide disabled-state token -- see lr-combobox. */
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
 
   /* Same start/end adornment wrapper convention as lr-combobox/lr-date-input --
@@ -368,18 +351,13 @@ export const styles = css`
     background: var(--lr-select-tag-remove-hover-bg, var(--lr-color-brand-quiet));
   }
   [part~="tag__remove-button"]:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-select-tag-remove-hover-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-select-tag-remove-hover-bg, var(--lr-color-brand-quiet))')};
   }
   [part~="tag__remove-button"]:focus-visible {
     ${focusRing}
   }
   [part~="tag__remove-button"]:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
 
   /* Sits in the trigger's reserved inline-end band (see .control[data-clearable] below), outboard
@@ -426,18 +404,13 @@ export const styles = css`
      rounded chip. */
   [part="clear-button"]:active {
     color: var(--lr-color-text);
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-surface)')};
   }
   [part="clear-button"]:focus-visible {
     ${focusRing}
   }
   [part="clear-button"]:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
 
   [part="end"][hidden] + [part="expand-icon"] {
@@ -592,15 +565,10 @@ export const styles = css`
      frame the user sees and has to read deeper than the hover it replaces. Mixes the same row tint
      (consumer override included) toward --lr-color-mix-partner. */
   [part="option"]:where(:not([aria-disabled="true"])):active {
-    background: color-mix(
-      in oklab,
-      var(--lr-select-option-active-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-select-option-active-bg, var(--lr-color-brand-quiet))')};
   }
   [part="option"][aria-disabled="true"] {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   [part="option-dot"] {
     inline-size: var(--lr-size-0-5rem);

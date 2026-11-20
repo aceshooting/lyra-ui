@@ -1,5 +1,5 @@
 // Regenerates `<lr-terminal>`'s ANSI/SGR opt-in fallbacks in
-// `src/internal/specialist-tokens.styles.ts`, for BOTH modes, between the
+// `src/internal/tokens/specialist-tokens.styles.ts`, for BOTH modes, between the
 // `terminal ramp` markers. Canonical theme values are validated; style-axes owns theme.css.
 // Two token sets are generated, because SGR gives the sixteen names two different jobs:
 //   --lr-terminal-color-<name>   foreground (CSI 30-37 / 90-97), drawn ON the terminal panel
@@ -37,7 +37,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
-const specialistTokensPath = join(packageDir, 'src', 'internal', 'specialist-tokens.styles.ts');
+const specialistTokensPath = join(packageDir, 'src', 'internal', 'tokens', 'specialist-tokens.styles.ts');
 
 const TEXT_CONTRAST = 4.5;
 const CONTRAST_TARGET = 4.75; // headroom over the gate

@@ -1,4 +1,4 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, hoverFill } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { formControlPresetButton } from '../../../internal/form-control/preset-button.styles.js';
 
@@ -221,11 +221,7 @@ export const styles = css`
   :host(:not(:disabled)) [part^="handle"]:hover {
     background: var(
       --lr-time-range-handle-hover-bg,
-      color-mix(
-        in oklab,
-        var(--lr-time-range-handle-bg, var(--lr-color-brand)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-      )
+      ${hoverFill('var(--lr-time-range-handle-bg, var(--lr-color-brand))')}
     );
   }
   /* Pressed = the grab, the only feedback a drag has before the value moves: the knob mixes a step
@@ -236,11 +232,7 @@ export const styles = css`
   :host(:not(:disabled)) [part^="handle"]:active {
     background: var(
       --lr-time-range-handle-pressed-bg,
-      color-mix(
-        in oklab,
-        var(--lr-time-range-handle-bg, var(--lr-color-brand)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-time-range-handle-bg, var(--lr-color-brand))')}
     );
     cursor: grabbing;
   }
@@ -250,8 +242,7 @@ export const styles = css`
      fieldset-disabled time-range gated interaction, tabindex and aria-disabled correctly but still
      rendered at full opacity with a normal cursor. Mirrors lr-radio's and lr-checkbox's fix. */
   :host(:disabled) {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   :host(:disabled) [part^="handle"] {
     /* [part^='handle'] sets cursor: grab unconditionally and is not gated on [disabled], so it

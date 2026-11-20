@@ -1,5 +1,5 @@
 import { devWarnOnce } from '../dev-mode-attribute-warning.js';
-import { unwrapOptionalPeerDefault } from '../optional-peer-capabilities.js';
+import { hasPeerMethods, unwrapOptionalPeerDefault } from '../optional-peer-capabilities.js';
 
 /** Maximum UTF-16 source code units admitted to synchronous syntax tokenization. */
 export const SHIKI_SOURCE_MAX_CODE_UNITS = 8192;
@@ -34,13 +34,7 @@ export type ShikiHighlighterCore = ShikiHighlighter;
  * invoked, which a load-time shape check alone cannot catch.
  */
 export function isShikiHighlighter(candidate: unknown): candidate is ShikiHighlighter {
-  return (
-    (typeof candidate === 'object' || typeof candidate === 'function') &&
-    candidate !== null &&
-    typeof (candidate as ShikiHighlighter).getLoadedLanguages === 'function' &&
-    typeof (candidate as ShikiHighlighter).loadLanguage === 'function' &&
-    typeof (candidate as ShikiHighlighter).codeToHtml === 'function'
-  );
+  return hasPeerMethods(candidate, 'getLoadedLanguages', 'loadLanguage', 'codeToHtml');
 }
 
 /** The peer-neutral shape of one TextMate grammar registration. */

@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 
@@ -150,8 +150,7 @@ export const styles = css`
     margin-inline-end: auto;
   }
   [part="previous-button"]:disabled {
-    cursor: not-allowed;
-    opacity: var(--lr-opacity-disabled);
+    ${disabledControl}
   }
   [part="next-button"] {
     background: var(--lr-color-brand);
@@ -166,29 +165,17 @@ export const styles = css`
   }
   :where([part="previous-button"]):active:where(:not(:disabled)),
   :where([part="skip-button"]):active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-brand-quiet)')};
   }
   /* A background mix, not filter: brightness(): a filter multiplies every channel of the subtree,
      dragging this button's own --lr-color-on-brand label along with the fill and moving neither
      once the brand token was themed pure white or pure black. Mixing toward
      --lr-color-mix-partner, which tracks the text color, always moves, and moves only the fill. */
   [part="next-button"]:hover {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
+    background: ${hoverFill('var(--lr-color-brand)')};
   }
   [part="next-button"]:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-brand)')};
   }
   [part="previous-button"]:focus-visible,
   [part="skip-button"]:focus-visible,

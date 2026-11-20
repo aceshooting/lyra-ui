@@ -1,5 +1,5 @@
 import { css } from 'lit';
-import { focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { catalogPickerStyles } from '../catalog-picker-trigger.styles.js';
 
 export const styles = css`
@@ -42,19 +42,14 @@ export const styles = css`
     color: var(--lr-voice-picker-preview-hover-color, var(--lr-color-brand));
   }
   [part='preview-button']:active:not(:disabled) {
-    background: color-mix(
-      in oklab,
-      var(--lr-voice-picker-preview-hover-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-voice-picker-preview-hover-bg, var(--lr-color-brand-quiet))')};
     color: var(--lr-voice-picker-preview-hover-color, var(--lr-color-brand));
   }
   [part='preview-button']:focus-visible {
     ${focusRing}
   }
   [part='preview-button']:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   [part='preview-button'][data-playing] {
     border-color: var(--lr-voice-picker-preview-active-border, var(--lr-color-brand));
@@ -101,11 +96,7 @@ export const styles = css`
     color: var(--lr-voice-picker-preview-hover-color, var(--lr-color-brand));
   }
   [part='option-preview']:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-voice-picker-preview-hover-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-voice-picker-preview-hover-bg, var(--lr-color-brand-quiet))')};
     color: var(--lr-voice-picker-preview-hover-color, var(--lr-color-brand));
   }
 

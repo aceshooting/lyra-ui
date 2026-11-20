@@ -12,6 +12,7 @@ import {
   type OverlayStackEntrySnapshot,
   type OverlayStackSnapshot,
 } from './overlay-stack.js';
+import { isShadowRootNode } from './dom-guards.js';
 
 /** A fixed return target or a live target resolved after modal resources have been released. */
 export type OverlayRestoreFocusTarget = HTMLElement | null | (() => HTMLElement | null);
@@ -335,10 +336,6 @@ function composedChildren(parent: ParentNode): Element[] {
     : [];
 }
 
-function isShadowRoot(node: ParentNode): node is ShadowRoot {
-  return node.nodeType === 11 && 'host' in node;
-}
-
 function addAllowedPath(
   allowed: Map<ParentNode, Set<Element>>,
   host: HTMLElement,
@@ -417,7 +414,7 @@ function inertOutsideAllowedPaths(
 ): void {
   for (const [parent, children] of allowed) {
     state.allowedParents.add(parent);
-    if (isShadowRoot(parent)) observeMutationRoot(state, parent);
+    if (isShadowRootNode(parent)) observeMutationRoot(state, parent);
     for (const child of composedChildren(parent)) {
       if (!children.has(child)) inertElement(state, child, desired);
     }

@@ -9,13 +9,12 @@ import { SourceWindowController, type SourceWindowSlot } from './source-window-c
 import { yieldViewerTask } from './resource-loader.js';
 import { deepActiveElementIn } from './active-element.js';
 import { shouldIgnoreNavigationKey } from './list-navigation.js';
+import { requireOwnDataValue } from './data-descriptors.js';
 
 /** Reads only an own data descriptor; hierarchy values never invoke authored getters. */
 export function hierarchyField(value: unknown, key: string): unknown {
   if (value === null || typeof value !== 'object') throw new TypeError('Invalid hierarchy record');
-  const descriptor = Object.getOwnPropertyDescriptor(value, key);
-  if (descriptor && !('value' in descriptor)) throw new TypeError('Invalid hierarchy field');
-  return descriptor?.value;
+  return requireOwnDataValue(value, key, 'Invalid hierarchy field');
 }
 export function hierarchyKey(value: unknown): string {
   if (typeof value !== 'string' || value.length > 65_536 || value.trim().length === 0) throw new TypeError('Invalid hierarchy key');

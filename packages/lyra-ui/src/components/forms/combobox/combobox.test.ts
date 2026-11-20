@@ -3503,6 +3503,31 @@ it("silently settles an independent AbortError for the current source request", 
   }
 });
 
+it("does not keep an earlier query's rows as the answer to a query its source aborted itself", async () => {
+  const el = (await fixture(html`<lr-combobox></lr-combobox>`)) as LyraCombobox;
+  const calls: Array<{ resolve: (rows: { value: string; label: string }[]) => void; reject: (err: unknown) => void }> = [];
+  el.source = () => new Promise((resolve, reject) => calls.push({ resolve, reject }));
+  el.open = true;
+  await el.updateComplete;
+  await settleComboboxSource(el);
+  requiredItem(calls, 0, 'first source call').resolve([{ value: "old", label: "Old result" }]);
+  await aTimeout(0);
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelectorAll('[part="option"]').length).to.equal(1);
+
+  await typeQuery(el, "second");
+  await settleComboboxSource(el);
+  const failures: unknown[] = [];
+  el.addEventListener('lr-source-error', event => failures.push(event.detail.error));
+  requiredItem(calls, 1, 'second source call').reject(new DOMException("aborted", "AbortError"));
+  await aTimeout(0);
+  await el.updateComplete;
+
+  expect(failures).to.have.length(0);
+  expect(el.shadowRoot!.querySelectorAll('[part="option"][data-value="old"]').length).to.equal(0);
+  expect(el.shadowRoot!.querySelector(".source-error") === null).to.equal(true);
+});
+
 it("moves the active option up with ArrowUp while the listbox is already open", async () => {
   const el = (await fixture(basic())) as LyraCombobox;
   const input = el.shadowRoot!.querySelector(

@@ -1,5 +1,6 @@
 import { css } from 'lit';
 import { formControlLabelTypography, formControlRequiredMarker } from '../../../internal/form-control.styles.js';
+import { activeFill, hoverFill } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   :host {
@@ -109,18 +110,18 @@ export const styles = css`
      --lr-color-mix-partner, which follows the text colour, always moves in the direction the
      surface needs and leaves the label alone. */
   [part='submit']:not(:disabled):hover {
-    background: var(--lr-rubric-form-submit-hover-bg, color-mix(in oklab, var(--_lr-rubric-form-submit-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
-    border-color: var(--lr-rubric-form-submit-hover-border-color, color-mix(in oklab, var(--_lr-rubric-form-submit-edge), var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
+    background: var(--lr-rubric-form-submit-hover-bg, ${hoverFill('var(--_lr-rubric-form-submit-fill)')});
+    border-color: var(--lr-rubric-form-submit-hover-border-color, ${hoverFill('var(--_lr-rubric-form-submit-edge)')});
   }
   [part='submit']:not(:disabled):active {
-    background: var(--lr-rubric-form-submit-active-bg, color-mix(in oklab, var(--_lr-rubric-form-submit-fill), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
-    border-color: var(--lr-rubric-form-submit-active-border-color, color-mix(in oklab, var(--_lr-rubric-form-submit-edge), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    background: var(--lr-rubric-form-submit-active-bg, ${activeFill('var(--_lr-rubric-form-submit-fill)')});
+    border-color: var(--lr-rubric-form-submit-active-border-color, ${activeFill('var(--_lr-rubric-form-submit-edge)')});
   }
   [part='skip']:not(:disabled):hover {
     background: var(--lr-rubric-form-skip-hover-bg, var(--lr-color-brand-quiet));
   }
   [part='skip']:not(:disabled):active {
-    background: var(--lr-rubric-form-skip-active-bg, color-mix(in oklab, var(--lr-rubric-form-skip-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    background: var(--lr-rubric-form-skip-active-bg, ${activeFill('var(--lr-rubric-form-skip-hover-bg, var(--lr-color-brand-quiet))')});
   }
   [part='empty'] {
     color: var(--lr-color-text-quiet);

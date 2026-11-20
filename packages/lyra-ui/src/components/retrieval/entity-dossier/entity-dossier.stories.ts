@@ -94,6 +94,11 @@ export const Default: Story = {
   `,
 };
 
+export const HeadingLevel: Story = {
+  name: 'heading-level="2"',
+  render: () => html`<lr-entity-dossier heading-level="2" .entity=${entity} .types=${types} .neighbors=${neighbors} .chunks=${chunks} .provenance=${provenance}></lr-entity-dossier>`,
+};
+
 export const NoConfidence: Story = {
   render: () => html`<lr-entity-dossier .entity=${entity} .types=${types} .neighbors=${neighbors} .chunks=${chunks} .provenance=${provenance}></lr-entity-dossier>`,
 };

@@ -230,6 +230,8 @@ function safeScore(score: number): number {
  * @cssprop [--lr-retrieval-results-selected-border=var(--lr-color-brand)] - Inline-start border
  *   color marking a selected `[part="row-body"]`. A border rather than a fill by design (see the
  *   styles file), so recoloring it carries no contrast risk for the row's own text.
+ * @cssprop [--lr-retrieval-results-selected-width=var(--lr-space-2xs)] - Inline size of that
+ *   selection stripe, reserved on every row body so selecting a row never shifts its text.
  * @status stable
  * @since 4.1.0
  */

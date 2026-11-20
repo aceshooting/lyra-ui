@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -22,7 +22,7 @@ export const styles = css`
     transition: var(--lr-transition-interactive);
   }
   [part='source-retry']:hover { background: var(--lr-color-brand-quiet); }
-  [part='source-retry']:active { background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
+  [part='source-retry']:active { background: ${activeFill('var(--lr-color-brand-quiet)')}; }
   [part='source-retry']:focus-visible { ${focusRing} }
   [data-source-key] { min-inline-size: 0; overflow-wrap: anywhere; }
   /* Every row rule below has an lr-virtual-list::part(x) twin because rows render through two
@@ -71,7 +71,7 @@ export const styles = css`
   }
   [part='node-label']:active,
   lr-virtual-list::part(node-label):active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-brand-quiet)')};
   }
   [part='direction'],
   lr-virtual-list::part(direction) {
@@ -122,11 +122,11 @@ export const styles = css`
   }
   [part='expand-button']:hover,
   lr-virtual-list::part(expand-button):hover {
-    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: ${hoverFill('transparent')};
   }
   [part='expand-button']:active,
   lr-virtual-list::part(expand-button):active {
-    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('transparent')};
   }
   [part='expand-button']:focus-visible,
   lr-virtual-list::part(expand-button):focus-visible {

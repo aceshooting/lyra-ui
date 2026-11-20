@@ -1,11 +1,10 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
     /* --lr-scroller-shadow-color and -size are the Lyra-prefixed aliases of the upstream
        --shadow-color and --shadow-size cssprops (see the class JSDoc), resolved once here so each
        edge-shadow rule below reads one value instead of repeating the three-level fallback chain
@@ -167,11 +166,7 @@ export const styles = css`
   [part~="control"]:active:not(:disabled) {
     background: var(
       --lr-scroller-control-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-scroller-control-hover-bg, var(--lr-color-brand-quiet)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-scroller-control-hover-bg, var(--lr-color-brand-quiet))')}
     );
   }
 

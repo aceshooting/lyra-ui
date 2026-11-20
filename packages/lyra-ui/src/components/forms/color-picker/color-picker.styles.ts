@@ -1,14 +1,10 @@
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
 import { glassIndependentRootStyles } from '../../../internal/glass-independent-root.styles.js';
-import {
-  formControlLabelTypography,
-  formControlFocusHalo,
-  formControlRequiredMarker,
-} from '../../../internal/form-control.styles.js';
+import { formControlFocusHalo, formControlLabelTypography, formControlRequiredMarker, formControlSupportingTone } from '../../../internal/form-control.styles.js';
 import {
   overlaySurfaceFill,
   overlaySurfaceControlEdge,
@@ -241,11 +237,7 @@ export const styles = css`
      selected colour, so mixing the fill would misreport the value the swatch exists to show. */
   :host(:not(:disabled):not([readonly])) [part~="trigger"]:where(:active),
   :host(:not(:disabled):not([readonly])) [part~="trigger"]:where(:active)::before {
-    border-color: color-mix(
-      in oklab,
-      var(--lr-color-picker-hover-border-color, var(--lr-color-brand)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    border-color: ${activeFill('var(--lr-color-picker-hover-border-color, var(--lr-color-brand))')};
   }
   [part~="trigger"]:where(:focus-visible) {
     ${focusRing}
@@ -401,19 +393,11 @@ export const styles = css`
   }
   :host(:not(:disabled):not([readonly])) [part~="slider"]:where(:active)::before {
     box-shadow: 0 0 0 var(--lr-border-width-medium)
-      color-mix(
-        in oklab,
-        var(--lr-color-picker-hover-border-color, var(--lr-color-brand)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      );
+      ${activeFill('var(--lr-color-picker-hover-border-color, var(--lr-color-brand))')};
   }
   :host(:not(:disabled):not([readonly])) [part~="slider"]:where(:active) {
     outline: var(--lr-border-width-medium) solid
-      color-mix(
-        in oklab,
-        var(--lr-color-picker-hover-border-color, var(--lr-color-brand)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      );
+      ${activeFill('var(--lr-color-picker-hover-border-color, var(--lr-color-brand))')};
   }
   [part~="hue-slider"]::before {
     background-image: linear-gradient(
@@ -481,11 +465,7 @@ export const styles = css`
      the trigger. */
   :host(:not(:disabled):not([readonly])) [part~="grid-handle"]:where(:active),
   :host(:not(:disabled):not([readonly])) [part~="slider-handle"]:where(:active) {
-    border-color: color-mix(
-      in oklab,
-      var(--lr-color-picker-hover-border-color, var(--lr-color-brand)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    border-color: ${activeFill('var(--lr-color-picker-hover-border-color, var(--lr-color-brand))')};
     cursor: grabbing;
   }
   [part~="grid-handle"]:where(:focus-visible),
@@ -570,16 +550,8 @@ export const styles = css`
      direction in light and dark. */
   :host(:not(:disabled):not([readonly])) [part~="format-button"]:where(:active),
   :host(:not(:disabled):not([readonly])) [part~="eyedropper-button"]:where(:active) {
-    border-color: color-mix(
-      in oklab,
-      var(--lr-color-picker-hover-border-color, var(--lr-color-brand)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    border-color: ${activeFill('var(--lr-color-picker-hover-border-color, var(--lr-color-brand))')};
+    background: ${activeFill('var(--lr-color-surface)')};
   }
   [part~="format-button"]:where(:focus-visible),
   [part~="eyedropper-button"]:where(:focus-visible) {
@@ -621,11 +593,7 @@ export const styles = css`
   }
   /* Edge only, again: ::after paints the palette entry's own colour over this box. */
   :host(:not([readonly])) [part~="swatch"]:not([part~="swatch-selected"]):where(:not(:disabled)):where(:active) {
-    border-color: color-mix(
-      in oklab,
-      var(--lr-color-picker-hover-border-color, var(--lr-color-brand)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    border-color: ${activeFill('var(--lr-color-picker-hover-border-color, var(--lr-color-brand))')};
   }
   [part~="swatch"]:where(:focus-visible) {
     ${focusRing}
@@ -674,8 +642,7 @@ export const styles = css`
   }
 
   :host(:disabled) {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   :host(:disabled) [part~="trigger"],
   :host(:disabled) [part~="grid"],
@@ -689,16 +656,9 @@ export const styles = css`
     cursor: not-allowed;
   }
 
-  [part="hint"] {
-    color: var(--lr-color-text-quiet);
-    font-size: var(--lr-font-size-sm);
-  }
+  ${formControlSupportingTone}
   [part="hint"][hidden] {
     display: none;
-  }
-  [part="error"] {
-    color: var(--lr-color-danger);
-    font-size: var(--lr-font-size-sm);
   }
   [part="error"][hidden] {
     display: none;

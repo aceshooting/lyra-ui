@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 /**
@@ -42,7 +42,7 @@ export const styles = css`
     color: var(--lr-input-action-active-color, var(--lr-input-action-hover-color, var(--lr-color-text)));
     background: var(
       --lr-input-action-active-bg,
-      color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      ${activeFill('var(--lr-color-surface)')}
     );
   }
   [part~='stepper-down']:focus-visible,

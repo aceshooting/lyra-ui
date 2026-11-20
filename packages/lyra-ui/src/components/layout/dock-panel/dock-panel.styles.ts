@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingInset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -82,8 +82,7 @@ export const styles = css`
      focus state as pressed. */
   [part="handle"]:focus-visible {
     background: var(--lr-dock-panel-handle-hover-color, var(--lr-color-brand));
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingInset}
   }
   /* After :focus-visible, so a keyboard-focused handle still shows the deeper pressed fill for the
      whole pointer drag (pointer capture holds :active throughout).
@@ -92,11 +91,7 @@ export const styles = css`
   [part="handle"]:active {
     background: var(
       --lr-dock-panel-handle-active-color,
-      color-mix(
-        in oklab,
-        var(--lr-dock-panel-handle-hover-color, var(--lr-color-brand)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-dock-panel-handle-hover-color, var(--lr-color-brand))')}
     );
   }
   /* Keep the target inside the clipped panel while leaving its visible line thin. The band lies
@@ -196,14 +191,7 @@ export const styles = css`
     );
   }
   [part="collapse-toggle"]:active {
-    background: color-mix(
-      in oklab,
-      var(
-        --lr-dock-panel-collapse-toggle-hover-bg,
-        var(--lr-color-brand-quiet)
-      ),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var( --lr-dock-panel-collapse-toggle-hover-bg, var(--lr-color-brand-quiet) )')};
     color: var(
       --lr-dock-panel-collapse-toggle-hover-color,
       var(--lr-color-brand)

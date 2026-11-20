@@ -1,37 +1,13 @@
 import { css } from 'lit';
+import { dropzoneSizeLadder, dropzoneVerdictForcedColors } from '../../../internal/dropzone.styles.js';
 
 export const styles = css`
   :host {
     display: block;
     position: relative;
     min-inline-size: 0;
-    --_lr-drop-zone-overlay-font-size: var(--lr-font-size-md-sm);
-    --_lr-drop-zone-overlay-icon-size: var(--lr-font-size-xl);
-    --_lr-drop-zone-overlay-padding: var(--lr-space-l);
   }
-  :host([size="2xs"]),
-  :host([size="xs"]) {
-    --_lr-drop-zone-overlay-font-size: var(--lr-font-size-xs);
-    --_lr-drop-zone-overlay-icon-size: var(--lr-font-size-md-sm);
-    --_lr-drop-zone-overlay-padding: var(--lr-space-s);
-  }
-  :host([size="s"]),
-  :host([size="small"]) {
-    --_lr-drop-zone-overlay-font-size: var(--lr-font-size-sm);
-    --_lr-drop-zone-overlay-icon-size: var(--lr-font-size-lg);
-    --_lr-drop-zone-overlay-padding: var(--lr-space-m);
-  }
-  :host([size="l"]),
-  :host([size="large"]) {
-    --_lr-drop-zone-overlay-font-size: var(--lr-font-size-lg);
-    --_lr-drop-zone-overlay-icon-size: var(--lr-font-size-2xl);
-    --_lr-drop-zone-overlay-padding: var(--lr-space-2xl);
-  }
-  :host([size="xl"]) {
-    --_lr-drop-zone-overlay-font-size: var(--lr-font-size-xl);
-    --_lr-drop-zone-overlay-icon-size: var(--lr-font-size-3xl);
-    --_lr-drop-zone-overlay-padding: var(--lr-space-2xl);
-  }
+  ${dropzoneSizeLadder}
   [part="base"] {
     display: contents;
   }
@@ -45,13 +21,13 @@ export const styles = css`
     justify-content: center;
     gap: var(--lr-drop-zone-overlay-gap, var(--lr-space-xs));
     box-sizing: border-box;
-    padding: var(--lr-drop-zone-overlay-padding, var(--_lr-drop-zone-overlay-padding));
+    padding: var(--lr-drop-zone-overlay-padding, var(--_lr-dropzone-padding));
     border: var(--lr-border-width-medium) dashed
       var(--lr-drop-zone-overlay-border-color, var(--lr-color-brand));
     border-radius: var(--lr-drop-zone-radius, var(--lr-radius));
     background: var(--lr-drop-zone-overlay-bg, color-mix(in srgb, var(--lr-color-brand) 8%, transparent));
     color: var(--lr-color-text-quiet);
-    font-size: var(--lr-drop-zone-overlay-font-size, var(--_lr-drop-zone-overlay-font-size));
+    font-size: var(--lr-drop-zone-overlay-font-size, var(--_lr-dropzone-font-size));
     text-align: center;
     pointer-events: none;
     transition: border-color var(--lr-transition-fast), background-color var(--lr-transition-fast);
@@ -71,7 +47,7 @@ export const styles = css`
     z-index: var(--lr-drop-zone-overlay-z-index, var(--lr-layer-dropdown));
   }
   [part="overlay-icon"] {
-    font-size: var(--lr-drop-zone-overlay-icon-size, var(--_lr-drop-zone-overlay-icon-size));
+    font-size: var(--lr-drop-zone-overlay-icon-size, var(--_lr-dropzone-icon-size));
   }
   [part="overlay"][data-drag-state="accept"] {
     border-color: var(--lr-drop-zone-accept-border-color, var(--lr-color-success));
@@ -81,20 +57,7 @@ export const styles = css`
     border-color: var(--lr-drop-zone-reject-border-color, var(--lr-color-danger));
     background: var(--lr-drop-zone-reject-bg, color-mix(in srgb, var(--lr-color-danger) 12%, transparent));
   }
-  @media (forced-colors: active) {
-    [part="overlay"][data-drag-state="accept"] {
-      border-color: Highlight;
-      border-style: double;
-      outline: var(--lr-border-width-thin) solid Highlight;
-      outline-offset: calc(-1 * var(--lr-border-width-medium));
-    }
-    [part="overlay"][data-drag-state="reject"] {
-      border-color: CanvasText;
-      border-style: dotted;
-      outline: var(--lr-border-width-medium) double CanvasText;
-      outline-offset: calc(-1 * var(--lr-border-width-medium));
-    }
-  }
+  ${dropzoneVerdictForcedColors('[part="overlay"]')}
   [part="rejection"] {
     margin-block-start: var(--lr-space-xs);
     color: var(--lr-color-danger);

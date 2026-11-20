@@ -171,62 +171,6 @@
   },
   {
     "type": "dependency",
-    "from": "src/components/charts/chart/box-plot.class.ts",
-    "to": "src/components/utility/export-button/csv.ts",
-    "unresolvedTo": "../../utility/export-button/csv.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/charts/chart/chart-spatial-data.ts",
-    "to": "src/components/utility/export-button/csv.ts",
-    "unresolvedTo": "../../utility/export-button/csv.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/charts/chart/chart.class.ts",
-    "to": "src/components/utility/export-button/csv.ts",
-    "unresolvedTo": "../../utility/export-button/csv.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/charts/chart/lite-chart.class.ts",
-    "to": "src/components/utility/export-button/csv.ts",
-    "unresolvedTo": "../../utility/export-button/csv.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
     "from": "src/components/conversation/agent-workspace/agent-workspace.class.ts",
     "to": "src/components/conversation/markdown/markdown-shared.ts",
     "unresolvedTo": "../markdown/markdown-shared.js",
@@ -534,20 +478,6 @@
   },
   {
     "type": "dependency",
-    "from": "src/components/data/calendar/calendar.class.ts",
-    "to": "src/components/forms/date-picker/calendar-core.ts",
-    "unresolvedTo": "../../forms/date-picker/calendar-core.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
     "from": "src/components/data/condition-builder/condition-builder-register.ts",
     "to": "src/components/forms/combobox/option.ts",
     "unresolvedTo": "../../forms/combobox/option.js",
@@ -579,20 +509,6 @@
     "from": "src/components/data/condition-builder/condition-builder.ts",
     "to": "src/components/forms/date-picker/date-input.ts",
     "unresolvedTo": "../../forms/date-picker/date-input.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/data/data-grid/data-grid-processing.ts",
-    "to": "src/components/utility/export-button/csv.ts",
-    "unresolvedTo": "../../utility/export-button/csv.js",
     "dependencyTypes": [
       "local",
       "import"
@@ -835,34 +751,6 @@
     "from": "src/components/data/graph-query-builder/graph-query-builder.ts",
     "to": "src/components/overlays/chip/chip-group.ts",
     "unresolvedTo": "../../overlays/chip/chip-group.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/data/heatmap/heatmap.class.ts",
-    "to": "src/components/utility/export-button/csv.ts",
-    "unresolvedTo": "../../utility/export-button/csv.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/data/sparkline/sparkline.class.ts",
-    "to": "src/components/charts/chart/chart-prepared-data.ts",
-    "unresolvedTo": "../../charts/chart/chart-prepared-data.js",
     "dependencyTypes": [
       "local",
       "import"
@@ -1683,20 +1571,6 @@
   },
   {
     "type": "dependency",
-    "from": "src/components/utility/known-date/known-date.class.ts",
-    "to": "src/components/forms/date-picker/calendar-core.ts",
-    "unresolvedTo": "../../forms/date-picker/calendar-core.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
     "from": "src/components/viewers/archive-viewer/archive-viewer-register.ts",
     "to": "src/components/viewers/document-viewer/registry.ts",
     "unresolvedTo": "../document-viewer/registry.js",
@@ -1729,20 +1603,6 @@
     "from": "src/components/viewers/calendar-viewer/calendar-viewer-register.ts",
     "to": "src/components/viewers/document-viewer/registry.ts",
     "unresolvedTo": "../document-viewer/registry.js",
-    "dependencyTypes": [
-      "local",
-      "import"
-    ],
-    "rule": {
-      "severity": "warn",
-      "name": "no-cross-component-private-imports"
-    }
-  },
-  {
-    "type": "dependency",
-    "from": "src/components/viewers/calendar-viewer/calendar-viewer.class.ts",
-    "to": "src/components/forms/date-picker/calendar-core.ts",
-    "unresolvedTo": "../../forms/date-picker/calendar-core.js",
     "dependencyTypes": [
       "local",
       "import"

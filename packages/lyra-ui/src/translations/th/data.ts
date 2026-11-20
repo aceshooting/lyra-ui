@@ -211,11 +211,15 @@ const strings: LyraLocaleStrings = {
   documentLibrarySelectDocument: 'เลือก {name}',
   graphQueryDeleteWithContext: 'ลบ {name}',
   statRowsInputLimit: 'แสดงรายละเอียด {count} จากทั้งหมด {total} แถว',
-  dataGridRowLimit: 'แสดงเฉพาะ {count} แถวแรกเท่านั้น',
+  dataGridRowLimit: {
+    other: 'แสดงเฉพาะ {count} แถวแรกเท่านั้น',
+  },
   dataGridExpandRow: 'ขยาย {row}',
   dataGridFilterColumn: 'กรอง {column}',
   dataGridSelectPage: 'เลือกทุกแถวในหน้านี้',
-  tableRowLimit: 'แสดงเฉพาะ {count} แถวแรกเท่านั้น',
+  tableRowLimit: {
+    other: 'แสดงเฉพาะ {count} แถวแรกเท่านั้น',
+  },
   tableAdditionalColumns: 'คอลัมน์เพิ่มเติม',
   treeLimit: 'แสดงเฉพาะ {count} รายการแรกเท่านั้น',
   treeDefaultLabel: 'ต้นไม้',

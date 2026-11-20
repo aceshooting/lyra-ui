@@ -1033,7 +1033,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   shadow-root-level branches (no columns, no rows) render spacious, while the filtered-to-zero
   branch, which sits inside `[part='base']` alongside the filter field, renders compact. An
   unsupported value normalizes to unset. Has no effect once the `empty` slot is filled.
-- `revealColumnsLabel` (`reveal-columns-label`) and `columnsHideLabel` (`columns-hide-label`) set the action tooltip for showing or hiding additional columns. An explicit empty string omits that tooltip. The visible name stays constant in both states and uses `tableAdditionalColumns`. Read `aria-expanded` for its state.
+- `revealColumnsLabel` (`reveal-columns-label`) and `columnsHideLabel` (`columns-hide-label`) label the reveal button for showing or hiding additional columns; read `aria-expanded` for its state. Supplying a `tableAdditionalColumns` string (through `strings` or a registered locale override) opts into one constant visible name in both states, and the two labels then become the action tooltip; an explicit empty string omits that tooltip.
 
 - `priorityColumnsVisible: boolean = false` (attribute `priority-columns-visible`, reflected) —
   forces responsive priority columns visible and is updated by the built-in reveal button.
@@ -1305,7 +1305,7 @@ declaration to retheme every internal scroll container in the library, including
   `aria-labelledby`.
   Without either name, first render issues one development-only `console.warn`; production and
   unknown/unbundled runtimes stay silent.
-- `revealColumnsLabel`/`columnsHideLabel` only set the tooltip on `[part='reveal-columns-button']`, which
+- `revealColumnsLabel`/`columnsHideLabel` only label `[part='reveal-columns-button']`, which
   requires a `priority` column. Setting either without one is inert and issues the same one-time,
   development-only warning; production and unknown/unbundled runtimes stay silent.
 - Headers and body rows each have one roving `tabindex="0"`. Left/Right/Home/End navigate headers;
@@ -2072,7 +2072,10 @@ prepared mode), `legend-limit` (localized rendered/received explicit-legend coun
 categorical palette, cycled by word index or `group`; a data-driven literal exception like
 `lr-heatmap`'s scale-ramp endpoints — exposed as retheme-able custom properties instead of
 hardcoded). They inherit from theme ancestors, while a value set directly on the word cloud wins
-through the normal cascade), plus shared tokens (`--lr-font`,
+through the normal cascade), `--lr-word-cloud-legible-font-size` (default `var(--lr-font-size-2xs)`, 0.625rem: when the host is
+narrower than the natural layout, no word renders smaller than this size or its own configured size
+if that is smaller, and the cloud scrolls horizontally instead of shrinking further; `0px` restores
+unbounded shrink-to-fit), plus shared tokens (`--lr-font`,
 `--lr-focus-ring-*`, `--lr-transition-fast`, `--lr-color-text-quiet`).
 
 **Optional peer deps:** none.

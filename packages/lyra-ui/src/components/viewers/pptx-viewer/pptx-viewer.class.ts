@@ -46,7 +46,7 @@ import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from '../viewer-sear
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_chart, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_next, LYRA_DEFAULT_open, LYRA_DEFAULT_previous, LYRA_DEFAULT_search } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_loading } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_pptxViewerFidelityNotice, LYRA_DEFAULT_pptxViewerLabel, LYRA_DEFAULT_pptxViewerMissingLibrary, LYRA_DEFAULT_pptxViewerNextSlide, LYRA_DEFAULT_pptxViewerPreviousSlide, LYRA_DEFAULT_pptxViewerRenderError, LYRA_DEFAULT_pptxViewerSlideOf } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -139,18 +139,10 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     anchorJumped: LYRA_DEFAULT_anchorJumped,
     anchorJumpedToPage: LYRA_DEFAULT_anchorJumpedToPage,
     anchorNotFound: LYRA_DEFAULT_anchorNotFound,
-    chart: LYRA_DEFAULT_chart,
-    collapse: LYRA_DEFAULT_collapse,
-    copy: LYRA_DEFAULT_copy,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
     documentPreviewFailedToLoad: LYRA_DEFAULT_documentPreviewFailedToLoad,
     documentPreviewResourceTooLarge: LYRA_DEFAULT_documentPreviewResourceTooLarge,
     documentPreviewUrlNotAllowed: LYRA_DEFAULT_documentPreviewUrlNotAllowed,
     loading: LYRA_DEFAULT_loading,
-    map: LYRA_DEFAULT_map,
-    next: LYRA_DEFAULT_next,
-    open: LYRA_DEFAULT_open,
     pptxViewerFidelityNotice: LYRA_DEFAULT_pptxViewerFidelityNotice,
     pptxViewerLabel: LYRA_DEFAULT_pptxViewerLabel,
     pptxViewerMissingLibrary: LYRA_DEFAULT_pptxViewerMissingLibrary,
@@ -158,8 +150,6 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
     pptxViewerPreviousSlide: LYRA_DEFAULT_pptxViewerPreviousSlide,
     pptxViewerRenderError: LYRA_DEFAULT_pptxViewerRenderError,
     pptxViewerSlideOf: LYRA_DEFAULT_pptxViewerSlideOf,
-    previous: LYRA_DEFAULT_previous,
-    search: LYRA_DEFAULT_search,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

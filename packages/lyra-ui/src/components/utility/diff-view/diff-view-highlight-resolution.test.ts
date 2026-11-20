@@ -32,6 +32,19 @@ describe('lr-diff-view highlight resolution', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="line-highlight-action"]').length).to.equal(2);
   });
 
+  it('paints no highlight for an anchor whose start lies outside the diff', async () => {
+    const el = await renderDiff();
+    el.highlights = [
+      { id: 'beyond', anchor: { kind: 'line-range', start: 40 } },
+      { id: 'negative', anchor: { kind: 'line-range', start: -1, end: 1 } },
+      { id: 'inside', anchor: { kind: 'line-range', start: 2, end: 99 }, tone: 'warning' },
+    ];
+    await el.updateComplete;
+    expect([0, 1, 2, 3].map((index) => highlightOf(el, index))).to.deep.equal([null, null, 'warning', 'warning']);
+    expect(el.shadowRoot!.querySelectorAll('[part="line-highlight-action"]').length).to.equal(1);
+    expect(await el.scrollToAnchor({ kind: 'line-range', start: 40 })).to.equal(false);
+  });
+
   it('names a labelled highlight action after its label', async () => {
     const el = await renderDiff();
     el.highlights = [{ id: 'named', label: 'Risky change', anchor: { kind: 'line-range', start: 2 } }];

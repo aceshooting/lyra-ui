@@ -30402,6 +30402,24 @@
             "default": "var(--lr-form-control-font-size)"
           },
           {
+            "name": "--lr-code-editor-gutter-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-code-editor-fill, var(--lr-color-surface))"
+          },
+          {
+            "name": "--lr-code-editor-gutter-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border)"
+          },
+          {
+            "name": "--lr-code-editor-gutter-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
+          },
+          {
             "name": "--lr-code-editor-hover-border",
             "deprecated": null,
             "hasDefault": true,
@@ -34986,6 +35004,15 @@
             "default": "card"
           },
           {
+            "name": "heading-level",
+            "property": "headingLevel",
+            "type": "LyraHeadingLevel | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -35036,6 +35063,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "card"
+          },
+          {
+            "name": "headingLevel",
+            "attribute": "heading-level",
+            "type": "LyraHeadingLevel | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -38364,6 +38400,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "color-mix(in srgb, var(--lr-color-text) 6%, transparent)"
+          },
+          {
+            "name": "--lr-conversation-item-pressed-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))"
           },
           {
             "name": "--lr-icon-button-bg",
@@ -58330,6 +58372,15 @@
             "default": "card"
           },
           {
+            "name": "heading-level",
+            "property": "headingLevel",
+            "type": "LyraHeadingLevel | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -58390,6 +58441,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "card"
+          },
+          {
+            "name": "headingLevel",
+            "attribute": "heading-level",
+            "type": "LyraHeadingLevel | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "locale",
@@ -58882,6 +58942,15 @@
             "default": false
           },
           {
+            "name": "heading-level",
+            "property": "headingLevel",
+            "type": "LyraHeadingLevel | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "label",
             "property": "label",
             "type": "string | null",
@@ -58982,6 +59051,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "headingLevel",
+            "attribute": "heading-level",
+            "type": "LyraHeadingLevel | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "label",
@@ -94723,9 +94801,33 @@
             "constructor": "Event"
           },
           {
+            "name": "lr-after-hide",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-after-show",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-change",
             "type": "CustomEvent<{ value: string; inCatalog: boolean }>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-change-request",
+            "type": "CustomEvent<Readonly<{ value: string; inCatalog: boolean }>>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-hide",
+            "type": "CustomEvent<null>",
+            "cancelable": "conditional",
             "constructor": "CustomEvent"
           },
           {
@@ -94736,6 +94838,12 @@
           },
           {
             "name": "lr-invalid",
+            "type": "CustomEvent<null>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-show",
             "type": "CustomEvent<null>",
             "cancelable": "always",
             "constructor": "CustomEvent"
@@ -99641,6 +99749,16 @@
             "default": ""
           },
           {
+            "name": "separate-relations",
+            "property": "separateRelations",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "source-direction",
             "property": "sourceDirection",
             "type": "NeighborSourceDirection",
@@ -99749,6 +99867,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
+          },
+          {
+            "name": "separateRelations",
+            "attribute": "separate-relations",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "sourceDirection",
@@ -125887,6 +126015,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-retrieval-results-selected-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
           }
         ],
         "cssStates": [],
@@ -166163,9 +166297,33 @@
             "constructor": "Event"
           },
           {
+            "name": "lr-after-hide",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-after-show",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-change",
             "type": "CustomEvent<{ value: string; inCatalog: boolean }>",
             "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-change-request",
+            "type": "CustomEvent<Readonly<{ value: string; inCatalog: boolean }>>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-hide",
+            "type": "CustomEvent<null>",
+            "cancelable": "conditional",
             "constructor": "CustomEvent"
           },
           {
@@ -166189,6 +166347,12 @@
           {
             "name": "lr-preview-request",
             "type": "CustomEvent<{ voiceId: string; previewUrl?: string }>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-show",
+            "type": "CustomEvent<null>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           }
@@ -168008,6 +168172,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-chart-4)"
+          },
+          {
+            "name": "--lr-word-cloud-legible-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-2xs)"
           }
         ],
         "cssStates": [],

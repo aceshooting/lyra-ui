@@ -5,6 +5,7 @@ import {
   getOwnDataDescriptor,
   getInheritedPropertyDescriptor,
   readOwnDataValue,
+  requireOwnDataValue,
   ownDataDescriptorValue,
   hasUnsafeOwnDescriptor,
   projectFrozenRows,
@@ -211,5 +212,17 @@ describe('ownDataDescriptorValue / hasUnsafeOwnDescriptor', () => {
     expect(ownDataDescriptorValue(missing)).to.equal(undefined);
     expect(hasUnsafeOwnDescriptor([id, missing])).to.equal(false);
     expect(hasUnsafeOwnDescriptor([id, label, missing])).to.equal(true);
+  });
+});
+
+describe('requireOwnDataValue', () => {
+  it('reads own data values, yields undefined when missing, and rejects accessors with the given message', () => {
+    let getterRuns = 0;
+    const record = Object.defineProperty({ id: 'a' }, 'label', { get() { getterRuns += 1; return 'x'; } });
+    expect(requireOwnDataValue(record, 'id', 'bad')).to.equal('a');
+    expect(requireOwnDataValue(record, 'missing', 'bad')).to.equal(undefined);
+    expect(requireOwnDataValue(Object.create({ inherited: 1 }), 'inherited', 'bad')).to.equal(undefined);
+    expect(() => requireOwnDataValue(record, 'label', 'Accessor field')).to.throw(TypeError, 'Accessor field');
+    expect(getterRuns).to.equal(0);
   });
 });

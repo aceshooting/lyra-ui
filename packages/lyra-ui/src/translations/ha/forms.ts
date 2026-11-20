@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'Buɗe kalanda',
+  item: 'abu',
   comboboxLoadError: 'An kasa loda zaɓuɓɓuka.',
   comboboxSelectedOverflow: '+{n} ƙari',
   checkboxRequired: 'Da fatan zaɓi wannan akwatin don ci gaba.',

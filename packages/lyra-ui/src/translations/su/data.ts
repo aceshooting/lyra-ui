@@ -211,11 +211,15 @@ const strings: LyraLocaleStrings = {
   documentLibrarySelectDocument: 'Pilih {name}',
   graphQueryDeleteWithContext: 'Hapus {name}',
   statRowsInputLimit: 'Némbongkeun {count} tina {total} jajar rincian.',
-  dataGridRowLimit: 'Ngan {count} baris kahiji anu dipidangkeun.',
+  dataGridRowLimit: {
+    other: 'Ngan {count} baris kahiji anu dipidangkeun.',
+  },
   dataGridExpandRow: 'Kembangkeun {row}',
   dataGridFilterColumn: 'Saring {column}',
   dataGridSelectPage: 'Pilih sakabéh baris dina kaca ieu',
-  tableRowLimit: 'Ngan {count} baris kahiji anu dipidangkeun.',
+  tableRowLimit: {
+    other: 'Ngan {count} baris kahiji anu dipidangkeun.',
+  },
   tableAdditionalColumns: 'Kolom tambahan',
   treeLimit: 'Ngan {count} item munggaran nu ditémbongkeun.',
   treeDefaultLabel: 'Tangkal',

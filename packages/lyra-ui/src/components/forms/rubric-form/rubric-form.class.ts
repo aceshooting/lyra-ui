@@ -4,6 +4,7 @@ import { isRepeatedActivationKey } from '../../../internal/list-navigation.js';
 import { emitValueEvents } from '../../../internal/value-events.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
+import { formControlSupportingState } from '../../../internal/form-control-template.js';
 import { FormControlController, reflectFormName } from '../../../internal/form-control-controller.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -520,8 +521,6 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
   @state() private touchedFields = new Set<string>();
   private readonly slotPresence = new SlotPresenceController(this);
   private get hasLabelSlot(): boolean { return this.slotPresence.has('label'); }
-  private get hasHintSlot(): boolean { return this.slotPresence.has('hint'); }
-  private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
 
   private internals: ElementInternals;
   private validityController: FormControlController;
@@ -1219,12 +1218,15 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
 
   override render(): TemplateResult {
     const hasLabel = this.withLabel || this.hasLabelSlot || (this.label ?? '').length > 0;
-    const hasHint =
-      this.withHint ||
-      this.hasHintSlot ||
-      (this.hint ?? '').length > 0;
     const aggregateError = this.errorText || this.customError || '';
-    const hasError = this.hasErrorSlot || aggregateError.length > 0;
+    const { hasHint, hasError } = formControlSupportingState({
+      presence: this.slotPresence,
+      idPrefix: 'rubric-form',
+      hint: this.hint,
+      errorText: aggregateError,
+      withHint: this.withHint,
+      helpTextSlot: false,
+    });
     const hostLabel = this.getAttribute('aria-label');
     const describedBy = [
       hasError ? this.aggregateErrorId : '',

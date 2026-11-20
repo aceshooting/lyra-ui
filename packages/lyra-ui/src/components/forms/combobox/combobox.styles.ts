@@ -1,5 +1,5 @@
 import { forcedColorsSelected } from '../../../internal/forced-colors.styles.js';
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, activeTint, disabledControl, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
@@ -194,8 +194,7 @@ export const styles = css`
   }
   :host(:disabled) [part="combobox"] {
     /* Shared library-wide disabled-state token; still 0.5 by fallback, so no visual change here. */
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
 
   [part="start"],
@@ -377,11 +376,7 @@ export const styles = css`
      the press is a background pad mixed off the row's own surface, stronger by construction since
      --lr-color-mix-active is the larger of the two shared knobs. */
   [part="clear-button"]:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-surface)')};
     border-radius: var(--lr-radius);
   }
   /* Mirrors <lr-chip>'s [part='remove-button']:hover -- a currentColor-derived tint rather than a
@@ -393,11 +388,7 @@ export const styles = css`
   /* Same currentColor idiom as the hover above, taken to the shared pressed strength -- 22% against
      the hover's 16%. */
   [part="tag__remove-button"]:active {
-    background: color-mix(
-      in srgb,
-      currentColor var(--lr-color-mix-active),
-      transparent
-    );
+    background: ${activeTint('currentColor')};
   }
   [part="clear-button"]:focus-visible,
   [part="tag__remove-button"]:focus-visible {
@@ -527,17 +518,12 @@ export const styles = css`
      --lr-combobox-option-active-bg in charge of both states: the pressed row is always their
      colour, one shared step further toward the text colour. */
   [part="option"]:where(:not([aria-disabled="true"])):active {
-    background: color-mix(
-      in oklab,
-      var(--lr-combobox-option-active-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-combobox-option-active-bg, var(--lr-color-brand-quiet))')};
   }
   [part="option"][aria-disabled="true"] {
     /* Unified with the library's single disabled-state opacity token; deliberately changes the old
        literal 0.4 to 0.5. */
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   [part="option-dot"] {
     inline-size: var(--lr-size-0-5rem);

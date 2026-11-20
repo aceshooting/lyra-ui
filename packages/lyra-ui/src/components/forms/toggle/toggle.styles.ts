@@ -1,4 +1,4 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, hoverFill } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -56,46 +56,24 @@ export const styles = css`
   :where([part~='button']):not(:disabled):hover {
     background: var(
       --lr-toggle-hover-bg,
-      color-mix(
-          in oklab,
-          var(--lr-toggle-bg, transparent),
-          var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-        )
+      ${hoverFill('var(--lr-toggle-bg, transparent)')}
 
     );
   }
 
   :where([part~='button']):not(:disabled):active {
-    background: color-mix(
-      in oklab,
-      var(
-        --lr-toggle-hover-bg,
-        var(--lr-toggle-bg, transparent)
-      ),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var( --lr-toggle-hover-bg, var(--lr-toggle-bg, transparent) )')};
   }
 
   :host([pressed]) :where([part~='button']):not(:disabled):hover {
     background: var(
       --lr-toggle-pressed-hover-bg,
-      color-mix(
-        in oklab,
-        var(--lr-toggle-pressed-bg, var(--lr-color-fill-quiet)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-      )
+      ${hoverFill('var(--lr-toggle-pressed-bg, var(--lr-color-fill-quiet))')}
     );
   }
 
   :host([pressed]) :where([part~='button']):not(:disabled):active {
-    background: color-mix(
-      in oklab,
-      var(
-        --lr-toggle-pressed-hover-bg,
-        var(--lr-toggle-pressed-bg, var(--lr-color-fill-quiet))
-      ),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var( --lr-toggle-pressed-hover-bg, var(--lr-toggle-pressed-bg, var(--lr-color-fill-quiet)) )')};
   }
 
   /* The ring sits one layer above a pressed neighbour, whose joined border overlaps this one. */
@@ -106,8 +84,7 @@ export const styles = css`
 
   /* The host is not form-associated, so :host(:disabled) can never match; the native button can. */
   [part~='button']:disabled {
-    cursor: not-allowed;
-    opacity: var(--lr-opacity-disabled);
+    ${disabledControl}
   }
 
   /* Joined runs are measured by the owning group from real geometry, so a separated, wrapped or

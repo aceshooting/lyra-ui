@@ -1,8 +1,8 @@
 ---
-'@aceshooting/lyra-ui': major
+'@aceshooting/lyra-ui': minor
 ---
 
-- Use `aria-expanded` on the table’s additional-columns button. Set its stable visible name with `tableAdditionalColumns`. The existing show and hide labels supply action tooltips.
+- The table's additional-columns button exposes its state with `aria-expanded`. Supply a `tableAdditionalColumns` string to give it one constant visible name, with the show and hide labels as action tooltips.
 - Use the shared pagination controls in the data grid, with compact page jumps, range summaries, unknown server totals and zero-based page events.
 - Veto grid or table paging before it commits, including when a synchronous listener changes the destination.
 - Observe grid sort, selection and expansion through the collection events. Veto selection and expansion requests before keys change.

@@ -1,7 +1,8 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingShorthand, hoverFill } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { chartDataTableStyles, chartLegendPositionStyles } from './chart-surface.styles.js';
 import { forcedColorLegendSwatchStyles } from './chart-forced-colors.js';
+import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
@@ -11,8 +12,7 @@ export const styles = css`
     min-inline-size: 0;
     min-block-size: var(--lr-chart-height, var(--_lr-chart-height, var(--lr-size-280px)));
     block-size: auto;
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${inlineSizeContainer}
     /* Same token names and fallback chain as chart.ts's --lr-chart-* set, so
        theming either component themes the other for free. Unlike chart.ts
        (canvas-rendered, cannot consume var() directly), this one is plain
@@ -103,13 +103,13 @@ export const styles = css`
   :where(svg:not([data-forced-colors])) :where([part='point']):hover,
   :where(svg:not([data-forced-colors])) :where(.mark-hit-group):hover [part='bar'],
   :where(svg:not([data-forced-colors])) :where(.mark-hit-group):hover [part='point'] {
-    fill: color-mix(in oklab, currentColor, var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    fill: ${hoverFill('currentColor')};
   }
   :where(svg:not([data-forced-colors])) :where([part='bar']):active,
   :where(svg:not([data-forced-colors])) :where([part='point']):active,
   :where(svg:not([data-forced-colors])) :where(.mark-hit-group):active [part='bar'],
   :where(svg:not([data-forced-colors])) :where(.mark-hit-group):active [part='point'] {
-    fill: color-mix(in oklab, currentColor, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    fill: ${activeFill('currentColor')};
   }
   /* Forced colors keep the series texture as the fill (a flat hover fill would erase it), so hover
      and press are an edge in a system colour instead. */
@@ -228,12 +228,11 @@ export const styles = css`
       --lr-lite-chart-data-table-toggle-active-bg,
       var(
         --lr-chart-data-table-toggle-active-bg,
-        color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+        ${activeFill('var(--lr-color-brand-quiet)')}
       )
     );
   }
   [part='data-table-toggle']:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
 `;

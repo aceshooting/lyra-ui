@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { anchoredPreviewPanel } from '../../../internal/overlay-surface.styles.js';
 
@@ -40,8 +40,7 @@ export const styles = css`
      <fieldset disabled> cascade; every interactive rule below excludes it likewise. Matches
      lr-chip and lr-button. */
   [part='base']:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   [part='base']:not(:disabled):hover {
     background: color-mix(in srgb, var(--lr-entity-chip-color, var(--lr-color-brand)) 16%, var(--lr-entity-chip-bg, var(--lr-color-brand-quiet)));
@@ -51,11 +50,7 @@ export const styles = css`
      --lr-color-mix-active (22%) is a six-point move nobody can see. Mixing toward the partner
      moves the fill whatever per-entity accent the chip was given. */
   [part='base']:not(:disabled):active {
-    background: color-mix(
-      in oklab,
-      color-mix(in srgb, var(--lr-entity-chip-color, var(--lr-color-brand)) 16%, var(--lr-entity-chip-bg, var(--lr-color-brand-quiet))),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('color-mix(in srgb, var(--lr-entity-chip-color, var(--lr-color-brand)) 16%, var(--lr-entity-chip-bg, var(--lr-color-brand-quiet)))')};
   }
   [part='base']:focus-visible {
     ${focusRing}

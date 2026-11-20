@@ -1,5 +1,5 @@
 import { css } from 'lit';
-import { iconHitTarget, focusRing } from './interactive-control.styles.js';
+import { disabledControl, focusRing, iconHitTarget } from './interactive-control.styles.js';
 import { iconAction, iconActionHover, iconActionActive } from './icon-action.styles.js';
 
 /** Filter fields share input theme hooks without registering a form control. */
@@ -51,7 +51,6 @@ export const nativeSearchStyles = css`
   [part='search-clear']:active:where(:not(:disabled)) { ${iconActionActive} }
   [part='search-clear']:focus-visible { ${focusRing} }
   .native-search-input:disabled, [part='search-clear']:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
 `;

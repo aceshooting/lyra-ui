@@ -1,4 +1,4 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingShorthand, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -106,19 +106,10 @@ export const styles = css`
      text colour, deepening the hue and -- the partner being opaque -- raising the tint's alpha, so
      a mousedown on the transparent target reads firmer than hover. */
   [part="region-highlight-target"]:active + [part="region-highlight"] {
-    background: color-mix(
-      in oklab,
-      color-mix(
-        in srgb,
-        var(--_lr-svg-viewer-highlight-color) 20%,
-        transparent
-      ),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('color-mix( in srgb, var(--_lr-svg-viewer-highlight-color) 20%, transparent )')};
   }
   [part="region-highlight-target"]:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   [part="region-highlight"]:where([data-active]) {
     border-color: var(
@@ -149,14 +140,9 @@ export const styles = css`
     background: var(--lr-svg-viewer-action-hover-background, var(--lr-color-surface-raised));
   }
   [part="region-highlight-action"]:active {
-    background: var(--lr-svg-viewer-action-active-background, color-mix(
-      in oklab,
-      var(--lr-color-surface-raised),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    ));
+    background: var(--lr-svg-viewer-action-active-background, ${activeFill('var(--lr-color-surface-raised)')});
   }
   [part="region-highlight-action"]:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
 `;

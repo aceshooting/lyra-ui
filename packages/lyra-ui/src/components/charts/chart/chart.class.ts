@@ -3272,7 +3272,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   /**
    * Resolves the categorical series palette (`--lr-color-chart-1..8`, declared in
-   * `internal/specialist-tokens.styles.ts` as indirections through
+   * `internal/tokens/specialist-tokens.styles.ts` as indirections through
    * `--lr-theme-color-chart-1..8`, with their own dark-theme ramp) via `getComputedStyle` —
    * same canvas-can't-read-`var()` constraint as `themeColors()`, and the same source
    * `<lr-lite-chart>` draws its default palette from. Feeds `seriesToDataset()` a concrete,

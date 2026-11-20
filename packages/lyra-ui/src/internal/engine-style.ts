@@ -1,5 +1,6 @@
 import { readCanvasRgba, resolveCanvasColor, toRgbaString } from './canvas-color.js';
 import { finiteRange } from './numbers.js';
+import { ENGINE_STYLE_MEDIA_QUERIES } from './engine-admission.js';
 
 /**
  * Plain style values an optional WebGL engine paints with: concrete CSS colour strings and CSS
@@ -44,12 +45,7 @@ export const ENGINE_CHART_PALETTE: readonly string[] = Object.freeze(
   Array.from({ length: 8 }, (_, index) => `--lr-color-chart-${index + 1}`),
 );
 
-/** The media features an engine style reads; a change to any of them must re-resolve it. */
-export const ENGINE_STYLE_MEDIA_QUERIES = Object.freeze([
-  '(prefers-reduced-motion: reduce)',
-  '(forced-colors: active)',
-  '(prefers-color-scheme: dark)',
-] as const);
+export { ENGINE_STYLE_MEDIA_QUERIES } from './engine-admission.js';
 
 type ColorField = 'background' | 'foreground' | 'muted' | 'accent' | 'focus';
 

@@ -43,13 +43,14 @@ assert.equal(manifest.repository.directory, 'packages/lyra-docs');
 assert.equal(manifest.scripts.prepack, 'pnpm --filter @aceshooting/lyra-ui build && pnpm build');
 assert.deepEqual(manifest.exports, {
   '.': { types: './dist/index.d.ts', default: './dist/index.js' },
+  './custom-elements.json': './custom-elements.json',
   './docx': { types: './dist/docx/index.d.ts', default: './dist/docx/index.js' },
   './docx/editor': { types: './dist/docx/editor.d.ts', default: './dist/docx/editor.js' },
   './docx/editor.class': { types: './dist/docx/docx-editor.class.d.ts', default: './dist/docx/docx-editor.class.js' },
   './docx/editor.css': './dist/docx/editor.css',
   './package.json': './package.json',
 });
-assert.deepEqual(manifest.files, ['dist', 'CHANGELOG.md', 'README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_LICENSES', 'NOTICE', 'scripts/engine-source.lock.json', 'scripts/engine', 'scripts/build-engine.mjs']);
+assert.deepEqual(manifest.files, ['dist', 'custom-elements.json', 'CHANGELOG.md', 'README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_LICENSES', 'NOTICE', 'scripts/engine-source.lock.json', 'scripts/engine', 'scripts/build-engine.mjs']);
 const changelog = read('packages/lyra-docs/CHANGELOG.md');
 assert.match(changelog, /^# @aceshooting\/lyra-docs\s/mu);
 assert(changelog.split(/\r?\n/u).includes(`## ${manifest.version}`), 'Changelog lacks current version');

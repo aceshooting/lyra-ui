@@ -15,6 +15,7 @@ import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import {
   getOwnDataDescriptor,
+  getInheritedPropertyDescriptor,
   isObjectValue,
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
@@ -48,6 +49,7 @@ import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 import { boundedViewerSearchQuery, ViewerSearchWorkBudget, VIEWER_SEARCH_QUERY_LIMIT } from '../viewer-search-limits.js';
 import { boundedSelectionRects, boundedSelectionText } from '../../../internal/text-quote.js';
+import { isRuntimeArray } from '../../../internal/object-guards.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty } from '../../../internal/default-strings/shared.generated.js';
@@ -79,7 +81,6 @@ const MAX_SEARCH_MATCHES = 10_000;
 const MAX_SEARCH_SPINE_ITEMS = 1_000;
 const MAX_FIND_RESULTS = 10_000;
 const MAX_PAINTED_HIGHLIGHTS = 100;
-const MAX_PEER_PROTOTYPES = 100;
 
 interface SafeEpubBook {
   readonly ready: Promise<void>;
@@ -129,33 +130,11 @@ interface TocWorkBudget {
   readonly seen: WeakSet<object>;
 }
 
-function isArrayValue(value: unknown): value is readonly unknown[] {
-  try {
-    return Array.isArray(value);
-  } catch {
-    return false;
-  }
-}
-
 /** Resolves an own/inherited data descriptor without invoking a peer getter. An accessor shadows
  * farther prototypes just as normal property lookup would, but fails closed at the boundary. */
 function inheritedDataDescriptor(value: object, key: PropertyKey): PropertyDescriptor | undefined {
-  let current: object | null = value;
-  for (let depth = 0; current && depth < MAX_PEER_PROTOTYPES; depth += 1) {
-    let descriptor: PropertyDescriptor | undefined;
-    try {
-      descriptor = Object.getOwnPropertyDescriptor(current, key);
-    } catch {
-      return undefined;
-    }
-    if (descriptor) return 'value' in descriptor ? descriptor : undefined;
-    try {
-      current = Object.getPrototypeOf(current) as object | null;
-    } catch {
-      return undefined;
-    }
-  }
-  return undefined;
+  const descriptor = getInheritedPropertyDescriptor(value, key);
+  return descriptor && 'value' in descriptor ? descriptor : undefined;
 }
 
 function inheritedDataValue(value: unknown, key: PropertyKey): unknown {
@@ -334,7 +313,7 @@ function normalizeSpineItem(value: unknown): SafeEpubSpineItem | undefined {
 
 function projectSpineItems(book: SafeEpubBook): { readonly items: readonly SafeEpubSpineItem[]; readonly exact: boolean } {
   const spineItems = inheritedDataValue(book.spine, 'spineItems');
-  if (!isArrayValue(spineItems)) return Object.freeze({ items: Object.freeze([]), exact: spineItems === undefined });
+  if (!isRuntimeArray(spineItems)) return Object.freeze({ items: Object.freeze([]), exact: spineItems === undefined });
   const length = readOwnArrayLength(spineItems);
   if (length === undefined) return Object.freeze({ items: Object.freeze([]), exact: false });
   const items: SafeEpubSpineItem[] = [];
@@ -359,7 +338,7 @@ function projectSpineItems(book: SafeEpubBook): { readonly items: readonly SafeE
 /** Projects one peer `find()` result prefix through own data descriptors. Invalid/holey/capped
  * positions make an externally reported count inexact, but never discard a later valid sibling. */
 function projectFindResults(value: unknown, work: ViewerSearchWorkBudget): FindResultProjection {
-  if (!isArrayValue(value)) return Object.freeze({ matches: Object.freeze([]), exact: false });
+  if (!isRuntimeArray(value)) return Object.freeze({ matches: Object.freeze([]), exact: false });
   const length = readOwnArrayLength(value);
   if (length === undefined) return Object.freeze({ matches: Object.freeze([]), exact: false });
   const matches: EbookSearchMatch[] = [];
@@ -411,7 +390,7 @@ function pushTocEntries(
   budget: TocWorkBudget,
   stack: Array<{ readonly value: unknown; readonly level: number }>,
 ): void {
-  if (!isArrayValue(value) || budget.positions >= MAX_TOC_ITEMS) return;
+  if (!isRuntimeArray(value) || budget.positions >= MAX_TOC_ITEMS) return;
   const length = readOwnArrayLength(value);
   if (length === undefined) return;
   const count = Math.min(length, MAX_TOC_ITEMS - budget.positions);

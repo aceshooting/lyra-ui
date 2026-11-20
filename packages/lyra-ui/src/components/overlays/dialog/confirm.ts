@@ -2,6 +2,7 @@ import { LyraDialog, type DialogCloseReason } from './dialog.class.js';
 import { defineElement, tag } from '../../../internal/prefix.js';
 import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_confirm } from '../../../internal/default-strings/shared.generated.js';
 import { resolveLyraString } from '../../../internal/localization-runtime.js';
+import { activeFill, focusRing, hoverFill } from '../../../internal/interactive-control.styles.js';
 
 const CONFIRM_DEFAULT_STRINGS = Object.freeze({
   cancel: LYRA_DEFAULT_cancel,
@@ -56,14 +57,13 @@ const CONFIRM_BUTTON_ATTRIBUTE = `data-${tag('confirm-action')}`;
 // light theme and lighten on a dark one without this file knowing which is in force.
 const BUTTON_STATE_STYLE = `
   [${CONFIRM_BUTTON_ATTRIBUTE}]:hover {
-    --lr-confirm-button-state: color-mix(in oklab, var(--lr-confirm-button-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    --lr-confirm-button-state: ${hoverFill('var(--lr-confirm-button-fill)').cssText};
   }
   [${CONFIRM_BUTTON_ATTRIBUTE}]:active {
-    --lr-confirm-button-state: color-mix(in oklab, var(--lr-confirm-button-fill), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    --lr-confirm-button-state: ${activeFill('var(--lr-confirm-button-fill)').cssText};
   }
   [${CONFIRM_BUTTON_ATTRIBUTE}]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing.cssText}
   }
 `;
 

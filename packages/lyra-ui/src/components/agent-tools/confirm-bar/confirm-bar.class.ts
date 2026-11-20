@@ -1,4 +1,5 @@
-import { html, nothing, svg, type PropertyValues, type SVGTemplateResult, type TemplateResult } from 'lit';
+import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { statusErrorIcon, statusSuccessIcon } from '../../../internal/icons.js';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { renderApproveAction, renderDenyAction } from '../approval-action-buttons.js';
@@ -26,8 +27,7 @@ import {
 import type { ApprovalWaitUntil } from '../../../internal/approval-wait-until.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmApprovedAnnounce, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_confirmDeniedAnnounce, LYRA_DEFAULT_toolApprovalArgsLabel, LYRA_DEFAULT_toolApprovalGenericTool, LYRA_DEFAULT_toolApprovalHeading } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_approve, LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_approve, LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmApprovedAnnounce, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_confirmDeniedAnnounce, LYRA_DEFAULT_deny, LYRA_DEFAULT_toolApprovalArgsLabel, LYRA_DEFAULT_toolApprovalGenericTool, LYRA_DEFAULT_toolApprovalHeading } from '../../../internal/default-strings/agent-tools.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type ConfirmBarDecision = ApprovalDecision | null;
@@ -67,31 +67,6 @@ export interface LyraConfirmBarEventMap {
 /** Unknown values read as unset rather than inerting both actions. */
 const CONFIRM_BAR_DECISION = optionalLiteralSetConverter<ApprovalDecision>(['approved', 'denied']);
 const CONFIRM_BAR_PENDING_ACTION = optionalLiteralSetConverter<ApprovalAction>(['approve', 'deny']);
-
-const ICON_VIEW_BOX = '0 0 24 24';
-const ICON_STROKE_WIDTH = '1.75';
-
-// Mirrors the shared icon set's viewBox/stroke conventions without adding approved/denied glyphs
-// to that module, so these one-off icons still read as part of the same visual language as the
-// rest of the library's inline icons.
-function approvedIcon(): SVGTemplateResult {
-  return svg`
-    <svg width="1em" height="1em" viewBox=${ICON_VIEW_BOX} fill="none" stroke="currentColor" stroke-width=${ICON_STROKE_WIDTH} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-      <circle cx="12" cy="12" r="9"></circle>
-      <polyline points="8 12.5 11 15.5 16 9.5"></polyline>
-    </svg>
-  `;
-}
-
-function deniedIcon(): SVGTemplateResult {
-  return svg`
-    <svg width="1em" height="1em" viewBox=${ICON_VIEW_BOX} fill="none" stroke="currentColor" stroke-width=${ICON_STROKE_WIDTH} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-      <circle cx="12" cy="12" r="9"></circle>
-      <line x1="9" y1="9" x2="15" y2="15"></line>
-      <line x1="15" y1="9" x2="9" y2="15"></line>
-    </svg>
-  `;
-}
 
 /**
  * `<lr-confirm-bar>` — an inline, non-modal approve/deny block for one proposed action: the
@@ -241,21 +216,11 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     approve: LYRA_DEFAULT_approve,
-    collapse: LYRA_DEFAULT_collapse,
     confirmApproved: LYRA_DEFAULT_confirmApproved,
     confirmApprovedAnnounce: LYRA_DEFAULT_confirmApprovedAnnounce,
     confirmDenied: LYRA_DEFAULT_confirmDenied,
     confirmDeniedAnnounce: LYRA_DEFAULT_confirmDeniedAnnounce,
-    date: LYRA_DEFAULT_date,
     deny: LYRA_DEFAULT_deny,
-    details: LYRA_DEFAULT_details,
-    loading: LYRA_DEFAULT_loading,
-    map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
-    open: LYRA_DEFAULT_open,
-    progress: LYRA_DEFAULT_progress,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
     toolApprovalArgsLabel: LYRA_DEFAULT_toolApprovalArgsLabel,
     toolApprovalGenericTool: LYRA_DEFAULT_toolApprovalGenericTool,
     toolApprovalHeading: LYRA_DEFAULT_toolApprovalHeading,
@@ -624,7 +589,7 @@ export class LyraConfirmBar extends LyraElement<LyraConfirmBarEventMap> {
         </div>
         <div part="status" tabindex="-1">
           ${decided
-            ? html`${this.decision === 'approved' ? approvedIcon() : deniedIcon()}<span>${this.statusText()}</span>`
+            ? html`${this.decision === 'approved' ? statusSuccessIcon() : statusErrorIcon()}<span>${this.statusText()}</span>`
             : nothing}
         </div>
         <lr-live-region mode="polite"></lr-live-region>

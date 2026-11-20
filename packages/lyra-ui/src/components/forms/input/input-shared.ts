@@ -101,6 +101,10 @@ const LENGTH_CONSTRAINED_TYPES: readonly LyraInputType[] = [
   'tel',
   'url',
 ];
+/** The text-entry types, whose entered text can carry its own direction. Date and time fields keep
+ *  the surrounding direction, and so does an empty field, so the placeholder and caret start on
+ *  the layout's side. */
+const AUTO_DIRECTION_TYPES = new Set<string>(LENGTH_CONSTRAINED_TYPES);
 
 export interface LyraInputEventMap {
   input: InputEvent;
@@ -983,7 +987,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
             id=${this.inputId}
             part="input"
             type=${nativeType}
-            dir=${this.type === 'number' ? 'ltr' : 'auto'}
+            dir=${this.type === 'number' ? 'ltr' : AUTO_DIRECTION_TYPES.has(nativeType) && this.nativeInputText ? 'auto' : nothing}
             name=${this.name || nothing}
             placeholder=${this.placeholder}
             title=${this.title || nothing}

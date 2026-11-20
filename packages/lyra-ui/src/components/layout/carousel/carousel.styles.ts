@@ -1,14 +1,14 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${inlineSizeContainer}
   }
 
   [part~="base"] {
@@ -209,18 +209,13 @@ export const styles = css`
   [part~="navigation-button"]:not(:disabled):active {
     background: var(
       --lr-carousel-navigation-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-color-brand-quiet),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-color-brand-quiet)')}
     );
     border-color: var(--lr-carousel-navigation-active-border-color, var(--lr-color-brand));
   }
 
   [part~="navigation-button"]:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
 
   [part~="pagination"] {
@@ -270,11 +265,7 @@ export const styles = css`
   [part~="pagination-item"]:active [part="indicator-dot"] {
     background: var(
       --lr-carousel-pagination-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-color-brand-quiet),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-color-brand-quiet)')}
     );
     border-color: var(--lr-carousel-pagination-active-border-color, var(--lr-color-brand));
   }

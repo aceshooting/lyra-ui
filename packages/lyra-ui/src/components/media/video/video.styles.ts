@@ -1,6 +1,7 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingShorthand, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   [part='panorama-engine'] { inline-size: 100%; block-size: 100%; }
@@ -10,8 +11,7 @@ export const styles = css`
   :host {
     display: block;
     color: var(--controls-color, var(--lr-color-on-strong-overlay));
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${inlineSizeContainer}
   }
 
   :host([hidden]) {
@@ -114,33 +114,23 @@ export const styles = css`
     );
     background: var(
       --lr-video-poster-play-button-hover-bg,
-      color-mix(
-          in oklab,
-          var(--poster-play-button-background, var(--lr-color-surface-overlay)),
-          var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-        )
+      ${hoverFill('var(--poster-play-button-background, var(--lr-color-surface-overlay))')}
     );
   }
 
   [part='poster-play-button']:active {
-    background: color-mix(
-      in oklab,
-      var(--poster-play-button-background, var(--lr-color-surface-overlay)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--poster-play-button-background, var(--lr-color-surface-overlay))')};
   }
 
   [part='poster-play-button']:focus-visible,
   [part='controls'] button:focus-visible,
   [part='controls'] select:focus-visible,
   [data-control='volume']:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
 
   [part='progress']:focus-visible ~ [part='timeline-track'] {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
 
   [part='video-title-overlay'] {
@@ -256,21 +246,13 @@ export const styles = css`
   [part='controls'] select:hover,
   [data-control='volume']:hover {
     border-color: var(--lr-color-border-strong);
-    background: color-mix(
-      in oklab,
-      var(--controls-background, var(--lr-color-overlay-strong)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
+    background: ${hoverFill('var(--controls-background, var(--lr-color-overlay-strong))')};
   }
 
   [part='controls'] button:active,
   [part='controls'] select:active,
   [data-control='volume']:active {
-    background: color-mix(
-      in oklab,
-      var(--controls-background, var(--lr-color-overlay-strong)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--controls-background, var(--lr-color-overlay-strong))')};
   }
 
   [part='timeline'] {
@@ -329,19 +311,11 @@ export const styles = css`
 
   [part='progress']:hover:where(:not(:disabled)) ~ [part='timeline-track'],
   [part='progress']:focus-visible ~ [part='timeline-track'] {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-border-strong),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
+    background: ${hoverFill('var(--lr-color-border-strong)')};
   }
 
   [part='progress']:active:where(:not(:disabled)) ~ [part='timeline-track'] {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-border-strong),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-border-strong)')};
   }
 
   [part='thumbnail'] {

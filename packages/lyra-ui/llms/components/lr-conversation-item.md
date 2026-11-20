@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [conversation](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/conversation.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -24,7 +24,7 @@ For the rename button, set `--lr-icon-button-radius` for the corners. The fill, 
 
 Set `disabled` to disable selection and renaming. Disabling a row discards an open rename draft.
 
-Customize the appearance with `--lr-conversation-item-hover-bg`.
+Customize the appearance with `--lr-conversation-item-hover-bg` and, for the press of an inactive row, `--lr-conversation-item-pressed-bg`.
 
 A selectable row representing one chat session in a history sidebar list. Usable standalone or as the
 `renderItem()` payload of `<lr-virtual-list>`; has no dependency on that (or any) other component.

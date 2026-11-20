@@ -1,7 +1,8 @@
-import { iconHitTarget, focusRingInset } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRingInset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { opaqueContentBorders } from '../../../internal/opaque-content-border.styles.js';
+import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 
 // Inline-size containment removes content-based intrinsic sizing, so the fallback keeps a
 // standalone card visible while definite allocations (grid tracks, percentages, explicit
@@ -14,8 +15,7 @@ export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${inlineSizeContainer}
     /* Single source for the Shoelace-compatible radius hook -- every rule below reads THIS
        instead of repeating var(--border-radius, var(--lr-radius-container)) inline, so there is exactly one
        fallback chain to change instead of several textually-identical copies that can drift. */
@@ -147,19 +147,11 @@ export const styles = css`
     background-image: linear-gradient(
       var(
         --lr-card-interactive-active-overlay,
-        color-mix(
-          in oklab,
-          transparent,
-          var(--lr-color-mix-partner) var(--lr-color-mix-active)
-        )
+        ${activeFill('transparent')}
       ),
       var(
         --lr-card-interactive-active-overlay,
-        color-mix(
-          in oklab,
-          transparent,
-          var(--lr-color-mix-partner) var(--lr-color-mix-active)
-        )
+        ${activeFill('transparent')}
       )
     );
   }
@@ -180,8 +172,7 @@ export const styles = css`
   :host(:disabled) [part="base"],
   [part="base"][data-disabled],
   .linked-content[data-disabled] {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   [part="activation-button"] {
     position: absolute;

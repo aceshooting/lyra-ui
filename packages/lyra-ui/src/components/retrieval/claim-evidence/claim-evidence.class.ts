@@ -32,8 +32,8 @@ import {
 } from '../retrieval-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_citation, LYRA_DEFAULT_claimEvidenceClaimsLimit, LYRA_DEFAULT_claimEvidenceConfidence, LYRA_DEFAULT_claimEvidenceContradicted, LYRA_DEFAULT_claimEvidenceEmpty, LYRA_DEFAULT_claimEvidenceLabel, LYRA_DEFAULT_claimEvidencePartiallySupported, LYRA_DEFAULT_claimEvidenceSupported, LYRA_DEFAULT_claimEvidenceUnsupported } from '../../../internal/default-strings/retrieval.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusUnknown } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_claimEvidenceClaimsLimit, LYRA_DEFAULT_claimEvidenceConfidence, LYRA_DEFAULT_claimEvidenceContradicted, LYRA_DEFAULT_claimEvidenceEmpty, LYRA_DEFAULT_claimEvidenceLabel, LYRA_DEFAULT_claimEvidencePartiallySupported, LYRA_DEFAULT_claimEvidenceSupported, LYRA_DEFAULT_claimEvidenceUnsupported } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_statusUnknown } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraClaimEvidenceEventMap {
@@ -195,7 +195,6 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    citation: LYRA_DEFAULT_citation,
     claimEvidenceClaimsLimit: LYRA_DEFAULT_claimEvidenceClaimsLimit,
     claimEvidenceConfidence: LYRA_DEFAULT_claimEvidenceConfidence,
     claimEvidenceContradicted: LYRA_DEFAULT_claimEvidenceContradicted,
@@ -204,16 +203,6 @@ export class LyraClaimEvidence extends LyraElement<LyraClaimEvidenceEventMap> {
     claimEvidencePartiallySupported: LYRA_DEFAULT_claimEvidencePartiallySupported,
     claimEvidenceSupported: LYRA_DEFAULT_claimEvidenceSupported,
     claimEvidenceUnsupported: LYRA_DEFAULT_claimEvidenceUnsupported,
-    collapse: LYRA_DEFAULT_collapse,
-    copy: LYRA_DEFAULT_copy,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
-    loading: LYRA_DEFAULT_loading,
-    map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
-    open: LYRA_DEFAULT_open,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
     statusUnknown: LYRA_DEFAULT_statusUnknown,
   };
   // GENERATED DEFAULT-STRING SLICE: END

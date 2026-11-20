@@ -481,7 +481,7 @@ export function FormAssociated<T extends Constructor<LitElement>, TValue = strin
       });
       this.addEventListener('focusout', (event) => {
         // A fieldset force-blur fires before `formDisabledCallback()`, so `:disabled` leads `effectiveDisabled`.
-        if (this.effectiveDisabled || this.matches(':disabled')) return;
+        if (isLiveDisabled(this)) return;
         if (this.countsAsInteraction(event)) markInteracted();
       });
       this.syncValidityStates();

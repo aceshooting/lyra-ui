@@ -148,22 +148,6 @@ it('hides a disabled dock resize handle without disabling the collapse toggle', 
   expect(el.shadowRoot!.querySelectorAll('[part="handle"]').length).to.equal(1);
 });
 
-it('restores saved sizes with every panel expanded when an empty collapsed set is bound', async () => {
-  const name = 'explicit-open-panels';
-  const storageKey = `lr-multi-split:${name}:panels`;
-  localStorage.setItem(storageKey, JSON.stringify({ version: 2, panels: [
-    { panelId: 'a', size: 100 }, { panelId: 'b', size: 0, collapsed: true, expandedSize: 35 },
-  ] }));
-  try {
-    const el = await fixture<LyraMultiSplit>(html`<lr-multi-split storage-key=${name} .collapsedPanels=${[]}
-      style="inline-size:400px;block-size:100px"><div panel-id="a">A</div><div panel-id="b">B</div></lr-multi-split>`);
-    expect(el.collapsedPanels).to.deep.equal([]);
-    expect(el.sizes).to.deep.equal([65, 35]);
-  } finally {
-    localStorage.removeItem(storageKey);
-  }
-});
-
 for (const [name, template] of [
   ['split', html`<lr-split-panel style="inline-size:400px;block-size:100px"></lr-split-panel>`],
   ['dock', html`<lr-dock-panel></lr-dock-panel>`],

@@ -7,6 +7,7 @@ import {
 } from '../../../internal/form-control.styles.js';
 import { formControlChrome } from '../../../internal/form-control/chrome.styles.js';
 import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
+import { disabledControl } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   :host {
@@ -110,8 +111,7 @@ export const styles = css`
     border-color: var(--lr-textarea-hover-border-color, var(--lr-color-brand));
   }
   [part="textarea"]:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   [part="textarea"]::placeholder {
     color: var(--lr-textarea-placeholder-color, var(--lr-color-text-quiet));

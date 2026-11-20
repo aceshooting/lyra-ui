@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { focusRingShorthand } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   [part='limit'] {
@@ -173,8 +174,7 @@ export const styles = css`
   }
   :host([shape='ring']) [part~='segment']:where(:focus-visible) {
     opacity: 0.8;
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   button[part~='legend-item'] {
     appearance: none;
@@ -197,8 +197,7 @@ export const styles = css`
     color: var(--lr-color-neutral-on-normal);
   }
   button[part~='legend-item']:where(:focus-visible) {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   /* Selected bands and rows. The state lives in the part NAME because nothing but a pseudo-class
      may follow ::part(), so a consumer cannot select on an attribute here.

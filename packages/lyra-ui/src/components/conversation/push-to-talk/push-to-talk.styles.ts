@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -33,8 +33,7 @@ export const styles = css`
     ${focusRing}
   }
   [part='trigger']:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   /* :where() leaves this at (0,1,0) so the pressed rule below -- same specificity, later in source
      order -- still wins during the hold. It buys nothing against a consumer's own
@@ -48,7 +47,7 @@ export const styles = css`
      the recording state and its pulse ring have anything to show. */
   :where([part='trigger']):active:where(:not(:disabled)) {
     background: var(--lr-push-to-talk-trigger-active-bg,
-      color-mix(in oklab, var(--lr-push-to-talk-trigger-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+      ${activeFill('var(--lr-push-to-talk-trigger-hover-bg, var(--lr-color-brand-quiet))')});
   }
   :host([data-state='recording']) [part='trigger'] {
     border-color: var(

@@ -1,5 +1,5 @@
 import { iconAction, iconActionHover, iconActionActive } from '../../../internal/icon-action.styles.js';
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -151,9 +151,9 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast);
     --_lr-icon-button-radius-default: var(--lr-radius-pill);
     --_lr-icon-button-background-hover-default: var(--lr-alert-close-hover-bg,
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
+      ${hoverFill('transparent')});
     --_lr-icon-button-background-active-default: var(--lr-alert-close-active-bg,
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+      ${activeFill('transparent')});
   }
 
   [part~='close-button']:where(:hover) {

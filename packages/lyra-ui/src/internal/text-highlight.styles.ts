@@ -1,4 +1,5 @@
 import { unsafeCSS, type CSSResult } from 'lit';
+import { activeFill, hoverFill } from './interactive-control.styles.js';
 
 /** The painted text-quote tones and their fallback fills. */
 const TONES = [
@@ -47,8 +48,8 @@ export function highlightToneStyles(prefix: string, options: HighlightToneStyleO
   }
   if (options.interactive) {
     rules.push(`${mark} { cursor: pointer; transition: background-color var(--lr-transition-fast); }`);
-    rules.push(`${mark}:hover { background: color-mix(in oklab, var(${carrier}), var(--lr-color-mix-partner) var(--lr-color-mix-hover)); }`);
-    rules.push(`${mark}:active { background: color-mix(in oklab, var(${carrier}), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }`);
+    rules.push(`${mark}:hover { background: ${hoverFill(`var(${carrier})`).cssText}; }`);
+    rules.push(`${mark}:active { background: ${activeFill(`var(${carrier})`).cssText}; }`);
   }
   rules.push(`${scope} mark[data-lr-highlight-name='lr-highlight-active'] { outline: var(--lr-border-width-thin) solid var(${outline}, var(--lr-color-brand)); outline-offset: var(--lr-focus-ring-offset); }`);
   const toneHighlights = TONES.map(([tone]) => `::highlight(lr-highlight-${tone})`).join(', ');

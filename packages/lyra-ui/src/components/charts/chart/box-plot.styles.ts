@@ -1,5 +1,6 @@
 import { css } from 'lit';
 import { chartLegendPositionStyles } from './chart-surface.styles.js';
+import { activeFill } from '../../../internal/interactive-control.styles.js';
 
 // Deliberately its own sheet rather than a wholesale re-export of
 // `chart.styles.ts`: unlike `lr-histogram`, `LyraBoxPlot` doesn't extend
@@ -56,7 +57,7 @@ export const styles = css`
       --lr-box-plot-data-table-toggle-active-bg,
       var(
         --lr-chart-data-table-toggle-active-bg,
-        color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+        ${activeFill('var(--lr-color-brand-quiet)')}
       )
     );
   }

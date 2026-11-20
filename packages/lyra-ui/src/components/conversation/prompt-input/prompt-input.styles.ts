@@ -1,12 +1,11 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { containerHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
-    display: block;
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${containerHost}
   }
 
   [part='base'] {
@@ -80,7 +79,7 @@ export const styles = css`
      [part='sources']'s surface -- what shows through the summary at rest. */
   [part='sources']:where(:not([inert])) [part='sources-summary']:active {
     color: var(--lr-color-brand);
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-surface)')};
   }
 
   [part='sources-summary']:focus-visible {

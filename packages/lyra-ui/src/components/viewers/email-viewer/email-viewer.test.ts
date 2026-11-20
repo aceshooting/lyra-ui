@@ -501,7 +501,7 @@ describe("lr-email-viewer", () => {
     }
   });
 
-  it("treats an installed sanitizer returning empty HTML as valid empty content", async () => {
+  it("treats an installed sanitizer returning empty HTML as valid empty content with a localized empty note", async () => {
     setEmailDeps({
       PostalMime: {
         parse: () =>
@@ -520,12 +520,12 @@ describe("lr-email-viewer", () => {
           src="https://example.test/message.eml"
         ></lr-email-viewer>`
       );
-      await untilRendered(el, '[part="body-text"]');
+      await untilRendered(el, '[part="body"] .empty-note');
       expect(el.shadowRoot!.querySelector('[part="error"]') === null).to.be
         .true;
       expect(
-        el.shadowRoot!.querySelector('[part="body-text"]')!.textContent
-      ).to.equal("");
+        el.shadowRoot!.querySelector('[part="body"] .empty-note')!.textContent
+      ).to.equal("This message has no displayable content.");
     } finally {
       restore();
     }

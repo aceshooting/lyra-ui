@@ -1,6 +1,7 @@
 import { loadDompurify } from '../../../internal/dompurify-loader.js';
 import {
   createOptionalPeerLoader,
+  hasPeerMethods,
   type HtmlSanitizer,
 } from '../../../internal/optional-peer-capabilities.js';
 
@@ -31,12 +32,7 @@ export interface PostalMimeApi {
 }
 
 function isPostalMimeApi(value: unknown): value is PostalMimeApi {
-  return (
-    (typeof value === 'object' || typeof value === 'function') &&
-    value !== null &&
-    'parse' in value &&
-    typeof value.parse === 'function'
-  );
+  return hasPeerMethods(value, 'parse');
 }
 
 export interface EmailDeps {

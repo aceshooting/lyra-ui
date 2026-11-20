@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { mapOverlayPanel, mapOverlayPanelLayer, mapOverlayCloseButton, mapOverlayCloseButtonHover, mapOverlayCloseButtonActive } from '../../../internal/map-overlay-panel.styles.js';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
@@ -50,12 +50,12 @@ export const styles = css`
     --_lr-map-action-fill: var(--lr-map-action-hover-bg, var(--lr-color-surface-raised));
   }
   [part='scene-toggle']:where(:active), button[part='scene-item']:where(:active), [part='scene-pagination'] button:where(:active) {
-    --_lr-map-action-fill: var(--lr-map-action-active-bg, color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    --_lr-map-action-fill: var(--lr-map-action-active-bg, ${activeFill('var(--lr-color-surface-raised)')});
   }
   [part='scene-toggle']:focus-visible, button[part='scene-item']:focus-visible, [part='scene-pagination'] button:focus-visible {
     ${focusRing}
   }
-  [part='scene-pagination'] button:where(:disabled) { opacity: var(--lr-opacity-disabled); cursor: not-allowed; }
+  [part='scene-pagination'] button:where(:disabled) { ${disabledControl} }
   [part='initialization-placeholder'] { position: absolute; inset: 0; pointer-events: none; }
   .initialization-skeleton { inline-size: 100%; block-size: 100%; }
   .initialization-controls { position: absolute; inset: 0; display: grid; grid-template-rows: auto 1fr auto; pointer-events: none; }
@@ -76,12 +76,12 @@ export const styles = css`
   }
   [part='initialization-activate']::after {
     content: ''; position: absolute; inset: 0; pointer-events: none;
-    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: ${hoverFill('transparent')};
     opacity: 0;
   }
   [part='initialization-activate']:where(:hover)::after { opacity: 1; }
   [part='initialization-activate']:where(:active)::after {
-    opacity: 1; background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    opacity: 1; background: ${activeFill('transparent')};
   }
   [part='initialization-activate']:focus-visible { ${focusRing} outline-offset: calc(-1 * var(--lr-focus-ring-width)); }
   .activate-label { position: relative; padding: var(--lr-space-xs) var(--lr-space-s); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius-button); background: var(--lr-color-surface); }
@@ -116,7 +116,7 @@ export const styles = css`
     --_lr-map-action-fill: var(--lr-map-action-hover-bg, var(--lr-color-surface-raised));
   }
   [part='pick-center']:where(:active), [part='pick-cancel']:where(:active), [part='drawing-add']:where(:active), [part='drawing-undo']:where(:active), [part='drawing-complete']:where(:active), [part='drawing-cancel']:where(:active), [part='anchor-close']:where(:active) {
-    --_lr-map-action-fill: var(--lr-map-action-active-bg, color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    --_lr-map-action-fill: var(--lr-map-action-active-bg, ${activeFill('var(--lr-color-surface-raised)')});
   }
   [part='pick-center']:focus-visible, [part='pick-cancel']:focus-visible, [part='drawing-add']:focus-visible, [part='drawing-undo']:focus-visible, [part='drawing-complete']:focus-visible, [part='drawing-cancel']:focus-visible, [part='anchor-close']:focus-visible { ${focusRing} }
   [part='pick-center']:where(:disabled), [part='pick-cancel']:where(:disabled), [part='drawing-add']:where(:disabled), [part='drawing-undo']:where(:disabled), [part='drawing-complete']:where(:disabled), [part='drawing-cancel']:where(:disabled), [part='anchor-close']:where(:disabled) { cursor: default; }
@@ -127,9 +127,9 @@ export const styles = css`
     display: grid; place-items: center; touch-action: none; padding: 0; border: 0; background: transparent; color: var(--lr-color-text); cursor: grab;
   }
   [part='drawing-vertex'] > span { inline-size: var(--lr-space-s); block-size: var(--lr-space-s); border-radius: var(--lr-radius-pill); background: var(--lr-map-drawing-color, var(--lr-color-brand)); border: var(--lr-border-width-thin) solid var(--lr-color-surface); }
-  [part='drawing-vertex']:where(:hover) > span { background: var(--lr-map-drawing-vertex-hover-bg, color-mix(in oklab, var(--lr-map-drawing-color, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-hover))); }
+  [part='drawing-vertex']:where(:hover) > span { background: var(--lr-map-drawing-vertex-hover-bg, ${hoverFill('var(--lr-map-drawing-color, var(--lr-color-brand))')}); }
   [part='drawing-vertex']:where(:active) { cursor: grabbing; }
-  [part='drawing-vertex']:where(:active) > span { background: var(--lr-map-drawing-vertex-active-bg, color-mix(in oklab, var(--lr-map-drawing-color, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active))); }
+  [part='drawing-vertex']:where(:active) > span { background: var(--lr-map-drawing-vertex-active-bg, ${activeFill('var(--lr-map-drawing-color, var(--lr-color-brand))')}); }
   [part='drawing-measurements'] { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 1; }
   [part='drawing-measurement'] {
     position: absolute; transform: translate(-50%, -50%); white-space: nowrap;
@@ -465,10 +465,10 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
   button[part='legend-disclosure']:where(:hover) {
-    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: ${hoverFill('transparent')};
   }
   button[part='legend-disclosure']:where(:active) {
-    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('transparent')};
   }
   button[part='legend-disclosure']:where(:focus-visible) {
     ${focusRing}
@@ -613,10 +613,10 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
   button[part~='legend-toggle']:where(:hover) {
-    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: ${hoverFill('transparent')};
   }
   button[part~='legend-toggle']:where(:active) {
-    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('transparent')};
   }
   button[part~='legend-toggle']:where(:focus-visible) {
     ${focusRing}
@@ -795,15 +795,14 @@ export const styles = css`
     color: var(--lr-color-brand);
   }
   .maplibregl-ctrl-group button:active:where(:not(:disabled)) {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-brand-quiet)')};
   }
   .maplibregl-ctrl-group button:focus-visible {
     outline: var(--lr-focus-ring);
     outline-offset: calc(-1 * var(--lr-focus-ring-offset));
   }
   .maplibregl-ctrl-group button:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   .map-scene-control-icon {
     display: block;
@@ -822,10 +821,10 @@ export const styles = css`
     color: var(--lr-color-brand);
   }
   .maplibregl-ctrl-group button:where([aria-pressed='true'], [aria-pressed='mixed']):hover:where(:not(:disabled)) {
-    background: color-mix(in oklab, var(--_map-scene-control-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: ${hoverFill('var(--_map-scene-control-fill)')};
   }
   .maplibregl-ctrl-group button:where([aria-pressed='true'], [aria-pressed='mixed']):active:where(:not(:disabled)) {
-    background: color-mix(in oklab, var(--_map-scene-control-fill), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--_map-scene-control-fill)')};
   }
   .maplibregl-ctrl-icon {
     position: relative;
@@ -970,7 +969,7 @@ export const styles = css`
     color: var(--lr-map-popup-close-button-hover-color, var(--lr-color-brand));
   }
   [part='anchor-close']:where(:active) {
-    --_lr-map-action-fill: var(--lr-map-popup-close-button-active-bg, var(--lr-map-action-active-bg, color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))));
+    --_lr-map-action-fill: var(--lr-map-popup-close-button-active-bg, var(--lr-map-action-active-bg, ${activeFill('var(--lr-color-brand-quiet)')}));
     color: var(--lr-map-popup-close-button-active-color, var(--lr-color-brand));
   }
   ${glassScrollLayerStyles}

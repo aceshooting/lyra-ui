@@ -1,5 +1,5 @@
 ---
-'@aceshooting/lyra-ui': major
+'@aceshooting/lyra-ui': minor
 ---
 
 Conversation list, feedback and message-item controls leave modified and IME-composing keys to the browser and input method.
@@ -16,7 +16,7 @@ Streaming text core preserves Markdown highlight state across renders when no la
 Plain streaming text and message parts take their direction from the caller's text.
 Message actions can reveal on interaction when placed directly inside a shadow root.
 Chat viewport announces messages after a bounded wait when their busy state persists.
-Chat viewport emits follow changes for scroll and jump-button interactions. Track direct follow assignments and calls to scrollToBottom at the call site.
+Chat viewport reports every follow flip after mount, from scrolling, the jump button, `scrollToBottom()` or a direct `follow` write.
 Thread list sticky group headers expose a background token.
 Thread list search matches accented titles and excerpts with unaccented queries.
 A throwing thread filter excludes the affected row and keeps the list usable.

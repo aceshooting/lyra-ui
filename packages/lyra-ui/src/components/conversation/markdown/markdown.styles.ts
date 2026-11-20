@@ -1,13 +1,12 @@
 import { iconAction, iconActionHover, iconActionActive } from '../../../internal/icon-action.styles.js';
-import { activeFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingInsetOffset, focusRingInwardOffset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { highlightToneStyles } from '../../../internal/text-highlight.styles.js';
 import { css } from 'lit';
+import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
     line-height: var(--lr-line-height-loose);
     /* Consumer-tunable scroll cap; 'none' grows with the content like every other block-level
        component here until a caller opts into an internal scrollbar via the max-height
@@ -55,8 +54,7 @@ export const styles = css`
   [part='content']:focus-visible,
   [part='code-block']:focus-visible,
   [part='table-wrapper']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
+    ${focusRingInwardOffset}
   }
   [part='code-block']:focus-visible,
   [part='table-wrapper']:focus-visible {
@@ -310,8 +308,7 @@ export const styles = css`
     ${iconActionActive}
   }
   [part~='code-block-copy']:where([data-lr-code-chrome]):focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * max(var(--lr-focus-ring-width), calc(var(--lr-focus-ring-width) + var(--lr-focus-ring-offset))));
+    ${focusRingInsetOffset}
   }
   @media (forced-colors: active) {
     [part~='code-block-copy']:where([data-lr-code-chrome]) {

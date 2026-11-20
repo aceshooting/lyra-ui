@@ -1,15 +1,15 @@
 import { visuallyHidden } from '../../../internal/a11y.js';
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${inlineSizeContainer}
     /* Both knobs read the shared control ladder -- every tier, both the s/m/l and
        small/medium/large spellings, one selector list. The public --lr-pagination-* names come
        first so a consumer can retune this component alone; the fallbacks are the ladder's m tier,
@@ -202,11 +202,7 @@ export const styles = css`
     ):where(:not([part~="page-current"])) {
     background: var(
       --lr-pagination-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-color-brand-quiet),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-color-brand-quiet)')}
     );
     border-color: var(
       --lr-pagination-active-border-color,
@@ -232,11 +228,7 @@ export const styles = css`
   [part~="page-current"]:where(:active) {
     background: var(
       --lr-pagination-current-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-pagination-current-bg, var(--lr-color-brand)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-pagination-current-bg, var(--lr-color-brand))')}
     );
     border-color: var(
       --lr-pagination-current-active-border-color,
@@ -259,14 +251,12 @@ export const styles = css`
   [part~="ellipsis"]:where(:disabled),
   [part~="page"]:where(:disabled),
   [part="page-input"]:where(:disabled) {
-    cursor: not-allowed;
-    opacity: var(--lr-opacity-disabled);
+    ${disabledControl}
   }
   /* Link mode has no :disabled -- the anchors carry aria-disabled and lose their href instead, so
      the resting look follows that attribute. */
   [part~="button"]:where([aria-disabled="true"]) {
-    cursor: not-allowed;
-    opacity: var(--lr-opacity-disabled);
+    ${disabledControl}
   }
   [part="first-icon"],
   [part="previous-icon"],
@@ -365,11 +355,7 @@ export const styles = css`
   [part="page-input"]:where(:active):where(:not(:disabled)) {
     background: var(
       --lr-pagination-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-color-brand-quiet),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-color-brand-quiet)')}
     );
     border-color: var(
       --lr-pagination-active-border-color,

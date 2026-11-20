@@ -1,5 +1,5 @@
 import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
-import { iconHitTarget, focusRing, hoverFill, activeFill } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { formControlLabelTypography, formControlRequiredMarker } from '../../../internal/form-control.styles.js';
 
@@ -49,8 +49,7 @@ export const styles = css`
   }
   :host([readonly]) [part='surface'] { cursor: default; }
   :host(:disabled) [part='surface'] {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
 
   svg {

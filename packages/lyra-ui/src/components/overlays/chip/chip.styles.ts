@@ -1,6 +1,7 @@
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
@@ -178,9 +179,7 @@ export const styles = css`
     font-size: var(--lr-chip-icon-size, var(--_lr-chip-icon-size));
   }
   [part='start'] ::slotted(*) {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
   }
   /* The display declaration above is author-origin, so it beats the UA's [hidden] { display: none }
      and a hidden slotted child would still paint a hit-testable box. Restated here, find-in-page
@@ -222,9 +221,7 @@ export const styles = css`
     font-size: var(--lr-chip-icon-size, var(--_lr-chip-icon-size));
   }
   [part='end'] ::slotted(*) {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
   }
   /* The display declaration above is author-origin, so it beats the UA's [hidden] { display: none }
      and a hidden slotted child would still paint a hit-testable box. Restated here, find-in-page

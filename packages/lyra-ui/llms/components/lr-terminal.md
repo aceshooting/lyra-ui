@@ -83,7 +83,7 @@ server-side or other handling),
 matchCountExact, activeIndex }`; `matchCountExact` is `false` once a search hits the 10,000-match
 ceiling, marking `matchCount` as a lower bound rather than an exact total),
 `lr-highlight-activate` (`detail: { highlightId }`), and `lr-text-select` (`detail: {
-text, anchor, rects }`). The terminal reports a selection inside its viewport on key or pointer release, once for unchanged endpoints.
+text, anchor, rects }`). The terminal reports a selection inside its viewport on key or pointer release, or once a keyboard or touch selection settles, once for unchanged endpoints.
 User scrolling and the jump-to-latest control emit `lr-follow-change`. Search and anchor navigation
 release following silently. Copy outcomes are announced. When an input or line exceeds the character
 limit, `part="limit"` displays the localized `terminalOutputTruncated` note until the buffer is replaced or cleared.

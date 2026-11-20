@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { activeFill, disabledControl, focusRingInset } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   /* Inline var() fallbacks for the row-chrome hooks, not :host declarations, so an application can
@@ -20,8 +21,7 @@ export const styles = css`
     border-radius: var(--lr-menu-item-radius, var(--lr-form-control-radius));
   }
   :host(:focus-visible) [part='base'] {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingInset}
   }
   [part='base'] {
     box-sizing: border-box;
@@ -92,18 +92,13 @@ export const styles = css`
   [part='base']:active {
     background: var(
       --lr-menu-item-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-menu-item-hover-bg, var(--lr-color-brand-quiet)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-menu-item-hover-bg, var(--lr-color-brand-quiet))')}
     );
   }
   :host([disabled]) [part='base'],
   :host([loading]) [part='base'] {
     /* Shared library-wide disabled-state token -- see lr-checkbox/lr-select. */
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   :host([disabled]) [part='base']:hover,
   :host([loading]) [part='base']:hover {
@@ -130,11 +125,7 @@ export const styles = css`
     [part='base']:active {
     background: var(
       --lr-menu-item-danger-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-color-danger-quiet),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-color-danger-quiet)')}
     );
   }
   [part~='icon'] {

@@ -1,6 +1,8 @@
 import { devWarnOnce } from './dev-warning.js';
 import {
   createOptionalPeerLoader,
+  hasPeerMethods,
+  isPeerObject,
   type OptionalPeerLoader,
 } from './optional-peer-capabilities.js';
 
@@ -81,13 +83,9 @@ export interface Engine3dModule {
 const REQUIRED_METHODS = ['mount', 'setData', 'setStyle', 'setCamera', 'resize', 'dispose'] as const;
 const OPTIONAL_METHODS = ['setState', 'fit', 'focus', 'pick', 'project', 'positionOf', 'prepareXrPresentation'] as const;
 
-function isObjectLike(value: unknown): value is Record<PropertyKey, unknown> {
-  return (typeof value === 'object' || typeof value === 'function') && value !== null;
-}
-
 /** Whether a loaded entry point exposes a callable `createEngine`. */
 export function isEngine3dModule(candidate: unknown): candidate is Engine3dModule {
-  return isObjectLike(candidate) && typeof candidate['createEngine'] === 'function';
+  return hasPeerMethods(candidate, 'createEngine');
 }
 
 /**
@@ -95,13 +93,14 @@ export function isEngine3dModule(candidate: unknown): candidate is Engine3dModul
  * contract version and every required method (and every present optional one) is callable.
  */
 export function engine3dContractViolation(candidate: unknown): string | undefined {
-  if (!isObjectLike(candidate)) return 'engine object';
-  if (candidate['contract'] !== ENGINE_3D_CONTRACT) return 'contract';
+  if (!isPeerObject(candidate)) return 'engine object';
+  const engine = candidate as Record<PropertyKey, unknown>;
+  if (engine['contract'] !== ENGINE_3D_CONTRACT) return 'contract';
   for (const method of REQUIRED_METHODS) {
-    if (typeof candidate[method] !== 'function') return method;
+    if (typeof engine[method] !== 'function') return method;
   }
   for (const method of OPTIONAL_METHODS) {
-    if (candidate[method] !== undefined && typeof candidate[method] !== 'function') return method;
+    if (engine[method] !== undefined && typeof engine[method] !== 'function') return method;
   }
   return undefined;
 }

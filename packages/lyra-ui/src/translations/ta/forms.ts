@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'நாட்காட்டியைத் திற',
+  item: 'உருப்படி',
   comboboxLoadError: 'விருப்பங்களை ஏற்ற முடியவில்லை.',
   comboboxSelectedOverflow: 'மேலும் {n}',
   checkboxRequired: 'தொடர விரும்பினால் இந்தப் பெட்டியைத் தேர்வுசெய்யவும்.',

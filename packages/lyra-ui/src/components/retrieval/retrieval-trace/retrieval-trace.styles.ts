@@ -1,13 +1,11 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingInset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
-import { wrapGuard } from '../../../internal/layout-fragments.styles.js';
+import { containerHost, wrapGuard } from '../../../internal/layout-fragments.styles.js';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
   :host {
-    display: block;
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${containerHost}
   }
 
   [part='base'] {
@@ -57,11 +55,10 @@ export const styles = css`
     background: var(--lr-color-surface-raised);
   }
   [part='evidence-toggle']:active {
-    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-surface-raised)')};
   }
   [part='evidence-toggle']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingInset}
   }
 
   [part='evidence-toggle-icon'] {

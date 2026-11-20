@@ -576,6 +576,38 @@ describe('region highlights', () => {
     }
   });
 
+  it('keeps on-image targets for several regions until their minimum hit areas overlap', async () => {
+    const el = await fixture<LyraSvgViewer>(html`<lr-svg-viewer></lr-svg-viewer>`);
+    const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120"></svg>');
+    try {
+      el.src = 'https://example.test/icon.svg';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
+      const root = el.shadowRoot!;
+      const frame = root.querySelector<HTMLElement>('.zoom-content')!;
+      frame.style.inlineSize = '400px';
+      frame.style.blockSize = '200px';
+      el.highlights = [
+        { id: 'a', anchor: { kind: 'region', rect: { x: 10, y: 40, width: 2, height: 2 } } },
+        { id: 'b', anchor: { kind: 'region', rect: { x: 80, y: 40, width: 2, height: 2 } } },
+      ];
+      const targets = () => root.querySelectorAll<HTMLButtonElement>('[part="region-highlight-target"]');
+      const actions = () => root.querySelectorAll<HTMLButtonElement>('[part="region-highlight-action"]');
+      await waitUntil(() => targets().length === 2, 'separate regions never gained on-image targets');
+      expect(actions().length).to.equal(0);
+      await focusByKeyboard(targets()[1]!);
+      const activated = oneEvent(el, 'lr-highlight-activate');
+      targets()[1]!.click();
+      expect((await activated).detail).to.deep.equal({ highlightId: 'b' });
+
+      frame.style.inlineSize = '40px';
+      await waitUntil(() => actions().length === 2, 'overlapping targets never switched to separate actions');
+      expect(targets().length).to.equal(0);
+      expect(root.activeElement === actions()[1]).to.equal(true);
+    } finally {
+      restore();
+    }
+  });
+
   it('uses a non-overlapping action list for multiple dense highlights', async () => {
     const el = (await fixture(html`<lr-svg-viewer></lr-svg-viewer>`)) as LyraSvgViewer;
     const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120"></svg>');
@@ -678,7 +710,7 @@ describe('region highlights', () => {
       await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
       el.highlights = [
         { id: 'a', anchor: { kind: 'region', rect: { x: 10, y: 10, width: 2, height: 2 } } },
-        { id: 'b', anchor: { kind: 'region', rect: { x: 20, y: 20, width: 2, height: 2 } } },
+        { id: 'b', anchor: { kind: 'region', rect: { x: 11, y: 10, width: 2, height: 2 } } },
       ];
       await el.updateComplete;
       const names = [...el.shadowRoot!.querySelectorAll('[part="region-highlight-action"]')]

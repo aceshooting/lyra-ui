@@ -1,14 +1,12 @@
 import { nativeControlSurface } from '../../../internal/native-control-surface.styles.js';
-import { panelListItem } from '../../../internal/layout-fragments.styles.js';
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { blockHost, panelListItem } from '../../../internal/layout-fragments.styles.js';
+import { activeFill, disabledControl, focusRing } from '../../../internal/interactive-control.styles.js';
 import { panelFrame } from '../../../internal/panel-frame.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
   :host {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
   }
 
   [part='base'] {
@@ -75,7 +73,7 @@ export const styles = css`
   }
 
   [part='decision']:where(:not(:disabled)):active {
-    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-surface-raised)')};
   }
 
   [part='decision']:focus-visible {
@@ -87,8 +85,7 @@ export const styles = css`
   }
 
   [part='decision']:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
 
   [part='empty'],

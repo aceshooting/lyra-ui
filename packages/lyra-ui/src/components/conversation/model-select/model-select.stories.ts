@@ -367,3 +367,18 @@ export const DraftQuery: Story = {
       output.value = event.detail.query ?? event.detail.value;
     }}></lr-model-select><output aria-label="Model draft"></output></div>`,
 };
+
+/** `lr-change-request` lets a host confirm a pick before it lands; cancelling keeps the current model
+ *  and the open list. The popup reports `lr-show`/`lr-hide` and their settled `lr-after-*` events. */
+export const ConfirmBeforeSwitching: Story = {
+  render: () => html`
+    <lr-model-select
+      provider="openai"
+      value="gpt-4.1"
+      .catalog=${OPENAI_CATALOG}
+      @lr-change-request=${(event: CustomEvent<{ value: string }>) => {
+        if (!window.confirm(`Switching to ${event.detail.value} starts a new context. Continue?`)) event.preventDefault();
+      }}
+    ></lr-model-select>
+  `,
+};

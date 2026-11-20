@@ -5,7 +5,8 @@ import { ifDefined } from 'lit/directives/if-defined.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
-import { ENGINE_STYLE_MEDIA_QUERIES, resolveEngineStyle, type EngineStyle } from '../../../internal/engine-style.js';
+import { resolveEngineStyle, type EngineStyle } from '../../../internal/engine-style.js';
+import { watchEngineStyle } from '../../../internal/engine-admission.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { resolveGuardedRel } from '../../../internal/link-rel.js';
 import { safeDownloadHref } from '../../../internal/safe-url.js';
@@ -134,7 +135,8 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
     const next = typeof value === 'string' ? value : '';
     const old = this._name;
     if (next === old) return;
-    this.retire();
+    // A label-only rename keeps the loaded model; only a name that changes the detected format reloads.
+    if (this.nameChangesFormat(old, next)) this.retire();
     this._name = next;
     this.requestUpdate('name', old);
   }
@@ -265,7 +267,14 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
         ? 'assertive'
         : this.status === 'ready' || this.status === 'empty' || this.status === 'loading' || this.status === 'context-lost' ? 'polite' : undefined,
     );
-    if (['src', 'name', 'mimeType', 'format'].some(key => changed.has(key))) this.scheduleAfterUpdate(() => { void this.load(); });
+    const nameOnly = changed.has('name') && !['src', 'mimeType', 'format'].some(key => changed.has(key))
+      && !this.nameChangesFormat(changed.get('name') as string, this.name);
+    if (!nameOnly && ['src', 'name', 'mimeType', 'format'].some(key => changed.has(key))) this.scheduleAfterUpdate(() => { void this.load(); });
+  }
+
+  /** Whether swapping the display name changes the format the source would be parsed as. */
+  private nameChangesFormat(before: string, after: string): boolean {
+    return resolveModelFormat(this.format, before, this.mimeType, this.src) !== resolveModelFormat(this.format, after, this.mimeType, this.src);
   }
 
   /** Invalidates the current generation synchronously and releases every resource it owned. */
@@ -449,19 +458,8 @@ export class LyraModelViewer extends LyraElement<LyraModelViewerEventMap> {
     const resize = new view.ResizeObserver(() => { if (current()) this.scheduleRefresh(false); });
     resize.observe(this.viewport!);
     this.observers.push(resize);
-    const mutation = new view.MutationObserver(refresh);
-    let ancestor: Element | null = this;
-    while (ancestor) {
-      mutation.observe(ancestor, { attributes: true });
-      const root: Node = ancestor.getRootNode();
-      ancestor = ancestor.parentElement ?? (root instanceof view.ShadowRoot ? root.host : null);
-    }
-    this.observers.push(mutation);
-    for (const query of ENGINE_STYLE_MEDIA_QUERIES) {
-      const media = view.matchMedia(query);
-      media.addEventListener('change', refresh);
-      this.mediaCleanup.push(() => media.removeEventListener('change', refresh));
-    }
+    // Theme attributes and the style media queries only, never every ancestor attribute.
+    this.mediaCleanup.push(watchEngineStyle(this, refresh));
   }
 
   private acceptCamera(value: unknown, emit: boolean): void {

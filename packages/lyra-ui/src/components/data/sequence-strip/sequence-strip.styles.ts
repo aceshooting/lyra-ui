@@ -1,5 +1,5 @@
 import { css } from 'lit';
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingInset, hoverFill } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   [part='source-status'] { overflow-wrap: anywhere; color: var(--lr-color-text-quiet); }
@@ -21,10 +21,10 @@ export const styles = css`
     transition: var(--lr-transition-interactive);
   }
   [part='source-retry']:hover, [part='source-exact']:hover {
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: ${hoverFill('var(--lr-color-surface)')};
   }
   [part='source-retry']:active, [part='source-exact']:active {
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-surface)')};
   }
   [part='source-retry']:focus-visible, [part='source-exact']:focus-visible { ${focusRing} }
   :host {
@@ -59,8 +59,7 @@ export const styles = css`
     outline-offset: calc(-1 * var(--lr-border-width-thin));
   }
   [part='cell']:where(:not([aria-disabled='true'])):focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingInset}
   }
   /* The pressed ring leaves the data color readable. */
   [part='cell']:where(:not([aria-disabled='true'])):active {

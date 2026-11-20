@@ -29,7 +29,7 @@ import {
   literalSetConverter,
   trueDefaultBooleanConverter,
 } from '../../../internal/converters.js';
-import { firstByIdentityMemo } from '../collection-identity.js';
+import { firstByIdentityMemo } from '../../../internal/collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_activityFeedCompletedSteps, LYRA_DEFAULT_activityFeedInputLimit, LYRA_DEFAULT_activityFeedLabel } from '../../../internal/default-strings/agent-tools.generated.js';

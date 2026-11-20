@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -65,7 +65,7 @@ export const styles = css`
      color to stay readable as a link. */
   [part='title']:not(:disabled):active {
     text-decoration: underline;
-    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('transparent')};
   }
   [part='title']:focus-visible,
   [part='toggle']:focus-visible {
@@ -101,7 +101,7 @@ export const styles = css`
   }
   [part='toggle']:not(:disabled):active {
     text-decoration: underline;
-    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('transparent')};
   }
   [part='full'] {
     min-inline-size: 0;

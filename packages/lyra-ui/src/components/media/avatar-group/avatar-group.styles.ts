@@ -1,4 +1,4 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingShorthand, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -148,15 +148,10 @@ export const styles = css`
     box-shadow: 0 0 0
       var(--lr-avatar-group-ring-width, var(--_lr-avatar-group-ring-width))
       var(--lr-avatar-group-badge-hover-ring-color, var(--lr-color-brand));
-    background: color-mix(
-      in oklab,
-      var(--lr-avatar-group-badge-bg, var(--_lr-avatar-group-badge-bg)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-avatar-group-badge-bg, var(--_lr-avatar-group-badge-bg))')};
   }
   [part='overflow-badge']:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
 
   @media (forced-colors: active) {

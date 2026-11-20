@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -64,7 +64,7 @@ export const styles = css`
   [part='overflow-indicator']:active {
     border-color: var(--lr-color-brand);
     color: var(--lr-color-text);
-    background: color-mix(in oklab, var(--lr-chip-group-overflow-bg, var(--lr-color-surface)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-chip-group-overflow-bg, var(--lr-color-surface))')};
   }
   [part='overflow-indicator']:focus-visible {
     ${focusRing}

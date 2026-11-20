@@ -1,5 +1,5 @@
 import { iconActionStyles } from '../../../internal/icon-action.styles.js';
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, hoverFill } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -19,7 +19,7 @@ export const styles = css`
     color: 'var(--lr-color-text-quiet)',
     hoverBackground: 'var(--lr-color-surface-raised)',
     hoverColor: 'var(--lr-color-text)',
-    activeBackground: 'color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised)), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+    activeBackground: activeFill('var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised))').cssText,
     activeColor: 'var(--lr-icon-button-color-hover, var(--lr-color-text))',
   })}
   :where([part='up-button'], [part='down-button']) {
@@ -47,10 +47,10 @@ export const styles = css`
     border-color: var(--_lr-thumb-selected-border);
   }
   [aria-pressed='true']:not(:disabled):hover {
-    background: var(--lr-icon-button-bg-hover, color-mix(in oklab, var(--_lr-thumb-selected-bg), var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
+    background: var(--lr-icon-button-bg-hover, ${hoverFill('var(--_lr-thumb-selected-bg)')});
   }
   [aria-pressed='true']:not(:disabled):active {
-    background: var(--lr-icon-button-bg-active, color-mix(in oklab, var(--_lr-thumb-selected-bg), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    background: var(--lr-icon-button-bg-active, ${activeFill('var(--_lr-thumb-selected-bg)')});
   }
   /* A 0fr/1fr grid row animates the disclosure's block size without measuring content;
      min-block-size: 0 on the inner wrapper plus overflow: hidden here stops collapsed content
@@ -153,28 +153,18 @@ export const styles = css`
      :hover, so an ungated rule made the one control the user cannot activate look like the most
      activatable thing on the panel. */
   :where([part="submit-button"]):hover:where(:not(:disabled)) {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
+    background: ${hoverFill('var(--lr-color-brand)')};
   }
   :where([part="submit-button"]):active:where(:not(:disabled)) {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-brand)')};
   }
   /* Matches the thumb buttons' disabled treatment, so every control reads as unavailable from the
      same two signals: dimmed fill and not-allowed cursor. */
   [part="submit-button"]:disabled {
-    cursor: not-allowed;
-    opacity: var(--lr-opacity-disabled);
+    ${disabledControl}
   }
   [part="comment"]:disabled {
-    cursor: not-allowed;
-    opacity: var(--lr-opacity-disabled);
+    ${disabledControl}
   }
   [part="submit-button"]:focus-visible {
     ${focusRing}

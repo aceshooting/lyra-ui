@@ -211,11 +211,15 @@ const strings: LyraLocaleStrings = {
   documentLibrarySelectDocument: 'Họrọ {name}',
   graphQueryDeleteWithContext: 'Hichapụ {name}',
   statRowsInputLimit: 'A na-egosi ahịrị nkọwa {count} n’ime {total}.',
-  dataGridRowLimit: 'Naanị ahịrị {count} mbụ ka egosiri.',
+  dataGridRowLimit: {
+    other: 'Naanị ahịrị {count} mbụ ka egosiri.',
+  },
   dataGridExpandRow: 'Mụbaa {row}',
   dataGridFilterColumn: 'Nyochaa {column}',
   dataGridSelectPage: 'Họrọ ahịrị niile dị na ibe a',
-  tableRowLimit: 'Naanị ahịrị {count} mbụ ka egosiri.',
+  tableRowLimit: {
+    other: 'Naanị ahịrị {count} mbụ ka egosiri.',
+  },
   tableAdditionalColumns: 'Kọlụm ndị ọzọ',
   treeLimit: 'Naanị ihe {count} mbụ ka egosiri.',
   treeDefaultLabel: 'Osisi',

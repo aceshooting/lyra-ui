@@ -3,7 +3,7 @@ import { composedParentElement } from './active-element.js';
 import { assignedSlotOf } from './composed-tree.js';
 import { asciiWhitespaceTokens } from './ascii-whitespace.js';
 import { isAriaTrue } from './aria-values.js';
-import { imageMapImageFor } from './dom-guards.js';
+import { cachedImageMapImageFor, imageMapImageFor } from './dom-guards.js';
 import { subscribeInheritedAttributes, type InheritedAttributeRelease } from './inherited-attribute-hub.js';
 
 export { composedParentElement } from './active-element.js';
@@ -541,14 +541,8 @@ function cachedElementState(
   return state;
 }
 
-function cachedImageMapImage(
-  context: AccessibilityTextContext,
-  element: Element,
-): HTMLImageElement | null {
-  if (context.imageMapImages.has(element)) return context.imageMapImages.get(element)!;
-  const image = imageMapImageFor(element, { consume: () => consumeNodeWork(context) });
-  context.imageMapImages.set(element, image);
-  return image;
+function cachedImageMapImage(context: AccessibilityTextContext, element: Element): HTMLImageElement | null {
+  return cachedImageMapImageFor(context.imageMapImages, element, () => consumeNodeWork(context));
 }
 
 function cachedSubtreeExcluded(context: AccessibilityTextContext, element: Element): boolean {

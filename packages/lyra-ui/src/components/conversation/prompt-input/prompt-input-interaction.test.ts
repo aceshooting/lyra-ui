@@ -192,3 +192,18 @@ it('keeps readonly queue pagination available and hides unavailable row and retr
   await inner.updateComplete;
   expect(inner.shadowRoot!.querySelector('[part="value"]')!.textContent).to.equal('20');
 });
+
+it('keeps the embedded pickers\' value, request and popup events from posing as its own', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-prompt-input']>(html`<lr-prompt-input
+    .modelCatalog=${['m']} .voiceCatalog=${['v']}></lr-prompt-input>`);
+  const root = el.shadowRoot!;
+  const names = ['lr-input', 'lr-change-request', 'lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide'];
+  const leaked: string[] = [];
+  for (const name of names) el.addEventListener(name, () => leaked.push(name));
+  for (const picker of [root.querySelector('lr-model-select')!, root.querySelector('lr-voice-picker')!]) {
+    for (const name of names) {
+      picker.dispatchEvent(new CustomEvent(name, { detail: { value: 'm', inCatalog: true }, bubbles: true, composed: true }));
+    }
+  }
+  expect(leaked).to.deep.equal([]);
+});

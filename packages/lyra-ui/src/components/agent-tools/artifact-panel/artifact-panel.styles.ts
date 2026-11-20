@@ -1,11 +1,10 @@
-import { iconHitTarget, focusRing, hoverFill, activeFill } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
   }
   [part='base'] {
     display: flex;
@@ -76,7 +75,7 @@ export const styles = css`
      which follows the text colour, so it reads as a distinctly deeper step than hover in both
      themes. */
   [part='view-button']:active:not([aria-pressed='true']) {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-brand-quiet)')};
   }
   [part='view-button']:where([aria-pressed='true']):hover {
     background: ${hoverFill('var(--lr-artifact-panel-view-active-bg, var(--lr-color-brand-quiet))')};
@@ -121,7 +120,7 @@ export const styles = css`
   }
   [part='version-previous']:active:not(:disabled),
   [part='version-next']:active:not(:disabled) {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-brand-quiet)')};
   }
   [part='version-previous']:focus-visible,
   [part='version-next']:focus-visible {
@@ -129,8 +128,7 @@ export const styles = css`
   }
   [part='version-previous']:disabled,
   [part='version-next']:disabled {
-    cursor: not-allowed;
-    opacity: var(--lr-opacity-disabled);
+    ${disabledControl}
   }
   [part='version-previous-glyph'],
   [part='version-next-glyph'] {

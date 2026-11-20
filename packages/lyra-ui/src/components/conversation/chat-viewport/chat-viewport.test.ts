@@ -2040,7 +2040,7 @@ it("resolves a host aria-describedby onto its log owner", async () => {
   await waitUntil(() => !ids().includes("host-hint"), "removing it clears the owner");
 });
 
-it('emits follow changes for user scrolling or a jump, and keeps direct writes silent', async () => {
+it('emits follow changes for direct writes, scrollToBottom(), user scrolling and a jump', async () => {
   const el = await fixture<LyraChatViewport>(html`<lr-chat-viewport style="block-size:100px"
     >${Array.from({ length: 10 }, (_, i) => row(`m${i}`))}</lr-chat-viewport>`);
   await nextFrame();
@@ -2052,7 +2052,8 @@ it('emits follow changes for user scrolling or a jump, and keeps direct writes s
   el.scrollToBottom({ behavior: 'auto' });
   await el.updateComplete;
   expect(el.follow).to.equal(true);
-  expect(changes).to.deep.equal([]);
+  expect(changes).to.deep.equal([false, true]);
+  changes.length = 0;
 
   const scroll = el.shadowRoot!.querySelector<HTMLElement>('[part="scroll"]')!;
   scroll.dispatchEvent(new WheelEvent('wheel', { deltaY: -40 }));

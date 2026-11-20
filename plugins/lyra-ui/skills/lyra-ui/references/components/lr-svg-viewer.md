@@ -79,8 +79,8 @@ only while the viewer and its composed ancestors are exposed to the accessibilit
 `highlight-layer` (wrapper around every
 rendered region highlight), `region-highlight` (one region highlight, `data-tone`, `data-active`),
 `region-highlight-target` (transparent activation geometry with an independent minimum hit area),
-`highlight-actions` (non-overlapping actions for multiple highlights), `region-highlight-action`
-(one action in that list),
+`highlight-actions` (non-overlapping actions used instead of on-image targets when the minimum hit
+areas of two or more highlights would overlap), `region-highlight-action` (one action in that list),
 `frame-viewport`/`frame-content`/`frame-controls`/`frame-zoom-in`/`frame-zoom-out`/`frame-reset`
 (forwarded from the internal `<lr-pan-zoom>` while `zoomable`).
 Passive loaded SVG content owns `role="img"`. Idle, loading, and error states instead use a named

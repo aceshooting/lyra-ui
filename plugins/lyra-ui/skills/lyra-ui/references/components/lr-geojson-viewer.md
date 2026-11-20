@@ -36,7 +36,10 @@ frames the data with `<lr-map>.fitBounds()` (size-aware, padded, antimeridian-sa
 the map exists, then hands the parsed value to
 `<lr-map>` as a single `dataLayers` entry (`sourceId: 'lr-geojson'`). The nested map explicitly uses
 `engine="maplibre"`, preserving this viewer's native `maplibre-gl` peer contract independently of
-`lr-map`'s modular default. There is no viewer engine-selection property. When the optional
+`lr-map`'s modular default. There is no viewer engine-selection property. Every `lr-map-*` event
+the nested map raises stays inside the viewer, so none reaches a host listener as the viewer's own;
+the viewer reports its own outcome through `lr-load`, `lr-render-error` and
+`lr-viewer-diagnostic`. When the optional
 `maplibre-gl` peer isn't installed, it falls back to a status line plus a `<lr-json-viewer
 expand-depth="2">` of the raw value instead of the map. The JSON-viewer fallback is registered
 lazily only when the map peer is unavailable. Loaded documents survive disconnect/reconnect while

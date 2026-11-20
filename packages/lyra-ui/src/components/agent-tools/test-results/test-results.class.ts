@@ -24,7 +24,7 @@ import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js'
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_statusSkipped, LYRA_DEFAULT_testResultsCollapseTest, LYRA_DEFAULT_testResultsCompleteAnnounce, LYRA_DEFAULT_testResultsExpandTest, LYRA_DEFAULT_testResultsFailed, LYRA_DEFAULT_testResultsFilterLabel, LYRA_DEFAULT_testResultsInputTooLarge, LYRA_DEFAULT_testResultsLabel, LYRA_DEFAULT_testResultsLimit, LYRA_DEFAULT_testResultsPassed, LYRA_DEFAULT_testResultsRunning, LYRA_DEFAULT_testResultsShownAnnounce, LYRA_DEFAULT_testResultsSkipped, LYRA_DEFAULT_testResultsUnnamedTest } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_tableLoadFailed } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_retry, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_tableLoadFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type TestStatus = 'passed' | 'failed' | 'skipped' | 'running';
@@ -200,17 +200,12 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     ...super.defaultStrings,
     accessibleLabelSeparator: LYRA_DEFAULT_accessibleLabelSeparator,
     collapse: LYRA_DEFAULT_collapse,
-    copy: LYRA_DEFAULT_copy,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
     durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
     durationSeconds: LYRA_DEFAULT_durationSeconds,
     expand: LYRA_DEFAULT_expand,
     loading: LYRA_DEFAULT_loading,
-    map: LYRA_DEFAULT_map,
     noData: LYRA_DEFAULT_noData,
     noMatches: LYRA_DEFAULT_noMatches,
-    open: LYRA_DEFAULT_open,
     retry: LYRA_DEFAULT_retry,
     statusError: LYRA_DEFAULT_statusError,
     statusRunning: LYRA_DEFAULT_statusRunning,

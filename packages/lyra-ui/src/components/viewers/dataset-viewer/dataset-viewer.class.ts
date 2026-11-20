@@ -20,6 +20,8 @@ import {
 } from '../../../internal/resource-loader.js';
 import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { srOnly } from '../../../internal/a11y.js';
+import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { loadPapaParseCached } from '../../../internal/papaparse-loader.js';
 import { parseCellRange } from '../../../internal/cell-range.js';
 import {
@@ -47,7 +49,7 @@ import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-targe
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_sourceSearchUnavailable, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
-import { LYRA_DEFAULT_cellHighlightWithLabel, LYRA_DEFAULT_datasetViewerCaption, LYRA_DEFAULT_datasetViewerCaptionNamed, LYRA_DEFAULT_datasetViewerEmpty, LYRA_DEFAULT_datasetViewerMissingParser, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDataset, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
+import { LYRA_DEFAULT_cellHighlightWithLabel, LYRA_DEFAULT_datasetViewerCaption, LYRA_DEFAULT_datasetViewerCaptionNamed, LYRA_DEFAULT_datasetViewerEmpty, LYRA_DEFAULT_datasetViewerLabel, LYRA_DEFAULT_datasetViewerMissingParser, LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDataset, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface DatasetTable {
@@ -122,7 +124,8 @@ class LyraDatasetViewerBase extends LyraElement<LyraDatasetViewerEventMap> {}
  *   region name; a non-empty host `aria-label` instead leaves ownership on the host, while an
  *   explicitly empty label remains explicit on this shadow owner. With neither source it stays a
  *   plain wrapper rather than an unnamed region.
- * @csspart body - The scrollable body wrapper.
+ * @csspart body - The scrollable body wrapper. In `scroll-mode="self"` it becomes a named, keyboard-focusable
+ *   region (`name`, else the localized "Dataset") while its rows overflow the cap, and adds no tab stop otherwise.
  * @csspart table - The `role="table"` container, named by the display name plus localized row
  *   count or by the localized row count alone; it never copies the host's overall name.
  * @csspart header-row - The sticky header row (`role="row"`).
@@ -169,6 +172,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
     datasetViewerCaption: LYRA_DEFAULT_datasetViewerCaption,
     datasetViewerCaptionNamed: LYRA_DEFAULT_datasetViewerCaptionNamed,
     datasetViewerEmpty: LYRA_DEFAULT_datasetViewerEmpty,
+    datasetViewerLabel: LYRA_DEFAULT_datasetViewerLabel,
     datasetViewerMissingParser: LYRA_DEFAULT_datasetViewerMissingParser,
     date: LYRA_DEFAULT_date,
     details: LYRA_DEFAULT_details,
@@ -349,13 +353,28 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
     scrollContainer: () => this.renderRoot.querySelector('[part="body"]'),
   });
 
+  private releaseScrollRegion?: () => void;
+
+  /** A capped self-scrolling body that holds no focusable cell gets its own named tab stop while
+   *  it overflows, so keyboard users can scroll it; page mode hands scrolling to the page. */
+  private syncScrollRegion(): void {
+    this.releaseScrollRegion?.();
+    const body = this.renderRoot.querySelector<HTMLElement>('[part="body"]');
+    this.releaseScrollRegion = body && this.isConnected && this.scrollMode === 'self'
+      ? makeScrollRegionFocusable(body, normalizeLabel(this.name) ?? this.localize('datasetViewerLabel'))
+      : undefined;
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) this.syncScrollRegion();
     this.tableController.connected();
     if (this.fetchState.kind === 'loading') this.scheduleAfterUpdate(() => { void this.load(); });
   }
 
   override disconnectedCallback(): void {
+    this.releaseScrollRegion?.();
+    this.releaseScrollRegion = undefined;
     this.tableController.disconnecting();
     super.disconnectedCallback();
     this.tableController.disconnected();
@@ -376,6 +395,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.tableController.updated(changed, this.fetchState);
+    this.syncScrollRegion();
     const list = this.renderRoot.querySelector<HTMLElement & { scrollElement?: HTMLElement }>(tag('virtual-list'));
     if (list && this.scrollMode === 'self') {
       list.scrollElement = this.renderRoot.querySelector<HTMLElement>('[part="body"]') ?? undefined;

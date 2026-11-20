@@ -70,7 +70,8 @@ settings snapshot, not just whichever field actually changed. `inCatalog` is rec
 `catalog`/`model` on every emission (mirroring `lr-model-select`'s own `effectiveEntries` logic)
 rather than cached from the last child event, so it's still correct even when `model` was just
 assigned directly instead of via the child's own event. The nested selector's native `focus` and
-`blur` events remain contained at that child boundary; the panel does not declare or relay them.
+`blur` events, its `lr-change-request` and its `lr-show`/`lr-hide`/`lr-after-show`/`lr-after-hide`
+popup lifecycle remain contained at that child boundary; the panel does not declare or relay them.
 
 **Slots:** none — this is a fixed two-control composition, not a generic layout shell.
 

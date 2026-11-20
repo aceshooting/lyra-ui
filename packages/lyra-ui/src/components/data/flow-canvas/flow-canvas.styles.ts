@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing, activeFill, interactiveTransition } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingInset, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -53,8 +53,7 @@ export const styles = css`
     cursor: grab;
   }
   [part='viewport']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingInset}
   }
   [part='background'],
   [part='edges'] {

@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { activeFill, focusRingInset } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   :host {
@@ -42,12 +43,11 @@ export const styles = css`
     color: var(--lr-menubar-item-hover-color, var(--lr-color-text));
   }
   :host(:where(:active:not([disabled]))) [part='base'] {
-    background: var(--lr-menubar-item-active-bg, color-mix(in oklab, var(--lr-menubar-item-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    background: var(--lr-menubar-item-active-bg, ${activeFill('var(--lr-menubar-item-hover-bg, var(--lr-color-brand-quiet))')});
     color: var(--lr-menubar-item-active-color, var(--lr-color-text));
   }
   :host(:focus-visible) [part='base'] {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingInset}
   }
   :host([disabled]) [part='base'] {
     opacity: var(--lr-opacity-disabled);

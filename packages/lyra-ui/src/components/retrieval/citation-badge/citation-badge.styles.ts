@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { anchoredPreviewPanel } from '../../../internal/overlay-surface.styles.js';
 
@@ -92,11 +92,7 @@ export const styles = css`
       --lr-citation-badge-accent,
       var(--_lr-citation-badge-accent)
     );
-    background: color-mix(
-      in oklab,
-      var(--lr-citation-badge-bg, var(--_lr-citation-badge-bg)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-citation-badge-bg, var(--_lr-citation-badge-bg))')};
   }
   [part="base"]:focus-visible {
     ${focusRing}

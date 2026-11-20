@@ -1,4 +1,4 @@
-import { activeFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingShorthand, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { nativeControlSurface } from '../../../internal/native-control-surface.styles.js';
 
@@ -46,7 +46,7 @@ export const styles = css`
      hover rather than the same one. */
   [part='rect-target']:active + [part='rect'] {
     outline-width: var(--lr-border-width-medium);
-    background: color-mix(in oklab, var(--_lr-highlight-layer-background), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--_lr-highlight-layer-background)')};
   }
   [part='rect']:where([data-tone='success']) {
     --_lr-highlight-layer-background: var(
@@ -93,8 +93,7 @@ export const styles = css`
     outline-offset: calc(-1 * var(--lr-border-width-thick));
   }
   [part='rect-target']:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   [part='highlight-actions'] {
     position: absolute;
@@ -122,8 +121,7 @@ export const styles = css`
     background: ${activeFill('var(--lr-color-surface-raised)')};
   }
   [part='highlight-action']:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   [part='rect']:where([data-flash]) {
     background: var(

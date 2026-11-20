@@ -1,14 +1,14 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, focusRingInset } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { wideContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
     max-inline-size: 100%;
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${inlineSizeContainer}
     --_lr-compare-panel-max-height: var(--lr-size-24rem);
   }
 
@@ -58,8 +58,7 @@ export const styles = css`
   }
   [part="pane-a"]:focus-visible,
   [part="pane-b"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingInset}
   }
 
   [part="pane-header"] {
@@ -103,11 +102,7 @@ export const styles = css`
      which follows the text colour, so it is a deeper step than hover in both themes, not a repeat.
      */
   [part="vote-button"]:where(:not(:disabled)):active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-brand-quiet)')};
   }
   /* After the two arms above and at their own (0,2,0), so source order hands the cast vote its
      selected fill under the pointer -- the generic brand-quiet hover tint reads as unselected.
@@ -135,18 +130,10 @@ export const styles = css`
      there is the deliberate half of the trade. Mixes from --lr-compare-panel-selected-bg so
      a retinted selection gets a deeper tier of itself, not the stock token. */
   [part="vote-button"][data-selected]:where(:not(:disabled)):active {
-    background: color-mix(
-      in oklab,
-      var(
-        --lr-compare-panel-selected-bg,
-        var(--lr-color-brand-quiet)
-      ),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var( --lr-compare-panel-selected-bg, var(--lr-color-brand-quiet) )')};
   }
   [part="vote-button"]:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   [part="vote-button"]:focus-visible {
     ${focusRing}

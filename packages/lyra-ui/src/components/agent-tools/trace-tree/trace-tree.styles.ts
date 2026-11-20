@@ -1,7 +1,8 @@
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
-import { iconHitTarget, focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingInset, focusRingInsetOffset, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { containerHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   [part~='source-label'] { flex: 1; }
@@ -18,9 +19,7 @@ export const styles = css`
   .source-span:where([data-active]) { color: var(--lr-trace-tree-row-active-color, var(--lr-color-text)); }
 
   :host {
-    display: block;
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${containerHost}
     --_lr-trace-tree-bar-column: var(--lr-size-6rem);
     --_lr-trace-tree-tokens-in-column: ;
     --_lr-trace-tree-tokens-out-column: ;
@@ -91,8 +90,7 @@ export const styles = css`
     background: var(--lr-trace-tree-row-hover-bg, var(--lr-color-surface-raised));
   }
   [part='row']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingInset}
   }
   [part='row'][data-active] {
     background: var(--lr-trace-tree-row-active-bg, var(--lr-color-brand-quiet));
@@ -104,11 +102,7 @@ export const styles = css`
      the press. Mixed from the active fill, not the plain-row hover fill, so a retinted
      --lr-trace-tree-row-active-bg carries into the hover step; same pattern as lr-tree-item. */
   [part='row']:where([data-active]):hover {
-    background: color-mix(
-      in oklab,
-      var(--lr-trace-tree-row-active-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
+    background: ${hoverFill('var(--lr-trace-tree-row-active-bg, var(--lr-color-brand-quiet))')};
   }
   /* The row is the click target -- it selects a span, while the nested [part='toggle'] only expands
      it. Mixing the hovered tint a further --lr-color-mix-active toward --lr-color-mix-partner keeps
@@ -116,16 +110,12 @@ export const styles = css`
      hover companion: all three are (0,2,0), so source order alone decides whether pressing the
      already-selected row shows any feedback. */
   [part='row']:active {
-    background: var(--lr-trace-tree-row-pressed-bg, color-mix(in oklab, var(--lr-trace-tree-row-hover-bg, var(--lr-color-surface-raised)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    background: var(--lr-trace-tree-row-pressed-bg, ${activeFill('var(--lr-trace-tree-row-hover-bg, var(--lr-color-surface-raised))')});
   }
   /* Pressing the active row mixes from the active fill, not the plain-row surface, so it never reads
      as deselected mid-click. :where() keeps it (0,2,0); MUST stay after the plain :active rule. */
   [part='row']:where([data-active]):active {
-    background: color-mix(
-      in oklab,
-      var(--lr-trace-tree-row-active-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-trace-tree-row-active-bg, var(--lr-color-brand-quiet))')};
   }
 
   /* text-quiet against brand-quiet lands at ~4.17:1 against the currently shipped default tokens,
@@ -205,11 +195,7 @@ export const styles = css`
     background: var(--lr-trace-tree-toggle-hover-bg, var(--lr-color-brand-quiet));
   }
   [part='toggle']:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-trace-tree-toggle-hover-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-trace-tree-toggle-hover-bg, var(--lr-color-brand-quiet))')};
   }
   [part='toggle']:focus-visible {
     ${focusRingInsetOffset}

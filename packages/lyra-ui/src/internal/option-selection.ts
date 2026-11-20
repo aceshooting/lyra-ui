@@ -1,4 +1,24 @@
+import { isHtmlElement } from './dom-guards.js';
 import { finiteCount } from './numbers.js';
+import { tag } from './prefix.js';
+
+/** Whether `value` is an option element under the active tag prefix. */
+export function isOptionElement(value: unknown): value is HTMLElementTagNameMap['lr-option'] {
+  return isHtmlElement(value) && value.localName === tag('option');
+}
+
+/**
+ * Normalizes a `value`/`defaultValue` assignment to the committed array form. `undefined` and
+ * `null` mean "clear" -- the documented contract for an unset assignment -- while every string,
+ * INCLUDING `''`, is a candidate value to resolve against the current options: `<lr-option
+ * value="">` is a legitimate row, so an empty string must round-trip as a real selection rather
+ * than being silently folded into "clear" the way a falsy check would. Duplicates and order are
+ * kept; non-string array members are dropped.
+ */
+export function normalizeSelectionValues(next: string | string[] | null | undefined): string[] {
+  if (Array.isArray(next)) return next.filter((value): value is string => typeof value === 'string');
+  return typeof next === 'string' ? [next] : [];
+}
 
 /** @internal */
 export const SET_OPTION_SELECTED_FROM_OWNER = Symbol('lr-set-option-selected-from-owner');

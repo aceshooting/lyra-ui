@@ -1,7 +1,4 @@
-import {
-  disclosureChevron,
-  iconHitTarget,
-} from '../../../internal/interactive-control.styles.js';
+import { activeFill, disclosureChevron, focusRingInset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -87,11 +84,7 @@ export const styles = css`
     background: color-mix(in srgb, var(--lr-color-text) 6%, transparent);
   }
   [part="disclosure"]:active {
-    background: color-mix(
-      in oklab,
-      transparent,
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('transparent')};
   }
   [part="item"]:hover {
     background: color-mix(in srgb, var(--lr-color-text) 6%, transparent);
@@ -100,15 +93,10 @@ export const styles = css`
      [part='checkbox'] inside is a painted div, not a focusable target -- so the row earns its own
      pressed state rather than deferring to something nested. */
   [part="item"]:active {
-    background: color-mix(
-      in oklab,
-      transparent,
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('transparent')};
   }
   [part="item"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingInset}
   }
   [part="checkbox"] {
     display: grid;

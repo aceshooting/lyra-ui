@@ -2,7 +2,6 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { catalogControlName, renderCatalogInput, renderCatalogLabel } from '../../../internal/catalog-picker-template.js';
 import { InputLimitAnnouncement } from '../../../internal/input-limit-announcement.js';
 import { guard } from 'lit/directives/guard.js';
-import { AutocorrectState } from '../../../internal/native-text-control.js';
 import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 import { publicCollectionTruncation, collectionSupport } from '../../../internal/collection-snapshot.js';
@@ -10,14 +9,14 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { LyraCatalogPickerElement } from '../catalog-picker-element.js';
-import type { LyraSize, LyraLabelDisplay } from '../../../internal/variants.js';
+import { emitPopupEvent } from '../../../internal/popup-controller.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { styles } from './model-select.styles.js';
-import { autocorrectConverter, spellcheckFromAttributeConverter as spellcheckConverter } from '../../../internal/converters.js';
 import {
   CatalogPickerController,
   type LyraCatalog,
@@ -51,6 +50,11 @@ export interface LyraModelSelectEventMap {
   'lr-invalid': CustomEvent<null>;
   'lr-input': CustomEvent<{ value: string; inCatalog: boolean; query?: string }>;
   'lr-change': CustomEvent<{ value: string; inCatalog: boolean }>;
+  'lr-change-request': CustomEvent<Readonly<{ value: string; inCatalog: boolean }>>;
+  'lr-show': CustomEvent<null>;
+  'lr-hide': CustomEvent<null>;
+  'lr-after-show': CustomEvent<null>;
+  'lr-after-hide': CustomEvent<null>;
   input: Event;
   change: Event;
   blur: FocusEvent;
@@ -104,6 +108,16 @@ export interface LyraModelSelectEventMap {
  *   rendering mode, retaining `relatedTarget`.
  * @event {FocusEvent} focus - Owner-realm native focus relayed once from the active control in
  *   either rendering mode, retaining `relatedTarget`.
+ * @event lr-change-request - Cancelable before a user pick or free-text commit changes `value`.
+ *   Frozen `detail: { value, inCatalog }` names the proposed value. Calling `preventDefault()` keeps
+ *   the current value and the open popup; a listener that disables, detaches, makes read-only or
+ *   re-values the picker also stops the commit. Programmatic `value` writes never request.
+ * @event lr-show - The listbox is about to open, however `open` became true after the first render.
+ *   Cancelable: `preventDefault()` keeps it closed.
+ * @event lr-hide - The listbox is about to close, however `open` became false. Cancelable, except
+ *   when disabling the picker forces the close.
+ * @event lr-after-show - The opened listbox finished its transition.
+ * @event lr-after-hide - The closed listbox finished its transition and left layout.
  * @event lr-invalid - The picker failed a validity check. Cancelable: calling `preventDefault()`
  *   also cancels the native `invalid` event behind it, suppressing the browser's own validation
  *   bubble so an app can present the failure its own way.
@@ -259,58 +273,10 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
     },
   };
 
-  /** Informational only — e.g. `'ollama'`. Rendered as a small leading badge for display grouping. */
-  @property() provider = '';
   /** The clone-owned full model list. Omit (or leave empty) to fall back to plain free-text entry.
    *  Catalog ids must be nonempty and unique; malformed rows and later duplicates are omitted,
    *  first wins. Reassign a new array after changes. */
   @property({ attribute: false }) catalog?: LyraCatalog<LyraModelCatalogEntry>;
-  /** Let the user type/commit a value that isn't in `catalog`, even when `catalog` is non-empty. */
-  @property({ type: Boolean, reflect: true, attribute: 'allow-custom' }) allowCustom = false;
-  /** Keeps user edits and catalog commits from changing `value` while retaining focus, popup
-   *  navigation, selection/copy, form submission, reset, and programmatic writes. */
-  @property({ type: Boolean, reflect: true }) readonly: boolean = false;
-  /**
-   * Optional visible title above the control, rendered alongside the `label` slot in a
-   * `part="form-control-label"` `<label>` paired with the active control's id. A host `aria-label`
-   * remains authoritative by presence; otherwise either visible-label source supplies the native
-   * associated name. Leaving both empty keeps the `aria-label || placeholder || 'Model'` chain.
-   */
-  @property() label = '';
-  /**
-   * Whether the `label` renders on screen. `hidden` keeps the label as the accessible name but
-   * removes it visually (compact toolbars, table cells); hint, error and required semantics are
-   * unaffected. Reflected so styles and `[label-display]` selectors match.
-   * @attr label-display
-   */
-  @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
-  /** Hint text below the field. Unset (the default): no hint chrome renders. */
-  @property() hint = '';
-  /** Error text below the field (overridden by slotted `error` content). Unset (the default): no
-   *  error chrome renders. */
-  @property({ attribute: 'error-text' }) errorText = '';
-  @property() placeholder = '';
-  /** Forwarded to the free-text mode's native `<input>`'s own `spellcheck`. Defaults to `true`,
-   *  matching the native element's own default. No effect in closed-dropdown mode (no native text
-   *  input there). `spellcheck="false"` is parsed as `false` (see `spellcheckConverter` above). */
-  @property({ converter: spellcheckConverter }) override spellcheck = true;
-  /** Forwarded to the free-text mode's native `<input>`'s own `autocapitalize`. Empty string omits
-   *  the attribute (browser default). */
-  @property() override autocapitalize = '';
-  private readonly autocorrectState = new AutocorrectState(this, true);
-  /** Native editing-assistance state forwarded as canonical `autocorrect="on"|"off"`. Reads are
-   *  boolean; writes accept the boolean IDL and the `'on'`/`'off'` vocabulary. */
-  @property({ converter: autocorrectConverter })
-  override get autocorrect(): boolean {
-    return this.autocorrectState.value;
-  }
-  override set autocorrect(next: boolean | string) {
-    this.autocorrectState.set(next);
-  }
-  /** Native editing and virtual-keyboard hints forwarded to free-text mode's input. */
-  @property() autocomplete = 'off';
-  @property({ attribute: 'inputmode' }) override inputMode = '';
-  @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
   /** Whether the model list is open. Effectively disabled controls reject direct reopen attempts,
    * including a synchronous fieldset cascade. */
   @property({ type: Boolean, reflect: true })
@@ -348,6 +314,8 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
     searchableFields: (entry) => [entry.id, entry.label],
     emitInput: (detail) => this.emit('lr-input', detail),
     emitChange: (detail) => this.emit('lr-change', detail),
+    emitChangeRequest: (detail, init: { cancelable: true }) => this.emit('lr-change-request', detail, init),
+    emitPopup: (name, cancelable) => emitPopupEvent(this, name, cancelable),
     onValueChange: (value, oldValue) => {
       this.internals.setFormValue(value);
       this.updateValidity();
@@ -465,12 +433,6 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
     return this.catalogPicker.labelFor(id);
   }
 
-  private show(): void {
-    this.catalogPicker.show();
-  }
-  private hide(): void {
-    this.catalogPicker.hide();
-  }
 
   private readonly limitAnnouncements = new AnnouncementSinkController(this);
 
@@ -508,22 +470,6 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
     this.catalogPicker.suppressControlEvents = false;
     this.finishModeFocus('model-select-mode-focus');
   }
-
-  private onTriggerClick = (): void => {
-    if (this.effectiveDisabled) return;
-    this.open ? this.hide() : this.show();
-  };
-  private readonly onControlBlur = this.catalogPicker.handleControlBlur.bind(this.catalogPicker);
-  private readonly onTriggerFocus = this.catalogPicker.handleControlFocus.bind(this.catalogPicker);
-  private readonly onTriggerKeyDown = this.catalogPicker.handleTriggerKeyDown.bind(this.catalogPicker);
-
-  private readonly onComboMouseDown = this.catalogPicker.handleComboMouseDown.bind(this.catalogPicker);
-  private readonly onInputFocus = this.catalogPicker.handleInputFocus.bind(this.catalogPicker);
-  private readonly onInput = this.catalogPicker.handleInput.bind(this.catalogPicker);
-  private readonly onInputKeyDown = this.catalogPicker.handleInputKeyDown.bind(this.catalogPicker);
-
-  private readonly onListboxMouseDown = this.catalogPicker.handleListboxMouseDown.bind(this.catalogPicker);
-  private readonly onListboxClick = this.catalogPicker.handleListboxClick.bind(this.catalogPicker);
 
   private renderRows(rows: DisplayEntry[], activeId: string): TemplateResult[] {
     return rows.map((entry, i) => {
@@ -617,7 +563,7 @@ export class LyraModelSelect extends LyraCatalogPickerElement<LyraModelSelectEve
         ?disabled=${this.effectiveDisabled}
         @click=${this.onTriggerClick}
         @keydown=${this.onTriggerKeyDown}
-        @focus=${this.onTriggerFocus}
+        @focus=${this.onControlFocus}
         @blur=${this.onControlBlur}
       >
         ${this.provider ? html`<span part="provider-badge">${this.provider}</span>` : ''}

@@ -124,8 +124,9 @@ const MAX_BUSY_SETTLE_SAMPLES = 60;
  *
  * @customElement lr-chat-viewport
  * @slot - The transcript: ordinary element children, or exactly one `<lr-virtual-list>`.
- * @event lr-follow-change - `detail: { following }` — scrolling or a jump-button click changed
- *   whether the viewport follows the transcript.
+ * @event lr-follow-change - `detail: { following }` — fired whenever `follow` flips: a user
+ *   scroll-up release, reaching the bottom again, a jump-button click, `scrollToBottom()` or a
+ *   direct `follow` assignment. Never fired for the initial mount state.
  * @csspart base - The positioning root.
  * @csspart scroll - The scroll container (`role="log"` and, in slotted mode, `tabindex="0"`). In
  *   virtual mode it stops scrolling itself and drops its tab stop because the slotted list owns
@@ -268,7 +269,6 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
    *  still-pending deferred initial-measurement microtask from a now-stale arm. */
   private armGeneration = 0;
   private followFocusRepair: ComposedFocusRepairSnapshot | null = null;
-  private requestedFollow?: boolean;
   private readonly knownProjectedNodes = new WeakSet<Node>();
   /** Appended children waiting to settle (`liveSettle` mode): the text seen at the previous
    *  sample (`null` before the first stable sample) and the owner-bound pending timer. */
@@ -340,7 +340,6 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     this.clearKeyboardScrollIntent();
     this.scrollbarDragActive = false;
     this.followFocusRepair = null;
-    this.requestedFollow = undefined;
     this.clearSettlingNodes();
     this.unreadBoundaryEl?.remove();
     this.unreadBoundaryEl = undefined;
@@ -384,8 +383,6 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     this.unreadBoundaryEl?.setAttribute('aria-label', this.localize('newMessages'));
     const wasMounting = this.isMounting;
     this.isMounting = false;
-    const requestedFollow = this.requestedFollow;
-    this.requestedFollow = undefined;
     if (changed.has('follow')) {
       if (this.follow) {
         // The very first paint always lands at the end instantly -- there's no prior on-screen
@@ -401,7 +398,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
         this.pendingScrollBehavior = undefined;
         this.performScrollToEnd(behavior);
       }
-      if (!wasMounting && requestedFollow === this.follow && changed.get('follow') !== this.follow) {
+      if (!wasMounting && changed.get('follow') !== this.follow) {
         this.emit('lr-follow-change', { following: this.follow });
       }
     }
@@ -729,7 +726,6 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     if (atBottom) {
       this.clearUserIntent();
       if (!this.follow) {
-        this.requestedFollow = true;
         this.follow = true;
       }
       return;
@@ -737,13 +733,11 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     const userCaused = this.consumeUserIntent() || keyboardCaused || this.scrollbarDragActive;
     if (userCaused && this.follow) {
       this.clearKeyboardScrollIntent();
-      this.requestedFollow = false;
       this.follow = false;
     }
   };
 
   private onJumpClick = (): void => {
-    if (!this.follow) this.requestedFollow = true;
     this.scrollToBottom();
   };
 

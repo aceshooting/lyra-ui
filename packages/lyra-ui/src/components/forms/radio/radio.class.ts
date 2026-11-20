@@ -613,10 +613,8 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
     }
     if (!this.checked) {
       this.checked = true;
-      const connected = this.isConnected;
       const detail = { checked: true, value: this.value };
       emitValueEvents(this, 'input', detail, captured => this.emit('lr-input', captured));
-      if (this.isConnected !== connected || isLiveDisabled(this)) return;
       emitValueEvents(this, 'change', detail, captured => this.emit('lr-change', captured));
     }
     this.emit('lr-activate', { value: this.value });
@@ -702,7 +700,7 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
   };
   protected onBlur = (event: FocusEvent): void => {
     // `:disabled` leads `effectiveDisabled` while a fieldset's forced blur is being delivered.
-    if (!this.effectiveDisabled && !this.matches(':disabled') && !this.swappingControl) {
+    if (!isLiveDisabled(this) && !this.swappingControl) {
       this.setInteracted(true);
     }
     relayNativeEvent(this, event);

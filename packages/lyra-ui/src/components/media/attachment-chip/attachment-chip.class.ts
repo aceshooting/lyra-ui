@@ -1,17 +1,15 @@
 import {
   html,
   nothing,
-  svg,
   type PropertyValues,
   type PropertyDeclaration,
   type TemplateResult,
-  type SVGTemplateResult,
 } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
-import { closeIcon, expandIcon, fileIcon } from '../../../internal/icons.js';
+import { closeIcon, expandIcon, fileIcon, retryIcon } from '../../../internal/icons.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
@@ -49,37 +47,12 @@ export interface LyraAttachmentPreviewRequestDetail
   src: string;
 }
 
-const ICON_VIEW_BOX = '0 0 24 24';
-
 /** Whether a `size` selects the compact density (`s` and the steps below it). */
 function isCompactSize(size: LyraSize | undefined): boolean {
   if (size === undefined) return false;
   const step = normalizeSize(size);
   return step === '2xs' || step === 'xs' || step === 's';
 }
-const ICON_STROKE_WIDTH = '1.75';
-
-// Same shape as `<lr-chat-message>`'s local `retryIcon()` -- duplicated
-// rather than imported (these are two independent, separately-consumable
-// components) but kept visually identical so a retry affordance reads the
-// same wherever it shows up in the library.
-function retryIcon(): SVGTemplateResult {
-  return svg`
-    <svg
-      width="1em"
-      height="1em"
-      viewBox=${ICON_VIEW_BOX}
-      fill="none"
-      stroke="currentColor"
-      stroke-width=${ICON_STROKE_WIDTH}
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    ><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
-  `;
-}
-
 /** Visible (not just color-coded) text for every non-resting status --
  *  `'pending'`/`'success'` render nothing here, they're resting states.
  *  The caller supplies already-localized complete messages so translated
@@ -133,8 +106,11 @@ export interface LyraAttachmentChipEventMap {
  *
  * Identifying *which* attachment a `lr-remove`/`lr-retry`/`lr-preview-request` event is about:
  * set `attachment-id="..."` when you have a stable server-side attachment identity. The platform
- * `id` remains available for DOM identity and idrefs. With no nonblank attachment id,
- * each chip reports its own stable id, including when several chips display the same file.
+ * `id` remains available for DOM identity and idrefs. When `attachmentId` is blank and `file` is
+ * set, a stable attachment identity is derived from
+ * `` `${file.name}:${file.size}:${file.lastModified}` ``, so chips showing the same `File` share it;
+ * set `attachment-id` to tell them apart. When neither is available, each chip reports its own
+ * generated id.
  *
  * i18n/locale: complete contextual messages (including filename/percentage
  * placement and punctuation) route through the shared localization registry.
@@ -399,6 +375,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
 
   private get resolvedId(): string {
     if (this.attachmentId.trim().length > 0) return this.attachmentId;
+    if (this.file) return `${this.file.name}:${this.file.size}:${this.file.lastModified}`;
     return this.fallbackId;
   }
 

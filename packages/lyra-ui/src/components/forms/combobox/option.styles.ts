@@ -1,5 +1,6 @@
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { css } from 'lit';
+import { activeFill } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   :host {
@@ -49,11 +50,7 @@ export const styles = css`
   :host(:state(current)) [part~='base']:active {
     background: var(
       --lr-option-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-option-hover-bg, var(--lr-color-brand-quiet)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-option-hover-bg, var(--lr-color-brand-quiet))')}
     );
   }
 

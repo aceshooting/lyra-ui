@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -104,7 +104,7 @@ export const styles = css`
   }
   [part='expand-toggle']:active {
     text-decoration: underline;
-    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('transparent')};
   }
   [part='item-body'] {
     padding-block-start: var(--lr-space-xs);
@@ -151,7 +151,7 @@ export const styles = css`
   [part='add-button']:active,
   [part='remove-button']:active,
   [part='forget-all-button']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-brand-quiet)')};
   }
   [part='forget-all-button'] {
     color: var(--lr-color-danger);

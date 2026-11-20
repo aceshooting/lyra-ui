@@ -45,7 +45,6 @@ const strings: LyraLocaleStrings = {
   items: {
     other: 'item'
   },
-  item: 'item',
   graphSourceRecords: 'Rekod graf',
   graphSourceNodes: 'Nod',
   graphSourceEdges: 'Tepi',
@@ -104,8 +103,6 @@ const strings: LyraLocaleStrings = {
   handoffToAgent: 'Dipindahkan kepada {agent}',
   handoffFromToAgent: 'Dipindahkan daripada {from} kepada {to}',
   thinking: 'Berfikir…',
-  deny: 'Tolak',
-  approve: 'Luluskan',
   fieldRequired: 'Medan ini wajib diisi.',
   unsupportedFieldType: 'Jenis medan "{type}" tidak disokong.',
   valueInvalid: 'Nilai tidak sah.',
@@ -121,8 +118,6 @@ const strings: LyraLocaleStrings = {
   anchorNotFound: 'Petikan tidak ditemui dalam dokumen ini.',
   highlightWithLabel: 'Serlahan: {label}',
   highlightOfTotal: 'Serlahan {index} daripada {total}',
-  tokensIn: 'Token masuk',
-  tokensOut: 'Token keluar',
   duration: 'Tempoh',
   comparePanel: 'Perbandingan',
   treeNodeMoved: '{label} dialihkan ke kedudukan {index} daripada {total}',
@@ -153,7 +148,9 @@ const strings: LyraLocaleStrings = {
   sourceSelectionLoading: 'Memuatkan item yang dipilih…',
   sourceSelectionFailed: 'Item yang dipilih tidak dapat dimuatkan.',
   catalogPickerInputLimit: 'Sebahagian entri katalog telah digugurkan kerana had input dicapai.',
-  tagFacetLimit: '+{count} lagi tag',
+  tagFacetLimit: {
+    other: '+{count} lagi tag',
+  },
   engine3dLoading: 'Memuatkan paparan 3D…',
   engine3dUnavailable: 'Enjin 3D tidak dapat dimuatkan.',
   engine3dUnsupported: 'Pelayar ini tidak dapat memaparkan grafik 3D.',

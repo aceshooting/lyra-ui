@@ -350,3 +350,16 @@ export const FormLifecycle: Story = {
 export const InputLimit: Story = {
   render: () => html`<lr-voice-picker label="Bounded catalog" .catalog=${Array.from({length:1025}, (_, i) => ({id:`row-${i}`,label:`Row ${i}`}))}></lr-voice-picker>`,
 };
+
+/** `lr-change-request` lets a host confirm a voice change before it lands; cancelling keeps the
+ *  current voice and the open list. */
+export const ConfirmBeforeSwitching: Story = {
+  render: () => html`<lr-voice-picker
+    label="Voice"
+    value="aria"
+    .catalog=${catalog}
+    @lr-change-request=${(event: LyraVoicePickerEventMap['lr-change-request']) => {
+      if (!window.confirm(`Use ${event.detail.value} for every reply?`)) event.preventDefault();
+    }}
+  ></lr-voice-picker>`,
+};

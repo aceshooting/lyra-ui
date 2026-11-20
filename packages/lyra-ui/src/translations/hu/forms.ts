@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'Naptár megnyitása',
+  item: 'elem',
   comboboxLoadError: 'Nem sikerült betölteni a lehetőségeket.',
   comboboxSelectedOverflow: '+{n} további',
   checkboxRequired: 'A folytatáshoz jelölje be ezt a négyzetet.',

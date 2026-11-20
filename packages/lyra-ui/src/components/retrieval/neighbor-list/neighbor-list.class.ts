@@ -11,9 +11,7 @@ export type NeighborSourceDirection = LyraGraphSourceQuery['direction'];
 type NeighborSourceRow = LyraSourceRecord<LyraGraphNode>;
 function sourceField(value: unknown, key: PropertyKey): unknown {
   if (!value || typeof value !== 'object') throw new TypeError('Invalid neighborhood value');
-  const descriptor = Object.getOwnPropertyDescriptor(value, key);
-  if (descriptor && !('value' in descriptor)) throw new TypeError('Accessor neighborhood field');
-  return descriptor?.value;
+  return requireOwnDataValue(value, key, 'Accessor neighborhood field');
 }
 function sourceRows(raw: unknown, limit: number): readonly NeighborSourceRow[] {
   if (!Array.isArray(raw)) throw new TypeError('Invalid neighborhood page');
@@ -68,6 +66,7 @@ import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
 } from '../retrieval-semantic-owner.js';
+import { requireOwnDataValue } from '../../../internal/data-descriptors.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_graphDataListLimit, LYRA_DEFAULT_neighborExpand, LYRA_DEFAULT_neighborGroupHeader, LYRA_DEFAULT_neighborListEmpty, LYRA_DEFAULT_neighborListLabel, LYRA_DEFAULT_neighborRowLabel, LYRA_DEFAULT_neighborSourceChoose, LYRA_DEFAULT_neighborSourceError, LYRA_DEFAULT_neighborSourceSummary } from '../../../internal/default-strings/retrieval.generated.js';
@@ -169,6 +168,9 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
   /** Stable-sorts rows by relation and renders one group header per relation with a count. */
   @property({ type: Boolean, attribute: 'group-by-relation' }) groupByRelation =
     false;
+  /** Keeps one row per distinct relationship (node id, relation and direction) instead of one row
+   *  per neighbor node. Off by default: later rows repeating a node id are omitted first-wins. */
+  @property({ type: Boolean, attribute: 'separate-relations' }) separateRelations = false;
   /** Shows a per-row expand icon-button emitting `lr-node-expand`. */
   @property({ type: Boolean }) expandable = false;
   /** Above this row count the list renders through an internal `lr-virtual-list`. */
@@ -370,7 +372,9 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
         this.sourceSyncing = false;
         if (this.sourcePageBinding) this.sourcePageBinding = [state.page, ...this.sourcePageBinding.slice(1)];
       }
-      if (changed.has('rows') || changed.has('groupByRelation')) this.hasComputedRows = false;
+      if (changed.has('rows') || changed.has('groupByRelation') || changed.has('separateRelations')) {
+        this.hasComputedRows = false;
+      }
       return;
     }
     if (this.hasUpdated && changed.has('rows')) {
@@ -383,6 +387,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
       !this.hasComputedRows ||
       changed.has('rows') ||
       changed.has('groupByRelation') ||
+      changed.has('separateRelations') ||
       signature !== this.processedSignature
     ) {
       this.hasComputedRows = true;
@@ -412,7 +417,9 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
   }
 
   private computeSortedRows(): readonly LyraNeighborRow[] {
-    const rows = firstByRetrievalIdentity(this.rows, relationshipKey);
+    const rows = this.separateRelations
+      ? firstByRetrievalIdentity(this.rows, relationshipKey)
+      : firstByRetrievalIdentity(this.rows, (row) => row?.node?.id);
     if (!this.groupByRelation) return rows;
     // Array.prototype.sort is spec-guaranteed stable (ES2019+) -- rows sharing a relation keep
     // their original relative order.

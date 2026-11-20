@@ -1,12 +1,10 @@
 import { progressTrackPaint, progressIndicatorPaint } from '../../../internal/progress-track.styles.js';
-import { panelListItem } from '../../../internal/layout-fragments.styles.js';
+import { blockHost, panelListItem } from '../../../internal/layout-fragments.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
   :host {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
   }
 
   [part='base'] {

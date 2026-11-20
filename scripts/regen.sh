@@ -95,6 +95,9 @@ pnpm --filter @aceshooting/lyra-ui tag-aliases
 step "manifest including registration aliases"
 pnpm manifest
 
+step "companion package manifests (lyra-docs, lyra-gen)"
+pnpm --filter @aceshooting/lyra-ui manifest:companions
+
 step "component release metadata and source annotations"
 pnpm --filter @aceshooting/lyra-ui component-metadata
 
@@ -196,7 +199,7 @@ CHANGED_PATHS=(
   packages/lyra-ui/src/internal/autoloader-manifest.ts
   packages/lyra-ui/registrations.json
   packages/lyra-ui/src/internal/tokens/palette.styles.ts
-  packages/lyra-ui/src/internal/specialist-tokens.styles.ts
+  packages/lyra-ui/src/internal/tokens/specialist-tokens.styles.ts
   packages/lyra-ui/src/events.ts
   packages/lyra-ui/src/testing/lyra-tag-event-map.ts
   packages/lyra-ui/src/custom-elements-jsx.ts

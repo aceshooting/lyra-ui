@@ -42,8 +42,7 @@ import {
 } from '../retrieval-semantic-owner.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_citation, LYRA_DEFAULT_groundingSummaryCitationsLimit, LYRA_DEFAULT_groundingSummaryConfidenceLabel, LYRA_DEFAULT_groundingSummaryCoverageLabel, LYRA_DEFAULT_groundingSummaryEmpty, LYRA_DEFAULT_groundingSummaryEvidenceHeading, LYRA_DEFAULT_groundingSummaryEvidenceSpan, LYRA_DEFAULT_groundingSummaryLabel, LYRA_DEFAULT_groundingSummarySupportedLabel, LYRA_DEFAULT_groundingSummaryUnsupportedLabel, LYRA_DEFAULT_groundingSummaryWarningsHeading } from '../../../internal/default-strings/retrieval.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_groundingSummaryCitationsLimit, LYRA_DEFAULT_groundingSummaryConfidenceLabel, LYRA_DEFAULT_groundingSummaryCoverageLabel, LYRA_DEFAULT_groundingSummaryEmpty, LYRA_DEFAULT_groundingSummaryEvidenceHeading, LYRA_DEFAULT_groundingSummaryEvidenceSpan, LYRA_DEFAULT_groundingSummaryLabel, LYRA_DEFAULT_groundingSummarySupportedLabel, LYRA_DEFAULT_groundingSummaryUnsupportedLabel, LYRA_DEFAULT_groundingSummaryWarningsHeading } from '../../../internal/default-strings/retrieval.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraGroundingSummaryEventMap {
@@ -311,11 +310,6 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    citation: LYRA_DEFAULT_citation,
-    collapse: LYRA_DEFAULT_collapse,
-    copy: LYRA_DEFAULT_copy,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
     groundingSummaryCitationsLimit: LYRA_DEFAULT_groundingSummaryCitationsLimit,
     groundingSummaryConfidenceLabel: LYRA_DEFAULT_groundingSummaryConfidenceLabel,
     groundingSummaryCoverageLabel: LYRA_DEFAULT_groundingSummaryCoverageLabel,
@@ -326,12 +320,6 @@ export class LyraGroundingSummary extends LyraElement<LyraGroundingSummaryEventM
     groundingSummarySupportedLabel: LYRA_DEFAULT_groundingSummarySupportedLabel,
     groundingSummaryUnsupportedLabel: LYRA_DEFAULT_groundingSummaryUnsupportedLabel,
     groundingSummaryWarningsHeading: LYRA_DEFAULT_groundingSummaryWarningsHeading,
-    loading: LYRA_DEFAULT_loading,
-    map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
-    open: LYRA_DEFAULT_open,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

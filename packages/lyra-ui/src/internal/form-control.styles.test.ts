@@ -6,6 +6,7 @@ import '../components/forms/color-picker/color-picker.js';
 import '../components/forms/radio/radio-group.js';
 import '../components/forms/select/select.js';
 import '../components/forms/code-editor/code-editor.js';
+import '../components/forms/emoji-picker/emoji-picker.js';
 import '../components/forms/otp-input/otp-input.js';
 import '../components/forms/checkbox-group/checkbox-group.js';
 import '../components/forms/token-input/token-input.js';
@@ -154,5 +155,28 @@ describe('the shared supporting text', () => {
     const hint = (el.querySelector('lr-input') as Element).shadowRoot!.querySelector('[part~="hint"]') as HTMLElement;
     expect(hint.getBoundingClientRect().width <= 120).to.equal(true);
     expect(getComputedStyle(hint).overflowWrap).to.equal('anywhere');
+  });
+
+  it('paints the hint and error tone of every adopting control exactly like the text field', async () => {
+    const host = await fixture<HTMLElement>(html`<div>
+      <lr-input hint="Hint" error-text="Error"></lr-input>
+      <lr-color-picker hint="Hint" error-text="Error"></lr-color-picker>
+      <lr-radio-group hint="Hint" error-text="Error"></lr-radio-group>
+      <lr-checkbox-group hint="Hint" error-text="Error"></lr-checkbox-group>
+      <lr-token-input hint="Hint" error-text="Error"></lr-token-input>
+      <lr-emoji-picker hint="Hint" error-text="Error"></lr-emoji-picker>
+    </div>`);
+    const tone = (el: Element, part: string) => {
+      const style = getComputedStyle(el.shadowRoot!.querySelector(`[part~="${part}"]`)!);
+      return [style.color, style.fontSize];
+    };
+    const [reference] = Array.from(host.children);
+    const referenceHint = tone(reference!, 'hint');
+    const referenceError = tone(reference!, 'error');
+    expect(referenceHint[0]).not.to.equal(referenceError[0]);
+    for (const control of Array.from(host.children).slice(1)) {
+      expect(tone(control, 'hint'), `${control.localName} hint`).to.deep.equal(referenceHint);
+      expect(tone(control, 'error'), `${control.localName} error`).to.deep.equal(referenceError);
+    }
   });
 });

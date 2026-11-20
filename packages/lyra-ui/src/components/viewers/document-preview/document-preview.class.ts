@@ -3,7 +3,7 @@ import { property, state } from 'lit/decorators.js';
 import { ref } from 'lit/directives/ref.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { fileIcon } from '../../../internal/icons.js';
+import { fileIcon, iconFrame } from '../../../internal/icons.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { safeDownloadHref, safeFetchUrl, safeMediaSrc } from '../../../internal/safe-url.js';
 import {
@@ -15,14 +15,9 @@ import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './document-preview.styles.js';
 import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
-import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
-import { OwnedResizeObserver } from '../../../internal/owned-observer.js';
-import { OwnedFrame } from '../../../internal/owned-timer.js';
-import { shadowFocusTarget } from '../../../internal/active-element.js';
-import { applyComposedFocusRepair, captureComposedFocusRepair } from '../../../internal/focus-navigation.js';
+import { RegionHitTargetsController } from '../../../internal/region-hit-targets.js';
 import { viewerFrameStyles } from '../viewer-frame.js';
 import {
-  highlightHitAreasOverlap,
   regionHighlightLabel,
   renderRegionHighlightActions,
   renderRegionHighlightLayer,
@@ -139,33 +134,13 @@ function projectRegionAnchor(
   }
 }
 
-const ICON_VIEW_BOX = '0 0 24 24';
-const ICON_STROKE_WIDTH = '1.75';
-
 /** A downward arrow into a tray -- the conventional "download" glyph. */
 function downloadIcon(): SVGTemplateResult {
-  return icon(svg`
+  return iconFrame(svg`
     <path d="M12 3v12"></path>
     <polyline points="7 11 12 16 17 11"></polyline>
     <path d="M4 18v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"></path>
   `);
-}
-
-function icon(paths: SVGTemplateResult): SVGTemplateResult {
-  return svg`
-    <svg
-      width="1em"
-      height="1em"
-      viewBox=${ICON_VIEW_BOX}
-      fill="none"
-      stroke="currentColor"
-      stroke-width=${ICON_STROKE_WIDTH}
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    >${paths}</svg>
-  `;
 }
 
 export interface LyraDocumentPreviewEventMap {
@@ -392,13 +367,8 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   @state() private textFetch: TextFetchState = IDLE_TEXT_FETCH;
   /** The `src` whose image failed to load; a different `src` clears the failure. */
   @state() private imageFailedSrc: string | null = null;
-  @state() private regionHitsOverlap = true;
-  private regionFrame?: Element;
-  private regionFocusRepair: ReturnType<typeof captureComposedFocusRepair> = null;
-  private readonly regionMeasurement = new OwnedFrame(this);
-  private readonly regionResize = new OwnedResizeObserver(this, (entries) => {
-    for (const { target } of entries) this.scheduleRegionMeasurement(target);
-  });
+  private readonly regionTargets = new RegionHitTargetsController(this, () =>
+    this._regionHighlights.map(({ anchor }) => anchor.rect));
   private readonly scrollRegions = new Map<Element, { child: Element | null; name: string; dispose: () => void }>();
 
   private readonly textSource = new ViewerSourceController(this, {
@@ -429,7 +399,6 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
 
   override connectedCallback(): void {
     super.connectedCallback();
-    this.regionResize.resume();
     this.announcements.connect();
     if (this.hasUpdated) this.syncScrollRegions();
     const moved = this.detached.cancel();
@@ -443,9 +412,6 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
   }
 
   override disconnectedCallback(): void {
-    this.regionResize.disconnect();
-    this.regionMeasurement.cancel();
-    this.regionFocusRepair = null;
     this.announcements.disconnect();
     this.disposeScrollRegions();
     super.disconnectedCallback();
@@ -506,15 +472,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     super.updated(changed);
     this.syncAnnouncementState();
     this.syncScrollRegions();
-    const focusRepair = this.regionFocusRepair;
-    if (changed.has('regionHitsOverlap') && focusRepair) {
-      this.regionFocusRepair = null;
-      const buttons = this.renderRoot.querySelectorAll<HTMLButtonElement>('[data-highlight-id]');
-      applyComposedFocusRepair(focusRepair, [...buttons].find(
-        (button) => button.getAttribute('data-highlight-id') === focusRepair.activeElement.getAttribute('data-highlight-id'),
-      ));
-    }
-    if (changed.has('highlights')) this.syncRegionTargets();
+    if (changed.has('highlights')) this.regionTargets.sync();
 
     const safeTextSrc = safeFetchUrl(this.src);
     const shouldFetchText =
@@ -692,8 +650,8 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
 
   private renderZoomableWrapper(content: TemplateResult): TemplateResult {
     const highlights = this._regionHighlights;
-    const showActions = highlights.length > 1 && this.regionHitsOverlap;
-    const inner = html`<div class="zoom-content" ${ref(this.bindRegionFrame)}>
+    const showActions = this.regionTargets.showActions(highlights.length);
+    const inner = html`<div class="zoom-content" ${ref(this.regionTargets.bind)}>
       ${content}${renderRegionHighlightLayer(highlights, this.activeHighlightId, !showActions,
         this.highlightActionLabel, this.activateHighlight)}
     </div>`;
@@ -703,45 +661,6 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     >${inner}</lr-pan-zoom>` : inner;
     return html`${frame}${renderRegionHighlightActions(highlights, this.highlightActionLabel,
       this.renderRoot, this.effectiveDirection === 'rtl', this.activateHighlight, showActions)}`;
-  }
-
-  private readonly bindRegionFrame = (frame: Element | undefined): void => {
-    this.regionFrame = frame;
-    this.syncRegionTargets();
-  };
-
-  private syncRegionTargets(): void {
-    this.regionResize.clear();
-    const frame = this.regionFrame;
-    if (!frame || !this.isConnected || this._regionHighlights.length < 2) {
-      this.regionMeasurement.cancel();
-      return;
-    }
-    this.regionResize.observe(frame);
-    this.scheduleRegionMeasurement(frame);
-  }
-
-  private scheduleRegionMeasurement(frame: Element): void {
-    this.regionMeasurement.schedule(() => this.updateRegionTargets(frame));
-  }
-
-  private updateRegionTargets(frame: Element): void {
-    const view = this.ownerDocument.defaultView!;
-    const min = resolveCssTokenLength(
-      view.getComputedStyle(frame).getPropertyValue('--lr-icon-button-size').trim(),
-      { host: frame },
-    ) ?? 0;
-    const overlaps = highlightHitAreasOverlap(
-      this._regionHighlights.map(({ anchor }) => [anchor.rect]),
-      { width: frame.clientWidth, height: frame.clientHeight },
-      min,
-    );
-    if (overlaps === this.regionHitsOverlap) return;
-    const focused = shadowFocusTarget(this);
-    if (focused?.localName === 'button' && focused.hasAttribute('data-highlight-id')) {
-      this.regionFocusRepair = captureComposedFocusRepair(this, focused as HTMLButtonElement);
-    }
-    this.regionHitsOverlap = overlaps;
   }
 
   private projectRegionHighlights(

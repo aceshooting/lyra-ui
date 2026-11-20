@@ -1,4 +1,4 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingShorthand, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 
@@ -68,17 +68,12 @@ export const styles = css`
   }
 
   [part='toggle']:where(:active) {
-    background: var(--lr-navigation-menu-toggle-active-bg, color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    ));
+    background: var(--lr-navigation-menu-toggle-active-bg, ${activeFill('var(--lr-color-brand-quiet)')});
     color: var(--lr-navigation-menu-toggle-active-color, var(--lr-color-text));
   }
 
   [part='toggle']:where(:focus-visible) {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
 
   [part='toggle-icon'] {

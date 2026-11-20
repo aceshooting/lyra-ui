@@ -1,12 +1,11 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRingShorthand, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { wideContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { containerHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
-    display: block;
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${containerHost}
     color: var(--lr-color-text);
   }
 
@@ -60,20 +59,19 @@ export const styles = css`
     border-color: var(--lr-video-playlist-item-hover-border-color, var(--lr-color-border-strong));
     background: var(
       --lr-video-playlist-item-hover-bg,
-      color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))
+      ${hoverFill('var(--lr-color-surface)')}
     );
   }
 
   [part='playlist-item']:active {
     background: var(
       --lr-video-playlist-item-active-bg,
-      color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      ${activeFill('var(--lr-color-surface)')}
     );
   }
 
   [part='playlist-item']:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
 
   [part='playlist-item']:where([aria-current='true']) {
@@ -88,17 +86,16 @@ export const styles = css`
   }
   [part='playlist-item']:where([aria-current='true']):hover {
     border-color: var(--lr-video-playlist-item-current-border-color, var(--lr-color-brand));
-    background: color-mix(in oklab, var(--lr-video-playlist-item-current-bg, var(--lr-color-brand-fill-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: ${hoverFill('var(--lr-video-playlist-item-current-bg, var(--lr-color-brand-fill-quiet))')};
   }
   [part='playlist-item']:where([aria-current='true']):active {
     border-color: var(--lr-video-playlist-item-current-border-color, var(--lr-color-brand));
-    background: color-mix(in oklab, var(--lr-video-playlist-item-current-bg, var(--lr-color-brand-fill-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-video-playlist-item-current-bg, var(--lr-color-brand-fill-quiet))')};
   }
 
   [part='playlist-item']:where(:disabled) {
     color: var(--lr-color-text-quiet);
-    cursor: not-allowed;
-    opacity: var(--lr-opacity-disabled);
+    ${disabledControl}
   }
 
   [part='playlist-item']:where(:disabled):hover {

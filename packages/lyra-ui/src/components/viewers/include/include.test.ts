@@ -661,6 +661,17 @@ describe('lr-include', () => {
     }
   });
 
+  it('resolves a same-page id inside the shadow root that contains the include', async () => {
+    const host = await fixture<HTMLDivElement>(html`<div></div>`);
+    const root = host.attachShadow({ mode: 'open' });
+    root.innerHTML = '<template id="shadow-only"><p class="shadow-copy">From the shadow tree</p></template><lr-include>Fallback</lr-include>';
+    const el = root.querySelector('lr-include') as LyraInclude;
+    const loaded = oneEvent(el, 'lr-load');
+    el.src = '#shadow-only';
+    await loaded;
+    expect(el.querySelector('.shadow-copy')?.textContent).to.equal('From the shadow tree');
+  });
+
   it('clones a same-page element’s children rather than the source wrapper', async () => {
     const fixtureRoot = await fixture<HTMLDivElement>(html`
       <div>

@@ -2041,7 +2041,7 @@ server-side or other handling),
 matchCountExact, activeIndex }`; `matchCountExact` is `false` once a search hits the 10,000-match
 ceiling, marking `matchCount` as a lower bound rather than an exact total),
 `lr-highlight-activate` (`detail: { highlightId }`), and `lr-text-select` (`detail: {
-text, anchor, rects }`). The terminal reports a selection inside its viewport on key or pointer release, once for unchanged endpoints.
+text, anchor, rects }`). The terminal reports a selection inside its viewport on key or pointer release, or once a keyboard or touch selection settles, once for unchanged endpoints.
 User scrolling and the jump-to-latest control emit `lr-follow-change`. Search and anchor navigation
 release following silently. Copy outcomes are announced. When an input or line exceeds the character
 limit, `part="limit"` displays the localized `terminalOutputTruncated` note until the buffer is replaced or cleared.
@@ -3835,9 +3835,9 @@ AgentEvaluationDashboardRun[] = []` (attribute: false), where each run is `{ id,
 AgentStatusValue, metrics?: Record<string, number> }`. `AgentStatusValue` accepts either a compact
 `AgentStatusKind` string or an `AgentStatusPresentation` object (`{ kind, message?, label?,
 variant?, terminal?, active? }`), preserving explicit caller labels/messages and badge variants.
-`metricId: string | null = null` — `null` and `''` select the first metric. A non-empty unmatched
-id leaves the selection empty and shows the localized `metric-unavailable` note until the id
-matches. Clear `metricId` to use the first available metric as a fallback. `label?: string` — omission localizes the heading while an
+`metricId: string | null = null` — `null`, `''` and an unmatched id select the first valid metric.
+A non-empty unmatched id also shows the localized `metric-unavailable` note until the id matches
+or is cleared. `label?: string` — omission localizes the heading while an
 explicit empty string renders no heading/name; `withoutChart: boolean = false` (attribute
 `without-chart`, reflected) suppresses the metric trend chart; `chartHeight: string =
 '220px'`; `maxRenderedRuns: number = 100` (attribute `max-rendered-runs`, clamped to 1–500) bounds

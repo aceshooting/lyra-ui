@@ -1,4 +1,4 @@
-import { focusRing } from '../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, hoverFill } from '../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 /** Shared chrome for native actions whose existing parts and event targets remain public. */
@@ -44,17 +44,16 @@ export const agentActionButtonStyles = css`
     color: var(--_lr-agent-action-selected-color, var(--lr-button-on-fill, var(--lr-color-text)));
   }
   button[data-agent-action]:where(:not(:disabled)):hover {
-    background: var(--lr-button-hover-bg, color-mix(in oklab, var(--lr-button-hover-base, var(--_lr-agent-action-hover-base, var(--_lr-agent-action-state-fill))), var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
+    background: var(--lr-button-hover-bg, ${hoverFill('var(--lr-button-hover-base, var(--_lr-agent-action-hover-base, var(--_lr-agent-action-state-fill)))')});
   }
   button[data-agent-action]:where(:not(:disabled)):active {
-    background: var(--lr-button-active-bg, color-mix(in oklab, var(--lr-button-hover-base, var(--_lr-agent-action-hover-base, var(--_lr-agent-action-state-fill))), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    background: var(--lr-button-active-bg, ${activeFill('var(--lr-button-hover-base, var(--_lr-agent-action-hover-base, var(--_lr-agent-action-state-fill)))')});
   }
   button[data-agent-action]:focus-visible {
     ${focusRing}
   }
   button[data-agent-action]:disabled {
-    cursor: not-allowed;
-    opacity: var(--lr-opacity-disabled);
+    ${disabledControl}
   }
   @media (prefers-reduced-motion: reduce) {
     button[data-agent-action] { transition: none; }

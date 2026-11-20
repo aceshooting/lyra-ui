@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'Fungola kalandriye',
+  item: 'eloko',
   comboboxLoadError: 'Tokoki te kocharger ba option.',
   comboboxSelectedOverflow: '+{n} mosusu',
   checkboxRequired: 'Tyá elembo na kati ya boîte oyo mpo okoba.',

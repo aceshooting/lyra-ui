@@ -52,6 +52,10 @@ class LyraSwitchBase extends LyraElement<LyraSwitchEventMap> {}
  * states come from the shared `CheckedFormAssociated` mixin, the same one `<lr-checkbox>` and
  * `<lr-radio>` use; this class adds only the switch's own toggle veto and rendering.
  *
+ * Deliberately no `readonly`: the native checkbox a switch stands in for has no read-only state either, so this control
+ * offers `disabled` alone (which also leaves form submission). A read-only form view renders the
+ * committed value as text, with a hidden input when it must still submit.
+ *
  * Ships an opt-in `hint`/`errorText` form-control chrome (props + matching named slots +
  * `hint`/`error` CSS parts), mirroring `<lr-select>`'s pattern for those two pieces -- left
  * unset, neither renders. Deliberately no separate top-of-field `label` prop/slot/part mirroring
@@ -292,10 +296,8 @@ export class LyraSwitch extends CheckedFormAssociated(LyraSwitchBase) {
         // which is the native `:user-invalid` timing.
         this.setInteracted(true);
         this.checked = next;
-        const connected = this.isConnected;
         const detail = { checked: this.checked, value: this.value };
         emitValueEvents(this, 'input', detail, captured => this.emit('lr-input', captured));
-        if (this.isConnected !== connected || isLiveDisabled(this)) return;
         emitValueEvents(this, 'change', detail, captured => this.emit('lr-change', captured));
       },
     });

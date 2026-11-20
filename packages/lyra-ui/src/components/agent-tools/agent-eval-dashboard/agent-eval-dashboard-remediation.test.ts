@@ -49,7 +49,7 @@ describe('lr-agent-eval-dashboard remediation', () => {
     }
   });
 
-  it('leaves every metric inactive until a stale controlled id is cleared or matched', async () => {
+  it('falls back to the first metric and notes a stale controlled id until it is cleared or matched', async () => {
     const metrics = [{ id: 'score', label: 'Score', value: 1 }];
     const runs = [{ id: 'run', label: 'Run', status: 'done', metrics: { score: 2 } }];
     const el = await fixture<LyraAgentEvalDashboard>(html`<lr-agent-eval-dashboard metric-id="deleted"
@@ -59,8 +59,8 @@ describe('lr-agent-eval-dashboard remediation', () => {
     const notice = () => el.shadowRoot!.querySelector('[part="metric-unavailable"]')?.textContent;
 
     expect(el.metricId).to.equal('deleted');
-    expect(selected()).to.equal(0);
-    expect(chart()).to.equal(0);
+    expect(selected()).to.equal(1);
+    expect(chart()).to.equal(1);
     expect(notice()).to.equal('No evaluation metric is available for deleted.');
     el.strings = { evaluationDashboardMetricUnavailable: 'Missing metric {metric}.' };
     await el.updateComplete;

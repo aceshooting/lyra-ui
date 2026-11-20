@@ -211,11 +211,15 @@ const strings: LyraLocaleStrings = {
   documentLibrarySelectDocument: '{name} ကို ရွေးရန်',
   graphQueryDeleteWithContext: '{name} ကို ဖျက်ရန်',
   statRowsInputLimit: 'အသေးစိတ် အတန်း {total} တန်းအနက် {count} တန်းကို ပြထားသည်။',
-  dataGridRowLimit: 'ပထမ {count} တန်းများကိုသာ ပြသထားသည်။',
+  dataGridRowLimit: {
+    other: 'ပထမ {count} တန်းများကိုသာ ပြသထားသည်။',
+  },
   dataGridExpandRow: '{row} ကို ချဲ့ရန်',
   dataGridFilterColumn: '{column} ကို စစ်ထုတ်ရန်',
   dataGridSelectPage: 'ဤစာမျက်နှာရှိ အတန်းအားလုံးကို ရွေးရန်',
-  tableRowLimit: 'ပထမ {count} တန်းများကိုသာ ပြသထားသည်။',
+  tableRowLimit: {
+    other: 'ပထမ {count} တန်းများကိုသာ ပြသထားသည်။',
+  },
   tableAdditionalColumns: 'နောက်ထပ် ကော်လံများ',
   treeLimit: 'ပထမအချက် {count} ခုကိုသာ ပြသထားသည်။',
   treeDefaultLabel: 'သစ်ပင်ပုံစံ',

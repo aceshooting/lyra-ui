@@ -550,6 +550,7 @@ const forcedColorTokens = css`
       --lr-color-text-quiet: CanvasText;
       --lr-color-border: ButtonText;
       --lr-color-border-subtle: ButtonText;
+      --lr-color-border-strong: ButtonText;
       --lr-color-brand: LinkText;
       --lr-color-brand-quiet: Canvas;
       --lr-color-success: LinkText;

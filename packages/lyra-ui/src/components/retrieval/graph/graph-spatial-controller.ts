@@ -5,7 +5,8 @@ import { activeElementIn } from '../../../internal/active-element.js';
 import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { admitGraphNodeRenderer, GraphNodeRendererError, type LyraGraphNodeMesh, type LyraGraphNodeRenderer, type LyraGraphNodeRenderErrorDetail } from './graph-node-renderer.js';
 import { yieldViewerTask } from '../../../internal/resource-loader.js';
-import { composedParentElement, isAccessibilityVisible } from '../../../internal/accessibility-visibility.js';
+import { isAccessibilityVisible } from '../../../internal/accessibility-visibility.js';
+import { observeAncestorFences } from '../../../internal/engine-admission.js';
 import { Engine3dSelection, engine3dFallbackNotice, type Engine3dFallbackDetail, type Engine3dFallbackReason, type Engine3dMessageKey } from '../../../internal/engine-3d.js';
 import { GraphEngineAdapter, type GraphEngineAdapterServices, type GraphComponentEngine } from './graph-engine-adapter.js';
 import { graphEngineColumnScene, type GraphEngineColumns, type GraphEngineColumnScene } from './graph-engine-columns.js';
@@ -158,7 +159,7 @@ export class GraphSpatialController {
   private paint?: GraphBuiltin3dPaint;
   private resize?: ResizeObserver;
   private intersection?: IntersectionObserver;
-  private eligibility?: MutationObserver;
+  private releaseFences?: () => void;
   private visible = true;
   /** False between observing a surface and its first intersection report. */
   private visibilityReported = true;
@@ -217,7 +218,7 @@ export class GraphSpatialController {
     this.meshAbort?.abort(); this.meshAbort = undefined; this.meshNext = undefined;
     this.meshEpoch++; if (this.meshPending || this.meshUnavailable) { this.meshPending = false; this.meshKey = undefined; this.meshUnavailable = false; }
     this.meshAppliedEngine = undefined; this.glowEpoch++; this.glowEngine = undefined; this.glowRequested = undefined;
-    this.eligibility?.disconnect(); this.eligibility = undefined;
+    this.releaseFences?.(); this.releaseFences = undefined;
     this.engineDataKey = this.enginePaintKey = undefined; this.engineStyleKey = this.engineSizeKey = ''; this.stateInputs = undefined; this.edgeRowsKey = undefined; this.adapter.close();
   }
   private engineOperation(engine: GraphComponentEngine, operation: (current: () => boolean) => void): boolean {
@@ -248,24 +249,18 @@ export class GraphSpatialController {
     if (!surface || this.engine || this.enginePending || !this.host.isConnected || this.host.view !== '3d' || this.selection.renderer !== 'webgl') return;
     if (!this.visible || !isAccessibilityVisible(surface)) {
       const view = this.host.ownerDocument.defaultView;
-      if (!this.eligibility && view?.MutationObserver) {
+      if (!this.releaseFences && view?.MutationObserver) {
         const epoch = this.engineEpoch;
-        this.eligibility = new view.MutationObserver(() => {
+        // Observe only the pending surface's composed author fences, never a document subtree.
+        this.releaseFences = observeAncestorFences(surface, () => {
           if (epoch !== this.engineEpoch || this.engineSurface !== surface || !this.host.isConnected) return;
           if (!view.IntersectionObserver) this.visible = surface.clientWidth > 0 && surface.clientHeight > 0;
           this.ensureEngine();
         });
-        // Observe only the pending surface's composed author fences, never a document subtree.
-        let ancestor: Element | null = surface;
-        let depth = 0;
-        while (ancestor && depth++ <= 256) {
-          this.eligibility.observe(ancestor, { attributes: true, attributeFilter: ['aria-hidden', 'inert', 'hidden', 'style', 'class', 'open'] });
-          ancestor = composedParentElement(ancestor);
-        }
       }
       return;
     }
-    this.eligibility?.disconnect(); this.eligibility = undefined;
+    this.releaseFences?.(); this.releaseFences = undefined;
     this.enginePending = true; const epoch = ++this.engineEpoch, ownerDocument = this.host.ownerDocument;
     const current = () => epoch === this.engineEpoch && this.host.ownerDocument === ownerDocument && this.host.isConnected;
     this.options.afterUpdate(() => this.options.repaint(), 'graph-engine-loading');
@@ -318,19 +313,13 @@ export class GraphSpatialController {
 
   private observeMountedEligibility(surface: HTMLElement): void {
     const view = this.host.ownerDocument.defaultView;
-    if (!view?.MutationObserver || this.eligibility) return;
+    if (!view?.MutationObserver || this.releaseFences) return;
     const epoch = this.engineEpoch;
-    this.eligibility = new view.MutationObserver(() => {
+    this.releaseFences = observeAncestorFences(surface, () => {
       if (epoch !== this.engineEpoch || this.engineSurface !== surface || !this.host.isConnected) return;
       if (!view.IntersectionObserver) this.visible = surface.clientWidth > 0 && surface.clientHeight > 0;
       this.syncVisibility();
     });
-    let ancestor: Element | null = surface;
-    let depth = 0;
-    while (ancestor && depth++ <= 256) {
-      this.eligibility.observe(ancestor, { attributes: true, attributeFilter: ['aria-hidden', 'inert', 'hidden', 'style', 'class', 'open'] });
-      ancestor = composedParentElement(ancestor);
-    }
   }
 
   private rgba(value: string): readonly [number, number, number, number] {

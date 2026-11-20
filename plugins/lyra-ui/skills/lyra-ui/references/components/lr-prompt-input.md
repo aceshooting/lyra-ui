@@ -108,7 +108,8 @@ remainingFiles, remainingTotalSize }`), `lr-attachment-remove` (`{ attachmentId 
 (`{ items, reason, itemId }`), `lr-send-now` (`{ item }`), `lr-camera-request`,
 `lr-audio-request`, `lr-attachment-retry` (`{ attachmentId }`), and cancelable
 `lr-attachment-preview-request` (`{ attachmentId, name, mimeType, src }`). Child events are stopped
-and re-emitted from `lr-prompt-input`; all composed interactions are suppressed while `disabled`,
+and re-emitted from `lr-prompt-input`; the embedded model and voice pickers' own `lr-input`,
+`lr-change-request` and popup lifecycle events stay inside it; all composed interactions are suppressed while `disabled`,
 including a child event dispatched in the same turn that disables the host. The one deliberate
 exception is the built-in voice picker's preview pair: its cancelable `lr-preview-request`
 (`{ voiceId, previewUrl? }`) and `lr-preview-change` (`{ voiceId }`) reach the host unchanged, so a

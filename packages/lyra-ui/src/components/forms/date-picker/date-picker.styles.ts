@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { formControlPresetButton } from '../../../internal/form-control/preset-button.styles.js';
 
@@ -22,8 +22,8 @@ export const styles = css`
       )
     );
     --_lr-preset-selected-pressed-image: linear-gradient(
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active)),
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      ${activeFill('transparent')},
+      ${activeFill('transparent')}
     );
     --_lr-preset-selected-pressed-border-color: var(
       --lr-date-picker-preset-selected-border-color,
@@ -169,11 +169,7 @@ export const styles = css`
   :where([part="next"]):active:not(:disabled) {
     background: var(
       --lr-date-picker-nav-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-date-picker-nav-hover-bg, var(--lr-color-brand-quiet)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-date-picker-nav-hover-bg, var(--lr-color-brand-quiet))')}
     );
   }
   [part="previous"]:focus-visible,
@@ -269,11 +265,7 @@ export const styles = css`
   :where([part~="day"]):active:not(:disabled) {
     background: var(
       --lr-date-picker-day-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-date-picker-day-hover-bg, var(--lr-color-brand-quiet)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-date-picker-day-hover-bg, var(--lr-color-brand-quiet))')}
     );
   }
   [part~="day-outside"] {
@@ -311,15 +303,15 @@ export const styles = css`
   :where([part~="day-range-inner"], [part~="day-range-preview"]):hover:not(:disabled) {
     background-color: var(--lr-date-picker-day-hover-bg, var(--_lr-date-picker-range-fill));
     background-image: linear-gradient(
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover)),
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover))
+      ${hoverFill('transparent')},
+      ${hoverFill('transparent')}
     );
   }
   :where([part~="day-range-inner"], [part~="day-range-preview"]):active:not(:disabled) {
     background-color: var(--lr-date-picker-day-active-bg, var(--lr-date-picker-day-hover-bg, var(--_lr-date-picker-range-fill)));
     background-image: linear-gradient(
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active)),
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      ${activeFill('transparent')},
+      ${activeFill('transparent')}
     );
   }
   [part~="day-selected"],
@@ -339,15 +331,15 @@ export const styles = css`
   :where([part~="day-selected"], [part~="day-range-start"], [part~="day-range-end"]):hover:not(:disabled) {
     background-color: var(--lr-date-picker-day-hover-bg, var(--lr-date-picker-selected-bg, var(--lr-color-brand)));
     background-image: linear-gradient(
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover)),
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover))
+      ${hoverFill('transparent')},
+      ${hoverFill('transparent')}
     );
   }
   :where([part~="day-selected"], [part~="day-range-start"], [part~="day-range-end"]):active:not(:disabled) {
     background-color: var(--lr-date-picker-day-active-bg, var(--lr-date-picker-day-hover-bg, var(--lr-date-picker-selected-bg, var(--lr-color-brand))));
     background-image: linear-gradient(
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active)),
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      ${activeFill('transparent')},
+      ${activeFill('transparent')}
     );
   }
   :host([readonly]) [part~="day"] {
@@ -393,11 +385,7 @@ export const styles = css`
   :where([part~="view-item"]):active:not(:disabled) {
     background: var(
       --lr-date-picker-view-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-date-picker-view-hover-bg, var(--lr-color-brand-quiet)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-date-picker-view-hover-bg, var(--lr-color-brand-quiet))')}
     );
   }
   :where([part~="view-item"]):focus-visible {
@@ -411,15 +399,15 @@ export const styles = css`
   :where([part~="view-item-selected"]):hover:not(:disabled) {
     background-color: var(--lr-date-picker-view-hover-bg, var(--lr-date-picker-view-selected-bg, var(--lr-color-brand)));
     background-image: linear-gradient(
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover)),
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover))
+      ${hoverFill('transparent')},
+      ${hoverFill('transparent')}
     );
   }
   :where([part~="view-item-selected"]):active:not(:disabled) {
     background-color: var(--lr-date-picker-view-active-bg, var(--lr-date-picker-view-hover-bg, var(--lr-date-picker-view-selected-bg, var(--lr-color-brand))));
     background-image: linear-gradient(
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active)),
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      ${activeFill('transparent')},
+      ${activeFill('transparent')}
     );
   }
   [part~="view-item-today"] {

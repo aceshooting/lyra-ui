@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -50,8 +50,7 @@ export const styles = css`
      fieldset-disabled composer's card at full opacity with a normal cursor while effectiveDisabled
      correctly gated the textarea and button. */
   :host(:disabled) [part='base'] {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
 
   /* Same [hidden]-tracked-in-JS shape as [part='chips'] below, for the same reason -- a literal
@@ -235,14 +234,14 @@ export const styles = css`
   :where([part='action-button']):hover:where(:not(:disabled)) {
     background: var(
       --lr-chat-composer-action-hover-bg,
-      color-mix(in oklab, var(--_lr-composer-action-bg), var(--lr-color-mix-partner) var(--lr-color-mix-hover))
+      ${hoverFill('var(--_lr-composer-action-bg)')}
     );
     color: var(--lr-chat-composer-action-hover-color, var(--_lr-composer-action-color));
   }
   :where([part='action-button']):active:where(:not(:disabled)) {
     background: var(
       --lr-chat-composer-action-active-bg,
-      color-mix(in oklab, var(--_lr-composer-action-bg), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      ${activeFill('var(--_lr-composer-action-bg)')}
     );
     color: var(--lr-chat-composer-action-active-color, var(--_lr-composer-action-color));
   }
@@ -252,8 +251,7 @@ export const styles = css`
   [part='action-button']:disabled {
     background: var(--lr-chat-composer-action-disabled-bg, var(--_lr-composer-action-bg));
     color: var(--lr-chat-composer-action-disabled-color, var(--_lr-composer-action-color));
-    cursor: not-allowed;
-    opacity: var(--lr-opacity-disabled);
+    ${disabledControl}
   }
   [part='send-glyph'],
   [part='stop-glyph'] {

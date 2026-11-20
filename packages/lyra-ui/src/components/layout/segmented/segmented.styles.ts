@@ -1,5 +1,5 @@
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { visuallyHidden } from '../../../internal/a11y.js';
 import { formControlTextWrap } from '../../../internal/form-control.styles.js';
@@ -92,8 +92,7 @@ export const styles = css`
     max-inline-size: var(--lr-size-2-5rem);
   }
   [part="segment"][aria-disabled="true"] {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   /* Reads its own prop, not the --lr-color-text token the selected state shares, so recoloring
      the selected pill never repaints hovered-unselected segments. :where() zeroes the wrapped
@@ -117,11 +116,7 @@ export const styles = css`
     ) {
     background: var(
       --lr-segmented-active-bg,
-      color-mix(
-        in oklab,
-        transparent,
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('transparent')}
     );
     color: var(
       --lr-segmented-active-color,

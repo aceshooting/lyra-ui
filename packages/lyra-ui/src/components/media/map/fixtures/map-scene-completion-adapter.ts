@@ -1,7 +1,7 @@
-import type { MapSceneSessionBacking, MapSceneSessionState, SceneCompletedFrame, SceneTargetFact } from '../../../internal/map-scene-contract.js';
-import type { createMapSceneOwner } from './map-scene-owner.js';
+import type { MapSceneSessionBacking, MapSceneSessionState, SceneCompletedFrame, SceneTargetFact } from '../../../../internal/map-scene-contract.js';
+import type { createMapSceneOwner } from '../map-scene-owner.js';
 import type { SceneCompletionCameraFacts, SceneCompletionHost, SceneCompletionInput, SceneCompletionPort,
-  SceneCompletionTarget, SceneRenderPublication } from './map-scene-render-contract.js';
+  SceneCompletionTarget, SceneRenderPublication } from '../map-scene-render-contract.js';
 
 type SceneOwner = ReturnType<typeof createMapSceneOwner>;
 interface HostBinding {

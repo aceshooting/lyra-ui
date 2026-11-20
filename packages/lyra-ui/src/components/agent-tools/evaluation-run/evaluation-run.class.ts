@@ -36,7 +36,7 @@ import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/he
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_evaluationRunDetailsLoadError, LYRA_DEFAULT_evaluationRunExampleCancelledAnnounce, LYRA_DEFAULT_evaluationRunExampleCompletedAnnounce, LYRA_DEFAULT_evaluationRunExampleFailedAnnounce, LYRA_DEFAULT_evaluationRunExampleLabel, LYRA_DEFAULT_evaluationRunExampleLimit, LYRA_DEFAULT_evaluationRunExampleStartedAnnounce, LYRA_DEFAULT_evaluationRunExampleWaitingApprovalAnnounce, LYRA_DEFAULT_evaluationRunExampleWaitingInputAnnounce, LYRA_DEFAULT_evaluationRunFailedCount, LYRA_DEFAULT_evaluationRunGroundingHeading, LYRA_DEFAULT_evaluationRunInputHeading, LYRA_DEFAULT_evaluationRunLabel, LYRA_DEFAULT_evaluationRunOutputHeading, LYRA_DEFAULT_evaluationRunProgressLabel, LYRA_DEFAULT_evaluationRunProgressSummary, LYRA_DEFAULT_evaluationRunRunningCount, LYRA_DEFAULT_evaluationRunToolTraceHeading, LYRA_DEFAULT_taskListStepIncompleteAnnounce } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_noData, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -231,10 +231,6 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
     agentRunStatusQueued: LYRA_DEFAULT_agentRunStatusQueued,
     agentRunStatusWaitingApproval: LYRA_DEFAULT_agentRunStatusWaitingApproval,
     agentRunStatusWaitingInput: LYRA_DEFAULT_agentRunStatusWaitingInput,
-    collapse: LYRA_DEFAULT_collapse,
-    copy: LYRA_DEFAULT_copy,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
     evaluationRunDetailsLoadError: LYRA_DEFAULT_evaluationRunDetailsLoadError,
     evaluationRunExampleCancelledAnnounce: LYRA_DEFAULT_evaluationRunExampleCancelledAnnounce,
     evaluationRunExampleCompletedAnnounce: LYRA_DEFAULT_evaluationRunExampleCompletedAnnounce,
@@ -253,9 +249,7 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
     evaluationRunProgressSummary: LYRA_DEFAULT_evaluationRunProgressSummary,
     evaluationRunRunningCount: LYRA_DEFAULT_evaluationRunRunningCount,
     evaluationRunToolTraceHeading: LYRA_DEFAULT_evaluationRunToolTraceHeading,
-    map: LYRA_DEFAULT_map,
     noData: LYRA_DEFAULT_noData,
-    open: LYRA_DEFAULT_open,
     statusError: LYRA_DEFAULT_statusError,
     statusRunning: LYRA_DEFAULT_statusRunning,
     taskListStepIncompleteAnnounce: LYRA_DEFAULT_taskListStepIncompleteAnnounce,

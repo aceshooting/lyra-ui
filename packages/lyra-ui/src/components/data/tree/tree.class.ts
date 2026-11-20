@@ -1,4 +1,4 @@
-import { applyHierarchySourceEffects, captureHierarchySourceEffects } from '../../../internal/hierarchy-summary-source.js';
+import { applyHierarchySourceEffects, captureHierarchySourceEffects, hierarchySourceSummary } from '../../../internal/hierarchy-summary-source.js';
 import { OwnedMutationObserver } from '../../../internal/owned-observer.js';
 import { readOwnArrayLength, readOwnDataValue } from '../../../internal/data-descriptors.js';
 import type { LyraHierarchySource, LyraHierarchyQuery, LyraHierarchyRow } from '../../../data-sources.js';
@@ -558,11 +558,8 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
   }
 
   private sourceSummary(): string {
-    const projection = this.hierarchy.projection;
-    return projection ? this.localize('treeSourceSummary', undefined, {
-      visible: this.formatLocaleNumber(projection.rows.count),
-      total: this.formatLocaleNumber(projection.total),
-    }) : '';
+    const summary = hierarchySourceSummary(this.hierarchy.projection, this.effectiveLocale);
+    return summary ? this.localize('treeSourceSummary', undefined, summary) : '';
   }
 
 

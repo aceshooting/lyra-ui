@@ -80,7 +80,8 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "scope": "shared",
         "values": {
           "light": "var(--_lr-glass-qualified-border-strong, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #919191)))",
-          "dark": "var(--_lr-glass-qualified-border-strong, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #646464)))"
+          "dark": "var(--_lr-glass-qualified-border-strong, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #646464)))",
+          "forcedColors": "ButtonText"
         }
       },
       {

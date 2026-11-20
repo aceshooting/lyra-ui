@@ -1,4 +1,4 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRingShorthand, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -72,20 +72,14 @@ export const styles = css`
     );
     background: var(
       --lr-sequence-playback-play-button-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-color-surface),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-color-surface)')}
     );
   }
   [part="play-button"]:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   [part="play-button"]:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   [part="slider"] {
     accent-color: var(--lr-color-brand);
@@ -99,25 +93,15 @@ export const styles = css`
      multiplying every channel of the subtree: it did nothing to a pure white or pure black accent,
      and it dimmed/lit the input's own focus ring along with the track. */
   :where([part="slider"]):hover:where(:not(:disabled)) {
-    accent-color: color-mix(
-      in oklab,
-      var(--lr-color-brand),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
+    accent-color: ${hoverFill('var(--lr-color-brand)')};
   }
   :where([part="slider"]):active:where(:not(:disabled)) {
-    accent-color: color-mix(
-      in oklab,
-      var(--lr-color-brand),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    accent-color: ${activeFill('var(--lr-color-brand)')};
   }
   [part="slider"]:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   [part="slider"]:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
 `;

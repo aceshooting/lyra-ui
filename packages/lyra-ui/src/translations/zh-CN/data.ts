@@ -211,11 +211,15 @@ const strings: LyraLocaleStrings = {
   documentLibrarySelectDocument: '选择{name}',
   graphQueryDeleteWithContext: '删除{name}',
   statRowsInputLimit: '共 {total} 行明细，当前显示 {count} 行。',
-  dataGridRowLimit: '仅显示前 {count} 行。',
+  dataGridRowLimit: {
+    other: '仅显示前 {count} 行。',
+  },
   dataGridExpandRow: '展开{row}',
   dataGridFilterColumn: '筛选{column}',
   dataGridSelectPage: '选择此页上的所有行',
-  tableRowLimit: '仅显示前 {count} 行。',
+  tableRowLimit: {
+    other: '仅显示前 {count} 行。',
+  },
   tableAdditionalColumns: '附加列',
   treeLimit: '仅显示前 {count} 项。',
   treeDefaultLabel: '树',

@@ -5,6 +5,7 @@ import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
 import { glassIndependentRootStyles } from '../../../internal/glass-independent-root.styles.js';
 import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
+import { activeFill, focusRingInwardOffset } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   :host {
@@ -31,14 +32,7 @@ export const styles = css`
        dialog's own -background-hover default) so that an ancestor override of just the hover tier
        still shapes the press mix -- a cross-reference to a DIFFERENT public token than the one being
        defined here, so it introduces no loop. */
-    --_lr-dialog-close-background-active: color-mix(
-      in oklab,
-      var(
-        --lr-icon-button-bg-hover,
-        var(--lr-color-brand-quiet)
-      ),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    --_lr-dialog-close-background-active: ${activeFill('var( --lr-icon-button-bg-hover, var(--lr-color-brand-quiet) )')};
     --_lr-dialog-close-color: var(--lr-color-text-quiet);
     /* Restated for the press state because keyboard activation raises :active with no :hover. */
     --_lr-dialog-close-color-hover: var(--lr-color-brand);
@@ -228,8 +222,7 @@ export const styles = css`
      rule below never looked like the only keyboard-path styling in the file; the close button is a
      composed lr-icon-button now and brings its own hover with it.) */
   [part="body"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
+    ${focusRingInwardOffset}
   }
   [part="footer"] {
     display: flex;

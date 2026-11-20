@@ -289,6 +289,7 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
       segment.omittedTokens != null
         ? this.localize('contextInspectorTruncatedCount', undefined, {
             count: this.formatLocaleNumber(finiteCount(segment.omittedTokens), { maximumFractionDigits: 0 }),
+            pluralCount: finiteCount(segment.omittedTokens),
           })
         : this.localize('contextInspectorTruncated');
     return html`<div part="truncation-boundary" role="note">${text}</div>`;
@@ -297,6 +298,7 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
   private renderSegment(segment: ContextInspectorSegment, citationIndex: number): TemplateResult {
     const tokensText = this.localize('contextInspectorSegmentTokens', undefined, {
       tokens: this.formatLocaleNumber(finiteCount(segment.tokens), { maximumFractionDigits: 0 }),
+      pluralCount: finiteCount(segment.tokens),
     });
     return html`
       <div part="segment" role="listitem">

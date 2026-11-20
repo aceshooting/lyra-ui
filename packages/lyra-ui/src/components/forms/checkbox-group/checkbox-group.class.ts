@@ -36,6 +36,7 @@ import {
   readStringArrayFormDataState,
   setFormOwner,
   type FormOwnerValue,
+  isLiveDisabled,
 } from '../../../internal/form-associated.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
@@ -84,6 +85,10 @@ export type CheckboxGroupOrientation = LyraOrientation;
  * its own hint/error/required descriptions, preserving external guidance across the shadow
  * boundary. Host `aria-labelledby` is deliberately not projected: the native legend supplies the
  * group's visible label relationship.
+ *
+ * Deliberately no `readonly`: the native checkbox set has no read-only state either, so this control
+ * offers `disabled` alone (which also leaves form submission). A read-only form view renders the
+ * committed value as text, with a hidden input when it must still submit.
  *
  * @customElement lr-checkbox-group
  * @slot - `<lr-checkbox>` children.
@@ -535,7 +540,7 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
     // what makes that interception reliable). Stopping propagation does not clear the canceled
     // flag, so the veto this handler may apply still reaches the child that dispatched it.
     event.stopImmediatePropagation();
-    if (this.liveDisabled) {
+    if (isLiveDisabled(this)) {
       event.preventDefault();
       return;
     }
@@ -557,7 +562,7 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
       // guard -- a listener that resolved the request by assigning `value` leaves
       // `defaultPrevented` false while still suppressing the commit.
       commit: () => {
-        allowed = !this.liveDisabled;
+        allowed = !isLiveDisabled(this);
       },
     });
     if (allowed) this.previousValues.set(option, previousValue);
@@ -850,10 +855,6 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
     this.requestUpdate();
   }
 
-  /** Synchronous disabled truth, including a fieldset cascade not yet reflected by callbacks. */
-  private get liveDisabled(): boolean {
-    return this.effectiveDisabled || this.matches(':disabled');
-  }
 
   private firstEnabledBox(): LyraCheckbox | undefined {
     return this.boxes.find((box) => !box.effectiveDisabled && !box.matches(':disabled'));
@@ -861,7 +862,7 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
 
   /** Moves focus to the first enabled checkbox. */
   override focus(options?: FocusOptions): void {
-    if (this.liveDisabled) return;
+    if (isLiveDisabled(this)) return;
     this.firstEnabledBox()?.focus(options);
   }
 
@@ -872,7 +873,7 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
 
   /** Activates the first enabled checkbox, matching native `click()` rather than acting as focus. */
   override click(): void {
-    if (this.liveDisabled) return;
+    if (isLiveDisabled(this)) return;
     this.firstEnabledBox()?.click();
   }
 

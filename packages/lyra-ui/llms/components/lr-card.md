@@ -140,7 +140,7 @@ card given only a resting shadow keeps that exact shadow on hover.
 <lr-card appearance="outlined" href="/reports/42" with-media with-header>
   <img slot="image" src="/thumb.png" alt="" />
   <span slot="header">Q3 Report</span>
-  <span slot="header-actions"><lr-chip tone="success">Ready</lr-chip></span>
+  <span slot="header-actions"><lr-chip variant="success">Ready</lr-chip></span>
   Revenue up 12% quarter-over-quarter.
   <span slot="footer">Updated 2 days ago</span>
   <button slot="footer-actions" type="button">Download</button>

@@ -14,7 +14,12 @@ const POP_DIRECTIONAL_ISOLATE = '\u2069';
 
 /** Converts an untyped bucket count to a bounded, non-negative integer. */
 export function normalizeHistogramBinCount(binCount: unknown): number {
-  const numeric = typeof binCount === 'number' ? binCount : Number(binCount);
+  let numeric: number;
+  try {
+    numeric = typeof binCount === 'number' ? binCount : Number(binCount);
+  } catch {
+    return 0; // an object whose conversion throws is not a count
+  }
   if (!Number.isFinite(numeric)) return 0;
   return Math.min(MAX_HISTOGRAM_BINS, Math.max(0, Math.floor(numeric)));
 }

@@ -23,3 +23,16 @@ export function resolveHeadingLevel(value: string): LyraResolvedHeadingLevel | u
       return '3';
   }
 }
+
+/**
+ * Resolves a card title's level from its `heading-level` token, which wins whenever it is set
+ * (`none` included), and otherwise from the host's `aria-level` attribute, validated to 1-6 with
+ * the level-three fallback. `undefined` means the title renders without heading semantics.
+ */
+export function resolveTitleHeadingLevel(
+  headingLevel: string | null | undefined,
+  hostAriaLevel: string | null,
+): LyraResolvedHeadingLevel | undefined {
+  if (typeof headingLevel === 'string' && headingLevel !== '') return resolveHeadingLevel(headingLevel);
+  return resolveHeadingLevel(hostAriaLevel || '3') ?? '3';
+}

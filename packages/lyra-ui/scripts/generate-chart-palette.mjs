@@ -22,7 +22,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
-const specialistTokensPath = join(packageDir, 'src', 'internal', 'specialist-tokens.styles.ts');
+const specialistTokensPath = join(packageDir, 'src', 'internal', 'tokens', 'specialist-tokens.styles.ts');
 
 const SERIES = 8;
 const NON_TEXT_CONTRAST = 3;
@@ -148,7 +148,7 @@ function solve(surface, mode) {
 }
 
 /**
- * Rewrites the matching opt-in fallbacks in `src/internal/specialist-tokens.styles.ts` so they
+ * Rewrites the matching opt-in fallbacks in `src/internal/tokens/specialist-tokens.styles.ts` so they
  * stay byte-identical to `theme.css`.
  *
  * That equality is a real contract, not tidiness: `theme.css` is optional, and a consumer who never

@@ -40,7 +40,7 @@ Generation is deterministic and produces:
   `theme-scopes` migration rule embeds.
 
 The generator also compares every canonical name and mode value with the per-mode token records
-(`tokens.styles.ts`, `tokens/palette.styles.ts`, `specialist-tokens.styles.ts`) that the palette and
+(`tokens.styles.ts`, `tokens/palette.styles.ts`, `tokens/specialist-tokens.styles.ts`) that the palette and
 contrast tooling read, and checks that their names partition exactly into the layer, the host-local
 set and the specialist palettes. It fails on either an undocumented token or metadata with no
 implementation. Update the JSON first, regenerate, then make the records agree. Generated files are

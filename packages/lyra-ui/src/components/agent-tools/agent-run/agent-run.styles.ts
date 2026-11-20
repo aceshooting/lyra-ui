@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { activeFill } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   :host {
@@ -166,14 +167,14 @@ export const styles = css`
     color: var(--lr-color-danger);
   }
   [part="cancel-button"]:active {
-    border-color: color-mix(in oklab, var(--lr-color-danger), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    border-color: ${activeFill('var(--lr-color-danger)')};
   }
   [part="retry-button"]:hover {
     border-color: var(--lr-color-brand);
     color: var(--lr-color-brand);
   }
   [part="retry-button"]:active {
-    border-color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    border-color: ${activeFill('var(--lr-color-brand)')};
   }
   [part="body"] {
     display: flex;

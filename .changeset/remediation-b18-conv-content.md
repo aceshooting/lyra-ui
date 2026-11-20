@@ -1,5 +1,5 @@
 ---
-'@aceshooting/lyra-ui': major
+'@aceshooting/lyra-ui': minor
 ---
 
 Markdown routes unmodified primary link activations. Applications that handle modified or previously canceled clicks can listen for those clicks directly.
@@ -21,7 +21,7 @@ Markdown reads initial script content through its first render and preserves exp
 Collapsed code blocks paint a single lower border, and short language labels remain legible beside long filenames.
 Markdown applies link-target protections to authored forms.
 Markdown limits explicit math sizes to 20 em and macro expansion to 1,000.
-Code block disclosures keep a stable accessible name and expose state through `aria-expanded`. Replace `expandCode` and `collapseCode` string overrides with `codeBlockToggle`.
+Code block disclosures expose their state through `aria-expanded`. Supply a `codeBlockToggle` string to give them one stable accessible name; `expandCode` and `collapseCode` keep working otherwise.
 Code block disclosure requests respect synchronous writes to `collapsed` and stop if the listener removes the disclosure.
 Code block headers track slotted controls in the code block's current document.
 Style Markdown's minimum content size and the resting, hovered, and pressed backgrounds of fenced copy buttons, code block disclosures, and line buttons.

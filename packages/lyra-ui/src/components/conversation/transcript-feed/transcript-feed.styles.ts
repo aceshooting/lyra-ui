@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { srOnly } from '../../../internal/a11y.js';
 
@@ -115,7 +115,7 @@ export const styles = [
       background: var(--lr-transcript-feed-jump-hover-bg, var(--lr-color-brand-quiet));
     }
     [part='jump-button']:active {
-      background: color-mix(in oklab, var(--lr-transcript-feed-jump-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+      background: ${activeFill('var(--lr-transcript-feed-jump-hover-bg, var(--lr-color-brand-quiet))')};
     }
     @media (prefers-reduced-motion: reduce) {
       [part='jump-button'] { transition: none; }

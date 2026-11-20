@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'Mepee kalenda',
+  item: 'ihe',
   comboboxLoadError: 'Enweghị ike ibunye nhọrọ.',
   comboboxSelectedOverflow: '+{n} ọzọ',
   checkboxRequired: 'Biko kaa igbe a ma ịchọrọ ịga n’ihu.',

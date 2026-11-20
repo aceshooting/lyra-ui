@@ -1,7 +1,7 @@
 import { expect } from '@open-wc/testing';
 import * as fc from 'fast-check';
 import { propertyRuns } from '../../test/property-options.js';
-import { byteFormat, formatFileSize } from './bytes.js';
+import { byteFormat, byteUnitIndex, formatFileSize } from './bytes.js';
 
 /** Reference ladder: divide by 1024 until the value fits or the terabyte rung is reached. */
 function naiveFileSize(bytes: number): string {
@@ -33,8 +33,10 @@ it('byteFormat picks the rung the magnitude reaches and scales back to the input
   fc.assert(fc.property(values, steps, (value, step) => {
     const { index, amount } = byteFormat(value, 'byte', 'short', step, 1);
     const magnitude = Math.abs(value);
-    expect(index === 0 || magnitude >= step ** index, 'reached rung').to.equal(true);
-    expect(index === 5 || magnitude < step ** (index + 1), 'next rung not reached').to.equal(true);
+    // A magnitude just under a boundary may round up onto the next rung, never further.
+    const reached = byteUnitIndex(value, step);
+    expect(index === reached || index === reached + 1, 'reached rung or rounded-up neighbour').to.equal(true);
+    expect(Math.abs(amount) < step || index === 5, 'amount never displays a full step').to.equal(true);
     expect(Math.abs(amount * step ** index - value) <= magnitude * 1e-12, 'scaled amount').to.equal(true);
   }), propertyRuns());
 });

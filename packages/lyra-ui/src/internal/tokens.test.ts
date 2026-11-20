@@ -4,7 +4,7 @@ import { setColorScheme, setForcedColors } from '../../test/wtr-media.js';
 import { forceCoarsePointer } from '../../test/coarse-pointer-media.js';
 import { tag } from './prefix.js';
 // The per-mode records: read as text only, to check the values they mirror.
-import { specialistTokens } from './specialist-tokens.styles.js';
+import { specialistTokens } from './tokens/specialist-tokens.styles.js';
 import { specialistTokens as specialistHostTokens } from './specialist-host-tokens.styles.js';
 import { hostTokens } from './host-tokens.styles.js';
 import { LyraElement } from './lyra-element.js';

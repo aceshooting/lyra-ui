@@ -851,3 +851,19 @@ it('leaves non-slider keys and boundary presses to the browser without emitting'
   expect(el.position).to.equal(100);
   expect(emitted).to.deep.equal([]);
 });
+
+it('drops a pending keyboard change when the element is removed before keyup', async () => {
+  const host = await fixture<HTMLDivElement>(html`<div><lr-image-comparer position="40"></lr-image-comparer></div>`);
+  const el = host.querySelector('lr-image-comparer') as LyraImageComparer;
+  const input = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  const changes: number[] = [];
+  el.addEventListener('lr-change', (event) => changes.push((event as CustomEvent<{ value: number }>).detail.value));
+  input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+  await el.updateComplete;
+  el.remove();
+  host.append(el);
+  await el.updateComplete;
+  const reattached = el.shadowRoot!.querySelector('[part="input"]') as HTMLInputElement;
+  reattached.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+  expect(changes).to.deep.equal([]);
+});

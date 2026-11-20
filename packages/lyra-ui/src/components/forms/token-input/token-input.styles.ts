@@ -1,20 +1,13 @@
 import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
-import {
-  formControlLabelTypography,
-  formControlTextWrap,
-  formControlFocusHalo,
-  formControlRequiredMarker,
-  formControlLabelDisplay,
-} from '../../../internal/form-control.styles.js';
+import { formControlFocusHalo, formControlLabelDisplay, formControlLabelTypography, formControlRequiredMarker, formControlSupportingTone, formControlTextWrap } from '../../../internal/form-control.styles.js';
+import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   ${formControlAppearance}
   :host {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
     box-sizing: border-box;
     --_lr-token-input-min-input-inline-size: var(--lr-size-4rem);
     /* Two-value shorthand, block axis first: inline half is this component's denser ladder
@@ -248,14 +241,7 @@ export const styles = css`
   [part="remove"]:active {
     background: var(
       --lr-token-input-remove-pressed-bg,
-      color-mix(
-        in oklab,
-        var(
-          --lr-token-input-remove-hover-bg,
-          var(--lr-token-input-action-hover-bg, var(--lr-color-brand-quiet))
-        ),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var( --lr-token-input-remove-hover-bg, var(--lr-token-input-action-hover-bg, var(--lr-color-brand-quiet)) )')}
     );
   }
   [part="remove"]:focus-visible {
@@ -289,14 +275,7 @@ export const styles = css`
   :host(:where(:not(:disabled))) [part="token-label"]:active {
     background: var(
       --lr-token-input-edit-pressed-bg,
-      color-mix(
-        in oklab,
-        var(
-          --lr-token-input-edit-hover-bg,
-          var(--lr-token-input-action-hover-bg, var(--lr-color-brand-quiet))
-        ),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var( --lr-token-input-edit-hover-bg, var(--lr-token-input-action-hover-bg, var(--lr-color-brand-quiet)) )')}
     );
   }
   [part="token-label"]:focus-visible {
@@ -318,14 +297,7 @@ export const styles = css`
   [part="token-editor"]::placeholder {
     color: var(--lr-token-input-placeholder-color, var(--lr-color-text-quiet));
   }
-  [part="hint"],
-  [part="error"] {
-    color: var(--lr-color-text-quiet);
-    font-size: var(--lr-font-size-sm);
-  }
-  [part="error"] {
-    color: var(--lr-color-danger);
-  }
+  ${formControlSupportingTone}
   :host([data-invalid]) [part="input-wrapper"] {
     border-color: var(
       --lr-token-input-invalid-border-color,

@@ -1,12 +1,11 @@
 import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { containerHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
-    display: block;
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${containerHost}
   }
 
   [part='base'] {

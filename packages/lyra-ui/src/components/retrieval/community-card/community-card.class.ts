@@ -1,5 +1,5 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
-import { resolveHeadingLevel } from '../../../internal/heading-level.js';
+import { resolveTitleHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -59,8 +59,8 @@ function isDenseSize(size: LyraSize): boolean {
  * @event lr-entity-select - A member chip was activated. `detail: { entityId }`.
  * @csspart base - The outer bordered container.
  * @csspart header - The header row.
- * @attr {string | number | null} aria-level - Heading level forwarded to the title. An absent or empty value
- *   uses level 3.
+ * @attr {string | number | null} aria-level - Heading level forwarded to the title. An absent, empty or
+ *   out-of-range value uses level 3. `heading-level` takes precedence whenever it is set.
  * @csspart title - The community label, `role="heading" aria-level="3"` by default, wrapping a `<button>`.
  * @csspart member-count - The `"{count} members"` text.
  * @csspart summary - The LLM summary excerpt, omitted while `size` is `s` or smaller.
@@ -106,6 +106,10 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
     super.attributeChangedCallback(name, oldValue, value);
     if (name === 'aria-level' && oldValue !== value) this.requestUpdate();
   }
+
+  /** Semantic level of the title heading, matching the other retrieval panels; `none` keeps the
+   *  visible title without heading semantics. Unset, the host `aria-level` (or level 3) applies. */
+  @property({ attribute: 'heading-level' }) headingLevel?: LyraHeadingLevel;
 
   /** `null` renders the `noData` empty state. */
   @property({ attribute: false }) community: LyraCommunity | null = null;
@@ -169,11 +173,12 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
     const visibleMembers = members.slice(0, this.effectiveMaxMembers);
     const overflowCount = Math.max(0, memberCount - visibleMembers.length);
     const numberFormat = getNumberFormat(this.effectiveLocale);
+    const titleLevel = resolveTitleHeadingLevel(this.headingLevel, this.getAttribute('aria-level'));
 
     return html`
       <div part="base">
         <div part="header">
-          <span part="title" role="heading" aria-level=${resolveHeadingLevel(this.getAttribute('aria-level') || '3') ?? '3'}
+          <span part="title" role=${titleLevel ? 'heading' : nothing} aria-level=${titleLevel ?? nothing}
             ><button type="button" @click=${this.onDrill}>
               ${titleText}
             </button></span

@@ -1,5 +1,6 @@
 import { css } from 'lit';
 import { opaqueContentBorders } from '../../../internal/opaque-content-border.styles.js';
+import { activeFill } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   ${opaqueContentBorders('[part~="accordion-item"][data-appearance="outlined"] [part~="panel"]')}
@@ -80,11 +81,7 @@ export const styles = css`
   [part~="button"]:where(:active):where(:not(:disabled)) {
     background: var(
       --lr-accordion-item-button-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-color-brand-quiet),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-color-brand-quiet)')}
     );
   }
   [part~="button"]:where(:focus-visible) {

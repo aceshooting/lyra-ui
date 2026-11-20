@@ -1,6 +1,6 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
-import { wrapGuard } from '../../../internal/layout-fragments.styles.js';
+import { containerHost, wrapGuard } from '../../../internal/layout-fragments.styles.js';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
 export const styles = css`
@@ -12,9 +12,7 @@ export const styles = css`
   }
 
   :host {
-    display: block;
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${containerHost}
   }
   [part='base'] {
     display: flex;
@@ -82,11 +80,7 @@ export const styles = css`
   [part~='slice']:active,
   [part~='metric']:active,
   [part='run']:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface-raised),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-surface-raised)')};
   }
   [part~='slice']:focus-visible,
   [part~='metric']:focus-visible,

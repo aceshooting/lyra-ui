@@ -1,4 +1,4 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -30,11 +30,7 @@ export const styles = css`
     );
     --_lr-multi-split-divider-color: var(--lr-color-border);
     --_lr-multi-split-divider-hover-color: var(--lr-color-brand);
-    --_lr-multi-split-divider-active-color: color-mix(
-      in oklab,
-      var(--lr-color-brand),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    --_lr-multi-split-divider-active-color: ${activeFill('var(--lr-color-brand)')};
   }
   .allocation {
     inline-size: 100%;

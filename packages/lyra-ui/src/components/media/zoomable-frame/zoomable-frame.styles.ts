@@ -1,5 +1,5 @@
-import { iconAction, iconActionActive, iconActionHover } from '../../../internal/icon-action.styles.js';
-import { iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
+import { iconAction, iconActionActive, iconActionHover, outlinedIconActionDefaults } from '../../../internal/icon-action.styles.js';
+import { disabledControl, focusRingShorthand, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -16,8 +16,7 @@ export const styles = css`
   }
 
   :host(:where([data-frame-focused])) {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
 
   [part='iframe'] {
@@ -63,13 +62,7 @@ export const styles = css`
   [part='zoom-out-button'] {
     display: inline-grid;
     place-items: center;
-    --_lr-icon-button-border-default: var(--lr-border-width-thin) solid var(--lr-color-border);
-    --_lr-icon-button-background-default: var(--lr-color-surface);
-    --_lr-icon-button-color-default: var(--lr-color-text);
-    --_lr-icon-button-border-hover-default: var(--lr-icon-button-border, var(--_lr-icon-button-border-default));
-    --_lr-icon-button-border-active-default: var(--lr-icon-button-border-hover, var(--_lr-icon-button-border-hover-default));
-    --_lr-icon-button-background-hover-default: var(--lr-zoomable-frame-control-hover-bg, var(--lr-color-brand-quiet));
-    --_lr-icon-button-background-active-default: color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--_lr-icon-button-background-hover-default)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    ${outlinedIconActionDefaults('var(--lr-zoomable-frame-control-hover-bg, var(--lr-color-brand-quiet))')}
     ${iconAction}
     ${iconHitTarget}
     ${interactiveTransition}
@@ -87,13 +80,11 @@ export const styles = css`
 
   [part='zoom-in-button']:focus-visible,
   [part='zoom-out-button']:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
 
   [part='zoom-in-button']:disabled,
   [part='zoom-out-button']:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
 `;

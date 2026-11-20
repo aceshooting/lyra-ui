@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'بازکردن تقویم',
+  item: 'مورد',
   comboboxLoadError: 'بارگذاری گزینه‌ها ممکن نشد.',
   comboboxSelectedOverflow: '+{n} مورد دیگر',
   checkboxRequired: 'اگر می‌خواهید ادامه دهید، این خانه را علامت بزنید.',

@@ -25,6 +25,13 @@ export const Grouped: Story = {
   render: () => html`<lr-neighbor-list .rows=${rows} group-by-relation></lr-neighbor-list>`,
 };
 
+export const SeparateRelations: Story = {
+  render: () => html`<lr-neighbor-list .rows=${[
+    ...rows,
+    { ...rows[0]!, relation: 'mentions', direction: 'in' },
+  ]} separate-relations group-by-relation></lr-neighbor-list>`,
+};
+
 export const Expandable: Story = {
   render: () => html`<lr-neighbor-list .rows=${rows} expandable></lr-neighbor-list>`,
 };

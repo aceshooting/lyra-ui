@@ -7,6 +7,7 @@ import {
   registerFormControlLabelSupport,
   type LyraElement,
 } from './lyra-element.js';
+import { isShadowRootNode } from './dom-guards.js';
 
 /**
  * How an external `<label>` activation reaches a control.
@@ -175,10 +176,6 @@ function isLabelElement(node: EventTarget | null): node is HTMLLabelElement {
 
 function isHtmlElement(node: Node): node is HTMLElement {
   return node.nodeType === 1 && 'focus' in node && 'style' in node;
-}
-
-function isShadowRootNode(node: Node | null | undefined): node is ShadowRoot {
-  return node?.nodeType === 11 && 'host' in node;
 }
 
 /** Whether `label` names `host` in the DOM tree *right now*.

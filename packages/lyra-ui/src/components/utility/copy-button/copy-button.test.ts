@@ -762,6 +762,22 @@ it('compare-restores the trigger tabindex when a parent toolbar releases its act
   expect(button.hasAttribute('tabindex')).to.be.false;
 });
 
+it('keeps a consumer tabindex takeover when the consumer later writes the leased value back', async () => {
+  const el = (await fixture(html`<lr-copy-button value="toolbar"></lr-copy-button>`)) as LyraCopyButton;
+  const action = el.getToolbarActions()[0]! as LyraToolbarAction;
+  const trigger = document.createElement('button');
+  trigger.textContent = 'Copy';
+  el.append(trigger);
+  await el.updateComplete;
+  action.setTabIndex(-1);
+  expect(trigger.getAttribute('tabindex')).to.equal('-1');
+  trigger.tabIndex = 2;
+  action.setTabIndex(0);
+  trigger.tabIndex = -1;
+  action.releaseTabIndex?.();
+  expect(trigger.getAttribute('tabindex')).to.equal('-1');
+});
+
 it('restores each copy trigger baseline across replacement and preserves a consumer takeover', async () => {
   const el = (await fixture(html`<lr-copy-button value="toolbar"></lr-copy-button>`)) as LyraCopyButton;
   const action = el.getToolbarActions()[0]! as LyraToolbarAction;

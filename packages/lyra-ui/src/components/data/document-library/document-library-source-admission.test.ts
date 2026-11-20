@@ -95,6 +95,17 @@ for (const problem of ['missing facets', 'unrequested unavailable facet'] as con
   });
 }
 
+it('chooses the omitted tag wording from the numeric omitted count', async () => {
+  const source: DocumentLibrarySource = { revision: 1,
+    query: async () => ({ total: 1, rows: [{ key: 'd0', order: 0, value: documentRecord() }],
+      tags: { total: 3, values: [{ key: 'topic', label: 'Research topic' }, { key: 'guide', label: 'Guides' }], unavailableSelected: [] } }),
+    lookup: async () => [], locate: async () => null };
+  const viewer = await fixture<LyraDocumentLibrary>(html`<lr-document-library .dataSource=${source}></lr-document-library>`);
+  await waitUntil(() => viewer.sourceTotal === 1);
+  await viewer.updateComplete;
+  expect(viewer.shadowRoot!.querySelector('[part="limit"]')?.textContent).to.equal('+1 more tag');
+});
+
 it('shows omitted source tag counts and provider labels without refetching for localized summary text', async () => {
   let requests = 0;
   const source: DocumentLibrarySource = { revision: 1,

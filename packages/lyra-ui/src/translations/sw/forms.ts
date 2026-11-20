@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'Fungua kalenda',
+  item: 'kipengee',
   comboboxLoadError: 'Imeshindwa kupakia machaguo.',
   comboboxSelectedOverflow: '+{n} zaidi',
   checkboxRequired: 'Tia alama kwenye kisanduku hiki ili kuendelea.',

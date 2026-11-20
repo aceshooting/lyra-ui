@@ -4,6 +4,7 @@ import { listenUntilPointerEnd } from '../../../internal/document-pointer.js';
 import { html, nothing, svg, type PropertyValues, type TemplateResult, type SVGTemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { iconFrame } from '../../../internal/icons.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import '../../utility/live-region/live-region.class.js';
 import { finiteDuration, MAX_TIMEOUT_MS } from '../../../internal/numbers.js';
@@ -86,17 +87,8 @@ function isPushToTalkSupported(owner: Window | null): owner is PushToTalkWindow 
 // One-off local glyphs, matching lr-attachment-trigger's convention of keeping single-use icons
 // local to the component that uses them rather than adding them to the shared internal/icons.ts
 // module, which is reserved for icons reused across several components.
-const ICON_VIEW_BOX = '0 0 24 24';
-const ICON_STROKE_WIDTH = '1.75';
-function icon(paths: SVGTemplateResult): SVGTemplateResult {
-  return svg`
-    <svg width="1em" height="1em" viewBox=${ICON_VIEW_BOX} fill="none" stroke="currentColor"
-      stroke-width=${ICON_STROKE_WIDTH} stroke-linecap="round" stroke-linejoin="round"
-      aria-hidden="true" focusable="false">${paths}</svg>
-  `;
-}
 function micIcon(): SVGTemplateResult {
-  return icon(svg`
+  return iconFrame(svg`
     <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z"></path>
     <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
     <line x1="12" y1="19" x2="12" y2="23"></line>
@@ -104,7 +96,7 @@ function micIcon(): SVGTemplateResult {
   `);
 }
 function pulseGlyph(): SVGTemplateResult {
-  return icon(svg`<circle cx="12" cy="12" r="6"></circle>`);
+  return iconFrame(svg`<circle cx="12" cy="12" r="6"></circle>`);
 }
 
 export interface LyraPushToTalkEventMap {

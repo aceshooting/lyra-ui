@@ -1,4 +1,4 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, hoverFill } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -72,7 +72,7 @@ export const styles = css`
   [part='restore-button']:active:not([aria-disabled='true']) {
     border-color: var(--lr-color-brand);
     color: var(--lr-color-brand);
-    background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-surface)')};
   }
   [part='restore-button']:focus-visible {
     ${focusRing}
@@ -123,16 +123,16 @@ export const styles = css`
     ${focusRing}
   }
   [part='confirm-button']:hover {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: ${hoverFill('var(--lr-color-brand-quiet)')};
   }
   [part='cancel-button']:hover {
     background: var(--lr-color-surface-raised);
   }
   [part='cancel-button']:active {
-    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-surface-raised)')};
   }
   [part='confirm-button']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-brand-quiet)')};
   }
   @keyframes lr-checkpoint-spin {
     to {

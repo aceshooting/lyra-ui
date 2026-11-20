@@ -1,4 +1,4 @@
-import { applyHierarchySourceEffects, captureHierarchySourceEffects } from '../../../internal/hierarchy-summary-source.js';
+import { applyHierarchySourceEffects, captureHierarchySourceEffects, hierarchySourceSummary } from '../../../internal/hierarchy-summary-source.js';
 import { optionalSizeConverter, writeOptionalSize, type LyraSize } from '../../../internal/variants.js';
 import { readOwnArrayLength } from '../../../internal/data-descriptors.js';
 import type { LyraHierarchySource, LyraHierarchyQuery, LyraHierarchyRow } from '../../../data-sources.js';
@@ -24,7 +24,7 @@ import { LyraTreeItem } from '../tree/tree-item.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fileTreeDiffSummary, LYRA_DEFAULT_fileTreeLabel, LYRA_DEFAULT_treeLimit } from '../../../internal/default-strings/data.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_gitStatusAdded, LYRA_DEFAULT_gitStatusConflicted, LYRA_DEFAULT_gitStatusDeleted, LYRA_DEFAULT_gitStatusIgnored, LYRA_DEFAULT_gitStatusModified, LYRA_DEFAULT_gitStatusRenamed, LYRA_DEFAULT_gitStatusUntracked, LYRA_DEFAULT_item, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_treeSourceError, LYRA_DEFAULT_treeSourceSummary } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_expand, LYRA_DEFAULT_gitStatusAdded, LYRA_DEFAULT_gitStatusConflicted, LYRA_DEFAULT_gitStatusDeleted, LYRA_DEFAULT_gitStatusIgnored, LYRA_DEFAULT_gitStatusModified, LYRA_DEFAULT_gitStatusRenamed, LYRA_DEFAULT_gitStatusUntracked, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_retry, LYRA_DEFAULT_treeSourceError, LYRA_DEFAULT_treeSourceSummary } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -289,9 +289,6 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     collapse: LYRA_DEFAULT_collapse,
-    copy: LYRA_DEFAULT_copy,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
     expand: LYRA_DEFAULT_expand,
     fileTreeDiffSummary: LYRA_DEFAULT_fileTreeDiffSummary,
     fileTreeLabel: LYRA_DEFAULT_fileTreeLabel,
@@ -302,14 +299,9 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
     gitStatusModified: LYRA_DEFAULT_gitStatusModified,
     gitStatusRenamed: LYRA_DEFAULT_gitStatusRenamed,
     gitStatusUntracked: LYRA_DEFAULT_gitStatusUntracked,
-    item: LYRA_DEFAULT_item,
     loading: LYRA_DEFAULT_loading,
-    map: LYRA_DEFAULT_map,
     noData: LYRA_DEFAULT_noData,
-    open: LYRA_DEFAULT_open,
     retry: LYRA_DEFAULT_retry,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
     treeLimit: LYRA_DEFAULT_treeLimit,
     treeSourceError: LYRA_DEFAULT_treeSourceError,
     treeSourceSummary: LYRA_DEFAULT_treeSourceSummary,
@@ -393,11 +385,8 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
   }
 
   private sourceSummary(): string {
-    const projection = this.hierarchy.projection;
-    return projection ? this.localize('treeSourceSummary', undefined, {
-      visible: getNumberFormat(this.effectiveLocale).format(projection.rows.count),
-      total: getNumberFormat(this.effectiveLocale).format(projection.total),
-    }) : '';
+    const summary = hierarchySourceSummary(this.hierarchy.projection, this.effectiveLocale);
+    return summary ? this.localize('treeSourceSummary', undefined, summary) : '';
   }
 
 

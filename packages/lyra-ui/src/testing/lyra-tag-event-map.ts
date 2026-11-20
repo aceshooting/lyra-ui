@@ -614,7 +614,7 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-menubar': { 'lr-select': true },
   'lr-message-actions': { 'lr-feedback-submit-request': true },
   'lr-message-feedback': { 'lr-feedback-submit-request': true },
-  'lr-model-select': { 'lr-invalid': true },
+  'lr-model-select': { 'lr-change-request': true, 'lr-hide': true, 'lr-invalid': true, 'lr-show': true },
   'lr-multi-split': { 'lr-resize-request': true, 'lr-toggle-request': true },
   'lr-navigation-menu': { 'lr-toggle-request': true },
   'lr-number-input': { 'lr-invalid': true },
@@ -664,6 +664,6 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-tooltip': { 'lr-hide': true, 'lr-show': true },
   'lr-tour': { 'lr-tour-end-request': true, 'lr-tour-step-change-request': true },
   'lr-unit-picker': { 'lr-invalid': true, 'lr-show': true },
-  'lr-voice-picker': { 'lr-invalid': true, 'lr-preview-request': true },
+  'lr-voice-picker': { 'lr-change-request': true, 'lr-hide': true, 'lr-invalid': true, 'lr-preview-request': true, 'lr-show': true },
   'lr-widget': { 'lr-fullscreen-request': true, 'lr-toggle-request': true, 'lr-view-request': true },
 };

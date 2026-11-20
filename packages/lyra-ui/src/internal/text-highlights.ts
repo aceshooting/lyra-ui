@@ -8,10 +8,11 @@ import {
   type TextQuoteMatch,
 } from './text-quote.js';
 import { TEXT_SELECTION_RECT_LIMIT } from './text-selection.js';
+import { HIGHLIGHT_TONES } from './highlight-collection.js';
 import { finiteDuration } from './numbers.js';
 
 /** Every tone, in paint order. A repaint sets each one, so a tone a pass leaves out is cleared. */
-export const HIGHLIGHT_TONES: readonly LyraHighlightTone[] = Object.freeze(['accent', 'success', 'warning', 'danger', 'neutral']);
+export { HIGHLIGHT_TONES };
 const DEFAULT_FLASH_MS = 1800; // mirrors --lr-transition-ambient's default duration (see tokens.styles.ts)
 /** The fallback mutates the DOM once per retained Range, so it shares the viewer search paint cap. */
 const FALLBACK_RANGE_LIMIT = 200;

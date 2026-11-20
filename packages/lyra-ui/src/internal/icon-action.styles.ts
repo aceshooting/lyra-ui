@@ -27,6 +27,23 @@ export const iconActionActive = css`
   @media (forced-colors: active) { background: Highlight; color: HighlightText; }
 `;
 
+/**
+ * The private defaults that give a hand-rendered icon action a bordered, surface-filled resting
+ * look: a thin border, surface fill and text colour at rest, the same border held through hover and
+ * press, and a hover fill given by `hoverBackground` (the component's own public hover token with its
+ * fallback, written as a `var()` expression) with the press fill mixed from the effective hover fill. Compose
+ * beside {@link iconAction}.
+ */
+export function outlinedIconActionDefaults(hoverBackground: string): CSSResult {
+  return unsafeCSS(`--_lr-icon-button-border-default: var(--lr-border-width-thin) solid var(--lr-color-border);
+    --_lr-icon-button-background-default: var(--lr-color-surface);
+    --_lr-icon-button-color-default: var(--lr-color-text);
+    --_lr-icon-button-border-hover-default: var(--lr-icon-button-border, var(--_lr-icon-button-border-default));
+    --_lr-icon-button-border-active-default: var(--lr-icon-button-border-hover, var(--_lr-icon-button-border-hover-default));
+    --_lr-icon-button-background-hover-default: ${hoverBackground};
+    --_lr-icon-button-background-active-default: ${activeFill('var(--lr-icon-button-bg-hover, var(--_lr-icon-button-background-hover-default))').cssText};`);
+}
+
 /** Per-control fallbacks for {@link iconActionStyles}; each yields to the public
  *  `--lr-icon-button-*` token of the same state. */
 export interface IconActionFallbacks {

@@ -1,12 +1,11 @@
 import { css } from 'lit';
 import { flowStatusPaint } from '../flow-canvas/flow-status.styles.js';
+import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   ${flowStatusPaint}
   :host {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
   }
   [part='base'] {
     box-sizing: border-box;

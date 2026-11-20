@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { wrapGuard } from '../../../internal/layout-fragments.styles.js';
 
@@ -75,7 +75,7 @@ export const styles = css`
      transparent background instead. */
   [part='title'] button:active {
     text-decoration: underline;
-    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('transparent')};
   }
   [part='title'] button:focus-visible {
     ${focusRing}
@@ -127,7 +127,7 @@ export const styles = css`
   }
   [part='member']:active,
   [part='overflow']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-brand-quiet)')};
   }
   [part='member']:focus-visible,
   [part='overflow']:focus-visible {

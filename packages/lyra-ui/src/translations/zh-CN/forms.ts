@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: '打开日历',
+  item: '项',
   comboboxLoadError: '无法加载选项。',
   comboboxSelectedOverflow: '+{n}项',
   checkboxRequired: '如需继续，请勾选此项。',

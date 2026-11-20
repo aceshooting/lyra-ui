@@ -1,4 +1,4 @@
-import { activeFill, iconHitTarget, hoverFill } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingShorthand, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { nativeControlSurface } from '../../../internal/native-control-surface.styles.js';
 
@@ -138,19 +138,10 @@ export const styles = css`
     );
   }
   [part="region-highlight-target"]:active + [part="region-highlight"] {
-    background: color-mix(
-      in oklab,
-      color-mix(
-        in srgb,
-        var(--_lr-document-preview-highlight-color) 20%,
-        transparent
-      ),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('color-mix( in srgb, var(--_lr-document-preview-highlight-color) 20%, transparent )')};
   }
   [part="region-highlight-target"]:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   [part="highlight-actions"] {
     display: grid;
@@ -172,8 +163,7 @@ export const styles = css`
     background: ${activeFill('var(--lr-color-surface-raised)')};
   }
   [part="region-highlight-action"]:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
 
   .empty-note {
@@ -237,8 +227,7 @@ export const styles = css`
     );
   }
   [part="download-link"]:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   [part="download-link"] svg {
     display: block;

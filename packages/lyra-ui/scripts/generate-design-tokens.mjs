@@ -175,7 +175,7 @@ export function readRuntimeTokenValues(packageDir = defaultPackageDir) {
   }
   for (const [name, value] of declarations(tokens, forcedMarker)) add(name, 'forcedColors', value, 'shared');
 
-  const specialistPath = path.join(packageDir, 'src', 'internal', 'specialist-tokens.styles.ts');
+  const specialistPath = path.join(packageDir, 'src', 'internal', 'tokens', 'specialist-tokens.styles.ts');
   if (existsSync(specialistPath)) {
     const specialist = readFileSync(specialistPath, 'utf8');
     const specialistDark = specialist.indexOf('const darkSpecialistTokens');
@@ -618,7 +618,7 @@ export function verifyRecordPartition(source, packageDir = defaultPackageDir) {
   const names = (relative) => new Set([...readFileSync(path.join(packageDir, relative), 'utf8')
     .matchAll(/^\s*(--lr-[a-z0-9-]+):/gm)].map((match) => match[1]).filter((name) => source.tokens[name]));
   const shared = new Set([...names('src/internal/tokens.styles.ts'), ...names('src/internal/tokens/palette.styles.ts')]);
-  const specialistRecord = names('src/internal/specialist-tokens.styles.ts');
+  const specialistRecord = names('src/internal/tokens/specialist-tokens.styles.ts');
   const { layer, hostLocal, specialist } = classifySharedTokens(source);
   const expectShared = new Set([...layer, ...hostLocal]);
   for (const name of shared) if (!expectShared.has(name)) errors.push(`${name}: declared in the shared record but outside the document layer`);

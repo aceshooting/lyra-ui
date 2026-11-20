@@ -1,6 +1,7 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { wideContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
@@ -8,8 +9,7 @@ export const styles = css`
     /* Query container so the @container rule below reacts to this grid's own allocated inline
        size -- a dashboard-grid usually sits in a panel of varying width, not the viewport. Same
        convention as lr-button-group/lr-control-group. */
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${inlineSizeContainer}
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;
@@ -157,11 +157,7 @@ export const styles = css`
      :active means only that the resize gesture is under way; pointer capture holds it for the
      whole drag. */
   [part="resize-handle"]:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-dashboard-grid-resize-handle-hover-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-dashboard-grid-resize-handle-hover-bg, var(--lr-color-brand-quiet))')};
   }
 
   :host(:dir(rtl)) [part="resize-handle"] {

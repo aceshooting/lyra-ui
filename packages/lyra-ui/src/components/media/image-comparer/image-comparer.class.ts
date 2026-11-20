@@ -221,6 +221,7 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
 
   override disconnectedCallback(): void {
     this.onPointerEnd();
+    this.keyboardDirty = false;
     super.disconnectedCallback();
   }
 

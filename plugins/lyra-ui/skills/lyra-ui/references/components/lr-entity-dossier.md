@@ -49,6 +49,9 @@ shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape
 - `expandable: boolean = false` — forwarded to `lr-neighbor-list`
 - `withoutFocusButton: boolean = false` (attribute `without-focus-button`) — forwarded to
   `lr-entity-card`.
+- `headingLevel?: LyraHeadingLevel` (attribute `heading-level`) — forwarded to `lr-entity-card`'s
+  title, so the entity heading can sit at the page's outline level; `'none'` drops its heading
+  semantics. Unset, the card uses level 3.
 - `communityLabel: string = ''` (attribute `community-label`) — forwarded to `lr-entity-card`
 - `label: string | null = null` (attribute `label`) — names the overall dossier group after a
   host `aria-label`, before the localized Details fallback. It does not rename the tab strip.

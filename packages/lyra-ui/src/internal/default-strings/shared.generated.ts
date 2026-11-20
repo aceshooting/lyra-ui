@@ -4,7 +4,6 @@ import type { LyraMessage } from '../localization.js';
 export const LYRA_DEFAULT_anchorJumped: LyraMessage = 'Jumped to highlighted passage.';
 export const LYRA_DEFAULT_anchorJumpedToPage: LyraMessage = 'Jumped to page {page}.';
 export const LYRA_DEFAULT_anchorNotFound: LyraMessage = 'Passage not found in this document.';
-export const LYRA_DEFAULT_approve: LyraMessage = 'Approve';
 export const LYRA_DEFAULT_attachmentUntitledFile: LyraMessage = 'Untitled file';
 export const LYRA_DEFAULT_cancel: LyraMessage = 'Cancel';
 export const LYRA_DEFAULT_catalogPickerInputLimit: LyraMessage = 'Some catalog entries were omitted because an input limit was reached.';
@@ -29,7 +28,6 @@ export const LYRA_DEFAULT_date: LyraMessage = 'Date';
 export const LYRA_DEFAULT_dateInputInvalid: LyraMessage = 'Enter a valid date.';
 export const LYRA_DEFAULT_dateInputMaxMessage: LyraMessage = 'Date must be on or before {max}.';
 export const LYRA_DEFAULT_dateInputMinMessage: LyraMessage = 'Date must be on or after {min}.';
-export const LYRA_DEFAULT_deny: LyraMessage = 'Deny';
 export const LYRA_DEFAULT_details: LyraMessage = 'Details';
 export const LYRA_DEFAULT_documentPreviewEmpty: LyraMessage = 'No {type} to display.';
 export const LYRA_DEFAULT_documentPreviewTypeImage: LyraMessage = 'image';
@@ -79,7 +77,6 @@ export const LYRA_DEFAULT_handoffFromToAgent: LyraMessage = 'Transferred from {f
 export const LYRA_DEFAULT_handoffToAgent: LyraMessage = 'Transferred to {agent}';
 export const LYRA_DEFAULT_highlightOfTotal: LyraMessage = 'Highlight {index} of {total}';
 export const LYRA_DEFAULT_highlightWithLabel: LyraMessage = 'Highlight: {label}';
-export const LYRA_DEFAULT_item: LyraMessage = 'item';
 export const LYRA_DEFAULT_items: LyraMessage = {
     one: 'item',
     other: 'items',
@@ -143,11 +140,9 @@ export const LYRA_DEFAULT_statusRunning: LyraMessage = 'Running';
 export const LYRA_DEFAULT_statusSuccess: LyraMessage = 'Success';
 export const LYRA_DEFAULT_statusUnknown: LyraMessage = 'Unknown';
 export const LYRA_DEFAULT_tableLoadFailed: LyraMessage = 'Could not load data';
-export const LYRA_DEFAULT_tagFacetLimit: LyraMessage = '+{count} more tags';
+export const LYRA_DEFAULT_tagFacetLimit: LyraMessage = { one: '+{count} more tag', other: '+{count} more tags' };
 export const LYRA_DEFAULT_thinking: LyraMessage = 'Thinking…';
 export const LYRA_DEFAULT_thinkingPanelLabel: LyraMessage = 'Thinking';
-export const LYRA_DEFAULT_tokensIn: LyraMessage = 'Tokens in';
-export const LYRA_DEFAULT_tokensOut: LyraMessage = 'Tokens out';
 export const LYRA_DEFAULT_treeNodeMoved: LyraMessage = 'Moved {label} to position {index} of {total}';
 export const LYRA_DEFAULT_treeSourceError: LyraMessage = 'Unable to load tree data.';
 export const LYRA_DEFAULT_treeSourceSummary: LyraMessage = '{visible} visible of {total} nodes.';

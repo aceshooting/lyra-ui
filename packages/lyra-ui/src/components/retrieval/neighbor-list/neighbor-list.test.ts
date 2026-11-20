@@ -814,7 +814,21 @@ it('lets a long node label shrink instead of widening its row', async () => {
   expect(label.getBoundingClientRect().width).to.be.at.most(241);
 });
 
-it('retains each relation and direction to the same neighbor once', async () => {
+it('shows one row per neighbor node by default, first-wins', async () => {
+  const node = { id: 'same', label: 'Same' };
+  const rows = [
+    { node, relation: 'owns', direction: 'out' },
+    { node, relation: 'uses', direction: 'in' },
+    { node: { id: 'other', label: 'Other' }, relation: 'uses', direction: 'out' },
+  ];
+  const list = await fixture<LyraNeighborList>(html`<lr-neighbor-list .rows=${rows}></lr-neighbor-list>`);
+  expect([...list.shadowRoot!.querySelectorAll('[part="relation"]')].map(el => el.textContent?.trim())).to.deep.equal(['owns', 'uses']);
+  list.separateRelations = true;
+  await list.updateComplete;
+  expect([...list.shadowRoot!.querySelectorAll('[part="relation"]')].map(el => el.textContent?.trim())).to.deep.equal(['owns', 'uses', 'uses']);
+});
+
+it('retains each relation and direction to the same neighbor once with separate-relations', async () => {
   const node = { id: 'same', label: 'Same' };
   const rows = [
     { node, relation: 'owns', direction: 'out' },
@@ -823,7 +837,7 @@ it('retains each relation and direction to the same neighbor once', async () => 
     { node, relation: 'owns', direction: 'out' },
     { node: { id: ' ' }, relation: 'owns', direction: 'in' },
   ];
-  const list = await fixture<LyraNeighborList>(html`<lr-neighbor-list group-by-relation .rows=${rows}></lr-neighbor-list>`);
+  const list = await fixture<LyraNeighborList>(html`<lr-neighbor-list group-by-relation separate-relations .rows=${rows}></lr-neighbor-list>`);
   expect([...list.shadowRoot!.querySelectorAll('[part="relation"]')].map(el => el.textContent?.trim())).to.deep.equal(['owns', 'owns', 'uses']);
   list.virtualizeAt = 0;
   await list.updateComplete;

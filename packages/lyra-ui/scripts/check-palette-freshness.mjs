@@ -27,7 +27,7 @@ export const PALETTE_GENERATORS = Object.freeze([
 export const PALETTE_ARTIFACTS = Object.freeze([
   'src/internal/tokens/palette.styles.ts',
   'src/theme.css',
-  'src/internal/specialist-tokens.styles.ts',
+  'src/internal/tokens/specialist-tokens.styles.ts',
   'src/components/charts/chart/chart-colors.ts',
   'src/theme/options/charts.ts',
 ]);

@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { visuallyHidden } from '../../../internal/a11y.js';
 
@@ -68,11 +68,7 @@ export const styles = css`
   [part="toggle"]:active {
     background: var(
       --lr-app-rail-group-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-color-brand-quiet),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-color-brand-quiet)')}
     );
     color: var(--lr-app-rail-group-active-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
   }

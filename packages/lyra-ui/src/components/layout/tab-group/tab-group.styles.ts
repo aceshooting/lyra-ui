@@ -1,14 +1,13 @@
 import { visuallyHidden } from '../../../internal/a11y.js';
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingInwardOffset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css, unsafeCSS } from 'lit';
 import { tag } from '../../../internal/prefix.js';
+import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
     min-block-size: 0;
   }
   [part~="base"] {
@@ -94,11 +93,7 @@ export const styles = css`
   :where([part~="scroll-button"]):where(:active) {
     background: var(
       --lr-tab-group-scroll-button-active-bg,
-      color-mix(
-        in oklab,
-        transparent,
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('transparent')}
     );
     color: var(--lr-tab-group-scroll-button-active-color, var(--lr-color-text));
   }
@@ -108,18 +103,13 @@ export const styles = css`
   :where([part~="scroll-button"]):where([data-pressed]) {
     background: var(
       --lr-tab-group-scroll-button-active-bg,
-      color-mix(
-        in oklab,
-        transparent,
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('transparent')}
     );
     color: var(--lr-tab-group-scroll-button-active-color, var(--lr-color-text));
   }
   /* The controls are tabindex="-1", so focus is script-only -- but it must still be visible. */
   [part~="scroll-button"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(var(--lr-focus-ring-offset) * -1);
+    ${focusRingInwardOffset}
     border-radius: var(--lr-radius);
   }
   [part="scroll-button-glyph"] {
@@ -181,11 +171,7 @@ export const styles = css`
   :where([part="tab"]):active:where(:not([aria-disabled="true"])) {
     background: var(
       --lr-tab-group-active-bg,
-      color-mix(
-        in oklab,
-        transparent,
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('transparent')}
     );
     color: var(
       --lr-tab-group-active-color,
@@ -220,8 +206,7 @@ export const styles = css`
     opacity: var(--lr-opacity-disabled);
   }
   [part="tab"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(var(--lr-focus-ring-offset) * -1);
+    ${focusRingInwardOffset}
     border-radius: var(--lr-radius);
   }
   [part="panel"] {

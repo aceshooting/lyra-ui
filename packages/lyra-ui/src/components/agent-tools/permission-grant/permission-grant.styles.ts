@@ -1,12 +1,11 @@
 import { focusRing } from '../../../internal/interactive-control.styles.js';
 import { panelFrame } from '../../../internal/panel-frame.styles.js';
 import { css } from 'lit';
+import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
   }
 
   [part='base'] {

@@ -1,4 +1,4 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingShorthand, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -130,11 +130,10 @@ export const styles = css`
     background: var(--_lr-xml-viewer-highlight-background);
   }
   [part='highlight-action']:active {
-    background: color-mix(in oklab, var(--_lr-xml-viewer-highlight-background), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--_lr-xml-viewer-highlight-background)')};
   }
   [part='highlight-action']:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   /* The one attribute an attribute-addressing node-path anchor resolved to, so a citation pointing
      at a single attribute value of a multi-attribute element stays identifiable. */
@@ -220,13 +219,12 @@ export const styles = css`
     color: var(--lr-color-brand);
   }
   [part='toggle']:active {
-    background: var(--lr-xml-viewer-action-active-background, color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    background: var(--lr-xml-viewer-action-active-background, ${activeFill('var(--lr-color-brand-quiet)')});
     color: var(--lr-color-brand);
   }
   [part='toggle']:focus-visible,
   [part='copy-button']:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   [part='copy-button'] {
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -245,7 +243,7 @@ export const styles = css`
   /* Also the pressed state the row-reveal rule below needs: that rule only fades the button in, so
      the acknowledgement of the click itself lives here. */
   [part='copy-button']:active {
-    background: var(--lr-xml-viewer-action-active-background, color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    background: var(--lr-xml-viewer-action-active-background, ${activeFill('var(--lr-color-brand-quiet)')});
     color: var(--lr-color-brand);
   }
   .row [part='copy-button'] {

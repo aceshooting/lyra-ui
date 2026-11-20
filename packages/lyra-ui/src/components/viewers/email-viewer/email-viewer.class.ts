@@ -33,10 +33,11 @@ import type { AnchorResultDetail, TextSelectDetail } from '../document-viewer/an
 import { sanitizePassiveMarkupFragment } from '../../../internal/passive-markup.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
+import { isRuntimeArray } from '../../../internal/object-guards.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_download, LYRA_DEFAULT_fileSizeUnitB, LYRA_DEFAULT_fileSizeUnitGb, LYRA_DEFAULT_fileSizeUnitKb, LYRA_DEFAULT_fileSizeUnitMb, LYRA_DEFAULT_fileSizeUnitTb, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
-import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeEmail, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_emailViewerAttachments, LYRA_DEFAULT_emailViewerDate, LYRA_DEFAULT_emailViewerFrom, LYRA_DEFAULT_emailViewerGroupAddress, LYRA_DEFAULT_emailViewerHideQuoted, LYRA_DEFAULT_emailViewerLabel, LYRA_DEFAULT_emailViewerMissingParser, LYRA_DEFAULT_emailViewerNoSubject, LYRA_DEFAULT_emailViewerOpenAttachment, LYRA_DEFAULT_emailViewerShowQuoted, LYRA_DEFAULT_emailViewerSubject, LYRA_DEFAULT_emailViewerTo, LYRA_DEFAULT_emailViewerUnnamedAttachment, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
+import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeEmail, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_emailViewerAttachments, LYRA_DEFAULT_emailViewerDate, LYRA_DEFAULT_emailViewerEmptyBody, LYRA_DEFAULT_emailViewerFrom, LYRA_DEFAULT_emailViewerGroupAddress, LYRA_DEFAULT_emailViewerHideQuoted, LYRA_DEFAULT_emailViewerLabel, LYRA_DEFAULT_emailViewerMissingParser, LYRA_DEFAULT_emailViewerNoSubject, LYRA_DEFAULT_emailViewerOpenAttachment, LYRA_DEFAULT_emailViewerShowQuoted, LYRA_DEFAULT_emailViewerSubject, LYRA_DEFAULT_emailViewerTo, LYRA_DEFAULT_emailViewerUnnamedAttachment, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -92,18 +93,10 @@ interface NormalizedParsedEmail {
   readonly attachments: readonly ParsedEmailAttachment[];
 }
 
-function isArrayValue(value: unknown): value is readonly unknown[] {
-  try {
-    return Array.isArray(value);
-  } catch {
-    return false;
-  }
-}
-
 /** Accept ordinary/null-prototype peer records while rejecting collections, custom instances,
  * revoked proxies, and reflection-failing values before any fields are inspected. */
 function isSafeRecord(value: unknown): value is object {
-  if (value === null || typeof value !== 'object' || isArrayValue(value)) return false;
+  if (value === null || typeof value !== 'object' || isRuntimeArray(value)) return false;
   try {
     const prototype = Object.getPrototypeOf(value);
     return prototype === null || Object.getPrototypeOf(prototype) === null;
@@ -133,7 +126,7 @@ function projectAddressList(
   budget: RecipientProjectionBudget,
   depth: number,
 ): Address[] {
-  if (!isArrayValue(value) || budget.positions >= MAX_EMAIL_RECIPIENT_POSITIONS) return [];
+  if (!isRuntimeArray(value) || budget.positions >= MAX_EMAIL_RECIPIENT_POSITIONS) return [];
   const length = getOwnDataDescriptor(value, 'length');
   if (
     length === MISSING_OWN_DATA_DESCRIPTOR
@@ -199,7 +192,7 @@ function normalizeAttachmentContent(content: unknown): Uint8Array | undefined {
 }
 
 function projectAttachments(value: unknown): readonly ParsedEmailAttachment[] {
-  if (!isArrayValue(value)) return Object.freeze([]);
+  if (!isRuntimeArray(value)) return Object.freeze([]);
   const length = getOwnDataDescriptor(value, 'length');
   if (
     length === MISSING_OWN_DATA_DESCRIPTOR
@@ -419,6 +412,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     download: LYRA_DEFAULT_download,
     emailViewerAttachments: LYRA_DEFAULT_emailViewerAttachments,
     emailViewerDate: LYRA_DEFAULT_emailViewerDate,
+    emailViewerEmptyBody: LYRA_DEFAULT_emailViewerEmptyBody,
     emailViewerFrom: LYRA_DEFAULT_emailViewerFrom,
     emailViewerGroupAddress: LYRA_DEFAULT_emailViewerGroupAddress,
     emailViewerHideQuoted: LYRA_DEFAULT_emailViewerHideQuoted,
@@ -783,7 +777,9 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
         const { email, htmlBody, fromAddress, toAddresses } = this.fetchState;
         return html`<div>${this.renderHeaders(email, fromAddress, toAddresses)}<div part="body">${htmlBody
           ? html`<div part="body-html" @click=${this.onBodyClick}>${this.foldQuotes ? this.getFoldedHtml(htmlBody) : templateContent(htmlBody.template)}</div>`
-          : this.renderTextBody(email.bodyText ?? '')}</div></div>${this.renderAttachments(email.attachments)}`;
+          : email.bodyText?.trim()
+            ? this.renderTextBody(email.bodyText)
+            : html`<p class="empty-note">${this.localize('emailViewerEmptyBody')}</p>`}</div></div>${this.renderAttachments(email.attachments)}`;
       }
       case 'loading': return renderViewerLoading(this.localize('loadingDocument'));
       case 'error': return html`<div part="error">${this.fetchState.message()}</div>`;

@@ -1,4 +1,4 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { wrapGuard } from '../../../internal/layout-fragments.styles.js';
 
@@ -41,7 +41,7 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
   }
   [part='test-name']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-brand-quiet)')};
   }
   [part='suite'] + [part='suite'] {
     margin-block-start: var(--lr-space-s);

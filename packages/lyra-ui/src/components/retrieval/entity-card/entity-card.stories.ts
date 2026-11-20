@@ -44,6 +44,16 @@ export const LiveHeadingLevel: Story = {
   `,
 };
 
+export const HeadingLevelToken: Story = {
+  name: 'heading-level="2" and "none"',
+  render: () => html`
+    <div style="display:grid; gap:1rem;">
+      <lr-entity-card heading-level="2" .entity=${entity} .types=${types()}></lr-entity-card>
+      <lr-entity-card heading-level="none" .entity=${entity} .types=${types()}></lr-entity-card>
+    </div>
+  `,
+};
+
 export const NoFocusButton: Story = {
   render: () => html`<lr-entity-card .entity=${entity} .types=${types()} without-focus-button></lr-entity-card>`,
 };

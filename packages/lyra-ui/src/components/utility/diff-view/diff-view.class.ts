@@ -773,7 +773,7 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
   }
 
   /** Host-supplied `highlights` resolved against `this.diffOps`, keyed by the covered op. A
-   *  `line-range` entry paints every op in its (clamped) `[start, end]` span, first-array-order
+   *  `line-range` entry paints every op in its `[start, end]` span (`end` clamped to the last op; a `start` outside the diff paints nothing, as `applyAnchor` rejects it), first-array-order
    *  highlight winning any overlap; `owners` records the first (lowest-index) op each highlight
    *  wins, the one that renders the focusable `[part="line-highlight-action"]` button; `order`
    *  positions each resolved highlight (0-based) for that button's accessible name, and `total`
@@ -795,8 +795,10 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
       if (seen.has(highlight.id)) continue;
       seen.add(highlight.id);
       if (highlight.anchor.kind !== 'line-range') continue;
-      const start = Math.max(0, Math.min(highlight.anchor.start, ops.length - 1));
-      const end = Math.max(start, Math.min(highlight.anchor.end ?? highlight.anchor.start, ops.length - 1));
+      // Same validity rule as `applyAnchor`: a start outside the diff resolves to nothing.
+      const start = highlight.anchor.start;
+      if (!Number.isInteger(start) || start < 0 || start >= ops.length) continue;
+      const end = Math.max(start, Math.min(highlight.anchor.end ?? start, ops.length - 1));
       let resolvedAny = false;
       for (let index = start; index <= end; index++) {
         const op = ops[index]!;

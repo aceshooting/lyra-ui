@@ -1,4 +1,4 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingShorthand, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -40,19 +40,14 @@ export const styles = css`
     background: var(--_lr-pdf-viewer-button-hover-bg);
   }
   [part="toolbar"] button:active:not(:disabled) {
-    background: color-mix(
-      in oklab,
-      var(--_lr-pdf-viewer-button-hover-bg),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--_lr-pdf-viewer-button-hover-bg)')};
   }
   [part="toolbar"] button:disabled {
     opacity: var(--lr-opacity-disabled);
     cursor: default;
   }
   [part="toolbar"] button:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   [part="page-indicator"],
   [part="zoom-indicator"] {

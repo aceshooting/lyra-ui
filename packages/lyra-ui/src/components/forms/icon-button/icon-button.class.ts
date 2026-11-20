@@ -14,6 +14,7 @@ import { safeActionLinkHref, safeDownloadHref } from '../../../internal/safe-url
 import { isUnsafeSvgCloneAttribute, isUnsafeSvgCloneElement } from '../../../internal/safe-svg.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import type { LyraToolbarAction } from '../../conversation/message-actions/toolbar-actions.js';
+import { leaseTabIndex } from '../../../internal/tab-index-lease.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_iconButtonLabel } from '../../../internal/default-strings/forms.generated.js';
@@ -470,21 +471,7 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
 
   private createToolbarAction(): LyraToolbarAction {
     const host = this;
-    let leasedTrigger: HTMLElement | undefined;
-    let authoredTabIndex: string | null = null;
-    let lastManagedTabIndex: string | null = null;
-    let consumerOwnsTabIndex = false;
-    const releaseTabIndex = (): void => {
-      const target = leasedTrigger;
-      if (target && target.getAttribute('tabindex') === lastManagedTabIndex) {
-        if (authoredTabIndex === null) target.removeAttribute('tabindex');
-        else target.setAttribute('tabindex', authoredTabIndex);
-      }
-      leasedTrigger = undefined;
-      authoredTabIndex = null;
-      lastManagedTabIndex = null;
-      consumerOwnsTabIndex = false;
-    };
+    const lease = leaseTabIndex();
     return {
       id: 'icon-button',
       get disabled() {
@@ -494,28 +481,9 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
         host.focus(options);
       },
       setTabIndex(tabIndex) {
-        const trigger = host.baseEl;
-        if (!trigger) {
-          releaseTabIndex();
-          return;
-        }
-        if (leasedTrigger !== trigger) {
-          releaseTabIndex();
-          leasedTrigger = trigger;
-          authoredTabIndex = trigger.getAttribute('tabindex');
-        }
-        if (
-          consumerOwnsTabIndex ||
-          (lastManagedTabIndex !== null &&
-            trigger.getAttribute('tabindex') !== lastManagedTabIndex)
-        ) {
-          consumerOwnsTabIndex = true;
-          return;
-        }
-        trigger.tabIndex = tabIndex;
-        lastManagedTabIndex = trigger.getAttribute('tabindex');
+        lease.set(host.baseEl ?? undefined, tabIndex);
       },
-      releaseTabIndex,
+      releaseTabIndex: lease.release,
       matchesEventPath(path) {
         // `!= null`, not `!== undefined`: Lit's @query getter is
         // `this.renderRoot?.querySelector(selector) ?? null`, so before the first render it yields

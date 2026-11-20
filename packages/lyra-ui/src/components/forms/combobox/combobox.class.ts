@@ -92,37 +92,20 @@ import {
   wasOptionInitiallySelected,
   RESET_OPTION_SELECTED_FROM_OWNER,
   SET_OPTION_SELECTED_FROM_OWNER,
+  isOptionElement as isLyraOptionElement,
+  normalizeSelectionValues,
 } from '../../../internal/option-selection.js';
-import { isHtmlElement } from '../../../internal/dom-guards.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_comboboxCreate, LYRA_DEFAULT_comboboxLabel, LYRA_DEFAULT_comboboxLoadError, LYRA_DEFAULT_comboboxOverflow, LYRA_DEFAULT_comboboxRequired, LYRA_DEFAULT_comboboxSelectedOverflow } from '../../../internal/default-strings/forms.generated.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_restore, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_retry, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 installFormControlLabelSupport();
 
 export type OptionFilter = (option: LyraOption, query: string) => boolean;
 
-function isLyraOptionElement(value: unknown): value is LyraOption {
-  return isHtmlElement(value) && value.localName === tag('option');
-}
-
-/**
- * Normalizes a `value` assignment to the committed array form. `undefined` and `null` mean
- * "clear" -- the documented contract for an unset assignment -- while every string, INCLUDING
- * `''`, is a candidate value: `<lr-option value="">` is a legitimate row, so an empty string must
- * round-trip as a real selection rather than being silently folded into "clear" the way a falsy
- * check would. A caller that means "clear" explicitly passes `[]`, never `''`.
- */
-function normalizeSelectionValues(
-  next: string | string[] | null | undefined
-): string[] {
-  if (Array.isArray(next))
-    return next.filter((value): value is string => typeof value === 'string');
-  return typeof next === 'string' ? [next] : [];
-}
 export type LyraComboboxPlacement = 'top' | 'bottom';
 
 /** The full shared `LyraAppearance` vocabulary, matching `<lr-select>`'s trigger. A value outside
@@ -726,30 +709,19 @@ export class LyraCombobox<
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     clear: LYRA_DEFAULT_clear,
-    collapse: LYRA_DEFAULT_collapse,
     comboboxCreate: LYRA_DEFAULT_comboboxCreate,
     comboboxLabel: LYRA_DEFAULT_comboboxLabel,
     comboboxLoadError: LYRA_DEFAULT_comboboxLoadError,
     comboboxOverflow: LYRA_DEFAULT_comboboxOverflow,
     comboboxRequired: LYRA_DEFAULT_comboboxRequired,
     comboboxSelectedOverflow: LYRA_DEFAULT_comboboxSelectedOverflow,
-    copy: LYRA_DEFAULT_copy,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     loading: LYRA_DEFAULT_loading,
-    map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
     noMatches: LYRA_DEFAULT_noMatches,
     notInCatalog: LYRA_DEFAULT_notInCatalog,
-    open: LYRA_DEFAULT_open,
-    progress: LYRA_DEFAULT_progress,
     removeWithContext: LYRA_DEFAULT_removeWithContext,
-    restore: LYRA_DEFAULT_restore,
     retry: LYRA_DEFAULT_retry,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
     tableLoadFailed: LYRA_DEFAULT_tableLoadFailed,
     valueInvalid: LYRA_DEFAULT_valueInvalid,
   };
@@ -817,10 +789,7 @@ export class LyraCombobox<
   }
   set open(next: boolean) {
     const old = this._open;
-    const liveDisabled =
-      this.effectiveDisabled ||
-      (typeof this.matches === 'function' && this.matches(':disabled'));
-    this._open = Boolean(next) && !this.readonly && !liveDisabled && this.meetsMinimumQuery(this.query);
+    this._open = Boolean(next) && !this.readonly && !isLiveDisabled(this) && this.meetsMinimumQuery(this.query);
     if (this._open === old) {
       if (next && !this._open && this.hasAttribute('open'))
         this.removeAttribute('open');
@@ -1307,18 +1276,14 @@ export class LyraCombobox<
     if (this.inputEl) this.inputEl.selectionDirection = value;
   }
 
-  /** Reads both component state and the UA's synchronous fieldset cascade before public actions. */
-  private get liveDisabled(): boolean {
-    return isLiveDisabled(this);
-  }
 
   /** A disabled or readonly control cannot stay open, so closing it is policy, not a request. */
   private get interactionBarred(): boolean {
-    return this.liveDisabled || this.readonly;
+    return isLiveDisabled(this) || this.readonly;
   }
 
   override focus(options?: FocusOptions): void {
-    if (!this.liveDisabled) this.inputEl?.focus(options);
+    if (!isLiveDisabled(this)) this.inputEl?.focus(options);
   }
 
   override blur(): void {
@@ -1332,7 +1297,7 @@ export class LyraCombobox<
    *  utility, or automation script calling `.click()` on `<lr-combobox>` directly (rather than on
    *  its shadow-internal parts) would otherwise silently do nothing. */
   override click(): void {
-    if (this.liveDisabled) return;
+    if (isLiveDisabled(this)) return;
     this.inputEl?.focus();
     void this.show();
   }
@@ -2981,9 +2946,9 @@ export class LyraCombobox<
 
   /** Runs the cancelable option-creation contract, then performs its default append/select behavior. */
   private createOption(inputValue: string): void {
-    if (this.liveDisabled || this.readonly) return;
+    if (isLiveDisabled(this) || this.readonly) return;
     const event = this.emit('lr-create', { inputValue }, { cancelable: true });
-    if (event.defaultPrevented || this.liveDisabled || this.readonly || !this.allowCreate) return;
+    if (event.defaultPrevented || isLiveDisabled(this) || this.readonly || !this.allowCreate) return;
     const option = this.ownerDocument.createElement(
       tag('option')
     ) as LyraOption;
@@ -2994,7 +2959,7 @@ export class LyraCombobox<
 
   /** Commits arbitrary text in the single-select custom-value mode without adding an option. */
   private commitCustomValue(inputValue: string): void {
-    if (this.liveDisabled || this.readonly || this.multiple || !inputValue) return;
+    if (isLiveDisabled(this) || this.readonly || this.multiple || !inputValue) return;
     const selectionChanged = this._selected[0] !== inputValue;
     if (selectionChanged && !this.acceptsSelection([inputValue])) return;
     this.touched = true;
@@ -3008,7 +2973,7 @@ export class LyraCombobox<
 
   private pickRow(row: ComboboxSourceRow, createdOption?: LyraOption): void {
     const sourceOption = this.sourceOptionsByRow.get(row);
-    if (this.liveDisabled || this.readonly || row.disabled || (sourceOption && !isCatalogOptionAvailable(sourceOption, this))) return;
+    if (isLiveDisabled(this) || this.readonly || row.disabled || (sourceOption && !isCatalogOptionAvailable(sourceOption, this))) return;
     if (row.createInput !== undefined) {
       this.createOption(row.createInput);
       return;
@@ -3068,7 +3033,7 @@ export class LyraCombobox<
    * would delete every duplicate in one click. Mirrors `<lr-select>`'s `removeValueAt()`.
    */
   private removeValueAt(index: number): void {
-    if (this.liveDisabled || this.readonly) return;
+    if (isLiveDisabled(this) || this.readonly) return;
     if (index < 0 || index >= this._selected.length) return;
     const next = this._selected.filter((_, i) => i !== index);
     const occurrences = this.multipleOccurrences.filter((_, i) => i !== index);
@@ -3086,7 +3051,7 @@ export class LyraCombobox<
    * must stay silent on `lr-filter` (the filter text never moved).
    */
   private clear(): void {
-    if (this.liveDisabled || this.readonly) return;
+    if (isLiveDisabled(this) || this.readonly) return;
     const hadSelection = this._selected.length > 0;
     const queryChanged = this.query !== '';
     if (!hadSelection && !queryChanged) return;
@@ -3106,7 +3071,7 @@ export class LyraCombobox<
   }
 
   private onInput = (e: Event): void => {
-    if (this.liveDisabled || this.readonly) return;
+    if (isLiveDisabled(this) || this.readonly) return;
     this.explicitInputValue = false;
     this.query = (e.target as HTMLInputElement).value;
     this.activeIndex = -1;
@@ -3219,11 +3184,14 @@ export class LyraCombobox<
       .catch((err) => {
         if (!isCurrent()) return;
         this.sourceEverSettled = true;
-        if (typeof err === 'object' && err !== null && 'name' in err && err.name === 'AbortError') return;
+        // Either outcome retires the previous query's rows: they never answered this one.
         this.asyncRows = [];
         this._sourceTotal = 0;
         this._sourceTruncated = false;
         this.activeIndex = -1;
+        // A source that cancelled its own current work (a shared fetch aborted elsewhere) settles
+        // with no rows and no failure, since nothing went wrong that a host needs to hear about.
+        if (typeof err === 'object' && err !== null && 'name' in err && err.name === 'AbortError') return;
         this.sourceFailed = true;
         this.sourceErrorAnnouncements.announceAssertive(
           this.localize('comboboxLoadError')
@@ -3251,7 +3219,7 @@ export class LyraCombobox<
     // `disabled` (see the `?disabled=${this.effectiveDisabled}` binding above) is not a real user
     // interaction -- marking `touched` for it could reenter an in-flight Lit update and trip Lit's
     // dev-mode "scheduled an update after an update completed" warning.
-    if (!this.liveDisabled) this.touched = true;
+    if (!isLiveDisabled(this)) this.touched = true;
     // Synchronously, not from `updated()`: `:state(user-invalid)` has to be true the moment focus
     // leaves, the same instant native `:user-invalid` starts matching.
     this.syncCustomStates();
@@ -3271,7 +3239,7 @@ export class LyraCombobox<
   };
 
   private onInputFocus = (event: FocusEvent): void => {
-    if (this.liveDisabled) {
+    if (isLiveDisabled(this)) {
       event.stopPropagation();
       return;
     }
@@ -3280,7 +3248,7 @@ export class LyraCombobox<
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
-    if (e.defaultPrevented || shouldIgnoreNavigationKey(e) || this.liveDisabled || this.readonly) return;
+    if (e.defaultPrevented || shouldIgnoreNavigationKey(e) || isLiveDisabled(this) || this.readonly) return;
     const navigable = ['ArrowDown', 'ArrowUp', 'Enter', 'End'].includes(e.key)
       ? this.navigableRows(this.renderedRows.rows)
       : [];
@@ -3360,7 +3328,7 @@ export class LyraCombobox<
   };
 
   private onComboMouseDown = (e: MouseEvent): void => {
-    if (this.liveDisabled) return;
+    if (isLiveDisabled(this)) return;
     // The free-text input owns the browser's native caret placement and Shift-selection defaults.
     // A mousedown whose real target is the input itself (not just something inside it -- there is
     // nothing inside it) must therefore remain uncancelled; preventing it here would strip basic

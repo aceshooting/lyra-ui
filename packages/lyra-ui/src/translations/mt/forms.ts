@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'Iftaħ il-kalendarju',
+  item: 'element',
   comboboxLoadError: 'L-għażliet ma setgħux jitgħabbew.',
   comboboxSelectedOverflow: '+{n} oħra',
   checkboxRequired: 'Jekk jogħġbok immarka din il-kaxxa jekk trid tkompli.',

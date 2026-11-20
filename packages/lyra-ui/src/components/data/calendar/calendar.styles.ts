@@ -1,5 +1,6 @@
 import { css } from 'lit';
-import { activeFill, hoverFill } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingInwardOffset, hoverFill } from '../../../internal/interactive-control.styles.js';
+import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 export const styles = css`
   :host {
     display: block;
@@ -7,8 +8,7 @@ export const styles = css`
     /* Establishes the containment context the narrow-panel @container query below depends on --
        without it, that query fires only if a consumer's page happens to declare container-type on
        some ancestor crossing the same threshold, leaving it dead code. */
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${inlineSizeContainer}
   }
   [part~='header'] { display: flex; align-items: center; justify-content: space-between; gap: var(--lr-space-s); margin-block-end: var(--lr-space-s); }
   [part='title'] { font-weight: var(--lr-font-weight-semibold); }
@@ -32,10 +32,9 @@ export const styles = css`
   button[part~='nav']:hover { background: var(--lr-calendar-nav-hover-bg, var(--lr-color-brand-quiet)); }
   /* Pressed: the hovered fill carried further toward --lr-color-mix-partner, which follows the
      text colour, so the step shows in either theme instead of relying on a fixed lighten. */
-  button[part~='nav']:active { background: var(--lr-calendar-nav-active-bg, color-mix(in oklab, var(--lr-calendar-nav-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))); }
+  button[part~='nav']:active { background: var(--lr-calendar-nav-active-bg, ${activeFill('var(--lr-calendar-nav-hover-bg, var(--lr-color-brand-quiet))')}); }
   button[part~='nav']:focus-visible, [part='agenda-event']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(var(--lr-focus-ring-offset) * -1);
+    ${focusRingInwardOffset}
   }
   /* Paint priority runs from month context through selection, pointer feedback and focus. */
   [part='day'][data-outside='true'] { color: var(--lr-calendar-day-outside-color, var(--lr-color-text-quiet)); background: var(--lr-calendar-day-outside-bg, var(--lr-color-surface)); }
@@ -47,7 +46,7 @@ export const styles = css`
     background: var(--lr-calendar-day-hover-bg, var(--lr-color-brand-quiet));
   }
   [part='day']:active {
-    background: var(--lr-calendar-day-active-bg, color-mix(in oklab, var(--lr-calendar-day-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    background: var(--lr-calendar-day-active-bg, ${activeFill('var(--lr-calendar-day-hover-bg, var(--lr-color-brand-quiet))')});
   }
   [part='day'][data-selected='true']:hover {
     background: var(--lr-calendar-day-hover-bg, ${hoverFill('var(--lr-calendar-day-selected-bg, var(--lr-color-brand-quiet))')});
@@ -56,8 +55,7 @@ export const styles = css`
     background: var(--lr-calendar-day-active-bg, ${activeFill('var(--lr-calendar-day-selected-bg, var(--lr-color-brand-quiet))')});
   }
   [part='day']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(var(--lr-focus-ring-offset) * -1);
+    ${focusRingInwardOffset}
   }
   [part='weekdays'] { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
   [part='weekday'] { padding: var(--lr-space-xs); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm); text-align: center; }
@@ -68,26 +66,25 @@ export const styles = css`
   [part='event'] { overflow: hidden; box-sizing: border-box; inline-size: 100%; min-inline-size: var(--lr-size-1-5rem); min-block-size: var(--lr-size-1-5rem); margin-block-start: var(--lr-space-2xs); padding: var(--lr-space-2xs); border: 0; border-radius: var(--lr-radius); background: var(--lr-color-brand); color: var(--lr-color-on-brand); font: inherit; font-size: var(--lr-font-size-sm); text-align: start; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
   [part='event-limit'] { display: block; margin-block-start: var(--lr-space-2xs); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-xs); }
   [part='agenda-event']:hover { background: var(--lr-calendar-agenda-event-hover-bg, var(--_lr-calendar-agenda-event-background, var(--lr-color-brand-quiet))); }
-  [part='agenda-event']:active { background: var(--lr-calendar-agenda-event-active-bg, var(--_lr-calendar-agenda-event-background, color-mix(in oklab, var(--lr-calendar-agenda-event-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)))); }
+  [part='agenda-event']:active { background: var(--lr-calendar-agenda-event-active-bg, var(--_lr-calendar-agenda-event-background, ${activeFill('var(--lr-calendar-agenda-event-hover-bg, var(--lr-color-brand-quiet))')})); }
   /* Tint the event color underneath the label, including when the color is inline. */
   [part='event']:hover {
-    --_lr-calendar-hover-tint: var(--lr-calendar-event-hover-tint, color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
+    --_lr-calendar-hover-tint: var(--lr-calendar-event-hover-tint, ${hoverFill('transparent')});
     background-image: linear-gradient(var(--_lr-calendar-hover-tint), var(--_lr-calendar-hover-tint));
   }
   [part='agenda-event']:hover {
-    --_lr-calendar-hover-tint: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    --_lr-calendar-hover-tint: ${hoverFill('transparent')};
     background-image: linear-gradient(var(--_lr-calendar-hover-tint), var(--_lr-calendar-hover-tint));
   }
   [part='event']:active,
   [part='agenda-event']:active {
     background-image: linear-gradient(
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active)),
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      ${activeFill('transparent')},
+      ${activeFill('transparent')}
     );
   }
   [part='event']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(var(--lr-focus-ring-offset) * -1);
+    ${focusRingInwardOffset}
   }
   [part='agenda'] { display: grid; gap: var(--lr-space-s); }
   /* Hover/active below only repaint background, so that is all this needs; without it this

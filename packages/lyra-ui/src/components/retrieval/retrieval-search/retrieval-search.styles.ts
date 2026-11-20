@@ -1,11 +1,10 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, hoverFill } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
   }
   [part='base'] {
     display: flex;
@@ -71,18 +70,10 @@ export const styles = css`
      themed to pure white or pure black. A background mix toward --lr-color-mix-partner, which
      tracks the text color, always moves, and moves only the fill. */
   [part='submit']:hover {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
+    background: ${hoverFill('var(--lr-color-brand)')};
   }
   [part='submit']:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-brand)')};
   }
   [part='submit']:focus-visible {
     ${focusRing}
@@ -96,11 +87,7 @@ export const styles = css`
     background: var(--lr-color-surface-raised);
   }
   :host([loading]) [part='submit']:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface-raised),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-surface-raised)')};
   }
   [part='filters'] {
     display: flex;

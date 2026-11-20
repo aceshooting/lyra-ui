@@ -4,7 +4,7 @@ import { html, svg, nothing, type PropertyValues, type TemplateResult, type SVGT
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { formatTimeOfDay } from '../../../internal/intl-cache.js';
-import { spinnerIcon } from '../../../internal/icons.js';
+import { iconFrame, spinnerIcon } from '../../../internal/icons.js';
 import { styles } from './checkpoint.styles.js';
 import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -23,23 +23,8 @@ export interface LyraCheckpointEventMap {
   'lr-restore': CustomEvent<CheckpointRestoreDetail>;
 }
 
-// Mirrors the shared icon set's viewBox/stroke conventions (internal/icons.ts) without adding a
-// checkpoint-specific glyph there.
 function bookmarkIcon(): SVGTemplateResult {
-  return svg`
-    <svg
-      width="1em"
-      height="1em"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="1.75"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    ><path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1Z"></path></svg>
-  `;
+  return iconFrame(svg`<path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1Z"></path>`);
 }
 
 /**

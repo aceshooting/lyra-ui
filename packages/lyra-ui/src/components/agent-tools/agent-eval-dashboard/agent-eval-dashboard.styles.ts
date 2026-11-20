@@ -1,7 +1,9 @@
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { activeFill, focusRing, hoverFill } from '../../../internal/interactive-control.styles.js';
+import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 export const styles = css`
-  :host { display: block; min-inline-size: 0; max-inline-size: 100%; container-type: inline-size; contain-intrinsic-inline-size: var(--lr-size-20rem); }
+  :host { display: block; min-inline-size: 0; max-inline-size: 100%; ${inlineSizeContainer} }
   [part='base'] { display: flex; min-inline-size: 0; max-inline-size: 100%; flex-direction: column; gap: var(--lr-space-m); }
   [part='heading'], [part='runs-heading'] { margin: 0; min-inline-size: 0; max-inline-size: 100%; overflow-wrap: break-word; font-size: var(--lr-font-size-lg); font-weight: var(--lr-font-weight-semibold); }
   [part='metrics'] { display: grid; min-inline-size: 0; max-inline-size: 100%; grid-template-columns: repeat(auto-fit, minmax(var(--lr-size-10rem), 1fr)); gap: var(--lr-space-s); }
@@ -20,9 +22,9 @@ export const styles = css`
   }
   [part='metric']:hover { background: var(--lr-color-surface-raised); }
   [part='metric']:where(:not([aria-pressed='true'])):active {
-    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-surface-raised)')};
   }
-  [part='metric']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
+  [part='metric']:focus-visible { ${focusRing} }
   [part='metric'][aria-pressed='true'] {
     border-color: var(--lr-agent-eval-dashboard-active-border, var(--lr-color-brand));
     background: var(--lr-agent-eval-dashboard-active-bg, var(--lr-color-brand-quiet));
@@ -35,11 +37,7 @@ export const styles = css`
      --lr-agent-eval-dashboard-active-bg keeps a hover step a tier deeper in that colour;
      matches lr-test-results' filter-toggle, the same chip shape in this family. */
   [part='metric']:where([aria-pressed='true']):hover {
-    background: color-mix(
-      in oklab,
-      var(--lr-agent-eval-dashboard-active-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
+    background: ${hoverFill('var(--lr-agent-eval-dashboard-active-bg, var(--lr-color-brand-quiet))')};
   }
   /* Pressed is the hovered tint pushed a further --lr-color-mix-active toward
      --lr-color-mix-partner (which follows the text colour), a distinctly deeper step than hover in
@@ -47,15 +45,15 @@ export const styles = css`
      companion: all three selectors are (0,2,0), so source order alone decides whether pressing an
      already-selected metric shows any feedback at all. */
   [part='metric']:where([aria-pressed='true']):active {
-    background: color-mix(in oklab, var(--lr-agent-eval-dashboard-active-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-agent-eval-dashboard-active-bg, var(--lr-color-brand-quiet))')};
   }
   [part='runs'] { display: flex; min-inline-size: 0; max-inline-size: 100%; flex-direction: column; gap: var(--lr-space-xs); }
   [part='run'] { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--lr-space-xs); align-items: center; padding-block: var(--lr-space-xs); border: 0; border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle); inline-size: 100%; background: transparent; color: var(--lr-color-text); font: inherit; text-align: start; cursor: pointer; transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast); }
   [part='run']:hover { background: var(--lr-color-surface-raised); }
   [part='run']:active {
-    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-surface-raised)')};
   }
-  [part='run']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
+  [part='run']:focus-visible { ${focusRing} }
   [part='run-label'] { min-inline-size: 0; max-inline-size: 100%; overflow-wrap: break-word; }
   [part='run-meta'] { display: flex; flex-wrap: wrap; gap: var(--lr-space-2xs); align-items: center; justify-content: flex-end; }
   [part='empty'] { color: var(--lr-color-text-quiet); }

@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, focusRingInset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
@@ -137,19 +137,14 @@ export const styles = css`
      :where()/:not(:disabled) wrapping, so it ties with the hover rule above -- source order hands
      the press the win -- and never fires on a disabled trigger. */
   :where([part='trigger']):active:where(:not(:disabled)) {
-    background: color-mix(
-      in oklab,
-      var(--lr-locale-picker-trigger-hover-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-locale-picker-trigger-hover-bg, var(--lr-color-brand-quiet))')};
   }
   :host([open]) [part='trigger'] {
     border-color: var(--lr-locale-picker-open-border-color, var(--lr-color-brand));
     ${formControlFocusHalo}
   }
   :host(:disabled) [part='trigger'] {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
 
   [part='trigger-flag'] {
@@ -242,8 +237,7 @@ export const styles = css`
     border-color: var(--lr-color-brand);
   }
   [part='search-input']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingInset}
   }
   [part='empty'] {
     padding: var(--lr-space-s);
@@ -284,11 +278,7 @@ export const styles = css`
   /* Mixing the hover tint itself (not the bare token) keeps a consumer who retinted
      --lr-locale-picker-option-active-bg in charge of both states. */
   [part='option']:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-locale-picker-option-active-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-locale-picker-option-active-bg, var(--lr-color-brand-quiet))')};
   }
   [part='option'][aria-selected='true'] {
     border-color: var(--lr-locale-picker-option-selected-border-color, var(--lr-color-brand));

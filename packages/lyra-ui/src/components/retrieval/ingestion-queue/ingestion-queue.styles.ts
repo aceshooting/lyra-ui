@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -150,11 +150,7 @@ export const styles = css`
   lr-virtual-list::part(item-action-button):active:not(:disabled) {
     border-color: var(--lr-color-brand);
     color: var(--lr-color-brand);
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-surface)')};
   }
   [part="cancel-button"]:hover:where(:not(:disabled)),
   lr-virtual-list::part(cancel-button):hover:not(:disabled) {
@@ -165,11 +161,7 @@ export const styles = css`
   lr-virtual-list::part(cancel-button):active:not(:disabled) {
     border-color: var(--lr-color-danger);
     color: var(--lr-color-danger);
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-surface)')};
   }
   [part="source-retry"]:focus-visible,
   [part="retry-button"]:focus-visible,
@@ -186,8 +178,7 @@ export const styles = css`
   lr-virtual-list::part(retry-button):disabled,
   lr-virtual-list::part(cancel-button):disabled,
   lr-virtual-list::part(item-action-button):disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   @media (prefers-reduced-motion: reduce) {
     [part="source-retry"],

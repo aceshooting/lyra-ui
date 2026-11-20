@@ -69,3 +69,13 @@ test('called stylesheet factories contribute their CSS hooks', () => {
   const result = collectStyleSources('src/component/example.class.ts', (file) => sources.get(file));
   assert.match(result.get('src/shared.styles.ts'), /--lr-factory-color/);
 });
+
+test('shared fill helpers contribute the var() hooks of their string argument', () => {
+  const sources = new Map([
+    ['src/component/example.class.ts', "import { styles } from './example.styles.js'; export class Example { static styles = styles; }"],
+    ['src/component/example.styles.ts', "export const styles = css`div:hover { background: ${hoverFill('var(--lr-example-hover-bg, var(--lr-color-surface))')}; } p { color: ${notAHelper('var(--lr-phantom-hook)')}; }`;"],
+  ]);
+  const css = [...collectStyleSources('src/component/example.class.ts', (file) => sources.get(file)).values()].join('\n');
+  assert.match(css, /--lr-example-hover-bg/);
+  assert.doesNotMatch(css, /--lr-phantom-hook/);
+});

@@ -1,8 +1,8 @@
 ---
-'@aceshooting/lyra-ui': major
+'@aceshooting/lyra-ui': minor
 ---
 
-Use the meter role to find budget usage. Small nonzero percentages and nearly full budgets retain their precision, and formatted quantities and units keep their reading direction in bidirectional text.
+Budget meters expose the `meter` role. Small nonzero percentages and nearly full budgets retain their precision, and formatted quantities and units keep their reading direction in bidirectional text.
 Keep a localized accessible name when the heading of a budget meter or agent question is hidden.
 Keep keyboard focus in the current workflow when run actions change, a span leaves the timeline, a question changes state, or a task list collapses.
 Preserve browser shortcuts and composing keystrokes in run trees, span timelines, reorderable tasks, and highlighted terminal output.

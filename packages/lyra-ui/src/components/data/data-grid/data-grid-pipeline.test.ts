@@ -207,6 +207,14 @@ describe('data-grid row budget', () => {
     expect(summary()).to.equal('Retained 2 rows');
   });
 
+  it('chooses the English row budget wording from the numeric admitted count', async () => {
+    const element = await dataGrid<Item>(html`<lr-data-grid label="Budget" max-rows="1"
+      .columns=${[{ field: 'name', label: 'Name' }]}
+      .data=${items.slice(0, 3)}
+    ></lr-data-grid>`);
+    expect(element.shadowRoot!.querySelector('[part="row-limit"]')?.textContent?.trim()).to.equal('Only the first 1 row is shown.');
+  });
+
   it('reports truncation and keeps controlled selection of rows beyond the budget', async () => {
     const many: Item[] = Array.from({ length: 10_005 }, (_, index) => ({ id: index, name: `Row ${index}`, score: index }));
     const element = await dataGrid<Item>(html`

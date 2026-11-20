@@ -1,15 +1,15 @@
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
     max-inline-size: 100%;
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${inlineSizeContainer}
   }
 
   [part='base'] {
@@ -93,7 +93,7 @@ export const styles = css`
      (which follows the text colour), so it reads as a distinctly deeper step than hover in both
      light and dark themes. */
   [part='request']:not(:disabled):active {
-    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-surface-raised)')};
   }
 
   [part='request']:focus-visible {

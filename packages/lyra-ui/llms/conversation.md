@@ -1318,7 +1318,7 @@ For the rename button, set `--lr-icon-button-radius` for the corners. The fill, 
 
 Set `disabled` to disable selection and renaming. Disabling a row discards an open rename draft.
 
-Customize the appearance with `--lr-conversation-item-hover-bg`.
+Customize the appearance with `--lr-conversation-item-hover-bg` and, for the press of an inactive row, `--lr-conversation-item-pressed-bg`.
 
 A selectable row representing one chat session in a history sidebar list. Usable standalone or as the
 `renderItem()` payload of `<lr-virtual-list>`; has no dependency on that (or any) other component.
@@ -1716,6 +1716,16 @@ visually-distinct row (dashed border, italic label, "not in catalog" badge) comp
   control in either mode (the closed trigger button or free-text input), retaining `relatedTarget`
   and bubbling/composed unlike the shadow-internal original.
 - `lr-invalid` (no detail) — the single bubbling/composed alias of a failed native validity check.
+- `lr-change-request` (frozen `detail: { value: string; inCatalog: boolean }`, **cancelable**) —
+  fired before a listbox pick or free-text commit changes `value`. `preventDefault()` keeps the
+  current value and the open popup; a listener that disables, detaches, makes read-only or
+  re-values the picker also stops the commit. Programmatic `value` writes never request.
+- `lr-show` / `lr-hide` (no detail) — fired before the listbox opens or closes, however `open`
+  changed after the first render (trigger, keyboard, Escape, outside press or a property/attribute
+  write). Both are cancelable, except the close that disabling the picker forces; a vetoed write
+  leaves the reflected `open` attribute in step with the kept state.
+- `lr-after-show` / `lr-after-hide` (no detail) — the opened listbox finished its transition, or the
+  closed one finished and left layout.
 
 **Slots:** `label` (custom visible label content), `hint` (custom hint content), `error` (custom
 error content).
@@ -2724,7 +2734,8 @@ settings snapshot, not just whichever field actually changed. `inCatalog` is rec
 `catalog`/`model` on every emission (mirroring `lr-model-select`'s own `effectiveEntries` logic)
 rather than cached from the last child event, so it's still correct even when `model` was just
 assigned directly instead of via the child's own event. The nested selector's native `focus` and
-`blur` events remain contained at that child boundary; the panel does not declare or relay them.
+`blur` events, its `lr-change-request` and its `lr-show`/`lr-hide`/`lr-after-show`/`lr-after-hide`
+popup lifecycle remain contained at that child boundary; the panel does not declare or relay them.
 
 **Slots:** none — this is a fixed two-control composition, not a generic layout shell.
 
@@ -3327,9 +3338,9 @@ root); wins over `label` and the localized default.
 unread divider to the top of the view, resolving `false` when `unreadStartIndex` is `null`/out of
 range; does not re-engage `follow`.
 
-**Events.** `lr-follow-change` carries `detail: { following }` when scrolling releases or resumes
-follow, or the user activates the jump button. Handle direct `follow` writes and calls to
-`scrollToBottom()` at their call sites if the application tracks those changes.
+**Events.** `lr-follow-change` carries `detail: { following }` whenever `follow` flips: scrolling
+releases or resumes follow, the user activates the jump button, `scrollToBottom()` re-engages it, or
+`follow` is assigned directly. It never fires for the initial mount state.
 
 Activating a focused jump-to-latest pill, or directly setting `follow = true`, transfers focus to
 the transcript's stable scroll owner after the pill disappears: `[part="scroll"]` in slotted mode,
@@ -3352,8 +3363,9 @@ slotted-content wrapper the growth observers watch), `jump-pill` (the built-in j
 absent while `follow` is engaged), `unread-divider` (the "New messages" separator, slotted mode
 only).
 
-**Events:** `lr-follow-change` (`detail: { following: boolean }`) reports a follow-state change
-caused by scrolling or activating the jump-to-latest button.
+**Events:** `lr-follow-change` (`detail: { following: boolean }`) reports every follow-state change
+after mount, whether from scrolling, the jump-to-latest button, `scrollToBottom()` or a direct
+`follow` write.
 
 **Themeable custom properties:** `--lr-chat-viewport-padding` (default `var(--lr-space-m)`) —
 padding of `[part="scroll"]` around the transcript, slotted mode only (in virtual mode the slotted
@@ -4361,7 +4373,10 @@ before the input renders.
 the committed value. Free-text edits include the exact draft in `query`, including an empty string.
 Commit events omit `query`. Enter commits the active enabled suggestion or the trimmed draft.
 Escape or leaving the control dismisses the draft.
-`lr-change` — `detail: { value, inCatalog }`. `lr-preview-request` — `detail: {
+`lr-change` — `detail: { value, inCatalog }`. Cancelable `lr-change-request` (frozen `{ value,
+inCatalog }`) precedes each pick or free-text commit, and `lr-show`/`lr-hide` (cancelable, except a
+close forced by disabling) plus `lr-after-show`/`lr-after-hide` report every listbox open and close
+after the first render, exactly as on `lr-model-select`. `lr-preview-request` — `detail: {
 voiceId, previewUrl? }`, cancelable. `lr-preview-change` — `detail: { voiceId }`, internal playback
 started (`voiceId`, only after `play()` fulfills) or stopped (`null`); a pending rejection emits
 neither. Plus owner-realm native `input`/`change` (retaining each free-text `InputEvent` payload)
@@ -4486,7 +4501,7 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 
 Whitespace-only name overrides use the same fallback as an omitted name.
 
-The built-in composer accepts `composerDisabled: boolean = false` (attribute `composer-disabled`). Listen directly on a built-in child for its native `input` and `change`, clipboard, disclosure and export events. Events from slotted content keep their normal propagation.
+The built-in composer accepts `composerDisabled: boolean = false` (attribute `composer-disabled`). Generic control-state events of the built-in children (native `input` and `change`, `lr-change`, `lr-invalid`, disclosure `lr-toggle`/`lr-toggle-request`, `lr-show`/`lr-hide`) stop at the workspace boundary. Child intents such as `lr-load-more`, `lr-chunk-open`, `lr-claim-select`, `lr-citation-open`, `lr-citation-activate`, `lr-tool-activate`, `lr-tool-render-error`, clipboard and export events still bubble out of the host. Events from slotted content keep their normal propagation.
 
 `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`) sets the title level. Details headings use the next level up to six. Use `none` to omit heading semantics, or `label=""` to omit the visible title. Host `aria-labelledby` and `aria-describedby` name and describe the workspace region.
 
@@ -4973,7 +4988,8 @@ remainingFiles, remainingTotalSize }`), `lr-attachment-remove` (`{ attachmentId 
 (`{ items, reason, itemId }`), `lr-send-now` (`{ item }`), `lr-camera-request`,
 `lr-audio-request`, `lr-attachment-retry` (`{ attachmentId }`), and cancelable
 `lr-attachment-preview-request` (`{ attachmentId, name, mimeType, src }`). Child events are stopped
-and re-emitted from `lr-prompt-input`; all composed interactions are suppressed while `disabled`,
+and re-emitted from `lr-prompt-input`; the embedded model and voice pickers' own `lr-input`,
+`lr-change-request` and popup lifecycle events stay inside it; all composed interactions are suppressed while `disabled`,
 including a child event dispatched in the same turn that disables the host. The one deliberate
 exception is the built-in voice picker's preview pair: its cancelable `lr-preview-request`
 (`{ voiceId, previewUrl? }`) and `lr-preview-change` (`{ voiceId }`) reach the host unchanged, so a

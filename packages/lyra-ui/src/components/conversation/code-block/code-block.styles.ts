@@ -1,4 +1,4 @@
-import { activeFill, iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingInwardOffset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -14,11 +14,7 @@ export const styles = css`
     /* Reads the PUBLIC hover token (not this component's own -bg-hover default) so that an
        ancestor override of just the hover tier still shapes the press mix -- a cross-reference to a
        DIFFERENT public token than the one being defined here, so it introduces no loop. */
-    --_lr-code-block-copy-bg-active: color-mix(
-      in oklab,
-      var(--lr-icon-button-bg-hover, var(--lr-icon-button-background-hover, var(--lr-color-brand-quiet))),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    --_lr-code-block-copy-bg-active: ${activeFill('var(--lr-icon-button-bg-hover, var(--lr-icon-button-background-hover, var(--lr-color-brand-quiet)))')};
     --_lr-code-block-copy-color: var(--lr-color-text-quiet);
     --_lr-code-block-copy-color-hover: var(--lr-color-brand);
     --_lr-code-block-copy-color-active: var(--lr-icon-button-color-hover, var(--lr-color-brand));
@@ -336,8 +332,7 @@ export const styles = css`
     background: var(--_lr-code-block-gutter-bg-active);
   }
   [part='pre'] button.line-gutter:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-offset));
+    ${focusRingInwardOffset}
   }
   /* Activates shiki's dual-themes dark variant. codeToHtml() (tokenize() in code-block.ts) renders
      each token's LIGHT color inline and stashes its DARK one in the --shiki-dark and

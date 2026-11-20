@@ -1,7 +1,7 @@
 import type { LyraSourceSearchResult } from '../data-sources.js';
-import { clipboardFailureReason } from './clipboard.js';
+import { writeAcceptedClipboardText } from './clipboard.js';
 import type { HierarchyCapabilityResult } from './hierarchy-source-controller.js';
-import { copyOutcome, reportCopyOutcome, type CopyOutcome } from './record-copy-feedback.js';
+import { reportCopyOutcome, type CopyOutcome } from './record-copy-feedback.js';
 
 type SearchResult = LyraSourceSearchResult<{ readonly key: string }>;
 
@@ -216,21 +216,8 @@ export class HierarchySourceCopyController {
     }
     const accepted = () => current() && result.isCurrent();
     if (!accepted()) return;
-    let outcome: CopyOutcome;
-    try {
-      const clipboard = owner.defaultView?.navigator.clipboard;
-      const write = clipboard?.writeText;
-      if (!accepted()) return;
-      if (typeof write !== 'function') {
-        outcome = copyOutcome('failure', { text: result.value, reason: 'unsupported', error: new Error('Clipboard is unavailable') });
-      } else {
-        await write.call(clipboard, result.value);
-        outcome = copyOutcome('success', { text: result.value });
-      }
-    } catch (error) {
-      outcome = copyOutcome('failure', { text: result.value, reason: clipboardFailureReason(error), error });
-    }
-    if (!accepted()) return;
+    const outcome = await writeAcceptedClipboardText(owner.defaultView, result.value, accepted);
+    if (!outcome || !accepted()) return;
     sinks.feedback(feedbackKey, outcome.ok);
     reportCopyOutcome({
       announce: (ok) => {

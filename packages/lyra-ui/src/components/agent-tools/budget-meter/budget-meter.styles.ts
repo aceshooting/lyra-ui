@@ -1,11 +1,10 @@
 import { forcedColorsDataFill } from '../../../internal/forced-colors.styles.js';
 import { css } from 'lit';
+import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
   }
 
   :host([frame='plain']) [part='base'] {
@@ -37,9 +36,7 @@ export const styles = css`
   }
 
   [part='track'] {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
     block-size: var(--lr-size-0-75rem);
     overflow: hidden;
     border-radius: var(--lr-budget-meter-radius, var(--lr-radius-xs));

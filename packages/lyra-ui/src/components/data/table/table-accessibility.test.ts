@@ -855,10 +855,10 @@ describe('localization', () => {
     await main.updateComplete;
     await waitUntil(() => main.hasHiddenPriorityColumns === true);
     const reveal = main.shadowRoot!.querySelector('[part="reveal-columns-button"]') as HTMLButtonElement;
-    const revealText = reveal.title;
+    const revealText = reveal.textContent!.trim();
     reveal.click();
     await main.updateComplete;
-    const hideText = reveal.title;
+    const hideText = reveal.textContent!.trim();
 
     const loading = (await fixture(
       html`<lr-table loading .strings=${strings}></lr-table>`

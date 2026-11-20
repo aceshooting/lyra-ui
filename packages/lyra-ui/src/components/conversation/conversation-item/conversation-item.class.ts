@@ -167,6 +167,7 @@ export interface LyraConversationItemEventMap {
  * @cssstate menu-open - Present while an `lr-dropdown`, `lr-popover` or `lr-context-menu` opened
  *   from the `actions` slot is open, e.g. `lr-conversation-item:is(:hover, :focus-within, :state(menu-open)) .row-menu`.
  * @cssprop [--lr-conversation-item-hover-bg=color-mix(in srgb, var(--lr-color-text) 6%, transparent)] - Row background on hover or while an actions menu is open.
+ * @cssprop [--lr-conversation-item-pressed-bg=color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Row background while an inactive row is pressed. The open session's own press deepens `--lr-conversation-item-active-bg` instead.
  * @cssprop --lr-icon-button-bg - Resting background of the rename button.
  * @cssprop --lr-icon-button-bg-active - Pressed background of the rename button.
  * @cssprop --lr-icon-button-bg-hover - Hover background of the rename button.

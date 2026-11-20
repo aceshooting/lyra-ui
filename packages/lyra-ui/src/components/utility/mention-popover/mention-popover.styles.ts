@@ -6,6 +6,7 @@ import {
   overlaySurface,
   overlaySurfaceControlEdge,
 } from '../../../internal/overlay-surface.styles.js';
+import { activeFill } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   :host {
@@ -86,11 +87,7 @@ export const styles = css`
      the [part='option-description'] hover rule below, a descendant treatment of this row rather
      than a hover state of its own. */
   [part='option']:where(:not([aria-disabled='true'])):active {
-    background: color-mix(
-      in oklab,
-      var(--lr-mention-popover-option-active-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-mention-popover-option-active-bg, var(--lr-color-brand-quiet))')};
   }
   [part='option'][aria-selected='true'] {
     color: var(--lr-mention-popover-option-active-color, var(--lr-color-brand));

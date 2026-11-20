@@ -42,12 +42,18 @@ export function clipboardFailureReason(error: unknown): LyraCopyErrorReason {
   return name === 'NotAllowedError' || name === 'SecurityError' ? 'denied' : 'failed';
 }
 
-function failure(
+/** A frozen failure outcome; `reason` defaults to the classification of `error`. */
+export function clipboardWriteFailure(
   text: string,
   error: unknown,
   reason = clipboardFailureReason(error),
 ): LyraClipboardWriteFailure {
   return Object.freeze({ ok: false, text, reason, error });
+}
+
+/** A frozen success outcome. */
+export function clipboardWriteSuccess(text: string): LyraClipboardWriteSuccess {
+  return Object.freeze({ ok: true, text });
 }
 
 /**
@@ -59,20 +65,28 @@ export async function writeClipboardText(
   owner: Window | null | undefined,
   text: string,
 ): Promise<LyraClipboardWriteOutcome> {
-  if (!owner) {
-    const error = new ClipboardUnavailableError();
-    return failure(text, error, 'unsupported');
-  }
+  return (await writeAcceptedClipboardText(owner, text, () => true))!;
+}
 
+/**
+ * {@link writeClipboardText}, re-checking `accepted()` after the clipboard capability is read and
+ * before the write starts. Resolves `undefined`, without writing, when the request was superseded
+ * (for example by a capability getter that replaced the owning source).
+ */
+export async function writeAcceptedClipboardText(
+  owner: Window | null | undefined,
+  text: string,
+  accepted: () => boolean,
+): Promise<LyraClipboardWriteOutcome | undefined> {
+  if (!owner) return clipboardWriteFailure(text, new ClipboardUnavailableError(), 'unsupported');
   try {
     const clipboard = owner.navigator.clipboard;
-    if (typeof clipboard?.writeText !== 'function') {
-      const error = new ClipboardUnavailableError();
-      return failure(text, error, 'unsupported');
-    }
-    await clipboard.writeText(text);
-    return Object.freeze({ ok: true, text });
+    const write = clipboard?.writeText;
+    if (!accepted()) return undefined;
+    if (typeof write !== 'function') return clipboardWriteFailure(text, new ClipboardUnavailableError(), 'unsupported');
+    await write.call(clipboard, text);
+    return clipboardWriteSuccess(text);
   } catch (error) {
-    return failure(text, error);
+    return clipboardWriteFailure(text, error);
   }
 }

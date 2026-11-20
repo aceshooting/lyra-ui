@@ -49,3 +49,14 @@ it('forwards size and readonly to the model and temperature controls', async () 
   expect(panel.temperature).to.equal(initial);
   expect(panel.model).to.equal('');
 });
+
+it('keeps the internal model picker request and popup lifecycle inside the panel', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-model-settings-panel']>(html`<lr-model-settings-panel
+    .catalog=${['m']}></lr-model-settings-panel>`);
+  const picker = el.shadowRoot!.querySelector('lr-model-select')!;
+  const names = ['lr-change-request', 'lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide'];
+  const leaked: string[] = [];
+  for (const name of names) el.addEventListener(name, () => leaked.push(name));
+  for (const name of names) picker.dispatchEvent(new CustomEvent(name, { bubbles: true, composed: true }));
+  expect(leaked).to.deep.equal([]);
+});

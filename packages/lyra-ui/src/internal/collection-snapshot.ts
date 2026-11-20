@@ -9,6 +9,7 @@ import {
   readOwnArrayLength,
 } from './data-descriptors.js';
 import { devWarnOnce } from './dev-warning.js';
+import { isRuntimeArray } from './object-guards.js';
 
 /** Maximum number of plain-record properties retained across one snapshot. */
 const PUBLIC_COLLECTION_NODE_LIMIT = 50_000;
@@ -156,14 +157,6 @@ function snapshotRealm(view?: Window | SnapshotRealm | null): SnapshotRealm {
     Object: candidate?.Object ?? Object,
     Set: candidate?.Set ?? Set,
   };
-}
-
-function isArrayValue(value: unknown): value is unknown[] {
-  try {
-    return Array.isArray(value);
-  } catch {
-    return false;
-  }
 }
 
 function isNativeArrayBufferView(value: object): value is ArrayBufferView {
@@ -317,7 +310,7 @@ function snapshotDataRecord(
         ? snapshotIdentityCollection(descriptor.value, budget.realm, budget)
         : snapshotCollectionValue(
             descriptor.value, budget, depth + 1, undefined, undefined,
-            budget.nestedArrayPrefix && isArrayValue(descriptor.value)
+            budget.nestedArrayPrefix && isRuntimeArray(descriptor.value)
           );
       if (isCollectionSnapshotFailure(entry)) {
         if (entry === OMIT_COLLECTION_VALUE) budget.invalid = true;
@@ -357,7 +350,7 @@ function snapshotCollectionValue(
   if (depth > budget.depthLimit || budget.remaining <= 0)
     return EXHAUSTED_COLLECTION_VALUE;
 
-  if (isArrayValue(value)) {
+  if (isRuntimeArray(value)) {
     if (!consumeSnapshotWork(budget)) return EXHAUSTED_COLLECTION_VALUE;
     const sourceLength = readOwnArrayLength(value);
     if (sourceLength === undefined) {
@@ -399,7 +392,7 @@ function snapshotCollectionValue(
         budget.remaining -= 1;
         return snapshotCollectionValue(
           descriptor.value, budget, depth + 1, undefined, undefined,
-          budget.nestedArrayPrefix && isArrayValue(descriptor.value)
+          budget.nestedArrayPrefix && isRuntimeArray(descriptor.value)
         );
       });
       if (entry === OMIT_COLLECTION_VALUE) {
@@ -554,7 +547,7 @@ export function snapshotPublicCollection(
     invalid: budget.invalid || snapshot === OMIT_COLLECTION_VALUE,
     truncated: budget.truncated || snapshot === EXHAUSTED_COLLECTION_VALUE,
   }));
-  if (isArrayValue(value) || isNativeArrayBufferView(value as object))
+  if (isRuntimeArray(value) || isNativeArrayBufferView(value as object))
     return emptyRealmArray(realm);
   if (typeof value === 'object') {
     if (nativeMapEntries(value))
@@ -872,7 +865,7 @@ function snapshotIdentityCollection(
     budget.seen.has(value)
   )
     return budget.seen.get(value);
-  if (isArrayValue(value)) {
+  if (isRuntimeArray(value)) {
     if (budget && !consumeSnapshotWork(budget))
       return EXHAUSTED_COLLECTION_VALUE;
     const sourceLength = readOwnArrayLength(value) ?? 0;
@@ -1235,7 +1228,7 @@ function installOwnedCollectionAccessors(ctor: typeof LyraElement): void {
         policy.preservesObjectIdentity &&
         value !== null &&
         typeof value === 'object' &&
-        !isArrayValue(value)
+        !isRuntimeArray(value)
           ? value
           : policy.preservesItemIdentity
           ? snapshotIdentityCollection(value, ownerView, undefined, options)
@@ -1245,7 +1238,7 @@ function installOwnedCollectionAccessors(ctor: typeof LyraElement): void {
         // A fresh caller array, including a former mutable source, supplies its own provenance.
         // Deep snapshots can retain rejected holes, so their length is not a retained-row count.
         const retained = truncation?.retained ?? (policy.preservesItemIdentity
-          ? isArrayValue(snapshot)
+          ? isRuntimeArray(snapshot)
             ? readOwnArrayLength(snapshot)
             : snapshot !== null && typeof snapshot === 'object'
               ? nativeCollectionSize(snapshot, 'map') ?? nativeCollectionSize(snapshot, 'set')

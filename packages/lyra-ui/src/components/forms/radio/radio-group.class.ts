@@ -30,6 +30,7 @@ import {
   isBarredFromValidation,
   setFormOwner,
   type FormOwnerValue,
+  isLiveDisabled,
 } from '../../../internal/form-associated.js';
 import {
   declaredDefaultConverter,
@@ -84,6 +85,10 @@ const RADIO_GROUP_ORIENTATION = literalSetConverter<RadioGroupOrientation>(
  *
  * Host `aria-describedby` references resolve onto the internal radiogroup before local hint/error
  * guidance. References track target replacement/removal, reconnect and document adoption.
+ *
+ * Deliberately no `readonly`: the native radio group has no read-only state either, so this control
+ * offers `disabled` alone (which also leaves form submission). A read-only form view renders the
+ * committed value as text, with a hidden input when it must still submit.
  *
  * @customElement lr-radio-group
  * @slot - Radio controls.
@@ -643,7 +648,7 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
   private onFocusOut = (event: FocusEvent): void => {
     // `:disabled` leads `effectiveDisabled` while a fieldset's forced blur is being delivered.
     const radio = event.target as Element;
-    if (!this.ownsRadio(radio) || this.hasInteracted || this.effectiveDisabled || this.matches(':disabled') || radio.matches(':disabled')) return;
+    if (!this.ownsRadio(radio) || this.hasInteracted || isLiveDisabled(this) || radio.matches(':disabled')) return;
     this.hasInteracted = true;
     this.reflectValidityStates();
     this.requestUpdate();
@@ -698,7 +703,7 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
 
   /** Moves focus to the selected enabled option, or the first enabled option when empty. */
   override focus(options?: FocusOptions): void {
-    if (this.effectiveDisabled || this.matches(':disabled')) return;
+    if (isLiveDisabled(this)) return;
     const enabled = this.radios().filter((radio) => this.isRadioAvailable(radio));
     (enabled.find((radio) => radio.checked) ?? enabled[0])?.focus(options);
   }
@@ -711,7 +716,7 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
   /** Activates the selected/first enabled option, matching host click semantics on the internal
    *  radio collection rather than leaving `<lr-radio-group>` a no-op. */
   override click(): void {
-    if (this.effectiveDisabled || this.matches(':disabled')) return;
+    if (isLiveDisabled(this)) return;
     const enabled = this.radios().filter((radio) => this.isRadioAvailable(radio));
     (enabled.find((radio) => radio.checked) ?? enabled[0])?.click();
   }

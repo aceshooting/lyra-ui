@@ -64,27 +64,51 @@ it('rebuilds Chart.js hosts that were built before the annotation plugin registe
 });
 
 it('rebuilds later subscribers after one host throws and releases unsubscribed hosts', () => {
-  const error = new Error('Chart rebuild failed');
+  const error = new Error('Chart rebuild failed; row-7');
   let healthy = 0;
   const warnings: unknown[][] = [];
   const warn = console.warn;
+  const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+  const issued = runtime.litIssuedWarnings;
   const stopBroken = onAnnotationPluginRegistered(() => { throw error; });
   const stopHealthy = onAnnotationPluginRegistered(() => { healthy++; });
   console.warn = (...args: unknown[]) => { warnings.push(args); };
+  runtime.litIssuedWarnings = new Set();
   try {
     expect(() => notifyAnnotationPluginRegistered()).not.to.throw();
     expect(healthy).to.equal(1);
-    expect(warnings.length).to.equal(1);
-    expect(warnings[0]![0]).to.equal('<lr-chart> could not rebuild a chart after annotation registration:');
-    expect(warnings[0]![1] === error).to.equal(true);
+    // A second failing rebuild repeats no diagnostic: it is development-only and once per page.
+    expect(() => notifyAnnotationPluginRegistered()).not.to.throw();
+    expect(healthy).to.equal(2);
+    expect(warnings.map((args) => args.map(String).join(' '))).to.deep.equal([
+      '<lr-chart> could not rebuild a chart after annotation registration.',
+    ]);
     stopBroken();
     notifyAnnotationPluginRegistered();
-    expect(healthy).to.equal(2);
-    expect(warnings.length).to.equal(1);
+    expect(healthy).to.equal(3);
     stopHealthy();
     notifyAnnotationPluginRegistered();
-    expect(healthy).to.equal(2);
+    expect(healthy).to.equal(3);
   } finally {
     stopBroken(); stopHealthy(); console.warn = warn;
+    if (issued === undefined) delete runtime.litIssuedWarnings;
+    else runtime.litIssuedWarnings = issued;
+  }
+});
+
+it('keeps a failed rebuild silent when Lit development diagnostics are unavailable', () => {
+  const warnings: unknown[][] = [];
+  const warn = console.warn;
+  const runtime = globalThis as typeof globalThis & { litIssuedWarnings?: Set<string> };
+  const issued = runtime.litIssuedWarnings;
+  const stop = onAnnotationPluginRegistered(() => { throw new Error('production rebuild failure'); });
+  console.warn = (...args: unknown[]) => { warnings.push(args); };
+  delete runtime.litIssuedWarnings;
+  try {
+    expect(() => notifyAnnotationPluginRegistered()).not.to.throw();
+    expect(warnings.length).to.equal(0);
+  } finally {
+    stop(); console.warn = warn;
+    if (issued !== undefined) runtime.litIssuedWarnings = issued;
   }
 });

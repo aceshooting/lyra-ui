@@ -1,5 +1,6 @@
 import { css } from 'lit';
 import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { blockHost, inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   [part='input-limit'], [part='slices-limit'] {
@@ -15,8 +16,7 @@ export const styles = css`
     min-inline-size: 0;
     min-block-size: 0;
     block-size: 100%;
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${inlineSizeContainer}
   }
   /* The middle track is the only scroll owner: minmax(0, 1fr) lets it shrink to zero and the
      composed lr-chat-viewport scrolls the transcript inside it. The two auto tracks are
@@ -64,9 +64,7 @@ export const styles = css`
     margin-inline-start: auto;
   }
   slot[name='header-actions'] {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
   }
   slot[name='header-actions']::slotted(*) {
     min-inline-size: 0;
@@ -92,15 +90,11 @@ export const styles = css`
     min-block-size: 0;
   }
   [part~='messages'] {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
     margin-block-end: var(--lr-space-m);
   }
   slot[name='messages']::slotted(*) {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
     margin-block-end: var(--lr-space-m);
   }
   /* The display above is author-origin, so it outranks the UA stylesheet's own

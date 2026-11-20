@@ -1,14 +1,13 @@
 import { visuallyHidden } from '../../../internal/a11y.js';
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing } from '../../../internal/interactive-control.styles.js';
 import { scrollOverflowFade } from '../../../internal/scroll-overflow.styles.js';
 import { css } from 'lit';
+import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
   }
   [part="base"] {
     display: flex;
@@ -81,8 +80,7 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part="step"][aria-disabled="true"] {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   /* A read-only strip is a progress display, not a locked control: the steps stop being buttons
      altogether (stepper.ts's render()), so only the click affordance is withdrawn. Deliberately no
@@ -108,11 +106,7 @@ export const styles = css`
   :where(button[part="step"]):active:where(:not([aria-disabled="true"])) {
     background: var(
       --lr-stepper-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-color-brand-quiet),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-color-brand-quiet)')}
     );
     color: var(--lr-stepper-active-color, var(--lr-color-text));
   }

@@ -1,5 +1,5 @@
 import { emitValueEvents } from '../../../internal/value-events.js';
-import { renderFormControlHintError } from '../../../internal/form-control-template.js';
+import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
@@ -1579,19 +1579,20 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
 
   override render(): TemplateResult {
     const hasLabel = this.withLabel || this.slotPresence.has('label') || Boolean(this.label);
-    const hasHint = this.withHint || this.slotPresence.has('hint') || Boolean(this.hint);
-    const hasError = this.slotPresence.has('error') || Boolean(this.errorText);
+    const supporting = formControlSupportingState({
+      presence: this.slotPresence,
+      idPrefix: 'color-picker',
+      hint: this.hint,
+      errorText: this.errorText,
+      withHint: this.withHint,
+      helpTextSlot: false,
+    });
+    const { hasHint, hasError } = supporting;
     const name = hostAriaLabel(this) ?? (!hasLabel ? this.localize('colorPicker') : '');
     const labelledBy = !this.accessibleLabel && hasLabel ? this.labelId : '';
     const userInvalid = hasCustomState(this.internals, 'user-invalid');
     const invalid = hasError || userInvalid;
-    const describedBy = [
-      hasError ? 'color-picker-error' : '',
-      hasHint ? 'color-picker-hint' : '',
-      this.valueTextId,
-    ]
-      .filter(Boolean)
-      .join(' ');
+    const describedBy = [supporting.describedBy, this.valueTextId].filter(Boolean).join(' ');
     const requiredTextId = `${this.triggerId}-required`;
     const triggerDescribedBy = this.localDescriptionIds = [
       this.required && !this.inline ? requiredTextId : '',

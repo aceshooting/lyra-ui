@@ -271,6 +271,20 @@ function memberName(member) {
  * map or kbd's local callback/map chain.
  */
 function dynamicLocalizeCallKeys(program, catalogKeys) {
+  return resolveDynamicLocalizeKeys(program, catalogKeys).found;
+}
+
+/**
+ * The closed-resolution core of {@link dynamicLocalizeCallKeys}. `closed` is true only when every
+ * dynamic key argument in the module resolves, through module-local declarations, object maps,
+ * private or readonly fields and in-module call arguments, to string literals alone. A key that
+ * reaches an import, a call result, a public field, a loop binding or a method parameter leaves the
+ * module open, and an open module keeps the conservative whole-graph literal walk.
+ */
+function resolveDynamicLocalizeKeys(program, catalogKeys, file = '') {
+  const exemptForwardedParameters = isLocalizeForwarderModule(file);
+  let closed = true;
+  const openFields = new Set();
   const parents = new WeakMap();
   const declarations = new Map();
   const fields = new Map();
@@ -287,7 +301,10 @@ function dynamicLocalizeCallKeys(program, catalogKeys) {
       values.push(node.init);
       declarations.set(node.id.name, values);
     } else if (node.type === 'PropertyDefinition' && node.value) {
-      const name = propertyName(node);
+      const name = propertyName(node) ?? (node.key?.type === 'PrivateIdentifier' ? node.key.name : undefined);
+      // Only an owned field is closed: a public, decorated or accessor field can be written from outside.
+      if (name !== undefined && (node.decorators?.length || (node.key?.type !== 'PrivateIdentifier' &&
+        node.accessibility !== 'private' && node.accessibility !== 'protected' && !node.readonly))) openFields.add(name);
       if (name !== undefined) {
         const values = fields.get(name) ?? [];
         values.push(node.value);
@@ -312,10 +329,13 @@ function dynamicLocalizeCallKeys(program, catalogKeys) {
     }
     if (node.type === 'CallExpression') {
       const callee = unwrapExpression(node.callee);
-      if (callee?.type === 'Identifier') {
-        const entries = calls.get(callee.name) ?? [];
+      const calleeName = callee?.type === 'Identifier' ? callee.name
+        : callee?.type === 'MemberExpression' && unwrapExpression(callee.object)?.type === 'ThisExpression'
+          ? `this.${memberName(callee) ?? unwrapExpression(callee.property)?.name}` : undefined;
+      if (calleeName !== undefined) {
+        const entries = calls.get(calleeName) ?? [];
         entries.push(node);
-        calls.set(callee.name, entries);
+        calls.set(calleeName, entries);
       }
     }
     for (const [key, value] of Object.entries(node)) {
@@ -340,6 +360,11 @@ function dynamicLocalizeCallKeys(program, catalogKeys) {
   const functionBindingName = (functionNode) => {
     if (functionNode.id?.type === 'Identifier') return functionNode.id.name;
     const parent = parents.get(functionNode);
+    // Only an owned method's callers are all in this module; a public method can be called from outside.
+    if (parent?.type === 'MethodDefinition' && parent.value === functionNode && !parent.static &&
+      (parent.key?.type === 'PrivateIdentifier' || parent.accessibility === 'private' || parent.accessibility === 'protected')) {
+      return `this.${parent.key?.type === 'PrivateIdentifier' ? parent.key.name : propertyName(parent)}`;
+    }
     if (
       parent?.type === 'VariableDeclarator' &&
       parent.init === functionNode &&
@@ -362,31 +387,37 @@ function dynamicLocalizeCallKeys(program, catalogKeys) {
   const resolvingObjects = new Set();
   const memberValueNodes = (member) => {
     if (unwrapExpression(member.object)?.type === 'ThisExpression') {
-      const requested = memberName(member);
+      const requested = memberName(member) ??
+        (unwrapExpression(member.property)?.type === 'PrivateIdentifier' ? unwrapExpression(member.property).name : undefined);
+      if (requested === undefined || openFields.has(requested) || !fields.has(requested)) closed = false;
       return requested === undefined
         ? [...fields.values()].flat()
         : fields.get(requested) ?? [];
     }
     const objectCandidates = objectNodes(member.object);
+    if (objectCandidates.length === 0) closed = false;
     const requested = memberName(member);
     const values = [];
     for (const object of objectCandidates) {
       for (const entry of object.properties ?? []) {
-        if (entry.type !== 'Property') continue;
+        if (entry.type !== 'Property') { closed = false; continue; }
         const name = propertyName(entry);
+        if (name === undefined) closed = false;
         if (requested === undefined || name === requested) values.push(entry.value);
       }
     }
+    if (values.length === 0) closed = false;
     return values;
   };
   const parameterArguments = (identifier) => {
     const parameter = containingParameter(identifier);
     if (!parameter) return [];
     const binding = functionBindingName(parameter.functionNode);
-    if (!binding) return [];
-    return (calls.get(binding) ?? [])
-      .map((call) => call.arguments?.[parameter.parameterIndex])
-      .filter(Boolean);
+    const values = binding ? (calls.get(binding) ?? [])
+      .map((call) => call.arguments?.[parameter.parameterIndex]) : [];
+    // A parameter with no in-module caller, or a caller that omits it, is supplied from outside.
+    if (values.length === 0 || values.some((value) => !value || value.type === 'SpreadElement')) closed = false;
+    return values.filter(Boolean);
   };
   function objectNodes(expression) {
     const node = unwrapExpression(expression);
@@ -415,8 +446,14 @@ function dynamicLocalizeCallKeys(program, catalogKeys) {
     if (literal !== undefined) {
       if (catalogKeys.has(literal)) found.add(literal);
     } else if (node.type === 'Identifier') {
-      for (const value of declarations.get(node.name) ?? []) resolveExpression(value);
-      for (const value of parameterArguments(node)) resolveExpression(value);
+      const declared = declarations.get(node.name) ?? [];
+      for (const value of declared) resolveExpression(value);
+      if (containingParameter(node)) {
+        for (const value of parameterArguments(node)) resolveExpression(value);
+      } else if (declared.length === 0) {
+        // An imported binding, a loop variable or a global: its values live outside this module.
+        closed = false;
+      }
     } else if (node.type === 'MemberExpression') {
       for (const value of memberValueNodes(node)) resolveExpression(value);
     } else if (node.type === 'ConditionalExpression') {
@@ -432,6 +469,9 @@ function dynamicLocalizeCallKeys(program, catalogKeys) {
         if (entry.type === 'Property') resolveExpression(entry.value);
         else if (entry.type === 'SpreadElement') resolveExpression(entry.argument);
       }
+    } else if (node.type !== 'Literal') {
+      // A call result, template with holes, binary concatenation, await and the like.
+      closed = false;
     }
     resolvingValues.delete(node);
   }
@@ -446,9 +486,12 @@ function dynamicLocalizeCallKeys(program, catalogKeys) {
     if (!argument) return;
     const literalKeys = new Set();
     collectKeyLiterals(argument, literalKeys);
-    if (literalKeys.size === 0) resolveExpression(argument);
+    if (literalKeys.size > 0) return;
+    const forwarded = exemptForwardedParameters && unwrapExpression(argument)?.type === 'Identifier' &&
+      containingParameter(unwrapExpression(argument)) !== undefined;
+    if (!forwarded) resolveExpression(argument);
   });
-  return found;
+  return { found, closed };
 }
 
 /**
@@ -630,11 +673,14 @@ function isRuntimeHelper(rootFile, candidate, sourceRoot) {
  * Key collection is call-scoped (collectLocalizeCallKeys()) for the root class file AND for helper
  * modules -- a literal that merely textually collides with a catalog key name never counts. The one
  * exception is the shape that genuinely hides its key from the call expression: a dynamic argument
- * such as `this.localize(FILE_SIZE_UNIT_KEYS[unit])` or `this.localize(key)`. When (and only when)
- * some module in this graph contains such a call, EVERY scanned module in the graph -- the root
- * class file included -- falls back to the broad literal walk, so the key map feeding that dynamic
- * call is picked up wherever it happens to live. Restricting that fallback to helper modules is not
- * enough: the map is just as often a module-level constant in the class file itself.
+ * such as `this.localize(FILE_SIZE_UNIT_KEYS[unit])` or `this.localize(key)`. A dynamic call whose
+ * key resolves entirely to literals declared in its own module (resolveDynamicLocalizeKeys()) adds
+ * exactly those keys. When (and only when) some module in this graph contains a dynamic call that
+ * stays open -- its key reaches an import, a call result, a public field or a method parameter --
+ * EVERY scanned module in the graph, the root class file included, falls back to the broad literal
+ * walk, so the key map feeding that call is picked up wherever it happens to live. Restricting that
+ * fallback to helper modules is not enough: the map is just as often a module-level constant in the
+ * class file itself.
  *
  * Without that condition every helper in the graph leaked its incidental literals: `internal/a11y.ts`
  * re-exports `accessibility-visibility.ts`, whose `visibility === 'collapse'`,
@@ -665,8 +711,11 @@ export async function reachableCatalogKeys(rootFile, catalogKeys, sourceRoot, so
     sourceCache.set(file, source);
     const clean = withoutGeneratedBlocks(source);
     const program = parseProgram(file, clean);
-    programs.push({ file, program });
-    if (!graphHasDynamicKey && hasDynamicLocalizeKey(program, file)) graphHasDynamicKey = true;
+    const dynamic = hasDynamicLocalizeKey(program, file);
+    // A dynamic key that resolves entirely to module-local literals needs no whole-graph walk.
+    const resolved = dynamic ? resolveDynamicLocalizeKeys(program, catalogKeys, file) : undefined;
+    programs.push({ file, program, dynamicKeys: resolved?.found });
+    if (resolved && !resolved.closed) graphHasDynamicKey = true;
     for (const specifier of runtimeImports(program)) {
       for (const candidate of dependencyCandidates(file, specifier)) {
         await visitFile(candidate);
@@ -680,7 +729,7 @@ export async function reachableCatalogKeys(rootFile, catalogKeys, sourceRoot, so
   // A nested class file contributes nothing either way: it may be traversed because it re-exports a
   // runtime key map (attachment-chip.class.ts does this for file-size units), but its own message
   // literals belong to its own generated slice, never to this one.
-  for (const { file, program } of programs) {
+  for (const { file, program, dynamicKeys } of programs) {
     if (file !== rootFile && (file.endsWith('.class.ts') || isSharedClassSource(file, program))) continue;
     if (graphHasDynamicKey) {
       // The broad walk covers the ROOT class file too, not just helpers: a key map feeding a
@@ -693,6 +742,7 @@ export async function reachableCatalogKeys(rootFile, catalogKeys, sourceRoot, so
       });
     } else {
       collectLocalizeCallKeys(program, catalogKeys, found);
+      for (const key of dynamicKeys ?? []) found.add(key);
     }
   }
   return [...found].sort();

@@ -1,6 +1,9 @@
 import { expect } from '@open-wc/testing';
 import {
   clipboardFailureReason,
+  clipboardWriteFailure,
+  clipboardWriteSuccess,
+  writeAcceptedClipboardText,
   writeClipboardText,
 } from './clipboard.js';
 
@@ -52,5 +55,39 @@ describe('clipboard outcome', () => {
   it('classifies foreign-shaped permission errors without instanceof', () => {
     expect(clipboardFailureReason(Object.freeze({ name: 'SecurityError' }))).to.equal('denied');
     expect(clipboardFailureReason(Object.freeze({ name: 'UnknownError' }))).to.equal('failed');
+  });
+});
+
+describe('accepted clipboard write', () => {
+  it('does not write once the request is superseded after the capability read', async () => {
+    let writes = 0;
+    let accepted = true;
+    const owner = {
+      navigator: {
+        get clipboard() {
+          accepted = false;
+          return { writeText: async () => { writes += 1; } };
+        },
+      },
+    } as unknown as Window;
+    expect(await writeAcceptedClipboardText(owner, 'value', () => accepted)).to.equal(undefined);
+    expect(writes).to.equal(0);
+  });
+
+  it('settles like writeClipboardText while the request stays accepted', async () => {
+    const written: string[] = [];
+    const outcome = await writeAcceptedClipboardText(ownerWith(async (text) => { written.push(text); }), 'kept', () => true);
+    expect(outcome).to.deep.equal({ ok: true, text: 'kept' });
+    expect(written).to.deep.equal(['kept']);
+    const missing = await writeAcceptedClipboardText(ownerWith(), 'kept', () => true);
+    expect(missing?.ok === false && missing.reason).to.equal('unsupported');
+  });
+
+  it('builds frozen outcomes with a classified default reason', () => {
+    const denied = clipboardWriteFailure('x', Object.assign(new Error('no'), { name: 'NotAllowedError' }));
+    expect(Object.isFrozen(denied) && denied.reason).to.equal('denied');
+    expect(clipboardWriteFailure('x', new Error('no'), 'unsupported').reason).to.equal('unsupported');
+    const success = clipboardWriteSuccess('y');
+    expect(Object.isFrozen(success) && success.ok && success.text).to.equal('y');
   });
 });

@@ -1,5 +1,5 @@
 import { iconAction, iconActionHover, iconActionActive } from '../../../internal/icon-action.styles.js';
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { overlaySurfaceFill } from '../../../internal/overlay-surface.styles.js';
@@ -170,7 +170,7 @@ export const styles = css`
     --_lr-icon-button-color-active-default: var(--lr-toast-close-button-active-color, var(--lr-color-text));
     --_lr-icon-button-background-hover-default: var(--lr-toast-close-button-hover-bg, transparent);
     --_lr-icon-button-background-active-default: var(--lr-toast-close-button-active-bg,
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+      ${activeFill('transparent')});
     position: relative;
     display: inline-grid;
     place-items: center;
@@ -240,8 +240,7 @@ export const styles = css`
     ${iconActionActive}
   }
   [part="close-button"][aria-disabled="true"] {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   [part="close-button"]:focus-visible {
     ${focusRing}

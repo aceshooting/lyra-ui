@@ -26,6 +26,7 @@ export const LYRA_DEFAULT_approvalQueueLimit: LyraMessage = 'Only the first {cou
 export const LYRA_DEFAULT_approvalQueueOpen: LyraMessage = 'Review approval for {tool}';
 export const LYRA_DEFAULT_approvalQueuePending: LyraMessage = 'Pending';
 export const LYRA_DEFAULT_approvalQueuePendingCount: LyraMessage = '{count} pending approvals';
+export const LYRA_DEFAULT_approve: LyraMessage = 'Approve';
 export const LYRA_DEFAULT_artifactPanelCode: LyraMessage = 'Code';
 export const LYRA_DEFAULT_artifactPanelGenerating: LyraMessage = 'Generating…';
 export const LYRA_DEFAULT_artifactPanelLabel: LyraMessage = 'Artifact';
@@ -71,11 +72,14 @@ export const LYRA_DEFAULT_changeReviewLabel: LyraMessage = 'Review changes';
 export const LYRA_DEFAULT_changeReviewLimit: LyraMessage = 'Only the first {count} changes are shown.';
 export const LYRA_DEFAULT_changeReviewPending: LyraMessage = 'Pending';
 export const LYRA_DEFAULT_commitCardCopyHash: LyraMessage = 'Copy commit hash';
-export const LYRA_DEFAULT_commitCardDiffSummary: LyraMessage = '+{additions} -{deletions} in {files} files';
+export const LYRA_DEFAULT_commitCardDiffSummary: LyraMessage = {
+    one: '+{additions} -{deletions} in {files} file',
+    other: '+{additions} -{deletions} in {files} files',
+  };
 export const LYRA_DEFAULT_commitCardFilesLimit: LyraMessage = 'Only the first {count} files are shown.';
-export const LYRA_DEFAULT_commitCardHideFiles: LyraMessage = 'Hide {count} changed files';
+export const LYRA_DEFAULT_commitCardHideFiles: LyraMessage = { one: 'Hide {count} changed file', other: 'Hide {count} changed files' };
 export const LYRA_DEFAULT_commitCardLabel: LyraMessage = 'Commit';
-export const LYRA_DEFAULT_commitCardShowFiles: LyraMessage = 'Show {count} changed files';
+export const LYRA_DEFAULT_commitCardShowFiles: LyraMessage = { one: 'Show {count} changed file', other: 'Show {count} changed files' };
 export const LYRA_DEFAULT_compareResponseA: LyraMessage = 'Response A';
 export const LYRA_DEFAULT_compareResponseB: LyraMessage = 'Response B';
 export const LYRA_DEFAULT_compareVoteBetter: LyraMessage = '{label} is better';
@@ -105,10 +109,14 @@ export const LYRA_DEFAULT_contextInspectorEmpty: LyraMessage = 'No context segme
 export const LYRA_DEFAULT_contextInspectorLabel: LyraMessage = 'Context inspector';
 export const LYRA_DEFAULT_contextInspectorLimit: LyraMessage = 'Only the first {count} segments are shown.';
 export const LYRA_DEFAULT_contextInspectorRedacted: LyraMessage = 'Redacted';
-export const LYRA_DEFAULT_contextInspectorSegmentTokens: LyraMessage = '{tokens} tokens';
+export const LYRA_DEFAULT_contextInspectorSegmentTokens: LyraMessage = { one: '{tokens} token', other: '{tokens} tokens' };
 export const LYRA_DEFAULT_contextInspectorTruncated: LyraMessage = 'Truncated';
-export const LYRA_DEFAULT_contextInspectorTruncatedCount: LyraMessage = 'Truncated — {count} tokens omitted';
+export const LYRA_DEFAULT_contextInspectorTruncatedCount: LyraMessage = {
+    one: 'Truncated — {count} token omitted',
+    other: 'Truncated — {count} tokens omitted',
+  };
 export const LYRA_DEFAULT_cost: LyraMessage = 'Cost';
+export const LYRA_DEFAULT_deny: LyraMessage = 'Deny';
 export const LYRA_DEFAULT_edit: LyraMessage = 'Edit';
 export const LYRA_DEFAULT_evalDatasetAddExample: LyraMessage = 'Add example';
 export const LYRA_DEFAULT_evalDatasetColumnExpectedOutput: LyraMessage = 'Expected output';
@@ -262,6 +270,8 @@ export const LYRA_DEFAULT_testResultsShownAnnounce: LyraMessage = 'Showing {show
 export const LYRA_DEFAULT_testResultsSkipped: LyraMessage = '{count} skipped';
 export const LYRA_DEFAULT_testResultsUnnamedTest: LyraMessage = 'Unnamed test';
 export const LYRA_DEFAULT_thoughtFor: LyraMessage = 'Thought for {duration}';
+export const LYRA_DEFAULT_tokensIn: LyraMessage = 'Tokens in';
+export const LYRA_DEFAULT_tokensOut: LyraMessage = 'Tokens out';
 export const LYRA_DEFAULT_toolApprovalArgsLabel: LyraMessage = 'Tool call arguments (JSON)';
 export const LYRA_DEFAULT_toolApprovalGenericTool: LyraMessage = 'tool';
 export const LYRA_DEFAULT_toolApprovalHeading: LyraMessage = 'Approve {tool} call?';

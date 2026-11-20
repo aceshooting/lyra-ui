@@ -2,14 +2,14 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { catalogControlName, renderCatalogInput, renderCatalogLabel } from '../../../internal/catalog-picker-template.js';
 import { InputLimitAnnouncement } from '../../../internal/input-limit-announcement.js';
 import { guard } from 'lit/directives/guard.js';
-import { AutocorrectState } from '../../../internal/native-text-control.js';
 import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { LyraCatalogPickerElement } from '../catalog-picker-element.js';
-import type { LyraSize, LyraLabelDisplay } from '../../../internal/variants.js';
+import { emitPopupEvent } from '../../../internal/popup-controller.js';
+import type { LyraSize } from '../../../internal/variants.js';
 import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { nextId } from '../../../internal/a11y.js';
@@ -17,7 +17,6 @@ import { chevronIcon, playIcon, pauseIcon } from '../../../internal/icons.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import { styles } from './voice-picker.styles.js';
-import { autocorrectConverter, trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
 import {
   CatalogPickerController,
   type LyraCatalog,
@@ -57,6 +56,11 @@ export interface LyraVoicePickerEventMap {
   'lr-invalid': CustomEvent<null>;
   'lr-input': CustomEvent<{ value: string; inCatalog: boolean; query?: string }>;
   'lr-change': CustomEvent<{ value: string; inCatalog: boolean }>;
+  'lr-change-request': CustomEvent<Readonly<{ value: string; inCatalog: boolean }>>;
+  'lr-show': CustomEvent<null>;
+  'lr-hide': CustomEvent<null>;
+  'lr-after-show': CustomEvent<null>;
+  'lr-after-hide': CustomEvent<null>;
   'lr-preview-request': CustomEvent<{ voiceId: string; previewUrl?: string }>;
   'lr-preview-change': CustomEvent<{ voiceId: string | null }>;
   input: Event;
@@ -142,6 +146,16 @@ export interface LyraVoicePickerEventMap {
  * @event lr-preview-request - `detail: { voiceId: string; previewUrl?: string }`. Cancelable.
  * @event lr-preview-change - `detail: { voiceId: string | null }` — internal playback started
  *   (`voiceId`) or stopped (`null`).
+ * @event lr-change-request - Cancelable before a user pick or free-text commit changes `value`.
+ *   Frozen `detail: { value, inCatalog }` names the proposed value. Calling `preventDefault()` keeps
+ *   the current value and the open popup; a listener that disables, detaches, makes read-only or
+ *   re-values the picker also stops the commit. Programmatic `value` writes never request.
+ * @event lr-show - The listbox is about to open, however `open` became true after the first render.
+ *   Cancelable: `preventDefault()` keeps it closed.
+ * @event lr-hide - The listbox is about to close, however `open` became false. Cancelable, except
+ *   when disabling the picker forces the close.
+ * @event lr-after-show - The opened listbox finished its transition.
+ * @event lr-after-hide - The closed listbox finished its transition and left layout.
  * @event lr-invalid - The picker failed a validity check. Cancelable: calling `preventDefault()`
  *   also cancels the native `invalid` event behind it, suppressing the browser's own validation
  *   bubble so an app can present the failure its own way.
@@ -312,50 +326,16 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
     },
   };
 
-  /** Informational only (e.g. `'elevenlabs'`); rendered as a small leading badge. */
-  @property() provider = '';
   /** The bounded, clone-owned, frozen full voice list. Omit (or leave empty) to fall back to plain
    *  free-text entry. Catalog ids must be nonempty and unique; later duplicates are omitted
    *  entirely, first wins; rows with a blank/whitespace-only id are omitted. Replacing the catalog
    *  retires any internal preview before the rendered candidate can change; reassign a new array
    *  after row changes. */
   @property({ attribute: false }) catalog?: LyraCatalog<LyraVoiceCatalogEntry>;
-  /** Let the user type/commit a value that isn't in `catalog`, even when `catalog` is non-empty. */
-  @property({ type: Boolean, reflect: true, attribute: 'allow-custom' }) allowCustom = false;
-  /** Keeps user edits and catalog commits from changing `value` while retaining focus, popup
-   *  navigation, selection/copy, previews, form submission, reset, and programmatic writes. */
-  @property({ type: Boolean, reflect: true }) readonly: boolean = false;
   /** Renders no preview affordances at all: neither the standalone preview toggle nor the per-row
    *  preview icons. */
   @property({ type: Boolean, attribute: 'without-preview', reflect: true }) withoutPreview = false;
 
-  /** Visible label text. The `label` slot appends custom label content to the same native label. */
-  @property() label = '';
-  /**
-   * Whether the `label` renders on screen. `hidden` keeps the label as the accessible name but
-   * removes it visually (compact toolbars, table cells); hint, error and required semantics are
-   * unaffected. Reflected so styles and `[label-display]` selectors match.
-   * @attr label-display
-   */
-  @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
-  @property() hint = '';
-  @property({ attribute: 'error-text' }) errorText = '';
-  @property() placeholder = '';
-  @property({ converter: spellcheckConverter }) override spellcheck = true;
-  @property() override autocapitalize = '';
-  private readonly autocorrectState = new AutocorrectState(this, true);
-  /** Native editing-assistance state forwarded as canonical `autocorrect="on"|"off"`. Reads are
-   *  boolean; writes accept the boolean IDL and the `'on'`/`'off'` vocabulary. */
-  @property({ converter: autocorrectConverter })
-  override get autocorrect(): boolean {
-    return this.autocorrectState.value;
-  }
-  override set autocorrect(next: boolean | string) {
-    this.autocorrectState.set(next);
-  }
-  @property() autocomplete = 'off';
-  @property({ attribute: 'inputmode' }) override inputMode = '';
-  @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
   /** Whether the catalog popup is open. Effectively disabled controls reject direct reopen
    * attempts, including a synchronous fieldset cascade. */
   @property({ type: Boolean, reflect: true })
@@ -399,6 +379,8 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
     ],
     emitInput: (detail) => this.emit('lr-input', detail),
     emitChange: (detail) => this.emit('lr-change', detail),
+    emitChangeRequest: (detail, init: { cancelable: true }) => this.emit('lr-change-request', detail, init),
+    emitPopup: (name, cancelable) => emitPopupEvent(this, name, cancelable),
     beforeValueChange: (value) => {
       const previewTarget = this.internalPreviewTargetId;
       if (previewTarget !== null && previewTarget !== value) this.stopInternalPreview();
@@ -533,12 +515,6 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
     return this.catalogPicker.labelFor(id);
   }
 
-  private show(): void {
-    this.catalogPicker.show();
-  }
-  private hide(): void {
-    this.catalogPicker.hide();
-  }
 
   private readonly announcements = new AnnouncementSinkController(this);
 
@@ -744,23 +720,6 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
     const name = this.labelFor(candidate) || candidate;
     return playing ? this.localize('voicePickerStopPreview') : this.localize('voicePickerPreview', undefined, { name });
   }
-
-  private onTriggerClick = (): void => {
-    if (this.effectiveDisabled) return;
-    this.open ? this.hide() : this.show();
-  };
-  private readonly onControlBlur = this.catalogPicker.handleControlBlur.bind(this.catalogPicker);
-  private readonly onControlFocus = this.catalogPicker.handleControlFocus.bind(this.catalogPicker);
-
-  private readonly onTriggerKeyDown = this.catalogPicker.handleTriggerKeyDown.bind(this.catalogPicker);
-
-  private readonly onComboMouseDown = this.catalogPicker.handleComboMouseDown.bind(this.catalogPicker);
-  private readonly onInputFocus = this.catalogPicker.handleInputFocus.bind(this.catalogPicker);
-  private readonly onInput = this.catalogPicker.handleInput.bind(this.catalogPicker);
-  private readonly onInputKeyDown = this.catalogPicker.handleInputKeyDown.bind(this.catalogPicker);
-
-  private readonly onListboxMouseDown = this.catalogPicker.handleListboxMouseDown.bind(this.catalogPicker);
-  private readonly onListboxClick = this.catalogPicker.handleListboxClick.bind(this.catalogPicker);
 
   private renderRows(rows: DisplayEntry[], activeId: string): TemplateResult[] {
     return rows.map((entry, i) => {

@@ -26,11 +26,19 @@ export const panelListItem = css`
   border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
 `;
 
+/**
+ * Makes the element an inline-size query container. Containment removes content-based intrinsic
+ * sizing, so the tokenized fallback keeps a shrink-to-fit parent from collapsing it to a sliver.
+ */
+export const inlineSizeContainer = css`
+  container-type: inline-size;
+  contain-intrinsic-inline-size: var(--lr-size-20rem);
+`;
+
 /** Host that sizes to its own inline space and lets descendants answer container queries. */
 export const containerHost = css`
   display: block;
-  container-type: inline-size;
-  contain-intrinsic-inline-size: var(--lr-size-20rem);
+  ${inlineSizeContainer}
 `;
 
 /** Plain block host that may shrink inside flex and grid parents and never exceeds its container. */

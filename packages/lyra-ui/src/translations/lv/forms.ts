@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'Atvērt kalendāru',
+  item: 'vienums',
   comboboxLoadError: 'Neizdevās ielādēt opcijas.',
   comboboxSelectedOverflow: '+{n} vēl',
   checkboxRequired: 'Lai turpinātu, atzīmējiet šo izvēles rūtiņu.',

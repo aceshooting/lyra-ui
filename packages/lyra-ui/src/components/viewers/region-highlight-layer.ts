@@ -3,6 +3,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { normalizeLabel } from '../../internal/accessible-name.js';
 import { getNumberFormat } from '../../internal/intl-cache.js';
 import { resolveListMove } from '../../internal/list-navigation.js';
+import type { RegionRect } from '../../internal/region-hit-targets.js';
 
 interface RegionHighlightItem {
   readonly id: string;
@@ -52,30 +53,7 @@ export function renderRegionHighlightLayer<T extends RegionHighlightItem>(
   </div>`;
 }
 
-type RegionRect = { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
-
-/** Tests for intersecting hit areas belonging to different highlights. */
-export function highlightHitAreasOverlap(
-  rectsByItem: readonly (readonly RegionRect[])[],
-  { width, height }: Pick<DOMRectReadOnly, 'width' | 'height'>,
-  min: number,
-): boolean {
-  const boxes = rectsByItem.flatMap((rects, index) => rects.map((rect) => {
-    const boxWidth = Math.max((rect.width / 100) * width, min);
-    const boxHeight = Math.max((rect.height / 100) * height, min);
-    const left = ((rect.x + rect.width / 2) / 100) * width - boxWidth / 2;
-    const top = ((rect.y + rect.height / 2) / 100) * height - boxHeight / 2;
-    return { index, left, top, right: left + boxWidth, bottom: top + boxHeight };
-  })).sort((first, second) => first.left - second.left);
-  for (let first = 0; first < boxes.length; first++) {
-    const a = boxes[first]!;
-    for (let second = first + 1; second < boxes.length && boxes[second]!.left < a.right; second++) {
-      const b = boxes[second]!;
-      if (b.index !== a.index && b.top < a.bottom && a.top < b.bottom) return true;
-    }
-  }
-  return false;
-}
+export { highlightHitAreasOverlap } from '../../internal/region-hit-targets.js';
 
 /** Structural equality of two region anchors' `page` and `rect`. */
 export function sameRegionRect(

@@ -638,4 +638,26 @@ describe('lr-image-viewer panorama', () => {
     });
   }
 
+  it('restyles a ready renderer for theme changes only, once per batch', async () => {
+    let styles = 0;
+    panoramaLoader.override(async () => ({ createEngine: (): Engine3dInstance => ({
+      contract: 1, async mount() {}, setData() {}, setCamera() {}, setState() {}, resize() {}, dispose() {},
+      setStyle() { styles++; },
+    }) }));
+    const wrapper = await fixture<HTMLDivElement>(html`<div><lr-image-viewer src=${PNG} engine="webgl" projection="equirectangular"></lr-image-viewer></div>`);
+    const el = wrapper.querySelector<LyraImageViewer>('lr-image-viewer')!;
+    await waitUntil(() => el.shadowRoot!.querySelector('[part="panorama"]')?.hasAttribute('data-ready') === true);
+    await new Promise(resolve => setTimeout(resolve, 50));
+    const count = styles;
+    wrapper.setAttribute('data-unrelated', '1');
+    wrapper.title = 'Unrelated';
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect(styles).to.equal(count);
+    wrapper.style.setProperty('--lr-color-text', 'rgb(3, 9, 5)');
+    wrapper.style.setProperty('--lr-color-brand', 'rgb(7, 11, 13)');
+    await waitUntil(() => styles > count);
+    await new Promise(resolve => setTimeout(resolve, 50));
+    expect(styles).to.equal(count + 1);
+  });
+
 });

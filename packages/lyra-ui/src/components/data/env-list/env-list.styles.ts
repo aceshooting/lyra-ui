@@ -1,11 +1,10 @@
-import { focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
   }
   [part='base'] {
     box-sizing: border-box;
@@ -67,7 +66,7 @@ export const styles = css`
     background: var(--lr-env-list-button-hover-bg, var(--lr-color-brand-quiet));
   }
   [part='reveal-button']:active {
-    background: var(--lr-env-list-button-active-bg, color-mix(in oklab, var(--lr-env-list-button-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    background: var(--lr-env-list-button-active-bg, ${activeFill('var(--lr-env-list-button-hover-bg, var(--lr-color-brand-quiet))')});
   }
   [part='reveal-button']:focus-visible,
   [part='copy-button']:focus-visible {
@@ -85,21 +84,17 @@ export const styles = css`
      --lr-env-list-reveal-active-bg carries into the hover step; matches lr-test-results'
      filter-toggle and lr-tree-item's selected row. */
   [part='reveal-button']:where([data-revealed]):hover {
-    background: color-mix(
-      in oklab,
-      var(--lr-env-list-reveal-active-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
+    background: ${hoverFill('var(--lr-env-list-reveal-active-bg, var(--lr-color-brand-quiet))')};
   }
   /* MUST stay after the [data-revealed] rule above and its hover companion: all three are
      (0,2,0), so source order alone decides, and a revealed button's toggled-on fill is the same
      brand-quiet the hover uses -- placed first, pressing it would show nothing. Only the fill is
      claimed, so the toggled border colour still reads while pressed. */
   [part='reveal-button']:where([data-revealed]):active {
-    background: color-mix(in oklab, var(--lr-env-list-reveal-active-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-env-list-reveal-active-bg, var(--lr-color-brand-quiet))')};
   }
   [part='copy-button']:active {
-    background: var(--lr-env-list-button-active-bg, color-mix(in oklab, var(--lr-env-list-button-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    background: var(--lr-env-list-button-active-bg, ${activeFill('var(--lr-env-list-button-hover-bg, var(--lr-color-brand-quiet))')});
   }
   [part='limit'] {
     margin: var(--lr-space-s) 0 0;

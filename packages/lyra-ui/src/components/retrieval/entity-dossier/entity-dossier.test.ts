@@ -459,7 +459,7 @@ it('leaves descendant toggles distinct from the inspector-owned disclosure event
   expect(seen).to.deep.equal([{ expanded: true, itemId: 'nested' }]);
 });
 
-it("contains the inner tab group's raw lr-tab-hide when the user switches tabs", async () => {
+it("lets the inner tab group's lr-tab-hide reach host listeners when the user switches tabs", async () => {
   const el = await populated();
   const tabs = el.shadowRoot!.querySelector('lr-tab-group') as LyraTabGroup;
   await tabs.updateComplete;
@@ -471,7 +471,7 @@ it("contains the inner tab group's raw lr-tab-hide when the user switches tabs",
     const shown = oneEvent(el, 'lr-tab-show');
     chunksTab.click();
     await shown;
-    expect(hidden.length).to.equal(0);
+    expect(hidden.length).to.equal(1);
   } finally {
     document.removeEventListener('lr-tab-hide', onHide);
   }
@@ -518,4 +518,16 @@ it('delegates supporting and provenance disclosures once and keeps legacy target
     { fromPanel: true, detail: { section: 'entities', expanded: false } },
     { fromPanel: true, detail: { section: 'chunks', expanded: true, itemId: 'ch1' } },
   ]);
+});
+
+it('forwards heading-level to the nested entity card title', async () => {
+  const el = await fixture<LyraEntityDossier>(html`<lr-entity-dossier heading-level="2" .entity=${entity}></lr-entity-dossier>`);
+  const card = el.shadowRoot!.querySelector<LyraEntityCard>('lr-entity-card')!;
+  await card.updateComplete;
+  const title = () => card.shadowRoot!.querySelector('[part="title"]')!;
+  expect(title().getAttribute('aria-level')).to.equal('2');
+  el.headingLevel = undefined;
+  await el.updateComplete;
+  await card.updateComplete;
+  expect(title().getAttribute('aria-level')).to.equal('3');
 });

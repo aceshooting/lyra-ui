@@ -1,8 +1,9 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingShorthand, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
+import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
@@ -10,8 +11,7 @@ export const styles = css`
     min-inline-size: 0;
     /* Query container for the narrow-allocation rate-select cap below -- matches lr-video's own
        [part='controls'] select narrow-container pattern. */
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${inlineSizeContainer}
     --_lr-av-player-transcript-height: var(--lr-size-16rem);
   }
   [part='base'] {
@@ -78,12 +78,11 @@ export const styles = css`
   [part='rate-select']:active {
     background: var(
       --lr-av-player-rate-select-active-bg,
-      color-mix(in oklab, var(--lr-av-player-rate-select-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      ${activeFill('var(--lr-av-player-rate-select-hover-bg, var(--lr-color-brand-quiet))')}
     );
   }
   [part='rate-select']:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   .rate-select-chevron {
     position: absolute;
@@ -119,11 +118,10 @@ export const styles = css`
      beyond the hover border: the surface shifts while the border keeps the hover accent. */
   [part='timeline']:active:where(:not([aria-disabled='true'])) {
     border-color: var(--lr-color-brand);
-    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-surface-raised)')};
   }
   [part='timeline']:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   [part='timeline'][aria-disabled='true'] {
     cursor: default;
@@ -193,10 +191,10 @@ export const styles = css`
      nothing to a fully saturated or pure-white fill, and applied to the subtree, dragging the
      marker's own label with it. */
   [part='timeline-marker']:hover {
-    background: color-mix(in oklab, var(--lr-av-player-marker-fill, var(--_lr-av-player-marker-fill)), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: ${hoverFill('var(--lr-av-player-marker-fill, var(--_lr-av-player-marker-fill))')};
   }
   [part='timeline-marker']:active {
-    background: color-mix(in oklab, var(--lr-av-player-marker-fill, var(--_lr-av-player-marker-fill)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-av-player-marker-fill, var(--_lr-av-player-marker-fill))')};
   }
   [part='timeline-marker'][data-tone='success'] { --_lr-av-player-marker-fill: var(--lr-av-player-marker-success-bg, color-mix(in srgb, var(--lr-color-success) 35%, transparent)); }
   [part='timeline-marker'][data-tone='warning'] { --_lr-av-player-marker-fill: var(--lr-av-player-marker-warning-bg, color-mix(in srgb, var(--lr-color-warning) 35%, transparent)); }
@@ -207,8 +205,7 @@ export const styles = css`
     outline-offset: calc(-1 * var(--lr-border-width-medium));
   }
   [part='timeline-marker']:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   [part='transcript'] {
     --lr-virtual-list-height: var(--lr-av-player-transcript-height, var(--_lr-av-player-transcript-height));
@@ -249,7 +246,7 @@ export const styles = css`
      retuned hover fill keeps its pressed step instead of snapping back to the brand default under
      the pointer when the hook is set. */
   lr-virtual-list::part(cue):active {
-    background: color-mix(in oklab, var(--lr-av-player-cue-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-av-player-cue-hover-bg, var(--lr-color-brand-quiet))')};
   }
   lr-virtual-list::part(cue-current) {
     background: var(--lr-av-player-cue-current-bg, var(--lr-color-brand-quiet));

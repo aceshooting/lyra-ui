@@ -3,7 +3,7 @@ import { bdi } from '../../../internal/bidi.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { guard } from 'lit/directives/guard.js';
 import { emitValueEvents } from '../../../internal/value-events.js';
-import { renderFormControlHintError } from '../../../internal/form-control-template.js';
+import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { installFormControlLabelSupport } from '../../../internal/form-control-labels.js';
 import { FormControlController, reflectFormName } from '../../../internal/form-control-controller.js';
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
@@ -1523,9 +1523,19 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
     const previewEntry = this.entryFor(previewTag);
     const flagOnly = this.triggerDisplay === 'flag' && !this.withoutFlags;
     const hasLabel = this.slotPresence.has('label') || (this.label ?? '').length > 0;
-    const hasHint = this.slotPresence.has('hint') || (this.hint ?? '').length > 0;
-    const hasError = this.slotPresence.has('error') || (this.errorText ?? '').length > 0;
-    const describedBy = [flagOnly ? 'locale-picker-value' : '', hasError ? 'locale-picker-error' : '', hasHint ? 'locale-picker-hint' : '', this.loadingTag || this.loadFailureTag ? 'locale-picker-load-status' : '']
+    const supporting = formControlSupportingState({
+      presence: this.slotPresence,
+      idPrefix: 'locale-picker',
+      hint: this.hint,
+      errorText: this.errorText,
+      helpTextSlot: false,
+    });
+    const { hasHint, hasError } = supporting;
+    const describedBy = [
+      flagOnly ? 'locale-picker-value' : '',
+      supporting.describedBy,
+      this.loadingTag || this.loadFailureTag ? 'locale-picker-load-status' : '',
+    ]
       .filter(Boolean)
       .join(' ');
     return html`

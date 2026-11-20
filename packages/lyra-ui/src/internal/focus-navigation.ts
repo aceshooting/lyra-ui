@@ -1,6 +1,6 @@
 import { composedParentElement, deepActiveElementIn } from './active-element.js';
 import { asciiWhitespaceTokens } from './ascii-whitespace.js';
-import { imageMapImageFor, isHtmlElement, isSvgElement } from './dom-guards.js';
+import { cachedImageMapImageFor, isHtmlElement, isSvgElement, isShadowRootNode } from './dom-guards.js';
 import {
   hasFocusExcludingAttributes,
   isNativeAction,
@@ -300,14 +300,8 @@ function cachedRenderedElementState(
   return state;
 }
 
-function cachedImageMapImage(
-  context: FocusTraversalContext,
-  element: Element,
-): HTMLImageElement | null {
-  if (context.imageMapImages.has(element)) return context.imageMapImages.get(element)!;
-  const image = imageMapImageFor(element, { consume: () => consumeFocusWork(context) });
-  context.imageMapImages.set(element, image);
-  return image;
+function cachedImageMapImage(context: FocusTraversalContext, element: Element): HTMLImageElement | null {
+  return cachedImageMapImageFor(context.imageMapImages, element, () => consumeFocusWork(context));
 }
 
 function isClosedDetailsBranch(
@@ -373,10 +367,6 @@ function hasAriaWidgetRole(element: Element): boolean {
 
 function isBrowserFocusElement(element: Element): element is BrowserFocusElement {
   return isHtmlElement(element) || isSvgElement(element);
-}
-
-function isShadowRoot(root: Element | ShadowRoot): root is ShadowRoot {
-  return root.nodeType === 11 && 'host' in root;
 }
 
 /** Realm-neutral classification of native actions and elements carrying an ARIA widget role. */
@@ -777,7 +767,7 @@ function traverseComposedElements(
     scheduleChildren(element.shadowRoot?.children ?? element.children, depth, ancestorsAvailable, scope);
   };
 
-  if (isShadowRoot(root)) {
+  if (isShadowRootNode(root)) {
     const shadowRoot = root;
     const ancestorsAvailable = options.skipRootAncestorValidation ||
       composedAncestorsAvailable(shadowRoot.host, context);

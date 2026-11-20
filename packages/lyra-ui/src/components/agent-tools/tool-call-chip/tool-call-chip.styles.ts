@@ -1,5 +1,5 @@
 import { toolStatusKeyframes } from '../tool-status.styles.js';
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 
@@ -71,11 +71,7 @@ export const styles = css`
      already a custom property, so one declaration covers all five status tints, darkening in a
      light theme and lightening in a dark one. */
   [part="base"]:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-tool-call-chip-bg, var(--_lr-tool-call-chip-bg)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-tool-call-chip-bg, var(--_lr-tool-call-chip-bg))')};
   }
   [part="base"]:focus-visible {
     ${focusRing}

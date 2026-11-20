@@ -1,17 +1,16 @@
 ---
-'@aceshooting/lyra-ui': major
+'@aceshooting/lyra-ui': minor
 ---
 
 - Checkbox, switch, radio, slider and picker key handlers preserve modified, composing and previously handled keystrokes.
 - Holding Space activates a radio once.
-- Checkbox, switch and standalone radio events carry the user's original edit even when an input listener writes another value. Handle teardown in the input listener if disabling or removing the control, as that ends the change sequence.
+- Checkbox, switch and standalone radio events carry the user's original edit even when an input listener writes another value.
 - Slider input and change events report the position that triggered each event.
 - Checkbox, radio and toggle group change events include the previous selection and the option that initiated the edit.
 - Checkbox and radio groups present errors before hints. Address the named error and hint parts when styling either message.
 - Checkbox group and combobox accept the `helpText` property and the `help-text` attribute and slot aliases.
 - A combobox accepts `defaultValue` and `default-value` as its form reset baseline.
 - Combobox selection, removal, creation and clearing emit a cancelable `lr-change-request` before committing.
-- Before a combobox renders its native input, `selectionDirection` returns `null`. Use a `null` check when reading it during initialization.
 - Select omits `aria-activedescendant` while no option is active. Use attribute presence to detect active navigation.
 - Select type-ahead and combobox filtering match accented labels with unaccented input.
 - Select and combobox format the complete accessible selection in the control's locale.

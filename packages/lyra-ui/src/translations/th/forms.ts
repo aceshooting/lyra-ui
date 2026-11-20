@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'เปิดปฏิทิน',
+  item: 'รายการ',
   comboboxLoadError: 'โหลดตัวเลือกไม่ได้',
   comboboxSelectedOverflow: 'อีก {n} รายการ',
   checkboxRequired: 'โปรดเลือกช่องนี้หากต้องการดำเนินการต่อ',

@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'Ṣí kàlẹ́ńdà',
+  item: 'ohun',
   comboboxLoadError: 'Kò ṣeé ṣe láti gbé àwọn àṣàyàn wọlé.',
   comboboxSelectedOverflow: '+{n} sí i',
   checkboxRequired: 'Tẹ àpótí yìí bí o bá fẹ́ tẹ̀síwájú.',

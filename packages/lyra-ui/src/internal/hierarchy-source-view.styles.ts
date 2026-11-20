@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { focusRing } from './interactive-control.styles.js';
 
 /** Flat hierarchy chrome shared by the source adapters. */
 export const hierarchySourceStyles = css`
@@ -17,12 +18,13 @@ export const hierarchySourceStyles = css`
   [part~='source-row']:where([aria-selected='true']) { --_source-row-fill: var(--lr-color-brand-fill-quiet); }
   [part~='source-row']:where([aria-disabled='true']) { cursor: default; opacity: var(--lr-opacity-disabled); }
   [part~='source-row']:where(:focus-visible), .source-tree:where(:focus-visible), [part~='source-toggle']:where(:focus-visible) {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   [part~='source-label'] { display: flex; align-items: center; flex-wrap: wrap; gap: var(--lr-space-xs); min-inline-size: 0; overflow-wrap: anywhere; }
   [part~='source-toggle'] {
     font: inherit; color: inherit; background: transparent; border: 0; cursor: pointer;
-    min-inline-size: var(--lr-icon-button-size); min-block-size: var(--lr-icon-button-size); flex-shrink: 0;
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size); flex-shrink: 0;
     transition: var(--lr-transition-interactive);
   }
   [part~='source-toggle']:where(:hover) { background: var(--lr-color-neutral-fill-quiet); }

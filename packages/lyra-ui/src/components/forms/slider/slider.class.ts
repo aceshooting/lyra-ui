@@ -14,6 +14,7 @@ import {
   isBarredFromValidation,
   setFormOwner,
   type FormOwnerValue,
+  isLiveDisabled,
 } from '../../../internal/form-associated.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { setCustomState, syncValidityStates } from '../../../internal/custom-states.js';
@@ -1029,7 +1030,7 @@ export class LyraSlider extends LyraSliderBase {
 
   private markFocusoutInteracted = (): void => {
     // Not interaction: a fieldset's forced blur (`:disabled` leads `effectiveDisabled`) or a range-mode thumb swap.
-    if (this.effectiveDisabled || this.matches(':disabled') || this.rangeFocusTransfer) return;
+    if (isLiveDisabled(this) || this.rangeFocusTransfer) return;
     this.markInteracted();
   };
 
@@ -1111,7 +1112,7 @@ export class LyraSlider extends LyraSliderBase {
   /** Whether a user gesture is allowed to change a value right now. `readonly`
    *  differs from `disabled` in that the control stays focusable and opaque. */
   private get interactive(): boolean {
-    return !this.effectiveDisabled && !this.matches(':disabled') && !this.readonly;
+    return !isLiveDisabled(this) && !this.readonly;
   }
 
   /** Re-sanitize an already assigned value immediately after range settings change. */

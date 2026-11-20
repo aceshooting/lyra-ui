@@ -1,4 +1,4 @@
-import { formControlIconHitTarget, focusRing, interactiveTransition } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, formControlIconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import {
   formControlTextWrap,
@@ -73,8 +73,7 @@ export const styles = css`
      per-element opacity compounds with an ancestor's, doubly fading the text against the buttons
      beside it. Same fix as lr-date-input and lr-radio. */
   :host(:disabled) [part~='input-wrapper'] {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   /* A small basis, not auto: a native field's intrinsic width comes from its size attribute, not
      its value, so an auto basis made a 4-digit number claim ~20 characters and clip a short end
@@ -205,7 +204,7 @@ export const styles = css`
     color: var(--lr-input-action-active-color, var(--lr-input-action-hover-color, var(--lr-color-text)));
     background: var(
       --lr-input-action-active-bg,
-      color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      ${activeFill('var(--lr-color-surface)')}
     );
   }
   [part='password-toggle']:focus-visible {

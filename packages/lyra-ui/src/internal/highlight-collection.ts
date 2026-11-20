@@ -1,4 +1,4 @@
-import type { LyraHighlight } from '../components/viewers/document-viewer/anchors.js';
+import type { LyraHighlight, LyraHighlightTone } from '../components/viewers/document-viewer/anchors.js';
 import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
@@ -10,7 +10,8 @@ export const HIGHLIGHT_SNAPSHOT_LIMIT = 10_000;
 
 const HIGHLIGHT_SNAPSHOT_OVERFLOW = 1;
 const EMPTY_HIGHLIGHTS: readonly LyraHighlight[] = Object.freeze([]);
-const HIGHLIGHT_TONES = new Set(['accent', 'success', 'warning', 'danger', 'neutral']);
+/** Every highlight tone, in paint order. */
+export const HIGHLIGHT_TONES: readonly LyraHighlightTone[] = Object.freeze(['accent', 'success', 'warning', 'danger', 'neutral']);
 const SNAPSHOT_ANCHOR_KINDS = new WeakMap<LyraHighlight, string>();
 
 function isSafeArrayLength(value: unknown): value is number {
@@ -95,7 +96,7 @@ function projectLyraHighlight(value: unknown): LyraHighlight | undefined {
       anchor: anchorValue as LyraHighlight['anchor'],
       ...(typeof label === 'string' ? { label } : {}),
       ...(typeof note === 'string' ? { note } : {}),
-      ...(typeof tone === 'string' && HIGHLIGHT_TONES.has(tone) ? {
+      ...(typeof tone === 'string' && (HIGHLIGHT_TONES as readonly string[]).includes(tone) ? {
         tone: tone as LyraHighlight['tone'],
       } : {}),
     });

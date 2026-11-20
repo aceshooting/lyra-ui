@@ -1,4 +1,4 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingShorthand, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -116,12 +116,11 @@ export const styles = css`
   :where([part="play-button"]):active:where(:not(:disabled)) {
     background: var(
       --lr-animated-image-play-button-active-bg,
-      color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      ${activeFill('var(--lr-color-surface)')}
     );
   }
   [part="play-button"]:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   [part="play-button"] svg {
     display: block;

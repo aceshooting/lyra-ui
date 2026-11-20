@@ -2247,6 +2247,32 @@ it('does not export inherited prototype properties as column values', async () =
   expect(await capturedBlob!.text()).to.equal('id,constructor,toString\r\na,,');
 });
 
+it('exports class-instance getter values supplied through getRows', async () => {
+  class Row {
+    constructor(readonly id: string) {}
+    get label(): string { return `Row ${this.id}`; }
+  }
+  const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+  el.getRows = () => [new Row('a')] as unknown as readonly Record<string, unknown>[];
+  el.columns = [{ key: 'id', label: 'id' }, { key: 'label', label: 'label' }];
+  el.formats = ['csv'];
+  await el.updateComplete;
+  const originalCreateObjectURL = URL.createObjectURL.bind(URL);
+  let capturedBlob: Blob | undefined;
+  URL.createObjectURL = (blob: Blob) => {
+    capturedBlob = blob;
+    return originalCreateObjectURL(blob);
+  };
+  const completeEvent = oneEvent(el, 'lr-export-complete');
+  try {
+    (el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement).click();
+    await completeEvent;
+  } finally {
+    URL.createObjectURL = originalCreateObjectURL;
+  }
+  expect(await capturedBlob!.text()).to.equal('id,label\r\na,Row a');
+});
+
 it('describes the native trigger from the host aria-describedby', async () => {
   const wrapper = (await fixture(html`
     <div>

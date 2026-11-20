@@ -1,6 +1,6 @@
 import { toolStatusKeyframes } from '../tool-status.styles.js';
-import { disclosureHeader } from '../../../internal/layout-fragments.styles.js';
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { containerHost, disclosureHeader } from '../../../internal/layout-fragments.styles.js';
+import { activeFill, focusRingInset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 
@@ -11,9 +11,7 @@ import { compactContainerQuery } from '../../../internal/container-breakpoints.s
 // the hover repaint animates like every other pointer target.
 export const styles = css`
   :host {
-    display: block;
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${containerHost}
     min-inline-size: 0;
     --_lr-tool-call-block-accent: var(--lr-color-text-quiet);
   }
@@ -80,11 +78,7 @@ export const styles = css`
   }
   /* Pressed text returns to the body colour: brand text on the deeper mix fails contrast. */
   :where([part='header']):active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-brand-quiet)')};
     color: var(--lr-color-text);
   }
   :where([part='header']):active :is([part='status-text'], [part='duration']) {
@@ -93,8 +87,7 @@ export const styles = css`
   /* Inset by the ring's own width so the card's clip can never cut it. */
   :where([part='header']):focus-visible,
   :where([part='result']):focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingInset}
   }
 
   [part='icon'] {

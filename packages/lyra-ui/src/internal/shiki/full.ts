@@ -6,7 +6,7 @@ import {
   type ShikiHighlighter,
   type ShikiLanguageInput,
 } from './core.js';
-import { createOptionalPeerLoader, resolveOptionalPeerCapability } from '../optional-peer-capabilities.js';
+import { createOptionalPeerLoader, hasPeerMethods, resolveOptionalPeerCapability } from '../optional-peer-capabilities.js';
 
 type ShikiModuleLoader = () => Promise<unknown>;
 let shikiModuleLoaderForTesting: ShikiModuleLoader | undefined;
@@ -32,11 +32,7 @@ interface ShikiModule {
 }
 
 function isShikiModule(candidate: unknown): candidate is ShikiModule {
-  return (
-    (typeof candidate === 'object' || typeof candidate === 'function') &&
-    candidate !== null &&
-    typeof (candidate as ShikiModule).createHighlighter === 'function'
-  );
+  return hasPeerMethods(candidate, 'createHighlighter');
 }
 
 const highlighter = /* @__PURE__ */ createOptionalPeerLoader<ShikiHighlighter>({

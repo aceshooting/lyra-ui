@@ -1,5 +1,5 @@
 import { expect, waitUntil } from '@open-wc/testing';
-import { ENGINE_FENCE_ATTRIBUTES, observeAdmission, observeAncestorFences } from './engine-admission.js';
+import { ENGINE_FENCE_ATTRIBUTES, observeAdmission, observeAncestorFences, watchEngineStyle } from './engine-admission.js';
 
 interface FakeIntersection {
   deliver(entries: unknown[]): void;
@@ -209,5 +209,34 @@ describe('observeAncestorFences', () => {
     await settle();
     expect(changes).to.equal(1);
     expect([...ENGINE_FENCE_ATTRIBUTES]).to.deep.equal(['aria-hidden', 'inert', 'hidden', 'style', 'class', 'open']);
+  });
+});
+
+describe('watchEngineStyle', () => {
+  it('reports theme attributes on composed ancestors, ignores unrelated attributes and stops after disposal', async () => {
+    const outer = document.createElement('div');
+    const inner = document.createElement('span');
+    outer.append(inner);
+    document.body.append(outer);
+    let calls = 0;
+    const dispose = watchEngineStyle(inner, () => { calls++; });
+    try {
+      outer.setAttribute('data-unrelated', '1');
+      outer.title = 'Unrelated';
+      await new Promise((resolve) => setTimeout(resolve));
+      expect(calls).to.equal(0);
+      outer.setAttribute('data-lr-theme', 'dark');
+      outer.style.setProperty('--lr-color-brand', 'rgb(1, 2, 3)');
+      await new Promise((resolve) => setTimeout(resolve));
+      expect(calls).to.equal(1);
+      dispose();
+      dispose();
+      outer.setAttribute('data-lr-theme', 'light');
+      await new Promise((resolve) => setTimeout(resolve));
+      expect(calls).to.equal(1);
+    } finally {
+      dispose();
+      outer.remove();
+    }
   });
 });

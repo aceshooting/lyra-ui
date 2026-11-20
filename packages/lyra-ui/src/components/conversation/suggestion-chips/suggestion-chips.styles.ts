@@ -1,4 +1,4 @@
-import { focusRing, focusRingInset } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingInset } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -69,11 +69,7 @@ export const styles = css`
   /* Mixes the SAME --lr-suggestion-chips-hover-bg the rule above uses, so a consumer retinting the
      hover fill gets a matching pressed step without a second custom property to keep in sync. */
   [part~='chip']:where(:not(:disabled)):active {
-    background: color-mix(
-      in oklab,
-      var(--lr-suggestion-chips-hover-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-suggestion-chips-hover-bg, var(--lr-color-brand-quiet))')};
     border-color: var(--lr-suggestion-chips-hover-border, var(--lr-color-brand));
   }
   /* A disabled suggestion keeps its own label/detail text (still the datum it always was) but

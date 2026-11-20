@@ -39,6 +39,16 @@ export const HeadingLevel: Story = {
   render: () => html`<lr-community-card aria-level="4" .community=${community} .members=${members}></lr-community-card>`,
 };
 
+export const HeadingLevelToken: Story = {
+  name: 'heading-level="2" and "none"',
+  render: () => html`
+    <div style="display:grid; gap:1rem;">
+      <lr-community-card heading-level="2" .community=${community} .members=${members}></lr-community-card>
+      <lr-community-card heading-level="none" .community=${community} .members=${members}></lr-community-card>
+    </div>
+  `,
+};
+
 export const Empty: Story = {
   render: () => html`<lr-community-card></lr-community-card>`,
 };

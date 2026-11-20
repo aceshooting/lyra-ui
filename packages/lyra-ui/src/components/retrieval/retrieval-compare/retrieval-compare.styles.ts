@@ -1,12 +1,11 @@
-import { iconHitTarget, focusRing, focusRingInsetOffset, hoverFill, activeFill, interactiveTransition, disabledControl } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, focusRingInsetOffset, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { containerHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
-    display: block;
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${containerHost}
   }
   [part='base'] {
     min-inline-size: 0;
@@ -61,7 +60,7 @@ export const styles = css`
     background: var(--lr-color-surface-raised);
   }
   [part~='chunk']:active {
-    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-surface-raised)')};
   }
   [part~='chunk']:focus-visible {
     ${focusRingInsetOffset}

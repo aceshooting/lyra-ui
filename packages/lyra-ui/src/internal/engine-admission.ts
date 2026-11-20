@@ -1,28 +1,43 @@
 import { composedParentElement, isAccessibilityVisible } from './accessibility-visibility.js';
-import { OwnedIntersectionObserver, OwnedMutationObserver, readIntersecting } from './owned-observer.js';
+import { THEME_ATTRIBUTES } from './theme-observation.js';
 
 /**
  * Attributes whose change on an element or a composed ancestor can hide, inert or reveal it
  * without changing geometry, so no intersection report follows.
  */
-export const ENGINE_FENCE_ATTRIBUTES: readonly string[] = Object.freeze(['aria-hidden', 'inert', 'hidden', 'style', 'class', 'open']);
+export const ENGINE_FENCE_ATTRIBUTES: readonly string[] = /* @__PURE__ */ Object.freeze(['aria-hidden', 'inert', 'hidden', 'style', 'class', 'open']);
+
+/** The media features an engine style reads; a change to any of them must re-resolve it. */
+export const ENGINE_STYLE_MEDIA_QUERIES = /* @__PURE__ */ Object.freeze([
+  '(prefers-reduced-motion: reduce)',
+  '(forced-colors: active)',
+  '(prefers-color-scheme: dark)',
+] as const);
 
 /** Composed ancestors observed above the starting element. */
 const FENCE_DEPTH = 256;
 
 /**
- * Observes the fence attributes on `start` and its first 256 composed ancestors (assigned slots
- * and shadow hosts included), in `start`'s owner window. Returns the disposer; no callback runs
- * after it, or while `start` is disconnected.
+ * Observes `attributes` on `start` and its first 256 composed ancestors (assigned slots and shadow
+ * hosts included), in `start`'s owner window. Returns the disposer; no callback runs after it, or
+ * while `start` is disconnected.
  */
-export function observeAncestorFences(start: Element, onChange: () => void): () => void {
-  const observer = new OwnedMutationObserver(start, () => onChange());
-  const init: MutationObserverInit = { attributes: true, attributeFilter: [...ENGINE_FENCE_ATTRIBUTES] };
+export function observeAncestorAttributes(start: Element, attributes: readonly string[], onChange: () => void): () => void {
+  const view = start.ownerDocument.defaultView;
+  if (!view?.MutationObserver) return () => {};
+  let active = true;
+  const observer = new view.MutationObserver(() => { if (active && start.isConnected) onChange(); });
+  const init: MutationObserverInit = { attributes: true, attributeFilter: attributes as string[] };
   for (let element: Element | null = start, depth = 0; element && depth <= FENCE_DEPTH; depth++) {
     observer.observe(element, init);
     element = composedParentElement(element);
   }
-  return () => observer.clear();
+  return () => { active = false; observer.disconnect(); };
+}
+
+/** {@link observeAncestorAttributes} for the {@link ENGINE_FENCE_ATTRIBUTES}. */
+export function observeAncestorFences(start: Element, onChange: () => void): () => void {
+  return observeAncestorAttributes(start, ENGINE_FENCE_ATTRIBUTES, onChange);
 }
 
 export interface EngineAdmissionOptions {
@@ -43,26 +58,50 @@ export interface EngineAdmissionOptions {
  */
 export function observeAdmission(host: Element, surface: Element, options: EngineAdmissionOptions): () => void {
   let settled = false;
-  let intersecting = false;
+  let intersection: IntersectionObserver | undefined;
   let releaseFences: (() => void) | undefined;
-  const intersection = new OwnedIntersectionObserver(host, (entries) => {
-    intersecting = readIntersecting(entries, surface) ?? intersecting;
-    admit();
-  });
+  const view = host.ownerDocument.defaultView;
   const release = (): void => {
     settled = true;
-    intersection.clear();
+    intersection?.disconnect();
     releaseFences?.();
   };
   const exposed = (): boolean => options.isExposed?.() ?? isAccessibilityVisible(host);
+  let intersecting = false;
   const admit = (): void => {
-    if (settled || !intersecting || !options.isReady() || !exposed()) return;
+    if (settled || !intersecting || !host.isConnected || !options.isReady() || !exposed()) return;
     release();
     options.onAdmit();
   };
-  intersection.observe(surface);
-  intersecting = host.isConnected && !intersection.active;
+  if (host.isConnected && view?.IntersectionObserver) {
+    intersection = new view.IntersectionObserver((entries) => {
+      if (settled || !host.isConnected) return;
+      // Entries for one target arrive in time order; the last one is current.
+      for (const entry of entries) {
+        if (entry?.target === surface && typeof entry.isIntersecting === 'boolean') intersecting = entry.isIntersecting;
+      }
+      admit();
+    });
+    intersection.observe(surface);
+  }
+  intersecting = host.isConnected && !intersection;
   releaseFences = observeAncestorFences(host, admit);
   admit();
   return release;
+}
+
+/**
+ * Calls `onChange` when an engine's resolved style may have changed: a theme attribute
+ * on the host or a composed ancestor, or one of the {@link ENGINE_STYLE_MEDIA_QUERIES}. Unrelated
+ * attribute changes are not reported. Returns the disposer.
+ */
+export function watchEngineStyle(host: Element, onChange: () => void): () => void {
+  const releaseAncestors = observeAncestorAttributes(host, THEME_ATTRIBUTES, onChange);
+  const view = host.ownerDocument.defaultView;
+  const lists = view ? ENGINE_STYLE_MEDIA_QUERIES.map((query) => view.matchMedia(query)) : [];
+  for (const list of lists) list.addEventListener('change', onChange);
+  return () => {
+    releaseAncestors();
+    for (const list of lists) list.removeEventListener('change', onChange);
+  };
 }

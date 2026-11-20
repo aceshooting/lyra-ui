@@ -1,4 +1,4 @@
-import { resolveOptionalPeerCapability } from '../../../internal/optional-peer-capabilities.js';
+import { hasPeerMethods, resolveOptionalPeerCapability } from '../../../internal/optional-peer-capabilities.js';
 
 /** Decorator-free adapter types, loader and helpers, so importing the loader skips the class. */
 
@@ -59,14 +59,7 @@ export interface LibphonenumberModuleLike<CountryCode extends string = string> {
 
 /** Narrows an unknown resolved peer value to the capability this loader actually calls. */
 function isLibphonenumberModule(candidate: unknown): candidate is LibphonenumberModuleLike {
-  const api = candidate as Partial<LibphonenumberModuleLike> | null;
-  return (
-    (typeof api === 'object' || typeof api === 'function') &&
-    api !== null &&
-    typeof api.getCountries === 'function' &&
-    typeof api.getCountryCallingCode === 'function' &&
-    typeof api.parsePhoneNumberFromString === 'function'
-  );
+  return hasPeerMethods(candidate, 'getCountries', 'getCountryCallingCode', 'parsePhoneNumberFromString');
 }
 
 /**

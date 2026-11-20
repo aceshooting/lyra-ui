@@ -1,10 +1,10 @@
 import { css } from 'lit';
+import { activeFill } from '../../../internal/interactive-control.styles.js';
+import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
     /* This row's own default paint for its move arrows, set on the HOST for organization only --
        nothing here reads an --lr-icon-button-* token to compute it. The move-button rule below
        writes these onto lr-icon-button's own --_lr-icon-button-<token>-default tier (never the
@@ -16,14 +16,7 @@ export const styles = css`
     /* Reads the PUBLIC hover token (not this component's own -bg-hover default) so that an
        ancestor override of just the hover tier still shapes the press mix -- a cross-reference to a
        DIFFERENT public token than the one being defined here, so it introduces no loop. */
-    --_lr-reorder-item-move-bg-active: color-mix(
-      in oklab,
-      var(
-        --lr-icon-button-bg-hover,
-        var(--lr-color-brand-quiet)
-      ),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    --_lr-reorder-item-move-bg-active: ${activeFill('var( --lr-icon-button-bg-hover, var(--lr-color-brand-quiet) )')};
     --_lr-reorder-item-move-color: var(--lr-color-text-quiet);
     --_lr-reorder-item-move-color-hover: var(--lr-color-brand);
     --_lr-reorder-item-move-color-active: var(--lr-icon-button-color-hover, var(--lr-color-brand));

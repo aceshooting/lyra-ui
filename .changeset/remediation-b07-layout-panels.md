@@ -1,5 +1,5 @@
 ---
-'@aceshooting/lyra-ui': major
+'@aceshooting/lyra-ui': minor
 ---
 
 - Keep screen-reader-only row text visually hidden in virtual lists.
@@ -11,7 +11,7 @@
 - Preserve text editing in command search. Home and End navigate results when the caret is already at the requested boundary.
 - Discard a pending command action if a selection listener removes, replaces or disables the command or replaces its callback.
 - Discard a multi-split resize proposal when a listener changes its layout.
-- Honor an explicitly empty collapsed-panel set when restoring a saved multi-split layout.
+- Honor an explicitly empty collapsed-panel set assigned after a saved multi-split layout has been restored.
 - Support disabling resize interaction on dock and multi-split panels.
 - Restore dock sizing defaults when extent attributes are removed.
 - Honor the dock handle’s authored accessible name and ignore whitespace-only labels on panel controls.

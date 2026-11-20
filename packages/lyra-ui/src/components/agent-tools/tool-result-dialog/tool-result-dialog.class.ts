@@ -16,9 +16,9 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { activateOverlay, type OverlayHandle } from '../../../internal/overlay-manager.js';
 import { nextId } from '../../../internal/a11y.js';
-import { closeIcon, expandIcon } from '../../../internal/icons.js';
+import { closeIcon, expandIcon, iconFrame } from '../../../internal/icons.js';
 import { formatShortDuration, safeDurationMs } from '../../../internal/duration.js';
-import { TOOL_CALL_STATUSES, TOOL_STATUS_LABEL_KEY, toolGlyph, toolStatusIcon, type ToolStatus } from '../tool-status.js';
+import { TOOL_CALL_STATUSES, TOOL_STATUS_LABEL_KEY, toolStatusIcon, type ToolStatus } from '../tool-status.js';
 import { literalSetConverter } from '../../../internal/converters.js';
 import { styles } from './tool-result-dialog.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -64,7 +64,7 @@ export interface LyraToolResultDialogEventMap {
  *  identical "x" icons side by side would be ambiguous about which one
  *  dismisses the dialog and which one only un-maximizes it. */
 function shrinkIcon(): SVGTemplateResult {
-  return toolGlyph(svg`
+  return iconFrame(svg`
     <polyline points="4 14 10 14 10 20"></polyline>
     <polyline points="20 10 14 10 14 4"></polyline>
     <line x1="14" y1="10" x2="21" y2="3"></line>

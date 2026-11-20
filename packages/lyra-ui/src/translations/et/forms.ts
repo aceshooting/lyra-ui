@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'Ava kalender',
+  item: 'üksus',
   comboboxLoadError: 'Valikuid ei õnnestunud laadida.',
   comboboxSelectedOverflow: '+{n} veel',
   checkboxRequired: 'Jätkamiseks märkige see ruut.',

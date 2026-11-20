@@ -1,6 +1,6 @@
 import { formatIsoDate, isValidIsoDate } from '../../../internal/calendar-date.js';
 import { observeValidatorAttributes, runFormValidators } from '../../../internal/form-validator-runtime.js';
-import { renderFormControlHintError } from '../../../internal/form-control-template.js';
+import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { installInteractionOnInvalid } from '../../../internal/invalid-event-alias.js';
 import { AutocorrectState, installNativeInputModeAliases, installNativeSelectionAccessors, nativeAutocorrectAttribute, setNativeRangeText } from '../../../internal/native-text-control.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
@@ -18,6 +18,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import {
   FormAssociated,
   isBarredFromValidation,
+  isLiveDisabled,
 } from '../../../internal/form-associated.js';
 import {
   SET_ANCHORED_VALIDITY,
@@ -787,8 +788,6 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   // `form-control-label` too: the required-asterisk `::after` attaches to
   // that box, so leaving it always-visible orphans a stray ' *' when no
   // `label` is set.
-  private get hasHintSlot(): boolean { return this.slotPresence.has('hint'); }
-  private get hasErrorSlot(): boolean { return this.slotPresence.has('error'); }
   private readonly slotPresence = new SlotPresenceController(this);
   private get hasLabelSlot(): boolean { return this.slotPresence.has('label'); }
   private get hasStartSlot(): boolean { return this.slotPresence.has('start'); }
@@ -1244,9 +1243,6 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   /** Synchronous disabled truth for public actions, including an ancestor fieldset cascade that
    * can precede `formDisabledCallback()` and the next rendered native `disabled` attribute. */
 
-  private get liveDisabled(): boolean {
-    return this.effectiveDisabled || (typeof this.matches === 'function' && this.matches(':disabled'));
-  }
 
   /** Open the calendar popover, unless the cancelable `lr-show` request is vetoed. */
   show(): Promise<void> {
@@ -1259,7 +1255,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   private changeOpen(next: boolean, notify: boolean, restoreFocus = false): Promise<void> {
     const old = this._open;
-    const opening = next && !this.readonly && !this.liveDisabled;
+    const opening = next && !this.readonly && !isLiveDisabled(this);
     if (opening === old || (notify && this.requestingOpen)) {
       if (next !== old) this.toggleAttribute('open', old);
       return Promise.resolve();
@@ -1271,7 +1267,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
         const request = opening
           ? this.emit('lr-show', null, { cancelable: true })
           : this.emit('lr-hide', null, { cancelable: !this.forcingClose });
-        const blocked = this.readonly || this.liveDisabled;
+        const blocked = this.readonly || isLiveDisabled(this);
         if (!this.isConnected || this._open !== old || (opening ? blocked || request.defaultPrevented : !blocked && request.defaultPrevented)) {
           this.toggleAttribute('open', this._open);
           return Promise.resolve();
@@ -1394,7 +1390,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   /** Clear the value (`input`, `change`, `lr-clear`); inert while blank, disabled or readonly. */
   clear(): void {
-    if (!this.value || this.liveDisabled || this.readonly) return;
+    if (!this.value || isLiveDisabled(this) || this.readonly) return;
     // Matches how `onInputBlur` already flips this on the first blur -- an
     // explicit user-initiated clear() is itself an interaction, so a
     // required-and-now-empty field must surface its invalid state right
@@ -1676,7 +1672,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     // The native `change` originates inside this shadow root. Always stop that source and expose
     // one host-originating equivalent below only when the raw text commits successfully.
     e.stopPropagation();
-    if (this.liveDisabled) return;
+    if (isLiveDisabled(this)) return;
     this.commitInputChange((e.target as HTMLInputElement).value, e);
   };
 
@@ -1714,7 +1710,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   private onInput = (event: InputEvent): void => {
     event.stopPropagation();
-    if (this.liveDisabled) return;
+    if (isLiveDisabled(this)) return;
     this.enterCommittedText = null;
     this.inputRelayedSinceCommit = true;
     const value = this.value;
@@ -1834,7 +1830,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
       void this.show();
       return;
     }
-    if (this.liveDisabled || this.readonly) return;
+    if (isLiveDisabled(this) || this.readonly) return;
     if (!isImplicitSubmission(e)) return;
     // Commit first, submit second. The submitted form value is read synchronously from
     // `ElementInternals`, and the typed text has not reached it yet -- the native `change` that
@@ -1869,19 +1865,19 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
     // A reset can leave the browser's last native-change baseline equal to retyped text.
     // Flush the pending edit even when that browser therefore omits change on blur.
     // A preceding native change already cleared the flag, so ordinary blur stays silent.
-    if (!this.liveDisabled && this.inputRelayedSinceCommit && this.inputElement) {
+    if (!isLiveDisabled(this) && this.inputRelayedSinceCommit && this.inputElement) {
       this.commitInputChange(this.inputElement.value);
     }
     // A blur the platform itself forces when a focused native control becomes `disabled` is not a
     // real user interaction -- marking `touched` for it could reenter an in-flight Lit update and
     // trip Lit's dev-mode "scheduled an update after an update completed" warning; this is the
     // same fix as <lr-input>'s onBlur.
-    if (!this.liveDisabled) this.touched = true;
+    if (!isLiveDisabled(this)) this.touched = true;
     relayNativeEvent(this, event);
   };
 
   private onInputFocus = (event: FocusEvent): void => {
-    if (this.liveDisabled) {
+    if (isLiveDisabled(this)) {
       event.stopPropagation();
       return;
     }
@@ -1890,12 +1886,12 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   /** Activate the internal date text input unless the form control is effectively disabled. */
   override click(): void {
-    if (!this.liveDisabled) this.inputElement?.click();
+    if (!isLiveDisabled(this)) this.inputElement?.click();
   }
 
   /** Focus the internal date text input unless the form control is effectively disabled. */
   override focus(options?: FocusOptions): void {
-    if (!this.liveDisabled) this.inputElement?.focus(options);
+    if (!isLiveDisabled(this)) this.inputElement?.focus(options);
   }
 
   /** Blur the internal date text input. */
@@ -1968,7 +1964,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   // fires on this host a *second* time, on top of the explicit emit below.
   private onPickerInput = (e: InputEvent): void => {
     e.stopPropagation();
-    if (this.liveDisabled) return;
+    if (isLiveDisabled(this)) return;
     const picker = e.target as LyraDatePicker;
     const previousValue = this.value;
     this.value = picker.value;
@@ -1985,7 +1981,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   private onPickerChange = (e: Event): void => {
     e.stopPropagation();
-    if (this.liveDisabled) return;
+    if (isLiveDisabled(this)) return;
     const picker = e.target as LyraDatePicker;
     const previousValue = this.previousCalendarValue ?? this.value;
     this.previousCalendarValue = undefined;
@@ -2002,17 +1998,18 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
 
   override render(): TemplateResult {
     const hasValue = this.value.length > 0;
-    const hasHint = this.withHint || this.hasHintSlot || (this.hint ?? '').length > 0;
-    const hasError = this.hasErrorSlot || (this.errorText ?? '').length > 0;
+    const { hasHint, hasError, describedBy: supportingDescribedBy } = formControlSupportingState({
+      presence: this.slotPresence,
+      idPrefix: 'date-input',
+      hint: this.hint,
+      errorText: this.errorText,
+      withHint: this.withHint,
+      helpTextSlot: false,
+    });
     const hasLabel =
       this.withLabel || this.hasLabelSlot || (this.label ?? '').length > 0;
     const invalid = hasError || (this.touched && !this.internals.validity.valid);
-    const describedBy = this.localDescriptionIds = [
-      hasError ? 'date-input-error' : '',
-      hasHint ? 'date-input-hint' : '',
-    ]
-      .filter(Boolean)
-      .join(' ');
+    const describedBy = this.localDescriptionIds = supportingDescribedBy ?? '';
     const dynamicDaySlots = this.daySlotNames();
     this.renderedDaySlots = dynamicDaySlots.join(' ');
     return html`

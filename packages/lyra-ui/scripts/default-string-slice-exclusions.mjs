@@ -15,21 +15,6 @@ export const DEFAULT_STRING_SLICE_EXCLUSIONS = Object.freeze({
 
   'src/components/conversation/voice-picker/voice-picker.class.ts': Object.freeze(['fieldRequired']),
 
-  // A local dynamic segment-key map makes the conservative fallback inspect transitive helpers.
-  // These generic catalog-shaped literals come from those helpers, not from time-input lookups.
-  'src/components/forms/input/time-input.class.ts': Object.freeze([
-    'collapse',
-    'date',
-    'details',
-    'map',
-    'navigation',
-    'open',
-    'progress',
-    'restore',
-    'search',
-    'select',
-  ]),
-
   // These controls import non-mixin helpers from form-associated.ts. Its unrelated FormAssociated
   // export owns the fieldRequired lookup; none of these classes invokes that export.
   'src/components/forms/radio/radio-button.class.ts': Object.freeze(['fieldRequired']),

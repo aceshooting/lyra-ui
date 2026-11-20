@@ -36,7 +36,9 @@
     "./dist/docx/editor.css"
   ],
   "types": "./dist/index.d.ts",
+  "customElements": "custom-elements.json",
   "exports": {
+    "./custom-elements.json": "./custom-elements.json",
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
@@ -58,6 +60,7 @@
   },
   "files": [
     "dist",
+    "custom-elements.json",
     "CHANGELOG.md",
     "README.md",
     "LICENSE",

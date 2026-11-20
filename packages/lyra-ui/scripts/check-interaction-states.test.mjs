@@ -13,6 +13,7 @@
 
 import assert from 'node:assert/strict';
 import {
+  expandInterpolations,
   hasStateQualifier,
   hoverContract,
   hoverCoverage,
@@ -606,6 +607,21 @@ test('rule 4 state qualifiers cover the documented forms and skip outcome suffix
   ]) {
     assert.equal(hasStateQualifier(selector), false, selector);
   }
+});
+
+test('shared fill, tint and focus helpers are read as the CSS they render', () => {
+  const source = [
+    "[part='a']:hover { background: ${hoverFill('var(--x)')}; }",
+    "[part='a']:active { background: ${activeFill('var(--x)')}; }",
+    "[part='a']:focus-visible { ${focusRingInset} }",
+    "[part='b'] { ${iconHitTarget} cursor: pointer; }",
+  ].join('\n');
+  const expanded = expandInterpolations(source);
+  assert.match(expanded, /color-mix\(in oklab, var\(--x\), var\(--lr-color-mix-partner\) var\(--lr-color-mix-hover\)\)/);
+  assert.match(expanded, /outline: var\(--lr-focus-ring-width\)/);
+  assert.match(expanded, /\$\{iconHitTarget\}/);
+  assert.equal(expanded.split('\n').length, source.split('\n').length);
+  assert.deepEqual(readHoverRules(source).map((rule) => rule.selector), ["[part='a']:hover"]);
 });
 
 if (failures > 0) {

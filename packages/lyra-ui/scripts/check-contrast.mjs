@@ -29,7 +29,7 @@ const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const palettePath = join(packageDir, 'src', 'internal', 'tokens', 'palette.styles.ts');
 const themePath = join(packageDir, 'src', 'theme.css');
 const baseTokensPath = join(packageDir, 'src', 'internal', 'tokens.styles.ts');
-const specialistTokensPath = join(packageDir, 'src', 'internal', 'specialist-tokens.styles.ts');
+const specialistTokensPath = join(packageDir, 'src', 'internal', 'tokens', 'specialist-tokens.styles.ts');
 
 const TEXT_CONTRAST = 4.5; // WCAG 2.2 SC 1.4.3, normal-size text
 const NON_TEXT_CONTRAST = 3; // WCAG 2.2 SC 1.4.11, UI component boundaries

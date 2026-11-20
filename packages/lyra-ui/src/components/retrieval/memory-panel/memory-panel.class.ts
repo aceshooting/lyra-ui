@@ -40,7 +40,7 @@ import { collapseWhitespaceAndSoftHyphen } from '../../../internal/text-selectio
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_citationHighConfidence, LYRA_DEFAULT_citationLowConfidence, LYRA_DEFAULT_citationMediumConfidence, LYRA_DEFAULT_memoryPanelAdd, LYRA_DEFAULT_memoryPanelAddPosition, LYRA_DEFAULT_memoryPanelAddWithContext, LYRA_DEFAULT_memoryPanelConfirmAddHeading, LYRA_DEFAULT_memoryPanelConfirmForgetBody, LYRA_DEFAULT_memoryPanelConfirmForgetHeading, LYRA_DEFAULT_memoryPanelConfirmRemoveHeading, LYRA_DEFAULT_memoryPanelForgetAll, LYRA_DEFAULT_memoryPanelItemsLimit, LYRA_DEFAULT_memoryPanelLabel, LYRA_DEFAULT_memoryPanelLongTermHeading, LYRA_DEFAULT_memoryPanelShortTermHeading, LYRA_DEFAULT_retrievalShowLessWithContext, LYRA_DEFAULT_retrievalShowMoreWithContext, LYRA_DEFAULT_showMore } from '../../../internal/default-strings/retrieval.generated.js';
-import { LYRA_DEFAULT_approve, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_showLess } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_noData, LYRA_DEFAULT_remove, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_showLess } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -326,17 +326,9 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    approve: LYRA_DEFAULT_approve,
     citationHighConfidence: LYRA_DEFAULT_citationHighConfidence,
     citationLowConfidence: LYRA_DEFAULT_citationLowConfidence,
     citationMediumConfidence: LYRA_DEFAULT_citationMediumConfidence,
-    collapse: LYRA_DEFAULT_collapse,
-    copy: LYRA_DEFAULT_copy,
-    date: LYRA_DEFAULT_date,
-    deny: LYRA_DEFAULT_deny,
-    details: LYRA_DEFAULT_details,
-    loading: LYRA_DEFAULT_loading,
-    map: LYRA_DEFAULT_map,
     memoryPanelAdd: LYRA_DEFAULT_memoryPanelAdd,
     memoryPanelAddPosition: LYRA_DEFAULT_memoryPanelAddPosition,
     memoryPanelAddWithContext: LYRA_DEFAULT_memoryPanelAddWithContext,
@@ -349,16 +341,11 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     memoryPanelLabel: LYRA_DEFAULT_memoryPanelLabel,
     memoryPanelLongTermHeading: LYRA_DEFAULT_memoryPanelLongTermHeading,
     memoryPanelShortTermHeading: LYRA_DEFAULT_memoryPanelShortTermHeading,
-    navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
-    open: LYRA_DEFAULT_open,
-    progress: LYRA_DEFAULT_progress,
     remove: LYRA_DEFAULT_remove,
     removeWithContext: LYRA_DEFAULT_removeWithContext,
     retrievalShowLessWithContext: LYRA_DEFAULT_retrievalShowLessWithContext,
     retrievalShowMoreWithContext: LYRA_DEFAULT_retrievalShowMoreWithContext,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
     showLess: LYRA_DEFAULT_showLess,
     showMore: LYRA_DEFAULT_showMore,
   };

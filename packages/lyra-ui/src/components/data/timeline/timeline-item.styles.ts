@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { srOnly } from '../../../internal/a11y.js';
 
@@ -194,18 +194,10 @@ export const styles = css`
     line-height: var(--lr-line-height-snug);
   }
   [part='cluster']:hover [part='cluster-count'] {
-    background: color-mix(
-      in oklab,
-      var(--lr-timeline-cluster-bg, var(--lr-color-brand)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
+    background: ${hoverFill('var(--lr-timeline-cluster-bg, var(--lr-color-brand))')};
   }
   [part='cluster']:active [part='cluster-count'] {
-    background: color-mix(
-      in oklab,
-      var(--lr-timeline-cluster-bg, var(--lr-color-brand)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-timeline-cluster-bg, var(--lr-color-brand))')};
   }
   [part='cluster']:focus-visible {
     ${focusRing}

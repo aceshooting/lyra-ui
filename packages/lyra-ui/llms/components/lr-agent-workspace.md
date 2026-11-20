@@ -18,7 +18,7 @@
 
 Whitespace-only name overrides use the same fallback as an omitted name.
 
-The built-in composer accepts `composerDisabled: boolean = false` (attribute `composer-disabled`). Listen directly on a built-in child for its native `input` and `change`, clipboard, disclosure and export events. Events from slotted content keep their normal propagation.
+The built-in composer accepts `composerDisabled: boolean = false` (attribute `composer-disabled`). Generic control-state events of the built-in children (native `input` and `change`, `lr-change`, `lr-invalid`, disclosure `lr-toggle`/`lr-toggle-request`, `lr-show`/`lr-hide`) stop at the workspace boundary. Child intents such as `lr-load-more`, `lr-chunk-open`, `lr-claim-select`, `lr-citation-open`, `lr-citation-activate`, `lr-tool-activate`, `lr-tool-render-error`, clipboard and export events still bubble out of the host. Events from slotted content keep their normal propagation.
 
 `headingLevel: LyraHeadingLevel = '2'` (attribute `heading-level`) sets the title level. Details headings use the next level up to six. Use `none` to omit heading semantics, or `label=""` to omit the visible title. Host `aria-labelledby` and `aria-describedby` name and describe the workspace region.
 

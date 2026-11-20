@@ -1,9 +1,8 @@
 ---
-'@aceshooting/lyra-ui': major
+'@aceshooting/lyra-ui': minor
 ---
 
-- In `lr-node-palette`, use plain arrows to navigate and enable `reorderable` for Ctrl/Meta reorder shortcuts. Confirm a requested reorder with the next `items` assignment.
-- In `lr-neighbor-list`, relationships to the same node now appear separately by relation and direction. Group rows by node ID before assignment when one result per neighbor is desired.
+- `lr-neighbor-list` adds `separate-relations` to show each relation and direction to the same neighbor as its own row; by default one row per neighbor node is kept, first-wins.
 - Graph source navigation and embedding selection surfaces expose distinct accessible names. Use the localized records name for graph navigation and the plot or list name for embedding selection.
 - Graphs, search results, embedding bins and palettes preserve browser and IME shortcuts. Palette placement fires once per keypress. If a placement listener replaces the catalog or removes the palette, the retired item no longer emits a follow-up selection.
 - Neighbor rows wrap long labels and relations and support keyboard movement between the primary and expand actions. Graph source rows expose incident actions for the current row. Revealing either kind of row keeps scrolling inside its list.

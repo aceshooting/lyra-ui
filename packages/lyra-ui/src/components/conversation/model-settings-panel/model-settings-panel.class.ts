@@ -13,6 +13,7 @@ import { styles } from './model-settings-panel.styles.js';
 import type { LyraCatalog, LyraModelCatalogEntry } from '../model-select/model-select.class.js';
 import '../model-select/model-select.class.js';
 import '../../forms/slider/slider.class.js';
+import { CATALOG_PICKER_CHILD_EVENTS, containShadowChildEvents } from '../../../internal/child-event-containment.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_selectModel, LYRA_DEFAULT_temperature } from '../../../internal/default-strings/conversation.generated.js';
@@ -110,6 +111,14 @@ export class LyraModelSettingsPanel extends LyraElement<LyraModelSettingsPanelEv
   protected static override readonly ownedCollectionProperties = Object.freeze(['catalog']);
 
   static override styles = [LyraElement.styles, styles];
+
+  /** The embedded model picker's value request and popup lifecycle stay inside this panel, which
+   *  reports the combined settings through its own `lr-change`. */
+  protected override createRenderRoot(): HTMLElement | DocumentFragment {
+    const root = super.createRenderRoot();
+    containShadowChildEvents(root, CATALOG_PICKER_CHILD_EVENTS);
+    return root;
+  }
 
   /** Locks the model and temperature controls while leaving their values readable. */
   @property({ type: Boolean, reflect: true }) readonly = false;

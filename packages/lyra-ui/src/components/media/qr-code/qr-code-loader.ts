@@ -1,4 +1,4 @@
-import { createOptionalPeerLoader } from '../../../internal/optional-peer-capabilities.js';
+import { createOptionalPeerLoader, hasPeerMethods } from '../../../internal/optional-peer-capabilities.js';
 
 const QR_CODE_PEER_WARNING_KEY = 'lyra-qr-code-peer-unavailable';
 const QR_CODE_PEER_WARNING = '<lr-qr-code> could not load its optional qrcode peer.';
@@ -10,12 +10,7 @@ export interface QrCodeApi {
 }
 
 function isQrCodeApi(value: unknown): value is QrCodeApi {
-  return (
-    (typeof value === 'object' || typeof value === 'function') &&
-    value !== null &&
-    'create' in value &&
-    typeof value.create === 'function'
-  );
+  return hasPeerMethods(value, 'create');
 }
 
 const qrCode = /* @__PURE__ */ createOptionalPeerLoader<QrCodeApi>({

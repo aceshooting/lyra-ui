@@ -12,6 +12,22 @@ export const focusRing = css`
   outline-offset: var(--lr-focus-ring-offset);
 `;
 
+/**
+ * Keyboard focus outline through the composite `--lr-focus-ring` shorthand, so a consumer that
+ * overrides that one token (a dashed or forced-colors ring) reaches it; otherwise identical to
+ * {@link focusRing}.
+ */
+export const focusRingShorthand = css`
+  outline: var(--lr-focus-ring);
+  outline-offset: var(--lr-focus-ring-offset);
+`;
+
+/** Keyboard focus outline pulled inward by the configured outer offset, for controls that cannot paint outside their box. */
+export const focusRingInwardOffset = css`
+  outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
+  outline-offset: calc(-1 * var(--lr-focus-ring-offset));
+`;
+
 /** Keyboard focus outline drawn inside the box, for controls whose overflow or neighbours would clip an outer ring. */
 export const focusRingInset = css`
   outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
@@ -39,6 +55,19 @@ export function hoverFill(base: string): CSSResult {
 /** The pressed fill; same contract as `hoverFill`, mixed by the active step. */
 export function activeFill(base: string): CSSResult {
   return unsafeCSS(`color-mix(in oklab, ${base}, var(--lr-color-mix-partner) var(--lr-color-mix-active))`);
+}
+
+/**
+ * The hover tint: the given accent at the hover share over transparent, for rows and cells whose
+ * hover must stay translucent on any background. Same contract as `hoverFill`.
+ */
+export function hoverTint(accent: string): CSSResult {
+  return unsafeCSS(`color-mix(in srgb, ${accent} var(--lr-color-mix-hover), transparent)`);
+}
+
+/** The pressed tint; same contract as `hoverTint`, at the active share. */
+export function activeTint(accent: string): CSSResult {
+  return unsafeCSS(`color-mix(in srgb, ${accent} var(--lr-color-mix-active), transparent)`);
 }
 
 /** The one pointer-interaction transition (fill, text and border); flattened by the reduced-motion token. */

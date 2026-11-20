@@ -1,8 +1,9 @@
 import { visuallyHidden } from '../../../internal/a11y.js';
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css, unsafeCSS, type CSSResult } from 'lit';
 import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { forcedColorLegendSwatchStyles } from './chart-forced-colors.js';
+import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 
 export const chartDataTableStyles = css`
   [part='data-table'] {
@@ -83,7 +84,7 @@ export const chartSurfaceStyles = css`
   [part~='legend-item']:where(:active) {
     background: var(
       --lr-chart-legend-item-active-bg,
-      color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      ${activeFill('var(--lr-color-brand-quiet)')}
     );
   }
   [part~='legend-item']:where(:focus-visible) {
@@ -108,8 +109,7 @@ export const chartSurfaceStyles = css`
     min-inline-size: 0;
     min-block-size: var(--lr-chart-height, var(--_lr-chart-height, var(--lr-size-280px)));
     block-size: auto;
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${inlineSizeContainer}
 
     --_lr-chart-grid-color: var(--lr-color-border-subtle);
     --_lr-chart-tick-color: var(--lr-color-text-quiet);
@@ -148,11 +148,7 @@ export const chartSurfaceStyles = css`
     outline-offset: var(--lr-focus-ring-offset);
   }
   [part='canvas']:active {
-    outline-color: color-mix(
-      in oklab,
-      var(--lr-chart-canvas-hover-outline-color, var(--lr-chart-grid-color, var(--lr-color-border))),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    outline-color: ${activeFill('var(--lr-chart-canvas-hover-outline-color, var(--lr-chart-grid-color, var(--lr-color-border)))')};
   }
   [part='canvas']:focus-visible {
     ${focusRing}

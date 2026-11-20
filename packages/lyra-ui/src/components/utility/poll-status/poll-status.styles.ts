@@ -1,5 +1,5 @@
 import { iconAction } from '../../../internal/icon-action.styles.js';
-import { interactiveTransition, iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -70,11 +70,7 @@ export const styles = css`
     --_lr-poll-status-refresh-hover-color: var(--lr-poll-status-refresh-hover-color, var(--lr-color-brand));
     --_lr-poll-status-refresh-active-bg: var(
       --lr-poll-status-refresh-active-bg,
-      color-mix(
-        in oklab,
-        var(--_lr-poll-status-refresh-hover-bg),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--_lr-poll-status-refresh-hover-bg)')}
     );
     --_lr-poll-status-refresh-active-color: var(--lr-poll-status-refresh-active-color, var(--lr-color-brand));
   }
@@ -89,7 +85,7 @@ export const styles = css`
   [part='pause-button']:active:not(:disabled) {
     background: var(
       --lr-poll-status-pause-active-bg,
-      color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      ${activeFill('var(--lr-color-brand-quiet)')}
     );
     color: var(--lr-poll-status-pause-active-color, var(--lr-color-brand));
   }

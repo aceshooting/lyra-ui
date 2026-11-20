@@ -35,3 +35,28 @@ it('keeps expanded file status wording in the button content without naming a ge
   expect(statuses.map((status) => status.querySelector('[aria-hidden="true"]')?.textContent)).to.deep.equal(['M', 'A']);
   await expectValidAriaRules(card, ['aria-prohibited-attr']);
 });
+
+it('chooses the file wording from the numeric file count', async () => {
+  const card = await fixture<LyraCommitCard>(html`<lr-commit-card
+    message="Update components"
+    .files=${[{ path: 'one.ts', additions: 3, deletions: 2, status: 'modified' }]}
+  ></lr-commit-card>`);
+  const summary = () => card.shadowRoot!.querySelector('[part="diffstat"] .sr-only')?.textContent;
+  const toggle = () => card.shadowRoot!.querySelector('[part="files-toggle"]')?.textContent?.trim();
+  expect(summary()).to.equal('+3 -2 in 1 file');
+  expect(toggle()).to.equal('Show 1 changed file');
+  card.filesExpanded = true;
+  await card.updateComplete;
+  expect(toggle()).to.equal('Hide 1 changed file');
+  card.files = [
+    { path: 'one.ts', additions: 3, deletions: 2, status: 'modified' },
+    { path: 'two.ts', additions: 1, deletions: 0, status: 'added' },
+  ];
+  card.filesExpanded = false;
+  await card.updateComplete;
+  expect(summary()).to.equal('+4 -2 in 2 files');
+  expect(toggle()).to.equal('Show 2 changed files');
+  card.strings = { commitCardShowFiles: { one: 'one entry', other: 'several entries' } };
+  await card.updateComplete;
+  expect(toggle()).to.equal('several entries');
+});

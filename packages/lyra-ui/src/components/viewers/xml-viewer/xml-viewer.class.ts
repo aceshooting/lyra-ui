@@ -1,5 +1,5 @@
 import { hasHierarchySourceCopy, hierarchyCopyScope, HierarchySourceCopyController, HierarchySourceSearchController } from '../../../internal/hierarchy-source-search.js';
-import { applyHierarchySourceEffects, captureHierarchySourceEffects } from '../../../internal/hierarchy-summary-source.js';
+import { applyHierarchySourceEffects, captureHierarchySourceEffects, hierarchySourceSummary } from '../../../internal/hierarchy-summary-source.js';
 import { KeyedCopyFeedback } from '../../../internal/record-copy-feedback.js';
 import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
@@ -546,11 +546,8 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     if (this.copyFeedback !== undefined) this.resetCopyFeedback();
   }
   private sourceSummary(): string {
-    const projection = this.hierarchy.projection;
-    return projection ? this.localize('treeSourceSummary', undefined, {
-      visible: getNumberFormat(this.effectiveLocale).format(projection.rows.count),
-      total: getNumberFormat(this.effectiveLocale).format(projection.total),
-    }) : '';
+    const summary = hierarchySourceSummary(this.hierarchy.projection, this.effectiveLocale);
+    return summary ? this.localize('treeSourceSummary', undefined, summary) : '';
   }
   private sourceCopyButton(node?: LyraInspectionNode): TemplateResult | typeof nothing {
     if (!this.copyable || !hasHierarchySourceCopy(() => this.treeSource)) return nothing;

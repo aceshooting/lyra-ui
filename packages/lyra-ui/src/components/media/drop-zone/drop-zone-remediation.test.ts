@@ -1,6 +1,7 @@
 import { setForcedColors } from '../../../../test/wtr-media.js';
 import { expect, fixture, html } from '@open-wc/testing';
 import './drop-zone.js';
+import '../file-input/file-input.js';
 import { sinkTexts } from '../../../../test/announcements.js';
 import type { LyraDropZone } from './drop-zone.js';
 
@@ -111,4 +112,21 @@ it('ignores assignment to the readonly dragging property', async () => {
   const el = await fixture<LyraDropZone>(html`<lr-drop-zone></lr-drop-zone>`);
   expect(() => { (el as unknown as { dragging: boolean }).dragging = true; }).not.to.throw();
   expect(el.dragging).to.equal(false);
+});
+
+it('sizes the overlay on the same tier ladder as the lr-file-input dropzone', async () => {
+  for (const size of ['2xs', 'xs', 's', 'm', 'l', 'xl']) {
+    const wrapper = await fixture<HTMLElement>(html`<div>
+      <lr-drop-zone size=${size}></lr-drop-zone>
+      <lr-file-input size=${size}></lr-file-input>
+    </div>`);
+    const zone = wrapper.querySelector<LyraDropZone>('lr-drop-zone')!;
+    const input = wrapper.querySelector('lr-file-input')!;
+    await zone.updateComplete;
+    await (input as HTMLElement & { updateComplete: Promise<unknown> }).updateComplete;
+    const overlay = getComputedStyle(zone.shadowRoot!.querySelector('[part="overlay"]')!);
+    const field = getComputedStyle(input.shadowRoot!.querySelector('.dropzone-content')!);
+    expect(overlay.paddingInlineStart, `${size} padding`).to.equal(field.paddingInlineStart);
+    expect(overlay.fontSize, `${size} font size`).to.equal(field.fontSize);
+  }
 });

@@ -3,7 +3,7 @@ import type { LyraHierarchySource, LyraHierarchyQuery, LyraHierarchyRow, LyraTas
 import { normalizeAgentTerminalStatus } from '../../../internal/shared-unions.js';
 import { repairComposedFocus } from '../../../internal/focus-navigation.js';
 import { HierarchySourceController, hierarchyField, hierarchyKey, hierarchyText } from '../../../internal/hierarchy-source-controller.js';
-import { applyHierarchySourceEffects, captureHierarchySourceEffects, createHierarchySummarySource } from '../../../internal/hierarchy-summary-source.js';
+import { applyHierarchySourceEffects, captureHierarchySourceEffects, createHierarchySummarySource, hierarchySourceSummary, captureHierarchyRowAuthority, hierarchySourceFieldReader } from '../../../internal/hierarchy-summary-source.js';
 import { hierarchySourceView } from '../../../internal/hierarchy-source-view.js';
 import { hierarchySourceStyles } from '../../../internal/hierarchy-source-view.styles.js';
 import { readOwnDataValue } from '../../../internal/data-descriptors.js';
@@ -11,7 +11,6 @@ import { finiteCount } from '../../../internal/numbers.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import {
   html,
-  svg,
   nothing,
   type TemplateResult,
   type SVGTemplateResult,
@@ -27,13 +26,20 @@ import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
-import { chevronIcon } from '../../../internal/icons.js';
+import {
+  chevronIcon,
+  statusErrorIcon,
+  statusIncompleteIcon,
+  statusPendingIcon,
+  statusRunningIcon,
+  statusSuccessIcon,
+} from '../../../internal/icons.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './task-list.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_taskListCompletedOfTotal, LYRA_DEFAULT_taskListLabel, LYRA_DEFAULT_taskListLimit, LYRA_DEFAULT_taskListStepCompletedAnnounce, LYRA_DEFAULT_taskListStepFailedAnnounce, LYRA_DEFAULT_taskListStepIncompleteAnnounce, LYRA_DEFAULT_taskListStepStartedAnnounce } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_expand, LYRA_DEFAULT_item, LYRA_DEFAULT_items, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_treeNodeMoved, LYRA_DEFAULT_treeSourceError, LYRA_DEFAULT_treeSourceSummary } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_retry, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_treeNodeMoved, LYRA_DEFAULT_treeSourceError, LYRA_DEFAULT_treeSourceSummary } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** A plan step's lifecycle state — not permission-gated, so there is no `denied` state here
@@ -187,61 +193,12 @@ interface PendingTaskReorder {
   toIndex: number;
 }
 
-// Mirrors the shared icon set's viewBox/stroke conventions (internal/icons.ts) without adding
-// task-list-specific glyphs there -- duplicated locally, matching lr-tool-call-chip's own
-// STATUS_ICON set (minus its 'denied' glyph, which has no TaskStatus
-// counterpart).
-const ICON_VIEW_BOX = '0 0 24 24';
-const ICON_STROKE_WIDTH = '1.75';
-
-function icon(paths: SVGTemplateResult): SVGTemplateResult {
-  return svg`
-    <svg
-      width="1em"
-      height="1em"
-      viewBox=${ICON_VIEW_BOX}
-      fill="none"
-      stroke="currentColor"
-      stroke-width=${ICON_STROKE_WIDTH}
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    >${paths}</svg>
-  `;
-}
-
-function pendingIcon(): SVGTemplateResult {
-  return icon(svg`<circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline>`);
-}
-
-function runningIcon(): SVGTemplateResult {
-  return icon(svg`<path d="M21 12a9 9 0 1 1-9-9"></path>`);
-}
-
-function successIcon(): SVGTemplateResult {
-  return icon(svg`<circle cx="12" cy="12" r="9"></circle><polyline points="8 12.5 11 15.5 16 9.5"></polyline>`);
-}
-
-function errorIcon(): SVGTemplateResult {
-  return icon(svg`
-    <circle cx="12" cy="12" r="9"></circle>
-    <line x1="9" y1="9" x2="15" y2="15"></line>
-    <line x1="15" y1="9" x2="9" y2="15"></line>
-  `);
-}
-
-/** A circle with a level dash: stopped short, neither succeeded nor failed. */
-function incompleteIcon(): SVGTemplateResult {
-  return icon(svg`<circle cx="12" cy="12" r="9"></circle><line x1="8" y1="12" x2="16" y2="12"></line>`);
-}
-
 const STATUS_ICON: Record<TaskStatus, () => SVGTemplateResult> = {
-  pending: pendingIcon,
-  running: runningIcon,
-  success: successIcon,
-  error: errorIcon,
-  incomplete: incompleteIcon,
+  pending: statusPendingIcon,
+  running: statusRunningIcon,
+  success: statusSuccessIcon,
+  error: statusErrorIcon,
+  incomplete: statusIncompleteIcon,
 };
 
 const STATUS_LABEL_KEY: Record<TaskStatus, string> = {
@@ -344,20 +301,10 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     collapse: LYRA_DEFAULT_collapse,
-    copy: LYRA_DEFAULT_copy,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
     expand: LYRA_DEFAULT_expand,
-    item: LYRA_DEFAULT_item,
-    items: LYRA_DEFAULT_items,
     loading: LYRA_DEFAULT_loading,
-    map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
-    open: LYRA_DEFAULT_open,
     retry: LYRA_DEFAULT_retry,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
     statusError: LYRA_DEFAULT_statusError,
     statusIncomplete: LYRA_DEFAULT_statusIncomplete,
     statusPending: LYRA_DEFAULT_statusPending,
@@ -476,20 +423,12 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   private normalizeSourceTask(value: unknown, key: string): TaskItem {
     const source = this.treeSource;
     const version = this.sourceVersion;
-    const owner = this.ownerDocument;
     const control = this.sourceControl;
-    const epoch = control.epoch;
     const projection = control.projection;
-    const owned = () => this.isConnected && this.ownerDocument === owner && this.treeSource === source &&
-      this.sourceVersion === version && this.sourceControl === control && control.epoch === epoch && control.projection === projection && !control.loading;
     const accepted = projection ? this.sourceSummaries.get(projection.rows) : undefined;
-    const current = () => owned() && Boolean(accepted?.current()) && owned();
-    const field = (name: string) => {
-      if (!current()) throw new Error('Task source changed');
-      const result = hierarchyField(value, name);
-      if (!current()) throw new Error('Task source changed');
-      return result;
-    };
+    const field = hierarchySourceFieldReader(value, captureHierarchyRowAuthority(this, control,
+      () => this.treeSource === source && this.sourceVersion === version && this.sourceControl === control,
+      accepted?.current), 'Task source changed');
     const id = hierarchyKey(field('id'));
     if (id !== key) throw new TypeError('Task key mismatch');
     const label = hierarchyText(field('label'));
@@ -535,11 +474,8 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   }
 
   private sourceSummary(): string {
-    const projection = this.sourceControl.projection;
-    return projection ? this.localize('treeSourceSummary', undefined, {
-      visible: getNumberFormat(this.effectiveLocale).format(projection.rows.count),
-      total: getNumberFormat(this.effectiveLocale).format(projection.total),
-    }) : '';
+    const summary = hierarchySourceSummary(this.sourceControl.projection, this.effectiveLocale);
+    return summary ? this.localize('treeSourceSummary', undefined, summary) : '';
   }
 
   private updateSourceEffects(): void {

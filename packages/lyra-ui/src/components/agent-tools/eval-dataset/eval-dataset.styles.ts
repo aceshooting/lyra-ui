@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { activeFill } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   :host {
@@ -30,7 +31,7 @@ export const styles = css`
   }
   button[data-agent-action][part='add-button']:where(:active):where(:not(:disabled)),
   button[data-agent-action][part='remove-button']:where(:active):where(:not(:disabled)) {
-    border-color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    border-color: ${activeFill('var(--lr-color-brand)')};
   }
   [part='import'] {
     flex: 0 1 auto;

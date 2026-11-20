@@ -1,5 +1,5 @@
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -68,16 +68,8 @@ export const styles = css`
        hover used to BE var(--lr-color-surface), i.e. no hover at all. Tint
        --lr-button-outlined-fill and point this at the same colour. */
     --_lr-button-hover-base: var(--lr-color-surface);
-    --_lr-button-hover-background: color-mix(
-      in oklab,
-      var(--lr-button-hover-base, var(--_lr-button-hover-base)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
-    --_lr-button-active-background: color-mix(
-      in oklab,
-      var(--lr-button-hover-base, var(--_lr-button-hover-base)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    --_lr-button-hover-background: ${hoverFill('var(--lr-button-hover-base, var(--_lr-button-hover-base))')};
+    --_lr-button-active-background: ${activeFill('var(--lr-button-hover-base, var(--_lr-button-hover-base))')};
   }
   /* Each painted tier names its own fill as the mix base, so retuning --lr-button-fill or
      --lr-button-accent-fill retunes that tier's hover and press with it. */
@@ -261,8 +253,7 @@ export const styles = css`
      */
   [part~="base"]:disabled,
   [part~="base"][aria-disabled="true"] {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   [part~="base"]:not(:disabled, [aria-disabled="true"]) {
     transition: background-color var(--lr-transition-fast),
@@ -465,20 +456,12 @@ export const styles = css`
   :host([appearance="link"])
     [part~="base"]:not(:disabled, [aria-disabled="true"]):hover {
     background: transparent;
-    color: color-mix(
-      in oklab,
-      var(--lr-button-accent, var(--_lr-button-accent)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
+    color: ${hoverFill('var(--lr-button-accent, var(--_lr-button-accent))')};
   }
   :host([appearance="link"])
     [part~="base"]:not(:disabled, [aria-disabled="true"]):active {
     background: transparent;
-    color: color-mix(
-      in oklab,
-      var(--lr-button-accent, var(--_lr-button-accent)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    color: ${activeFill('var(--lr-button-accent, var(--_lr-button-accent))')};
   }
   [part="spinner"] {
     display: inline-flex;

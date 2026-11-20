@@ -27,7 +27,7 @@ if (darkMarker < 0 || auxiliaryMarker < darkMarker) throw new Error('Token fallb
 outputs.set(tokenPath, replaceStyleFallbacks(tokenSource.slice(0, darkMarker), profileInputs, 'light', model.canonical.tokens) + replaceStyleFallbacks(tokenSource.slice(darkMarker, auxiliaryMarker), profileInputs, 'dark', model.canonical.tokens) + tokenSource.slice(auxiliaryMarker));
 const sizesPath = 'src/internal/sizes.styles.ts';
 outputs.set(sizesPath, replaceStyleFallbacks(readFileSync(join(packageDir, sizesPath), 'utf8'), profileInputs, 'light', model.canonical.tokens));
-const specialistPath = 'src/internal/specialist-tokens.styles.ts';
+const specialistPath = 'src/internal/tokens/specialist-tokens.styles.ts';
 const specialistSource = readFileSync(join(packageDir, specialistPath), 'utf8');
 const specialistDark = specialistSource.indexOf('const darkSpecialistTokens');
 const specialistForced = specialistSource.indexOf('const forcedColorSpecialistTokens');

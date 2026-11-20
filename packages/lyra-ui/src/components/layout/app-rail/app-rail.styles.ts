@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { minimumPointerTarget } from '../../../internal/minimum-pointer-target.styles.js';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
@@ -71,11 +71,7 @@ export const styles = css`
   [part="toggle"]:active {
     background: var(
       --lr-app-rail-toggle-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-color-brand-quiet),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-color-brand-quiet)')}
     );
     color: var(--lr-app-rail-toggle-active-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
   }
@@ -208,11 +204,7 @@ export const styles = css`
   [part="resizer"]:active [part="resizer-track"] {
     background: var(
       --lr-app-rail-resizer-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-color-brand),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-color-brand)')}
     );
   }
   [part="resizer"]:focus-visible {
@@ -364,11 +356,7 @@ export const styles = css`
   [part="collapse-toggle"]:active {
     background: var(
       --lr-app-rail-collapse-toggle-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-color-brand-quiet),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-color-brand-quiet)')}
     );
     color: var(--lr-app-rail-collapse-toggle-active-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
   }
@@ -431,11 +419,7 @@ export const styles = css`
     color: var(--lr-app-rail-pin-hover-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
   }
   [part="pin-button"]:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-app-rail-pin-hover-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-app-rail-pin-hover-bg, var(--lr-color-brand-quiet))')};
   }
   [part="pin-button"]:focus-visible {
     ${focusRing}

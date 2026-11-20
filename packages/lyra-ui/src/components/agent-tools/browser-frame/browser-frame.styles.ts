@@ -1,13 +1,13 @@
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
     display: block;
     /* Makes the host a query container so the @container rule below reacts to the frame's own
        allocated width -- a sidebar, a split pane, a dialog -- instead of the viewport's. */
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${inlineSizeContainer}
   }
   [part='base'] {
     display: flex;

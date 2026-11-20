@@ -1,5 +1,5 @@
 import { anchoredPopupReveal, anchoredPopupOpen } from '../../../internal/overlay-surface.styles.js';
-import { iconHitTarget, focusRing, interactiveTransition } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
@@ -13,6 +13,7 @@ import {
   formControlLabelDisplay,
 } from '../../../internal/form-control.styles.js';
 import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
+import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
@@ -35,9 +36,7 @@ export const styles = css`
 
   [part~='form-control-label'] {
     ${formControlLabelTypography()}
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
     margin-block-end: var(--lr-space-xs);
     overflow-wrap: anywhere;
   }
@@ -84,8 +83,7 @@ export const styles = css`
     ${formControlFocusHalo}
   }
   :host(:disabled) [part~='time-input'] {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
 
   [part='start'],
@@ -144,11 +142,7 @@ export const styles = css`
   :host(:not(:disabled)) [part='segment']:active {
     background: var(
       --lr-time-input-segment-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-time-input-segment-hover-bg, var(--lr-color-brand-quiet)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-time-input-segment-hover-bg, var(--lr-color-brand-quiet))')}
     );
   }
   [part='segment']:focus-visible {
@@ -193,11 +187,7 @@ export const styles = css`
   [part='expand-button']:not(:disabled):active {
     background: var(
       --lr-time-input-action-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-time-input-action-hover-bg, var(--lr-color-brand-quiet)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-time-input-action-hover-bg, var(--lr-color-brand-quiet))')}
     );
   }
   [part='clear-button']:focus-visible,
@@ -206,8 +196,7 @@ export const styles = css`
   }
   [part='clear-button']:disabled,
   [part='expand-button']:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   [part='expand-icon'] {
     display: inline-flex;
@@ -298,11 +287,7 @@ export const styles = css`
   :where([part~='column-item']):active {
     background: var(
       --lr-time-input-column-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-time-input-column-hover-bg, var(--lr-color-brand-quiet)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-time-input-column-hover-bg, var(--lr-color-brand-quiet))')}
     );
   }
   :where([part~='column-item']):focus-visible {
@@ -318,21 +303,13 @@ export const styles = css`
   :where([part~='column-item-selected']):hover {
     background: var(
       --lr-time-input-column-selected-hover-bg,
-      color-mix(
-        in oklab,
-        var(--lr-time-input-column-selected-bg, var(--lr-color-brand)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-      )
+      ${hoverFill('var(--lr-time-input-column-selected-bg, var(--lr-color-brand))')}
     );
   }
   :where([part~='column-item-selected']):active {
     background: var(
       --lr-time-input-column-selected-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-time-input-column-selected-bg, var(--lr-color-brand)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-time-input-column-selected-bg, var(--lr-color-brand))')}
     );
   }
   [part='now-button'] {
@@ -354,11 +331,7 @@ export const styles = css`
   [part='now-button']:active {
     background: var(
       --lr-time-input-action-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-time-input-action-hover-bg, var(--lr-color-brand-quiet)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-time-input-action-hover-bg, var(--lr-color-brand-quiet))')}
     );
   }
   [part='now-button']:focus-visible {

@@ -28,6 +28,7 @@ import type { LyraToolbarAction } from '../../conversation/message-actions/toolb
 import type { LyraIconButton } from '../../forms/icon-button/icon-button.class.js';
 import { styles } from './copy-button.styles.js';
 import { COPY_FEEDBACK_MS } from '../../../internal/copy-feedback.js';
+import { leaseTabIndex } from '../../../internal/tab-index-lease.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed } from '../../../internal/default-strings/shared.generated.js';
@@ -425,10 +426,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
 
   private createToolbarAction(): LyraToolbarAction {
     const host = this;
-    let leasedTrigger: HTMLElement | undefined;
-    let authoredTabIndex: string | null = null;
-    let lastManagedTabIndex: string | null = null;
-    let consumerOwnsTabIndex = false;
+    const lease = leaseTabIndex();
     let delegated: LyraToolbarAction | undefined;
     const releaseDelegated = (): void => {
       const previous = delegated;
@@ -437,15 +435,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     };
     const releaseTabIndex = (): void => {
       releaseDelegated();
-      const target = leasedTrigger;
-      if (target && target.getAttribute('tabindex') === lastManagedTabIndex) {
-        if (authoredTabIndex === null) target.removeAttribute('tabindex');
-        else target.setAttribute('tabindex', authoredTabIndex);
-      }
-      leasedTrigger = undefined;
-      authoredTabIndex = null;
-      lastManagedTabIndex = null;
-      consumerOwnsTabIndex = false;
+      lease.release();
     };
     return {
       id: 'copy',
@@ -467,26 +457,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
           return;
         }
         releaseDelegated();
-        const trigger = host.activeTrigger();
-        if (!trigger) {
-          releaseTabIndex();
-          return;
-        }
-        if (leasedTrigger !== trigger) {
-          releaseTabIndex();
-          leasedTrigger = trigger;
-          authoredTabIndex = trigger.getAttribute('tabindex');
-        }
-        if (
-          consumerOwnsTabIndex ||
-          (lastManagedTabIndex !== null &&
-            trigger.getAttribute('tabindex') !== lastManagedTabIndex)
-        ) {
-          consumerOwnsTabIndex = true;
-          return;
-        }
-        trigger.tabIndex = tabIndex;
-        lastManagedTabIndex = trigger.getAttribute('tabindex');
+        lease.set(host.activeTrigger() ?? undefined, tabIndex);
       },
       releaseTabIndex,
       matchesEventPath(path) {

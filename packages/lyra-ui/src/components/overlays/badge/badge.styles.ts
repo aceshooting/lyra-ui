@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
@@ -91,9 +92,7 @@ export const styles = css`
   }
   [part='start'] ::slotted(*),
   [part='end'] ::slotted(*) {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
   }
   /* The author-origin display above outranks the UA stylesheet's '[hidden] { display: none }', so a
      consumer's hidden slotted child would still paint and hit-test. Restated here with the UA

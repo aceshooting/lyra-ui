@@ -4,7 +4,7 @@ import { noChange, nothing, type PropertyValues, type ReactiveController, type T
 import { html, unsafeStatic } from 'lit/static-html.js';
 import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../internal/lyra-element.js';
-import { FormAssociated, isBarredFromValidation, type FormSubmissionValue } from '../../internal/form-associated.js';
+import { FormAssociated, isBarredFromValidation, type FormSubmissionValue, isLiveDisabled } from '../../internal/form-associated.js';
 import { resolveValidityAnchor, SET_ANCHORED_VALIDITY, VALIDITY_ANCHOR } from '../../internal/anchored-validity.js';
 import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../internal/aria-controls.js';
 import { AnnouncementSinkController } from '../../internal/announcer.js';
@@ -162,7 +162,6 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
   private get combobox(): LyraCombobox<false> | undefined {
     return this.renderRoot?.querySelector<LyraCombobox<false>>(tag('combobox')) ?? undefined;
   }
-  private get liveDisabled(): boolean { return this.effectiveDisabled || this.matches(':disabled'); }
   private get rows(): readonly SelectionCatalogRow[] {
     const entries = this.entries;
     const locale = this.effectiveLocale;
@@ -189,11 +188,11 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
   /** @internal */
   [VALIDITY_ANCHOR](): HTMLElement | null { return resolveValidityAnchor(this.control) ?? null; }
   /** Focus the visible trigger or optional filter when enabled. */
-  override focus(options?: FocusOptions): void { if (!this.liveDisabled) this.control?.focus(options); }
+  override focus(options?: FocusOptions): void { if (!isLiveDisabled(this)) this.control?.focus(options); }
   /** Blur the visible control. */
   override blur(): void { this.control?.blur(); }
   /** Activate the visible trigger or optional filter when enabled. */
-  override click(): void { if (!this.liveDisabled) this.control?.click(); }
+  override click(): void { if (!isLiveDisabled(this)) this.control?.click(); }
 
   private readonly onControlEvent = (event: Event): void => {
     const child = this.control;
@@ -202,7 +201,7 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
     if (event.type !== 'lr-change') return;
     const raw = (event as CustomEvent<{ value: string | null }>).detail.value;
     const next = raw === null ? '' : raw;
-    if (this.liveDisabled || typeof next !== 'string' || (next && !this.entries.some((row) => row.code === next && !row.disabled))) {
+    if (isLiveDisabled(this) || typeof next !== 'string' || (next && !this.entries.some((row) => row.code === next && !row.disabled))) {
       this.syncChildValue(child);
       return;
     }
@@ -223,7 +222,7 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
     if (event.target === this.replacingControl) event.stopPropagation();
   };
   private readonly onControlKeyDown = (event: KeyboardEvent): void => {
-    if (!this.liveDisabled && this.searchable && event.target === this.control &&
+    if (!isLiveDisabled(this) && this.searchable && event.target === this.control &&
         event.composedPath()[0] === this.input) submitOnEnter(this, event);
   };
   private syncChildValue(child: PickerControl): void {
@@ -259,7 +258,7 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
   private loadCombobox = (): Promise<unknown> => import('./combobox/combobox-catalog.js');
 
   private readonly retrySearch = (): void => {
-    if (this.liveDisabled) return;
+    if (isLiveDisabled(this)) return;
     this.focus();
     this.comboboxFailed = false;
     this.requestUpdate();
@@ -323,7 +322,7 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
       if (this.focusReplacement === child) {
         this.focusReplacement = undefined;
         const active = deepActiveElementIn(document);
-        if (!this.liveDisabled && (!active || active === document.body || active === this || active === child)) {
+        if (!isLiveDisabled(this) && (!active || active === document.body || active === this || active === child)) {
           child.focus({ preventScroll: true });
           void child.hide();
         }

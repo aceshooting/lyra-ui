@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { focusRingShorthand } from './interactive-control.styles.js';
 
 export const panoramaStyles = css`
   [part='panorama'] {
@@ -36,7 +37,7 @@ export const panoramaStyles = css`
     cursor: pointer;
   }
   [part='panorama-hotspot']:hover, [part='panorama-page']:hover { text-decoration: underline; }
-  [part='panorama-hotspot']:focus-visible, [part='panorama-page']:focus-visible { outline: var(--lr-focus-ring); outline-offset: var(--lr-focus-ring-offset); }
+  [part='panorama-hotspot']:focus-visible, [part='panorama-page']:focus-visible { ${focusRingShorthand} }
   [part='panorama-hotspot']:active, [part='panorama-page']:active { border-color: var(--lr-color-brand); }
   [part='panorama-page']:disabled { opacity: var(--lr-opacity-disabled); cursor: default; }
 `;

@@ -2,16 +2,16 @@ import { getNumberFormat } from './intl-cache.js';
 import { finiteInteger, finiteRange } from './numbers.js';
 
 /** Which Intl unit ladder a quantity is scaled on. */
-export type ByteUnitFamily = 'byte' | 'bit';
+export type LyraFormatBytesUnit = 'byte' | 'bit';
 
 /** `Intl.NumberFormat` `unitDisplay` styles. */
-export type ByteUnitDisplay = 'long' | 'short' | 'narrow';
+export type LyraFormatDisplay = 'long' | 'short' | 'narrow';
 
-const INTL_LADDERS: Readonly<Record<ByteUnitFamily, readonly string[]>> = {
+const INTL_LADDERS: Readonly<Record<LyraFormatBytesUnit, readonly string[]>> = {
   byte: ['byte', 'kilobyte', 'megabyte', 'gigabyte', 'terabyte', 'petabyte'],
   bit: ['bit', 'kilobit', 'megabit', 'gigabit', 'terabit', 'petabit'],
 };
-const UNIT_DISPLAYS: readonly ByteUnitDisplay[] = ['long', 'short', 'narrow'];
+const UNIT_DISPLAYS: readonly LyraFormatDisplay[] = ['long', 'short', 'narrow'];
 /** Both Intl ladders have the same number of rungs. */
 const INTL_RUNGS = INTL_LADDERS.byte.length;
 
@@ -39,31 +39,40 @@ export interface ByteFormatResult {
   options: Intl.NumberFormatOptions;
 }
 
-/** Scales a byte or bit quantity onto its Intl unit ladder and builds validated unit options. */
+/** Scales a byte or bit quantity onto its Intl unit ladder and builds validated unit options. A
+ *  magnitude that rounds up to the next rung's step at the requested precision is shown on that
+ *  rung (`999.96 kB` at one decimal reads `1 MB`, never `1,000 kB`). */
 export function byteFormat(
   value: number,
-  unit: ByteUnitFamily,
-  display: ByteUnitDisplay,
+  unit: LyraFormatBytesUnit,
+  display: LyraFormatDisplay,
   unitStep: number,
   decimals: number,
 ): ByteFormatResult {
   const ladder = INTL_LADDERS[unit === 'bit' ? 'bit' : 'byte'];
-  const index = byteUnitIndex(value, unitStep, ladder.length);
+  const step = safeByteUnitStep(unitStep);
+  const fractionDigits = finiteInteger(decimals, 1, 0, 10);
+  let index = byteUnitIndex(value, unitStep, ladder.length);
+  if (index < ladder.length - 1) {
+    const factor = 10 ** fractionDigits;
+    const rounded = Math.round(Math.abs(value / step ** index) * factor) / factor;
+    if (rounded >= step) index += 1;
+  }
   return {
     index,
-    amount: value / safeByteUnitStep(unitStep) ** index,
+    amount: value / step ** index,
     options: {
       style: 'unit',
       unit: ladder[index],
       unitDisplay: UNIT_DISPLAYS.includes(display) ? display : 'short',
-      maximumFractionDigits: finiteInteger(decimals, 1, 0, 10),
+      maximumFractionDigits: fractionDigits,
     },
   };
 }
 
 export interface ByteSizeOptions {
-  readonly unit?: ByteUnitFamily;
-  readonly display?: ByteUnitDisplay;
+  readonly unit?: LyraFormatBytesUnit;
+  readonly display?: LyraFormatDisplay;
   /** Defaults to the decimal 1000; pass 1024 for binary scaling. */
   readonly unitStep?: number;
   /** Maximum fraction digits, 0-10; defaults to 1. */

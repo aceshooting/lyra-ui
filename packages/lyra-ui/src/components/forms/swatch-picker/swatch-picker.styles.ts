@@ -1,4 +1,4 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { disabledControl, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -180,8 +180,7 @@ export const styles = css`
      inert is the swatch that dims. :host(:disabled) would be dead code: this control is
      deliberately not form-associated, so the UA computes no disabled state for the host. */
   [part~="swatch"]:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   [part~="swatch"]:not(:disabled):hover [part="swatch-fill"],
   [part~="swatch"]:not(:disabled):hover [part="swatch-icon"] {

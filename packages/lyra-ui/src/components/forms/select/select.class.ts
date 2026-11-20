@@ -86,8 +86,9 @@ import {
   wasOptionInitiallySelected,
   RESET_OPTION_SELECTED_FROM_OWNER,
   SET_OPTION_SELECTED_FROM_OWNER,
+  isOptionElement as isLyraOptionElement,
+  normalizeSelectionValues,
 } from '../../../internal/option-selection.js';
-import { isHtmlElement } from '../../../internal/dom-guards.js';
 import { tag } from '../../../internal/prefix.js';
 import {
   currentValidityValidator,
@@ -101,24 +102,6 @@ import { LYRA_DEFAULT_clear, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, L
 
 installFormControlLabelSupport();
 
-function isLyraOptionElement(value: unknown): value is LyraOption {
-  return isHtmlElement(value) && value.localName === tag('option');
-}
-
-/**
- * Normalizes a `value`/`defaultValue` assignment to the committed array form. `undefined` and
- * `null` mean "clear" -- the documented contract for an unset assignment -- while every string,
- * INCLUDING `''`, is a candidate value to resolve against the current options: `<lr-option
- * value="">` is a legitimate row, so an empty string must round-trip as a real selection rather
- * than being silently folded into "clear" the way a falsy check would.
- */
-function normalizeSelectionValues(
-  next: string | string[] | null | undefined
-): string[] {
-  if (Array.isArray(next))
-    return next.filter((value): value is string => typeof value === 'string');
-  return typeof next === 'string' ? [next] : [];
-}
 
 /** Re-exported so a consumer importing only the select subpath can still name the shared
  *  positioning vocabulary `positioningStrategy` uses. */
@@ -197,6 +180,10 @@ export type LyraSelectInputEvent<Multiple extends boolean = boolean> =
  * Options are `<lr-option value>` children, the same element `<lr-combobox>`
  * uses. Unlike `lr-combobox` there is no filter/source/empty-text/max-render
  * surface -- see `<lr-combobox>` for the filterable case.
+ *
+ * Deliberately no `readonly`: the native `<select>` has no read-only state either, so this control
+ * offers `disabled` alone (which also leaves form submission). A read-only form view renders the
+ * committed value as text, with a hidden input when it must still submit.
  *
  * `multiple` turns the committed `value` into a `string[]` and renders one removable chip per
  * selection. The chip row is a sibling overlaid on the real trigger button, never nested inside it,

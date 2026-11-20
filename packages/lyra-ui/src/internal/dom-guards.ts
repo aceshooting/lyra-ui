@@ -116,6 +116,24 @@ export function isShadowRoot(value: unknown): value is ShadowRoot {
   }
 }
 
+/** {@link imageMapImageFor} memoized in a per-traversal `cache`, charging `consume` for lookup work. */
+export function cachedImageMapImageFor(
+  cache: Map<Element, HTMLImageElement | null>,
+  element: Element,
+  consume: () => boolean,
+): HTMLImageElement | null {
+  if (cache.has(element)) return cache.get(element)!;
+  const image = imageMapImageFor(element, { consume });
+  cache.set(element, image);
+  return image;
+}
+
+/** Structural shadow-root test for a node already known to come from the DOM (a traversal step or
+ * `getRootNode()` result); use {@link isShadowRoot} for untrusted values. */
+export function isShadowRootNode(node: Node | ParentNode | null | undefined): node is ShadowRoot {
+  return node?.nodeType === 11 && 'host' in node;
+}
+
 const DEFAULT_SOME_NODE_MAX_NODES = 100_000;
 
 /**

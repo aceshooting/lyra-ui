@@ -50,6 +50,7 @@ export const LYRA_DEFAULT_emojiPickerSearchPlaceholder: LyraMessage = 'Search em
 export const LYRA_DEFAULT_hidePassword: LyraMessage = 'Hide password';
 export const LYRA_DEFAULT_iconButtonLabel: LyraMessage = 'Button';
 export const LYRA_DEFAULT_inputLabel: LyraMessage = 'Text';
+export const LYRA_DEFAULT_item: LyraMessage = 'item';
 export const LYRA_DEFAULT_localePickerEmpty: LyraMessage = 'No matching languages.';
 export const LYRA_DEFAULT_localePickerInputLimit: LyraMessage = 'Only the first 512 locale entries are available.';
 export const LYRA_DEFAULT_localePickerLabel: LyraMessage = 'Language';

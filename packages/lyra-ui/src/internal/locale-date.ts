@@ -1,4 +1,4 @@
-import type { ByteUnitDisplay } from './bytes.js';
+import type { LyraFormatDisplay } from './bytes.js';
 import { isDateObject } from './dom-guards.js';
 import { getDateTimeFormat, getNumberFormat } from './intl-cache.js';
 
@@ -81,7 +81,7 @@ export type LyraRelativeTimeNumeric = 'always' | 'auto';
 
 /** Builds runtime-safe options for `Intl.RelativeTimeFormat`. */
 export function relativeTimeFormatOptions(
-  format: ByteUnitDisplay,
+  format: LyraFormatDisplay,
   numeric: LyraRelativeTimeNumeric,
 ): Intl.RelativeTimeFormatOptions {
   return {

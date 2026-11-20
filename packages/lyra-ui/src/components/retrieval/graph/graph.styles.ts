@@ -1,4 +1,4 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, hoverFill } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -37,8 +37,8 @@ export const styles = css`
   .source-rows li { display: flex; flex-wrap: wrap; gap: var(--lr-space-xs); margin-block: var(--lr-space-xs); }
   [part="source-navigator"] :where(button, input, select), [part="source-status"] button {
     --_lr-source-fill: var(--lr-color-neutral-fill-quiet);
-    min-block-size: var(--lr-icon-button-size);
     min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     max-inline-size: 100%;
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -53,10 +53,10 @@ export const styles = css`
   [part~="source-row"]:where([aria-pressed="true"]) { --_lr-source-fill: var(--lr-color-brand-fill-quiet); }
   [part="source-navigator"] button, [part="source-status"] button { cursor: pointer; }
   [part="source-navigator"] button:hover, [part="source-status"] button:hover {
-    background: color-mix(in oklab, var(--_lr-source-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: ${hoverFill('var(--_lr-source-fill)')};
   }
   [part="source-navigator"] button:active, [part="source-status"] button:active {
-    background: color-mix(in oklab, var(--_lr-source-fill), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--_lr-source-fill)')};
   }
   [part="source-navigator"] :where(button, input, select):focus-visible, [part="source-status"] button:focus-visible { ${focusRing} }
   [part="source-status"], [part="source-coverage"] { overflow-wrap: anywhere; margin-block: var(--lr-space-s); }
@@ -99,11 +99,11 @@ export const styles = css`
   }
   [part="spatial-control"]:hover:where(:not(:disabled)),
   [part="spatial-list-item"]:hover {
-    background: var(--lr-graph-spatial-control-hover-fill, color-mix(in oklab, var(--_lr-spatial-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
+    background: var(--lr-graph-spatial-control-hover-fill, ${hoverFill('var(--_lr-spatial-fill)')});
   }
   [part="spatial-control"]:active:where(:not(:disabled)),
   [part="spatial-list-item"]:active {
-    background: color-mix(in oklab, var(--_lr-spatial-fill), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--_lr-spatial-fill)')};
   }
   [part="spatial-control"]:focus-visible,
   [part="spatial-list-item"]:focus-visible,
@@ -174,11 +174,7 @@ export const styles = css`
      moved into view; a press also lands on a painted node, which cannot carry DOM :active. */
   [part="canvas"]:hover,
   [part="spatial-canvas"]:hover {
-    background: color-mix(
-      in oklab,
-      transparent,
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
+    background: ${hoverFill('transparent')};
   }
   [part="tooltip"] {
     position: absolute;
@@ -243,18 +239,10 @@ export const styles = css`
      --lr-color-mix-partner keeps the per-instance color and always moves in the direction
      needed. */
   [part="link"]:hover {
-    stroke: color-mix(
-      in oklab,
-      var(--lr-graph-edge-color, var(--lr-color-border)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
+    stroke: ${hoverFill('var(--lr-graph-edge-color, var(--lr-color-border))')};
   }
   [part="link"]:active {
-    stroke: color-mix(
-      in oklab,
-      var(--lr-graph-edge-color, var(--lr-color-border)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    stroke: ${activeFill('var(--lr-graph-edge-color, var(--lr-color-border))')};
   }
   [part="arrowhead"] {
     fill: context-stroke;
@@ -275,18 +263,10 @@ export const styles = css`
     cursor: pointer;
   }
   [part="node"]:hover {
-    fill: color-mix(
-      in oklab,
-      var(--lr-graph-node-fill, var(--lr-color-brand)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
+    fill: ${hoverFill('var(--lr-graph-node-fill, var(--lr-color-brand))')};
   }
   [part="node"]:active {
-    fill: color-mix(
-      in oklab,
-      var(--lr-graph-node-fill, var(--lr-color-brand)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    fill: ${activeFill('var(--lr-graph-node-fill, var(--lr-color-brand))')};
   }
   [part="node"]:focus-visible {
     ${focusRing}
@@ -351,18 +331,10 @@ export const styles = css`
     stroke-width: var(--lr-border-width-thick);
   }
   [part="link"][data-selected]:hover {
-    stroke: color-mix(
-      in oklab,
-      var(--lr-graph-selected-color, var(--lr-color-success)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    ) !important;
+    stroke: ${hoverFill('var(--lr-graph-selected-color, var(--lr-color-success))')} !important;
   }
   [part="link"][data-selected]:active {
-    stroke: color-mix(
-      in oklab,
-      var(--lr-graph-selected-color, var(--lr-color-success)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    ) !important;
+    stroke: ${activeFill('var(--lr-graph-selected-color, var(--lr-color-success))')} !important;
   }
   [part="node"][data-dimmed] {
     opacity: var(--lr-graph-dimmed-opacity, 0.35);
@@ -383,28 +355,12 @@ export const styles = css`
     cursor: pointer;
   }
   [part="hull"]:hover {
-    fill: color-mix(
-      in oklab,
-      var(--lr-graph-hull-fill, var(--lr-color-brand)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
-    stroke: color-mix(
-      in oklab,
-      var(--lr-graph-hull-fill, var(--lr-color-brand)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
+    fill: ${hoverFill('var(--lr-graph-hull-fill, var(--lr-color-brand))')};
+    stroke: ${hoverFill('var(--lr-graph-hull-fill, var(--lr-color-brand))')};
   }
   [part="hull"]:active {
-    fill: color-mix(
-      in oklab,
-      var(--lr-graph-hull-fill, var(--lr-color-brand)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
-    stroke: color-mix(
-      in oklab,
-      var(--lr-graph-hull-fill, var(--lr-color-brand)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    fill: ${activeFill('var(--lr-graph-hull-fill, var(--lr-color-brand))')};
+    stroke: ${activeFill('var(--lr-graph-hull-fill, var(--lr-color-brand))')};
   }
   [part="hull"]:focus-visible {
     ${focusRing}

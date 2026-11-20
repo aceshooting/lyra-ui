@@ -1,5 +1,6 @@
 import { iconActionStyles } from '../../../internal/icon-action.styles.js';
 import { css } from 'lit';
+import { activeFill } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   :host {
@@ -16,7 +17,7 @@ export const styles = css`
     color: 'inherit',
     hoverBackground: 'var(--lr-color-brand-quiet)',
     hoverColor: 'var(--lr-color-brand)',
-    activeBackground: 'color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+    activeBackground: activeFill('var(--lr-icon-button-bg-hover, var(--lr-color-brand-quiet))').cssText,
     activeColor: 'var(--lr-icon-button-color-hover, var(--lr-color-brand))',
   })}
   :where([part='previous-button'], [part='next-button']) {

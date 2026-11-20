@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'カレンダーを開く',
+  item: '件',
   comboboxLoadError: '選択肢を読み込めませんでした。',
   comboboxSelectedOverflow: '他 {n} 件',
   checkboxRequired: '続行するにはこのチェックボックスをオンにしてください。',

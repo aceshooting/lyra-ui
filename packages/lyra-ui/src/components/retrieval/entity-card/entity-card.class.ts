@@ -1,5 +1,5 @@
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
-import { resolveHeadingLevel } from '../../../internal/heading-level.js';
+import { resolveTitleHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import { html, nothing, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
@@ -76,8 +76,8 @@ function typeBadgeStyle(color: string | undefined): Record<string, string> {
  * collection and reassign it after changes; mutating the assigned array does not update the view.
  *
  * @customElement lr-entity-card
- * @attr {string | number | null} aria-level - Heading level forwarded to the title. An absent or empty value
- *   uses level 3.
+ * @attr {string | number | null} aria-level - Heading level forwarded to the title. An absent, empty or
+ *   out-of-range value uses level 3. `heading-level` takes precedence whenever it is set.
  * @slot - Extra body content below the property rows (e.g. a `lr-neighbor-list`).
  * @slot actions - Extra header actions alongside the built-in focus button.
  * @event lr-entity-select - The built-in focus button was activated. `detail: { entityId }`.
@@ -134,6 +134,10 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
 
   static override styles = [LyraElement.styles, styles];
 
+  /** Semantic level of the title heading, matching the other retrieval panels; `none` keeps the
+   *  visible title without heading semantics. Unset, the host `aria-level` (or level 3) applies. */
+  @property({ attribute: 'heading-level' }) headingLevel?: LyraHeadingLevel;
+
   /** `null` renders the shared `lr-empty` `noData` state. */
   @property({ attribute: false }) entity: Readonly<LyraEntity> | null = null;
   /** `lr-graph` `nodeTypes` pass-through used to resolve the type badge's label and swatch
@@ -182,7 +186,7 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
     const resolved = entity.type ? this.resolvedType(entity.type) : undefined;
     const badgeLabel = resolved?.label ?? entity.type;
     const properties = Object.entries(entity.properties ?? {});
-    const ariaLevel = resolveHeadingLevel(this.getAttribute('aria-level') || '3') ?? '3';
+    const titleLevel = resolveTitleHeadingLevel(this.headingLevel, this.getAttribute('aria-level'));
 
     // The degree/community rows route their localized labels through `lr-result-field`'s
     // `label` prop, exactly like the plain `property` rows above: the label/value separator is
@@ -199,7 +203,7 @@ export class LyraEntityCard extends LyraElement<LyraEntityCardEventMap> {
                 >${badgeLabel}</lr-badge
               >`
             : nothing}
-          <span part="title" role="heading" aria-level=${ariaLevel}
+          <span part="title" role=${titleLevel ? 'heading' : nothing} aria-level=${titleLevel ?? nothing}
             >${titleText}</span
           >
           <div part="actions">

@@ -3,6 +3,7 @@ import type { ReactiveControllerHost } from 'lit';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { isAccessibilityVisible } from '../../../internal/accessibility-visibility.js';
 import { readCanvasRgba, resolveCanvasColor, toRgbaString } from '../../../internal/canvas-color.js';
+import { ENGINE_STYLE_MEDIA_QUERIES, observeAdmission } from '../../../internal/engine-admission.js';
 import { createEngine3dLoader, type Engine3dInstance } from '../../../internal/engine-3d-loader.js';
 import {
   Engine3dSelection,
@@ -72,9 +73,7 @@ export class Chart3dEngineController {
   private attempted = false;
   private configured = false;
   private contextLost = false;
-  private observer?: IntersectionObserver;
-  private eligibility?: MutationObserver;
-  private intersecting = false;
+  private admission?: () => void;
   private resizeObserver?: ResizeObserver;
   private themeWatcher?: ThemeWatcher;
   private styleSignature = '';
@@ -105,11 +104,8 @@ export class Chart3dEngineController {
    */
   invalidate(): number {
     const generation = ++this.generation;
-    this.observer?.disconnect();
-    this.observer = undefined;
-    this.eligibility?.disconnect();
-    this.eligibility = undefined;
-    this.intersecting = false;
+    this.admission?.();
+    this.admission = undefined;
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
     if (this.themeWatcher) {
@@ -177,7 +173,7 @@ export class Chart3dEngineController {
       if (!current()) return;
     }
     if (preference !== 'webgl' || !data?.positions.length || !container || !this.host.isConnected) return;
-    if (this.attempted || this.observer || this.eligibility) return;
+    if (this.attempted || this.admission) return;
     this.awaitAdmission(container);
   }
 
@@ -188,39 +184,18 @@ export class Chart3dEngineController {
    * attributes, and it stops observing the moment the renderer starts.
    */
   private awaitAdmission(container: HTMLElement): void {
-    const view = this.host.ownerDocument.defaultView;
     const generation = this.generation;
-    this.intersecting = view?.IntersectionObserver === undefined;
-    const admit = (): void => {
-      if (generation !== this.generation || this.attempted || !this.intersecting) return;
-      if (!chart3dEngineEnvironment.visible(this.host)) return;
-      this.observer?.disconnect();
-      this.observer = undefined;
-      this.eligibility?.disconnect();
-      this.eligibility = undefined;
-      void this.start();
-    };
-    if (view?.IntersectionObserver) {
-      this.observer = new view.IntersectionObserver((entries) => {
-        if (generation !== this.generation) return;
-        for (const entry of entries) if (entry.target === container) this.intersecting = entry.isIntersecting;
-        admit();
-      });
-      this.observer.observe(container);
-    }
-    if (view?.MutationObserver) {
-      this.eligibility = new view.MutationObserver(admit);
-      let ancestor: Element | null = this.host;
-      for (let depth = 0; ancestor && depth <= 256; depth++) {
-        this.eligibility.observe(ancestor, {
-          attributes: true,
-          attributeFilter: ['aria-hidden', 'inert', 'hidden', 'style', 'class', 'open'],
-        });
-        const root: Node = ancestor.getRootNode();
-        ancestor = ancestor.assignedSlot ?? ancestor.parentElement ?? (root instanceof view.ShadowRoot ? root.host : null);
-      }
-    }
-    admit();
+    let admitted = false;
+    const admission = observeAdmission(this.host, container, {
+      isReady: () => generation === this.generation && !this.attempted,
+      isExposed: () => chart3dEngineEnvironment.visible(this.host),
+      onAdmit: () => {
+        admitted = true;
+        this.admission = undefined;
+        void this.start();
+      },
+    });
+    if (!admitted) this.admission = admission;
   }
 
   /**
@@ -394,9 +369,7 @@ export class Chart3dEngineController {
       this.resizeObserver = new view.ResizeObserver(refresh);
       this.resizeObserver.observe(container);
     }
-    this.themeWatcher = new ThemeWatcher(this.host, refresh, [
-      '(prefers-reduced-motion: reduce)', '(forced-colors: active)', '(prefers-color-scheme: dark)',
-    ]);
+    this.themeWatcher = new ThemeWatcher(this.host, refresh, ENGINE_STYLE_MEDIA_QUERIES);
   }
 
   /** Resolves tokens, fonts, point and line sizes and media preferences into plain values. */

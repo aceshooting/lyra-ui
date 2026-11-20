@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: '달력 열기',
+  item: '항목',
   comboboxLoadError: '옵션을 로드할 수 없습니다.',
   comboboxSelectedOverflow: '+ {n} 더 보기',
   checkboxRequired: '계속하려면 이 확인란을 선택하세요.',

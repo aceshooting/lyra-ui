@@ -1,4 +1,4 @@
-import { activeFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingShorthand, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { nativeControlSurface } from '../../../internal/native-control-surface.styles.js';
 import { highlightToneStyles } from '../../../internal/text-highlight.styles.js';
@@ -111,8 +111,7 @@ export const styles = css`
   }
 
   [part="highlight-action"]:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
 
   ${highlightToneStyles('docx-viewer', {

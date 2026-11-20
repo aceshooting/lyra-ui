@@ -1,8 +1,8 @@
 ---
-'@aceshooting/lyra-ui': major
+'@aceshooting/lyra-ui': minor
 ---
 
-Rail toggles keep their accessible names as their state changes. Migrate state-specific string overrides to `navigation`, `appRailPin`, `appRailItemToggle`, and `appRailGroupToggle`.
+Rail item and group toggles accept optional stable-name keys `appRailItemToggle` and `appRailGroupToggle`; the state-specific keys keep working when those are not supplied.
 Assigning `open`, `railWidth`, or a menu item's `checked` inside its request listener resolves the request, including a write of the held value.
 Read-only steppers retain focus on the list when they replace a focused step.
 Steppers expose progress and error states as localized text and restore orientation defaults when their attributes are removed.

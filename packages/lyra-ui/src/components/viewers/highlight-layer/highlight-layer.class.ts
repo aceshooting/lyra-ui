@@ -14,7 +14,7 @@ import { normalizeLabel, resolveAccessibleName } from '../../../internal/accessi
 import { shouldIgnoreActivationKey, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
-import { highlightHitAreasOverlap } from '../region-highlight-layer.js';
+import { highlightHitAreasOverlap } from '../../../internal/region-hit-targets.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel } from '../../../internal/default-strings/shared.generated.js';

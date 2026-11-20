@@ -9,6 +9,11 @@ export const OWNED_CONTROL_EVENTS = Object.freeze([
   'lr-change-request', 'lr-create', 'lr-retry-request', 'lr-source-error', 'lr-chip-change', 'lr-overflow-toggle',
 ]);
 
+/** Value-request and popup lifecycle events of an internally rendered catalog picker. */
+export const CATALOG_PICKER_CHILD_EVENTS = Object.freeze([
+  'lr-change-request', 'lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide',
+]);
+
 /** Prevent an owned control's event from looking like a host event on an ancestor. */
 export function containShadowChildEvent(event: Event): void {
   const target = event.target;

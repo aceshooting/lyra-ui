@@ -1,10 +1,9 @@
 import type { RetrievalChunk } from '../../ai/types.js';
 import { firstByIdentity } from '../../internal/collection-identity.js';
+import { isSafeNonArrayObject } from '../../internal/object-guards.js';
 
 /** Runtime boundary for public collection rows before a renderer dereferences their fields. */
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
+export const isRecord = isSafeNonArrayObject;
 
 /** Identity validation shared by retrieval views with keyed public data. Validation trims only
  * to decide whether an identity is blank; retained spelling remains byte-for-byte unchanged. */

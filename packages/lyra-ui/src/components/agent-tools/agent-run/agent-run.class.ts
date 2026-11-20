@@ -19,13 +19,13 @@ import type { TaskItem, TaskStatus } from '../task-list/task-list.class.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './agent-run.styles.js';
 import { agentActionButtonStyles } from '../agent-action-button.styles.js';
-import { firstByIdentity } from '../collection-identity.js';
+import { firstByIdentity } from '../../../internal/collection-identity.js';
 import { agentStatusKind, agentStatusMessage } from '../agent-status-presentation.js';
 import { agentStatusText } from '../../../internal/agent-status-text.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_agentRunCurrentStepLabel, LYRA_DEFAULT_agentRunStatusAnnounce, LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_noData, LYRA_DEFAULT_retry, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -242,19 +242,10 @@ export class LyraAgentRun extends LyraElement<LyraAgentRunEventMap> {
     agentRunStatusWaitingApproval: LYRA_DEFAULT_agentRunStatusWaitingApproval,
     agentRunStatusWaitingInput: LYRA_DEFAULT_agentRunStatusWaitingInput,
     cancel: LYRA_DEFAULT_cancel,
-    collapse: LYRA_DEFAULT_collapse,
-    copy: LYRA_DEFAULT_copy,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
     durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
     durationSeconds: LYRA_DEFAULT_durationSeconds,
-    map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
-    open: LYRA_DEFAULT_open,
     retry: LYRA_DEFAULT_retry,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
     statusError: LYRA_DEFAULT_statusError,
     statusRunning: LYRA_DEFAULT_statusRunning,
   };

@@ -724,7 +724,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     const label = this.localize('evalDatasetTagFilterLabel');
     const omitted = this.sourceMode ? (this.sourceResult?.tags?.total ?? 0) - tags.length : tags.length - MAX_TAG_FACETS;
     const overflow = omitted > 0 ? this.localize('tagFacetLimit', undefined, {
-      count: getNumberFormat(this.effectiveLocale).format(omitted),
+      count: getNumberFormat(this.effectiveLocale).format(omitted), pluralCount: omitted,
     }) : '';
     const inputs = [tags, this.activeTags, this.disabled, label, overflow, this.sourceFacetLabels];
     if (this.tagTemplateMemo && inputs.every((input, index) => input === this.tagTemplateMemo!.inputs[index])) return this.tagTemplateMemo.template;

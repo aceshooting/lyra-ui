@@ -92,16 +92,20 @@ export const formControlFocusHalo = css`
   box-shadow: var(--_lr-form-control-focus-shadow, none);
 `;
 
+/** The hint and error text tone (muted hint, danger error, small size) that every form control shares. */
+export const formControlSupportingTone = css`
+  [part~='hint'] { color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-sm); }
+  [part~='error'] { color: var(--lr-color-danger); font-size: var(--lr-font-size-sm); }
+`;
+
 /** Supporting form text, using part tokens so compatibility aliases retain the same styling. */
 export const formControlSupportingText = css`
   [part~='hint'], [part~='error'] {
     margin-block-start: var(--lr-space-xs);
-    font-size: var(--lr-font-size-sm);
     min-inline-size: 0;
     overflow-wrap: anywhere;
   }
-  [part~='hint'] { color: var(--lr-color-text-quiet); }
-  [part~='error'] { color: var(--lr-color-danger); }
+  ${formControlSupportingTone}
   [part~='hint'][hidden], [part~='error'][hidden] { display: none; }
 `;
 

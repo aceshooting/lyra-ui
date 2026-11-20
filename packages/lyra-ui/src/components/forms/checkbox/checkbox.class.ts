@@ -6,6 +6,7 @@ import { installFormControlLabelSupport } from '../../../internal/form-control-l
 import { html, svg, nothing, type TemplateResult, type SVGTemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { iconFrame } from '../../../internal/icons.js';
 import { CheckedControlLabelController } from '../../../internal/checked-control-label.js';
 import { tag } from '../../../internal/prefix.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
@@ -34,44 +35,13 @@ installFormControlLabelSupport();
 // reused across many components, and this checkmark is specific to this
 // control's own box -- so the glyph still reads as part of the same visual
 // language as the rest of the library's inline icons.
-const GLYPH_VIEW_BOX = '0 0 24 24';
-const GLYPH_STROKE_WIDTH = '1.75';
-
 function checkmarkGlyph(): SVGTemplateResult {
-  return svg`
-    <svg
-      part="checkmark checked-icon"
-      width="1em"
-      height="1em"
-      viewBox=${GLYPH_VIEW_BOX}
-      fill="none"
-      stroke="currentColor"
-      stroke-width=${GLYPH_STROKE_WIDTH}
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    ><polyline points="5 12.5 10 17.5 19 6.5"></polyline></svg>
-  `;
+  return iconFrame(svg`<polyline points="5 12.5 10 17.5 19 6.5"></polyline>`, 'checkmark checked-icon');
 }
 
 /** The indeterminate/mixed-state dash — takes priority over the checkmark. */
 function indeterminateGlyph(): SVGTemplateResult {
-  return svg`
-    <svg
-      part="checkmark indeterminate-icon"
-      width="1em"
-      height="1em"
-      viewBox=${GLYPH_VIEW_BOX}
-      fill="none"
-      stroke="currentColor"
-      stroke-width=${GLYPH_STROKE_WIDTH}
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    ><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-  `;
+  return iconFrame(svg`<line x1="5" y1="12" x2="19" y2="12"></line>`, 'checkmark indeterminate-icon');
 }
 
 export interface LyraCheckboxEventMap {
@@ -99,6 +69,10 @@ class LyraCheckboxBase extends LyraElement<LyraCheckboxEventMap> {}
  * Form association, dirty/default `checked` tracking, reset, state restore and the validity
  * states come from the shared `CheckedFormAssociated` mixin, the same one `<lr-switch>` and
  * `<lr-radio>` use; this class adds the mixed state, the group hooks and its own rendering.
+ *
+ * Deliberately no `readonly`: the native checkbox has no read-only state either, so this control
+ * offers `disabled` alone (which also leaves form submission). A read-only form view renders the
+ * committed value as text, with a hidden input when it must still submit.
  *
  * Supporting text is optional through either Web Awesome's `hint` spelling or Shoelace's
  * `help-text` spelling. `errorText` and the `error` slot provide the matching owned error surface;
@@ -447,10 +421,8 @@ export class LyraCheckbox extends CheckedFormAssociated(LyraCheckboxBase) {
         this.setInteracted(true);
         this.checked = proposed;
         this.indeterminate = false;
-        const connected = this.isConnected;
         const detail = { checked: this.checked, value: this.value };
         emitValueEvents(this, 'input', detail, captured => this.emit('lr-input', captured));
-        if (this.isConnected !== connected || isLiveDisabled(this)) return;
         emitValueEvents(this, 'change', detail, captured => this.emit('lr-change', captured));
       },
     });

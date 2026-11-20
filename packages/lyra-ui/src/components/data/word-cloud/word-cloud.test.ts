@@ -1679,3 +1679,46 @@ describe('lr-word-cloud legend input', () => {
     }
   });
 });
+
+describe('legibility floor in a narrow host', () => {
+  const MANY = Array.from({ length: 24 }, (_, index) => ({ text: `entry${index}`, weight: 24 - index }));
+
+  async function narrow(style: string): Promise<{ el: LyraWordCloud; svg: SVGSVGElement; natural: number; smallest: number }> {
+    const holder = await fixture<HTMLDivElement>(
+      html`<div style="inline-size:120px"><lr-word-cloud style=${style} .words=${MANY} min-font-size="12" max-font-size="40"></lr-word-cloud></div>`
+    );
+    const el = holder.querySelector('lr-word-cloud') as LyraWordCloud;
+    await el.updateComplete;
+    const svg = el.shadowRoot!.querySelector('svg')!;
+    const natural = svg.viewBox.baseVal.width;
+    const smallest = Math.min(...Array.from(el.shadowRoot!.querySelectorAll('[part="word"]')).map((node) => Number(node.getAttribute('font-size'))));
+    return { el, svg, natural, smallest };
+  }
+
+  it('keeps the smallest word near its configured size and scrolls instead of shrinking the cloud', async () => {
+    const { el, svg, natural, smallest } = await narrow('');
+    expect(natural, 'the natural layout is wider than the host').to.be.greaterThan(120);
+    const rendered = svg.getBoundingClientRect().width;
+    // Default floor: no word renders below 10px (or its own configured size when that is smaller).
+    expect(smallest * (rendered / natural)).to.be.at.least(Math.min(10, smallest) - 0.5);
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    expect(base.scrollWidth).to.be.greaterThan(base.clientWidth);
+  });
+
+  it('lets the floor token disable the guarantee', async () => {
+    const { svg, natural, smallest } = await narrow('--lr-word-cloud-legible-font-size: 0px');
+    const rendered = svg.getBoundingClientRect().width;
+    expect(rendered).to.be.at.most(121);
+    expect(smallest * (rendered / natural)).to.be.lessThan(10);
+  });
+
+  it('does not constrain a host that already fits the natural layout', async () => {
+    const holder = await fixture<HTMLDivElement>(
+      html`<div style="inline-size:2000px"><lr-word-cloud .words=${MANY}></lr-word-cloud></div>`
+    );
+    const el = holder.querySelector('lr-word-cloud') as LyraWordCloud;
+    await el.updateComplete;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    expect(base.scrollWidth).to.be.at.most(base.clientWidth);
+  });
+});

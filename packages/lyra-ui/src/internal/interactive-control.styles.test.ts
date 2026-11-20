@@ -1,5 +1,13 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import { disclosureChevron, formControlIconHitTarget } from './interactive-control.styles.js';
+import {
+  disclosureChevron,
+  focusRing,
+  focusRingInset,
+  focusRingInsetOffset,
+  focusRingInwardOffset,
+  focusRingShorthand,
+  formControlIconHitTarget,
+} from './interactive-control.styles.js';
 
 describe('formControlIconHitTarget', () => {
   it('caps the icon-button floor at the field tier and never drops below 24px', async () => {
@@ -37,5 +45,29 @@ describe('disclosureChevron', () => {
     expect(new DOMMatrix(transform('rtl-closed')).a).to.equal(-1);
     expect(transform('rtl-open')).to.equal(transform('open'));
     expect(getComputedStyle(root.querySelector('#closed')!).display).to.equal('inline-flex');
+  });
+});
+
+describe('focus ring fragments', () => {
+  it('paint the documented outline and offset for each spelling', async () => {
+    const root = await fixture<HTMLDivElement>(html`<div data-lr-theme-scope style="--lr-focus-ring-width: 3px; --lr-focus-ring-color: rgb(1, 2, 3); --lr-focus-ring-offset: 5px; --lr-focus-ring: 7px dashed rgb(9, 8, 7);">
+      <style>
+        #a { ${focusRing.cssText} }
+        #b { ${focusRingInset.cssText} }
+        #c { ${focusRingInsetOffset.cssText} }
+        #d { ${focusRingInwardOffset.cssText} }
+        #e { ${focusRingShorthand.cssText} }
+      </style>
+      <i id="a"></i><i id="b"></i><i id="c"></i><i id="d"></i><i id="e"></i>
+    </div>`);
+    const read = (id: string) => {
+      const style = getComputedStyle(root.querySelector(`#${id}`)!);
+      return [style.outlineStyle, style.outlineWidth, style.outlineColor, style.outlineOffset];
+    };
+    expect(read('a')).to.deep.equal(['solid', '3px', 'rgb(1, 2, 3)', '5px']);
+    expect(read('b')).to.deep.equal(['solid', '3px', 'rgb(1, 2, 3)', '-3px']);
+    expect(read('c')).to.deep.equal(['solid', '3px', 'rgb(1, 2, 3)', '-8px']);
+    expect(read('d')).to.deep.equal(['solid', '3px', 'rgb(1, 2, 3)', '-5px']);
+    expect(read('e')).to.deep.equal(['dashed', '7px', 'rgb(9, 8, 7)', '5px']);
   });
 });

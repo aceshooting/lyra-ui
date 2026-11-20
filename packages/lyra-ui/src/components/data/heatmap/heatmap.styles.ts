@@ -1,5 +1,6 @@
 import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   .source-axes { display: flex; justify-content: space-between; gap: var(--lr-space-xs); font-size: var(--lr-font-size-sm); }
@@ -15,9 +16,7 @@ export const styles = css`
   }
 
   :host {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
     /* Sequential ramp endpoints for the data-driven cell colors. Canvas can't consume var(), so
        heatmap.ts resolves these through getComputedStyle and interpolates between them; tokens,
        not literals, so hosts retheme the ramp without raw hex in the public API. */

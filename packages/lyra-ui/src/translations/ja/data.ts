@@ -211,11 +211,15 @@ const strings: LyraLocaleStrings = {
   documentLibrarySelectDocument: '{name} を選択',
   graphQueryDeleteWithContext: '{name} を削除',
   statRowsInputLimit: '内訳の全 {total} 行のうち {count} 行を表示しています。',
-  dataGridRowLimit: '最初の {count} 行のみが表示されます。',
+  dataGridRowLimit: {
+    other: '最初の {count} 行のみが表示されます。',
+  },
   dataGridExpandRow: '{row} を展開',
   dataGridFilterColumn: '{column} を絞り込む',
   dataGridSelectPage: 'このページのすべての行を選択',
-  tableRowLimit: '最初の {count} 行のみが表示されます。',
+  tableRowLimit: {
+    other: '最初の {count} 行のみが表示されます。',
+  },
   tableAdditionalColumns: '追加の列',
   treeLimit: '最初の {count} 項目のみが表示されます。',
   treeDefaultLabel: 'ツリー',

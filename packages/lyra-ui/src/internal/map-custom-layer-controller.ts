@@ -2,14 +2,13 @@ import { mapCustomLayerAttachment, type MapCustomLayerLease } from './map-custom
 import type { LyraMapCustomLayer, LyraMapCustomLayerCode, LyraMapCustomLayerContext, LyraMapCustomLayerHandle, LyraMapCustomLayerOptions,
   LyraMapCustomLayerState, LyraMapCustomLayerStatus } from './map-custom-layer-types.js';
 import { isMapSceneLayerHandle, loadMapSceneLayerRuntime, type MapSceneLayerHandle } from './map-scene-layer-runtime.js';
+import { requireOwnDataValue } from './data-descriptors.js';
 
 type NativeListener = (event: unknown) => void;
 const text = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0;
 
 function ownValue(record: object, key: string): unknown {
-  const descriptor = Object.getOwnPropertyDescriptor(record, key);
-  if (descriptor && !('value' in descriptor)) throw new TypeError(`Map custom layer ${key} must be a data property.`);
-  return descriptor?.value;
+  return requireOwnDataValue(record, key, `Map custom layer ${key} must be a data property.`);
 }
 
 /** Snapshots the descriptor fields once; `create` keeps the caller's receiver. */

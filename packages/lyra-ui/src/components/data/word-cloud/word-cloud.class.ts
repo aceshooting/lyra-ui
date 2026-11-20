@@ -340,6 +340,7 @@ function normalizePalette(value: unknown): readonly string[] | undefined {
  * @csspart limit - Numeric rendered/input disclosure when input normalization or layout omits data.
  * @csspart summary - Full-source valid/invalid counts and retained/full weight for prepared words.
  * @csspart error - Localized invalid prepared-input message.
+ * @cssprop [--lr-word-cloud-legible-font-size=var(--lr-font-size-2xs)] - Smallest on-screen size a word may shrink to when the host is narrower than the natural layout (capped at the word's own configured size). The cloud then keeps that width and scrolls horizontally instead of scaling further down; `0px` restores unbounded shrink-to-fit.
  * @cssprop [--lr-word-cloud-color-1=var(--lr-color-brand)] - First entry of the default categorical palette.
  * @cssprop [--lr-word-cloud-color-2=var(--lr-color-success)] - Second entry of the default categorical palette.
  * @cssprop [--lr-word-cloud-color-3=var(--lr-color-warning)] - Third entry of the default categorical palette.
@@ -1053,6 +1054,12 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
       word: this.localize(layout.placed.length === 1 ? 'wordCloudWord' : 'wordCloudWords'),
     });
     const accessibleLabel = hostAriaLabel(this) ?? generatedLabel;
+    // Legibility floor: the cloud is laid out once in fixed units and scaled to the host, so the
+    // stylesheet needs the natural width and how many floor-widths of it the smallest word spans.
+    const smallestFont = layout.placed.reduce((least, word) => Math.min(least, word.fontSize), Infinity);
+    const floorStyle = Number.isFinite(smallestFont) && smallestFont > 0 && layout.width > 0
+      ? { '--_lr-word-cloud-natural-width': `${layout.width}px`, '--_lr-word-cloud-floor-scale': String(layout.width / smallestFont) }
+      : {};
 
     return html`
       <div part="base">
@@ -1066,6 +1073,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
             .join(' ') || nothing}
           tabindex="0"
           viewBox="0 0 ${layout.width} ${layout.height}"
+          style=${styleMap(floorStyle)}
           @focus=${this.onSvgFocus}
           @blur=${this.onSvgBlur}
           @keydown=${this.onKeyDown}

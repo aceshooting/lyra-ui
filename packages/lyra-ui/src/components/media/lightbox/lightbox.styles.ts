@@ -1,8 +1,9 @@
 import { dialogChrome, dialogOpenHost } from '../../../internal/modal-surface.styles.js';
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRingShorthand, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { modalHostStyles } from '../../../internal/native-modal-carrier.styles.js';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
@@ -12,8 +13,7 @@ export const styles = css`
     ${modalHostStyles}
     max-inline-size: none;
     max-block-size: none;
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${inlineSizeContainer}
     ${dialogChrome}
   }
   ${dialogOpenHost}
@@ -111,7 +111,7 @@ export const styles = css`
   :where([part="next-button"]):active:where(:not(:disabled)) {
     background: var(
       --lr-lightbox-control-active-bg,
-      color-mix(in oklab, var(--_lr-lightbox-control-hover-bg), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      ${activeFill('var(--_lr-lightbox-control-hover-bg)')}
     );
     color: var(--lr-lightbox-control-active-color, var(--_lr-lightbox-control-hover-color));
   }
@@ -119,13 +119,11 @@ export const styles = css`
   [part="close-button"]:focus-visible,
   [part="previous-button"]:focus-visible,
   [part="next-button"]:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   [part="previous-button"]:disabled,
   [part="next-button"]:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   [part="close-button"] svg,
   [part="previous-glyph"],

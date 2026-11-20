@@ -1,5 +1,5 @@
 import { css } from 'lit';
-import { formControlLabelTypography, formControlLabelDisplay, formControlRequiredMarker } from '../../../internal/form-control.styles.js';
+import { formControlLabelDisplay, formControlLabelTypography, formControlRequiredMarker, formControlSupportingTone } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   :host {
@@ -44,14 +44,7 @@ export const styles = css`
     flex-wrap: wrap;
     align-items: center;
   }
-  [part~="hint"],
-  [part="error"] {
-    color: var(--lr-color-text-quiet);
-    font-size: var(--lr-font-size-sm);
-  }
-  [part="error"] {
-    color: var(--lr-color-danger);
-  }
+  ${formControlSupportingTone}
   :host([data-invalid]) [part~="options"] {
     outline: var(--lr-border-width-thin) solid
       var(--lr-checkbox-group-invalid-border, var(--lr-color-danger));

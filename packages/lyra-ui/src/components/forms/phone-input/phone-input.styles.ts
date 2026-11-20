@@ -8,6 +8,7 @@ import {
   formControlLabelDisplay,
 } from '../../../internal/form-control.styles.js';
 import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
+import { activeFill, disabledControl, focusRingInset } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   :host {
@@ -126,8 +127,7 @@ export const styles = css`
      attribute selector caught only the first, leaving a fieldset-disabled field's wrapper at full
      opacity with a normal cursor while effectiveDisabled correctly gated the controls inside. */
   :host(:disabled) [part='input-wrapper'] {
-    cursor: not-allowed;
-    opacity: var(--lr-opacity-disabled);
+    ${disabledControl}
   }
 
   [part='country-prefix'] {
@@ -195,18 +195,13 @@ export const styles = css`
      would never match, it is not the pressed element. Mixing the hover tint one shared step toward
      the text colour keeps a --lr-phone-input-country-hover-bg override in charge of both states. */
   [part='country-select']:not(:disabled):active + [part='country-trigger'] {
-    background: color-mix(
-      in oklab,
-      var(--lr-phone-input-country-hover-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-phone-input-country-hover-bg, var(--lr-color-brand-quiet))')};
   }
 
   /* The wrapper's focus-within ring marks the whole field; this inner ring marks that keyboard
      focus sits on the invisible country select rather than the telephone input. */
   [part='country-select']:focus-visible + [part='country-trigger'] {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingInset}
   }
 
   [part='flag'] {

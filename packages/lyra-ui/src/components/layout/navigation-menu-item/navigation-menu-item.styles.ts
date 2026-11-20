@@ -3,12 +3,12 @@ import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
 import { glassIndependentRootStyles } from '../../../internal/glass-independent-root.styles.js';
 import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
+import { activeFill, focusRingShorthand } from '../../../internal/interactive-control.styles.js';
+import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
   }
 
   [part~='base'] {
@@ -76,14 +76,13 @@ export const styles = css`
   [part~='base']:where(:active) {
     background: var(
       --lr-navigation-menu-item-active-bg,
-      color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      ${activeFill('var(--lr-color-brand-quiet)')}
     );
     color: var(--lr-navigation-menu-item-active-color, var(--lr-color-text));
   }
 
   [part~='base']:where(:focus-visible) {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
 
   [part='start'],

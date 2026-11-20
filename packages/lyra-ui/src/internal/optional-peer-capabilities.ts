@@ -14,7 +14,7 @@ export interface HtmlSanitizer {
 
 /** Returns an ESM default export when present, otherwise the original value. */
 export function unwrapOptionalPeerDefault(value: unknown): unknown {
-  if ((typeof value !== 'object' && typeof value !== 'function') || value === null) return value;
+  if (!isPeerObject(value)) return value;
   return 'default' in value ? value.default : value;
 }
 
@@ -34,14 +34,25 @@ export function resolveOptionalPeerCapability<Capability>(
   return isCapability(defaultExport) ? defaultExport : null;
 }
 
+/** Whether an optional-peer value is a non-null object or a function: the only values with members to read. */
+export function isPeerObject(value: unknown): value is object {
+  return (typeof value === 'object' && value !== null) || typeof value === 'function';
+}
+
+/**
+ * Whether an optional-peer value is an object or function whose every named member is callable:
+ * the shape check each peer loader runs before it trusts a resolved module.
+ */
+export function hasPeerMethods<Name extends string>(
+  value: unknown,
+  ...names: readonly Name[]
+): value is Record<Name, (...args: never[]) => unknown> {
+  return isPeerObject(value) && names.every((name) => typeof (value as Record<string, unknown>)[name] === 'function');
+}
+
 /** Narrows an unknown optional-peer value to the sanitizer capability Lyra uses. */
 export function isHtmlSanitizer(value: unknown): value is HtmlSanitizer {
-  return (
-    (typeof value === 'object' || typeof value === 'function') &&
-    value !== null &&
-    'sanitize' in value &&
-    typeof value.sanitize === 'function'
-  );
+  return hasPeerMethods(value, 'sanitize');
 }
 
 export interface OptionalPeerLoaderOptions<Capability> {

@@ -790,7 +790,10 @@ itself — `lr-entity-select` is a request a host routes into `lr-graph`'s own
 `focusNode(id, options?)`.
 
 The host `aria-level` attribute overrides the internal title heading live. Changing or removing it
-updates that heading without another property change; omission or an empty override uses level 3.
+updates that heading without another property change; omission, an empty or an out-of-range override
+uses level 3. `headingLevel?: LyraHeadingLevel` (attribute `heading-level`, `'1'`-`'6'` or `'none'`)
+is the spelling the other retrieval panels use and wins whenever it is set; `'none'` keeps the
+visible title without heading semantics.
 
 **Properties:**
 
@@ -1068,7 +1071,7 @@ Source-mode parts: `source-status` (loading, failure, empty or missing-center fe
 - A row is exactly one `[part="row"]` element in both rendering paths. Above `virtualizeAt` that
   element is the internal virtual-list's own row wrapper (the component renders only the row's
   content into it), so a `::part(row)` rule applies once, not twice.
-- Rows are identified by node id, relation and direction. Each distinct relationship appears once. Blank node ids are omitted.
+- Rows are identified by node id: later rows repeating the same node id are omitted first-wins. Set `separate-relations` (`separateRelations: boolean = false`) to identify rows by node id, relation and direction instead, so each distinct relationship to the same neighbor appears once. Blank node ids are omitted either way.
 - A missing, blank, or nonstring `node.type` is omitted from that row's secondary metadata instead
   of being passed to locale formatting; the neighbor label and any valid degree remain visible.
 
@@ -1161,7 +1164,10 @@ activated).
 
 **Slots:** `actions` — extra header actions alongside the built-in drill button.
 
-The host `aria-level` attribute overrides the title heading level live; removing it restores 3.
+The host `aria-level` attribute overrides the title heading level live; removing it restores 3, and
+an out-of-range value uses 3. `headingLevel?: LyraHeadingLevel` (attribute `heading-level`,
+`'1'`-`'6'` or `'none'`) wins whenever it is set; `'none'` keeps the title button without heading
+semantics.
 
 **CSS parts:** `base`, `header`, `title` (`role="heading" aria-level="3"` by default, wrapping a `<button>`),
 `member-count`, `summary` and `members` (both omitted while `size` is `s` or smaller), `member`,
@@ -2039,6 +2045,9 @@ shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape
 - `expandable: boolean = false` — forwarded to `lr-neighbor-list`
 - `withoutFocusButton: boolean = false` (attribute `without-focus-button`) — forwarded to
   `lr-entity-card`.
+- `headingLevel?: LyraHeadingLevel` (attribute `heading-level`) — forwarded to `lr-entity-card`'s
+  title, so the entity heading can sit at the page's outline level; `'none'` drops its heading
+  semantics. Unset, the card uses level 3.
 - `communityLabel: string = ''` (attribute `community-label`) — forwarded to `lr-entity-card`
 - `label: string | null = null` (attribute `label`) — names the overall dossier group after a
   host `aria-label`, before the localized Details fallback. It does not rename the tab strip.
@@ -3231,7 +3240,8 @@ cannot be followed by a descendant combinator, so `::part(metadata-entry) dt` re
 
 **Themeable custom properties:** `--lr-retrieval-results-selected-border` (default
 `var(--lr-color-brand)`) — the inline-start border color marking a selected row body
-(`::part(row-body-selected)`). A
+(`::part(row-body-selected)`). `--lr-retrieval-results-selected-width` (default `var(--lr-space-2xs)`)
+sets that stripe's inline size, so a density retune of the spacing scale need not move it. A
 border rather than a fill by design: the row's own text (the nested chunk inspector's quiet-toned
 score line in particular) is sized and colored for the page's default surface, and a tinted
 background can drop it below the required contrast ratio, while a border-only indicator carries no

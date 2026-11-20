@@ -1,4 +1,4 @@
-import { focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { chartLegendPositionStyles } from './chart-surface.styles.js';
 
@@ -62,7 +62,7 @@ export const styles = css`
   [part='data-table-button']:active {
     background: var(
       --lr-chart-data-table-button-active-bg,
-      color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      ${activeFill('var(--lr-color-brand-quiet)')}
     );
   }
   [part='data-table-button']:focus-visible {
@@ -101,7 +101,7 @@ export const styles = css`
   [part='reset-zoom-button']:active {
     background: var(
       --lr-chart-reset-zoom-button-active-bg,
-      color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      ${activeFill('var(--lr-color-brand-quiet)')}
     );
   }
   [part='reset-zoom-button']:focus-visible {
@@ -114,7 +114,7 @@ export const styles = css`
   [part='data-table-toggle']:active {
     background: var(
       --lr-chart-data-table-toggle-active-bg,
-      color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      ${activeFill('var(--lr-color-brand-quiet)')}
     );
   }
 `;

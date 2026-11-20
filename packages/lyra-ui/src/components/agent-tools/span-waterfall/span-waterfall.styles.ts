@@ -1,7 +1,8 @@
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { containerHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   .source-waterfall { min-inline-size: 0; }
@@ -22,9 +23,7 @@ export const styles = css`
   }
 
   :host {
-    display: block;
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${containerHost}
     --_lr-span-waterfall-name-width: var(--lr-size-8rem);
   }
 
@@ -148,18 +147,10 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
   [part="bar"]:hover::after {
-    background: color-mix(
-      in oklab,
-      transparent,
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
+    background: ${hoverFill('transparent')};
   }
   [part="bar"]:active::after {
-    background: color-mix(
-      in oklab,
-      transparent,
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('transparent')};
   }
   button[part="bar"]:focus-visible::before {
     ${focusRing}

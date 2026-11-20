@@ -1,4 +1,4 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -36,19 +36,11 @@ export const styles = css`
   }
 
   [part~='close-button']:where(:hover) {
-    background: var(--lr-tab-close-hover-bg, color-mix(
-      in oklab,
-      transparent,
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    ));
+    background: var(--lr-tab-close-hover-bg, ${hoverFill('transparent')});
   }
 
   [part~='close-button']:where(:active) {
-    background: var(--lr-tab-close-active-bg, color-mix(
-      in oklab,
-      transparent,
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    ));
+    background: var(--lr-tab-close-active-bg, ${activeFill('transparent')});
   }
 
   @media (prefers-reduced-motion: reduce) {

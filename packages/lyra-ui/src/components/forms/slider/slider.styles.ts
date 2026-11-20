@@ -1,4 +1,4 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { disabledControl, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { formControlLabelTypography, formControlRequiredMarker } from '../../../internal/form-control.styles.js';
 
@@ -537,8 +537,7 @@ export const styles = css`
     transform: translate(50%, 50%);
   }
   :host(:disabled) {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   :host(:disabled) [part~="thumb"] {
     cursor: not-allowed;

@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing, focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingInset, focusRingInsetOffset, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { raiseWhileOverlayOpen } from '../../../internal/open-overlay-raise.styles.js';
 import { dataStateRetryStyles, dataStateSurfaceStyles } from '../../../internal/data-state-renderer.styles.js';
@@ -84,11 +84,7 @@ export const styles = css`
      control here: one step past the hovered fill toward --lr-color-mix-partner, and back on
      release. */
   :where([part='filter']):active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-brand-quiet)')};
   }
   [part='filter']::placeholder {
     color: var(--lr-color-text-quiet);
@@ -122,15 +118,10 @@ export const styles = css`
   }
   [part='filter-clear']:active {
     color: var(--lr-color-text);
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-surface)')};
   }
   [part='filter-clear']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingInset}
   }
   /* The visible spinner block, scoped away from the skeleton-appearance status node, which reuses
      [part='loading'] but is sr-only: the placeholder rows are its affordance, so it must not also
@@ -245,8 +236,7 @@ export const styles = css`
     );
   }
   [part='resize-handle']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * max(var(--lr-focus-ring-width), calc(var(--lr-focus-ring-width) + var(--lr-focus-ring-offset))));
+    ${focusRingInsetOffset}
   }
   /* :where() zeroes the attribute qualifiers to (0,1,0), matching the :hover rule below -- at
      (0,3,0) a consumer's own ::part(header-cell) cursor override ((0,1,1)) would lose without
@@ -284,11 +274,7 @@ export const styles = css`
      before the rows move. Same specificity as the :hover arm above and written after it, one step
      further toward --lr-color-mix-partner. */
   [part='header-cell'][data-sortable]:active {
-    background: var(--lr-table-sortable-header-active-bg, color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    ));
+    background: var(--lr-table-sortable-header-active-bg, ${activeFill('var(--lr-color-brand-quiet)')});
   }
   /* Not scoped to [data-sortable]: the roving-tabindex header stop (table.ts's focusedColKey()) can
      land on any column, so every header cell needs its own focus indicator. */
@@ -354,17 +340,13 @@ export const styles = css`
      plain brand-quiet fallback used elsewhere, because the selected row's resting fill already
      resolves to that token. */
   [part='row']:hover {
-    --_lr-table-row-bg: var(--lr-table-row-hover-bg, color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
+    --_lr-table-row-bg: var(--lr-table-row-hover-bg, ${hoverFill('var(--lr-color-brand-quiet)')});
     background: var(--_lr-table-row-bg);
   }
   /* MUST stay after the selected-row rule above -- both are (0,2,0), so source order alone decides,
      and the selected row is the one a user presses to DEselect. */
   [part='row']:active {
-    --_lr-table-row-bg: var(--lr-table-row-active-bg, color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    ));
+    --_lr-table-row-bg: var(--lr-table-row-active-bg, ${activeFill('var(--lr-color-brand-quiet)')});
     background: var(--_lr-table-row-bg);
   }
   @media (forced-colors: active) {
@@ -416,11 +398,7 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
   }
   :where([part='cell'][data-editable]):active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-brand-quiet)')};
   }
   [part='cell'][data-editable]:focus-visible {
     ${focusRingInsetOffset}
@@ -459,11 +437,7 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
   }
   :where([part='cell-editor']):active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-brand-quiet)')};
   }
   /* editType: 'number' renders a native type="number" editor; without this reset the browser's
      spinner buttons show as raw UA chrome in an otherwise fully re-themed field -- the same reset
@@ -563,11 +537,7 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
   }
   [part='row-expand-toggle']:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-brand-quiet)')};
   }
   [part='row-expand-toggle']:focus-visible {
     ${focusRing}
@@ -688,11 +658,7 @@ export const styles = css`
   }
   [part='more-button']:active:where(:not([aria-disabled='true'])),
   [part='reveal-columns-button']:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-brand-quiet)')};
   }
   [part='more-button']:focus-visible,
   [part='reveal-columns-button']:focus-visible {

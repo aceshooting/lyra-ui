@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'Deschide calendarul',
+  item: 'element',
   comboboxLoadError: 'Opțiunile nu au putut fi încărcate.',
   comboboxSelectedOverflow: '+{n} altele',
   checkboxRequired: 'Bifează această casetă pentru a continua.',

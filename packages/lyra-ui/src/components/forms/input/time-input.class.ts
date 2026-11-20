@@ -660,9 +660,6 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     return this.segmentModel.order;
   }
 
-  private get liveDisabled(): boolean {
-    return isLiveDisabled(this);
-  }
 
   private get periodLabels(): Record<DayPeriod, string> {
     const model = this.segmentModel;
@@ -820,7 +817,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   }
 
   private setDraftSegment(name: SegmentName, value: number | DayPeriod | null, user = true): void {
-    if (this.liveDisabled || (user && this.readonly)) return;
+    if (isLiveDisabled(this) || (user && this.readonly)) return;
     if (name === 'hour') {
       if (value === null) {
         this.draft.hour = null;
@@ -944,7 +941,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   private onSegmentKeyDown = (event: KeyboardEvent): void => {
     const target = event.currentTarget as HTMLElement;
     const name = target.dataset['segment'] as SegmentName;
-    if (this.liveDisabled) return;
+    if (isLiveDisabled(this)) return;
 
     if (event.altKey && event.key === 'ArrowDown') {
       event.preventDefault();
@@ -997,7 +994,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   };
 
   private onSegmentPaste = (event: ClipboardEvent): void => {
-    if (this.liveDisabled || this.readonly) return;
+    if (isLiveDisabled(this) || this.readonly) return;
     const pasted = normalizeTimeValue(event.clipboardData?.getData('text').trim() ?? '');
     if (!pasted) return;
     event.preventDefault();
@@ -1007,7 +1004,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
 
   private onSegmentFocus = (event: FocusEvent): void => {
     event.stopPropagation();
-    if (this.liveDisabled) return;
+    if (isLiveDisabled(this)) return;
     const target = event.target as HTMLElement;
     const focusedSegment = (target.dataset['segment'] as SegmentName) ?? this.activeSegment;
     if (this.restoringSegmentFocus || this.restoringPopupFocus) {
@@ -1036,7 +1033,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     // Disabling a focused segment (its tabindex drops to -1) makes the
     // browser force a blur here that is not a real user interaction; don't mark the field touched
     // for it.
-    if (!this.liveDisabled) this.touched = true;
+    if (!isLiveDisabled(this)) this.touched = true;
     this.resetDigitBuffer();
     relayNativeEvent(this, event);
   };
@@ -1047,7 +1044,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
 
   /** Focuses the active segment unless the control is directly or fieldset disabled. */
   override focus(options?: FocusOptions): void {
-    if (this.liveDisabled) return;
+    if (isLiveDisabled(this)) return;
     const order = this.segmentOrder;
     const activeSegment = this.activeSegmentFor(order);
     if (activeSegment !== this.activeSegment) this.activeSegment = activeSegment;
@@ -1062,7 +1059,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   }
 
   override click(): void {
-    if (!this.liveDisabled) this.focus();
+    if (!isLiveDisabled(this)) this.focus();
   }
 
   private setOpen(next: boolean): void {
@@ -1079,7 +1076,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
 
   private requestVisibility(next: boolean, announce: boolean, restoreFocus: boolean): Promise<void> {
     if (this._open === next) return this.visibilityPromise;
-    if (next && (this.liveDisabled || this.readonly)) {
+    if (next && (isLiveDisabled(this) || this.readonly)) {
       this.syncOpenAttribute();
       return Promise.resolve();
     }
@@ -1091,7 +1088,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
       }
       // A synchronous listener may have disabled, made read-only or itself toggled the picker; the
       // request is re-validated against the live state instead of committing the stale decision.
-      if (this._open === next || (next && (this.liveDisabled || this.readonly))) {
+      if (this._open === next || (next && (isLiveDisabled(this) || this.readonly))) {
         this.syncOpenAttribute();
         return this._open === next ? this.visibilityPromise : Promise.resolve();
       }
@@ -1202,13 +1199,13 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   };
 
   private onExpand = (): void => {
-    if (this.liveDisabled) return;
+    if (isLiveDisabled(this)) return;
     if (this.open) void this.hide();
     else void this.show();
   };
 
   private onClear = (): void => {
-    if (this.liveDisabled || this.readonly || (!this.draftHasAny && this.value === '')) return;
+    if (isLiveDisabled(this) || this.readonly || (!this.draftHasAny && this.value === '')) return;
     this.touched = true;
     this.commitUserValue('', 'deleteContentBackward', true);
     this.emit('lr-clear');
@@ -1216,7 +1213,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   };
 
   private onNow = (): void => {
-    if (this.liveDisabled || this.readonly) return;
+    if (isLiveDisabled(this) || this.readonly) return;
     const now = this.now();
     let value = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
     if (this.includeSeconds) value += `:${pad(now.getSeconds())}`;
@@ -1224,7 +1221,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   };
 
   private onColumnSelect(name: SegmentName, value: number | DayPeriod): void {
-    if (this.readonly || this.liveDisabled) return;
+    if (this.readonly || isLiveDisabled(this)) return;
     this.resetDigitBuffer();
     this.setDraftSegment(name, value);
     this.activeSegment = name;
@@ -1248,7 +1245,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
       input.value = this.value;
       return;
     }
-    if ((input.value !== '' && !normalized) || this.readonly || this.liveDisabled) return;
+    if ((input.value !== '' && !normalized) || this.readonly || isLiveDisabled(this)) return;
     this.value = normalized;
     dispatchNativeInputEvent(this, {
       data: event.data,
@@ -1261,7 +1258,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
     event.stopPropagation();
     const input = event.currentTarget as HTMLInputElement;
     const normalized = normalizeTimeValue(input.value);
-    if ((input.value !== '' && !normalized) || this.readonly || this.liveDisabled) return;
+    if ((input.value !== '' && !normalized) || this.readonly || isLiveDisabled(this)) return;
     this.value = normalized;
     dispatchNativeEvent(this, 'change');
     this.emit('lr-change', { value: this.value });
@@ -1532,7 +1529,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   }
 
   private onColumnKeyDown = (event: KeyboardEvent): void => {
-    if (this.liveDisabled) return;
+    if (isLiveDisabled(this)) return;
     if (!['ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return;
     const current = event.currentTarget as HTMLButtonElement;
     const column = current.closest('[role="listbox"]');

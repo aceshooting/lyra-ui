@@ -660,3 +660,26 @@ it('stops reporting an engine failure after the fallback listener removes the vi
   expect(el.isConnected).to.equal(false);
   expect(errors).to.equal(0);
 });
+
+it('keeps the loaded engine when only the display name changes', async () => {
+  const viewer = await fixture<LyraModelViewer>(html`<lr-model-viewer src=${source} format="obj" name="Triangle"></lr-model-viewer>`);
+  await ready(viewer);
+  const fetched = data.length;
+  let loads = 0;
+  viewer.addEventListener('lr-load', () => loads++);
+  viewer.name = 'Renamed triangle';
+  await viewer.updateComplete;
+  await new Promise(resolve => setTimeout(resolve, 20));
+  expect((viewer as unknown as { status: string }).status).to.equal('ready');
+  expect(disposed).to.equal(0);
+  expect(loads).to.equal(0);
+  expect(data.length).to.equal(fetched);
+});
+
+it('reloads when a name change alters the detected format', async () => {
+  const viewer = await fixture<LyraModelViewer>(html`<lr-model-viewer src=${source} name="shape.obj"></lr-model-viewer>`);
+  await ready(viewer);
+  viewer.name = 'shape.stl';
+  await viewer.updateComplete;
+  expect((viewer as unknown as { status: string }).status).to.not.equal('ready');
+});

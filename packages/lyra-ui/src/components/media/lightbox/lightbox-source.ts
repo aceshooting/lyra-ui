@@ -4,6 +4,7 @@ import { SourceRequestController, sourceCount, sourceRevision } from '../../../i
 import { SourceWindowController } from '../../../internal/source-window-controller.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
 import type { LyraLightboxImage, LyraLightboxSource } from './lightbox-types.js';
+import { requireOwnDataValue } from '../../../internal/data-descriptors.js';
 
 type Record = LyraSourceRecord<LyraLightboxImage>;
 type Host = HTMLElement & ReactiveControllerHost;
@@ -11,9 +12,7 @@ const MAX_FIELD_UNITS = 65_536;
 
 function field(value: unknown, key: string): unknown {
   if (value === null || typeof value !== 'object') throw new TypeError('Invalid image record');
-  const descriptor = Object.getOwnPropertyDescriptor(value, key);
-  if (descriptor && !('value' in descriptor)) throw new TypeError('Invalid image field');
-  return descriptor?.value;
+  return requireOwnDataValue(value, key, 'Invalid image field');
 }
 function text(value: unknown, optional = false): string | undefined {
   if (optional && value === undefined) return undefined;

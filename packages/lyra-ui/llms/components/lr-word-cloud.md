@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 14 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -173,7 +173,10 @@ prepared mode), `legend-limit` (localized rendered/received explicit-legend coun
 categorical palette, cycled by word index or `group`; a data-driven literal exception like
 `lr-heatmap`'s scale-ramp endpoints — exposed as retheme-able custom properties instead of
 hardcoded). They inherit from theme ancestors, while a value set directly on the word cloud wins
-through the normal cascade), plus shared tokens (`--lr-font`,
+through the normal cascade), `--lr-word-cloud-legible-font-size` (default `var(--lr-font-size-2xs)`, 0.625rem: when the host is
+narrower than the natural layout, no word renders smaller than this size or its own configured size
+if that is smaller, and the cloud scrolls horizontally instead of shrinking further; `0px` restores
+unbounded shrink-to-fit), plus shared tokens (`--lr-font`,
 `--lr-focus-ring-*`, `--lr-transition-fast`, `--lr-color-text-quiet`).
 
 **Optional peer deps:** none.

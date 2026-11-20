@@ -21,7 +21,7 @@ import { RecordCopyFeedback, reportCopyOutcome } from '../../../internal/record-
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_commitCardCopyHash, LYRA_DEFAULT_commitCardDiffSummary, LYRA_DEFAULT_commitCardFilesLimit, LYRA_DEFAULT_commitCardHideFiles, LYRA_DEFAULT_commitCardLabel, LYRA_DEFAULT_commitCardShowFiles } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_gitStatusAdded, LYRA_DEFAULT_gitStatusConflicted, LYRA_DEFAULT_gitStatusDeleted, LYRA_DEFAULT_gitStatusIgnored, LYRA_DEFAULT_gitStatusModified, LYRA_DEFAULT_gitStatusRenamed, LYRA_DEFAULT_gitStatusUntracked, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_gitStatusAdded, LYRA_DEFAULT_gitStatusConflicted, LYRA_DEFAULT_gitStatusDeleted, LYRA_DEFAULT_gitStatusIgnored, LYRA_DEFAULT_gitStatusModified, LYRA_DEFAULT_gitStatusRenamed, LYRA_DEFAULT_gitStatusUntracked } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Visual chrome for `<lr-commit-card>`'s root — the library's shared container-frame vocabulary. */
@@ -134,7 +134,6 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
-    collapse: LYRA_DEFAULT_collapse,
     commitCardCopyHash: LYRA_DEFAULT_commitCardCopyHash,
     commitCardDiffSummary: LYRA_DEFAULT_commitCardDiffSummary,
     commitCardFilesLimit: LYRA_DEFAULT_commitCardFilesLimit,
@@ -144,8 +143,6 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
     copied: LYRA_DEFAULT_copied,
     copy: LYRA_DEFAULT_copy,
     copyFailed: LYRA_DEFAULT_copyFailed,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
     gitStatusAdded: LYRA_DEFAULT_gitStatusAdded,
     gitStatusConflicted: LYRA_DEFAULT_gitStatusConflicted,
     gitStatusDeleted: LYRA_DEFAULT_gitStatusDeleted,
@@ -153,9 +150,6 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
     gitStatusModified: LYRA_DEFAULT_gitStatusModified,
     gitStatusRenamed: LYRA_DEFAULT_gitStatusRenamed,
     gitStatusUntracked: LYRA_DEFAULT_gitStatusUntracked,
-    loading: LYRA_DEFAULT_loading,
-    map: LYRA_DEFAULT_map,
-    open: LYRA_DEFAULT_open,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -175,7 +169,7 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
     new InputLimitAnnouncement(this, {
       limited: () => this.filesExpanded && this.normalizedFiles.length > MAX_RENDERED_FILES,
       announce: () => this.limitAnnouncements.announcePolite(this.localize('commitCardFilesLimit', undefined, {
-        count: this.formatLocaleNumber(MAX_RENDERED_FILES),
+        count: this.formatLocaleNumber(MAX_RENDERED_FILES), pluralCount: MAX_RENDERED_FILES,
       })),
     });
   }
@@ -341,6 +335,7 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
                   additions: this.formatLocaleNumber(additions),
                   deletions: this.formatLocaleNumber(deletions),
                   files: this.formatLocaleNumber(files.length),
+                  pluralCount: files.length,
                 })}</span><span aria-hidden="true"
                   ><span part="additions" dir="ltr">+${this.formatLocaleNumber(additions)}</span> <span part="deletions" dir="ltr">-${this.formatLocaleNumber(deletions)}</span></span
                 >
@@ -377,8 +372,8 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
                 @click=${this.toggleFiles}
               >
                 ${this.filesExpanded
-                  ? this.localize('commitCardHideFiles', undefined, { count: this.formatLocaleNumber(files.length) })
-                  : this.localize('commitCardShowFiles', undefined, { count: this.formatLocaleNumber(files.length) })}
+                  ? this.localize('commitCardHideFiles', undefined, { count: this.formatLocaleNumber(files.length), pluralCount: files.length })
+                  : this.localize('commitCardShowFiles', undefined, { count: this.formatLocaleNumber(files.length), pluralCount: files.length })}
               </button>
               ${this.filesExpanded
                 ? files.slice(0, MAX_RENDERED_FILES).map((f) => {
@@ -408,7 +403,7 @@ export class LyraCommitCard extends LyraElement<LyraCommitCardEventMap> {
                 : nothing}
               ${this.filesExpanded && files.length > MAX_RENDERED_FILES
                 ? html`<p part="limit" role="note">${this.localize('commitCardFilesLimit', undefined, {
-                    count: this.formatLocaleNumber(MAX_RENDERED_FILES),
+                    count: this.formatLocaleNumber(MAX_RENDERED_FILES), pluralCount: MAX_RENDERED_FILES,
                   })}</p>`
                 : nothing}
             `

@@ -1,5 +1,6 @@
 import { iconActionStyles } from '../../../internal/icon-action.styles.js';
 import { css } from 'lit';
+import { activeFill } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   :host {
@@ -45,7 +46,7 @@ export const styles = css`
     color: 'var(--lr-color-text)',
     hoverBackground: 'var(--lr-icon-button-bg, var(--lr-color-surface))',
     hoverColor: 'var(--lr-color-brand)',
-    activeBackground: 'color-mix(in oklab, var(--lr-icon-button-bg, var(--lr-color-surface)), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+    activeBackground: activeFill('var(--lr-icon-button-bg, var(--lr-color-surface))').cssText,
     activeColor: 'var(--lr-icon-button-color-hover, var(--lr-color-brand))',
     background: 'var(--lr-color-surface)',
   })}

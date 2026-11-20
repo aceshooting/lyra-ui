@@ -17,7 +17,10 @@ export const LYRA_DEFAULT_dataGridExpandRow: LyraMessage = 'Expand {row}';
 export const LYRA_DEFAULT_dataGridFilterColumn: LyraMessage = 'Filter {column}';
 export const LYRA_DEFAULT_dataGridPinEnd: LyraMessage = 'Pin {label} to end';
 export const LYRA_DEFAULT_dataGridPinStart: LyraMessage = 'Pin {label} to start';
-export const LYRA_DEFAULT_dataGridRowLimit: LyraMessage = 'Only the first {count} rows are shown.';
+export const LYRA_DEFAULT_dataGridRowLimit: LyraMessage = {
+    one: 'Only the first {count} row is shown.',
+    other: 'Only the first {count} rows are shown.',
+  };
 export const LYRA_DEFAULT_dataGridRowsPerPage: LyraMessage = 'Rows per page';
 export const LYRA_DEFAULT_dataGridSelectPage: LyraMessage = 'Select all rows on this page';
 export const LYRA_DEFAULT_dataGridTreeLimitReached: LyraMessage = 'Additional nested rows were omitted because the data-grid tree limit was reached.';
@@ -202,7 +205,10 @@ export const LYRA_DEFAULT_tableFilterLabel: LyraMessage = 'Filter rows';
 export const LYRA_DEFAULT_tableFilterPlaceholder: LyraMessage = 'Filter rows';
 export const LYRA_DEFAULT_tableLoading: LyraMessage = 'Loading rows';
 export const LYRA_DEFAULT_tableLoadingMore: LyraMessage = 'Loading more rows';
-export const LYRA_DEFAULT_tableRowLimit: LyraMessage = 'Only the first {count} rows are shown.';
+export const LYRA_DEFAULT_tableRowLimit: LyraMessage = {
+    one: 'Only the first {count} row is shown.',
+    other: 'Only the first {count} rows are shown.',
+  };
 export const LYRA_DEFAULT_tableRowTotal: LyraMessage = 'Total';
 export const LYRA_DEFAULT_timeline: LyraMessage = 'Timeline';
 export const LYRA_DEFAULT_timelineClusterCount: LyraMessage = 'Show timeline events ({count})';

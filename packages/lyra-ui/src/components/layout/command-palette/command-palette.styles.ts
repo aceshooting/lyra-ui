@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, focusRingInset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 export const styles = css`
@@ -113,15 +113,10 @@ export const styles = css`
   }
   [part="clear-button"]:active {
     color: var(--lr-color-text);
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-surface)')};
   }
   [part="clear-button"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingInset}
   }
   [part="list"] {
     position: relative;
@@ -190,11 +185,7 @@ export const styles = css`
      toward --lr-color-mix-partner for a deeper step of the same highlight. Kept at the hover
      rule's zeroed specificity so the two tie and source order hands this one the press. */
   :where([part="command"]):active:where(:not(:disabled)) {
-    background: color-mix(
-      in oklab,
-      var(--lr-command-palette-active-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-command-palette-active-bg, var(--lr-color-brand-quiet))')};
   }
   /* Inline var() fallback rather than a :host-declared property, so a consumer can set it on any
      ancestor without a :host declaration shadowing it. ::part(command)[data-active='true'] is
@@ -209,15 +200,10 @@ export const styles = css`
   }
   /* The held fill takes precedence when the pointer presses the keyboard-active option. */
   [part="command"][data-active="true"]:active:where(:not(:disabled)) {
-    background: color-mix(
-      in oklab,
-      var(--lr-command-palette-active-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-command-palette-active-bg, var(--lr-color-brand-quiet))')};
   }
   [part="command"]:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   [part="icon"] {
     display: inline-flex;

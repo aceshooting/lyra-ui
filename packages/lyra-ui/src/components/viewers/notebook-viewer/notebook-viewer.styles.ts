@@ -1,7 +1,8 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingShorthand, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { visuallyHidden } from '../../../internal/a11y.js';
 import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
@@ -10,8 +11,7 @@ export const styles = css`
     /* Query container, so the @container rule below reacts to this viewer's own allocated width
        -- a chat transcript, a split pane, a narrow dialog on a wide desktop -- not the page
        viewport's. */
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${inlineSizeContainer}
   }
   [part='base'] {
     display: block;
@@ -113,8 +113,7 @@ export const styles = css`
     background: var(--lr-color-surface-raised);
   }
   lr-virtual-list::part(raw-source):focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   lr-virtual-list::part(outputs) {
     display: flex;
@@ -170,11 +169,10 @@ export const styles = css`
      step rather than a repeat of hover. */
   lr-virtual-list::part(output-toggle):active {
     text-decoration: underline;
-    color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    color: ${activeFill('var(--lr-color-brand)')};
   }
   lr-virtual-list::part(output-toggle):focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   [part='error'] {
     border-inline-start: var(--lr-border-width-medium) solid var(--lr-color-danger);

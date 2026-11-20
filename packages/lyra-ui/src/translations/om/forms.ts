@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'Kaalaandarii bani',
+  item: 'wanta',
   comboboxLoadError: 'Filannoowwan fe\'uun hin danda\'amne.',
   comboboxSelectedOverflow: '+{n} dabalataa',
   checkboxRequired: 'Itti fufuuf sanduuqa kana mallatteessi.',

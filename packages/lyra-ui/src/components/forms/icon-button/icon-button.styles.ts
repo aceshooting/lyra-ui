@@ -1,6 +1,6 @@
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { iconAction, iconActionHover, iconActionActive } from '../../../internal/icon-action.styles.js';
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { disabledControl, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 export const styles = css`
   :host { display: inline-flex; --_lr-icon-button-radius-default: var(--lr-radius); }
@@ -25,9 +25,9 @@ export const styles = css`
      one. The press fallback is the same mix at the stronger --lr-color-mix-active share. */
   [part~='button']:not(:disabled):not([aria-disabled='true']):hover { ${iconActionHover} }
   [part~='button']:not(:disabled):not([aria-disabled='true']):active { ${iconActionActive} }
-  [part~='button']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
+  [part~='button']:focus-visible { ${focusRing} }
   [part~='button']:disabled,
-  [part~='button'][aria-disabled='true'] { opacity: var(--lr-opacity-disabled); cursor: not-allowed; }
+  [part~='button'][aria-disabled='true'] { ${disabledControl} }
   /* Font-relative on purpose: an icon button has its own 1.25rem visual-glyph contract,
      independent of the button label font-size the nested component inherits, so the integration
      boundary uses the existing rem token. A consumer's inherited --lr-icon-size still wins on the

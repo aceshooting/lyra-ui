@@ -1,4 +1,4 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 // A pressed link uses a token-derived fill so it tints its inherited surface without assuming a
@@ -66,11 +66,7 @@ export const styles = css`
     text-decoration: underline;
     background: var(
       --lr-breadcrumb-item-active-bg,
-      color-mix(
-        in oklab,
-        transparent,
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('transparent')}
     );
   }
   [part="base"]:focus-visible {

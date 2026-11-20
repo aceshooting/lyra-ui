@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingInsetOffset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -111,7 +111,7 @@ export const styles = css`
   lr-virtual-list::part(open-button):active {
     color: var(--lr-color-brand);
     text-decoration: underline;
-    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('transparent')};
   }
   [part~='open-button']:focus-visible,
   lr-virtual-list::part(open-button):focus-visible {
@@ -164,7 +164,7 @@ export const styles = css`
   [part~='toggle']:active,
   lr-virtual-list::part(toggle):active {
     text-decoration: underline;
-    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('transparent')};
   }
   [part~='toggle']:focus-visible,
   lr-virtual-list::part(toggle):focus-visible {

@@ -4,7 +4,7 @@ import { html, nothing, svg, type PropertyValues, type TemplateResult, type SVGT
 import { property, query } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-controls.js';
-import { chevronIcon } from '../../../internal/icons.js';
+import { chevronIcon, iconFrame } from '../../../internal/icons.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
@@ -20,7 +20,6 @@ import type { LyraMessageKey } from '../../../internal/localization-types.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_attachmentAdd, LYRA_DEFAULT_attachmentMenuAudio, LYRA_DEFAULT_attachmentMenuCamera, LYRA_DEFAULT_attachmentMenuFiles, LYRA_DEFAULT_attachmentMenuImage, LYRA_DEFAULT_attachmentTriggerAudio, LYRA_DEFAULT_attachmentTriggerCamera, LYRA_DEFAULT_attachmentTriggerFiles, LYRA_DEFAULT_attachmentTriggerImage } from '../../../internal/default-strings/media.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_open } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraAttachmentCapability = 'files' | 'image' | 'camera' | 'audio';
@@ -55,39 +54,19 @@ export interface LyraAttachmentFilesDetail {
 // read as part of the same visual language as the rest of the library's
 // inline icons. Same approach as lr-attachment-chip's local fileGlyph()/
 // retryIcon() and lr-checkbox's local checkmarkGlyph().
-const ICON_VIEW_BOX = '0 0 24 24';
-const ICON_STROKE_WIDTH = '1.75';
-
-function icon(paths: SVGTemplateResult): SVGTemplateResult {
-  return svg`
-    <svg
-      width="1em"
-      height="1em"
-      viewBox=${ICON_VIEW_BOX}
-      fill="none"
-      stroke="currentColor"
-      stroke-width=${ICON_STROKE_WIDTH}
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    >${paths}</svg>
-  `;
-}
-
 /** A paperclip glyph -- the generic "attach" affordance, used for the
  *  `files` capability and as the multi-capability menu's own trigger icon
  *  (the one glyph a user recognizes regardless of which capabilities the
  *  menu underneath actually offers). */
 function paperclipIcon(): SVGTemplateResult {
-  return icon(svg`
+  return iconFrame(svg`
     <path d="M21.44 11.05 12.25 20.24a5.5 5.5 0 0 1-7.78-7.78l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a1.5 1.5 0 0 1-2.12-2.12l8.49-8.48"></path>
   `);
 }
 
 /** A picture-frame glyph for the `image` capability. */
 function imageIcon(): SVGTemplateResult {
-  return icon(svg`
+  return iconFrame(svg`
     <rect x="3" y="3" width="18" height="18" rx="2"></rect>
     <circle cx="8.5" cy="8.5" r="1.5"></circle>
     <polyline points="21 15 16 10 5 21"></polyline>
@@ -96,7 +75,7 @@ function imageIcon(): SVGTemplateResult {
 
 /** A camera-body glyph for the `camera` capability. */
 function cameraIcon(): SVGTemplateResult {
-  return icon(svg`
+  return iconFrame(svg`
     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2Z"></path>
     <circle cx="12" cy="13" r="4"></circle>
   `);
@@ -106,7 +85,7 @@ function cameraIcon(): SVGTemplateResult {
  *  own convention keeps one-off icons local to whichever component renders them, matching the
  *  paperclip/image/camera glyphs above. */
 function audioIcon(): SVGTemplateResult {
-  return icon(svg`
+  return iconFrame(svg`
     <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3Z"></path>
     <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
     <line x1="12" y1="19" x2="12" y2="23"></line>
@@ -286,12 +265,6 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
     attachmentTriggerCamera: LYRA_DEFAULT_attachmentTriggerCamera,
     attachmentTriggerFiles: LYRA_DEFAULT_attachmentTriggerFiles,
     attachmentTriggerImage: LYRA_DEFAULT_attachmentTriggerImage,
-    collapse: LYRA_DEFAULT_collapse,
-    copy: LYRA_DEFAULT_copy,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
-    map: LYRA_DEFAULT_map,
-    open: LYRA_DEFAULT_open,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;

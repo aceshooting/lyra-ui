@@ -1,5 +1,5 @@
 import { iconActionStyles } from '../../../internal/icon-action.styles.js';
-import { disclosureChevron, iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disclosureChevron, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { nativeControlSurface } from '../../../internal/native-control-surface.styles.js';
 import { css } from 'lit';
 import { dataStateRetryStyles } from '../../../internal/data-state-renderer.styles.js';
@@ -105,7 +105,7 @@ export const styles = css`
     color: 'var(--lr-color-text-quiet)',
     hoverBackground: 'var(--lr-color-surface-raised)',
     hoverColor: 'var(--lr-color-text)',
-    activeBackground: 'color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised)), var(--lr-color-mix-partner) var(--lr-color-mix-active))',
+    activeBackground: activeFill('var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised))').cssText,
     activeColor: 'var(--lr-icon-button-color-hover, var(--lr-color-text))',
   })}
   [part='clear-button'] {
@@ -184,14 +184,7 @@ export const styles = css`
   lr-virtual-list::part(group-toggle):active {
     background: var(
       --lr-thread-list-group-toggle-active-bg,
-      color-mix(
-        in oklab,
-        var(
-          --lr-thread-list-group-toggle-hover-bg,
-          var(--lr-color-surface-raised)
-        ),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var( --lr-thread-list-group-toggle-hover-bg, var(--lr-color-surface-raised) )')}
     );
     color: var(
       --lr-thread-list-group-toggle-active-color,
@@ -264,14 +257,7 @@ export const styles = css`
       --lr-thread-list-row-action-active-bg,
       var(
         --lr-icon-button-bg-active,
-        color-mix(
-          in oklab,
-          var(
-            --lr-thread-list-row-action-hover-bg,
-            var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised))
-          ),
-          var(--lr-color-mix-partner) var(--lr-color-mix-active)
-        )
+        ${activeFill('var( --lr-thread-list-row-action-hover-bg, var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised)) )')}
       )
     );
     color: var(

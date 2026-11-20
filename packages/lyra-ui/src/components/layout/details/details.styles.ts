@@ -1,5 +1,6 @@
 import { css } from 'lit';
 import { opaqueContentBorders } from '../../../internal/opaque-content-border.styles.js';
+import { activeFill, disabledControl, focusRingInset } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   ${opaqueContentBorders(":host(:not([appearance='plain']):not([appearance='filled']):not([appearance='filled-outlined'])) [part='content']")}
@@ -120,16 +121,11 @@ export const styles = css`
   :host(:where(:not([disabled]))) [part='summary']:active {
     background: var(
       --lr-details-summary-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-color-brand-quiet),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-color-brand-quiet)')}
     );
   }
   [part='summary']:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingInset}
   }
   [part~='icon'] {
     display: inline-flex;
@@ -155,8 +151,7 @@ export const styles = css`
     block-size: var(--lr-size-1rem);
   }
   :host([disabled]) [part='summary'] {
-    cursor: not-allowed;
-    opacity: var(--lr-opacity-disabled);
+    ${disabledControl}
   }
   [part~='header-actions']:where(:not([hidden])) {
     display: flex;

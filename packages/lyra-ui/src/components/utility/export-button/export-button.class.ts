@@ -813,12 +813,16 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
     return Array.isArray(supplied) ? supplied : [];
   }
 
-  /** Applies the same `columns` allow-list CSV exports use, so JSON can't leak fields CSV hides. */
+  /** Applies the same `columns` allow-list CSV exports use, so JSON can't leak fields CSV hides.
+   *  A column named after an `Object.prototype` member (`constructor`, `toString`, ...) reads only an
+   *  own value; any other key reads through the row, so class-instance getters still export. */
   private rowsForExport(rows: readonly Readonly<Record<string, unknown>>[]): Record<string, unknown>[] {
     const keys = this.effectiveColumns(rows).map((c) => c.key);
     return rows.map((row) => {
       const picked = Object.create(null) as Record<string, unknown>;
-      for (const key of keys) picked[key] = Object.hasOwn(row, key) ? row[key] : undefined;
+      for (const key of keys) {
+        picked[key] = Object.hasOwn(row, key) || !(key in Object.prototype) ? row[key] : undefined;
+      }
       return picked;
     });
   }

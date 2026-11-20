@@ -29,9 +29,9 @@ AgentEvaluationDashboardRun[] = []` (attribute: false), where each run is `{ id,
 AgentStatusValue, metrics?: Record<string, number> }`. `AgentStatusValue` accepts either a compact
 `AgentStatusKind` string or an `AgentStatusPresentation` object (`{ kind, message?, label?,
 variant?, terminal?, active? }`), preserving explicit caller labels/messages and badge variants.
-`metricId: string | null = null` — `null` and `''` select the first metric. A non-empty unmatched
-id leaves the selection empty and shows the localized `metric-unavailable` note until the id
-matches. Clear `metricId` to use the first available metric as a fallback. `label?: string` — omission localizes the heading while an
+`metricId: string | null = null` — `null`, `''` and an unmatched id select the first valid metric.
+A non-empty unmatched id also shows the localized `metric-unavailable` note until the id matches
+or is cleared. `label?: string` — omission localizes the heading while an
 explicit empty string renders no heading/name; `withoutChart: boolean = false` (attribute
 `without-chart`, reflected) suppresses the metric trend chart; `chartHeight: string =
 '220px'`; `maxRenderedRuns: number = 100` (attribute `max-rendered-runs`, clamped to 1–500) bounds

@@ -211,11 +211,15 @@ const strings: LyraLocaleStrings = {
   documentLibrarySelectDocument: '{name} 선택',
   graphQueryDeleteWithContext: '{name} 삭제',
   statRowsInputLimit: '전체 세부 내역 {total}개 행 중 {count}개 행을 표시합니다.',
-  dataGridRowLimit: '처음 {count}개 행만 표시됩니다.',
+  dataGridRowLimit: {
+    other: '처음 {count}개 행만 표시됩니다.',
+  },
   dataGridExpandRow: '{row} 확장',
   dataGridFilterColumn: '{column} 필터링',
   dataGridSelectPage: '이 페이지의 모든 행 선택',
-  tableRowLimit: '처음 {count}개 행만 표시됩니다.',
+  tableRowLimit: {
+    other: '처음 {count}개 행만 표시됩니다.',
+  },
   tableAdditionalColumns: '추가 열',
   treeLimit: '처음 {count}개 항목만 표시됩니다.',
   treeDefaultLabel: '트리',

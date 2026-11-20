@@ -90,9 +90,10 @@ export const styles = css`
     z-index: var(--lr-layer-content);
     padding: var(--lr-code-editor-padding, var(--lr-form-control-padding-inline))
       var(--lr-space-xs);
-    border-inline-end: var(--lr-border-width-thin) solid var(--lr-color-border);
-    background: var(--lr-code-editor-fill, var(--lr-color-surface));
-    color: var(--lr-color-text-quiet);
+    border-inline-end: var(--lr-border-width-thin) solid
+      var(--lr-code-editor-gutter-border-color, var(--lr-color-border));
+    background: var(--lr-code-editor-gutter-bg, var(--lr-code-editor-fill, var(--lr-color-surface)));
+    color: var(--lr-code-editor-gutter-color, var(--lr-color-text-quiet));
     text-align: end;
     white-space: pre;
     user-select: none;

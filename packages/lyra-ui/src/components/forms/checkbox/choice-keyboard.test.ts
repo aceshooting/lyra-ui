@@ -85,7 +85,7 @@ it('reports the slider position that triggered input and change when listeners m
 
 for (const name of ['checkbox', 'switch', 'radio'] as const) {
   for (const action of ['disable', 'remove'] as const) {
-    it(`${name} stops before change when its input listener requests ${action}`, async () => {
+    it(`${name} still completes its committed change when its input listener requests ${action}`, async () => {
       const control = await fixture<HTMLElementTagNameMap[`lr-${typeof name}`]>(`<lr-${name}></lr-${name}>`);
       const events: string[] = [];
       control.addEventListener('input', () => {
@@ -96,7 +96,8 @@ for (const name of ['checkbox', 'switch', 'radio'] as const) {
         control.addEventListener(type, () => events.push(type));
       }
       control.click();
-      expect(events).to.deep.equal(['lr-input']);
+      expect(control.checked).to.equal(true);
+      expect(events).to.deep.equal(['lr-input', 'change', 'lr-change']);
     });
   }
 }

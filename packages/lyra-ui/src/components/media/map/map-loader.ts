@@ -1,6 +1,6 @@
 import type { Feature, Geometry } from 'geojson';
 import { litDevWarnings } from '../../../internal/dev-warning.js';
-import { isObjectLike } from '../../../internal/object-guards.js';
+import { isConstructor, isObjectLike } from '../../../internal/object-guards.js';
 import {
   createOptionalPeerLoader,
   resolveOptionalPeerCapability,
@@ -211,16 +211,6 @@ const MAP_METHODS = [
 ] as const;
 const MARKER_METHODS = ['setLngLat', 'setPopup', 'getPopup', 'addTo', 'remove'] as const;
 const POPUP_METHODS = ['setHTML', 'setText'] as const;
-
-function isConstructor(value: unknown): value is new (...args: never[]) => object {
-  if (typeof value !== 'function') return false;
-  try {
-    Reflect.construct(Object, [], value);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 function missingConstructorCapability(
   module: object,

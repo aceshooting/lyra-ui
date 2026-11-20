@@ -7,7 +7,7 @@ import { shouldIgnoreNavigationKey } from './list-navigation.js';
 import { createEngine3dLoader, type Engine3dInstance } from './engine-3d-loader.js';
 import { Engine3dSelection, ENGINE_3D_REASON_MESSAGE, ENGINE_3D_SHOWING_MESSAGE, engine3dFailureReason, webgl2Available, type Engine3dFallbackDetail, type Engine3dFallbackReason } from './engine-3d.js';
 import { AnnouncementSinkController } from './announcer.js';
-import { isAccessibilityVisible } from './accessibility-visibility.js';
+import { observeAdmission, watchEngineStyle } from './engine-admission.js';
 import { readCanvasRgba, resolveCanvasColor, toRgbaString } from './canvas-color.js';
 import type { LyraMessageKey } from './localization.js';
 import { tag } from './prefix.js';
@@ -81,11 +81,8 @@ export class PanoramaController {
   private revision = 0;
   private attempted = false;
   private pending = false;
-  private intersection?: IntersectionObserver;
-  private eligibility?: MutationObserver;
-  private intersecting = false;
+  private admission?: () => void;
   private resize?: ResizeObserver;
-  private theme?: MutationObserver;
   private cleanups: (() => void)[] = [];
   private cursor = 0;
 
@@ -95,11 +92,8 @@ export class PanoramaController {
 
   private release(): void {
     this.generation++;
-    this.intersection?.disconnect(); this.intersection = undefined;
-    this.eligibility?.disconnect(); this.eligibility = undefined;
-    this.intersecting = false;
+    this.admission?.(); this.admission = undefined;
     this.resize?.disconnect(); this.resize = undefined;
-    this.theme?.disconnect(); this.theme = undefined;
     for (const cleanup of this.cleanups) cleanup(); this.cleanups = [];
     const engine = this.engine; this.engine = undefined;
     this.ready = this.loading = this.pending = false;
@@ -124,36 +118,15 @@ export class PanoramaController {
     const cameraChanged = camera !== this.camera; this.camera = camera;
     if (!enabled || !media || !container || !this.host.isConnected) return;
     if (this.ready) { if (cameraChanged) this.command(() => this.engine?.setCamera(camera)); return; }
-    if (this.pending || this.attempted || this.intersection || this.eligibility) return;
-    const view = this.host.ownerDocument.defaultView;
+    if (this.pending || this.attempted || this.admission) return;
     const generation = this.generation;
-    this.intersecting = view?.IntersectionObserver === undefined;
-    const admit = (): void => {
-      if (generation !== this.generation || this.pending || this.attempted || !this.intersecting || !isAccessibilityVisible(this.host)) return;
-      this.intersection?.disconnect(); this.intersection = undefined;
-      this.eligibility?.disconnect(); this.eligibility = undefined;
-      void this.start();
-    };
-    if (view?.IntersectionObserver) {
-      this.intersection = new view.IntersectionObserver(entries => {
-        if (generation !== this.generation) return;
-        for (const entry of entries) if (entry.target === container) this.intersecting = entry.isIntersecting;
-        admit();
-      });
-      this.intersection.observe(container);
-    }
     // Only pending admission observes author fences; no polling or subtree/document observer.
-    if (view?.MutationObserver) {
-      this.eligibility = new view.MutationObserver(admit);
-      let ancestor: Element | null = this.host;
-      let depth = 0;
-      while (ancestor && depth++ <= 256) {
-        this.eligibility.observe(ancestor, { attributes: true, attributeFilter: ['aria-hidden', 'inert', 'hidden', 'style', 'class', 'open'] });
-        const root: Node = ancestor.getRootNode();
-        ancestor = ancestor.assignedSlot ?? ancestor.parentElement ?? (root instanceof view.ShadowRoot ? root.host : null);
-      }
-    }
-    admit();
+    let admitted = false;
+    const admission = observeAdmission(this.host, container, {
+      isReady: () => generation === this.generation && !this.pending && !this.attempted,
+      onAdmit: () => { admitted = true; this.admission = undefined; void this.start(); },
+    });
+    if (!admitted) this.admission = admission;
   }
 
   private fail(reason: Engine3dFallbackReason): void {
@@ -221,16 +194,8 @@ export class PanoramaController {
       if (!current()) return;
       const view = owner.defaultView;
       if (view?.ResizeObserver) { this.resize = new view.ResizeObserver(() => { if (current() && this.ready) this.command(resize); }); this.resize.observe(container); }
-      const restyle = () => { if (current() && this.ready) this.command(() => engine!.setStyle(this.style())); };
-      if (view?.MutationObserver) {
-        this.theme = new view.MutationObserver(restyle);
-        let ancestor: Element | null = this.host;
-        while (ancestor) { this.theme.observe(ancestor, { attributes: true }); const root: Node = ancestor.getRootNode(); ancestor = ancestor.parentElement ?? (root instanceof view.ShadowRoot ? root.host : null); }
-      }
-      for (const query of ['(prefers-reduced-motion: reduce)', '(forced-colors: active)', '(prefers-color-scheme: dark)']) {
-        const mediaQuery = view?.matchMedia(query); mediaQuery?.addEventListener('change', restyle);
-        if (mediaQuery) this.cleanups.push(() => mediaQuery.removeEventListener('change', restyle));
-      }
+      // Theme attributes and the style media queries only, never every ancestor attribute.
+      this.cleanups.push(watchEngineStyle(this.host, () => { if (current() && this.ready) this.command(() => engine!.setStyle(this.style())); }));
       this.pending = this.loading = false; this.ready = this.selection.renderer === 'webgl'; this.options.changed();
     } catch (error) { if (!current()) { if (!owned) disposePanoramaEngine(engine); return; } this.fail(engine3dFailureReason(error)); }
   }

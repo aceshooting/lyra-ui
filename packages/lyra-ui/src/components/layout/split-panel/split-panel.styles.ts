@@ -1,4 +1,4 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -146,11 +146,7 @@ export const styles = css`
   [part~='divider']:where(:active, [data-dragging]) {
     background: var(
       --lr-split-panel-divider-active-color,
-      color-mix(
-        in oklab,
-        var(--lr-split-panel-divider-hover-color, var(--lr-color-brand)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-split-panel-divider-hover-color, var(--lr-color-brand))')}
     );
   }
 

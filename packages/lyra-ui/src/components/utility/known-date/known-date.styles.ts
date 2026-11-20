@@ -1,4 +1,4 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { disabledControl, focusRing } from '../../../internal/interactive-control.styles.js';
 import {
   formControlLabelTypography,
   formControlSupportingText,
@@ -184,8 +184,7 @@ export const styles = css`
     );
   }
   [part="field-input"]:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
 
   ${formControlSupportingText}

@@ -444,4 +444,18 @@ describe('lr-embedding-explorer engine and columns', () => {
     expect(getComputedStyle(row).backgroundColor).to.equal('rgb(7, 48, 68)');
     expect(getComputedStyle(button).backgroundColor).to.equal('rgb(22, 34, 55)');
   });
+
+  it('restyles a ready renderer for theme changes, not for unrelated ancestor attributes', async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div><lr-embedding-explorer engine="webgl" .pointColumns=${columns(2)}></lr-embedding-explorer></div>`);
+    const el = wrapper.firstElementChild as LyraEmbeddingExplorer;
+    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part="row"]').length === 2);
+    await aTimeout(50);
+    const count = styleCalls;
+    wrapper.setAttribute('data-unrelated', '1');
+    wrapper.title = 'Unrelated';
+    await aTimeout(50);
+    expect(styleCalls).to.equal(count);
+    wrapper.style.setProperty('--lr-color-brand', 'rgb(7, 11, 13)');
+    await waitUntil(() => styleCalls > count);
+  });
 });

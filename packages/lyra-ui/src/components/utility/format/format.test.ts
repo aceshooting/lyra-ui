@@ -30,7 +30,7 @@ it('switches byte units exactly at numeric powers of the step', async () => {
   el.value = 999.9999999999999;
   el.unitStep = 1000;
   await el.updateComplete;
-  expect(el.shadowRoot?.textContent?.trim()).to.equal('1,000 bytes');
+  expect(el.shadowRoot?.textContent?.trim()).to.equal('1 kilobyte');
 });
 
 for (const tag of ['lr-format-date', 'lr-relative-time'] as const) {

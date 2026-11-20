@@ -1,11 +1,11 @@
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { focusRingShorthand } from '../../../internal/interactive-control.styles.js';
+import { containerHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
-    display: block;
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${containerHost}
   }
 
   [part='base'] {
@@ -136,7 +136,7 @@ export const styles = css`
   }
   [part='row']:where([aria-selected='true']) { background: var(--lr-embedding-explorer-row-selected-fill, var(--lr-color-brand-fill-quiet)); font-weight: var(--lr-font-weight-bold); }
   [part='row']:hover { text-decoration: underline; }
-  [part='row']:focus-visible { outline: var(--lr-focus-ring); outline-offset: var(--lr-focus-ring-offset); }
+  [part='row']:focus-visible { ${focusRingShorthand} }
   [part='row']:active { outline: var(--lr-border-width-medium) solid var(--lr-color-brand); }
   [part='pagination'] { display: flex; flex-wrap: wrap; align-items: center; gap: var(--lr-space-s); }
   [part='page-button'] {
@@ -152,7 +152,7 @@ export const styles = css`
     cursor: pointer;
   }
   [part='page-button']:hover { text-decoration: underline; }
-  [part='page-button']:focus-visible { outline: var(--lr-focus-ring); outline-offset: var(--lr-focus-ring-offset); }
+  [part='page-button']:focus-visible { ${focusRingShorthand} }
   [part='page-button']:active { border-color: var(--lr-color-brand); }
   [part='page-button']:disabled { background: var(--lr-embedding-explorer-page-disabled-fill, var(--lr-color-surface)); cursor: default; opacity: var(--lr-opacity-disabled); }
   lr-graph-legend::part(item) { padding: 0; color: var(--lr-color-text-quiet); }

@@ -1,11 +1,11 @@
 import { css } from 'lit';
 import { wideContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { hoverFill } from '../../../internal/interactive-control.styles.js';
+import { containerHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
-    display: block;
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${containerHost}
     --_lr-document-compare-pane-max-height: var(--lr-size-24rem);
   }
 
@@ -64,11 +64,7 @@ export const styles = css`
      scroll, and a mousedown has nothing to acknowledge. */
   [part="pane-old"]:hover,
   [part="pane-new"]:hover {
-    border-color: color-mix(
-      in oklab,
-      var(--lr-color-border-strong),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
+    border-color: ${hoverFill('var(--lr-color-border-strong)')};
   }
 
   [part="pane-header"] {

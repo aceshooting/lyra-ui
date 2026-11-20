@@ -211,11 +211,15 @@ const strings: LyraLocaleStrings = {
   documentLibrarySelectDocument: 'Yan {name}',
   graphQueryDeleteWithContext: 'Pa {name} rẹ́',
   statRowsInputLimit: 'A ń fi ìlà ìtúpalẹ̀ {count} nínú {total} hàn.',
-  dataGridRowLimit: 'Awọn ori ila {count} akọkọ nikan ni o han.',
+  dataGridRowLimit: {
+    other: 'Awọn ori ila {count} akọkọ nikan ni o han.',
+  },
   dataGridExpandRow: 'Fẹ {row} sí i',
   dataGridFilterColumn: 'Ṣàlẹ̀mọ́ {column}',
   dataGridSelectPage: 'Yan gbogbo àwọn ìlà lójú ìwé yìí',
-  tableRowLimit: 'Awọn ori ila {count} akọkọ nikan ni o han.',
+  tableRowLimit: {
+    other: 'Awọn ori ila {count} akọkọ nikan ni o han.',
+  },
   tableAdditionalColumns: 'Àwọn ọ̀wọ̀n àfikún',
   treeLimit: 'Awọn nkan {count} akọkọ nikan ni o han.',
   treeDefaultLabel: 'Igi',

@@ -1,4 +1,4 @@
-import { interactiveTransition, iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
@@ -15,7 +15,7 @@ export const styles = css`
     --_lr-export-button-hover-background: var(--lr-color-surface);
     --_lr-export-button-hover-color: var(--lr-color-text);
     --_lr-export-button-hover-border: var(--lr-color-brand);
-    --_lr-export-button-active-background: color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    --_lr-export-button-active-background: ${activeFill('var(--lr-color-surface)')};
     --_lr-export-button-active-color: var(--lr-color-text);
     --_lr-export-button-active-border: var(--lr-color-brand);
   }
@@ -26,7 +26,7 @@ export const styles = css`
     --_lr-export-button-hover-background: var(--lr-color-brand-quiet);
     --_lr-export-button-hover-color: var(--lr-color-brand);
     --_lr-export-button-hover-border: var(--lr-color-brand);
-    --_lr-export-button-active-background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    --_lr-export-button-active-background: ${activeFill('var(--lr-color-brand-quiet)')};
     --_lr-export-button-active-color: var(--lr-color-brand);
     --_lr-export-button-active-border: var(--lr-color-brand);
   }
@@ -37,7 +37,7 @@ export const styles = css`
     --_lr-export-button-hover-background: var(--lr-color-brand-quiet);
     --_lr-export-button-hover-color: var(--lr-color-text-quiet);
     --_lr-export-button-hover-border: var(--lr-color-brand);
-    --_lr-export-button-active-background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    --_lr-export-button-active-background: ${activeFill('var(--lr-color-brand-quiet)')};
     --_lr-export-button-active-color: var(--lr-color-text-quiet);
     --_lr-export-button-active-border: var(--lr-color-brand);
   }
@@ -46,7 +46,7 @@ export const styles = css`
     --_lr-export-button-border: transparent;
     --_lr-export-button-hover-background: var(--lr-color-brand-quiet);
     --_lr-export-button-hover-border: transparent;
-    --_lr-export-button-active-background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    --_lr-export-button-active-background: ${activeFill('var(--lr-color-brand-quiet)')};
     --_lr-export-button-active-border: transparent;
   }
   [part~='trigger'] {
@@ -124,8 +124,7 @@ export const styles = css`
     padding: 0;
   }
   [part~='trigger']:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   [part~='trigger']:focus-visible {
     ${focusRing}
@@ -224,15 +223,14 @@ export const styles = css`
     color: var(--lr-export-button-menu-item-hover-color, inherit);
   }
   :where([part='menu-item']):active:where(:not(:disabled)) {
-    background: var(--lr-export-button-menu-item-active-bg, color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    background: var(--lr-export-button-menu-item-active-bg, ${activeFill('var(--lr-color-brand-quiet)')});
     color: var(--lr-export-button-menu-item-active-color, inherit);
   }
   [part='menu-item']:focus-visible {
     ${focusRing}
   }
   [part='menu-item']:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   [part='format-description'] {
     color: var(--lr-color-text-quiet);

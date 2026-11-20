@@ -48,3 +48,21 @@ it('keeps page-mode horizontal overflow visible outside a narrow host', async ()
   expect(header.right).to.be.greaterThan(base.right + 10);
   expect(document.elementFromPoint(base.right + 10, header.top + header.height / 2) === viewer).to.equal(true);
 });
+
+it('gives a capped, overflowing self-scrolling body a named tab stop only while it overflows', async () => {
+  const viewer = await fixture<LyraDatasetViewer>(html`<lr-dataset-viewer max-height="120px" src=${source}></lr-dataset-viewer>`);
+  await waitUntil(() => viewer.shadowRoot!.querySelector('[part="header-row"]') !== null);
+  const body = viewer.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+  await waitUntil(() => body.getAttribute('tabindex') === '0', 'overflowing body never became focusable');
+  expect([body.getAttribute('role'), body.getAttribute('aria-label')]).to.deep.equal(['region', 'Dataset']);
+  viewer.name = 'Sales';
+  await viewer.updateComplete;
+  await waitUntil(() => body.getAttribute('aria-label') === 'Sales', 'region name did not follow the dataset name');
+  viewer.maxHeight = '400rem';
+  await waitUntil(() => !body.hasAttribute('tabindex'), 'short body kept its tab stop');
+  viewer.maxHeight = '120px';
+  await waitUntil(() => body.getAttribute('tabindex') === '0');
+  viewer.scrollMode = 'page';
+  await viewer.updateComplete;
+  expect(body.hasAttribute('tabindex')).to.equal(false);
+});

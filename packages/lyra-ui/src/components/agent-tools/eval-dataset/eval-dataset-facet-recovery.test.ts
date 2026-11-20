@@ -77,3 +77,14 @@ it('keeps a selected tag individually removable when earlier tags fill the facet
   expect(el.shadowRoot!.querySelectorAll('lr-chip').length).to.equal(500);
   expect([...el.shadowRoot!.querySelectorAll<LyraChip>('lr-chip')].some(facet => facet.value === 'z')).to.equal(false);
 });
+
+it('chooses the omitted tag wording from the numeric omitted count', async function () {
+  this.timeout(30000); // Budget for a heavily loaded multi-browser host; the asserted bounds are unchanged.
+  const examples = (count: number) => Array.from({ length: count }, (_, i) => ({ id: `e${i}`, input: `Example ${i}`, tags: [`t${String(i).padStart(3, '0')}`] }));
+  const el = await fixture<LyraEvalDataset>(html`<lr-eval-dataset .examples=${examples(501)}></lr-eval-dataset>`);
+  const limit = () => el.shadowRoot!.querySelector('[part="limit"]')?.textContent;
+  expect(limit()).to.equal('+1 more tag');
+  el.examples = examples(502);
+  await el.updateComplete;
+  expect(limit()).to.equal('+2 more tags');
+});

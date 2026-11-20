@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -133,6 +133,9 @@ spaces — the Tab key keeps inserting `tabSize` spaces in that case.
 `--lr-code-editor-border` (default `var(--lr-color-border)`) and `--lr-code-editor-fill` (default
 `var(--lr-color-surface)`) retint the frame's resting border and background. Setting the fill also
 colors the line-number gutter during scrolling.
+`--lr-code-editor-gutter-bg` (default: the fill), `--lr-code-editor-gutter-color` (default
+`var(--lr-color-text-quiet)`) and `--lr-code-editor-gutter-border-color` (default
+`var(--lr-color-border)`) retint the gutter alone without a `::part(gutter)` rule.
 `--lr-code-editor-hover-border` (default `var(--lr-color-brand)`) and
 `--lr-code-editor-invalid-border` retint those frame states. The invalid border falls back to
 `--lr-form-control-invalid-border-color`, then `--lr-color-danger`.

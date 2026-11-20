@@ -27,7 +27,7 @@ import { RovingListController } from '../../../internal/roving-list-controller.j
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_evaluationDashboardLabel, LYRA_DEFAULT_evaluationDashboardMetricUnavailable, LYRA_DEFAULT_evaluationDashboardNoRuns, LYRA_DEFAULT_evaluationDashboardRunsLabel } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open, LYRA_DEFAULT_ragEvalDashboardRunsLimit, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_ragEvalDashboardRunsLimit, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusRunning } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type EvaluationMetricFormat = 'number' | 'percent' | 'milliseconds' | 'currency';
@@ -88,19 +88,12 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
     agentRunStatusWaitingApproval: LYRA_DEFAULT_agentRunStatusWaitingApproval,
     agentRunStatusWaitingInput: LYRA_DEFAULT_agentRunStatusWaitingInput,
     chartValueLabel: LYRA_DEFAULT_chartValueLabel,
-    collapse: LYRA_DEFAULT_collapse,
-    copy: LYRA_DEFAULT_copy,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
     durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
     durationSeconds: LYRA_DEFAULT_durationSeconds,
     evaluationDashboardLabel: LYRA_DEFAULT_evaluationDashboardLabel,
     evaluationDashboardMetricUnavailable: LYRA_DEFAULT_evaluationDashboardMetricUnavailable,
     evaluationDashboardNoRuns: LYRA_DEFAULT_evaluationDashboardNoRuns,
     evaluationDashboardRunsLabel: LYRA_DEFAULT_evaluationDashboardRunsLabel,
-    loading: LYRA_DEFAULT_loading,
-    map: LYRA_DEFAULT_map,
-    open: LYRA_DEFAULT_open,
     ragEvalDashboardRunsLimit: LYRA_DEFAULT_ragEvalDashboardRunsLimit,
     statusError: LYRA_DEFAULT_statusError,
     statusRunning: LYRA_DEFAULT_statusRunning,
@@ -140,7 +133,8 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
   /** Run history used by both the chart and list. Empty ids are omitted; duplicates normalize
    *  first-wins. */
   @property({ attribute: false }) runs: readonly AgentEvaluationDashboardRun[] = [];
-  /** Controlled metric selection. `null` or `''` selects the first metric. A non-empty unmatched id leaves the selection empty. */
+  /** Controlled metric selection. `null`, `''` or an unmatched identity selects the first valid
+   *  metric; a non-empty unmatched id also shows the `metric-unavailable` note. */
   @property({ attribute: 'metric-id' }) metricId: string | null = null;
   /** ISO 4217 currency code used by metrics whose format is `currency`. Invalid codes use USD. */
   @property() currency = 'USD';
@@ -192,7 +186,7 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
 
   private get activeMetric(): AgentEvaluationMetric | undefined {
     const metrics = this.normalizedMetrics;
-    return this.metricId ? metrics.find((metric) => metric.id === this.metricId) : metrics[0];
+    return (this.metricId ? metrics.find((metric) => metric.id === this.metricId) : undefined) ?? metrics[0];
   }
   private statusLabel(status: AgentStatusValue): string {
     return agentStatusLabel(status) ?? agentStatusText(this.localize.bind(this), agentStatusKind(status));
@@ -269,7 +263,7 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
             ><lr-stat frame="plain" .label=${metric.label} .value=${value}></lr-stat></button>`;
           })}</div>`
         : nothing}
-      ${this.metricId && !active ? html`<p part="metric-unavailable" role="note">${this.localize('evaluationDashboardMetricUnavailable', undefined, { metric: this.metricId })}</p>` : nothing}
+      ${this.metricId && active?.id !== this.metricId ? html`<p part="metric-unavailable" role="note">${this.localize('evaluationDashboardMetricUnavailable', undefined, { metric: this.metricId })}</p>` : nothing}
       ${!this.withoutChart && active && runs.length
         ? html`<div part="chart"><lr-lite-chart type="line" .height=${this.chartHeight} .labels=${this.chartInputs(runs, active).labels} .datasets=${this.chartInputs(runs, active).datasets} with-legend aria-label=${active.label}></lr-lite-chart></div>`
         : nothing}

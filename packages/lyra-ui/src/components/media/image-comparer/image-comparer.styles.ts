@@ -1,5 +1,6 @@
 import { css } from 'lit';
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
+import { activeFill, focusRingShorthand } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   :host {
@@ -181,8 +182,7 @@ export const styles = css`
     outline: none;
   }
   [part="handle"]:has([part="input"]:focus-visible) .handle-visual {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   /* [part='input'] is a fully-transparent full-bleed native <input type="range">, so hover feedback
      goes on the divider and the whole drag surface responds, not just the small visible handle. */
@@ -192,11 +192,7 @@ export const styles = css`
   /* Same :has() indirection as the hover rule above -- the transparent full-bleed input has
      nothing of its own to tint, so mid-drag the seam deepens past its hover accent. */
   [part~="base"]:has([part="input"]:active) [part="divider"] {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-brand)')};
   }
   ${forcedColorsPart('[part="divider"]')}
   @media (forced-colors: active) {

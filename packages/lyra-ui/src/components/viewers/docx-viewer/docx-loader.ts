@@ -1,5 +1,5 @@
 import { loadDompurify } from '../../../internal/dompurify-loader.js';
-import { createOptionalPeerLoader, type HtmlSanitizer } from '../../../internal/optional-peer-capabilities.js';
+import { createOptionalPeerLoader, hasPeerMethods, type HtmlSanitizer } from '../../../internal/optional-peer-capabilities.js';
 
 export interface MammothApi {
   convertToHtml(input: { arrayBuffer: ArrayBuffer }): Promise<{
@@ -16,12 +16,7 @@ export interface DocxDeps {
 let resolvedDeps: DocxDeps | undefined;
 
 function isMammothApi(value: unknown): value is MammothApi {
-  return (
-    (typeof value === 'object' || typeof value === 'function') &&
-    value !== null &&
-    'convertToHtml' in value &&
-    typeof value.convertToHtml === 'function'
-  );
+  return hasPeerMethods(value, 'convertToHtml');
 }
 
 const mammothLoader = /* @__PURE__ */ createOptionalPeerLoader<MammothApi>({

@@ -4,7 +4,7 @@ import type {
   SceneBridgeCompletedFrame, SceneBridgeCameraProfile, SceneBridgeTargetProjection
 } from '@aceshooting/lyra-map/scene';
 import type { SceneCompletionHost, SceneCompletionInput, SceneCompletionPort, SceneRenderInput } from '../src/components/media/map/map-scene-render-contract.js';
-import type { createMapSceneCompletionHost, createMapSceneCompletionAdapter } from '../src/components/media/map/map-scene-completion-adapter.js';
+import type { createMapSceneCompletionHost, createMapSceneCompletionAdapter } from '../src/components/media/map/fixtures/map-scene-completion-adapter.js';
 import type { MapSceneSessionBacking, SceneCompletedFrame, SceneCameraProfile, SceneTargetProjection } from '../src/internal/map-scene-contract.js';
 
 type Assert<T extends true> = T;

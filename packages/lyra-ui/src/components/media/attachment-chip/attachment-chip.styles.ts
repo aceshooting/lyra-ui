@@ -1,4 +1,4 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingShorthand, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -214,14 +214,13 @@ export const styles = css`
   :where([part='remove-button']):active {
     background: var(
       --lr-attachment-chip-action-active-bg,
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      ${activeFill('transparent')}
     );
   }
   [part='retry-button']:focus-visible,
   [part='preview-button']:focus-visible,
   [part='remove-button']:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   [part='retry-button'] svg,
   [part='preview-button'] svg,

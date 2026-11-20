@@ -1,6 +1,5 @@
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
-import { composedContains } from '../../../internal/composed-tree.js';
 import { tag } from '../../../internal/prefix.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
@@ -18,10 +17,8 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { snapshotLyraHighlights } from '../../../internal/highlight-collection.js';
-import {
-  boundedSelectionRects,
-  boundedSelectionText,
-} from '../../../internal/text-quote.js';
+import { observeTextSelection } from '../../../internal/text-selection-observer.js';
+import { downloadBlob } from '../../../internal/csv.js';
 import type {
   LyraAnchor,
   LyraHighlight,
@@ -212,9 +209,10 @@ export interface LyraTerminalEventMap {
  *   `matchCount` as a lower bound rather than an exact total.
  * @event lr-highlight-activate - `detail: { highlightId }` — a highlighted line was
  *   clicked/activated.
- * @event lr-text-select - `detail: { text, anchor, rects }` — fires on key or pointer release after a text
- *   selection ending inside the viewport. `anchor` is `null` when either selection endpoint isn't
- *   inside a currently-mounted (non-virtualized-out) line. Ranges outside the viewport are ignored.
+ * @event lr-text-select - `detail: { text, anchor, rects }` — fires on key or pointer release, or once a
+ *   keyboard or touch selection settles, after a text selection ending inside the viewport. `anchor`
+ *   is `null` when either selection endpoint isn't inside a currently-mounted (non-virtualized-out)
+ *   line. Ranges outside the viewport are ignored.
  * @csspart base - The outer container.
  * @csspart toolbar - The header row, only rendered when copy/download are enabled.
  * @csspart limit - Localized note shown once input or a line exceeded the size limits and output was omitted.
@@ -444,11 +442,13 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
       document: this.ownerDocument,
       source: this,
     });
+    if (this.hasUpdated) this.bindViewportSelection();
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
-    this.lastSelectedRange = undefined;
+    this.releaseSelection?.();
+    this.releaseSelection = undefined;
     this.downloadGeneration += 1;
     this.cancelPendingAnnouncement();
     this.sink?.release();
@@ -466,6 +466,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   override firstUpdated(changed: PropertyValues): void {
     super.firstUpdated(changed);
     this.announceRegionEl = this.renderRoot.querySelector<HTMLElement>('[part="announcer"]') ?? undefined;
+    this.bindViewportSelection();
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -480,7 +481,8 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
   // --- Buffer / cursor model -------------------------------------------------
 
   private resetBuffer(): void {
-    this.lastSelectedRange = undefined;
+    // A fresh binding forgets the last reported range, so the same range reports again.
+    if (this.releaseSelection) this.bindViewportSelection();
     this.ansiParser.reset();
     this.buffer = [];
     this.retainedCellCount = 0;
@@ -919,15 +921,8 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
       // `lr-open` convention. See the class doc's event list.
       if (this.emitDownloadRequest({ filename }).defaultPrevented) return;
       if (generation !== this.downloadGeneration || !this.isConnected || !this.downloadable) return;
-      const ownerWindow = this.ownerDocument.defaultView;
-      if (!ownerWindow) return;
-      const blob = new ownerWindow.Blob([this.getPlainText()], { type: 'text/plain' });
-      const url = ownerWindow.URL.createObjectURL(blob);
-      const a = this.ownerDocument.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      ownerWindow.setTimeout(() => ownerWindow.URL.revokeObjectURL(url), 5000);
+      if (!this.ownerDocument.defaultView) return;
+      downloadBlob(this.getPlainText(), filename, 'text/plain', this.ownerDocument);
     } finally {
       this.downloadDispatching = false;
     }
@@ -953,66 +948,43 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     if (e.key === 'End') this.jumpToLatest();
   };
 
-  private lastSelectedRange?: Pick<Range, 'startContainer' | 'startOffset' | 'endContainer' | 'endOffset'>;
+  private releaseSelection?: () => void;
 
-  private onViewportSelectionEnd = (event: Event): void => {
-    // The virtual list owns the line text. Read its shadow selection before the document fallback.
-    const shadowGetSelection = (root: ShadowRoot | null | undefined) =>
-      (root as unknown as { getSelection?: () => Selection | null } | null | undefined)?.getSelection?.();
-    const listShadow = this.renderRoot.querySelector(tag('virtual-list'))?.shadowRoot;
-    const selection =
-      shadowGetSelection(listShadow) ?? shadowGetSelection(this.shadowRoot) ?? this.ownerDocument.getSelection();
-    if (!selection || selection.isCollapsed) {
-      this.lastSelectedRange = undefined;
-      return;
-    }
-    let range: Range;
-    try {
-      range = selection.getRangeAt(0);
-    } catch {
-      return;
-    }
-    const ancestor = range.commonAncestorContainer;
-    const element = ancestor.nodeType === 1 ? ancestor as Element : ancestor.parentElement;
-    if (!composedContains(event.currentTarget as Element, element)) {
-      this.lastSelectedRange = undefined;
-      return;
-    }
-    const text = boundedSelectionText(range);
-    if (text === '') return;
-    const last = this.lastSelectedRange;
-    if (last && last.startContainer === range.startContainer && last.startOffset === range.startOffset &&
-      last.endContainer === range.endContainer && last.endOffset === range.endOffset) return;
-    this.lastSelectedRange = {
-      startContainer: range.startContainer, startOffset: range.startOffset,
-      endContainer: range.endContainer, endOffset: range.endOffset,
-    };
-    const lineNumberOf = (node: Node | null): number | null => {
-      let el: Node | null = node;
-      while (el) {
-        if (el.nodeType === 1) {
-          const attr = (el as Element).getAttribute('data-line-number');
-          if (attr !== null) return Number(attr);
+  /** Binds the shared selection observer to the viewport (re-bound on reconnect). The virtual
+   *  list owns the line text, so its shadow selection is read before the document fallback. */
+  private bindViewportSelection(): void {
+    this.releaseSelection?.();
+    const viewport = this.renderRoot.querySelector('[part="viewport"]');
+    this.releaseSelection = viewport ? observeTextSelection(this, viewport, (range, text, rects) => {
+      const lineNumberOf = (node: Node | null): number | null => {
+        let el: Node | null = node;
+        while (el) {
+          if (el.nodeType === 1) {
+            const attr = (el as Element).getAttribute('data-line-number');
+            if (attr !== null) return Number(attr);
+          }
+          el = (el as ParentNode).parentNode ?? (el as unknown as { host?: Node }).host ?? null;
         }
-        el = (el as ParentNode).parentNode ?? (el as unknown as { host?: Node }).host ?? null;
-      }
-      return null;
-    };
-    const startLine = lineNumberOf(selection.anchorNode);
-    const endLine = lineNumberOf(selection.focusNode);
-    const anchor: LyraAnchor | null =
-      startLine !== null && endLine !== null
-        ? { kind: 'line-range', start: Math.min(startLine, endLine), end: Math.max(startLine, endLine) }
-        : null;
-    let rects: TextSelectDetail['rects'] = Object.freeze([]);
-    try {
-      rects = boundedSelectionRects(range);
-    } catch {
-      // A live Range can be invalidated between text and geometry capture. Keep the bounded
-      // text/anchor event useful while failing closed on its optional geometry.
-    }
-    this.emit('lr-text-select', { text, anchor, rects });
-  };
+        return null;
+      };
+      const startLine = lineNumberOf(range.startContainer);
+      const endLine = lineNumberOf(range.endContainer);
+      const anchor: LyraAnchor | null =
+        startLine !== null && endLine !== null
+          ? { kind: 'line-range', start: Math.min(startLine, endLine), end: Math.max(startLine, endLine) }
+          : null;
+      this.emit('lr-text-select', { text, anchor, rects } satisfies TextSelectDetail);
+    }, undefined, {
+      readRange: () => {
+        const shadowGetSelection = (root: ShadowRoot | null | undefined) =>
+          (root as unknown as { getSelection?: () => Selection | null } | null | undefined)?.getSelection?.();
+        const listShadow = this.renderRoot.querySelector(tag('virtual-list'))?.shadowRoot;
+        const selection =
+          shadowGetSelection(listShadow) ?? shadowGetSelection(this.shadowRoot) ?? this.ownerDocument.getSelection();
+        return !selection || selection.isCollapsed ? null : selection.getRangeAt(0);
+      },
+    }) : undefined;
+  }
 
   // --- Render ------------------------------------------------------------
 
@@ -1170,8 +1142,6 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
           aria-live="off"
           aria-label=${ariaLabel}
           @keydown=${this.onViewportKeyDown}
-          @pointerup=${this.onViewportSelectionEnd}
-          @keyup=${this.onViewportSelectionEnd}
         >
           <lr-virtual-list
             exportparts="line:line, line-interactive:line-interactive, line-highlight-accent:line-highlight-accent, line-highlight-success:line-highlight-success, line-highlight-warning:line-highlight-warning, line-highlight-danger:line-highlight-danger, line-highlight-neutral:line-highlight-neutral, line-match:line-match, line-active-match:line-active-match"

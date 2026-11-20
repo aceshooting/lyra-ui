@@ -2007,3 +2007,16 @@ it('uses the component hover token on its action surface', async () => {
     await resetMouse();
   }
 });
+
+it('paints the pressed row from the component pressed token', async () => {
+  const el = await fixture(html`<lr-conversation-item data-lr-theme-scope label="Row" style="--lr-conversation-item-pressed-bg: rgb(44, 55, 66); --lr-transition-fast: 0s"></lr-conversation-item>`);
+  const target = el.shadowRoot!.querySelector('[part~="base"]')!;
+  try {
+    await hoverUntilMatched(target, 'row hover');
+    await sendMouse({ type: 'down' });
+    await waitUntil(() => getComputedStyle(target).backgroundColor === 'rgb(44, 55, 66)', 'the pressed row never took the pressed token');
+  } finally {
+    await sendMouse({ type: 'up' });
+    await resetMouse();
+  }
+});

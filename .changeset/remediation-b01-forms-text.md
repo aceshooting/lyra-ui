@@ -1,5 +1,5 @@
 ---
-'@aceshooting/lyra-ui': major
+'@aceshooting/lyra-ui': minor
 ---
 
 Time input segments, time range handles, OTP segments and token buttons no longer act on or cancel Ctrl/Alt/Meta-modified or IME-composing keys.

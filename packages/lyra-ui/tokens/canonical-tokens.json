@@ -71,7 +71,8 @@
       "description": "Canonical shared component token for color border strong.",
       "values": {
         "light": "var(--_lr-glass-qualified-border-strong, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #4b5563)))",
-        "dark": "var(--_lr-glass-qualified-border-strong, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #c4c9d1)))"
+        "dark": "var(--_lr-glass-qualified-border-strong, var(--_lr-preference-control-color, var(--lr-theme-color-border-strong, #c4c9d1)))",
+        "forcedColors": "ButtonText"
       },
       "themeInput": "--lr-theme-color-border-strong"
     },

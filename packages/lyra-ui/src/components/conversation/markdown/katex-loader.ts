@@ -1,4 +1,4 @@
-import { createOptionalPeerLoader } from '../../../internal/optional-peer-capabilities.js';
+import { createOptionalPeerLoader, hasPeerMethods } from '../../../internal/optional-peer-capabilities.js';
 
 /** Re-exported under a component-scoped name -- what `<lr-markdown>`'s `math` option needs from
  *  the optional `katex` peer (`renderToString(tex, options)`). */
@@ -7,12 +7,7 @@ export interface KatexApi {
 }
 
 function isKatexApi(value: unknown): value is KatexApi {
-  return (
-    (typeof value === 'object' || typeof value === 'function') &&
-    value !== null &&
-    'renderToString' in value &&
-    typeof value.renderToString === 'function'
-  );
+  return hasPeerMethods(value, 'renderToString');
 }
 
 const katex = /* @__PURE__ */ createOptionalPeerLoader<KatexApi>({

@@ -1,4 +1,4 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -82,14 +82,7 @@ export const styles = css`
   :host(:not(:disabled):not([readonly])) [part~="base"]:active [part="star"] {
     color: var(
       --lr-rating-active-color,
-      color-mix(
-        in oklab,
-        var(
-          --lr-rating-empty-color,
-          var(--symbol-color, var(--lr-color-border-strong))
-        ),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var( --lr-rating-empty-color, var(--symbol-color, var(--lr-color-border-strong)) )')}
     );
   }
   [part="star"] {
@@ -136,8 +129,7 @@ export const styles = css`
     );
   }
   :host(:disabled) [part~="base"] {
-    cursor: not-allowed;
-    opacity: var(--lr-opacity-disabled);
+    ${disabledControl}
   }
   :host([readonly]) [part~="base"] {
     cursor: default;

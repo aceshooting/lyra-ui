@@ -1,5 +1,7 @@
 import {
   createOptionalPeerLoader,
+  hasPeerMethods,
+  isPeerObject,
   resolveOptionalPeerCapability,
 } from '../../../internal/optional-peer-capabilities.js';
 
@@ -117,9 +119,7 @@ export interface D3Modules {
 }
 
 function optionalPeerRecord(value: unknown): Record<string, unknown> {
-  return (typeof value === 'object' || typeof value === 'function') && value !== null
-    ? value as Record<string, unknown>
-    : {};
+  return isPeerObject(value) ? value as Record<string, unknown> : {};
 }
 
 type CallableApi<Name extends string> = Record<Name, (...args: never[]) => unknown>;
@@ -136,8 +136,7 @@ function hasRequiredCallables<Name extends string>(
   value: unknown,
   names: readonly Name[],
 ): value is CallableApi<Name> {
-  const candidate = optionalPeerRecord(value);
-  return names.every((name) => typeof candidate[name] === 'function');
+  return hasPeerMethods(value, ...names);
 }
 
 function isD3ForceApi(value: unknown): value is CallableApi<(typeof forceApiNames)[number]> {

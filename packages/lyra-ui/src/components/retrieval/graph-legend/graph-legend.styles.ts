@@ -1,11 +1,10 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
   }
   [part='base'] {
     display: flex;
@@ -38,10 +37,10 @@ export const styles = css`
     transition: var(--lr-transition-interactive);
   }
   button[part~='item']:hover {
-    background: var(--lr-graph-legend-item-hover-fill, color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
+    background: var(--lr-graph-legend-item-hover-fill, ${hoverFill('transparent')});
   }
   button[part~='item']:active {
-    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('transparent')};
   }
   button[part~='item']:focus-visible {
     ${focusRing}

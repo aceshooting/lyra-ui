@@ -1,4 +1,4 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -93,11 +93,7 @@ export const styles = css`
     box-shadow: var(--lr-stat-link-active-shadow, var(--lr-stat-link-hover-shadow, var(--lr-shadow-s)));
     background: var(
       --lr-stat-link-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-stat-bg, var(--lr-color-surface)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-stat-bg, var(--lr-color-surface))')}
     );
   }
   [part='base'][href]:focus-visible {

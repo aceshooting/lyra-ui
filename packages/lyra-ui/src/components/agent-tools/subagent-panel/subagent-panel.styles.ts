@@ -1,9 +1,10 @@
-import { focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { containerHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
-  :host { display: block; container-type: inline-size; contain-intrinsic-inline-size: var(--lr-size-20rem); }
+  :host { ${containerHost} }
   [part='list'] { display: flex; flex-direction: column; gap: var(--lr-space-xs); margin: 0; padding: 0; list-style: none; }
   /* Run-row chrome behind inline var() fallbacks, same convention as the dense size tier below:
      each fallback is the pre-existing token, so an unset panel paints exactly as before while a
@@ -31,11 +32,7 @@ export const styles = css`
      which follows the text colour -- a distinctly deeper step in both light and dark themes. It
      mixes from the hover hook, not the raw token, so a retuned hover keeps its deeper press. */
   [part='run-trigger']:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-subagent-panel-hover-bg, var(--lr-color-surface-raised)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-subagent-panel-hover-bg, var(--lr-color-surface-raised))')};
   }
   [part='run-trigger']:focus-visible { ${focusRingInsetOffset} }
   [part='label'], [part='task'], [part='model'] { min-inline-size: 0; overflow-wrap: break-word; }

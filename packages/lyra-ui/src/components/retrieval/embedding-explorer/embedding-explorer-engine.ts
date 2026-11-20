@@ -3,7 +3,7 @@ import { Engine3dSelection, engine3dFailureReason, webgl2Available, type Engine3
 import { readCanvasRgba, resolveCanvasColor, toRgbaString } from '../../../internal/canvas-color.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { tag } from '../../../internal/prefix.js';
-import { isAccessibilityVisible } from '../../../internal/accessibility-visibility.js';
+import { observeAdmission, watchEngineStyle } from '../../../internal/engine-admission.js';
 import type { EmbeddingRows } from './embedding-explorer-data.js';
 
 export const embeddingPointsLoader = createEngine3dLoader({
@@ -32,16 +32,13 @@ export class EmbeddingEngineController {
   private readonly disposed = new WeakSet<Engine3dInstance>();
   private rows: EmbeddingRows | null = null;
   private container: HTMLElement | null = null;
-  private observer?: IntersectionObserver;
-  private eligibility?: MutationObserver;
-  private intersecting = false;
+  private admission?: () => void;
   private resizeObserver?: ResizeObserver;
   private pending = false;
   private attempted = false;
   private preference: Engine3dPreference = 'builtin';
   private sourceMode = false;
-  private styleObserver?: MutationObserver;
-  private mediaCleanup: (() => void)[] = [];
+  private releaseTheme?: () => void;
   private hover = -1;
   private selected = -1;
   private focus = -1;
@@ -62,13 +59,9 @@ export class EmbeddingEngineController {
   /** Release ownership first; callers must preserve any newer cycle started by disposal. */
   private releaseEngine(): number {
     const generation = ++this.generation;
-    this.observer?.disconnect(); this.observer = undefined;
-    this.eligibility?.disconnect(); this.eligibility = undefined;
-    this.intersecting = false;
+    this.admission?.(); this.admission = undefined;
     this.resizeObserver?.disconnect(); this.resizeObserver = undefined;
-    this.styleObserver?.disconnect(); this.styleObserver = undefined;
-    for (const cleanup of this.mediaCleanup) cleanup();
-    this.mediaCleanup = [];
+    this.releaseTheme?.(); this.releaseTheme = undefined;
     const engine = this.engine; this.engine = undefined;
     this.ready = this.loading = this.pending = false;
     this.software = false; this.hover = -1;
@@ -117,36 +110,15 @@ export class EmbeddingEngineController {
       return;
     }
     if (this.pending || this.attempted || this.selection.renderer !== 'webgl') return;
-    if (this.observer || this.eligibility) return;
-    const view = this.host.ownerDocument.defaultView;
+    if (this.admission) return;
     const generation = this.generation;
-    this.intersecting = view?.IntersectionObserver === undefined;
-    const admit = (): void => {
-      if (generation !== this.generation || this.pending || this.attempted || !this.intersecting || !isAccessibilityVisible(this.host)) return;
-      this.observer?.disconnect(); this.observer = undefined;
-      this.eligibility?.disconnect(); this.eligibility = undefined;
-      void this.start();
-    };
-    if (view?.IntersectionObserver) {
-      this.observer = new view.IntersectionObserver(entries => {
-        if (generation !== this.generation) return;
-        for (const entry of entries) if (entry.target === container) this.intersecting = entry.isIntersecting;
-        admit();
-      });
-      this.observer.observe(container);
-    }
     // Only pending admission observes author fences; no polling or subtree/document observer.
-    if (view?.MutationObserver) {
-      this.eligibility = new view.MutationObserver(admit);
-      let ancestor: Element | null = this.host;
-      let depth = 0;
-      while (ancestor && depth++ <= 256) {
-        this.eligibility.observe(ancestor, { attributes: true, attributeFilter: ['aria-hidden', 'inert', 'hidden', 'style', 'class', 'open'] });
-        const root: Node = ancestor.getRootNode();
-        ancestor = ancestor.assignedSlot ?? ancestor.parentElement ?? (root instanceof view.ShadowRoot ? root.host : null);
-      }
-    }
-    admit();
+    let admitted = false;
+    const admission = observeAdmission(this.host, container, {
+      isReady: () => generation === this.generation && !this.pending && !this.attempted,
+      onAdmit: () => { admitted = true; this.admission = undefined; void this.start(); },
+    });
+    if (!admitted) this.admission = admission;
   }
 
   private fail(reason: Engine3dFallbackReason): void {
@@ -226,20 +198,8 @@ export class EmbeddingEngineController {
         if (!current() || !this.ready) return;
         try { engine!.setStyle(this.style()); } catch { if (current()) this.fail('error'); }
       };
-      if (view?.MutationObserver) {
-        this.styleObserver = new view.MutationObserver(refreshStyle);
-        let ancestor: Element | null = this.host;
-        while (ancestor) {
-          this.styleObserver.observe(ancestor, { attributes: true });
-          const root: Node = ancestor.getRootNode();
-          ancestor = ancestor.parentElement ?? (root instanceof view.ShadowRoot ? root.host : null);
-        }
-      }
-      for (const query of ['(prefers-reduced-motion: reduce)', '(forced-colors: active)', '(prefers-color-scheme: dark)']) {
-        const media = view?.matchMedia(query);
-        media?.addEventListener('change', refreshStyle);
-        if (media) this.mediaCleanup.push(() => media.removeEventListener('change', refreshStyle));
-      }
+      // Theme attributes and the style media queries only, never every ancestor attribute.
+      this.releaseTheme = watchEngineStyle(this.host, refreshStyle);
       this.pending = this.loading = false;
       this.ready = this.selection.renderer === 'webgl';
       this.syncState();

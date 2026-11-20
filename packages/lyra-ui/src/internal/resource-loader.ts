@@ -1,8 +1,7 @@
 import { finiteCount } from './numbers.js';
 import { safeFetchUrl } from './safe-url.js';
 
-/** Default cap for remote resources before a viewer hands them to a parser. */
-/** Default source size limit in bytes (25 MiB). */
+/** Default cap in bytes (25 MiB) for a remote resource before a viewer hands it to a parser. */
 export const DEFAULT_MAX_RESOURCE_BYTES = 26214400;
 export const MAX_RESOURCE_BYTES_CEILING = 250 * 1024 * 1024;
 

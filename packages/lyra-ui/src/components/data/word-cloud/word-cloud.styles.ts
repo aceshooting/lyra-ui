@@ -22,12 +22,23 @@ export const styles = css`
     flex-direction: column;
     gap: var(--lr-space-xs);
     block-size: 100%;
+    /* A host narrower than the legible floor scrolls rather than shrinking the words further. */
+    overflow-x: auto;
   }
   svg {
     display: block;
     inline-size: 100%;
     block-size: 100%;
     ${iconHitTarget}
+    /* Never narrower than the width at which the smallest word still renders at the legible floor
+       (or its own size when that is smaller), and never wider than the natural layout. */
+    min-inline-size: max(
+      var(--lr-icon-button-size),
+      min(
+        var(--_lr-word-cloud-natural-width),
+        calc(var(--lr-word-cloud-legible-font-size, var(--lr-font-size-2xs)) * var(--_lr-word-cloud-floor-scale))
+      )
+    );
     cursor: pointer;
   }
   svg:hover {

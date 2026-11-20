@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'ቀን መቁጠሪያ ክፈት',
+  item: 'ንጥል',
   comboboxLoadError: 'አማራጮችን መጫን አልተቻለም።',
   comboboxSelectedOverflow: '+{n} ተጨማሪ',
   checkboxRequired: 'ለመቀጠል ከፈለጉ ይህን ሳጥን ይምረጡ።',

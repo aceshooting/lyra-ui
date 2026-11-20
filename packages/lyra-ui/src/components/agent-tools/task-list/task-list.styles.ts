@@ -1,4 +1,4 @@
-import { focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { srOnly } from '../../../internal/a11y.js';
 
@@ -82,11 +82,7 @@ export const styles = [
        --lr-color-mix-partner, which follows the text colour, so it reads as a distinctly deeper
        step than hover in both light and dark themes rather than repeating it. */
     :where(button[part="header"]):active {
-      background: color-mix(
-        in oklab,
-        var(--lr-color-brand-quiet),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      );
+      background: ${activeFill('var(--lr-color-brand-quiet)')};
       color: var(--lr-color-text);
     }
     /* The quiet summary count fails contrast on the hover tint and on the deeper pressed mix, so it
@@ -97,8 +93,7 @@ export const styles = [
       color: inherit;
     }
     button[part="header"]:focus-visible {
-      outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-      outline-offset: calc(-1 * max(var(--lr-focus-ring-width), calc(var(--lr-focus-ring-width) + var(--lr-focus-ring-offset))));
+      ${focusRingInsetOffset}
     }
     [part="toggle"] {
       display: inline-flex;
@@ -151,11 +146,7 @@ export const styles = [
       background: var(--lr-color-brand-quiet);
     }
     :where([part="item"][tabindex]):active {
-      background: color-mix(
-        in oklab,
-        var(--lr-color-brand-quiet),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      );
+      background: ${activeFill('var(--lr-color-brand-quiet)')};
     }
     [part="item"][tabindex]:focus-visible {
       ${focusRingInsetOffset}

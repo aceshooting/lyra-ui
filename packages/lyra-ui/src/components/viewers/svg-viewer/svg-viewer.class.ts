@@ -4,6 +4,8 @@ import { ViewerSourceController, ViewerSourceUrlNotAllowedError, type ViewerSour
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
+import { ref } from 'lit/directives/ref.js';
+import { RegionHitTargetsController } from '../../../internal/region-hit-targets.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import {
@@ -33,7 +35,7 @@ import { sanitizePassiveMarkupFragment } from '../../../internal/passive-markup.
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_download, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_download, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_popover, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_loadingDocument, LYRA_DEFAULT_svgViewerLabel } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -116,7 +118,8 @@ class LyraSvgViewerBase extends LyraElement<LyraSvgViewerEventMap> {}
  * @csspart region-highlight - One region highlight (`data-tone`, `data-active`).
  * @csspart region-highlight-target - Transparent activation geometry around a region highlight,
  *   with a minimum pointer/focus area independent of the visual rectangle.
- * @csspart highlight-actions - Non-overlapping actions used for multiple region highlights.
+ * @csspart highlight-actions - Non-overlapping actions used instead of on-image targets when the
+ *   minimum hit areas of two or more region highlights would overlap.
  * @csspart region-highlight-action - One non-overlapping highlight action.
  * @cssprop --lr-svg-viewer-action-background - Resting background of viewer actions.
  * @cssprop --lr-svg-viewer-action-hover-background - Hover background of viewer actions.
@@ -157,8 +160,10 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     loading: LYRA_DEFAULT_loading,
     loadingDocument: LYRA_DEFAULT_loadingDocument,
     map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     open: LYRA_DEFAULT_open,
     popover: LYRA_DEFAULT_popover,
+    search: LYRA_DEFAULT_search,
     select: LYRA_DEFAULT_select,
     svgViewerLabel: LYRA_DEFAULT_svgViewerLabel,
   };
@@ -198,6 +203,8 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     },
   });
   private readonly announcements = new ViewerAnnouncementController(this);
+  private readonly regionTargets = new RegionHitTargetsController(this, () =>
+    this.regionHighlights().map(({ anchor }) => anchor.rect));
 
   private releaseScrollRegion?: () => void;
 
@@ -245,6 +252,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
       this.fetchState.kind === 'error' ? this.fetchState.message() : this.localize('loadingDocument'),
     );
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
+    if (changed.has('highlights') || changed.has('activeHighlightId')) this.regionTargets.sync();
     if (this.isConnected && changed.has('fetchState') && this.fetchState.kind === 'loaded') this.emit('lr-load', {});
   }
 
@@ -298,14 +306,15 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     content: TemplateResult,
     regionHighlights: ResolvedRegionHighlight[],
   ): TemplateResult {
-    const inner = html`<div class="zoom-content">
-      ${content}${this.renderHighlightLayer(regionHighlights, regionHighlights.length === 1)}
+    const showActions = this.regionTargets.showActions(regionHighlights.length);
+    const inner = html`<div class="zoom-content" ${ref(this.regionTargets.bind)}>
+      ${content}${this.renderHighlightLayer(regionHighlights, !showActions)}
     </div>`;
     const frame = this.zoomable ? html`<lr-pan-zoom
       exportparts="viewport:frame-viewport, content:frame-content, controls:frame-controls, zoom-in:frame-zoom-in, zoom-out:frame-zoom-out, reset:frame-reset"
       @lr-zoom-change=${this.stopPanZoomEvent}
     >${inner}</lr-pan-zoom>` : inner;
-    return html`${frame}${this.renderHighlightActions(regionHighlights)}`;
+    return html`${frame}${this.renderHighlightActions(regionHighlights, showActions)}`;
   }
 
   private regionHighlights(): ResolvedRegionHighlight[] {
@@ -344,11 +353,12 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
 
   private renderHighlightActions(
     regionHighlights: ResolvedRegionHighlight[],
+    showActions: boolean,
   ): TemplateResult | typeof nothing {
     return renderRegionHighlightActions(regionHighlights,
       (highlight, index, total) => this.highlightActionLabel(highlight, index, total),
       this.renderRoot, this.effectiveDirection === 'rtl',
-      (highlightId) => this.emit('lr-highlight-activate', { highlightId }));
+      (highlightId) => this.emit('lr-highlight-activate', { highlightId }), showActions);
   }
 
   /** Per-viewer hook for `DocumentAnchorTarget`: resolves a `region` anchor back to its owning

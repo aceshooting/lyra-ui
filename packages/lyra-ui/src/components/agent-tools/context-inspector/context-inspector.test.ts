@@ -158,6 +158,18 @@ it('renders a truncation-boundary marker only for truncated segments, with omitt
   expect(rows[2]!.querySelector('[part="truncation-boundary"]')!.textContent).to.include('40');
 });
 
+it('chooses the token wording from the numeric token counts', async () => {
+  const el = (await fixture(html`<lr-context-inspector></lr-context-inspector>`)) as LyraContextInspector;
+  el.segments = [
+    { id: 's1', label: 'A', text: 'a', tokens: 1, truncated: true, omittedTokens: 1 },
+    { id: 's2', label: 'B', text: 'b', tokens: 2, truncated: true, omittedTokens: 2 },
+  ];
+  await el.updateComplete;
+  const read = (part: string) => [...el.shadowRoot!.querySelectorAll(`[part="${part}"]`)].map((node) => node.textContent!.trim());
+  expect(read('segment-tokens')).to.deep.equal(['1 token', '2 tokens']);
+  expect(read('truncation-boundary')).to.deep.equal(['Truncated — 1 token omitted', 'Truncated — 2 tokens omitted']);
+});
+
 it('wraps a redacted character range in a titled [part="redaction"] mark, leaving the rest of the text intact', async () => {
   const el = (await fixture(html`<lr-context-inspector></lr-context-inspector>`)) as LyraContextInspector;
   el.segments = [

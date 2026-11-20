@@ -1,7 +1,7 @@
 import { expect } from '@open-wc/testing';
 import { completionCameraFacts, completionUiFixture } from '../../../../test/map-scene-completion-fixtures.js';
 import { sceneMarker, scenePath } from '../../../../test/map-scene-admission-fixtures.js';
-import { createMapSceneCompletionAdapter, createMapSceneCompletionHost } from './map-scene-completion-adapter.js';
+import { createMapSceneCompletionAdapter, createMapSceneCompletionHost } from './fixtures/map-scene-completion-adapter.js';
 import type { SceneCompletedFrame } from '../../../internal/map-scene-contract.js';
 
 describe('map scene completion authority and failure recovery', () => {

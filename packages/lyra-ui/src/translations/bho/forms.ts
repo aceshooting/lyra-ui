@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'कैलेंडर खोलीं',
+  item: 'चीज',
   comboboxLoadError: 'विकल्प लोड ना हो सकल।',
   comboboxSelectedOverflow: '+{n} अउरी',
   checkboxRequired: 'आगे बढ़े के बा त ई डिब्बा पर टिक करीं।',

@@ -150,7 +150,10 @@ before the input renders.
 the committed value. Free-text edits include the exact draft in `query`, including an empty string.
 Commit events omit `query`. Enter commits the active enabled suggestion or the trimmed draft.
 Escape or leaving the control dismisses the draft.
-`lr-change` — `detail: { value, inCatalog }`. `lr-preview-request` — `detail: {
+`lr-change` — `detail: { value, inCatalog }`. Cancelable `lr-change-request` (frozen `{ value,
+inCatalog }`) precedes each pick or free-text commit, and `lr-show`/`lr-hide` (cancelable, except a
+close forced by disabling) plus `lr-after-show`/`lr-after-hide` report every listbox open and close
+after the first render, exactly as on `lr-model-select`. `lr-preview-request` — `detail: {
 voiceId, previewUrl? }`, cancelable. `lr-preview-change` — `detail: { voiceId }`, internal playback
 started (`voiceId`, only after `play()` fulfills) or stopped (`null`); a pending rejection emits
 neither. Plus owner-realm native `input`/`change` (retaining each free-text `InputEvent` payload)

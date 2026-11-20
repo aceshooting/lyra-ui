@@ -1,11 +1,10 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { containerHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
-    display: block;
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${containerHost}
   }
 
   :host([frame='card']) [part='base'] {
@@ -66,10 +65,10 @@ export const styles = css`
      dark one. Not the former hand-rolled 8% mix against --lr-color-text -- a literal no consumer
      could retune, at a strength no other control in the library shared. */
   [part='handoff']:hover {
-    background: var(--lr-agent-trace-handoff-hover-bg, color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover)));
+    background: var(--lr-agent-trace-handoff-hover-bg, ${hoverFill('transparent')});
   }
   [part='handoff']:active {
-    background: var(--lr-agent-trace-handoff-pressed-bg, color-mix(in oklab, var(--lr-agent-trace-handoff-hover-bg, transparent), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    background: var(--lr-agent-trace-handoff-pressed-bg, ${activeFill('var(--lr-agent-trace-handoff-hover-bg, transparent)')});
   }
   [part='handoff']:focus-visible {
     ${focusRing}
@@ -84,11 +83,7 @@ export const styles = css`
      --lr-agent-trace-handoff-active-bg rather than transparent, so a retinted active fill gets a
      deeper tier of itself. */
   [part='handoff'][data-active]:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-agent-trace-handoff-active-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-agent-trace-handoff-active-bg, var(--lr-color-brand-quiet))')};
   }
 
   [part='tree'] {

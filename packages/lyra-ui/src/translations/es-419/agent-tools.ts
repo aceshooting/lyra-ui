@@ -12,7 +12,11 @@ const strings: LyraLocaleStrings = {
   changeReviewLimit: 'Solo se muestran los primeros {count} cambios.',
   mcpAppUnavailable: 'No se pudo cargar esta aplicación interactiva.',
   promptStudioPreviewLimit: 'Vista previa no disponible: se superó el límite de expansión del texto.',
-  contextInspectorTruncatedCount: 'Truncado: se omitieron {count} tokens',
+  contextInspectorTruncatedCount: {
+    one: 'Truncado: se omitió {count} token',
+    many: 'Truncado: se omitieron {count} tokens',
+    other: 'Truncado: se omitieron {count} tokens',
+  },
   evaluationRunExampleStartedAnnounce: '{label} comenzó',
   evaluationRunExampleCompletedAnnounce: '{label} finalizó',
   evaluationRunExampleFailedAnnounce: '{label} falló',

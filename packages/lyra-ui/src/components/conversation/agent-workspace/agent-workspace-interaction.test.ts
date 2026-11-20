@@ -66,6 +66,18 @@ it('disables only its built-in composer and scopes its child events', async () =
   expect(events).to.deep.equal(['lr-submit', 'lr-change']);
 });
 
+it('lets built-in retrieval load-more requests reach host listeners', async () => {
+  const el = await fixture<HTMLElementTagNameMap['lr-agent-workspace']>(html`<lr-agent-workspace
+    retrieval-loading retrieval-has-more></lr-agent-workspace>`);
+  await el.updateComplete;
+  const results = el.shadowRoot!.querySelector('lr-retrieval-results');
+  expect(results, 'built-in retrieval results').to.not.equal(null);
+  let requests = 0;
+  el.addEventListener('lr-load-more', () => { requests += 1; });
+  results!.dispatchEvent(new CustomEvent('lr-load-more', { bubbles: true, composed: true }));
+  expect(requests).to.equal(1);
+});
+
 it('names the conversation log once within the workspace', async () => {
   const el = await fixture<HTMLElementTagNameMap['lr-agent-workspace']>(html`<lr-agent-workspace></lr-agent-workspace>`);
   const region = el.shadowRoot!.querySelector('[part="conversation"]')!;

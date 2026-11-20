@@ -8,8 +8,7 @@ import { styles } from './permission-grant.styles.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_approvalQueuePending, LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_permissionGrantAllowOnce, LYRA_DEFAULT_permissionGrantAllowSession, LYRA_DEFAULT_permissionGrantLabel, LYRA_DEFAULT_permissionGrantScopeLabel } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_date, LYRA_DEFAULT_deny, LYRA_DEFAULT_details, LYRA_DEFAULT_map, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_approvalQueuePending, LYRA_DEFAULT_confirmApproved, LYRA_DEFAULT_confirmDenied, LYRA_DEFAULT_deny, LYRA_DEFAULT_permissionGrantAllowOnce, LYRA_DEFAULT_permissionGrantAllowSession, LYRA_DEFAULT_permissionGrantLabel, LYRA_DEFAULT_permissionGrantScopeLabel } from '../../../internal/default-strings/agent-tools.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** `granted` is an alias of the shared `approved` spelling. */
@@ -64,21 +63,13 @@ export class LyraPermissionGrant extends LyraElement<LyraPermissionGrantEventMap
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     approvalQueuePending: LYRA_DEFAULT_approvalQueuePending,
-    collapse: LYRA_DEFAULT_collapse,
     confirmApproved: LYRA_DEFAULT_confirmApproved,
     confirmDenied: LYRA_DEFAULT_confirmDenied,
-    date: LYRA_DEFAULT_date,
     deny: LYRA_DEFAULT_deny,
-    details: LYRA_DEFAULT_details,
-    map: LYRA_DEFAULT_map,
-    open: LYRA_DEFAULT_open,
     permissionGrantAllowOnce: LYRA_DEFAULT_permissionGrantAllowOnce,
     permissionGrantAllowSession: LYRA_DEFAULT_permissionGrantAllowSession,
     permissionGrantLabel: LYRA_DEFAULT_permissionGrantLabel,
     permissionGrantScopeLabel: LYRA_DEFAULT_permissionGrantScopeLabel,
-    progress: LYRA_DEFAULT_progress,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 

@@ -1,4 +1,4 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRingShorthand, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -54,24 +54,15 @@ export const styles = css`
   :host(:not([frame="plain"])) a[part="base"]:not([aria-disabled="true"]):active {
     border-color: var(
       --lr-media-card-active-border-color,
-      color-mix(
-        in oklab,
-        var(--lr-color-brand),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-color-brand)')}
     );
     background: var(
       --lr-media-card-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-media-card-bg, var(--lr-color-surface)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-media-card-bg, var(--lr-color-surface))')}
     );
   }
   [part="base"]:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   /* Every branch here adds one qualifier over the resting rule it overrides, so the not-allowed
      cursor wins on specificity rather than on source order; the hover/pressed rules above and below
@@ -94,8 +85,7 @@ export const styles = css`
   button[part="base"]:disabled,
   a[part="base"][aria-disabled="true"],
   [part="open-button"]:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   /* Chrome escape hatch for a dense list/feed of cards -- the library-wide
      :host([frame='plain']) [part='base'] reset. Image/video kinds already render [part='base'] with
@@ -165,15 +155,10 @@ export const styles = css`
   /* Hover only finishes opacifying the translucent scrim, leaving it nowhere further to go; pressed
      mixes that now-solid surface toward --lr-color-mix-partner instead. */
   [part="open-button"]:not(:disabled):active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-surface)')};
   }
   [part="open-button"]:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   [part="open-button"] svg {
     display: block;

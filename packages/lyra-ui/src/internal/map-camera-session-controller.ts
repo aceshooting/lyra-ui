@@ -1,6 +1,6 @@
 import { simulationClockLifetime, type ClockSnapshot, type SimulationClock } from '../simulation-clock.js';
 import { getOwnDataDescriptor, isPlainDataRecord, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from './data-descriptors.js';
-import { admitMapCameraTour, admitMapViewpoint, sampleMapCameraTour, type AdmittedMapCameraTour, type MapViewpoint } from './map-camera-session-data.js';
+import { admitMapCameraTour, admitMapViewpoint, sameMapViewpoint, sampleMapCameraTour, type AdmittedMapCameraTour, type MapViewpoint } from './map-camera-session-data.js';
 import { mapCameraSessionAttachment, type MapCameraPreparedCommand, type MapCameraSessionLease } from './map-camera-session.js';
 import { admitMapCameraFollowOptions, type MapCameraFollowOptions as AdmittedFollowOptions } from './map-camera-follow-data.js';
 import { prepareMapCameraFollow, startMapCameraFollow, type MapCameraFollowPlan, type MapCameraFollowRunner,
@@ -134,10 +134,6 @@ function transitionOption(input: unknown): Transition {
   if (duration !== undefined && (typeof duration !== 'number' || !Number.isFinite(duration) || duration < 0)) return fail('invalid-options');
   return Object.freeze({ kind, ...(duration === undefined ? {} : { duration }) });
 }
-function sameView(first: MapViewpoint | undefined, second: MapViewpoint): boolean {
-  return first !== undefined && first.zoom === second.zoom && first.bearing === second.bearing && first.pitch === second.pitch &&
-    first.center[0] === second.center[0] && first.center[1] === second.center[1];
-}
 
 /** Internal saved-view and shared-clock owner. Native attachment and clock instances remain opaque. */
 export function createMapCameraSessionController(host: HTMLElement, options?: MapCameraSessionOptions) {
@@ -239,7 +235,7 @@ export function createMapCameraSessionController(host: HTMLElement, options?: Ma
       const target = sampleMapCameraTour(candidate.tour, delivered.instant, { reducedMotion: lease!.reducedMotion() });
       if (!current(candidate)) return;
       const command = prepare(candidate.token, target, { kind: 'jump' });
-      if (!current(candidate) || sameView(candidate.applied, command.view)) return;
+      if (!current(candidate) || sameMapViewpoint(candidate.applied, command.view)) return;
       commit(candidate, command);
     } catch { unavailable(candidate); }
   };

@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'Vula ikhalenda',
+  item: 'into',
   comboboxLoadError: 'Izinketho azilayisekanga.',
   comboboxSelectedOverflow: '+{n} ngaphezulu',
   checkboxRequired: 'Thikha leli bhokisi ukuze uqhubeke.',

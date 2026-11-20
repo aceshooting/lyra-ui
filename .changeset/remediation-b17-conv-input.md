@@ -1,8 +1,8 @@
 ---
-'@aceshooting/lyra-ui': major
+'@aceshooting/lyra-ui': minor
 ---
 
-The agent workspace scopes built-in child events to their controls. Listen directly on the child for its clipboard, export, disclosure and native control events.
+The agent workspace stops the generic control-state events of its built-in children (native `input` and `change`, `lr-change`, `lr-invalid`, disclosure and show/hide events) at its boundary. Child intents such as `lr-load-more`, chunk, citation and tool activation, clipboard and export events keep bubbling out of the host.
 Set `composer-disabled` and `heading-level` to disable the workspace composer or integrate its headings into a page outline.
 Style the workspace, model settings panel and queue items with component background, border, radius and padding tokens.
 Host label references and descriptions reach the workspace, prompt queue and realtime session regions.

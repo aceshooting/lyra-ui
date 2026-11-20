@@ -56,7 +56,7 @@ export const styles = css`
     /* A border rather than a background-color change: this row's text -- the nested
        lr-chunk-inspector's quiet-toned score in particular -- is sized and colored for the page's
        default surface, and a tinted background can drop it below the required contrast ratio. */
-    border-inline-start: var(--lr-space-2xs) solid transparent;
+    border-inline-start: var(--lr-retrieval-results-selected-width, var(--lr-space-2xs)) solid transparent;
     padding-inline-start: var(--lr-space-xs);
   }
   /* A second part token rather than the row's data-selected attribute: Shadow Parts forbids an

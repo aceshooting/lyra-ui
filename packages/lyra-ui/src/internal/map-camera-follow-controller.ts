@@ -1,6 +1,6 @@
 import { admitMapCameraFollowOptions, admitMapCameraFollowProfile, createMapCameraFollowAttempt,
   observeMapCameraFollowAttempt, type MapCameraFollowOptions } from './map-camera-follow-data.js';
-import { admitMapViewpoint, type MapViewpoint } from './map-camera-session-data.js';
+import { admitMapViewpoint, sameMapViewpoint, type MapViewpoint } from './map-camera-session-data.js';
 
 export type MapCameraFollowTarget =
   | { readonly kind: 'absent' }
@@ -89,10 +89,6 @@ export function prepareMapCameraFollow(input: unknown, dependencies: Plan['depen
   const plan = Object.freeze({}) as MapCameraFollowPlan;
   plans.set(plan, { options, dependencies, view, reduced });
   return plan;
-}
-function sameView(first: MapViewpoint | undefined, second: MapViewpoint): boolean {
-  return first !== undefined && first.center[0] === second.center[0] && first.center[1] === second.center[1] &&
-    first.zoom === second.zoom && first.bearing === second.bearing && first.pitch === second.pitch;
 }
 
 /** Consumes accepted target facts for one existing action; it owns no native camera or clock. */
@@ -185,7 +181,7 @@ export function startMapCameraFollow(plan: MapCameraFollowPlan, owner: MapCamera
     }
     const destination = admitMapViewpoint({ center: next.center, zoom: options.zoom ?? view.zoom,
       bearing: options.bearing ?? view.bearing, pitch: options.pitch ?? view.pitch });
-    if (sameView(applied, destination) || (restricted && writes > 0)) {
+    if (sameMapViewpoint(applied, destination) || (restricted && writes > 0)) {
       publish({ status: 'ground', corrections: 0 }); return;
     }
     const prepared = owner.prepareGround(destination);

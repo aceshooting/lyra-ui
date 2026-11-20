@@ -1,5 +1,5 @@
 import { css, type CSSResult } from 'lit';
-import { iconHitTarget } from '../../internal/interactive-control.styles.js';
+import { activeFill, iconHitTarget } from '../../internal/interactive-control.styles.js';
 
 /** Grid chrome shared by the csv and spreadsheet viewers; `maxHeight` is the viewer's own `var()` hook. */
 export function delimitedGridStyles(maxHeight: CSSResult): CSSResult {
@@ -103,11 +103,7 @@ export function tableCellHighlightStyles({
   }
   [part='cell-highlight-action']:active,
   lr-virtual-list::part(cell-highlight-action):active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-brand-quiet)')};
   }
   [part='cell-highlight-action']:focus-visible,
   lr-virtual-list::part(cell-highlight-action):focus-visible {

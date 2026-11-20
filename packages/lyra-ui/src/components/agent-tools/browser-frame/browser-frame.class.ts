@@ -17,7 +17,6 @@ import { collectInitialSlotAssignment } from '../../../internal/initial-slot-col
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_browserFrameControllerAgent, LYRA_DEFAULT_browserFrameControllerUser, LYRA_DEFAULT_browserFrameHandBack, LYRA_DEFAULT_browserFrameLabel, LYRA_DEFAULT_browserFramePingsLimit, LYRA_DEFAULT_browserFrameStatusConnecting, LYRA_DEFAULT_browserFrameStatusIdle, LYRA_DEFAULT_browserFrameStatusLive, LYRA_DEFAULT_browserFrameStatusStalled, LYRA_DEFAULT_browserFrameStop, LYRA_DEFAULT_browserFrameTakeOver, LYRA_DEFAULT_browserFrameUrlLabel, LYRA_DEFAULT_browserFrameViewOf } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const BROWSER_FRAME_PHASE = literalSetConverter<LyraStreamPhase>(
@@ -133,13 +132,6 @@ export class LyraBrowserFrame extends LyraElement<LyraBrowserFrameEventMap> {
     browserFrameTakeOver: LYRA_DEFAULT_browserFrameTakeOver,
     browserFrameUrlLabel: LYRA_DEFAULT_browserFrameUrlLabel,
     browserFrameViewOf: LYRA_DEFAULT_browserFrameViewOf,
-    collapse: LYRA_DEFAULT_collapse,
-    copy: LYRA_DEFAULT_copy,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
-    loading: LYRA_DEFAULT_loading,
-    map: LYRA_DEFAULT_map,
-    open: LYRA_DEFAULT_open,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;

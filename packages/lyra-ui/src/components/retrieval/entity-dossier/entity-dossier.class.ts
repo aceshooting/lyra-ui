@@ -23,6 +23,7 @@ export type { LyraProvenance } from '../provenance-panel/provenance-panel.class.
 import type { StatRow } from '../../data/stat/stat.class.js';
 import type { LyraVariant } from '../../../internal/variants.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
+import type { LyraHeadingLevel } from '../../../internal/heading-level.js';
 export type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
 import type { LyraTabGroupEventMap } from '../../layout/tab-group/tab-group.class.js';
 import '../entity-card/entity-card.class.js';
@@ -37,7 +38,7 @@ import type { LyraScoreThresholds } from '../../../internal/score-tiers.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_neighborListLabel, LYRA_DEFAULT_provenancePanelLabel } from '../../../internal/default-strings/retrieval.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_details, LYRA_DEFAULT_noData } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** The three tab ids this component renders -- also `lr-tab-group`' own `slot`/`tabId` values, so a
@@ -66,7 +67,7 @@ export interface LyraEntityDossierEventMap
   extends Omit<LyraNeighborListEventMap, 'lr-entity-select'>,
     Omit<LyraChunkInspectorEventMap, 'lr-toggle'>,
     Omit<LyraProvenancePanelEventMap, 'lr-entity-select' | 'lr-toggle' | 'lr-retrieval-disclosure-change'>,
-    Omit<LyraTabGroupEventMap, 'lr-tab-show' | 'lr-tab-hide'> {
+    Omit<LyraTabGroupEventMap, 'lr-tab-show'> {
   /** Canonical "user picked this entity" gesture from any composed child; a path strip adds `occurrenceIndex`. */
   'lr-entity-select': CustomEvent<{ entityId: string; occurrenceIndex?: number }>;
   'lr-tab-show': CustomEvent<{ tabId: LyraEntityDossierTab }>;
@@ -144,20 +145,10 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     chunkInspectorLabel: LYRA_DEFAULT_chunkInspectorLabel,
-    collapse: LYRA_DEFAULT_collapse,
-    copy: LYRA_DEFAULT_copy,
-    date: LYRA_DEFAULT_date,
     details: LYRA_DEFAULT_details,
-    loading: LYRA_DEFAULT_loading,
-    map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     neighborListLabel: LYRA_DEFAULT_neighborListLabel,
     noData: LYRA_DEFAULT_noData,
-    open: LYRA_DEFAULT_open,
-    progress: LYRA_DEFAULT_progress,
     provenancePanelLabel: LYRA_DEFAULT_provenancePanelLabel,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -184,6 +175,9 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
   @property({ attribute: false }) types: readonly LyraNodeTypeStyle[] = [];
   /** Forwarded to `lr-entity-card`'s own `communityLabel`. */
   @property({ attribute: 'community-label' }) communityLabel = '';
+  /** Forwarded to `lr-entity-card`'s own `headingLevel`, so the entity title can sit at the
+   *  page's outline level (`none` drops its heading semantics). Unset, the card uses level 3. */
+  @property({ attribute: 'heading-level' }) headingLevel?: LyraHeadingLevel;
   /** Forwarded to `lr-entity-card`'s own `withoutFocusButton`. */
   @property({ type: Boolean, attribute: 'without-focus-button' })
   withoutFocusButton = false;
@@ -278,6 +272,7 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
             .types=${this.types}
             .communityLabel=${this.communityLabel}
             .withoutFocusButton=${this.withoutFocusButton}
+            .headingLevel=${this.headingLevel}
           ></lr-entity-card>
           ${c
             ? html`<lr-stat
@@ -298,7 +293,6 @@ export class LyraEntityDossier extends LyraElement<LyraEntityDossierEventMap> {
           .active=${this.activeTab}
           @lr-tab-show=${this.onTabsChange}
           @lr-activate=${this.containTabsEvent}
-          @lr-tab-hide=${this.containTabsEvent}
         >
           <lr-tab panel="relationships"
             >${this.localize('neighborListLabel')}</lr-tab

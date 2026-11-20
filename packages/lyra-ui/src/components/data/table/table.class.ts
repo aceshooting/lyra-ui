@@ -49,7 +49,7 @@ import { renderDataState } from '../../../internal/data-state-renderer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_dataGridCollapseRow, LYRA_DEFAULT_dataGridExpandRow, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableAdditionalColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoading, LYRA_DEFAULT_tableLoadingMore, LYRA_DEFAULT_tableRowLimit, LYRA_DEFAULT_tableRowTotal } from '../../../internal/default-strings/data.generated.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_open, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_select, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_viewerSearchMatchCount } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_details, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_viewerSearchMatchCount } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** How `loading` renders. `'spinner'` (the default) replaces the grid with an indeterminate
@@ -855,21 +855,17 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     clear: LYRA_DEFAULT_clear,
-    collapse: LYRA_DEFAULT_collapse,
     dataGridCollapseRow: LYRA_DEFAULT_dataGridCollapseRow,
     dataGridExpandRow: LYRA_DEFAULT_dataGridExpandRow,
     details: LYRA_DEFAULT_details,
     loadMore: LYRA_DEFAULT_loadMore,
     loading: LYRA_DEFAULT_loading,
-    map: LYRA_DEFAULT_map,
     noColumns: LYRA_DEFAULT_noColumns,
     noData: LYRA_DEFAULT_noData,
     noMatches: LYRA_DEFAULT_noMatches,
-    open: LYRA_DEFAULT_open,
     resizeColumn: LYRA_DEFAULT_resizeColumn,
     resizeValuePixels: LYRA_DEFAULT_resizeValuePixels,
     retry: LYRA_DEFAULT_retry,
-    select: LYRA_DEFAULT_select,
     showAllColumns: LYRA_DEFAULT_showAllColumns,
     showFewerColumns: LYRA_DEFAULT_showFewerColumns,
     tableAdditionalColumns: LYRA_DEFAULT_tableAdditionalColumns,
@@ -3227,6 +3223,23 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     el.focus();
   }
 
+
+  /** The visible text names the action for the current state, as the reveal button always has.
+   *  Supplying a `tableAdditionalColumns` string opts into one constant visible name, with the
+   *  state-specific labels moved to the tooltip. */
+  private renderRevealColumnsButton(): TemplateResult {
+    const actionLabel = this.priorityColumnsVisible
+      ? this.localizedOverride('showFewerColumns', this.columnsHideLabel)
+      : this.localizedOverride('showAllColumns', this.revealColumnsLabel);
+    const stableName = this.strings.tableAdditionalColumns !== undefined;
+    return html`<button
+      part="reveal-columns-button"
+      type="button"
+      aria-expanded=${this.priorityColumnsVisible ? 'true' : 'false'}
+      title=${stableName && actionLabel ? actionLabel : nothing}
+      @click=${this.toggleColumns}
+    >${stableName ? this.localize('tableAdditionalColumns') : actionLabel}</button>`;
+  }
   private toggleColumns = (): void => {
     this.priorityColumnsVisible = !this.priorityColumnsVisible;
     this.emit(
@@ -4009,17 +4022,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
               count: this.formatLocaleNumber(this.rows.length), pluralCount: this.rows.length,
             })}</div>`
           : nothing}
-        ${this.priorityToggleAvailable
-          ? html`<button
-              part="reveal-columns-button"
-              type="button"
-              aria-expanded=${this.priorityColumnsVisible ? 'true' : 'false'}
-              title=${this.priorityColumnsVisible
-                ? this.localizedOverride('showFewerColumns', this.columnsHideLabel)
-                : this.localizedOverride('showAllColumns', this.revealColumnsLabel)}
-              @click=${this.toggleColumns}
-            >${this.localize('tableAdditionalColumns')}</button>`
-          : nothing}
+        ${this.priorityToggleAvailable ? this.renderRevealColumnsButton() : nothing}
         ${this.hasMore
           ? html`<button part="more-button" type="button"
               aria-disabled=${this.loadingMore ? 'true' : nothing}

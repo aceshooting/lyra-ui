@@ -1,5 +1,5 @@
 import { expect } from '@open-wc/testing';
-import { admitMapViewpoint, admitMapCameraTour, sampleMapCameraTour } from './map-camera-session-data.js';
+import { admitMapViewpoint, admitMapCameraTour, sameMapViewpoint, sampleMapCameraTour } from './map-camera-session-data.js';
 
 const view = (center: readonly [number, number] = [0, 0], zoom = 2, bearing = 0, pitch = 0) => ({ center, zoom, bearing, pitch });
 const tour = (first = view(), last = view([10, 20], 4, 40, 60), interpolation = 'linear') => ({ keyframes: [
@@ -136,5 +136,17 @@ describe('camera session data', () => {
     const options = { get reducedMotion() { reads++; return true; } };
     expect(() => sampleMapCameraTour(admitted, 0, options)).to.throw();
     expect(reads).to.equal(0);
+  });
+});
+
+describe('sameMapViewpoint', () => {
+  it('matches only an applied viewpoint equal in every field', () => {
+    const view = admitMapViewpoint({ center: [1, 2], zoom: 3, bearing: 4, pitch: 5 });
+    expect(sameMapViewpoint(undefined, view)).to.equal(false);
+    expect(sameMapViewpoint(admitMapViewpoint({ center: [1, 2], zoom: 3, bearing: 4, pitch: 5 }), view)).to.equal(true);
+    for (const changed of [{ center: [1.5, 2] }, { center: [1, 2.5] }, { zoom: 3.5 }, { bearing: 4.5 }, { pitch: 6 }]) {
+      const other = admitMapViewpoint({ center: [1, 2], zoom: 3, bearing: 4, pitch: 5, ...changed });
+      expect(sameMapViewpoint(other, view), JSON.stringify(changed)).to.equal(false);
+    }
   });
 });

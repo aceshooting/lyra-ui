@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 35 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 35 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -247,7 +247,8 @@ cannot be followed by a descendant combinator, so `::part(metadata-entry) dt` re
 
 **Themeable custom properties:** `--lr-retrieval-results-selected-border` (default
 `var(--lr-color-brand)`) — the inline-start border color marking a selected row body
-(`::part(row-body-selected)`). A
+(`::part(row-body-selected)`). `--lr-retrieval-results-selected-width` (default `var(--lr-space-2xs)`)
+sets that stripe's inline size, so a density retune of the spacing scale need not move it. A
 border rather than a fill by design: the row's own text (the nested chunk inspector's quiet-toned
 score line in particular) is sized and colored for the page's default surface, and a tinted
 background can drop it below the required contrast ratio, while a border-only indicator carries no

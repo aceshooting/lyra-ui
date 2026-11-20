@@ -1,6 +1,12 @@
 import { parseSync } from 'oxc-parser';
 import path from 'node:path';
 
+/**
+ * Shared style helpers that build CSS from a string argument. The argument is the same `var()`
+ * expression a sheet would otherwise write inline, so it counts as stylesheet text.
+ */
+const CSS_STRING_HELPERS = new Set(['hoverFill', 'activeFill', 'hoverTint', 'activeTint', 'outlinedIconActionDefaults']);
+
 /** Resolve only stylesheet bindings a component actually adopts and interpolates. */
 export function collectStyleSources(entry, readSource) {
   const result = new Map();
@@ -44,6 +50,10 @@ export function collectStyleSources(entry, readSource) {
         // sheets are documented separately from fragments adopted by a component sheet.
         if (imported && (file !== entry || path.posix.dirname(imported[0]) === path.posix.dirname(entry))) visit(...imported);
         else if (declarations.has(node.name)) inspect(declarations.get(node.name));
+      }
+      if (node.type === 'CallExpression' && CSS_STRING_HELPERS.has(node.callee?.name)) {
+        const literals = node.arguments.filter((argument) => argument.type === 'Literal' && typeof argument.value === 'string').map((argument) => argument.value);
+        if (literals.length) result.set(file, `${result.get(file) ?? ''}\n${literals.join('\n')}`);
       }
       if (node.type === 'TaggedTemplateExpression' && node.tag.name === 'css') {
         // Template quasis contain CSS, while expressions link to the composed fragments.

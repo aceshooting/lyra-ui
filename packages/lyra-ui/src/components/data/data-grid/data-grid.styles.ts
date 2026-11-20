@@ -1,8 +1,9 @@
-import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeTint, disabledControl, focusRingInset, hoverTint, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { raiseWhileOverlayOpen } from '../../../internal/open-overlay-raise.styles.js';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { dataStateRetryStyles, dataStateSurfaceStyles } from '../../../internal/data-state-renderer.styles.js';
+import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :where([part="search"], [part~="header-cell"][data-sortable]:not([data-pin]), [part="resize-handle"], [part="page-size"]) { transition: var(--lr-transition-interactive); }
@@ -33,29 +34,16 @@ export const styles = css`
       var(--_lr-density-target-min, 0px),
       calc(max(var(--lr-table-row-min-height), var(--_lr-data-grid-row-size)) * var(--_lr-density-control, 1))
     );
-    --_lr-data-grid-row-hover-background: color-mix(
-      in srgb,
-      var(--accent-color, var(--_lr-data-grid-accent-color))
-        var(--lr-color-mix-hover),
-      transparent
-    );
+    --_lr-data-grid-row-hover-background: ${hoverTint('var(--accent-color, var(--_lr-data-grid-accent-color))')};
     --_lr-data-grid-selected-background: var(--lr-color-brand-quiet);
     /* Shared hover/press fills of the toolbar, filter, pager and resize controls. */
     --_lr-data-grid-control-hover-fill: var(
       --lr-data-grid-control-hover-bg,
-      color-mix(
-        in srgb,
-        var(--accent-color, var(--_lr-data-grid-accent-color)) var(--lr-color-mix-hover),
-        transparent
-      )
+      ${hoverTint('var(--accent-color, var(--_lr-data-grid-accent-color))')}
     );
     --_lr-data-grid-control-active-fill: var(
       --lr-data-grid-control-active-bg,
-      color-mix(
-        in srgb,
-        var(--accent-color, var(--_lr-data-grid-accent-color)) var(--lr-color-mix-active),
-        transparent
-      )
+      ${activeTint('var(--accent-color, var(--_lr-data-grid-accent-color))')}
     );
     --_lr-data-grid-stripe-background: var(--lr-color-surface-raised);
     --_lr-data-grid-text-color: var(--lr-color-text);
@@ -95,8 +83,7 @@ export const styles = css`
   [part="data-grid"] {
     position: relative;
     isolation: isolate;
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${inlineSizeContainer}
     overflow: hidden;
     border: var(--border-width, var(--_lr-data-grid-border-width)) solid
       var(--lr-data-grid-line-color, var(--border-color, var(--_lr-data-grid-line-color)));
@@ -195,8 +182,7 @@ export const styles = css`
   }
   [part="search-clear"]:focus-visible,
   [part="filter-panel-clear"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingInset}
   }
 
   [part="search"]:hover {
@@ -255,8 +241,7 @@ export const styles = css`
   }
 
   button:disabled {
-    cursor: not-allowed;
-    opacity: var(--lr-opacity-disabled);
+    ${disabledControl}
   }
 
   [part="column-menu"],
@@ -325,24 +310,14 @@ export const styles = css`
   [part~="header-cell"][data-sortable]:hover {
     background: var(
       --lr-data-grid-sortable-header-hover-bg,
-      color-mix(
-          in srgb,
-          var(--accent-color, var(--_lr-data-grid-accent-color))
-            var(--lr-color-mix-hover),
-          transparent
-        )
+      ${hoverTint('var(--accent-color, var(--_lr-data-grid-accent-color))')}
     );
   }
 
   [part~="header-cell"][data-sortable]:active {
     background: var(
       --lr-data-grid-sortable-header-active-bg,
-      color-mix(
-          in srgb,
-          var(--accent-color, var(--_lr-data-grid-accent-color))
-            var(--lr-color-mix-active),
-          transparent
-        )
+      ${activeTint('var(--accent-color, var(--_lr-data-grid-accent-color))')}
     );
   }
 
@@ -352,10 +327,10 @@ export const styles = css`
     background:
       linear-gradient(var(
           --lr-data-grid-sortable-header-hover-bg,
-          color-mix(in srgb, var(--accent-color, var(--_lr-data-grid-accent-color)) var(--lr-color-mix-hover), transparent)
+          ${hoverTint('var(--accent-color, var(--_lr-data-grid-accent-color))')}
         ), var(
           --lr-data-grid-sortable-header-hover-bg,
-          color-mix(in srgb, var(--accent-color, var(--_lr-data-grid-accent-color)) var(--lr-color-mix-hover), transparent)
+          ${hoverTint('var(--accent-color, var(--_lr-data-grid-accent-color))')}
         )),
       var(--header-background, var(--_lr-data-grid-header-background));
   }
@@ -364,10 +339,10 @@ export const styles = css`
     background:
       linear-gradient(var(
           --lr-data-grid-sortable-header-active-bg,
-          color-mix(in srgb, var(--accent-color, var(--_lr-data-grid-accent-color)) var(--lr-color-mix-active), transparent)
+          ${activeTint('var(--accent-color, var(--_lr-data-grid-accent-color))')}
         ), var(
           --lr-data-grid-sortable-header-active-bg,
-          color-mix(in srgb, var(--accent-color, var(--_lr-data-grid-accent-color)) var(--lr-color-mix-active), transparent)
+          ${activeTint('var(--accent-color, var(--_lr-data-grid-accent-color))')}
         )),
       var(--header-background, var(--_lr-data-grid-header-background));
   }
@@ -444,12 +419,7 @@ export const styles = css`
   [part~="row"]:active {
     --_lr-data-grid-row-fill: var(
       --lr-data-grid-row-active-bg,
-      color-mix(
-          in srgb,
-          var(--accent-color, var(--_lr-data-grid-accent-color))
-            var(--lr-color-mix-active),
-          transparent
-        )
+      ${activeTint('var(--accent-color, var(--_lr-data-grid-accent-color))')}
     );
     background: var(--_lr-data-grid-row-fill);
   }
@@ -726,12 +696,7 @@ export const styles = css`
     border-color: var(--accent-color, var(--_lr-data-grid-accent-color));
     background: var(
       --lr-data-grid-page-size-active-bg,
-      color-mix(
-          in srgb,
-          var(--accent-color, var(--_lr-data-grid-accent-color))
-            var(--lr-color-mix-active),
-          transparent
-        )
+      ${activeTint('var(--accent-color, var(--_lr-data-grid-accent-color))')}
     );
   }
 

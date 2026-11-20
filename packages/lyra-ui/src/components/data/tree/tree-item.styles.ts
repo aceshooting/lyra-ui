@@ -1,5 +1,5 @@
 import { minimumPointerTarget } from '../../../internal/minimum-pointer-target.styles.js';
-import { focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingInsetOffset, hoverFill } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 
@@ -52,22 +52,18 @@ export const styles = css`
   [part~='item']:hover {
     background: var(
       --lr-tree-hover-bg,
-      color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover))
+      ${hoverFill('var(--lr-color-brand-quiet)')}
     );
   }
   :host(:where([aria-selected='true'])) [part~='item']:hover {
     background: var(
       --lr-tree-selected-hover-bg,
-      color-mix(in oklab, var(--_lr-tree-selected-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover))
+      ${hoverFill('var(--_lr-tree-selected-fill)')}
     );
   }
   [part~='item']:active,
   :host(:where([aria-selected='true'])) [part~='item']:active {
-    background: color-mix(
-      in oklab,
-      var(--_lr-tree-selected-fill, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--_lr-tree-selected-fill, var(--lr-color-brand-quiet))')};
   }
   /* The quiet fill moves toward body text under the pointer. Its on-quiet foreground
      retains contrast; an explicit selected colour continues to own every selected state. */
@@ -115,18 +111,10 @@ export const styles = css`
     border-radius: var(--lr-radius);
   }
   :where([part='toggle']):active:where(:not(:disabled)) {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet))')};
   }
   :where([part='toggle'])[data-pressed]:where(:not(:disabled)) {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-surface-hover, var(--lr-color-neutral-fill-quiet))')};
   }
   [part='reorder-handle'] {
     display: inline-flex;
@@ -195,7 +183,7 @@ export const styles = css`
   [part='checkbox']:active [part~='checkbox__control'] {
     --_lr-tree-checkbox-active-border: var(
       --lr-tree-checkbox-active-border-color,
-      color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      ${activeFill('var(--lr-color-brand)')}
     );
     border-color: var(--_lr-tree-checkbox-active-border);
   }
@@ -206,10 +194,10 @@ export const styles = css`
     border-color: var(--lr-tree-checkbox-indeterminate-border-color, var(--lr-color-brand));
   }
   [part='checkbox']:active [part~='checkbox__control--checked'] {
-    border-color: color-mix(in oklab, var(--lr-tree-checkbox-checked-border-color, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    border-color: ${activeFill('var(--lr-tree-checkbox-checked-border-color, var(--lr-color-brand))')};
   }
   [part='checkbox']:active [part~='checkbox__control--indeterminate'] {
-    border-color: color-mix(in oklab, var(--lr-tree-checkbox-indeterminate-border-color, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    border-color: ${activeFill('var(--lr-tree-checkbox-indeterminate-border-color, var(--lr-color-brand))')};
   }
   :host([aria-disabled='true']) [part='checkbox'] {
     cursor: default;

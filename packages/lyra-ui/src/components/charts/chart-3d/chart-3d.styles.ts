@@ -1,15 +1,15 @@
 import { css } from 'lit';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
-import { focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { nativeControlSurface } from '../../../internal/native-control-surface.styles.js';
+import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
     max-inline-size: 100%;
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${inlineSizeContainer}
   }
 
   [part='base'] {
@@ -105,7 +105,7 @@ export const styles = css`
   }
 
   [part='row-button']:where([aria-pressed='true']):hover {
-    background: color-mix(in oklab, var(--lr-chart-3d-selected-bg, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: ${hoverFill('var(--lr-chart-3d-selected-bg, var(--lr-color-brand))')};
   }
 
   [part='cursor'] {

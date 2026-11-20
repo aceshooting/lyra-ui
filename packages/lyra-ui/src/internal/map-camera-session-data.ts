@@ -138,3 +138,9 @@ export function sampleMapCameraTour(
     pitch: finiteInterpolate(first.view.pitch, last.view.pitch, ratio),
   });
 }
+
+/** Whether an applied viewpoint already matches `second` exactly. */
+export function sameMapViewpoint(first: MapViewpoint | undefined, second: MapViewpoint): boolean {
+  return first !== undefined && first.center[0] === second.center[0] && first.center[1] === second.center[1] &&
+    first.zoom === second.zoom && first.bearing === second.bearing && first.pitch === second.pitch;
+}

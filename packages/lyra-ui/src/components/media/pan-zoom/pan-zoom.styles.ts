@@ -1,5 +1,5 @@
-import { iconAction, iconActionActive, iconActionHover } from '../../../internal/icon-action.styles.js';
-import { iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
+import { iconAction, iconActionActive, iconActionHover, outlinedIconActionDefaults } from '../../../internal/icon-action.styles.js';
+import { disabledControl, focusRingShorthand, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -23,8 +23,7 @@ export const styles = css`
     transition: var(--lr-transition-interactive);
   }
   [part='viewport']:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   /* no-pressed-state: the viewport is a focusable scroll surface, not an activation target. */
   [part='viewport']:hover {
@@ -80,13 +79,7 @@ export const styles = css`
   [part='zoom-out'],
   [part='zoom-in'],
   [part='reset'] {
-    --_lr-icon-button-border-default: var(--lr-border-width-thin) solid var(--lr-color-border);
-    --_lr-icon-button-background-default: var(--lr-color-surface);
-    --_lr-icon-button-color-default: var(--lr-color-text);
-    --_lr-icon-button-border-hover-default: var(--lr-icon-button-border, var(--_lr-icon-button-border-default));
-    --_lr-icon-button-border-active-default: var(--lr-icon-button-border-hover, var(--_lr-icon-button-border-hover-default));
-    --_lr-icon-button-background-hover-default: var(--lr-pan-zoom-control-hover-bg, var(--lr-color-brand-quiet));
-    --_lr-icon-button-background-active-default: color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--_lr-icon-button-background-hover-default)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    ${outlinedIconActionDefaults('var(--lr-pan-zoom-control-hover-bg, var(--lr-color-brand-quiet))')}
     ${iconHitTarget}
     ${iconAction}
     ${interactiveTransition}
@@ -111,13 +104,11 @@ export const styles = css`
   }
   [part='zoom-out']:disabled,
   [part='zoom-in']:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   [part='zoom-out']:focus-visible,
   [part='zoom-in']:focus-visible,
   [part='reset']:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
 `;

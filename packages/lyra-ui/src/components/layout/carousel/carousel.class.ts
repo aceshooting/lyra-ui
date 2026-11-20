@@ -30,6 +30,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { tag } from '../../../internal/prefix.js';
 import { styles } from './carousel.styles.js';
+import { appendLoopClones, loopCloneFor } from './carousel-loop.js';
 import type { LyraCarouselItem } from './carousel-item.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -59,25 +60,6 @@ export type LyraCarouselOrientation = LyraOrientation;
 /** How long scrolling must stay idle before publishing the new slide. */
 const SCROLL_SETTLE_MS = 120;
 
-const LOOP_SNAPSHOT_UNSAFE_TAGS = new Set([
-  'audio',
-  'canvas',
-  'embed',
-  'form',
-  'iframe',
-  'img',
-  'input',
-  'link',
-  'object',
-  'picture',
-  'script',
-  'select',
-  'source',
-  'style',
-  'textarea',
-  'track',
-  'video',
-]);
 const CAROUSEL_MANAGED_SLIDE_ATTRIBUTES = new Set([
   'aria-hidden',
   'aria-label',
@@ -874,47 +856,6 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     this.handleSlidesChanged();
   };
 
-  private prepareClone(
-    original: HTMLElement,
-    index: number,
-    side: 'before' | 'after'
-  ): HTMLElement | undefined {
-    const sourceElements = [
-      original,
-      ...Array.from(original.querySelectorAll<HTMLElement>('*')),
-    ];
-    if (
-      sourceElements.some(
-        (element) =>
-          element.namespaceURI !== 'http://www.w3.org/1999/xhtml' ||
-          element.localName.includes('-') ||
-          LOOP_SNAPSHOT_UNSAFE_TAGS.has(element.localName)
-      )
-    ) {
-      return undefined;
-    }
-    const clone = original.cloneNode(true) as HTMLElement;
-    const descendants = [
-      clone,
-      ...Array.from(clone.querySelectorAll<HTMLElement>('*')),
-    ];
-    for (const descendant of descendants) {
-      descendant.removeAttribute('id');
-      descendant.removeAttribute('name');
-      descendant.removeAttribute('form');
-      descendant.removeAttribute('for');
-      descendant.removeAttribute('aria-controls');
-      descendant.removeAttribute('aria-describedby');
-      descendant.removeAttribute('aria-labelledby');
-    }
-    clone.removeAttribute('slot');
-    clone.dataset['carouselClone'] = side;
-    clone.dataset['carouselIndex'] = String(index);
-    clone.inert = true;
-    clone.setAttribute('aria-hidden', 'true');
-    return clone;
-  }
-
   private syncLoopClones(): void {
     const before = this.beforeClones;
     const after = this.afterClones;
@@ -930,26 +871,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
         this.moveSize(slides.length)
       )
     );
-    const beforeStart = slides.length - cloneCount;
-    for (let index = beforeStart; index < slides.length; index += 1) {
-      const clone = this.prepareClone(slides[index]!, index, 'before');
-      if (clone) before.append(clone);
-    }
-    for (let index = 0; index < cloneCount; index += 1) {
-      const clone = this.prepareClone(slides[index]!, index, 'after');
-      if (clone) after.append(clone);
-    }
-  }
-
-  private cloneFor(
-    side: 'before' | 'after',
-    index: number
-  ): HTMLElement | undefined {
-    const container = side === 'before' ? this.beforeClones : this.afterClones;
-    return (
-      container?.querySelector(`[data-carousel-index="${index}"]`) ??
-      undefined
-    ) as HTMLElement | undefined;
+    appendLoopClones(before, after, slides, cloneCount);
   }
 
   private changeTo(
@@ -1140,7 +1062,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     this.loopSide = undefined;
     this.requestedBehavior = undefined;
     const target = loopSide
-      ? this.cloneFor(loopSide, targetIndex) ?? realSlide
+      ? loopCloneFor(loopSide === 'before' ? this.beforeClones : this.afterClones, targetIndex) ?? realSlide
       : realSlide;
     const offset = this.axisOffsetOf(target, viewport);
     if (Math.round(offset) === 0) {

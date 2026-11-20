@@ -1,7 +1,7 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import { flattenedThemeParent, THEME_ATTRIBUTES } from './theme-observation.js';
 import { sameNodes, visitAncestorChain } from './composed-tree.js';
-import { nodeContainsSlot, someListedNode } from './dom-guards.js';
+import { isShadowRootNode, nodeContainsSlot, someListedNode } from './dom-guards.js';
 import { addAncestorSubscriber, removeAncestorSubscriber, subscribeInheritedAttributes } from './inherited-attribute-hub.js';
 
 export type LyraThemeRoot = Document | ShadowRoot | Element;
@@ -31,7 +31,6 @@ const THEME_HUB_KEY = Symbol.for('@aceshooting/lyra-ui.theme-invalidation.v1');
 const fallbackHubs = new WeakMap<object, SharedThemeHub>();
 const ELEMENT_NODE = 1;
 const DOCUMENT_NODE = 9;
-const DOCUMENT_FRAGMENT_NODE = 11;
 const BASE_MEDIA_QUERIES = [
   '(prefers-color-scheme: dark)',
   '(prefers-contrast: more)',
@@ -271,7 +270,7 @@ function flattenedPath(host: Element): [Set<Element>, Set<ObservedRoot>] {
   if (host.shadowRoot) roots.add(host.shadowRoot);
   visitAncestorChain(host, flattenedThemeParent, chain, current => {
     const root = current.getRootNode();
-    if (root.nodeType === DOCUMENT_FRAGMENT_NODE && 'host' in root) roots.add(root as ShadowRoot);
+    if (isShadowRootNode(root)) roots.add(root);
   });
   return [chain, roots];
 }

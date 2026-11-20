@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'Kalendarni ochish',
+  item: 'element',
   comboboxLoadError: 'Variantlarni yuklab boʻlmadi.',
   comboboxSelectedOverflow: '+{n} ta koʻproq',
   checkboxRequired: 'Davom etish uchun ushbu katakchani belgilang.',

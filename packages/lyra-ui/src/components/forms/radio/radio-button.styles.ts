@@ -1,4 +1,4 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, hoverFill } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 const buttonChromeStyles = css`
@@ -94,11 +94,7 @@ const buttonChromeStyles = css`
   [part~="button"]:not([part~="disabled"]):active {
     background: var(
       --lr-radio-button-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-radio-button-hover-bg, var(--lr-color-brand-quiet)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-radio-button-hover-bg, var(--lr-color-brand-quiet))')}
     );
     border-color: var(
       --lr-radio-button-active-border-color,
@@ -136,11 +132,7 @@ const buttonChromeStyles = css`
   [part~="button"]:where([part~="checked"]):not([part~="disabled"]):hover {
     background: var(
       --lr-radio-button-checked-hover-bg,
-      color-mix(
-        in oklab,
-        var(--lr-radio-button-checked-bg, var(--lr-color-brand)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-      )
+      ${hoverFill('var(--lr-radio-button-checked-bg, var(--lr-color-brand))')}
     );
     border-color: var(
       --lr-radio-button-checked-hover-border-color,
@@ -150,11 +142,7 @@ const buttonChromeStyles = css`
   [part~="button"]:where([part~="checked"]):not([part~="disabled"]):active {
     background: var(
       --lr-radio-button-checked-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-radio-button-checked-bg, var(--lr-color-brand)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-radio-button-checked-bg, var(--lr-color-brand))')}
     );
     border-color: var(
       --lr-radio-button-checked-active-border-color,
@@ -165,8 +153,7 @@ const buttonChromeStyles = css`
     );
   }
   [part~="button"]:where([part~="disabled"]) {
-    cursor: not-allowed;
-    opacity: var(--lr-opacity-disabled);
+    ${disabledControl}
   }
   @media (forced-colors: active) {
     [part~="button"][part~="checked"],

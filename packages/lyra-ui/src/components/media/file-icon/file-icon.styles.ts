@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host { display: inline-flex; vertical-align: middle; min-inline-size: 0; max-inline-size: 100%; }
@@ -45,9 +46,7 @@ export const styles = css`
     font-weight: var(--lr-font-weight-bold);
   }
   .token {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

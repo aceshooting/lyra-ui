@@ -211,11 +211,15 @@ const strings: LyraLocaleStrings = {
   documentLibrarySelectDocument: 'Chọn {name}',
   graphQueryDeleteWithContext: 'Xóa {name}',
   statRowsInputLimit: 'Đang hiển thị {count} trong tổng số {total} hàng chi tiết.',
-  dataGridRowLimit: 'Chỉ có {count} hàng đầu tiên được hiển thị.',
+  dataGridRowLimit: {
+    other: 'Chỉ có {count} hàng đầu tiên được hiển thị.',
+  },
   dataGridExpandRow: 'Mở rộng {row}',
   dataGridFilterColumn: 'Lọc {column}',
   dataGridSelectPage: 'Chọn tất cả hàng trên trang này',
-  tableRowLimit: 'Chỉ có {count} hàng đầu tiên được hiển thị.',
+  tableRowLimit: {
+    other: 'Chỉ có {count} hàng đầu tiên được hiển thị.',
+  },
   tableAdditionalColumns: 'Cột bổ sung',
   treeLimit: 'Chỉ có {count} mục đầu tiên được hiển thị.',
   treeDefaultLabel: 'Cây',

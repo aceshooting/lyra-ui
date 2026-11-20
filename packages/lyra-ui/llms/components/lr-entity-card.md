@@ -22,7 +22,10 @@ itself — `lr-entity-select` is a request a host routes into `lr-graph`'s own
 `focusNode(id, options?)`.
 
 The host `aria-level` attribute overrides the internal title heading live. Changing or removing it
-updates that heading without another property change; omission or an empty override uses level 3.
+updates that heading without another property change; omission, an empty or an out-of-range override
+uses level 3. `headingLevel?: LyraHeadingLevel` (attribute `heading-level`, `'1'`-`'6'` or `'none'`)
+is the spelling the other retrieval panels use and wins whenever it is set; `'none'` keeps the
+visible title without heading semantics.
 
 **Properties:**
 

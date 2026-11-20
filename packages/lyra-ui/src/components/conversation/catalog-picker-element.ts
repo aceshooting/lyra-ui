@@ -1,5 +1,8 @@
 import type { PropertyDeclarations } from 'lit';
-import { state } from 'lit/decorators.js';
+import { property, state } from 'lit/decorators.js';
+import { AutocorrectState } from '../../internal/native-text-control.js';
+import { autocorrectConverter, spellcheckFromAttributeConverter } from '../../internal/converters.js';
+import type { LyraLabelDisplay } from '../../internal/variants.js';
 import { LyraFormControlElement } from '../../internal/form-control-element.js';
 import {
   getFormOwner,
@@ -22,6 +25,17 @@ import {
 
 interface CatalogPickerEditing {
   readonly input: HTMLInputElement | null;
+  readonly open: boolean;
+  show(): void;
+  handleControlBlur(event: FocusEvent): void;
+  handleControlFocus(event: FocusEvent): void;
+  handleTriggerKeyDown(event: KeyboardEvent): void;
+  handleComboMouseDown(event: MouseEvent): void;
+  handleInputFocus(event: FocusEvent): void;
+  handleInput(event: Event): void;
+  handleInputKeyDown(event: KeyboardEvent): void;
+  handleListboxMouseDown(event: MouseEvent): void;
+  handleListboxClick(event: MouseEvent): void;
   click(): void;
   focus(options?: FocusOptions): void;
   blur(): void;
@@ -40,6 +54,55 @@ export abstract class LyraCatalogPickerElement<Events> extends LyraFormControlEl
     required: { type: Boolean, reflect: true, noAccessor: true },
     name: { reflect: true, noAccessor: true },
   };
+
+  /** Informational only (e.g. `'ollama'`, `'elevenlabs'`); rendered as a small leading badge. */
+  @property() provider = '';
+  /** Let the user type/commit a value that isn't in `catalog`, even when `catalog` is non-empty. */
+  @property({ type: Boolean, reflect: true, attribute: 'allow-custom' }) allowCustom = false;
+  /** Keeps user edits and catalog commits from changing `value` while retaining focus, popup
+   *  navigation, selection/copy, form submission, reset, and programmatic writes. */
+  @property({ type: Boolean, reflect: true }) readonly: boolean = false;
+  /**
+   * Optional visible title above the control, rendered alongside the `label` slot in a
+   * `part="form-control-label"` `<label>` paired with the active control's id. A host `aria-label`
+   * remains authoritative by presence; otherwise either visible-label source supplies the native
+   * associated name.
+   */
+  @property() label = '';
+  /**
+   * Whether the `label` renders on screen. `hidden` keeps the label as the accessible name but
+   * removes it visually (compact toolbars, table cells); hint, error and required semantics are
+   * unaffected. Reflected so styles and `[label-display]` selectors match.
+   * @attr label-display
+   */
+  @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
+  /** Hint text below the field. Unset (the default): no hint chrome renders. */
+  @property() hint = '';
+  /** Error text below the field (overridden by slotted `error` content). Unset (the default): no
+   *  error chrome renders. */
+  @property({ attribute: 'error-text' }) errorText = '';
+  @property() placeholder = '';
+  /** Forwarded to the free-text mode's native `<input>`'s own `spellcheck`. Defaults to `true`,
+   *  matching the native element's own default. No effect in closed-dropdown mode (no native text
+   *  input there). `spellcheck="false"` is parsed as `false`. */
+  @property({ converter: spellcheckFromAttributeConverter }) override spellcheck = true;
+  /** Forwarded to the free-text mode's native `<input>`'s own `autocapitalize`. Empty string omits
+   *  the attribute (browser default). */
+  @property() override autocapitalize = '';
+  private readonly autocorrectState = new AutocorrectState(this, true);
+  /** Native editing-assistance state forwarded as canonical `autocorrect="on"|"off"`. Reads are
+   *  boolean; writes accept the boolean IDL and the `'on'`/`'off'` vocabulary. */
+  @property({ converter: autocorrectConverter })
+  override get autocorrect(): boolean {
+    return this.autocorrectState.value;
+  }
+  override set autocorrect(next: boolean | string) {
+    this.autocorrectState.set(next);
+  }
+  /** Native editing and virtual-keyboard hints forwarded to free-text mode's input. */
+  @property() autocomplete = 'off';
+  @property({ attribute: 'inputmode' }) override inputMode = '';
+  @property({ attribute: 'enterkeyhint' }) override enterKeyHint = '';
 
   protected abstract get catalogEditing(): CatalogPickerEditing;
   /** The localized `valueMissing` message. */
@@ -255,6 +318,22 @@ export abstract class LyraCatalogPickerElement<Events> extends LyraFormControlEl
     const owner = this.renderRoot.querySelector<HTMLElement>('[part="form-control"]');
     return owner && isComposedFocusAvailable(owner) ? owner : null;
   }
+
+  // Template handlers, resolved through `catalogEditing` at event time.
+  protected readonly onTriggerClick = (): void => {
+    if (this.effectiveDisabled) return;
+    const editing = this.catalogEditing;
+    if (editing.open) editing.hide(); else editing.show();
+  };
+  protected readonly onControlBlur = (event: FocusEvent): void => this.catalogEditing.handleControlBlur(event);
+  protected readonly onControlFocus = (event: FocusEvent): void => this.catalogEditing.handleControlFocus(event);
+  protected readonly onTriggerKeyDown = (event: KeyboardEvent): void => this.catalogEditing.handleTriggerKeyDown(event);
+  protected readonly onComboMouseDown = (event: MouseEvent): void => this.catalogEditing.handleComboMouseDown(event);
+  protected readonly onInputFocus = (event: FocusEvent): void => this.catalogEditing.handleInputFocus(event);
+  protected readonly onInput = (event: Event): void => this.catalogEditing.handleInput(event);
+  protected readonly onInputKeyDown = (event: KeyboardEvent): void => this.catalogEditing.handleInputKeyDown(event);
+  protected readonly onListboxMouseDown = (event: MouseEvent): void => this.catalogEditing.handleListboxMouseDown(event);
+  protected readonly onListboxClick = (event: MouseEvent): void => this.catalogEditing.handleListboxClick(event);
 
   /** Clicks the active trigger or editable input; the free-text path also focuses it. */
   override click(): void { this.catalogEditing.click(); }

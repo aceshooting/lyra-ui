@@ -1,5 +1,5 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import { imageMapImageFor, isDateObject, isHtmlElement, isSvgElement, nodeContainsSlot, someListedNode } from './dom-guards.js';
+import { cachedImageMapImageFor, imageMapImageFor, isDateObject, isShadowRootNode, isHtmlElement, isSvgElement, nodeContainsSlot, someListedNode } from './dom-guards.js';
 
 it('recognizes genuine HTML elements and Dates from another same-origin realm', async () => {
   const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
@@ -101,4 +101,30 @@ it('finds a slot at or below a node and scans a node list root by root', () => {
   expect(someListedNode(wrapper.childNodes, nodeContainsSlot)).to.equal(true);
   expect(someListedNode([document.createTextNode('a')], nodeContainsSlot)).to.equal(false);
   expect(someListedNode([], nodeContainsSlot)).to.equal(false);
+});
+
+it('classifies shadow roots structurally and rejects documents, fragments and nullish values', () => {
+  const host = document.createElement('div');
+  const root = host.attachShadow({ mode: 'open' });
+  expect(isShadowRootNode(root)).to.equal(true);
+  expect(isShadowRootNode(document.createDocumentFragment())).to.equal(false);
+  expect(isShadowRootNode(document)).to.equal(false);
+  expect(isShadowRootNode(host)).to.equal(false);
+  expect(isShadowRootNode(null)).to.equal(false);
+  expect(isShadowRootNode(undefined)).to.equal(false);
+});
+
+it('memoizes image-map lookups per traversal cache and charges work only on a miss', async () => {
+  const wrapper = await fixture<HTMLElement>(html`<div><map name="cached-map"><area href="#a"></map><img usemap="#cached-map" alt=""></div>`);
+  const area = wrapper.querySelector('area')!;
+  const image = wrapper.querySelector('img')!;
+  const cache = new Map<Element, HTMLImageElement | null>();
+  let work = 0;
+  const consume = (): boolean => { work += 1; return true; };
+  expect(cachedImageMapImageFor(cache, area, consume) === image).to.equal(true);
+  const spent = work;
+  expect(spent).to.be.greaterThan(0);
+  expect(cachedImageMapImageFor(cache, area, consume) === image).to.equal(true);
+  expect(work).to.equal(spent);
+  expect(cachedImageMapImageFor(new Map(), area, () => false)).to.equal(null);
 });

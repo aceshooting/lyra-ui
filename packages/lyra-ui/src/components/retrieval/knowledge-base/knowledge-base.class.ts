@@ -25,7 +25,7 @@ import {
   getDateTimeFormat,
   getNumberFormat,
 } from '../../../internal/intl-cache.js';
-import { playIcon, pauseIcon } from '../../../internal/icons.js';
+import { pauseIcon, playIcon, trashIcon } from '../../../internal/icons.js';
 import { styles } from './knowledge-base.styles.js';
 import type { LyraTableEventMap, TableColumn } from '../../data/table/table.class.js';
 import type { BadgeVariant } from '../../overlays/badge/badge.class.js';
@@ -212,19 +212,6 @@ const TABLE_EXPORT_PARTS = [
 // aren't part of the library's general-purpose icon vocabulary). trashIcon mirrors lr-thread-list's
 // own glyph verbatim so a destructive action reads identically everywhere it appears.
 const ICON_VIEW_BOX = '0 0 24 24';
-const ICON_STROKE_WIDTH = '1.75';
-
-function trashIcon(): SVGTemplateResult {
-  return svg`
-    <svg width="1em" height="1em" viewBox=${ICON_VIEW_BOX} fill="none" stroke="currentColor" stroke-width=${ICON_STROKE_WIDTH} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-      <path d="M4 7h16"></path>
-      <path d="M10 11v6"></path>
-      <path d="M14 11v6"></path>
-      <path d="M6 7l1 14h10l1-14"></path>
-      <path d="M9 7V4h6v3"></path>
-    </svg>
-  `;
-}
 
 /** A vertical three-dot "more actions" trigger glyph -- filled dots rather than this set's usual
  *  stroked paths, since that's the conventional rendering for an overflow-menu affordance. */

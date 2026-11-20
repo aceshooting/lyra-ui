@@ -1,4 +1,4 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { anchoredPopupOpen, anchoredPopupReveal, overlaySurface, overlaySurfaceControlEdge } from '../../../internal/overlay-surface.styles.js';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
@@ -11,6 +11,7 @@ import {
 } from '../../../internal/form-control.styles.js';
 import { formControlChrome } from '../../../internal/form-control/chrome.styles.js';
 import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
+import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
@@ -51,9 +52,7 @@ export const styles = css`
   }
   [part="date-input"],
   [part="base"] {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
   }
   ${formControlAppearance}
   ${formControlChrome}
@@ -96,8 +95,7 @@ export const styles = css`
     ${formControlFocusHalo}
   }
   :host(:disabled) [part="input-wrapper"] {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   /* The lr-input allocation: a small basis rather than the native field's size-derived intrinsic
      width, so the field gives up its slack before an adornment is clipped. */
@@ -197,11 +195,7 @@ export const styles = css`
     );
     background: var(
       --lr-date-input-action-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-color-surface),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-color-surface)')}
     );
     border-radius: var(
       --lr-date-input-action-active-radius,

@@ -985,6 +985,19 @@ describe('table row budget', () => {
   });
 });
 
+describe('table row budget wording', () => {
+  it('chooses the row wording from the numeric retained count', async () => {
+    const element = await fixture<LyraTable<Row>>(html`<lr-table caption="Few" max-rows="1"
+      .rows=${[{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }]} .columns=${columns} .rowKey=${rowKey}></lr-table>`);
+    const notice = () => element.shadowRoot!.querySelector('[part="row-limit"]')?.textContent?.trim();
+    expect(notice()).to.equal('Only the first 1 row is shown.');
+    element.maxRows = 2;
+    element.rows = [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }, { id: 'c', name: 'C' }];
+    await element.updateComplete;
+    expect(notice()).to.equal('Only the first 2 rows are shown.');
+  });
+});
+
 describe('table modified arrows', () => {
   it('leaves Alt+Arrow on a row to the browser', async () => {
     const element = await fixture<LyraTable<Row>>(html`<lr-table caption="Names" .rows=${rows} .columns=${columns} .rowKey=${rowKey}></lr-table>`);

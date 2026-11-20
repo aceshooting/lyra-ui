@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing, focusRingInset } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingInset, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { forcedColorsSelected } from '../../../internal/forced-colors.styles.js';
 import { css } from 'lit';
 
@@ -157,11 +157,7 @@ export const styles = css`
      Unpressed toggles only: the pressed one is out-ranked by the [aria-pressed='true'] rule below
      and has its own press rule after it. */
   :where([part="view-toggle"]):active {
-    background: color-mix(
-      in oklab,
-      var(--lr-widget-view-toggle-hover-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-widget-view-toggle-hover-bg, var(--lr-color-brand-quiet))')};
     color: var(--lr-widget-view-toggle-hover-color, var(--lr-color-text));
   }
   /* Inline var() fallbacks, not :host declarations, which would shadow an ancestor's value.
@@ -183,11 +179,7 @@ export const styles = css`
      hover prop. lr-tab-group and lr-stepper need no equivalent -- their selected-state rules
      declare no background, so the generic :active fill still reaches a selected tab or step. */
   [part="view-toggle"][aria-pressed="true"]:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-widget-view-toggle-active-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-widget-view-toggle-active-bg, var(--lr-color-brand-quiet))')};
     color: var(--lr-widget-view-toggle-active-color, var(--lr-color-brand));
   }
   [part="view-toggle"]:focus-visible {
@@ -222,19 +214,11 @@ export const styles = css`
     color: var(--lr-widget-fullscreen-button-hover-color, var(--lr-color-brand));
   }
   [part="collapse-button"]:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-widget-collapse-button-hover-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-widget-collapse-button-hover-bg, var(--lr-color-brand-quiet))')};
     color: var(--lr-widget-collapse-button-hover-color, var(--lr-color-brand));
   }
   [part="fullscreen-button"]:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-widget-fullscreen-button-hover-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-widget-fullscreen-button-hover-bg, var(--lr-color-brand-quiet))')};
     color: var(--lr-widget-fullscreen-button-hover-color, var(--lr-color-brand));
   }
   [part="collapse-button"]:focus-visible,

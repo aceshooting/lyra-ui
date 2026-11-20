@@ -1,5 +1,6 @@
 import { css } from 'lit';
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
+import { activeFill, focusRingShorthand } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   :host {
@@ -40,15 +41,10 @@ export const styles = css`
     background: var(--lr-color-surface-raised);
   }
   lr-virtual-list::part(page):active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-surface-raised),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-surface-raised)')};
   }
   lr-virtual-list::part(page):focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   lr-virtual-list::part(page-current) {
     background: var(--lr-page-rail-current-bg, var(--lr-color-brand-quiet));
@@ -60,11 +56,7 @@ export const styles = css`
     background: var(--lr-page-rail-current-bg, var(--lr-color-brand-quiet));
   }
   lr-virtual-list::part(page-current):active {
-    background: color-mix(
-      in oklab,
-      var(--lr-page-rail-current-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-page-rail-current-bg, var(--lr-color-brand-quiet))')};
   }
   lr-virtual-list::part(thumbnail) {
     position: relative;

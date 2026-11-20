@@ -1,4 +1,5 @@
 import { svg, type SVGTemplateResult } from 'lit';
+import { ifDefined } from 'lit/directives/if-defined.js';
 
 /**
  * Shared inline-SVG icon set. Every component in this library previously
@@ -18,9 +19,14 @@ import { svg, type SVGTemplateResult } from 'lit';
 const STROKE_WIDTH = '1.75';
 const VIEW_BOX = '0 0 24 24';
 
-function icon(paths: SVGTemplateResult): SVGTemplateResult {
+/**
+ * The library's decorative inline-SVG frame: a 24-unit viewBox, 1.75 stroke, `1em` square, hidden
+ * from assistive technology. Wraps `paths`; an optional `part` names the svg element itself.
+ */
+export function iconFrame(paths: SVGTemplateResult, part?: string): SVGTemplateResult {
   return svg`
     <svg
+      part=${ifDefined(part)}
       width="1em"
       height="1em"
       viewBox=${VIEW_BOX}
@@ -37,22 +43,22 @@ function icon(paths: SVGTemplateResult): SVGTemplateResult {
 
 /** A single right-pointing chevron. Rotate the wrapping element for other directions. */
 export function chevronIcon(): SVGTemplateResult {
-  return icon(svg`<polyline points="9 6 15 12 9 18"></polyline>`);
+  return iconFrame(svg`<polyline points="9 6 15 12 9 18"></polyline>`);
 }
 
 /** A downward arrow into a tray. */
 export function downloadIcon(): SVGTemplateResult {
-  return icon(svg`<path d="M12 3v12 M7 11l5 5 5-5 M4 18v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"></path>`);
+  return iconFrame(svg`<path d="M12 3v12 M7 11l5 5 5-5 M4 18v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"></path>`);
 }
 
 /** Paired vertical chevrons indicate a sortable column with no active direction. */
 export function sortIcon(): SVGTemplateResult {
-  return icon(svg`<polyline points="8 8 12 4 16 8"></polyline><polyline points="8 16 12 20 16 16"></polyline>`);
+  return iconFrame(svg`<polyline points="8 8 12 4 16 8"></polyline><polyline points="8 16 12 20 16 16"></polyline>`);
 }
 
 /** An "x" close/clear glyph. */
 export function closeIcon(): SVGTemplateResult {
-  return icon(svg`
+  return iconFrame(svg`
     <line x1="18" y1="6" x2="6" y2="18"></line>
     <line x1="6" y1="6" x2="18" y2="18"></line>
   `);
@@ -60,7 +66,7 @@ export function closeIcon(): SVGTemplateResult {
 
 /** A three-bar "hamburger" glyph, for navigation and menu toggles. */
 export function menuIcon(): SVGTemplateResult {
-  return icon(svg`
+  return iconFrame(svg`
     <line x1="4" y1="7" x2="20" y2="7"></line>
     <line x1="4" y1="12" x2="20" y2="12"></line>
     <line x1="4" y1="17" x2="20" y2="17"></line>
@@ -69,12 +75,12 @@ export function menuIcon(): SVGTemplateResult {
 
 /** A right-pointing play triangle. */
 export function playIcon(): SVGTemplateResult {
-  return icon(svg`<polygon points="6 4 20 12 6 20 6 4"></polygon>`);
+  return iconFrame(svg`<polygon points="6 4 20 12 6 20 6 4"></polygon>`);
 }
 
 /** Two vertical pause bars. */
 export function pauseIcon(): SVGTemplateResult {
-  return icon(svg`
+  return iconFrame(svg`
     <rect x="6" y="4" width="4" height="16" rx="1"></rect>
     <rect x="14" y="4" width="4" height="16" rx="1"></rect>
   `);
@@ -82,12 +88,12 @@ export function pauseIcon(): SVGTemplateResult {
 
 /** Two circular arrows, for a refresh/"show another" action. */
 export function refreshIcon(): SVGTemplateResult {
-  return icon(svg`<path d="M20 11a8 8 0 0 0-14.9-4M4 5v4h4m-4 4a8 8 0 0 0 14.9 4M20 19v-4h-4"></path>`);
+  return iconFrame(svg`<path d="M20 11a8 8 0 0 0-14.9-4M4 5v4h4m-4 4a8 8 0 0 0 14.9 4M20 19v-4h-4"></path>`);
 }
 
 /** A calendar/date glyph, for date-input's open-calendar toggle. */
 export function calendarIcon(): SVGTemplateResult {
-  return icon(svg`
+  return iconFrame(svg`
     <rect x="3" y="5" width="18" height="16" rx="2"></rect>
     <line x1="16" y1="3" x2="16" y2="7"></line>
     <line x1="8" y1="3" x2="8" y2="7"></line>
@@ -97,17 +103,17 @@ export function calendarIcon(): SVGTemplateResult {
 
 /** A generic file/document glyph. */
 export function fileIcon(): SVGTemplateResult {
-  return icon(svg`<path d="M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"></path><polyline points="14 2 14 8 20 8"></polyline>`);
+  return iconFrame(svg`<path d="M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"></path><polyline points="14 2 14 8 20 8"></polyline>`);
 }
 
 /** A folder glyph. */
 export function folderIcon(): SVGTemplateResult {
-  return icon(svg`<path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"></path>`);
+  return iconFrame(svg`<path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"></path>`);
 }
 
 /** A four-corner "expand to fullscreen" glyph. */
 export function expandIcon(): SVGTemplateResult {
-  return icon(svg`
+  return iconFrame(svg`
     <polyline points="15 3 21 3 21 9"></polyline>
     <polyline points="9 21 3 21 3 15"></polyline>
     <line x1="21" y1="3" x2="14" y2="10"></line>
@@ -117,12 +123,12 @@ export function expandIcon(): SVGTemplateResult {
 
 /** A three-quarter-arc spinner glyph. Rotate the wrapping part element via CSS animation for a loading state. */
 export function spinnerIcon(): SVGTemplateResult {
-  return icon(svg`<path d="M21 12a9 9 0 1 1-9-9"></path>`);
+  return iconFrame(svg`<path d="M21 12a9 9 0 1 1-9-9"></path>`);
 }
 
 /** An open-eye glyph, for a password field's "show" toggle. */
 export function eyeIcon(): SVGTemplateResult {
-  return icon(svg`
+  return iconFrame(svg`
     <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"></path>
     <circle cx="12" cy="12" r="3"></circle>
   `);
@@ -130,7 +136,7 @@ export function eyeIcon(): SVGTemplateResult {
 
 /** A slashed-eye glyph, for a password field's "hide" toggle. */
 export function eyeOffIcon(): SVGTemplateResult {
-  return icon(svg`
+  return iconFrame(svg`
     <path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a18.5 18.5 0 0 1 4.22-5.06"></path>
     <path d="M9.9 4.24A10.4 10.4 0 0 1 12 4c7 0 11 7 11 7a18.5 18.5 0 0 1-2.16 3.19"></path>
     <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path>
@@ -140,7 +146,7 @@ export function eyeOffIcon(): SVGTemplateResult {
 
 /** A pinned conversation glyph. */
 export function pinIcon(): SVGTemplateResult {
-  return icon(svg`
+  return iconFrame(svg`
     <path d="M12 17v5"></path>
     <path d="M9 3h6l1 6 3 3v2H5v-2l3-3Z"></path>
   `);
@@ -148,7 +154,7 @@ export function pinIcon(): SVGTemplateResult {
 
 /** An archive box glyph. */
 export function archiveIcon(): SVGTemplateResult {
-  return icon(svg`
+  return iconFrame(svg`
     <rect x="3" y="4" width="18" height="4" rx="1"></rect>
     <path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8"></path>
     <line x1="10" y1="13" x2="14" y2="13"></line>
@@ -157,7 +163,7 @@ export function archiveIcon(): SVGTemplateResult {
 
 /** A trash bin glyph. */
 export function trashIcon(): SVGTemplateResult {
-  return icon(svg`
+  return iconFrame(svg`
     <path d="M4 7h16"></path>
     <path d="M10 11v6"></path>
     <path d="M14 11v6"></path>
@@ -168,17 +174,17 @@ export function trashIcon(): SVGTemplateResult {
 
 /** A pencil glyph. */
 export function pencilIcon(): SVGTemplateResult {
-  return icon(svg`<path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"></path>`);
+  return iconFrame(svg`<path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"></path>`);
 }
 
 /** A paper-plane send glyph. */
 export function sendIcon(): SVGTemplateResult {
-  return icon(svg`<line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>`);
+  return iconFrame(svg`<line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>`);
 }
 
 /** A circular regenerate glyph. */
 export function regenerateIcon(): SVGTemplateResult {
-  return icon(svg`
+  return iconFrame(svg`
     <polyline points="23 4 23 10 17 10"></polyline>
     <polyline points="1 20 1 14 7 14"></polyline>
     <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
@@ -187,7 +193,7 @@ export function regenerateIcon(): SVGTemplateResult {
 
 /** A retry glyph. */
 export function retryIcon(): SVGTemplateResult {
-  return icon(svg`<polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>`);
+  return iconFrame(svg`<polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>`);
 }
 
 /** A filled square stop glyph. */
@@ -231,10 +237,44 @@ export function thumbIcon(direction: 'up' | 'down', filled: boolean): SVGTemplat
 
 /** A confirmation checkmark; the library's one "done" glyph (copy confirmation, checked state). */
 export function checkIcon(): SVGTemplateResult {
-  return icon(svg`<polyline points="5 12.5 10 17.5 19 6.5"></polyline>`);
+  return iconFrame(svg`<polyline points="5 12.5 10 17.5 19 6.5"></polyline>`);
 }
 
 /** A generic two-rectangle "copy" glyph. */
 export function copyIcon(): SVGTemplateResult {
-  return icon(svg`<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>`);
+  return iconFrame(svg`<rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>`);
+}
+
+/** A circle with a clock hand: a step that has not started. */
+export function statusPendingIcon(): SVGTemplateResult {
+  return iconFrame(svg`<circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline>`);
+}
+
+/** A three-quarter arc, spun by each component's running-status CSS animation; a full circle would not convey rotation. */
+export function statusRunningIcon(): SVGTemplateResult {
+  return iconFrame(svg`<path d="M21 12a9 9 0 1 1-9-9"></path>`);
+}
+
+/** A circle with a checkmark: succeeded or approved. */
+export function statusSuccessIcon(): SVGTemplateResult {
+  return iconFrame(svg`<circle cx="12" cy="12" r="9"></circle><polyline points="8 12.5 11 15.5 16 9.5"></polyline>`);
+}
+
+/** A circle with a cross: failed or denied by the user. */
+export function statusErrorIcon(): SVGTemplateResult {
+  return iconFrame(svg`
+    <circle cx="12" cy="12" r="9"></circle>
+    <line x1="9" y1="9" x2="15" y2="15"></line>
+    <line x1="15" y1="9" x2="9" y2="15"></line>
+  `);
+}
+
+/** A circle with a diagonal slash: blocked by policy rather than failed at run time. */
+export function statusDeniedIcon(): SVGTemplateResult {
+  return iconFrame(svg`<circle cx="12" cy="12" r="9"></circle><line x1="6" y1="18" x2="18" y2="6"></line>`);
+}
+
+/** A circle with a level dash: stopped short, neither succeeded nor failed. */
+export function statusIncompleteIcon(): SVGTemplateResult {
+  return iconFrame(svg`<circle cx="12" cy="12" r="9"></circle><line x1="8" y1="12" x2="16" y2="12"></line>`);
 }

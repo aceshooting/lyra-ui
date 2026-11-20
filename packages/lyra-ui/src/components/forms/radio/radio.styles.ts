@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { disabledControl, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -57,8 +57,7 @@ export const styles = css`
      selector caught only the first, leaving a fieldset-disabled radio's base at full opacity with
      a normal cursor while effectiveDisabled correctly gated tabindex/aria-disabled. */
   [part~="base"][part~="disabled"] {
-    cursor: not-allowed;
-    opacity: var(--lr-opacity-disabled);
+    ${disabledControl}
   }
   [part~="circle"] {
     display: inline-flex;

@@ -1,4 +1,4 @@
-import { focusRing, focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingInsetOffset, hoverFill } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -71,7 +71,7 @@ export const styles = css`
      light and dark themes. */
   [part='copy-button']:active,
   [part='download-button']:active {
-    background: var(--lr-terminal-toolbar-button-active-bg, color-mix(in oklab, var(--lr-terminal-toolbar-button-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    background: var(--lr-terminal-toolbar-button-active-bg, ${activeFill('var(--lr-terminal-toolbar-button-hover-bg, var(--lr-color-brand-quiet))')});
   }
   [part='copy-button']:focus-visible,
   [part='download-button']:focus-visible {
@@ -104,7 +104,7 @@ export const styles = css`
     background: var(--lr-terminal-line-hover-bg, var(--lr-color-brand-quiet));
   }
   lr-virtual-list::part(line-interactive):active {
-    background: var(--lr-terminal-line-active-bg, color-mix(in oklab, var(--lr-terminal-line-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    background: var(--lr-terminal-line-active-bg, ${activeFill('var(--lr-terminal-line-hover-bg, var(--lr-color-brand-quiet))')});
   }
   /* State-specific parts keep semantic highlights intact through hover/press, and give a consumer
      a semantic part to override deliberately. */
@@ -196,10 +196,10 @@ export const styles = css`
      pill's own label along with the surface. Mixing always moves, in the direction the surface
      needs. */
   [part='jump-to-latest']:hover {
-    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: ${hoverFill('var(--lr-color-brand)')};
   }
   [part='jump-to-latest']:active {
-    background: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-brand)')};
   }
   [part='jump-to-latest']:focus-visible {
     ${focusRing}

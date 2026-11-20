@@ -1,5 +1,5 @@
 import { css } from 'lit';
-import { focusRing } from '../interactive-control.styles.js';
+import { activeFill, focusRing, hoverFill } from '../interactive-control.styles.js';
 
 /**
  * Preset-button paint shared by the quick-range rows. The adopter's `:host` resolves its public
@@ -24,11 +24,11 @@ export const formControlPresetButton = css`
   [part~='preset-button']:not([data-active]):active:not(:disabled) {
     background: var(
       --_lr-preset-pressed-bg,
-      color-mix(in oklab, var(--_lr-preset-pressed-base, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      ${activeFill('var(--_lr-preset-pressed-base, var(--lr-color-brand-quiet))')}
     );
     border-color: var(
       --_lr-preset-pressed-border-color,
-      color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      ${activeFill('var(--lr-color-brand)')}
     );
   }
   [part~='preset-button'][data-active] {
@@ -38,8 +38,8 @@ export const formControlPresetButton = css`
   }
   [part~='preset-button'][data-active]:hover:not(:disabled) {
     background-image: linear-gradient(
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover)),
-      color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover))
+      ${hoverFill('transparent')},
+      ${hoverFill('transparent')}
     );
   }
   /* Pressed selected preset: by default its fill mixes toward the press partner; an adopter that keeps
@@ -48,20 +48,12 @@ export const formControlPresetButton = css`
   [part~='preset-button'][data-active]:active:not(:disabled) {
     background-color: var(
       --_lr-preset-selected-pressed-bg,
-      color-mix(
-        in oklab,
-        var(--_lr-preset-selected-bg, var(--lr-color-brand)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--_lr-preset-selected-bg, var(--lr-color-brand))')}
     );
     background-image: var(--_lr-preset-selected-pressed-image, none);
     border-color: var(
       --_lr-preset-selected-pressed-border-color,
-      color-mix(
-        in oklab,
-        var(--_lr-preset-selected-border-color, var(--lr-color-brand)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--_lr-preset-selected-border-color, var(--lr-color-brand))')}
     );
   }
   [part~='preset-button']:focus-visible {

@@ -871,25 +871,27 @@ describe('hit area', () => {
 });
 
 describe('attachment identity resolution', () => {
-  it('assigns distinct stable action ids to two occurrences of the same File', async () => {
+  it('derives a stable attachmentId from file name+size+lastModified when no attachment-id is set', async () => {
+    const file = makeFile('a.png', 'image/png', 10);
+    const el = await fixture<LyraAttachmentChip>(html`<lr-attachment-chip .file=${file}></lr-attachment-chip>`);
+    const pending = oneEvent(el, 'lr-remove');
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]')!.click();
+    expect((await pending).detail.attachmentId).to.equal(`a.png:10:${file.lastModified}`);
+  });
+
+  it('gives chips that show the same File distinct ids once attachment-id is set', async () => {
     const file = makeFile('a.png', 'image/png', 10);
     const wrapper = await fixture<HTMLElement>(html`<div>
       <lr-attachment-chip .file=${file}></lr-attachment-chip>
-      <lr-attachment-chip attachment-id="   " .file=${file}></lr-attachment-chip>
+      <lr-attachment-chip attachment-id="second" .file=${file}></lr-attachment-chip>
     </div>`);
     const ids: string[] = [];
     for (const chip of wrapper.querySelectorAll('lr-attachment-chip')) {
       await chip.updateComplete;
       chip.addEventListener('lr-remove', event => ids.push(event.detail.attachmentId));
-      const remove = chip.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]')!;
-      remove.click();
-      remove.click();
+      chip.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]')!.click();
     }
-    expect(ids).to.have.length(4);
-    expect(ids.every(id => id.trim().length > 0)).to.equal(true);
-    expect(ids[0]).to.equal(ids[1]);
-    expect(ids[2]).to.equal(ids[3]);
-    expect(ids[0]).not.to.equal(ids[2]);
+    expect(ids).to.deep.equal([`a.png:10:${file.lastModified}`, 'second']);
   });
 
   it('uses the same generated id for whitespace-only and omitted attachment-id', async () => {

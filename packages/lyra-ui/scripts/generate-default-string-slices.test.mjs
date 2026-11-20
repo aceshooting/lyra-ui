@@ -510,6 +510,76 @@ export class LyraRootMapSample extends LyraElement {
   await rm(rootMapFixture, { recursive: true, force: true });
 }
 
+// A dynamic key that resolves entirely to a module-local map is closed: it adds exactly the map's
+// keys and leaves the helper graph under the strict call-scoped walk. A key fed by a public field
+// stays open, because a caller can assign it, and keeps the conservative whole-graph walk.
+const closedMapCatalog = `
+type Key = 'collapse' | 'statusHigh' | 'statusLow' | 'plainLabel';
+const DEFAULT_STRINGS: Record<Key, string> = {
+  collapse: 'Collapse',
+  statusHigh: 'High confidence',
+  statusLow: 'Low confidence',
+  plainLabel: 'Plain',
+};
+`;
+const closedMapFixture = await mkdtemp(path.join(tmpdir(), 'lyra-default-slice-closed-map-'));
+try {
+  const internal = path.join(closedMapFixture, 'src', 'internal');
+  const closedDir = path.join(closedMapFixture, 'src', 'components', 'utility', 'closed-map-sample');
+  const openDir = path.join(closedMapFixture, 'src', 'components', 'utility', 'open-field-sample');
+  await mkdir(internal, { recursive: true });
+  await mkdir(closedDir, { recursive: true });
+  await mkdir(openDir, { recursive: true });
+  await writeFile(path.join(internal, 'localization.ts'), closedMapCatalog);
+  await writeFile(path.join(internal, 'visibility-helper.ts'),
+    `export const isCollapsed = (value: string): boolean => value === 'collapse';\n`);
+  await writeFile(
+    path.join(closedDir, 'closed-map-sample.class.ts'),
+    `import { LyraElement } from '../../../internal/lyra-element.js';
+import { isCollapsed } from '../../../internal/visibility-helper.js';
+
+const STATUS_KEY = { high: 'statusHigh', low: 'statusLow' } as const;
+
+export class LyraClosedMapSample extends LyraElement {
+  private readonly level: keyof typeof STATUS_KEY = 'high';
+  private message(key: (typeof STATUS_KEY)[keyof typeof STATUS_KEY]): string {
+    return this.localize(key);
+  }
+  render() {
+    void isCollapsed('open');
+    return this.localize(STATUS_KEY[this.level]) + this.message(STATUS_KEY.low) + this.localize('plainLabel');
+  }
+}
+`,
+  );
+  await writeFile(
+    path.join(openDir, 'open-field-sample.class.ts'),
+    `import { LyraElement } from '../../../internal/lyra-element.js';
+import { isCollapsed } from '../../../internal/visibility-helper.js';
+
+export class LyraOpenFieldSample extends LyraElement {
+  labelKey = 'statusHigh';
+  render() {
+    void isCollapsed('open');
+    return this.localize(this.labelKey);
+  }
+}
+`,
+  );
+  await generateDefaultStringSlices({ packageDir: closedMapFixture, write: true, exclusions: {} });
+  const closedSlice = await readFile(path.join(closedDir, 'closed-map-sample.class.ts'), 'utf8');
+  const openSlice = await readFile(path.join(openDir, 'open-field-sample.class.ts'), 'utf8');
+  assert.match(closedSlice, /LYRA_DEFAULT_statusHigh\b/, 'a closed local key map stays reachable');
+  assert.match(closedSlice, /LYRA_DEFAULT_statusLow\b/, 'a closed local key map stays reachable');
+  assert.match(closedSlice, /LYRA_DEFAULT_plainLabel\b/, 'the literal key alongside it is still detected');
+  assert.doesNotMatch(closedSlice, /LYRA_DEFAULT_collapse\b/,
+    'a closed dynamic key must not reopen the broad walk over incidental helper literals');
+  assert.match(openSlice, /LYRA_DEFAULT_statusHigh\b/, 'a public-field key keeps its literal default reachable');
+  assert.match(openSlice, /LYRA_DEFAULT_collapse\b/, 'a public-field key keeps the conservative whole-graph walk');
+} finally {
+  await rm(closedMapFixture, { recursive: true, force: true });
+}
+
 // A small number of component graphs intentionally import broad helper modules whose unrelated
 // localization lookups or catalog-shaped literals cannot be distinguished by the conservative
 // graph walk. Keep those proven false positives out of the owning component slices without

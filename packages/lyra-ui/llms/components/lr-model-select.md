@@ -219,6 +219,16 @@ visually-distinct row (dashed border, italic label, "not in catalog" badge) comp
   control in either mode (the closed trigger button or free-text input), retaining `relatedTarget`
   and bubbling/composed unlike the shadow-internal original.
 - `lr-invalid` (no detail) — the single bubbling/composed alias of a failed native validity check.
+- `lr-change-request` (frozen `detail: { value: string; inCatalog: boolean }`, **cancelable**) —
+  fired before a listbox pick or free-text commit changes `value`. `preventDefault()` keeps the
+  current value and the open popup; a listener that disables, detaches, makes read-only or
+  re-values the picker also stops the commit. Programmatic `value` writes never request.
+- `lr-show` / `lr-hide` (no detail) — fired before the listbox opens or closes, however `open`
+  changed after the first render (trigger, keyboard, Escape, outside press or a property/attribute
+  write). Both are cancelable, except the close that disabling the picker forces; a vetoed write
+  leaves the reflected `open` attribute in step with the kept state.
+- `lr-after-show` / `lr-after-hide` (no detail) — the opened listbox finished its transition, or the
+  closed one finished and left layout.
 
 **Slots:** `label` (custom visible label content), `hint` (custom hint content), `error` (custom
 error content).

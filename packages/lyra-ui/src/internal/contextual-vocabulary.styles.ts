@@ -1,5 +1,5 @@
 import { css } from 'lit';
-import { semanticVariantRows } from './semantic-variant-rows.styles.js';
+import { brandVariantRow, neutralVariantRow, semanticVariantRows } from './semantic-variant-rows.styles.js';
 
 /**
  * Explicit-only semantic mappings for components whose unset variant inherits a containing
@@ -10,26 +10,10 @@ import { semanticVariantRows } from './semantic-variant-rows.styles.js';
  */
 export const contextualVariants = css`
   :host([variant='neutral']) {
-    --lr-color-fill-quiet: var(--lr-color-neutral-fill-quiet);
-    --lr-color-fill-normal: var(--lr-color-neutral-fill-normal);
-    --lr-color-fill-loud: var(--lr-color-neutral-fill-loud);
-    --lr-color-border-quiet: var(--lr-color-neutral-border-quiet);
-    --lr-color-border-normal: var(--lr-color-neutral-border-normal);
-    --lr-color-border-loud: var(--lr-color-neutral-border-loud);
-    --lr-color-on-quiet: var(--lr-color-neutral-on-quiet);
-    --lr-color-on-normal: var(--lr-color-neutral-on-normal);
-    --lr-color-on-loud: var(--lr-color-neutral-on-loud);
+    ${neutralVariantRow}
   }
   :host([variant='brand']) {
-    --lr-color-fill-quiet: var(--lr-color-brand-fill-quiet);
-    --lr-color-fill-normal: var(--lr-color-brand-fill-normal);
-    --lr-color-fill-loud: var(--lr-color-brand-fill-loud);
-    --lr-color-border-quiet: var(--lr-color-brand-border-quiet);
-    --lr-color-border-normal: var(--lr-color-brand-border-normal);
-    --lr-color-border-loud: var(--lr-color-brand-border-loud);
-    --lr-color-on-quiet: var(--lr-color-brand-on-quiet);
-    --lr-color-on-normal: var(--lr-color-brand-on-normal);
-    --lr-color-on-loud: var(--lr-color-brand-on-loud);
+    ${brandVariantRow}
   }
   ${semanticVariantRows}
 `;

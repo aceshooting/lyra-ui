@@ -211,11 +211,15 @@ const strings: LyraLocaleStrings = {
   documentLibrarySelectDocument: 'Pilih {name}',
   graphQueryDeleteWithContext: 'Hapus {name}',
   statRowsInputLimit: 'Menampilkan {count} dari {total} baris perincian.',
-  dataGridRowLimit: 'Hanya {count} baris pertama yang ditampilkan.',
+  dataGridRowLimit: {
+    other: 'Hanya {count} baris pertama yang ditampilkan.',
+  },
   dataGridExpandRow: 'Perluas {row}',
   dataGridFilterColumn: 'Filter {column}',
   dataGridSelectPage: 'Pilih semua baris di halaman ini',
-  tableRowLimit: 'Hanya {count} baris pertama yang ditampilkan.',
+  tableRowLimit: {
+    other: 'Hanya {count} baris pertama yang ditampilkan.',
+  },
   tableAdditionalColumns: 'Kolom tambahan',
   treeLimit: 'Hanya {count} item pertama yang ditampilkan.',
   treeDefaultLabel: 'Pohon',

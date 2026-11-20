@@ -205,6 +205,7 @@ echo "==> Regenerating manifest, event surfaces, framework types, and palette/de
 pnpm --filter @aceshooting/lyra-ui run archive-changelog
 pnpm --filter @aceshooting/lyra-ui run package-metadata
 pnpm manifest
+pnpm --filter @aceshooting/lyra-ui run manifest:companions
 pnpm --filter @aceshooting/lyra-ui run events
 pnpm --filter @aceshooting/lyra-ui run testing-event-registry
 pnpm --filter @aceshooting/lyra-ui run framework-types

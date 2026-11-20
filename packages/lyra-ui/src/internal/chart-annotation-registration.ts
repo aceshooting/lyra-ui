@@ -1,3 +1,5 @@
+import { devWarnOnce } from './dev-warning.js';
+
 type AnnotationRegistrationListener = () => void;
 const annotationRegistrationListeners = new Set<AnnotationRegistrationListener>();
 
@@ -19,7 +21,8 @@ export function onAnnotationPluginRegistered(
 }
 
 /**
- * Fires every subscriber once, isolating a throwing host from its siblings.
+ * Fires every subscriber once, isolating a throwing host from its siblings. A failed rebuild
+ * reports one development diagnostic per page.
  *
  * @internal Called by the chart feature loader immediately after the global registration.
  */
@@ -27,8 +30,9 @@ export function notifyAnnotationPluginRegistered(): void {
   for (const listener of [...annotationRegistrationListeners]) {
     try {
       listener();
-    } catch (err) {
-      console.warn('<lr-chart> could not rebuild a chart after annotation registration:', err);
+    } catch {
+      // Development-only and once per page: a production page has no use for the diagnostic.
+      devWarnOnce('lyra-chart-annotation-rebuild', '<lr-chart> could not rebuild a chart after annotation registration.');
     }
   }
 }

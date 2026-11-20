@@ -36,6 +36,7 @@ import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js'
 import { styles } from './message-feedback.styles.js';
 import type { LyraToolbarAction } from '../message-actions/toolbar-actions.js';
 import { leaseTabIndex } from '../../../internal/roving-toolbar.js';
+import { isRuntimeArray } from '../../../internal/object-guards.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_feedbackCommentLabel, LYRA_DEFAULT_feedbackCommentPlaceholder, LYRA_DEFAULT_feedbackCommentTooLong, LYRA_DEFAULT_feedbackNegative, LYRA_DEFAULT_feedbackPositive, LYRA_DEFAULT_feedbackReasonsLabel, LYRA_DEFAULT_feedbackSingleReasonDescription, LYRA_DEFAULT_feedbackSubmit, LYRA_DEFAULT_feedbackSubmitted } from '../../../internal/default-strings/conversation.generated.js';
@@ -99,14 +100,6 @@ const EMPTY_FEEDBACK_DETAIL_PROJECTION: FeedbackDetailProjection = Object.freeze
   commentMaxLength: undefined,
 });
 
-function isArrayValue(value: unknown): value is readonly unknown[] {
-  try {
-    return Array.isArray(value);
-  } catch {
-    return false;
-  }
-}
-
 /**
  * Admits only own-data reason fields and copies their later-used values once. The shared ownership
  * boundary protects the outer collection, but schema projection still must not re-read a retained
@@ -132,7 +125,7 @@ function projectFeedbackDetail(detail: unknown): FeedbackDetailProjection {
     reasonsDescriptor !== UNSAFE_OWN_DATA_DESCRIPTOR
       ? reasonsDescriptor.value
       : undefined;
-  if (!isArrayValue(reasonsValue)) {
+  if (!isRuntimeArray(reasonsValue)) {
     return Object.freeze({ reasons: Object.freeze([]), commentable, reasonSelection, commentMaxLength });
   }
   const lengthDescriptor = getOwnDataDescriptor(reasonsValue, 'length');

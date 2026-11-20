@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { activeFill, hoverFill } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   /* Fully transparent to layout, matching the nested dropdown/menu shell -- the visible/clickable
@@ -32,16 +33,8 @@ export const styles = css`
     --_lr-attachment-trigger-on-fill: var(--lr-color-text-quiet);
     --_lr-attachment-trigger-edge: 0;
     --_lr-attachment-trigger-bg: var(--_lr-attachment-trigger-fill);
-    --_lr-attachment-trigger-bg-hover: color-mix(
-      in oklab,
-      var(--_lr-attachment-trigger-fill),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
-    --_lr-attachment-trigger-bg-active: color-mix(
-      in oklab,
-      var(--_lr-attachment-trigger-fill),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    --_lr-attachment-trigger-bg-hover: ${hoverFill('var(--_lr-attachment-trigger-fill)')};
+    --_lr-attachment-trigger-bg-active: ${activeFill('var(--_lr-attachment-trigger-fill)')};
     --_lr-attachment-trigger-color: var(--_lr-attachment-trigger-on-fill);
     --_lr-attachment-trigger-color-hover: var(--_lr-attachment-trigger-on-fill);
     /* Reads the PUBLIC hover token (not this component's own -color-hover default) so that an

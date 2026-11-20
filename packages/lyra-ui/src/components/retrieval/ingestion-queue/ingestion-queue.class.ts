@@ -2,10 +2,8 @@ import { collectionSupport, publicCollectionTruncation } from '../../../internal
 import {
   html,
   nothing,
-  svg,
   type PropertyValues,
   type TemplateResult,
-  type SVGTemplateResult,
 } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
@@ -37,7 +35,7 @@ import {
   getListFormat,
   getNumberFormat,
 } from '../../../internal/intl-cache.js';
-import { closeIcon } from '../../../internal/icons.js';
+import { closeIcon, retryIcon } from '../../../internal/icons.js';
 import type {
   CancelEventDetail,
   DocumentRef,
@@ -184,29 +182,6 @@ export interface LyraIngestionQueueEventMap {
   'lr-retry': CustomEvent<IngestionRetryEventDetail>;
   'lr-cancel': CustomEvent<IngestionCancelEventDetail>;
   'lr-item-action': CustomEvent<IngestionItemActionEventDetail>;
-}
-
-const ICON_VIEW_BOX = '0 0 24 24';
-const ICON_STROKE_WIDTH = '1.75';
-
-// Same shape as `<lr-attachment-chip>`'s local `retryIcon()` -- duplicated rather than imported
-// (independently consumable components) but kept visually identical so a retry affordance reads
-// the same wherever it shows up in the library.
-function retryIcon(): SVGTemplateResult {
-  return svg`
-    <svg
-      width="1em"
-      height="1em"
-      viewBox=${ICON_VIEW_BOX}
-      fill="none"
-      stroke="currentColor"
-      stroke-width=${ICON_STROKE_WIDTH}
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    ><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
-  `;
 }
 
 const DEFAULT_VIRTUALIZE_AT = 100;

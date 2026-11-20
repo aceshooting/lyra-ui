@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { activeFill } from './interactive-control.styles.js';
 
 /**
  * The surface chrome of an overlay panel anchored inside a map (`lr-map` anchor slot and
@@ -44,6 +45,6 @@ export const mapOverlayCloseButtonHover = css`
 
 /** Declarations for the pressed state of a panel close button. */
 export const mapOverlayCloseButtonActive = css`
-  background: var(--lr-map-popup-close-button-active-bg, color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+  background: var(--lr-map-popup-close-button-active-bg, ${activeFill('var(--lr-color-brand-quiet)')});
   color: var(--lr-map-popup-close-button-active-color, var(--lr-color-brand));
 `;

@@ -1,5 +1,11 @@
 import type { ReactiveController, ReactiveControllerHost } from 'lit';
-import { writeClipboardText, type LyraClipboardWriteOutcome, type LyraCopyErrorReason } from './clipboard.js';
+import {
+  clipboardWriteFailure,
+  clipboardWriteSuccess,
+  writeClipboardText,
+  type LyraClipboardWriteOutcome,
+  type LyraCopyErrorReason,
+} from './clipboard.js';
 import { COPY_FEEDBACK_MS } from './copy-feedback.js';
 
 type CopyStatus = 'rest' | 'success' | 'error';
@@ -84,13 +90,8 @@ export function copyOutcome(
   kind: 'success' | 'failure',
   detail: { text: string; reason?: LyraCopyErrorReason; error?: unknown },
 ): CopyOutcome {
-  if (kind === 'success') return Object.freeze({ ok: true, text: detail.text });
-  return Object.freeze({
-    ok: false,
-    text: detail.text,
-    reason: detail.reason ?? 'failed',
-    error: detail.error ?? new Error('The text could not be copied.'),
-  });
+  if (kind === 'success') return clipboardWriteSuccess(detail.text);
+  return clipboardWriteFailure(detail.text, detail.error ?? new Error('The text could not be copied.'), detail.reason ?? 'failed');
 }
 
 /**

@@ -1,7 +1,8 @@
 import { css } from 'lit';
 import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { blockHost } from '../../../internal/layout-fragments.styles.js';
 export const styles = css`
-  :host { display: block; min-inline-size: 0; max-inline-size: 100%; }
+  :host { ${blockHost} }
   [part='base'] { display: grid; gap: var(--lr-space-m); min-inline-size: 0; }
   [part='heading'] { margin: 0; font-size: var(--lr-font-size-lg); font-weight: var(--lr-font-weight-bold); overflow-wrap: anywhere; }
   [part='message'], [part='requester'], [part='status'], [part='error'] { margin: 0; overflow-wrap: anywhere; }

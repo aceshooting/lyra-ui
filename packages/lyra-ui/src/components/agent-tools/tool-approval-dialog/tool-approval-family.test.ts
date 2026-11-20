@@ -101,7 +101,9 @@ describe('tool approval interactions', () => {
     expect(host.open).to.equal(false);
     host.readonly = false;
     await host.updateComplete;
-    expect(host.hasAttribute('readonly')).to.equal(false);
+    // `readonly` is a non-reflecting property: clearing it leaves the authored attribute in place.
+    expect(host.readonly).to.equal(false);
+    expect(host.hasAttribute('readonly')).to.equal(true);
   });
 
   for (const [name, template] of [

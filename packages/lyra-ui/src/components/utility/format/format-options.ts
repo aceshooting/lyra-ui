@@ -131,7 +131,7 @@ export function dateTimeFormatOptions(input: DateFormatInputs): Intl.DateTimeFor
 }
 
 export { byteFormat, byteUnitIndex, safeByteUnitStep, type ByteFormatResult } from '../../../internal/bytes.js';
-export type { ByteUnitDisplay as LyraFormatDisplay, ByteUnitFamily as LyraFormatBytesUnit } from '../../../internal/bytes.js';
+export type { LyraFormatDisplay, LyraFormatBytesUnit } from '../../../internal/bytes.js';
 export {
   RELATIVE_TIME_UNITS, relativeTimeDivisor, relativeTimeFormatOptions, resolveDateSource, resolveRelativeTimeState,
   type LyraRelativeTimeNumeric, type LyraRelativeTimeUnit, type RelativeTimeState,

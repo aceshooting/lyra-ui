@@ -19,14 +19,14 @@ import { normalizeLyraSpanKind, normalizeLyraSpanStatus, type LyraSpan } from '.
 import { projectLyraSpans } from '../trace-tree/span-projection.js';
 import type { TraceTreeSource } from '../trace-tree/trace-tree.class.js';
 import type { LyraHierarchySource, LyraHierarchyQuery, LyraTraceSourceSummary } from '../../../data-sources.js';
-import { HierarchySourceController, hierarchyField, hierarchyKey, hierarchyText } from '../../../internal/hierarchy-source-controller.js';
-import { applyHierarchySourceEffects, captureHierarchySourceEffects, createHierarchySummarySource, traceSourceSummary } from '../../../internal/hierarchy-summary-source.js';
+import { HierarchySourceController, hierarchyKey, hierarchyText } from '../../../internal/hierarchy-source-controller.js';
+import { applyHierarchySourceEffects, captureHierarchySourceEffects, createHierarchySummarySource, traceSourceSummary, hierarchySourceSummary, captureHierarchyRowAuthority, hierarchySourceFieldReader, revealActiveHierarchyKey } from '../../../internal/hierarchy-summary-source.js';
 import { hierarchySourceView } from '../../../internal/hierarchy-source-view.js';
 import { hierarchySourceStyles } from '../../../internal/hierarchy-source-view.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanStartedAtOffset, LYRA_DEFAULT_spanWaterfall, LYRA_DEFAULT_spanWaterfallLimit } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_expand, LYRA_DEFAULT_item, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_statusUnknown, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut, LYRA_DEFAULT_treeSourceError, LYRA_DEFAULT_treeSourceSummary } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_durationMilliseconds, LYRA_DEFAULT_durationSeconds, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_retry, LYRA_DEFAULT_statusDenied, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusIncomplete, LYRA_DEFAULT_statusPending, LYRA_DEFAULT_statusRunning, LYRA_DEFAULT_statusSuccess, LYRA_DEFAULT_statusUnknown, LYRA_DEFAULT_treeSourceError, LYRA_DEFAULT_treeSourceSummary } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraSpan } from '../trace-tree/span.js';
@@ -139,21 +139,12 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     ...super.defaultStrings,
     accessibleLabelSeparator: LYRA_DEFAULT_accessibleLabelSeparator,
     collapse: LYRA_DEFAULT_collapse,
-    copy: LYRA_DEFAULT_copy,
-    date: LYRA_DEFAULT_date,
-    details: LYRA_DEFAULT_details,
     durationMilliseconds: LYRA_DEFAULT_durationMilliseconds,
     durationSeconds: LYRA_DEFAULT_durationSeconds,
     expand: LYRA_DEFAULT_expand,
-    item: LYRA_DEFAULT_item,
     loading: LYRA_DEFAULT_loading,
-    map: LYRA_DEFAULT_map,
-    navigation: LYRA_DEFAULT_navigation,
     noData: LYRA_DEFAULT_noData,
-    open: LYRA_DEFAULT_open,
     retry: LYRA_DEFAULT_retry,
-    search: LYRA_DEFAULT_search,
-    select: LYRA_DEFAULT_select,
     spanKindAgent: LYRA_DEFAULT_spanKindAgent,
     spanKindEmbedding: LYRA_DEFAULT_spanKindEmbedding,
     spanKindLlm: LYRA_DEFAULT_spanKindLlm,
@@ -170,8 +161,6 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     statusRunning: LYRA_DEFAULT_statusRunning,
     statusSuccess: LYRA_DEFAULT_statusSuccess,
     statusUnknown: LYRA_DEFAULT_statusUnknown,
-    tokensIn: LYRA_DEFAULT_tokensIn,
-    tokensOut: LYRA_DEFAULT_tokensOut,
     treeSourceError: LYRA_DEFAULT_treeSourceError,
     treeSourceSummary: LYRA_DEFAULT_treeSourceSummary,
   };
@@ -255,20 +244,12 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   private normalizeSourceSpan(value: unknown, key: string): LyraSpan {
     const source = this.treeSource;
     const version = this.sourceVersion;
-    const owner = this.ownerDocument;
     const control = this.sourceControl;
-    const epoch = control.epoch;
     const projection = control.projection;
-    const owned = () => this.isConnected && this.ownerDocument === owner && this.treeSource === source &&
-      this.sourceVersion === version && this.sourceControl === control && control.epoch === epoch && control.projection === projection && !control.loading;
     const accepted = projection ? this.sourceSummaries.get(projection.rows) : undefined;
-    const current = () => owned() && Boolean(accepted?.current()) && owned();
-    const field = (name: string) => {
-      if (!current()) throw new Error('Trace source changed');
-      const result = hierarchyField(value, name);
-      if (!current()) throw new Error('Trace source changed');
-      return result;
-    };
+    const field = hierarchySourceFieldReader(value, captureHierarchyRowAuthority(this, control,
+      () => this.treeSource === source && this.sourceVersion === version && this.sourceControl === control,
+      accepted?.current), 'Trace source changed');
     const id = hierarchyKey(field('id'));
     if (id !== key) throw new TypeError('Trace key mismatch');
     const startMs = field('startMs');
@@ -291,11 +272,8 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
   }
 
   private sourceSummary(): string {
-    const projection = this.sourceControl.projection;
-    return projection ? this.localize('treeSourceSummary', undefined, {
-      visible: getNumberFormat(this.effectiveLocale).format(projection.rows.count),
-      total: getNumberFormat(this.effectiveLocale).format(projection.total),
-    }) : '';
+    const summary = hierarchySourceSummary(this.sourceControl.projection, this.effectiveLocale);
+    return summary ? this.localize('treeSourceSummary', undefined, summary) : '';
   }
 
   private updateSourceEffects(): void {
@@ -304,8 +282,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     const version = this.sourceVersion;
     const snapshot = captureHierarchySourceEffects(this, this.sourceControl,
       () => this.treeSource === source && this.sourceWrapper === binding && this.sourceVersion === version);
-    const { epoch, bound, current } = snapshot;
-    if (!current()) return;
+    if (!snapshot.current()) return;
     for (const row of this.renderRoot.querySelectorAll<HTMLElement>('[data-source-key]')) {
       const active = row.dataset['sourceKey'] === this.activeSpanId;
       row.setAttribute('aria-current', String(active));
@@ -320,12 +297,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
     }, this.sourceAnnouncement);
     if (status === undefined) return;
     this.sourceAnnouncement = status;
-    const key = this.activeSpanId;
-    if (!key || (this.sourceReveal?.[0] === epoch && this.sourceReveal[1] === key)) return;
-    this.sourceReveal = [epoch, key];
-    void this.sourceControl.whenReady().then(ready => {
-      if (ready && bound() && this.activeSpanId === key) void this.sourceControl.reveal(key);
-    });
+    this.sourceReveal = revealActiveHierarchyKey(this.sourceControl, snapshot, () => this.activeSpanId, this.sourceReveal);
   }
 
 

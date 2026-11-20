@@ -537,3 +537,19 @@ it('wraps a long unbroken title without collapsing its min-content to one glyph'
   expect(title.scrollWidth <= title.clientWidth + 1).to.equal(true);
   expect(getComputedStyle(title).overflowWrap).to.equal('break-word');
 });
+
+it('takes its title level from heading-level ahead of a host aria-level and honours none', async () => {
+  const el = await fixture<LyraEntityCard>(html`<lr-entity-card aria-level="7" .entity=${entity}></lr-entity-card>`);
+  const title = () => el.shadowRoot!.querySelector('[part="title"]')!;
+  expect([title().getAttribute('role'), title().getAttribute('aria-level')]).to.deep.equal(['heading', '3']);
+  el.setAttribute('heading-level', '5');
+  await el.updateComplete;
+  expect(title().getAttribute('aria-level')).to.equal('5');
+  el.setAttribute('heading-level', 'none');
+  await el.updateComplete;
+  expect([title().hasAttribute('role'), title().hasAttribute('aria-level')]).to.deep.equal([false, false]);
+  el.removeAttribute('heading-level');
+  el.setAttribute('aria-level', '2');
+  await el.updateComplete;
+  expect(title().getAttribute('aria-level')).to.equal('2');
+});

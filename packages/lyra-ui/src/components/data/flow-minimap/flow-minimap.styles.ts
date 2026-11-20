@@ -1,4 +1,4 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { flowStatusPaint } from '../flow-canvas/flow-status.styles.js';
 
@@ -59,7 +59,7 @@ export const styles = css`
      */
   [part='map']:active,
   [part='base']:active [part='map'] {
-    background: var(--lr-flow-minimap-active-bg, color-mix(in oklab, var(--lr-flow-minimap-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    background: var(--lr-flow-minimap-active-bg, ${activeFill('var(--lr-flow-minimap-hover-bg, var(--lr-color-brand-quiet))')});
   }
   [part='base'][data-locked] [part='map'] {
     cursor: default;

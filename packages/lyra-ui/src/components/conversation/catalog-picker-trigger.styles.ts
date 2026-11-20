@@ -1,4 +1,4 @@
-import { focusRing } from '../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing } from '../../internal/interactive-control.styles.js';
 import { css, unsafeCSS, type CSSResult } from 'lit';
 import { glassSurface } from '../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../internal/glass-scroll-layer.styles.js';
@@ -129,15 +129,14 @@ export function catalogPickerStyles(
     }
     :where([part='trigger']):active:where(:not(:disabled)) {
       background: var(--lr-picker-trigger-active-bg,
-        color-mix(in oklab, var(--lr-picker-trigger-hover-bg, var(--lr-color-brand-quiet)), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+        ${activeFill('var(--lr-picker-trigger-hover-bg, var(--lr-color-brand-quiet))')});
     }
     :host([open]) [part='trigger'] {
       border-color: var(--lr-picker-open-border-color, var(--lr-color-brand));
     }
     :host(:disabled) [part='trigger'],
     :host(:disabled) [part='combobox'] {
-      opacity: var(--lr-opacity-disabled);
-      cursor: not-allowed;
+      ${disabledControl}
     }
 
     ${catalogPickerTriggerLabel}
@@ -233,11 +232,7 @@ export function catalogPickerStyles(
       background: var(--lr-picker-option-active-bg, var(--lr-color-brand-quiet));
     }
     [part='option']:where(:not([aria-disabled='true'])):active {
-      background: color-mix(
-        in oklab,
-        var(--lr-picker-option-active-bg, var(--lr-color-brand-quiet)),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      );
+      background: ${activeFill('var(--lr-picker-option-active-bg, var(--lr-color-brand-quiet))')};
     }
     [part='option'][aria-disabled='true'] {
       cursor: default;

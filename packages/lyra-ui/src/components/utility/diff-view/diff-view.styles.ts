@@ -1,5 +1,5 @@
 import { iconAction } from '../../../internal/icon-action.styles.js';
-import { interactiveTransition, iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingShorthand, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -169,12 +169,11 @@ export const styles = css`
     color: var(--lr-diff-view-highlight-action-hover-color, var(--lr-color-text));
   }
   [part="line-highlight-action"]:active {
-    background: var(--lr-diff-view-highlight-action-active-bg, color-mix(in oklab, var(--_lr-diff-view-highlight-background), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    background: var(--lr-diff-view-highlight-action-active-bg, ${activeFill('var(--_lr-diff-view-highlight-background)')});
     color: var(--lr-diff-view-highlight-action-active-color, var(--lr-color-text));
   }
   [part="line-highlight-action"]:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   [part="copy-button"] {
     ${iconAction}
@@ -200,11 +199,7 @@ export const styles = css`
   }
   [part="copy-button"]:active {
     border-color: var(--lr-color-brand);
-    background: var(--lr-diff-view-copy-active-bg, color-mix(
-      in oklab,
-      var(--lr-color-surface),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    ));
+    background: var(--lr-diff-view-copy-active-bg, ${activeFill('var(--lr-color-surface)')});
     color: var(--lr-diff-view-copy-active-color, var(--lr-color-text));
   }
   [part="copy-button"]:focus-visible {

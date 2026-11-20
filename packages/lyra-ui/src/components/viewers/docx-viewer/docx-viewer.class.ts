@@ -73,6 +73,7 @@ import { sanitizePassiveMarkupFragment } from '../passive-markup.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 import { ViewerSearchState } from '../../../internal/viewer-search.js';
+import { isRuntimeArray } from '../../../internal/object-guards.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
@@ -106,14 +107,6 @@ interface NormalizedDocxConversion {
   readonly messages: readonly unknown[];
 }
 
-function isArrayValue(value: unknown): value is readonly unknown[] {
-  try {
-    return Array.isArray(value);
-  } catch {
-    return false;
-  }
-}
-
 /**
  * Admits the converter's one required string and a bounded own-data diagnostic prefix without
  * invoking getters, iterating peer collections, or inspecting a diagnostic's opaque cause.
@@ -128,7 +121,7 @@ function normalizeDocxConversion(value: unknown): NormalizedDocxConversion | nul
     || diagnostics === MISSING_OWN_DATA_DESCRIPTOR
     || diagnostics === UNSAFE_OWN_DATA_DESCRIPTOR
     || typeof markup.value !== 'string'
-    || !isArrayValue(diagnostics.value)
+    || !isRuntimeArray(diagnostics.value)
   )
     return null;
   const length = readOwnArrayLength(diagnostics.value);

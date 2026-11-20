@@ -1,9 +1,9 @@
 ---
-'@aceshooting/lyra-ui': major
+'@aceshooting/lyra-ui': minor
 ---
 
-Listen for `lr-activate` after the existing native and Lyra events on every emoji pick, including a repeated selection.
-Read `previousValue` alongside `value` on color, date, swatch and rubric value events.
+Emoji pickers also emit `lr-activate` after the existing native and Lyra events on every pick, including a repeated selection.
+Color, date, swatch and rubric value events also carry `previousValue` alongside `value`.
 Keep browser shortcuts, text composition and held activation keys from triggering unintended picker actions or repeated rubric submissions.
 Distinguish button, icon-button and color-picker trigger hover and press in forced-colors mode.
 Keep locale and date-input popups within the available space on both axes.

@@ -1,5 +1,5 @@
 ---
-'@aceshooting/lyra-ui': major
+'@aceshooting/lyra-ui': minor
 ---
 
 Data visualization navigation and activation handlers leave Alt, Ctrl, Meta and IME-composing keys to the browser.

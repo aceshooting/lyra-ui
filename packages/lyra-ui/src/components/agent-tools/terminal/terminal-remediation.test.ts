@@ -160,6 +160,30 @@ it('emits lr-text-select once for an unchanged viewport selection across key and
   expect(count).to.equal(2);
 });
 
+it('reports a viewport selection that settles without a pointer or key release over the viewport', async () => {
+  const el = await fixture<LyraTerminal>(html`<lr-terminal content="first&#10;second"></lr-terminal>`);
+  const list = el.shadowRoot!.querySelector('lr-virtual-list')!;
+  await waitUntil(() => list.shadowRoot!.querySelector('[data-line-number="2"]') !== null);
+  const line = list.shadowRoot!.querySelector('[data-line-number="2"]') as HTMLElement;
+  const range = document.createRange();
+  range.selectNodeContents(line);
+  const selection = { isCollapsed: false, anchorNode: line, focusNode: line, getRangeAt: () => range } as unknown as Selection;
+  (list.shadowRoot as unknown as { getSelection: () => Selection }).getSelection = () => selection;
+  // The page-level selection stream routes by the selected node; a plain range-shaped selection
+  // keeps the routing deterministic in engines that refuse a page range inside a shadow tree.
+  const originalGetSelection = window.getSelection;
+  window.getSelection = () => ({ rangeCount: 1, isCollapsed: false, getRangeAt: () => range }) as unknown as Selection;
+  try {
+    const listener = oneEvent(el, 'lr-text-select');
+    document.dispatchEvent(new Event('selectionchange'));
+    const event = (await listener) as CustomEvent<{ text: string; anchor: unknown }>;
+    expect(event.detail.text).to.equal('second');
+    expect(event.detail.anchor).to.deep.equal({ kind: 'line-range', start: 2, end: 2 });
+  } finally {
+    window.getSelection = originalGetSelection;
+  }
+});
+
 it('announces and shows a note once over-long input is omitted, and clears it with the buffer', async () => {
   const el = await fixture<LyraTerminal>(html`<lr-terminal></lr-terminal>`);
   expect(el.shadowRoot!.querySelector('[part="limit"]') === null).to.equal(true);

@@ -24,21 +24,41 @@ import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { setMapCanvasReadyCallback } from '../../../internal/map-canvas-ready.js';
 import { loadMaplibre } from '../../media/map/map-loader.js';
 import type {
+  LyraMapEventMap,
   LyraMapGeoJsonDataLayer,
   LyraMap,
   LyraMapStyleSpecification,
 } from '../../media/map/map.class.js';
+import { containShadowChildEvents } from '../../../internal/child-event-containment.js';
 import { styles } from './geojson-view.styles.js';
 import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import type {
   AnchorResultDetail,
   TextSelectDetail,
 } from '../document-viewer/anchors.js';
+import { isSafeNonArrayObject } from '../../../internal/object-guards.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeDocument, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_geojsonViewFeatureCount, LYRA_DEFAULT_geojsonViewInvalid, LYRA_DEFAULT_geojsonViewLabel, LYRA_DEFAULT_geojsonViewMissingMapLibrary, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
+
+/** Every event the internal `<lr-map>` raises. The record type makes a newly added map event a
+ *  type error here until it is listed, so none can escape as if it were this viewer's own. */
+const MAP_CHILD_EVENTS: Readonly<Record<keyof LyraMapEventMap, 1>> = {
+  'lr-map-anchor-close': 1, 'lr-map-anchor-close-request': 1, 'lr-map-attribution-toggle': 1,
+  'lr-map-camera-interrupt': 1, 'lr-map-click': 1, 'lr-map-contextmenu': 1, 'lr-map-draw-cancel': 1,
+  'lr-map-draw-change': 1, 'lr-map-draw-complete': 1, 'lr-map-draw-start': 1,
+  'lr-map-draw-vertex-end': 1, 'lr-map-export-error': 1, 'lr-map-feature-enter': 1,
+  'lr-map-feature-leave': 1, 'lr-map-geolocate': 1, 'lr-map-geolocate-error': 1,
+  'lr-map-geolocate-out-of-bounds': 1, 'lr-map-idle': 1, 'lr-map-legend-panel-toggle-request': 1,
+  'lr-map-legend-toggle-request': 1, 'lr-map-load': 1, 'lr-map-marker-activate': 1, 'lr-map-move': 1,
+  'lr-map-pick': 1, 'lr-map-pick-cancel': 1, 'lr-map-pick-cancel-request': 1,
+  'lr-map-pointer-leave': 1, 'lr-map-pointer-move': 1, 'lr-map-projection-change': 1,
+  'lr-map-projection-change-request': 1, 'lr-map-scene-activate': 1, 'lr-map-scene-state': 1,
+  'lr-map-style-load': 1, 'lr-map-terrain-change': 1, 'lr-map-terrain-change-request': 1,
+  'lr-map-view-change': 1,
+};
 
 /** The three structural container tags accepted by the GeoJSON bridge. */
 export type GeoJsonTypeTag =
@@ -111,10 +131,6 @@ const GEOJSON_BASE_MAP_STYLE: LyraMapStyleSpecification = {
   sources: {},
   layers: [],
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
 
 /** Budgets every value and object key in the parsed JSON graph before geometry validation,
  *  pretty serialization, json-viewer handoff, or MapLibre handoff. Geometry has stricter rules
@@ -230,7 +246,7 @@ function assertGeoJsonGraphWithinLimits(root: unknown): void {
  */
 function analyzeGeoJson(value: unknown): GeoJsonAnalysis {
   assertGeoJsonGraphWithinLimits(value);
-  if (!isRecord(value)) throw new Error('not a GeoJSON object');
+  if (!isSafeNonArrayObject(value)) throw new Error('not a GeoJSON object');
   const root = value as GeoJsonLike;
   const tasks: GeoTask[] = [{ kind: 'geo', value, depth: 0, mode: 'any' }];
   let positionCount = 0;
@@ -341,7 +357,7 @@ function analyzeGeoJson(value: unknown): GeoJsonAnalysis {
 
     if (task.kind !== 'geo')
       throw new Error('invalid GeoJSON coordinate structure');
-    if (!isRecord(task.value) || typeof task.value['type'] !== 'string')
+    if (!isSafeNonArrayObject(task.value) || typeof task.value['type'] !== 'string')
       throw new Error('invalid GeoJSON member');
     const member = task.value as GeoJsonLike;
     const type = member['type'];
@@ -358,7 +374,7 @@ function analyzeGeoJson(value: unknown): GeoJsonAnalysis {
       ) {
         throw new Error('invalid GeoJSON Feature');
       }
-      if (member['properties'] !== null && !isRecord(member['properties']))
+      if (member['properties'] !== null && !isSafeNonArrayObject(member['properties']))
         throw new Error('invalid GeoJSON Feature properties');
       if (member['geometry'] !== null) {
         pushTask({
@@ -505,7 +521,8 @@ class LyraGeoJsonViewerBase extends LyraElement<LyraGeoJsonViewerEventMap> {}
  * status, and map output define no fragment ids; such a jump reports `found: false`. Use a
  * text-quote anchor for the serialized metadata. Responses are limited to 4 MiB before JSON
  * parsing; pretty metadata is limited to 4,194,304 UTF-16 units before serialization. Loaded
- * documents are retained across disconnect/reconnect while src is unchanged.
+ * documents are retained across disconnect/reconnect while src is unchanged. Every `lr-map-*`
+ * event the internal map raises stays inside the viewer.
  *
  * @customElement lr-geojson-viewer
  * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with empty detail.
@@ -603,6 +620,12 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
 
   private stopChildEvent(event: Event): void {
     event.stopPropagation();
+  }
+
+  protected override createRenderRoot(): HTMLElement | DocumentFragment {
+    const root = super.createRenderRoot();
+    containShadowChildEvents(root, Object.keys(MAP_CHILD_EVENTS));
+    return root;
   }
 
   private onMapCanvasReady(map: LyraMap, canvas: HTMLCanvasElement): void {
@@ -828,12 +851,6 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
             .mapStyle=${GEOJSON_BASE_MAP_STYLE}
             .dataLayers=${guard([dataLayers], () => dataLayers)}
             label=${this.effectiveLabel}
-            @lr-map-load=${this.stopChildEvent}
-            @lr-map-click=${this.stopChildEvent}
-            @lr-map-view-change=${this.stopChildEvent}
-            @lr-map-marker-activate=${this.stopChildEvent}
-            @lr-map-legend-toggle-request=${this.stopChildEvent}
-            @lr-map-legend-panel-toggle-request=${this.stopChildEvent}
           ></lr-map>
         `;
       }

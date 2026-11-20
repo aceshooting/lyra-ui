@@ -43,11 +43,11 @@ import { LYRA_DEFAULT_agentWorkspaceContext, LYRA_DEFAULT_agentWorkspaceConversa
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
+/** Generic control-state events of the built-in children, which would otherwise read as the
+ *  workspace's own. Child intents (load-more, chunk/citation/claim/tool activation, clipboard and
+ *  export outcomes) keep bubbling past the host: the workspace offers no other route to them. */
 const childEvents = [
-  'input', 'change', 'lr-change', 'lr-invalid', 'lr-toggle', 'lr-toggle-request', 'lr-tool-activate',
-  'lr-tool-render-error', 'lr-chunk-open', 'lr-load-more', 'lr-claim-select', 'lr-citation-open',
-  'lr-citation-activate', 'lr-copy', 'lr-error', 'lr-copy-error', 'lr-toolbar-actions-change',
-  'lr-export-request', 'lr-export-complete', 'lr-export-error', 'lr-show', 'lr-hide',
+  'input', 'change', 'lr-change', 'lr-invalid', 'lr-toggle', 'lr-toggle-request', 'lr-show', 'lr-hide',
 ];
 
 const MAX_RENDERED_MESSAGES = 500;

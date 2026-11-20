@@ -1,11 +1,10 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
   }
   /* Card chrome behind inline var() fallbacks, same convention as the dense size tier below. The
      background fallback is transparent, which is what this card has always painted -- it takes
@@ -102,7 +101,7 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
   }
   [part='files-toggle']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-brand-quiet)')};
   }
   [part='files-toggle']:focus-visible {
     ${focusRing}
@@ -139,7 +138,7 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
   }
   [part='file']:active {
-    background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-brand-quiet)')};
   }
   [part='file']:focus-visible {
     ${focusRing}

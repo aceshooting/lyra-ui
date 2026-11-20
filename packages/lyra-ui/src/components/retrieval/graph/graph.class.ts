@@ -84,6 +84,7 @@ import {
   getOwnDataDescriptor,
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
+  requireOwnDataValue,
 } from '../../../internal/data-descriptors.js';
 import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import type { LyraNodeTypeStyle } from '../../../internal/node-type-style.js';
@@ -128,9 +129,7 @@ let paginationRegistration: Promise<unknown> | undefined;
 const EMPTY_SOURCE_QUERY: LyraGraphSourceQuery = Object.freeze({ kind: 'nodes', search: '', centerKey: null, direction: 'both', nodeTypes: Object.freeze([]) });
 function graphSourceField(value: unknown, key: PropertyKey): unknown {
   if (value === null || typeof value !== 'object') throw new TypeError('Invalid graph record');
-  const descriptor = Object.getOwnPropertyDescriptor(value, key);
-  if (descriptor && !('value' in descriptor)) throw new TypeError('Accessor graph record');
-  return descriptor?.value;
+  return requireOwnDataValue(value, key, 'Accessor graph record');
 }
 function graphSourceRows(raw: unknown, limit: number): readonly GraphSourceRecord[] {
   if (!Array.isArray(raw)) throw new TypeError('Invalid graph records');

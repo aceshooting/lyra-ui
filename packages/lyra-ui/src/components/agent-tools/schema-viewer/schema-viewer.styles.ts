@@ -2,11 +2,12 @@ import { css } from 'lit';
 import { srOnly } from '../../../internal/a11y.js';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
-import { activeFill, hoverFill } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, hoverFill } from '../../../internal/interactive-control.styles.js';
+import { containerHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   ${srOnly}
-  :host { display: block; container-type: inline-size; contain-intrinsic-inline-size: var(--lr-size-20rem); }
+  :host { ${containerHost} }
   ul { display: flex; flex-direction: column; gap: var(--lr-space-xs); margin: 0; padding-inline-start: 0; list-style: none; }
   [part='tree'] { padding-inline-start: 0; }
   [part~='node'] {
@@ -37,13 +38,13 @@ export const styles = css`
      --lr-color-mix-partner, which follows the text colour, so it reads as a distinctly deeper
      step than hover in either theme. */
   [part='node-trigger']:active {
-    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-surface-raised)')};
   }
   [part='node-trigger']:where([aria-pressed='true']) { background: var(--_lr-schema-trigger-selected-bg); }
   [part='node-trigger']:where([aria-pressed='true']):hover { background: ${hoverFill('var(--_lr-schema-trigger-selected-bg)')}; }
   [part='node-trigger']:where([aria-pressed='true']):active { background: ${activeFill('var(--_lr-schema-trigger-selected-bg)')}; }
   ${forcedColorsPart("[part='node-trigger'][aria-pressed='true']")}
-  [part='node-trigger']:focus-visible { outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color); outline-offset: var(--lr-focus-ring-offset); }
+  [part='node-trigger']:focus-visible { ${focusRing} }
   [part='name'] { min-inline-size: 0; overflow-wrap: break-word; }
   [part='description'], [part='issue'] { margin: var(--lr-space-2xs) var(--lr-space-xs); font-size: var(--lr-font-size-sm); overflow-wrap: break-word; }
   [part='description'] { color: var(--lr-color-text-quiet); }

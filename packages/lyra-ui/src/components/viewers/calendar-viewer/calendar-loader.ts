@@ -1,4 +1,4 @@
-import { createOptionalPeerLoader } from '../../../internal/optional-peer-capabilities.js';
+import { createOptionalPeerLoader, hasPeerMethods } from '../../../internal/optional-peer-capabilities.js';
 
 const CALENDAR_ICAL_WARNING_KEY = 'lyra-calendar-viewer-ical-unavailable';
 const CALENDAR_ICAL_WARNING = '<lr-calendar-viewer> could not load its optional ical.js peer.';
@@ -32,16 +32,7 @@ export interface IcalApi {
 }
 
 function isIcalApi(value: unknown): value is IcalApi {
-  return (
-    (typeof value === 'object' || typeof value === 'function') &&
-    value !== null &&
-    'parse' in value &&
-    typeof value.parse === 'function' &&
-    'Component' in value &&
-    typeof value.Component === 'function' &&
-    'Event' in value &&
-    typeof value.Event === 'function'
-  );
+  return hasPeerMethods(value, 'parse', 'Component', 'Event');
 }
 
 const ical = /* @__PURE__ */ createOptionalPeerLoader<IcalApi>({

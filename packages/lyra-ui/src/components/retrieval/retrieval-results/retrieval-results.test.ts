@@ -1748,6 +1748,11 @@ describe('selected-row cssprop escape hatch', () => {
     );
   });
 
+  it('sizes the selection stripe from its own width token', async () => {
+    const { rowBody } = await selected('--lr-retrieval-results-selected-width: 5px');
+    expect(getComputedStyle(rowBody).borderLeftWidth).to.equal('5px');
+  });
+
   it('renders byte-identical to the brand token when unset', async () => {
     const { el, rowBody } = await selected();
     expect(getComputedStyle(rowBody).borderLeftColor).to.equal(

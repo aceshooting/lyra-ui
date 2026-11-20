@@ -1,5 +1,5 @@
 import { css } from 'lit';
-import { activeFill, hoverFill } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingShorthand, hoverFill } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   :host {
@@ -67,7 +67,6 @@ export const styles = css`
   }
 
   [part="download-link"]:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
 `;

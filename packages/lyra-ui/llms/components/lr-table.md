@@ -394,7 +394,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   shadow-root-level branches (no columns, no rows) render spacious, while the filtered-to-zero
   branch, which sits inside `[part='base']` alongside the filter field, renders compact. An
   unsupported value normalizes to unset. Has no effect once the `empty` slot is filled.
-- `revealColumnsLabel` (`reveal-columns-label`) and `columnsHideLabel` (`columns-hide-label`) set the action tooltip for showing or hiding additional columns. An explicit empty string omits that tooltip. The visible name stays constant in both states and uses `tableAdditionalColumns`. Read `aria-expanded` for its state.
+- `revealColumnsLabel` (`reveal-columns-label`) and `columnsHideLabel` (`columns-hide-label`) label the reveal button for showing or hiding additional columns; read `aria-expanded` for its state. Supplying a `tableAdditionalColumns` string (through `strings` or a registered locale override) opts into one constant visible name in both states, and the two labels then become the action tooltip; an explicit empty string omits that tooltip.
 
 - `priorityColumnsVisible: boolean = false` (attribute `priority-columns-visible`, reflected) —
   forces responsive priority columns visible and is updated by the built-in reveal button.
@@ -666,7 +666,7 @@ declaration to retheme every internal scroll container in the library, including
   `aria-labelledby`.
   Without either name, first render issues one development-only `console.warn`; production and
   unknown/unbundled runtimes stay silent.
-- `revealColumnsLabel`/`columnsHideLabel` only set the tooltip on `[part='reveal-columns-button']`, which
+- `revealColumnsLabel`/`columnsHideLabel` only label `[part='reveal-columns-button']`, which
   requires a `priority` column. Setting either without one is inert and issues the same one-time,
   development-only warning; production and unknown/unbundled runtimes stay silent.
 - Headers and body rows each have one roving `tabindex="0"`. Left/Right/Home/End navigate headers;

@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'Άνοιγμα ημερολογίου',
+  item: 'στοιχείο',
   comboboxLoadError: 'Δεν ήταν δυνατή η φόρτωση των επιλογών.',
   comboboxSelectedOverflow: '+{n} ακόμη',
   checkboxRequired: 'Επιλέξτε αυτό το πλαίσιο για να συνεχίσετε.',

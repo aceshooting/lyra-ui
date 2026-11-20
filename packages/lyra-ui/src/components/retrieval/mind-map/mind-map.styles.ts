@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { activeFill } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   :host {
@@ -52,11 +53,7 @@ export const styles = css`
   /* Pressed is the same halo pushed one step toward --lr-color-mix-partner, so it stays whatever
      hue a consumer set --lr-mind-map-node-hover-halo to while reading as visibly held. */
   [part="node"]:active circle {
-    stroke: color-mix(
-      in oklab,
-      var(--lr-mind-map-node-hover-halo, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    stroke: ${activeFill('var(--lr-mind-map-node-hover-halo, var(--lr-color-brand-quiet))')};
   }
   [part="disclosure"] { fill: none; stroke: var(--lr-color-surface); pointer-events: none; }
   [part="node-label"] {

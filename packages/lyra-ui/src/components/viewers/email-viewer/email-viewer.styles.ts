@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { activeFill, focusRingShorthand, hoverFill } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   :host {
@@ -99,22 +100,13 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast);
   }
   [part="attachment-button"]:hover {
-    background: var(--lr-email-viewer-action-hover-background, color-mix(
-      in oklab,
-      var(--lr-email-viewer-action-background, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    ));
+    background: var(--lr-email-viewer-action-hover-background, ${hoverFill('var(--lr-email-viewer-action-background, var(--lr-color-brand-quiet))')});
   }
   [part="attachment-button"]:active {
-    background: var(--lr-email-viewer-action-active-background, color-mix(
-      in oklab,
-      var(--lr-email-viewer-action-background, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    ));
+    background: var(--lr-email-viewer-action-active-background, ${activeFill('var(--lr-email-viewer-action-background, var(--lr-color-brand-quiet))')});
   }
   [part="attachment-button"]:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   [part="attachment-name"] {
     min-inline-size: 0;
@@ -141,15 +133,10 @@ export const styles = css`
     background: var(--lr-email-viewer-action-hover-background, var(--lr-color-brand-quiet));
   }
   [part="quote-toggle"]:active {
-    background: var(--lr-email-viewer-action-active-background, color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    ));
+    background: var(--lr-email-viewer-action-active-background, ${activeFill('var(--lr-color-brand-quiet)')});
   }
   [part="quote-toggle"]:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   [part="quoted"] {
     margin-block-start: var(--lr-space-xs);

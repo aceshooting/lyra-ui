@@ -86,9 +86,9 @@ root); wins over `label` and the localized default.
 unread divider to the top of the view, resolving `false` when `unreadStartIndex` is `null`/out of
 range; does not re-engage `follow`.
 
-**Events.** `lr-follow-change` carries `detail: { following }` when scrolling releases or resumes
-follow, or the user activates the jump button. Handle direct `follow` writes and calls to
-`scrollToBottom()` at their call sites if the application tracks those changes.
+**Events.** `lr-follow-change` carries `detail: { following }` whenever `follow` flips: scrolling
+releases or resumes follow, the user activates the jump button, `scrollToBottom()` re-engages it, or
+`follow` is assigned directly. It never fires for the initial mount state.
 
 Activating a focused jump-to-latest pill, or directly setting `follow = true`, transfers focus to
 the transcript's stable scroll owner after the pill disappears: `[part="scroll"]` in slotted mode,
@@ -111,8 +111,9 @@ slotted-content wrapper the growth observers watch), `jump-pill` (the built-in j
 absent while `follow` is engaged), `unread-divider` (the "New messages" separator, slotted mode
 only).
 
-**Events:** `lr-follow-change` (`detail: { following: boolean }`) reports a follow-state change
-caused by scrolling or activating the jump-to-latest button.
+**Events:** `lr-follow-change` (`detail: { following: boolean }`) reports every follow-state change
+after mount, whether from scrolling, the jump-to-latest button, `scrollToBottom()` or a direct
+`follow` write.
 
 **Themeable custom properties:** `--lr-chat-viewport-padding` (default `var(--lr-space-m)`) —
 padding of `[part="scroll"]` around the transcript, slotted mode only (in virtual mode the slotted

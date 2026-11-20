@@ -1,5 +1,6 @@
 import { css, html, type TemplateResult } from 'lit';
 import { chevronIcon } from '../../internal/icons.js';
+import { activeFill, disabledControl, focusRingShorthand } from '../../internal/interactive-control.styles.js';
 
 /** Shared icon pager controls for chapter and slide navigation. */
 export function renderViewerPagerButton(
@@ -38,21 +39,15 @@ export const viewerPagerStyles = css`
   }
   [part="previous-button"]:active:not(:disabled),
   [part="next-button"]:active:not(:disabled) {
-    background: color-mix(
-      in oklab,
-      var(--lr-viewer-pager-button-hover-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-viewer-pager-button-hover-bg, var(--lr-color-brand-quiet))')};
   }
   [part="previous-button"]:disabled,
   [part="next-button"]:disabled {
-    cursor: not-allowed;
-    opacity: var(--lr-opacity-disabled);
+    ${disabledControl}
   }
   [part="previous-button"]:focus-visible,
   [part="next-button"]:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   [part="previous-icon"],
   [part="next-icon"] {

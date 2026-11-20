@@ -1,5 +1,5 @@
 import { iconAction } from '../../../internal/icon-action.styles.js';
-import { interactiveTransition, iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -53,7 +53,7 @@ export const styles = css`
   [part='next-button']:active {
     border-color: var(--lr-color-brand);
     color: var(--lr-random-content-action-active-color, var(--lr-color-brand));
-    background: var(--lr-random-content-action-active-bg, color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active)));
+    background: var(--lr-random-content-action-active-bg, ${activeFill('var(--lr-color-surface)')});
   }
   [part='pause-button']:focus-visible,
   [part='next-button']:focus-visible {

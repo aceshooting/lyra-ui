@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'Atidaryti kalendorių',
+  item: 'elementas',
   comboboxLoadError: 'Nepavyko įkelti parinkčių.',
   comboboxSelectedOverflow: 'Dar +{n}',
   checkboxRequired: 'Norėdami tęsti, pažymėkite šį langelį.',

@@ -1,4 +1,4 @@
-import { disclosureChevron } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disclosureChevron, focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { disclosureHeader } from '../../../internal/layout-fragments.styles.js';
 import { css } from 'lit';
@@ -59,15 +59,10 @@ export const styles = css`
   /* The hovered tint pushed a further --lr-color-mix-active toward --lr-color-mix-partner (which
      follows the text colour), so the press reads deeper than hover in light and dark alike. */
   [part="header"]:active {
-    background: var(--lr-activity-feed-header-pressed-bg, color-mix(
-      in oklab,
-      var(--lr-activity-feed-header-hover-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    ));
+    background: var(--lr-activity-feed-header-pressed-bg, ${activeFill('var(--lr-activity-feed-header-hover-bg, var(--lr-color-brand-quiet))')});
   }
   [part="header"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * max(var(--lr-focus-ring-width), calc(var(--lr-focus-ring-width) + var(--lr-focus-ring-offset))));
+    ${focusRingInsetOffset}
   }
   ${disclosureChevron({
     glyph: '[part="toggle"]',
@@ -124,8 +119,7 @@ export const styles = css`
       var(--lr-activity-feed-border-color, var(--lr-color-border-subtle));
   }
   [part="body"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * max(var(--lr-focus-ring-width), calc(var(--lr-focus-ring-width) + var(--lr-focus-ring-offset))));
+    ${focusRingInsetOffset}
   }
   [part="body"][hidden] {
     display: none;

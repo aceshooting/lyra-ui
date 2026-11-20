@@ -1,4 +1,4 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, hoverFill } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -62,7 +62,7 @@ export const styles = css`
      The mix follows --lr-color-mix-partner, the text colour, so it darkens a light theme and
      lightens a dark one instead of always doing one of the two. */
   [part='clear-selection']:active {
-    color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    color: ${activeFill('var(--lr-color-brand)')};
     text-decoration: underline;
   }
   [part='clear-selection']:focus-visible {
@@ -70,13 +70,14 @@ export const styles = css`
   }
   [part='selection-status'] { margin: 0; color: var(--lr-color-text-quiet); }
   [part='selection-retry'] {
-    min-block-size: var(--lr-icon-button-size); min-inline-size: var(--lr-icon-button-size);
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     border: 0; background: transparent; color: var(--lr-color-brand); font: inherit; cursor: pointer;
     transition: var(--lr-transition-interactive);
   }
   [part='selection-retry']:hover { text-decoration: underline; }
   [part='selection-retry']:active {
-    color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    color: ${activeFill('var(--lr-color-brand)')};
     text-decoration: underline;
   }
   [part='selection-retry']:focus-visible { ${focusRing} }
@@ -97,8 +98,8 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
   :where([part='cursor-previous'], [part='cursor-next'], [part='cursor-restart']) {
-    min-block-size: var(--lr-icon-button-size);
     min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     max-inline-size: 100%;
     padding-block: var(--lr-space-xs);
     padding-inline: var(--lr-space-s);
@@ -112,10 +113,10 @@ export const styles = css`
     transition: var(--lr-transition-interactive);
   }
   :where([part='cursor-previous'], [part='cursor-next'], [part='cursor-restart']):hover:where([aria-disabled='false']) {
-    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: ${hoverFill('var(--lr-color-surface-raised)')};
   }
   :where([part='cursor-previous'], [part='cursor-next'], [part='cursor-restart']):active:where([aria-disabled='false']) {
-    background: color-mix(in oklab, var(--lr-color-surface-raised), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('var(--lr-color-surface-raised)')};
   }
   :where([part='cursor-previous'], [part='cursor-next'], [part='cursor-restart']):focus-visible {
     ${focusRing}
@@ -143,7 +144,7 @@ export const styles = css`
     text-decoration: underline;
   }
   [part='table']::part(document-name):active {
-    color: color-mix(in oklab, var(--lr-color-brand), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    color: ${activeFill('var(--lr-color-brand)')};
     text-decoration: underline;
   }
   [part='table']::part(document-name):focus-visible {

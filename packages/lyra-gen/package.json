@@ -12,8 +12,10 @@
     "url": "git+https://github.com/aceshooting/lyra-ui.git",
     "directory": "packages/lyra-gen"
   },
+  "customElements": "custom-elements.json",
   "files": [
     "dist",
+    "custom-elements.json",
     "bin",
     "docs",
     "examples",
@@ -26,6 +28,7 @@
     "./dist/dashboard-binding.js"
   ],
   "exports": {
+    "./custom-elements.json": "./custom-elements.json",
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"

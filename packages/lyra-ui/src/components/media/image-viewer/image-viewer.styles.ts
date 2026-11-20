@@ -1,6 +1,7 @@
-import { iconAction, iconActionActive, iconActionHover } from '../../../internal/icon-action.styles.js';
-import { iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
+import { iconAction, iconActionActive, iconActionHover, outlinedIconActionDefaults } from '../../../internal/icon-action.styles.js';
+import { activeFill, disabledControl, focusRingShorthand, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   [part='panorama-engine'] { inline-size: 100%; block-size: 100%; }
@@ -35,8 +36,7 @@ export const styles = css`
     container-type: size;
   }
   :host([fit="width"]) [part="frame"]::part(viewport) {
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${inlineSizeContainer}
   }
   [part="toolbar"] {
     display: flex;
@@ -54,13 +54,7 @@ export const styles = css`
   [part="fit-control"],
   [part="rotate-button"],
   [part="annotate-toggle"] {
-    --_lr-icon-button-border-default: var(--lr-border-width-thin) solid var(--lr-color-border);
-    --_lr-icon-button-background-default: var(--lr-color-surface);
-    --_lr-icon-button-color-default: var(--lr-color-text);
-    --_lr-icon-button-border-hover-default: var(--lr-icon-button-border, var(--_lr-icon-button-border-default));
-    --_lr-icon-button-border-active-default: var(--lr-icon-button-border-hover, var(--_lr-icon-button-border-hover-default));
-    --_lr-icon-button-background-hover-default: var(--lr-image-viewer-control-hover-bg, var(--lr-color-brand-quiet));
-    --_lr-icon-button-background-active-default: color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--_lr-icon-button-background-hover-default)), var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    ${outlinedIconActionDefaults('var(--lr-image-viewer-control-hover-bg, var(--lr-color-brand-quiet))')}
     ${iconAction}
     ${iconHitTarget}
     ${interactiveTransition}
@@ -69,8 +63,7 @@ export const styles = css`
   [part="fit-control"]:disabled,
   [part="rotate-button"]:disabled,
   [part="annotate-toggle"]:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
   [part="fit-control"] {
     appearance: none;
@@ -101,8 +94,7 @@ export const styles = css`
   [part="fit-control"]:focus-visible,
   [part="rotate-button"]:focus-visible,
   [part="annotate-toggle"]:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   .fit-control-chevron {
     position: absolute;
@@ -132,11 +124,7 @@ export const styles = css`
      keep hover on the selected member. Mixing from --lr-image-viewer-annotate-active-bg keeps a
      retinted fill's press a deeper tier of itself. */
   [part="annotate-toggle"][aria-pressed="true"]:where(:not(:disabled)):active {
-    background: color-mix(
-      in oklab,
-      var(--lr-image-viewer-annotate-active-bg, var(--lr-color-brand-quiet)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-image-viewer-annotate-active-bg, var(--lr-color-brand-quiet))')};
   }
   [part="rotation-frame"] {
     position: relative;
@@ -319,28 +307,13 @@ export const styles = css`
      white one, and, applying to the whole subtree, dragged [part='highlight-label']'s text with
      the box. Mixing the fill toward --lr-color-mix-partner always moves, and moves only that. */
   [part="highlight"]:hover {
-    background: color-mix(
-      in oklab,
-      var(
-        --lr-image-viewer-highlight-fill,
-        var(--_lr-image-viewer-highlight-fill)
-      ),
-      var(--lr-color-mix-partner) var(--lr-color-mix-hover)
-    );
+    background: ${hoverFill('var( --lr-image-viewer-highlight-fill, var(--_lr-image-viewer-highlight-fill) )')};
   }
   [part="highlight"]:active {
-    background: color-mix(
-      in oklab,
-      var(
-        --lr-image-viewer-highlight-fill,
-        var(--_lr-image-viewer-highlight-fill)
-      ),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var( --lr-image-viewer-highlight-fill, var(--_lr-image-viewer-highlight-fill) )')};
   }
   [part="highlight"]:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   [part="highlight-label"] {
     position: absolute;

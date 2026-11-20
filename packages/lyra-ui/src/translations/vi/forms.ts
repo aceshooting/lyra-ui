@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'Mở lịch',
+  item: 'mục',
   comboboxLoadError: 'Không thể tải danh sách lựa chọn.',
   comboboxSelectedOverflow: 'Còn {n} mục',
   checkboxRequired: 'Vui lòng đánh dấu ô này để tiếp tục.',

@@ -1,9 +1,10 @@
 import { iconAction, iconActionHover, iconActionActive } from '../../../internal/icon-action.styles.js';
 import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 import { dialogChrome, dialogOpenHost } from '../../../internal/modal-surface.styles.js';
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingInset, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { modalHostStyles } from '../../../internal/native-modal-carrier.styles.js';
+import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
@@ -86,7 +87,7 @@ export const styles = css`
     color: inherit;
     font: inherit;
     font-size: var(--lr-tool-select-dialog-search-font-size, inherit);
-    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast), border-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   /* Replaces the native ::-webkit-search-cancel-button suppressed below -- same "opt-out chrome
      needs a rendered replacement" contract lr-input's own [part='clear-button'] documents. */
@@ -107,8 +108,7 @@ export const styles = css`
     ${iconActionActive}
   }
   [part="search-clear"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingInset}
   }
   [part="search-input"]:focus-visible {
     ${focusRing}
@@ -150,8 +150,7 @@ export const styles = css`
     padding: var(--lr-space-m) var(--lr-space-l) var(--lr-space-l);
   }
   [part="body"]:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingInset}
   }
   /* no-pressed-state: the focusable body is a scroll viewport, not an activation target. */
   :where([part="body"]):hover {
@@ -205,18 +204,14 @@ export const styles = css`
     font: inherit;
     overflow-wrap: anywhere;
     cursor: pointer;
-    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast), border-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   [part="load-more"]:hover {
     border-color: var(--lr-color-brand);
     background: var(--lr-color-brand-quiet);
   }
   [part="load-more"]:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-brand-quiet)')};
   }
   [part="load-more"]:focus-visible {
     ${focusRing}
@@ -306,9 +301,7 @@ export const styles = css`
     line-height: var(--lr-line-height-none);
   }
   [part="tool-description"] {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
     overflow-wrap: anywhere;
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
@@ -316,9 +309,7 @@ export const styles = css`
   [part="tool-disabled-reason"] {
     /* Slotted into lr-checkbox's own hint surface alongside tool-description, so the checkbox-hint
        bridge describes the control without lengthening its accessible name. */
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
     font-size: var(--lr-font-size-xs);
     color: var(--lr-color-warning);
     overflow-wrap: anywhere;

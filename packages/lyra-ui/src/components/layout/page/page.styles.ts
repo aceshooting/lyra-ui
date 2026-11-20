@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -84,11 +84,7 @@ export const styles = css`
   [part~="skip-to-content"]:where(:active) {
     background: var(
       --lr-page-skip-to-content-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-color-brand-quiet),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-color-brand-quiet)')}
     );
     color: var(--lr-page-skip-to-content-active-color, var(--lr-color-brand));
   }
@@ -186,11 +182,7 @@ export const styles = css`
   ::slotted([slot="navigation-toggle"]:active) {
     background: var(
       --lr-page-navigation-toggle-active-bg,
-      color-mix(
-        in oklab,
-        var(--lr-color-brand-quiet),
-        var(--lr-color-mix-partner) var(--lr-color-mix-active)
-      )
+      ${activeFill('var(--lr-color-brand-quiet)')}
     );
     color: var(--lr-page-navigation-toggle-active-color, var(--lr-color-brand));
   }

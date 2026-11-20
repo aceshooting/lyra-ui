@@ -1,4 +1,4 @@
-import { iconHitTarget, focusRing } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRing, focusRingInset, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -44,7 +44,7 @@ export const styles = css`
     transition: var(--lr-transition-interactive);
   }
   [part='source-clear']:hover { background: var(--lr-knowledge-graph-explorer-source-action-hover-fill, var(--lr-color-brand-quiet)); }
-  [part='source-clear']:active { background: color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active)); }
+  [part='source-clear']:active { background: ${activeFill('var(--lr-color-brand-quiet)')}; }
   [part='source-clear']:focus-visible { ${focusRing} }
   [part='source-status'] { overflow-wrap: anywhere; margin-block: var(--lr-space-xs); }
   [part='search-results'] {
@@ -77,14 +77,13 @@ export const styles = css`
     transition: background-color var(--lr-transition-fast);
   }
   [part='search-result'] button:hover {
-    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    background: ${hoverFill('transparent')};
   }
   [part='search-result'] button:active {
-    background: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active));
+    background: ${activeFill('transparent')};
   }
   [part='search-result'] button:focus-visible {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: calc(-1 * var(--lr-focus-ring-width));
+    ${focusRingInset}
   }
   [part='search-empty'] {
     padding: var(--lr-space-xs) var(--lr-space-s);

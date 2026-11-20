@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'Takvimi aç',
+  item: 'öğe',
   comboboxLoadError: 'Seçenekler yüklenemedi.',
   comboboxSelectedOverflow: '+{n} tane daha',
   checkboxRequired: 'Devam etmek için bu kutuyu işaretleyin.',

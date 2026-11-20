@@ -35,8 +35,8 @@ function fetchText(value: string): () => void {
     window.fetch = original;
   };
 }
-expectLocaleFallback('ar', ['datasetViewerCaption', 'documentPreviewEmpty', 'documentPreviewTypeDataset', 'loadingDocument', 'noData', 'highlightWithLabel', 'cellHighlightWithLabel']);
-expectLocaleFallback('tr', ['datasetViewerCaption', 'documentPreviewEmpty', 'documentPreviewTypeDataset', 'loadingDocument', 'highlightWithLabel', 'cellHighlightWithLabel']);
+expectLocaleFallback('ar', ['datasetViewerCaption', 'documentPreviewEmpty', 'documentPreviewTypeDataset', 'loadingDocument', 'noData', 'highlightWithLabel', 'cellHighlightWithLabel', 'datasetViewerLabel']);
+expectLocaleFallback('tr', ['datasetViewerCaption', 'documentPreviewEmpty', 'documentPreviewTypeDataset', 'loadingDocument', 'highlightWithLabel', 'cellHighlightWithLabel', 'datasetViewerLabel']);
 
 describe('lr-dataset-viewer', () => {
   it('reports a current fetch AbortError and relocalizes the error without retrying', async () => {

@@ -1,12 +1,11 @@
-import { focusRing } from '../../../internal/interactive-control.styles.js';
+import { disabledControl, focusRing, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { formControlRequiredMarker } from '../../../internal/form-control.styles.js';
+import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
-    display: block;
-    min-inline-size: 0;
-    max-inline-size: 100%;
+    ${blockHost}
   }
   :host(:disabled) [part='base'] {
     color: var(--lr-color-text-quiet);
@@ -58,7 +57,7 @@ export const styles = css`
     color: inherit;
     font: inherit;
     font-size: var(--lr-form-control-font-size);
-    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast), border-color var(--lr-transition-fast);
+    ${interactiveTransition}
   }
   input.control:focus-visible {
     ${focusRing}
@@ -70,8 +69,7 @@ export const styles = css`
     border-color: var(--lr-tool-param-form-invalid-border-color, var(--lr-color-danger));
   }
   input.control:disabled {
-    opacity: var(--lr-opacity-disabled);
-    cursor: not-allowed;
+    ${disabledControl}
   }
 
   [part='description'] {

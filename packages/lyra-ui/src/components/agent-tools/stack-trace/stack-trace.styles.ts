@@ -1,4 +1,4 @@
-import { focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingInsetOffset } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -92,11 +92,7 @@ export const styles = css`
      frame's transparent surface toward --lr-color-mix-partner, which follows the text colour:
      darker in a light theme, lighter in a dark one. */
   button[part="frame"]:active {
-    background: color-mix(
-      in oklab,
-      transparent,
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('transparent')};
   }
   button[part="frame"]:focus-visible {
     ${focusRingInsetOffset}
@@ -128,11 +124,7 @@ export const styles = css`
     background: var(--lr-color-brand-quiet);
   }
   [part="internal-toggle"]:active {
-    background: color-mix(
-      in oklab,
-      var(--lr-color-brand-quiet),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    background: ${activeFill('var(--lr-color-brand-quiet)')};
   }
   [part="internal-toggle"]:focus-visible {
     ${focusRingInsetOffset}
@@ -161,10 +153,6 @@ export const styles = css`
     );
   }
   [part="copy-button"]:active {
-    border-color: color-mix(
-      in oklab,
-      var(--lr-stack-trace-interactive-color, var(--lr-color-brand)),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    );
+    border-color: ${activeFill('var(--lr-stack-trace-interactive-color, var(--lr-color-brand))')};
   }
 `;

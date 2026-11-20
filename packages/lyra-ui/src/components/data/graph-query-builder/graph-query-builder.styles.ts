@@ -1,6 +1,6 @@
 import { iconAction } from '../../../internal/icon-action.styles.js';
 import { formControlLabelTypography } from '../../../internal/form-control.styles.js';
-import { iconHitTarget, focusRing, disabledControl } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 
 export const styles = css`
@@ -104,13 +104,13 @@ export const styles = css`
   [part='run-button']:where(:not(:disabled)):hover {
     background: var(
       --lr-graph-query-builder-run-hover-bg,
-      color-mix(in oklab, var(--lr-graph-query-builder-run-bg, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-hover))
+      ${hoverFill('var(--lr-graph-query-builder-run-bg, var(--lr-color-brand))')}
     );
   }
   [part='run-button']:where(:not(:disabled)):active {
     background: var(
       --lr-graph-query-builder-run-active-bg,
-      color-mix(in oklab, var(--lr-graph-query-builder-run-bg, var(--lr-color-brand)), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      ${activeFill('var(--lr-graph-query-builder-run-bg, var(--lr-color-brand))')}
     );
   }
   [part='save-button']:where(:not(:disabled)):hover {
@@ -119,7 +119,7 @@ export const styles = css`
   [part='save-button']:where(:not(:disabled)):active {
     background: var(
       --lr-graph-query-builder-save-active-bg,
-      color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      ${activeFill('var(--lr-color-brand-quiet)')}
     );
   }
   [part='run-button']:disabled,
@@ -206,7 +206,7 @@ export const styles = css`
   [part='saved-load-button']:where(:not(:disabled)):active {
     background: var(
       --lr-graph-query-builder-saved-load-active-bg,
-      color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      ${activeFill('var(--lr-color-surface)')}
     );
     text-decoration: underline;
   }
@@ -233,7 +233,7 @@ export const styles = css`
   [part='saved-delete-button']:where(:not(:disabled)):active {
     color: var(
       --lr-graph-query-builder-saved-delete-active-color,
-      color-mix(in oklab, var(--lr-graph-query-builder-saved-delete-hover-color, var(--lr-color-danger)), var(--lr-color-mix-partner) var(--lr-color-mix-active))
+      ${activeFill('var(--lr-graph-query-builder-saved-delete-hover-color, var(--lr-color-danger))')}
     );
     background: var(--lr-graph-query-builder-saved-delete-active-bg, var(--lr-color-danger-quiet));
   }

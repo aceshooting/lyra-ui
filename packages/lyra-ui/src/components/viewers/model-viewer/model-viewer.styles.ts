@@ -1,5 +1,7 @@
 import { css } from 'lit';
 import { mediumContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { activeFill, focusRingShorthand } from '../../../internal/interactive-control.styles.js';
+import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
   :host {
@@ -7,15 +9,10 @@ export const styles = css`
     min-inline-size: 0;
     --_lr-model-viewer-control-fill: var(--lr-model-viewer-action-background, var(--lr-color-surface));
     --_lr-model-viewer-control-hover-fill: var(--lr-model-viewer-action-hover-background, var(--lr-color-surface-raised));
-    --_lr-model-viewer-control-active-fill: var(--lr-model-viewer-action-active-background, color-mix(
-      in oklab,
-      var(--_lr-model-viewer-control-fill),
-      var(--lr-color-mix-partner) var(--lr-color-mix-active)
-    ));
+    --_lr-model-viewer-control-active-fill: var(--lr-model-viewer-action-active-background, ${activeFill('var(--_lr-model-viewer-control-fill)')});
   }
   [part='base'] {
-    container-type: inline-size;
-    contain-intrinsic-inline-size: var(--lr-size-20rem);
+    ${inlineSizeContainer}
     color: var(--lr-color-text);
     background: var(--lr-color-surface);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -60,8 +57,8 @@ export const styles = css`
     color: var(--lr-color-text);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-xs);
-    min-block-size: var(--lr-icon-button-size);
     min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
     padding: var(--lr-space-xs) var(--lr-space-s);
     background: var(--_lr-model-viewer-control-fill);
     cursor: pointer;
@@ -78,8 +75,7 @@ export const styles = css`
   }
   [part='control']:focus-visible,
   [part='download']:focus-visible {
-    outline: var(--lr-focus-ring);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRingShorthand}
   }
   [part='control']:disabled {
     cursor: default;

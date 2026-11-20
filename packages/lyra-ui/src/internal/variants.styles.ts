@@ -1,5 +1,5 @@
 import { css } from 'lit';
-import { semanticVariantRows } from './semantic-variant-rows.styles.js';
+import { brandVariantRow, neutralVariantRow, semanticVariantRows } from './semantic-variant-rows.styles.js';
 
 // Re-points nine GENERIC colour slots at the active variant's row of the 45-slot semantic grid, so a
 // component styles itself once against `--lr-color-fill-loud` (etc.) instead of declaring one block
@@ -15,27 +15,11 @@ import { semanticVariantRows } from './semantic-variant-rows.styles.js';
 // read them.
 export const variants = css`
   :host {
-    --lr-color-fill-quiet: var(--lr-color-neutral-fill-quiet);
-    --lr-color-fill-normal: var(--lr-color-neutral-fill-normal);
-    --lr-color-fill-loud: var(--lr-color-neutral-fill-loud);
-    --lr-color-border-quiet: var(--lr-color-neutral-border-quiet);
-    --lr-color-border-normal: var(--lr-color-neutral-border-normal);
-    --lr-color-border-loud: var(--lr-color-neutral-border-loud);
-    --lr-color-on-quiet: var(--lr-color-neutral-on-quiet);
-    --lr-color-on-normal: var(--lr-color-neutral-on-normal);
-    --lr-color-on-loud: var(--lr-color-neutral-on-loud);
+    ${neutralVariantRow}
   }
   :host([variant='brand']),
   :host([variant='primary']) {
-    --lr-color-fill-quiet: var(--lr-color-brand-fill-quiet);
-    --lr-color-fill-normal: var(--lr-color-brand-fill-normal);
-    --lr-color-fill-loud: var(--lr-color-brand-fill-loud);
-    --lr-color-border-quiet: var(--lr-color-brand-border-quiet);
-    --lr-color-border-normal: var(--lr-color-brand-border-normal);
-    --lr-color-border-loud: var(--lr-color-brand-border-loud);
-    --lr-color-on-quiet: var(--lr-color-brand-on-quiet);
-    --lr-color-on-normal: var(--lr-color-brand-on-normal);
-    --lr-color-on-loud: var(--lr-color-brand-on-loud);
+    ${brandVariantRow}
   }
   ${semanticVariantRows}
 `;

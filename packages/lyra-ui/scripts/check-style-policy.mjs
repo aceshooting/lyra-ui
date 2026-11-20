@@ -11,7 +11,7 @@ const internalTokenDefinitionFiles = new Set([
   join(internalRoot, 'minimum-pointer-target.styles.ts'),
   // The host remainder of the document token layer (the per-element reduced-motion safety net).
   join(internalRoot, 'host-tokens.styles.ts'),
-  join(internalRoot, 'specialist-tokens.styles.ts'),
+  join(internalRoot, 'tokens', 'specialist-tokens.styles.ts'),
   join(internalRoot, 'tokens.styles.ts'),
   join(internalRoot, 'tokens', 'palette.styles.ts'),
   // Container queries cannot consume CSS variables, so shared thresholds stay literal here.

@@ -7,6 +7,7 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   openCalendar: 'Buka kalender',
+  item: 'item',
   comboboxLoadError: 'Tidak dapat memuat opsi.',
   comboboxSelectedOverflow: '+{n} lainnya',
   checkboxRequired: 'Centang kotak ini jika Anda ingin melanjutkan.',
