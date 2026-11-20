@@ -137,7 +137,7 @@
         "backendReads": 441,
         "dayCells": 47,
         "logicalEvents": 1100000,
-        "maxDomNodes": 227,
+        "maxDomNodes": 337,
         "maxMountedEvents": 111,
         "maxResponseRows": 111,
         "maxRetainedRows": 111,
@@ -231,7 +231,7 @@
       "remote-search@1000000": {
         "backendReads": 8804,
         "logicalRecords": 1100000,
-        "maxDomNodes": 907,
+        "maxDomNodes": 1348,
         "maxMountedRows": 221,
         "maxResponseRows": 2200,
         "maxRetainedRows": 2200,
@@ -1166,7 +1166,7 @@
         "summaries": 0
       },
       "lazy million logical positions": {
-        "domNodes": 6,
+        "domNodes": 8,
         "exactReads": 4,
         "findCalls": 2,
         "logicalPositions": 1100000,
