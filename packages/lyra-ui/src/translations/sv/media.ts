@@ -44,10 +44,14 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'Laddar upp…',
   attachmentUploadFailed: 'Uppladdningen misslyckades',
   fileInputDefaultLabel: 'Släpp filer här eller klicka för att bläddra',
-  fileInputAcceptedOne: '{count} fil har lagts till.',
-  fileInputAcceptedMany: '{count} filer har lagts till.',
-  fileInputRejectedOne: '{count} fil avvisades.',
-  fileInputRejectedMany: '{count} filer avvisades.',
+  fileInputAccepted: {
+    one: '{count} fil har lagts till.',
+    other: '{count} filer har lagts till.',
+  },
+  fileInputRejected: {
+    one: '{count} fil avvisades.',
+    other: '{count} filer avvisades.',
+  },
   fileInputFolderRejected: 'Mappar accepteras inte här.',
   fileInputRejectedType: '{filename}: den här filtypen accepteras inte.',
   fileInputRejectedSize: '{filename}: filen är för stor.',

@@ -1,3 +1,4 @@
+import { graphSourceCountText } from '../../../internal/graph-source-messages.js';
 import { listenUntilPointerEnd } from '../../../internal/document-pointer.js';
 import { revealInOwnScroller } from '../../../internal/reveal-row.js';
 import { layoutScale } from '../../../internal/layout-scale.js';
@@ -62,7 +63,7 @@ import { wheelZoomDelta, wheelZoomFactor } from '../../../internal/wheel-zoom.js
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_flowCanvasInputLimit, LYRA_DEFAULT_flowCanvasLabel, LYRA_DEFAULT_flowCanvasLayoutLimit, LYRA_DEFAULT_flowCanvasSummary, LYRA_DEFAULT_flowConnectCancelled, LYRA_DEFAULT_flowConnectCommitted, LYRA_DEFAULT_flowConnectStarted, LYRA_DEFAULT_flowConnectTarget, LYRA_DEFAULT_flowEdge, LYRA_DEFAULT_flowEdgeList, LYRA_DEFAULT_flowEdgeWithLabel, LYRA_DEFAULT_flowNode, LYRA_DEFAULT_flowNodeDeselected, LYRA_DEFAULT_flowNodeMoved, LYRA_DEFAULT_flowNodeSelected, LYRA_DEFAULT_flowSelectionCleared, LYRA_DEFAULT_flowSourceRecordMatches, LYRA_DEFAULT_flowSourceRevealSourceNode, LYRA_DEFAULT_flowSourceRevealTargetNode, LYRA_DEFAULT_paginationPage } from '../../../internal/default-strings/data.generated.js';
-import { LYRA_DEFAULT_flowItemAnnouncement, LYRA_DEFAULT_graphSourceAllRecords, LYRA_DEFAULT_graphSourceBothDirections, LYRA_DEFAULT_graphSourceCoverageAggregate, LYRA_DEFAULT_graphSourceCoverageComplete, LYRA_DEFAULT_graphSourceCoverageNeighborhood, LYRA_DEFAULT_graphSourceDirection, LYRA_DEFAULT_graphSourceEdges, LYRA_DEFAULT_graphSourceIncidentEdges, LYRA_DEFAULT_graphSourceNodes, LYRA_DEFAULT_graphSourceRecordMissing, LYRA_DEFAULT_graphSourceRecords, LYRA_DEFAULT_graphSourceRecordsError, LYRA_DEFAULT_graphSourceSceneError, LYRA_DEFAULT_graphSourceTotals, LYRA_DEFAULT_loading, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut, LYRA_DEFAULT_next, LYRA_DEFAULT_noData, LYRA_DEFAULT_previous, LYRA_DEFAULT_retry, LYRA_DEFAULT_search } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_details, LYRA_DEFAULT_flowItemAnnouncement, LYRA_DEFAULT_graphSourceAllRecords, LYRA_DEFAULT_graphSourceBothDirections, LYRA_DEFAULT_graphSourceCoverageAggregate, LYRA_DEFAULT_graphSourceCoverageComplete, LYRA_DEFAULT_graphSourceCoverageNeighborhood, LYRA_DEFAULT_graphSourceDirection, LYRA_DEFAULT_graphSourceEdgeCount, LYRA_DEFAULT_graphSourceEdges, LYRA_DEFAULT_graphSourceIncidentEdges, LYRA_DEFAULT_graphSourceNodeCount, LYRA_DEFAULT_graphSourceNodes, LYRA_DEFAULT_graphSourceRecordMissing, LYRA_DEFAULT_graphSourceRecords, LYRA_DEFAULT_graphSourceRecordsError, LYRA_DEFAULT_graphSourceSceneError, LYRA_DEFAULT_graphSourceShownEdges, LYRA_DEFAULT_graphSourceShownNodes, LYRA_DEFAULT_graphSourceTotals, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut, LYRA_DEFAULT_next, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_previous, LYRA_DEFAULT_progress, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type FlowCanvasSource = LyraGraphSource<FlowNode, FlowEdge>;
@@ -339,6 +340,9 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    collapse: LYRA_DEFAULT_collapse,
+    copy: LYRA_DEFAULT_copy,
+    details: LYRA_DEFAULT_details,
     flowCanvasInputLimit: LYRA_DEFAULT_flowCanvasInputLimit,
     flowCanvasLabel: LYRA_DEFAULT_flowCanvasLabel,
     flowCanvasLayoutLimit: LYRA_DEFAULT_flowCanvasLayoutLimit,
@@ -365,23 +369,32 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     graphSourceCoverageComplete: LYRA_DEFAULT_graphSourceCoverageComplete,
     graphSourceCoverageNeighborhood: LYRA_DEFAULT_graphSourceCoverageNeighborhood,
     graphSourceDirection: LYRA_DEFAULT_graphSourceDirection,
+    graphSourceEdgeCount: LYRA_DEFAULT_graphSourceEdgeCount,
     graphSourceEdges: LYRA_DEFAULT_graphSourceEdges,
     graphSourceIncidentEdges: LYRA_DEFAULT_graphSourceIncidentEdges,
+    graphSourceNodeCount: LYRA_DEFAULT_graphSourceNodeCount,
     graphSourceNodes: LYRA_DEFAULT_graphSourceNodes,
     graphSourceRecordMissing: LYRA_DEFAULT_graphSourceRecordMissing,
     graphSourceRecords: LYRA_DEFAULT_graphSourceRecords,
     graphSourceRecordsError: LYRA_DEFAULT_graphSourceRecordsError,
     graphSourceSceneError: LYRA_DEFAULT_graphSourceSceneError,
+    graphSourceShownEdges: LYRA_DEFAULT_graphSourceShownEdges,
+    graphSourceShownNodes: LYRA_DEFAULT_graphSourceShownNodes,
     graphSourceTotals: LYRA_DEFAULT_graphSourceTotals,
     loading: LYRA_DEFAULT_loading,
+    map: LYRA_DEFAULT_map,
+    navigation: LYRA_DEFAULT_navigation,
     neighborDirectionIn: LYRA_DEFAULT_neighborDirectionIn,
     neighborDirectionOut: LYRA_DEFAULT_neighborDirectionOut,
     next: LYRA_DEFAULT_next,
     noData: LYRA_DEFAULT_noData,
+    open: LYRA_DEFAULT_open,
     paginationPage: LYRA_DEFAULT_paginationPage,
     previous: LYRA_DEFAULT_previous,
+    progress: LYRA_DEFAULT_progress,
     retry: LYRA_DEFAULT_retry,
     search: LYRA_DEFAULT_search,
+    select: LYRA_DEFAULT_select,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -701,10 +714,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     if (this.sourceQuery.search || this.sourceQuery.centerKey !== null) {
       return this.localize('flowSourceRecordMatches', undefined, { count: this.formatLocaleNumber(result.total) });
     }
-    return this.localize('graphSourceTotals', undefined, {
-      nodes: this.formatLocaleNumber(result.summary.nodes),
-      edges: this.formatLocaleNumber(result.summary.edges),
-    });
+    return graphSourceCountText((key, values) => this.localize(key, undefined, values), value => this.formatLocaleNumber(value), result.summary);
   }
 
   private renderSourceNavigator(): TemplateResult {
@@ -721,9 +731,8 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       </div>
       <p part="source-status">${this.recordStatus()}
         ${(state.error || error) && !state.pending ? html`<button type="button" @click=${() => { if (current() && (state.error || error)) this.requestUpdate(); }}>${this.localize('retry')}</button>` : nothing}</p>
-      ${this.sourceScene.state.scene && !this.sourceSceneFailure ? html`<p part="source-coverage">${this.localize(this.sourceScene.state.scene.coverage === 'complete' ? 'graphSourceCoverageComplete' : this.sourceScene.state.scene.coverage === 'aggregate' ? 'graphSourceCoverageAggregate' : 'graphSourceCoverageNeighborhood', undefined, {
-        shownNodes: this.formatLocaleNumber(this.sourceNodes.length), shownEdges: this.formatLocaleNumber(this.sourceEdges.length),
-        nodes: this.formatLocaleNumber(this.sourceScene.state.scene.total.nodes), edges: this.formatLocaleNumber(this.sourceScene.state.scene.total.edges),
+      ${this.sourceScene.state.scene && !this.sourceSceneFailure ? html`<p part="source-coverage">${graphSourceCountText((key, values) => this.localize(key, undefined, values), value => this.formatLocaleNumber(value), this.sourceScene.state.scene.total, {
+        coverage: this.sourceScene.state.scene.coverage, shown: { nodes: this.sourceNodes.length, edges: this.sourceEdges.length },
       })}</p>` : nothing}
       <div part="source-records">${state.result?.rows.map(row => {
         const value = row.value, rowCurrent = () => current() && !state.pending && !state.error && state.result?.rows.includes(row);

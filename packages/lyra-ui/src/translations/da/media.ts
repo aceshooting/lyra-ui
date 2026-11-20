@@ -44,10 +44,14 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'Uploader…',
   attachmentUploadFailed: 'Upload mislykkedes',
   fileInputDefaultLabel: 'Slip filer her, eller klik for at gennemse',
-  fileInputAcceptedOne: '{count} fil tilføjet.',
-  fileInputAcceptedMany: '{count} filer tilføjet.',
-  fileInputRejectedOne: '{count} fil afvist.',
-  fileInputRejectedMany: '{count} filer afvist.',
+  fileInputAccepted: {
+    one: '{count} fil tilføjet.',
+    other: '{count} filer tilføjet.',
+  },
+  fileInputRejected: {
+    one: '{count} fil afvist.',
+    other: '{count} filer afvist.',
+  },
   fileInputFolderRejected: 'Mapper accepteres ikke her.',
   fileInputRejectedType: '{filename}: denne filtype accepteres ikke.',
   fileInputRejectedSize: '{filename}: filen er for stor.',

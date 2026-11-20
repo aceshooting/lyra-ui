@@ -44,10 +44,14 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'Üleslaadimine…',
   attachmentUploadFailed: 'Üleslaadimine ebaõnnestus',
   fileInputDefaultLabel: 'Lohistage failid siia või klõpsake sirvimiseks',
-  fileInputAcceptedOne: 'Lisati {count} fail.',
-  fileInputAcceptedMany: 'Lisati {count} faili.',
-  fileInputRejectedOne: 'Tagasi lükati {count} fail.',
-  fileInputRejectedMany: 'Tagasi lükati {count} faili.',
+  fileInputAccepted: {
+    one: 'Lisati {count} fail.',
+    other: 'Lisati {count} faili.',
+  },
+  fileInputRejected: {
+    one: 'Tagasi lükati {count} fail.',
+    other: 'Tagasi lükati {count} faili.',
+  },
   fileInputFolderRejected: 'Kaustu siin ei aktsepteerita.',
   fileInputRejectedType: '{filename}: seda failitüüpi ei aktsepteerita.',
   fileInputRejectedSize: '{filename}: fail on liiga suur.',

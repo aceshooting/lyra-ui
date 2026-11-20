@@ -21,6 +21,7 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'የግራፍ ቁልፍ',
   entityChipWithType: '{label}, {type}',
   showMore: 'ተጨማሪ አሳይ',
+  showMoreCount: '{count} ተጨማሪ አሳይ',
   embeddingExplorerSpatialBounds: 'ከ{minX} እስከ {maxX} በአግድም፤ ከ{minY} እስከ {maxY} በቁመት',
   embeddingExplorerSpatialSummary: 'በሙሉ ምንጩ {total} ነጥቦች አሉ ({global})። በእይታ ክልሉ {matched} ነጥቦች አሉ ({viewport})። የጥግግት ክልሎች ሁሉንም ተዛማጆች ይቆጥራሉ፤ በላይ የሚደረቡ ነጥቦች በእነዚህ ቁጥሮች ላይ አይጨመሩም።',
   embeddingExplorerSpatialBin: 'በጥግግት ክልሉ {count} ነጥቦች፦ {bounds}',

@@ -44,10 +44,14 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'E dey upload…',
   attachmentUploadFailed: 'Upload fail',
   fileInputDefaultLabel: 'Drop files here, or click make you find files',
-  fileInputAcceptedOne: 'Dem add {count} file.',
-  fileInputAcceptedMany: 'Dem add {count} files.',
-  fileInputRejectedOne: 'Dem reject {count} file.',
-  fileInputRejectedMany: 'Dem reject {count} files.',
+  fileInputAccepted: {
+    one: 'Dem add {count} file.',
+    other: 'Dem add {count} files.',
+  },
+  fileInputRejected: {
+    one: 'Dem reject {count} file.',
+    other: 'Dem reject {count} files.',
+  },
   fileInputFolderRejected: 'We no dey accept folders here.',
   fileInputRejectedType: '{filename}: we no dey accept dis kind file.',
   fileInputRejectedSize: '{filename}: dis file too big.',

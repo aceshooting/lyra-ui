@@ -18,6 +18,7 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Ukhiye wegrafu',
   entityChipWithType: '{label}, {type}',
   showMore: 'Bonisa okwengeziwe',
+  showMoreCount: 'Bonisa okunye okungu-{count}',
   embeddingExplorerSpatialBounds: '{minX} kuya ku-{maxX} ngokuvundlile; {minY} kuya ku-{maxY} ngokuma mpo',
   embeddingExplorerSpatialSummary: 'Amaphuzu angu-{total} emthonjeni ophelele ({global}). Amaphuzu angu-{matched} endaweni yokubuka ({viewport}). Izindawo zokuminyana zibala konke okufanayo; izendlalelo zamaphuzu azengezi kulezi zibalo.',
   embeddingExplorerSpatialBin: 'Amaphuzu angu-{count} endaweni yokuminyana: {bounds}',

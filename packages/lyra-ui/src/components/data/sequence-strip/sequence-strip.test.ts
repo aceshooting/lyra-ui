@@ -1573,7 +1573,9 @@ it('honors .strings overrides for the range name and the overview disclosure', a
     <lr-sequence-strip
       .strings=${{
         sequenceStripBucketLabel: '{label} — de {start} à {end}',
-        sequenceStripBucketSummary: '{items} éléments en {ranges} plages',
+        sequenceStripBucketSummary: '{items} en {ranges}',
+        sequenceStripItemCount: { one: '{count} élément', other: '{count} éléments' },
+        sequenceStripRangeCount: { one: '{count} plage', other: '{count} plages' },
       }}
     ></lr-sequence-strip>
   `)) as LyraSequenceStrip;

@@ -44,10 +44,12 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'Lagi ngunggah…',
   attachmentUploadFailed: 'Gagal diunggah',
   fileInputDefaultLabel: 'Selehake berkas ing kene utawa klik kanggo njelajah',
-  fileInputAcceptedOne: '{count} berkas ditambahake.',
-  fileInputAcceptedMany: '{count} berkas ditambahake.',
-  fileInputRejectedOne: '{count} berkas ditolak.',
-  fileInputRejectedMany: '{count} berkas ditolak.',
+  fileInputAccepted: {
+    other: '{count} berkas ditambahake.',
+  },
+  fileInputRejected: {
+    other: '{count} berkas ditolak.',
+  },
   fileInputFolderRejected: 'Folder ora bisa ditampa ing kene.',
   fileInputRejectedType: '{filename}: jinis berkas iki ora ditampa.',
   fileInputRejectedSize: '{filename}: berkas iki kegedhen.',

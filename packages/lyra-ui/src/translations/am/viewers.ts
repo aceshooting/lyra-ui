@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   emailViewerNoSubject: '(ርዕስ የለም)',
   emailViewerOpenAttachment: '{filename}ን ክፈት',
   emailViewerQuotedText: 'የተጠቀሰ ጽሑፍ',
+  emailViewerOpenAttachmentSize: '{filename} {size}ን ክፈት',
   emailViewerEmptyBody: 'ይህ መልዕክት የሚታይ ይዘት የለውም።',
   emailViewerGroupAddress: '{name}: {members}',
   calendarViewerLabel: 'የቀን መቁጠሪያ መመልከቻ',

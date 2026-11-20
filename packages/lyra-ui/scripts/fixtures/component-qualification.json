@@ -29952,7 +29952,7 @@
           "evidence": [
             {
               "file": "src/components/utility/json-viewer/json-viewer.class.ts",
-              "line": 710,
+              "line": 711,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -30715,7 +30715,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.ts",
-              "line": 716,
+              "line": 724,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -49987,7 +49987,7 @@
           "evidence": [
             {
               "file": "src/components/data/sequence-strip/sequence-strip.class.ts",
-              "line": 581,
+              "line": 583,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -63841,7 +63841,7 @@
           "evidence": [
             {
               "file": "src/components/data/word-cloud/word-cloud.class.ts",
-              "line": 417,
+              "line": 416,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   emailViewerNoSubject: '(gan ábhar)',
   emailViewerOpenAttachment: 'Oscail {filename}',
   emailViewerQuotedText: 'Téacs athfhriotail',
+  emailViewerOpenAttachmentSize: 'Oscail {filename} {size}',
   emailViewerEmptyBody: 'Níl aon ábhar intaispeána sa teachtaireacht seo.',
   emailViewerGroupAddress: '{name}: {members}',
   calendarViewerLabel: 'Amharcán féilire',

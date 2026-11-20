@@ -16,7 +16,13 @@ const strings: LyraLocaleStrings = {
   sequenceStripCellKeyboardHelp: 'Pencet Enter utawa Spasi kanggo ngaktifake item iki.',
   sequenceStripUnnamedCategory: 'Kategori tanpa jeneng',
   sequenceStripBucketLabel: '{label}, barang {start} nganti {end}',
-  sequenceStripBucketSummary: '{items} barang ing {ranges} rentang',
+  sequenceStripBucketSummary: '{items} ing {ranges}',
+  sequenceStripItemCount: {
+    other: '{count} barang',
+  },
+  sequenceStripRangeCount: {
+    other: '{count} rentang',
+  },
   noColumns: 'Kolom durung diatur',
   dataGridColumnMenu: 'Pilihan kanggo {label}',
   dataGridPinStart: 'Sematake {label} ing wiwitan',
@@ -43,8 +49,15 @@ const strings: LyraLocaleStrings = {
   paginationInvalidPageUnknownTotal: 'Lebokna nomer kaca wutuh 1 utawa luwih.',
   paginationEmptySummary: '{total} {itemLabel}',
   paginationAppliedUnknownTotal: 'Kaca {page}',
-  trendOf: 'Tren saka {count} nilai, sing pungkasan {value}',
-  wordCloud: 'Awan tembung sing ngemot {count} {word}',
+  trendOf: {
+    other: 'Tren saka {count} nilai, sing pungkasan {value}',
+  },
+  wordCloud: {
+    other: 'Awan tembung sing ngemot {count} tembung',
+  },
+  wordCloudWordLimit: {
+    other: '{start}–{end} saka {total} tembung',
+  },
   wordCloudLegend: 'Kunci warna awan tembung',
   wordCloudWordAnnouncement: '{text}, bobot {weight}',
   wordCloudPreparedSummary: 'Ringkesan tembung: {retainedCount} saka {validCount} tembung sah disimpen ({invalidCount} ora sah); bobot sing disimpen {retainedWeight} saka {totalWeight}.',
@@ -57,8 +70,6 @@ const strings: LyraLocaleStrings = {
   heatmapSourceMean: 'rata-rata',
   heatmapSourceMin: 'minimal',
   heatmapSourceMax: 'maksimal',
-  wordCloudWord: 'tembung',
-  wordCloudWords: 'tembung',
   calendarLabel: 'Tanggalan',
   calendarEmpty: 'Ora ana acara ing sasi iki.',
   calendarEventsOverflow: '+{n} maneh',
@@ -132,7 +143,9 @@ const strings: LyraLocaleStrings = {
   flowSourceRevealTargetNode: 'Menyang simpul target {node} saka {edge}',
   flowSourceRecordMatches: 'Cathetan sing cocog: {count}',
   flowRunStatusLabel: 'Status proses',
-  flowRunSummary: '{done} saka {total} langkah wis rampung',
+  flowRunSummary: {
+    other: '{done} saka {total} langkah wis rampung',
+  },
   flowRunStepStatus: '{label}: {status}',
   flowRunStatusCount: '{status}: {count}',
   queryBuilderLabel: 'Panyusun pitakon',

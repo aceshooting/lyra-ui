@@ -21,6 +21,7 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'ग्राफ़ लेजेंड',
   entityChipWithType: '{label}, {type}',
   showMore: 'और दिखाएँ',
+  showMoreCount: '{count} और दिखाएँ',
   embeddingExplorerSpatialBounds: 'क्षैतिज रूप से {minX} से {maxX}; लंबवत रूप से {minY} से {maxY}',
   embeddingExplorerSpatialSummary: 'पूरे स्रोत में {total} बिंदु ({global})। दृश्य क्षेत्र में {matched} बिंदु ({viewport})। घनत्व क्षेत्र सभी मिलानों को गिनते हैं; बिंदुओं की ऊपरी परतें इन गिनतियों में नहीं जुड़तीं।',
   embeddingExplorerSpatialBin: 'घनत्व क्षेत्र में {count} बिंदु: {bounds}',

@@ -44,10 +44,12 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'Ó ń gbé sókè…',
   attachmentUploadFailed: 'Gbigbé sókè kùnà',
   fileInputDefaultLabel: 'Ju àwọn fáìlì síbí tàbí tẹ̀ láti wá kiri',
-  fileInputAcceptedOne: 'A fi fáìlì {count} kún un.',
-  fileInputAcceptedMany: 'A fi àwọn fáìlì {count} kún un.',
-  fileInputRejectedOne: 'A kọ fáìlì {count}.',
-  fileInputRejectedMany: 'A kọ àwọn fáìlì {count}.',
+  fileInputAccepted: {
+    other: 'A fi fáìlì {count} kún un.',
+  },
+  fileInputRejected: {
+    other: 'A kọ fáìlì {count}.',
+  },
   fileInputFolderRejected: 'A kò gba àwọn fódà níbí.',
   fileInputRejectedType: '{filename}: a kò gba irú fáìlì yìí.',
   fileInputRejectedSize: '{filename}: fáìlì yìí tóbi jù.',

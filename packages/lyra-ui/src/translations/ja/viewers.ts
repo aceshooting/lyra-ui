@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   emailViewerNoSubject: '（件名なし）',
   emailViewerOpenAttachment: '{filename} を開く',
   emailViewerQuotedText: '引用テキスト',
+  emailViewerOpenAttachmentSize: '{filename} {size} を開く',
   emailViewerEmptyBody: 'このメッセージには表示できる内容がありません。',
   emailViewerGroupAddress: '{name}：{members}',
   calendarViewerLabel: 'カレンダービューアー',

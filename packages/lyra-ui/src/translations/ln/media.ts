@@ -44,10 +44,14 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'Ezali ko-upload…',
   attachmentUploadFailed: 'Upload elongi te',
   fileInputDefaultLabel: 'Tika ba fichier awa to finá mpo na kotala',
-  fileInputAcceptedOne: 'Fichier {count} ebakisami.',
-  fileInputAcceptedMany: 'Ba fichier {count} ebakisami.',
-  fileInputRejectedOne: 'Fichier {count} eboyami.',
-  fileInputRejectedMany: 'Ba fichier {count} eboyami.',
+  fileInputAccepted: {
+    one: 'Fichier {count} ebakisami.',
+    other: 'Ba fichier {count} ebakisami.',
+  },
+  fileInputRejected: {
+    one: 'Fichier {count} eboyami.',
+    other: 'Ba fichier {count} eboyami.',
+  },
   fileInputFolderRejected: 'Ba dossier endimami te awa.',
   fileInputRejectedType: '{filename}: lolenge ya fichier oyo endimami te.',
   fileInputRejectedSize: '{filename}: fichier oyo ezali monene mingi.',

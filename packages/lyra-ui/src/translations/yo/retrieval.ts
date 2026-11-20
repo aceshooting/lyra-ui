@@ -18,6 +18,7 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Àlàyé graph',
   entityChipWithType: '{label}, {type}',
   showMore: 'Fi sí i hàn',
+  showMoreCount: 'Fi {count} sí i hàn',
   embeddingExplorerSpatialBounds: '{minX} sí {maxX} ní ìbú; {minY} sí {maxY} ní gígùn òkè sí ìsàlẹ̀',
   embeddingExplorerSpatialSummary: 'Kókó {total} nínú gbogbo orísun ({global}). Kókó {matched} nínú agbègbè ìwòye ({viewport}). Àwọn agbègbè ìṣúpọ̀ ń ka gbogbo ohun tó bá mu; àwọn kókó ìpele àfikún kò fi kún àwọn iye yìí.',
   embeddingExplorerSpatialBin: 'Kókó {count} nínú agbègbè ìṣúpọ̀: {bounds}',

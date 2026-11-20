@@ -44,10 +44,14 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'Yuklanmoqda…',
   attachmentUploadFailed: 'Yuklab boʻlmadi',
   fileInputDefaultLabel: 'Fayllarni bu yerga tashlang yoki tanlash uchun bosing',
-  fileInputAcceptedOne: '{count} ta fayl qoʻshildi.',
-  fileInputAcceptedMany: '{count} ta fayl qoʻshildi.',
-  fileInputRejectedOne: '{count} ta fayl rad etildi.',
-  fileInputRejectedMany: '{count} ta fayl rad etildi.',
+  fileInputAccepted: {
+    one: '{count} ta fayl qoʻshildi.',
+    other: '{count} ta fayl qoʻshildi.',
+  },
+  fileInputRejected: {
+    one: '{count} ta fayl rad etildi.',
+    other: '{count} ta fayl rad etildi.',
+  },
   fileInputFolderRejected: 'Bu yerda papkalar qabul qilinmaydi.',
   fileInputRejectedType: '{filename}: bu fayl turi qabul qilinmaydi.',
   fileInputRejectedSize: '{filename}: fayl juda katta.',

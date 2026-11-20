@@ -44,10 +44,14 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'Ana lodawa…',
   attachmentUploadFailed: 'Lodawa ta gaza',
   fileInputDefaultLabel: 'Ajiye fayiloli a nan ko danna don nemo fayil',
-  fileInputAcceptedOne: 'An ƙara fayil {count}.',
-  fileInputAcceptedMany: 'An ƙara fayiloli {count}.',
-  fileInputRejectedOne: 'An ƙi fayil {count}.',
-  fileInputRejectedMany: 'An ƙi fayiloli {count}.',
+  fileInputAccepted: {
+    one: 'An ƙara fayil {count}.',
+    other: 'An ƙara fayiloli {count}.',
+  },
+  fileInputRejected: {
+    one: 'An ƙi fayil {count}.',
+    other: 'An ƙi fayiloli {count}.',
+  },
   fileInputFolderRejected: 'Ba a yarda da manyan fayiloli a nan ba.',
   fileInputRejectedType: '{filename}: ba a yarda da irin wannan fayil ba.',
   fileInputRejectedSize: '{filename}: fayil ɗin ya yi girma sosai.',

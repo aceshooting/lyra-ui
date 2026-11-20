@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'ဂရပ် ရှင်းလင်းချက်',
   entityChipWithType: '{label} ({type})',
   showMore: 'ထပ်ပြရန်',
+  showMoreCount: 'နောက်ထပ် {count} ခု ပြရန်',
   embeddingExplorerSpatialBounds: 'အလျားလိုက် {minX} မှ {maxX} အထိ၊ ဒေါင်လိုက် {minY} မှ {maxY} အထိ',
   embeddingExplorerSpatialSummary: 'မူရင်းတစ်ခုလုံးတွင် အမှတ် {total} ခုရှိသည် ({global})။ မြင်ကွင်းဧရိယာတွင် အမှတ် {matched} ခုရှိသည် ({viewport})။ သိပ်သည်းမှုဧရိယာများသည် ကိုက်ညီမှုအားလုံးကို ရေတွက်သည်။ ထပ်ဆင့်ပြသထားသော အမှတ်များကို ဤအရေအတွက်များတွင် ထပ်မပေါင်းပါ။',
   embeddingExplorerSpatialBin: 'သိပ်သည်းမှုဧရိယာတွင် အမှတ် {count} ခု။ {bounds}',

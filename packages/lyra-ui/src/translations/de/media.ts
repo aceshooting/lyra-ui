@@ -44,10 +44,14 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'Wird hochgeladen…',
   attachmentUploadFailed: 'Hochladen fehlgeschlagen',
   fileInputDefaultLabel: 'Dateien hierher ziehen oder zum Auswählen klicken',
-  fileInputAcceptedOne: '{count} Datei hinzugefügt.',
-  fileInputAcceptedMany: '{count} Dateien hinzugefügt.',
-  fileInputRejectedOne: '{count} Datei abgelehnt.',
-  fileInputRejectedMany: '{count} Dateien abgelehnt.',
+  fileInputAccepted: {
+    one: '{count} Datei hinzugefügt.',
+    other: '{count} Dateien hinzugefügt.',
+  },
+  fileInputRejected: {
+    one: '{count} Datei abgelehnt.',
+    other: '{count} Dateien abgelehnt.',
+  },
   fileInputFolderRejected: 'Ordner werden hier nicht akzeptiert.',
   fileInputRejectedType: '{filename}: Dieser Dateityp wird nicht akzeptiert.',
   fileInputRejectedSize: '{filename}: Diese Datei ist zu groß.',

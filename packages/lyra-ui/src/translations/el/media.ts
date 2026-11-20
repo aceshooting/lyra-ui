@@ -44,10 +44,14 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'Μεταφόρτωση…',
   attachmentUploadFailed: 'Η μεταφόρτωση απέτυχε',
   fileInputDefaultLabel: 'Αποθέστε αρχεία εδώ ή κάντε κλικ για περιήγηση',
-  fileInputAcceptedOne: 'Προστέθηκε {count} αρχείο.',
-  fileInputAcceptedMany: 'Προστέθηκαν {count} αρχεία.',
-  fileInputRejectedOne: 'Απορρίφθηκε {count} αρχείο.',
-  fileInputRejectedMany: 'Απορρίφθηκαν {count} αρχεία.',
+  fileInputAccepted: {
+    one: 'Προστέθηκε {count} αρχείο.',
+    other: 'Προστέθηκαν {count} αρχεία.',
+  },
+  fileInputRejected: {
+    one: 'Απορρίφθηκε {count} αρχείο.',
+    other: 'Απορρίφθηκαν {count} αρχεία.',
+  },
   fileInputFolderRejected: 'Οι φάκελοι δεν γίνονται αποδεκτοί εδώ.',
   fileInputRejectedType: '{filename}: αυτός ο τύπος αρχείου δεν γίνεται αποδεκτός.',
   fileInputRejectedSize: '{filename}: το αρχείο είναι υπερβολικά μεγάλο.',

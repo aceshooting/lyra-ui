@@ -30212,7 +30212,7 @@ plus shared tokens (`--lr-space-xs`, `--lr-space-s`,
 
 ### `lr-chip-group`
 
-The collapsed overflow button shows `showMoreCollapsed` (`+2`), and its accessible name starts with that visible text, followed by `showMoreCount` (`+2 Show 2 more`). Set `--lr-chip-group-overflow-bg`, `--lr-chip-group-overflow-color`, and `--lr-chip-group-overflow-border-color` to style it. Its hover and press take `--lr-chip-group-overflow-hover-border-color` (default `var(--lr-color-brand)`), `--lr-chip-group-overflow-hover-color` (default `var(--lr-color-text)`), `--lr-chip-group-overflow-hover-bg` (default: the resting fill) and `--lr-chip-group-overflow-active-bg`.
+The collapsed overflow button shows `showMoreCollapsed` (`+2`). Its accessible name is `showMoreOverflowLabel` (`+2 Show 2 more`), whose `{visible}` placeholder keeps that visible text at the start. Set `--lr-chip-group-overflow-bg`, `--lr-chip-group-overflow-color`, and `--lr-chip-group-overflow-border-color` to style it.
 
 A flex-wrap container for a set of `<lr-chip>` children — plain light-DOM composition, direct
 children are the chips (the same shape `<lr-multi-split>`'s panels / `<lr-source-list>`'s cards take,
@@ -39459,8 +39459,8 @@ disconnect and reconnect.
 the badge was activated by click or Enter/Space. Non-cancelable, purely informational: the
 component keeps rendering the same collapsed stack, and a host typically wires this to its own
 popover/dialog listing the hidden members. There is no `expanded` state and no `aria-expanded`.
-The badge shows `showMoreCollapsed` (`+2`), and its accessible name starts with that visible text,
-followed by `showMoreCount` (`+2 Show 2 more`).
+The badge shows `showMoreCollapsed` (`+2`). Its accessible name is `showMoreOverflowLabel`
+(`+2 Show 2 more`), whose `{visible}` placeholder keeps that visible text at the start.
 
 **Slots:** default slot — direct or forwarded `<lr-avatar>` elements. Other elements are ignored
 and remain untouched. Author-hidden/inert avatars do not consume visible capacity. Excess eligible

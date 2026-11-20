@@ -356,6 +356,12 @@ it('counts only rendered finite samples in its accessible summary', async () => 
   );
 });
 
+it('uses the singular value noun for a one-sample summary', async () => {
+  const el = (await fixture(html`<lr-sparkline .values=${[3]}></lr-sparkline>`)) as LyraSparkline;
+  await el.updateComplete;
+  expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-label')).to.equal('Trend of 1 value, last 3');
+});
+
 it('synthesizes the same accessible summary for the data-string path as the values-array path', async () => {
   const el = (await fixture(html`<lr-sparkline data="1 2 3"></lr-sparkline>`)) as LyraSparkline;
   const svg = el.shadowRoot!.querySelector('svg')!;

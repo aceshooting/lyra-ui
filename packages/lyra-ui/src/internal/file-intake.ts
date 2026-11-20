@@ -105,8 +105,8 @@ export function selectionMessage(
   const messages: string[] = [];
   const format = getNumberFormat(locale);
   for (const [n, override, key] of [
-    [files.length, acceptedMessage, files.length === 1 ? 'fileInputAcceptedOne' : 'fileInputAcceptedMany'],
-    [rejected.length, rejectedMessage, rejected.length === 1 ? 'fileInputRejectedOne' : 'fileInputRejectedMany'],
+    [files.length, acceptedMessage, 'fileInputAccepted'],
+    [rejected.length, rejectedMessage, 'fileInputRejected'],
   ] as const) {
     if (!n) continue;
     const count = format.format(n);

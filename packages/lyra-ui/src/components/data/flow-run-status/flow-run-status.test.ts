@@ -258,6 +258,19 @@ it('renders the "{done} of {total} steps complete" summary and per-status counts
   expect(counts.length).to.equal(2); // success + running only -- pending/error/denied are all 0
 });
 
+it('agrees the step noun with a one-step total', async () => {
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas>
+      <lr-flow-run-status slot="top-end" .decorations=${{ fetch: { status: 'running' } } as FlowRunDecorations}></lr-flow-run-status>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = [nodes[0]!];
+  await wrapper.updateComplete;
+  const overlay = wrapper.querySelector('lr-flow-run-status') as LyraFlowRunStatus;
+  await overlay.updateComplete;
+  expect(overlay.shadowRoot!.querySelector('[part="summary"]')!.textContent).to.equal('0 of 1 step complete');
+});
+
 it('lets each summary-count status color be rethemed independently', async () => {
   const statusNodes: FlowNode[] = ['pending', 'running', 'success', 'error', 'denied'].map(
     (id, index) => ({ id, position: { x: index * 100, y: 0 } }),

@@ -44,10 +44,14 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'అప్‌లోడ్ అవుతోంది…',
   attachmentUploadFailed: 'అప్‌లోడ్ విఫలమైంది',
   fileInputDefaultLabel: 'ఫైళ్లను ఇక్కడ వదలండి లేదా బ్రౌజ్ చేయడానికి క్లిక్ చేయండి',
-  fileInputAcceptedOne: '{count} ఫైల్ జోడించారు.',
-  fileInputAcceptedMany: '{count} ఫైళ్లు జోడించారు.',
-  fileInputRejectedOne: '{count} ఫైల్‌ను అంగీకరించలేదు.',
-  fileInputRejectedMany: '{count} ఫైళ్లను అంగీకరించలేదు.',
+  fileInputAccepted: {
+    one: '{count} ఫైల్ జోడించారు.',
+    other: '{count} ఫైళ్లు జోడించారు.',
+  },
+  fileInputRejected: {
+    one: '{count} ఫైల్‌ను అంగీకరించలేదు.',
+    other: '{count} ఫైళ్లను అంగీకరించలేదు.',
+  },
   fileInputFolderRejected: 'ఇక్కడ ఫోల్డర్‌లను అంగీకరించరు.',
   fileInputRejectedType: '{filename}: ఈ ఫైల్ రకాన్ని అంగీకరించరు.',
   fileInputRejectedSize: '{filename}: ఈ ఫైల్ చాలా పెద్దది.',

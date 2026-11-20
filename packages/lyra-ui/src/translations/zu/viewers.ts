@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   emailViewerNoSubject: '(asikho isihloko)',
   emailViewerOpenAttachment: 'Vula u-{filename}',
   emailViewerQuotedText: 'Umbhalo ocashuniwe',
+  emailViewerOpenAttachmentSize: 'Vula u-{filename} {size}',
   emailViewerEmptyBody: 'Lo molo awunalo okuqukethwe okungabonisiwa.',
   emailViewerGroupAddress: '{name}: {members}',
   calendarViewerLabel: 'Isibukeli sekhalenda',

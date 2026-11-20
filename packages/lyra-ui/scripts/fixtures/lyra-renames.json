@@ -8217,6 +8217,34 @@
         },
         {
           "kind": "locale-key",
+          "from": "fileInputAcceptedMany",
+          "to": "fileInputAccepted",
+          "summary": "lr-file-input and lr-drop-zone read one plural message; move the override into a category object under the new key.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "fileInputAcceptedOne",
+          "to": "fileInputAccepted",
+          "summary": "lr-file-input and lr-drop-zone read one plural message; move the override into a category object under the new key.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "fileInputRejectedMany",
+          "to": "fileInputRejected",
+          "summary": "lr-file-input and lr-drop-zone read one plural message; move the override into a category object under the new key.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "fileInputRejectedOne",
+          "to": "fileInputRejected",
+          "summary": "lr-file-input and lr-drop-zone read one plural message; move the override into a category object under the new key.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
           "from": "jsonCollapseLabel",
           "to": "jsonToggleLabel",
           "summary": "lr-json-viewer names its node toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies.",
@@ -8304,6 +8332,20 @@
           "from": "widgetExpand",
           "to": "panelToggle",
           "summary": "lr-widget names its collapse button with one constant key (appRailItemToggle with a widget label) while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "wordCloudWord",
+          "to": "wordCloud",
+          "summary": "lr-word-cloud's wordCloud is a plural message that carries the noun; the capped-cloud note reads wordCloudWordLimit.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "wordCloudWords",
+          "to": "wordCloud",
+          "summary": "lr-word-cloud's wordCloud is a plural message that carries the noun; the capped-cloud note reads wordCloudWordLimit.",
           "since": "32.0.0"
         },
         {

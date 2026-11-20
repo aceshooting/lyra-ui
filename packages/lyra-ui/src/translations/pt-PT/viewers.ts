@@ -78,6 +78,7 @@ const strings: LyraLocaleStrings = {
   emailViewerNoSubject: '(sem assunto)',
   emailViewerOpenAttachment: 'Abrir {filename}',
   emailViewerQuotedText: 'Texto citado',
+  emailViewerOpenAttachmentSize: 'Abrir {filename} {size}',
   emailViewerEmptyBody: 'Esta mensagem não tem conteúdo que possa ser apresentado.',
   emailViewerGroupAddress: '{name}: {members}',
   calendarViewerLabel: 'Visualizador de calendário',

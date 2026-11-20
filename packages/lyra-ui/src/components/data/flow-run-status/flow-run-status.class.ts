@@ -227,7 +227,7 @@ export class LyraFlowRunStatus extends LyraElement {
       const { done, total } = this.summary();
       const number = getNumberFormat(this.effectiveLocale);
       this.announcer.announce(
-        this.localize('flowRunSummary', undefined, { done: number.format(done), total: number.format(total) }),
+        this.localize('flowRunSummary', undefined, { done: number.format(done), total: number.format(total), pluralCount: total }),
         { force: true },
       );
       return;
@@ -281,6 +281,7 @@ export class LyraFlowRunStatus extends LyraElement {
             <div part="summary">${this.localize('flowRunSummary', undefined, {
               done: number.format(done),
               total: number.format(total),
+              pluralCount: total,
             })}</div>
             ${ALL_STATUSES.filter((s) => counts[s] > 0).map(
               (s) => html`<span part="count" data-status=${s}><span class="tone-dot"></span>${this.localize(

@@ -16,7 +16,13 @@ const strings: LyraLocaleStrings = {
   sequenceStripCellKeyboardHelp: '按 Enter 鍵或空白鍵啟用此項目。',
   sequenceStripUnnamedCategory: '未命名類別',
   sequenceStripBucketLabel: '{label}，第{start}–{end}項',
-  sequenceStripBucketSummary: '{items}項，合併為{ranges}個區間',
+  sequenceStripBucketSummary: '{ranges}中的{items}',
+  sequenceStripItemCount: {
+    other: '{count}項',
+  },
+  sequenceStripRangeCount: {
+    other: '{count}個區間',
+  },
   noColumns: '未配置任何列',
   dataGridColumnMenu: '{label} 的選項',
   dataGridPinStart: '將 {label} 固定到開頭',
@@ -43,8 +49,15 @@ const strings: LyraLocaleStrings = {
   paginationInvalidPageUnknownTotal: '請輸入 1 或更大的整數頁碼。',
   paginationEmptySummary: '共{total}{itemLabel}',
   paginationAppliedUnknownTotal: '第{page}頁',
-  trendOf: '{count}個值的趨勢，最新值為{value}',
-  wordCloud: '包含{count}{word}的詞雲',
+  trendOf: {
+    other: '{count}個值的趨勢，最新值為{value}',
+  },
+  wordCloud: {
+    other: '包含{count}個詞的詞雲',
+  },
+  wordCloudWordLimit: {
+    other: '{start}–{end}，共{total}個詞',
+  },
   wordCloudLegend: '詞雲顏色圖例',
   wordCloudWordAnnouncement: '{text}，{weight}',
   wordCloudPreparedSummary: '詞語摘要：保留了 {validCount} 個有效詞語中的 {retainedCount} 個（{invalidCount} 個無效）；保留權重為 {retainedWeight}，總權重為 {totalWeight}。',
@@ -57,8 +70,6 @@ const strings: LyraLocaleStrings = {
   heatmapSourceMean: '平均值',
   heatmapSourceMin: '最小值',
   heatmapSourceMax: '最大值',
-  wordCloudWord: '個詞',
-  wordCloudWords: '個詞',
   calendarLabel: '日曆',
   calendarEmpty: '本月沒有事件。',
   calendarEventsOverflow: '+{n}項',
@@ -132,7 +143,9 @@ const strings: LyraLocaleStrings = {
   flowSourceRevealTargetNode: '前往 {edge} 的目標節點 {node}',
   flowSourceRecordMatches: '相符的記錄：{count}',
   flowRunStatusLabel: '執行狀態',
-  flowRunSummary: '已完成{done}/{total}個步驟',
+  flowRunSummary: {
+    other: '已完成{done}/{total}個步驟',
+  },
   flowRunStepStatus: '{label}：{status}',
   flowRunStatusCount: '{status}：{count}',
   queryBuilderLabel: '查詢構建器',

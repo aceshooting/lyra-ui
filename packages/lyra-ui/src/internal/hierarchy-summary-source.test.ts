@@ -30,10 +30,10 @@ function fixture(rows: LyraHierarchyView<Row> = {
   return { host, binding, source, rows, wrapper, project, accepted };
 }
 
-it('formats visible and total counts in the requested locale when a projection is present', () => {
+it('formats visible and total counts in the requested locale and keeps the raw total for plural selection', () => {
   expect(hierarchySourceSummary(undefined, 'de')).to.equal(undefined);
   expect(hierarchySourceSummary({ total: 10_000, rows: { count: 5000 } }, 'de')).to.deep.equal({
-    total: '10.000', visible: '5.000',
+    total: '10.000', visible: '5.000', pluralCount: 10_000,
   });
 });
 

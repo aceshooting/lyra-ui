@@ -18,6 +18,7 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Legenda grafik',
   entityChipWithType: '{label}, {type}',
   showMore: 'Témbongkeun deui',
+  showMoreCount: 'Témbongkeun {count} deui',
   embeddingExplorerSpatialBounds: '{minX} nepi ka {maxX} sacara horizontal; {minY} nepi ka {maxY} sacara vértikal',
   embeddingExplorerSpatialSummary: '{total} titik dina sakabéh sumber ({global}). {matched} titik dina wewengkon tampilan ({viewport}). Wewengkon kapadetan ngitung sakabéh anu cocog; lapisan titik teu nambahan kana itungan ieu.',
   embeddingExplorerSpatialBin: '{count} titik dina wewengkon kapadetan: {bounds}',

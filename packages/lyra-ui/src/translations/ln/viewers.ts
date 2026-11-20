@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   emailViewerNoSubject: '(sujet ezali te)',
   emailViewerOpenAttachment: 'Fungola {filename}',
   emailViewerQuotedText: 'Makomi ya citation',
+  emailViewerOpenAttachmentSize: 'Fungola {filename} {size}',
   emailViewerEmptyBody: 'Nsango oyo ezali na eloko moko te ya kolakisa.',
   emailViewerGroupAddress: '{name}: {members}',
   calendarViewerLabel: 'Motali ya calendrier',

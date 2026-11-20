@@ -14,7 +14,7 @@ import { composedContains } from '../../../internal/overlay-manager.js';
 import { styles } from './chip-group.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMoreCollapsed, LYRA_DEFAULT_showMoreCount } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMoreCollapsed, LYRA_DEFAULT_showMoreOverflowLabel } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -95,7 +95,7 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     ...super.defaultStrings,
     showLess: LYRA_DEFAULT_showLess,
     showMoreCollapsed: LYRA_DEFAULT_showMoreCollapsed,
-    showMoreCount: LYRA_DEFAULT_showMoreCount,
+    showMoreOverflowLabel: LYRA_DEFAULT_showMoreOverflowLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -516,7 +516,7 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
               part="overflow-indicator"
               type="button"
               aria-expanded=${this.expanded ? 'true' : 'false'}
-              aria-label=${this.expanded ? visible : `${visible} ${this.localize('showMoreCount', undefined, { count: formattedHiddenCount })}`}
+              aria-label=${this.expanded ? visible : this.localize('showMoreOverflowLabel', undefined, { visible, count: formattedHiddenCount })}
               @click=${this.onToggleOverflow}
             >
               ${visible}

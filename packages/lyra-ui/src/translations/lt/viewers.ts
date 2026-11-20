@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   emailViewerNoSubject: '(be temos)',
   emailViewerOpenAttachment: 'Atidaryti {filename}',
   emailViewerQuotedText: 'Cituojamas tekstas',
+  emailViewerOpenAttachmentSize: 'Atidaryti {filename} {size}',
   emailViewerEmptyBody: 'Šiame laiške nėra rodomo turinio.',
   emailViewerGroupAddress: '{name}: {members}',
   calendarViewerLabel: 'Kalendoriaus peržiūra',

@@ -44,10 +44,12 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'Memuat naik…',
   attachmentUploadFailed: 'Muat naik gagal',
   fileInputDefaultLabel: 'Lepaskan fail di sini atau klik untuk menyemak imbas',
-  fileInputAcceptedOne: '{count} fail ditambah.',
-  fileInputAcceptedMany: '{count} fail ditambah.',
-  fileInputRejectedOne: '{count} fail ditolak.',
-  fileInputRejectedMany: '{count} fail ditolak.',
+  fileInputAccepted: {
+    other: '{count} fail ditambah.',
+  },
+  fileInputRejected: {
+    other: '{count} fail ditolak.',
+  },
   fileInputFolderRejected: 'Folder tidak diterima di sini.',
   fileInputRejectedType: '{filename}: jenis fail ini tidak diterima.',
   fileInputRejectedSize: '{filename}: fail ini terlalu besar.',

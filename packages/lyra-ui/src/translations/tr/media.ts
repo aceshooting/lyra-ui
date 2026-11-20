@@ -44,10 +44,14 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'Yükleniyor…',
   attachmentUploadFailed: 'Yükleme başarısız',
   fileInputDefaultLabel: 'Dosyaları buraya bırakın veya göz atmak için tıklayın',
-  fileInputAcceptedOne: '{count} dosya eklendi.',
-  fileInputAcceptedMany: '{count} dosya eklendi.',
-  fileInputRejectedOne: '{count} dosya reddedildi.',
-  fileInputRejectedMany: '{count} dosya reddedildi.',
+  fileInputAccepted: {
+    one: '{count} dosya eklendi.',
+    other: '{count} dosya eklendi.',
+  },
+  fileInputRejected: {
+    one: '{count} dosya reddedildi.',
+    other: '{count} dosya reddedildi.',
+  },
   fileInputFolderRejected: 'Burada klasör kabul edilmiyor.',
   fileInputRejectedType: '{filename}: bu dosya türü kabul edilmiyor.',
   fileInputRejectedSize: '{filename}: bu dosya çok büyük.',

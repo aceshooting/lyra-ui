@@ -18,6 +18,7 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Grafens teckenförklaring',
   entityChipWithType: '{label}, {type}',
   showMore: 'Visa mer',
+  showMoreCount: 'Visa {count} till',
   embeddingExplorerSpatialBounds: '{minX} till {maxX} vågrätt; {minY} till {maxY} lodrätt',
   embeddingExplorerSpatialSummary: '{total} punkter i hela källan ({global}). {matched} punkter i visningsområdet ({viewport}). Täthetsområden räknar alla träffar; överlagrade punkter ökar inte dessa antal.',
   embeddingExplorerSpatialBin: '{count} punkter i täthetsområdet: {bounds}',

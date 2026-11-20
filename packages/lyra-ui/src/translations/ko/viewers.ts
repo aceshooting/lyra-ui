@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   emailViewerNoSubject: '(제목 없음)',
   emailViewerOpenAttachment: '{filename} 열기',
   emailViewerQuotedText: '인용된 텍스트',
+  emailViewerOpenAttachmentSize: '{filename} {size} 열기',
   emailViewerEmptyBody: '이 메시지에는 표시할 수 있는 내용이 없습니다.',
   emailViewerGroupAddress: '{name}: 구성원 {members}',
   calendarViewerLabel: '캘린더 뷰어',

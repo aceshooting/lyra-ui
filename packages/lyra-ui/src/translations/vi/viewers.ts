@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   emailViewerNoSubject: '(không có chủ đề)',
   emailViewerOpenAttachment: 'Mở {filename}',
   emailViewerQuotedText: 'Văn bản được trích dẫn',
+  emailViewerOpenAttachmentSize: 'Mở {filename} {size}',
   emailViewerEmptyBody: 'Thư này không có nội dung có thể hiển thị.',
   emailViewerGroupAddress: '{name}: {members}',
   calendarViewerLabel: 'Trình xem lịch',

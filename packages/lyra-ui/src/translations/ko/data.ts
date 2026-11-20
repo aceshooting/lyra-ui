@@ -16,7 +16,13 @@ const strings: LyraLocaleStrings = {
   sequenceStripCellKeyboardHelp: 'Enter 키 또는 스페이스 키를 눌러 이 항목을 활성화하세요.',
   sequenceStripUnnamedCategory: '이름 없는 카테고리',
   sequenceStripBucketLabel: '{label}, 항목 {start}~{end}',
-  sequenceStripBucketSummary: '범위 {ranges}개에 항목 {items}개',
+  sequenceStripBucketSummary: '{ranges}에 {items}',
+  sequenceStripItemCount: {
+    other: '항목 {count}개',
+  },
+  sequenceStripRangeCount: {
+    other: '범위 {count}개',
+  },
   noColumns: '구성된 열 없음',
   dataGridColumnMenu: '{label} 옵션',
   dataGridPinStart: '시작 위치에 {label} 고정',
@@ -43,8 +49,15 @@ const strings: LyraLocaleStrings = {
   paginationInvalidPageUnknownTotal: '1 이상의 정수 페이지 번호를 입력하세요.',
   paginationEmptySummary: '{total} {itemLabel}',
   paginationAppliedUnknownTotal: '페이지 {page}',
-  trendOf: '마지막 값이 {value}인 {count}개 값의 추세',
-  wordCloud: '{count}개 {word} 워드 클라우드',
+  trendOf: {
+    other: '마지막 값이 {value}인 {count}개 값의 추세',
+  },
+  wordCloud: {
+    other: '단어 {count}개 워드 클라우드',
+  },
+  wordCloudWordLimit: {
+    other: '전체 {total}개 단어 중 {start}~{end}',
+  },
   wordCloudLegend: '워드 클라우드 색상 범례',
   wordCloudWordAnnouncement: '{text}, {weight}',
   wordCloudPreparedSummary: '단어 요약: 유효한 단어 {validCount}개 중 {retainedCount}개 유지(무효 {invalidCount}개). 유지된 가중치는 전체 {totalWeight} 중 {retainedWeight}입니다.',
@@ -57,8 +70,6 @@ const strings: LyraLocaleStrings = {
   heatmapSourceMean: '평균',
   heatmapSourceMin: '최솟값',
   heatmapSourceMax: '최댓값',
-  wordCloudWord: '단어',
-  wordCloudWords: '단어',
   calendarLabel: '달력',
   calendarEmpty: '이번 달에는 일정이 없습니다.',
   calendarEventsOverflow: '+ {n} 더 보기',
@@ -132,7 +143,9 @@ const strings: LyraLocaleStrings = {
   flowSourceRevealTargetNode: '{edge}의 대상 노드 {node}(으)로 이동',
   flowSourceRecordMatches: '일치하는 레코드: {count}',
   flowRunStatusLabel: '실행 상태',
-  flowRunSummary: '전체 {total}단계 중 {done}단계 완료',
+  flowRunSummary: {
+    other: '전체 {total}단계 중 {done}단계 완료',
+  },
   flowRunStepStatus: '{label}: {status}',
   flowRunStatusCount: '{status}: {count}',
   queryBuilderLabel: '쿼리 작성기',

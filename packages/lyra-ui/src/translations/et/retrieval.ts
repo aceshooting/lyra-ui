@@ -21,6 +21,7 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Graafi legend',
   entityChipWithType: '{label}, {type}',
   showMore: 'Näita rohkem',
+  showMoreCount: 'Näita veel {count}',
   embeddingExplorerSpatialBounds: 'horisontaalselt {minX} kuni {maxX}; vertikaalselt {minY} kuni {maxY}',
   embeddingExplorerSpatialSummary: 'Kogu allikas on {total} punkti ({global}). Vaateaknas on {matched} punkti ({viewport}). Tiheduspiirkonnad loendavad kõiki vasteid; punktide kihid neid arve ei suurenda.',
   embeddingExplorerSpatialBin: 'Tiheduspiirkonnas {count} punkti: {bounds}',

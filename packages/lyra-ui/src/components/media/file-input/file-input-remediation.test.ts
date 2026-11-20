@@ -230,7 +230,7 @@ it('renders and announces a bounded rejection list with a summary of the rest', 
 
 it('uses the numeric selection count to choose a plural message', async () => {
   const el = await fixture<HTMLElementTagNameMap['lr-file-input']>(html`<lr-file-input multiple non-retaining locale="sl" .strings=${{
-    fileInputDefaultLabel: 'Select', fileInputAcceptedMany: { two: 'pair', other: 'other', one: 'singular' },
+    fileInputDefaultLabel: 'Select', fileInputAccepted: { two: 'pair', other: 'other', one: 'singular' },
   }}></lr-file-input>`);
   await el.updateComplete;
   const transfer = new DataTransfer();

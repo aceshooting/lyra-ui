@@ -18,6 +18,7 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'ग्राफ लेजेन्ड',
   entityChipWithType: '{label}, {type}',
   showMore: 'थप देखाउनुहोस्',
+  showMoreCount: 'थप {count} देखाउनुहोस्',
   embeddingExplorerSpatialBounds: 'तेर्सो {minX} देखि {maxX} सम्म; ठाडो {minY} देखि {maxY} सम्म',
   embeddingExplorerSpatialSummary: 'सम्पूर्ण स्रोतमा {total} बिन्दुहरू ({global})। दृश्य क्षेत्रमा {matched} बिन्दुहरू ({viewport})। घनत्व क्षेत्रहरूले सबै मिलानहरू गन्छन्; बिन्दु ओभरलेहरूले यी सङ्ख्या बढाउँदैनन्।',
   embeddingExplorerSpatialBin: 'घनत्व क्षेत्रमा {count} बिन्दुहरू: {bounds}',

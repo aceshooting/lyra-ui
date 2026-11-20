@@ -18,6 +18,7 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Ufunguo wa grafu',
   entityChipWithType: '{label}, {type}',
   showMore: 'Onyesha zaidi',
+  showMoreCount: 'Onyesha {count} zaidi',
   embeddingExplorerSpatialBounds: '{minX} hadi {maxX} kwa mlalo; {minY} hadi {maxY} kwa wima',
   embeddingExplorerSpatialSummary: 'Nukta {total} katika chanzo kizima ({global}). Nukta {matched} katika eneo la mwonekano ({viewport}). Maeneo ya msongamano huhesabu ulinganifu wote; tabaka za nukta haziongezi hesabu hizi.',
   embeddingExplorerSpatialBin: 'Nukta {count} katika eneo la msongamano: {bounds}',

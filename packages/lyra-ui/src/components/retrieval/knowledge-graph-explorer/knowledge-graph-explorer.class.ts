@@ -65,7 +65,7 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_graphDataListLimit, LYRA_DEFAULT_graphEdgeLimit, LYRA_DEFAULT_graphExplorerAllTypesHidden, LYRA_DEFAULT_graphExplorerClearTypes, LYRA_DEFAULT_graphExplorerFindPath, LYRA_DEFAULT_graphExplorerLabel, LYRA_DEFAULT_graphExplorerPin, LYRA_DEFAULT_graphExplorerPinned, LYRA_DEFAULT_graphExplorerPinnedHeading, LYRA_DEFAULT_graphExplorerSearchLimit, LYRA_DEFAULT_graphExplorerSearchPlaceholder, LYRA_DEFAULT_graphExplorerSearchResultsLabel, LYRA_DEFAULT_graphExplorerUnpin, LYRA_DEFAULT_graphExplorerUnpinned, LYRA_DEFAULT_graphNodeLimit } from '../../../internal/default-strings/retrieval.generated.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_largeDataInvalid, LYRA_DEFAULT_largeDataLimit, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFAULT_engine3dLoading, LYRA_DEFAULT_engine3dShowingBuiltin, LYRA_DEFAULT_engine3dShowingList, LYRA_DEFAULT_engine3dSoftwareRendering, LYRA_DEFAULT_engine3dUnavailable, LYRA_DEFAULT_engine3dUnsupported, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_graphSourceCoverageAggregate, LYRA_DEFAULT_graphSourceCoverageComplete, LYRA_DEFAULT_graphSourceCoverageNeighborhood, LYRA_DEFAULT_graphSourceEdgeCount, LYRA_DEFAULT_graphSourceNodeCount, LYRA_DEFAULT_graphSourceShownEdges, LYRA_DEFAULT_graphSourceShownNodes, LYRA_DEFAULT_graphSourceTotals, LYRA_DEFAULT_largeDataInvalid, LYRA_DEFAULT_largeDataLimit, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_search, LYRA_DEFAULT_select, LYRA_DEFAULT_statusError, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** Search results rendered at once; the match count still covers every match. */
@@ -318,6 +318,14 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
     graphExplorerUnpin: LYRA_DEFAULT_graphExplorerUnpin,
     graphExplorerUnpinned: LYRA_DEFAULT_graphExplorerUnpinned,
     graphNodeLimit: LYRA_DEFAULT_graphNodeLimit,
+    graphSourceCoverageAggregate: LYRA_DEFAULT_graphSourceCoverageAggregate,
+    graphSourceCoverageComplete: LYRA_DEFAULT_graphSourceCoverageComplete,
+    graphSourceCoverageNeighborhood: LYRA_DEFAULT_graphSourceCoverageNeighborhood,
+    graphSourceEdgeCount: LYRA_DEFAULT_graphSourceEdgeCount,
+    graphSourceNodeCount: LYRA_DEFAULT_graphSourceNodeCount,
+    graphSourceShownEdges: LYRA_DEFAULT_graphSourceShownEdges,
+    graphSourceShownNodes: LYRA_DEFAULT_graphSourceShownNodes,
+    graphSourceTotals: LYRA_DEFAULT_graphSourceTotals,
     largeDataInvalid: LYRA_DEFAULT_largeDataInvalid,
     largeDataLimit: LYRA_DEFAULT_largeDataLimit,
     loading: LYRA_DEFAULT_loading,

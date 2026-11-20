@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   emailViewerNoSubject: '(hakuna mada)',
   emailViewerOpenAttachment: 'Fungua {filename}',
   emailViewerQuotedText: 'Maandishi yaliyonukuliwa',
+  emailViewerOpenAttachmentSize: 'Fungua {filename} {size}',
   emailViewerEmptyBody: 'Ujumbe huu hauna maudhui yanayoweza kuonyeshwa.',
   emailViewerGroupAddress: '{name}: {members}',
   calendarViewerLabel: 'Kitazamaji cha kalenda',

@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   emailViewerNoSubject: '(kò sí kókó ọ̀rọ̀)',
   emailViewerOpenAttachment: 'Ṣí {filename}',
   emailViewerQuotedText: 'Ọ̀rọ̀ tí a fà yọ',
+  emailViewerOpenAttachmentSize: 'Ṣí {filename} {size}',
   emailViewerEmptyBody: 'Ifiranṣẹ yìí kò ní àkóónú tí a lè fihàn.',
   emailViewerGroupAddress: '{name}: {members}',
   calendarViewerLabel: 'Olùwò kàlẹ́ńdà',

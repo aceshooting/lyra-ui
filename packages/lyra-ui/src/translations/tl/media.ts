@@ -44,10 +44,14 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'Ina-upload…',
   attachmentUploadFailed: 'Nabigo ang pag-upload',
   fileInputDefaultLabel: 'I-drop dito ang mga file o mag-click upang mag-browse',
-  fileInputAcceptedOne: 'Naidagdag ang {count} file.',
-  fileInputAcceptedMany: 'Naidagdag ang {count} file.',
-  fileInputRejectedOne: 'Tinanggihan ang {count} file.',
-  fileInputRejectedMany: 'Tinanggihan ang {count} file.',
+  fileInputAccepted: {
+    one: 'Naidagdag ang {count} file.',
+    other: 'Naidagdag ang {count} file.',
+  },
+  fileInputRejected: {
+    one: 'Tinanggihan ang {count} file.',
+    other: 'Tinanggihan ang {count} file.',
+  },
   fileInputFolderRejected: 'Hindi tinatanggap dito ang mga folder.',
   fileInputRejectedType: '{filename}: hindi tinatanggap ang uri ng file na ito.',
   fileInputRejectedSize: '{filename}: masyadong malaki ang file na ito.',

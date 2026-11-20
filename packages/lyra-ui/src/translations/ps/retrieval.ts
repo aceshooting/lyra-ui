@@ -18,6 +18,7 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'د ګراف نښې',
   entityChipWithType: '{label}, {type}',
   showMore: 'نور ښکاره کول',
+  showMoreCount: '{count} نور ښکاره کړئ',
   embeddingExplorerSpatialBounds: 'په افقي ډول له {minX} تر {maxX}؛ په عمودي ډول له {minY} تر {maxY}',
   embeddingExplorerSpatialSummary: 'په بشپړه سرچینه کې {total} ټکي ({global}). د لید په ساحه کې {matched} ټکي ({viewport}). د کثافت سیمې ټول سمونونه شمېري؛ د ټکو پوښښونه دا شمېرې نه زیاتوي.',
   embeddingExplorerSpatialBin: 'د کثافت په سیمه کې {count} ټکي: {bounds}',

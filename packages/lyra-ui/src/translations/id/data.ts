@@ -16,7 +16,13 @@ const strings: LyraLocaleStrings = {
   sequenceStripCellKeyboardHelp: 'Tekan Enter atau Spasi untuk mengaktifkan item ini.',
   sequenceStripUnnamedCategory: 'Kategori tanpa nama',
   sequenceStripBucketLabel: '{label}, item {start} sampai {end}',
-  sequenceStripBucketSummary: '{items} item dalam {ranges} rentang',
+  sequenceStripBucketSummary: '{items} dalam {ranges}',
+  sequenceStripItemCount: {
+    other: '{count} item',
+  },
+  sequenceStripRangeCount: {
+    other: '{count} rentang',
+  },
   noColumns: 'Tidak ada kolom yang dikonfigurasi',
   dataGridColumnMenu: 'Opsi untuk {label}',
   dataGridPinStart: 'Sematkan {label} di awal',
@@ -43,8 +49,15 @@ const strings: LyraLocaleStrings = {
   paginationInvalidPageUnknownTotal: 'Masukkan nomor halaman bulat 1 atau lebih.',
   paginationEmptySummary: '{total} {itemLabel}',
   paginationAppliedUnknownTotal: 'Halaman {page}',
-  trendOf: 'Tren dari {count} nilai, terakhir {value}',
-  wordCloud: 'Awan kata berisi {count} {word}',
+  trendOf: {
+    other: 'Tren dari {count} nilai, terakhir {value}',
+  },
+  wordCloud: {
+    other: 'Awan kata berisi {count} kata',
+  },
+  wordCloudWordLimit: {
+    other: '{start}–{end} dari {total} kata',
+  },
   wordCloudLegend: 'Kunci warna awan kata',
   wordCloudWordAnnouncement: '{text}, {weight}',
   wordCloudPreparedSummary: 'Ringkasan kata: {retainedCount} dari {validCount} kata valid dipertahankan ({invalidCount} tidak valid); bobot yang dipertahankan {retainedWeight} dari {totalWeight}.',
@@ -57,8 +70,6 @@ const strings: LyraLocaleStrings = {
   heatmapSourceMean: 'rata-rata',
   heatmapSourceMin: 'minimum',
   heatmapSourceMax: 'maksimum',
-  wordCloudWord: 'kata',
-  wordCloudWords: 'kata',
   calendarLabel: 'Kalender',
   calendarEmpty: 'Tidak ada acara bulan ini.',
   calendarEventsOverflow: '+{n} lainnya',
@@ -132,7 +143,9 @@ const strings: LyraLocaleStrings = {
   flowSourceRevealTargetNode: 'Buka node target {node} dari {edge}',
   flowSourceRecordMatches: 'Rekaman yang cocok: {count}',
   flowRunStatusLabel: 'Status proses',
-  flowRunSummary: '{done} dari {total} langkah selesai',
+  flowRunSummary: {
+    other: '{done} dari {total} langkah selesai',
+  },
   flowRunStepStatus: '{label}: {status}',
   flowRunStatusCount: '{status}: {count}',
   queryBuilderLabel: 'Pembuat kueri',

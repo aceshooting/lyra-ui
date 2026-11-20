@@ -16,7 +16,13 @@ const strings: LyraLocaleStrings = {
   sequenceStripCellKeyboardHelp: 'Pencét Enter atawa Spasi pikeun ngaktipkeun item ieu.',
   sequenceStripUnnamedCategory: 'Kategori tanpa ngaran',
   sequenceStripBucketLabel: '{label}, item {start} nepi ka {end}',
-  sequenceStripBucketSummary: '{items} item dina {ranges} rentang',
+  sequenceStripBucketSummary: '{items} dina {ranges}',
+  sequenceStripItemCount: {
+    other: '{count} item',
+  },
+  sequenceStripRangeCount: {
+    other: '{count} rentang',
+  },
   noColumns: 'Can aya kolom nu dikonpigurasi',
   dataGridColumnMenu: 'Pilihan pikeun {label}',
   dataGridPinStart: 'Pin {label} di awal',
@@ -43,8 +49,15 @@ const strings: LyraLocaleStrings = {
   paginationInvalidPageUnknownTotal: 'Lebetkeun nomer kaca bulat 1 atawa leuwih.',
   paginationEmptySummary: '{total} {itemLabel}',
   paginationAppliedUnknownTotal: 'Kaca {page}',
-  trendOf: 'Tren {count} nilai, panungtung {value}',
-  wordCloud: 'Awan kecap tina {count} {word}',
+  trendOf: {
+    other: 'Tren {count} nilai, panungtung {value}',
+  },
+  wordCloud: {
+    other: 'Awan kecap tina {count} kecap',
+  },
+  wordCloudWordLimit: {
+    other: '{start}–{end} tina {total} kecap',
+  },
   wordCloudLegend: 'Konci warna awan kecap',
   wordCloudWordAnnouncement: '{text}, {weight}',
   wordCloudPreparedSummary: 'Ringkesan kecap: {retainedCount} tina {validCount} kecap sah dipiara ({invalidCount} teu sah); bobot anu dipiara {retainedWeight} tina {totalWeight}.',
@@ -57,8 +70,6 @@ const strings: LyraLocaleStrings = {
   heatmapSourceMean: 'rata-rata',
   heatmapSourceMin: 'minimum',
   heatmapSourceMax: 'maksimum',
-  wordCloudWord: 'kecap',
-  wordCloudWords: 'kecap',
   calendarLabel: 'Kalénder',
   calendarEmpty: 'Teu aya acara bulan ieu.',
   calendarEventsOverflow: '+{n} deui',
@@ -132,7 +143,9 @@ const strings: LyraLocaleStrings = {
   flowSourceRevealTargetNode: 'Angkat ka titik udagan {node} ti {edge}',
   flowSourceRecordMatches: 'Rékaman anu cocog: {count}',
   flowRunStatusLabel: 'Status prosés',
-  flowRunSummary: '{done} tina {total} léngkah réngsé',
+  flowRunSummary: {
+    other: '{done} tina {total} léngkah réngsé',
+  },
   flowRunStepStatus: '{label}: {status}',
   flowRunStatusCount: '{status}: {count}',
   queryBuilderLabel: 'Panyusun query',

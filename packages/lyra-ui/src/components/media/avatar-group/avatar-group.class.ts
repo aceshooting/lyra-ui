@@ -21,7 +21,7 @@ import { styles } from './avatar-group.styles.js';
 import type { LyraAvatar, LyraAvatarShape } from '../avatar/avatar.class.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_showMoreCollapsed, LYRA_DEFAULT_showMoreCount } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_showMoreCollapsed, LYRA_DEFAULT_showMoreOverflowLabel } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const presentationAttributes = ['size', 'shape', 'variant'] as const;
@@ -117,7 +117,7 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     showMoreCollapsed: LYRA_DEFAULT_showMoreCollapsed,
-    showMoreCount: LYRA_DEFAULT_showMoreCount,
+    showMoreOverflowLabel: LYRA_DEFAULT_showMoreOverflowLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
   protected static override collectionSupport = collectionSupport;
@@ -523,9 +523,10 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
               part="overflow-badge"
               type="button"
               ?data-first-visible=${badgeIsFirstVisible}
-              aria-label=${`${collapsedText} ${this.localize('showMoreCount', undefined, {
+              aria-label=${this.localize('showMoreOverflowLabel', undefined, {
+                visible: collapsedText,
                 count: localizedHiddenCount,
-              })}`}
+              })}
               @click=${this.onOverflowClick}
             >
               <span part="overflow-badge-visual" aria-hidden="true"

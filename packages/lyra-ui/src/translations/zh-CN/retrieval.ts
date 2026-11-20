@@ -18,6 +18,7 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: '图谱图例',
   entityChipWithType: '{label}，{type}',
   showMore: '显示更多',
+  showMoreCount: '再显示{count}个',
   embeddingExplorerSpatialBounds: '水平方向 {minX} 至 {maxX}；垂直方向 {minY} 至 {maxY}',
   embeddingExplorerSpatialSummary: '完整数据源中有 {total} 个点（{global}）。视口中有 {matched} 个点（{viewport}）。密度区域统计所有匹配点；点叠加层不会增加这些计数。',
   embeddingExplorerSpatialBin: '密度区域中有 {count} 个点：{bounds}',

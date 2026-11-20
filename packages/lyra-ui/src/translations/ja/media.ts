@@ -44,10 +44,12 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'アップロード中…',
   attachmentUploadFailed: 'アップロードに失敗しました',
   fileInputDefaultLabel: 'ファイルをここにドロップするか、クリックして選択',
-  fileInputAcceptedOne: 'ファイルを {count} 件追加しました。',
-  fileInputAcceptedMany: 'ファイルを {count} 件追加しました。',
-  fileInputRejectedOne: 'ファイルを {count} 件拒否しました。',
-  fileInputRejectedMany: 'ファイルを {count} 件拒否しました。',
+  fileInputAccepted: {
+    other: 'ファイルを {count} 件追加しました。',
+  },
+  fileInputRejected: {
+    other: 'ファイルを {count} 件拒否しました。',
+  },
   fileInputFolderRejected: 'ここではフォルダーを受け付けられません。',
   fileInputRejectedType: '{filename}：このファイル形式は受け付けられません。',
   fileInputRejectedSize: '{filename}：このファイルは大きすぎます。',

@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   emailViewerNoSubject: '(အကြောင်းအရာမရှိ)',
   emailViewerOpenAttachment: '{filename} ကို ဖွင့်ရန်',
   emailViewerQuotedText: 'ကိုးကားထားသော စာသား',
+  emailViewerOpenAttachmentSize: '{filename} {size} ကို ဖွင့်ရန်',
   emailViewerEmptyBody: 'ဤမက်ဆေ့ချ်တွင် ပြသနိုင်သော အကြောင်းအရာ မရှိပါ။',
   emailViewerGroupAddress: '{name}၊ {members}',
   calendarViewerLabel: 'ပြက္ခဒိန်ကြည့်ကိရိယာ',

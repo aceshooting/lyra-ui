@@ -6,7 +6,7 @@ import { registerLyraLocaleDelta } from '../../internal/localization-runtime.js'
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
-  graphSourceCoverageNeighborhood: 'Neighbourhood: showing {shownNodes} of {nodes} nodes and {shownEdges} of {edges} edges.',
+  graphSourceCoverageNeighborhood: 'Neighbourhood: showing {nodes} and {edges}.',
   notInCatalog: 'not in catalogue',
   catalogPickerInputLimit: 'Some catalogue entries were omitted because an input limit was reached.',
 };

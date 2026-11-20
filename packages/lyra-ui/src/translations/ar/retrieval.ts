@@ -25,6 +25,7 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'وسيلة إيضاح الرسم البياني',
   entityChipWithType: '{label}، {type}',
   showMore: 'عرض المزيد',
+  showMoreCount: 'عرض {count} أخرى',
   embeddingExplorerSpatialBounds: 'من {minX} إلى {maxX} أفقيًا؛ من {minY} إلى {maxY} عموديًا',
   embeddingExplorerSpatialSummary: '{total} نقطة في المصدر الكامل ({global}). {matched} نقطة في نطاق العرض ({viewport}). تحسب مناطق الكثافة جميع النقاط المطابقة؛ ولا تضيف طبقات النقاط المتراكبة إلى هذه الأعداد.',
   embeddingExplorerSpatialBin: '{count} نقطة في منطقة الكثافة: {bounds}',

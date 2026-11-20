@@ -282,11 +282,9 @@ it('defines complete media-card attachment action labels', () => {
   expect(LYRA_DEFAULT_STRINGS.mediaCardOpenFileAttachment).to.equal('Open file attachment');
 });
 
-it('defines singular and plural file-input result messages', () => {
-  expect(LYRA_DEFAULT_STRINGS.fileInputAcceptedOne).to.equal('{count} file added.');
-  expect(LYRA_DEFAULT_STRINGS.fileInputAcceptedMany).to.equal('{count} files added.');
-  expect(LYRA_DEFAULT_STRINGS.fileInputRejectedOne).to.equal('{count} file rejected.');
-  expect(LYRA_DEFAULT_STRINGS.fileInputRejectedMany).to.equal('{count} files rejected.');
+it('defines file-input result messages as plural messages', () => {
+  expect(LYRA_DEFAULT_STRINGS.fileInputAccepted).to.deep.equal({ one: '{count} file added.', other: '{count} files added.' });
+  expect(LYRA_DEFAULT_STRINGS.fileInputRejected).to.deep.equal({ one: '{count} file rejected.', other: '{count} files rejected.' });
 });
 
 it('getRegisteredLyraLocales always includes "en" and every registered key, deduped and sorted regardless of casing', () => {

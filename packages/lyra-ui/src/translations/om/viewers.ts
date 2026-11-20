@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   emailViewerNoSubject: '(mata-duree hin qabu)',
   emailViewerOpenAttachment: '{filename} bani',
   emailViewerQuotedText: 'Barruu eerame',
+  emailViewerOpenAttachmentSize: '{filename} {size} bani',
   emailViewerEmptyBody: 'Ergaan kun qabiyyee mul’isuun danda’amu hin qabu.',
   emailViewerGroupAddress: '{name}: {members}',
   calendarViewerLabel: 'Ilaaltuu kalandarii',

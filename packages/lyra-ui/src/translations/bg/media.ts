@@ -44,10 +44,14 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'Качва се…',
   attachmentUploadFailed: 'Качването не бе успешно',
   fileInputDefaultLabel: 'Пуснете файлове тук или щракнете, за да изберете',
-  fileInputAcceptedOne: 'Добавен е {count} файл.',
-  fileInputAcceptedMany: 'Добавени са {count} файла.',
-  fileInputRejectedOne: 'Отхвърлен е {count} файл.',
-  fileInputRejectedMany: 'Отхвърлени са {count} файла.',
+  fileInputAccepted: {
+    one: 'Добавен е {count} файл.',
+    other: 'Добавени са {count} файла.',
+  },
+  fileInputRejected: {
+    one: 'Отхвърлен е {count} файл.',
+    other: 'Отхвърлени са {count} файла.',
+  },
   fileInputFolderRejected: 'Тук не се приемат папки.',
   fileInputRejectedType: '{filename}: този тип файл не се приема.',
   fileInputRejectedSize: '{filename}: файлът е твърде голям.',

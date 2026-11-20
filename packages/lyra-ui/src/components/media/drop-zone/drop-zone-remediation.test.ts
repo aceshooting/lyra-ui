@@ -49,7 +49,7 @@ it('renders a bounded rejection list with a summary of the rest', async () => {
 
 it('uses the numeric selection count to choose a plural message', async () => {
   const el = await fixture<HTMLElementTagNameMap['lr-drop-zone']>(html`<lr-drop-zone multiple locale="sl" .strings=${{
-    fileInputAcceptedMany: { two: 'pair', other: 'other', one: 'singular' },
+    fileInputAccepted: { two: 'pair', other: 'other', one: 'singular' },
   }}></lr-drop-zone>`);
   await el.updateComplete;
   const transfer = new DataTransfer();

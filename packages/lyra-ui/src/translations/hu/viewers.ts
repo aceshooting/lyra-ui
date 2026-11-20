@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   emailViewerNoSubject: '(nincs tárgy)',
   emailViewerOpenAttachment: 'Megnyitás: {filename}',
   emailViewerQuotedText: 'Idézett szöveg',
+  emailViewerOpenAttachmentSize: 'Megnyitás: {filename} {size}',
   emailViewerEmptyBody: 'Ennek az üzenetnek nincs megjeleníthető tartalma.',
   emailViewerGroupAddress: '{name}: {members}',
   calendarViewerLabel: 'Naptármegjelenítő',

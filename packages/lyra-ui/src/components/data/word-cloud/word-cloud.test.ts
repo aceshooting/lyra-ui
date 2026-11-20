@@ -20,7 +20,7 @@ const WORDS = [
   { text: 'gamma', weight: 1 },
 ];
 
-expectLocaleFallback('de-DE', ['wordCloud', 'wordCloudWord']);
+expectLocaleFallback('de-DE', ['wordCloud', 'wordCloudWordLimit']);
 
 it('checks typography tokens after an out-of-band theme invalidation', async () => {
   const el = await fixture<LyraWordCloud>(html`<lr-word-cloud .words=${WORDS}></lr-word-cloud>`);
@@ -420,9 +420,7 @@ it('uses host aria-label presence, including empty, and restores the localized g
   const el = (await fixture(html`
     <lr-word-cloud
       .strings=${{
-        wordCloud: 'Nuage de {count} {word}',
-        wordCloudWord: 'mot',
-        wordCloudWords: 'mots',
+        wordCloud: { one: 'Nuage de {count} mot', other: 'Nuage de {count} mots' },
       }}
       .words=${WORDS}
     ></lr-word-cloud>
@@ -990,11 +988,12 @@ it('inherits categorical palette hooks from an ancestor while direct host values
   expect(word.getAttribute('fill')).to.equal('rgb(7, 8, 9)');
 });
 
-it("localizes the wordCloud aria-label's pluralized noun via this.localize()", async () => {
-  const el = (await fixture(html`<lr-word-cloud .words=${WORDS}></lr-word-cloud>`)) as LyraWordCloud;
-  el.strings = { wordCloudWords: 'mots' };
+it("selects the wordCloud aria-label's plural form from the locale's category for the word count", async () => {
+  const strings = { wordCloud: { one: 'one {count}', few: 'few {count}', many: 'many {count}', other: 'other {count}' } };
+  const el = (await fixture(html`<lr-word-cloud locale="ru" .strings=${strings} .words=${WORDS}></lr-word-cloud>`)) as LyraWordCloud;
   await el.updateComplete;
-  expect(svgEl(el).getAttribute('aria-label')).to.equal(`Word cloud of ${WORDS.length} mots`);
+  expect(WORDS.length).to.equal(3);
+  expect(svgEl(el).getAttribute('aria-label')).to.equal('few 3');
 });
 
 it('localizes the whole focused-word announcement and formats its weight with the effective locale', async () => {

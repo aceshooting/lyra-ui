@@ -44,10 +44,14 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'Inapakia…',
   attachmentUploadFailed: 'Upakiaji umeshindwa',
   fileInputDefaultLabel: 'Dondosha faili hapa au bofya ili kuvinjari',
-  fileInputAcceptedOne: 'Faili {count} limeongezwa.',
-  fileInputAcceptedMany: 'Faili {count} yameongezwa.',
-  fileInputRejectedOne: 'Faili {count} limekataliwa.',
-  fileInputRejectedMany: 'Faili {count} yamekataliwa.',
+  fileInputAccepted: {
+    one: 'Faili {count} limeongezwa.',
+    other: 'Faili {count} yameongezwa.',
+  },
+  fileInputRejected: {
+    one: 'Faili {count} limekataliwa.',
+    other: 'Faili {count} yamekataliwa.',
+  },
   fileInputFolderRejected: 'Folda hazikubaliki hapa.',
   fileInputRejectedType: '{filename}: aina hii ya faili haikubaliki.',
   fileInputRejectedSize: '{filename}: faili hili ni kubwa mno.',

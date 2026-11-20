@@ -21,6 +21,7 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Légende ya graphe',
   entityChipWithType: '{label}, {type}',
   showMore: 'Lakisa mingi',
+  showMoreCount: 'Lakisa {count} mosusu',
   embeddingExplorerSpatialBounds: '{minX} kino {maxX} na direction horizontale; {minY} kino {maxY} na direction verticale',
   embeddingExplorerSpatialSummary: 'Ba points {total} na source mobimba ({global}). Ba points {matched} na esika ya komona ({viewport}). Ba régions ya densité etángaka ba correspondances nyonso; ba points oyo ebakisami likoló ebakisaka te mitángo oyo.',
   embeddingExplorerSpatialBin: 'Ba points {count} na région ya densité: {bounds}',

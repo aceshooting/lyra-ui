@@ -16,7 +16,13 @@ const strings: LyraLocaleStrings = {
   sequenceStripCellKeyboardHelp: 'Tekan Enter atau Space untuk mengaktifkan item ini.',
   sequenceStripUnnamedCategory: 'Kategori tanpa nama',
   sequenceStripBucketLabel: '{label}, item {start} hingga {end}',
-  sequenceStripBucketSummary: '{items} item dalam {ranges} julat',
+  sequenceStripBucketSummary: '{items} dalam {ranges}',
+  sequenceStripItemCount: {
+    other: '{count} item',
+  },
+  sequenceStripRangeCount: {
+    other: '{count} julat',
+  },
   noColumns: 'Tiada lajur dikonfigurasikan',
   dataGridColumnMenu: 'Pilihan untuk {label}',
   dataGridPinStart: 'Sematkan {label} pada permulaan',
@@ -43,8 +49,15 @@ const strings: LyraLocaleStrings = {
   paginationInvalidPageUnknownTotal: 'Masukkan nombor halaman bulat 1 atau lebih.',
   paginationEmptySummary: '{total} {itemLabel}',
   paginationAppliedUnknownTotal: 'Halaman {page}',
-  trendOf: 'Trend {count} nilai, terakhir {value}',
-  wordCloud: 'Awan kata {count} {word}',
+  trendOf: {
+    other: 'Trend {count} nilai, terakhir {value}',
+  },
+  wordCloud: {
+    other: 'Awan kata daripada {count} kata',
+  },
+  wordCloudWordLimit: {
+    other: '{start}–{end} daripada {total} kata',
+  },
   wordCloudLegend: 'Petunjuk warna awan kata',
   wordCloudWordAnnouncement: '{text}, {weight}',
   wordCloudPreparedSummary: 'Ringkasan perkataan: {retainedCount} daripada {validCount} perkataan sah dikekalkan ({invalidCount} tidak sah); pemberat yang dikekalkan {retainedWeight} daripada {totalWeight}.',
@@ -57,8 +70,6 @@ const strings: LyraLocaleStrings = {
   heatmapSourceMean: 'purata',
   heatmapSourceMin: 'minimum',
   heatmapSourceMax: 'maksimum',
-  wordCloudWord: 'kata',
-  wordCloudWords: 'kata',
   calendarLabel: 'Kalendar',
   calendarEmpty: 'Tiada acara bulan ini.',
   calendarEventsOverflow: '+{n} lagi',
@@ -132,7 +143,9 @@ const strings: LyraLocaleStrings = {
   flowSourceRevealTargetNode: 'Pergi ke nod sasaran {node} bagi {edge}',
   flowSourceRecordMatches: 'Rekod sepadan: {count}',
   flowRunStatusLabel: 'Status larian',
-  flowRunSummary: '{done} daripada {total} langkah selesai',
+  flowRunSummary: {
+    other: '{done} daripada {total} langkah selesai',
+  },
   flowRunStepStatus: '{label}: {status}',
   flowRunStatusCount: '{status}: {count}',
   queryBuilderLabel: 'Pembina pertanyaan',

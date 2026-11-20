@@ -18,6 +18,7 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'گراف جون نشانيون',
   entityChipWithType: '{label}, {type}',
   showMore: 'وڌيڪ ڏيکاريو',
+  showMoreCount: '{count} وڌيڪ ڏيکاريو',
   embeddingExplorerSpatialBounds: 'افقي طور {minX} کان {maxX}؛ عمودي طور {minY} کان {maxY}',
   embeddingExplorerSpatialSummary: 'سڄي ماخذ ۾ {total} نقطا ({global}). ڏيک واري حصي ۾ {matched} نقطا ({viewport}). گهاٽائي وارا علائقا سڀ مطابقتون ڳڻين ٿا؛ نقطن جون اوورلي واريون تهون انهن ڳڻپَن ۾ اضافو نٿيون ڪن.',
   embeddingExplorerSpatialBin: 'گهاٽائي واري علائقي ۾ {count} نقطا: {bounds}',

@@ -44,10 +44,12 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'တင်နေသည်…',
   attachmentUploadFailed: 'တင်၍ မရပါ',
   fileInputDefaultLabel: 'ဖိုင်များကို ဤနေရာတွင် ချပါ သို့မဟုတ် ရှာရန် နှိပ်ပါ',
-  fileInputAcceptedOne: 'ဖိုင် {count} ခု ထည့်ပြီးပါပြီ။',
-  fileInputAcceptedMany: 'ဖိုင် {count} ခု ထည့်ပြီးပါပြီ။',
-  fileInputRejectedOne: 'ဖိုင် {count} ခုကို ပယ်ချလိုက်သည်။',
-  fileInputRejectedMany: 'ဖိုင် {count} ခုကို ပယ်ချလိုက်သည်။',
+  fileInputAccepted: {
+    other: 'ဖိုင် {count} ခု ထည့်ပြီးပါပြီ။',
+  },
+  fileInputRejected: {
+    other: 'ဖိုင် {count} ခုကို ပယ်ချလိုက်သည်။',
+  },
   fileInputFolderRejected: 'ဤနေရာတွင် ဖိုင်တွဲများကို လက်မခံပါ။',
   fileInputRejectedType: '{filename}: ဤဖိုင်အမျိုးအစားကို လက်မခံပါ။',
   fileInputRejectedSize: '{filename}: ဤဖိုင်သည် အလွန်ကြီးသည်။',

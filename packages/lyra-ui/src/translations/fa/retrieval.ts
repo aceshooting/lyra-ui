@@ -21,6 +21,7 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'راهنمای نمودار',
   entityChipWithType: '{label}، {type}',
   showMore: 'نمایش بیشتر',
+  showMoreCount: 'نمایش {count} مورد دیگر',
   embeddingExplorerSpatialBounds: '{minX} تا {maxX} افقی؛ {minY} تا {maxY} عمودی',
   embeddingExplorerSpatialSummary: '{total} نقطه در کل منبع ({global}). {matched} نقطه در محدودهٔ دید ({viewport}). ناحیه‌های تراکم همهٔ موارد مطابق را می‌شمارند؛ لایه‌های رویی نقطه‌ها به این تعدادها اضافه نمی‌شوند.',
   embeddingExplorerSpatialBin: '{count} نقطه در ناحیهٔ تراکم: {bounds}',

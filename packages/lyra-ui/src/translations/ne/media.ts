@@ -44,10 +44,14 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'अपलोड हुँदैछ…',
   attachmentUploadFailed: 'अपलोड असफल भयो',
   fileInputDefaultLabel: 'यहाँ फाइलहरू छोड्नुहोस् वा ब्राउज गर्न क्लिक गर्नुहोस्',
-  fileInputAcceptedOne: '{count} फाइल थपियो।',
-  fileInputAcceptedMany: '{count} फाइलहरू थपिए।',
-  fileInputRejectedOne: '{count} फाइल अस्वीकार गरियो।',
-  fileInputRejectedMany: '{count} फाइलहरू अस्वीकार गरिए।',
+  fileInputAccepted: {
+    one: '{count} फाइल थपियो।',
+    other: '{count} फाइलहरू थपिए।',
+  },
+  fileInputRejected: {
+    one: '{count} फाइल अस्वीकार गरियो।',
+    other: '{count} फाइलहरू अस्वीकार गरिए।',
+  },
   fileInputFolderRejected: 'यहाँ फोल्डरहरू स्वीकार गरिँदैनन्।',
   fileInputRejectedType: '{filename}: यो फाइल प्रकार स्वीकार्य छैन।',
   fileInputRejectedSize: '{filename}: यो फाइल धेरै ठूलो छ।',

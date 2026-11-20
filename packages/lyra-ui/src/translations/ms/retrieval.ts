@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Petunjuk graf',
   entityChipWithType: '{label}, {type}',
   showMore: 'Papar lagi',
+  showMoreCount: 'Papar {count} lagi',
   embeddingExplorerSpatialBounds: '{minX} hingga {maxX} secara mendatar; {minY} hingga {maxY} secara menegak',
   embeddingExplorerSpatialSummary: '{total} titik dalam keseluruhan sumber ({global}). {matched} titik dalam ruang pandang ({viewport}). Kawasan kepadatan mengira semua padanan; lapisan titik tidak menambah kiraan ini.',
   embeddingExplorerSpatialBin: '{count} titik dalam kawasan kepadatan: {bounds}',

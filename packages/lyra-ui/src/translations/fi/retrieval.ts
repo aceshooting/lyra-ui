@@ -21,6 +21,7 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Graafin selite',
   entityChipWithType: '{label}, {type}',
   showMore: 'Näytä lisää',
+  showMoreCount: 'Näytä {count} lisää',
   embeddingExplorerSpatialBounds: '{minX}–{maxX} vaakasuunnassa; {minY}–{maxY} pystysuunnassa',
   embeddingExplorerSpatialSummary: '{total} pistettä koko lähteessä ({global}). {matched} pistettä näkymäalueella ({viewport}). Tiheysalueet laskevat kaikki osumat; päälle piirretyt pisteet eivät kasvata näitä lukumääriä.',
   embeddingExplorerSpatialBin: '{count} pistettä tiheysalueella: {bounds}',

@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Leġġenda tal-graff',
   entityChipWithType: '{label}, {type}',
   showMore: 'Uri aktar',
+  showMoreCount: 'Uri {count} oħra',
   embeddingExplorerSpatialBounds: 'minn {minX} sa {maxX} orizzontalment; minn {minY} sa {maxY} vertikalment',
   embeddingExplorerSpatialSummary: '{total} punti fis-sors sħiħ ({global}). {matched} punti fil-veduta ({viewport}). Ir-reġjuni ta’ densità jgħoddu r-riżultati kollha; is-saffi tal-punti ma jżidux ma’ dan l-għadd.',
   embeddingExplorerSpatialBin: '{count} punti fir-reġjun ta’ densità: {bounds}',

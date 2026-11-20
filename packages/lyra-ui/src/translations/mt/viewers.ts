@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   emailViewerNoSubject: '(l-ebda suġġett)',
   emailViewerOpenAttachment: 'Iftaħ {filename}',
   emailViewerQuotedText: 'Test ikkwotat',
+  emailViewerOpenAttachmentSize: 'Iftaħ {filename} {size}',
   emailViewerEmptyBody: 'Dan il-messaġġ m’għandu l-ebda kontenut li jista’ jintwera.',
   emailViewerGroupAddress: '{name}: {members}',
   calendarViewerLabel: 'Werrej tal-kalendarju',

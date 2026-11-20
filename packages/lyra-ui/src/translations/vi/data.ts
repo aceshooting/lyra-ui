@@ -16,7 +16,13 @@ const strings: LyraLocaleStrings = {
   sequenceStripCellKeyboardHelp: 'Nhấn Enter hoặc phím cách để kích hoạt mục này.',
   sequenceStripUnnamedCategory: 'Danh mục chưa có tên',
   sequenceStripBucketLabel: '{label}, mục từ {start} đến {end}',
-  sequenceStripBucketSummary: '{items} mục trong {ranges} khoảng',
+  sequenceStripBucketSummary: '{items} trong {ranges}',
+  sequenceStripItemCount: {
+    other: '{count} mục',
+  },
+  sequenceStripRangeCount: {
+    other: '{count} khoảng',
+  },
   noColumns: 'Chưa cấu hình cột nào',
   dataGridColumnMenu: 'Tùy chọn cho {label}',
   dataGridPinStart: 'Ghim {label} vào đầu',
@@ -43,8 +49,15 @@ const strings: LyraLocaleStrings = {
   paginationInvalidPageUnknownTotal: 'Nhập số trang nguyên từ 1 trở lên.',
   paginationEmptySummary: '{total} {itemLabel}',
   paginationAppliedUnknownTotal: 'Trang {page}',
-  trendOf: 'Xu hướng của {count} giá trị, gần nhất {value}',
-  wordCloud: 'Đám mây từ gồm {count} {word}',
+  trendOf: {
+    other: 'Xu hướng của {count} giá trị, gần nhất {value}',
+  },
+  wordCloud: {
+    other: 'Đám mây từ gồm {count} từ',
+  },
+  wordCloudWordLimit: {
+    other: '{start}–{end} trên tổng số {total} từ',
+  },
   wordCloudLegend: 'Chú giải màu đám mây từ',
   wordCloudWordAnnouncement: '{text}, {weight}',
   wordCloudPreparedSummary: 'Tóm tắt từ: giữ lại {retainedCount} trong số {validCount} từ hợp lệ ({invalidCount} từ không hợp lệ); trọng số giữ lại {retainedWeight} trên {totalWeight}.',
@@ -57,8 +70,6 @@ const strings: LyraLocaleStrings = {
   heatmapSourceMean: 'trung bình',
   heatmapSourceMin: 'nhỏ nhất',
   heatmapSourceMax: 'lớn nhất',
-  wordCloudWord: 'từ',
-  wordCloudWords: 'từ',
   calendarLabel: 'Lịch',
   calendarEmpty: 'Tháng này không có sự kiện.',
   calendarEventsOverflow: 'Còn {n} mục',
@@ -132,7 +143,9 @@ const strings: LyraLocaleStrings = {
   flowSourceRevealTargetNode: 'Chuyển đến nút đích {node} của {edge}',
   flowSourceRecordMatches: 'Bản ghi khớp: {count}',
   flowRunStatusLabel: 'Trạng thái chạy',
-  flowRunSummary: 'Đã hoàn thành {done} trên {total} bước',
+  flowRunSummary: {
+    other: 'Đã hoàn thành {done} trên {total} bước',
+  },
   flowRunStepStatus: '{label}: {status}',
   flowRunStatusCount: '{status}: {count}',
   queryBuilderLabel: 'Trình tạo truy vấn',

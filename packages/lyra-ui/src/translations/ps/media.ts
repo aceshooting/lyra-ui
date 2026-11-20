@@ -44,10 +44,14 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'پورته کېږي…',
   attachmentUploadFailed: 'پورته کول ناکام شول',
   fileInputDefaultLabel: 'دوتنې دلته وغورځوئ یا د لټون لپاره کلیک وکړئ',
-  fileInputAcceptedOne: '{count} دوتنه ورزیاته شوه.',
-  fileInputAcceptedMany: '{count} دوتنې ورزیاتې شوې.',
-  fileInputRejectedOne: '{count} دوتنه رد شوه.',
-  fileInputRejectedMany: '{count} دوتنې رد شوې.',
+  fileInputAccepted: {
+    one: '{count} دوتنه ورزیاته شوه.',
+    other: '{count} دوتنې ورزیاتې شوې.',
+  },
+  fileInputRejected: {
+    one: '{count} دوتنه رد شوه.',
+    other: '{count} دوتنې رد شوې.',
+  },
   fileInputFolderRejected: 'دلته پوښۍ نه منل کېږي.',
   fileInputRejectedType: '{filename}: د دې دوتنې ډول نه منل کېږي.',
   fileInputRejectedSize: '{filename}: دا دوتنه ډېره لویه ده.',

@@ -38,7 +38,7 @@ import { isRuntimeArray } from '../../../internal/object-guards.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_promptQueueAttachmentLimit, LYRA_DEFAULT_scrollerLabel, LYRA_DEFAULT_showMoreCollapsed } from '../../../internal/default-strings/shared.generated.js';
-import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeEmail, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_emailViewerAttachments, LYRA_DEFAULT_emailViewerDate, LYRA_DEFAULT_emailViewerEmptyBody, LYRA_DEFAULT_emailViewerFrom, LYRA_DEFAULT_emailViewerGroupAddress, LYRA_DEFAULT_emailViewerLabel, LYRA_DEFAULT_emailViewerMissingParser, LYRA_DEFAULT_emailViewerNoSubject, LYRA_DEFAULT_emailViewerOpenAttachment, LYRA_DEFAULT_emailViewerQuotedText, LYRA_DEFAULT_emailViewerSubject, LYRA_DEFAULT_emailViewerTo, LYRA_DEFAULT_emailViewerUnnamedAttachment, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
+import { LYRA_DEFAULT_documentPreviewFailedToLoad, LYRA_DEFAULT_documentPreviewResourceTooLarge, LYRA_DEFAULT_documentPreviewTypeEmail, LYRA_DEFAULT_documentPreviewUrlNotAllowed, LYRA_DEFAULT_documentViewerMissingSanitizer, LYRA_DEFAULT_emailViewerAttachments, LYRA_DEFAULT_emailViewerDate, LYRA_DEFAULT_emailViewerEmptyBody, LYRA_DEFAULT_emailViewerFrom, LYRA_DEFAULT_emailViewerGroupAddress, LYRA_DEFAULT_emailViewerLabel, LYRA_DEFAULT_emailViewerMissingParser, LYRA_DEFAULT_emailViewerNoSubject, LYRA_DEFAULT_emailViewerOpenAttachment, LYRA_DEFAULT_emailViewerOpenAttachmentSize, LYRA_DEFAULT_emailViewerQuotedText, LYRA_DEFAULT_emailViewerSubject, LYRA_DEFAULT_emailViewerTo, LYRA_DEFAULT_emailViewerUnnamedAttachment, LYRA_DEFAULT_loadingDocument } from '../../../internal/default-strings/viewers.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -424,6 +424,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
     emailViewerMissingParser: LYRA_DEFAULT_emailViewerMissingParser,
     emailViewerNoSubject: LYRA_DEFAULT_emailViewerNoSubject,
     emailViewerOpenAttachment: LYRA_DEFAULT_emailViewerOpenAttachment,
+    emailViewerOpenAttachmentSize: LYRA_DEFAULT_emailViewerOpenAttachmentSize,
     emailViewerQuotedText: LYRA_DEFAULT_emailViewerQuotedText,
     emailViewerSubject: LYRA_DEFAULT_emailViewerSubject,
     emailViewerTo: LYRA_DEFAULT_emailViewerTo,
@@ -707,7 +708,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
         return html`<li part="attachment-item"><button
           type="button"
           part="attachment-button"
-          aria-label=${this.localize('emailViewerOpenAttachment', undefined, { filename: `${filename} ${size}` })}
+          aria-label=${size ? this.localize('emailViewerOpenAttachmentSize', undefined, { filename, size }) : this.localize('emailViewerOpenAttachment', undefined, { filename })}
           @click=${() => this.emit('lr-attachment-open', {
             attachment: {
               filename,

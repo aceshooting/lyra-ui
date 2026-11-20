@@ -47,7 +47,7 @@ import {
 import { copyOutcome, KeyedCopyFeedback, reportCopyOutcome } from '../../../internal/record-copy-feedback.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_retry, LYRA_DEFAULT_sourceSearchUnavailable, LYRA_DEFAULT_treeSourceError, LYRA_DEFAULT_treeSourceSummary, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_countAtLeast, LYRA_DEFAULT_expand, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_retry, LYRA_DEFAULT_sourceSearchUnavailable, LYRA_DEFAULT_treeSourceError, LYRA_DEFAULT_treeSourceSummary, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_circularReference, LYRA_DEFAULT_copyJson, LYRA_DEFAULT_jsonArray, LYRA_DEFAULT_jsonCopyLabel, LYRA_DEFAULT_jsonItemCount, LYRA_DEFAULT_jsonKeyCount, LYRA_DEFAULT_jsonObject, LYRA_DEFAULT_jsonToggleLabel, LYRA_DEFAULT_jsonValue, LYRA_DEFAULT_jsonViewerLabel, LYRA_DEFAULT_jsonViewerLimit } from '../../../internal/default-strings/utility.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -457,6 +457,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     copy: LYRA_DEFAULT_copy,
     copyFailed: LYRA_DEFAULT_copyFailed,
     copyJson: LYRA_DEFAULT_copyJson,
+    countAtLeast: LYRA_DEFAULT_countAtLeast,
     expand: LYRA_DEFAULT_expand,
     jsonArray: LYRA_DEFAULT_jsonArray,
     jsonCopyLabel: LYRA_DEFAULT_jsonCopyLabel,
@@ -604,7 +605,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
         name: node => node.name, content: node => this.renderSourceNode(node), select: () => {},
       })}
       ${partial ? html`<div part="search-status">${this.sourceSearch.unavailable ? this.localize('sourceSearchUnavailable') :
-        this.localize('viewerSearchMatchCount', undefined, { count: `≥${getNumberFormat(this.effectiveLocale).format(count)}`, pluralCount: count })}</div>` : nothing}
+        this.localize('viewerSearchMatchCount', undefined, { count: this.localize('countAtLeast', undefined, { count: getNumberFormat(this.effectiveLocale).format(count) }), pluralCount: count })}</div>` : nothing}
     </div>`;
   }
 
@@ -780,7 +781,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     // "number space noun" order. `count` carries the locale-grouped string for
     // display; `pluralCount` carries the raw number that selects the category.
     const formattedCount = getNumberFormat(this.effectiveLocale).format(count);
-    const localizedCount = exact ? formattedCount : `≥${formattedCount}`;
+    const localizedCount = exact ? formattedCount : this.localize('countAtLeast', undefined, { count: formattedCount });
     if (type === 'array') {
       return this.localize('jsonItemCount', undefined, {
         count: localizedCount,
@@ -1267,7 +1268,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     const numberFormat = getNumberFormat(this.effectiveLocale);
     return this.localize('viewerSearchActiveMatch', undefined, {
       current: numberFormat.format(this.activeSearchIndex + 1),
-      total: this.searchState.truncated ? `≥${numberFormat.format(total)}` : numberFormat.format(total),
+      total: this.searchState.truncated ? this.localize('countAtLeast', undefined, { count: numberFormat.format(total) }) : numberFormat.format(total),
     });
   }
 

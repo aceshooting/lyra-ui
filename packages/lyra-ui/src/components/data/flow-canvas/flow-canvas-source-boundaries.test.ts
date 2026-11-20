@@ -78,6 +78,14 @@ describe('lr-flow-canvas graph source boundaries', () => {
     });
   }
 
+  it('inflects each count of the totals and complete coverage on its own number', async () => {
+    const data = provider(1);
+    const el = await fixture<Canvas>(html`<lr-flow-canvas style="width:640px;height:480px" .graphSource=${data.source}></lr-flow-canvas>`);
+    await waitUntil(() => coverageText(el) !== '' && statusText(el) !== '' && statusText(el).startsWith('Graph'), 'source status and coverage');
+    expect(statusText(el)).to.equal('Graph contains 1 node and 0 edges.');
+    expect(coverageText(el)).to.equal('Complete graph: 1 node and 0 edges.');
+  });
+
   it('reports an empty source as no data', async () => {
     const data = provider(0);
     const el = await fixture<Canvas>(html`<lr-flow-canvas style="width:640px;height:480px" .graphSource=${data.source}></lr-flow-canvas>`);

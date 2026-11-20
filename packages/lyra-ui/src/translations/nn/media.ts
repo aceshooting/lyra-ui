@@ -44,10 +44,14 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'Lastar opp…',
   attachmentUploadFailed: 'Opplastinga mislukkast',
   fileInputDefaultLabel: 'Slepp filer her eller klikk for å bla gjennom',
-  fileInputAcceptedOne: '{count} fil lagd til.',
-  fileInputAcceptedMany: '{count} filer lagde til.',
-  fileInputRejectedOne: '{count} fil avvist.',
-  fileInputRejectedMany: '{count} filer avviste.',
+  fileInputAccepted: {
+    one: '{count} fil lagd til.',
+    other: '{count} filer lagde til.',
+  },
+  fileInputRejected: {
+    one: '{count} fil avvist.',
+    other: '{count} filer avviste.',
+  },
   fileInputFolderRejected: 'Mapper er ikkje tillatne her.',
   fileInputRejectedType: '{filename}: denne filtypen er ikkje tillaten.',
   fileInputRejectedSize: '{filename}: denne fila er for stor.',

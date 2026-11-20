@@ -44,10 +44,14 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'በመጫን ላይ…',
   attachmentUploadFailed: 'መጫን አልተሳካም',
   fileInputDefaultLabel: 'ፋይሎችን እዚህ ይጣሉ ወይም ለማሰስ ጠቅ ያድርጉ',
-  fileInputAcceptedOne: '{count} ፋይል ታክሏል።',
-  fileInputAcceptedMany: '{count} ፋይሎች ታክለዋል።',
-  fileInputRejectedOne: '{count} ፋይል ተከልክሏል።',
-  fileInputRejectedMany: '{count} ፋይሎች ተከልክለዋል።',
+  fileInputAccepted: {
+    one: '{count} ፋይል ታክሏል።',
+    other: '{count} ፋይሎች ታክለዋል።',
+  },
+  fileInputRejected: {
+    one: '{count} ፋይል ተከልክሏል።',
+    other: '{count} ፋይሎች ተከልክለዋል።',
+  },
   fileInputFolderRejected: 'እዚህ አቃፊዎች አይቀበሉም።',
   fileInputRejectedType: '{filename}: ይህ የፋይል አይነት አይቀበልም።',
   fileInputRejectedSize: '{filename}: ይህ ፋይል በጣም ትልቅ ነው።',

@@ -22,6 +22,7 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'מקרא הגרף',
   entityChipWithType: '{label}, {type}',
   showMore: 'הצג עוד',
+  showMoreCount: 'הצג עוד {count}',
   embeddingExplorerSpatialBounds: '{minX} עד {maxX} אופקית; {minY} עד {maxY} אנכית',
   embeddingExplorerSpatialSummary: '{total} נקודות במקור המלא ({global}). {matched} נקודות באזור התצוגה ({viewport}). אזורי הצפיפות סופרים את כל ההתאמות; שכבות הנקודות אינן מתווספות לספירות אלה.',
   embeddingExplorerSpatialBin: '{count} נקודות באזור הצפיפות: {bounds}',

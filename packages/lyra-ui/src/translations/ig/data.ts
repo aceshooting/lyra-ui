@@ -16,7 +16,13 @@ const strings: LyraLocaleStrings = {
   sequenceStripCellKeyboardHelp: 'Pịa Enter ma ọ bụ Space iji mee ka ihe a rụọ ọrụ.',
   sequenceStripUnnamedCategory: 'Otu enweghị aha',
   sequenceStripBucketLabel: '{label}, ihe {start} ruo {end}',
-  sequenceStripBucketSummary: 'Ihe {items} n’ime oke {ranges}',
+  sequenceStripBucketSummary: '{items} n’ime {ranges}',
+  sequenceStripItemCount: {
+    other: 'ihe {count}',
+  },
+  sequenceStripRangeCount: {
+    other: 'oke {count}',
+  },
   noColumns: 'Ahazighị kọlụm ọ bụla',
   dataGridColumnMenu: 'Nhọrọ maka {label}',
   dataGridPinStart: 'Tụnye {label} na mbido',
@@ -43,8 +49,15 @@ const strings: LyraLocaleStrings = {
   paginationInvalidPageUnknownTotal: 'Tinye nọmba peeji zuru ezu nke 1 ma ọ bụ karịa.',
   paginationEmptySummary: '{total} {itemLabel}',
   paginationAppliedUnknownTotal: 'Peeji {page}',
-  trendOf: 'Ọnọdụ uru {count}, nke ikpeazụ {value}',
-  wordCloud: 'Igwe ojii okwu {count} {word}',
+  trendOf: {
+    other: 'Ọnọdụ uru {count}, nke ikpeazụ {value}',
+  },
+  wordCloud: {
+    other: 'Igwe ojii okwu {count}',
+  },
+  wordCloudWordLimit: {
+    other: '{start}–{end} n’ime okwu {total}',
+  },
   wordCloudLegend: 'Igodo agba igwe ojii okwu',
   wordCloudWordAnnouncement: '{text}, ibu {weight}',
   wordCloudPreparedSummary: 'Nchịkọta okwu: echekwara {retainedCount} n’ime okwu ziri ezi {validCount} ({invalidCount} na-ezighi ezi); ibu echekwara {retainedWeight} n’ime {totalWeight}.',
@@ -57,8 +70,6 @@ const strings: LyraLocaleStrings = {
   heatmapSourceMean: 'nkezi',
   heatmapSourceMin: 'kacha nta',
   heatmapSourceMax: 'kacha ukwuu',
-  wordCloudWord: 'okwu',
-  wordCloudWords: 'okwu',
   calendarLabel: 'Kalenda',
   calendarEmpty: 'Enweghị ihe omume n’ọnwa a.',
   calendarEventsOverflow: '+{n} ọzọ',
@@ -132,7 +143,9 @@ const strings: LyraLocaleStrings = {
   flowSourceRevealTargetNode: 'Gaa na nodu ebumnuche {node} nke {edge}',
   flowSourceRecordMatches: 'Ndekọ dabara adaba: {count}',
   flowRunStatusLabel: 'Ọnọdụ ịrụ ọrụ',
-  flowRunSummary: 'Emechaala usoro {done} n’ime {total}',
+  flowRunSummary: {
+    other: 'Emechaala usoro {done} n’ime {total}',
+  },
   flowRunStepStatus: '{label}: {status}',
   flowRunStatusCount: '{status}: {count}',
   queryBuilderLabel: 'Onye na-ewu ajụjụ',

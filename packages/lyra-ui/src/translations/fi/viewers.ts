@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   emailViewerNoSubject: '(ei aihetta)',
   emailViewerOpenAttachment: 'Avaa {filename}',
   emailViewerQuotedText: 'Lainattu teksti',
+  emailViewerOpenAttachmentSize: 'Avaa {filename} {size}',
   emailViewerEmptyBody: 'Tässä viestissä ei ole näytettävää sisältöä.',
   emailViewerGroupAddress: '{name}: {members}',
   calendarViewerLabel: 'Kalenterikatselin',

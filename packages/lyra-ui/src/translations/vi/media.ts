@@ -44,10 +44,12 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'Đang tải lên…',
   attachmentUploadFailed: 'Tải lên không thành công',
   fileInputDefaultLabel: 'Thả tệp vào đây hoặc nhấp để duyệt',
-  fileInputAcceptedOne: 'Đã thêm {count} tệp.',
-  fileInputAcceptedMany: 'Đã thêm {count} tệp.',
-  fileInputRejectedOne: 'Đã từ chối {count} tệp.',
-  fileInputRejectedMany: 'Đã từ chối {count} tệp.',
+  fileInputAccepted: {
+    other: 'Đã thêm {count} tệp.',
+  },
+  fileInputRejected: {
+    other: 'Đã từ chối {count} tệp.',
+  },
   fileInputFolderRejected: 'Không chấp nhận thư mục ở đây.',
   fileInputRejectedType: '{filename}: không chấp nhận loại tệp này.',
   fileInputRejectedSize: '{filename}: tệp này quá lớn.',

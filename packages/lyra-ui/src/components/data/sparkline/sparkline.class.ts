@@ -372,8 +372,10 @@ export class LyraSparkline extends LyraElement {
     // Two fraction digits, widened below one so a small value keeps two significant digits
     // instead of reading "0".
     const digits = chartValueFractionDigits(last, 2, 2);
+    const count = this.valuesMemo?.result === values ? this.valuesMemo.count : values.length;
     return this.localize('trendOf', undefined, {
-      count: getNumberFormat(this.effectiveLocale).format(this.valuesMemo?.result === values ? this.valuesMemo.count : values.length),
+      count: getNumberFormat(this.effectiveLocale).format(count),
+      pluralCount: count,
       value: getNumberFormat(this.effectiveLocale, {
         maximumFractionDigits: digits,
       }).format(last),

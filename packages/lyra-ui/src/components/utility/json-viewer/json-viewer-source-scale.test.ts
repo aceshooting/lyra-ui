@@ -294,7 +294,7 @@ it('uses unregistered English source fallbacks and accepts instance overrides', 
   const { provider } = source(1);
   const el = await fixture<LyraJsonViewer>(html`<lr-json-viewer lang="en" .treeSource=${provider}></lr-json-viewer>`);
   await ready(el);
-  expect(el.shadowRoot!.querySelector('[part~="source-status"]')?.textContent).to.include('1 visible of 1 nodes.');
+  expect(el.shadowRoot!.querySelector('[part~="source-status"]')?.textContent).to.include('1 visible of 1 node.');
   expect(await el.runSearch('missing')).to.equal(0);
   expect(el.shadowRoot!.querySelector('[part="search-status"]')?.textContent).to.include('Search is unavailable for this data source.');
   el.strings = { sourceSearchUnavailable: 'Custom unavailable' }; await el.updateComplete;

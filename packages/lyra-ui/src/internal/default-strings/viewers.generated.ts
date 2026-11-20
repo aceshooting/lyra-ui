@@ -69,6 +69,7 @@ export const LYRA_DEFAULT_emailViewerLabel: LyraMessage = 'Email viewer';
 export const LYRA_DEFAULT_emailViewerMissingParser: LyraMessage = 'This viewer needs the optional "postal-mime" package installed to parse this message.';
 export const LYRA_DEFAULT_emailViewerNoSubject: LyraMessage = '(no subject)';
 export const LYRA_DEFAULT_emailViewerOpenAttachment: LyraMessage = 'Open {filename}';
+export const LYRA_DEFAULT_emailViewerOpenAttachmentSize: LyraMessage = 'Open {filename} {size}';
 export const LYRA_DEFAULT_emailViewerQuotedText: LyraMessage = 'Quoted text';
 export const LYRA_DEFAULT_emailViewerSubject: LyraMessage = 'Subject';
 export const LYRA_DEFAULT_emailViewerTo: LyraMessage = 'To';

@@ -44,10 +44,12 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'Ngunggah…',
   attachmentUploadFailed: 'Gagal unggah',
   fileInputDefaultLabel: 'Leupaskeun berkas di dieu atawa klik pikeun néangan',
-  fileInputAcceptedOne: '{count} berkas ditambahkeun.',
-  fileInputAcceptedMany: '{count} berkas ditambahkeun.',
-  fileInputRejectedOne: '{count} berkas ditolak.',
-  fileInputRejectedMany: '{count} berkas ditolak.',
+  fileInputAccepted: {
+    other: '{count} berkas ditambahkeun.',
+  },
+  fileInputRejected: {
+    other: '{count} berkas ditolak.',
+  },
   fileInputFolderRejected: 'Folder teu ditarima di dieu.',
   fileInputRejectedType: '{filename}: jenis berkas ieu teu ditarima.',
   fileInputRejectedSize: '{filename}: berkas ieu kacida gedéna.',

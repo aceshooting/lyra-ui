@@ -44,10 +44,12 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'A na-ebulite…',
   attachmentUploadFailed: 'Bulite ya emeghị nke ọma',
   fileInputDefaultLabel: 'Dọrọ faịlụ ebe a ma ọ bụ pịa iji chọgharịa',
-  fileInputAcceptedOne: 'Agbakwunyela faịlụ {count}.',
-  fileInputAcceptedMany: 'Agbakwunyela faịlụ {count}.',
-  fileInputRejectedOne: 'Ajụla faịlụ {count}.',
-  fileInputRejectedMany: 'Ajụla faịlụ {count}.',
+  fileInputAccepted: {
+    other: 'Agbakwunyela faịlụ {count}.',
+  },
+  fileInputRejected: {
+    other: 'Ajụla faịlụ {count}.',
+  },
   fileInputFolderRejected: 'Anaghị anabata folda ebe a.',
   fileInputRejectedType: '{filename}: anaghị anabata ụdị faịlụ a.',
   fileInputRejectedSize: '{filename}: faịlụ a buru oke ibu.',

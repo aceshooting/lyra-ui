@@ -22,7 +22,7 @@ import { lyraLocaleCatalogVersion } from '../../../internal/localization-runtime
 import { styles } from './sequence-strip.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_sequenceStripBucketLabel, LYRA_DEFAULT_sequenceStripBucketSummary, LYRA_DEFAULT_sequenceStripCategoryCount, LYRA_DEFAULT_sequenceStripCellKeyboardHelp, LYRA_DEFAULT_sequenceStripEmpty, LYRA_DEFAULT_sequenceStripSourceError, LYRA_DEFAULT_sequenceStripSourceItemLabel, LYRA_DEFAULT_sequenceStripSourceItemUnavailable, LYRA_DEFAULT_sequenceStripSourceKeyboardHelp, LYRA_DEFAULT_sequenceStripSourceRangeDetails, LYRA_DEFAULT_sequenceStripUnnamedCategory } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_sequenceStripBucketLabel, LYRA_DEFAULT_sequenceStripBucketSummary, LYRA_DEFAULT_sequenceStripCategoryCount, LYRA_DEFAULT_sequenceStripCellKeyboardHelp, LYRA_DEFAULT_sequenceStripEmpty, LYRA_DEFAULT_sequenceStripItemCount, LYRA_DEFAULT_sequenceStripRangeCount, LYRA_DEFAULT_sequenceStripSourceError, LYRA_DEFAULT_sequenceStripSourceItemLabel, LYRA_DEFAULT_sequenceStripSourceItemUnavailable, LYRA_DEFAULT_sequenceStripSourceKeyboardHelp, LYRA_DEFAULT_sequenceStripSourceRangeDetails, LYRA_DEFAULT_sequenceStripUnnamedCategory } from '../../../internal/default-strings/data.generated.js';
 import { LYRA_DEFAULT_loading, LYRA_DEFAULT_retry } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -223,6 +223,8 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     sequenceStripCategoryCount: LYRA_DEFAULT_sequenceStripCategoryCount,
     sequenceStripCellKeyboardHelp: LYRA_DEFAULT_sequenceStripCellKeyboardHelp,
     sequenceStripEmpty: LYRA_DEFAULT_sequenceStripEmpty,
+    sequenceStripItemCount: LYRA_DEFAULT_sequenceStripItemCount,
+    sequenceStripRangeCount: LYRA_DEFAULT_sequenceStripRangeCount,
     sequenceStripSourceError: LYRA_DEFAULT_sequenceStripSourceError,
     sequenceStripSourceItemLabel: LYRA_DEFAULT_sequenceStripSourceItemLabel,
     sequenceStripSourceItemUnavailable: LYRA_DEFAULT_sequenceStripSourceItemUnavailable,
@@ -708,10 +710,14 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     const cells = this.cells();
     if (cells.length === 0 || cells.length >= this.items.length) return undefined;
     const number = getNumberFormat(this.effectiveLocale);
+    return this.bucketSummaryText(number, this.items.length, cells.length);
+  }
+
+  /** "N items in M ranges", each count inflecting its own noun. */
+  private bucketSummaryText(number: Intl.NumberFormat, items: number, ranges: number): string {
     return this.localize('sequenceStripBucketSummary', undefined, {
-      items: number.format(this.items.length),
-      ranges: number.format(cells.length),
-      pluralCount: this.items.length,
+      items: this.localize('sequenceStripItemCount', undefined, { count: number.format(items), pluralCount: items }),
+      ranges: this.localize('sequenceStripRangeCount', undefined, { count: number.format(ranges), pluralCount: ranges }),
     });
   }
 
@@ -913,9 +919,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     if (snapshot && this.markerLabel && snapshot.markerCount) clauses.push(this.localize('sequenceStripCategoryCount', undefined, {
       label: this.markerLabel, count: number.format(snapshot.markerCount), pluralCount: snapshot.markerCount,
     }));
-    const overview = snapshot && controller.length ? this.localize('sequenceStripBucketSummary', undefined, {
-      items: number.format(controller.length), ranges: number.format(ranges.length), pluralCount: controller.length,
-    }) : undefined;
+    const overview = snapshot && controller.length ? this.bucketSummaryText(number, controller.length, ranges.length) : undefined;
     if (overview) clauses.push(overview);
     const summary = snapshot ? clauses.length ? getListFormat(this.effectiveLocale, { style: 'long', type: 'unit' }).format(clauses) : this.localize('sequenceStripEmpty') : this.localize(controller.error ? 'sequenceStripSourceError' : 'loading');
     const exact = controller.exact;

@@ -44,10 +44,14 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'Kuyalayishwa…',
   attachmentUploadFailed: 'Ukulayisha kwehlulekile',
   fileInputDefaultLabel: 'Dedela amafayela lapha noma uchofoze ukuze uphequlule',
-  fileInputAcceptedOne: 'Kwengezwe ifayela elingu-{count}.',
-  fileInputAcceptedMany: 'Kwengezwe amafayela angu-{count}.',
-  fileInputRejectedOne: 'Ifayela elingu-{count} linqatshiwe.',
-  fileInputRejectedMany: 'Amafayela angu-{count} anqatshiwe.',
+  fileInputAccepted: {
+    one: 'Kwengezwe ifayela elingu-{count}.',
+    other: 'Kwengezwe amafayela angu-{count}.',
+  },
+  fileInputRejected: {
+    one: 'Ifayela elingu-{count} linqatshiwe.',
+    other: 'Amafayela angu-{count} anqatshiwe.',
+  },
   fileInputFolderRejected: 'Amafolda awamukelekile lapha.',
   fileInputRejectedType: '{filename}: lolu hlobo lwefayela alwamukelekile.',
   fileInputRejectedSize: '{filename}: leli fayela likhulu kakhulu.',

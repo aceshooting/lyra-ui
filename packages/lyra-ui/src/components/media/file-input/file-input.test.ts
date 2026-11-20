@@ -96,7 +96,7 @@ function dropEntriesWith(el: HTMLElement, entries: readonly unknown[]): void {
   el.dispatchEvent(event);
 }
 
-expectLocaleFallback('ar-EG', ['fileInputAcceptedMany', 'fileInputDefaultLabel', 'fileInputRejectedMany', 'fileInputRejectedType', 'removeWithContext']);
+expectLocaleFallback('ar-EG', ['fileInputAccepted', 'fileInputDefaultLabel', 'fileInputRejected', 'fileInputRejectedType', 'removeWithContext']);
 
 it("renders the label text by default", async () => {
   const el = (await fixture(
@@ -3076,8 +3076,8 @@ it("uses localized outcome defaults only while acceptedMessage/rejectedMessage a
       multiple
       .allowedMimeTypes=${["text/csv"]}
       .strings=${{
-        fileInputAcceptedOne: "{count} ajout localisé.",
-        fileInputRejectedOne: "{count} rejet localisé.",
+        fileInputAccepted: "{count} ajout localisé.",
+        fileInputRejected: "{count} rejet localisé.",
       }}
     ></lr-file-input>
   `);

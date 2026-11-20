@@ -36,6 +36,7 @@ expectLocaleFallback('ar', [
   'emailViewerLabel',
   'emailViewerNoSubject',
   'emailViewerOpenAttachment',
+  'emailViewerOpenAttachmentSize',
   'emailViewerSubject',
   'emailViewerTo',
   'loadingDocument',
@@ -1010,7 +1011,7 @@ describe("lr-email-viewer", () => {
 
         el.strings = {
           emailViewerUnnamedAttachment: 'pièce jointe sans nom',
-          emailViewerOpenAttachment: 'Ouvrir {filename}',
+          emailViewerOpenAttachmentSize: 'Ouvrir {filename} ({size})',
         };
         await el.updateComplete;
 
@@ -1019,7 +1020,7 @@ describe("lr-email-viewer", () => {
         ).to.equal('pièce jointe sans nom');
         expect(
           el.shadowRoot!.querySelector('[part="attachment-button"]')!.getAttribute('aria-label')
-        ).to.equal('Ouvrir pièce jointe sans nom 1 B');
+        ).to.equal('Ouvrir pièce jointe sans nom (1 B)');
       } finally {
         restore();
       }

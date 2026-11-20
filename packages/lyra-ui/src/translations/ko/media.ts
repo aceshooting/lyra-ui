@@ -44,10 +44,12 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: '업로드 중…',
   attachmentUploadFailed: '업로드 실패',
   fileInputDefaultLabel: '여기에 파일을 놓거나 클릭하여 찾아보기',
-  fileInputAcceptedOne: '파일 {count}개 추가됨.',
-  fileInputAcceptedMany: '파일 {count}개 추가됨.',
-  fileInputRejectedOne: '파일 {count}개가 거부됨.',
-  fileInputRejectedMany: '파일 {count}개가 거부됨.',
+  fileInputAccepted: {
+    other: '파일 {count}개 추가됨.',
+  },
+  fileInputRejected: {
+    other: '파일 {count}개가 거부됨.',
+  },
   fileInputFolderRejected: '여기에서는 폴더를 사용할 수 없습니다.',
   fileInputRejectedType: '{filename}: 이 파일 형식은 허용되지 않습니다.',
   fileInputRejectedSize: '{filename}: 파일이 너무 큽니다.',

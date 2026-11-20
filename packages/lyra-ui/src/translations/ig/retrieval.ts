@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Igodo eserese',
   entityChipWithType: '{label}, {type}',
   showMore: 'Gosi ihe ndị ọzọ',
+  showMoreCount: 'Gosi {count} ndị ọzọ',
   embeddingExplorerSpatialBounds: '{minX} ruo {maxX} n’akụkụ; {minY} ruo {maxY} n’elu na n’ala',
   embeddingExplorerSpatialSummary: 'Ntụpọ {total} n’isi iyi dum ({global}). Ntụpọ {matched} na mpaghara nlele ({viewport}). Mpaghara njupụta na-agụ ihe niile dakọtara; ntụpọ ndị a tụkwasịrị n’elu anaghị agbakwunye na ọnụọgụ ndị a.',
   embeddingExplorerSpatialBin: 'Ntụpọ {count} na mpaghara njupụta: {bounds}',

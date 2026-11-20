@@ -44,10 +44,14 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'Olkaa\'amaa jira…',
   attachmentUploadFailed: 'Olkaa\'uun hin milkoofne',
   fileInputDefaultLabel: 'Faayilota asitti dhiisi ykn ilaaluuf cuqaasi',
-  fileInputAcceptedOne: 'Faayilli {count} dabalameera.',
-  fileInputAcceptedMany: 'Faayilota {count} dabalaman.',
-  fileInputRejectedOne: 'Faayilli {count} fudhatama dhabeera.',
-  fileInputRejectedMany: 'Faayilota {count} fudhatama dhaban.',
+  fileInputAccepted: {
+    one: 'Faayilli {count} dabalameera.',
+    other: 'Faayilota {count} dabalaman.',
+  },
+  fileInputRejected: {
+    one: 'Faayilli {count} fudhatama dhabeera.',
+    other: 'Faayilota {count} fudhatama dhaban.',
+  },
   fileInputFolderRejected: 'Galmeen asitti hin fudhatamu.',
   fileInputRejectedType: '{filename}: gosti faayila kanaa hin fudhatamu.',
   fileInputRejectedSize: '{filename}: faayilli kun baay\'ee guddaa dha.',

@@ -16,8 +16,8 @@ import '../../overlays/empty/empty.class.js';
 import { styles } from './community-card.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_communityDrillIn, LYRA_DEFAULT_communityDrillInWithContext, LYRA_DEFAULT_communityMemberCount, LYRA_DEFAULT_untitledCommunity } from '../../../internal/default-strings/retrieval.generated.js';
-import { LYRA_DEFAULT_noData, LYRA_DEFAULT_showMoreCount } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_communityDrillIn, LYRA_DEFAULT_communityDrillInWithContext, LYRA_DEFAULT_communityMemberCount, LYRA_DEFAULT_showMoreCount, LYRA_DEFAULT_untitledCommunity } from '../../../internal/default-strings/retrieval.generated.js';
+import { LYRA_DEFAULT_noData } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export interface LyraCommunity {

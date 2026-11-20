@@ -716,6 +716,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
       retry: this.localize('retry'), expand: this.localize('expand'), collapse: this.localize('collapse'),
       summary: projection ? this.localize('treeSourceSummary', undefined, {
         visible: getNumberFormat(this.effectiveLocale).format(projection.rows.count), total: getNumberFormat(this.effectiveLocale).format(projection.total),
+        pluralCount: projection.total,
       }) : '', content: topic => { this.scheduleSourceDiagram(); return topic.label; }, name: topic => topic.label,
       select: row => this.selectSourceRow(row),
     })}<div part="source-diagram">${this.renderDiagram()}</div>

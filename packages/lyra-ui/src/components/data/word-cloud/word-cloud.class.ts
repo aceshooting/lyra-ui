@@ -32,7 +32,7 @@ import {
 import { styles } from './word-cloud.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_wordCloud, LYRA_DEFAULT_wordCloudLegend, LYRA_DEFAULT_wordCloudPreparedSummary, LYRA_DEFAULT_wordCloudPreparedUnavailable, LYRA_DEFAULT_wordCloudWord, LYRA_DEFAULT_wordCloudWordAnnouncement, LYRA_DEFAULT_wordCloudWords } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_wordCloud, LYRA_DEFAULT_wordCloudLegend, LYRA_DEFAULT_wordCloudPreparedSummary, LYRA_DEFAULT_wordCloudPreparedUnavailable, LYRA_DEFAULT_wordCloudWordAnnouncement, LYRA_DEFAULT_wordCloudWordLimit } from '../../../internal/default-strings/data.generated.js';
 import { LYRA_DEFAULT_items, LYRA_DEFAULT_noData, LYRA_DEFAULT_paginationSummary } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -364,9 +364,8 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     wordCloudLegend: LYRA_DEFAULT_wordCloudLegend,
     wordCloudPreparedSummary: LYRA_DEFAULT_wordCloudPreparedSummary,
     wordCloudPreparedUnavailable: LYRA_DEFAULT_wordCloudPreparedUnavailable,
-    wordCloudWord: LYRA_DEFAULT_wordCloudWord,
     wordCloudWordAnnouncement: LYRA_DEFAULT_wordCloudWordAnnouncement,
-    wordCloudWords: LYRA_DEFAULT_wordCloudWords,
+    wordCloudWordLimit: LYRA_DEFAULT_wordCloudWordLimit,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -962,13 +961,17 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     this.announce(order[next]!);
   };
 
-  private collectionSummary(shown: number, total: number, itemLabel: string): string {
-    return this.localize('paginationSummary', undefined, {
+  /** "1–N of M" for a capped list; the plural category follows the total, so the noun inflects. */
+  private collectionSummary(shown: number, total: number, words: boolean): string {
+    const values = {
       start: this.formatLocaleNumber(shown === 0 ? 0 : 1),
       end: this.formatLocaleNumber(shown),
       total: this.formatLocaleNumber(total),
-      itemLabel,
-    });
+      pluralCount: total,
+    };
+    return words
+      ? this.localize('wordCloudWordLimit', undefined, values)
+      : this.localize('paginationSummary', undefined, { ...values, itemLabel: this.localize('items', undefined, { pluralCount: total }) });
   }
 
   private renderLegend(
@@ -979,7 +982,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     const hasLimit = explicitInput && (this.legendDroppedCount > 0 || this.legendTruncatedCount > 0);
     if (entries.length === 0 && !hasLimit) return nothing;
     const limitText = hasLimit
-      ? this.collectionSummary(entries.length, this.legendInputCount, this.localize('items'))
+      ? this.collectionSummary(entries.length, this.legendInputCount, false)
       : '';
     return html`
       ${entries.length
@@ -1031,11 +1034,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     const omittedCount = (this.preparedActive ? 0 : this.inputDroppedCount) + layout.skippedCount;
     const hasWordLimit = omittedCount > 0 || (!this.preparedActive && this.inputTruncatedCount > 0);
     const wordLimitText = hasWordLimit
-      ? this.collectionSummary(
-          layout.placed.length,
-          inputCount,
-          this.localize(layout.placed.length === 1 && inputCount === 1 ? 'wordCloudWord' : 'wordCloudWords'),
-        )
+      ? this.collectionSummary(layout.placed.length, inputCount, true)
       : '';
     if (layout.placed.length === 0) {
       return html`<div part="base">
@@ -1051,7 +1050,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
     const ring = focused ? this.focusRingRect(focused) : undefined;
     const generatedLabel = this.localize('wordCloud', undefined, {
       count: this.formatLocaleNumber(layout.placed.length),
-      word: this.localize(layout.placed.length === 1 ? 'wordCloudWord' : 'wordCloudWords'),
+      pluralCount: layout.placed.length,
     });
     const accessibleLabel = hostAriaLabel(this) ?? generatedLabel;
     // Legibility floor: the cloud is laid out once in fixed units and scaled to the host, so the

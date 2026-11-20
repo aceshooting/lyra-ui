@@ -44,10 +44,12 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: '正在上傳…',
   attachmentUploadFailed: '上傳失敗',
   fileInputDefaultLabel: '將檔案拖放到此處，或點選瀏覽',
-  fileInputAcceptedOne: '已新增{count}個檔案。',
-  fileInputAcceptedMany: '已新增{count}個檔案。',
-  fileInputRejectedOne: '已拒絕{count}個檔案。',
-  fileInputRejectedMany: '已拒絕{count}個檔案。',
+  fileInputAccepted: {
+    other: '已新增{count}個檔案。',
+  },
+  fileInputRejected: {
+    other: '已拒絕{count}個檔案。',
+  },
   fileInputFolderRejected: '此處不接受資料夾。',
   fileInputRejectedType: '{filename}：不接受此檔案型別。',
   fileInputRejectedSize: '{filename}：此檔案過大。',

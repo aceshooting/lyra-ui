@@ -44,10 +44,14 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'Feltöltés…',
   attachmentUploadFailed: 'A feltöltés sikertelen',
   fileInputDefaultLabel: 'Húzza ide a fájlokat, vagy kattintson a tallózáshoz',
-  fileInputAcceptedOne: '{count} fájl hozzáadva.',
-  fileInputAcceptedMany: '{count} fájl hozzáadva.',
-  fileInputRejectedOne: '{count} fájl elutasítva.',
-  fileInputRejectedMany: '{count} fájl elutasítva.',
+  fileInputAccepted: {
+    one: '{count} fájl hozzáadva.',
+    other: '{count} fájl hozzáadva.',
+  },
+  fileInputRejected: {
+    one: '{count} fájl elutasítva.',
+    other: '{count} fájl elutasítva.',
+  },
   fileInputFolderRejected: 'Mappák itt nem engedélyezettek.',
   fileInputRejectedType: '{filename}: ez a fájltípus nem engedélyezett.',
   fileInputRejectedSize: '{filename}: a fájl túl nagy.',

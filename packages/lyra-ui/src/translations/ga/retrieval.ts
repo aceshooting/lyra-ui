@@ -24,6 +24,7 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Eochair an ghraif',
   entityChipWithType: '{label}, {type}',
   showMore: 'Taispeáin tuilleadh',
+  showMoreCount: 'Taispeáin {count} eile',
   embeddingExplorerSpatialBounds: '{minX} go {maxX} go cothrománach; {minY} go {maxY} go hingearach',
   embeddingExplorerSpatialSummary: 'Pointí san fhoinse iomlán: {total} ({global}). Pointí sa phort amhairc: {matched} ({viewport}). Áirítear gach meaitseáil i réigiúin dlúis; ní chuireann forleagain pointí leis na comhairimh seo.',
   embeddingExplorerSpatialBin: 'Pointí i réigiún dlúis: {count}; {bounds}',

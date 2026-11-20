@@ -41,7 +41,7 @@ function fiveAvatars() {
   `;
 }
 
-expectLocaleFallback('ar-EG', ['showMoreCollapsed', 'showMoreCount']);
+expectLocaleFallback('ar-EG', ['showMoreCollapsed', 'showMoreOverflowLabel']);
 
 it('sanitizes a NaN/negative max to a finite non-negative integer instead of poisoning overflow math with NaN', async () => {
   const el = (await fixture(fiveAvatars())) as LyraAvatarGroup;
@@ -470,14 +470,14 @@ describe('localization', () => {
 
   it('localizes the overflow-badge aria-label via this.localize(), not hardcoded English', async () => {
     const el = (await fixture(html`
-      <lr-avatar-group max="1" .strings=${{ showMoreCount: '{count} de plus' }}>
+      <lr-avatar-group max="1" .strings=${{ showMoreOverflowLabel: '{visible} — {count} de plus' }}>
         <lr-avatar initials="AB"></lr-avatar>
         <lr-avatar initials="CD"></lr-avatar>
         <lr-avatar initials="EF"></lr-avatar>
       </lr-avatar-group>
     `)) as LyraAvatarGroup;
     const badge = el.shadowRoot!.querySelector('[part="overflow-badge"]') as HTMLButtonElement;
-    expect(badge.getAttribute('aria-label')).to.equal('+2 2 de plus');
+    expect(badge.getAttribute('aria-label')).to.equal('+2 — 2 de plus');
   });
 });
 

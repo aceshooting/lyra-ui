@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   emailViewerNoSubject: '(mavzusiz)',
   emailViewerOpenAttachment: '{filename}ni ochish',
   emailViewerQuotedText: 'Keltirilgan matn',
+  emailViewerOpenAttachmentSize: 'Ochish: {filename} {size}',
   emailViewerEmptyBody: 'Bu xabarda koʻrsatish mumkin boʻlgan mazmun yoʻq.',
   emailViewerGroupAddress: '{name}: {members}',
   calendarViewerLabel: 'Kalendar koʻruvchisi',

@@ -299,6 +299,9 @@ it("labels a budget-truncated collapsed preview as a lower bound instead of a fa
   expect(preview.textContent?.trim().startsWith("≥")).to.be.true;
   expect(preview.textContent).not.to.equal("5000 keys");
   expect(el.shadowRoot!.querySelectorAll('[part="limit"]').length).to.equal(1);
+  el.strings = { countAtLeast: "au moins {count}" };
+  await el.updateComplete;
+  expect(preview.textContent?.trim().startsWith("au moins ")).to.be.true;
 });
 
 it("locale-formats collapsed item/key counts before interpolation", async () => {

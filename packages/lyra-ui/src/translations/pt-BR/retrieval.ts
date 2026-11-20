@@ -18,6 +18,7 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Legenda do grafo',
   entityChipWithType: '{label}, {type}',
   showMore: 'Mostrar mais',
+  showMoreCount: 'Mostrar mais {count}',
   embeddingExplorerSpatialBounds: '{minX} a {maxX} na horizontal; {minY} a {maxY} na vertical',
   embeddingExplorerSpatialSummary: '{total} pontos na origem completa ({global}). {matched} pontos na área de visualização ({viewport}). As regiões de densidade contam todas as correspondências; as sobreposições de pontos não aumentam essas contagens.',
   embeddingExplorerSpatialBin: '{count} pontos na região de densidade: {bounds}',

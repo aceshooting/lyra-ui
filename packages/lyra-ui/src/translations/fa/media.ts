@@ -44,10 +44,14 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'در حال آپلود…',
   attachmentUploadFailed: 'آپلود انجام نشد',
   fileInputDefaultLabel: 'فایل‌ها را اینجا رها کنید یا برای مرور کلیک کنید',
-  fileInputAcceptedOne: '{count} فایل اضافه شد.',
-  fileInputAcceptedMany: '{count} فایل اضافه شد.',
-  fileInputRejectedOne: '{count} فایل رد شد.',
-  fileInputRejectedMany: '{count} فایل رد شد.',
+  fileInputAccepted: {
+    one: '{count} فایل اضافه شد.',
+    other: '{count} فایل اضافه شد.',
+  },
+  fileInputRejected: {
+    one: '{count} فایل رد شد.',
+    other: '{count} فایل رد شد.',
+  },
   fileInputFolderRejected: 'پوشه‌ها در اینجا پذیرفته نمی‌شوند.',
   fileInputRejectedType: '{filename}: این نوع فایل پذیرفته نیست.',
   fileInputRejectedSize: '{filename}: این فایل خیلی بزرگ است.',

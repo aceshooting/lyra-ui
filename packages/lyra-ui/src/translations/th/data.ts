@@ -16,7 +16,13 @@ const strings: LyraLocaleStrings = {
   sequenceStripCellKeyboardHelp: 'กด Enter หรือ Space เพื่อเปิดใช้งานรายการนี้',
   sequenceStripUnnamedCategory: 'หมวดหมู่ไม่มีชื่อ',
   sequenceStripBucketLabel: '{label}, รายการ {start} ถึง {end}',
-  sequenceStripBucketSummary: '{items} รายการใน {ranges} ช่วง',
+  sequenceStripBucketSummary: '{items} ใน {ranges}',
+  sequenceStripItemCount: {
+    other: '{count} รายการ',
+  },
+  sequenceStripRangeCount: {
+    other: '{count} ช่วง',
+  },
   noColumns: 'ยังไม่ได้กำหนดค่าคอลัมน์',
   dataGridColumnMenu: 'ตัวเลือกสำหรับ {label}',
   dataGridPinStart: 'ตรึง {label} ไว้ต้นรายการ',
@@ -43,8 +49,15 @@ const strings: LyraLocaleStrings = {
   paginationInvalidPageUnknownTotal: 'กรอกหมายเลขหน้าเป็นจำนวนเต็มตั้งแต่ 1 ขึ้นไป',
   paginationEmptySummary: '{total} {itemLabel}',
   paginationAppliedUnknownTotal: 'หน้า {page}',
-  trendOf: 'แนวโน้มของ {count} ค่า ค่าล่าสุด {value}',
-  wordCloud: 'กลุ่มคำ {count} {word}',
+  trendOf: {
+    other: 'แนวโน้มของ {count} ค่า ค่าล่าสุด {value}',
+  },
+  wordCloud: {
+    other: 'กลุ่มคำ {count} คำ',
+  },
+  wordCloudWordLimit: {
+    other: '{start}–{end} จาก {total} คำ',
+  },
   wordCloudLegend: 'คำอธิบายสีของกลุ่มคำ',
   wordCloudWordAnnouncement: '{text}, {weight}',
   wordCloudPreparedSummary: 'สรุปคำ: เก็บไว้ {retainedCount} จาก {validCount} คำที่ใช้ได้ ({invalidCount} คำที่ใช้ไม่ได้); น้ำหนักที่เก็บไว้ {retainedWeight} จาก {totalWeight}',
@@ -57,8 +70,6 @@ const strings: LyraLocaleStrings = {
   heatmapSourceMean: 'ค่าเฉลี่ย',
   heatmapSourceMin: 'ค่าต่ำสุด',
   heatmapSourceMax: 'ค่าสูงสุด',
-  wordCloudWord: 'คำ',
-  wordCloudWords: 'คำ',
   calendarLabel: 'ปฏิทิน',
   calendarEmpty: 'เดือนนี้ไม่มีเหตุการณ์',
   calendarEventsOverflow: 'อีก {n} รายการ',
@@ -132,7 +143,9 @@ const strings: LyraLocaleStrings = {
   flowSourceRevealTargetNode: 'ไปที่โหนดปลายทาง {node} ของ {edge}',
   flowSourceRecordMatches: 'ระเบียนที่ตรงกัน: {count}',
   flowRunStatusLabel: 'สถานะการทำงาน',
-  flowRunSummary: 'เสร็จสิ้น {done} จาก {total} ขั้นตอน',
+  flowRunSummary: {
+    other: 'เสร็จสิ้น {done} จาก {total} ขั้นตอน',
+  },
   flowRunStepStatus: '{label}: {status}',
   flowRunStatusCount: '{status}: {count}',
   queryBuilderLabel: 'ตัวสร้างคิวรี',

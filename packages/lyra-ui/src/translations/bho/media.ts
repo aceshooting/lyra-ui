@@ -44,10 +44,14 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'अपलोड हो रहल बा…',
   attachmentUploadFailed: 'अपलोड ना हो सकल',
   fileInputDefaultLabel: 'इहाँ फाइल छोड़ीं भा ब्राउज करे खातिर क्लिक करीं',
-  fileInputAcceptedOne: '{count} फाइल जोड़ल गइल।',
-  fileInputAcceptedMany: '{count} फाइल जोड़ल गइल।',
-  fileInputRejectedOne: '{count} फाइल नामंजूर भइल।',
-  fileInputRejectedMany: '{count} फाइल नामंजूर भइल।',
+  fileInputAccepted: {
+    one: '{count} फाइल जोड़ल गइल।',
+    other: '{count} फाइल जोड़ल गइल।',
+  },
+  fileInputRejected: {
+    one: '{count} फाइल नामंजूर भइल।',
+    other: '{count} फाइल नामंजूर भइल।',
+  },
   fileInputFolderRejected: 'इहाँ फोल्डर मंजूर नइखे।',
   fileInputRejectedType: '{filename}: ई फाइल किसिम मंजूर नइखे।',
   fileInputRejectedSize: '{filename}: ई फाइल बहुत बड़ बा।',

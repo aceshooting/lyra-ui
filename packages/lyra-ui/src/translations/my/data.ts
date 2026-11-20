@@ -16,7 +16,13 @@ const strings: LyraLocaleStrings = {
   sequenceStripCellKeyboardHelp: 'ဤအရာကို အသက်သွင်းရန် Enter သို့မဟုတ် Space ခလုတ်ကို နှိပ်ပါ။',
   sequenceStripUnnamedCategory: 'အမည်မရှိသော အမျိုးအစား',
   sequenceStripBucketLabel: '{label}, အရာ {start} မှ {end} အထိ',
-  sequenceStripBucketSummary: 'အပိုင်းအခြား {ranges} ခုတွင် အရာ {items} ခု',
+  sequenceStripBucketSummary: '{ranges}တွင် {items}',
+  sequenceStripItemCount: {
+    other: 'အရာ {count} ခု',
+  },
+  sequenceStripRangeCount: {
+    other: 'အပိုင်းအခြား {count} ခု',
+  },
   noColumns: 'ကော်လံများ မသတ်မှတ်ရသေးပါ',
   dataGridColumnMenu: '{label} အတွက် ရွေးချယ်စရာများ',
   dataGridPinStart: '{label} ကို အစတွင် ချိတ်ထားရန်',
@@ -43,8 +49,15 @@ const strings: LyraLocaleStrings = {
   paginationInvalidPageUnknownTotal: '1 နှင့်အထက် စာမျက်နှာ ကိန်းပြည့်နံပါတ်တစ်ခု ထည့်ပါ။',
   paginationEmptySummary: '{total} {itemLabel}',
   paginationAppliedUnknownTotal: 'စာမျက်နှာ {page}',
-  trendOf: 'တန်ဖိုး {count} ခု၏ လမ်းကြောင်း၊ နောက်ဆုံး {value}',
-  wordCloud: 'စကားလုံး {word} {count} ခုပါဝင်သော တိမ်တိုက်',
+  trendOf: {
+    other: 'တန်ဖိုး {count} ခု၏ လမ်းကြောင်း၊ နောက်ဆုံး {value}',
+  },
+  wordCloud: {
+    other: 'စကားလုံး {count} ခုပါဝင်သော တိမ်တိုက်',
+  },
+  wordCloudWordLimit: {
+    other: 'စုစုပေါင်း စကားလုံး {total} ခုအနက် {start}–{end}',
+  },
   wordCloudLegend: 'စကားလုံးတိမ်တိုက် အရောင်ညွှန်း',
   wordCloudWordAnnouncement: '{text}၊ အလေးချိန် {weight}',
   wordCloudPreparedSummary: 'စကားလုံးအကျဉ်းချုပ်။ မှန်ကန်သော စကားလုံး {validCount} လုံးအနက် {retainedCount} လုံးကို ထိန်းသိမ်းထားသည် (မမှန်ကန်သော {invalidCount} လုံး)။ ထိန်းသိမ်းထားသော အလေးချိန်မှာ စုစုပေါင်း {totalWeight} အနက် {retainedWeight} ဖြစ်သည်။',
@@ -57,8 +70,6 @@ const strings: LyraLocaleStrings = {
   heatmapSourceMean: 'ပျမ်းမျှ',
   heatmapSourceMin: 'အနည်းဆုံး',
   heatmapSourceMax: 'အများဆုံး',
-  wordCloudWord: 'စကားလုံး',
-  wordCloudWords: 'စကားလုံးများ',
   calendarLabel: 'ပြက္ခဒိန်',
   calendarEmpty: 'ဤလတွင် အစီအစဉ်မရှိပါ။',
   calendarEventsOverflow: 'နောက်ထပ် {n} ခု',
@@ -132,7 +143,9 @@ const strings: LyraLocaleStrings = {
   flowSourceRevealTargetNode: '{edge} ၏ ပစ်မှတ်နိုဒ် {node} သို့ သွားပါ',
   flowSourceRecordMatches: 'ကိုက်ညီသော မှတ်တမ်းများ- {count}',
   flowRunStatusLabel: 'လုပ်ဆောင်မှု အခြေအနေ',
-  flowRunSummary: 'အဆင့် {total} ခုအနက် {done} ခု ပြီးပါပြီ',
+  flowRunSummary: {
+    other: 'အဆင့် {total} ခုအနက် {done} ခု ပြီးပါပြီ',
+  },
   flowRunStepStatus: '{label} — {status}',
   flowRunStatusCount: '{status} — {count}',
   queryBuilderLabel: 'မေးမြန်းချက် ဖန်တီးကိရိယာ',

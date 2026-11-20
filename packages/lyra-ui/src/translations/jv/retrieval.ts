@@ -20,6 +20,7 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Katrangan graf',
   entityChipWithType: '{label} ({type})',
   showMore: 'Tampilake luwih akeh',
+  showMoreCount: 'Tampilake {count} maneh',
   embeddingExplorerSpatialBounds: '{minX} nganti {maxX} kanthi horisontal; {minY} nganti {maxY} kanthi vertikal',
   embeddingExplorerSpatialSummary: '{total} titik ing kabeh sumber ({global}). {matched} titik ing area tampilan ({viewport}). Wilayah kapadhetan ngetung kabeh sing cocog; lapisan titik ora nambah cacah iki.',
   embeddingExplorerSpatialBin: '{count} titik ing wilayah kapadhetan: {bounds}',

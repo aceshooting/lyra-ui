@@ -16,7 +16,13 @@ const strings: LyraLocaleStrings = {
   sequenceStripCellKeyboardHelp: '按 Enter 键或空格键激活此项目。',
   sequenceStripUnnamedCategory: '未命名类别',
   sequenceStripBucketLabel: '{label}，第{start}–{end}项',
-  sequenceStripBucketSummary: '{items}项，合并为{ranges}个区间',
+  sequenceStripBucketSummary: '{items}，分布在{ranges}中',
+  sequenceStripItemCount: {
+    other: '{count}项',
+  },
+  sequenceStripRangeCount: {
+    other: '{count}个区间',
+  },
   noColumns: '未配置任何列',
   dataGridColumnMenu: '{label} 的选项',
   dataGridPinStart: '将 {label} 固定到开头',
@@ -43,8 +49,15 @@ const strings: LyraLocaleStrings = {
   paginationInvalidPageUnknownTotal: '请输入 1 或更大的整数页码。',
   paginationEmptySummary: '共{total}{itemLabel}',
   paginationAppliedUnknownTotal: '第{page}页',
-  trendOf: '{count}个值的趋势，最新值为{value}',
-  wordCloud: '包含{count}{word}的词云',
+  trendOf: {
+    other: '{count}个值的趋势，最新值为{value}',
+  },
+  wordCloud: {
+    other: '包含{count}个词的词云',
+  },
+  wordCloudWordLimit: {
+    other: '{start}–{end}，共{total}个词',
+  },
   wordCloudLegend: '词云颜色图例',
   wordCloudWordAnnouncement: '{text}，{weight}',
   wordCloudPreparedSummary: '词语摘要：保留了 {validCount} 个有效词语中的 {retainedCount} 个（{invalidCount} 个无效）；保留权重为 {retainedWeight}，总权重为 {totalWeight}。',
@@ -57,8 +70,6 @@ const strings: LyraLocaleStrings = {
   heatmapSourceMean: '平均值',
   heatmapSourceMin: '最小值',
   heatmapSourceMax: '最大值',
-  wordCloudWord: '个词',
-  wordCloudWords: '个词',
   calendarLabel: '日历',
   calendarEmpty: '本月没有事件。',
   calendarEventsOverflow: '+{n}项',
@@ -132,7 +143,9 @@ const strings: LyraLocaleStrings = {
   flowSourceRevealTargetNode: '转到 {edge} 的目标节点 {node}',
   flowSourceRecordMatches: '匹配的记录：{count}',
   flowRunStatusLabel: '运行状态',
-  flowRunSummary: '已完成{done}/{total}个步骤',
+  flowRunSummary: {
+    other: '已完成{done}/{total}个步骤',
+  },
   flowRunStepStatus: '{label}：{status}',
   flowRunStatusCount: '{status}：{count}',
   queryBuilderLabel: '查询构建器',

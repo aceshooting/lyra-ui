@@ -44,10 +44,14 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'பதிவேற்றப்படுகிறது…',
   attachmentUploadFailed: 'பதிவேற்றம் தோல்வியடைந்தது',
   fileInputDefaultLabel: 'கோப்புகளை இங்கே விடவும் அல்லது உலாவ கிளிக் செய்யவும்',
-  fileInputAcceptedOne: '{count} கோப்பு சேர்க்கப்பட்டது.',
-  fileInputAcceptedMany: '{count} கோப்புகள் சேர்க்கப்பட்டன.',
-  fileInputRejectedOne: '{count} கோப்பு நிராகரிக்கப்பட்டது.',
-  fileInputRejectedMany: '{count} கோப்புகள் நிராகரிக்கப்பட்டன.',
+  fileInputAccepted: {
+    one: '{count} கோப்பு சேர்க்கப்பட்டது.',
+    other: '{count} கோப்புகள் சேர்க்கப்பட்டன.',
+  },
+  fileInputRejected: {
+    one: '{count} கோப்பு நிராகரிக்கப்பட்டது.',
+    other: '{count} கோப்புகள் நிராகரிக்கப்பட்டன.',
+  },
   fileInputFolderRejected: 'இங்கே கோப்புறைகளை ஏற்க முடியாது.',
   fileInputRejectedType: '{filename}: இந்தக் கோப்பு வகை ஏற்கப்படாது.',
   fileInputRejectedSize: '{filename}: இந்தக் கோப்பு மிகப் பெரியது.',

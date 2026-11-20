@@ -18,6 +18,7 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'گراف کی علامات',
   entityChipWithType: '{label}، {type}',
   showMore: 'مزید دکھائیں',
+  showMoreCount: '{count} مزید دکھائیں',
   embeddingExplorerSpatialBounds: 'افقی طور پر {minX} سے {maxX}؛ عمودی طور پر {minY} سے {maxY}',
   embeddingExplorerSpatialSummary: 'پورے ماخذ میں {total} نقاط ({global})۔ منظر کے حصے میں {matched} نقاط ({viewport})۔ کثافت کے علاقے تمام مطابقتوں کو شمار کرتے ہیں؛ نقاط کی اوورلے تہیں ان تعدادوں میں اضافہ نہیں کرتیں۔',
   embeddingExplorerSpatialBin: 'کثافت کے علاقے میں {count} نقاط: {bounds}',

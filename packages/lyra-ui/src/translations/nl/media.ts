@@ -44,10 +44,14 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'Uploaden…',
   attachmentUploadFailed: 'Uploaden mislukt',
   fileInputDefaultLabel: 'Sleep bestanden hierheen of klik om te bladeren',
-  fileInputAcceptedOne: '{count} bestand toegevoegd.',
-  fileInputAcceptedMany: '{count} bestanden toegevoegd.',
-  fileInputRejectedOne: '{count} bestand geweigerd.',
-  fileInputRejectedMany: '{count} bestanden geweigerd.',
+  fileInputAccepted: {
+    one: '{count} bestand toegevoegd.',
+    other: '{count} bestanden toegevoegd.',
+  },
+  fileInputRejected: {
+    one: '{count} bestand geweigerd.',
+    other: '{count} bestanden geweigerd.',
+  },
   fileInputFolderRejected: 'Mappen worden hier niet geaccepteerd.',
   fileInputRejectedType: '{filename}: dit bestandstype wordt niet geaccepteerd.',
   fileInputRejectedSize: '{filename}: dit bestand is te groot.',

@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   emailViewerNoSubject: '(fără subiect)',
   emailViewerOpenAttachment: 'Deschide {filename}',
   emailViewerQuotedText: 'Text citat',
+  emailViewerOpenAttachmentSize: 'Deschide {filename} {size}',
   emailViewerEmptyBody: 'Acest mesaj nu are conținut care să poată fi afișat.',
   emailViewerGroupAddress: '{name}: {members}',
   calendarViewerLabel: 'Vizualizator de calendar',

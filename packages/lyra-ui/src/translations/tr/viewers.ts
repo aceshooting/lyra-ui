@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   emailViewerNoSubject: '(konu yok)',
   emailViewerOpenAttachment: '{filename} dosyasını aç',
   emailViewerQuotedText: 'Alıntılanan metin',
+  emailViewerOpenAttachmentSize: '{filename} {size} dosyasını aç',
   emailViewerEmptyBody: 'Bu iletide görüntülenebilecek içerik yok.',
   emailViewerGroupAddress: '{name}: {members}',
   calendarViewerLabel: 'Takvim görüntüleyici',

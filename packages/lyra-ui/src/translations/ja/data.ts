@@ -16,7 +16,13 @@ const strings: LyraLocaleStrings = {
   sequenceStripCellKeyboardHelp: 'Enter キーまたはスペースキーを押して、この項目をアクティブにします。',
   sequenceStripUnnamedCategory: '名前のないカテゴリ',
   sequenceStripBucketLabel: '{label}、項目 {start}～{end}',
-  sequenceStripBucketSummary: '{items} 件を {ranges} 区間に集約',
+  sequenceStripBucketSummary: '{items}を {ranges}に集約',
+  sequenceStripItemCount: {
+    other: '{count} 件',
+  },
+  sequenceStripRangeCount: {
+    other: '{count} 区間',
+  },
   noColumns: '列が設定されていません',
   dataGridColumnMenu: '{label} のオプション',
   dataGridPinStart: '{label} を先頭に固定',
@@ -43,8 +49,15 @@ const strings: LyraLocaleStrings = {
   paginationInvalidPageUnknownTotal: '1 以上の整数のページ番号を入力してください。',
   paginationEmptySummary: '{total} {itemLabel}',
   paginationAppliedUnknownTotal: '{page} ページ目',
-  trendOf: '{count} 件の値の推移、最新は {value}',
-  wordCloud: '{count} {word}のワードクラウド',
+  trendOf: {
+    other: '{count} 件の値の推移、最新は {value}',
+  },
+  wordCloud: {
+    other: '{count} 語のワードクラウド',
+  },
+  wordCloudWordLimit: {
+    other: '{total} 語中 {start}–{end}',
+  },
   wordCloudLegend: 'ワードクラウドの色の凡例',
   wordCloudWordAnnouncement: '{text}、{weight}',
   wordCloudPreparedSummary: '単語の要約：有効な単語 {validCount} 件のうち {retainedCount} 件を保持（無効 {invalidCount} 件）。保持した重みは {totalWeight} のうち {retainedWeight}。',
@@ -57,8 +70,6 @@ const strings: LyraLocaleStrings = {
   heatmapSourceMean: '平均',
   heatmapSourceMin: '最小値',
   heatmapSourceMax: '最大値',
-  wordCloudWord: '語',
-  wordCloudWords: '語',
   calendarLabel: 'カレンダー',
   calendarEmpty: '今月の予定はありません。',
   calendarEventsOverflow: '他 {n} 件',
@@ -132,7 +143,9 @@ const strings: LyraLocaleStrings = {
   flowSourceRevealTargetNode: '{edge} のターゲットノード {node} に移動',
   flowSourceRecordMatches: '一致するレコード: {count}',
   flowRunStatusLabel: '実行状況',
-  flowRunSummary: '{total} ステップ中 {done} ステップ完了',
+  flowRunSummary: {
+    other: '{total} ステップ中 {done} ステップ完了',
+  },
   flowRunStepStatus: '{label}：{status}',
   flowRunStatusCount: '{status}：{count}',
   queryBuilderLabel: 'クエリビルダー',

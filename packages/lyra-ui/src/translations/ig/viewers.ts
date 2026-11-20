@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   emailViewerNoSubject: '(enweghị isiokwu)',
   emailViewerOpenAttachment: 'Mepee {filename}',
   emailViewerQuotedText: 'Ederede e hotụrụ',
+  emailViewerOpenAttachmentSize: 'Mepee {filename} {size}',
   emailViewerEmptyBody: 'Ozi a enweghị ọdịnaya enwere ike igosi.',
   emailViewerGroupAddress: '{name}: {members}',
   calendarViewerLabel: 'Ihe nlere kalenda',

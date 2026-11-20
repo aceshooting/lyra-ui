@@ -44,10 +44,14 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'Lähetetään…',
   attachmentUploadFailed: 'Lähetys epäonnistui',
   fileInputDefaultLabel: 'Pudota tiedostot tähän tai selaa napsauttamalla',
-  fileInputAcceptedOne: '{count} tiedosto lisätty.',
-  fileInputAcceptedMany: '{count} tiedostoa lisätty.',
-  fileInputRejectedOne: '{count} tiedosto hylätty.',
-  fileInputRejectedMany: '{count} tiedostoa hylätty.',
+  fileInputAccepted: {
+    one: '{count} tiedosto lisätty.',
+    other: '{count} tiedostoa lisätty.',
+  },
+  fileInputRejected: {
+    one: '{count} tiedosto hylätty.',
+    other: '{count} tiedostoa hylätty.',
+  },
   fileInputFolderRejected: 'Kansioita ei hyväksytä tähän.',
   fileInputRejectedType: '{filename}: tätä tiedostotyyppiä ei hyväksytä.',
   fileInputRejectedSize: '{filename}: tiedosto on liian suuri.',

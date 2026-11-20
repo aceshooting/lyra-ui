@@ -44,10 +44,14 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'اپ لوڈ ہو ریا اے…',
   attachmentUploadFailed: 'اپ لوڈ ناکام ہویا',
   fileInputDefaultLabel: 'فائل اتھے چھڈو یا لبھن لئی کلک کرو',
-  fileInputAcceptedOne: '{count} فائل شامل ہوئی۔',
-  fileInputAcceptedMany: '{count} فائل شامل ہوئیاں۔',
-  fileInputRejectedOne: '{count} فائل رد ہوئی۔',
-  fileInputRejectedMany: '{count} فائل رد ہوئیاں۔',
+  fileInputAccepted: {
+    one: '{count} فائل شامل ہوئی۔',
+    other: '{count} فائل شامل ہوئیاں۔',
+  },
+  fileInputRejected: {
+    one: '{count} فائل رد ہوئی۔',
+    other: '{count} فائل رد ہوئیاں۔',
+  },
   fileInputFolderRejected: 'اتھے فولڈر قبول نئیں۔',
   fileInputRejectedType: '{filename}: ایہہ فائل دی قسم قبول نئیں۔',
   fileInputRejectedSize: '{filename}: ایہہ فائل بہت وڈی اے۔',

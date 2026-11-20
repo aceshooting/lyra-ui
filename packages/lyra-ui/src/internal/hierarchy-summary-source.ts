@@ -9,10 +9,10 @@ import { hierarchyField } from './hierarchy-source-controller.js';
 export function hierarchySourceSummary(
   projection: { readonly total: number; readonly rows: { readonly count: number } } | undefined,
   locale: string,
-): { visible: string; total: string } | undefined {
+): { visible: string; total: string; pluralCount: number } | undefined {
   if (!projection) return undefined;
   const formatter = getNumberFormat(locale);
-  return { visible: formatter.format(projection.rows.count), total: formatter.format(projection.total) };
+  return { visible: formatter.format(projection.rows.count), total: formatter.format(projection.total), pluralCount: projection.total };
 }
 
 type Host = Pick<HTMLElement, 'ownerDocument' | 'isConnected'>;

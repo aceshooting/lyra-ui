@@ -79,6 +79,7 @@ const strings: LyraLocaleStrings = {
   emailViewerNoSubject: '(tanpa bab)',
   emailViewerOpenAttachment: 'Bukak {filename}',
   emailViewerQuotedText: 'Teks kutipan',
+  emailViewerOpenAttachmentSize: 'Bukak {filename} {size}',
   emailViewerEmptyBody: 'Pesen iki ora duwe isi sing bisa ditampilake.',
   emailViewerGroupAddress: '{name}: {members}',
   calendarViewerLabel: 'Pamawas tanggalan',

@@ -1789,6 +1789,10 @@ working; other uses (a deep import, a namespace member) and removed localization
 | locale-key | `emailViewerShowQuoted` | `emailViewerQuotedText` | Reported only. lr-email-viewer names its quoted-text toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
 | locale-key | `expandCode` | `codeBlockToggle` | Reported only. lr-code-block names its collapse toggle with the constant codeBlockToggle key while aria-expanded reports the state; a string override under the old key no longer applies. |
 | locale-key | `expandMessage` | `toggleMessage` | Reported only. lr-chat-message names its collapse button with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `fileInputAcceptedMany` | `fileInputAccepted` | Reported only. lr-file-input and lr-drop-zone read one plural message; move the override into a category object under the new key. |
+| locale-key | `fileInputAcceptedOne` | `fileInputAccepted` | Reported only. lr-file-input and lr-drop-zone read one plural message; move the override into a category object under the new key. |
+| locale-key | `fileInputRejectedMany` | `fileInputRejected` | Reported only. lr-file-input and lr-drop-zone read one plural message; move the override into a category object under the new key. |
+| locale-key | `fileInputRejectedOne` | `fileInputRejected` | Reported only. lr-file-input and lr-drop-zone read one plural message; move the override into a category object under the new key. |
 | locale-key | `jsonCollapseLabel` | `jsonToggleLabel` | Reported only. lr-json-viewer names its node toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
 | locale-key | `jsonExpandLabel` | `jsonToggleLabel` | Reported only. lr-json-viewer names its node toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
 | locale-key | `mapSceneHide` | `mapScene` | Reported only. lr-map names its scene toggle with the constant mapScene key while aria-expanded reports the state; a string override under the old key no longer applies. |
@@ -1802,6 +1806,8 @@ working; other uses (a deep import, a namespace member) and removed localization
 | locale-key | `testResultsExpandTest` | `testResultsToggleTest` | Reported only. lr-test-results names its detail toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
 | locale-key | `widgetCollapse` | `panelToggle` | Reported only. lr-widget names its collapse button with one constant key (appRailItemToggle with a widget label) while aria-expanded reports the state; a string override under the old key no longer applies. |
 | locale-key | `widgetExpand` | `panelToggle` | Reported only. lr-widget names its collapse button with one constant key (appRailItemToggle with a widget label) while aria-expanded reports the state; a string override under the old key no longer applies. |
+| locale-key | `wordCloudWord` | `wordCloud` | Reported only. lr-word-cloud's wordCloud is a plural message that carries the noun; the capped-cloud note reads wordCloudWordLimit. |
+| locale-key | `wordCloudWords` | `wordCloud` | Reported only. lr-word-cloud's wordCloud is a plural message that carries the noun; the capped-cloud note reads wordCloudWordLimit. |
 | locale-key | `xmlViewerCollapseNode` | `xmlViewerToggleNode` | Reported only. lr-xml-viewer names its node toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
 | locale-key | `xmlViewerExpandNode` | `xmlViewerToggleNode` | Reported only. lr-xml-viewer names its node toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
 

@@ -45,7 +45,7 @@ function focusedChipPart(chip: HTMLElement): string | null {
   return chip.shadowRoot?.activeElement?.getAttribute('part') ?? null;
 }
 
-expectLocaleFallback('ar-EG', ['showMoreCollapsed', 'showMoreCount']);
+expectLocaleFallback('ar-EG', ['showMoreCollapsed', 'showMoreOverflowLabel']);
 
 it('lets a consumer ::part(overflow-indicator) override win while expanded', async () => {
   const style = document.createElement('style');
@@ -770,14 +770,14 @@ it('keeps the overflow indicator at the shared minimum target size', async () =>
 
 it('localizes the overflow-toggle aria-label and collapsed text via this.localize(), not hardcoded English', async () => {
   const el = (await fixture(html`
-    <lr-chip-group max-visible="1" .strings=${{ showMoreCount: '{count} de plus', showLess: 'Voir moins' }}>
+    <lr-chip-group max-visible="1" .strings=${{ showMoreOverflowLabel: '{visible} — {count} de plus', showLess: 'Voir moins' }}>
       <lr-chip>A</lr-chip>
       <lr-chip>B</lr-chip>
       <lr-chip>C</lr-chip>
     </lr-chip-group>
   `)) as LyraChipGroup;
   const toggle = el.shadowRoot!.querySelector('[part="overflow-indicator"]') as HTMLButtonElement;
-  expect(toggle.getAttribute('aria-label')).to.equal('+2 2 de plus');
+  expect(toggle.getAttribute('aria-label')).to.equal('+2 — 2 de plus');
   toggle.click();
   await el.updateComplete;
   expect(toggle.getAttribute('aria-label')).to.equal('Voir moins');

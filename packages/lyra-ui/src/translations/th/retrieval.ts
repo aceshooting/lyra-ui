@@ -18,6 +18,7 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'คำอธิบายกราฟ',
   entityChipWithType: '{label}, {type}',
   showMore: 'แสดงเพิ่มเติม',
+  showMoreCount: 'แสดงอีก {count} รายการ',
   embeddingExplorerSpatialBounds: 'แนวนอน {minX} ถึง {maxX}; แนวตั้ง {minY} ถึง {maxY}',
   embeddingExplorerSpatialSummary: '{total} จุดในแหล่งข้อมูลทั้งหมด ({global}) {matched} จุดในพื้นที่แสดงผล ({viewport}) บริเวณความหนาแน่นนับจุดที่ตรงกันทั้งหมด; จุดซ้อนทับไม่เพิ่มจำนวนเหล่านี้',
   embeddingExplorerSpatialBin: '{count} จุดในบริเวณความหนาแน่น: {bounds}',

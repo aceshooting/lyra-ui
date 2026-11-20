@@ -4620,8 +4620,8 @@ disconnect and reconnect.
 the badge was activated by click or Enter/Space. Non-cancelable, purely informational: the
 component keeps rendering the same collapsed stack, and a host typically wires this to its own
 popover/dialog listing the hidden members. There is no `expanded` state and no `aria-expanded`.
-The badge shows `showMoreCollapsed` (`+2`), and its accessible name starts with that visible text,
-followed by `showMoreCount` (`+2 Show 2 more`).
+The badge shows `showMoreCollapsed` (`+2`). Its accessible name is `showMoreOverflowLabel`
+(`+2 Show 2 more`), whose `{visible}` placeholder keeps that visible text at the start.
 
 **Slots:** default slot — direct or forwarded `<lr-avatar>` elements. Other elements are ignored
 and remain untouched. Author-hidden/inert avatars do not consume visible capacity. Excess eligible

@@ -44,10 +44,12 @@ const strings: LyraLocaleStrings = {
   attachmentUploadingIndeterminate: 'กำลังอัปโหลด…',
   attachmentUploadFailed: 'อัปโหลดไม่สำเร็จ',
   fileInputDefaultLabel: 'วางไฟล์ที่นี่หรือคลิกเพื่อเลือก',
-  fileInputAcceptedOne: 'เพิ่มไฟล์ {count} ไฟล์แล้ว',
-  fileInputAcceptedMany: 'เพิ่มไฟล์ {count} ไฟล์แล้ว',
-  fileInputRejectedOne: 'ปฏิเสธไฟล์ {count} ไฟล์',
-  fileInputRejectedMany: 'ปฏิเสธไฟล์ {count} ไฟล์',
+  fileInputAccepted: {
+    other: 'เพิ่มไฟล์ {count} ไฟล์แล้ว',
+  },
+  fileInputRejected: {
+    other: 'ปฏิเสธไฟล์ {count} ไฟล์',
+  },
   fileInputFolderRejected: 'ไม่รองรับโฟลเดอร์ที่นี่',
   fileInputRejectedType: '{filename}: ไม่รองรับไฟล์ชนิดนี้',
   fileInputRejectedSize: '{filename}: ไฟล์นี้มีขนาดใหญ่เกินไป',

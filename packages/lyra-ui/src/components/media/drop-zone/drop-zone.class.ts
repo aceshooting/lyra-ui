@@ -22,7 +22,7 @@ import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './drop-zone.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_dropzoneRejectedType, LYRA_DEFAULT_dropzoneReleaseToAdd, LYRA_DEFAULT_fileInputAcceptedMany, LYRA_DEFAULT_fileInputAcceptedOne, LYRA_DEFAULT_fileInputFolderRejected, LYRA_DEFAULT_fileInputRejectedCount, LYRA_DEFAULT_fileInputRejectedLimit, LYRA_DEFAULT_fileInputRejectedMany, LYRA_DEFAULT_fileInputRejectedMaxFiles, LYRA_DEFAULT_fileInputRejectedMaxTotalSize, LYRA_DEFAULT_fileInputRejectedOne, LYRA_DEFAULT_fileInputRejectedRead, LYRA_DEFAULT_fileInputRejectedSize, LYRA_DEFAULT_fileInputRejectedType, LYRA_DEFAULT_fileInputRejectionsMore } from '../../../internal/default-strings/media.generated.js';
+import { LYRA_DEFAULT_dropzoneRejectedType, LYRA_DEFAULT_dropzoneReleaseToAdd, LYRA_DEFAULT_fileInputAccepted, LYRA_DEFAULT_fileInputFolderRejected, LYRA_DEFAULT_fileInputRejected, LYRA_DEFAULT_fileInputRejectedCount, LYRA_DEFAULT_fileInputRejectedLimit, LYRA_DEFAULT_fileInputRejectedMaxFiles, LYRA_DEFAULT_fileInputRejectedMaxTotalSize, LYRA_DEFAULT_fileInputRejectedRead, LYRA_DEFAULT_fileInputRejectedSize, LYRA_DEFAULT_fileInputRejectedType, LYRA_DEFAULT_fileInputRejectionsMore } from '../../../internal/default-strings/media.generated.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -136,15 +136,13 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
     details: LYRA_DEFAULT_details,
     dropzoneRejectedType: LYRA_DEFAULT_dropzoneRejectedType,
     dropzoneReleaseToAdd: LYRA_DEFAULT_dropzoneReleaseToAdd,
-    fileInputAcceptedMany: LYRA_DEFAULT_fileInputAcceptedMany,
-    fileInputAcceptedOne: LYRA_DEFAULT_fileInputAcceptedOne,
+    fileInputAccepted: LYRA_DEFAULT_fileInputAccepted,
     fileInputFolderRejected: LYRA_DEFAULT_fileInputFolderRejected,
+    fileInputRejected: LYRA_DEFAULT_fileInputRejected,
     fileInputRejectedCount: LYRA_DEFAULT_fileInputRejectedCount,
     fileInputRejectedLimit: LYRA_DEFAULT_fileInputRejectedLimit,
-    fileInputRejectedMany: LYRA_DEFAULT_fileInputRejectedMany,
     fileInputRejectedMaxFiles: LYRA_DEFAULT_fileInputRejectedMaxFiles,
     fileInputRejectedMaxTotalSize: LYRA_DEFAULT_fileInputRejectedMaxTotalSize,
-    fileInputRejectedOne: LYRA_DEFAULT_fileInputRejectedOne,
     fileInputRejectedRead: LYRA_DEFAULT_fileInputRejectedRead,
     fileInputRejectedSize: LYRA_DEFAULT_fileInputRejectedSize,
     fileInputRejectedType: LYRA_DEFAULT_fileInputRejectedType,

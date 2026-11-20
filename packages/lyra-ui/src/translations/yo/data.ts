@@ -16,7 +16,13 @@ const strings: LyraLocaleStrings = {
   sequenceStripCellKeyboardHelp: 'Tẹ Enter tàbí Space láti mú ohun yìí ṣiṣẹ́.',
   sequenceStripUnnamedCategory: 'Ẹ̀ka tí kò ní orúkọ',
   sequenceStripBucketLabel: '{label}, àwọn ohun {start} sí {end}',
-  sequenceStripBucketSummary: 'Àwọn ohun {items} nínú ààlà {ranges}',
+  sequenceStripBucketSummary: '{items} nínú {ranges}',
+  sequenceStripItemCount: {
+    other: 'ohun {count}',
+  },
+  sequenceStripRangeCount: {
+    other: 'ààlà {count}',
+  },
   noColumns: 'A kò ṣètò ọ̀wọ̀n kankan',
   dataGridColumnMenu: 'Àwọn àṣàyàn fún {label}',
   dataGridPinStart: 'So {label} mọ́ ìbẹ̀rẹ̀',
@@ -43,8 +49,15 @@ const strings: LyraLocaleStrings = {
   paginationInvalidPageUnknownTotal: 'Tẹ nọ́mbà ojúewé odidi tó jẹ́ 1 tàbí jù bẹ́ẹ̀ lọ.',
   paginationEmptySummary: '{total} {itemLabel}',
   paginationAppliedUnknownTotal: 'Ojúewé {page}',
-  trendOf: 'Àṣà ìyípadà iye {count}, èyí tó kẹ́yìn {value}',
-  wordCloud: 'Àwọsánmọ̀ ọ̀rọ̀ {count} {word}',
+  trendOf: {
+    other: 'Àṣà ìyípadà iye {count}, èyí tó kẹ́yìn {value}',
+  },
+  wordCloud: {
+    other: 'Àwọsánmọ̀ ọ̀rọ̀ {count}',
+  },
+  wordCloudWordLimit: {
+    other: '{start}–{end} nínú ọ̀rọ̀ {total}',
+  },
   wordCloudLegend: 'Kókó àwọ̀ àwọsánmọ̀ ọ̀rọ̀',
   wordCloudWordAnnouncement: '{text}, {weight}',
   wordCloudPreparedSummary: 'Àkótán ọ̀rọ̀: a dá {retainedCount} nínú ọ̀rọ̀ tó péye {validCount} sí ({invalidCount} kò péye); ìwọ̀n tí a dá sí jẹ́ {retainedWeight} nínú {totalWeight}.',
@@ -57,8 +70,6 @@ const strings: LyraLocaleStrings = {
   heatmapSourceMean: 'ìpín àpapọ̀',
   heatmapSourceMin: 'iye tó kéré jù',
   heatmapSourceMax: 'iye tó pọ̀ jù',
-  wordCloudWord: 'ọ̀rọ̀',
-  wordCloudWords: 'ọ̀rọ̀',
   calendarLabel: 'Kàlẹ́ńdà',
   calendarEmpty: 'Kò sí ìṣẹ̀lẹ̀ ní oṣù yìí.',
   calendarEventsOverflow: '+{n} sí i',
@@ -132,7 +143,9 @@ const strings: LyraLocaleStrings = {
   flowSourceRevealTargetNode: 'Lọ si ipade ibi-afẹde {node} ti {edge}',
   flowSourceRecordMatches: 'Awọn igbasilẹ ti o baamu: {count}',
   flowRunStatusLabel: 'Ipò ìṣiṣẹ́',
-  flowRunSummary: 'Ìgbésẹ̀ {done} nínú {total} parí',
+  flowRunSummary: {
+    other: 'Ìgbésẹ̀ {done} nínú {total} parí',
+  },
   flowRunStepStatus: '{label}: {status}',
   flowRunStatusCount: '{status}: {count}',
   queryBuilderLabel: 'Olùkọ́ query',
