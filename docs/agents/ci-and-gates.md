@@ -151,8 +151,11 @@ gate. Read `EXEMPTIONS` for the current list and reasons.
   `enrollments` (`{ module, exportName, kind, document, family, locator }`: a new public contract and
   its authored locator) and `relocations` (`{ module, toModule, exportName, kind,
   expectedFingerprint }`, moving a declaration into a shared module while keeping its public
-  re-exports) and `removals` (`{ module, exportName, kind, expectedFingerprint }`: a documented owner
-  whose declaration is no longer exported anywhere). At least one owner is required, and the authored documentation is committed and
+  re-exports), `removals` (`{ module, exportName, kind, expectedFingerprint }`: a documented owner
+  whose declaration is no longer exported anywhere) and `retiredRoutes` (canonical `src/**/*.ts`
+  paths of deleted modules: each must be recorded by a documented owner, reach no live owner and no
+  longer exist; it is dropped from every owner before the other operations, keeping requests for a
+  removed registration layer within the dispatch input limit). At least one owner is required, and the authored documentation is committed and
   reviewed first. After canonical regeneration the updater derives fingerprints and routes with the
   existing scanner, preserves existing routes and locators, and rejects legacy owners, stale
   preimages, unchanged requests and unrelated drift; the complete census and the authored docs must

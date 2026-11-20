@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { collectGaps } from '../packages/lyra-ui/scripts/llms-gaps.mjs';
 import {
@@ -21,6 +21,27 @@ export function prepareSourceContractBaseline(census, baseline, request) {
   const documented = new Map(next.documented.map(owner => [sourceContractKey(owner), owner]));
   const legacy = new Set(next.legacy.map(sourceContractKey));
   assert.equal(documented.size, next.documented.length, 'Duplicate documented source-contract owner');
+  // A retired route is a deleted module that re-exported documented owners. It must be recorded,
+  // must no longer reach any live owner, and is dropped from every owner before the other operations.
+  const retiredRoutes = new Set(request.retiredRoutes ?? []);
+  const liveRoutes = new Set(census.flatMap(contract => contract.routes));
+  for (const route of retiredRoutes) {
+    assert.ok(!liveRoutes.has(route), `Retired source-contract route is still live: ${route}`);
+    assert.ok(next.documented.some(owner => owner.routes.includes(route)),
+      `Retired source-contract route is not recorded: ${route}`);
+  }
+  for (const entry of [...request.updates, ...(request.relocations ?? [])]) {
+    for (const route of [...(entry.additionalRoutes ?? []), ...(entry.removedRoutes ?? [])]) {
+      assert.ok(!retiredRoutes.has(route), `A retired source-contract route cannot also be requested per owner: ${route}`);
+    }
+  }
+  if (retiredRoutes.size > 0) {
+    for (const owner of next.documented) {
+      if (!owner.routes.some(route => retiredRoutes.has(route))) continue;
+      owner.routes = owner.routes.filter(route => !retiredRoutes.has(route));
+      assert.ok(owner.routes.length > 0, `Source-contract owner would keep no routes ${sourceContractKey(owner)}`);
+    }
+  }
   for (const relocation of request.relocations ?? []) {
     const key = sourceContractKey(relocation);
     const targetKey = sourceContractKey({ ...relocation, module: relocation.toModule });
@@ -109,6 +130,9 @@ export function writePreparedSourceContracts(root, request) {
   const file = join(packageDir, 'scripts/fixtures/llms-source-contracts.json');
   const before = readFileSync(file, 'utf8');
   const baseline = JSON.parse(before);
+  for (const route of request.retiredRoutes ?? []) {
+    assert.ok(!existsSync(join(packageDir, route)), `Retired source-contract route still exists: ${route}`);
+  }
   const census = sourceContractCensus(packageDir);
   const next = prepareSourceContractBaseline(census, baseline, request);
   // Read the real authored documents and the regenerated manifest/shared assembly. No request can
@@ -116,7 +140,9 @@ export function writePreparedSourceContracts(root, request) {
   assert.deepEqual(collectGaps(undefined, null, { census, baseline: next }), [],
     'Authored documentation has unresolved source-contract or component gaps');
   const relocations = request.relocations ?? [];
+  const retiredRoutes = new Set(request.retiredRoutes ?? []);
   const requested = new Set([
+    ...baseline.documented.filter(owner => owner.routes.some(route => retiredRoutes.has(route))),
     ...request.updates,
     ...request.enrollments,
     ...relocations.map(relocation => ({ ...relocation, module: relocation.toModule })),

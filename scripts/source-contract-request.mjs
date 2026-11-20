@@ -36,15 +36,22 @@ function assertLocator(locator) {
 export function assertSourceContractRequest(request) {
   const hasRelocations = request != null && Object.hasOwn(request, 'relocations');
   const hasRemovals = request != null && Object.hasOwn(request, 'removals');
+  const hasRetiredRoutes = request != null && Object.hasOwn(request, 'retiredRoutes');
   exactKeys(request, ['schemaVersion', 'updates', 'enrollments', ...(hasRelocations ? ['relocations'] : []),
-    ...(hasRemovals ? ['removals'] : [])], 'Source-contract request');
+    ...(hasRemovals ? ['removals'] : []), ...(hasRetiredRoutes ? ['retiredRoutes'] : [])], 'Source-contract request');
+  if (hasRetiredRoutes) {
+    assert.ok(Array.isArray(request.retiredRoutes) && request.retiredRoutes.length > 0,
+      'Retired source-contract routes must be a nonempty array');
+    request.retiredRoutes.forEach(route => sourcePath(route, 'src/', '.ts', 'Retired contract route'));
+    assert.equal(new Set(request.retiredRoutes).size, request.retiredRoutes.length, 'Duplicate retired source-contract route');
+  }
   assert.equal(request.schemaVersion, 1, 'Source-contract request schemaVersion must be 1');
   const relocations = hasRelocations ? request.relocations : [];
   const removals = hasRemovals ? request.removals : [];
   assert.ok(Array.isArray(request.updates) && Array.isArray(request.enrollments) && Array.isArray(relocations) &&
     Array.isArray(removals), 'Source-contract updates, enrollments, relocations and removals must be arrays');
-  assert.ok(request.updates.length + request.enrollments.length + relocations.length + removals.length > 0,
-    'Source-contract request must name owners');
+  assert.ok(request.updates.length + request.enrollments.length + relocations.length + removals.length +
+    (hasRetiredRoutes ? request.retiredRoutes.length : 0) > 0, 'Source-contract request must name owners');
   const owners = new Set();
   for (const [operation, entries] of [
     ['update', request.updates], ['enrollment', request.enrollments], ['relocation', relocations],

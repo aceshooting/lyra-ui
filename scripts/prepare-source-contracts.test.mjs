@@ -1017,3 +1017,68 @@ for (const [name, change] of [
     assert.deepEqual(data, before);
   });
 }
+
+const retiredRoute = 'src/components/forms/example/example.ts';
+
+function retiredRouteFixture() {
+  const data = fixture();
+  for (const entry of data.baseline.documented) entry.routes = [...entry.routes, retiredRoute];
+  data.request.retiredRoutes = [retiredRoute];
+  return data;
+}
+
+test('the parser accepts retired routes, alone or beside owner operations', () => {
+  const { request } = retiredRouteFixture();
+  assert.deepEqual(parse(request), request);
+  assert.throws(() => parse(request, 'release'));
+  const retiredOnly = { schemaVersion: 1, updates: [], enrollments: [], retiredRoutes: [retiredRoute] };
+  assert.deepEqual(parse(retiredOnly), retiredOnly);
+});
+
+test('retired routes reject malformed lists', () => {
+  for (const retiredRoutes of [[], null, retiredRoute, [retiredRoute, retiredRoute], ['../src/lyra.ts'], ['src/lyra.js'], ['lib/x.ts']]) {
+    rejectRequest(request => { request.retiredRoutes = retiredRoutes; });
+  }
+});
+
+test('a retired route is dropped from every documented owner that recorded it', () => {
+  const data = retiredRouteFixture();
+  const before = structuredClone(data);
+  deepFreeze(data);
+  const candidate = prepareSourceContractBaseline(data.census, data.baseline, data.request);
+  for (const entry of candidate.documented) assert.ok(!entry.routes.includes(retiredRoute), entry.exportName);
+  const keeper = candidate.documented.find(entry => entry.exportName === 'LyraKeeperEntry');
+  assert.deepEqual(keeper.routes, ['src/lyra.ts', owner('keeper').module]);
+  assert.equal(keeper.fingerprint, fingerprints.unchanged);
+  assert.deepEqual(keeper.annotations, before.baseline.documented[0].annotations);
+  const updated = candidate.documented.find(entry => entry.exportName === 'LyraExampleEntry');
+  assert.equal(updated.fingerprint, fingerprints.current);
+  assert.deepEqual(data, before);
+});
+
+for (const [name, change, pattern] of [
+  ['a route that still reaches a live owner', data => {
+    data.census.find(entry => entry.exportName === 'LyraKeeperEntry').routes.push(retiredRoute);
+  }, /Retired source-contract route is still live/u],
+  ['a route no documented owner recorded', data => {
+    data.request.retiredRoutes = ['src/components/forms/other/other.ts'];
+  }, /Retired source-contract route is not recorded/u],
+  ['a route also requested on one owner', data => {
+    data.request.updates[0].removedRoutes = [retiredRoute];
+  }, /cannot also be requested per owner/u],
+  ['an owner left without routes', data => {
+    data.baseline.documented[0].routes = [retiredRoute];
+  }, /would keep no routes/u],
+  ['an owner whose remaining routes still drifted', data => {
+    data.census.find(entry => entry.exportName === 'LyraKeeperEntry').routes.pop();
+  }, /unresolved gaps/u],
+]) {
+  test(`retired routes reject ${name} without mutating inputs`, () => {
+    const data = retiredRouteFixture();
+    change(data);
+    const before = structuredClone(data);
+    deepFreeze(data);
+    assert.throws(() => prepareSourceContractBaseline(data.census, data.baseline, data.request), pattern);
+    assert.deepEqual(data, before);
+  });
+}
