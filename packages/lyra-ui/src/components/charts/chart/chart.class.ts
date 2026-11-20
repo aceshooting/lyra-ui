@@ -141,6 +141,7 @@ export type {
   LyraChartSeries,
 } from './chart-types.js';
 import { isRepeatedActivationKey } from '../../../internal/list-navigation.js';
+import { chartKeyboardStep, spatialBinAt, spatialKeyboardItems } from './chart-spatial-model.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chartAnnotationsUnavailable, LYRA_DEFAULT_chartAxisTotal, LYRA_DEFAULT_chartBubblePointCoordinates, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataLabelsUnavailable, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartInputLimit, LYRA_DEFAULT_chartLabeledPoint, LYRA_DEFAULT_chartLegend, LYRA_DEFAULT_chartMissingLibrary, LYRA_DEFAULT_chartPlotSampled, LYRA_DEFAULT_chartPointCoordinates, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartPreparedSummaryZoom, LYRA_DEFAULT_chartPrimaryAxis, LYRA_DEFAULT_chartRenderUnavailable, LYRA_DEFAULT_chartSecondaryAxis, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartSpatialBin, LYRA_DEFAULT_chartSpatialDensityLegend, LYRA_DEFAULT_chartSpatialHidden, LYRA_DEFAULT_chartSpatialPoint, LYRA_DEFAULT_chartSpatialRadiusDomain, LYRA_DEFAULT_chartSpatialSummary, LYRA_DEFAULT_chartStackTotalsUnavailable, LYRA_DEFAULT_chartSummaryEmpty, LYRA_DEFAULT_chartSummaryWithData, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_chartTypeBar, LYRA_DEFAULT_chartTypeBubble, LYRA_DEFAULT_chartTypeDoughnut, LYRA_DEFAULT_chartTypeLine, LYRA_DEFAULT_chartTypePie, LYRA_DEFAULT_chartTypePolarArea, LYRA_DEFAULT_chartTypeRadar, LYRA_DEFAULT_chartTypeScatter, LYRA_DEFAULT_chartValuePercentageLabel, LYRA_DEFAULT_chartZoomUnavailable, LYRA_DEFAULT_liteChartMarkSummary } from '../../../internal/default-strings/charts.generated.js';
@@ -1127,24 +1128,19 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       this.spatialKeyboardItems().some(item => 'id' in item && item.id === id) && this.renderRoot.querySelector(':focus') === canvas;
   }
   private spatialKeyboardItems(): readonly (LyraSpatialChartPoint | LyraSpatialBin)[] {
-    const hidden = this.canonicalHiddenDatasets() ?? [];
-    return [...this.spatialSeriesPoints(true).flatMap((points, index) => hidden.includes(index) ? [] : points), ...(this.spatial.result?.bins ?? [])];
+    return spatialKeyboardItems(this.spatialSeriesPoints(true), this.canonicalHiddenDatasets() ?? [], this.spatial.result?.bins ?? []);
   }
   private spatialKeyDown(event: KeyboardEvent): void {
     if (!this.spatialGuard()()) return;
     const items = this.spatialKeyboardItems(); if (!items.length) return;
-    let next = Math.min(this.spatialKeyboardIndex, items.length - 1);
+    const index = Math.min(this.spatialKeyboardIndex, items.length - 1);
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault(); if (event.repeat) return;
-      const item = items[next]!; if ('id' in item) this.activateSpatialPoint(item); else this.activateSpatialBin(item);
+      const item = items[index]!; if ('id' in item) this.activateSpatialPoint(item); else this.activateSpatialBin(item);
       return;
     }
-    const rtl = this.effectiveDirection === 'rtl';
-    if (event.key === 'Home') next = 0;
-    else if (event.key === 'End') next = items.length - 1;
-    else if (event.key === (rtl ? 'ArrowLeft' : 'ArrowRight') || event.key === 'ArrowDown') next = Math.min(items.length - 1, next + 1);
-    else if (event.key === (rtl ? 'ArrowRight' : 'ArrowLeft') || event.key === 'ArrowUp') next = Math.max(0, next - 1);
-    else return;
+    const next = chartKeyboardStep(event.key, this.effectiveDirection === 'rtl', index, items.length);
+    if (next === undefined) return;
     event.preventDefault(); this.spatialKeyboardIndex = next;
     this.showSpatialKeyboardCue();
     const item = items[next]!; this.keyboardDatumAnnouncement = 'id' in item ? this.spatialPointText(item) : this.spatialBinText(item);
@@ -3950,15 +3946,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       this.activateDatum(datums[this.keyboardDatumIndex]!);
       return;
     }
-    const rtl = this.effectiveDirection === 'rtl';
-    const forward = rtl ? 'ArrowLeft' : 'ArrowRight';
-    const backward = rtl ? 'ArrowRight' : 'ArrowLeft';
-    let next = this.keyboardDatumIndex;
-    if (event.key === forward || event.key === 'ArrowDown') next = Math.min(datums.length - 1, next + 1);
-    else if (event.key === backward || event.key === 'ArrowUp') next = Math.max(0, next - 1);
-    else if (event.key === 'Home') next = 0;
-    else if (event.key === 'End') next = datums.length - 1;
-    else return;
+    const next = chartKeyboardStep(event.key, this.effectiveDirection === 'rtl', this.keyboardDatumIndex, datums.length);
+    if (next === undefined) return;
     event.preventDefault();
     this.keyboardDatumIndex = next;
     this.publishSyncDatum(datums[next]!);
@@ -4458,8 +4447,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         const point = hit && groups[hit.datasetIndex]?.[hit.index];
         if (point && !this.canonicalHiddenDatasets()?.includes(hit!.datasetIndex)) { this.activateSpatialPoint(point); return; }
         if (!chart.chartArea || typeof event.x !== 'number' || typeof event.y !== 'number') return;
-        const bin = bins.find(bin => { const a = toPixel(chart, bin.bounds.minX, bin.bounds.maxY), b = toPixel(chart, bin.bounds.maxX, bin.bounds.minY);
-          return event.x! >= Math.min(a.x, b.x) - (a.x === b.x ? 2 : 0) && event.x! <= Math.max(a.x, b.x) + (a.x === b.x ? 2 : 0) && event.y! >= a.y - (a.y === b.y ? 2 : 0) && event.y! <= b.y + (a.y === b.y ? 2 : 0); });
+        const bin = spatialBinAt(bins, event.x, event.y, (x, y) => toPixel(chart, x, y));
         if (bin) this.activateSpatialBin(bin);
       },
       plugins: { legend: { display: false }, tooltip: { enabled: !this.withoutTooltip, backgroundColor: theme.tooltipBg, titleColor: theme.tooltipText, bodyColor: theme.tooltipText,

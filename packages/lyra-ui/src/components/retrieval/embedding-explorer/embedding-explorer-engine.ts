@@ -1,9 +1,7 @@
 import { createEngine3dLoader, type Engine3dInstance } from '../../../internal/engine-3d-loader.js';
 import { Engine3dSelection, engine3dFailureReason, webgl2Available, type Engine3dFallbackDetail, type Engine3dFallbackReason, type Engine3dPreference } from '../../../internal/engine-3d.js';
-import { readCanvasRgba, resolveCanvasColor, toRgbaString } from '../../../internal/canvas-color.js';
-import { finiteRange } from '../../../internal/numbers.js';
 import { tag } from '../../../internal/prefix.js';
-import { observeAdmission, watchEngineStyle } from '../../../internal/engine-admission.js';
+import { ENGINE_CHART_PALETTE, engineStyle, observeAdmission, watchEngineStyle } from '../../../internal/engine-admission.js';
 import type { EmbeddingRows } from './embedding-explorer-data.js';
 
 export const embeddingPointsLoader = createEngine3dLoader({
@@ -211,21 +209,6 @@ export class EmbeddingEngineController {
   }
 
   private style(): unknown {
-    const view = this.host.ownerDocument.defaultView!;
-    const computed = view.getComputedStyle(this.host);
-    const color = (name: string): string => {
-      const resolved = resolveCanvasColor(this.host, `var(${name})`, computed.color);
-      const rgba = readCanvasRgba(this.host.ownerDocument, resolved);
-      return rgba ? toRgbaString(rgba) : resolved;
-    };
-    return {
-      background: color('--lr-color-surface'), foreground: color('--lr-color-text'), muted: color('--lr-color-text-quiet'),
-      accent: color('--lr-color-brand'), focus: color('--lr-focus-ring-color'),
-      palette: Array.from({ length: 8 }, (_, index) => color(`--lr-color-chart-${index + 1}`)),
-      fontFamily: computed.fontFamily, fontSize: finiteRange(Number.parseFloat(computed.fontSize), 14, 1, 128),
-      pointSize: 12, lineWidth: 1, devicePixelRatio: finiteRange(view.devicePixelRatio, 1, 0.25, 4),
-      reducedMotion: view.matchMedia('(prefers-reduced-motion: reduce)').matches,
-      forcedColors: view.matchMedia('(forced-colors: active)').matches,
-    };
+    return engineStyle(this.host, ENGINE_CHART_PALETTE, 12, 1);
   }
 }

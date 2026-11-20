@@ -55,6 +55,11 @@ if (typeof buttonGranularBudgetKilobytes !== 'number' || !Number.isSafeInteger(b
 const optionalPeers = Object.keys(uiPackageJson.peerDependencies ?? {})
   .filter((name) => uiPackageJson.peerDependenciesMeta?.[name]?.optional === true)
   .sort();
+// The peer-compatibility authority records the exact toolchain the workspace lockfile resolves;
+// dependency refreshes rewrite it, so the fixtures below never drift onto an older bundler.
+const { toolchain: fixtureToolchain } = JSON.parse(
+  await readFile(join(root, 'scripts', 'peer-compatibility-profiles.json'), 'utf8'),
+);
 
 /**
  * Optional peers the npm `--strict-peer-deps` fixture actually installs, so their declared ranges
@@ -322,8 +327,8 @@ const bundleEntries = {
     fixture: 'optional',
     // MapLibre 6.19.0 geolocation controls retain their required camera and terrain math.
     // With worker codecs and unused projection setup excluded from control imports, the
-    // complete graph measures 2,595,501 raw bytes across 52 files; initial gzip stays 439,972.
-    // The next 64-byte boundary leaves 19 bytes of raw headroom.
+    // complete graph measures 2,593,782 raw bytes across 40 files with the lockfile's Vite.
+    // The ceiling is unchanged and leaves 1,738 bytes of raw headroom.
     maxRawBytes: 2_595_520,
   },
   graph: {
@@ -613,8 +618,8 @@ async function writeFixture(
     // resolve a newly-published, mutually-incompatible Vite/TypeScript pair before any Lyra
     // declaration or bundle assertion runs, turning this contract test into an upstream
     // resolver lottery. Pin the exact toolchain already exercised by this repository's lockfile.
-    typescript: '7.0.2',
-    vite: '8.1.5',
+    typescript: fixtureToolchain.typescript,
+    vite: fixtureToolchain.vite,
   };
   if (withOptionalPeers) {
     Object.assign(devDependencies, {

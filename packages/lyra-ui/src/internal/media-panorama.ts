@@ -7,8 +7,7 @@ import { shouldIgnoreNavigationKey } from './list-navigation.js';
 import { createEngine3dLoader, type Engine3dInstance } from './engine-3d-loader.js';
 import { Engine3dSelection, ENGINE_3D_REASON_MESSAGE, ENGINE_3D_SHOWING_MESSAGE, engine3dFailureReason, webgl2Available, type Engine3dFallbackDetail, type Engine3dFallbackReason } from './engine-3d.js';
 import { AnnouncementSinkController } from './announcer.js';
-import { observeAdmission, watchEngineStyle } from './engine-admission.js';
-import { readCanvasRgba, resolveCanvasColor, toRgbaString } from './canvas-color.js';
+import { engineStyle, observeAdmission, watchEngineStyle } from './engine-admission.js';
 import type { LyraMessageKey } from './localization.js';
 import { tag } from './prefix.js';
 
@@ -201,17 +200,7 @@ export class PanoramaController {
   }
 
   private style(): unknown {
-    const view = this.host.ownerDocument.defaultView!;
-    const computed = view.getComputedStyle(this.host);
-    const doc = this.host.ownerDocument;
-    const color = (name: string) => {
-      const value = resolveCanvasColor(this.host, `var(${name})`, computed.color);
-      const rgba = readCanvasRgba(doc, value);
-      return rgba ? toRgbaString(rgba) : value;
-    };
-    return { background: color('--lr-color-surface'), foreground: color('--lr-color-text'), muted: color('--lr-color-text-quiet'), accent: color('--lr-color-brand'), focus: color('--lr-focus-ring-color'), palette: [color('--lr-color-brand')],
-      fontFamily: computed.fontFamily, fontSize: finiteRange(Number.parseFloat(computed.fontSize), 14, 1, 128), pointSize: 24, lineWidth: 1,
-      devicePixelRatio: finiteRange(view.devicePixelRatio, 1, 0.25, 4), reducedMotion: view.matchMedia('(prefers-reduced-motion: reduce)').matches, forcedColors: view.matchMedia('(forced-colors: active)').matches };
+    return engineStyle(this.host, ['--lr-color-brand'], 24, 1);
   }
 
   private activate(index: number): void {

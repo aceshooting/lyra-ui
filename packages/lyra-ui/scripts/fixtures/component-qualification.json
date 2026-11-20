@@ -26563,7 +26563,7 @@
           "evidence": [
             {
               "file": "src/components/data/graph-query-builder/graph-query-builder.class.ts",
-              "line": 941,
+              "line": 947,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -29853,7 +29853,7 @@
           "evidence": [
             {
               "file": "src/components/utility/json-viewer/json-viewer.class.ts",
-              "line": 698,
+              "line": 704,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

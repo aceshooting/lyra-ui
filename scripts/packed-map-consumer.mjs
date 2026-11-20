@@ -4,6 +4,8 @@ import { join, relative } from 'node:path';
 import { attwCommandArguments } from './packed-attw.mjs';
 import { packedManifest } from './packed-tarball-input.mjs';
 
+const { toolchain } = JSON.parse(await readFile(new URL('./peer-compatibility-profiles.json', import.meta.url), 'utf8'));
+
 export function validatePackedMapManifest(manifest) {
   assert.equal(manifest.name, '@aceshooting/lyra-map');
   const ranges = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies']
@@ -24,7 +26,7 @@ export async function verifyPackedMapConsumer({ workspace, mapTarball, run, pnpm
   await writeFile(join(fixture, 'package.json'), JSON.stringify({
     name: 'lr-packed-map-consumer', private: true, type: 'module',
     dependencies: { '@aceshooting/lyra-map': `file:${relative(fixture, mapTarball)}` },
-    devDependencies: { vite: '8.3.4', typescript: '7.0.2', '@types/node': '26.6.5' },
+    devDependencies: { vite: toolchain.vite, typescript: toolchain.typescript, '@types/node': '26.6.5' },
   }));
   await writeFile(join(fixture, 'load.mjs'), `import { Map, prepareStyle } from '@aceshooting/lyra-map';
 import { lyraMapWorkerPlugin } from '@aceshooting/lyra-map/vite';

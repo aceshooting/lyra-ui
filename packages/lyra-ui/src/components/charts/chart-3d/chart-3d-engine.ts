@@ -2,8 +2,7 @@ import { OwnedFrame } from '../../../internal/owned-timer.js';
 import type { ReactiveControllerHost } from 'lit';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { isAccessibilityVisible } from '../../../internal/accessibility-visibility.js';
-import { readCanvasRgba, resolveCanvasColor, toRgbaString } from '../../../internal/canvas-color.js';
-import { ENGINE_STYLE_MEDIA_QUERIES, observeAdmission } from '../../../internal/engine-admission.js';
+import { ENGINE_CHART_PALETTE, ENGINE_COLOR_TOKENS, ENGINE_STYLE_MEDIA_QUERIES, engineStyle, observeAdmission } from '../../../internal/engine-admission.js';
 import { createEngine3dLoader, type Engine3dInstance } from '../../../internal/engine-3d-loader.js';
 import {
   Engine3dSelection,
@@ -44,8 +43,7 @@ interface Chart3dEngineCallbacks {
   camera(camera: LyraChart3dCamera): void;
 }
 
-const paletteTokens = Array.from({ length: 8 }, (_, index) => `--lr-color-chart-${index + 1}`);
-const colorTokens = ['--lr-color-surface', '--lr-color-text', '--lr-color-text-quiet', '--lr-color-brand', '--lr-focus-ring-color', ...paletteTokens];
+const colorTokens = [...ENGINE_COLOR_TOKENS, ...ENGINE_CHART_PALETTE];
 
 /**
  * Owns the optional points renderer. Row identity, keyboard interaction and the accessible table
@@ -79,7 +77,6 @@ export class Chart3dEngineController {
   private styleSignature = '';
   private cachedStyle?: object;
   private readonly refreshFrame: OwnedFrame;
-  private readonly colors = new Map<string, string>();
 
   constructor(
     private readonly host: HTMLElement & ReactiveControllerHost,
@@ -117,7 +114,6 @@ export class Chart3dEngineController {
     this.cachedStyle = undefined;
     const engine = this.engine;
     this.engine = undefined;
-    this.colors.clear();
     this.refreshFrame.cancel();
     this.loading = this.ready = this.configured = this.attempted = this.contextLost = this.software = false;
     this.hover = -1;
@@ -379,39 +375,12 @@ export class Chart3dEngineController {
     // The probe carries the point-size and line-width tokens, so their units resolve live.
     const probe = this.host.shadowRoot?.querySelector('[data-style-probe]');
     const measured = probe ? view.getComputedStyle(probe) : computed;
-    const reducedMotion = view.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const forcedColors = view.matchMedia('(forced-colors: active)').matches;
     const signature = JSON.stringify([computed.color, computed.colorScheme, computed.fontSize, computed.fontFamily,
-      measured.inlineSize, measured.borderBlockStartWidth, view.devicePixelRatio, reducedMotion, forcedColors,
-      view.matchMedia('(prefers-color-scheme: dark)').matches, ...colorTokens.map(name => computed.getPropertyValue(name))]);
+      measured.inlineSize, measured.borderBlockStartWidth, view.devicePixelRatio,
+      ...ENGINE_STYLE_MEDIA_QUERIES.map((query) => view.matchMedia(query).matches), ...colorTokens.map(name => computed.getPropertyValue(name))]);
     if (this.cachedStyle && signature === this.styleSignature) return this.cachedStyle;
     this.styleSignature = signature;
-    const previous = new Map(this.colors);
-    this.colors.clear();
-    const color = (name: string): string => {
-      const resolved = resolveCanvasColor(this.host, `var(${name})`, computed.color);
-      let value = this.colors.get(resolved) ?? previous.get(resolved);
-      if (value === undefined) {
-        const rgba = readCanvasRgba(this.host.ownerDocument, resolved);
-        value = rgba ? toRgbaString(rgba) : resolved;
-      }
-      this.colors.set(resolved, value);
-      return value;
-    };
-    return this.cachedStyle = {
-      background: color('--lr-color-surface'),
-      foreground: color('--lr-color-text'),
-      muted: color('--lr-color-text-quiet'),
-      accent: color('--lr-color-brand'),
-      focus: color('--lr-focus-ring-color'),
-      palette: paletteTokens.map(color),
-      fontFamily: computed.fontFamily,
-      fontSize: finiteRange(Number.parseFloat(computed.fontSize), 14, 1, 128),
-      pointSize: finiteRange(Number.parseFloat(measured.inlineSize), 8, 1, 1024),
-      lineWidth: finiteRange(Number.parseFloat(measured.borderBlockStartWidth), 1, 0, 64),
-      devicePixelRatio: finiteRange(view.devicePixelRatio, 1, 0.25, 4),
-      reducedMotion,
-      forcedColors,
-    };
+    return this.cachedStyle = engineStyle(this.host, ENGINE_CHART_PALETTE, finiteRange(Number.parseFloat(measured.inlineSize), 8, 1, 1024),
+      finiteRange(Number.parseFloat(measured.borderBlockStartWidth), 1, 0, 64));
   }
 }

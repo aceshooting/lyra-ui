@@ -1,5 +1,8 @@
 import { composedParentElement, isAccessibilityVisible } from './accessibility-visibility.js';
 import { THEME_ATTRIBUTES } from './theme-observation.js';
+import { readCanvasRgba, resolveCanvasColor, toRgbaString } from './canvas-color.js';
+import { finiteRange } from './numbers.js';
+import type { EngineStyle } from './engine-style.js';
 
 /**
  * Attributes whose change on an element or a composed ancestor can hide, inert or reveal it
@@ -104,4 +107,31 @@ export function watchEngineStyle(host: Element, onChange: () => void): () => voi
     releaseAncestors();
     for (const list of lists) list.removeEventListener('change', onChange);
   };
+}
+
+/** The categorical chart tokens, in palette order. */
+export const ENGINE_CHART_PALETTE: readonly string[] = /* @__PURE__ */ Array.from({ length: 8 }, (_, index) => `--lr-color-chart-${index + 1}`);
+
+/** Background, foreground, muted, accent and focus, in that order. */
+export const ENGINE_COLOR_TOKENS: readonly string[] = ['--lr-color-surface', '--lr-color-text', '--lr-color-text-quiet', '--lr-color-brand', '--lr-focus-ring-color'];
+
+/**
+ * Resolves the theme colours, the `palette` tokens, the host's font, a bounded device pixel ratio
+ * and the motion/forced-colour preferences into the plain style an engine paints with. Each colour
+ * is resolved in the host's theme context, then read back to `rgba()` when the owner document's
+ * canvas can serialize it.
+ */
+export function engineStyle(host: Element, palette: readonly string[], pointSize: number, lineWidth: number): EngineStyle {
+  const view = host.ownerDocument.defaultView!;
+  const computed = view.getComputedStyle(host);
+  const color = (token: string): string => {
+    const css = resolveCanvasColor(host, `var(${token})`, computed.color);
+    const rgba = readCanvasRgba(host.ownerDocument, css);
+    return rgba ? toRgbaString(rgba) : css;
+  };
+  return { background: color('--lr-color-surface'), foreground: color('--lr-color-text'), muted: color('--lr-color-text-quiet'),
+    accent: color('--lr-color-brand'), focus: color('--lr-focus-ring-color'), palette: palette.map(color),
+    fontFamily: computed.fontFamily, fontSize: finiteRange(Number.parseFloat(computed.fontSize), 14, 1, 128), pointSize, lineWidth,
+    devicePixelRatio: finiteRange(view.devicePixelRatio, 1, 0.25, 4), reducedMotion: view.matchMedia(ENGINE_STYLE_MEDIA_QUERIES[0]).matches,
+    forcedColors: view.matchMedia(ENGINE_STYLE_MEDIA_QUERIES[1]).matches };
 }

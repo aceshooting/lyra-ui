@@ -69,9 +69,10 @@ test('the packed MapLibre v6 fixture resolves the exact qualified workspace engi
   const optionalCall = checkerSource.match(/^    await (writeFixture\(optionalFixture,[^\n]+\));$/mu)?.[1];
   assert.ok(start >= 0 && end > start && optionalCall);
   let fixtureManifest;
-  const writeFixture = new Function('writeFile', 'join', 'relative', 'uiPackageJson', 'FIXTURE_OPTIONAL_PEERS',
+  const { toolchain } = JSON.parse(await readFile(new URL('peer-compatibility-profiles.json', import.meta.url), 'utf8'));
+  const writeFixture = new Function('writeFile', 'join', 'relative', 'uiPackageJson', 'FIXTURE_OPTIONAL_PEERS', 'fixtureToolchain',
     `return (${checkerSource.slice(start, end)}});`
-  )(async (_file, content) => { fixtureManifest = JSON.parse(content); }, join, relative, { dependencies: { lit: '3.3.3' } }, {});
+  )(async (_file, content) => { fixtureManifest = JSON.parse(content); }, join, relative, { dependencies: { lit: '3.3.3' } }, {}, toolchain);
   await new Function('writeFixture', 'optionalFixture', 'uiTarball', 'flagsTarball', 'translationsTarball', 'mapTarball',
     `return ${optionalCall};`
   )(writeFixture, '/fixture', '/ui.tgz', '/flags.tgz', '/translations.tgz', '/map.tgz');
@@ -81,6 +82,12 @@ test('the packed MapLibre v6 fixture resolves the exact qualified workspace engi
   assert.match(workspaceVersion, /^6\.\d+\.\d+$/u);
   assert.equal(fixtureManifest.devDependencies['maplibre-gl'], workspaceVersion,
     'the measured packed graph must use the exact same engine as the frozen workspace');
+  // The bundler shapes the measured chunk graph, so it must be the one the lockfile resolves too.
+  const rootRequire = createRequire(new URL('../package.json', import.meta.url));
+  assert.equal(fixtureManifest.devDependencies.vite, rootRequire('vite/package.json').version,
+    'the packed fixture must build with the workspace-resolved Vite');
+  assert.equal(fixtureManifest.devDependencies.typescript, workspaceRequire('typescript/package.json').version,
+    'the packed fixture must type-check with the workspace-resolved TypeScript');
 });
 
 test('caps measured core and optional graphs without an implicit binary allowance', () => {

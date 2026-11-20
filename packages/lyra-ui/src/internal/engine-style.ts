@@ -1,6 +1,6 @@
 import { readCanvasRgba, resolveCanvasColor, toRgbaString } from './canvas-color.js';
 import { finiteRange } from './numbers.js';
-import { ENGINE_STYLE_MEDIA_QUERIES } from './engine-admission.js';
+import { ENGINE_CHART_PALETTE, ENGINE_COLOR_TOKENS, ENGINE_STYLE_MEDIA_QUERIES } from './engine-admission.js';
 
 /**
  * Plain style values an optional WebGL engine paints with: concrete CSS colour strings and CSS
@@ -38,15 +38,7 @@ export interface EngineStyleOptions {
   readonly probe?: Element | null;
 }
 
-/** The categorical chart tokens, in palette order. */
-export const ENGINE_CHART_PALETTE: readonly string[] = /* @__PURE__ */ Object.freeze(['--lr-color-chart-1',
-  '--lr-color-chart-2', '--lr-color-chart-3', '--lr-color-chart-4', '--lr-color-chart-5', '--lr-color-chart-6',
-  '--lr-color-chart-7', '--lr-color-chart-8']);
-
-export { ENGINE_STYLE_MEDIA_QUERIES } from './engine-admission.js';
-
-/** Background, foreground, muted, accent and focus, in that order. */
-const COLOR_TOKENS = ['--lr-color-surface', '--lr-color-text', '--lr-color-text-quiet', '--lr-color-brand', '--lr-focus-ring-color'];
+export { ENGINE_CHART_PALETTE, ENGINE_COLOR_TOKENS, ENGINE_STYLE_MEDIA_QUERIES, engineStyle } from './engine-admission.js';
 
 interface ResolvedEngineStyle {
   readonly key: string;
@@ -70,7 +62,7 @@ export function resolveEngineStyle(host: Element, options: EngineStyleOptions = 
   const measured = options.probe ? view.getComputedStyle(options.probe) : undefined;
   const [reducedMotion = false, forcedColors = false, dark = false] =
     ENGINE_STYLE_MEDIA_QUERIES.map((query) => view.matchMedia(query).matches);
-  const tokens = [...COLOR_TOKENS, ...options.palette ?? ENGINE_CHART_PALETTE];
+  const tokens = [...ENGINE_COLOR_TOKENS, ...options.palette ?? ENGINE_CHART_PALETTE];
   const values = tokens.map((token) => computed.getPropertyValue(token).trim());
   const context = JSON.stringify([computed.color, computed.colorScheme, dark, forcedColors]);
   const key = JSON.stringify([context, tokens, values, computed.fontFamily, computed.fontSize, measured?.inlineSize,
