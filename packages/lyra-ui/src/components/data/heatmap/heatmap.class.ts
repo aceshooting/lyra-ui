@@ -14,6 +14,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { finiteCount, finiteInteger, finiteNumber, finiteRange, minMax } from '../../../internal/numbers.js';
 import { activateNonmodalOverlay, type OverlayHandle } from '../../../internal/nonmodal-overlay-manager.js';
 import { armClickSuppression, capturePointer, consumeSuppressedClick, releasePointer } from '../../../internal/pointer-capture.js';
@@ -256,6 +257,8 @@ export type { CalendarCellPos, HeatmapAnnotation, HeatmapCalendarData, HeatmapDa
  * @csspart live-region - An aria-hidden shadow mirror of the keyboard announcement; the actual
  *   announcement uses the shared light-DOM polite sink.
  * @csspart projection-limit - Localized assistive disclosure for bounded projections.
+ * @csspart description - The screen-reader-only chart description: `description`, or the generated
+ *   summary while `label` names the chart. Absent when neither applies.
  * @csspart legend - The color legend. The whole row, its slot included, is absent from the DOM
  *   while `withoutLegend` is set.
  * @csspart legend-lo - The low legend endpoint (omitted when `legendStops` is supplied).
@@ -1146,6 +1149,18 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    */
   @property({ attribute: false }) selectedCell: HeatmapSelectedCell | null =
     null;
+  /** Accessible chart label. A host `aria-label` still has highest precedence; a blank label
+   *  falls back to the generated summary. While set, the generated summary moves to the
+   *  accessible description so the data overview is not lost. */
+  @property() label: string | null = null;
+  /**
+   * Accessible chart description, which REPLACES the generated summary rather than adding to it,
+   * as on `lr-chart`. Wired to the focusable canvas (or the `accessibleCells` grid) through
+   * `aria-describedby`. Without a `label` the generated summary still names the chart, so this
+   * text is announced after it; with a `label` it replaces the summary entirely. Blank text is
+   * ignored. Prefer visible text beside the chart for a caveat every reader should see.
+   */
+  @property() description: string | null = null;
   /** Enables controlled multiple selection through selectedCells instead of selectedCell.
    * Click or Enter/Space toggles a cell. Drag paints/erases; Shift+arrows extends a rectangular
    * range. The default false preserves the existing single-cell event and selection contract. */
@@ -1465,6 +1480,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   private authorRole: string | null = null;
   private authorAriaLabel: string | null = null;
   private generatedAriaLabel = '';
+  private accessibleDescription = '';
   private syncingGeneratedSemantics = false;
   /** Whether a host `aria-describedby` was last reflected onto the active role owner -- see
    *  `checkbox.class.ts`'s identically-named field for why the sync call must stay guarded. */
@@ -1820,8 +1836,10 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     // keeps it discoverable any time a screen reader user queries this element's accessible
     // name, regardless of which cell (if any) currently has keyboard focus.
     const selectedText = this.selectedCellDescription();
+    const authoredLabel = normalizeLabel(this.label);
+    this.accessibleDescription = normalizeLabel(this.description) ?? (authoredLabel ? label : '');
     const generatedAriaLabel = [
-      label,
+      authoredLabel ?? label,
       selectedText,
       this.projectionDescription(),
     ]
@@ -4742,6 +4760,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         aria-multiselectable=${this.multiple ? 'true' : nothing}
         aria-describedby=${[
           this.getAttribute('aria-describedby') ?? '',
+          this.accessibleDescription ? 'description' : '',
           this.projectionTruncated ? 'projection-limit' : '',
         ]
           .filter(Boolean)
@@ -4857,6 +4876,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         aria-describedby=${!this.accessibleCells
           ? [
               this.getAttribute('aria-describedby') ?? '',
+              this.accessibleDescription ? 'description' : '',
               projectionDescription ? 'projection-limit' : '',
             ]
               .filter(Boolean)
@@ -4978,6 +4998,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         data-projection-truncated=${this.projectionTruncated ? 'true' : 'false'}
       >
         ${this.renderGridSurface(projectionDescription)}
+        ${this.accessibleDescription
+          ? html`<p id="description" part="description" class="sr-only">${this.accessibleDescription}</p>`
+          : nothing}
         ${projectionDescription
           ? html`<span
               id="projection-limit"

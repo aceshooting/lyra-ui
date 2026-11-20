@@ -615,6 +615,19 @@ export const WeeklyAvailability: Story = {
 };
 
 
+export const LabelAndDescription: Story = {
+  parameters: { docs: { description: { story: '`label` names the heatmap the way it names `lr-chart`; `description` replaces the generated summary as the accessible description. A host `aria-label` would still win.' } } },
+  render: () => html`
+    <lr-heatmap label="Support tickets by weekday and shift" description="Tickets opened per shift over the last four weeks."
+      value-label="tickets"
+      .data=${{
+        kind: 'matrix', rowLabels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], colLabels: ['Early', 'Day', 'Late'],
+        values: [[4, 12, 7], [3, 15, 6], [5, 11, 9], [2, 14, 8], [6, 10, 3]],
+      }}
+    ></lr-heatmap>
+  `,
+};
+
 export const MatrixPresentation: Story = {
   parameters: { docs: { description: { story: 'A fluid 7×24 activity matrix with 1px column gaps, 2px row gaps, 2px rounded corners, and every third hour painted on the axis. Hover or use arrow keys: every hour retains its full label.' } } },
   render: () => html`

@@ -1,5 +1,5 @@
 import { jsonStringBytes } from './json-bytes.js';
-import type { JsonValue, LyraGenDiagnostic, LyraGenLimits, LyraGenResult, LyraGenSchema } from './types.js';
+import type { JsonValue, LyraGenDiagnostic, LyraGenLimits, LyraGenMapSchema, LyraGenResult, LyraGenSchema } from './types.js';
 
 export const HARD_LIMITS: Readonly<LyraGenLimits> = Object.freeze({
   maxBytes: 4_194_304, maxDepth: 64, maxNodes: 100_000, maxStringLength: 262_144,
@@ -29,6 +29,15 @@ export function isSafeKey(key: string): boolean {
 
 export function escapePointerSegment(value: string): string {
   return value.replace(/~/g, '~0').replace(/\//g, '~1');
+}
+
+/** Length in code points, so astral characters count once like JSON Schema string lengths. */
+function codePointLength(value: string): number {
+  let length = 0;
+  for (let index = 0; index < value.length; index++, length++) {
+    if ((value.codePointAt(index) ?? 0) > 0xffff) index++;
+  }
+  return length;
 }
 
 function diagnostic(code: string, path: string, message: string): LyraGenDiagnostic {
@@ -202,10 +211,7 @@ export function validateSchema(input: unknown, schema: LyraGenSchema, overrides?
       case 'string':
         if (typeof value !== 'string') invalid('schema.type', 'Expected a string.');
         else {
-          let length = 0;
-          for (let index = 0; index < value.length; index++, length++) {
-            if ((value.codePointAt(index) ?? 0) > 0xffff) index++;
-          }
+          const length = codePointLength(value);
           if (length < (current.minLength ?? 0) || length > (current.maxLength ?? limits.maxStringLength)) invalid('schema.length', 'String length is outside the admitted range.');
         }
         break;
@@ -224,14 +230,24 @@ export function validateSchema(input: unknown, schema: LyraGenSchema, overrides?
         if (value === null || typeof value !== 'object' || Array.isArray(value)) invalid('schema.type', 'Expected an object.');
         else {
           const object = value as Record<string, JsonValue>;
+          const map = typeof current.additionalProperties === 'object' ? current as LyraGenMapSchema : undefined;
+          if (map) {
+            const count = Object.keys(object).length;
+            if (count < (map.minProperties ?? 0) || count > map.maxProperties) { invalid('schema.length', 'Object property count is outside the admitted range.'); break; }
+          }
           for (const name of current.required ?? []) {
             if (++work > limits.maxNodes) { valid = false; report('limit.validation', path, 'Schema validation exceeds the work limit.'); break; }
             if (!Object.hasOwn(object, name)) { valid = false; report('schema.required', `${path}/${escapePointerSegment(name)}`, 'Required property is missing.'); }
           }
           for (const [name, child] of Object.entries(object)) {
             const childPath = `${path}/${escapePointerSegment(name)}`;
-            if (!Object.hasOwn(current.properties, name)) { valid = false; report('schema.property', childPath, 'Property is not admitted by the schema.'); }
-            else if (!check(child, current.properties[name] as LyraGenSchema, childPath)) valid = false;
+            if (Object.hasOwn(current.properties, name)) { if (!check(child, current.properties[name] as LyraGenSchema, childPath)) valid = false; }
+            else if (!map) { valid = false; report('schema.property', childPath, 'Property is not admitted by the schema.'); }
+            else {
+              const length = codePointLength(name);
+              if (length < (map.propertyNames.minLength ?? 0) || length > map.propertyNames.maxLength) { valid = false; report('schema.property-name', childPath, 'Property name length is outside the admitted range.'); }
+              else if (!check(child, map.additionalProperties, childPath)) valid = false;
+            }
             if (work > limits.maxNodes) break;
           }
         }
@@ -275,7 +291,19 @@ function inspectSchema(value: JsonValue, limits: LyraGenLimits): boolean {
         for (const key of ['properties', 'required', 'additionalProperties']) allowed.add(key);
         const properties = schema['properties'];
         if (properties === null || typeof properties !== 'object' || Array.isArray(properties)) return false;
-        if (schema['additionalProperties'] !== undefined && schema['additionalProperties'] !== false) return false;
+        const additional = schema['additionalProperties'];
+        if (additional !== undefined && additional !== false) {
+          // An open map is admitted only with explicit width and key-length ceilings.
+          for (const key of ['minProperties', 'maxProperties', 'propertyNames']) allowed.add(key);
+          if (additional === null || typeof additional !== 'object' || Array.isArray(additional) || !inspect(additional)) return false;
+          const rawNames = schema['propertyNames'];
+          if (rawNames === null || typeof rawNames !== 'object' || Array.isArray(rawNames)) return false;
+          const names = rawNames as Record<string, JsonValue>;
+          if (!Object.keys(names).every(key => key === 'type' || key === 'minLength' || key === 'maxLength') || (names['type'] !== undefined && names['type'] !== 'string')) return false;
+          const count = (value: JsonValue | undefined) => typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+          if (!count(schema['maxProperties']) || (schema['minProperties'] !== undefined && !count(schema['minProperties'])) || Number(schema['minProperties'] ?? 0) > Number(schema['maxProperties'])) return false;
+          if (!count(names['maxLength']) || (names['minLength'] !== undefined && !count(names['minLength'])) || Number(names['minLength'] ?? 0) > Number(names['maxLength'])) return false;
+        }
         if (schema['required'] !== undefined && (!Array.isArray(schema['required']) || schema['required'].some(key => typeof key !== 'string' || !Object.hasOwn(properties, key)) || new Set(schema['required']).size !== schema['required'].length)) return false;
         if (!Object.values(properties).every(inspect)) return false;
         break;

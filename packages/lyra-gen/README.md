@@ -116,8 +116,32 @@ schema admits them. The host chooses display locale and requested prose language
 Do not replace a numeric source value with a localized display string. Properties whose actual
 component schema requires a string still use that documented type.
 
+Property schemas are a bounded JSON Schema subset. An object schema is closed by default
+(`additionalProperties: false`). For map-like input, give `additionalProperties` a value schema
+together with the required `maxProperties` and `propertyNames: { maxLength }` ceilings (optional
+`minProperties` and `propertyNames.minLength`). Declared `properties` keep their own schemas,
+`maxProperties` counts every key, prototype-related keys are always refused, and a map key named
+like a URL or navigation sink is refused by the content policy. `exportCatalogJsonSchema()` emits
+the same value schema and ceilings:
+
+```ts
+const counts = { type: 'object', properties: {}, additionalProperties: { type: 'integer', minimum: 0 },
+  maxProperties: 24, propertyNames: { maxLength: 32 } } as const;
+```
+
+A role can declare `hostProperties` for element properties that only its trusted
+`prepareProperties` adapter supplies, such as a formatter callback. The view assigns those adapter
+outputs, while generated content can neither set nor bind them, and `buildCatalogPrompt()`,
+`exportCatalogArtifact()` and `exportCatalogJsonSchema()` omit them. Names must not overlap
+`properties` or bindings and must not be URL or navigation sinks:
+
+```ts
+const metric = { tag: 'lr-stat', properties: { label, value }, hostProperties: ['valueFormatter'],
+  prepareProperties: (props) => ({ ...props, valueFormatter: formatHostValue }) };
+```
+
 `exportCatalogSchemaForProfile(catalog, 'closed-json-v1')` returns a diagnosed result for a narrow
-closed, single-leaf profile. Unsupported unions, bindings and actions are rejected by that profile.
+closed, single-leaf profile. Unsupported unions, open maps, bindings and actions are rejected by that profile.
 The `json-schema-2020-12` profile preserves the full structural artifact. These names describe
 schema profiles; neither name is a provider acceptance or conformance claim.
 

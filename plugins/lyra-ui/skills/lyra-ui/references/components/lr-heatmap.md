@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 22 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 23 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -388,6 +388,14 @@ col?: number; date?: string; label?: string }`: matrix mode matches by `row`/`co
   stroked ring over the matching cell; an annotation with a `label` also gets its own
   `[part="legend-annotation"]` entry in the legend. The collection is clone-owned, bounded, and
   frozen; reassign a new array after changes.
+- `label: string | null = null` — accessible chart name, as on `lr-chart`: a host `aria-label` still
+  wins, and a blank label falls back to the generated row/column (or day) and value-range summary.
+  While a label names the chart, that summary moves to the `[part="description"]` accessible
+  description. The selected-cell and projection-limit wording stay appended to the name.
+- `description: string | null = null` — accessible chart description wired through
+  `aria-describedby` to the canvas (or the `accessibleCells` grid, or the `matrixSource` canvas).
+  It REPLACES the generated summary as the description rather than adding to it; without a `label`
+  the summary still names the chart. Blank text is ignored.
 - `selectedCell: HeatmapSelectedCell | null = null` (attribute: false) — `HeatmapSelectedCell {
 row?: number; col?: number; date?: string }`, matched the same way as `annotations`. Draws a
   persistent ring (independent of keyboard focus) over the matching cell, appends a "Selected: ..."

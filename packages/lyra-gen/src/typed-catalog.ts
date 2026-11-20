@@ -16,6 +16,8 @@ export type InferSchema<Schema extends LyraGenSchema> = LyraGenSchema extends Sc
   : Schema extends { readonly type: 'boolean' } ? boolean
   : Schema extends { readonly type: 'null' } ? null
   : Schema extends { readonly type: 'array'; readonly items: infer Item extends LyraGenSchema } ? readonly InferSchema<Item>[]
+  : Schema extends { readonly type: 'object'; readonly additionalProperties: infer Extra extends LyraGenSchema; readonly properties: infer Properties extends Readonly<Record<string, LyraGenSchema>> }
+    ? [keyof Properties] extends [never] ? { readonly [key: string]: InferSchema<Extra> } : ObjectValue<Schema, Properties> & { readonly [key: string]: JsonValue }
   : Schema extends { readonly type: 'object'; readonly properties: infer Properties extends Readonly<Record<string, LyraGenSchema>> } ? ObjectValue<Schema, Properties>
   : never;
 
@@ -39,7 +41,10 @@ export interface TypedCatalog<Definition extends LyraGenCatalog, State extends L
 function freezeSchema<Schema extends LyraGenSchema>(schema: Schema): Schema {
   if ('anyOf' in schema) schema.anyOf.forEach(freezeSchema);
   else if (schema.type === 'array') freezeSchema(schema.items);
-  else if (schema.type === 'object') Object.values(schema.properties).forEach(freezeSchema);
+  else if (schema.type === 'object') {
+    Object.values(schema.properties).forEach(freezeSchema);
+    if (typeof schema.additionalProperties === 'object') { freezeSchema(schema.additionalProperties); Object.freeze(schema.propertyNames); }
+  }
   return Object.freeze(schema);
 }
 

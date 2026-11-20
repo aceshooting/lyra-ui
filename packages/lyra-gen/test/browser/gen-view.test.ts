@@ -269,3 +269,30 @@ describe('generated view typography and component styling', () => {
     expect(getComputedStyle(base).borderTopLeftRadius).to.equal('31px');
   });
 });
+
+describe('host-only adapter properties', () => {
+  const formatter = (value: number): string => `#${value}`;
+  const hostCatalog = createCatalog({ id: 'host-only', version: '1', components: {
+    note: { tag: 'p', properties: { title: { type: 'string', maxLength: 64 } }, text: true, hostProperties: ['valueFormatter'],
+      prepareProperties: props => ({ ...props, valueFormatter: formatter, undeclared: 'dropped' }) },
+  } });
+  const hostView = (props: Record<string, string>): LyraGenView => ({ version: '1', surfaceId: 'host', revision: 0, catalog: { id: hostCatalog.id, version: hostCatalog.version }, root: { id: 'note', type: 'note', props, text: 'Note' } });
+
+  it('assigns declared host properties from the adapter but never undeclared output', async () => {
+    const element = await fixture<LyraGenViewElement>(html`<lr-gen-view .catalog=${hostCatalog} .document=${hostView({ title: 'Totals' })}></lr-gen-view>`);
+    await element.updateComplete;
+    const target = node(element, 'note') as HTMLElement & Record<string, unknown>;
+    expect(target.title).to.equal('Totals');
+    expect(target['valueFormatter'] === formatter).to.equal(true);
+    expect('undeclared' in target).to.equal(false);
+  });
+
+  it('rejects generated content that tries to set a host-only property', async () => {
+    const element = await fixture<LyraGenViewElement>(html`<lr-gen-view .catalog=${hostCatalog}></lr-gen-view>`);
+    const errored = oneEvent(element, 'lr-gen-error');
+    element.document = hostView({ title: 'Totals', valueFormatter: 'injected' });
+    const codes = ((await errored) as CustomEvent<{ diagnostics: { code: string }[] }>).detail.diagnostics.map(item => item.code);
+    expect(codes).to.include('props.unknown');
+    expect(element.shadowRoot!.querySelector('[data-gen-id="note"]') === null).to.equal(true);
+  });
+});

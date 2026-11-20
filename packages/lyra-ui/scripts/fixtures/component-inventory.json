@@ -71698,6 +71698,16 @@
             "hasDefault": false
           },
           {
+            "name": "description",
+            "property": "description",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "fit-to-width",
             "property": "fitToWidth",
             "type": "boolean",
@@ -71706,6 +71716,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "label",
+            "property": "label",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "locale",
@@ -71987,6 +72007,16 @@
             "default": "DEFAULT_MATRIX_DATA"
           },
           {
+            "name": "description",
+            "attribute": "description",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "domain",
             "attribute": null,
             "type": "[number, number] | undefined",
@@ -72004,6 +72034,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "label",
+            "attribute": "label",
+            "type": "string | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "legendStops",
@@ -72245,6 +72285,10 @@
           },
           {
             "name": "col-labels",
+            "deprecated": null
+          },
+          {
+            "name": "description",
             "deprecated": null
           },
           {

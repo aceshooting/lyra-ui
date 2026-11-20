@@ -150,7 +150,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-graph-query-builder"></a>`lr-graph-query-builder` | data | `import '@aceshooting/lyra-ui/components/lr-graph-query-builder.js';` | none | `lr-chip`, `lr-chip-group`, `lr-input`, `lr-option`, `lr-select` | none | 109.4 KiB |
 | <a id="lr-grounding-summary"></a>`lr-grounding-summary` | retrieval | `import '@aceshooting/lyra-ui/components/lr-grounding-summary.js';` | none | `lr-citation-badge`, `lr-claim-evidence`, `lr-empty`, `lr-stat` | `lr-badge` | 74.1 KiB |
 | <a id="lr-handoff-divider"></a>`lr-handoff-divider` | conversation | `import '@aceshooting/lyra-ui/components/lr-handoff-divider.js';` | none | none | none | 25.5 KiB |
-| <a id="lr-heatmap"></a>`lr-heatmap` | data | `import '@aceshooting/lyra-ui/components/lr-heatmap.js';` | none | none | none | 76.2 KiB |
+| <a id="lr-heatmap"></a>`lr-heatmap` | data | `import '@aceshooting/lyra-ui/components/lr-heatmap.js';` | none | none | none | 76.3 KiB |
 | <a id="lr-highlight-layer"></a>`lr-highlight-layer` | viewers | `import '@aceshooting/lyra-ui/components/lr-highlight-layer.js';` | none | none | none | 32.8 KiB |
 | <a id="lr-histogram"></a>`lr-histogram` | charts | `import '@aceshooting/lyra-ui/components/lr-histogram.js';` | `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` | `lr-chart`, `lr-skeleton` | none | 98 KiB |
 | <a id="lr-html-viewer"></a>`lr-html-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-html-viewer.js';` | `dompurify` | none | none | 52.6 KiB |

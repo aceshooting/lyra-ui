@@ -169,3 +169,30 @@ test('union validation stops before a later valid branch when its work ceiling i
   assert.equal(result.ok, false);
   assert.equal(result.diagnostics[0]?.code, 'limit.validation');
 });
+
+test('validates bounded open maps like arrays and refuses unbounded or malformed map schemas', () => {
+  const map: LyraGenSchema = { type: 'object', properties: { total: { type: 'number' } }, additionalProperties: { type: 'integer', minimum: 0 }, maxProperties: 3, propertyNames: { maxLength: 8 } };
+  const admitted = validateSchema({ total: 1.5, north: 2, south: 0 }, map);
+  assert.equal(admitted.ok, true);
+  assert.deepEqual(admitted.value, { total: 1.5, north: 2, south: 0 });
+  const codes = (input: unknown, schema: LyraGenSchema = map) => validateSchema(input, schema).diagnostics.map(item => item.code);
+  assert.deepEqual(codes({ north: -1 }), ['schema.range']);
+  assert.deepEqual(codes({ total: 'x' }), ['schema.type']);
+  assert.deepEqual(codes({ a: 1, b: 2, c: 3, d: 4 }), ['schema.length']);
+  assert.deepEqual(codes({ 'much-too-long': 1 }), ['schema.property-name']);
+  assert.deepEqual(codes({ '\u{1F600}\u{1F600}\u{1F600}\u{1F600}\u{1F600}\u{1F600}\u{1F600}\u{1F600}': 1 }), []);
+  assert.equal(validateSchema(JSON.parse('{"__proto__":1}'), map).ok, false);
+  assert.deepEqual(codes({ a: 1 }, { ...map, minProperties: 2 } as LyraGenSchema), ['schema.length']);
+  const malformed: unknown[] = [
+    { type: 'object', properties: {}, additionalProperties: { type: 'number' }, propertyNames: { maxLength: 8 } },
+    { type: 'object', properties: {}, additionalProperties: { type: 'number' }, maxProperties: 4 },
+    { type: 'object', properties: {}, additionalProperties: { type: 'number' }, maxProperties: 4, propertyNames: { maxLength: 8, pattern: '^a' } },
+    { type: 'object', properties: {}, additionalProperties: { type: 'number' }, maxProperties: 4, propertyNames: { type: 'number', maxLength: 8 } },
+    { type: 'object', properties: {}, additionalProperties: { type: 'number' }, maxProperties: 1.5, propertyNames: { maxLength: 8 } },
+    { type: 'object', properties: {}, additionalProperties: { type: 'number' }, minProperties: 5, maxProperties: 4, propertyNames: { maxLength: 8 } },
+    { type: 'object', properties: {}, additionalProperties: { type: 'nope' }, maxProperties: 4, propertyNames: { maxLength: 8 } },
+    { type: 'object', properties: {}, additionalProperties: true, maxProperties: 4, propertyNames: { maxLength: 8 } },
+    { type: 'object', properties: {}, additionalProperties: false, maxProperties: 4 },
+  ];
+  for (const schema of malformed) assert.deepEqual(codes({}, schema as LyraGenSchema), ['schema.invalid']);
+});

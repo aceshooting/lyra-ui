@@ -14,14 +14,22 @@ function stable(value: unknown): JsonValue {
 
 /** Portable catalog metadata contains no loaders, functions, or import instructions. */
 export function exportCatalogArtifact(catalog: LyraGenCatalog): JsonObject {
-  return stable({ format: 'lyra-gen-catalog', formatVersion: '1', id: catalog.id, version: catalog.version, components: catalog.components, actions: catalog.actions ?? {} }) as JsonObject;
+  // Host-only properties are adapter output, never generated content, so prompts never name them.
+  const components = Object.fromEntries(Object.entries(catalog.components).map(([role, component]) =>
+    [role, Object.fromEntries(Object.entries(component).filter(([key]) => key !== 'hostProperties'))]));
+  return stable({ format: 'lyra-gen-catalog', formatVersion: '1', id: catalog.id, version: catalog.version, components, actions: catalog.actions ?? {} }) as JsonObject;
 }
 
 function schema(value: LyraGenSchema): JsonObject {
   const base = stable(value) as JsonObject;
   if ('anyOf' in value) return { ...base, anyOf: value.anyOf.map(schema) };
   if (value.type === 'array') return { ...base, items: schema(value.items) };
-  if (value.type === 'object') return { ...base, additionalProperties: false, properties: Object.fromEntries(Object.entries(value.properties).map(([key, child]) => [key, schema(child)])) };
+  if (value.type === 'object') {
+    const properties = Object.fromEntries(Object.entries(value.properties).map(([key, child]) => [key, schema(child)]));
+    if (typeof value.additionalProperties !== 'object') return { ...base, additionalProperties: false, properties };
+    // An open map keeps its value schema and its width and key-length ceilings.
+    return { ...base, additionalProperties: schema(value.additionalProperties), properties, propertyNames: { ...(base['propertyNames'] as JsonObject), type: 'string' } };
+  }
   return base;
 }
 
@@ -106,7 +114,10 @@ export function exportCatalogSchemaForProfile(catalog: LyraGenCatalog, profile: 
   const simple = (current: LyraGenSchema, path: string): void => {
     if ('anyOf' in current) { unsupported(path, 'Alternative value types need schema composition.'); return; }
     if (current.type === 'array') simple(current.items, `${path}/items`);
-    if (current.type === 'object') for (const [key, child] of Object.entries(current.properties)) simple(child, `${path}/properties/${key}`);
+    if (current.type === 'object') {
+      if (typeof current.additionalProperties === 'object') unsupported(`${path}/additionalProperties`, 'Open maps are outside the closed profile.');
+      for (const [key, child] of Object.entries(current.properties)) simple(child, `${path}/properties/${key}`);
+    }
   };
   for (const [key, value] of Object.entries(component.properties)) simple(value, `/components/${role}/properties/${key}`);
   const names = component.accessibleName?.required ? [

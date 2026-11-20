@@ -195,6 +195,7 @@
         "LyraGenFunctionRegistry": "functions.d.ts#LyraGenFunctionRegistry",
         "LyraGenIsolation": "types.d.ts#LyraGenIsolation",
         "LyraGenLimits": "types.d.ts#LyraGenLimits",
+        "LyraGenMapSchema": "types.d.ts#LyraGenMapSchema",
         "LyraGenMigratedAnswer": "answer-migrations.d.ts#LyraGenMigratedAnswer",
         "LyraGenNode": "types.d.ts#LyraGenNode",
         "LyraGenPatch": "runtime.d.ts#LyraGenPatch",
@@ -840,6 +841,7 @@
         "LyraGenFunctionRegistry": "functions.d.ts#LyraGenFunctionRegistry",
         "LyraGenIsolation": "types.d.ts#LyraGenIsolation",
         "LyraGenLimits": "types.d.ts#LyraGenLimits",
+        "LyraGenMapSchema": "types.d.ts#LyraGenMapSchema",
         "LyraGenMigratedAnswer": "answer-migrations.d.ts#LyraGenMigratedAnswer",
         "LyraGenNode": "types.d.ts#LyraGenNode",
         "LyraGenPatch": "runtime.d.ts#LyraGenPatch",
@@ -1285,6 +1287,7 @@
         "LyraGenFieldPurpose": "types.d.ts#LyraGenFieldPurpose",
         "LyraGenIsolation": "types.d.ts#LyraGenIsolation",
         "LyraGenLimits": "types.d.ts#LyraGenLimits",
+        "LyraGenMapSchema": "types.d.ts#LyraGenMapSchema",
         "LyraGenNode": "types.d.ts#LyraGenNode",
         "LyraGenRecoveryMode": "types.d.ts#LyraGenRecoveryMode",
         "LyraGenResult": "types.d.ts#LyraGenResult",
@@ -2634,7 +2637,7 @@
       "profile": "supported"
     },
     "typed-catalog.d.ts#InferSchema": {
-      "hash": "5d69a601729252e8d7edd5f575d90f23b629b8892f04ac7856aa1fdd5af87e8d",
+      "hash": "165528f9d41d1a5b1e94d67f6a511053c9410b9fac8d0e7543d816de53811cb6",
       "profile": "supported"
     },
     "typed-catalog.d.ts#ObjectValue": {
@@ -2714,7 +2717,7 @@
       "profile": "supported"
     },
     "types.d.ts#LyraGenComponent": {
-      "hash": "5a2690b62a75ff9a6818f75f5d66a1ecd86b5a895c62b9d5544d81756d8dc42a",
+      "hash": "8e582d5056576915c431066dba3aa45f2299e79fa66664119339290f071a6c15",
       "profile": "supported"
     },
     "types.d.ts#LyraGenDataReference": {
@@ -2741,6 +2744,10 @@
       "hash": "62515d263164bb3f04335826eda8df7df45065b148a3aee873a494bc3bee7ebc",
       "profile": "supported"
     },
+    "types.d.ts#LyraGenMapSchema": {
+      "hash": "6e34bda9cbb517e517a073eb30e1cbbeb0fdf13fa01d3f8a0c9161c4b728bbaa",
+      "profile": "supported"
+    },
     "types.d.ts#LyraGenNode": {
       "hash": "19483130a1c5a5e63fbdaa7826c0ea257e695c3b1fa405615d365c02ba5717e7",
       "profile": "supported"
@@ -2754,7 +2761,7 @@
       "profile": "supported"
     },
     "types.d.ts#LyraGenSchema": {
-      "hash": "affde657e19af2bb460c8d13e271c25482375a3093400a44523038aab783e9fe",
+      "hash": "b34405e78c58317634fa099520170096537c0c8504482f954be6d45e61967311",
       "profile": "supported"
     },
     "types.d.ts#LyraGenSourceRange": {

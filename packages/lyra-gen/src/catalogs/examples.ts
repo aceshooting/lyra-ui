@@ -1,5 +1,5 @@
 import type { LyraGenCatalog, LyraGenComponent } from '../types.js';
-import { assertComponentContentPolicy, snapshotFieldPolicy } from '../content-policy.js';
+import { assertComponentContentPolicy, isContentUrlProperty, snapshotFieldPolicy } from '../content-policy.js';
 import { formComponents } from './forms.js';
 import { conversationComponents } from './conversation.js';
 import { dataComponents } from './data.js';
@@ -62,6 +62,14 @@ export function createCatalog(definition: LyraGenCatalog): LyraGenCatalog {
     }
     if (component.accessibleName?.required && !(component.accessibleName.text && component.text) && !component.accessibleName.properties?.some(key => Object.hasOwn(component.properties, key))) throw new TypeError(`Missing accessible name source for ${role}`);
     for (const key of component.required ?? []) if (!(key in component.properties)) throw new TypeError(`Unknown required property ${role}.${key}`);
+    if (component.hostProperties !== undefined) {
+      const host = component.hostProperties;
+      if (!Array.isArray(host) || host.length > 64 || new Set(host).size !== host.length || !component.prepareProperties) throw new TypeError(`Invalid host properties for ${role}`);
+      for (const key of host) {
+        if (typeof key !== 'string' || !/^[A-Za-z_$][\w$]{0,127}$/.test(key) || /^(?:on|innerHTML$|outerHTML$|srcdoc$|style$|className$|constructor$|prototype$|__proto__$)/i.test(key)) throw new TypeError(`Unsafe host property: ${key}`);
+        if (Object.hasOwn(component.properties, key) || Object.hasOwn(component.bindings ?? {}, key) || isContentUrlProperty(key, component)) throw new TypeError(`Host property ${role}.${key} must not be a generated, bound or URL property`);
+      }
+    }
     for (const [key, binding] of Object.entries(component.bindings ?? {})) {
       if (!(key in component.properties) || !(binding.property in component.properties)) throw new TypeError(`Unknown binding property ${role}.${key}`);
     }

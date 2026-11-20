@@ -30,6 +30,8 @@ export interface HeatmapSourceHost extends HTMLElement, ReactiveControllerHost {
   readonly selectedCells: readonly HeatmapSelectedCell[];
   readonly selectedCell: HeatmapSelectedCell | null;
   readonly accessibleCells: boolean;
+  readonly label: string | null;
+  readonly description: string | null;
   readonly cellInteractive: CellCallback<boolean> | undefined;
   readonly cellText: CellCallback<string> | undefined;
   readonly cellColor: CellCallback<string | undefined> | undefined;
@@ -397,18 +399,22 @@ export function renderSource(h: HeatmapSourceHost): TemplateResult {
   }
   const entry = cells.find(cell => presentation.get(cell)?.interactive && cell.row === cursor?.row && cell.col === cursor.col) ?? cells.find(cell => presentation.get(cell)?.interactive);
   const windowLabel = cells.length ? h.localize('heatmapSourceExactWindow', undefined, { rowStart: number(cells[0]!.row + 1), rowEnd: number(cells[cells.length - 1]!.row + 1), columnStart: number(Math.min(...cells.map(cell => cell.col)) + 1), columnEnd: number(Math.max(...cells.map(cell => cell.col)) + 1) }) : h.localize('loading');
+  const authoredName = normalizeLabel(h.getAttribute('aria-label')) ?? normalizeLabel(h.label);
+  const description = normalizeLabel(h.description);
+  const describedBy = description ? 'source-help description' : 'source-help';
   return html`<div part="base" aria-busy=${String(controller.loading)} @focusin=${() => { if (!h.sourceRestoringFocus) h.sourceFocusVersion++; }}>
     <p part="source-summary">${summary} ${completeSummary}</p>
     <p id="source-help">${h.localize('heatmapSourceKeyboardHelp')}</p>
+    ${description ? html`<p id="description" part="description" class="sr-only">${description}</p>` : nothing}
     ${controller.error ? html`<p part="source-error">${h.localize('heatmapSourceError')}</p>` : nothing}
     ${viewport ? html`<div class="source-axes" aria-hidden="true"><span>${number(viewport.columnStart + 1)}</span><span>${number(viewport.columnStart + Math.floor((viewport.columnEnd - viewport.columnStart - 1) / 2) + 1)}</span><span>${number(viewport.columnEnd)}</span></div>` : nothing}
     <canvas part="canvas" data-source-entry tabindex=${h.accessibleCells ? '-1' : '0'} role=${h.accessibleCells ? nothing : 'application'}
-      aria-hidden=${h.accessibleCells ? 'true' : nothing} aria-label=${h.accessibleCells ? nothing : normalizeLabel(h.getAttribute('aria-label')) ?? summary} aria-describedby="source-help"
+      aria-hidden=${h.accessibleCells ? 'true' : nothing} aria-label=${h.accessibleCells ? nothing : authoredName ?? summary} aria-describedby=${describedBy}
       @click=${(e: MouseEvent) => sourceClick(h, e)} @mousemove=${(e: MouseEvent) => sourceHover(h, e)} @mouseleave=${() => { h.sourceTooltip = null; }} @keydown=${(e: KeyboardEvent) => sourceKeydown(h, e)}></canvas>
     ${h.sourceTooltip ? html`<p part="tooltip" style=${styleMap({
       left: `${h.sourceTooltip.x}px`, top: `${h.sourceTooltip.y}px`,
     })}>${sourceRangeLabel(h, h.sourceTooltip.tile)}</p>` : nothing}
-    ${h.accessibleCells ? html`<p>${windowLabel}</p><div part="source-exact-window" role="grid" aria-label=${normalizeLabel(h.getAttribute('aria-label')) ?? windowLabel}
+    ${h.accessibleCells ? html`<p>${windowLabel}</p><div part="source-exact-window" role="grid" aria-label=${authoredName ?? windowLabel} aria-describedby=${description ? 'description' : nothing}
       aria-rowcount=${controller.rows} aria-colcount=${controller.cols} tabindex=${entry ? '-1' : '0'} data-source-entry @keydown=${(e: KeyboardEvent) => sourceKeydown(h, e)}>
       ${rows.map(row => html`<div role="row" aria-rowindex=${row + 1}>${cells.filter(cell => cell.row === row).map(cell => html`<div role="gridcell" aria-colindex=${cell.col + 1} aria-selected=${String(h.multiple ? h.sourceSelectedKeys.has(`${cell.row}:${cell.col}`) : h.selectedCell?.row === cell.row && h.selectedCell.col === cell.col)}><button part="cell" data-source-row=${cell.row} data-source-col=${cell.col}
         ?disabled=${!presentation.get(cell)?.interactive} style=${styleMap({ backgroundColor: presentation.get(cell)?.color })}

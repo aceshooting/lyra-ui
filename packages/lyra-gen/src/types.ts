@@ -16,8 +16,25 @@ export type LyraGenSchema = SchemaAnnotations & (
   | { readonly type: 'boolean' | 'null' }
   | { readonly type: 'array'; readonly items: LyraGenSchema; readonly minItems?: number; readonly maxItems?: number }
   | { readonly type: 'object'; readonly properties: Readonly<Record<string, LyraGenSchema>>; readonly required?: readonly string[]; readonly additionalProperties?: false }
+  | LyraGenMapSchema
   | { readonly anyOf: readonly LyraGenSchema[] }
 );
+
+/**
+ * A bounded map-like object: declared `properties` keep their own schemas and every other key is
+ * validated by `additionalProperties`. `maxProperties` (all keys, declared ones included) and
+ * `propertyNames.maxLength` are required, so a generated map can never be wider or carry longer
+ * keys than the host admitted; prototype-related keys are always refused.
+ */
+export interface LyraGenMapSchema extends SchemaAnnotations {
+  readonly type: 'object';
+  readonly properties: Readonly<Record<string, LyraGenSchema>>;
+  readonly required?: readonly string[];
+  readonly additionalProperties: LyraGenSchema;
+  readonly minProperties?: number;
+  readonly maxProperties: number;
+  readonly propertyNames: { readonly type?: 'string'; readonly minLength?: number; readonly maxLength: number };
+}
 
 export interface LyraGenLimits {
   readonly maxBytes: number;
@@ -137,6 +154,14 @@ export interface LyraGenComponent {
   /** Only these native/component events can initiate this node's declared action. */
   readonly events?: readonly string[];
   readonly bindings?: Readonly<Record<string, LyraGenBindingDefinition>>;
+  /**
+   * Element properties only `prepareProperties` may supply, such as host callbacks or locale-bound
+   * formatters. The view assigns them from the adapter's output, but they are never part of
+   * `properties`: generated content cannot set or bind them, and `buildCatalogPrompt()`,
+   * `exportCatalogArtifact()` and `exportCatalogJsonSchema()` omit them. Requires
+   * `prepareProperties`; names must not overlap `properties` or be URL/navigation sinks.
+   */
+  readonly hostProperties?: readonly string[];
   /** Trusted host-only adaptation after JSON validation; never supplied by generated content. */
   readonly prepareProperties?: (props: Readonly<Record<string, JsonValue>>, context?: { readonly locale: string }) => Readonly<Record<string, unknown>>;
   readonly load?: () => Promise<unknown>;

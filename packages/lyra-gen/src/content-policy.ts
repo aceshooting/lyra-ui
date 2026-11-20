@@ -29,7 +29,24 @@ export function validateNavigationDestination(input: unknown, policy: LyraGenUrl
 function hasNestedUrlSchema(schema: LyraGenSchema): boolean {
   if ('anyOf' in schema) return schema.anyOf.some(hasNestedUrlSchema);
   if (schema.type === 'array') return hasNestedUrlSchema(schema.items);
-  return schema.type === 'object' && Object.entries(schema.properties).some(([key, child]) => navigationProperty.test(key) || urlProperty.test(key) || hasNestedUrlSchema(child));
+  if (schema.type !== 'object') return false;
+  if (typeof schema.additionalProperties === 'object' && hasNestedUrlSchema(schema.additionalProperties)) return true;
+  return Object.entries(schema.properties).some(([key, child]) => navigationProperty.test(key) || urlProperty.test(key) || hasNestedUrlSchema(child));
+}
+
+/** An open map's keys come from content, so a URL- or navigation-named map key is refused by value. */
+function mapCarriesUrlKey(schema: LyraGenSchema, value: unknown, depth = 0): boolean {
+  if (depth > 64 || value === null || typeof value !== 'object') return false;
+  if ('anyOf' in schema) return schema.anyOf.some(branch => mapCarriesUrlKey(branch, value, depth + 1));
+  if (schema.type === 'array') return Array.isArray(value) && value.some(item => mapCarriesUrlKey(schema.items, item, depth + 1));
+  if (schema.type !== 'object' || Array.isArray(value)) return false;
+  const extra = typeof schema.additionalProperties === 'object' ? schema.additionalProperties : undefined;
+  return Object.entries(value).some(([key, item]) => {
+    const declared = Object.hasOwn(schema.properties, key) ? schema.properties[key] : undefined;
+    if (!declared && extra && (navigationProperty.test(key) || urlProperty.test(key))) return true;
+    const child = declared ?? extra;
+    return child !== undefined && mapCarriesUrlKey(child, item, depth + 1);
+  });
 }
 
 /** Reject undeclared or ambiguous sinks while constructing trusted catalog metadata. */
@@ -56,7 +73,7 @@ export function validateContentProperties(props: Readonly<Record<string, unknown
     const path = `/props/${segment(key)}`;
     const sink = Object.hasOwn(component.urlSinks ?? {}, key) ? component.urlSinks![key] : undefined;
     const schema = component.properties[key];
-    if (schema && hasNestedUrlSchema(schema)) issues.push(diagnostic('content.url-profile', path, 'Nested URL properties are outside the supported sink profile.'));
+    if (schema && (hasNestedUrlSchema(schema) || mapCarriesUrlKey(schema, value))) issues.push(diagnostic('content.url-profile', path, 'Nested URL properties are outside the supported sink profile.'));
     if (navigationProperty.test(key)) issues.push(diagnostic('content.navigation', path, 'Navigation requires an explicitly authorized host action.'));
     else if (sink || urlProperty.test(key)) {
       if (!sink || sink.kind !== 'media' || /srcset/iu.test(key) || !validateNavigationDestination(value, sink).ok) issues.push(diagnostic('content.url', path, 'Media URL does not satisfy its declared origin policy.'));

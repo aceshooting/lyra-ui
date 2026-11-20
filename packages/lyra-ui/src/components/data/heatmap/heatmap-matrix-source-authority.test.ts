@@ -392,3 +392,16 @@ it('names the source canvas from the summary for a blank host label and drops st
   expect(el.shadowRoot!.querySelector('canvas')!.getAttribute('aria-label')!.trim()).to.not.equal('');
   expect(el.getAttribute('aria-label')).to.not.match(/^Heatmap of 2/);
 });
+
+it('names the source canvas from label and wires description, with a host aria-label still winning', async () => {
+  const el = await fixture<SourceHost & { label: string | null; description: string | null }>(html`<lr-heatmap style="width:320px"
+    label="Exact source" description="Sensor readings" .matrixSource=${provider(2, 2)}></lr-heatmap>`);
+  await waitUntil(() => el.shadowRoot!.querySelector('canvas[aria-label]') !== null);
+  const canvas = el.shadowRoot!.querySelector('canvas')!;
+  expect(canvas.getAttribute('aria-label')).equal('Exact source');
+  const ids = canvas.getAttribute('aria-describedby')!.split(' ');
+  expect(ids.map(id => el.shadowRoot!.getElementById(id)?.textContent?.trim())).to.include('Sensor readings');
+  el.setAttribute('aria-label', 'Host name');
+  await el.updateComplete;
+  expect(canvas.getAttribute('aria-label')).equal('Host name');
+});

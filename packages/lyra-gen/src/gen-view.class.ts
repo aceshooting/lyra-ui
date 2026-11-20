@@ -649,7 +649,7 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
       record.assigned.delete(propertyName);
     }
     for (const [propertyName, value] of Object.entries(values)) {
-      if (!Object.hasOwn(definition.properties, propertyName)) continue;
+      if (!Object.hasOwn(definition.properties, propertyName) && !definition.hostProperties?.includes(propertyName)) continue;
       if (!record.defaults.has(propertyName)) record.defaults.set(propertyName, target[propertyName]);
       if (!Object.is(target[propertyName], value)) target[propertyName] = value;
       record.assigned.add(propertyName);

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createCatalog, initialCatalog, subsetCatalog } from './catalog.js';
-import { buildCatalogPrompt, exportCatalogArtifact, exportCatalogJsonSchema } from './prompts.js';
+import { buildCatalogPrompt, exportCatalogArtifact, exportCatalogJsonSchema, exportCatalogSchemaForProfile } from './prompts.js';
 import { validateView } from './runtime.js';
 import { validateSchema } from './schema.js';
 
@@ -93,4 +93,52 @@ test('required child roles still fail the subset with catalog.dependency, option
   const ok = subsetCatalog(host, ['box', 'item']);
   assert.ok(ok.ok && (ok.value.components['box']!.children as readonly string[]).join() === 'item' && ok.value.components['box']!.optionalChildren?.length === 0);
   assert.throws(() => createCatalog({ id: 'h', version: '1', components: { box: { tag: 'div', properties: {}, children: ['item'], optionalChildren: ['other'] }, item: { tag: 'span', properties: {}, text: true } } }), TypeError);
+});
+
+test('exports bounded open maps in the catalog JSON Schema and keeps them out of the closed profile', () => {
+  const catalog = createCatalog({ id: 'maps', version: '1', components: {
+    tally: { tag: 'div', properties: { counts: { type: 'object', properties: {}, additionalProperties: { type: 'integer', minimum: 0 }, maxProperties: 12, propertyNames: { maxLength: 32 } } } },
+  } });
+  const props = (exportCatalogJsonSchema(catalog)['$defs'] as Record<string, { properties: { props: { properties: Record<string, unknown> } } }>)['tally']!.properties.props.properties;
+  assert.deepEqual(props['counts'], { type: 'object', properties: {}, additionalProperties: { type: 'integer', minimum: 0 }, maxProperties: 12, propertyNames: { maxLength: 32, type: 'string' } });
+  assert.equal(validateView({ version: '1', surfaceId: 's', revision: 0, catalog: { id: 'maps', version: '1' }, root: { id: 'r', type: 'tally', props: { counts: { north: 3, south: 4 } } } }, catalog).ok, true);
+  assert.equal(validateView({ version: '1', surfaceId: 's', revision: 0, catalog: { id: 'maps', version: '1' }, root: { id: 'r', type: 'tally', props: { counts: { north: -3 } } } }, catalog).ok, false);
+  const closed = exportCatalogSchemaForProfile(catalog, 'closed-json-v1');
+  assert.equal(closed.ok, false);
+  assert.ok(closed.diagnostics.some(item => item.path.endsWith('/additionalProperties')));
+});
+
+test('a map-valued property refuses URL-named keys supplied by content', () => {
+  const catalog = createCatalog({ id: 'maps', version: '1', components: {
+    tally: { tag: 'div', properties: { meta: { type: 'object', properties: {}, additionalProperties: { type: 'string' }, maxProperties: 4, propertyNames: { maxLength: 32 } } } },
+  } });
+  const document = (meta: Record<string, string>) => ({ version: '1' as const, surfaceId: 's', revision: 0, catalog: { id: 'maps', version: '1' }, root: { id: 'r', type: 'tally', props: { meta } } });
+  assert.equal(validateView(document({ owner: 'ops' }), catalog).ok, true);
+  for (const key of ['href', 'imageUrl', 'src']) assert.equal(validateView(document({ [key]: 'https://evil.example' }), catalog).ok, false, key);
+});
+
+test('host-only properties stay out of prompts, artifacts and exported schemas and cannot be generated', () => {
+  const formatter = (value: number) => `${value}`;
+  const catalog = createCatalog({ id: 'host', version: '1', components: {
+    metric: { tag: 'lr-stat', properties: { label: { type: 'string', maxLength: 64 } }, hostProperties: ['valueFormatter'],
+      prepareProperties: props => ({ ...props, valueFormatter: formatter }) },
+  } });
+  const prompt = buildCatalogPrompt(catalog);
+  assert.ok(!prompt.includes('valueFormatter'));
+  assert.ok(!prompt.includes('hostProperties'));
+  assert.ok(!JSON.stringify(exportCatalogArtifact(catalog)).includes('valueFormatter'));
+  assert.ok(!JSON.stringify(exportCatalogJsonSchema(catalog)).includes('valueFormatter'));
+  const generated = { version: '1' as const, surfaceId: 's', revision: 0, catalog: { id: 'host', version: '1' }, root: { id: 'r', type: 'metric', props: { label: 'Revenue', valueFormatter: 'x' } } };
+  const rejected = validateView(generated, catalog);
+  assert.equal(rejected.ok, false);
+  assert.ok(rejected.diagnostics.some(item => item.code === 'props.unknown'));
+  const base = { tag: 'lr-stat', properties: { label: { type: 'string' as const } }, prepareProperties: (props: Record<string, unknown>) => props };
+  for (const component of [
+    { ...base, hostProperties: ['label'] },
+    { ...base, hostProperties: ['imageUrl'] },
+    { ...base, hostProperties: ['href'] },
+    { ...base, hostProperties: ['onclick'] },
+    { ...base, hostProperties: ['a', 'a'] },
+    { tag: 'lr-stat', properties: {}, hostProperties: ['valueFormatter'] },
+  ]) assert.throws(() => createCatalog({ id: 'bad', version: '1', components: { metric: component } }), TypeError);
 });

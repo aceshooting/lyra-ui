@@ -602,6 +602,45 @@ it("does not overwrite an author-supplied role/aria-label", async () => {
   expect(el.getAttribute("aria-label")).to.equal("Custom label");
 });
 
+describe("label and description", () => {
+  const data = { kind: "matrix" as const, rowLabels: ["a", "b"], colLabels: ["x", "y"], values: [[1, 2], [3, 4]] };
+  const describedText = (el: LyraHeatmap, control: Element): string =>
+    (control.getAttribute("aria-describedby") ?? "").split(/\s+/).filter(Boolean)
+      .map((id) => el.shadowRoot!.getElementById(id)?.textContent?.trim() ?? "").join(" ");
+
+  it("names the chart from label and moves the generated summary into the description", async () => {
+    const el = await fixture<LyraHeatmap>(html`<lr-heatmap .data=${data}></lr-heatmap>`);
+    const summary = el.getAttribute("aria-label")!;
+    el.label = "Traffic by hour";
+    await el.updateComplete;
+    const canvas = el.shadowRoot!.querySelector('canvas[part="canvas"]')!;
+    expect(el.getAttribute("aria-label")).to.equal("Traffic by hour");
+    expect(canvas.getAttribute("aria-label")).to.equal("Traffic by hour");
+    expect(describedText(el, canvas)).to.equal(summary);
+    el.description = "Requests per hour, last week";
+    await el.updateComplete;
+    expect(describedText(el, canvas)).to.equal("Requests per hour, last week");
+    el.accessibleCells = true;
+    await el.updateComplete;
+    const grid = el.shadowRoot!.querySelector('[part="cells"]')!;
+    expect(grid.getAttribute("aria-label")).to.equal("Traffic by hour");
+    expect(describedText(el, grid)).to.equal("Requests per hour, last week");
+  });
+
+  it("lets a host aria-label win and falls back to the summary for a blank label", async () => {
+    const el = await fixture<LyraHeatmap>(html`<lr-heatmap label="   " .data=${data}></lr-heatmap>`);
+    const canvas = el.shadowRoot!.querySelector('canvas[part="canvas"]')!;
+    expect(el.getAttribute("aria-label")).to.match(/2/);
+    expect(canvas.getAttribute("aria-label")).to.equal(el.getAttribute("aria-label"));
+    expect(describedText(el, canvas)).to.equal("");
+    el.setAttribute("aria-label", "Host name");
+    el.label = "Ignored";
+    await el.updateComplete;
+    expect(el.getAttribute("aria-label")).to.equal("Host name");
+    expect(canvas.getAttribute("aria-label")).to.equal("Host name");
+  });
+});
+
 it("renders numeric min/max legend ticks", async () => {
   const el = (await fixture(html`<lr-heatmap></lr-heatmap>`)) as LyraHeatmap;
   setMatrixData(el, { rowLabels: ["a"] });
