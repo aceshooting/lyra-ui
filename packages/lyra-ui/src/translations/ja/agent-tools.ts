@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: '応答を送信する',
   agentQuestionDecline: '辞退',
   agentQuestionSubmitted: '回答が送信されました',
+  agentQuestionFormLoadFailed: 'このコンポーネントを読み込めませんでした。',
   terminalLabel: 'ターミナル出力',
   terminalDownload: 'ログをダウンロード',
   terminalHighlightLine: '{line} 行目',

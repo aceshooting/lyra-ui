@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'Nyefee nzaghachi',
   agentQuestionDecline: 'Ajụ',
   agentQuestionSubmitted: 'Azịza nyefere',
+  agentQuestionFormLoadFailed: 'Enweghị ike ibunye akụkụ a.',
   terminalLabel: 'Nsonaazụ ọnụ',
   terminalDownload: 'Budata ndekọ ọrụ',
   terminalHighlightLine: 'Ahịrị {line}',

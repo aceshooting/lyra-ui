@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'Seol freagra',
   agentQuestionDecline: 'Diúltaigh',
   agentQuestionSubmitted: 'Freagra seolta',
+  agentQuestionFormLoadFailed: 'Níorbh fhéidir an chomhpháirt seo a lódáil.',
   terminalLabel: 'Aschur teirminéil',
   terminalDownload: 'Íoslódáil an logchomhad',
   terminalHighlightLine: 'Líne {line}',

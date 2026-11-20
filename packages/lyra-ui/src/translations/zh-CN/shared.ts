@@ -6,7 +6,6 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
-  genViewLoadFailed: '无法加载此组件。',
   noData: '无数据',
   legendTypeShown: '{label}已显示',
   legendTypeHidden: '{label}已隐藏',

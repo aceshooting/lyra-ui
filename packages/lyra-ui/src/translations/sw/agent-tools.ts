@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'Wasilisha jibu',
   agentQuestionDecline: 'Kataa',
   agentQuestionSubmitted: 'Jibu limewasilishwa',
+  agentQuestionFormLoadFailed: 'Kijenzi hiki hakikuweza kupakiwa.',
   terminalLabel: 'Matokeo ya terminali',
   terminalDownload: 'Pakua kumbukumbu',
   terminalHighlightLine: 'Mstari {line}',

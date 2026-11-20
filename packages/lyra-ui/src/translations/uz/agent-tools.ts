@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'Javobni yuborish',
   agentQuestionDecline: 'Rad etish',
   agentQuestionSubmitted: 'Javob yuborildi',
+  agentQuestionFormLoadFailed: 'Bu komponentni yuklab bo‘lmadi.',
   terminalLabel: 'Terminal chiqishi',
   terminalDownload: 'Logni yuklab olish',
   terminalHighlightLine: '{line}-qator',

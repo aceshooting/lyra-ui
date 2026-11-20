@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'Gabatar da martani',
   agentQuestionDecline: 'Ƙi',
   agentQuestionSubmitted: 'An gabatar da martani',
+  agentQuestionFormLoadFailed: 'Ba a iya loda wannan sashi ba.',
   terminalLabel: 'Fitowar tasha',
   terminalDownload: 'Sauke tarihin ayyuka',
   terminalHighlightLine: 'Layi {line}',

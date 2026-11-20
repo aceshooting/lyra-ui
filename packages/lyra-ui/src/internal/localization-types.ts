@@ -111,6 +111,7 @@ export type LyraMessageKey =
   | 'agentQuestionAccept'
   | 'agentQuestionDecline'
   | 'agentQuestionSubmitted'
+  | 'agentQuestionFormLoadFailed'
   | 'streamInterrupted'
   | 'streamResume'
   | 'genViewEmpty'

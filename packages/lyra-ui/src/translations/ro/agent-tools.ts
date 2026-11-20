@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'Trimite răspunsul',
   agentQuestionDecline: 'Refuză',
   agentQuestionSubmitted: 'Răspuns trimis',
+  agentQuestionFormLoadFailed: 'Această componentă nu a putut fi încărcată.',
   terminalLabel: 'Ieșire terminal',
   terminalDownload: 'Descarcă jurnalul',
   terminalHighlightLine: 'Linia {line}',

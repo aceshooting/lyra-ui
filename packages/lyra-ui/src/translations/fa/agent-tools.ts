@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'ارسال پاسخ',
   agentQuestionDecline: 'رد کردن',
   agentQuestionSubmitted: 'پاسخ ارسال شد',
+  agentQuestionFormLoadFailed: 'این مؤلفه بارگیری نشد.',
   terminalLabel: 'خروجی ترمینال',
   terminalDownload: 'دانلود گزارش',
   terminalHighlightLine: 'خط {line}',

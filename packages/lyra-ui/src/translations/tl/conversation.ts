@@ -11,6 +11,7 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'Walang nabuong tanaw na maipapakita.',
   genViewInvalid: 'Hindi maipapakita ang nabuong tanaw na ito.',
   genViewLoading: 'Naglo-load ng component…',
+  genViewLoadFailed: 'Hindi ma-load ang component na ito.',
   genViewInvalidState: 'Hindi magagamit ang value ng field na ito.',
   genViewActionDenied: 'Hindi available ang aksyong ito.',
   genViewConfirmationRequired: 'Kailangan ng aksyong ito ng kumpirmasyon mula sa app.',

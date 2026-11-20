@@ -11,6 +11,7 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'Kuvatav genereeritud vaade puudub.',
   genViewInvalid: 'Seda genereeritud vaadet ei saa kuvada.',
   genViewLoading: 'Komponendi laadimine…',
+  genViewLoadFailed: 'Seda komponenti ei õnnestunud laadida.',
   genViewInvalidState: 'Seda välja väärtust ei saa kasutada.',
   genViewActionDenied: 'See toiming pole saadaval.',
   genViewConfirmationRequired: 'See toiming vajab rakenduse kinnitust.',

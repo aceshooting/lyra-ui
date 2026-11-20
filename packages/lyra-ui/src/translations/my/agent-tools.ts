@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'တုံ့ပြန်ချက်ပေးပို့ပါ။',
   agentQuestionDecline: 'ငြင်းသည်။',
   agentQuestionSubmitted: 'တုံ့ပြန်ချက်ပေးပို့ခဲ့သည်။',
+  agentQuestionFormLoadFailed: 'ဤအစိတ်အပိုင်းကို မတင်နိုင်ခဲ့ပါ။',
   terminalLabel: 'Terminal ရလဒ်',
   terminalDownload: 'မှတ်တမ်း ဒေါင်းလုဒ်လုပ်ရန်',
   terminalHighlightLine: 'စာကြောင်း {line}',

@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'Send inn svar',
   agentQuestionDecline: 'Avslå',
   agentQuestionSubmitted: 'Svar sendt inn',
+  agentQuestionFormLoadFailed: 'Denne komponenten kunne ikke lastes inn.',
   terminalLabel: 'Terminalutdata',
   terminalDownload: 'Last ned logg',
   terminalHighlightLine: 'Linje {line}',

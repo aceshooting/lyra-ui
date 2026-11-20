@@ -11,6 +11,7 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'M’hemm l-ebda veduta ġġenerata x’turi.',
   genViewInvalid: 'Din il-veduta ġġenerata ma tistax tintwera.',
   genViewLoading: 'Qed jitgħabba l-komponent…',
+  genViewLoadFailed: 'Dan il-komponent ma setax jitgħabba.',
   genViewInvalidState: 'Il-valur ta’ dan il-qasam ma jistax jintuża.',
   genViewActionDenied: 'Din l-azzjoni mhix disponibbli.',
   genViewConfirmationRequired: 'Din l-azzjoni teħtieġ konferma mill-applikazzjoni.',

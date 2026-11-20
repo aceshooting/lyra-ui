@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'Жауап жіберу',
   agentQuestionDecline: 'Бас тарту',
   agentQuestionSubmitted: 'Жауап жіберілді',
+  agentQuestionFormLoadFailed: 'Бұл құрамдасты жүктеу мүмкін болмады.',
   terminalLabel: 'Терминал шығысы',
   terminalDownload: 'Журналды жүктеп алу',
   terminalHighlightLine: 'Жол {line}',

@@ -6,7 +6,6 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
-  genViewLoadFailed: 'Hindi ma-load ang component na ito.',
   noData: 'Walang datos',
   legendTypeShown: 'Ipinapakita ang {label}',
   legendTypeHidden: 'Nakatago ang {label}',

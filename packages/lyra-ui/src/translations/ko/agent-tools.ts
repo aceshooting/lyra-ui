@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: '응답 제출',
   agentQuestionDecline: '거절하다',
   agentQuestionSubmitted: '응답이 제출되었습니다.',
+  agentQuestionFormLoadFailed: '이 컴포넌트를 로드하지 못했습니다.',
   terminalLabel: '터미널 출력',
   terminalDownload: '다운로드 로그',
   terminalHighlightLine: '라인 {line}',

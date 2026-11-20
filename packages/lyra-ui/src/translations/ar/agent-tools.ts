@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'إرسال الرد',
   agentQuestionDecline: 'رفض',
   agentQuestionSubmitted: 'تم إرسال الرد',
+  agentQuestionFormLoadFailed: 'تعذّر تحميل هذا المكوّن.',
   terminalLabel: 'مخرجات الطرفية',
   terminalDownload: 'تنزيل السجل',
   terminalHighlightLine: 'السطر {line}',

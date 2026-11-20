@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'Pošalji odgovor',
   agentQuestionDecline: 'Odbij',
   agentQuestionSubmitted: 'Odgovor je poslat',
+  agentQuestionFormLoadFailed: 'Ova komponenta nije mogla da se učita.',
   terminalLabel: 'Izlaz terminala',
   terminalDownload: 'Preuzmi dnevnik',
   terminalHighlightLine: 'Red {line}',

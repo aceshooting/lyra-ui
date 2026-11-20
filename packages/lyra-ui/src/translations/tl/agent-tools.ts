@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'Isumite ang tugon',
   agentQuestionDecline: 'Tanggihan',
   agentQuestionSubmitted: 'Naipasa na ang tugon',
+  agentQuestionFormLoadFailed: 'Hindi ma-load ang component na ito.',
   terminalLabel: 'Inilalabas ng terminal',
   terminalDownload: 'I-download ang log',
   terminalHighlightLine: 'Linya {line}',

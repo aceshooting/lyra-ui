@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'प्रतिक्रिया जमा करीं',
   agentQuestionDecline: 'मना करीं',
   agentQuestionSubmitted: 'जवाब जमा कइल गइल',
+  agentQuestionFormLoadFailed: 'ई घटक लोड ना हो सकल।',
   terminalLabel: 'टर्मिनल आउटपुट',
   terminalDownload: 'लॉग डाउनलोड करीं',
   terminalHighlightLine: 'लाइन {line}',

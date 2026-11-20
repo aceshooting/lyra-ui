@@ -87,6 +87,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   agentQuestionAccept: 'Submit response',
   agentQuestionDecline: 'Decline',
   agentQuestionSubmitted: 'Response submitted',
+  agentQuestionFormLoadFailed: 'This component could not be loaded.',
   streamInterrupted: 'Stream interrupted',
   streamResume: 'Resume',
   genViewEmpty: 'No generated view to display.',

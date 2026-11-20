@@ -11,6 +11,7 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'Hakuna mwonekano uliotengenezwa wa kuonyesha.',
   genViewInvalid: 'Mwonekano huu uliotengenezwa hauwezi kuonyeshwa.',
   genViewLoading: 'Inapakia kijenzi…',
+  genViewLoadFailed: 'Kijenzi hiki hakikuweza kupakiwa.',
   genViewInvalidState: 'Thamani ya sehemu hii haiwezi kutumika.',
   genViewActionDenied: 'Kitendo hiki hakipatikani.',
   genViewConfirmationRequired: 'Kitendo hiki kinahitaji uthibitisho kutoka kwa programu.',

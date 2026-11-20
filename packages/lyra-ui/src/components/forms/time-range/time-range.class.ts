@@ -580,8 +580,13 @@ export class LyraTimeRange extends LyraFormControlElement<LyraTimeRangeEventMap>
   private hostRelationships: ResolvedAriaRelationshipLease[] = [];
 
   private syncHostRelationships(): void {
-    const part = (name: string) =>
-      this.isConnected ? this.renderRoot.querySelector<HTMLElement>(`[part="${name}"]`) : null;
+    // The first update can run after an interrupted first connection; a relationship acquired
+    // while disconnected would keep its observers with no disconnectedCallback left to release it.
+    if (!this.isConnected) {
+      this.releaseHostRelationships();
+      return;
+    }
+    const part = (name: string) => this.renderRoot.querySelector<HTMLElement>(`[part="${name}"]`);
     const targets = [
       [part('base'), 'aria-labelledby'],
       [part('handle-start'), 'aria-describedby'],

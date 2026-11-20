@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'પ્રતિભાવ સબમિટ કરો',
   agentQuestionDecline: 'નકાર',
   agentQuestionSubmitted: 'જવાબ સબમિટ કર્યો',
+  agentQuestionFormLoadFailed: 'આ ઘટક લોડ કરી શકાયો નથી.',
   terminalLabel: 'ટર્મિનલ આઉટપુટ',
   terminalDownload: 'લૉગ ડાઉનલોડ કરો',
   terminalHighlightLine: 'પંક્તિ {line}',

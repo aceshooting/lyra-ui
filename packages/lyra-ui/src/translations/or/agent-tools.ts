@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'ଉତ୍ତର ଦାଖଲ କରନ୍ତୁ',
   agentQuestionDecline: 'ପ୍ରତ୍ୟାଖ୍ୟାନ କରନ୍ତୁ',
   agentQuestionSubmitted: 'ଉତ୍ତର ଦାଖଲ ହେଲା',
+  agentQuestionFormLoadFailed: 'ଏହି ଘଟକକୁ ଲୋଡ୍ କରାଯାଇପାରିଲା ନାହିଁ।',
   terminalLabel: 'ଟର୍ମିନାଲ୍ ଆଉଟପୁଟ୍',
   terminalDownload: 'ଲଗ୍ ଡାଉନଲୋଡ୍ କରନ୍ତୁ',
   terminalHighlightLine: 'ଧାଡ଼ି {line}',

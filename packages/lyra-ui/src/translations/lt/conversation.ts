@@ -11,6 +11,7 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'Nėra sugeneruoto rodinio.',
   genViewInvalid: 'Šio sugeneruoto rodinio negalima parodyti.',
   genViewLoading: 'Įkeliamas komponentas…',
+  genViewLoadFailed: 'Nepavyko įkelti šio komponento.',
   genViewInvalidState: 'Šios lauko reikšmės negalima naudoti.',
   genViewActionDenied: 'Šis veiksmas nepasiekiamas.',
   genViewConfirmationRequired: 'Šiam veiksmui reikia programos patvirtinimo.',

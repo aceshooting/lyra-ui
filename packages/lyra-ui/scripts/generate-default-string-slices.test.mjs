@@ -1282,8 +1282,10 @@ try {
 
 const actualConversationDefaults = await readFile(new URL('../src/internal/default-strings/conversation.generated.ts', import.meta.url), 'utf8');
 for (const key of ['genViewEmpty', 'genViewInvalid', 'genViewLoading', 'genViewLoadFailed', 'genViewInvalidState', 'genViewActionDenied', 'genViewConfirmationRequired']) {
-  // lr-agent-question also renders genViewLoadFailed itself, so agent-tools may co-own a key.
-  assert.ok(inputFamilyIndex.keyToFamilies.get(key)?.has('conversation'), `${key} remains available in the translation family`);
+  // The documented lyra-gen contract: every renderer message ships in the conversation slice. A
+  // second owning family would route the key to the shared slice instead, so a component that
+  // needs similar copy gets its own component-prefixed key rather than reusing a genView* one.
+  assert.deepEqual([...(inputFamilyIndex.keyToFamilies.get(key) ?? [])], ['conversation'], `${key} is owned by the conversation family alone`);
   assert.doesNotMatch(actualConversationDefaults, new RegExp(`LYRA_DEFAULT_${key}\\b`), `${key} has no unused UI fallback export`);
 }
 

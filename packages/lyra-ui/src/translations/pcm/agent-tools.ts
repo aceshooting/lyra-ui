@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'Send di answer',
   agentQuestionDecline: 'No accept am',
   agentQuestionSubmitted: 'Answer don submit',
+  agentQuestionFormLoadFailed: 'E no fit load dis component.',
   terminalLabel: 'Wetin terminal show',
   terminalDownload: 'Download di log',
   terminalHighlightLine: 'Line number {line}',

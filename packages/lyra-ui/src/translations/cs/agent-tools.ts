@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'Odeslat odpověď',
   agentQuestionDecline: 'Odmítnout',
   agentQuestionSubmitted: 'Odpověď odeslána',
+  agentQuestionFormLoadFailed: 'Tuto komponentu se nepodařilo načíst.',
   terminalLabel: 'Výstup terminálu',
   terminalDownload: 'Stáhnout protokol',
   terminalHighlightLine: 'Řádek {line}',

@@ -6,7 +6,6 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
-  genViewLoadFailed: 'A kò lè gbé ẹ̀yà yìí wọlé.',
   noData: 'Kò sí dátà',
   legendTypeShown: 'A ti fi {label} hàn',
   legendTypeHidden: 'A ti fi {label} pamọ́',

@@ -11,6 +11,7 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'Akukho ukubuka okukhiqiziwe okungaboniswa.',
   genViewInvalid: 'Lokhu kubuka okukhiqiziwe akukwazi ukuboniswa.',
   genViewLoading: 'Kulayishwa ingxenye…',
+  genViewLoadFailed: 'Le ngxenye ayikwazanga ukulayishwa.',
   genViewInvalidState: 'Inani lale nkambu alikwazi ukusetshenziswa.',
   genViewActionDenied: 'Lesi senzo asitholakali.',
   genViewConfirmationRequired: 'Lesi senzo sidinga ukuqinisekiswa okuvela kuhlelo lokusebenza.',

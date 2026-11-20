@@ -6,7 +6,6 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
-  genViewLoadFailed: 'Tento komponent sa nepodarilo načítať.',
   noData: 'Žiadne údaje',
   legendTypeShown: 'Zobrazené: {label}',
   legendTypeHidden: 'Skryté: {label}',

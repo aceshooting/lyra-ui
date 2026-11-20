@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'Kirim tanggapan',
   agentQuestionDecline: 'nolak',
   agentQuestionSubmitted: 'Tanggapan diajukake',
+  agentQuestionFormLoadFailed: 'Komponen iki ora bisa dimuat.',
   terminalLabel: 'Keluaran terminal',
   terminalDownload: 'Undhuh log',
   terminalHighlightLine: 'Baris {line}',

@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'ಪ್ರತಿಕ್ರಿಯೆಯನ್ನು ಸಲ್ಲಿಸಿ',
   agentQuestionDecline: 'ನಿರಾಕರಿಸು',
   agentQuestionSubmitted: 'ಪ್ರತಿಕ್ರಿಯೆ ಸಲ್ಲಿಸಲಾಗಿದೆ',
+  agentQuestionFormLoadFailed: 'ಈ ಘಟಕವನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.',
   terminalLabel: 'ಟರ್ಮಿನಲ್ ಔಟ್‌ಪುಟ್',
   terminalDownload: 'ಲಾಗ್ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ',
   terminalHighlightLine: 'ಸಾಲು {line}',

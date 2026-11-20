@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'Tinda eyano',
   agentQuestionDecline: 'Boya',
   agentQuestionSubmitted: 'Eyano oyo epesamaki',
+  agentQuestionFormLoadFailed: 'Tokoki te kocharger composant oyo.',
   terminalLabel: 'Sortie ya terminal',
   terminalDownload: 'Télécharger log',
   terminalHighlightLine: 'Molɔngɔ {line}',

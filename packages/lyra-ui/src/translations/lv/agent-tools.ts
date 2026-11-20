@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'Iesniegt atbildi',
   agentQuestionDecline: 'Noraidīt',
   agentQuestionSubmitted: 'Atbilde iesniegta',
+  agentQuestionFormLoadFailed: 'Neizdevās ielādēt šo komponentu.',
   terminalLabel: 'Termināļa izvade',
   terminalDownload: 'Lejupielādēt žurnālu',
   terminalHighlightLine: 'Rinda {line}',

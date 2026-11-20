@@ -667,6 +667,13 @@ export const styles = css`
     font-weight: var(--lr-font-weight-normal);
     color: var(--lr-color-text-quiet);
   }
+  /* text-quiet on the tag's brand-quiet fill is ~4.3:1, under the WCAG AA 4.5:1 floor for this
+     small text; inside a tag the badge inherits the tag's own full-strength text color instead,
+     the same treatment lr-conversation-item and lr-trace-tree give quiet text on that fill. The
+     italic label and dashed border still mark the value as unavailable. */
+  [part~="tag"] [part="unknown-value"] {
+    color: inherit;
+  }
 
   [part="form-control"],
   [part="form-control-label"],

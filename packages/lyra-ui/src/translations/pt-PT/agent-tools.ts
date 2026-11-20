@@ -68,6 +68,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'Submeter resposta',
   agentQuestionDecline: 'Recusar',
   agentQuestionSubmitted: 'Resposta submetida',
+  agentQuestionFormLoadFailed: 'Não foi possível carregar este componente.',
   terminalLabel: 'Saída do terminal',
   terminalDownload: 'Transferir o registo',
   terminalHighlightLine: 'Linha {line}',

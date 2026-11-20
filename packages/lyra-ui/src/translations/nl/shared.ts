@@ -6,7 +6,6 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
-  genViewLoadFailed: 'Deze component kon niet worden geladen.',
   noData: 'Geen gegevens',
   legendTypeShown: '{label} weergegeven',
   legendTypeHidden: '{label} verborgen',

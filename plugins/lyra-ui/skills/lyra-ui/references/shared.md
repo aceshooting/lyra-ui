@@ -3756,15 +3756,17 @@ those four kinds must walk the declaration's own `superclass.name`/`superclass.m
 are already fully resolved.
 
 **Which tags an entry registers, and which message keys it can reach (`registrations.json`).** A
-stable per-tag entry (`@aceshooting/lyra-ui/components/lr-<name>.js`) can, at import time, define
-more than one custom element: importing `lr-table.js` also registers `<lr-empty>`,
-`<lr-pagination>`, `<lr-skeleton>` and `<lr-spinner>`, because `lr-table`'s registration entry
-imports those composed children's own registration entries before defining `<lr-table>` itself.
+stable per-tag entry (`@aceshooting/lyra-ui/components/lr-<name>.js`) can define more than one
+custom element: importing `lr-table.js` also registers `<lr-empty>`, `<lr-pagination>`,
+`<lr-skeleton>` and `<lr-spinner>`, because `lr-table`'s registration entry imports those composed
+children's own registration entries — `<lr-empty>` and `<lr-spinner>` before defining `<lr-table>`
+itself, `<lr-pagination>` and `<lr-skeleton>` lazily, the first time the table pages or shows
+skeleton rows.
 `custom-elements.json` declares one custom element per family source module, with no field for a
 stable per-tag entry specifier and none for the extra tags importing it registers as a side effect.
 For that, read the generated `@aceshooting/lyra-ui/registrations.json` instead (`schemaVersion: 1`):
-`{ entries: [{ tag, entry, registrationModule, distModule, registers, localeKeys }],
-integrations: [{ entry, registrationModule, distModule, registers, localeKeys }] }`. Every
+`{ entries: [{ tag, entry, registrationModule, distModule, registers, lazyRegisters, localeKeys }],
+integrations: [{ entry, registrationModule, distModule, registers, lazyRegisters, localeKeys }] }`. Every
 `entries` row describes the stable per-tag alias above and always carries `tag`. `integrations`
 lists the published integration-bridge specifiers, which install an integration — an optional-peer
 resolver, a lazy document-format registrar — without being any single component's own alias, so
@@ -3772,13 +3774,15 @@ they carry no `tag`: `components/media/flag/flag-peer.js`,
 `components/viewers/archive-viewer/archive-viewer-register.js` and
 `components/viewers/ebook-viewer/ebook-viewer-register.js`, the three imports a per-tag alias cannot
 stand in for. They are a separate array rather than tag-less rows mixed into `entries`, so a reader
-that keys `entries` by `tag` keeps working; `integrations`, `distModule` and `localeKeys` are all
-additive, which is why the schema version is unchanged. `registrationModule` is the `src/` path used
+that keys `entries` by `tag` keeps working; `integrations`, `distModule`, `lazyRegisters` and
+`localeKeys` are all additive, which is why the schema version is unchanged. `registrationModule` is the `src/` path used
 internally; `distModule` is a retained published specifier and equals the stable `entry` for per-tag
 registrations and integration bridges. `registers` is every `lr-*` tag
 importing `entry` defines, direct or transitive, derived from the same transitive-import analysis
 `scripts/check-component-dependencies.mjs` already performs against the real registration graph
-(not a second hand-maintained list). `localeKeys` is every `LyraMessageKey` the registered tags can
+(not a second hand-maintained list). `lazyRegisters` is the subset of `registers` reached only
+through a lazy `import()`, defined on first use rather than when the import settles; every other
+`registers` tag is defined by then. `localeKeys` is every `LyraMessageKey` the registered tags can
 reach — including a key reached only through an indirect lookup table (e.g. `lr-attachment-trigger`'s
 `{ triggerKey: 'attachmentTriggerFiles' }`-shaped map), because it reuses
 `generate-default-string-slices.mjs`'s own reachability walk rather than a literal-`localize()`-only

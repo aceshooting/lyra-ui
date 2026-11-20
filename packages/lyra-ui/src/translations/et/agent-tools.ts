@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'Saada vastus',
   agentQuestionDecline: 'Keeldu',
   agentQuestionSubmitted: 'Vastus saadetud',
+  agentQuestionFormLoadFailed: 'Seda komponenti ei õnnestunud laadida.',
   terminalLabel: 'Terminali väljund',
   terminalDownload: 'Laadi logi alla',
   terminalHighlightLine: 'Rida {line}',

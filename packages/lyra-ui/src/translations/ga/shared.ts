@@ -6,7 +6,6 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
-  genViewLoadFailed: 'Níorbh fhéidir an chomhpháirt seo a lódáil.',
   noData: 'Gan sonraí',
   legendTypeShown: '{label} taispeánta',
   legendTypeHidden: '{label} i bhfolach',

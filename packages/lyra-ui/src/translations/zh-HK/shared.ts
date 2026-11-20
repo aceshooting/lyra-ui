@@ -7,7 +7,6 @@ import { registerLyraLocaleDelta } from '../../internal/localization-runtime.js'
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
-  genViewLoadFailed: '無法載入此組件。',
   promptStudioRoleUser: '用戶',
 };
 

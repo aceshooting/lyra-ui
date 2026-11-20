@@ -11,6 +11,7 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'Ei luotua näkymää näytettäväksi.',
   genViewInvalid: 'Tätä luotua näkymää ei voida näyttää.',
   genViewLoading: 'Ladataan komponenttia…',
+  genViewLoadFailed: 'Tätä komponenttia ei voitu ladata.',
   genViewInvalidState: 'Tämän kentän arvoa ei voida käyttää.',
   genViewActionDenied: 'Tämä toiminto ei ole käytettävissä.',
   genViewConfirmationRequired: 'Tämä toiminto vaatii vahvistuksen sovellukselta.',

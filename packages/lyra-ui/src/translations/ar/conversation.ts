@@ -11,6 +11,7 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'لا توجد واجهة مُنشأة لعرضها.',
   genViewInvalid: 'لا يمكن عرض هذه الواجهة المُنشأة.',
   genViewLoading: 'جارٍ تحميل المكوّن…',
+  genViewLoadFailed: 'تعذّر تحميل هذا المكوّن.',
   genViewInvalidState: 'لا يمكن استخدام قيمة هذا الحقل.',
   genViewActionDenied: 'هذا الإجراء غير متاح.',
   genViewConfirmationRequired: 'يتطلب هذا الإجراء تأكيدًا من التطبيق.',

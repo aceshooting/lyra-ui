@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'ځواب وسپارئ',
   agentQuestionDecline: 'رد یې کړئ',
   agentQuestionSubmitted: 'ځواب وسپارل شو',
+  agentQuestionFormLoadFailed: 'دا برخه نه شوه راوړل کېدای.',
   terminalLabel: 'د ټرمېنل پایله',
   terminalDownload: 'لاګ ښکته کول',
   terminalHighlightLine: 'کرښه {line}',

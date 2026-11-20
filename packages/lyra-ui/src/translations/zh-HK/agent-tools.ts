@@ -7,6 +7,7 @@ import { registerLyraLocaleDelta } from '../../internal/localization-runtime.js'
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  agentQuestionFormLoadFailed: '無法載入此組件。',
   subagentPanelLimit: '僅顯示前{count}次子智能體執行。',
   spanKindAgent: '智能體',
   browserFrameControllerAgent: '智能體',

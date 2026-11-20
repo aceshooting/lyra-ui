@@ -11,6 +11,7 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'ಪ್ರದರ್ಶಿಸಲು ರಚಿಸಲಾದ ನೋಟವಿಲ್ಲ.',
   genViewInvalid: 'ಈ ರಚಿಸಲಾದ ನೋಟವನ್ನು ಪ್ರದರ್ಶಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ.',
   genViewLoading: 'ಘಟಕವನ್ನು ಲೋಡ್ ಮಾಡಲಾಗುತ್ತಿದೆ…',
+  genViewLoadFailed: 'ಈ ಘಟಕವನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.',
   genViewInvalidState: 'ಈ ಕ್ಷೇತ್ರದ ಮೌಲ್ಯವನ್ನು ಬಳಸಲು ಸಾಧ್ಯವಿಲ್ಲ.',
   genViewActionDenied: 'ಈ ಕ್ರಿಯೆ ಲಭ್ಯವಿಲ್ಲ.',
   genViewConfirmationRequired: 'ಈ ಕ್ರಿಯೆಗೆ ಅಪ್ಲಿಕೇಶನ್‌ನಿಂದ ದೃಢೀಕರಣದ ಅಗತ್ಯವಿದೆ.',

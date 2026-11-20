@@ -11,6 +11,7 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'وکھاؤن لئی کوئی بنایا گیا منظر نئیں۔',
   genViewInvalid: 'ایہہ بنایا گیا منظر وکھایا نئیں جا سکدا۔',
   genViewLoading: 'کمپوننٹ لوڈ ہو ریا اے…',
+  genViewLoadFailed: 'ایہہ کمپوننٹ لوڈ نئیں ہو سکیا۔',
   genViewInvalidState: 'ایس فیلڈ دی قدر ورتی نئیں جا سکدی۔',
   genViewActionDenied: 'ایہہ کارروائی دستیاب نئیں۔',
   genViewConfirmationRequired: 'ایس کارروائی لئی ایپ توں تصدیق دی لوڑ اے۔',

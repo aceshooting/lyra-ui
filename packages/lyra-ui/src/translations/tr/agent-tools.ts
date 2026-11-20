@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'Yanıtı gönder',
   agentQuestionDecline: 'Reddet',
   agentQuestionSubmitted: 'Yanıt gönderildi',
+  agentQuestionFormLoadFailed: 'Bu bileşen yüklenemedi.',
   terminalLabel: 'Terminal çıktısı',
   terminalDownload: 'Günlüğü indir',
   terminalHighlightLine: '{line}. satır',

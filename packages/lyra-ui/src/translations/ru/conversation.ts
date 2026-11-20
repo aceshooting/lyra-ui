@@ -11,6 +11,7 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'Нет сгенерированного представления для отображения.',
   genViewInvalid: 'Это сгенерированное представление невозможно отобразить.',
   genViewLoading: 'Загрузка компонента…',
+  genViewLoadFailed: 'Не удалось загрузить этот компонент.',
   genViewInvalidState: 'Значение этого поля невозможно использовать.',
   genViewActionDenied: 'Это действие недоступно.',
   genViewConfirmationRequired: 'Для этого действия требуется подтверждение приложения.',

@@ -20,7 +20,7 @@ import { agentActionButtonStyles } from '../agent-action-button.styles.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_agentQuestionAccept, LYRA_DEFAULT_agentQuestionDecline, LYRA_DEFAULT_agentQuestionLabel, LYRA_DEFAULT_agentQuestionSubmitted, LYRA_DEFAULT_agentQuestionUnsupported, LYRA_DEFAULT_genViewLoadFailed } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_agentQuestionAccept, LYRA_DEFAULT_agentQuestionDecline, LYRA_DEFAULT_agentQuestionFormLoadFailed, LYRA_DEFAULT_agentQuestionLabel, LYRA_DEFAULT_agentQuestionSubmitted, LYRA_DEFAULT_agentQuestionUnsupported } from '../../../internal/default-strings/agent-tools.generated.js';
 import { LYRA_DEFAULT_cancel } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -80,11 +80,11 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
     ...super.defaultStrings,
     agentQuestionAccept: LYRA_DEFAULT_agentQuestionAccept,
     agentQuestionDecline: LYRA_DEFAULT_agentQuestionDecline,
+    agentQuestionFormLoadFailed: LYRA_DEFAULT_agentQuestionFormLoadFailed,
     agentQuestionLabel: LYRA_DEFAULT_agentQuestionLabel,
     agentQuestionSubmitted: LYRA_DEFAULT_agentQuestionSubmitted,
     agentQuestionUnsupported: LYRA_DEFAULT_agentQuestionUnsupported,
     cancel: LYRA_DEFAULT_cancel,
-    genViewLoadFailed: LYRA_DEFAULT_genViewLoadFailed,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -201,7 +201,7 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
       void registration.then((loaded) => {
         if (loaded === !this.formLoadFailed) return;
         this.formLoadFailed = !loaded;
-        if (!loaded) this.announcements.announceAssertive(this.localize('genViewLoadFailed'));
+        if (!loaded) this.announcements.announceAssertive(this.localize('agentQuestionFormLoadFailed'));
       });
     } else if (this.formLoadFailed && customElements.get(tag('tool-param-form'))) {
       this.formLoadFailed = false;
@@ -290,7 +290,7 @@ export class LyraAgentQuestion extends LyraElement<LyraAgentQuestionEventMap> {
         .disabled=${this.inactive} @lr-input=${(event: CustomEvent<{ value: ToolParamFormValue }>) => this.input(event, requestId)}></lr-tool-param-form>`
         : html`<p part="error">${this.localize('agentQuestionUnsupported')}</p>`}
       ${this.formLoadFailed && this.schema !== EMPTY_SCHEMA && this.supportedSchema
-        ? html`<p part="error">${this.localize('genViewLoadFailed')}</p>` : nothing}
+        ? html`<p part="error">${this.localize('agentQuestionFormLoadFailed')}</p>` : nothing}
       <div part="actions">${(['accept', 'decline', 'cancel'] as const).map((action) => html`<button
         part="action" type="button" data-action=${action} data-agent-action=${action === 'accept' ? 'brand' : 'neutral'} ?disabled=${this.inactive || (action === 'accept' && (!this.supportedSchema || this.formLoadFailed))}
         @click=${() => this.respond(action, requestId)}>${this.localize(action === 'accept' ? 'agentQuestionAccept' : action === 'decline' ? 'agentQuestionDecline' : 'cancel')}</button>`)}</div>

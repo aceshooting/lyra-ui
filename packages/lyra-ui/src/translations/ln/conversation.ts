@@ -11,6 +11,7 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'Ezali na bolakisi oyo esalemi te mpo na kolakisa.',
   genViewInvalid: 'Tokoki te kolakisa bolakisi oyo esalemi.',
   genViewLoading: 'Ezali kozwa composant…',
+  genViewLoadFailed: 'Tokoki te kocharger composant oyo.',
   genViewInvalidState: 'Tokoki te kosalela valeur ya esika oyo.',
   genViewActionDenied: 'Action oyo ezali te.',
   genViewConfirmationRequired: 'Action oyo esengeli na bondimi ya application.',

@@ -11,6 +11,7 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: '沒有已產生的檢視可顯示。',
   genViewInvalid: '無法顯示此已產生的檢視。',
   genViewLoading: '正在載入元件…',
+  genViewLoadFailed: '無法載入此元件。',
   genViewInvalidState: '無法使用此欄位的值。',
   genViewActionDenied: '此操作無法使用。',
   genViewConfirmationRequired: '此操作需要應用程式確認。',

@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'Gửi câu trả lời',
   agentQuestionDecline: 'Từ chối',
   agentQuestionSubmitted: 'Đã gửi câu trả lời',
+  agentQuestionFormLoadFailed: 'Không thể tải thành phần này.',
   terminalLabel: 'Đầu ra terminal',
   terminalDownload: 'Tải nhật ký xuống',
   terminalHighlightLine: 'Dòng {line}',

@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'Υποβολή απάντησης',
   agentQuestionDecline: 'Απόρριψη',
   agentQuestionSubmitted: 'Η απάντηση υποβλήθηκε',
+  agentQuestionFormLoadFailed: 'Δεν ήταν δυνατή η φόρτωση αυτού του στοιχείου.',
   terminalLabel: 'Έξοδος τερματικού',
   terminalDownload: 'Λήψη αρχείου καταγραφής',
   terminalHighlightLine: 'Γραμμή {line}',

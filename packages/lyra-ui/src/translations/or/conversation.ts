@@ -11,6 +11,7 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'ଦେଖାଇବା ପାଇଁ କୌଣସି ସୃଷ୍ଟି ହୋଇଥିବା ଦୃଶ୍ୟ ନାହିଁ।',
   genViewInvalid: 'ଏହି ସୃଷ୍ଟି ହୋଇଥିବା ଦୃଶ୍ୟକୁ ଦେଖାଯାଇପାରିବ ନାହିଁ।',
   genViewLoading: 'ଘଟକ ଲୋଡ୍ ହେଉଛି…',
+  genViewLoadFailed: 'ଏହି ଘଟକକୁ ଲୋଡ୍ କରାଯାଇପାରିଲା ନାହିଁ।',
   genViewInvalidState: 'ଏହି ଫିଲ୍ଡର ମୂଲ୍ୟ ବ୍ୟବହାର କରାଯାଇପାରିବ ନାହିଁ।',
   genViewActionDenied: 'ଏହି କାର୍ଯ୍ୟ ଉପଲବ୍ଧ ନାହିଁ।',
   genViewConfirmationRequired: 'ଏହି କାର୍ଯ୍ୟ ପାଇଁ ଆପ୍ଲିକେସନ୍‌ରୁ ନିଶ୍ଚିତକରଣ ଆବଶ୍ୟକ।',

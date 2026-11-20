@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'Fi ìdáhùn ránṣẹ́',
   agentQuestionDecline: 'Kọ̀ ọ́',
   agentQuestionSubmitted: 'A ti fi ìdáhùn ránṣẹ́',
+  agentQuestionFormLoadFailed: 'A kò lè gbé ẹ̀yà yìí wọlé.',
   terminalLabel: 'Àbájáde terminal',
   terminalDownload: 'Ṣe ìgbàsílẹ̀ àkọsílẹ̀',
   terminalHighlightLine: 'Ìlà {line}',

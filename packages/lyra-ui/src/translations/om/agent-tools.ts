@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'Deebii galchi',
   agentQuestionDecline: 'Didi',
   agentQuestionSubmitted: 'Deebiin galfameera',
+  agentQuestionFormLoadFailed: 'Qaama kana fe’uun hin danda’amne.',
   terminalLabel: 'Bu\'aa sarara ajajaa',
   terminalDownload: 'Galmee buusi',
   terminalHighlightLine: 'Sarara {line}',

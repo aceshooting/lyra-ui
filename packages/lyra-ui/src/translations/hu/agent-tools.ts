@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'Válasz beküldése',
   agentQuestionDecline: 'Elutasítás',
   agentQuestionSubmitted: 'Válasz elküldve',
+  agentQuestionFormLoadFailed: 'Ezt a komponenst nem sikerült betölteni.',
   terminalLabel: 'Terminálkimenet',
   terminalDownload: 'Napló letöltése',
   terminalHighlightLine: '{line}. sor',

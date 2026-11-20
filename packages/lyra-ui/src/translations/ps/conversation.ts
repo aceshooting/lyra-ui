@@ -11,6 +11,7 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'د ښودلو لپاره جوړ شوی لید نشته.',
   genViewInvalid: 'دا جوړ شوی لید نه شي ښودل کېدای.',
   genViewLoading: 'برخه رانیول کېږي…',
+  genViewLoadFailed: 'دا برخه نه شوه راوړل کېدای.',
   genViewInvalidState: 'د دې ډګر ارزښت نه شي کارول کېدای.',
   genViewActionDenied: 'دا کړنه شتون نه لري.',
   genViewConfirmationRequired: 'دا کړنه د اپلېکېشن تایید ته اړتیا لري.',

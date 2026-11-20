@@ -11,6 +11,7 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'No generated view dey to show.',
   genViewInvalid: 'Dis generated view no fit show.',
   genViewLoading: 'E dey load component…',
+  genViewLoadFailed: 'E no fit load dis component.',
   genViewInvalidState: 'Dem no fit use dis field value.',
   genViewActionDenied: 'Dis action no dey available.',
   genViewConfirmationRequired: 'Dis action need confirmation from di app.',

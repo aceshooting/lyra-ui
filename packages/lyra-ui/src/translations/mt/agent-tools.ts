@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'Ibgħat it-tweġiba',
   agentQuestionDecline: 'Irrifjuta',
   agentQuestionSubmitted: 'Tweġiba mibgħuta',
+  agentQuestionFormLoadFailed: 'Dan il-komponent ma setax jitgħabba.',
   terminalLabel: 'Output tat-terminal',
   terminalDownload: 'Niżżel il-log',
   terminalHighlightLine: 'Linja {line}',

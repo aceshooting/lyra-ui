@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: '提交回覆',
   agentQuestionDecline: '拒絕',
   agentQuestionSubmitted: '已提交回覆',
+  agentQuestionFormLoadFailed: '無法載入此元件。',
   terminalLabel: '終端輸出',
   terminalDownload: '下載日誌',
   terminalHighlightLine: '第{line}行',

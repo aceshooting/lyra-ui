@@ -11,6 +11,7 @@ const strings: LyraLocaleStrings = {
   genViewEmpty: 'Nema generisanog prikaza.',
   genViewInvalid: 'Ovaj generisani prikaz ne može da se prikaže.',
   genViewLoading: 'Učitavanje komponente…',
+  genViewLoadFailed: 'Ova komponenta nije mogla da se učita.',
   genViewInvalidState: 'Ova vrednost polja ne može da se koristi.',
   genViewActionDenied: 'Ova radnja nije dostupna.',
   genViewConfirmationRequired: 'Za ovu radnju potrebna je potvrda aplikacije.',

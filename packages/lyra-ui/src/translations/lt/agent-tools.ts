@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'Pateikti atsakymą',
   agentQuestionDecline: 'Atsisakyti',
   agentQuestionSubmitted: 'Atsakymas pateiktas',
+  agentQuestionFormLoadFailed: 'Nepavyko įkelti šio komponento.',
   terminalLabel: 'Terminalo išvestis',
   terminalDownload: 'Atsisiųsti žurnalą',
   terminalHighlightLine: '{line} eilutė',

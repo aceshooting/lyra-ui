@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'שלח תגובה',
   agentQuestionDecline: 'דחה',
   agentQuestionSubmitted: 'הוגשה תגובה',
+  agentQuestionFormLoadFailed: 'לא ניתן היה לטעון את הרכיב הזה.',
   terminalLabel: 'פלט מסוף',
   terminalDownload: 'הורד יומן',
   terminalHighlightLine: 'שורה {line}',

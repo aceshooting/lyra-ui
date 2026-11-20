@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'ምላሽ አስገባ',
   agentQuestionDecline: 'አትቀበል',
   agentQuestionSubmitted: 'ምላሽ ገብቷል።',
+  agentQuestionFormLoadFailed: 'ይህን ክፍል መጫን አልተቻለም።',
   terminalLabel: 'የተርሚናል ውጤት',
   terminalDownload: 'ምዝግቡን አውርድ',
   terminalHighlightLine: 'መስመር {line}',

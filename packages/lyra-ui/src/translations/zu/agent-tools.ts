@@ -69,6 +69,7 @@ const strings: LyraLocaleStrings = {
   agentQuestionAccept: 'Thumela impendulo',
   agentQuestionDecline: 'Yenqaba',
   agentQuestionSubmitted: 'Impendulo ithunyelwe',
+  agentQuestionFormLoadFailed: 'Le ngxenye ayikwazanga ukulayishwa.',
   terminalLabel: 'Okukhipha kwetheminali',
   terminalDownload: 'Landa irekhodi',
   terminalHighlightLine: 'Umugqa {line}',

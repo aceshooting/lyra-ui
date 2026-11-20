@@ -77,6 +77,8 @@ assert.equal(table.entry, './components/lr-table.js');
 assert.equal(table.registrationModule, 'src/components/lr-table.ts');
 assert.equal(table.distModule, table.entry, 'the stable tag-shaped route is canonical after nested registration retirement');
 assert.deepEqual(table.registers, ['lr-empty', 'lr-pagination', 'lr-skeleton', 'lr-spinner', 'lr-table']);
+// The pager and skeleton rows load through lazy import() on first use; the rest exist at import time.
+assert.deepEqual(table.lazyRegisters, ['lr-pagination', 'lr-skeleton']);
 
 // Every entry registers at least its own tag (per-tag entries only -- a bridge entry has no own
 // tag to require).
@@ -91,6 +93,9 @@ for (const entry of entries) {
     `${label}: registers must be sorted`,
   );
   assert.deepEqual(entry.registers, [...new Set(entry.registers)], `${label}: registers must not repeat a tag`);
+  assert.ok(Array.isArray(entry.lazyRegisters), `${label}: lazyRegisters must be an array`);
+  assert.ok(entry.lazyRegisters.every((tag) => entry.registers.includes(tag)), `${label}: lazyRegisters must be a subset of registers`);
+  if (entry.tag) assert.ok(!entry.lazyRegisters.includes(entry.tag), `${label}: an entry defines its own tag at import time`);
   assert.ok(Array.isArray(entry.localeKeys), `${label}: localeKeys must be an array`);
   assert.deepEqual(
     entry.localeKeys,
@@ -165,6 +170,7 @@ assert.equal('tag' in flagPeer, false, 'an integration-bridge entry has no singl
 // flag-peer.ts imports flag.js (registers lr-flag, which itself imports skeleton.js) -- it never
 // calls defineElement() itself, but transitively registers both.
 assert.deepEqual(flagPeer.registers, ['lr-flag', 'lr-skeleton']);
+assert.deepEqual(flagPeer.lazyRegisters, []);
 
 const archiveViewerRegister = integrations.find(
   (entry) => entry.entry === './components/viewers/archive-viewer/archive-viewer-register.js',
@@ -174,6 +180,7 @@ assert.equal(archiveViewerRegister.registrationModule, 'src/components/viewers/a
 // archive-viewer-register.ts only ever reaches lr-archive-viewer through a lazy `import()`
 // (triggered once a matching zip file appears), which itself eagerly imports virtual-list.js.
 assert.deepEqual(archiveViewerRegister.registers, ['lr-archive-viewer', 'lr-virtual-list']);
+assert.deepEqual(archiveViewerRegister.lazyRegisters, ['lr-archive-viewer', 'lr-virtual-list']);
 
 const ebookViewerRegister = integrations.find(
   (entry) => entry.entry === './components/viewers/ebook-viewer/ebook-viewer-register.js',

@@ -6,7 +6,10 @@ import { isMainModule } from './is-main-module.mjs';
 // plus every composed-child registration its registration entry pulls in transitively. Importing
 // `@aceshooting/lyra-ui/components/lr-table.js` also registers `<lr-empty>`, `<lr-pagination>`,
 // `<lr-skeleton>` and `<lr-spinner>`, because `lr-table.ts` imports those siblings' own registration
-// entries (not their side-effect-free `*.class.js`) before calling `defineElement('table', ...)`.
+// entries (not their side-effect-free `*.class.js`): `<lr-empty>` and `<lr-spinner>` statically,
+// before calling `defineElement('table', ...)`, and `<lr-pagination>`/`<lr-skeleton>` through lazy
+// `import()`s the first time the table pages or shows skeleton rows. `lazyRegisters` names that
+// first-use subset, so a reader can tell which tags exist as soon as the import settles.
 //
 // The transitive-import walk is NOT reimplemented here: it reuses
 // `analyzeComponentDependencies()` from `check-component-dependencies.mjs`, which already resolves
@@ -99,8 +102,10 @@ function parseModule(file, source) {
  * imports/exports excluded, a dynamic `import('literal')` or single-quasi template counted),
  * scoped down to just the specifier strings this closure walk needs.
  */
-function importedSpecifiers(program) {
-  return runtimeModuleEdges(program).map(({ specifier }) => specifier);
+function importedSpecifiers(program, { eagerOnly = false } = {}) {
+  return runtimeModuleEdges(program)
+    .filter(({ kind }) => !eagerOnly || kind !== 'dynamic-import')
+    .map(({ specifier }) => specifier);
 }
 
 /** Resolve a relative specifier against the same virtual `files` map
@@ -122,7 +127,7 @@ function resolveRelativeSpecifier(files, fromFile, specifier) {
  * registration specifier that is not itself one of the inventory's per-tag components (an
  * integration bridge such as an optional-peer resolver or a lazy document-format registrar).
  */
-function registeredTagsFrom(entryFile, { files, registrationByModule, knownTags }) {
+function registeredTagsFrom(entryFile, { files, registrationByModule, knownTags, eagerOnly = false }) {
   const seen = new Set([entryFile]);
   const queue = [entryFile];
   const registered = new Set();
@@ -135,7 +140,7 @@ function registeredTagsFrom(entryFile, { files, registrationByModule, knownTags 
     for (const local of locallyRegisteredTags(source, file)) {
       if (knownTags.has(local)) registered.add(local);
     }
-    for (const specifier of importedSpecifiers(parseModule(file, source))) {
+    for (const specifier of importedSpecifiers(parseModule(file, source), { eagerOnly })) {
       const resolved = resolveRelativeSpecifier(files, file, specifier);
       if (!resolved || seen.has(resolved)) continue;
       seen.add(resolved);
@@ -209,6 +214,17 @@ export async function deriveRegistrationGraph(inventory, { packageDir = defaultP
     return [...new Set(perTag.flat())].sort((left, right) => left.localeCompare(right));
   }
 
+  // The subset of `registers` that importing the module does NOT define at evaluation time: tags
+  // reached only through a lazy `import()` (a composed child registered on first use, a document
+  // format's viewer loaded once a matching file appears). Everything else in `registers` is
+  // defined by the time the import settles.
+  function lazyRegistersFrom(registrationModule, registers) {
+    const context = { files, registrationByModule, knownTags };
+    const eager = new Set(registeredTagsFrom(registrationModule, { ...context, eagerOnly: true }));
+    const reachable = new Set(registeredTagsFrom(registrationModule, context));
+    return registers.filter((tag) => reachable.has(tag) && !eager.has(tag));
+  }
+
   function assertPublished(specifier) {
     invariant(packageJson.exports?.[specifier] !== undefined, `${specifier}: not a published package.json#exports entry`);
   }
@@ -223,12 +239,14 @@ export async function deriveRegistrationGraph(inventory, { packageDir = defaultP
       assertPublished(alias.exportPath);
       const distModule = alias.exportPath;
       const localeKeys = await localeKeysForRegisters(registers);
+      const lazyRegisters = lazyRegistersFrom(alias.registrationModule, registers);
       return {
         tag: alias.tag,
         entry: alias.exportPath,
         registrationModule: alias.registrationModule,
         distModule,
         registers,
+        lazyRegisters,
         localeKeys,
       };
     }),
@@ -251,6 +269,7 @@ export async function deriveRegistrationGraph(inventory, { packageDir = defaultP
         registrationModule,
         distModule,
         registers,
+        lazyRegisters: lazyRegistersFrom(registrationModule, registers),
         localeKeys,
       };
     }),
@@ -273,13 +292,16 @@ export function renderRegistrationGraph(entries, integrations = []) {
       + 'integration-bridge specifiers -- an optional-peer resolver, a lazy document-format '
       + 'registrar -- that install an integration without being any single component\'s own '
       + 'alias, so they carry no `tag`. For every row, `registers` lists every <lr-*> tag that '
-      + 'importing `entry` defines as a side effect, direct or transitive (e.g. lr-table.js also '
-      + 'registers lr-empty/lr-pagination/lr-skeleton/lr-spinner); `distModule` is that '
+      + 'importing `entry` defines, direct or transitive, at import time or on first use (e.g. '
+      + 'lr-table.js also registers lr-empty/lr-pagination/lr-skeleton/lr-spinner); '
+      + '`lazyRegisters` is the subset defined only on first use, through a lazy import (lr-table.js '
+      + 'defines lr-pagination and lr-skeleton the first time it pages or shows skeleton rows), so '
+      + 'every other `registers` tag is defined once the import settles; `distModule` is that '
       + 'retained published deep specifier, or `entry` when no separate deep route is exported '
       + '(also equal to `entry` for an integration bridge); `localeKeys` lists every LyraMessageKey '
       + 'the registered tags can reach, from the '
       + 'same reachability analysis generate-default-string-slices.mjs uses for the tree-shakeable '
-      + 'locale slices. `integrations`, `distModule` and `localeKeys` are additive to schema '
+      + 'locale slices. `integrations`, `distModule`, `lazyRegisters` and `localeKeys` are additive to schema '
       + 'version 1. Run `pnpm run registration-graph` (scripts/generate-registration-graph.mjs) to '
       + 'refresh.',
     schemaVersion: 1,

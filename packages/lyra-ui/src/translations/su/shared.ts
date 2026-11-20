@@ -6,7 +6,6 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
-  genViewLoadFailed: 'Komponén ieu teu bisa dimuat.',
   noData: 'Teu aya data',
   legendTypeShown: '{label} dipintonkeun',
   legendTypeHidden: '{label} disumputkeun',

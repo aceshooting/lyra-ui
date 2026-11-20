@@ -1,5 +1,6 @@
-import { expect } from '@open-wc/testing';
+import { expect, fixture, html } from '@open-wc/testing';
 import '../components/lr-table.js';
+import type { LyraTable } from '../components/data/table/table.class.js';
 
 /**
  * Contract test for the published registration-graph artifact (`registrations.json`,
@@ -17,6 +18,7 @@ interface RegistrationGraphEntry {
   entry: string;
   registrationModule: string;
   registers: string[];
+  lazyRegisters: string[];
 }
 
 interface RegistrationGraph {
@@ -45,7 +47,8 @@ it("lists lr-table's known composed-child registrations", async () => {
   expect(table?.entry).to.equal('./components/lr-table.js');
   expect(table?.registrationModule).to.equal('src/components/lr-table.ts');
   // lr-table.ts imports lr-empty.js/lr-pagination.js/lr-spinner.js/lr-skeleton.js -- their full registration
-  // entries, not the side-effect-free *.class.js -- before defining lr-table itself.
+  // entries, not the side-effect-free *.class.js: lr-empty/lr-spinner statically before defining
+  // lr-table itself, lr-pagination/lr-skeleton through lazy import() on first use.
   expect(table?.registers).to.deep.equal([
     'lr-empty',
     'lr-pagination',
@@ -53,12 +56,20 @@ it("lists lr-table's known composed-child registrations", async () => {
     'lr-spinner',
     'lr-table',
   ]);
+  expect(table?.lazyRegisters).to.deep.equal(['lr-pagination', 'lr-skeleton']);
 });
 
-it('is not aspirational: importing the real lr-table.js entry registers every tag the artifact lists', async () => {
+it('is not aspirational: importing the real lr-table.js entry registers every eager tag and first use registers the lazy ones', async () => {
   const graph = await loadRegistrationGraph();
   const table = graph.entries.find((entry) => entry.tag === 'lr-table');
-  const unregistered = (table?.registers ?? []).filter((tag) => !customElements.get(tag));
+  const lazy = new Set(table?.lazyRegisters ?? []);
+  const eager = (table?.registers ?? []).filter((tag) => !lazy.has(tag));
   // Comparing tag-name arrays, never a DOM node, per this repo's chai-hang trap.
-  expect(unregistered).to.deep.equal([]);
+  expect(eager.filter((tag) => !customElements.get(tag))).to.deep.equal([]);
+  // A skeleton load with a schema renders both the placeholder rows and the pager footer; the
+  // table's update settles only after its lazily registered children have upgraded.
+  const host = await fixture<LyraTable<{ name: string }>>(html`<lr-table caption="Rows" loading
+    loading-appearance="skeleton" .columns=${[{ key: 'name', label: 'Name', cell: (row: { name: string }) => row.name }]}></lr-table>`);
+  await host.updateComplete;
+  expect([...lazy].filter((tag) => !customElements.get(tag))).to.deep.equal([]);
 });
