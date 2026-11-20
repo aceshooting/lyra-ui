@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'Kanselahin',
   confirm: 'Kumpirmahin',
   search: 'Maghanap',
+  circularReference: 'Pabilog na sanggunian',
   items: {
     one: 'bagay',
     other: 'mga bagay',
@@ -132,6 +133,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'Menu',
+  emailViewerFrom: 'Mula kay',
+  emailViewerTo: 'Para kay',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Pumunta sa naka-highlight na bahagi.',
   anchorJumpedToPage: 'Pumunta sa pahina {page}.',

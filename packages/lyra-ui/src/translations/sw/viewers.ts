@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'anwani',
   emailViewerLabel: 'Kitazamaji cha barua pepe',
   emailViewerMissingParser: 'Kitazamaji hiki kinahitaji kifurushi cha hiari "postal-mime" kisakinishwe ili kuchanganua ujumbe huu.',
-  emailViewerFrom: 'Kutoka',
-  emailViewerTo: 'Kwa',
   emailViewerSubject: 'Mada',
   emailViewerDate: 'Tarehe',
   emailViewerAttachments: 'Viambatisho',

@@ -501,6 +501,8 @@ export type LyraRetrievalTraceVueProps = LyraVueCustomElement<'lr-retrieval-trac
 
 export type LyraRubricFormVueProps = LyraVueCustomElement<'lr-rubric-form'>;
 
+export type LyraSankeyVueProps = LyraVueCustomElement<'lr-sankey'>;
+
 export type LyraScatterChartVueProps = LyraVueCustomElement<'lr-scatter-chart'>;
 
 export type LyraScrollerVueProps = LyraVueCustomElement<'lr-scroller'>;
@@ -892,6 +894,7 @@ export interface LyraVueGlobalComponents {
   'lr-retrieval-search': LyraRetrievalSearchVueProps;
   'lr-retrieval-trace': LyraRetrievalTraceVueProps;
   'lr-rubric-form': LyraRubricFormVueProps;
+  'lr-sankey': LyraSankeyVueProps;
   'lr-scatter-chart': LyraScatterChartVueProps;
   'lr-scroller': LyraScrollerVueProps;
   'lr-segmented': LyraSegmentedVueProps;

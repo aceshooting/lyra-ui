@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'বাতিল করুন',
   confirm: 'নিশ্চিত করুন',
   search: 'খুঁজুন',
+  circularReference: 'চক্রাকার রেফারেন্স',
   items: {
     one: 'টি আইটেম',
     other: 'টি আইটেম',
@@ -132,6 +133,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'মেনু',
+  emailViewerFrom: 'প্রেরক',
+  emailViewerTo: 'প্রাপক',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'হাইলাইট করা অংশে নিয়ে যাওয়া হয়েছে।',
   anchorJumpedToPage: '{page} নম্বর পাতায় নিয়ে যাওয়া হয়েছে।',

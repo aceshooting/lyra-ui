@@ -45,6 +45,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'Annulla',
   confirm: 'Conferma',
   search: 'Cerca',
+  circularReference: 'Riferimento circolare',
   items: {
     one: 'elemento',
     many: 'elementi',
@@ -138,6 +139,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'Menu',
+  emailViewerFrom: 'Da',
+  emailViewerTo: 'A',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Passato al passaggio evidenziato.',
   anchorJumpedToPage: 'Passato alla pagina {page}.',

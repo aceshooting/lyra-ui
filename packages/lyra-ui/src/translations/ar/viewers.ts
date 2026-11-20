@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'جهة اتصال',
   emailViewerLabel: 'عارض البريد الإلكتروني',
   emailViewerMissingParser: 'يحتاج هذا العارض إلى تثبيت الحزمة الاختيارية "postal-mime" لتحليل هذه الرسالة.',
-  emailViewerFrom: 'من',
-  emailViewerTo: 'إلى',
   emailViewerSubject: 'الموضوع',
   emailViewerDate: 'التاريخ',
   emailViewerAttachments: 'المرفقات',

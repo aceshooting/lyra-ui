@@ -7,7 +7,6 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   copyJson: 'Αντιγραφή JSON στο πρόχειρο',
-  circularReference: 'Κυκλική αναφορά',
   copyDiff: 'Αντιγραφή διαφορών',
   diffViewOldLabel: 'Αρχικό',
   diffViewNewLabel: 'Τροποποιημένο',

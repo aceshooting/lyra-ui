@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'Annuleren',
   confirm: 'Bevestigen',
   search: 'Zoeken',
+  circularReference: 'Cirkelverwijzing',
   items: {
     one: 'onderdeel',
     other: 'onderdelen',
@@ -132,6 +133,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value} ms',
   durationSeconds: '{value} s',
   menuLabel: 'Menu',
+  emailViewerFrom: 'Van',
+  emailViewerTo: 'Aan',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Naar de gemarkeerde passage gegaan.',
   anchorJumpedToPage: 'Naar pagina {page} gegaan.',

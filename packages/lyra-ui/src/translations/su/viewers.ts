@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'kontak',
   emailViewerLabel: 'Pintonan email',
   emailViewerMissingParser: 'Pintonan ieu merlukeun paket "postal-mime" opsional pikeun nganalisis talatah ieu.',
-  emailViewerFrom: 'Ti',
-  emailViewerTo: 'Ka',
   emailViewerSubject: 'Jejer',
   emailViewerDate: 'Tanggal',
   emailViewerAttachments: 'Lampiran',

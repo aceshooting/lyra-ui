@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'Ghairi',
   confirm: 'Thibitisha',
   search: 'Tafuta',
+  circularReference: 'Rejeleo la duara',
   items: {
     one: 'kipengee',
     other: 'vipengee',
@@ -132,6 +133,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'Menyu',
+  emailViewerFrom: 'Kutoka',
+  emailViewerTo: 'Kwa',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Imeenda kwenye sehemu iliyoangaziwa.',
   anchorJumpedToPage: 'Imeenda kwenye ukurasa {page}.',

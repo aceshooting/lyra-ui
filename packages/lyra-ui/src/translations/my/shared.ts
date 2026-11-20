@@ -43,6 +43,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'ပယ်ဖျက်ရန်',
   confirm: 'အတည်ပြုရန်',
   search: 'ရှာဖွေရန်',
+  circularReference: 'စက်ဝိုင်းပုံ ကိုးကားမှု',
   items: {
     other: 'အရာများ',
   },
@@ -126,6 +127,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value} မီလီစက္ကန့်',
   durationSeconds: '{value} စက္ကန့်',
   menuLabel: 'မီနူး',
+  emailViewerFrom: 'ပေးပို့သူ',
+  emailViewerTo: 'လက်ခံသူ',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'အသားပေးထားသော စာပိုဒ်သို့ ရောက်ရှိသွားပါပြီ။',
   anchorJumpedToPage: 'စာမျက်နှာ {page} သို့ ရောက်ရှိသွားပါပြီ။',

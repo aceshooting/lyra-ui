@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'kontaktas',
   emailViewerLabel: 'El. laiškų peržiūra',
   emailViewerMissingParser: 'Kad galėtų nagrinėti šį laišką, šiai peržiūros priemonei reikia įdiegti pasirenkamą paketą „postal-mime“.',
-  emailViewerFrom: 'Nuo',
-  emailViewerTo: 'Kam',
   emailViewerSubject: 'Tema',
   emailViewerDate: 'Data',
   emailViewerAttachments: 'Priedai',

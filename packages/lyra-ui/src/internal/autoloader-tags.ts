@@ -236,6 +236,7 @@ export const AUTOLOADER_TAGS = [
   'lr-retrieval-search',
   'lr-retrieval-trace',
   'lr-rubric-form',
+  'lr-sankey',
   'lr-scatter-chart',
   'lr-scroller',
   'lr-segmented',

@@ -7,7 +7,6 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   copyJson: 'JSON-ஐ கிளிப்போர்டுக்கு நகலெடு',
-  circularReference: 'சுழல் குறிப்பு',
   copyDiff: 'வேறுபாட்டை நகலெடு',
   diffViewOldLabel: 'அசல்',
   diffViewNewLabel: 'மாற்றப்பட்டது',

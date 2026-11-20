@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'контакт',
   emailViewerLabel: 'Перегляд електронного листа',
   emailViewerMissingParser: 'Щоб розібрати це повідомлення, потрібно встановити необов’язковий пакет "postal-mime".',
-  emailViewerFrom: 'Від',
-  emailViewerTo: 'Кому',
   emailViewerSubject: 'Тема',
   emailViewerDate: 'Дата',
   emailViewerAttachments: 'Вкладення',

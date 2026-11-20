@@ -5662,6 +5662,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-retrieval-search': LyraRetrievalSearchReactProps;
   'lr-retrieval-trace': LyraRetrievalTraceReactProps;
   'lr-rubric-form': LyraRubricFormReactProps;
+  'lr-sankey': LyraSankeyReactProps;
   'lr-scatter-chart': LyraScatterChartReactProps;
   'lr-scroller': LyraScrollerReactProps;
   'lr-segmented': LyraSegmentedReactProps;
@@ -6105,6 +6106,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-retrieval-search': LyraComponentTypeMap['lr-retrieval-search']['element'];
   'lr-retrieval-trace': LyraComponentTypeMap['lr-retrieval-trace']['element'];
   'lr-rubric-form': LyraComponentTypeMap['lr-rubric-form']['element'];
+  'lr-sankey': LyraComponentTypeMap['lr-sankey']['element'];
   'lr-scatter-chart': LyraComponentTypeMap['lr-scatter-chart']['element'];
   'lr-scroller': LyraComponentTypeMap['lr-scroller']['element'];
   'lr-segmented': LyraComponentTypeMap['lr-segmented']['element'];
@@ -6419,6 +6421,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-retrieval-search': LyraRetrievalSearchSvelteProps;
   'lr-retrieval-trace': LyraRetrievalTraceSvelteProps;
   'lr-rubric-form': LyraRubricFormSvelteProps;
+  'lr-sankey': LyraSankeySvelteProps;
   'lr-scatter-chart': LyraScatterChartSvelteProps;
   'lr-scroller': LyraScrollerSvelteProps;
   'lr-segmented': LyraSegmentedSvelteProps;
@@ -6880,6 +6883,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-retrieval-search': LyraRetrievalSearchVueProps;
   'lr-retrieval-trace': LyraRetrievalTraceVueProps;
   'lr-rubric-form': LyraRubricFormVueProps;
+  'lr-sankey': LyraSankeyVueProps;
   'lr-scatter-chart': LyraScatterChartVueProps;
   'lr-scroller': LyraScrollerVueProps;
   'lr-segmented': LyraSegmentedVueProps;

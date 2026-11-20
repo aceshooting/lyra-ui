@@ -46,6 +46,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'Zrušit',
   confirm: 'Potvrdit',
   search: 'Hledat',
+  circularReference: 'Cyklický odkaz',
   items: {
     few: 'položky',
     many: 'položky',
@@ -144,6 +145,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value} ms',
   durationSeconds: '{value} s',
   menuLabel: 'Nabídka',
+  emailViewerFrom: 'Od',
+  emailViewerTo: 'Komu',
   pdfViewerCurrentZoom: '{percent} %',
   anchorJumped: 'Přechod na zvýrazněnou pasáž.',
   anchorJumpedToPage: 'Přechod na stránku {page}.',

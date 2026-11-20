@@ -9,8 +9,8 @@ component’s compatibility status. The machine-readable source is
 
 ## Current evidence
 
-- Public tags: **312**
-- Exact same-test/same-instance populated or open axe evidence: **311**
+- Public tags: **313**
+- Exact same-test/same-instance populated or open axe evidence: **312**
 - Narrow reviewed axe-state exemptions: **1**
 - Missing axe qualification: **0**
 - Visual-regression enrollment: **92** tags
@@ -294,6 +294,7 @@ complete enrolled set. Axe is not assistive-technology testing.
 | [`lr-retrieval-search`](component-integration.md#lr-retrieval-search) | stable | automated | source signal | source signal | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | N/A | source signal | not enrolled | not verified | unmeasured |
 | [`lr-retrieval-trace`](component-integration.md#lr-retrieval-trace) | stable | automated | not recorded | source signal | N/A | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | unmeasured |
 | [`lr-rubric-form`](component-integration.md#lr-rubric-form) | stable | automated | source signal | source signal | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | unmeasured |
+| [`lr-sankey`](component-integration.md#lr-sankey) | experimental | automated | source signal | source signal | N/A | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | unmeasured |
 | [`lr-scatter-chart`](component-integration.md#lr-scatter-chart) | stable | automated | source signal | source signal | source signal | source signal | configured CI | render-and-hydrate | complete | source signal | source signal | not enrolled | not verified | measured |
 | [`lr-scroller`](component-integration.md#lr-scroller) | stable | automated | source signal | source signal | N/A | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | unmeasured |
 | [`lr-segmented`](component-integration.md#lr-segmented) | stable | automated | source signal | source signal | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | unmeasured |

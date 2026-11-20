@@ -45,6 +45,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'בטל',
   confirm: 'אשר',
   search: 'חפש',
+  circularReference: 'הפניה מעגלית',
   items: {
     one: 'פריט',
     two: 'פריטים',
@@ -138,6 +139,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value} מילישניות',
   durationSeconds: '{value} שניות',
   menuLabel: 'תפריט',
+  emailViewerFrom: 'מן',
+  emailViewerTo: 'אל',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'בוצע מעבר לקטע המודגש.',
   anchorJumpedToPage: 'בוצע מעבר לעמוד {page}.',

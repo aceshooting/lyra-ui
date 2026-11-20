@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'επαφή',
   emailViewerLabel: 'Προβολή ηλεκτρονικού ταχυδρομείου',
   emailViewerMissingParser: 'Για την ανάλυση αυτού του μηνύματος απαιτείται το προαιρετικό πακέτο "postal-mime".',
-  emailViewerFrom: 'Από',
-  emailViewerTo: 'Προς',
   emailViewerSubject: 'Θέμα',
   emailViewerDate: 'Ημερομηνία',
   emailViewerAttachments: 'Συνημμένα',

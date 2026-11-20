@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'yhteystieto',
   emailViewerLabel: 'Sähköpostikatselin',
   emailViewerMissingParser: 'Tämä katselin tarvitsee valinnaisen ”postal-mime”-paketin tämän viestin jäsentämiseen.',
-  emailViewerFrom: 'Lähettäjä',
-  emailViewerTo: 'Vastaanottaja',
   emailViewerSubject: 'Aihe',
   emailViewerDate: 'Päivämäärä',
   emailViewerAttachments: 'Liitteet',

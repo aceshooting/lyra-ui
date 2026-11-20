@@ -7,7 +7,6 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   copyJson: 'JSON ကို ကလစ်ဘုတ်သို့ ကူးယူရန်',
-  circularReference: 'စက်ဝိုင်းပုံ ကိုးကားမှု',
   copyDiff: 'ကွာခြားချက်ကို ကူးယူရန်',
   diffViewOldLabel: 'မူရင်း',
   diffViewNewLabel: 'ပြင်ဆင်ပြီး',

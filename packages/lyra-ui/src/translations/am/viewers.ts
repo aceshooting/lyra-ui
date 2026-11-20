@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'እውቂያ',
   emailViewerLabel: 'የኢሜይል መመልከቻ',
   emailViewerMissingParser: 'ይህን መልዕክት ለመተንተን መመልከቻው አማራጭ "postal-mime" ጥቅል እንዲጫን ይፈልጋል።',
-  emailViewerFrom: 'ከ',
-  emailViewerTo: 'ለ',
   emailViewerSubject: 'ርዕስ',
   emailViewerDate: 'ቀን',
   emailViewerAttachments: 'አባሪዎች',

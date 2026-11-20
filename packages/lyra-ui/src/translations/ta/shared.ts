@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'ரத்து செய்',
   confirm: 'உறுதிப்படுத்து',
   search: 'தேடு',
+  circularReference: 'சுழல் குறிப்பு',
   items: {
     one: 'உருப்படி',
     other: 'உருப்படிகள்',
@@ -132,6 +133,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'பட்டி',
+  emailViewerFrom: 'அனுப்புநர்',
+  emailViewerTo: 'பெறுநர்',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'தனிப்படுத்திய பகுதியை அடைந்தது.',
   anchorJumpedToPage: 'பக்கம் {page}-ஐ அடைந்தது.',

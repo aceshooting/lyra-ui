@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'kontakt',
   emailViewerLabel: 'E-kirjade vaatur',
   emailViewerMissingParser: 'Selle sõnumi parsimiseks vajab see vaatur valikulist paketti „postal-mime”.',
-  emailViewerFrom: 'Saatja',
-  emailViewerTo: 'Saaja',
   emailViewerSubject: 'Teema',
   emailViewerDate: 'Kuupäev',
   emailViewerAttachments: 'Manused',

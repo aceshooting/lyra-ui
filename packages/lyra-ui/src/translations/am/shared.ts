@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'ሰርዝ',
   confirm: 'አረጋግጥ',
   search: 'ፈልግ',
+  circularReference: 'ዑደታዊ ማጣቀሻ',
   items: {
     one: 'ንጥል',
     other: 'ንጥሎች',
@@ -132,6 +133,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value} ሚሊሰከንድ',
   durationSeconds: '{value} ሰከንድ',
   menuLabel: 'ምናሌ',
+  emailViewerFrom: 'ከ',
+  emailViewerTo: 'ለ',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'ወደ ደመቀው ክፍል ተዘልሏል።',
   anchorJumpedToPage: 'ወደ {page}ኛ ገጽ ተዘልሏል።',

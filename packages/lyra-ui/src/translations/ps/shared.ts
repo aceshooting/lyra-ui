@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'لغوه کول',
   confirm: 'تاییدول',
   search: 'لټون',
+  circularReference: 'دوراني حواله',
   items: {
     one: 'توکی',
     other: 'توکي',
@@ -132,6 +133,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'غورنۍ',
+  emailViewerFrom: 'له',
+  emailViewerTo: 'ته',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'روښانه شوې برخې ته ورټوپ شو.',
   anchorJumpedToPage: '{page} پاڼې ته ورټوپ شو.',

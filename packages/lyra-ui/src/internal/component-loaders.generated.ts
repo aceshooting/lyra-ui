@@ -238,6 +238,7 @@ export const COMPONENT_LOADERS: Readonly<Record<AutoloadableTagName, () => Promi
   'lr-retrieval-search': () => import('../components/retrieval/retrieval-search/retrieval-search.class.js').then((module) => module.LyraRetrievalSearch),
   'lr-retrieval-trace': () => import('../components/retrieval/retrieval-trace/retrieval-trace.class.js').then((module) => module.LyraRetrievalTrace),
   'lr-rubric-form': () => import('../components/forms/rubric-form/rubric-form.class.js').then((module) => module.LyraRubricForm),
+  'lr-sankey': () => import('../components/data/sankey/sankey.class.js').then((module) => module.LyraSankey),
   'lr-scatter-chart': () => import('../components/charts/chart/scatter-chart.class.js').then((module) => module.LyraScatterChart),
   'lr-scroller': () => import('../components/layout/scroller/scroller.class.js').then((module) => module.LyraScroller),
   'lr-segmented': () => import('../components/layout/segmented/segmented.class.js').then((module) => module.LyraSegmented),

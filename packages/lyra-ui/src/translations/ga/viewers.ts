@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'teagmhálaí',
   emailViewerLabel: 'Amharcán ríomhphoist',
   emailViewerMissingParser: 'Teastaíonn an pacáiste roghnach "postal-mime" ón amharcán seo chun an teachtaireacht seo a pharsáil.',
-  emailViewerFrom: 'Ó',
-  emailViewerTo: 'Chuig',
   emailViewerSubject: 'Ábhar',
   emailViewerDate: 'Dáta',
   emailViewerAttachments: 'Ceangaltáin',

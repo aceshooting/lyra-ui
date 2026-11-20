@@ -7,7 +7,6 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   copyJson: 'JSONʼni clipboardʼga nusxalash',
-  circularReference: 'Siklik havola',
   copyDiff: 'Farqni nusxalash',
   diffViewOldLabel: 'Asl',
   diffViewNewLabel: 'Oʻzgartirilgan',

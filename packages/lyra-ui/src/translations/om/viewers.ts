@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'quunnamtii',
   emailViewerLabel: 'Ilaaltuu imeelii',
   emailViewerMissingParser: 'Ergaa kana xiinxaluuf ilaaltuun kun paakeejii filannoo "postal-mime" fe\'amee qabaachuu barbaada.',
-  emailViewerFrom: 'Ergamaa',
-  emailViewerTo: 'Fudhataa',
   emailViewerSubject: 'Mata-duree',
   emailViewerDate: 'Guyyaa',
   emailViewerAttachments: 'Faayilota maxxanfaman',

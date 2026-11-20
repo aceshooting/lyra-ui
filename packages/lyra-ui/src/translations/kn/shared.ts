@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'ರದ್ದುಮಾಡಿ',
   confirm: 'ದೃಢೀಕರಿಸಿ',
   search: 'ಹುಡುಕಿ',
+  circularReference: 'ವೃತ್ತಾಕಾರದ ಉಲ್ಲೇಖ',
   items: {
     one: 'ಐಟಂ',
     other: 'ಐಟಂಗಳು',
@@ -132,6 +133,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value} ಮಿಲಿಸೆಕೆಂಡ್‌ಗಳು',
   durationSeconds: '{value} ಸೆಕೆಂಡ್‌ಗಳು',
   menuLabel: 'ಮೆನು',
+  emailViewerFrom: 'ಇಂದ',
+  emailViewerTo: 'ಗೆ',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'ಹೈಲೈಟ್ ಮಾಡಿದ ಭಾಗಕ್ಕೆ ತೆರಳಲಾಗಿದೆ.',
   anchorJumpedToPage: '{page}ನೇ ಪುಟಕ್ಕೆ ತೆರಳಲಾಗಿದೆ.',

@@ -86,6 +86,7 @@ import type { LyraFlowControlsEventMap } from './components/data/flow-controls/f
 import type { LyraGraphQueryBuilderEventMap } from './components/data/graph-query-builder/graph-query-builder.class.js';
 import type { LyraHeatmapEventMap } from './components/data/heatmap/heatmap-model.js';
 import type { LyraPaginationEventMap } from './components/data/pagination/pagination.class.js';
+import type { LyraSankeyEventMap } from './components/data/sankey/sankey.class.js';
 import type { LyraSequenceStripEventMap } from './components/data/sequence-strip/sequence-strip.class.js';
 import type { LyraTableEventMap } from './components/data/table/table-support.js';
 import type { LyraTimelineEventMap } from './components/data/timeline/timeline.class.js';
@@ -1018,16 +1019,17 @@ export type LyraDatePickerSelectRequestEvent = LyraDatePickerEventMap['lr-date-p
 export type LyraDateSelectEvent = LyraCalendarEventMap['lr-date-select'];
 
 /**
- * `lr-datum-activate` — dispatched by 13 components: `<lr-bar-chart>`, `<lr-box-plot>`,
+ * `lr-datum-activate` — dispatched by 14 components: `<lr-bar-chart>`, `<lr-box-plot>`,
  * `<lr-bubble-chart>`, `<lr-chart>`, `<lr-doughnut-chart>`, `<lr-histogram>`, `<lr-line-chart>`,
- * `<lr-lite-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`,
- * `<lr-scatter-chart>`, `<lr-treemap>`; detail union of 4, e.g.
+ * `<lr-lite-chart>`, `<lr-pie-chart>`, `<lr-polar-area-chart>`, `<lr-radar-chart>`, `<lr-sankey>`,
+ * `<lr-scatter-chart>`, `<lr-treemap>`; detail union of 5, e.g.
  * `LyraBoxPlotEventMap['lr-datum-activate']`.
  */
 export type LyraDatumActivateEvent =
   | LyraBoxPlotEventMap['lr-datum-activate']
   | LyraChartEventMap['lr-datum-activate']
   | LyraLiteChartEventMap['lr-datum-activate']
+  | LyraSankeyEventMap['lr-datum-activate']
   | LyraTreemapEventMap['lr-datum-activate'];
 
 /**

@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'Peruuta',
   confirm: 'Vahvista',
   search: 'Hae',
+  circularReference: 'Kehäviittaus',
   items: {
     one: 'kohde',
     other: 'kohdetta',
@@ -132,6 +133,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value} ms',
   durationSeconds: '{value} s',
   menuLabel: 'Valikko',
+  emailViewerFrom: 'Lähettäjä',
+  emailViewerTo: 'Vastaanottaja',
   pdfViewerCurrentZoom: '{percent} %',
   anchorJumped: 'Siirrytty korostettuun kohtaan.',
   anchorJumpedToPage: 'Siirrytty sivulle {page}.',

@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'റദ്ദാക്കുക',
   confirm: 'സ്ഥിരീകരിക്കുക',
   search: 'തിരയുക',
+  circularReference: 'ചാക്രിക റഫറൻസ്',
   items: {
     one: 'ഇനം',
     other: 'ഇനങ്ങൾ',
@@ -132,6 +133,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'മെനു',
+  emailViewerFrom: 'അയച്ചത്',
+  emailViewerTo: 'സ്വീകർത്താവ്',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'ഹൈലൈറ്റ് ചെയ്ത ഭാഗത്തേക്ക് പോയി.',
   anchorJumpedToPage: '{page}-ാം പേജിലേക്ക് പോയി.',

@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'stik',
   emailViewerLabel: 'Pregledovalnik e-pošte',
   emailViewerMissingParser: 'Ta pregledovalnik za razčlenitev tega sporočila potrebuje nameščen izbirni paket »postal-mime«.',
-  emailViewerFrom: 'Od',
-  emailViewerTo: 'Za',
   emailViewerSubject: 'Zadeva',
   emailViewerDate: 'Datum',
   emailViewerAttachments: 'Priloge',

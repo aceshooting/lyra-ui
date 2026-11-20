@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'Bekor qilish',
   confirm: 'Tasdiqlash',
   search: 'Qidirish',
+  circularReference: 'Siklik havola',
   items: {
     one: 'element',
     other: 'element',
@@ -132,6 +133,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'Menyu',
+  emailViewerFrom: 'Kimdan',
+  emailViewerTo: 'Kimga',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Ajratilgan parchaga oʻtildi.',
   anchorJumpedToPage: '{page}-sahifaga oʻtildi.',

@@ -45,6 +45,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'Odustani',
   confirm: 'Potvrdi',
   search: 'Pretraži',
+  circularReference: 'Kružna referenca',
   items: {
     few: 'stavke',
     one: 'stavka',
@@ -138,6 +139,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value} ms',
   durationSeconds: '{value} s',
   menuLabel: 'Izbornik',
+  emailViewerFrom: 'Od',
+  emailViewerTo: 'Za',
   pdfViewerCurrentZoom: '{percent} %',
   anchorJumped: 'Pomaknuto na istaknuti odlomak.',
   anchorJumpedToPage: 'Pomaknuto na stranicu {page}.',

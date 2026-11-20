@@ -47,6 +47,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'Cealaigh',
   confirm: 'Deimhnigh',
   search: 'Cuardaigh',
+  circularReference: 'Tagairt chiorclach',
   items: {
     few: 'mhír',
     many: 'mír',
@@ -150,6 +151,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'Roghchlár',
+  emailViewerFrom: 'Ó',
+  emailViewerTo: 'Chuig',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Léimeadh go dtí an sliocht aibhsithe.',
   anchorJumpedToPage: 'Léimeadh go dtí leathanach {page}.',

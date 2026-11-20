@@ -45,6 +45,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'Atcelt',
   confirm: 'Apstiprināt',
   search: 'Meklēt',
+  circularReference: 'Cikliska atsauce',
   items: {
     one: 'vienums',
     other: 'vienumi',
@@ -138,6 +139,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value} ms',
   durationSeconds: '{value} s',
   menuLabel: 'Izvēlne',
+  emailViewerFrom: 'No',
+  emailViewerTo: 'Kam',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Pāriets uz iezīmēto fragmentu.',
   anchorJumpedToPage: 'Pāriets uz {page}. lapu.',

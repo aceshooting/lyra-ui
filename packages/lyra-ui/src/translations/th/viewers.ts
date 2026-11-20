@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'ผู้ติดต่อ',
   emailViewerLabel: 'โปรแกรมดูอีเมล',
   emailViewerMissingParser: 'โปรแกรมดูนี้ต้องติดตั้งแพ็กเกจเสริม "postal-mime" เพื่อแยกวิเคราะห์ข้อความนี้',
-  emailViewerFrom: 'จาก',
-  emailViewerTo: 'ถึง',
   emailViewerSubject: 'เรื่อง',
   emailViewerDate: 'วันที่',
   emailViewerAttachments: 'ไฟล์แนบ',

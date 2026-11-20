@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'రద్దు చేయండి',
   confirm: 'నిర్ధారించండి',
   search: 'వెతకండి',
+  circularReference: 'చక్రీయ సూచన',
   items: {
     one: 'అంశం',
     other: 'అంశాలు',
@@ -132,6 +133,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'మెను',
+  emailViewerFrom: 'పంపినవారు',
+  emailViewerTo: 'గ్రహీత',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'హైలైట్ చేసిన భాగానికి వెళ్లింది.',
   anchorJumpedToPage: '{page}వ పేజీకి వెళ్లింది.',

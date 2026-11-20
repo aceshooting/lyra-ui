@@ -222,6 +222,7 @@ import './components/lr-retrieval-results.js';
 import './components/lr-retrieval-search.js';
 import './components/lr-retrieval-trace.js';
 import './components/lr-rubric-form.js';
+import './components/lr-sankey.js';
 import './components/lr-scroller.js';
 import './components/lr-segmented.js';
 import './components/lr-select.js';

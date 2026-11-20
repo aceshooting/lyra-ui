@@ -46,6 +46,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'Atšaukti',
   confirm: 'Patvirtinti',
   search: 'Ieškoti',
+  circularReference: 'Ciklinė nuoroda',
   items: {
     few: 'elementai',
     many: 'elemento',
@@ -144,6 +145,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value} ms',
   durationSeconds: '{value} s',
   menuLabel: 'Meniu',
+  emailViewerFrom: 'Nuo',
+  emailViewerTo: 'Kam',
   pdfViewerCurrentZoom: '{percent} %',
   anchorJumped: 'Pereita prie paryškintos ištraukos.',
   anchorJumpedToPage: 'Pereita į {page} puslapį.',

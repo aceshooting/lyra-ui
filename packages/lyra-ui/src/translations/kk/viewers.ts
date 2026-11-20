@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'контакт',
   emailViewerLabel: 'Электрондық хатты қарау құралы',
   emailViewerMissingParser: 'Бұл хатты талдау үшін қарау құралына қосымша «postal-mime» бумасын орнату қажет.',
-  emailViewerFrom: 'Кімнен',
-  emailViewerTo: 'Кімге',
   emailViewerSubject: 'Тақырып',
   emailViewerDate: 'Күні',
   emailViewerAttachments: 'Тіркемелер',

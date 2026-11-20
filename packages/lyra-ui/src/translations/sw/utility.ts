@@ -7,7 +7,6 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   copyJson: 'Nakili JSON kwenye ubao wa kunakili',
-  circularReference: 'Rejeleo la duara',
   copyDiff: 'Nakili tofauti',
   diffViewOldLabel: 'Asili',
   diffViewNewLabel: 'Iliyorekebishwa',

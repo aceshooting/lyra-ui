@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'oxhumana naye',
   emailViewerLabel: 'Isibukeli se-imeyili',
   emailViewerMissingParser: 'Lesi sibukeli sidinga ukufakwa kwephakheji ethi "postal-mime" ukuze sifunde lo myalezo.',
-  emailViewerFrom: 'Kusuka',
-  emailViewerTo: 'Kuya',
   emailViewerSubject: 'Isihloko',
   emailViewerDate: 'Usuku',
   emailViewerAttachments: 'Okunamathiselwe',

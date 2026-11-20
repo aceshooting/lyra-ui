@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'منسوخ ڪريو',
   confirm: 'تصديق ڪريو',
   search: 'ڳوليو',
+  circularReference: 'چڪرائتو حوالو',
   items: {
     one: 'شيءِ',
     other: 'شيون',
@@ -132,6 +133,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'مينيو',
+  emailViewerFrom: 'کان',
+  emailViewerTo: 'ڏانهن',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'نمايان ڪيل عبارت ڏانهن پهچي ويا.',
   anchorJumpedToPage: 'صفحي {page} ڏانهن پهچي ويا.',

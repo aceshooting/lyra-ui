@@ -508,6 +508,8 @@ export type LyraRetrievalTraceSvelteProps = LyraSvelteElementProps<'lr-retrieval
 
 export type LyraRubricFormSvelteProps = LyraSvelteElementProps<'lr-rubric-form'>;
 
+export type LyraSankeySvelteProps = LyraSvelteElementProps<'lr-sankey'>;
+
 export type LyraScatterChartSvelteProps = LyraSvelteElementProps<'lr-scatter-chart'>;
 
 export type LyraScrollerSvelteProps = LyraSvelteElementProps<'lr-scroller'>;
@@ -899,6 +901,7 @@ export interface LyraSvelteElements {
   'lr-retrieval-search': LyraRetrievalSearchSvelteProps;
   'lr-retrieval-trace': LyraRetrievalTraceSvelteProps;
   'lr-rubric-form': LyraRubricFormSvelteProps;
+  'lr-sankey': LyraSankeySvelteProps;
   'lr-scatter-chart': LyraScatterChartSvelteProps;
   'lr-scroller': LyraScrollerSvelteProps;
   'lr-segmented': LyraSegmentedSvelteProps;
@@ -1214,6 +1217,7 @@ export interface LyraElementTagNameMap {
   'lr-retrieval-search': LyraComponentTypeMap['lr-retrieval-search']['element'];
   'lr-retrieval-trace': LyraComponentTypeMap['lr-retrieval-trace']['element'];
   'lr-rubric-form': LyraComponentTypeMap['lr-rubric-form']['element'];
+  'lr-sankey': LyraComponentTypeMap['lr-sankey']['element'];
   'lr-scatter-chart': LyraComponentTypeMap['lr-scatter-chart']['element'];
   'lr-scroller': LyraComponentTypeMap['lr-scroller']['element'];
   'lr-segmented': LyraComponentTypeMap['lr-segmented']['element'];

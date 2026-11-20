@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'kuntatt',
   emailViewerLabel: 'Werrej tal-emails',
   emailViewerMissingParser: 'Dan il-werrej jeħtieġ il-pakkett fakultattiv "postal-mime" installat biex janalizza dan il-messaġġ.',
-  emailViewerFrom: 'Minn',
-  emailViewerTo: 'Lil',
   emailViewerSubject: 'Suġġett',
   emailViewerDate: 'Data',
   emailViewerAttachments: 'Annessi',

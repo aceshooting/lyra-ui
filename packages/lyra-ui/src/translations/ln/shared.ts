@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'Kata',
   confirm: 'Confirmer',
   search: 'Luka',
+  circularReference: 'Référence ya cercle',
   items: {
     one: 'eloko',
     other: 'biloko',
@@ -132,6 +133,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value} milliseconde',
   durationSeconds: '{value} seconde',
   menuLabel: 'Menyu',
+  emailViewerFrom: 'Longwa na',
+  emailViewerTo: 'Epai ya',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Akendaki na eteni oyo emonisami.',
   anchorJumpedToPage: 'Akendaki na lokasa {page}.',

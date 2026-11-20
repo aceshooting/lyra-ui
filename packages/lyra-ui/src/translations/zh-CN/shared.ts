@@ -43,6 +43,7 @@ const strings: LyraLocaleStrings = {
   cancel: '取消',
   confirm: '确认',
   search: '搜索',
+  circularReference: '循环引用',
   items: {
     other: '项',
   },
@@ -126,6 +127,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value}毫秒',
   durationSeconds: '{value}秒',
   menuLabel: '菜单',
+  emailViewerFrom: '发件人',
+  emailViewerTo: '收件人',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: '已跳转到高亮段落。',
   anchorJumpedToPage: '已跳转到第{page}页。',

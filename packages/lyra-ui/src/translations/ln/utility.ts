@@ -7,7 +7,6 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   copyJson: 'Kopiá JSON na presse-papier',
-  circularReference: 'Référence ya cercle',
   copyDiff: 'Kopiá différence',
   diffViewOldLabel: 'Ya liboso',
   diffViewNewLabel: 'Ebongisami',

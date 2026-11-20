@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'रद्द करा',
   confirm: 'पुष्टी करा',
   search: 'शोधा',
+  circularReference: 'चक्रीय संदर्भ',
   items: {
     one: 'घटक',
     other: 'घटक',
@@ -132,6 +133,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'मेनू',
+  emailViewerFrom: 'प्रेषक',
+  emailViewerTo: 'प्रति',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'हायलाइट केलेल्या मजकुरावर नेले.',
   anchorJumpedToPage: '{page} व्या पृष्ठावर नेले.',

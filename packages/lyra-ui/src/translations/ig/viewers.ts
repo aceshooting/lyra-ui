@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'kọntaktị',
   emailViewerLabel: 'Ihe nlere email',
   emailViewerMissingParser: 'Ihe nlere a chọrọ ka etinye ngwungwu nhọrọ "postal-mime" iji tụlee ozi a.',
-  emailViewerFrom: 'Site na',
-  emailViewerTo: 'Nye',
   emailViewerSubject: 'Isiokwu',
   emailViewerDate: 'Ụbọchị',
   emailViewerAttachments: 'Ihe agbakwunyere',

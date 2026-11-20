@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'ìbánisọ̀rọ̀',
   emailViewerLabel: 'Olùwò ìmeèlì',
   emailViewerMissingParser: 'Olùwò yìí nílò àpò "postal-mime" àṣàyàn láti túmọ̀ ìfiránṣẹ́ yìí.',
-  emailViewerFrom: 'Láti ọ̀dọ̀',
-  emailViewerTo: 'Sí',
   emailViewerSubject: 'Kókó ọ̀rọ̀',
   emailViewerDate: 'Ọjọ́',
   emailViewerAttachments: 'Àwọn àfikún',

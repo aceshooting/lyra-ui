@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'Khansela',
   confirm: 'Qinisekisa',
   search: 'Sesha',
+  circularReference: 'Ireferensi eyindilinga',
   items: {
     one: 'into',
     other: 'izinto',
@@ -132,6 +133,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'Imenyu',
+  emailViewerFrom: 'Kusuka',
+  emailViewerTo: 'Kuya',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Kuyeqiwe kwaya endimeni egqanyisiwe.',
   anchorJumpedToPage: 'Kuyeqiwe kwaya ekhasini {page}.',

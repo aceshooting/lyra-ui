@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'İptal',
   confirm: 'Onayla',
   search: 'Ara',
+  circularReference: 'Döngüsel başvuru',
   items: {
     one: 'öğe',
     other: 'öğe',
@@ -132,6 +133,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'Menü',
+  emailViewerFrom: 'Gönderen',
+  emailViewerTo: 'Alıcı',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Vurgulanan bölüme gidildi.',
   anchorJumpedToPage: '{page}. sayfaya gidildi.',

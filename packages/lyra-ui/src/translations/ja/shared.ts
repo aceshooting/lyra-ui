@@ -43,6 +43,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'キャンセル',
   confirm: '確定',
   search: '検索',
+  circularReference: '循環参照',
   items: {
     other: '件',
   },
@@ -126,6 +127,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value} ミリ秒',
   durationSeconds: '{value} 秒',
   menuLabel: 'メニュー',
+  emailViewerFrom: '差出人',
+  emailViewerTo: '宛先',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'ハイライトされた箇所へ移動しました。',
   anchorJumpedToPage: '{page} ページへ移動しました。',

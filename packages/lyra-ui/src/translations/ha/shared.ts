@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'Soke',
   confirm: 'Tabbatar',
   search: 'Nema',
+  circularReference: 'Nuni mai dawowa kansa',
   items: {
     one: 'abu',
     other: 'abubuwa',
@@ -132,6 +133,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'Jerin zaɓuɓɓuka',
+  emailViewerFrom: 'Daga',
+  emailViewerTo: 'Zuwa',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'An je zuwa wurin da aka haskaka.',
   anchorJumpedToPage: 'An je zuwa shafi na {page}.',

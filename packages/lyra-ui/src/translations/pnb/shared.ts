@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'منسوخ کرو',
   confirm: 'تصدیق کرو',
   search: 'تلاش کرو',
+  circularReference: 'چکری حوالہ',
   items: {
     one: 'آئٹم',
     other: 'آئٹمز',
@@ -132,6 +133,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'مینو',
+  emailViewerFrom: 'ولوں',
+  emailViewerTo: 'نوں',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'نمایاں کیتے گئے حصے تے پہنچ گئے۔',
   anchorJumpedToPage: 'صفحہ {page} تے پہنچ گئے۔',

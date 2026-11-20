@@ -9,7 +9,7 @@ is an explicit evidence gap, not a zero-byte claim. Each tag’s stable registra
 Raw byte counts and bundle SHA-256 digests are in
 `packages/lyra-ui/scripts/fixtures/component-integration.json`, keyed by tag, not repeated below.
 
-Coverage: **312 tags**, **312 measured gzip entries**, **0 not measured**.
+Coverage: **313 tags**, **313 measured gzip entries**, **0 not measured**.
 
 Dependency meaning: direct edges are tags rendered by this component or registration entries it
 imports directly. Transitive edges are other registrations reachable through those direct edges.
@@ -250,6 +250,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-retrieval-search"></a>`lr-retrieval-search` | retrieval | `import '@aceshooting/lyra-ui/components/lr-retrieval-search.js';` | none | `lr-chip`, `lr-chip-group`, `lr-empty`, `lr-input`, `lr-segmented`, `lr-spinner` | none | 76.3 KiB |
 | <a id="lr-retrieval-trace"></a>`lr-retrieval-trace` | retrieval | `import '@aceshooting/lyra-ui/components/lr-retrieval-trace.js';` | none | `lr-chunk-inspector`, `lr-empty`, `lr-span-waterfall` | `lr-virtual-list` | 86.4 KiB |
 | <a id="lr-rubric-form"></a>`lr-rubric-form` | forms | `import '@aceshooting/lyra-ui/components/lr-rubric-form.js';` | none | `lr-checkbox`, `lr-checkbox-group`, `lr-option`, `lr-segmented`, `lr-select`, `lr-slider`, `lr-textarea` | none | 124.1 KiB |
+| <a id="lr-sankey"></a>`lr-sankey` | data | `import '@aceshooting/lyra-ui/components/lr-sankey.js';` | none | none | none | 44.5 KiB |
 | <a id="lr-scatter-chart"></a>`lr-scatter-chart` | charts | `import '@aceshooting/lyra-ui/components/lr-scatter-chart.js';` | `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` | `lr-chart`, `lr-skeleton` | none | 94.3 KiB |
 | <a id="lr-scroller"></a>`lr-scroller` | layout | `import '@aceshooting/lyra-ui/components/lr-scroller.js';` | none | none | none | 30.5 KiB |
 | <a id="lr-segmented"></a>`lr-segmented` | layout | `import '@aceshooting/lyra-ui/components/lr-segmented.js';` | none | none | none | 34.5 KiB |

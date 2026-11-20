@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'Ακύρωση',
   confirm: 'Επιβεβαίωση',
   search: 'Αναζήτηση',
+  circularReference: 'Κυκλική αναφορά',
   items: {
     one: 'στοιχείο',
     other: 'στοιχεία',
@@ -132,6 +133,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value} χιλιοστά του δευτερολέπτου',
   durationSeconds: '{value} δευτ.',
   menuLabel: 'Μενού',
+  emailViewerFrom: 'Από',
+  emailViewerTo: 'Προς',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Μετάβαση στο επισημασμένο απόσπασμα.',
   anchorJumpedToPage: 'Μετάβαση στη σελίδα {page}.',

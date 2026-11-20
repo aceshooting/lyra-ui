@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'لغو',
   confirm: 'تأیید',
   search: 'جست‌وجو',
+  circularReference: 'ارجاع دوری',
   items: {
     one: 'مورد',
     other: 'موارد',
@@ -132,6 +133,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value} میلی‌ثانیه',
   durationSeconds: '{value} ثانیه',
   menuLabel: 'منو',
+  emailViewerFrom: 'از',
+  emailViewerTo: 'به',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'به بخش برجسته‌شده رفت.',
   anchorJumpedToPage: 'به صفحهٔ {page} رفت.',

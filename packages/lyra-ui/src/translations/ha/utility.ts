@@ -7,7 +7,6 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   copyJson: 'Kwafi JSON zuwa allon riƙewa',
-  circularReference: 'Nuni mai dawowa kansa',
   copyDiff: 'Kwafi bambanci',
   diffViewOldLabel: 'Na asali',
   diffViewNewLabel: 'An gyara',

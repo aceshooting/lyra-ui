@@ -224,6 +224,7 @@ export const ROOT_BARREL_TAGS = [
   'lr-retrieval-search',
   'lr-retrieval-trace',
   'lr-rubric-form',
+  'lr-sankey',
   'lr-scroller',
   'lr-segmented',
   'lr-select',

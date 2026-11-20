@@ -506,6 +506,8 @@ export type LyraRetrievalTraceReactProps = LyraReactElementProps<'lr-retrieval-t
 
 export type LyraRubricFormReactProps = LyraReactElementProps<'lr-rubric-form'>;
 
+export type LyraSankeyReactProps = LyraReactElementProps<'lr-sankey'>;
+
 export type LyraScatterChartReactProps = LyraReactElementProps<'lr-scatter-chart'>;
 
 export type LyraScrollerReactProps = LyraReactElementProps<'lr-scroller'>;
@@ -897,6 +899,7 @@ export interface LyraReactIntrinsicElements {
   'lr-retrieval-search': LyraRetrievalSearchReactProps;
   'lr-retrieval-trace': LyraRetrievalTraceReactProps;
   'lr-rubric-form': LyraRubricFormReactProps;
+  'lr-sankey': LyraSankeyReactProps;
   'lr-scatter-chart': LyraScatterChartReactProps;
   'lr-scroller': LyraScrollerReactProps;
   'lr-segmented': LyraSegmentedReactProps;

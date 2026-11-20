@@ -27,6 +27,8 @@ export interface SvgChartOptions {
   notice?: string;
   viewBox: string;
   marks: readonly SvgChartMark[];
+  /** Keyboard entry when SVG paint order puts background ribbons before the first node. */
+  initialId?: string;
   legend?: readonly { label: string; color: string }[];
   legendLabel: string;
   tableLabel: string;
@@ -153,7 +155,8 @@ export class SvgChartInteraction implements ReactiveController {
     const marks = options.status ? [] : options.marks;
     if (!marks.some(mark => mark.id === this.focusedId)) {
       this.restoreMarkFocus = this.host.shadowRoot?.activeElement?.matches('g[data-index]') ?? false;
-      this.focusedId = marks[0]?.id;
+      this.focusedId = options.initialId && marks.some(mark => mark.id === options.initialId)
+        ? options.initialId : marks[0]?.id;
     }
     if (this.keyboardId && !marks.some(mark => mark.id === this.keyboardId)) this.keyboardId = undefined;
     if (this.hoverId && !marks.some(mark => mark.id === this.hoverId)) this.hoverId = undefined;

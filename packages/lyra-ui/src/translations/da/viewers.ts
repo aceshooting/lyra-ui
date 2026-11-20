@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'kontakt',
   emailViewerLabel: 'E-mailfremviser',
   emailViewerMissingParser: 'Denne fremviser kræver, at den valgfrie pakke "postal-mime" er installeret, for at kunne fortolke beskeden.',
-  emailViewerFrom: 'Fra',
-  emailViewerTo: 'Til',
   emailViewerSubject: 'Emne',
   emailViewerDate: 'Dato',
   emailViewerAttachments: 'Vedhæftede filer',

@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'kontak',
   emailViewerLabel: 'Pamawas email',
   emailViewerMissingParser: 'Pamawas iki mbutuhake paket opsional "postal-mime" kanggo ngurai pesen iki.',
-  emailViewerFrom: 'Saka',
-  emailViewerTo: 'Kanggo',
   emailViewerSubject: 'Bab',
   emailViewerDate: 'Tanggal',
   emailViewerAttachments: 'Lampiran',

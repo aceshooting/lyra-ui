@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'aloqa',
   emailViewerLabel: 'Elektron xat koʻruvchisi',
   emailViewerMissingParser: 'Bu xabarni tahlil qilish uchun koʻruvchiga ixtiyoriy "postal-mime" paketini oʻrnatish kerak.',
-  emailViewerFrom: 'Kimdan',
-  emailViewerTo: 'Kimga',
   emailViewerSubject: 'Mavzu',
   emailViewerDate: 'Sana',
   emailViewerAttachments: 'Ilovalar',

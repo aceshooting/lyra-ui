@@ -3515,6 +3515,42 @@
       }
     },
     {
+      "module": "src/components/data/sankey/sankey-layout.ts",
+      "exportName": "LyraSankeyLink",
+      "kind": "interface",
+      "fingerprint": "5dc9caa1db4a027a188f",
+      "routes": [
+        "src/components/data/index.ts",
+        "src/components/data/sankey/sankey.class.ts",
+        "src/components/lr-sankey.ts"
+      ],
+      "document": "llms/data.md",
+      "family": "data",
+      "locator": {
+        "kind": "utility",
+        "name": "components-data-sankey-sankey-contracts",
+        "declaration": "LyraSankeyLink"
+      }
+    },
+    {
+      "module": "src/components/data/sankey/sankey-layout.ts",
+      "exportName": "LyraSankeyNode",
+      "kind": "interface",
+      "fingerprint": "76b6adb485c8322e14a4",
+      "routes": [
+        "src/components/data/index.ts",
+        "src/components/data/sankey/sankey.class.ts",
+        "src/components/lr-sankey.ts"
+      ],
+      "document": "llms/data.md",
+      "family": "data",
+      "locator": {
+        "kind": "utility",
+        "name": "components-data-sankey-sankey-contracts",
+        "declaration": "LyraSankeyNode"
+      }
+    },
+    {
       "module": "src/internal/chat-composer-status.ts",
       "exportName": "normalizeChatComposerStatus",
       "kind": "function",

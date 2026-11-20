@@ -7,7 +7,6 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   copyJson: 'Kopiér JSON til udklipsholderen',
-  circularReference: 'Cirkulær reference',
   copyDiff: 'Kopiér diff',
   diffViewOldLabel: 'Original',
   diffViewNewLabel: 'Ændret',

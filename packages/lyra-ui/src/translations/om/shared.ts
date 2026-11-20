@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'Dhiisi',
   confirm: 'Mirkaneessi',
   search: 'Barbaadi',
+  circularReference: 'Wabii marsaa',
   items: {
     one: 'wantoota',
     other: 'wantoota',
@@ -132,6 +133,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'Baafata',
+  emailViewerFrom: 'Ergamaa',
+  emailViewerTo: 'Fudhataa',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Kutaa calaqqisiifame bira ga\'e.',
   anchorJumpedToPage: 'Fuula {page} bira ga\'e.',

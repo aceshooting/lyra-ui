@@ -257,6 +257,7 @@
     "./components/data/graph-query-builder/graph-query-builder.class.js": "./dist/components/data/graph-query-builder/graph-query-builder.class.js",
     "./components/data/heatmap/heatmap.class.js": "./dist/components/data/heatmap/heatmap.class.js",
     "./components/data/pagination/pagination.class.js": "./dist/components/data/pagination/pagination.class.js",
+    "./components/data/sankey/sankey.class.js": "./dist/components/data/sankey/sankey.class.js",
     "./components/data/sequence-strip/sequence-strip.class.js": "./dist/components/data/sequence-strip/sequence-strip.class.js",
     "./components/data/sparkline/sparkline.class.js": "./dist/components/data/sparkline/sparkline.class.js",
     "./components/data/stat/stat.class.js": "./dist/components/data/stat/stat.class.js",
@@ -1287,6 +1288,10 @@
     "./components/lr-rubric-form.js": {
       "types": "./dist/components/lr-rubric-form.d.ts",
       "default": "./dist/components/lr-rubric-form.js"
+    },
+    "./components/lr-sankey.js": {
+      "types": "./dist/components/lr-sankey.d.ts",
+      "default": "./dist/components/lr-sankey.js"
     },
     "./components/lr-scatter-chart.js": {
       "types": "./dist/components/lr-scatter-chart.d.ts",

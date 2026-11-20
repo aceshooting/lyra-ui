@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'ਰੱਦ ਕਰੋ',
   confirm: 'ਪੁਸ਼ਟੀ ਕਰੋ',
   search: 'ਖੋਜੋ',
+  circularReference: 'ਚੱਕਰੀ ਹਵਾਲਾ',
   items: {
     one: 'ਆਈਟਮ',
     other: 'ਆਈਟਮਾਂ',
@@ -132,6 +133,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value} ਮਿਲੀਸਕਿੰਟ',
   durationSeconds: '{value} ਸਕਿੰਟ',
   menuLabel: 'ਮੀਨੂ',
+  emailViewerFrom: 'ਵੱਲੋਂ',
+  emailViewerTo: 'ਨੂੰ',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'ਉਜਾਗਰ ਕੀਤੇ ਹਿੱਸੇ ਉੱਤੇ ਜਾਇਆ ਗਿਆ।',
   anchorJumpedToPage: 'ਪੰਨਾ {page} ਉੱਤੇ ਜਾਇਆ ਗਿਆ।',

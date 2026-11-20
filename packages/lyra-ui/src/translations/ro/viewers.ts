@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'contact',
   emailViewerLabel: 'Vizualizator de e-mailuri',
   emailViewerMissingParser: 'Acest vizualizator necesită pachetul opțional „postal-mime” instalat pentru a analiza acest mesaj.',
-  emailViewerFrom: 'De la',
-  emailViewerTo: 'Către',
   emailViewerSubject: 'Subiect',
   emailViewerDate: 'Data',
   emailViewerAttachments: 'Fișiere atașate',

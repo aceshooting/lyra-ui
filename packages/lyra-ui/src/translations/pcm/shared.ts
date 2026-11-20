@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'Cancel am',
   confirm: 'Confirm am',
   search: 'Find',
+  circularReference: 'Reference wey dey go round',
   items: {
     one: 'thing',
     other: 'things',
@@ -132,6 +133,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'Menu',
+  emailViewerFrom: 'Who send am',
+  emailViewerTo: 'Who e go reach',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'E don jump reach di highlighted part.',
   anchorJumpedToPage: 'E don jump reach page {page}.',

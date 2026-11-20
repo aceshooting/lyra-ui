@@ -91,6 +91,7 @@ import type { LyraFlowControlsEventMap } from '../components/data/flow-controls/
 import type { LyraGraphQueryBuilderEventMap } from '../components/data/graph-query-builder/graph-query-builder.class.js';
 import type { LyraHeatmapEventMap } from '../components/data/heatmap/heatmap-model.js';
 import type { LyraPaginationEventMap } from '../components/data/pagination/pagination.class.js';
+import type { LyraSankeyEventMap } from '../components/data/sankey/sankey.class.js';
 import type { LyraSequenceStripEventMap } from '../components/data/sequence-strip/sequence-strip.class.js';
 import type { LyraTableEventMap } from '../components/data/table/table-support.js';
 import type { LyraTimelineEventMap } from '../components/data/timeline/timeline.class.js';
@@ -470,6 +471,7 @@ export interface LyraTagEventTypes {
   'lr-retrieval-search': LyraRetrievalSearchEventMap;
   'lr-retrieval-trace': LyraRetrievalTraceEventMap;
   'lr-rubric-form': LyraRubricFormEventMap;
+  'lr-sankey': LyraSankeyEventMap;
   'lr-scatter-chart': LyraChartEventMap;
   'lr-scroller': LyraScrollerEventMap;
   'lr-segmented': LyraSegmentedEventMap;

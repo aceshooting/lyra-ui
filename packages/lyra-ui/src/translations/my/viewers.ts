@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'ဆက်သွယ်ရန်အချက်အလက်',
   emailViewerLabel: 'အီးမေးလ်ကြည့်ကိရိယာ',
   emailViewerMissingParser: 'ဤစာကို ဖတ်ရှုရန် ဤကြည့်ကိရိယာတွင် ရွေးချယ်နိုင်သော "postal-mime" ပက်ကေ့ဂျ် ထည့်သွင်းထားရန် လိုအပ်သည်။',
-  emailViewerFrom: 'ပေးပို့သူ',
-  emailViewerTo: 'လက်ခံသူ',
   emailViewerSubject: 'အကြောင်းအရာ',
   emailViewerDate: 'ရက်စွဲ',
   emailViewerAttachments: 'တွဲဖက်ဖိုင်များ',

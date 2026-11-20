@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'контакт',
   emailViewerLabel: 'Прегледач имејлова',
   emailViewerMissingParser: 'За рашчлањивање ове поруке овом прегледачу потребан је инсталиран опциони пакет „postal-mime“.',
-  emailViewerFrom: 'Од',
-  emailViewerTo: 'За',
   emailViewerSubject: 'Тема',
   emailViewerDate: 'Датум',
   emailViewerAttachments: 'Прилози',

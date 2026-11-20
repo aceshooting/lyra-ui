@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'kenalan',
   emailViewerLabel: 'Papar e-mel',
   emailViewerMissingParser: 'Papar ini memerlukan pakej pilihan "postal-mime" dipasang untuk menghuraikan mesej ini.',
-  emailViewerFrom: 'Daripada',
-  emailViewerTo: 'Kepada',
   emailViewerSubject: 'Subjek',
   emailViewerDate: 'Tarikh',
   emailViewerAttachments: 'Lampiran',

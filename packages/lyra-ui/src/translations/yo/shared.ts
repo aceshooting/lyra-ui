@@ -43,6 +43,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'Fagilé',
   confirm: 'Jẹ́rìí',
   search: 'Wá kiri',
+  circularReference: 'Ìtọ́kasí aláyípo',
   items: {
     other: 'ohun',
   },
@@ -126,6 +127,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'Àtòjọ aṣàyàn',
+  emailViewerFrom: 'Láti ọ̀dọ̀',
+  emailViewerTo: 'Sí',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'A fo sí apá tí a ṣe àfihàn rẹ̀.',
   anchorJumpedToPage: 'A fo sí ojúewé {page}.',

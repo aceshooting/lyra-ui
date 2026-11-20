@@ -7,7 +7,6 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   copyJson: '클립보드로 복사',
-  circularReference: '순환 참조',
   copyDiff: '차이 복사',
   diffViewOldLabel: '원본',
   diffViewNewLabel: '수정됨',

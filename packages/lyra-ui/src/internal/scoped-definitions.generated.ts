@@ -235,6 +235,7 @@ export const scopedDefinitionClosures: Readonly<Record<string, readonly string[]
   'lr-retrieval-search': ['lr-chip', 'lr-chip-group', 'lr-empty', 'lr-input', 'lr-retrieval-search', 'lr-segmented', 'lr-spinner'],
   'lr-retrieval-trace': ['lr-chunk-inspector', 'lr-empty', 'lr-retrieval-trace', 'lr-span-waterfall', 'lr-virtual-list'],
   'lr-rubric-form': ['lr-checkbox', 'lr-checkbox-group', 'lr-option', 'lr-rubric-form', 'lr-segmented', 'lr-select', 'lr-slider', 'lr-textarea'],
+  'lr-sankey': ['lr-sankey'],
   'lr-scatter-chart': ['lr-chart', 'lr-scatter-chart', 'lr-skeleton'],
   'lr-scroller': ['lr-scroller'],
   'lr-segmented': ['lr-segmented'],

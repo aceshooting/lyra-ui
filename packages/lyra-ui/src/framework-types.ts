@@ -109,6 +109,7 @@ import type { LyraGauge } from './components/data/gauge/gauge.class.js';
 import type { LyraGraphQueryBuilder, LyraGraphQueryBuilderEventMap } from './components/data/graph-query-builder/graph-query-builder.class.js';
 import type { LyraHeatmap, LyraHeatmapEventMap } from './components/data/heatmap/heatmap.class.js';
 import type { LyraPagination, LyraPaginationEventMap } from './components/data/pagination/pagination.class.js';
+import type { LyraSankey, LyraSankeyEventMap } from './components/data/sankey/sankey.class.js';
 import type { LyraSequenceStrip, LyraSequenceStripEventMap } from './components/data/sequence-strip/sequence-strip.class.js';
 import type { LyraSparkline } from './components/data/sparkline/sparkline.class.js';
 import type { LyraStat } from './components/data/stat/stat.class.js';
@@ -11718,6 +11719,30 @@ export interface LyraComponentTypeMap {
       'item-id'?: LyraRubricForm['itemId'];
       'with-hint'?: LyraRubricForm['withHint'];
       'with-label'?: LyraRubricForm['withLabel'];
+    };
+  };
+  'lr-sankey': {
+    element: LyraSankey;
+    properties: LyraElementProperties<
+      LyraSankey,
+      | 'dataTableToggle'
+      | 'description'
+      | 'label'
+      | 'links'
+      | 'loading'
+      | 'locale'
+      | 'nodes'
+      | 'strings'
+      | 'valueFormatter'
+      | 'withDataTable',
+      {}
+    >;
+    events: LyraSankeyEventMap;
+    eventNames:       | 'lr-datum-activate';
+    cssNames: never;
+    attributeAliases: {
+      'data-table-toggle'?: LyraSankey['dataTableToggle'];
+      'with-data-table'?: LyraSankey['withDataTable'];
     };
   };
   'lr-scatter-chart': {

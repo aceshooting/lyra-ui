@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'Tühista',
   confirm: 'Kinnita',
   search: 'Otsi',
+  circularReference: 'Ringviide',
   items: {
     one: 'üksus',
     other: 'üksust',
@@ -132,6 +133,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value} ms',
   durationSeconds: '{value} s',
   menuLabel: 'Menüü',
+  emailViewerFrom: 'Saatja',
+  emailViewerTo: 'Saaja',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Liiguti esiletõstetud lõigule.',
   anchorJumpedToPage: 'Liiguti leheküljele {page}.',

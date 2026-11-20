@@ -38,7 +38,7 @@ whole catalog. `llms/index.md` maps every tag to its family and entry point.
 
 - **Foundation** — base class, form association, events, i18n, theming, TypeScript, frameworks, SSR, packaging (`llms/shared.md`)
 - **Form controls & inputs** — 36 tags in `components/forms/`
-- **Data display, dashboards & flow canvas** — 27 tags in `components/data/`
+- **Data display, dashboards & flow canvas** — 28 tags in `components/data/`
 - **Layout, navigation & structure** — 40 tags in `components/layout/`
 - **Overlays, status & feedback** — 22 tags in `components/overlays/`
 - **Utilities, formatting & observers** — 20 tags in `components/utility/`
@@ -5718,6 +5718,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-retrieval-search': LyraRetrievalSearchReactProps;
   'lr-retrieval-trace': LyraRetrievalTraceReactProps;
   'lr-rubric-form': LyraRubricFormReactProps;
+  'lr-sankey': LyraSankeyReactProps;
   'lr-scatter-chart': LyraScatterChartReactProps;
   'lr-scroller': LyraScrollerReactProps;
   'lr-segmented': LyraSegmentedReactProps;
@@ -6161,6 +6162,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-retrieval-search': LyraComponentTypeMap['lr-retrieval-search']['element'];
   'lr-retrieval-trace': LyraComponentTypeMap['lr-retrieval-trace']['element'];
   'lr-rubric-form': LyraComponentTypeMap['lr-rubric-form']['element'];
+  'lr-sankey': LyraComponentTypeMap['lr-sankey']['element'];
   'lr-scatter-chart': LyraComponentTypeMap['lr-scatter-chart']['element'];
   'lr-scroller': LyraComponentTypeMap['lr-scroller']['element'];
   'lr-segmented': LyraComponentTypeMap['lr-segmented']['element'];
@@ -6475,6 +6477,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-retrieval-search': LyraRetrievalSearchSvelteProps;
   'lr-retrieval-trace': LyraRetrievalTraceSvelteProps;
   'lr-rubric-form': LyraRubricFormSvelteProps;
+  'lr-sankey': LyraSankeySvelteProps;
   'lr-scatter-chart': LyraScatterChartSvelteProps;
   'lr-scroller': LyraScrollerSvelteProps;
   'lr-segmented': LyraSegmentedSvelteProps;
@@ -6936,6 +6939,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-retrieval-search': LyraRetrievalSearchVueProps;
   'lr-retrieval-trace': LyraRetrievalTraceVueProps;
   'lr-rubric-form': LyraRubricFormVueProps;
+  'lr-sankey': LyraSankeyVueProps;
   'lr-scatter-chart': LyraScatterChartVueProps;
   'lr-scroller': LyraScrollerVueProps;
   'lr-segmented': LyraSegmentedVueProps;
@@ -22426,6 +22430,81 @@ and `limit`.
     readonly label: string;
     readonly value?: number;
     readonly children?: readonly LyraTreemapNode[];
+  }`
+
+## `lr-sankey`
+
+Show how quantities move across stages. The SVG lays out nodes in columns and connects them
+with ribbons whose thickness is proportional to the flow. Each node represents the greater of
+its incoming and outgoing totals. The legend identifies nodes with outgoing flows and uses the
+same colors as their ribbons. Where space permits, a ribbon displays its supplied label or
+its formatted value.
+
+| Property | Attribute | Purpose |
+| --- | --- | --- |
+| `nodes` | — | Readonly array of `LyraSankeyNode` values. Assign a new array when nodes change. |
+| `links` | — | Readonly array of `LyraSankeyLink` values. Assign a new array when links change. |
+| `label` | `label` | Accessible chart name. A host `aria-label` takes precedence. |
+| `description` | `description` | Optional accessible chart description. |
+| `loading` | `loading` | Shows the loading state. Defaults to `false`. |
+| `withDataTable` | `with-data-table` | Shows the data table visually. Defaults to `false`. |
+| `dataTableToggle` | `data-table-toggle` | Adds a button to show or hide the table. Defaults to `false`. |
+| `valueFormatter` | — | Optional `(value: number) => string` for displayed and accessible values. Formatting follows the effective locale by default. |
+
+Give each node a unique string ID and each link a positive, finite value. Parallel links are
+supported. Supply unique link IDs when you need stable link identity across updates. Links
+without IDs receive generated IDs. The chart skips dangling links and links with invalid values.
+Isolated nodes have a value of zero. Circular flows, including self-links, show an error. The
+chart reads the first 1,000 node entries and 4,000 link entries and shows a notice if input exceeds
+a limit or a ribbon is too small to represent.
+Node totals that exceed the numeric range are reported as `Number.MAX_VALUE`.
+
+Tab enters the plot at its first node. The arrow keys move through nodes and then links.
+Left and Right follow the reading direction. Home and End move to the first and last mark.
+Click, Enter, or Space emits the bubbling, composed `lr-datum-activate` event with
+`LyraSankeyDatum` detail. Node detail is `{ kind: 'node', id, label, value }`. Link detail is
+`{ kind: 'link', id, label, value, source, target }`.
+An unlabelled link uses a localized description of its endpoints for the event label. Hover or
+keyboard focus reveals the tooltip. Escape dismisses it. The data table lists plotted flows and
+isolated nodes, and remains available to assistive technology while visually collapsed.
+
+Nodes and ribbons use the shared `--lr-color-chart-1` through `--lr-color-chart-8` palette.
+**CSS parts:** `base`, `plot`, `description`, `node`, `node-label`, `link`, `link-label`,
+`tooltip`, `legend`, `legend-item`, `legend-swatch`, `legend-label`, `data-table`,
+`data-table-toggle`, `empty`, `loading`, `error`, and `limit`.
+
+```html
+<lr-sankey id="energy" label="Energy distribution" data-table-toggle></lr-sankey>
+<script type="module">
+  import '@aceshooting/lyra-ui/components/lr-sankey.js';
+
+  const chart = document.querySelector('#energy');
+  chart.nodes = [
+    { id: 'solar', label: 'Solar generation' },
+    { id: 'grid', label: 'Grid' },
+    { id: 'homes', label: 'Homes' },
+    { id: 'businesses', label: 'Businesses' },
+  ];
+  chart.links = [
+    { source: 'solar', target: 'grid', value: 90 },
+    { source: 'grid', target: 'homes', value: 55 },
+    { source: 'grid', target: 'businesses', value: 35 },
+  ];
+</script>
+```
+
+- **`components-data-sankey-sankey-contracts`** — Node and link types for weighted flow data.
+  Import `@aceshooting/lyra-ui/components/lr-sankey.js`.
+  `LyraSankeyNode {
+    readonly id: string;
+    readonly label: string;
+  }`
+  `LyraSankeyLink {
+    readonly id?: string;
+    readonly label?: string;
+    readonly source: string;
+    readonly target: string;
+    readonly value: number;
   }`
 
 # Layout, navigation & structure (`components/layout/`)

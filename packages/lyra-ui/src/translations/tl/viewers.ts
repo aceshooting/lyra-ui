@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'contact',
   emailViewerLabel: 'Viewer ng email',
   emailViewerMissingParser: 'Kailangang mai-install ang opsyonal na package na "postal-mime" upang ma-parse ang mensaheng ito.',
-  emailViewerFrom: 'Mula kay',
-  emailViewerTo: 'Para kay',
   emailViewerSubject: 'Paksa',
   emailViewerDate: 'Petsa',
   emailViewerAttachments: 'Mga attachment',

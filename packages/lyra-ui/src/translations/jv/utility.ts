@@ -7,7 +7,6 @@ import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
   copyJson: 'Salin JSON menyang clipboard',
-  circularReference: 'Referensi muter',
   copyDiff: 'Salin bedane',
   diffViewOldLabel: 'Asli',
   diffViewNewLabel: 'Diowahi',

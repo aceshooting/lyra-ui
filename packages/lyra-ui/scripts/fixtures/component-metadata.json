@@ -53,6 +53,7 @@
   },
   "assignments": {
     "new-component-experimental": [
+      "lr-sankey",
       "lr-treemap"
     ],
     "published-stable": [
@@ -37237,7 +37238,7 @@
     "current": {
       "version": "31.2.1",
       "sourceCommit": null,
-      "manifestSha256": "74808030bd60a423245944cebe53fb305bb7e16fd1de5e78a5821ff39cc726f6",
+      "manifestSha256": "bcfd37a05a1d469a06c87498360daef2bc36cd1f8dddc95f3f53e34e3ffe7725",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",
@@ -37473,6 +37474,7 @@
         "lr-retrieval-search",
         "lr-retrieval-trace",
         "lr-rubric-form",
+        "lr-sankey",
         "lr-scatter-chart",
         "lr-scroller",
         "lr-segmented",

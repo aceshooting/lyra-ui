@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'संपर्क',
   emailViewerLabel: 'ईमेल दर्शक',
   emailViewerMissingParser: 'इस संदेश को पार्स करने के लिए इस दर्शक को वैकल्पिक "postal-mime" पैकेज इंस्टॉल करना होगा।',
-  emailViewerFrom: 'प्रेषक',
-  emailViewerTo: 'प्रति',
   emailViewerSubject: 'विषय',
   emailViewerDate: 'तारीख',
   emailViewerAttachments: 'अटैचमेंट',

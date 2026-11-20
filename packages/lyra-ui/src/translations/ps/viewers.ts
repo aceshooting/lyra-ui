@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'اړیکه',
   emailViewerLabel: 'د برېښنالیک لیدونکی',
   emailViewerMissingParser: 'د دې پیغام د شنلو لپاره د "postal-mime" اختیاري بسته نصب کړئ.',
-  emailViewerFrom: 'له',
-  emailViewerTo: 'ته',
   emailViewerSubject: 'سرلیک',
   emailViewerDate: 'نېټه',
   emailViewerAttachments: 'ضمیمې',

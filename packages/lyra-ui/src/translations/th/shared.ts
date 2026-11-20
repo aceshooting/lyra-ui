@@ -43,6 +43,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'ยกเลิก',
   confirm: 'ยืนยัน',
   search: 'ค้นหา',
+  circularReference: 'การอ้างอิงแบบวนซ้ำ',
   items: {
     other: 'รายการ',
   },
@@ -126,6 +127,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value} มิลลิวินาที',
   durationSeconds: '{value} วินาที',
   menuLabel: 'เมนู',
+  emailViewerFrom: 'จาก',
+  emailViewerTo: 'ถึง',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'ไปยังข้อความที่ไฮไลต์แล้ว',
   anchorJumpedToPage: 'ไปยังหน้า {page} แล้ว',

@@ -312,6 +312,7 @@
     "signature-pad": "forms",
     "chart-3d": "charts",
     "model-viewer": "viewers",
-    "treemap": "data"
+    "treemap": "data",
+    "sankey": "data"
   }
 }

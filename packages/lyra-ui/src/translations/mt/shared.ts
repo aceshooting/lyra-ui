@@ -47,6 +47,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'Ikkanċella',
   confirm: 'Ikkonferma',
   search: 'Fittex',
+  circularReference: 'Referenza ċirkolari',
   items: {
     few: 'elementi',
     many: 'element',
@@ -150,6 +151,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'Menu',
+  emailViewerFrom: 'Minn',
+  emailViewerTo: 'Lil',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Inqbeż għas-silta enfasizzata.',
   anchorJumpedToPage: 'Inqbeż għall-paġna {page}.',

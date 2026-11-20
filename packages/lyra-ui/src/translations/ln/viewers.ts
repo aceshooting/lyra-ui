@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'moto ya boyokani',
   emailViewerLabel: 'Motali ya email',
   emailViewerMissingParser: 'Motali oyo esengaka paquet "postal-mime" mpo na ko analyser message oyo.',
-  emailViewerFrom: 'Longwa na',
-  emailViewerTo: 'Epai ya',
   emailViewerSubject: 'Sujet',
   emailViewerDate: 'Mokolo',
   emailViewerAttachments: 'Ba fichier attaché',

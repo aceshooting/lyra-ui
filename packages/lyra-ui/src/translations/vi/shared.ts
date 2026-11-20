@@ -43,6 +43,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'Hủy',
   confirm: 'Xác nhận',
   search: 'Tìm kiếm',
+  circularReference: 'Tham chiếu vòng',
   items: {
     other: 'mục',
   },
@@ -126,6 +127,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value} ms',
   durationSeconds: '{value} giây',
   menuLabel: 'Trình đơn',
+  emailViewerFrom: 'Người gửi',
+  emailViewerTo: 'Người nhận',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Đã chuyển đến đoạn được đánh dấu.',
   anchorJumpedToPage: 'Đã chuyển đến trang {page}.',

@@ -15,6 +15,7 @@ export * from '../lr-graph-query-builder.js';
 export * from '../lr-heatmap.js';
 export * from '../lr-pagination.js';
 export * from '../lr-condition-builder.js';
+export * from '../lr-sankey.js';
 export * from '../lr-sequence-strip.js';
 export * from '../lr-sparkline.js';
 export * from '../lr-stat.js';

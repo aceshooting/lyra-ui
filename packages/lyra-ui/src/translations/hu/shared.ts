@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'Mégse',
   confirm: 'Megerősítés',
   search: 'Keresés',
+  circularReference: 'Körkörös hivatkozás',
   items: {
     one: 'elem',
     other: 'elem',
@@ -132,6 +133,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value} ms',
   durationSeconds: '{value} mp',
   menuLabel: 'Menü',
+  emailViewerFrom: 'Feladó',
+  emailViewerTo: 'Címzett',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Ugrás a kiemelt részre.',
   anchorJumpedToPage: 'Ugrás az oldalra: {page}.',

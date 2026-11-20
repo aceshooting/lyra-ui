@@ -48,6 +48,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'إلغاء',
   confirm: 'تأكيد',
   search: 'بحث',
+  circularReference: 'مرجع دائري',
   items: {
     zero: 'عنصر',
     one: 'عنصر',
@@ -156,6 +157,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value} مللي ثانية',
   durationSeconds: '{value} ثانية',
   menuLabel: 'القائمة',
+  emailViewerFrom: 'من',
+  emailViewerTo: 'إلى',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'تم الانتقال إلى المقطع المميّز.',
   anchorJumpedToPage: 'تم الانتقال إلى الصفحة {page}.',

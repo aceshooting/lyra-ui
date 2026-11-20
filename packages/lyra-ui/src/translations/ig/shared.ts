@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'Kagbuo',
   confirm: 'Kwenye',
   search: 'Chọọ',
+  circularReference: 'Ntụaka na-agba okirikiri',
   items: {
     one: 'ihe',
     other: 'ihe',
@@ -128,6 +129,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'Ndepụta nhọrọ',
+  emailViewerFrom: 'Site na',
+  emailViewerTo: 'Nye',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Gagaraala na ebe e mere ka ọ pụta ìhè.',
   anchorJumpedToPage: 'Gagaraala na peeji {page}.',

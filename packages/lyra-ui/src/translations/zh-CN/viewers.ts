@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: '联系人',
   emailViewerLabel: '邮件查看器',
   emailViewerMissingParser: '此查看器需要安装可选的 "postal-mime" 包才能解析此邮件。',
-  emailViewerFrom: '发件人',
-  emailViewerTo: '收件人',
   emailViewerSubject: '主题',
   emailViewerDate: '日期',
   emailViewerAttachments: '附件',

@@ -2,6 +2,7 @@
   "family": "data",
   "assignments": {
     "new-component-experimental": [
+      "lr-sankey",
       "lr-treemap"
     ],
     "published-stable": [

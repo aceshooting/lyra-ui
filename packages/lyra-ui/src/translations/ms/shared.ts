@@ -43,6 +43,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'Batal',
   confirm: 'Sahkan',
   search: 'Cari',
+  circularReference: 'Rujukan berpusing',
   items: {
     other: 'item'
   },
@@ -126,6 +127,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value}ms',
   durationSeconds: '{value}s',
   menuLabel: 'Menu',
+  emailViewerFrom: 'Daripada',
+  emailViewerTo: 'Kepada',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Pergi ke petikan yang diserlahkan.',
   anchorJumpedToPage: 'Pergi ke halaman {page}.',

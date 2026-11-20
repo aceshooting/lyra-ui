@@ -46,6 +46,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'Скасувати',
   confirm: 'Підтвердити',
   search: 'Пошук',
+  circularReference: 'Циклічне посилання',
   items: {
     one: 'елемент',
     few: 'елементи',
@@ -144,6 +145,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value} мс',
   durationSeconds: '{value} с',
   menuLabel: 'Меню',
+  emailViewerFrom: 'Від',
+  emailViewerTo: 'Кому',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Перейдено до виділеного фрагмента.',
   anchorJumpedToPage: 'Перейдено до сторінки {page}.',

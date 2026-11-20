@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'kişi',
   emailViewerLabel: 'E-posta görüntüleyici',
   emailViewerMissingParser: 'Bu görüntüleyicinin iletiyi ayrıştırması için isteğe bağlı "postal-mime" paketi yüklenmelidir.',
-  emailViewerFrom: 'Gönderen',
-  emailViewerTo: 'Alıcı',
   emailViewerSubject: 'Konu',
   emailViewerDate: 'Tarih',
   emailViewerAttachments: 'Ekler',

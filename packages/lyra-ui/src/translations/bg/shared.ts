@@ -44,6 +44,7 @@ const strings: LyraLocaleStrings = {
   cancel: 'Отказ',
   confirm: 'Потвърди',
   search: 'Търсене',
+  circularReference: 'Циклична препратка',
   items: {
     one: 'елемент',
     other: 'елемента',
@@ -132,6 +133,8 @@ const strings: LyraLocaleStrings = {
   durationMilliseconds: '{value} мс',
   durationSeconds: '{value} с',
   menuLabel: 'Меню',
+  emailViewerFrom: 'От',
+  emailViewerTo: 'До',
   pdfViewerCurrentZoom: '{percent}%',
   anchorJumped: 'Преминато към маркирания откъс.',
   anchorJumpedToPage: 'Преминато към страница {page}.',

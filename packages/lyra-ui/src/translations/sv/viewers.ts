@@ -70,8 +70,6 @@ const strings: LyraLocaleStrings = {
   documentPreviewTypeContact: 'kontakt',
   emailViewerLabel: 'E-postvisare',
   emailViewerMissingParser: 'Den här visaren behöver det valfria paketet ”postal-mime” för att kunna tolka meddelandet.',
-  emailViewerFrom: 'Från',
-  emailViewerTo: 'Till',
   emailViewerSubject: 'Ämne',
   emailViewerDate: 'Datum',
   emailViewerAttachments: 'Bilagor',
