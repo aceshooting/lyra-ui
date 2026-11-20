@@ -10,7 +10,6 @@ export * from '../lr-docx-viewer.js';
 export * from '../lr-ebook-viewer.js';
 export * from '../lr-email-viewer.js';
 export * from '../lr-geojson-viewer.js';
-export { LyraGeojsonView } from './geojson-view/geojson-view.class.js';
 export * from '../lr-highlight-layer.js';
 export * from '../lr-html-viewer.js';
 export * from '../lr-include.js';

@@ -2292,6 +2292,32 @@ test('lyra-v31 reports every name removed in 32.0.0 and accepts the resolved, ty
   }
 });
 
+test('lyra-v31 re-binds the removed viewers-barrel subclass to the canonical class and reports other routes', () => {
+  const current = buildMigrationContract(checkedInventory, {
+    renameLedger: readRenameLedger(), exportDeprecations: readExportDeprecations(), compatibilityContext: checkedCompatibilityContext,
+  });
+  const migrate = (text) => migrateText(text, current, { file: 'viewer.ts', origin: 'lyra-v31' });
+  const result = migrate([
+    `import { LyraGeojsonView, LyraPdfViewer } from '${PACKAGE}/components/viewers';`,
+    `import { LyraGeojsonView as Legacy } from '${PACKAGE}/components/viewers';`,
+    `import { LyraGeojsonView as Root } from '${PACKAGE}';`,
+    `import * as viewers from '${PACKAGE}/components/viewers';`,
+    'customElements.define(\'app-geojson\', viewers.LyraGeojsonView);',
+    '',
+  ].join('\n'));
+  assert.deepEqual(result.content.split('\n').slice(0, 3), [
+    `import { LyraGeoJsonViewer as LyraGeojsonView, LyraPdfViewer } from '${PACKAGE}/components/viewers';`,
+    `import { LyraGeoJsonViewer as Legacy } from '${PACKAGE}/components/viewers';`,
+    `import { LyraGeojsonView as Root } from '${PACKAGE}';`,
+  ]);
+  assert.deepEqual(result.changes.map((change) => change.action), ['rewrite-export', 'rewrite-export']);
+  assert.deepEqual(result.warnings.filter((warning) => warning.warningCode === 'GLOBAL_REVIEW').map((warning) => warning.line), [3, 5]);
+  assert.equal(migrate(result.content).changes.length, 0, 'idempotent');
+  const ledger = readRenameLedger();
+  ledger.profiles.find((entry) => entry.origin === 'lyra-v31').globals[0].module = './components/viewers/index.js';
+  assertFinding(validateRenameLedgerShape(ledger), /needs module "\." \(the package root\) or a \.\/components\/<family> barrel/);
+});
+
 test('direct retirements need no published policy record but never bypass one', () => {
   const history = readJson(path.join(scriptDir, 'fixtures', 'retired-event-history.json'));
   const current = readRenameLedger();

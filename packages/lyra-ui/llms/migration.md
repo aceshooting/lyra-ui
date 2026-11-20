@@ -1656,7 +1656,7 @@ hydration compares template strings.
 Entries no component owns. A module specifier is rewritten where it is provably an import, re-export,
 dynamic import, `require()`, CSS `@import`, `<link href>`/`<script src>` or a `node_modules/` path, and in any
 string of a JSON file such as `.vscode/settings.json` (pass it as an explicit target); anywhere else it is
-reported. A removed root export is re-bound as `New as Old` in the import clause, so local references keep
+reported. A removed root or barrel export is re-bound as `New as Old` in the import clause, so local references keep
 working; other uses (a deep import, a namespace member) and removed localization keys are reported as
 `GLOBAL_REVIEW`, acknowledged as `lyra-migrate-reviewed: GLOBAL_REVIEW:<name>`.
 
@@ -1764,12 +1764,13 @@ events with the same name, and check nested event targets and existing canonical
 Entries no component owns. A module specifier is rewritten where it is provably an import, re-export,
 dynamic import, `require()`, CSS `@import`, `<link href>`/`<script src>` or a `node_modules/` path, and in any
 string of a JSON file such as `.vscode/settings.json` (pass it as an explicit target); anywhere else it is
-reported. A removed root export is re-bound as `New as Old` in the import clause, so local references keep
+reported. A removed root or barrel export is re-bound as `New as Old` in the import clause, so local references keep
 working; other uses (a deep import, a namespace member) and removed localization keys are reported as
 `GLOBAL_REVIEW`, acknowledged as `lyra-migrate-reviewed: GLOBAL_REVIEW:<name>`.
 
 | Kind | From | To | Handling |
 |---|---|---|---|
+| export | `LyraGeojsonView (./components/viewers)` | `LyraGeoJsonViewer` | Import clause re-bound; other uses reported. The viewers barrel no longer exports the LyraGeojsonView subclass; LyraGeoJsonViewer is the one GeoJSON viewer class. |
 | locale-key | `appRailCollapse` | `toggleNavigation` | Reported only. lr-app-rail names its collapse toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
 | locale-key | `appRailExpand` | `toggleNavigation` | Reported only. lr-app-rail names its collapse toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
 | locale-key | `appRailItemCollapse` | `appRailItemToggle` | Reported only. lr-app-rail-item names its disclosure with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |

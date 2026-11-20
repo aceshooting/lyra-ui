@@ -109,8 +109,7 @@ process native data-model updates, or provide native A2UI catalog compatibility.
 The result is `A2UiAdapterResult | null`: a widget-compatible `{ version: '2', root }` plus
 `bindingState` when `surface.data` is present. Assign `bindingState` separately; the widget-v2
 document itself never supplies controlled state. Explicit `data: null` remains `bindingState: null`.
-The original `state` field remains an equal compatibility alias in the helper result; renderers
-do not read it. Input, props, action payloads and state are detached under the adapter budgets.
+The former `state` alias of `bindingState` was removed in 32.0.0. Input, props, action payloads and state are detached under the adapter budgets.
 
 ```ts
 import { adaptA2UiSurface } from "@aceshooting/lyra-ui/ai";

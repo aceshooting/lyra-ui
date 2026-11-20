@@ -677,7 +677,6 @@ These named interfaces and helper signatures are available to typed integrations
   readonly version: '2';
   readonly root: LyraWidgetNode;
   readonly bindingState?: unknown;
-  readonly state?: unknown;
 }`
   `adaptA2UiSurface(surface: unknown, typeMap: unknown, limits: Partial<A2UiAdapterLimits> = {}): A2UiAdapterResult | null`
 

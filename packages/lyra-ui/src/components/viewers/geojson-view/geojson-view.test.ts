@@ -9,7 +9,6 @@ import '../../../translations/ar/media.js';
 import '../../../translations/ar/shared.js';
 import { LyraMap } from '../../media/map/map.class.js';
 import { LyraGeoJsonViewer } from './geojson-viewer.class.js';
-import { LyraGeojsonView } from './geojson-view.class.js';
 import { DEFAULT_MAX_RESOURCE_BYTES } from '../../../internal/resource-loader.js';
 import { getDefaultDocumentRendererRegistry, loadDocumentRenderer } from '../document-viewer/registry.js';
 import { nothing } from 'lit';
@@ -39,47 +38,11 @@ const OriginalIntersectionObserver = window.IntersectionObserver;
 const testObservers = new WeakMap<Element, TestIntersectionObserver>();
 
 describe('GeoJSON viewer identity', () => {
-  it('registers only the canonical tag and retains a distinct compatibility constructor', () => {
+  it('registers only the canonical tag', () => {
     const canonical = document.createElement('lr-geojson-viewer');
     expect(canonical instanceof LyraGeoJsonViewer).to.equal(true);
-    expect(canonical instanceof LyraGeojsonView).to.equal(false);
-    expect(Object.getPrototypeOf(LyraGeojsonView) === LyraGeoJsonViewer).to.equal(true);
     expect(customElements.get('lr-geojson-viewer') === LyraGeoJsonViewer).to.equal(true);
     expect(customElements.get('lr-geojson-view') === undefined).to.equal(true);
-  });
-
-  it('renders populated inherited metadata when the application registers the retained constructor', async () => {
-    if (!customElements.get('test-retained-geojson-view')) {
-      customElements.define('test-retained-geojson-view', LyraGeojsonView);
-    }
-    const originalFetch = globalThis.fetch;
-    try {
-      const feature = {
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: [6.13, 49.61] },
-        properties: { name: 'Retained landmark' },
-      };
-      stubFetch(feature);
-      const el = await fixture<LyraGeojsonView>(
-        html`<test-retained-geojson-view max-height="12rem"></test-retained-geojson-view>`
-      );
-      (el as unknown as { forceMissingMaplibreForTesting: boolean }).forceMissingMaplibreForTesting = true;
-      const missingPeer = oneEvent(el, 'lr-viewer-diagnostic');
-      el.src = GEOJSON_URL;
-      await missingPeer;
-      await waitUntil(() => el.shadowRoot!.querySelector('[part="metadata"]') !== null);
-      expect(el instanceof LyraGeoJsonViewer).to.equal(true);
-      expect(el.shadowRoot!.querySelector('[part="metadata"]')!.textContent)
-        .to.include('Retained landmark');
-      const fallback = el.shadowRoot!.querySelector<HTMLElement & { data: unknown }>('lr-json-viewer');
-      expect(fallback !== null).to.equal(true);
-      expect(fallback!.data).to.deep.equal(feature);
-      expect(el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!
-        .style.getPropertyValue('--lr-geojson-viewer-max-height')).to.equal('12rem');
-      expect(customElements.get('lr-geojson-view') === undefined).to.equal(true);
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
   });
 });
 

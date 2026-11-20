@@ -256,9 +256,11 @@ function namedReadmeUpstream(readme) {
 /**
  * Profile `globals` against the real public surface (RFC 0003): a `module` entry's old subpath must
  * be gone from the package exports and its replacement present in the target package's exports, an
- * `export` entry's old name must be absent from the root barrel and its replacement exported, and
- * a `locale-key` entry's old key must be gone from the default strings with its replacement present.
- * `surface` is `{ exports, packages: { [name]: exports }, rootBarrel, stringKeys }`.
+ * `export` entry's old name must be absent from its barrel (the root, or a `./components/<family>`
+ * barrel) and its replacement exported, and a `locale-key` entry's old key must be gone from the
+ * default strings with its replacement present. `surface` is
+ * `{ exports, packages: { [name]: exports }, rootBarrel, barrels: { [module]: text }, stringKeys }`;
+ * a barrel's text includes the modules it re-exports with `export *`.
  */
 export function analyzeGlobalsSurface(renameLedger, surface) {
   const errors = [];
@@ -287,8 +289,13 @@ export function analyzeGlobalsSurface(renameLedger, surface) {
           if (!Object.keys(surface.exports).some((key) => key.startsWith(kept.subpath))) errors.push(`${label}: excepted prefix ${prefix} is not exported by ${kept.packageName}`);
         }
       } else if (entry.kind === 'export') {
-        if (hasName(surface.rootBarrel, entry.from)) errors.push(`${label}: ${entry.from} is still exported by the package root`);
-        if (!hasName(surface.rootBarrel, entry.to)) errors.push(`${label}: ${entry.to} is not exported by the package root`);
+        const barrel = entry.module === '.' ? surface.rootBarrel : surface.barrels?.[entry.module];
+        const owner = entry.module === '.' ? 'the package root' : entry.module;
+        if (typeof barrel !== 'string') errors.push(`${label}: ${entry.module} is not an exported barrel`);
+        else {
+          if (hasName(barrel, entry.from)) errors.push(`${label}: ${entry.from} is still exported by ${owner}`);
+          if (!hasName(barrel, entry.to)) errors.push(`${label}: ${entry.to} is not exported by ${owner}`);
+        }
       } else if (entry.kind === 'locale-key') {
         if (surface.stringKeys.has(entry.from)) errors.push(`${label}: the key still exists in the default strings`);
         if (!surface.stringKeys.has(entry.to)) errors.push(`${label}: ${entry.to} is not a default string key`);
@@ -567,6 +574,25 @@ export function formatMigrationCoverageSummary(summary, upstreamTags) {
 }
 
 /** The public surface `globals` entries are checked against, read from the sibling workspace packages. */
+/** Each exported `./components/<family>` barrel's source, with its `export *` modules inlined. */
+function readFamilyBarrels(exportsMap) {
+  const expand = (file, seen) => {
+    if (seen.has(file) || !fs.existsSync(file)) return '';
+    seen.add(file);
+    const text = fs.readFileSync(file, 'utf8');
+    const nested = [...text.matchAll(/^export \* from '(\.{1,2}\/[^']+)\.js';$/gm)]
+      .map((match) => expand(path.resolve(path.dirname(file), `${match[1]}.ts`), seen));
+    return [text, ...nested].join('\n');
+  };
+  const barrels = {};
+  for (const [subpath, target] of Object.entries(exportsMap)) {
+    if (!/^\.\/components\/[a-z][a-z0-9-]*$/.test(subpath) || typeof target !== 'string') continue;
+    const source = path.join(packageDir, target.replace(/^\.\/dist\//, 'src/').replace(/\.js$/, '.ts'));
+    barrels[subpath] = expand(source, new Set());
+  }
+  return barrels;
+}
+
 function readGlobalsSurface() {
   const readJsonFile = (...segments) => JSON.parse(fs.readFileSync(path.join(...segments), 'utf8'));
   const workspace = path.dirname(packageDir);
@@ -582,6 +608,7 @@ function readGlobalsSurface() {
     exports: packages['@aceshooting/lyra-ui'] ?? {},
     packages,
     rootBarrel: fs.readFileSync(path.join(packageDir, 'src', 'lyra.ts'), 'utf8'),
+    barrels: readFamilyBarrels(packages['@aceshooting/lyra-ui'] ?? {}),
     stringKeys: new Set([...strings.matchAll(/^  ([A-Za-z0-9_$]+):/gm)].map((match) => match[1])),
   };
 }

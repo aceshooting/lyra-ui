@@ -101,6 +101,7 @@ const AUTHORED_PROFILE_KEYS = ['origin', 'fromMajor', 'toMajor', 'aliasRemovalMa
  * prefix of them) and `part` a part whose meaning changed on one component; the last three never edit.
  */
 const GLOBAL_KINDS = Object.freeze(['module', 'export', 'locale-key', 'css-property', 'part']);
+const EXPORT_BARREL_PATTERN = /^\.\/components\/[a-z][a-z0-9-]*$/;
 /** Structural rules a profile can enable; each is implemented and tested in the codemod. */
 const PROFILE_RULES = Object.freeze(['theme-scopes']);
 const PACKAGE_SPECIFIER_PATTERN = /^@aceshooting\/lyra-[a-z]+(?:\/[A-Za-z0-9_./-]*)?$/;
@@ -284,7 +285,9 @@ function validateGlobalEntry(findings, label, entry) {
   if (typeof entry.from !== 'string' || !JS_IDENTIFIER_PATTERN.test(entry.from)) findings.push(`${label}: from must be an identifier`);
   if (typeof entry.to !== 'string' || !JS_IDENTIFIER_PATTERN.test(entry.to)) findings.push(`${label}: to must be an identifier`);
   if (entry.from === entry.to) findings.push(`${label}: from and to must differ`);
-  if (entry.kind === 'export' && entry.module !== '.') findings.push(`${label}: an export entry needs module "." (the package root)`);
+  if (entry.kind === 'export' && entry.module !== '.' && !(typeof entry.module === 'string' && EXPORT_BARREL_PATTERN.test(entry.module))) {
+    findings.push(`${label}: an export entry needs module "." (the package root) or a ./components/<family> barrel`);
+  }
   if (optional && Object.hasOwn(entry, 'module')) findings.push(`${label}: locale keys do not take a module`);
 }
 

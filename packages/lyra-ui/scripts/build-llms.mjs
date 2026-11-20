@@ -835,14 +835,14 @@ export function buildLyraRenameReference(renameLedger, inventory, { exportDeprec
         `Entries no component owns. A module specifier is rewritten where it is provably an import, re-export,`,
         'dynamic import, `require()`, CSS `@import`, `<link href>`/`<script src>` or a `node_modules/` path, and in any',
         'string of a JSON file such as `.vscode/settings.json` (pass it as an explicit target); anywhere else it is',
-        'reported. A removed root export is re-bound as `New as Old` in the import clause, so local references keep',
+        'reported. A removed root or barrel export is re-bound as `New as Old` in the import clause, so local references keep',
         'working; other uses (a deep import, a namespace member) and removed localization keys are reported as',
         '`GLOBAL_REVIEW`, acknowledged as `lyra-migrate-reviewed: GLOBAL_REVIEW:<name>`.',
         '',
         '| Kind | From | To | Handling |',
         '|---|---|---|---|',
         ...profile.globals.map((entry) => {
-          const from = entry.kind === 'export' ? `${entry.from} (package root)` : entry.kind === 'part' ? `<${entry.tag}> ::part(${entry.from})` : entry.prefix ? `${entry.from}*` : entry.from;
+          const from = entry.kind === 'export' ? `${entry.from} (${entry.module === '.' ? 'package root' : entry.module})` : entry.kind === 'part' ? `<${entry.tag}> ::part(${entry.from})` : entry.prefix ? `${entry.from}*` : entry.from;
           const handling = entry.kind === 'module'
             ? `Rewritten${entry.except ? ` except ${entry.except.map((prefix) => `\`${cell(prefix)}\``).join(', ')}` : ''}. ${entry.summary}`
             : entry.kind === 'export' ? `Import clause re-bound; other uses reported. ${entry.summary}` : `Reported only. ${entry.summary}`;

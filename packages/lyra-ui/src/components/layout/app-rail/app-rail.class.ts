@@ -1197,6 +1197,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   }
 
   protected override willUpdate(changed: PropertyValues): void {
+    super.willUpdate(changed);
     this.deferRailEvents = true;
     try {
       this.reconcileBeforeRender(changed);
@@ -1220,7 +1221,6 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   }
 
   private reconcileBeforeRender(changed: PropertyValues): void {
-    super.willUpdate(changed);
     if (
       (changed.has('resizable') || changed.has('mode')) &&
       (!this.resizable || this._mode !== 'full')

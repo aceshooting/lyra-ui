@@ -8082,6 +8082,14 @@
       ],
       "globals": [
         {
+          "kind": "export",
+          "module": "./components/viewers",
+          "from": "LyraGeojsonView",
+          "to": "LyraGeoJsonViewer",
+          "summary": "The viewers barrel no longer exports the LyraGeojsonView subclass; LyraGeoJsonViewer is the one GeoJSON viewer class.",
+          "since": "32.0.0"
+        },
+        {
           "kind": "locale-key",
           "from": "appRailCollapse",
           "to": "toggleNavigation",

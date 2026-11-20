@@ -2,7 +2,7 @@ import { expect } from '@open-wc/testing';
 import { adaptA2UiSurface } from './a2ui.js';
 
 function widgetState(document: ReturnType<typeof adaptA2UiSurface>): unknown {
-  return document && 'state' in document ? document.state : undefined;
+  return document?.bindingState;
 }
 
 it('maps an A2UI-style component graph into a versioned allowlisted widget document', () => {
@@ -216,7 +216,7 @@ it('exposes controlled binding state separately from the version-two document', 
     data: source,
   }, { Input: 'input' });
   expect(result?.bindingState).to.deep.equal({ name: 'Ada' });
-  expect(result?.bindingState).to.equal(widgetState(result));
+  expect(Object.keys(result ?? {}).sort()).to.deep.equal(['bindingState', 'root', 'version']);
   source.name = 'Changed';
   expect(result?.bindingState).to.deep.equal({ name: 'Ada' });
   const explicitNull = adaptA2UiSurface({

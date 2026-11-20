@@ -579,13 +579,16 @@ const LYRA_PACKAGE = '@aceshooting/lyra-ui';
 const NODE_MODULES_LEAD = /(?:^|\/)node_modules\/$/;
 const JSON_FILE = /\.json$/i;
 const IDENTIFIER = '[$A-Za-z_][$\\w]*';
+/** The specifier an `export` global's barrel is imported from: the package root, or its subpath. */
+const exportSpecifier = (entry) => (entry.module === '.' ? LYRA_PACKAGE : `${LYRA_PACKAGE}${entry.module.slice(1)}`);
 
 /**
  * Profile `globals`: entries no `lr-*` tag owns. A `module` entry rewrites a package specifier where
  * it is provably a specifier (import/export-from, dynamic import, require, CSS @import, `<link href>`
  * and `<script src>`, a `node_modules/...` path, any string in a JSON file) and reports it anywhere
- * else. An `export` entry rewrites a root-barrel named import or re-export to `New as Old` (or
- * `New as Local` when already aliased), so no scope analysis is needed, and reports every other use.
+ * else. An `export` entry rewrites a named import or re-export from its barrel (the package root, or
+ * the `./components/<family>` barrel its `module` names) to `New as Old` (or `New as Local` when
+ * already aliased), so no scope analysis is needed, and reports every other use.
  * A `locale-key` entry only reports.
  */
 function applyGlobals(text, file, entries, { inComment, inCss, openingTokens, rewrite, warn }) {
@@ -647,20 +650,21 @@ function applyGlobals(text, file, entries, { inComment, inCss, openingTokens, re
         if (!entry) continue;
         const nameStart = bodyStart + part.index + parsed.indices[2][0];
         if (inComment(nameStart)) continue;
-        if (match.groups.source === LYRA_PACKAGE) {
+        if (match.groups.source === exportSpecifier(entry)) {
           rewrite(nameStart, nameStart + entry.from.length, parsed[3] ? entry.to : `${entry.to} as ${entry.from}`, {
             tag: null, member: entry.from, action: 'rewrite-export', target: entry.to,
             message: `${entry.from} no longer exists; import ${entry.to}${parsed[3] ? '' : ` as ${entry.from}`}: ${entry.summary}`,
           });
         } else {
           review(nameStart, entry, entry.from,
-            `${entry.from} is not exported by ${match.groups.source} any more: ${entry.summary} Import ${entry.to} from ${LYRA_PACKAGE}.`);
+            `${entry.from} is not exported by ${match.groups.source} any more: ${entry.summary} Import ${entry.to} from ${exportSpecifier(entry)}.`);
         }
       }
     }
-    const aliases = [...text.matchAll(new RegExp(`import\\s+(?:type\\s+)?\\*\\s+as\\s+(${IDENTIFIER})\\s+from\\s*(['"])${regexEscape(LYRA_PACKAGE)}\\2`, 'g'))].map((match) => match[1]);
-    const receivers = [...aliases.map(regexEscape), `import\\(\\s*['"]${regexEscape(LYRA_PACKAGE)}['"]\\s*\\)`];
     for (const entry of exported) {
+      const specifier = regexEscape(exportSpecifier(entry));
+      const aliases = [...text.matchAll(new RegExp(`import\\s+(?:type\\s+)?\\*\\s+as\\s+(${IDENTIFIER})\\s+from\\s*(['"])${specifier}\\2`, 'g'))].map((match) => match[1]);
+      const receivers = [...aliases.map(regexEscape), `import\\(\\s*['"]${specifier}['"]\\s*\\)`];
       for (const match of text.matchAll(new RegExp(`(?<![$\\w.])(?:${receivers.join('|')})\\s*\\.\\s*${entry.from}(?![$\\w])`, 'g'))) {
         if (!inComment(match.index)) review(match.index + match[0].lastIndexOf(entry.from), entry, entry.from, `${entry.from} no longer exists: ${entry.summary} Use ${entry.to}.`);
       }

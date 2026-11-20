@@ -44,7 +44,6 @@ import '../components/viewers/csv-viewer/csv-viewer.class.js';
 import '../components/viewers/dataset-viewer/dataset-viewer.class.js';
 import '../components/viewers/document-compare/document-compare.class.js';
 import '../components/viewers/document-preview/document-preview.class.js';
-import '../components/viewers/geojson-view/geojson-view.class.js';
 import '../components/viewers/geojson-view/geojson-viewer.class.js';
 import '../components/viewers/notebook-viewer/notebook-viewer.class.js';
 import '../components/viewers/page-rail/page-rail.class.js';

@@ -34,8 +34,6 @@ export interface A2UiLikeSurface {
 /** A widget-compatible helper result. Assign `bindingState` separately to the renderer. */
 export interface A2UiAdapterResult extends LyraWidgetDocument {
   readonly bindingState?: unknown;
-  /** Compatibility alias for the helper's original state field; renderers do not read it. */
-  readonly state?: unknown;
 }
 
 export type A2UiTypeMap = Readonly<Record<string, string>>;
@@ -174,6 +172,6 @@ export function adaptA2UiSurface(
   return {
     version: '2',
     root,
-    ...(Object.hasOwn(source, 'data') ? { bindingState: source['data'], state: source['data'] } : {}),
+    ...(Object.hasOwn(source, 'data') ? { bindingState: source['data'] } : {}),
   };
 }

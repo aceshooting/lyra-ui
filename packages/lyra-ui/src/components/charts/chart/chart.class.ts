@@ -701,7 +701,7 @@ function chartDatasetStack(dataset: unknown): string | undefined {
   const value = chartDatasetValue(dataset, 'stack');
   return typeof value === 'string' ? value : undefined;
 }
-/** Whether a `size` selects the compact plot tier the deprecated `compact` boolean spelled. */
+/** Whether a `size` selects the compact plot tier. */
 function isDenseChartSize(size: LyraSize): boolean {
   const step = normalizeSize(size);
   return step === 's' || step === 'xs' || step === '2xs';

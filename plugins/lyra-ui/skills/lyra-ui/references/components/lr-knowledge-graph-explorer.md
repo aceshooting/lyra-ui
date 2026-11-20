@@ -32,7 +32,7 @@ overlay. Composes `lr-graph`, `lr-graph-legend`, `lr-entity-card`, `lr-neighbor-
 
 Removing `query` retains `null` property readback while clearing the search input, results
 and search dimming; an explicitly empty value remains empty and later queries work normally.
-Path-node `lr-entity-select` (and its deprecated alias) is consumed by the explorer and enters the same selection, graph
+Path-node `lr-entity-select` is consumed by the explorer and enters the same selection, graph
 focus and details flow as other entity activations, emitting one `lr-selection-change`.
 `lr-relation-activate` continues to pass through unchanged. The canonical search event fields remain
 `query`, `matchCount`, `matchCountExact`, and `activeIndex: -1`.

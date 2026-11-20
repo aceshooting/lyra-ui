@@ -3175,8 +3175,7 @@ process native data-model updates, or provide native A2UI catalog compatibility.
 The result is `A2UiAdapterResult | null`: a widget-compatible `{ version: '2', root }` plus
 `bindingState` when `surface.data` is present. Assign `bindingState` separately; the widget-v2
 document itself never supplies controlled state. Explicit `data: null` remains `bindingState: null`.
-The original `state` field remains an equal compatibility alias in the helper result; renderers
-do not read it. Input, props, action payloads and state are detached under the adapter budgets.
+The former `state` alias of `bindingState` was removed in 32.0.0. Input, props, action payloads and state are detached under the adapter budgets.
 
 ```ts
 import { adaptA2UiSurface } from "@aceshooting/lyra-ui/ai";
@@ -5098,7 +5097,6 @@ These named interfaces and helper signatures are available to typed integrations
   readonly version: '2';
   readonly root: LyraWidgetNode;
   readonly bindingState?: unknown;
-  readonly state?: unknown;
 }`
   `adaptA2UiSurface(surface: unknown, typeMap: unknown, limits: Partial<A2UiAdapterLimits> = {}): A2UiAdapterResult | null`
 
@@ -47021,9 +47019,8 @@ the scrollbar, for example `lr-document-compare::part(diff-base) { max-block-siz
 
 Document-registry bridge that fetches, validates, and renders a GeoJSON file through `<lr-map>`'s
 `dataLayers`. The canonical class is `LyraGeoJsonViewer`, with `LyraGeoJsonViewerEventMap`.
-The old `lr-geojson-view` tag and `LyraGeojsonViewEventMap` type were removed in 23.0.0.
-The viewers family barrel (not the root barrel) still exposes a distinct `LyraGeojsonView`
-subclass; importing it does not register the removed tag. Prefer the canonical class.
+The old `lr-geojson-view` tag and `LyraGeojsonViewEventMap` type were removed in 23.0.0, and the
+`LyraGeojsonView` subclass in 32.0.0; import `LyraGeoJsonViewer` instead.
 The document registry renders `lr-geojson-viewer` for `application/geo+json` and `.geojson` filenames.
 
 Responses are limited to 4 MiB (4,194,304 bytes) before `JSON.parse`. The parsed JSON must be a
@@ -61778,7 +61775,7 @@ overlay. Composes `lr-graph`, `lr-graph-legend`, `lr-entity-card`, `lr-neighbor-
 
 Removing `query` retains `null` property readback while clearing the search input, results
 and search dimming; an explicitly empty value remains empty and later queries work normally.
-Path-node `lr-entity-select` (and its deprecated alias) is consumed by the explorer and enters the same selection, graph
+Path-node `lr-entity-select` is consumed by the explorer and enters the same selection, graph
 focus and details flow as other entity activations, emitting one `lr-selection-change`.
 `lr-relation-activate` continues to pass through unchanged. The canonical search event fields remain
 `query`, `matchCount`, `matchCountExact`, and `activeIndex: -1`.

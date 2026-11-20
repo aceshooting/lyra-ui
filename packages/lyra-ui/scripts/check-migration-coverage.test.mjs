@@ -195,12 +195,14 @@ const polarityErrors = (result) =>
     exports: { './translations/pseudo/en-XA.js': './x.js', './kept.js': './kept.js' },
     packages: { '@aceshooting/lyra-translations': { './*.js': './dist/*.js' }, '@aceshooting/lyra-ide': { './data.json': './data.json' } },
     rootBarrel: "export type { NewStatus } from './status.js';",
+    barrels: { './components/viewers': "export * from '../lr-new-viewer.js';\nexport class NewViewer {}" },
     stringKeys: new Set(['newLabel']),
   };
   const entries = [
     { kind: 'module', from: '@aceshooting/lyra-ui/translations/', to: '@aceshooting/lyra-translations/', prefix: true, except: ['@aceshooting/lyra-ui/translations/pseudo/'] },
     { kind: 'module', from: '@aceshooting/lyra-ui/data.json', to: '@aceshooting/lyra-ide/data.json' },
     { kind: 'export', module: '.', from: 'OldStatus', to: 'NewStatus' },
+    { kind: 'export', module: './components/viewers', from: 'OldViewer', to: 'NewViewer' },
     { kind: 'locale-key', from: 'oldLabel', to: 'newLabel' },
   ];
   const ledger = (list) => ({ profiles: [{ origin: 'lyra-v26', globals: list }] });
@@ -216,6 +218,10 @@ const polarityErrors = (result) =>
   finding((entry) => (entry.except ? { except: ['@aceshooting/lyra-ui/translations/ghost/'] } : {}), /excepted prefix .* is not exported/);
   finding(only('export', { from: 'NewStatus' }), /is still exported by the package root/);
   finding(only('export', { to: 'MissingStatus' }), /MissingStatus is not exported by the package root/);
+  const barrel = (change) => (entry) => (entry.module === './components/viewers' ? change : {});
+  finding(barrel({ from: 'NewViewer' }), /NewViewer is still exported by \.\/components\/viewers/);
+  finding(barrel({ to: 'MissingViewer' }), /MissingViewer is not exported by \.\/components\/viewers/);
+  finding(barrel({ module: './components/ghost' }), /\.\/components\/ghost is not an exported barrel/);
   finding(only('locale-key', { from: 'newLabel' }), /the key still exists/);
   finding(only('locale-key', { to: 'missingLabel' }), /missingLabel is not a default string key/);
 }

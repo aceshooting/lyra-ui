@@ -351,9 +351,8 @@ it('keeps GeoJSON constructors on canonical class and family routes without a ro
     const viewers = await entrypoints.importViewers();
     expect('LyraGeojsonView' in root).to.equal(false);
     expect('LyraGeoJsonViewer' in root).to.equal(false);
-    expect(typeof viewers['LyraGeojsonView']).to.equal('function');
+    expect('LyraGeojsonView' in viewers).to.equal(false);
     expect(typeof viewers['LyraGeoJsonViewer']).to.equal('function');
-    expect(Object.getPrototypeOf(viewers['LyraGeojsonView']) === viewers['LyraGeoJsonViewer']).to.equal(true);
     expect(registry.get('lr-geojson-viewer') === viewers['LyraGeoJsonViewer']).to.equal(true);
     expect(registry.get('lr-geojson-view') === undefined).to.equal(true);
   } finally {

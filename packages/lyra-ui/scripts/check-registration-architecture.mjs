@@ -942,8 +942,7 @@ const DOCUMENTED_LAZY_REGISTRATION_EDGES = [
   'src/components/retrieval/neighbor-list/neighbor-list.class.ts -> src/components/lr-virtual-list.ts',
   // The retrieval trace reaches the waterfall source runtime through its embedded span waterfall.
   'src/components/retrieval/retrieval-trace/retrieval-trace.class.ts -> src/components/agent-tools/span-waterfall/span-waterfall.class.ts -> src/components/lr-virtual-list.ts',
-  // Both GeoJSON class entry points load the JSON viewer only when the optional map peer is absent.
-  'src/components/viewers/geojson-view/geojson-view.class.ts -> src/components/viewers/geojson-view/geojson-viewer.class.ts -> src/components/lr-json-viewer.ts',
+  // The GeoJSON class entry point loads the JSON viewer only when the optional map peer is absent.
   'src/components/viewers/geojson-view/geojson-viewer.class.ts -> src/components/lr-json-viewer.ts',
 ];
 
