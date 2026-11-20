@@ -56,3 +56,20 @@ export const BoundedHistory: Story = {
     ></lr-agent-eval-dashboard>
   `,
 };
+
+export const MetricCardLimit: Story = {
+  name: 'Metric card limit',
+  parameters: {
+    docs: {
+      description: {
+        story: 'At most 100 metric cards render, plus the active metric when it lies past them; `[part="metrics-limit"]` reports the rest.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-agent-eval-dashboard
+      .metrics=${Array.from({ length: 110 }, (_, index) => ({ id: `m${index}`, label: `Metric ${index + 1}`, value: index / 110, format: 'percent' as const }))}
+      .runs=${[{ id: 'r1', label: 'Run 1', status: 'done' as const, metrics: { m0: 0.5 } }]}
+    ></lr-agent-eval-dashboard>
+  `,
+};

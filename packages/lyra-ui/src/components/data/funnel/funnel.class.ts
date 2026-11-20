@@ -12,6 +12,7 @@ import { isSafeNonArrayObject } from '../../../internal/object-guards.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { styles } from './funnel.styles.js';
 import { bdi } from '../../../internal/bidi.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_funnelComparisonShare, LYRA_DEFAULT_funnelDropoffDecreased, LYRA_DEFAULT_funnelDropoffIncreased, LYRA_DEFAULT_funnelStagesInputLimit, LYRA_DEFAULT_funnelStagesLimit, LYRA_DEFAULT_trendUnchanged } from '../../../internal/default-strings/data.generated.js';
@@ -169,7 +170,7 @@ export class LyraFunnel extends LyraElement {
   @property({ type: Boolean, reflect: true, attribute: 'without-dropoff' }) withoutDropoff = false;
 
   /** Fraction digits used for every share and drop-off percentage. */
-  @property({ type: Number, attribute: 'share-precision' }) sharePrecision = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'share-precision' }) sharePrecision = 0;
 
   private get precision(): number {
     return finiteInteger(this.sharePrecision, 0, 0, MAX_SHARE_PRECISION);

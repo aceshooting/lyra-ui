@@ -41,6 +41,7 @@ import {
   declaredDefaultConverter,
   literalSetConverter,
   omittedEmptyStringConverter,
+  blankNumberConverter,
 } from '../../../internal/converters.js';
 import type { PlaceStrategy } from '../../../internal/positioner.js';
 import { PositioningStrategyState, positioningStrategyConverter, resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
@@ -319,18 +320,18 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   @property({ type: Boolean }) manual = false;
   /** Delay (ms) before an interaction opens the tooltip. NaN/negative/oversized all normalize
    *  through `finiteDuration`. */
-  @property({ type: Number, attribute: 'show-delay' }) showDelay = 150;
+  @property({ converter: blankNumberConverter(150), attribute: 'show-delay' }) showDelay = 150;
   /** Delay (ms) before an interaction closes the tooltip again. `0` by default, so leaving the
    *  trigger closes it at once. */
-  @property({ type: Number, attribute: 'hide-delay' }) hideDelay = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'hide-delay' }) hideDelay = 0;
   /** Preferred side and alignment of the tooltip relative to its anchor; flips when space is short and mirrors under RTL. Defaults to `top`. */
   @property({ reflect: true, converter: declaredDefaultConverter('top') })
   placement: Placement = 'top';
   /** Anchor-offset distance (px) passed to Floating UI's `offset()` middleware -- identical
    *  semantics to `<lr-popover>.distance` (can legitimately be negative for overlap). */
-  @property({ type: Number }) distance = 8;
+  @property({ converter: blankNumberConverter(8) }) distance = 8;
   /** Offset along the anchor's edge, in pixels — Floating UI's cross-axis offset. */
-  @property({ type: Number }) skidding = 0;
+  @property({ converter: blankNumberConverter(0) }) skidding = 0;
   private _for = '';
   /**
    * Id of an element elsewhere in this tooltip's own root. It participates in positioning behind
@@ -414,7 +415,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   /** Where the arrow sits along the popup's edge. `anchor` tracks the anchor's centre. */
   @property({ attribute: 'arrow-placement' }) arrowPlacement: LyraArrowPlacement = 'anchor';
   /** Keeps the arrow this far from the popup's corners, in pixels. */
-  @property({ type: Number, attribute: 'arrow-padding' }) arrowPadding = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'arrow-padding' }) arrowPadding = 0;
   /** Plain-text tooltip content, painted when the active content slot carries nothing of its own.
    *  Whitespace-only text there (template indentation around a `slot="trigger"` element) counts as
    *  nothing, so this text still paints and describes the trigger. */

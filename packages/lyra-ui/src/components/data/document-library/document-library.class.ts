@@ -49,6 +49,7 @@ import {
   type LyraSize,
 } from '../../../internal/variants.js';
 import { cursorQuery, FRESHNESS_RANK, MAX_LIBRARY_COLLECTION_ENTRIES, MAX_TAG_FACETS, documentKey, FRESHNESS_TONE, projectLibraryDocument, type DocumentLibrarySourceQuery, type DocumentLibrarySource, type DocumentLibraryCursorSource, type LyraDocumentLibraryEventMap } from './document-library-support.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_documentLibraryClearSelection, LYRA_DEFAULT_documentLibraryCursorEmptyBatch, LYRA_DEFAULT_documentLibraryCursorEnd, LYRA_DEFAULT_documentLibraryCursorFailed, LYRA_DEFAULT_documentLibraryCursorHistoryLimit, LYRA_DEFAULT_documentLibraryCursorNavigation, LYRA_DEFAULT_documentLibraryCursorRestart, LYRA_DEFAULT_documentLibraryEmptyHeading, LYRA_DEFAULT_documentLibraryFilterByTag, LYRA_DEFAULT_documentLibraryFreshnessAging, LYRA_DEFAULT_documentLibraryFreshnessColumn, LYRA_DEFAULT_documentLibraryFreshnessFresh, LYRA_DEFAULT_documentLibraryFreshnessStale, LYRA_DEFAULT_documentLibraryLabel, LYRA_DEFAULT_documentLibraryNameColumn, LYRA_DEFAULT_documentLibraryNoMatchesHeading, LYRA_DEFAULT_documentLibraryOmitted, LYRA_DEFAULT_documentLibraryOwnerColumn, LYRA_DEFAULT_documentLibrarySearchPlaceholder, LYRA_DEFAULT_documentLibrarySelectAll, LYRA_DEFAULT_documentLibrarySelectColumn, LYRA_DEFAULT_documentLibrarySelectDocument, LYRA_DEFAULT_documentLibrarySelectPage, LYRA_DEFAULT_documentLibrarySelectedCount, LYRA_DEFAULT_documentLibraryTagsColumn, LYRA_DEFAULT_documentLibraryTypeColumn, LYRA_DEFAULT_documentLibraryUpdatedColumn, LYRA_DEFAULT_documentLibraryVersionColumn } from '../../../internal/default-strings/data.generated.js';
@@ -462,9 +463,9 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
     this.requestUpdate('dataSource', previous);
   }
   /** Zero-based provider page; legacy table paging is unchanged. */
-  @property({ type: Number, attribute: 'source-page' }) sourcePage = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'source-page' }) sourcePage = 0;
   /** Provider rows per page, normalized to 1..500. */
-  @property({ type: Number, attribute: 'source-page-size' }) sourcePageSize = 100;
+  @property({ converter: blankNumberConverter(100), attribute: 'source-page-size' }) sourcePageSize = 100;
   /** Exact current-query total, or null while pending, invalid or outside provider mode. */
   get sourceTotal(): number | null { return this.cursorMode || this.dataSource === undefined ? null : this.sourcePages.state.result?.total ?? null; }
   private get sourceMode(): boolean { return !this.cursorMode && this.dataSource !== undefined; }
@@ -611,7 +612,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
    * Maximum source positions inspected per assignment. Raising the limit re-admits the source.
    * @default 10000
    */
-  @property({ type: Number, attribute: 'max-documents' })
+  @property({ converter: blankNumberConverter(MAX_LIBRARY_COLLECTION_ENTRIES), attribute: 'max-documents' })
   get maxDocuments(): number { return this.documentLimit; }
   set maxDocuments(value: number) {
     const limit = finiteInteger(value, MAX_LIBRARY_COLLECTION_ENTRIES, 0, 100_000);

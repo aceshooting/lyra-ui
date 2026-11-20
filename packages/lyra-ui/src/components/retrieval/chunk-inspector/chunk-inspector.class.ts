@@ -31,6 +31,7 @@ import {
 import { DEFAULT_SCORE_THRESHOLDS, resolveScoreTiers, type LyraScoreThresholds } from '../../../internal/score-tiers.js';
 import { bdi } from '../../../internal/bidi.js';
 import { resolveLocalizedParts } from '../../../internal/localization-runtime.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_chunkInspectorOpenOrdinal, LYRA_DEFAULT_chunkScore, LYRA_DEFAULT_retrievalShowLessWithContext, LYRA_DEFAULT_retrievalShowMoreWithContext, LYRA_DEFAULT_scoreTierHigh, LYRA_DEFAULT_scoreTierLow, LYRA_DEFAULT_scoreTierMedium, LYRA_DEFAULT_showMore, LYRA_DEFAULT_sourcePageSuffix, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings/retrieval.generated.js';
@@ -198,7 +199,7 @@ export class LyraChunkInspector extends LyraElement<LyraChunkInspectorEventMap> 
   /** Marks the chunk currently open in the viewer. */
   @property({ attribute: 'active-chunk-id' }) activeChunkId = '';
   /** Row count at which rendering switches to the internal virtual list. */
-  @property({ type: Number, attribute: 'virtualize-at' }) virtualizeAt = 50;
+  @property({ converter: blankNumberConverter(50), attribute: 'virtualize-at' }) virtualizeAt = 50;
   /**
    * Row density on the shared size scale. `s` (and the smaller `xs`/`2xs`) renders dense rows:
    * title, score bar and open button only, without the text preview and its toggle. `m` (the

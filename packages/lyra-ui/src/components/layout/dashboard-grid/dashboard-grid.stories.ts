@@ -240,3 +240,28 @@ export const NarrowLongCustomContent: Story = {
     </div>
   `,
 };
+
+export const OmittedCells: Story = {
+  name: "Cell limit readback (omittedCells)",
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "`layout` keeps the first 1,000 positions; `omittedCells` reports how many positions the latest assignment dropped, and a smaller assignment resets it to `0`.",
+      },
+    },
+  },
+  render: () => {
+    const grid = document.createElement("lr-dashboard-grid") as LyraDashboardGrid;
+    grid.layout = Array.from({ length: 1_004 }, (_, index) => ({
+      cellId: `cell-${index}`,
+      x: index % 4,
+      y: Math.floor(index / 4),
+      w: 1,
+      h: 1,
+    }));
+    return html`<p>
+      Kept ${grid.layout.length} cells; omittedCells = ${grid.omittedCells}.
+    </p>`;
+  },
+};

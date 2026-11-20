@@ -16,7 +16,7 @@ import type { ShikiLanguageInput } from '../../../internal/shiki/core.js';
 import type { LyraDiffView, LyraDiffViewLayout } from '../../utility/diff-view/diff-view.class.js';
 import type { LyraAnchorTargetEventMap } from '../../../internal/anchor-target.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
-import { literalSetConverter } from '../../../internal/converters.js';
+import { literalSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import type {
   LyraClipboardWriteFailure,
   LyraClipboardWriteSuccess,
@@ -344,7 +344,7 @@ export class LyraDocumentCompare extends LyraElement<LyraDocumentCompareEventMap
   /** Forwarded to the internal `<lr-diff-view>`'s `contextLines` while `view="diff"`; unset shows
    *  every unchanged line. */
   // numeric-guard-exempt: pure pass-through to <lr-diff-view>, which normalizes it with finiteCount()
-  @property({ type: Number, attribute: 'context-lines' }) contextLines?: number;
+  @property({ converter: blankNumberConverter(undefined), attribute: 'context-lines' }) contextLines?: number;
 
   /** Highlight id marked active in both `view="side-by-side"` panes. */
   @property({ attribute: 'active-highlight-id' }) activeHighlightId: string | null = null;

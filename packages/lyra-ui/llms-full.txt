@@ -51225,7 +51225,7 @@ null` (attribute `aria-label`) — host `aria-label`, forwarded to the internal 
 root); wins over `label` and the localized default.
 
 **Methods:** `scrollToBottom(options?)` — scrolls to the end and re-engages `follow`; default
-`smooth`, forced to `auto` under `prefers-reduced-motion`. `scrollToUnread(options?)` — scrolls the
+`smooth`, forced to `instant` under `prefers-reduced-motion`. `scrollToUnread(options?)` — scrolls the
 unread divider to the top of the view, resolving `false` when `unreadStartIndex` is `null`/out of
 range; does not re-engage `follow`.
 

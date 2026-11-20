@@ -73,6 +73,7 @@ import {
 import {
   declaredDefaultConverter,
   omittedEmptyStringConverter,
+  blankNumberConverter,
 } from '../../../internal/converters.js';
 import {
   getFormOwner,
@@ -540,7 +541,7 @@ export class LyraSelect<
       converter: omittedEmptyStringConverter,
     },
     maxOptionsVisible: {
-      type: Number,
+      converter: blankNumberConverter(3),
       attribute: 'max-options-visible',
       noAccessor: true,
     },
@@ -759,7 +760,7 @@ export class LyraSelect<
    * are retained up to an absolute 1,000-row ceiling; excess selections remain committed.
    * Zero mounts only retained rows. Invalid values use 200. */
   // numeric-guard-exempt: capOptionRows() in internal/option-selection.ts bounds this value with finiteCount() before row selection.
-  @property({ type: Number, attribute: 'max-render' }) maxRender = 200;
+  @property({ converter: blankNumberConverter(200), attribute: 'max-render' }) maxRender = 200;
 
   @state() private options: LyraOption[] = [];
   private callbackRefreshEpoch = 0;

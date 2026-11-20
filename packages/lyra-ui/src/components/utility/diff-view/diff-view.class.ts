@@ -14,7 +14,7 @@ import { Announcer } from '../../../internal/announcer.js';
 import { advanceViewerSearchIndex, announceSearchResult, viewerSearchDetail } from '../../../internal/viewer-search.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteCount } from '../../../internal/numbers.js';
-import { literalSetConverter } from '../../../internal/converters.js';
+import { literalSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import {
   getOwnDataDescriptor,
@@ -328,7 +328,7 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
    *  to a finite number `>= 0` to collapse a longer run of unchanged lines behind a single fold
    *  marker reporting how many lines it hides -- the same context-window convention unified diffs
    *  and `git diff`'s `-U<n>` use. A negative or non-finite value is treated as unset (no folding). */
-  @property({ type: Number, attribute: 'context-lines' }) contextLines?: number;
+  @property({ converter: blankNumberConverter(undefined), attribute: 'context-lines' }) contextLines?: number;
 
   /** Maximum lines accepted on either input side before rendering a bounded fallback. Defaults
    *  to `5000`. `Infinity` relaxes this line-count limit; aggregate text and comparison work
@@ -336,7 +336,7 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
    *  rendering (at most 10,000 unified lines or 20,000 split cells, including empty cells).
    *  Above the ceiling a localized `limit` fallback replaces the diff. Rows use
    *  `content-visibility: auto` to defer offscreen paint. */
-  @property({ type: Number, attribute: 'max-lines' }) maxLines = 5000;
+  @property({ converter: blankNumberConverter(5000), attribute: 'max-lines' }) maxLines = 5000;
 
   /** Anchor kinds this component resolves via `scrollToAnchor()`. Feature-detectable capability
    *  mirror -- the same pattern every other `DocumentAnchorTarget`-adopting viewer uses for this

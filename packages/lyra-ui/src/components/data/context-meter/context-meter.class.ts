@@ -6,7 +6,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteNumber } from '../../../internal/numbers.js';
-import { literalSetConverter } from '../../../internal/converters.js';
+import { literalSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { formatAdaptiveShare } from '../../../internal/locale-number.js';
 import { chartValueFractionDigits } from '../../../internal/chart-number-format.js';
@@ -279,7 +279,7 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
   @property({ attribute: false }) segments: readonly ContextMeterSegment[] = [];
 
   /** The full capacity segments are measured against (e.g. a model's context window size). */
-  @property({ type: Number }) total = 0;
+  @property({ converter: blankNumberConverter(0) }) total = 0;
 
   private _shape: ContextMeterShape = 'bar';
 

@@ -36,6 +36,7 @@ import {
 } from '../../../internal/icons.js';
 import type { LyraLiveRegion } from '../../utility/live-region/live-region.class.js';
 import { styles } from './task-list.styles.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_taskListCompletedOfTotal, LYRA_DEFAULT_taskListLabel, LYRA_DEFAULT_taskListLimit, LYRA_DEFAULT_taskListStepCompletedAnnounce, LYRA_DEFAULT_taskListStepFailedAnnounce, LYRA_DEFAULT_taskListStepIncompleteAnnounce, LYRA_DEFAULT_taskListStepStartedAnnounce } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -470,7 +471,7 @@ export class LyraTaskList extends LyraElement<LyraTaskListEventMap> {
   @property({ attribute: false }) items: readonly TaskItem[] = [];
 
   /** Maximum rendered tasks including direct children; bounded to 1–5,000, default 500. */
-  @property({ type: Number, attribute: 'max-nodes' }) maxNodes = 500;
+  @property({ converter: blankNumberConverter(500), attribute: 'max-nodes' }) maxNodes = 500;
 
   private taskProjection?: TaskProjection;
   private renderedProjection?: { model: TaskProjection; limit: number; items: TaskItem[]; truncated: boolean };

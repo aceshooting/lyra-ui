@@ -949,7 +949,7 @@ describe("scrollToBottom()", () => {
     );
   });
 
-  it('forces behavior "auto" under prefers-reduced-motion', async () => {
+  it('forces an instant scroll under prefers-reduced-motion', async () => {
     const originalMatchMedia = window.matchMedia;
     window.matchMedia = (query: string) => {
       const nativeQuery = originalMatchMedia.call(window, query);

@@ -7,7 +7,7 @@ import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { chevronIcon } from '../../../internal/icons.js';
-import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { literalSetConverter, trueDefaultBooleanConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { shouldIgnoreActivationKey } from '../../../internal/list-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
@@ -278,11 +278,11 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   static override styles = [LyraElement.styles, sizes, styles];
 
   /** The currently applied page. Controlled; this component never mutates it. */
-  @property({ type: Number, reflect: true }) page = 1;
+  @property({ converter: blankNumberConverter(1), reflect: true }) page = 1;
   /** Number of items represented by one page. Non-positive values produce no pages. */
-  @property({ type: Number, attribute: 'page-size' }) pageSize = 10;
+  @property({ converter: blankNumberConverter(10), attribute: 'page-size' }) pageSize = 10;
   /** Total item count. `-1` enables indeterminate mode. Other non-positive values render the empty state. */
-  @property({ type: Number }) total = 0;
+  @property({ converter: blankNumberConverter(0) }) total = 0;
   /** Whether at least one more page exists past the current one. Consulted only in indeterminate
    *  mode (`total="-1"`, see the class doc) -- previous availability is always derivable from
    *  `page`, but forward availability generally is not for a caller with no total. Defaults to
@@ -316,9 +316,9 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     this.requestUpdate('format', previous);
   }
   /** Pages shown either side of the current page in the numbered list. */
-  @property({ type: Number, attribute: 'sibling-count' }) siblingCount = 2;
+  @property({ converter: blankNumberConverter(2), attribute: 'sibling-count' }) siblingCount = 2;
   /** Pages always pinned at the start and at the end of the numbered list. */
-  @property({ type: Number, attribute: 'boundary-count' }) boundaryCount = 1;
+  @property({ converter: blankNumberConverter(1), attribute: 'boundary-count' }) boundaryCount = 1;
   /** Renders buttons that jump straight to the first and last page. */
   @property({ type: Boolean, attribute: 'with-edges', reflect: true })
   withEdges = false;

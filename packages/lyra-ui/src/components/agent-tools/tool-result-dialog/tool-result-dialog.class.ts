@@ -19,7 +19,7 @@ import { nextId } from '../../../internal/a11y.js';
 import { closeIcon, expandIcon, iconFrame } from '../../../internal/icons.js';
 import { formatShortDuration, safeDurationMs } from '../../../internal/duration.js';
 import { TOOL_CALL_STATUSES, TOOL_STATUS_LABEL_KEY, toolStatusIcon, type ToolStatus } from '../tool-status.js';
-import { literalSetConverter } from '../../../internal/converters.js';
+import { literalSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { styles } from './tool-result-dialog.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -240,7 +240,7 @@ export class LyraToolResultDialog extends LyraElement<LyraToolResultDialogEventM
 
   /** How long the call took, in milliseconds. Omitted from the header entirely when unset. */
   // numeric-guard-exempt: safeDurationMs() in internal/duration.ts rejects non-finite values and clamps negatives.
-  @property({ type: Number, attribute: 'duration-ms' }) durationMs?: number;
+  @property({ converter: blankNumberConverter(undefined), attribute: 'duration-ms' }) durationMs?: number;
 
   /** Near-fullscreen presentation of the same open dialog. */
   @property({ type: Boolean, reflect: true }) maximized = false;

@@ -11,7 +11,7 @@ import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteDuration, finiteInteger } from '../../../internal/numbers.js';
 import { composedContains, deepActiveElement } from '../../../internal/overlay-manager.js';
-import { literalSetConverter } from '../../../internal/converters.js';
+import { literalSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { styles } from './random-content.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -152,13 +152,13 @@ export class LyraRandomContent extends LyraElement<LyraRandomContentEventMap> {
   @property({ type: Boolean, reflect: true }) paused = false;
 
   /** Milliseconds between autoplay ticks. Clamped to a 1000ms floor. */
-  @property({ type: Number, attribute: 'autoplay-interval' })
+  @property({ converter: blankNumberConverter(3000), attribute: 'autoplay-interval' })
   autoplayInterval = 3000;
 
   /** How many children are shown simultaneously -- a count, not the pool itself. NaN/negative/
    *  fractional/oversized all normalize through `finiteInteger`, clamped to at least 1 and at
    *  most the pool size -- see `clampedCount()`. */
-  @property({ type: Number }) items = 1;
+  @property({ converter: blankNumberConverter(1) }) items = 1;
 
   private _mode: LyraRandomContentMode = 'unique';
 

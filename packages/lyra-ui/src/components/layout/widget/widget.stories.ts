@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import { storyColor } from '../../../../../../.storybook/theme-contract.js';
+import type { LyraWidget } from './widget.class.js';
 
 const meta: Meta = {
   title: 'Widget',
@@ -311,4 +312,25 @@ export const FromNativeModal: Story = {
     }}>Open tools</button></dialog>
     <lr-widget expandable label="Tools"><button>Apply</button></lr-widget>
   </section>`,
+};
+
+export const OmittedViews: Story = {
+  name: 'View limit readback (omittedViews)',
+  parameters: {
+    docs: {
+      description: {
+        story: '`views` keeps the first 256 positions; `omittedViews` reports how many positions the latest assignment dropped, and a smaller assignment resets it to `0`.',
+      },
+    },
+  },
+  render: () => {
+    const widget = document.createElement('lr-widget') as LyraWidget;
+    widget.label = 'Many views';
+    widget.views = Array.from({ length: 260 }, (_, index) => ({ viewId: `view-${index}`, label: `View ${index + 1}` }));
+    widget.append(Object.assign(document.createElement('p'), { textContent: 'Panel body' }));
+    return html`<div>
+      ${widget}
+      <p>Kept ${widget.views.length} views; omittedViews = ${widget.omittedViews}.</p>
+    </div>`;
+  },
 };

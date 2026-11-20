@@ -16,6 +16,7 @@ import { keyEventOwnedByInnerControl } from '../../../internal/hotkey.js';
 import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { styles } from './pan-zoom.styles.js';
 import { repairControlFocusOnUpdate } from '../../../internal/control-focus-repair.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_imageViewerFailedToLoad, LYRA_DEFAULT_zoomControls, LYRA_DEFAULT_zoomableFrameLabel } from '../../../internal/default-strings/media.generated.js';
@@ -126,14 +127,14 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
   }
 
   /** Current zoom multiplier (default 1), clamped to `minZoom`-`maxZoom`; reflects to the `zoom` attribute. */
-  @property({ type: Number, reflect: true }) zoom = 1;
+  @property({ converter: blankNumberConverter(1), reflect: true }) zoom = 1;
   private pendingZoomChange?: number;
   /** Smallest allowed zoom multiplier (default 0.5). */
-  @property({ type: Number, attribute: 'min-zoom' }) minZoom = 0.5;
+  @property({ converter: blankNumberConverter(0.5), attribute: 'min-zoom' }) minZoom = 0.5;
   /** Largest allowed zoom multiplier (default 4). */
-  @property({ type: Number, attribute: 'max-zoom' }) maxZoom = 4;
+  @property({ converter: blankNumberConverter(4), attribute: 'max-zoom' }) maxZoom = 4;
   /** Zoom change applied by each zoom-in or zoom-out action (default 0.25). */
-  @property({ type: Number, attribute: 'zoom-step' }) zoomStep = 0.25;
+  @property({ converter: blankNumberConverter(0.25), attribute: 'zoom-step' }) zoomStep = 0.25;
   private _fit: LyraImageFit = 'actual';
   /** Base image sizing policy. The default preserves the natural-size behavior of this frame. */
   @property({ reflect: true })

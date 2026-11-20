@@ -6,7 +6,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraMessageKey } from '../../../internal/localization.js';
 import { formatFileSize } from '../../../internal/bytes.js';
 import { finiteRange } from '../../../internal/numbers.js';
-import { literalSetConverter } from '../../../internal/converters.js';
+import { literalSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import {
   defaultFileTypeMetadataRegistry,
   type LyraFileTypeIcon,
@@ -140,7 +140,7 @@ export class LyraFileIcon extends LyraElement {
    *  renders no size. Named `bytes`, not `size`: everywhere else in this library `size` names a tier
    *  on the shared size ladder, and a numeric byte count answering to the same property name is the
    *  kind of collision a consumer only discovers at runtime. */
-  @property({ type: Number }) bytes = 0;
+  @property({ converter: blankNumberConverter(0) }) bytes = 0;
   /** Whether the badge is decorative and hidden from assistive technology. */
   @property({ type: Boolean, reflect: true }) decorative = false;
   private _mode: LyraFileIconMode = 'icon';

@@ -20,6 +20,7 @@ import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import { lyraLocaleCatalogVersion } from '../../../internal/localization-runtime.js';
 import { styles } from './sequence-strip.styles.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_sequenceStripBucketLabel, LYRA_DEFAULT_sequenceStripBucketSummary, LYRA_DEFAULT_sequenceStripCategoryCount, LYRA_DEFAULT_sequenceStripCellKeyboardHelp, LYRA_DEFAULT_sequenceStripEmpty, LYRA_DEFAULT_sequenceStripItemCount, LYRA_DEFAULT_sequenceStripRangeCount, LYRA_DEFAULT_sequenceStripSourceError, LYRA_DEFAULT_sequenceStripSourceItemLabel, LYRA_DEFAULT_sequenceStripSourceItemUnavailable, LYRA_DEFAULT_sequenceStripSourceKeyboardHelp, LYRA_DEFAULT_sequenceStripSourceRangeDetails, LYRA_DEFAULT_sequenceStripUnnamedCategory } from '../../../internal/default-strings/data.generated.js';
@@ -440,7 +441,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
   // integer, and cellIndexForItem() re-clamps through finiteInteger() before the bucket division,
   // so a non-finite or fractional write selects nothing rather than reaching layout, Intl, canvas
   // or timer math.
-  @property({ type: Number, attribute: 'selected-index' }) selectedIndex = -1;
+  @property({ converter: blankNumberConverter(-1), attribute: 'selected-index' }) selectedIndex = -1;
 
   /** Index of the cell that owns `itemIndex`, or `-1` for an unusable index. Below the cell cap
    *  this is the identity mapping; past it, the bucket whose range contains the item. */

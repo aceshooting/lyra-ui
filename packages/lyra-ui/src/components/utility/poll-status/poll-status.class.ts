@@ -9,7 +9,7 @@ import { formatMediaTime } from '../../../internal/media-time.js';
 import type { LyraLiveRegion } from '../live-region/live-region.class.js';
 import '../live-region/live-region.class.js';
 import { styles } from './poll-status.styles.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { trueDefaultBooleanConverter, blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_pollInactive, LYRA_DEFAULT_pollPause, LYRA_DEFAULT_pollPaused, LYRA_DEFAULT_pollPausedAnnounce, LYRA_DEFAULT_pollRefresh, LYRA_DEFAULT_pollRefreshing, LYRA_DEFAULT_pollRefreshingAnnounce, LYRA_DEFAULT_pollResume, LYRA_DEFAULT_pollResumedAnnounce } from '../../../internal/default-strings/utility.generated.js';
@@ -97,7 +97,7 @@ export class LyraPollStatus extends LyraElement<LyraPollStatusEventMap> {
 
   /** Milliseconds until the next scheduled action, as of whenever this was last set -- setting it
    *  (re)starts the countdown from "now." Unset (the default) shows no countdown. */
-  @property({ type: Number, attribute: 'next-in-ms' }) nextInMs?: number;
+  @property({ converter: blankNumberConverter(undefined), attribute: 'next-in-ms' }) nextInMs?: number;
 
   /** Whether the poll cycle is running at all. While false, the component
    *  clears due/countdown semantics and disables its pause action. */

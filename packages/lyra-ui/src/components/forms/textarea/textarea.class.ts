@@ -32,6 +32,7 @@ import type {
 import {
   autocorrectConverter,
   spellcheckConverter,
+  blankNumberConverter,
 } from '../../../internal/converters.js';
 import { sanitizeCssResize, type LyraTextResize } from '../../../internal/safe-css.js';
 import { finiteDuration, finiteNumber } from '../../../internal/numbers.js';
@@ -250,7 +251,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   // template below) -- the browser's own "rules for parsing non-negative integers" fall back to
   // its default for an invalid value instead of throwing, and this file performs no arithmetic on
   // `rows` itself (fitToContent() measures the live DOM scrollHeight, not this property).
-  @property({ type: Number, useDefault: true }) rows = 4;
+  @property({ converter: blankNumberConverter(4), useDefault: true }) rows = 4;
   /** Native CSS `resize` behavior for the textarea (`'none'`, `'vertical'`, `'horizontal'`,
    *  `'both'`), plus `'auto'`: a `ResizeObserver`-driven grow-to-content mode with no manual drag
    *  handle (mirrors `wa-textarea`'s `resize="auto"`). An invalid runtime value falls back to
@@ -365,7 +366,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
    *  never fires. A pending debounce is flushed immediately by `change`/Enter/blur (so a blur never
    *  drops the last keystroke) and cancelled with no stray settle by disconnection and a
    *  programmatic `value` write that changes the value -- a same-value write does not disturb it. */
-  @property({ type: Number }) debounce?: number;
+  @property({ converter: blankNumberConverter(undefined) }) debounce?: number;
 
   @state() private touched = false;
   /** @internal Test seam for the count-announcement delay. */

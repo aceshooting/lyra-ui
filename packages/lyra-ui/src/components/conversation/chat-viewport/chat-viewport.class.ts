@@ -6,7 +6,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { chevronIcon } from '../../../internal/icons.js';
-import { prefersReducedMotion } from '../../../internal/motion.js';
+import { motionScrollBehavior } from '../../../internal/motion.js';
 import { listenUntilPointerEnd } from '../../../internal/document-pointer.js';
 import { keyEventOwnedByInnerControl } from '../../../internal/hotkey.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
@@ -17,7 +17,7 @@ import type {
 } from '../../layout/virtual-list/virtual-list.class.js';
 import { styles } from './chat-viewport.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { trueDefaultBooleanConverter, blankNumberConverter } from '../../../internal/converters.js';
 import {
   AnnouncementSinkController,
   type AnnouncementSink,
@@ -195,14 +195,14 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
    *  descendant such as a streaming `<lr-streaming-text>`). Values below 50 are raised to 50;
    *  a non-finite value uses 1000. A child that is removed first, or never gains text, is not
    *  announced. */
-  @property({ type: Number, attribute: 'live-settle' }) liveSettle: number | null = null;
+  @property({ converter: blankNumberConverter(null), attribute: 'live-settle' }) liveSettle: number | null = null;
 
   /** Px distance from the end still counted as "at bottom." */
-  @property({ type: Number, attribute: 'bottom-threshold' }) bottomThreshold = 24;
+  @property({ converter: blankNumberConverter(24), attribute: 'bottom-threshold' }) bottomThreshold = 24;
 
   /** Index of the first unread item -- element-child index in slotted mode, `items` index in virtual
    *  mode. Host-owned unread bookkeeping in, divider/pill count out. `null` disables both. */
-  @property({ type: Number, attribute: 'unread-start-index' }) unreadStartIndex: number | null = null;
+  @property({ converter: blankNumberConverter(null), attribute: 'unread-start-index' }) unreadStartIndex: number | null = null;
 
   /** Accessible name for the log region. Omitting it localizes the default `chatViewportLabel`
    *  message; an explicit empty string (`label=""` or `.label = ''`) suppresses that default and
@@ -239,7 +239,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
   private scrollbarDragWindow?: Window;
   private scrollbarDragRelease?: () => void;
   private isMounting = true;
-  private pendingScrollBehavior?: 'auto' | 'smooth';
+  private pendingScrollBehavior?: ScrollBehavior;
   /** Set when a reader's scroll or jump-pill click flips `follow`; only such flips emit. */
   private userFollowChange = false;
   private readonly contentResizeObserver = new OwnedResizeObserver(this, () => {
@@ -398,8 +398,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
         // scroll (`scrollToBottom()` re-engaging a released `follow`), not this initial one.
         const behavior = wasMounting
           ? 'auto'
-          : (this.pendingScrollBehavior ??
-            (prefersReducedMotion(this) ? 'auto' : 'smooth'));
+          : (this.pendingScrollBehavior ?? motionScrollBehavior(this));
         this.pendingScrollBehavior = undefined;
         this.performScrollToEnd(behavior);
       }
@@ -424,14 +423,12 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     }).elements[0] ?? null;
   }
 
-  /** Scrolls to the end and re-engages `follow`. Default `smooth`, forced to `auto` under
+  /** Scrolls to the end and re-engages `follow`. Default `smooth`, forced to `instant` under
    *  `prefers-reduced-motion`. */
   scrollToBottom(options?: { behavior?: 'auto' | 'smooth' }): void {
     this.clearKeyboardScrollIntent();
     this.clearUserIntent();
-    const behavior = prefersReducedMotion(this)
-      ? 'auto'
-      : (options?.behavior ?? 'smooth');
+    const behavior = motionScrollBehavior(this, options?.behavior ?? 'smooth');
     if (this.follow) {
       this.performScrollToEnd(behavior);
     } else {
@@ -447,9 +444,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     const unreadStartIndex = this.effectiveUnreadStartIndex;
     if (unreadStartIndex == null) return false;
     this.messageElementsCache = null;
-    const behavior = prefersReducedMotion(this)
-      ? 'auto'
-      : (options?.behavior ?? 'smooth');
+    const behavior = motionScrollBehavior(this, options?.behavior ?? 'smooth');
     const list = this.virtualListEl;
     if (list) {
       if (unreadStartIndex >= virtualCount(list)) return false;
@@ -466,7 +461,7 @@ export class LyraChatViewport extends LyraElement<LyraChatViewportEventMap> {
     return true;
   }
 
-  private performScrollToEnd(behavior: 'auto' | 'smooth'): void {
+  private performScrollToEnd(behavior: ScrollBehavior): void {
     const list = this.listenedVirtualList;
     if (list) {
       const count = virtualCount(list);

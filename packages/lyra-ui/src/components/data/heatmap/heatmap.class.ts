@@ -75,6 +75,7 @@ import {
 import { PAD_LEFT, PAD_TOP, ROW_LABEL_INSET, MAX_ROW_LABEL_FRACTION, MAX_COL_LABEL_HEIGHT, COL_LABEL_INSET, labelExtentConverter, STICKY_LABELS, FALLBACK_NO_DATA_FILL, FALLBACK_STICKY_LABEL_BG, RAMP_STEPS, FALLBACK_SCALE_LO, FALLBACK_SCALE_HI, FALLBACK_LABEL_FONT, CAL_PAD_LEFT, CAL_WEEKDAY_LABEL_INSET, CAL_LABEL_H, CAL_CELL, CAL_GAP, DEFAULT_MATRIX_CELL_SIZE, MAX_MATRIX_ROW_HEIGHT, DEFAULT_ACCESSIBLE_TARGET_SIZE_PX, FIT_MIN_CELL, RING_LINE_WIDTH, FALLBACK_FOCUS_RING_COLOR, FALLBACK_ANNOTATION_COLOR, FALLBACK_SELECTED_COLOR, SCOPED_COLOR, MAX_CANVAS_DIMENSION, MAX_CANVAS_PIXELS, ARROW_KEYS, ignoresGridKey, GRID_KEYS, MS_PER_DAY, CAL_MONTH_LABEL_GAP, optionalCellSizeConverter, DEFAULT_MATRIX_DATA, normalizeCellSizeClamp, bucketCountConverter, mixRgb, type CalendarSpacingProperty, CALENDAR_SPACING_PROPERTIES } from './heatmap-config.js';
 import { legendStopsChanged } from './heatmap-model.js';
 import type { LyraHeatmapStickyLabels, OwnedAnimationFrame, HeatmapMode, HeatmapScale, HeatmapCalendarData, HeatmapData, MatrixCellPos, CalendarCellPos, CellPos, HeatmapAnnotation, HeatmapLegendStop, HeatmapSelectedCell, HeatmapSelectionSource, LyraHeatmapCellClickDetail, LyraHeatmapMatrixGeometryChangeDetail, LyraHeatmapCalendarGeometry, LyraHeatmapEventMap, LyraHeatmapExportFormat } from './heatmap-model.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_heatmapCalendarCellLabel, LYRA_DEFAULT_heatmapCalendarLabel, LYRA_DEFAULT_heatmapDecorationLimit, LYRA_DEFAULT_heatmapDefaultColLabel, LYRA_DEFAULT_heatmapDefaultRowLabel, LYRA_DEFAULT_heatmapInputLimit, LYRA_DEFAULT_heatmapMatrixCellLabel, LYRA_DEFAULT_heatmapMatrixLabel, LYRA_DEFAULT_heatmapNoDataValue, LYRA_DEFAULT_heatmapProjectionLimit, LYRA_DEFAULT_heatmapSelectedCellLabel, LYRA_DEFAULT_heatmapSelectedCount, LYRA_DEFAULT_heatmapSourceError, LYRA_DEFAULT_heatmapSourceExactWindow, LYRA_DEFAULT_heatmapSourceKeyboardHelp, LYRA_DEFAULT_heatmapSourceMax, LYRA_DEFAULT_heatmapSourceMean, LYRA_DEFAULT_heatmapSourceMin, LYRA_DEFAULT_heatmapSourceRangeLabel, LYRA_DEFAULT_heatmapSourceSummary, LYRA_DEFAULT_heatmapValueLabel } from '../../../internal/default-strings/data.generated.js';
@@ -421,7 +422,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
 
   /** Maximum admitted cells, default 10,000 and bounded to 1–100,000. Calendar input and its
    *  530-week default span scale with this budget. Accessible DOM cells remain windowed at 400. */
-  @property({ type: Number, attribute: 'max-cells' }) maxCells = 10000;
+  @property({ converter: blankNumberConverter(10000), attribute: 'max-cells' }) maxCells = 10000;
 
   private get cellBudget(): number { return Math.max(1, Math.min(100_000, finiteCount(this.maxCells, MAX_HEATMAP_CELLS))); }
 
@@ -481,7 +482,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * the class doc), and leaning one axis' labels the other way while the grid itself stays physical
    * would be incoherent.
    */
-  @property({ type: Number, attribute: 'col-label-rotation' }) colLabelRotation?: number;
+  @property({ converter: blankNumberConverter(undefined), attribute: 'col-label-rotation' }) colLabelRotation?: number;
 
   private _stickyLabels: LyraHeatmapStickyLabels = 'none';
 
@@ -930,17 +931,18 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * In calendar mode it is opt-in: only an explicitly set value (property or attribute) replaces
    * the calendar's original 2px spacing between week columns, adding to the column pitch with the
    * same bounds; a non-finite value, or removing the attribute, restores the original spacing. */
-  @property({ type: Number, attribute: 'cell-gap-x' }) cellGapX = 1;
+  // A blank or removed attribute is `null`: unset, so calendar mode keeps its own spacing.
+  @property({ converter: blankNumberConverter(null), attribute: 'cell-gap-x' }) cellGapX = 1;
   /** Trailing vertical separator in CSS pixels, bounded by the vertical row pitch minus one. In calendar mode
    * an explicitly set value replaces the original 2px spacing between weekday rows. */
-  @property({ type: Number, attribute: 'cell-gap-y' }) cellGapY = 1;
+  @property({ converter: blankNumberConverter(null), attribute: 'cell-gap-y' }) cellGapY = 1;
   /** Painted corner radius in CSS pixels, clamped to half the smaller painted side. Does not change
    * cellSize, the matrix pitch, or data labels. In calendar mode an explicitly set value rounds the
    * calendar cells and their state rings; calendar cells stay square-cornered while it is unset. */
-  @property({ type: Number, attribute: 'cell-radius' }) cellRadius = 0;
+  @property({ converter: blankNumberConverter(null), attribute: 'cell-radius' }) cellRadius = 0;
   /** Paint every Nth matrix column label, starting at column zero. Truncated to an integer of at
    * least one; non-finite values use one. Tooltips, keyboard labels, and data retain every label. */
-  @property({ type: Number, attribute: 'col-label-interval' }) colLabelInterval = 1;
+  @property({ converter: blankNumberConverter(1), attribute: 'col-label-interval' }) colLabelInterval = 1;
 
   /**
    * Pins the color ramp's input domain to `[min, max]` instead of deriving it from the data's own
@@ -961,7 +963,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   // numeric-guard-exempt: midpointRatio() (heatmap-scale.ts) validates this with Number.isFinite
   // before any arithmetic and falls back to plain finiteRatio() normalization when it fails, so a
   // non-finite midpoint degrades to today's behavior rather than producing NaN ramp positions.
-  @property({ type: Number }) midpoint?: number;
+  @property({ converter: blankNumberConverter(undefined) }) midpoint?: number;
 
   /**
    * Whether the consumer has declared signed data, by pinning `domain` or anchoring `midpoint`.

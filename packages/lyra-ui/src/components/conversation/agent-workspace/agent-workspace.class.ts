@@ -266,7 +266,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   @property({ attribute: false }) contextSegments: readonly ContextInspectorSegment[] = [];
 
   /** Overall context-window token total. */
-  @property({ type: Number, attribute: 'context-total' }) contextTotal = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'context-total' }) contextTotal = 0;
 
   /** Whether the transcript follows the latest message. */
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) follow = true;
@@ -299,7 +299,7 @@ export class LyraAgentWorkspace extends LyraElement<LyraAgentWorkspaceEventMap> 
   @property({ attribute: 'composer-placeholder' }) composerPlaceholder?: string;
 
   /** Minimum and maximum rows for the built-in composer. */
-  @property({ type: Number, attribute: 'composer-min-rows' }) composerMinRows = 1;
+  @property({ converter: blankNumberConverter(1), attribute: 'composer-min-rows' }) composerMinRows = 1;
   /** Maximum rows the built-in composer grows to before scrolling (default 8). */
   @property({ converter: lengthLimitConverter, useDefault: true, attribute: 'composer-max-rows' }) composerMaxRows = 8;
 

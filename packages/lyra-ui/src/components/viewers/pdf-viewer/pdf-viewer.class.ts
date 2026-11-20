@@ -15,7 +15,7 @@ import {
 } from '../../../internal/resource-loader.js';
 import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { srOnly } from '../../../internal/a11y.js';
-import { prefersReducedMotion } from '../../../internal/motion.js';
+import { motionScrollBehavior } from '../../../internal/motion.js';
 import { sanitizeCssLength, sanitizePercentRect } from '../../../internal/safe-css.js';
 import {
   DocumentAnchorTargetBase as DocumentAnchorTarget,
@@ -63,6 +63,7 @@ import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-targe
 import { ViewerSearchState } from '../../../internal/viewer-search.js';
 import { wrapTextRangeInMarks, unwrapTextMark, type TextMarkPaintBudget } from '../../../internal/text-highlights.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_pdfViewerCurrentZoom, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
@@ -502,9 +503,9 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
   /** Display name used as the document's accessible label fallback. */
   @property() name = '';
   /** One-based current page, clamped to the loaded document's page count. */
-  @property({ type: Number, reflect: true }) page = 1;
+  @property({ converter: blankNumberConverter(1), reflect: true }) page = 1;
   /** Page zoom multiplier, clamped to the range 0.25–4. */
-  @property({ type: Number, reflect: true }) zoom = 1;
+  @property({ converter: blankNumberConverter(1), reflect: true }) zoom = 1;
   /** A CSS length (e.g. `"30rem"`); once set, overrides `--lr-pdf-viewer-height` -- the block size
    *  of the virtualized page list -- declaratively, the same `max-height` attribute
    *  `<lr-notebook-viewer>`/`<lr-svg-viewer>`/`<lr-xml-viewer>` expose, rather than requiring a
@@ -1190,7 +1191,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     const offset = rect.top - containerRect.top - containerRect.height / 2 + rect.height / 2;
     scrollContainer.scrollBy({
       top: offset,
-      behavior: prefersReducedMotion(this) ? 'auto' : 'smooth',
+      behavior: motionScrollBehavior(this),
     });
   }
 
@@ -1203,7 +1204,7 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
     const offset = targetY - containerRect.top - containerRect.height / 2;
     scrollContainer.scrollBy({
       top: offset,
-      behavior: prefersReducedMotion(this) ? 'auto' : 'smooth',
+      behavior: motionScrollBehavior(this),
     });
   }
 

@@ -8,7 +8,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
 import { ref } from 'lit/directives/ref.js';
-import { literalSetConverter } from '../../../internal/converters.js';
+import { literalSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { tag } from '../../../internal/prefix.js';
 import { loadLazyChildren } from '../../../internal/lazy-children.js';
 import { isRepeatedActivationKey } from '../../../internal/list-navigation.js';
@@ -435,8 +435,8 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   // through `finiteRange` instead of leaving the native media element unsanitized until the next
   // `updated()` flush.
   static override properties = {
-    playbackRate: { type: Number, attribute: 'playback-rate', reflect: true, noAccessor: true },
-    volume: { type: Number, reflect: true, noAccessor: true },
+    playbackRate: { converter: blankNumberConverter(1), attribute: 'playback-rate', reflect: true, noAccessor: true },
+    volume: { converter: blankNumberConverter(1), reflect: true, noAccessor: true },
   };
 
   /** Media URL; validated with `safeMediaSrc` before it ever reaches the `<audio>`/`<video>` `src`. */

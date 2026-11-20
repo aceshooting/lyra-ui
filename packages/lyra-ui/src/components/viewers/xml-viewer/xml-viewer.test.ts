@@ -946,7 +946,7 @@ describe('search', () => {
     window.matchMedia = (() => ({ matches: true }) as MediaQueryList) as typeof window.matchMedia;
     try {
       expect(await el.search('needle')).to.equal(1);
-      expect(behaviors).to.deep.equal(['auto']);
+      expect(behaviors).to.deep.equal(['instant']);
     } finally {
       HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
       window.matchMedia = originalMatchMedia;

@@ -58,6 +58,7 @@ import {
   literalSetConverter,
   omittedEmptyStringConverter,
   spellcheckConverter,
+  blankNumberConverter,
 } from '../../../internal/converters.js';
 import type { PlaceStrategy, PlaceSync } from '../../../internal/positioner.js';
 import { PositioningStrategyState, positioningStrategyConverter, resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
@@ -764,13 +765,13 @@ export class LyraCombobox<
       converter: omittedEmptyStringConverter,
     },
     maxOptionsVisible: {
-      type: Number,
+      converter: blankNumberConverter(3),
       attribute: 'max-options-visible',
       noAccessor: true,
     },
-    maxRender: { type: Number, attribute: 'max-render', noAccessor: true },
-    sourceDelay: { type: Number, attribute: 'source-delay', noAccessor: true },
-    minQueryLength: { type: Number, attribute: 'min-query-length', noAccessor: true },
+    maxRender: { converter: blankNumberConverter(200), attribute: 'max-render', noAccessor: true },
+    sourceDelay: { converter: blankNumberConverter(200), attribute: 'source-delay', noAccessor: true },
+    minQueryLength: { converter: blankNumberConverter(0), attribute: 'min-query-length', noAccessor: true },
   };
 
   /** Placeholder shown in the filter input while empty; hidden once a single-select value is chosen. */
@@ -1212,7 +1213,7 @@ export class LyraCombobox<
    * as it was. Zero, negative, and non-finite values normalize to unset rather than collapsing the
    * popup.
    */
-  @property({ type: Number, attribute: 'visible-options' }) visibleOptions?: number;
+  @property({ converter: blankNumberConverter(undefined), attribute: 'visible-options' }) visibleOptions?: number;
 
   private _maxOptionsVisible = 3;
   private _maxRender = 200;

@@ -39,6 +39,10 @@
   regardless of the declared TypeScript type, and this bug class has shipped twice.
   `pnpm run check:numeric-guards` finds them; a genuine exception takes a
   `// numeric-guard-exempt: <reason>` comment.
+- An attribute-backed numeric property declares `converter: blankNumberConverter(<declared default>)`
+  (`src/internal/converters.ts`) in place of `type: Number`, so an empty or whitespace attribute
+  keeps the default instead of becoming `0`
+  (`pnpm run check:blank-numeric-attributes`; exception: `// blank-number-exempt: <reason>`).
 - New timer-duration attributes end in `-ms`; new render ceilings use `max-rendered-<noun>`.
   Preserve established public names when adding a shared helper or documenting an existing limit.
 - **Closed string sets are literal union types, never a real TypeScript `enum`.** A prop backed by

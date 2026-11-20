@@ -8,7 +8,7 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { fileIcon } from '../../../internal/icons.js';
-import { falseDefaultBooleanConverter } from '../../../internal/converters.js';
+import { falseDefaultBooleanConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { subscribeInheritedAttributes } from '../../../internal/inherited-attribute-hub.js';
 import {
   DropSessionController,
@@ -181,30 +181,30 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
   /** Largest accepted file size in bytes. `0` (the default) disables the check -- identical
    *  contract to `lr-file-input`'s `maxFileSize`, including its invalid-override fallback. */
   // numeric-guard-exempt: normalized by classifyFiles() in file-intake.ts
-  @property({ type: Number, attribute: 'max-file-size' }) maxFileSize = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'max-file-size' }) maxFileSize = 0;
   /** Largest number of files accepted per drop, counting `heldFileCount` plus the current drop's
    *  files. `0` (the default) disables the check -- identical contract to `lr-file-input`'s
    *  `maxFiles`. Since this component retains nothing of its own between drops, the count would
    *  otherwise always cover only the current drop -- `heldFileCount` is what lets a cumulative cap
    *  span separate drops. */
   // numeric-guard-exempt: normalized by classifyFiles() in file-intake.ts
-  @property({ type: Number, attribute: 'max-files' }) maxFiles = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'max-files' }) maxFiles = 0;
   /** Largest combined byte size accepted per drop, summing `heldTotalSize` plus the current
    *  drop's files. `0` (the default) disables the check -- identical contract to
    *  `lr-file-input`'s `maxTotalSize`. */
   // numeric-guard-exempt: normalized by classifyFiles() in file-intake.ts
-  @property({ type: Number, attribute: 'max-total-size' }) maxTotalSize = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'max-total-size' }) maxTotalSize = 0;
   /** Externally held file count added to the running count `maxFiles` evaluates against --
    *  identical contract to `lr-file-input`'s `heldFileCount`, letting a cumulative, server-backed
    *  cap span separate drops onto this region. `0` (the default) means "nothing held" and
    *  reproduces prior behavior exactly. A negative, `NaN`, or `Infinity` value is normalized to
    *  `0` via `finiteCount`. */
   // numeric-guard-exempt: normalized by classifyFiles() in file-intake.ts
-  @property({ type: Number, attribute: 'held-file-count' }) heldFileCount = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'held-file-count' }) heldFileCount = 0;
   /** Externally held byte total added to the running size `maxTotalSize` evaluates against --
    *  identical contract to `lr-file-input`'s `heldTotalSize`. */
   // numeric-guard-exempt: normalized by classifyFiles() in file-intake.ts
-  @property({ type: Number, attribute: 'held-total-size' }) heldTotalSize = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'held-total-size' }) heldTotalSize = 0;
   /** Density tier for the overlay's padding, icon and instructional text -- identical contract and
    *  scale to `lr-file-input`'s own `size`, so a small-tier drop-zone can match a neighboring
    *  small-tier `lr-file-input` in the same dense layout. */

@@ -14,6 +14,7 @@ import type { LyraToolbarAction } from '../../../internal/toolbar-actions.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { repairUnavailableControlFocus } from '../../../internal/focus-navigation.js';
 import { leaseTabIndex } from '../../../internal/roving-toolbar.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_branchNext, LYRA_DEFAULT_branchPickerLabel, LYRA_DEFAULT_branchPosition, LYRA_DEFAULT_branchPrevious } from '../../../internal/default-strings/conversation.generated.js';
@@ -78,10 +79,10 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
 
   /** 0-based current branch, rendered 1-based ("2 / 5"). Controlled -- this component never writes
    *  to it itself. */
-  @property({ type: Number, reflect: true }) index = 0;
+  @property({ converter: blankNumberConverter(0), reflect: true }) index = 0;
 
   /** Total number of branches. While `count < 2` the component renders nothing at all. */
-  @property({ type: Number, reflect: true }) count = 1;
+  @property({ converter: blankNumberConverter(1), reflect: true }) count = 1;
 
   /** Accessible name for the group. Omitting it localizes the default `branchPickerLabel`
    *  message; an explicit empty string (`label=""` or `.label = ''`) suppresses that default and

@@ -3,7 +3,7 @@ import { stopIcon } from '../../../internal/icons.js';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount, finiteRange } from '../../../internal/numbers.js';
-import { literalSetConverter } from '../../../internal/converters.js';
+import { literalSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { normalizeAgentTerminalStatus } from '../../../internal/shared-unions.js';
 import { styles } from './generation-metrics.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -202,16 +202,16 @@ export class LyraGenerationMetrics extends LyraElement<LyraGenerationMetricsEven
    *  ISO-8601 date string) while `status` is `running`, this component captures
    *  the current time itself the moment `status` becomes `running` and counts
    *  from there instead (see the class doc). */
-  @property({ type: Number, attribute: 'started-at' }) startedAt?: number;
+  @property({ converter: blankNumberConverter(undefined), attribute: 'started-at' }) startedAt?: number;
 
   /** Running token count so far. Finite values are rounded to a non-negative integer; unset or
    *  non-finite values omit the `tokens` segment entirely. */
-  @property({ type: Number, attribute: 'token-count' }) tokenCount?: number;
+  @property({ converter: blankNumberConverter(undefined), attribute: 'token-count' }) tokenCount?: number;
 
   /** Host-computed tokens/sec figure. Finite values are clamped to zero or above; unset and
    *  non-finite values fall back to a derived `token-count / elapsed-seconds` rate once at least
    *  one second has elapsed. */
-  @property({ type: Number, attribute: 'tokens-per-second' }) tokensPerSecond?: number;
+  @property({ converter: blankNumberConverter(undefined), attribute: 'tokens-per-second' }) tokensPerSecond?: number;
 
   /** Hides the built-in Stop button. */
   @property({ type: Boolean, attribute: 'without-stop' }) withoutStop = false;

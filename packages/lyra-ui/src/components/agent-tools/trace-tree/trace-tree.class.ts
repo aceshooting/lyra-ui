@@ -9,7 +9,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { formatShortDuration } from '../../../internal/duration.js';
 import { isRtl } from '../../../internal/rtl.js';
-import { prefersReducedMotion } from '../../../internal/motion.js';
+import { motionScrollBehavior } from '../../../internal/motion.js';
 import { finiteCount, finiteNumber } from '../../../internal/numbers.js';
 import { chevronIcon, iconFrame } from '../../../internal/icons.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
@@ -22,6 +22,7 @@ import type { LyraHierarchySource, LyraHierarchyQuery, LyraTraceSourceSummary } 
 import type { HierarchySourceController } from '../../../internal/hierarchy-source-controller.js';
 import { HierarchySourceRuntimeGate, type HierarchySourceRuntime } from '../../../internal/lazy-hierarchy-source.js';
 import { hierarchySourceStyles } from '../../../internal/hierarchy-source-view.styles.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_cost, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanProjectionLimit, LYRA_DEFAULT_tokensIn, LYRA_DEFAULT_tokensOut, LYRA_DEFAULT_traceTree, LYRA_DEFAULT_traceTreeMetricLabel, LYRA_DEFAULT_traceTreeSpanStatus } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -433,7 +434,7 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
   @property({ attribute: false }) spans: readonly LyraSpan[] = [];
   /** Maximum projected rows, from 1 to 5000. Invalid or unset values use 500.
    * Source admission retains the first 10000 outer entries without cloning opaque metadata. */
-  @property({ type: Number, attribute: 'max-nodes' }) maxNodes = 500;
+  @property({ converter: blankNumberConverter(500), attribute: 'max-nodes' }) maxNodes = 500;
 
   private get effectiveMaxNodes(): number {
     return Math.max(1, Math.min(5000, finiteCount(this.maxNodes, 500)));
@@ -834,8 +835,8 @@ export class LyraTraceTree extends LyraElement<LyraTraceTreeEventMap> {
       const row = this.renderedRowById(this.activeSpanId);
       if (row) {
         const ownerWindow = row.ownerDocument.defaultView;
-        const reducedMotion = !ownerWindow || prefersReducedMotion(this);
-        row.scrollIntoView({ block: 'nearest', behavior: reducedMotion ? 'auto' : 'smooth' });
+        const behavior = ownerWindow ? motionScrollBehavior(this) : 'instant';
+        row.scrollIntoView({ block: 'nearest', behavior });
       }
     }
     if (this.pendingAnnouncements.length > 0) {

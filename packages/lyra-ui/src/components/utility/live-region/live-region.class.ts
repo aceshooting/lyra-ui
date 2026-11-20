@@ -3,7 +3,7 @@ import { property } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { finiteDuration } from '../../../internal/numbers.js';
-import { literalSetConverter } from '../../../internal/converters.js';
+import { literalSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import {
   Announcer,
   AnnouncementSinkController,
@@ -104,7 +104,7 @@ export class LyraLiveRegion extends LyraElement {
   }
 
   /** Throttle window in ms — see `Announcer` in `internal/announcer.ts`. */
-  @property({ type: Number, attribute: 'throttle-ms' }) throttleMs = 500;
+  @property({ converter: blankNumberConverter(500), attribute: 'throttle-ms' }) throttleMs = 500;
 
   private readonly announcer: Announcer;
 

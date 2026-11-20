@@ -144,6 +144,8 @@ Full rules: **[docs/agents/coding-conventions.md](docs/agents/coding-conventions
 - A `true`-defaulting boolean `@property` uses `trueDefaultBooleanConverter`.
 - Numeric props reaching layout/`Intl`/canvas/timers use the `finiteNumber` family
   (`src/internal/numbers.ts`), never bare `isNaN()`.
+- Attribute-backed numeric props use `converter: blankNumberConverter(<default>)` instead of
+  `type: Number`, so a blank attribute keeps the default (`check:blank-numeric-attributes`).
 - Closed string sets are colocated exported literal unions, never a TS `enum`; name a repeated
   union.
 - Single-quoted literals outside templates (`check:source-policy`); printed types feed

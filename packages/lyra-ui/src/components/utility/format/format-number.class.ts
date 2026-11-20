@@ -11,13 +11,14 @@ import {
   type LyraFormatNumberNotation,
   type LyraFormatNumberType,
 } from './format-options.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 
 export type { LyraFormatCurrencyDisplay, LyraFormatNumberNotation, LyraFormatNumberType } from './format-options.js';
 
 const INTEGER_DIGIT_BOUNDS = { minimum: 1, maximum: 21 } as const;
 const FRACTION_DIGIT_BOUNDS = { minimum: 0, maximum: 100 } as const;
 const SIGNIFICANT_DIGIT_BOUNDS = { minimum: 1, maximum: 21 } as const;
-const optionalPrecision = (value: string | null): number | undefined => value === null ? undefined : Number(value);
+const optionalPrecision = blankNumberConverter(undefined);
 
 /**
  * `<lr-format-number>` — locale-aware `Intl.NumberFormat` output.
@@ -30,7 +31,7 @@ const optionalPrecision = (value: string | null): number | undefined => value ==
 export class LyraFormatNumber extends LyraElement {
   static override styles = [LyraElement.styles, styles];
   /** Number to format. A non-finite value renders the default slot instead. */
-  @property({ type: Number }) value = 0;
+  @property({ converter: blankNumberConverter(0) }) value = 0;
   /** Formatting style: `'decimal'` (default), `'currency'` or `'percent'`. */
   @property() type: LyraFormatNumberType = 'decimal';
   /** ISO currency code. Removed or blank attributes format with the existing USD fallback. */

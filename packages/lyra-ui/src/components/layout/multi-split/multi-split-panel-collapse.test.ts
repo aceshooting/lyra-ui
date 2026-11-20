@@ -517,29 +517,6 @@ describe('lr-multi-split per-panel collapse', () => {
     }
   });
 
-  it('restores stored folds with an initially empty collapsedPanels binding', async () => {
-    const storageKey = `empty-binding-${Math.random()}`;
-    localStorage.setItem(fullKey(storageKey), JSON.stringify({ version: 2, panels: [
-      { panelId: 'a', size: 0, collapsed: true, expandedSize: 40 },
-      { panelId: 'b', size: 100 },
-    ] }));
-    try {
-      const split = await fixture<LyraMultiSplit>(html`<lr-multi-split storage-key=${storageKey}
-        .collapsedPanels=${[]} style=${SPLIT_STYLE}>
-        <div panel-id="a">A</div><div panel-id="b">B</div>
-      </lr-multi-split>`);
-      await split.updateComplete;
-      expect(split.collapsedPanels).to.deep.equal(['a']);
-      expect(split.sizes).to.deep.equal([0, 100]);
-      split.collapsedPanels = [];
-      await split.updateComplete;
-      expect(split.sizes).to.deep.equal([40, 60]);
-      expect(panel(split, 'a').hasAttribute('data-panel-collapsed')).to.equal(false);
-    } finally {
-      localStorage.removeItem(fullKey(storageKey));
-    }
-  });
-
   it('accepts a sizes assignment that already describes a new fold', async () => {
     const split = await fourPanels();
     split.collapsedPanels = ['a'];

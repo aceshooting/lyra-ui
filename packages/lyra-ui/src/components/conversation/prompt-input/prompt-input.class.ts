@@ -17,6 +17,7 @@ import type { DocumentRef } from '../../../ai/types.js';
 import {
   autocorrectConverter,
   trueDefaultBooleanConverter,
+  blankNumberConverter,
 } from '../../../internal/converters.js';
 import {
   LyraElement,
@@ -323,7 +324,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   @property({ attribute: 'toolbar-align' }) toolbarAlign: ChatComposerToolbarAlign = 'start';
   /** Minimum visible rows forwarded to the composed composer (default `1`). */
   // numeric-guard-exempt: pass-through to <lr-chat-composer>, which normalizes its row limits.
-  @property({ type: Number, attribute: 'min-rows' }) minRows = 1;
+  @property({ converter: blankNumberConverter(1), attribute: 'min-rows' }) minRows = 1;
   /** Maximum rows forwarded to the composed composer before it scrolls (default `8`). */
   // numeric-guard-exempt: same <lr-chat-composer> pass-through as minRows above.
   @property({ converter: lengthLimitConverter, useDefault: true, attribute: 'max-rows' }) maxRows = 8;

@@ -15,7 +15,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { isRtl } from '../../../internal/rtl.js';
 import { srOnly, nextId } from '../../../internal/a11y.js';
 import { finiteCount, finiteInteger, finiteRatio } from '../../../internal/numbers.js';
-import { trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { trueDefaultBooleanConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { CollectionSourceTracker } from '../../../internal/collection-source-tracker.js';
@@ -397,7 +397,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    * its caller still retains it; otherwise assign a new collection to supply additional rows.
    * @default 10000
    */
-  @property({ attribute: 'max-rows', type: Number })
+  @property({ attribute: 'max-rows', converter: blankNumberConverter(MAX_TABLE_COLLECTION_ENTRIES) })
   get maxRows(): number { return this._maxRows; }
   set maxRows(value: number) {
     const limit = Math.max(1, finiteCount(value, MAX_TABLE_COLLECTION_ENTRIES, MAX_TABLE_ROWS));
@@ -604,7 +604,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  renders 3 placeholders for the ordinary bounded default, or derives a non-default explicit
    *  `pageSize` (capped at 20). Positive explicit values are also capped at 20. Ignored entirely
    *  under the default spinner appearance. */
-  @property({ type: Number, attribute: 'skeleton-rows' }) skeletonRows = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'skeleton-rows' }) skeletonRows = 0;
   /** Inserts a non-focusable group header row wherever this key changes between consecutive
    *  rendered rows. Supply `rows` with each group already contiguous — the table does not
    *  re-order them to make them so, and the group order it renders is their first-appearance
@@ -619,12 +619,12 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   @property({ attribute: false }) groupLabel?: (key: string | number, rows: readonly T[]) => unknown;
   /** Maximum rows mounted per page. Defaults to 100 and normalizes into 1..500 so a bare table
    * never creates an unbounded row-by-column DOM projection. */
-  @property({ type: Number, attribute: 'page-size' }) pageSize = DEFAULT_PAGE_SIZE;
+  @property({ converter: blankNumberConverter(DEFAULT_PAGE_SIZE), attribute: 'page-size' }) pageSize = DEFAULT_PAGE_SIZE;
   /** Current page. Client pagination updates it on accepted navigation; server pagination leaves it
    * controlled and only emits `lr-page-change`. */
-  @property({ type: Number, reflect: true }) page = 1;
+  @property({ converter: blankNumberConverter(1), reflect: true }) page = 1;
   /** Total item count for server pagination; `-1` derives it from filtered rows. */
-  @property({ type: Number, attribute: 'total-items' }) totalItems = -1;
+  @property({ converter: blankNumberConverter(-1), attribute: 'total-items' }) totalItems = -1;
   /** Client mode slices rows locally. Server mode expects one supplied page. */
   @property({ reflect: true, attribute: 'pagination-mode' }) paginationMode: 'client' | 'server' = 'client';
   /** Marks server pagination as indeterminate -- the caller has no total item count, only whether

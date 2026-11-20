@@ -37,6 +37,7 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { normalizeImageFit, type LyraImageFit } from '../../../internal/image-fit.js';
 import { IMAGE_VIEWER_HIGHLIGHT_LIMIT } from './image-viewer-limits.js';
 import { repairControlFocusOnUpdate } from '../../../internal/control-focus-repair.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_imageViewerAnnotate, LYRA_DEFAULT_imageViewerAnnotationAdded, LYRA_DEFAULT_imageViewerAnnotationBoxPosition, LYRA_DEFAULT_imageViewerAnnotationCancelled, LYRA_DEFAULT_imageViewerAnnotationHint, LYRA_DEFAULT_imageViewerFailedToLoad, LYRA_DEFAULT_imageViewerFitActual, LYRA_DEFAULT_imageViewerFitContain, LYRA_DEFAULT_imageViewerFitLabel, LYRA_DEFAULT_imageViewerFitWidth, LYRA_DEFAULT_imageViewerHighlightsLabel, LYRA_DEFAULT_imageViewerHighlightsLimited, LYRA_DEFAULT_imageViewerLabel, LYRA_DEFAULT_imageViewerRotate, LYRA_DEFAULT_imageViewerUnlabeledHighlight, LYRA_DEFAULT_panoramaHotspotsLabel, LYRA_DEFAULT_panoramaInstructions } from '../../../internal/default-strings/media.generated.js';
@@ -380,27 +381,27 @@ export class LyraImageViewer extends DocumentAnchorTarget(LyraImageViewerBase) {
   }
   /** Multiplier over the fit-derived base scale, delegated to the embedded pan-zoom surface. */
   // numeric-guard-exempt: the frame and highlight border limits both normalize it with normalizeImageZoom
-  @property({ type: Number, reflect: true }) zoom = 1;
+  @property({ converter: blankNumberConverter(1), reflect: true }) zoom = 1;
 
   /** Passed through to the embedded `<lr-pan-zoom>` as `.minZoom`. Same default as
    *  `<lr-pan-zoom>` itself. Mirrors `<lr-lightbox>`'s own `minZoom` (name, default,
    *  pass-through shape) -- both wrap the exact same `<lr-pan-zoom>` surface. */
   // numeric-guard-exempt: the frame and highlight border limits both normalize it with normalizeImageZoom
-  @property({ type: Number, attribute: 'min-zoom' }) minZoom = 0.5;
+  @property({ converter: blankNumberConverter(0.5), attribute: 'min-zoom' }) minZoom = 0.5;
 
   /** Passed through to the embedded `<lr-pan-zoom>` as `.maxZoom`. Mirrors
    *  `<lr-lightbox>`'s own `maxZoom`. */
   // numeric-guard-exempt: the frame and highlight border limits both normalize it with normalizeImageZoom
-  @property({ type: Number, attribute: 'max-zoom' }) maxZoom = 4;
+  @property({ converter: blankNumberConverter(4), attribute: 'max-zoom' }) maxZoom = 4;
 
   /** Passed through to the embedded `<lr-pan-zoom>` as `.zoomStep`. Mirrors
    *  `<lr-lightbox>`'s own `zoomStep`. */
   // numeric-guard-exempt: pure pass-through to <lr-pan-zoom>, which already normalizes it via its own safeZoomStep
-  @property({ type: Number, attribute: 'zoom-step' }) zoomStep = 0.25;
+  @property({ converter: blankNumberConverter(0.25), attribute: 'zoom-step' }) zoomStep = 0.25;
   private _rotation: LyraImageRotation = 0;
   /** Clockwise rotation in 90-degree steps. */
   // numeric-guard-exempt: the setter immediately normalizes every write with finiteNumber and a bounded four-step wrap
-  @property({ type: Number, reflect: true })
+  @property({ converter: blankNumberConverter(0), reflect: true })
   get rotation(): LyraImageRotation {
     return this._rotation;
   }

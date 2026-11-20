@@ -732,7 +732,7 @@ describe('lr-csv-viewer', () => {
           ({ matches: true } as MediaQueryList)) as typeof window.matchMedia;
         expect(await el.scrollToAnchor({ kind: 'cell-range', range: 'B1' })).to
           .be.true;
-        expect(behaviors).to.deep.equal(['smooth', 'auto']);
+        expect(behaviors).to.deep.equal(['smooth', 'instant']);
       } finally {
         window.matchMedia = originalMatchMedia;
         restore();

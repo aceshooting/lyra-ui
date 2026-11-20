@@ -47,14 +47,15 @@ for (const failure of ['import', 'setup'] as const) {
       fail();
       expect(await transfer).to.equal(false);
       await waitUntil(() => !el.open && el.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!.hidden);
-      expect(events).to.deep.equal([]);
+      // An unplaceable popup is a dismissal without a selection, reported once.
+      expect(events).to.deep.equal(['lr-mention-close']);
       expect(document.activeElement === anchor).to.equal(true);
       expect(anchor.value).to.equal('Draft');
       el.open = true;
       await el.updateComplete;
       expect(await el.focusActiveOption()).to.equal(true);
       expect(el.shadowRoot!.activeElement?.getAttribute('data-id')).to.equal('alice');
-      expect(events).to.deep.equal([]);
+      expect(events).to.deep.equal(['lr-mention-close']);
     } finally {
       fail();
       el.remove();

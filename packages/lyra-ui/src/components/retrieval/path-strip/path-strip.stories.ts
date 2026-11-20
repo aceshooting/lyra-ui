@@ -46,3 +46,19 @@ export const Narrow: Story = {
       <lr-path-strip .path=${path}></lr-path-strip>
     </div>`,
 };
+
+export const RenderLimit: Story = {
+  name: 'Render limit (first 200 elements)',
+  parameters: {
+    docs: {
+      description: {
+        story: 'Only the first 200 valid elements render, navigate and emit; `[part="limit"]` says the path continues.',
+      },
+    },
+  },
+  render: () => html`<lr-path-strip
+    .path=${Array.from({ length: 210 }, (_, index): LyraPathElement => index % 2 === 0
+      ? { kind: 'node', node: { id: `n${index}`, label: `Node ${index / 2 + 1}` } }
+      : { kind: 'edge', relation: 'links', directed: true })}
+  ></lr-path-strip>`,
+};

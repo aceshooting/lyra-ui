@@ -18,6 +18,7 @@ import { projectLyraSpans } from '../trace-tree/span-projection.js';
 import type { LyraTraceTree, TraceTreeSource } from '../trace-tree/trace-tree.class.js';
 export type { TraceTreeSource } from '../trace-tree/trace-tree.class.js';
 import type { LyraGraphLegendVisibilityDetail } from '../../retrieval/graph-legend/graph-legend.class.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_agentTraceFilterLabel, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanProjectionLimit } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -231,7 +232,7 @@ export class LyraAgentTrace extends LyraElement<LyraAgentTraceEventMap> {
   @property({ attribute: false }) spans: readonly LyraSpan[] = [];
   /** Maximum projected rows, from 1 to 5000. Invalid or unset values use 500.
    * Source admission keeps the first 10000 outer entries without cloning opaque metadata. */
-  @property({ type: Number, attribute: 'max-nodes' }) maxNodes = 500;
+  @property({ converter: blankNumberConverter(500), attribute: 'max-nodes' }) maxNodes = 500;
   private get effectiveMaxNodes(): number {
     return Math.max(1, Math.min(5000, finiteCount(this.maxNodes, 500)));
   }

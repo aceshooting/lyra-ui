@@ -151,7 +151,7 @@ export function normalizeCellSizeClamp(
 
 export const bucketCountConverter = {
   fromAttribute(value: string | null): number {
-    return value === null
+    return !value?.trim()
       ? DEFAULT_BUCKET_COUNT
       : normalizeBucketCount(Number(value));
   },

@@ -23,6 +23,7 @@ import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import type { AnchorResultDetail, TextSelectDetail } from '../../../internal/document-anchors.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_scrollerLabel } from '../../../internal/default-strings/shared.generated.js';
@@ -114,7 +115,7 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
   @property() src = '';
   /** Maximum admitted contacts (0–2,500, default 250). A larger document shows the resource-limit message. */
   // numeric-guard-exempt: parseContactDocument bounds this limit with finiteCount before parsing.
-  @property({ type: Number, attribute: 'max-contacts' }) maxContacts = 250;
+  @property({ converter: blankNumberConverter(250), attribute: 'max-contacts' }) maxContacts = 250;
   /** Optional display name for the source document. It names `[part='base']` when host
    *  `aria-label` is absent, before the localized fallback. A non-empty host label remains on the
    *  host; an explicitly empty one is preserved on the shadow owner. */

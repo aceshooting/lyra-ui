@@ -45,6 +45,7 @@ import type { LyraTreeItem } from './tree-item.class.js';
 import type { TreeBadge, TreeIdentityContext, LyraTreeNodeData, LyraTreePointerReorderDetail, TreeSelection } from './tree-types.js';
 import { TREE_MAX_RENDER_DEPTH, TREE_MAX_RENDER_NODES } from './tree-types.js';
 import { composedParentElement, deepActiveElementIn } from '../../../internal/active-element.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_treeDefaultLabel } from '../../../internal/default-strings/data.generated.js';
@@ -624,7 +625,7 @@ export class LyraTree extends LyraElement<LyraTreeEventMap> {
   /** Maximum object-model nodes, from 1 to 10000; invalid or unset values use 1000.
    * Set before assigning data. Reassign excluded data after raising the limit to restore it.
    * Declarative light-DOM items have no node-count cap; both models retain the depth limit. */
-  @property({ type: Number, attribute: 'max-nodes' }) maxNodes = 1000;
+  @property({ converter: blankNumberConverter(1000), attribute: 'max-nodes' }) maxNodes = 1000;
 
   private get effectiveMaxNodes(): number {
     return Math.max(1, Math.min(10000, finiteCount(this.maxNodes, 1000)));

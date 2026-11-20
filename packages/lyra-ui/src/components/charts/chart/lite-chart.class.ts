@@ -51,7 +51,7 @@ import {
   forcedColorsActive,
   type ForcedColorEncodingName,
 } from './chart-forced-colors.js';
-import { literalSetConverter } from '../../../internal/converters.js';
+import { literalSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { sanitizeCssColor } from '../../../internal/safe-css.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
@@ -723,7 +723,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    * Fit layouts also respect the measured width. Sampling retains endpoints and bucket extrema;
    * callbacks and events continue to use source indexes. */
   // numeric-guard-exempt: normalizeChartRecordLimit() in chart-table-sampling.ts normalizes render budgets through finiteCount().
-  @property({ type: Number, attribute: 'max-records' }) maxRecords = 1_000;
+  @property({ converter: blankNumberConverter(1_000), attribute: 'max-records' }) maxRecords = 1_000;
   private _datasets: readonly LyraLiteChartSeries[] = Object.freeze([]);
   private datasetsTruncated = false;
   private readonly datasetsSources = new CollectionSourceTracker();
@@ -842,7 +842,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   /** Fixed per-category bar width in px, used only when `layout="scroll"`. Ignored in `layout="fit"`, the
    *  default. Scroll content is capped at 1,000,000px,
    *  so an excessive requested width is reduced as needed to keep SVG and CSS geometry finite. */
-  @property({ type: Number, attribute: 'bar-width' }) barWidth = 32;
+  @property({ converter: blankNumberConverter(32), attribute: 'bar-width' }) barWidth = 32;
   /** Fixed per-category slot width (the category pitch) in px for `type="bar"` in `layout="fit"`,
    *  replacing the derived `plotW / labels.length` slot. Each bar group's width follows from this
    *  slot and `barGapRatio` exactly as it does from the derived slot, and default category
@@ -856,7 +856,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    *  sets the pitch, and by `type="line"`. Unset (the default) reads `undefined` and keeps the
    *  derived slot; a non-finite, zero or negative value falls back to it too, and a finite value is
    *  capped so the whole category run stays within 1,000,000px. */
-  @property({ type: Number, attribute: 'bar-slot-width' }) barSlotWidth?: number;
+  @property({ converter: blankNumberConverter(undefined), attribute: 'bar-slot-width' }) barSlotWidth?: number;
   /** Caps how many x-axis category labels render text once `this.displayLabels.length` exceeds it,
    *  decimating roughly evenly while always keeping the first and last label. `'auto'` derives a
    *  deterministic cap from the resolved plot width and widest rendered category label using the
@@ -929,7 +929,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   /** Overrides the internal `BAR_GROUP_GAP` (0.2) fraction of a category slot left as a gap between
    *  categories. Grouped bars share the remaining width with bounded internal gaps; ratios below
    *  1 retain positive bar widths. Unset (the default) keeps the 0.2 category gap. */
-  @property({ type: Number, attribute: 'bar-gap-ratio' }) barGapRatio?: number;
+  @property({ converter: blankNumberConverter(undefined), attribute: 'bar-gap-ratio' }) barGapRatio?: number;
   /** `'linear'` (default) maps values through the standard domain fraction. `'sqrt'` compresses
    *  bar magnitudes while keeping line points and gridlines linear; stacked bars compress each
    *  signed total once and split it proportionally. `'logarithmic'` maps bars, line points and
@@ -953,7 +953,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
    *  (that's `skipZero`'s job, not this one's). Finite values are capped at 1,000,000px to keep
    *  derived SVG geometry practical. Unset (the default) uses `Math.max(0, y2 - y1)` exactly, with no floor. Authored floors can exceed the available plot height. Linear and
    *  logarithmic stacks push subsequent segments along their signed pixel cursor. */
-  @property({ type: Number, attribute: 'min-bar-height' }) minBarHeight?: number;
+  @property({ converter: blankNumberConverter(undefined), attribute: 'min-bar-height' }) minBarHeight?: number;
   /** Category indexes to mark `data-selected` and `aria-pressed="true"` on every bar/point at
    *  that index, across every
    *  dataset -- e.g. to highlight a whole selected week's column in a stacked chart. Empty (the default): no mark carries `data-selected`. Style the highlight

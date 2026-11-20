@@ -70,6 +70,7 @@ import {
   retrievalSemanticRole,
 } from '../retrieval-semantic-owner.js';
 import { requireOwnDataValue } from '../../../internal/data-descriptors.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_graphDataListLimit, LYRA_DEFAULT_neighborExpand, LYRA_DEFAULT_neighborGroupHeader, LYRA_DEFAULT_neighborListEmpty, LYRA_DEFAULT_neighborListLabel, LYRA_DEFAULT_neighborRowLabel, LYRA_DEFAULT_neighborSourceChoose, LYRA_DEFAULT_neighborSourceError, LYRA_DEFAULT_neighborSourceSummary } from '../../../internal/default-strings/retrieval.generated.js';
@@ -177,7 +178,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
   /** Shows a per-row expand icon-button emitting `lr-node-expand`. */
   @property({ type: Boolean }) expandable = false;
   /** Above this row count the list renders through an internal `lr-virtual-list`. */
-  @property({ type: Number, attribute: 'virtualize-at' }) virtualizeAt = 100;
+  @property({ converter: blankNumberConverter(100), attribute: 'virtualize-at' }) virtualizeAt = 100;
   /** Accessible name for the stable group when the host has no `aria-label`; falls back to the
    *  localized `neighborListLabel` default when omitted. An explicitly empty host label stays
    *  empty, and so does an explicitly empty `label`. */
@@ -221,9 +222,9 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     this.requestUpdate('sourceNodeTypes', previous);
   }
   /** Zero-based full-neighborhood page. */
-  @property({ type: Number, attribute: 'source-page' }) sourcePage = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'source-page' }) sourcePage = 0;
   /** Requested page size, normalized to 1–500, default 100. */
-  @property({ type: Number, attribute: 'source-page-size' }) sourcePageSize = 100;
+  @property({ converter: blankNumberConverter(100), attribute: 'source-page-size' }) sourcePageSize = 100;
   /** Exact matching neighborhood count, or null before a current successful query. */
   get sourceTotal(): number | null { return this.graphSource !== undefined && this.centerKey !== null && !this.sourceError && this.sourceBinding?.[3] === this.sourceEpoch ? this.sourcePages.state.result?.total ?? null : null; }
   private sourceEpoch = 0;

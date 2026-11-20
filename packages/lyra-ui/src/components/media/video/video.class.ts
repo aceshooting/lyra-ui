@@ -38,6 +38,7 @@ import { readResponseText, resolveOwnerFetchTarget } from '../../../internal/res
 import type { ThumbnailCue } from './video-thumbnails.js';
 import { styles } from './video.styles.js';
 import { repairControlFocusOnUpdate } from '../../../internal/control-focus-repair.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_avPlayerFailedToLoad, LYRA_DEFAULT_avPlayerPlaybackRate, LYRA_DEFAULT_avPlayerPosition, LYRA_DEFAULT_avPlayerRateOption, LYRA_DEFAULT_panoramaHotspotsLabel, LYRA_DEFAULT_panoramaInstructions, LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition, LYRA_DEFAULT_videoCaptions, LYRA_DEFAULT_videoCaptionsOff, LYRA_DEFAULT_videoEnterFullscreen, LYRA_DEFAULT_videoExitFullscreen, LYRA_DEFAULT_videoExitPictureInPicture, LYRA_DEFAULT_videoMute, LYRA_DEFAULT_videoPictureInPicture, LYRA_DEFAULT_videoPlayerLabel, LYRA_DEFAULT_videoTimeReadout, LYRA_DEFAULT_videoUnmute, LYRA_DEFAULT_videoVolume } from '../../../internal/default-strings/media.generated.js';
@@ -309,9 +310,9 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   /** Custom controls: none, standard, or standard plus rate and picture-in-picture. */
   @property({ reflect: true }) controls: LyraVideoControls = 'standard';
   /** Current playback position in seconds. Assignments are finite and clamped to duration. */
-  @property({ type: Number, attribute: 'currentTime' }) currentTime = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'currentTime' }) currentTime = 0;
   /** Current finite media duration. Read-only in normal use. */
-  @property({ type: Number }) duration = 0;
+  @property({ converter: blankNumberConverter(0) }) duration = 0;
   /** Icon library handed to every control fallback `<lr-icon>`. */
   @property({ attribute: 'icon-library' }) iconLibrary = 'system';
   /** Restarts playback when the video reaches its end. */
@@ -335,10 +336,10 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   /** Video title and accessible-name context. */
   @property() override title = '';
   /** Audio volume from zero to one. */
-  @property({ type: Number }) volume = 1;
+  @property({ converter: blankNumberConverter(1) }) volume = 1;
   /** Playback-rate multiplier for the native video, clamped to the native range; removing the
    *  attribute restores `1`. Native `ratechange` and `setPlaybackRate()` update it. */
-  @property({ type: Number, attribute: 'playback-rate' }) playbackRate = 1;
+  @property({ converter: blankNumberConverter(1), attribute: 'playback-rate' }) playbackRate = 1;
 
   @state() private posterVisible = true;
   /** The current source failed: rejected before load (unsafe or no allowlisted source) or a native error. */

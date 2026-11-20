@@ -60,7 +60,7 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
 
   /** Trailing-edge coalesce window, in ms, for `content` updates -- see the
    *  class doc. */
-  @property({ type: Number, attribute: 'coalesce-ms' }) coalesceMs = DEFAULT_COALESCE_MS;
+  @property({ converter: blankNumberConverter(DEFAULT_COALESCE_MS), attribute: 'coalesce-ms' }) coalesceMs = DEFAULT_COALESCE_MS;
 
   /** Rendering mode. `auto` uses `looksLikeMarkdown`; the other values force
    *  their named mode regardless of content. */
@@ -127,7 +127,7 @@ export abstract class StreamingTextRuntimeBase extends LyraElement<LyraStreaming
   // numeric-guard-exempt: forwarded verbatim, never used for math here -- the composed Markdown
   // element clamps it at its point of use (`finiteInteger(this.headingOffset, 0, 0, 6)` in
   // markdown-base.class.ts). A second guard here would duplicate that range and could diverge.
-  @property({ type: Number, attribute: 'heading-offset' }) headingOffset = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'heading-offset' }) headingOffset = 0;
 
   /** Forwarded verbatim to the composed Markdown element's own `withoutSyntaxHighlighting` --
    *  turns off fenced-code syntax highlighting. Unset (the default) matches the composed element's

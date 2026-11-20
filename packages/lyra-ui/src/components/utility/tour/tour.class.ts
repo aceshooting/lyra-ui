@@ -1,4 +1,4 @@
-import { declaredDefaultConverter } from '../../../internal/converters.js';
+import { declaredDefaultConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
 import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
 import { isCrossRealmPlainRecord } from '../../../internal/object-guards.js';
@@ -26,7 +26,7 @@ import {
 } from '../../../internal/anchored-overlay-runtime.js';
 import { resolveEffectivePositioningStrategy } from '../../../internal/positioning-strategy.js';
 import { rtlAwarePlacement } from '../../../internal/rtl.js';
-import { prefersReducedMotion } from '../../../internal/motion.js';
+import { motionScrollBehavior } from '../../../internal/motion.js';
 import { finiteInteger, finiteNumber, finiteRange } from '../../../internal/numbers.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
 import { shouldIgnoreActivationKey } from '../../../internal/list-navigation.js';
@@ -436,7 +436,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
    *  and, for a direct property/attribute assignment that bypasses that method (e.g. two-way
    *  binding an external store, or a bad `active-index` attribute), normalized the same way in
    *  `willUpdate()` below. */
-  @property({ type: Number, reflect: true, attribute: 'active-index' })
+  @property({ converter: blankNumberConverter(0), reflect: true, attribute: 'active-index' })
   get activeIndex(): number { return this._activeIndex; }
   set activeIndex(value: number) {
     const previous = this._activeIndex;
@@ -452,7 +452,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   /** Distance (px) between the target and the popover, passed straight to Floating UI's
    *  `offset()` middleware -- a tour-level-only setting, mirroring `lr-popover`'s `distance`
    *  prop exactly (can legitimately be negative for overlap). */
-  @property({ type: Number }) distance = DEFAULT_DISTANCE;
+  @property({ converter: blankNumberConverter(DEFAULT_DISTANCE) }) distance = DEFAULT_DISTANCE;
 
   /** Tour-level default extra space between a target's own box and the spotlight cutout/ring,
    *  overridable per step via `LyraTourStep.spotlightPadding`: a number of CSS pixels, or a CSS
@@ -781,11 +781,11 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
 
     if (options.scroll) {
       const ownerWindow = target.ownerDocument.defaultView;
-      const reducedMotion = !ownerWindow || prefersReducedMotion(this);
+      const behavior = ownerWindow ? motionScrollBehavior(this) : 'instant';
       target.scrollIntoView({
         block: 'center',
         inline: 'nearest',
-        behavior: reducedMotion ? 'auto' : 'smooth',
+        behavior,
       });
     }
 

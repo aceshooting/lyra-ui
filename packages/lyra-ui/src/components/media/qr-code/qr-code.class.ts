@@ -18,6 +18,7 @@ import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { loadQrCodeCached, type QrCodeApi } from './qr-code-loader.js';
 import { styles } from './qr-code.styles.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_qrCodeGenerationFailed, LYRA_DEFAULT_qrCodeMissingLibrary } from '../../../internal/default-strings/media.generated.js';
@@ -213,15 +214,15 @@ export class LyraQrCode extends LyraElement {
   @property({ attribute: 'image-background' }) imageBackground: string | null = null;
 
   /** Fraction of the QR canvas side available to the embedded image, clamped to `[0, 1]`. */
-  @property({ type: Number, attribute: 'image-coverage' }) imageCoverage: number | null = null;
+  @property({ converter: blankNumberConverter(null), attribute: 'image-coverage' }) imageCoverage: number | null = null;
 
   /** CSS-pixel padding inside the embedded image's coverage box, clamped to fit. */
-  @property({ type: Number, attribute: 'image-padding' }) imagePadding: number | null = null;
+  @property({ converter: blankNumberConverter(null), attribute: 'image-padding' }) imagePadding: number | null = null;
 
   private _size = DEFAULT_SIZE;
 
   /** CSS-px side length of the square canvas, clamped to `[1, 2048]`. */
-  @property({ type: Number })
+  @property({ converter: blankNumberConverter(DEFAULT_SIZE) })
   get size(): number {
     return this._size;
   }
@@ -236,7 +237,7 @@ export class LyraQrCode extends LyraElement {
 
   /** Per-module corner radius, as a fraction of one module's side length -- `0` (default) for
    *  square modules, `0.5` for fully round/pill modules. Clamped to `[0, 0.5]`. */
-  @property({ type: Number })
+  @property({ converter: blankNumberConverter(DEFAULT_RADIUS) })
   get radius(): number {
     return this._radius;
   }

@@ -33,7 +33,7 @@ import {
   type LyraSizeStep,
 } from '../../../internal/variants.js';
 import { styles } from './rating.styles.js';
-import { omittedEmptyStringConverter } from '../../../internal/converters.js';
+import { omittedEmptyStringConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import {
   installFormControlLabelSupport,
@@ -241,12 +241,12 @@ export class LyraRating extends LyraFormControlElement<LyraRatingEventMap> {
   // same tick, long before Lit's async update cycle would have run.
   static override properties = {
     customError: { attribute: 'custom-error', reflect: true, noAccessor: true },
-    value: { attribute: 'value', type: Number, noAccessor: true },
+    value: { attribute: 'value', converter: blankNumberConverter(0), noAccessor: true },
     defaultValue: {
       attribute: false,
       noAccessor: true,
     },
-    max: { type: Number, noAccessor: true },
+    max: { converter: blankNumberConverter(DEFAULT_MAX), noAccessor: true },
     name: {
       reflect: true,
       noAccessor: true,
@@ -257,7 +257,7 @@ export class LyraRating extends LyraFormControlElement<LyraRatingEventMap> {
   };
 
   /** Step between selectable values, such as `0.5` for half stars. Non-positive values fall back to `1`. */
-  @property({ type: Number }) precision = 1;
+  @property({ converter: blankNumberConverter(1) }) precision = 1;
   @property({ type: Boolean, reflect: true }) readonly = false;
   /** Accessible-name property override. A host `aria-label` attribute has higher priority, and an
    * explicitly empty host attribute is preserved instead of restoring a fallback name. */
@@ -287,7 +287,7 @@ export class LyraRating extends LyraFormControlElement<LyraRatingEventMap> {
    * supported JS property remains `defaultValue`; this accessor is not public API.
    * @internal
    * @default 0 */
-  @property({ attribute: 'default-value', type: Number })
+  @property({ attribute: 'default-value', converter: blankNumberConverter(0) })
   get defaultValueAlias(): number {
     return this.defaultValue;
   }

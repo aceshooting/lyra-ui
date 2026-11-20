@@ -22,6 +22,7 @@ import {
 } from '../../../internal/variants.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { formatFileSize } from '../../../internal/bytes.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_attachmentPreviewFile, LYRA_DEFAULT_attachmentPreviewName, LYRA_DEFAULT_attachmentRetryWithContext, LYRA_DEFAULT_attachmentUploadFailed, LYRA_DEFAULT_attachmentUploadingIndeterminate, LYRA_DEFAULT_attachmentUploadingProgress, LYRA_DEFAULT_attachmentUploadingWithContext } from '../../../internal/default-strings/media.generated.js';
@@ -210,7 +211,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
    *  rather than `size`, which in this library (this component included) names a size *tier*
    *  (`small`/`medium`/`large`, `xs`...`xl`). `0` is a known empty file and renders `0 B`; only
    *  omission means unknown. Non-finite/negative inputs are treated as unknown. */
-  @property({ type: Number })
+  @property({ converter: blankNumberConverter(undefined) })
   get bytes(): number | undefined {
     return this._bytes;
   }
@@ -252,7 +253,7 @@ export class LyraAttachmentChip extends LyraElement<LyraAttachmentChipEventMap> 
   /** Upload completion, 0-100. Only meaningful while `status="uploading"`;
    *  a value of 0 (the default), `NaN`, or negative falls back to the indeterminate spinner
    *  (see `hasNumericProgress`); an oversized value clamps to 100 (see `clampedProgress`). */
-  @property({ type: Number }) progress = 0;
+  @property({ converter: blankNumberConverter(0) }) progress = 0;
 
   /** Hides the remove (×) button, which otherwise renders. */
   @property({ type: Boolean, reflect: true, attribute: 'without-remove-button' })

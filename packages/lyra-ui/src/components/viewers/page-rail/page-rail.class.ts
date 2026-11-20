@@ -13,7 +13,7 @@ import { tag } from '../../../internal/prefix.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount, finiteInteger, finiteRange } from '../../../internal/numbers.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
-import { lengthOrNumberConverter } from '../../../internal/converters.js';
+import { lengthOrNumberConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraHighlight, LyraHighlightTone } from '../../../internal/document-anchors.js';
 import type {
@@ -138,9 +138,9 @@ export class LyraPageRail extends LyraElement<LyraPageRailEventMap> {
    *  `viewer`. */
   @property() for = '';
   /** Mediated-mode page count. Ignored while a viewer is wired (`viewer` or a resolved `for`). */
-  @property({ type: Number, attribute: 'page-count' }) pageCount = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'page-count' }) pageCount = 0;
   /** Current page: auto-tracked in wired mode, host-bound in mediated mode. */
-  @property({ type: Number, reflect: true }) page = 1;
+  @property({ converter: blankNumberConverter(1), reflect: true }) page = 1;
   private _highlights: readonly LyraHighlight[] = snapshotLyraHighlights([]);
   private _highlightsSource?: readonly LyraHighlight[];
   /** Per-page heat-marker highlights. IDs are trimmed and must be nonempty; the first record for

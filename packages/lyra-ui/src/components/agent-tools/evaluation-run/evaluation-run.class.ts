@@ -34,6 +34,7 @@ import {
 import { agentStatusText } from '../../../internal/agent-status-text.js';
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_evaluationRunDetailsLoadError, LYRA_DEFAULT_evaluationRunExampleCancelledAnnounce, LYRA_DEFAULT_evaluationRunExampleCompletedAnnounce, LYRA_DEFAULT_evaluationRunExampleFailedAnnounce, LYRA_DEFAULT_evaluationRunExampleLabel, LYRA_DEFAULT_evaluationRunExampleLimit, LYRA_DEFAULT_evaluationRunExampleStartedAnnounce, LYRA_DEFAULT_evaluationRunExampleWaitingApprovalAnnounce, LYRA_DEFAULT_evaluationRunExampleWaitingInputAnnounce, LYRA_DEFAULT_evaluationRunFailedCount, LYRA_DEFAULT_evaluationRunGroundingHeading, LYRA_DEFAULT_evaluationRunInputHeading, LYRA_DEFAULT_evaluationRunLabel, LYRA_DEFAULT_evaluationRunOutputHeading, LYRA_DEFAULT_evaluationRunProgressLabel, LYRA_DEFAULT_evaluationRunProgressSummary, LYRA_DEFAULT_evaluationRunRunningCount, LYRA_DEFAULT_evaluationRunToolTraceHeading, LYRA_DEFAULT_taskListStepIncompleteAnnounce } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -286,7 +287,7 @@ export class LyraEvalRun extends LyraElement<LyraEvalRunEventMap> {
    *  explicitly while a batch is still streaming in and the eventual total is already known ahead
    *  of every example actually completing. An explicit value below the current observed count is
    *  raised to `examples.length`, so progress never reports an impossible total. */
-  @property({ type: Number }) total: number | null = null;
+  @property({ converter: blankNumberConverter(null) }) total: number | null = null;
 
   /** Header label and accessible-name source. Omission localizes "Evaluation run"; any supplied
    *  string, including `''`, is rendered verbatim. */

@@ -7,7 +7,7 @@ import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { isNonBlankIdentity } from '../retrieval-identity.js';
 import { srOnly } from '../../../internal/a11y.js';
-import { prefersReducedMotion } from '../../../internal/motion.js';
+import { motionScrollBehavior } from '../../../internal/motion.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import type { LyraEntity } from '../entity-card/entity-card.class.js';
 import '../../layout/scroller/scroller.class.js';
@@ -195,9 +195,9 @@ export class LyraPathStrip extends LyraElement<LyraPathStripEventMap> {
       el?.focus();
       if (el) {
         const ownerWindow = el.ownerDocument.defaultView;
-        const reducedMotion = !ownerWindow || prefersReducedMotion(this);
+        const behavior = ownerWindow ? motionScrollBehavior(this) : 'instant';
         el.scrollIntoView({
-          behavior: reducedMotion ? 'auto' : 'smooth',
+          behavior,
           inline: 'nearest',
           block: 'nearest',
         });

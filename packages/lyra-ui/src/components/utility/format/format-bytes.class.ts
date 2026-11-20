@@ -5,6 +5,7 @@ import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteNumber } from '../../../internal/numbers.js';
 import { styles } from './format.styles.js';
 import { byteFormat, formatByteAmount, type LyraFormatBytesUnit, type LyraFormatDisplay } from './format-options.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 
 export type { LyraFormatBytesUnit, LyraFormatDisplay } from './format-options.js';
 
@@ -25,15 +26,15 @@ const DEFAULT_DECIMALS = 1;
 export class LyraFormatBytes extends LyraElement {
   static override styles = [LyraElement.styles, styles];
   /** Size to format, in `unit`s (bytes by default). A non-finite value renders the default slot instead. */
-  @property({ type: Number }) value = 0;
+  @property({ converter: blankNumberConverter(0) }) value = 0;
   /** Unit family of `value`: `'byte'` (default) or `'bit'`. */
   @property() unit: LyraFormatBytesUnit = 'byte';
   /** Unit label style passed to `Intl.NumberFormat` as `unitDisplay`: `'short'` (default), `'long'` or `'narrow'`. */
   @property() display: LyraFormatDisplay = 'short';
   /** Size of each step in the unit ladder (attribute `unit-step`): `1000` (default) for decimal units, `1024` for binary steps. */
-  @property({ type: Number, attribute: 'unit-step' }) unitStep = DEFAULT_UNIT_STEP;
+  @property({ converter: blankNumberConverter(DEFAULT_UNIT_STEP), attribute: 'unit-step' }) unitStep = DEFAULT_UNIT_STEP;
   /** Maximum number of fraction digits shown, clamped to 0-10. Defaults to `1`. */
-  @property({ type: Number }) decimals = DEFAULT_DECIMALS;
+  @property({ converter: blankNumberConverter(DEFAULT_DECIMALS) }) decimals = DEFAULT_DECIMALS;
 
   override render(): TemplateResult {
     // NaN/Infinity (a malformed attribute or an invalid programmatic value) render the fallback.

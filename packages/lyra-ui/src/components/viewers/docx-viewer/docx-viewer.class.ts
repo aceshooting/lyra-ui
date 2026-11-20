@@ -10,7 +10,7 @@ import {
   LyraUserFacingError,
 } from '../../../internal/resource-loader.js';
 import { scrollToHeadingAnchor, scrollToResolvedRange } from '../../../internal/heading-anchor.js';
-import { prefersReducedMotion } from '../../../internal/motion.js';
+import { motionScrollBehavior } from '../../../internal/motion.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import {
   getOwnDataDescriptor,
@@ -757,7 +757,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
 
   private scrollToActiveSearchMatch(): void {
     const active = this.renderRoot.querySelector('mark[part~="search-match-active"]') as HTMLElement | null;
-    if (active) revealInOwnScroller(active, 'center', prefersReducedMotion(this) ? 'auto' : 'smooth');
+    if (active) revealInOwnScroller(active, 'center', motionScrollBehavior(this));
   }
 
   private clearSearchPaint(): void {

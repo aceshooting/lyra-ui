@@ -244,7 +244,7 @@ it('uses the adopted owner window reduced-motion preference when revealing a rov
     );
     await el.updateComplete;
 
-    expect(behavior).to.equal('auto');
+    expect(behavior).to.equal('instant');
   } finally {
     el.remove();
     window.matchMedia = originalTopMatchMedia;

@@ -25,6 +25,8 @@ it("restores declared defaults from removal without suppressing initial reflecti
   const numberDefault = declaredDefaultConverter(6);
   expect(numberDefault.fromAttribute?.(null, undefined)).to.equal(6);
   expect(numberDefault.fromAttribute?.("8", undefined)).to.equal(8);
+  expect(['', '  '].map((value) => numberDefault.fromAttribute?.(value, undefined))).to.deep.equal([6, 6]);
+  expect(stringDefault.fromAttribute?.('', undefined)).to.equal('');
   expect(numberDefault.toAttribute?.(6, undefined)).to.equal(6);
 });
 
@@ -152,5 +154,6 @@ describe('blankNumberConverter', () => {
     const parse = converter.fromAttribute!;
     expect([null, '', '  ', '2', ' 0 ', 'x'].map((value) => parse(value, Number))).to.deep.equal([4, 4, 4, 2, 0, NaN]);
     expect(blankNumberConverter(null).fromAttribute!('', Number)).to.equal(null);
+    expect(blankNumberConverter(undefined).fromAttribute!(' ', Number)).to.equal(undefined);
   });
 });

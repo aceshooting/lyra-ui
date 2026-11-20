@@ -12,6 +12,7 @@ import { safeDownloadHref } from '../../../internal/safe-url.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { styles } from './zoomable-frame.styles.js';
 import { repairControlFocusOnUpdate } from '../../../internal/control-focus-repair.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_zoomControls, LYRA_DEFAULT_zoomableFrameLabel } from '../../../internal/default-strings/media.generated.js';
@@ -282,7 +283,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
    * narrowed to scripts in a unique origin. */
   @property() sandbox = DEFAULT_IFRAME_SANDBOX;
   /** Current iframe scale. Programmatic values need not appear in `zoomLevels`. */
-  @property({ type: Number, reflect: true }) zoom = 1;
+  @property({ converter: blankNumberConverter(1), reflect: true }) zoom = 1;
   private pendingZoomChange?: number;
   /** Space-separated decimal and percentage stops used only by `zoomIn()`/`zoomOut()`. The
    * normalized projection reads at most 16,384 UTF-16 code units and 256 whitespace-delimited

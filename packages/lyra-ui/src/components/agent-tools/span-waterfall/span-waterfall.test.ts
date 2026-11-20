@@ -428,7 +428,7 @@ describe('lr-span-waterfall', () => {
       }) as typeof bar.scrollIntoView;
       el.activeSpanId = specialId;
       await el.updateComplete;
-      expect(behavior).to.equal('auto');
+      expect(behavior).to.equal('instant');
 
       const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
       base.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, composed: true }));
@@ -441,7 +441,7 @@ describe('lr-span-waterfall', () => {
       behavior = undefined;
       el.activeSpanId = specialId;
       await el.updateComplete;
-      expect(behavior).to.equal('auto');
+      expect(behavior).to.equal('instant');
     } finally {
       el.remove();
       window.matchMedia = originalTopMatchMedia;

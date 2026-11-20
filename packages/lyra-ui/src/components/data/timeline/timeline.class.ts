@@ -11,7 +11,7 @@ import {
 } from '../../../internal/focus-navigation.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { literalSetConverter } from '../../../internal/converters.js';
+import { literalSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { tag } from '../../../internal/prefix.js';
 import {
   observeScrollOverflow,
@@ -284,7 +284,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
 
   /** The number of the first step while `ordered` is set, like a native `<ol start>`. A
    *  non-finite value numbers from 1; fractions truncate. Ignored unless `ordered`. */
-  @property({ type: Number }) start = 1;
+  @property({ converter: blankNumberConverter(1) }) start = 1;
 
   /** Pins the axis start instead of deriving it from the earliest item. Ignored unless
    *  `scale="time"`; a non-finite or reversed pair falls back to the derived range. */

@@ -17,6 +17,7 @@ import {
   resolveNamedEasing,
   type LyraMirrorAnimationName,
 } from './animation-catalog.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 
 export {
   animations,
@@ -321,23 +322,23 @@ export class LyraAnimation extends LyraElement<LyraAnimationEventMap> {
   /** Plays the animation while true; reflects to the `play` attribute and resets to false when it finishes or is canceled. */
   @property({ type: Boolean, reflect: true }) play = false;
   /** Milliseconds to wait before playback starts (default 0); may be negative. */
-  @property({ type: Number }) delay = 0;
+  @property({ converter: blankNumberConverter(0) }) delay = 0;
   /** Web Animations playback direction (`normal`, `reverse`, `alternate` or `alternate-reverse`); other values read as `normal`. */
   @property() direction: PlaybackDirection = 'normal';
   /** Duration of one iteration in milliseconds (default 1000); ignored while `timingPreset` is not `custom`. */
-  @property({ type: Number }) duration = 1000;
+  @property({ converter: blankNumberConverter(1000) }) duration = 1000;
   /** CSS easing function for each iteration (default `linear`); an unsupported value falls back to `linear`. Ignored while `timingPreset` is not `custom`. */
   @property() easing = 'linear';
   /** Milliseconds to wait after the last iteration before the animation ends (default 0). */
-  @property({ type: Number, attribute: 'end-delay' }) endDelay = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'end-delay' }) endDelay = 0;
   /** Web Animations fill mode (`none`, `forwards`, `backwards`, `both` or `auto`); other values read as `auto`. */
   @property() fill: FillMode = 'auto';
   /** Number of times the animation repeats (default `Infinity`); an invalid or negative value reads as 1. */
-  @property({ type: Number }) iterations: number = Infinity;
+  @property({ converter: blankNumberConverter(Infinity) }) iterations: number = Infinity;
   /** Iteration offset at which playback begins (default 0); non-negative. */
-  @property({ type: Number, attribute: 'iteration-start' }) iterationStart = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'iteration-start' }) iterationStart = 0;
   /** Playback speed multiplier (default 1); a non-finite value reads as 1. */
-  @property({ type: Number, attribute: 'playback-rate' }) playbackRate = 1;
+  @property({ converter: blankNumberConverter(1), attribute: 'playback-rate' }) playbackRate = 1;
   /** Takes `duration` and `easing` from the `--lr-transition-fast`, `-base` or `-ambient` token (`fast`, `base`, `ambient`); `custom` (default) uses the `duration` and `easing` properties. */
   @property({ attribute: 'timing-preset', reflect: true })
   timingPreset: LyraAnimationTimingPreset = 'custom';

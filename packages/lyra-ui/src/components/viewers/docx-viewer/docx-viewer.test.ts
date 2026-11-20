@@ -949,7 +949,7 @@ describe('scrollToAnchor (fragment)', () => {
     try {
       ownerDocument.adoptNode(el);
       expect(await el.scrollToAnchor({ kind: 'fragment', id: specialId })).to.be.true;
-      expect(behavior).to.equal('auto');
+      expect(behavior).to.equal('instant');
     } finally {
       el.remove();
       window.CSS.escape = originalParentEscape;
@@ -2024,7 +2024,7 @@ describe('search', () => {
     const { el, restore } = await loadWithMarkup('<p>The cat sat.</p>');
     try {
       expect(await el.search('cat')).to.equal(1);
-      expect(behavior).to.equal('auto');
+      expect(behavior).to.equal('instant');
     } finally {
       restore();
       window.matchMedia = originalMatchMedia;

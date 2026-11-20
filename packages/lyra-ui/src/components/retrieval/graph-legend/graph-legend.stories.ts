@@ -112,3 +112,19 @@ export const Narrow: Story = {
     ></lr-graph-legend>
   </div>`,
 };
+
+export const RenderLimit: Story = {
+  name: 'Render limit (first 200 types)',
+  parameters: {
+    docs: {
+      description: {
+        story: 'Only the first 200 valid types render as rows; `[part="limit"]` notes the rest.',
+      },
+    },
+  },
+  render: () => html`<div style="max-height: 20rem; overflow: auto;">
+    <lr-graph-legend
+      .types=${Array.from({ length: 205 }, (_, index): LyraNodeTypeStyle => ({ id: `type-${index}`, label: `Type ${index + 1}` }))}
+    ></lr-graph-legend>
+  </div>`,
+};

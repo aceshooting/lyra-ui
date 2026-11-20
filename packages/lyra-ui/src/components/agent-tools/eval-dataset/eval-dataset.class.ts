@@ -14,7 +14,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { getCollator, getListFormat, getNumberFormat, resolveIntlLocale } from '../../../internal/intl-cache.js';
-import { trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
+import { trueDefaultSpellcheckConverter as spellcheckConverter, blankNumberConverter } from '../../../internal/converters.js';
 import type { LyraTableEventMap, TableColumn } from '../../data/table/table.class.js';
 import type { ChipSelectDetail } from '../../overlays/chip/chip.class.js';
 import type { LyraFileInputEventMap } from '../../media/file-input/file-input.class.js';
@@ -305,9 +305,9 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
     this.requestUpdate('dataSource', previous);
   }
   /** Zero-based provider page; legacy table paging is unchanged. */
-  @property({ type: Number, attribute: 'source-page' }) sourcePage = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'source-page' }) sourcePage = 0;
   /** Provider rows per page, normalized to 1..500. */
-  @property({ type: Number, attribute: 'source-page-size' }) sourcePageSize = 100;
+  @property({ converter: blankNumberConverter(100), attribute: 'source-page-size' }) sourcePageSize = 100;
   /** Exact current-query total, or null while pending, invalid or outside provider mode. */
   get sourceTotal(): number | null { return this.dataSource === undefined ? null : this.sourcePages.state.result?.total ?? null; }
   private get sourceMode(): boolean { return this.dataSource !== undefined; }

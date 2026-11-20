@@ -16,6 +16,7 @@ import { composedContains, deepActiveElement } from '../../../internal/overlay-m
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import {
   optionalLiteralSetConverter,
+  blankNumberConverter,
 } from '../../../internal/converters.js';
 import {
   writeOptionalSize,
@@ -256,7 +257,7 @@ export class LyraAlert extends LyraElement<LyraAlertEventMap> {
 
   /** Milliseconds before automatic dismissal; `Infinity` disables automatic dismissal.
    * Removing the attribute restores persistence. A hidden document pauses the countdown. */
-  @property({ type: Number, useDefault: true }) duration: number = Infinity;
+  @property({ converter: blankNumberConverter(Infinity), useDefault: true }) duration: number = Infinity;
 
   private _variant: AlertVariant = 'primary';
 

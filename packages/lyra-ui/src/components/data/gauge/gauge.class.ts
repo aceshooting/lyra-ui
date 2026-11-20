@@ -16,6 +16,7 @@ import { finiteNumber, finiteRatio } from '../../../internal/numbers.js';
 import { isSafeNonArrayObject } from '../../../internal/object-guards.js';
 import type { LyraProgressVariant } from '../../overlays/progress/progress-bar.class.js';
 import { styles } from './gauge.styles.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_gaugeLabel, LYRA_DEFAULT_gaugeValueLabel } from '../../../internal/default-strings/data.generated.js';
@@ -138,11 +139,11 @@ export class LyraGauge extends LyraElement {
   }
 
   /** The measured value, clamped to the range for the visual fill. */
-  @property({ type: Number }) value = 0;
+  @property({ converter: blankNumberConverter(0) }) value = 0;
   /** Inclusive lower bound of the measured range. */
-  @property({ type: Number }) min = 0;
+  @property({ converter: blankNumberConverter(0) }) min = 0;
   /** Inclusive upper bound of the measured range. */
-  @property({ type: Number }) max = 100;
+  @property({ converter: blankNumberConverter(100) }) max = 100;
   /** Visual geometry. Named `shape` because this Lyra-original component is not a native input. */
   @property({ reflect: true }) shape: GaugeShape = 'radial';
   private _size?: LyraSize;

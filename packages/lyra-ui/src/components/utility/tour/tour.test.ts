@@ -1599,7 +1599,7 @@ describe('lr-tour', () => {
       await tour.updateComplete;
 
       expect(tour.shadowRoot!.querySelector('[part="popover"]')!.hasAttribute('data-unanchored')).to.be.false;
-      expect(behavior).to.equal('auto');
+      expect(behavior).to.equal('instant');
     } finally {
       if (tour.open) {
         tour.end('api');

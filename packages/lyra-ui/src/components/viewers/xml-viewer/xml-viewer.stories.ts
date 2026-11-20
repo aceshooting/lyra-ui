@@ -210,3 +210,18 @@ export const MillionDeepSource: Story = {
   render: () => html`<div style="max-width: 320px"><lr-xml-viewer .treeSource=${millionInspectionSource(true)} max-height="16rem" aria-label="Deep XML hierarchy"></lr-xml-viewer>
     <button @click=${(event: Event) => void (event.currentTarget as HTMLElement).parentElement!.querySelector<LyraXmlViewer>('lr-xml-viewer')!.revealSourceKey('n999999')}>Deepest node</button></div>`,
 };
+
+export const AttributeLimit: Story = {
+  name: 'Attribute limit (first 256 per element)',
+  parameters: {
+    docs: {
+      description: {
+        story: 'Each element row renders at most 256 attributes; `[part="attribute-more"]` shows a `+N` count for the rest.',
+      },
+    },
+  },
+  render: () => html`<lr-xml-viewer
+    name="wide.xml"
+    .xml=${`<record ${Array.from({ length: 264 }, (_, index) => `field${index + 1}="${index + 1}"`).join(' ')}><child/></record>`}
+  ></lr-xml-viewer>`,
+};

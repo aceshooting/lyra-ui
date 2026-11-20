@@ -411,7 +411,7 @@ describe("owner-realm line interactions", () => {
       expect(
         await scrollCodeBlockToAnchor(host, { kind: "line-range", start: 1 })
       ).to.be.true;
-      expect(readBehavior()).to.equal("auto");
+      expect(readBehavior()).to.equal("instant");
     } finally {
       window.matchMedia = originalTopMatchMedia;
       ownerWindow.matchMedia = originalOwnerMatchMedia;
@@ -430,7 +430,7 @@ describe("owner-realm line interactions", () => {
       expect(
         await scrollCodeBlockToAnchor(host, { kind: "line-range", start: 1 })
       ).to.be.true;
-      expect(readBehavior()).to.equal("auto");
+      expect(readBehavior()).to.equal("instant");
     } finally {
       window.matchMedia = originalMatchMedia;
     }

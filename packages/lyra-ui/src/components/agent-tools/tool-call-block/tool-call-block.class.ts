@@ -4,7 +4,7 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { guard } from 'lit/directives/guard.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { literalSetConverter } from '../../../internal/converters.js';
+import { literalSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { formatShortDuration, safeDurationMs } from '../../../internal/duration.js';
@@ -218,7 +218,7 @@ export class LyraToolCallBlock extends LyraElement<LyraToolCallBlockEventMap> {
 
   /** How long the call took, in milliseconds. Hidden unless finite; negative values clamp to 0. */
   // numeric-guard-exempt: safeDurationMs() in internal/duration.ts rejects non-finite values and clamps negatives.
-  @property({ type: Number, attribute: 'duration-ms' }) durationMs?: number;
+  @property({ converter: blankNumberConverter(undefined), attribute: 'duration-ms' }) durationMs?: number;
 
   /** Call arguments. Opaque; the block keeps the identity and reads it only while expanded. */
   @property({ attribute: false }) args: unknown;

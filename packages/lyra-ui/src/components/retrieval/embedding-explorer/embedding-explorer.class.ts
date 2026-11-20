@@ -34,6 +34,7 @@ import { specialistTokens } from '../../../internal/specialist-host-tokens.style
 import { styles } from './embedding-explorer.styles.js';
 import { repairUnavailableControlFocus } from '../../../internal/focus-navigation.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_embeddingExplorerEmpty, LYRA_DEFAULT_embeddingExplorerLabel, LYRA_DEFAULT_embeddingExplorerPoint, LYRA_DEFAULT_embeddingExplorerPointLimit, LYRA_DEFAULT_embeddingExplorerSpatialBin, LYRA_DEFAULT_embeddingExplorerSpatialBounds, LYRA_DEFAULT_embeddingExplorerSpatialError, LYRA_DEFAULT_embeddingExplorerSpatialLoading, LYRA_DEFAULT_embeddingExplorerSpatialSummary } from '../../../internal/default-strings/retrieval.generated.js';
@@ -482,7 +483,7 @@ export class LyraEmbeddingExplorer extends LyraElement<LyraEmbeddingExplorerEven
   }
   /** Maximum evenly sampled points, from 1 to 10,000; invalid values use 1,000.
    *  The selected point is additionally retained when outside the sample. */
-  @property({ type: Number, attribute: 'max-rendered-points' }) maxRenderedPoints = 1000;
+  @property({ converter: blankNumberConverter(1000), attribute: 'max-rendered-points' }) maxRenderedPoints = 1000;
   /** The selected point id. Controlled by the host. */
   @property({ attribute: 'selected-point-id' }) selectedPointId = '';
   /**

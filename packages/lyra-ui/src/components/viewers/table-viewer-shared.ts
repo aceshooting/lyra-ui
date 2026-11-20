@@ -13,7 +13,7 @@ import { resolveCssTokenLength } from '../../internal/css-token-length.js';
 import { html, nothing, type ReactiveController, type PropertyValues, type ReactiveControllerHost, type TemplateResult } from 'lit';
 import { parseCellRange, type ParsedCellRange } from '../../internal/cell-range.js';
 import { prioritizedHighlightCandidates } from '../../internal/anchor-target-base.js';
-import { prefersReducedMotion } from '../../internal/motion.js';
+import { motionScrollBehavior } from '../../internal/motion.js';
 import { OwnerAnimationFrameWaiter } from '../../internal/owner-animation-frame.js';
 import type { LyraSearchChangeDetail } from '../../internal/text-viewer-target.js';
 import { ViewerSearchState } from '../../internal/viewer-search.js';
@@ -96,7 +96,7 @@ export class TableViewerScrollController {
   }
 
   reveal(target: HTMLElement | undefined): void {
-    if (target) revealInOwnScroller(target, 'nearest', prefersReducedMotion(this.host) ? 'auto' : 'smooth');
+    if (target) revealInOwnScroller(target, 'nearest', motionScrollBehavior(this.host));
   }
 }
 
@@ -787,7 +787,7 @@ export class TableViewerSourceController implements ReactiveController {
     const slot = this.slots.find(value => index >= value.row && index < value.row + value.rows && value.state === 'ready');
     const rawRow = index + 1 + Number(this.hooks.header());
     const highlights = this.chrome.highlightsForRow(rawRow, this.hooks.workbook ? this.sheet?.name : undefined);
-    return html`<div part="data-row" role="presentation" aria-busy=${slot ? 'false' : 'true'} style=${`${style};height:${height}px;overflow:hidden`}>
+    return html`<div part="data-row" role="presentation" style=${`${style};height:${height}px;overflow:hidden`}>
       ${this.windowColumns.map((column, position) => this.chrome.renderCell(slot?.values?.[index - slot.row]?.[position] ?? '', column, highlights,
         'cell', 'cell', this.hooks.colorVar, this.hooks.activeHighlight(), this.columns))}
     </div>`;

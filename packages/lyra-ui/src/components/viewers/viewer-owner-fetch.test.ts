@@ -274,7 +274,7 @@ it('uses an adopted document preview owner realm for reduced-motion scrolling', 
   try {
     iframe.contentDocument!.adoptNode(element);
     expect(await element.scrollToAnchor(specialId)).to.equal(true);
-    expect(behavior).to.equal('auto');
+    expect(behavior).to.equal('instant');
     expect(parentQueries).to.equal(0);
     expect(ownerQueries).to.equal(1);
   } finally {
@@ -336,7 +336,7 @@ it('uses an adopted SVG viewer owner realm for reduced-motion scrolling', async 
       element as unknown as { applyAnchor: (anchor: { kind: 'region'; rect: { x: number; y: number; width: number; height: number } }) => Promise<boolean> }
     ).applyAnchor(element.highlights[0]!.anchor as { kind: 'region'; rect: { x: number; y: number; width: number; height: number } });
     expect(found).to.equal(true);
-    expect(behavior).to.equal('auto');
+    expect(behavior).to.equal('instant');
     expect(parentQueries).to.equal(0);
     expect(ownerQueries).to.equal(1);
   } finally {

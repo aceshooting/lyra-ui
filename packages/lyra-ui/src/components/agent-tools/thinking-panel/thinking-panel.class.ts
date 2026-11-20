@@ -8,7 +8,7 @@ import type { LyraTranscriptMode } from '../../../internal/shared-unions.js';
 import { nextId } from '../../../internal/a11y.js';
 import { chevronIcon } from '../../../internal/icons.js';
 import { formatShortDuration, safeDurationMs } from '../../../internal/duration.js';
-import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { literalSetConverter, trueDefaultBooleanConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { OwnedMutationObserver } from '../../../internal/owned-observer.js';
 import { repairComposedFocus } from '../../../internal/focus-navigation.js';
 import { styles } from './thinking-panel.styles.js';
@@ -228,7 +228,7 @@ export class LyraThinkingPanel extends LyraElement<LyraThinkingPanelEventMap> {
    *  entirely (nothing rendered in `'post-hoc'`, a pulsing placeholder in
    *  `'live'`) while unset. */
   // numeric-guard-exempt: safeDurationMs() in internal/duration.ts rejects non-finite values and clamps negatives.
-  @property({ type: Number, attribute: 'duration-ms' }) durationMs?: number;
+  @property({ converter: blankNumberConverter(undefined), attribute: 'duration-ms' }) durationMs?: number;
 
   private readonly bodyId = nextId('thinking-panel-body');
 

@@ -37,7 +37,7 @@ describe('chat viewport composed and directional boundaries', () => {
       scroll.scrollTo = ((options: ScrollToOptions) => { behaviors.push(options.behavior); }) as typeof scroll.scrollTo;
       try {
         expect(viewport.scrollToUnread({ behavior: 'smooth' })).to.equal(true);
-        expect(behaviors.at(-1)).to.equal('auto');
+        expect(behaviors.at(-1)).to.equal('instant');
       } finally {
         scroll.scrollTo = originalScrollTo;
       }

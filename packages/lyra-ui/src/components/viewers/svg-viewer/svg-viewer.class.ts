@@ -16,7 +16,7 @@ import {
 } from '../../../internal/anchor-target-base.js';
 import { LyraUserFacingError } from '../../../internal/resource-loader.js';
 import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
-import { prefersReducedMotion } from '../../../internal/motion.js';
+import { motionScrollBehavior } from '../../../internal/motion.js';
 import { loadDompurify } from '../../../internal/dompurify-loader.js';
 import { styles } from './svg-viewer.styles.js';
 import type { LyraAnchor, LyraAnchorKind, LyraHighlight } from '../../../internal/document-anchors.js';
@@ -382,8 +382,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     const region = [...this.renderRoot.querySelectorAll('[part~="region-highlight"][data-id]')]
       .find((candidate) => candidate.getAttribute('data-id') === highlight.id);
     if (!region) return false;
-    const behavior = prefersReducedMotion(this) ? 'auto' : 'smooth';
-    revealInOwnScroller(region, 'nearest', behavior);
+    revealInOwnScroller(region, 'nearest', motionScrollBehavior(this));
     return true;
   }
 

@@ -8,6 +8,7 @@ import { SlotPresenceController } from '../../../internal/slot-presence-controll
 import { finiteInteger } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './citation-badge.styles.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_citation, LYRA_DEFAULT_citationHighConfidence, LYRA_DEFAULT_citationLowConfidence, LYRA_DEFAULT_citationMediumConfidence, LYRA_DEFAULT_citationUnverified, LYRA_DEFAULT_citationVerified, LYRA_DEFAULT_citationWithCustomLabel, LYRA_DEFAULT_citationWithStatus } from '../../../internal/default-strings/retrieval.generated.js';
@@ -165,7 +166,7 @@ export class LyraCitationBadge extends LyraElement<LyraCitationBadgeEventMap> {
    *  feeds `lr-citation-activate`/`lr-citation-open`'s `detail.index`), so a NaN/non-integer
    *  value would be a real user-facing rendering bug — clamped to a finite, 1-indexed integer
    *  (citation numbers are conventionally 1-indexed, matching this property's own default). */
-  @property({ type: Number })
+  @property({ converter: blankNumberConverter(1) })
   get index(): number {
     return this._index;
   }

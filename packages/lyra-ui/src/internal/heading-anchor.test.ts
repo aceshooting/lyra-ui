@@ -55,18 +55,18 @@ describe('scrollToHeadingAnchor', () => {
   it('animates only when motion is allowed and the document has a window', () => {
     const root = content('<h2 id="moving" data-name="moving">Moving</h2>');
     const calls = scrollSpy(root);
-    const expected = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+    const expected = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth';
     expect(anchorScrollBehavior(root)).to.equal(expected);
     scrollToHeadingAnchor(root, outline('moving'), 'moving');
     root.setAttribute('data-lr-motion', 'reduce');
     scrollToHeadingAnchor(root, outline('moving'), 'moving');
-    expect(calls.map(([, options]) => options.behavior)).to.deep.equal([expected, 'auto']);
+    expect(calls.map(([, options]) => options.behavior)).to.deep.equal([expected, 'instant']);
 
     const detached = document.implementation.createHTMLDocument('detached');
     const windowless = content('<h2 id="still">Still</h2>', detached);
     const still = scrollSpy(windowless);
     expect(scrollToHeadingAnchor(windowless, outline('still'), 'still')).to.equal(true);
-    expect(still.map(([, options]) => options.behavior)).to.deep.equal(['auto']);
+    expect(still.map(([, options]) => options.behavior)).to.deep.equal(['instant']);
   });
 });
 

@@ -12,6 +12,7 @@ import {
 } from '../../../internal/focus-navigation.js';
 import { composedContains } from '../../../internal/overlay-manager.js';
 import { styles } from './chip-group.styles.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMoreCollapsed, LYRA_DEFAULT_showMoreOverflowLabel } from '../../../internal/default-strings/shared.generated.js';
@@ -108,7 +109,7 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
    *  value is sanitized to a finite, non-negative integer via `finiteCount` — this feeds the
    *  `hasOverflow`/`syncChildVisibility` index comparisons below directly, so a NaN/negative value
    *  must never reach them. */
-  @property({ type: Number, attribute: 'max-visible' })
+  @property({ converter: blankNumberConverter(undefined), attribute: 'max-visible' })
   get maxVisible(): number | undefined {
     return this._maxVisible;
   }

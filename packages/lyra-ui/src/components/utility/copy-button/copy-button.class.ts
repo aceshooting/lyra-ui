@@ -29,6 +29,7 @@ import type { LyraIconButton } from '../../forms/icon-button/icon-button.class.j
 import { styles } from './copy-button.styles.js';
 import { COPY_FEEDBACK_MS } from '../../../internal/copy-feedback.js';
 import { leaseTabIndex } from '../../../internal/tab-index-lease.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed } from '../../../internal/default-strings/shared.generated.js';
@@ -221,7 +222,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
   }
 
   /** How long, in milliseconds, the copied confirmation or failure state remains visible. */
-  @property({ type: Number, attribute: 'feedback-duration' }) feedbackDuration: number = DEFAULT_FEEDBACK_DURATION;
+  @property({ converter: blankNumberConverter(DEFAULT_FEEDBACK_DURATION), attribute: 'feedback-duration' }) feedbackDuration: number = DEFAULT_FEEDBACK_DURATION;
 
   @state() private status: CopyStatus = 'rest';
   /** Handle on the shared light-DOM live region outcomes actually announce through -- a region

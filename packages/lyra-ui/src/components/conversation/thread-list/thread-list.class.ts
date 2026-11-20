@@ -54,6 +54,7 @@ import {
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import type { LyraChatThread, ThreadBucketKey, ThreadListGrouping } from './thread-list-types.js';
 import { loadLazyChildren } from '../../../internal/lazy-children.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_archiveConversation, LYRA_DEFAULT_conversationActionWithTitle, LYRA_DEFAULT_deleteConversation, LYRA_DEFAULT_pinConversation, LYRA_DEFAULT_searchThreads, LYRA_DEFAULT_threadGroupArchived, LYRA_DEFAULT_threadGroupPinned, LYRA_DEFAULT_threadGroupPrevious30Days, LYRA_DEFAULT_threadGroupPrevious7Days, LYRA_DEFAULT_threadGroupToday, LYRA_DEFAULT_threadGroupYesterday, LYRA_DEFAULT_threadListEmpty, LYRA_DEFAULT_threadListInputLimit, LYRA_DEFAULT_threadListLabel, LYRA_DEFAULT_threadListMatchAnnounce, LYRA_DEFAULT_unarchiveConversation, LYRA_DEFAULT_unpinConversation } from '../../../internal/default-strings/conversation.generated.js';
@@ -432,9 +433,9 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     this.requestUpdate('dataSource', previous);
   }
   /** Zero-based source record page. Collapsing groups preserves this page and its record positions. */
-  @property({ type: Number, attribute: 'source-page' }) sourcePage = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'source-page' }) sourcePage = 0;
   /** Source records per page, normalized to 1..500. Size changes reset page 0. */
-  @property({ type: Number, attribute: 'source-page-size' }) sourcePageSize = 100;
+  @property({ converter: blankNumberConverter(100), attribute: 'source-page-size' }) sourcePageSize = 100;
   /** Exact current-query record count before group collapse, or null before success/without a source. */
   get sourceTotal(): number | null { return this.sourceMode ? this.sourcePages.state.result?.total ?? null : null; }
   private get sourceMode(): boolean { return this.dataSource !== undefined; }

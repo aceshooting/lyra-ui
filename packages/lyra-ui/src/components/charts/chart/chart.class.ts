@@ -144,6 +144,7 @@ export type {
 } from './chart-types.js';
 import { isRepeatedActivationKey } from '../../../internal/list-navigation.js';
 import { chartKeyboardStep, spatialBinAt, spatialKeyboardItems } from './chart-spatial-model.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chartAnnotationsUnavailable, LYRA_DEFAULT_chartAxisTotal, LYRA_DEFAULT_chartBubblePointCoordinates, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartDataLabelsUnavailable, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartInputLimit, LYRA_DEFAULT_chartLabeledPoint, LYRA_DEFAULT_chartLegend, LYRA_DEFAULT_chartMissingLibrary, LYRA_DEFAULT_chartPlotSampled, LYRA_DEFAULT_chartPointCoordinates, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartPreparedSummaryZoom, LYRA_DEFAULT_chartPrimaryAxis, LYRA_DEFAULT_chartRenderUnavailable, LYRA_DEFAULT_chartSecondaryAxis, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartSpatialBin, LYRA_DEFAULT_chartSpatialDensityLegend, LYRA_DEFAULT_chartSpatialHidden, LYRA_DEFAULT_chartSpatialPoint, LYRA_DEFAULT_chartSpatialRadiusDomain, LYRA_DEFAULT_chartSpatialSummary, LYRA_DEFAULT_chartStackTotalsUnavailable, LYRA_DEFAULT_chartSummaryEmpty, LYRA_DEFAULT_chartSummaryWithData, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_chartTypeBar, LYRA_DEFAULT_chartTypeBubble, LYRA_DEFAULT_chartTypeDoughnut, LYRA_DEFAULT_chartTypeLine, LYRA_DEFAULT_chartTypePie, LYRA_DEFAULT_chartTypePolarArea, LYRA_DEFAULT_chartTypeRadar, LYRA_DEFAULT_chartTypeScatter, LYRA_DEFAULT_chartValuePercentageLabel, LYRA_DEFAULT_chartZoomUnavailable, LYRA_DEFAULT_liteChartMarkSummary } from '../../../internal/default-strings/charts.generated.js';
@@ -1291,7 +1292,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    * @default 1000
    */
   // numeric-guard-exempt: normalizeChartRecordLimit() in chart-table-sampling.ts normalizes render budgets through finiteCount().
-  @property({ type: Number, attribute: 'max-records' }) maxRecords = 1_000;
+  @property({ converter: blankNumberConverter(1_000), attribute: 'max-records' }) maxRecords = 1_000;
   @state() private samplingWidth = 0;
   private labelsSnapshot?: { source: unknown; value: readonly string[] };
   private annotationsSnapshot?: {
@@ -1477,9 +1478,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
    */
   @property({ attribute: false }) annotations: readonly LyraChartAnnotation[] = [];
   /** Maximum value-axis bound. Non-finite values are ignored. */
-  @property({ type: Number }) max: number | null = null;
+  @property({ converter: blankNumberConverter(null) }) max: number | null = null;
   /** Minimum value-axis bound. Non-finite values are ignored. */
-  @property({ type: Number }) min: number | null = null;
+  @property({ converter: blankNumberConverter(null) }) min: number | null = null;
   private _plugins: readonly LyraChartPlugin[] = Object.freeze([]);
   private pluginsSource: unknown = this._plugins;
   /** Chart.js plugins attached to this chart instance. Valid plugins retain their opaque identity.

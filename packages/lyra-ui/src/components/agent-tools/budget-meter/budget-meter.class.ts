@@ -11,6 +11,7 @@ import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { styles } from './budget-meter.styles.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_budgetMeterExceeded, LYRA_DEFAULT_budgetMeterLabel, LYRA_DEFAULT_budgetMeterPercent, LYRA_DEFAULT_budgetMeterUnavailable, LYRA_DEFAULT_budgetMeterValue } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -68,9 +69,9 @@ export class LyraBudgetMeter extends LyraElement {
   static override styles = [LyraElement.styles, styles];
 
   /** Host-reported usage quantity, normalized to a finite nonnegative value for display. */
-  @property({ type: Number }) used = 0;
+  @property({ converter: blankNumberConverter(0) }) used = 0;
   /** Host-reported capacity; a nonpositive or invalid value makes the meter unavailable. */
-  @property({ type: Number }) limit = 0;
+  @property({ converter: blankNumberConverter(0) }) limit = 0;
   /** Optional host-supplied unit label, shown with the actual quantities. */
   @property() unit?: string;
   /** Level of the visible title: `'1'`-`'6'`, or `'none'` for no heading semantics. */

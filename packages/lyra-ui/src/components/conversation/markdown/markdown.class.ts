@@ -395,7 +395,7 @@ export class LyraMarkdown extends MarkdownRuntimeBase {
    *  overflowing past the HTML heading levels; the floor at `1` is
    *  defensive, since this property is meant to be additive-only). `0`
    *  (the default) emits plain `<h${token.depth}>`. */
-  @property({ type: Number, attribute: 'heading-offset' })
+  @property({ converter: blankNumberConverter(0), attribute: 'heading-offset' })
   override headingOffset = 0;
 
   /** Signals that `content` is still arriving incrementally. The default plain mode keeps

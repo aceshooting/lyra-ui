@@ -37,6 +37,7 @@ import { announceAfterFirstPaint } from '../retrieval-announcements.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { DEFAULT_SCORE_THRESHOLDS, type LyraScoreThresholds } from '../../../internal/score-tiers.js';
 import { occurrenceKeys } from '../../../internal/render-keys.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_chunkInspectorEmpty, LYRA_DEFAULT_chunkInspectorLabel, LYRA_DEFAULT_retrievalResultsInputLimit, LYRA_DEFAULT_retrievalResultsSelectRowOrdinal, LYRA_DEFAULT_retrievalResultsSelectionLimit, LYRA_DEFAULT_untitledSource, LYRA_DEFAULT_valueTruncated } from '../../../internal/default-strings/retrieval.generated.js';
@@ -315,9 +316,9 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
     this.requestUpdate('dataSource', old);
   }
   /** Zero-based provider page. */
-  @property({ type: Number, attribute: 'source-page' }) sourcePage = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'source-page' }) sourcePage = 0;
   /** Provider records per page, normalized to 1..500; changing size resets page 0. */
-  @property({ type: Number, attribute: 'source-page-size' }) sourcePageSize = 100;
+  @property({ converter: blankNumberConverter(100), attribute: 'source-page-size' }) sourcePageSize = 100;
   /** Current query total, or null before success/without a source. */
   get sourceTotal(): number | null { return this.sourceMode ? this.sourcePages.state.result?.total ?? null : null; }
   private get sourceMode(): boolean { return this.dataSource !== undefined; }
@@ -600,7 +601,7 @@ export class LyraRetrievalResults extends LyraElement<LyraRetrievalResultsEventM
   /** Above this many rows (after identity canonicalization, before grouping), rendering switches
    *  from a plain list to the internal `<lr-virtual-list>`. Grouped mode always virtualizes
    *  regardless of this value. */
-  @property({ type: Number, attribute: 'virtualize-at' }) virtualizeAt = 50;
+  @property({ converter: blankNumberConverter(50), attribute: 'virtualize-at' }) virtualizeAt = 50;
 
   /** Marks the chunk currently open in a viewer -- forwarded to each per-row `<lr-chunk-inspector>`
    *  and to the internal `<lr-virtual-list>` (which scrolls the matching row into view). */

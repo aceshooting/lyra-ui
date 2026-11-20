@@ -13,6 +13,7 @@ import type { ResourceCacheLease } from '../../../internal/safe-resource-cache.j
 import { getIconLibrary, subscribeIconLibrary } from './icon-library.js';
 import { acquireSanitizedIconResource, IconResourceError } from './icon-resource.js';
 import { styles } from './icon.styles.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_iconLoadError, LYRA_DEFAULT_iconSanitizerMissing, LYRA_DEFAULT_iconTooLarge } from '../../../internal/default-strings/utility.generated.js';
@@ -194,7 +195,7 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
   }
   /** Rotation in degrees, clockwise in both text directions. The zero default does not reflect and
    *  produces no `transform`, so an ordinary icon never becomes a containing block. */
-  @property({ type: Number, reflect: true, useDefault: true }) rotate = 0;
+  @property({ converter: blankNumberConverter(0), reflect: true, useDefault: true }) rotate = 0;
   /** Mirrors the icon about the vertical (`x`/`horizontal`), horizontal (`y`/`vertical`), or both axes. */
   @property({ reflect: true }) flip?: LyraIconFlip;
   /** Layout canvas. Unset/`fixed` is 1.25em × 1em; `auto` follows intrinsic width at 1em high;

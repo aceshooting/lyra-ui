@@ -27,7 +27,7 @@ import { observeValidatorAttributes, runFormValidators } from '../../../internal
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { DropSessionController, isFileValue, readFileList, type DropSessionState } from '../../../internal/drop-session-controller.js';
-import { falseDefaultBooleanConverter } from '../../../internal/converters.js';
+import { falseDefaultBooleanConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import type { LyraSize } from '../../../internal/variants.js';
@@ -372,7 +372,7 @@ export class LyraFileInput extends LyraFormControlElement<LyraFileInputEventMap>
   /** Largest accepted file size in bytes. `0` (the default) or `Infinity` disables the check; an
    *  invalid override (negative, `NaN`) falls back to 25 MiB instead of accepting any size. */
   // numeric-guard-exempt: normalized by classifyFiles() in file-intake.ts
-  @property({ type: Number, attribute: 'max-file-size' }) maxFileSize = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'max-file-size' }) maxFileSize = 0;
   /** Largest total number of files accepted, counting retained files (unless `nonRetaining`; a
    *  single-file input replaces its file, so it retains none) plus `heldFileCount` plus the
    *  current batch. `0` (the default) disables the check. Same rejection-UI shape as
@@ -380,13 +380,13 @@ export class LyraFileInput extends LyraFormControlElement<LyraFileInputEventMap>
    *  in `[part="rejection"]` alongside any other rejection, rather than failing the whole
    *  selection. An invalid override (negative, `NaN`) falls back to 100 files. */
   // numeric-guard-exempt: normalized by classifyFiles() in file-intake.ts
-  @property({ type: Number, attribute: 'max-files' }) maxFiles = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'max-files' }) maxFiles = 0;
   /** Largest combined byte size accepted, summing retained files (unless `nonRetaining` or a
    *  single-file input) plus `heldTotalSize` plus the current batch. `0` (the default) disables
    *  the check. Same rejection-UI shape as `maxFileSize`; an invalid override falls back to
    *  250 MiB. */
   // numeric-guard-exempt: normalized by classifyFiles() in file-intake.ts
-  @property({ type: Number, attribute: 'max-total-size' }) maxTotalSize = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'max-total-size' }) maxTotalSize = 0;
   /** Externally held file count added to the running count `maxFiles` evaluates against, in both
    *  retaining and `nonRetaining` modes -- the numeric counterpart of `valuePresent`, for a
    *  cumulative cap that spans separate picker sessions (e.g. a server-backed upload limit) rather
@@ -395,12 +395,12 @@ export class LyraFileInput extends LyraFormControlElement<LyraFileInputEventMap>
    *  via `finiteCount` -- an invalid baseline degrades to "nothing held" rather than corrupting
    *  every later comparison or permanently blocking every future file. */
   // numeric-guard-exempt: normalized by classifyFiles() in file-intake.ts
-  @property({ type: Number, attribute: 'held-file-count' }) heldFileCount = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'held-file-count' }) heldFileCount = 0;
   /** Externally held byte total added to the running size `maxTotalSize` evaluates against, in
    *  both retaining and `nonRetaining` modes. Same contract, default, and invalid-input
    *  normalization as `heldFileCount`. */
   // numeric-guard-exempt: normalized by classifyFiles() in file-intake.ts
-  @property({ type: Number, attribute: 'held-total-size' }) heldTotalSize = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'held-total-size' }) heldTotalSize = 0;
   /** Opt-in mode where an accepted selection still fires `lr-files`/`input`/`change` but is never
    *  written to `files` or rendered as a built-in `[part="file"]` row -- for a host that persists
    *  files elsewhere and renders its own list, so assigning `files` (even to reset it) never fights

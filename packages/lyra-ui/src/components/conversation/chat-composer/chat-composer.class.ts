@@ -34,6 +34,7 @@ import {
   autocorrectConverter,
   literalSetConverter,
   trueDefaultBooleanConverter,
+  blankNumberConverter,
 } from '../../../internal/converters.js';
 import { deepActiveElementIn } from '../../../internal/active-element.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
@@ -238,7 +239,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   /** Placeholder text of the internal textarea; also the accessible-name fallback when `accessible-label` is unset. */
   @property() placeholder = '';
   /** Minimum visible rows of the internal textarea (default `1`). */
-  @property({ type: Number, attribute: 'min-rows' }) minRows = 1;
+  @property({ converter: blankNumberConverter(1), attribute: 'min-rows' }) minRows = 1;
   /** Maximum rows the internal textarea grows to before scrolling (default `8`). */
   @property({ converter: lengthLimitConverter, useDefault: true, attribute: 'max-rows' }) maxRows = 8;
   private statusValue: ChatComposerStatus = 'idle';

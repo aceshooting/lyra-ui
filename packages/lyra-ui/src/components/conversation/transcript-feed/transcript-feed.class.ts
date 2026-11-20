@@ -12,7 +12,7 @@ import { finiteCount } from '../../../internal/numbers.js';
 import { srOnly } from '../../../internal/a11y.js';
 import { captureComposedFocusRepair, applyComposedFocusRepair } from '../../../internal/focus-navigation.js';
 import { styles } from './transcript-feed.styles.js';
-import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { normalizeLyraTimestamp, type LyraTimestamp } from '../timestamp.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -127,7 +127,7 @@ export class LyraTranscriptFeed extends LyraElement<LyraTranscriptFeedEventMap> 
   @property({ attribute: false }) formatTimestamp?: (date: Date) => string;
   /** `> 0` renders only the newest N rows (host `entries` data is untouched); `0` explicitly
    *  opts into rendering the full history. */
-  @property({ type: Number, attribute: 'max-rendered-entries' }) maxRenderedEntries = 500;
+  @property({ converter: blankNumberConverter(500), attribute: 'max-rendered-entries' }) maxRenderedEntries = 500;
   /** Session identity. Changing it resets final-announcement history and treats
    *  the new session's current entries as a silent baseline. */
   @property({ attribute: 'session-id' }) sessionId = '';

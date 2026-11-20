@@ -25,6 +25,7 @@ import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owner.js';
 import type { AnchorResultDetail, TextSelectDetail } from '../../../internal/document-anchors.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_scrollerLabel } from '../../../internal/default-strings/shared.generated.js';
@@ -178,7 +179,7 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
   /** URL to fetch and parse as an iCalendar document. */
   @property() src = '';
   /** Maximum admitted events (0–2,500, default 250). A larger document shows the resource-limit message. */
-  @property({ type: Number, attribute: 'max-events' }) maxEvents = 250;
+  @property({ converter: blankNumberConverter(250), attribute: 'max-events' }) maxEvents = 250;
   /** Display name associated with the calendar. It names `[part='base']` when host `aria-label` is
    *  absent, before the localized fallback. A non-empty host label remains on the host; an
    *  explicitly empty one is preserved on the shadow owner. */

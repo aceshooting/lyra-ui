@@ -41,3 +41,44 @@ export const NormalizedQuoteSearch: Story = {
     </section>`;
   })}`,
 };
+
+const ATTACHMENT_BOUNDARY = 'lr-story-attachments';
+const MANY_ATTACHMENTS_EML = [
+  'From: Ada Lovelace <ada@example.test>',
+  'To: Grace Hopper <grace@example.test>',
+  'Subject: Nightly export',
+  'Date: Tue, 14 Jul 2026 09:30:00 +0000',
+  'MIME-Version: 1.0',
+  `Content-Type: multipart/mixed; boundary="${ATTACHMENT_BOUNDARY}"`,
+  '',
+  `--${ATTACHMENT_BOUNDARY}`,
+  'Content-Type: text/plain; charset=utf-8',
+  '',
+  'The export is attached.',
+  ...Array.from({ length: 205 }, (_, index) => [
+    `--${ATTACHMENT_BOUNDARY}`,
+    `Content-Type: text/plain; name="part-${index + 1}.txt"`,
+    `Content-Disposition: attachment; filename="part-${index + 1}.txt"`,
+    '',
+    'x',
+  ].join('\r\n')),
+  `--${ATTACHMENT_BOUNDARY}--`,
+  '',
+].join('\r\n');
+
+export const AttachmentLimit: Story = {
+  name: 'Attachment limit (first 200 rows)',
+  parameters: {
+    docs: {
+      description: {
+        story: 'Only the first 200 retained attachments render; `[part="attachments-limit"]` reports how many exist.',
+      },
+    },
+  },
+  render: () => html`<lr-email-viewer
+    style="max-inline-size: 36rem;"
+    max-height="24rem"
+    src=${`data:message/rfc822;charset=utf-8,${encodeURIComponent(MANY_ATTACHMENTS_EML)}`}
+    name="export.eml"
+  ></lr-email-viewer>`,
+};

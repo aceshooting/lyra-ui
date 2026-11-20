@@ -28,7 +28,7 @@ import {
   readOwnArrayLength,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
-import { literalSetConverter, trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { literalSetConverter, trueDefaultBooleanConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { DEV_DIAGNOSTICS, devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { litDevWarnings } from '../../../internal/dev-warning.js';
 import { chevronIcon } from '../../../internal/icons.js';
@@ -2855,7 +2855,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private _center: readonly [number, number] = Object.freeze([0, 0] as [number, number]);
   /** Initial and controlled map zoom level. Tracks the settled camera and reconciles the same way
    * as `center`. Clamped into the zoom limits (`minZoom`/`maxZoom`, `[0, 22]` by default). */
-  @property({ type: Number }) zoom = 2;
+  @property({ converter: blankNumberConverter(2) }) zoom = 2;
 
   /**
    * Lowest zoom level the camera may reach, in `[0, 24]`. Unset leaves the engine's own floor, `0`.
@@ -2865,14 +2865,14 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * without an `lr-map-view-change`. A non-finite value counts as unset; when both limits are set
    * and `minZoom` exceeds `maxZoom`, both are ignored (with a dev-mode warning).
    */
-  @property({ type: Number, attribute: 'min-zoom' }) minZoom?: number;
+  @property({ converter: blankNumberConverter(undefined), attribute: 'min-zoom' }) minZoom?: number;
 
   /**
    * Highest zoom level the camera may reach, in `[0, 24]`. Unset leaves the engine's own ceiling,
    * `22` (or `minZoom` when that is higher). Forwarded and enforced exactly like `minZoom`; a
    * `fitBounds()`/`fitToData()` `maxZoom` above it is lowered to it.
    */
-  @property({ type: Number, attribute: 'max-zoom' }) maxZoom?: number;
+  @property({ converter: blankNumberConverter(undefined), attribute: 'max-zoom' }) maxZoom?: number;
 
   /** Whether either zoom limit is set to a usable value, so construction forwards them. */
   private get zoomLimitsRequested(): boolean {
@@ -3225,7 +3225,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   /** With `initialization="interaction"`, also constructs the map this many milliseconds after it
    * connected when no input arrived first. Unset (default) waits for input only; other modes ignore
    * it. A negative or non-finite value counts as unset. */
-  @property({ type: Number, attribute: 'initialization-delay' }) initializationDelay?: number;
+  @property({ converter: blankNumberConverter(undefined), attribute: 'initialization-delay' }) initializationDelay?: number;
   private get safeInitializationDelay(): number | undefined {
     const delay = this.initializationDelay;
     return typeof delay === 'number' && Number.isFinite(delay) && delay >= 0 ? finiteDuration(delay, 0) : undefined;

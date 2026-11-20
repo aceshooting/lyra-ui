@@ -86,6 +86,7 @@ import {
   autocorrectConverter,
   literalSetConverter,
   spellcheckFromAttributeConverter as spellcheckConverter,
+  blankNumberConverter,
 } from '../../../internal/converters.js';
 import {
   isImplicitSubmission,
@@ -668,10 +669,10 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   /** Optional JavaScript renderer for individual calendar-day content. */
   @property({ attribute: false }) dayContent?: LyraDatePickerDayContent;
   /** Minimum range length in inclusive days; `0` means no minimum. Range mode only. */
-  @property({ type: Number, attribute: 'min-range', reflect: true })
+  @property({ converter: blankNumberConverter(0), attribute: 'min-range', reflect: true })
   minRange = 0;
   /** Maximum range length in inclusive days; `0` means no maximum. Range mode only. */
-  @property({ type: Number, attribute: 'max-range', reflect: true })
+  @property({ converter: blankNumberConverter(0), attribute: 'max-range', reflect: true })
   maxRange = 0;
   /** Whether the previous/next buttons move by the number of visible `months` or by a single month. */
   @property({ converter: pageByConverter, attribute: 'page-by', reflect: true })
@@ -679,7 +680,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
   /** ISO date (`YYYY-MM-DD`) that overrides what counts as today; empty uses the system date. */
   @property({ reflect: true }) today = '';
   /** Gap in pixels between the field and the calendar popover. */
-  @property({ type: Number, reflect: true }) distance = 0;
+  @property({ converter: blankNumberConverter(0), reflect: true }) distance = 0;
   /** Popover placement relative to the field (`top`, `right`, `bottom`, `left`, each with optional `-start`/`-end`). */
   @property({ converter: placementConverter, reflect: true })
   placement: LyraDateInputPlacement = 'bottom-start';

@@ -44,6 +44,7 @@ import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
 import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from '../viewer-search-limits.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_loading, LYRA_DEFAULT_scrollerLabel } from '../../../internal/default-strings/shared.generated.js';
@@ -167,7 +168,7 @@ export class LyraPptxViewer extends TextViewerTarget(LyraPptxViewerBase) {
    *  localized default; an explicit empty string clears it. */
   @property() label?: string;
   /** One-based current slide for page-addressed integrations; assignments navigate when ready. */
-  @property({ type: Number, reflect: true }) page = 1;
+  @property({ converter: blankNumberConverter(1), reflect: true }) page = 1;
   /** A CSS `max-height` that caps the scrollable renderer output container; invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
   /**

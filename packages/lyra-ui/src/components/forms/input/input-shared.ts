@@ -28,6 +28,7 @@ import type { LyraSelectionDirection } from '../../../internal/shared-unions.js'
 import {
   autocorrectConverter,
   spellcheckConverter,
+  blankNumberConverter,
 } from '../../../internal/converters.js';
 import { finiteCount, finiteDuration } from '../../../internal/numbers.js';
 import { submitOnEnter } from '../../../internal/submit-on-enter.js';
@@ -323,7 +324,7 @@ export class LyraInputShared extends FormAssociated(LyraInputBase) {
    *  flushed immediately by `change`/Enter/blur (so a blur never drops the last keystroke) and
    *  cancelled with no stray settle by disconnection, the built-in clear button, and a
    *  programmatic `value` write that changes the value -- a same-value write does not disturb it. */
-  @property({ type: Number }) debounce?: number;
+  @property({ converter: blankNumberConverter(undefined) }) debounce?: number;
   /** Forwards native read-only behavior to the internal input and disables the clear action. */
   @property({ type: Boolean, reflect: true }) readonly = false;
   @property() label = '';

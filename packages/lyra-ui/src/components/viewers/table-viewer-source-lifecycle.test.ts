@@ -208,4 +208,7 @@ it('renders the active source workbook sheet inside the panel its selected tab c
   expect(selected.getAttribute('aria-controls')).to.equal(shown.id);
   const assigned = shown.querySelector('slot')!.assignedElements();
   expect(assigned.map((panel) => panel.querySelector('[role="table"]') !== null)).to.deep.equal([true]);
+  const list = assigned[0]!.querySelector('lr-virtual-list')!;
+  await waitUntil(() => list.shadowRoot?.textContent?.includes('2:1') === true, 'second sheet rows painted');
+  await expect(viewer).to.be.accessible();
 });

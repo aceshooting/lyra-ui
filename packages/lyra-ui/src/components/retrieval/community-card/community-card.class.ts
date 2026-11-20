@@ -14,6 +14,7 @@ import '../../overlays/chip/chip.class.js';
 import '../../forms/button/button.class.js';
 import '../../overlays/empty/empty.class.js';
 import { styles } from './community-card.styles.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_communityDrillIn, LYRA_DEFAULT_communityDrillInWithContext, LYRA_DEFAULT_communityMemberCount, LYRA_DEFAULT_showMoreCount, LYRA_DEFAULT_untitledCommunity } from '../../../internal/default-strings/retrieval.generated.js';
@@ -117,7 +118,7 @@ export class LyraCommunityCard extends LyraElement<LyraCommunityCardEventMap> {
   /** Rendered as chips. */
   @property({ attribute: false }) members: readonly LyraEntity[] = [];
   /** Visible member chips before the "+N" overflow chip. */
-  @property({ type: Number, attribute: 'max-members' }) maxMembers = 8;
+  @property({ converter: blankNumberConverter(8), attribute: 'max-members' }) maxMembers = 8;
   /**
    * Density on the shared size scale. `s` (and the smaller `xs`/`2xs`) renders the single-row
    * layout (title + member count + drill button, no summary/chips) with tighter `[part="base"]`

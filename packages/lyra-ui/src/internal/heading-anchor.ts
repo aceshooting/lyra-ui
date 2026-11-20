@@ -1,12 +1,12 @@
-import { prefersReducedMotion } from './motion.js';
+import { motionScrollBehavior } from './motion.js';
 import { TEXT_QUOTE_LIMITS } from './text-quote.js';
 
 const XHTML = 'http://www.w3.org/1999/xhtml';
 const HEADING = /^h[1-6]$/u;
 
-/** `smooth` only when motion is allowed and the content's document has a window. */
+/** `smooth` only when motion is allowed and the content's document has a window, else `instant`. */
 export function anchorScrollBehavior(root: Element): ScrollBehavior {
-  return !root.ownerDocument.defaultView || prefersReducedMotion(root) ? 'auto' : 'smooth';
+  return root.ownerDocument.defaultView ? motionScrollBehavior(root) : 'instant';
 }
 
 /**

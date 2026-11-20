@@ -10,6 +10,7 @@ import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './split-panel.styles.js';
 import type { LyraSplitPanelSnapFunction } from './split-panel-snap.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_resizeDivider, LYRA_DEFAULT_resizeValuePercent } from '../../../internal/default-strings/layout.generated.js';
@@ -286,7 +287,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
 
   /** Divider position as a percentage from the primary panel's edge.
    * @default 50 */
-  @property({ type: Number, reflect: true })
+  @property({ converter: blankNumberConverter(DEFAULT_POSITION), reflect: true })
   get position(): number {
     const start = finiteRange(this._startPosition, DEFAULT_POSITION, 0, 100);
     return this.primary === 'end' ? 100 - start : start;
@@ -314,7 +315,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
    * Divider position in pixels from the primary panel's edge.
    * @default 0
    */
-  @property({ type: Number, attribute: 'position-in-pixels' })
+  @property({ converter: blankNumberConverter(undefined), attribute: 'position-in-pixels' })
   get positionInPixels(): number {
     if (this.pendingPositionInPixels != null) return this.pendingPositionInPixels;
     if (this.availableSize <= 0) return 0;
@@ -423,7 +424,7 @@ export class LyraSplitPanel extends LyraElement<LyraSplitPanelEventMap> {
 
   /** Maximum distance in pixels at which string snap points take effect.
    * @default 12 */
-  @property({ type: Number, attribute: 'snap-threshold' })
+  @property({ converter: blankNumberConverter(DEFAULT_SNAP_THRESHOLD), attribute: 'snap-threshold' })
   get snapThreshold(): number {
     return this._snapThreshold;
   }

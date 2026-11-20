@@ -35,6 +35,8 @@ const GUARD_IMPORT_RE =
 const GUARD_CALL_RE =
   /\b(?:finite(?:Number|Range|Integer|Count|Duration)|normalizeSourcePage(?:Size)?|displayedSourcePage|sourcePageOfRecord)\s*\(/g;
 const EXEMPT_RE = /^\s*\/\/\s*numeric-guard-exempt:\s*(.+?)\s*$/;
+// A numeric reactive property declares `type: Number` or its blank-safe replacement converter.
+const NUMERIC_OPTION_RE = /\btype\s*:\s*Number\b|\bconverter\s*:\s*blankNumberConverter\s*\(/;
 
 // How many lines around a guard-helper call site count as "near" a property's own name for the
 // proximity check -- generous on purpose (low false-positive rate matters more than precision
@@ -102,7 +104,7 @@ function findNumericProperties(source) {
     const closeParenIndex = matchBalanced(source, openParenIndex, '(', ')');
     if (closeParenIndex === -1) continue;
     const optionsText = source.slice(openParenIndex + 1, closeParenIndex);
-    if (!/\btype\s*:\s*Number\b/.test(optionsText)) continue;
+    if (!NUMERIC_OPTION_RE.test(optionsText)) continue;
 
     const after = source.slice(closeParenIndex + 1, closeParenIndex + 1 + 200);
     // Field form: `name = ...;` or `name?: number;` (no initializer, e.g. an optional numeric
@@ -116,7 +118,7 @@ function findNumericProperties(source) {
     results.push({ name, siteIndex: match.index });
   }
 
-  const staticPropertiesRe = /static\s+properties\s*=\s*\{/g;
+  const staticPropertiesRe = /static\s+(?:override\s+)?properties\s*=\s*\{/g;
   while ((match = staticPropertiesRe.exec(source))) {
     const openBraceIndex = match.index + match[0].length - 1;
     const closeBraceIndex = matchBalanced(source, openBraceIndex, '{', '}');
@@ -131,7 +133,7 @@ function findNumericProperties(source) {
       const entryCloseIndex = matchBalanced(blockText, entryOpenIndex, '{', '}');
       if (entryCloseIndex === -1) continue;
       const entryOptionsText = blockText.slice(entryOpenIndex + 1, entryCloseIndex);
-      if (/\btype\s*:\s*Number\b/.test(entryOptionsText)) {
+      if (NUMERIC_OPTION_RE.test(entryOptionsText)) {
         results.push({ name: entryMatch[1], siteIndex: blockOffset + entryMatch.index });
       }
     }
@@ -244,7 +246,7 @@ for (const file of sourceFiles) {
 }
 
 console.log(
-  `Numeric guard check: ${totalCount} \`type: Number\` propert${totalCount === 1 ? 'y' : 'ies'} found across ${sourceFiles.length} component and internal source files.`,
+  `Numeric guard check: ${totalCount} numeric propert${totalCount === 1 ? 'y' : 'ies'} found across ${sourceFiles.length} component and internal source files.`,
 );
 console.log(`  guarded (helper usage detected): ${guardedCount}`);
 console.log(`  exempted (numeric-guard-exempt comment): ${exempted.length}`);

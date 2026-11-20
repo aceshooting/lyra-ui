@@ -13,6 +13,7 @@ import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { preserveRangeKeyboardShortcut } from '../../../internal/range-keyboard-shortcut.js';
 import { styles } from './sequence-playback.styles.js';
 import { registerSequencePlayback, type SequencePlaybackCommands, type SequencePlaybackOwner, type SequencePlaybackProjection } from '../../../internal/sequence-playback-binding.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition, LYRA_DEFAULT_playbackStepPosition } from '../../../internal/default-strings/media.generated.js';
@@ -91,16 +92,16 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
   protected static readonly knownUnobservedAttributes: readonly string[] = ['playing'];
 
   /** Total number of sequence items; the current-index range is `[0, itemCount)`. */
-  @property({ type: Number, attribute: 'item-count' }) itemCount = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'item-count' }) itemCount = 0;
   /** The current sequence item, in `[0, itemCount)`. */
-  @property({ type: Number, attribute: 'current-index' }) currentIndex = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'current-index' }) currentIndex = 0;
   /** Delay between ticks, in milliseconds, while playing. Clamped to the timer-safe range in
    *  `scheduleTick()`. */
-  @property({ type: Number, attribute: 'interval-ms' }) intervalMs = DEFAULT_INTERVAL_MS;
+  @property({ converter: blankNumberConverter(DEFAULT_INTERVAL_MS), attribute: 'interval-ms' }) intervalMs = DEFAULT_INTERVAL_MS;
 
   /** Second spelling of `intervalMs`, matching `lr-carousel`'s `autoplay-interval`. */
   // numeric-guard-exempt: alias accessor over intervalMs, which scheduleTick() normalizes with finiteDuration()
-  @property({ type: Number, attribute: 'autoplay-interval', noAccessor: true })
+  @property({ converter: blankNumberConverter(DEFAULT_INTERVAL_MS), attribute: 'autoplay-interval', noAccessor: true })
   get autoplayInterval(): number {
     return this.intervalMs;
   }

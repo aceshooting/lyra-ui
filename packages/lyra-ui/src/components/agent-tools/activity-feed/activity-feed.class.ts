@@ -29,6 +29,7 @@ import { styles } from './activity-feed.styles.js';
 import {
   literalSetConverter,
   trueDefaultBooleanConverter,
+  blankNumberConverter,
 } from '../../../internal/converters.js';
 import { firstByIdentityMemo } from '../../../internal/collection-identity.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -289,7 +290,7 @@ export class LyraActivityFeed extends LyraElement<LyraActivityFeedEventMap> {
   @property({ attribute: false }) renderText?: (entry: ActivityEntry) => TemplateResult;
 
   /** Above this entry count, the body renders through an internal `<lr-virtual-list>`. */
-  @property({ type: Number, attribute: 'virtualize-at' }) virtualizeAt = 199;
+  @property({ converter: blankNumberConverter(199), attribute: 'virtualize-at' }) virtualizeAt = 199;
 
   @query(tag('live-region')) private liveRegion?: LyraLiveRegion;
   @query(tag('virtual-list')) private virtualListEl?: LyraVirtualList;

@@ -30,6 +30,7 @@ import {
   type WordCloudWord,
 } from './word-cloud-layout.js';
 import { styles } from './word-cloud.styles.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_wordCloud, LYRA_DEFAULT_wordCloudLegend, LYRA_DEFAULT_wordCloudPreparedSummary, LYRA_DEFAULT_wordCloudPreparedUnavailable, LYRA_DEFAULT_wordCloudWordAnnouncement, LYRA_DEFAULT_wordCloudWordLimit } from '../../../internal/default-strings/data.generated.js';
@@ -454,10 +455,10 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
   }
 
   /** Font size, in px, for the lowest-weight word. */
-  @property({ attribute: 'min-font-size', type: Number }) minFontSize = DEFAULT_MIN_FONT_SIZE;
+  @property({ attribute: 'min-font-size', converter: blankNumberConverter(DEFAULT_MIN_FONT_SIZE) }) minFontSize = DEFAULT_MIN_FONT_SIZE;
 
   /** Font size, in px, for the highest-weight word. */
-  @property({ attribute: 'max-font-size', type: Number }) maxFontSize = DEFAULT_MAX_FONT_SIZE;
+  @property({ attribute: 'max-font-size', converter: blankNumberConverter(DEFAULT_MAX_FONT_SIZE) }) maxFontSize = DEFAULT_MAX_FONT_SIZE;
 
   /** Pins the weight-to-font-size input domain to `[min, max]`, so separate clouds can share one
    * scale instead of each deriving it from its own lightest/heaviest word. Reversed endpoints are

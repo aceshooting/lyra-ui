@@ -38,7 +38,7 @@ import type { LyraToolResultViewEventMap } from '../../agent-tools/tool-result-v
 import type { LyraAttachmentChipEventMap } from '../../media/attachment-chip/attachment-chip.class.js';
 import type { LyraCitationBadgeEventMap } from '../../retrieval/citation-badge/citation-badge.class.js';
 import type { LyraJsonViewerEventMap } from '../../utility/json-viewer/json-viewer.class.js';
-import { literalSetConverter } from '../../../internal/converters.js';
+import { literalSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
@@ -429,7 +429,7 @@ export class LyraMessageParts extends LyraElement<LyraMessagePartsEventMap> {
    *  even once an earlier citation rolls out of the rendered window. Opt in for a message that can
    *  grow an unusually large number of parts (e.g. a long agentic run with many interleaved
    *  tool-call/tool-result parts), where unbounded live DOM can visibly stall the main thread. */
-  @property({ type: Number, attribute: 'max-rendered-parts' }) maxRenderedParts = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'max-rendered-parts' }) maxRenderedParts = 0;
 
   private readonly citationRanks = new Map<string, number>();
   private readonly widgetDocuments = new Map<string, LyraWidgetDocument>();

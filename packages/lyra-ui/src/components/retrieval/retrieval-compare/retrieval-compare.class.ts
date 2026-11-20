@@ -28,6 +28,7 @@ import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
 } from '../retrieval-semantic-owner.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_retrievalCompareDenseScore, LYRA_DEFAULT_retrievalCompareEmpty, LYRA_DEFAULT_retrievalCompareFinalScore, LYRA_DEFAULT_retrievalCompareInputLimit, LYRA_DEFAULT_retrievalCompareLabel, LYRA_DEFAULT_retrievalCompareOverlap, LYRA_DEFAULT_retrievalCompareRank, LYRA_DEFAULT_retrievalCompareRerankScore, LYRA_DEFAULT_retrievalCompareResultLimit, LYRA_DEFAULT_retrievalCompareSparseScore, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings/retrieval.generated.js';
@@ -148,7 +149,7 @@ export class LyraRetrievalCompare extends LyraElement<LyraRetrievalCompareEventM
   @property({ attribute: false }) sets: readonly RetrievalComparisonSet[] = [];
   /** Maximum ranked chunks shown from each set, ordered by effective rank (an explicit `rank`,
    *  else input position) and then score. Rendering is capped at 100 per set. */
-  @property({ type: Number, attribute: 'top-k' }) topK = 10;
+  @property({ converter: blankNumberConverter(10), attribute: 'top-k' }) topK = 10;
   /** Controlled chunk id highlighted across every set that contains it. */
   @property({ attribute: 'selected-chunk-id' }) selectedChunkId = '';
   /** Semantic level of each result-set heading; `none` keeps the visible text without heading semantics. */

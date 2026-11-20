@@ -48,7 +48,7 @@ import {
 } from '../../../internal/persisted-state.js';
 import { resolveCssLength } from '../../../internal/css-length.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
-import { literalSetConverter } from '../../../internal/converters.js';
+import { literalSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { styles } from './multi-split.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -464,7 +464,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
    *  not sum to ~100 is still rejected). */
   @property({ attribute: false }) defaultSizes: readonly (number | string)[] = [];
   /** Minimum size of each panel, in percent of the container; a non-finite or negative value falls back to `10`. */
-  @property({ type: Number }) min = 10;
+  @property({ converter: blankNumberConverter(10) }) min = 10;
   /** Direction the panels are laid out: `horizontal` places them side by side, `vertical` stacks them. */
   @property({ reflect: true, converter: ORIENTATION }) orientation: LyraOrientation = 'horizontal';
   /** Opt-in inline-size breakpoint for this component's *own* measured allocation. Below it,
@@ -670,7 +670,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
 
   /** Internal hydration seed reflected into declarative output so a property-driven server render
    * and the browser's first reuse pass agree before assigned children can be observed. */
-  @property({ type: Number, attribute: 'data-lr-panel-count', reflect: true })
+  @property({ converter: blankNumberConverter(0), attribute: 'data-lr-panel-count', reflect: true })
   private panelCount = 0;
   private sizesReconciledForMembership = false;
   /** The `panel-id`s whose fold is currently baked into `sizes` (each such entry is `0`). */

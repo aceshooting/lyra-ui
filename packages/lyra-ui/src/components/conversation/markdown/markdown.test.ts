@@ -689,8 +689,8 @@ it("uses the rendered root window for reduced-motion fragment and text-quote scr
         quote: "brown fox",
       }, createTextQuoteIndex(scopeFromElement(root)))
     ).to.be.true;
-    expect(headingBehavior).to.equal("auto");
-    expect(paragraphBehavior).to.equal("auto");
+    expect(headingBehavior).to.equal("instant");
+    expect(paragraphBehavior).to.equal("instant");
     expect(foreignQueries).to.equal(2);
     expect(mainQueries).to.equal(0);
   } finally {
@@ -719,7 +719,7 @@ it("uses non-animated anchor scrolling when the rendered root document has no wi
       [{ id: "detached-section", label: "Detached section", level: 2 }]
     )
   ).to.be.true;
-  expect(behavior).to.equal("auto");
+  expect(behavior).to.equal("instant");
 });
 
 it("percent-encodes a link href that needs it, matching marked's own default renderer", async () => {

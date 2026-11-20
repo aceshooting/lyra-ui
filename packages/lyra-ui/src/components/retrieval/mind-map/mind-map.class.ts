@@ -29,6 +29,7 @@ import {
   type PlacedTopic,
 } from './mind-map-layout.js';
 import { styles } from './mind-map.styles.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_mindMapCollapsed, LYRA_DEFAULT_mindMapExpanded, LYRA_DEFAULT_mindMapInputLimit, LYRA_DEFAULT_mindMapLabel, LYRA_DEFAULT_mindMapLeafStatus, LYRA_DEFAULT_mindMapNodeLimit, LYRA_DEFAULT_mindMapTopicStatus } from '../../../internal/default-strings/retrieval.generated.js';
@@ -319,7 +320,7 @@ export class LyraMindMap extends LyraElement<LyraMindMapEventMap> {
   @property() label?: string;
   /** Initial expansion depth (root + first ring). Expansion state is component-managed
    *  afterward, keyed by topic id, and survives `topics` reassignment. */
-  @property({ type: Number, attribute: 'expand-depth' }) expandDepth = 1;
+  @property({ converter: blankNumberConverter(1), attribute: 'expand-depth' }) expandDepth = 1;
 
   @query('[part="svg"]') private svgEl?: SVGSVGElement;
 

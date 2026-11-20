@@ -25,6 +25,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { formatShortDuration } from '../../../internal/duration.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_statusSkipped, LYRA_DEFAULT_testResultsCompleteAnnounce, LYRA_DEFAULT_testResultsFailed, LYRA_DEFAULT_testResultsFilterLabel, LYRA_DEFAULT_testResultsInputTooLarge, LYRA_DEFAULT_testResultsLabel, LYRA_DEFAULT_testResultsLimit, LYRA_DEFAULT_testResultsPassed, LYRA_DEFAULT_testResultsRunning, LYRA_DEFAULT_testResultsShownAnnounce, LYRA_DEFAULT_testResultsSkipped, LYRA_DEFAULT_testResultsToggleTest, LYRA_DEFAULT_testResultsUnnamedTest } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -298,9 +299,9 @@ export class LyraTestResults extends LyraElement<LyraTestResultsEventMap> {
     this.requestUpdate('dataSource', old);
   }
   /** Zero-based provider page. */
-  @property({ type: Number, attribute: 'source-page' }) sourcePage = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'source-page' }) sourcePage = 0;
   /** Provider page size, normalized to 1..500; changes reset the page. */
-  @property({ type: Number, attribute: 'source-page-size' }) sourcePageSize = 100;
+  @property({ converter: blankNumberConverter(100), attribute: 'source-page-size' }) sourcePageSize = 100;
   /** Exact current filtered count, or null while unavailable. */
   get sourceTotal(): number | null { return this.sourceMode ? this.sourcePages.state.result?.total ?? null : null; }
   private get sourceMode(): boolean { return this.dataSource !== undefined; }

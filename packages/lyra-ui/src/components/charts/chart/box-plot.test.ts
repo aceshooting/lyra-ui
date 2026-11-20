@@ -1240,7 +1240,7 @@ it('redraws the live chart with the current reduced-motion state when the media 
     await el.updateComplete;
     await waitUntil(() => (el as any).chart != null, undefined, { timeout: 5000 });
 
-    expect(changeListener, 'armReducedMotionWatcher() must register a change listener').to.be.a(
+    expect(changeListener, 'the reduced-motion watch must register a change listener').to.be.a(
       'function',
     );
     expect((el as any).chart.options.animation).to.not.equal(false);

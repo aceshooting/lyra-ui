@@ -110,7 +110,7 @@ export async function assertScrollFrameFollowsAdoption(
     expect(frameRequests).to.equal(1);
     expect(topMotionQueries).to.equal(0);
     expect(frameMotionQueries).to.equal(1);
-    expect(scrollBehaviors).to.deep.equal(['auto']);
+    expect(scrollBehaviors).to.deep.equal(['instant']);
   } finally {
     window.requestAnimationFrame = originalRequest;
     window.cancelAnimationFrame = originalCancel;

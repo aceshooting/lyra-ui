@@ -33,6 +33,7 @@ import { tag } from '../../../internal/prefix.js';
 import { styles } from './carousel.styles.js';
 import { appendLoopClones, loopCloneFor } from './carousel-loop.js';
 import type { LyraCarouselItem } from './carousel-item.class.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_carousel, LYRA_DEFAULT_carouselGoTo, LYRA_DEFAULT_carouselIndicators, LYRA_DEFAULT_carouselLabel, LYRA_DEFAULT_carouselPauseRotation, LYRA_DEFAULT_carouselResumeRotation, LYRA_DEFAULT_carouselSlide, LYRA_DEFAULT_carouselSlideAnnouncement, LYRA_DEFAULT_carouselSlideAnnouncementSeparator, LYRA_DEFAULT_carouselSlidePosition, LYRA_DEFAULT_carouselViewport } from '../../../internal/default-strings/layout.generated.js';
@@ -214,7 +215,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
 
   /** Zero-based start of the active slide page.
    * @default 0 */
-  @property({ type: Number, attribute: 'current-slide', reflect: true })
+  @property({ converter: blankNumberConverter(0), attribute: 'current-slide', reflect: true })
   get currentSlide(): number {
     return this._currentSlide;
   }
@@ -262,10 +263,10 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   mouseDragging = false;
   /** Slides visible at once.
    * @default 1 */
-  @property({ type: Number, attribute: 'slides-per-page', useDefault: true }) slidesPerPage = 1;
+  @property({ converter: blankNumberConverter(1), attribute: 'slides-per-page', useDefault: true }) slidesPerPage = 1;
   /** Slides advanced by one previous or next step.
    * @default 1 */
-  @property({ type: Number, attribute: 'slides-per-move', useDefault: true }) slidesPerMove = 1;
+  @property({ converter: blankNumberConverter(1), attribute: 'slides-per-move', useDefault: true }) slidesPerMove = 1;
   /** Live count of assigned slides.
    * @default 0 */
   get slides(): number {

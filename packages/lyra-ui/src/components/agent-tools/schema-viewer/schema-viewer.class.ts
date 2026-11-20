@@ -13,6 +13,7 @@ import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { isolateText, ltrIsolate } from '../../../internal/bidi.js';
 import { styles } from './schema-viewer.styles.js';
 import { overallSemanticLabel } from '../semantic-owner.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_schemaViewerCircular, LYRA_DEFAULT_schemaViewerEmpty, LYRA_DEFAULT_schemaViewerIssueError, LYRA_DEFAULT_schemaViewerIssueInfo, LYRA_DEFAULT_schemaViewerIssueLimit, LYRA_DEFAULT_schemaViewerIssueWarning, LYRA_DEFAULT_schemaViewerLabel, LYRA_DEFAULT_schemaViewerLimit, LYRA_DEFAULT_schemaViewerType } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -243,7 +244,7 @@ export class LyraJsonSchemaViewer extends LyraElement<LyraJsonSchemaViewerEventM
    *  string is the valid JSON Pointer for the schema root. */
   @property({ attribute: 'selected-path' }) selectedPath: string | null = null;
   /** Requested nesting depth, clamped to 100 to keep recursive template construction stack-safe. */
-  @property({ type: Number, attribute: 'max-depth' }) maxDepth = 20;
+  @property({ converter: blankNumberConverter(20), attribute: 'max-depth' }) maxDepth = 20;
   /** Accessible name of the viewer region. It renders no visible heading, so an empty value
    *  falls back to the localized `schemaViewerLabel` default rather than leaving the region
    *  unnamed; a host `aria-label` remains authoritative. */

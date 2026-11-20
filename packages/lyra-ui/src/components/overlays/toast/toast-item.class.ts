@@ -42,6 +42,7 @@ import {
   type NotificationDismissReason,
   type ToastRegionController,
 } from './toast-region-protocol.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_closeWithContext, LYRA_DEFAULT_closeWithTruncatedContext, LYRA_DEFAULT_toastContentIncomplete } from '../../../internal/default-strings/overlays.generated.js';
@@ -202,7 +203,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
   }
 
   /** Auto-dismiss delay in ms. Set to `Infinity` (or <= 0) to disable. */
-  @property({ type: Number }) duration = 5000;
+  @property({ converter: blankNumberConverter(5000) }) duration = 5000;
 
   /** Visual size. Valid upstream `small`/`medium`/`large` values round-trip verbatim while the CSS
    * maps both spellings onto the same rendered ladder. */

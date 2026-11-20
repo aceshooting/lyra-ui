@@ -19,6 +19,7 @@ import type { RubricKey, RubricValue } from '../../forms/rubric-form/rubric-form
 import type { AgentRunActivateDetail } from '../run-events.js';
 import { firstByIdentityMemo } from '../../../internal/collection-identity.js';
 import type { LyraTableEventMap, TableColumn } from '../../data/table/table.class.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_evaluationDashboardRunsLabel } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -197,9 +198,9 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
   }
   /** Zero-based provider page. Null selection uses the first global row, primed with a size-one
    * page-zero request when necessary, independently of this displayed page. */
-  @property({ type: Number, attribute: 'source-page' }) sourcePage = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'source-page' }) sourcePage = 0;
   /** Provider rows per page, normalized to 1..500. */
-  @property({ type: Number, attribute: 'source-page-size' }) sourcePageSize = 100;
+  @property({ converter: blankNumberConverter(100), attribute: 'source-page-size' }) sourcePageSize = 100;
   /** Exact displayed-query total; null while pending/failed or outside provider mode. */
   get sourceTotal(): number | null { return this.sourceMode ? this.sourceResult?.total ?? null : null; }
   private get sourceMode(): boolean { return this.dataSource !== undefined; }

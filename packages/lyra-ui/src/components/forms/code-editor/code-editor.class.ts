@@ -215,7 +215,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
 
   /** Visible native row count.
    * @default 4 */
-  @property({ type: Number, useDefault: true })
+  @property({ converter: blankNumberConverter(4), useDefault: true })
   get rows(): number {
     return this._rows;
   }
@@ -225,7 +225,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     this.requestUpdate('rows', previous);
   }
   /** Visible native column count. It also supplies the platform's hard-wrap submission width. */
-  @property({ type: Number, useDefault: true }) cols = 20;
+  @property({ converter: blankNumberConverter(20), useDefault: true }) cols = 20;
   /** Native minimum and maximum code-unit length constraints. */
   private _minlength?: number;
   /** Minimum value length in UTF-16 code units, enforced by validation; unset or invalid means no minimum.

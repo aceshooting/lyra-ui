@@ -8,7 +8,7 @@ import { property } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { resolveListMove, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
-import { prefersReducedMotion } from '../../../internal/motion.js';
+import { motionScrollBehavior } from '../../../internal/motion.js';
 import { finiteCount, finiteNumber, finiteRatio, finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
@@ -22,6 +22,7 @@ import type { LyraHierarchySource, LyraHierarchyQuery, LyraTraceSourceSummary } 
 import type { HierarchySourceController } from '../../../internal/hierarchy-source-controller.js';
 import { HierarchySourceRuntimeGate, type HierarchySourceRuntime } from '../../../internal/lazy-hierarchy-source.js';
 import { hierarchySourceStyles } from '../../../internal/hierarchy-source-view.styles.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_accessibleLabelSeparator, LYRA_DEFAULT_spanKindAgent, LYRA_DEFAULT_spanKindEmbedding, LYRA_DEFAULT_spanKindLlm, LYRA_DEFAULT_spanKindOther, LYRA_DEFAULT_spanKindRetriever, LYRA_DEFAULT_spanKindTool, LYRA_DEFAULT_spanStartedAtOffset, LYRA_DEFAULT_spanWaterfall, LYRA_DEFAULT_spanWaterfallLimit } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -337,9 +338,9 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
    *  `LyraSpan.startMs`/`endMs` -- never a wall-clock timestamp). Both `null` (the default) fits
    *  the whole trace; a non-null NaN (e.g. an unparsable attribute) is normalized the same way as
    *  `null` by `viewWindow()` rather than poisoning the axis/bar math with NaN. */
-  @property({ type: Number, attribute: 'view-start-ms' }) viewStartMs: number | null = null;
+  @property({ converter: blankNumberConverter(null), attribute: 'view-start-ms' }) viewStartMs: number | null = null;
   /** End of the visible time window in trace-relative milliseconds; `null` fits the whole trace. */
-  @property({ type: Number, attribute: 'view-end-ms' }) viewEndMs: number | null = null;
+  @property({ converter: blankNumberConverter(null), attribute: 'view-end-ms' }) viewEndMs: number | null = null;
   /** Hides the time-ruler row (`[part="axis"]`). */
   @property({ type: Boolean, attribute: 'without-axis' }) withoutAxis = false;
   /** Accessible name of the list. Omission localizes the default; any supplied string, including
@@ -348,7 +349,7 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
 
   private focusedId: string | null = null;
   /** Maximum array-mode span rows, clamped to 1–5000. The active span retains its place. */
-  @property({ type: Number, attribute: 'max-nodes' }) maxNodes = 500;
+  @property({ converter: blankNumberConverter(500), attribute: 'max-nodes' }) maxNodes = 500;
 
   private sortedLimit = 0;
   private sortedSource?: readonly LyraSpan[];
@@ -576,8 +577,8 @@ export class LyraSpanWaterfall extends LyraElement<LyraSpanWaterfallEventMap> {
       const bar = this.renderedBarById(this.activeSpanId);
       if (bar && !bar.hidden) {
         const ownerWindow = bar.ownerDocument.defaultView;
-        const reducedMotion = !ownerWindow || prefersReducedMotion(this);
-        bar.scrollIntoView({ block: 'nearest', behavior: reducedMotion ? 'auto' : 'smooth' });
+        const behavior = ownerWindow ? motionScrollBehavior(this) : 'instant';
+        bar.scrollIntoView({ block: 'nearest', behavior });
       }
     }
     if (this.limitAnnouncementInitialized && this.sortedCacheTruncated && !this.previouslyTruncated) {

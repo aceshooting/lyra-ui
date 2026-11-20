@@ -16,7 +16,7 @@ import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { formatShortDuration, safeDurationMs } from '../../../internal/duration.js';
 
 import { TOOL_CALL_STATUSES, TOOL_STATUS_LABEL_KEY, toolStatusIcon, type ToolStatus } from '../tool-status.js';
-import { literalSetConverter } from '../../../internal/converters.js';
+import { literalSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { styles } from './tool-call-chip.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -190,7 +190,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
 
   /** How long the call took, in milliseconds. Omitted from the chip entirely when unset. */
   // numeric-guard-exempt: safeDurationMs() in internal/duration.ts rejects non-finite values and clamps negatives.
-  @property({ type: Number, attribute: 'duration-ms' }) durationMs?: number;
+  @property({ converter: blankNumberConverter(undefined), attribute: 'duration-ms' }) durationMs?: number;
 
   /** Literal icon hint (e.g. an emoji) used when the `status-icon` slot is empty — see the class doc's
    *  icon-precedence note. Ignored once anything is assigned to `slot="status-icon"`. */

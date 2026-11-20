@@ -26,6 +26,7 @@ import { keyEventOwnedByInnerControl } from '../../../internal/hotkey.js';
 import { isElement } from '../../../internal/rendered-tree-traversal.js';
 import { repairControlFocusOnUpdate } from '../../../internal/control-focus-repair.js';
 import { trackScrollRegions } from '../../../internal/scroll-region.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_imageViewerFailedToLoad, LYRA_DEFAULT_lightboxImagePosition, LYRA_DEFAULT_lightboxLabel } from '../../../internal/default-strings/media.generated.js';
@@ -338,7 +339,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
    * Source mode retains the requested index while loading.
    * @default 0
    */
-  @property({ type: Number, reflect: true, noAccessor: true })
+  @property({ converter: blankNumberConverter(0), reflect: true, noAccessor: true })
   get index(): number { return this._index; }
   set index(value: number) {
     this.navigationIntent++;
@@ -382,15 +383,15 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   /** Passed through to the embedded `<lr-pan-zoom>` as `.minZoom`. Same default as
    *  `<lr-pan-zoom>` itself. */
   // numeric-guard-exempt: pure pass-through to <lr-pan-zoom>, which already normalizes it via its own safeMinZoom
-  @property({ type: Number, attribute: 'min-zoom' }) minZoom = 0.5;
+  @property({ converter: blankNumberConverter(0.5), attribute: 'min-zoom' }) minZoom = 0.5;
 
   /** Passed through to the embedded `<lr-pan-zoom>` as `.maxZoom`. */
   // numeric-guard-exempt: pure pass-through to <lr-pan-zoom>, which already normalizes it via its own safeMaxZoom
-  @property({ type: Number, attribute: 'max-zoom' }) maxZoom = 4;
+  @property({ converter: blankNumberConverter(4), attribute: 'max-zoom' }) maxZoom = 4;
 
   /** Passed through to the embedded `<lr-pan-zoom>` as `.zoomStep`. */
   // numeric-guard-exempt: pure pass-through to <lr-pan-zoom>, which already normalizes it via its own safeZoomStep
-  @property({ type: Number, attribute: 'zoom-step' }) zoomStep = 0.25;
+  @property({ converter: blankNumberConverter(0.25), attribute: 'zoom-step' }) zoomStep = 0.25;
 
   /** A nonblank host label names the dialog. Blank labels use the localized `lightboxLabel` default. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;

@@ -13,7 +13,7 @@ import {
   isResourceLimitError,
   LyraUserFacingError,
 } from '../../../internal/resource-loader.js';
-import { prefersReducedMotion } from '../../../internal/motion.js';
+import { motionScrollBehavior } from '../../../internal/motion.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { styles } from './document-preview.styles.js';
@@ -48,6 +48,7 @@ import {
   MISSING_OWN_DATA_DESCRIPTOR,
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_documentPreviewTypeImage, LYRA_DEFAULT_download, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_navigation, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_search, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
@@ -332,7 +333,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
 
   /** 0-100. Only consulted while `status="converting"`. Unset (the default)
    *  renders the indeterminate spinner instead of a determinate progress bar. */
-  @property({ type: Number }) progress?: number;
+  @property({ converter: blankNumberConverter(undefined) }) progress?: number;
 
   /** Shown (via `[part="error"]`) while `status="error"`. Caller-supplied text, not routed through
    *  `localize()` -- app/network data, not library copy. */
@@ -734,8 +735,7 @@ export class LyraDocumentPreview extends LyraElement<LyraDocumentPreviewEventMap
     const regionElement = [...this.renderRoot.querySelectorAll('[part~="region-highlight"][data-id]')]
       .find((candidate) => candidate.getAttribute('data-id') === region.id);
     if (!regionElement) return false;
-    const behavior = prefersReducedMotion(this) ? 'auto' : 'smooth';
-    revealInOwnScroller(regionElement, 'center', behavior);
+    revealInOwnScroller(regionElement, 'center', motionScrollBehavior(this));
     return true;
   }
 

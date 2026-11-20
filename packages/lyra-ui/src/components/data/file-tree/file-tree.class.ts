@@ -21,6 +21,7 @@ import type { LyraTree, LyraTreeNodeData, TreeBadge } from '../tree/tree.class.j
 // Value import (not `import type`) -- revealPath() below needs the real constructor at runtime
 // for its `instanceof` check.
 import { LyraTreeItem } from '../tree/tree-item.class.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_fileTreeDiffSummary, LYRA_DEFAULT_fileTreeLabel } from '../../../internal/default-strings/data.generated.js';
@@ -438,7 +439,7 @@ export class LyraFileTree extends LyraElement<LyraFileTreeEventMap> {
   }
   /** Maximum projected rows, from 1 to 10000. Invalid or unset values use 1000.
    * Source admission remains bounded to 10000 positions across 64 descendant levels. */
-  @property({ type: Number, attribute: 'max-nodes' }) maxNodes = 1000;
+  @property({ converter: blankNumberConverter(1000), attribute: 'max-nodes' }) maxNodes = 1000;
   private get effectiveMaxNodes(): number {
     return Math.max(1, Math.min(10000, finiteCount(this.maxNodes, 1000)));
   }

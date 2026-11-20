@@ -1805,7 +1805,7 @@ describe("anchor-target adoption", () => {
         scroller.scrollBy = originalScrollBy;
       }
       expect(behaviors.length).to.be.at.least(2);
-      expect(behaviors.every((behavior) => behavior === "auto")).to.equal(true);
+      expect(behaviors.every((behavior) => behavior === "instant")).to.equal(true);
     } finally {
       restore();
     }

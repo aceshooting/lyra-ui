@@ -11,6 +11,7 @@ import {
   progressSafeValue,
   resolveProgressLabel,
 } from './progress-shared.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 
 /** The library's one semantic-tone vocabulary. */
 export type LyraProgressVariant = LyraVariant;
@@ -19,10 +20,10 @@ export type LyraProgressVariant = LyraVariant;
 export abstract class LyraProgressBase extends LyraElement {
   /** Current progress, clamped to `0` through `max`. Reflects to the `value` attribute. */
   // numeric-guard-exempt: normalized by progressSafeValue() in ./progress-shared.ts, which is where this component's finiteRange() guard now lives
-  @property({ type: Number, reflect: true }) value = 0;
+  @property({ converter: blankNumberConverter(0), reflect: true }) value = 0;
   /** Value at which progress is complete. Non-positive or non-finite values fall back to `100`. */
   // numeric-guard-exempt: normalized by progressSafeMax() in ./progress-shared.ts, which is where this component's finiteRange() guard now lives
-  @property({ type: Number }) max = 100;
+  @property({ converter: blankNumberConverter(100) }) max = 100;
   /** Shows an indeterminate busy state instead of a measured value. Reflects to the `indeterminate` attribute. */
   @property({ type: Boolean, reflect: true }) indeterminate = false;
   /** Semantic palette, read from the library's shared semantic-tone vocabulary. Recolors the

@@ -21,6 +21,7 @@ import {
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './stat.styles.js';
 import { bdi } from '../../../internal/bidi.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_statRowsInputLimit, LYRA_DEFAULT_statTrendAnnouncement, LYRA_DEFAULT_statTrendBad, LYRA_DEFAULT_statTrendDecreased, LYRA_DEFAULT_statTrendGood, LYRA_DEFAULT_statTrendIncreased, LYRA_DEFAULT_trendUnchanged } from '../../../internal/default-strings/data.generated.js';
@@ -158,7 +159,7 @@ export class LyraStat extends LyraElement {
   private _deltaPercent: number | null = null;
   /** Percentage delta for the trend pill. Null (the JSON-safe default) hides the pill;
    * non-finite input normalizes to null and finite numbers remain unclamped. */
-  @property({ type: Number, attribute: 'delta-percent' })
+  @property({ converter: blankNumberConverter(null), attribute: 'delta-percent' })
   get deltaPercent(): number | null {
     return this._deltaPercent;
   }

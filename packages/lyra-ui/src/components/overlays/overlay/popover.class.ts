@@ -40,6 +40,7 @@ import {
   declaredDefaultConverter,
   literalSetConverter,
   omittedEmptyStringConverter,
+  blankNumberConverter,
 } from '../../../internal/converters.js';
 import {
   activateNonmodalOverlay,
@@ -371,9 +372,9 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   private placedTopLayer?: boolean;
   /** Anchor-offset distance (px) passed to Floating UI's `offset()` middleware. Can legitimately
    *  be negative (overlaps the popup with the trigger); NaN/non-finite falls back to the default. */
-  @property({ type: Number }) distance = 8;
+  @property({ converter: blankNumberConverter(8) }) distance = 8;
   /** Offset along the anchor's edge, in pixels — Floating UI's cross-axis offset. */
-  @property({ type: Number }) skidding = 0;
+  @property({ converter: blankNumberConverter(0) }) skidding = 0;
   private _for = '';
   /**
    * Id of an element elsewhere in this popover's own root. It participates in positioning behind
@@ -406,7 +407,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   /** Where the arrow sits along the popup's edge. `anchor` tracks the anchor's centre. */
   @property({ attribute: 'arrow-placement' }) arrowPlacement: LyraArrowPlacement = 'anchor';
   /** Keeps the arrow this far from the popup's corners, in pixels. */
-  @property({ type: Number, attribute: 'arrow-padding' }) arrowPadding = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'arrow-padding' }) arrowPadding = 0;
   private _trigger = 'click';
   /**
    * Space-separated list of the interactions that open the popover -- see
@@ -447,11 +448,11 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   /** Delay (ms) between a `hover`/`focus` interaction and the popover opening. NaN, negative and
    *  oversized values all normalize through `finiteDuration`.
    *  @default 0 */
-  @property({ type: Number, attribute: 'show-delay' }) showDelay = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'show-delay' }) showDelay = 0;
   /** Delay (ms) between the interaction ending and the popover closing again -- the grace period
    *  that lets a pointer cross the gap to the popup. Normalized like {@link showDelay}.
    *  @default 0 */
-  @property({ type: Number, attribute: 'hide-delay' }) hideDelay = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'hide-delay' }) hideDelay = 0;
   /**
    * Renders an invisible `[part='hover-bridge']` quad spanning the `distance` gap between the
    * trigger and the popup while a `hover` popover is open, so a pointer travelling between them

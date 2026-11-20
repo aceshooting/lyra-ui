@@ -17,7 +17,7 @@ import { repeat } from 'lit/directives/repeat.js';
 import { ref } from 'lit/directives/ref.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { literalSetConverter } from '../../../internal/converters.js';
+import { literalSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { tag } from '../../../internal/prefix.js';
 import { VIRTUAL_LIST_ROW_ATTRIBUTE } from './virtual-list-attributes.js';
 export { VIRTUAL_LIST_ROW_ATTRIBUTE, VIRTUAL_LIST_STICKY_ATTRIBUTE } from './virtual-list-attributes.js';
@@ -591,7 +591,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   /** Added to a row's 1-based index to compute `aria-rowindex` in `item-role="row"` mode (e.g. `1`
    *  when a consumer renders its own header row occupying `aria-rowindex="1"` outside this
    *  component). No effect in `'listitem'` mode. */
-  @property({ type: Number, attribute: 'row-index-offset' }) rowIndexOffset = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'row-index-offset' }) rowIndexOffset = 0;
 
   /** Extra rows rendered beyond the visible viewport on each side, to reduce
    *  blank-frame risk during fast scrolling. Normalized to a whole number in
@@ -2358,7 +2358,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    */
   scrollToIndex(
     index: number,
-    options?: { align?: 'start' | 'end' | 'auto'; behavior?: 'auto' | 'smooth' }
+    options?: { align?: 'start' | 'end' | 'auto'; behavior?: ScrollBehavior }
   ): void {
     const n = this.itemCount;
     if (n === 0) return;

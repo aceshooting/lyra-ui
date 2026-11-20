@@ -11,7 +11,7 @@ import '../../utility/live-region/live-region.class.js';
 import { finiteDuration, MAX_TIMEOUT_MS } from '../../../internal/numbers.js';
 import { formatMediaTime } from '../../../internal/media-time.js';
 import { styles } from './push-to-talk.styles.js';
-import { literalSetConverter } from '../../../internal/converters.js';
+import { literalSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
 import { OwnedFrame, OwnedInterval, OwnedTimeout } from '../../../internal/owned-timer.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -202,7 +202,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
    *  milliseconds; `0` requests one slice at stop, or one-second slices in stream-only mode. Clamped to
    *  `[1, MAX_TIMEOUT_MS]` at the point it's handed to `MediaRecorder.start()` -- see `start()` --
    *  so a non-finite/oversized value can't reach that native API unsanitized. */
-  @property({ type: Number, attribute: 'timeslice-ms' }) timesliceMs = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'timeslice-ms' }) timesliceMs = 0;
   /** Emit chunks without retaining a final recording. The stop event carries an empty Blob.
    * A stream-only take requests one-second chunks unless timeslice-ms specifies a positive interval. */
   @property({ type: Boolean, attribute: 'stream-only' }) streamOnly = false;
@@ -222,7 +222,7 @@ export class LyraPushToTalk extends LyraElement<LyraPushToTalkEventMap> {
    *  `lr-sequence-playback`'s `interval-ms`
    *  handling of its own duration-like property. Changes during recording reschedule the deadline
    *  relative to the original recording start; setting `0` cancels it. */
-  @property({ type: Number, attribute: 'max-duration-ms' }) maxDurationMs = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'max-duration-ms' }) maxDurationMs = 0;
   /** Hides the elapsed timer and stops sampling it. Changes take effect immediately while
    *  recording. */
   @property({ type: Boolean, attribute: 'without-timer' }) withoutTimer = false;

@@ -19,6 +19,7 @@ import { styles } from './avatar-group.styles.js';
 // would side-effect-register `<lr-avatar>` just from importing `<lr-avatar-group>`, which this
 // component must not do: consumers register `lr-avatar` themselves.
 import type { LyraAvatar, LyraAvatarShape } from '../avatar/avatar.class.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_showMoreCollapsed, LYRA_DEFAULT_showMoreOverflowLabel } from '../../../internal/default-strings/shared.generated.js';
@@ -139,7 +140,7 @@ export class LyraAvatarGroup extends LyraElement<LyraAvatarGroupEventMap> {
    *  sanitized to a finite, non-negative integer via `finiteCount` — this feeds the
    *  `hasOverflow`/`syncChildVisibility`/`onOverflowClick` index math below directly, so a
    *  NaN/negative value must never reach it. */
-  @property({ type: Number })
+  @property({ converter: blankNumberConverter(undefined) })
   get max(): number | undefined {
     return this._max;
   }

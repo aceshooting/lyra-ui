@@ -61,6 +61,7 @@ import {
 import { styles } from './time-input.styles.js';
 import { isDateObject } from '../../../internal/dom-guards.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_timeInputDayPeriod, LYRA_DEFAULT_timeInputEmptySegment, LYRA_DEFAULT_timeInputHour, LYRA_DEFAULT_timeInputInvalid, LYRA_DEFAULT_timeInputLabel, LYRA_DEFAULT_timeInputMaxMessage, LYRA_DEFAULT_timeInputMinMessage, LYRA_DEFAULT_timeInputMinute, LYRA_DEFAULT_timeInputNow, LYRA_DEFAULT_timeInputOpen, LYRA_DEFAULT_timeInputPopup, LYRA_DEFAULT_timeInputRangeMessage, LYRA_DEFAULT_timeInputSecond, LYRA_DEFAULT_timeInputStepMessage } from '../../../internal/default-strings/forms.generated.js';
@@ -391,7 +392,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
   @property({ reflect: true }) appearance: LyraAppearance = 'outlined';
   @property() autocomplete = '';
   /** Gap in pixels between the field and the time picker popup. */
-  @property({ type: Number, reflect: true }) distance = 0;
+  @property({ converter: blankNumberConverter(0), reflect: true }) distance = 0;
   @property() hint = '';
   /** Hour display: `12`, `24`, or `auto` to follow the effective locale; unknown values use `auto`. */
   @property({ attribute: 'hour-format', converter: hourFormatConverter, reflect: true }) hourFormat: LyraTimeInputHourFormat = 'auto';

@@ -16,6 +16,7 @@ import type {
 import { styles } from './context-inspector.styles.js';
 import { firstByIdentity } from '../../../internal/collection-identity.js';
 import { overallSemanticLabel, overallSemanticRole } from '../semantic-owner.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_contextInspectorCopyLabel, LYRA_DEFAULT_contextInspectorEmpty, LYRA_DEFAULT_contextInspectorLabel, LYRA_DEFAULT_contextInspectorLimit, LYRA_DEFAULT_contextInspectorRedacted, LYRA_DEFAULT_contextInspectorSegmentTokens, LYRA_DEFAULT_contextInspectorTruncated, LYRA_DEFAULT_contextInspectorTruncatedCount } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -201,7 +202,7 @@ export class LyraContextInspector extends LyraElement<LyraContextInspectorEventM
   @property({ attribute: false }) segments: readonly ContextInspectorSegment[] = [];
 
   /** The full token budget `segments` are measured against — passed straight through to `<lr-context-meter>`'s own `total`. */
-  @property({ type: Number }) total = 0;
+  @property({ converter: blankNumberConverter(0) }) total = 0;
 
   /** Accessible group name, and the embedded `<lr-context-meter>`'s own visible caption, e.g. "128K context window". */
   @property() label?: string;

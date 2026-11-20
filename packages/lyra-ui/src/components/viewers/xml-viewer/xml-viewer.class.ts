@@ -29,7 +29,7 @@ import {
   yieldViewerTask,
 } from '../../../internal/resource-loader.js';
 import { chevronIcon } from '../../../internal/icons.js';
-import { prefersReducedMotion } from '../../../internal/motion.js';
+import { motionScrollBehavior } from '../../../internal/motion.js';
 import { RovingTreeFocus } from '../../../internal/roving-tree-focus.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import type { LyraHierarchySource, LyraHierarchyQuery, LyraInspectionNode } from '../../../data-sources.js';
@@ -56,6 +56,7 @@ import { ViewerAnnouncementController } from '../viewer-announcements.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 import { boundedViewerSearchQuery, ViewerSearchWorkBudget, VIEWER_SEARCH_MATCH_LIMIT, VIEWER_PAINTED_HIGHLIGHT_LIMIT } from '../viewer-search-limits.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed, LYRA_DEFAULT_countAtLeast, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_expand, LYRA_DEFAULT_highlightOfTotal, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_retry, LYRA_DEFAULT_search, LYRA_DEFAULT_showMoreCollapsed, LYRA_DEFAULT_sourceSearchUnavailable, LYRA_DEFAULT_treeSourceError, LYRA_DEFAULT_treeSourceSummary, LYRA_DEFAULT_viewerSearchMatchCount } from '../../../internal/default-strings/shared.generated.js';
@@ -464,12 +465,12 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
 
 
   /** Maximum parsed document nodes, from 1 to 500,000; invalid values use 50,000. */
-  @property({ type: Number, attribute: 'max-nodes' }) maxNodes = 50000;
+  @property({ converter: blankNumberConverter(50000), attribute: 'max-nodes' }) maxNodes = 50000;
   /** Maximum displayed tree rows, from 1 to 50,000; invalid values use 5,000. */
-  @property({ type: Number, attribute: 'max-rows' }) maxRows = 5000;
+  @property({ converter: blankNumberConverter(5000), attribute: 'max-rows' }) maxRows = 5000;
   /** Maximum UTF-8 input bytes, from 1 to 262,144,000; invalid values use 26,214,400.
    * @default 26214400 */
-  @property({ type: Number, attribute: 'max-bytes' }) maxBytes: number = DEFAULT_MAX_RESOURCE_BYTES;
+  @property({ converter: blankNumberConverter(DEFAULT_MAX_RESOURCE_BYTES), attribute: 'max-bytes' }) maxBytes: number = DEFAULT_MAX_RESOURCE_BYTES;
   private _treeSource?: XmlViewerTreeSource;
   private sourceMode = false;
   private sourceAnchorTask?: object;
@@ -665,7 +666,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
 
   /** Elements at or beyond this nesting depth (root = 0) start collapsed, so only the levels above
    *  it start expanded. Omit/undefined: nothing auto-collapses. */
-  @property({ type: Number, attribute: 'expand-depth' }) expandDepth?: number;
+  @property({ converter: blankNumberConverter(undefined), attribute: 'expand-depth' }) expandDepth?: number;
   /** Shows copy-to-clipboard affordances: one for the whole document, plus one per element. */
   @property({ type: Boolean, reflect: true }) copyable = false;
 
@@ -1263,7 +1264,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
     this.expandAncestors(JSON.parse(pathKey) as PathSegment[], true);
     await this.updateComplete;
     const active = this.renderRoot.querySelector('[data-active-match]') as HTMLElement | null;
-    if (active) revealInOwnScroller(active, 'center', prefersReducedMotion(this) ? 'auto' : 'smooth');
+    if (active) revealInOwnScroller(active, 'center', motionScrollBehavior(this));
   }
 
   private emitSearchChange(): void {

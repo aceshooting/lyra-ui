@@ -51,6 +51,7 @@ import {
   retrievalSemanticLabel,
   retrievalSemanticRole,
 } from '../retrieval-semantic-owner.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_ingestionActionWithContext, LYRA_DEFAULT_ingestionAttemptCount, LYRA_DEFAULT_ingestionCancelWithContext, LYRA_DEFAULT_ingestionChunkCount, LYRA_DEFAULT_ingestionEmbeddedOfTotal, LYRA_DEFAULT_ingestionItemProgressLabel, LYRA_DEFAULT_ingestionQueueActionLimit, LYRA_DEFAULT_ingestionQueueEmpty, LYRA_DEFAULT_ingestionQueueInputLimit, LYRA_DEFAULT_ingestionQueueLabel, LYRA_DEFAULT_ingestionRetryWithContext, LYRA_DEFAULT_ingestionStageCancelled, LYRA_DEFAULT_ingestionStageChunking, LYRA_DEFAULT_ingestionStageDone, LYRA_DEFAULT_ingestionStageEmbedding, LYRA_DEFAULT_ingestionStageExtracting, LYRA_DEFAULT_ingestionStageFailed, LYRA_DEFAULT_ingestionStageIndexing, LYRA_DEFAULT_ingestionStageQueued, LYRA_DEFAULT_ingestionStageUnknown, LYRA_DEFAULT_ingestionStageUploading, LYRA_DEFAULT_untitledSource } from '../../../internal/default-strings/retrieval.generated.js';
@@ -354,9 +355,9 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
     this.requestUpdate('dataSource', previous);
   }
   /** Zero-based provider page; only used with dataSource. */
-  @property({ type: Number, attribute: 'source-page' }) sourcePage = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'source-page' }) sourcePage = 0;
   /** Provider page size, normalized to 1..500. A size change resets the source page to 0. */
-  @property({ type: Number, attribute: 'source-page-size' }) sourcePageSize = 100;
+  @property({ converter: blankNumberConverter(100), attribute: 'source-page-size' }) sourcePageSize = 100;
   /** Exact total of the current provider queue, or null before a valid response or without a source. */
   get sourceTotal(): number | null { return this.sourceMode ? this.sourcePages.state.result?.total ?? null : null; }
   private get sourceMode(): boolean { return this.dataSource !== undefined; }
@@ -472,7 +473,7 @@ export class LyraIngestionQueue extends LyraElement<LyraIngestionQueueEventMap> 
   /** Above this item count, the list renders through an internal `<lr-virtual-list>`. Exclusive,
    *  like every other `virtualize-at` in this family: exactly this many items still render as a
    *  plain list. */
-  @property({ type: Number, attribute: 'virtualize-at' }) virtualizeAt =
+  @property({ converter: blankNumberConverter(DEFAULT_VIRTUALIZE_AT), attribute: 'virtualize-at' }) virtualizeAt =
     DEFAULT_VIRTUALIZE_AT;
 
   /** Opts this queue into announcing the failures it already carries when it first mounts, through

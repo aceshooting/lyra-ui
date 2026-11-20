@@ -28,6 +28,7 @@ import { resolveViewerSource, type LyraViewerSource } from '../viewer-source.js'
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 import { boundedViewerSearchQuery, ViewerSearchWorkBudget } from '../viewer-search-limits.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty } from '../../../internal/default-strings/shared.generated.js';
@@ -690,7 +691,7 @@ export class LyraNotebookViewer extends DocumentAnchorTarget(LyraNotebookViewerB
 
   /** A plain-text output longer than this many lines renders collapsed behind a toggle. `0`
    *  disables collapsing. */
-  @property({ type: Number, attribute: 'output-collapse-lines' }) outputCollapseLines = 40;
+  @property({ converter: blankNumberConverter(40), attribute: 'output-collapse-lines' }) outputCollapseLines = 40;
 
   /** A CSS length (e.g. `"30rem"`); once set, the notebook scrolls internally past this height
    *  instead of growing the page. Invalid values are ignored. */

@@ -24,6 +24,7 @@ import { firstByIdentity } from '../../../internal/collection-identity.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { InputLimitAnnouncement } from '../../../internal/input-limit-announcement.js';
 import { RovingListController } from '../../../internal/roving-list-controller.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_agentRunStatusCancelled, LYRA_DEFAULT_agentRunStatusCollecting, LYRA_DEFAULT_agentRunStatusDone, LYRA_DEFAULT_agentRunStatusIdle, LYRA_DEFAULT_agentRunStatusQueued, LYRA_DEFAULT_agentRunStatusWaitingApproval, LYRA_DEFAULT_agentRunStatusWaitingInput, LYRA_DEFAULT_evaluationDashboardLabel, LYRA_DEFAULT_evaluationDashboardMetricUnavailable, LYRA_DEFAULT_evaluationDashboardNoRuns, LYRA_DEFAULT_evaluationDashboardRunsLabel } from '../../../internal/default-strings/agent-tools.generated.js';
@@ -157,7 +158,7 @@ export class LyraAgentEvalDashboard extends LyraElement<LyraAgentEvalDashboardEv
   @property({ attribute: 'chart-height' }) chartHeight = '220px';
   /** Maximum history entries rendered into both the run list and trend chart. Clamped to 1–500. The
    *  first N runs in input order are kept, so pass newest-first history to chart the most recent runs. */
-  @property({ type: Number, attribute: 'max-rendered-runs' }) maxRenderedRuns = 100;
+  @property({ converter: blankNumberConverter(100), attribute: 'max-rendered-runs' }) maxRenderedRuns = 100;
   private metricsFor?: unknown;
   private metricsCache: AgentEvaluationMetric[] = [];
   private runsFor?: unknown;

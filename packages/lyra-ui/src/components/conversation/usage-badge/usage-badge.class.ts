@@ -12,6 +12,7 @@ import { styles } from './usage-badge.styles.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { resolveIdReferencesIn, updateDescriptionBaseline } from '../../../internal/aria-reflection.js';
 import { formatShortDuration, safeDurationMs } from '../../../internal/duration.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_usageBadgeCostLabel, LYRA_DEFAULT_usageBadgeLabel, LYRA_DEFAULT_usageBadgeLatencyLabel, LYRA_DEFAULT_usageBadgeTokensIn, LYRA_DEFAULT_usageBadgeTokensInLabel, LYRA_DEFAULT_usageBadgeTokensOut, LYRA_DEFAULT_usageBadgeTokensOutLabel, LYRA_DEFAULT_usageBadgeTotalTokensLabel } from '../../../internal/default-strings/conversation.generated.js';
@@ -100,10 +101,10 @@ export class LyraUsageBadge extends LyraElement {
 
   /** Input tokens. Normalized to a non-negative integer, locale-formatted. Segment omitted
    *  entirely while unset or non-finite. */
-  @property({ type: Number, attribute: 'tokens-in' }) tokensIn?: number;
+  @property({ converter: blankNumberConverter(undefined), attribute: 'tokens-in' }) tokensIn?: number;
 
   /** Output tokens. Same rules as `tokensIn`. */
-  @property({ type: Number, attribute: 'tokens-out' }) tokensOut?: number;
+  @property({ converter: blankNumberConverter(undefined), attribute: 'tokens-out' }) tokensOut?: number;
 
   /** Pre-formatted cost (e.g. `"$0.012"`), rendered verbatim. Currency formatting is host domain. */
   @property({ attribute: 'cost-text' }) costText = '';
@@ -111,7 +112,7 @@ export class LyraUsageBadge extends LyraElement {
   /** Latency in milliseconds, formatted with the shared duration algorithm (or `formatLatency`,
    *  when set). */
   // numeric-guard-exempt: safeDurationMs() in internal/duration.ts rejects non-finite values and clamps negatives.
-  @property({ type: Number, attribute: 'latency-ms' }) latencyMs?: number;
+  @property({ converter: blankNumberConverter(undefined), attribute: 'latency-ms' }) latencyMs?: number;
 
   /** Visible text used when there are no built-in token/cost/latency segments. Required to make a
    *  details-only badge into a discoverable tooltip trigger; the `summary` slot takes precedence. */

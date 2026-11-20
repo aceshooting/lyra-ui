@@ -60,6 +60,7 @@ import {
   type CalendarMode,
   type WeekdayFormat,
 } from './calendar-core.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_nextMonth, LYRA_DEFAULT_previousMonth } from '../../../internal/default-strings/forms.generated.js';
@@ -499,10 +500,10 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
     return this.admitsRange(from, to, min, max, this.resolvedToday()) ? { from, to } : null;
   }
   /** Minimum range length in inclusive days; `0` means no minimum. Range mode only. */
-  @property({ type: Number, attribute: 'min-range', reflect: true })
+  @property({ converter: blankNumberConverter(0), attribute: 'min-range', reflect: true })
   minRange = 0;
   /** Maximum range length in inclusive days; `0` means no maximum. Range mode only. */
-  @property({ type: Number, attribute: 'max-range', reflect: true })
+  @property({ converter: blankNumberConverter(0), attribute: 'max-range', reflect: true })
   maxRange = 0;
   /** Whether the previous/next buttons move by the number of visible `months` or by a single month. */
   @property({ attribute: 'page-by', reflect: true, converter: pageByConverter })

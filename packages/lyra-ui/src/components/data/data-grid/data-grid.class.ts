@@ -11,7 +11,7 @@ import { property, query, state } from 'lit/decorators.js';
 import { live } from 'lit/directives/live.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { styleMap } from 'lit/directives/style-map.js';
-import { trueDefaultBooleanConverter, trueDefaultSpellcheckConverter as spellcheckConverter } from '../../../internal/converters.js';
+import { trueDefaultBooleanConverter, trueDefaultSpellcheckConverter as spellcheckConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import {
   getOwnDataDescriptor,
@@ -437,7 +437,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
 
   /** Maximum admitted rows, including tree descendants; bounded from 1 to 100,000.
    * Set before data, then reassign data to restore previously excluded rows. */
-  @property({ type: Number, attribute: 'max-rows' }) maxRows = 10_000;
+  @property({ converter: blankNumberConverter(10_000), attribute: 'max-rows' }) maxRows = 10_000;
 
   private get rowLimit(): number {
     return Math.max(1, finiteCount(this.maxRows, DATA_GRID_TREE_NODE_LIMIT, 100_000));
@@ -512,7 +512,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     this.expandedRowKeys = value;
   }
   /** Delay before server search/filter requests. */
-  @property({ type: Number, attribute: 'filter-debounce' })
+  @property({ converter: blankNumberConverter(250), attribute: 'filter-debounce' })
   filterDebounce = 250;
   /** Whether the client row projection omitted rows: more than maxRows total rows (roots plus
    *  nested children) or nesting deeper than 64 levels. The `tree-limit` notice renders then. */
@@ -600,9 +600,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   /** Failed-load supporting copy. */
   @property({ attribute: 'error-description' }) errorDescription = '';
   /** Maximum simultaneous sorts; zero is unlimited. */
-  @property({ type: Number, attribute: 'max-multi-sort' }) maxMultiSort = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'max-multi-sort' }) maxMultiSort = 0;
   /** Zero-based page index. */
-  @property({ type: Number, reflect: true }) page = 0;
+  @property({ converter: blankNumberConverter(0), reflect: true }) page = 0;
   /** Number of available pages. */
   get pageCount(): number {
     return this.safePageSize ? Math.ceil(this.pageItemCount / this.safePageSize) : 0;
@@ -628,7 +628,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   }
 
   /** Rows per page. */
-  @property({ type: Number, attribute: 'page-size' }) pageSize = 20;
+  @property({ converter: blankNumberConverter(20), attribute: 'page-size' }) pageSize = 20;
   /** Choices rendered by the page-size selector. */
   private _pageSizeOptions: readonly number[] = Object.freeze([
     10, 20, 50, 100,
@@ -832,7 +832,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   /** Alternates client row backgrounds. */
   @property({ type: Boolean, reflect: true }) striped = false;
   /** Total server rows; `-1` derives the count from loaded data. */
-  @property({ type: Number }) total = -1;
+  @property({ converter: blankNumberConverter(-1) }) total = -1;
   /** Shows a menu on each column. */
   @property({ type: Boolean, attribute: 'with-column-menu', reflect: true })
   withColumnMenu = false;

@@ -11,7 +11,7 @@ import {
   normalizeFlowStatus,
   snapshotFlowHandles,
 } from '../flow-canvas/flow-model.js';
-import { omittedEmptyStringConverter } from '../../../internal/converters.js';
+import { omittedEmptyStringConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { resolveHeadingLevel, type LyraHeadingLevel } from '../../../internal/heading-level.js';
 import {
   writeOptionalSize,
@@ -147,11 +147,11 @@ export class LyraFlowNode extends LyraElement {
     if (next !== previous || value !== next) this.requestUpdate('status', previous);
   }
   /** Determinate progress percentage (0-100) shown as `[part="progress"]`; null hides the bar. */
-  @property({ type: Number }) progress: number | null = null;
+  @property({ converter: blankNumberConverter(null) }) progress: number | null = null;
   /** Text appended to the status line. */
   @property({ attribute: 'status-detail' }) statusDetail = '';
   /** Elapsed run time in milliseconds, formatted into the status line. */
-  @property({ type: Number, attribute: 'duration-ms' }) durationMs: number | null = null;
+  @property({ converter: blankNumberConverter(null), attribute: 'duration-ms' }) durationMs: number | null = null;
   /** Selected state; paints the card's selected ring outside a canvas. */
   @property({ type: Boolean, reflect: true }) selected = false;
   private _size?: LyraSize;

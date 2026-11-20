@@ -127,3 +127,19 @@ export const RetintedRevealToggle: Story = {
       .entries=${entries}
     ></lr-env-list>`,
 };
+
+export const RenderLimit: Story = {
+  name: 'Render limit (first 500 rows)',
+  parameters: {
+    docs: {
+      description: {
+        story: 'Only the first 500 entries render; `[part="limit"]` counts every retained entry that is not shown.',
+      },
+    },
+  },
+  render: () =>
+    html`<lr-env-list
+      style="max-width:32rem;max-height:20rem;overflow:auto"
+      .entries=${Array.from({ length: 520 }, (_, index): EnvEntry => ({ name: `VAR_${index + 1}`, value: `value-${index + 1}`, secret: false }))}
+    ></lr-env-list>`,
+};

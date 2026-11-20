@@ -60,6 +60,7 @@ import { styles } from './flow-canvas.styles.js';
 import { FlowViewportIndex, type FlowViewportBounds } from './flow-viewport-index.js';
 import { composedParentElement, deepActiveElementIn } from '../../../internal/active-element.js';export * from './flow-types.js';
 import { wheelZoomDelta, wheelZoomFactor } from '../../../internal/wheel-zoom.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_flowCanvasInputLimit, LYRA_DEFAULT_flowCanvasLabel, LYRA_DEFAULT_flowCanvasLayoutLimit, LYRA_DEFAULT_flowCanvasSummary, LYRA_DEFAULT_flowConnectCancelled, LYRA_DEFAULT_flowConnectCommitted, LYRA_DEFAULT_flowConnectStarted, LYRA_DEFAULT_flowConnectTarget, LYRA_DEFAULT_flowEdge, LYRA_DEFAULT_flowEdgeList, LYRA_DEFAULT_flowEdgeWithLabel, LYRA_DEFAULT_flowNode, LYRA_DEFAULT_flowNodeDeselected, LYRA_DEFAULT_flowNodeMoved, LYRA_DEFAULT_flowNodeSelected, LYRA_DEFAULT_flowSelectionCleared, LYRA_DEFAULT_flowSourceRecordMatches, LYRA_DEFAULT_flowSourceRevealSourceNode, LYRA_DEFAULT_flowSourceRevealTargetNode, LYRA_DEFAULT_paginationPage } from '../../../internal/default-strings/data.generated.js';
@@ -481,7 +482,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
   private _sourcePage = 0;
   /** Zero-based global record page, normalized against sourcePageSize. */
-  @property({ type: Number, attribute: 'source-page' })
+  @property({ converter: blankNumberConverter(0), attribute: 'source-page' })
   get sourcePage(): number { return this._sourcePage; }
   set sourcePage(value: number) {
     const old = this._sourcePage; this._sourcePage = value;
@@ -490,7 +491,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
   }
   private _sourcePageSize = 100;
   /** Source records per page, normalized to 1–500. */
-  @property({ type: Number, attribute: 'source-page-size' })
+  @property({ converter: blankNumberConverter(100), attribute: 'source-page-size' })
   get sourcePageSize(): number { return this._sourcePageSize; }
   set sourcePageSize(value: number) {
     const old = this._sourcePageSize; this._sourcePageSize = value; this._sourcePage = 0;
@@ -890,16 +891,16 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     return selected.length === value.length ? value : Object.freeze(selected);
   }
   /** Lowest zoom; invalid values fall back to 0.25 and reversed bounds are sorted. */
-  @property({ type: Number, attribute: 'min-zoom' }) minZoom = 0.25;
+  @property({ converter: blankNumberConverter(0.25), attribute: 'min-zoom' }) minZoom = 0.25;
   /** Highest zoom; invalid values fall back to 2 and reversed bounds are sorted. */
-  @property({ type: Number, attribute: 'max-zoom' }) maxZoom = 2;
+  @property({ converter: blankNumberConverter(2), attribute: 'max-zoom' }) maxZoom = 2;
   /** Snap step, in content px, for drags/nudges/drop positions; `0` disables snapping. Also the
    *  dotted background's base spacing. */
-  @property({ type: Number }) grid = 8;
+  @property({ converter: blankNumberConverter(8) }) grid = 8;
   /** Auto-layout spacing between layers, in content px. */
-  @property({ type: Number, attribute: 'layer-gap' }) layerGap = 64;
+  @property({ converter: blankNumberConverter(64), attribute: 'layer-gap' }) layerGap = 64;
   /** Auto-layout spacing between siblings in a layer, in content px. */
-  @property({ type: Number, attribute: 'node-gap' }) nodeGap = 24;
+  @property({ converter: blankNumberConverter(24), attribute: 'node-gap' }) nodeGap = 24;
   private readonly decorationsSnapshot = new SnapshotProperty<FlowRunDecorations | null>(null,
     value => value == null ? null : snapshotFlowDecorations(value));
   /** Deeply snapshotted, frozen run decorations, bounded to 10,000 keys and a finite nested-data

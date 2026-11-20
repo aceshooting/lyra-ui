@@ -12,6 +12,7 @@ import { chartValueFractionDigits, formatChartValue } from '../../../internal/ch
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { finiteNumber, finiteRatio } from '../../../internal/numbers.js';
 import { styles } from './sparkline.styles.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_trendOf } from '../../../internal/default-strings/data.generated.js';
@@ -172,10 +173,10 @@ export class LyraSparkline extends LyraElement {
   }
 
   /** Lower bound of the value scale (defaults to the data minimum). */
-  @property({ type: Number }) min?: number;
+  @property({ converter: blankNumberConverter(undefined) }) min?: number;
 
   /** Upper bound of the value scale (defaults to the data maximum). */
-  @property({ type: Number }) max?: number;
+  @property({ converter: blankNumberConverter(undefined) }) max?: number;
 
   /** Property-only immutable whole-source summary with exactly one series and at most 500 samples.
    * Takes precedence over values/data. Original x, full domains/counts and gap breaks are retained;

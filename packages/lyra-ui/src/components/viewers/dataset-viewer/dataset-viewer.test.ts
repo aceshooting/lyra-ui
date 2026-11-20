@@ -802,7 +802,7 @@ describe('lr-dataset-viewer', () => {
         expect(
           await el.scrollToAnchor({ kind: 'cell-range', range: 'B1' })
         ).to.equal(true);
-        expect(behaviors).to.deep.equal(['smooth', 'auto']);
+        expect(behaviors).to.deep.equal(['smooth', 'instant']);
       } finally {
         window.matchMedia = originalMatchMedia;
         restore();

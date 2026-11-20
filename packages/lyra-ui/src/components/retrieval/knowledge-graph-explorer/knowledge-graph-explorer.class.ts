@@ -62,6 +62,7 @@ import '../../overlays/overlay/popover.class.js';
 import '../../forms/input/input.class.js';
 import '../../forms/button/button.class.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_graphDataListLimit, LYRA_DEFAULT_graphEdgeLimit, LYRA_DEFAULT_graphExplorerAllTypesHidden, LYRA_DEFAULT_graphExplorerClearTypes, LYRA_DEFAULT_graphExplorerFindPath, LYRA_DEFAULT_graphExplorerLabel, LYRA_DEFAULT_graphExplorerPin, LYRA_DEFAULT_graphExplorerPinned, LYRA_DEFAULT_graphExplorerPinnedHeading, LYRA_DEFAULT_graphExplorerSearchLimit, LYRA_DEFAULT_graphExplorerSearchPlaceholder, LYRA_DEFAULT_graphExplorerSearchResultsLabel, LYRA_DEFAULT_graphExplorerUnpin, LYRA_DEFAULT_graphExplorerUnpinned, LYRA_DEFAULT_graphNodeLimit } from '../../../internal/default-strings/retrieval.generated.js';
@@ -387,7 +388,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   }
   private _sourcePage = 0;
   /** Zero-based page of the sole child-owned global record navigator. */
-  @property({ type: Number, attribute: 'source-page', noAccessor: true })
+  @property({ converter: blankNumberConverter(0), attribute: 'source-page', noAccessor: true })
   get sourcePage(): number { return this._sourcePage; }
   set sourcePage(value: number) {
     const old = this._sourcePage; this._sourcePage = value;
@@ -397,7 +398,7 @@ export class LyraKnowledgeGraphExplorer extends LyraElement<LyraKnowledgeGraphEx
   }
   private _sourcePageSize = 100;
   /** Records per page, default 100 and normalized 1–500 by the child. */
-  @property({ type: Number, attribute: 'source-page-size', noAccessor: true })
+  @property({ converter: blankNumberConverter(100), attribute: 'source-page-size', noAccessor: true })
   get sourcePageSize(): number { return this._sourcePageSize; }
   set sourcePageSize(value: number) {
     const old = this._sourcePageSize; this._sourcePageSize = value;

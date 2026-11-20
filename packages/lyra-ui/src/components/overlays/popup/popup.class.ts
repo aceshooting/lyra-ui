@@ -1,4 +1,4 @@
-import { declaredDefaultConverter } from '../../../internal/converters.js';
+import { declaredDefaultConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { waitForTransitionSettle } from '../../../internal/css-motion-time.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
@@ -149,10 +149,10 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
   @property({ reflect: true, converter: declaredDefaultConverter('absolute') }) strategy: PlaceStrategy = 'absolute';
 
   /** Distance from the anchor along the placement axis, in pixels. */
-  @property({ type: Number }) distance = 0;
+  @property({ converter: blankNumberConverter(0) }) distance = 0;
 
   /** Offset along the anchor's edge, in pixels. */
-  @property({ type: Number }) skidding = 0;
+  @property({ converter: blankNumberConverter(0) }) skidding = 0;
 
   /** Flip to the opposite side when the preferred one does not fit. */
   @property({ type: Boolean }) flip = false;
@@ -179,7 +179,7 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
   @property({ attribute: false }) flipBoundary: PlaceBoundary | null = null;
 
   /** Padding kept clear inside the flip boundary, in pixels. */
-  @property({ type: Number, attribute: 'flip-padding' }) flipPadding = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'flip-padding' }) flipPadding = 0;
 
   /** Shift along the anchor's edge to stay within the viewport. */
   @property({ type: Boolean }) shift = false;
@@ -188,10 +188,10 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
   @property({ attribute: false }) shiftBoundary: PlaceBoundary | null = null;
 
   /** Padding kept clear inside the shift boundary, in pixels. */
-  @property({ type: Number, attribute: 'shift-padding' }) shiftPadding = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'shift-padding' }) shiftPadding = 0;
 
   /** Viewport padding kept clear by `shift` and by the available-size measurement. */
-  @property({ type: Number }) padding = 0;
+  @property({ converter: blankNumberConverter(0) }) padding = 0;
 
   /**
    * Re-measures the available space on the named axes against `auto-size-boundary` and
@@ -204,7 +204,7 @@ export class LyraPopup extends LyraElement<LyraPopupEventMap> {
   @property({ attribute: false }) autoSizeBoundary: PlaceBoundary | null = null;
 
   /** Padding kept clear inside the auto-size boundary, in pixels. */
-  @property({ type: Number, attribute: 'auto-size-padding' }) autoSizePadding = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'auto-size-padding' }) autoSizePadding = 0;
 
   /** Copies the anchor's inline size, block size, or both onto the popup. */
   @property() sync: PlaceSync | null = null;

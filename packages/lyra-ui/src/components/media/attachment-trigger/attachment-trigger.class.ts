@@ -14,7 +14,7 @@ import type { LyraIconButton } from '../../forms/icon-button/icon-button.class.j
 import { styles } from './attachment-trigger.styles.js';
 import type { MenuItemSelectDetail } from '../../layout/menu/menu.class.js';
 import type { LyraDropdown } from '../../overlays/overlay/dropdown.class.js';
-import { falseDefaultBooleanConverter } from '../../../internal/converters.js';
+import { falseDefaultBooleanConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { classifyFiles, EMPTY_MIME_TYPES, mimeTypeFilter, snapshotMimeTypes } from '../../../internal/file-accept.js';
 import type { LyraFileInputRejectedFile } from '../file-input/file-input.class.js';
@@ -313,22 +313,22 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   /** Largest accepted file size in bytes; larger picks are listed in `rejected` with reason
    *  `'size'`. `0` (the default) disables the check; an invalid override falls back to 25 MiB. */
   // numeric-guard-exempt: normalized by classifyFiles() in file-intake.ts
-  @property({ type: Number, attribute: 'max-file-size', useDefault: true }) maxFileSize = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'max-file-size', useDefault: true }) maxFileSize = 0;
   /** Largest number of files accepted per selection; excess picks are rejected with reason
    *  `'maxFiles'`. `0` (the default) disables the check; an invalid override falls back to 100. */
   // numeric-guard-exempt: normalized by classifyFiles() in file-intake.ts
-  @property({ type: Number, attribute: 'max-files', useDefault: true }) maxFiles = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'max-files', useDefault: true }) maxFiles = 0;
   /** Largest combined byte size accepted per selection (`'maxTotalSize'` rejection). `0` (the
    *  default) disables the check; an invalid override falls back to 250 MiB. */
   // numeric-guard-exempt: normalized by classifyFiles() in file-intake.ts
-  @property({ type: Number, attribute: 'max-total-size', useDefault: true }) maxTotalSize = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'max-total-size', useDefault: true }) maxTotalSize = 0;
 
   /** Externally held files to count against `maxFiles`. */
   // numeric-guard-exempt: normalized by classifyFiles() in file-input/accept.ts via finiteCount()
-  @property({ type: Number, attribute: 'held-file-count', useDefault: true }) heldFileCount = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'held-file-count', useDefault: true }) heldFileCount = 0;
   /** Externally held bytes to count against `maxTotalSize`. */
   // numeric-guard-exempt: normalized by classifyFiles() in file-input/accept.ts via finiteCount()
-  @property({ type: Number, attribute: 'held-total-size', useDefault: true }) heldTotalSize = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'held-total-size', useDefault: true }) heldTotalSize = 0;
   /** Exact MIME types allowed in addition to satisfying `accept`. An empty allowlist admits any type. */
   @property({ attribute: false }) allowedMimeTypes: readonly string[] = EMPTY_MIME_TYPES;
   /** Exact MIME types rejected even when present in the allowlist. */

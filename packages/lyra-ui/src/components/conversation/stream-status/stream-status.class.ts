@@ -7,7 +7,7 @@ import type { LyraLiveRegion } from '../../utility/live-region/live-region.class
 import '../../utility/live-region/live-region.class.js';
 import { finiteDuration, MAX_TIMEOUT_MS } from '../../../internal/numbers.js';
 import { OwnedTimeout } from '../../../internal/owned-timer.js';
-import { literalSetConverter } from '../../../internal/converters.js';
+import { literalSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import type { LyraStreamPhase } from '../../../internal/stream-phase.js';
 import { styles } from './stream-status.styles.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
@@ -185,7 +185,7 @@ export class LyraStreamStatus extends LyraElement<LyraStreamStatusEventMap> {
 
   /** How long `phase` may stay `'streaming'` with no `recordActivity()` call
    *  before this component declares it stalled. */
-  @property({ type: Number, attribute: 'stall-threshold-ms', useDefault: true })
+  @property({ converter: blankNumberConverter(10000), attribute: 'stall-threshold-ms', useDefault: true })
   stallThresholdMs = 10000;
 
   /** Offers a resume request only while interrupted. Does not reconnect a transport. */

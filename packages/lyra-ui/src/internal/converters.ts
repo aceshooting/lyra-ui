@@ -144,14 +144,15 @@ export const omittedEmptyStringConverter: ComplexAttributeConverter<string> = {
  * Restores a declared string/number default when an attribute is removed while preserving the
  * component's established initial reflection. Lit's `useDefault` restores removal too, but it
  * intentionally omits the initial reflected attribute and therefore changes that DOM contract.
+ * A numeric default is also restored by a blank (empty or whitespace-only) attribute.
  */
 export function declaredDefaultConverter<T extends string | number>(
   declaredDefault: T
 ): ComplexAttributeConverter<T> {
   return Object.freeze({
     fromAttribute: (value: string | null): T => {
-      if (value === null) return declaredDefault;
-      return (typeof declaredDefault === 'number' ? Number(value) : value) as T;
+      if (typeof declaredDefault !== 'number') return (value ?? declaredDefault) as T;
+      return (value?.trim() ? Number(value) : declaredDefault) as T;
     },
     toAttribute: (value: T): string | number => value,
   });
@@ -159,10 +160,11 @@ export function declaredDefaultConverter<T extends string | number>(
 
 /**
  * Number attribute whose blank value (absent, empty or whitespace-only) yields `fallback` -- the
- * declared default, or `null` for "unset" -- instead of the `0` that `Number('')` produces, so a
- * framework binding that serializes an unset value as `""` keeps the default.
+ * declared default, or `null`/`undefined` for "unset" -- instead of the `0` that `Number('')`
+ * produces, so a framework binding that serializes an unset value as `""` keeps the default.
+ * Attribute-backed numeric properties use it in place of `type: Number` (`check:blank-numeric-attributes`).
  */
-export function blankNumberConverter<T extends number | null>(
+export function blankNumberConverter<T extends number | null | undefined>(
   fallback: T
 ): ComplexAttributeConverter<number | T> {
   return Object.freeze({

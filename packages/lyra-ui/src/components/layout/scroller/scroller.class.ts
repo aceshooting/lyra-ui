@@ -6,7 +6,7 @@ import { chevronIcon } from '../../../internal/icons.js';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { resolveAccessibleName } from '../../../internal/accessible-name.js';
-import { declaredDefaultConverter } from '../../../internal/converters.js';
+import { declaredDefaultConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './scroller.styles.js';
@@ -118,7 +118,7 @@ export class LyraScroller extends LyraElement<LyraScrollerEventMap> {
   @property({ type: Boolean, attribute: 'without-shadow', reflect: true })
   withoutShadow = false;
   /** Distance in CSS pixels the control buttons scroll per activation; zero, negative or non-finite scrolls 80% of the viewport size. */
-  @property({ type: Number, attribute: 'scroll-step' }) scrollStep = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'scroll-step' }) scrollStep = 0;
   /** Accessible name of the scroll viewport; the host `aria-label` takes precedence. */
   @property() label = '';
   /** Accessible name of the scroll viewport. A present host aria-label takes precedence. */

@@ -39,7 +39,7 @@ import type { LyraFrame, LyraSize } from '../../../internal/variants.js';
 import type { LyraVirtualListRange } from '../../layout/virtual-list/virtual-list.class.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 import { advanceViewerSearchIndex, sameViewerSearchDetail, viewerSearchDetail } from '../../../internal/viewer-search.js';
-import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter } from '../../../internal/converters.js';
+import { presenceTrueDefaultBooleanConverter as trueDefaultBooleanConverter, blankNumberConverter } from '../../../internal/converters.js';
 import type { LyraClipboardWriteFailure, LyraClipboardWriteSuccess } from '../../../internal/clipboard.js';
 import { RecordCopyFeedback, reportCopyOutcome } from '../../../internal/record-copy-feedback.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -318,7 +318,7 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
    *  1..10,000 range. Retained text is additionally limited to 2,000,000 UTF-16 units, each line
    *  to 20,000 scalar columns, and each write/content commit to 1,000,000 input UTF-16 units.
    *  lr-overflow reports loss; effective retained lines also depend on their lengths. */
-  @property({ type: Number, attribute: 'max-scrollback' }) maxScrollback = 5000;
+  @property({ converter: blankNumberConverter(5000), attribute: 'max-scrollback' }) maxScrollback = 5000;
   /** Keeps the view pinned to the newest output. Defaults to `true`; reflects to the `follow` attribute. */
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) follow = true;
   /** Keeps each line on one row (horizontally scrollable) instead of soft-wrapping it. */

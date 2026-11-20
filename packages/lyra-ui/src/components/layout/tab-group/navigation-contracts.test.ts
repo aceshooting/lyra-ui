@@ -169,7 +169,8 @@ it('uses layout pixels to position the separator in a scaled rail', async () => 
   const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
   const resizer = el.shadowRoot!.querySelector<HTMLElement>('[part="resizer"]')!;
   await waitUntil(() => resizer.style.insetInlineStart !== '');
-  expect(parseFloat(resizer.style.insetInlineStart)).to.be.closeTo(base.offsetWidth - resizer.offsetWidth / 2, 1);
+  // The hit target starts at the rail edge and extends outward, in unscaled layout pixels.
+  expect(parseFloat(resizer.style.insetInlineStart)).to.be.closeTo(base.offsetWidth, 1);
   expect(resizer.getAttribute('aria-valuenow')).to.equal(String(base.offsetWidth));
 });
 

@@ -321,3 +321,20 @@ export const SelectedFilesInGrid: Story = {
     },
   },
 };
+
+export const HeldFileLimit: Story = {
+  name: 'Held file limit (first 200 rows)',
+  parameters: {
+    docs: {
+      description: {
+        story: 'The control keeps every held file in `files` but renders the first 200 rows; `[part="file-more"]` inside `file-list` counts the rest.',
+      },
+    },
+  },
+  render: () =>
+    html`<lr-file-input
+      multiple
+      label="Batch upload"
+      .files=${Array.from({ length: 205 }, (_, index) => new File(['x'], `file-${index + 1}.txt`, { type: 'text/plain' }))}
+    ></lr-file-input>`,
+};

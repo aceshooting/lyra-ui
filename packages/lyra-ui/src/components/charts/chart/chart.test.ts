@@ -7051,7 +7051,10 @@ describe('bounded chart fallback paths', () => {
     const descriptor = Object.getOwnPropertyDescriptor(window, 'matchMedia');
     Object.defineProperty(window, 'matchMedia', { configurable: true, value: undefined });
     try {
-      expect(() => (el as any).armReducedMotionWatcher()).to.not.throw();
+      expect(() => {
+        (el as any).reducedMotionWatch.arm();
+        (el as any).reducedMotionWatch.disarm();
+      }).to.not.throw();
     } finally {
       if (descriptor) Object.defineProperty(window, 'matchMedia', descriptor);
       else Reflect.deleteProperty(window, 'matchMedia');

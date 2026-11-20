@@ -37,6 +37,7 @@ import {
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
 import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
 import { StructuredFormValidityController } from '../../../internal/form-validator-runtime.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_graphQueryBuilderLabel, LYRA_DEFAULT_graphQueryDeleteWithContext, LYRA_DEFAULT_graphQueryDirectionLabel, LYRA_DEFAULT_graphQueryEndLabel, LYRA_DEFAULT_graphQueryHopRangeInvalid, LYRA_DEFAULT_graphQueryLoadWithContext, LYRA_DEFAULT_graphQueryMaxHopsLabel, LYRA_DEFAULT_graphQueryMinHopsLabel, LYRA_DEFAULT_graphQueryNodeTypeLabel, LYRA_DEFAULT_graphQueryRelationshipTypeLabel, LYRA_DEFAULT_graphQueryRun, LYRA_DEFAULT_graphQuerySaveButton, LYRA_DEFAULT_graphQuerySaveNameLabel, LYRA_DEFAULT_graphQuerySavedQueriesLabel, LYRA_DEFAULT_graphQueryStartLabel } from '../../../internal/default-strings/data.generated.js';
@@ -485,7 +486,7 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
   }
   /** Upper bound (inclusive) offered by the minimum/maximum hop selects. Sanitized to a finite
    *  integer in `[1, 20]`, falling back to `6`. */
-  @property({ attribute: 'hop-limit', type: Number }) hopLimit = 6;
+  @property({ attribute: 'hop-limit', converter: blankNumberConverter(6) }) hopLimit = 6;
 
   /** Semantic level of the saved-queries heading: `1`-`6` expose it as a heading at that level
    *  (default `3`), `none` renders plain text so it stays out of the document outline. */

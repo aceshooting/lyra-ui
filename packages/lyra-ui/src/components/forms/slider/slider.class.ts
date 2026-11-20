@@ -20,7 +20,7 @@ import {
 } from '../../../internal/form-associated.js';
 import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { setCustomState, syncValidityStates } from '../../../internal/custom-states.js';
-import { falseDefaultBooleanConverter, literalSetConverter } from '../../../internal/converters.js';
+import { falseDefaultBooleanConverter, literalSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraLabelDisplay, LyraSize } from '../../../internal/variants.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
@@ -290,7 +290,7 @@ export class LyraSlider extends LyraSliderBase {
     value: { attribute: false, noAccessor: true },
     defaultValue: {
       attribute: 'value',
-      type: Number,
+      converter: blankNumberConverter(0),
       reflect: true,
       useDefault: true,
       noAccessor: true,
@@ -298,15 +298,15 @@ export class LyraSlider extends LyraSliderBase {
     name: { reflect: true, noAccessor: true },
     required: { type: Boolean, reflect: true, noAccessor: true },
     disabled: { type: Boolean, reflect: true, noAccessor: true },
-    min: { type: Number, noAccessor: true },
-    max: { type: Number, noAccessor: true },
-    step: { type: Number, noAccessor: true },
+    min: { converter: blankNumberConverter(0), noAccessor: true },
+    max: { converter: blankNumberConverter(100), noAccessor: true },
+    step: { converter: blankNumberConverter(1), noAccessor: true },
     // Same reasoning: `range` decides whether this control contributes to
     // FormData at all, and `minValue`/`maxValue` are read back synchronously
     // by consumers right after assignment.
     range: { type: Boolean, reflect: true, noAccessor: true },
-    minValue: { type: Number, attribute: 'min-value', noAccessor: true },
-    maxValue: { type: Number, attribute: 'max-value', noAccessor: true },
+    minValue: { converter: blankNumberConverter(0), attribute: 'min-value', noAccessor: true },
+    maxValue: { converter: blankNumberConverter(50), attribute: 'max-value', noAccessor: true },
     size: { reflect: true },
   };
 
@@ -642,7 +642,7 @@ export class LyraSlider extends LyraSliderBase {
   @property({ type: Boolean }) override autofocus = false;
 
   /** Origin of the single-slider indicator. The fill spans between this value and `value`. */
-  @property({ type: Number, attribute: 'indicator-offset' }) indicatorOffset?: number;
+  @property({ converter: blankNumberConverter(undefined), attribute: 'indicator-offset' }) indicatorOffset?: number;
 
   /** Which axis carries the value. `'vertical'` also switches the primary keys to
    *  ArrowUp/ArrowDown and exposes `aria-orientation="vertical"`. */
@@ -674,7 +674,7 @@ export class LyraSlider extends LyraSliderBase {
   tooltipPlacement: SliderTooltipPlacement = 'top';
 
   /** Gap between a handle and its tooltip, measured in CSS pixels. */
-  @property({ type: Number, attribute: 'tooltip-distance' }) tooltipDistance = 8;
+  @property({ converter: blankNumberConverter(8), attribute: 'tooltip-distance' }) tooltipDistance = 8;
 
   /** Shoelace-compatible tooltip switch. `none` hides; top/bottom also set the placement. Lyra
    *  defaults to `none`, unlike `<sl-range>`'s `top`; the migration codemod inserts `tooltip="top"`,

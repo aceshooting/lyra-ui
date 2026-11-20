@@ -14,7 +14,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { makeScrollRegionFocusable, revealWithinScrollParent } from '../../../internal/scroll-region.js';
 import { finiteCount } from '../../../internal/numbers.js';
 import { RovingTreeFocus } from '../../../internal/roving-tree-focus.js';
-import { literalSetConverter } from '../../../internal/converters.js';
+import { literalSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
 import { viewerSearchDetail } from '../../../internal/viewer-search.js';
 import {
@@ -610,7 +610,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   }
 
   /** Maximum admitted, searched and rendered nodes, from 1 to 50,000; invalid values use 5,000. */
-  @property({ type: Number, attribute: 'max-nodes' }) maxNodes = 5000;
+  @property({ converter: blankNumberConverter(5000), attribute: 'max-nodes' }) maxNodes = 5000;
   private get effectiveMaxNodes(): number {
     return Math.max(1, finiteCount(this.maxNodes, MAX_JSON_NODES, 50000));
   }
@@ -618,7 +618,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   @property({ attribute: false }) data: unknown;
   /** Nodes at or beyond this nesting depth (root = 0) start collapsed, so only the levels above it
    *  start expanded. Omit/undefined: nothing auto-collapses. */
-  @property({ type: Number, attribute: 'expand-depth' })
+  @property({ converter: blankNumberConverter(undefined), attribute: 'expand-depth' })
   expandDepth?: number;
   /** A CSS length (e.g. `"20rem"`); once set, the viewer scrolls internally past this height
    * instead of growing the page. Invalid values are ignored. */

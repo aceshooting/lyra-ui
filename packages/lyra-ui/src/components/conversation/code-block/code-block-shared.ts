@@ -28,7 +28,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { chevronIcon, copyIcon } from '../../../internal/icons.js';
-import { prefersReducedMotion } from '../../../internal/motion.js';
+import { motionScrollBehavior } from '../../../internal/motion.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
 import { observeTextSelection } from '../../../internal/text-selection-observer.js';
@@ -274,10 +274,10 @@ export async function scrollCodeBlockToAnchor(
   if (!body || !lineEl) return false;
   const offset = lineEl.offsetTop - body.clientHeight / 2;
   const ownerWindow = body.ownerDocument.defaultView;
-  const reducedMotion = !ownerWindow || prefersReducedMotion(body);
+  const behavior = ownerWindow ? motionScrollBehavior(body) : 'instant';
   body.scrollTo({
     top: Math.max(0, offset),
-    behavior: reducedMotion ? 'auto' : 'smooth',
+    behavior,
   });
   return true;
 }

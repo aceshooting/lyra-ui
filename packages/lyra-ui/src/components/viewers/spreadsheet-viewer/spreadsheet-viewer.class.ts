@@ -42,6 +42,7 @@ import {
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { renderViewerLoading, viewerLoadingStyles } from '../viewer-loading.js';
 import type { LyraSearchChangeDetail } from '../../../internal/text-viewer-target.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_highlightWithLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData, LYRA_DEFAULT_open, LYRA_DEFAULT_search, LYRA_DEFAULT_sourceSearchUnavailable, LYRA_DEFAULT_viewerSearchActiveMatch, LYRA_DEFAULT_viewerSearchMatchCount, LYRA_DEFAULT_viewerSearchNoMatches } from '../../../internal/default-strings/shared.generated.js';
@@ -232,14 +233,14 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
 
   /** Maximum admitted rows; defaults to 10,000 and can be raised to 100,000. */
   // numeric-guard-exempt: tabularInputLimits bounds the row count before admission.
-  @property({ type: Number, attribute: 'max-rows' }) maxRows = 10000;
+  @property({ converter: blankNumberConverter(10000), attribute: 'max-rows' }) maxRows = 10000;
   /** Maximum admitted columns; defaults to 1,000 and can be raised to 10,000. */
   // numeric-guard-exempt: tabularInputLimits bounds the column count before admission.
-  @property({ type: Number, attribute: 'max-columns' }) maxColumns = 1000;
+  @property({ converter: blankNumberConverter(1000), attribute: 'max-columns' }) maxColumns = 1000;
   /** Maximum source bytes; defaults to 25 MiB and can be raised to 250 MiB.
    * @default 26214400 */
   // numeric-guard-exempt: tabularInputLimits bounds the byte budget before reading or snapshotting.
-  @property({ type: Number, attribute: 'max-bytes' }) maxBytes: number = DEFAULT_MAX_RESOURCE_BYTES;
+  @property({ converter: blankNumberConverter(DEFAULT_MAX_RESOURCE_BYTES), attribute: 'max-bytes' }) maxBytes: number = DEFAULT_MAX_RESOURCE_BYTES;
   private get limits() { return tabularInputLimits(this.maxRows, this.maxColumns, this.maxBytes); }
   private readonly input = new TabularInputSnapshot<SpreadsheetViewerWorkbook>({
     snapshot: (value, limits) => this.snapshotWorkbook(value, limits),

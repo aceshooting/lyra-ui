@@ -13,6 +13,7 @@ import { finiteRange, isSliderKey } from '../../../internal/numbers.js';
 import { preserveRangeKeyboardShortcut } from '../../../internal/range-keyboard-shortcut.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './image-comparer.styles.js';
+import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_imageComparerLabel } from '../../../internal/default-strings/media.generated.js';
@@ -104,7 +105,7 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
 
   private _position = 50;
   /** Divider position as a percentage from 0 to 100 (default 50); out-of-range values are clamped and non-finite values read as 50. Reflects to the `position` attribute. */
-  @property({ type: Number, reflect: true })
+  @property({ converter: blankNumberConverter(50), reflect: true })
   get position(): number {
     return this._position;
   }

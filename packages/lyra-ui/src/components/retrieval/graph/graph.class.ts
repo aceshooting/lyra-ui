@@ -40,7 +40,7 @@ import { specialistTokens } from '../../../internal/specialist-host-tokens.style
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { isRtl } from '../../../internal/rtl.js';
-import { literalSetConverter } from '../../../internal/converters.js';
+import { literalSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { resolveCssTokenLength } from '../../../internal/css-token-length.js';
 import { styles } from './graph.styles.js';
 import {
@@ -746,9 +746,9 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     this.requestUpdate('graphSource', previous);
   }
   /** Zero-based global records page. Applies only with graphSource. */
-  @property({ type: Number, attribute: 'source-page' }) sourcePage = 0;
+  @property({ converter: blankNumberConverter(0), attribute: 'source-page' }) sourcePage = 0;
   /** Records per source page, normalized to 1..500. Changing size resets sourcePage to zero. */
-  @property({ type: Number, attribute: 'source-page-size' }) sourcePageSize = 100;
+  @property({ converter: blankNumberConverter(100), attribute: 'source-page-size' }) sourcePageSize = 100;
   /** Exact total for the active node/edge query, or null before a successful current response. */
   get sourceTotal(): number | null { if (this.sourceMode && this.sourceComposition.profile?.empty) return 0; return this.sourceMode && !this.sourceBindingError ? this.sourcePages.state.result?.total ?? null : null; }
   private get sourceMode(): boolean { return this.graphSource !== undefined; }
@@ -1190,14 +1190,14 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  is ignored while `fitTo === 'container'`; the host sizing above still applies. */
   @property({ converter: graphLengthConverter }) height: number | string = 600;
   /** Many-body force strength used by the force layout. Negative values repel nodes. */
-  @property({ type: Number, attribute: 'charge-strength' }) chargeStrength =
+  @property({ converter: blankNumberConverter(-300), attribute: 'charge-strength' }) chargeStrength =
     -300;
   /** Preferred edge length for force layout and layer separation for layered layout. */
-  @property({ type: Number, attribute: 'edge-distance' }) edgeDistance = 100;
+  @property({ converter: blankNumberConverter(100), attribute: 'edge-distance' }) edgeDistance = 100;
   /** Minimum camera scale accepted by zoom interactions; updates live in both renderers. */
-  @property({ type: Number, attribute: 'min-zoom' }) minZoom = 0.1;
+  @property({ converter: blankNumberConverter(0.1), attribute: 'min-zoom' }) minZoom = 0.1;
   /** Maximum camera scale accepted by zoom interactions; updates live in both renderers. */
-  @property({ type: Number, attribute: 'max-zoom' }) maxZoom = 8;
+  @property({ converter: blankNumberConverter(8), attribute: 'max-zoom' }) maxZoom = 8;
   /** Accessible graph name. A host aria-label takes precedence, including an empty string. */
   @property() label: string | null = null;
   /** Compatibility name used when label is absent. A host aria-label names the graph host. */
@@ -1210,7 +1210,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
    *  later update introduces new node ids) — changing `seed` afterwards does
    *  not retroactively reposition already-settled nodes; there is currently
    *  no way to make an already-rendered graph reproducible after the fact. */
-  @property({ type: Number }) seed?: number;
+  @property({ converter: blankNumberConverter(undefined) }) seed?: number;
   /** Draws each resolved (non-dangling) edge's `label` as visible SVG text at the segment
    *  midpoint. Off by default — `LyraGraphEdge.label` stays spoken/tooltip-only unless this is set. */
   @property({ type: Boolean, attribute: 'with-edge-labels' }) withEdgeLabels =
@@ -1218,7 +1218,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
   /** Below this zoom scale, every drawn edge label is hidden (a `data-edge-labels-hidden`
    *  attribute toggled on the zoomed `<g>`, no Lit re-render). Ignored when `withEdgeLabels` is
    *  false. */
-  @property({ type: Number, attribute: 'edge-label-min-zoom' })
+  @property({ converter: blankNumberConverter(0.6), attribute: 'edge-label-min-zoom' })
   edgeLabelMinZoom = 0.6;
   /** Node-label visibility. `'always'` draws every node's label unconditionally; `'zoom'` hides
    *  them below `NODE_LABEL_MIN_ZOOM` (a `data-node-labels-hidden` attribute toggled on the zoomed
