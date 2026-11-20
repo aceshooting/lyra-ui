@@ -917,7 +917,7 @@ it('does not wire up chart.js when the boxplot plugin fails to load, even though
   await (el as any).onBoxPlotPluginLoaded(null);
 
   expect((el as any).chartJsModule).to.equal(undefined);
-  expect((el as any).chart).to.equal(undefined);
+  expect((el as any).chart === undefined).to.equal(true);
 });
 
 it('fails closed with static visible error text and one light-DOM alert when the boxplot peer fails', async () => {
@@ -1221,6 +1221,8 @@ it('disables Chart.js animation when the user prefers reduced motion', async () 
 });
 
 it('redraws the live chart with the current reduced-motion state when the media query change event fires', async () => {
+  // Let earlier tests' removed plots finish their deferred release of the shared motion watcher.
+  await Promise.resolve();
   let changeListener: (() => void) | undefined;
   const fakeQuery = {
     matches: false,
@@ -1428,7 +1430,7 @@ describe('box-plot robustness regressions', () => {
     el.datasets = [{ label: 'x', data: [{ min: 2, q1: 3, median: 4, q3: 5, max: 6 }] }];
     el.remove();
     await el.updateComplete;
-    expect((el as unknown as { chart?: unknown }).chart).to.equal(undefined);
+    expect((el as unknown as { chart?: unknown }).chart === undefined).to.equal(true);
   });
 
   it('automatically refreshes canvas colors after an ancestor theme mutation', async () => {

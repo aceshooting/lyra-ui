@@ -2,6 +2,7 @@ import type { ReactiveController, ReactiveControllerHost } from 'lit';
 import type { LyraIndexedView, LyraRangeSource, LyraSourceRevision } from '../data-sources.js';
 import type { LyraVirtualListIndexedSource } from '../components/layout/virtual-list/virtual-list.class.js';
 import { SourceRequestController, sourceCount, sourceRevision } from './source-request-controller.js';
+import { DeferredTeardown } from './deferred-teardown.js';
 
 export type SourceWindowSlot<T> =
   | { readonly state: 'ready'; readonly index: number; readonly value: T }
@@ -29,6 +30,9 @@ export interface SourceWindowOptions<T> {
   readonly normalize: (value: unknown, index: number) => T;
   /** Update named reactive state; a keyless host refresh would invalidate the source again. */
   readonly onChange: () => void;
+  /** Keeps the cached window and in-flight reads across a same-task DOM move; a genuine
+   *  disconnect still clears them, a microtask later. */
+  readonly deferDisconnect?: boolean;
 }
 
 type RangeChannel = 'range-0' | 'range-1';
@@ -110,8 +114,9 @@ export class SourceWindowController<T> implements ReactiveController {
     this.pageCapacity = Math.min(maxPages, Math.floor(maxRows / pageSize));
     this.connected = host.isConnected;
     this.authority = new SourceRequestController(host, {
-      channels: ['range-0', 'range-1', 'lookup'], onReset: () => this.clear(),
+      channels: ['range-0', 'range-1', 'lookup'], onReset: () => this.clear(), deferDisconnect: options.deferDisconnect,
     });
+    if (options.deferDisconnect) this.detached = new DeferredTeardown(() => this.clear());
     const control = this;
     this.source = {
       get count() { return control.count; },
@@ -624,9 +629,12 @@ export class SourceWindowController<T> implements ReactiveController {
     });
   }
 
-  adopted(): void { this.authority.adopted(); }
+  private readonly detached?: DeferredTeardown;
+
+  adopted(): void { this.detached?.flush(); this.authority.adopted(); }
   hostConnected(): void {
-    const reconnecting = !this.connected;
+    const moved = this.detached?.cancel() ?? false;
+    const reconnecting = !this.connected && !moved;
     this.connected = true;
     if (reconnecting && this.binding) {
       const requested = this.requested;
@@ -634,5 +642,9 @@ export class SourceWindowController<T> implements ReactiveController {
       this.notify();
     }
   }
-  hostDisconnected(): void { this.connected = false; this.clear(); }
+  hostDisconnected(): void {
+    this.connected = false;
+    if (this.detached) this.detached.schedule();
+    else this.clear();
+  }
 }

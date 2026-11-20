@@ -321,7 +321,10 @@ canvas capability becomes available.
   canvas-local coordinates (`top`, `left`, `right`, `bottom`, `width`, `height`), when a chart is
   drawn
 - `chart: LyraChartInstance | undefined` (readonly-by-convention) — peer-neutral structural view of
-  the live Chart.js instance; absent before load and after disconnect
+  the live Chart.js instance; absent before load and after disconnect. A same-task DOM move
+  (`moveBefore()`, or removal and re-insertion in one task) keeps it, as it keeps `lr-lite-chart`'s
+  prepared data, `lr-box-plot`'s plot and `lr-chart-3d`'s renderer; a genuine disconnect releases
+  them a microtask later
 - `appendData(label, values, maxPoints?)` — appends one aligned numeric category and keeps a
   rolling window of the newest `maxPoints` (at most 10,000, also the default: `labels` and each
   series keep only the first 10,000 entries of a longer assigned array, with a localized `limit`

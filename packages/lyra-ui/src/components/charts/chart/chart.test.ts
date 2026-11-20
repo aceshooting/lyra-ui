@@ -865,7 +865,9 @@ describe('bounded chart surface regressions', () => {
     expect(detail).to.deep.equal({ datasetIndex: 0, index: 1, label: 'B', value: 2, kind: 'bar' });
   });
 
-  it('responds to live reduced-motion changes and releases the query listener', () => {
+  it('responds to live reduced-motion changes and releases the query listener', async () => {
+    // Let earlier tests' removed charts finish their deferred release of the shared watcher.
+    await Promise.resolve();
     const originalMatchMedia = window.matchMedia;
     let listener: ((event: MediaQueryListEvent) => void) | undefined;
     let removals = 0;
@@ -896,6 +898,8 @@ describe('bounded chart surface regressions', () => {
       listener?.({ matches: true, media: '(prefers-reduced-motion: reduce)' } as MediaQueryListEvent);
       expect(draws).to.equal(before + 1);
       el.remove();
+      // A genuine disconnect releases a microtask later; a same-task move keeps the listener.
+      await Promise.resolve();
       expect(removals).to.be.greaterThan(0);
     } finally {
       el.remove();
@@ -942,7 +946,7 @@ describe('bounded chart surface regressions', () => {
     }
   });
 
-  it('ignores a stale visibility callback after reconnecting with a new observer', () => {
+  it('ignores a stale visibility callback after reconnecting with a new observer', async () => {
     const OriginalObserver = window.IntersectionObserver;
     const callbacks: IntersectionObserverCallback[] = [];
     class TestObserver {
@@ -960,6 +964,8 @@ describe('bounded chart surface regressions', () => {
     try {
       document.body.append(el);
       el.remove();
+      // A genuine disconnect, not a same-task move (which keeps the first observer).
+      await Promise.resolve();
       document.body.append(el);
       (el as unknown as { visible: boolean }).visible = true;
       callbacks[0]?.([{ isIntersecting: false } as IntersectionObserverEntry], {} as IntersectionObserver);
@@ -1149,6 +1155,7 @@ it('rebinds observers, animation frames, media state, styles, and DOM factories 
     expect(requestedFrames).to.have.length(1);
     const pendingFrame = requestedFrames[0]!;
     el.remove();
+    await Promise.resolve();
     expect(canceledFrames).to.include(pendingFrame);
   } finally {
     el.remove();

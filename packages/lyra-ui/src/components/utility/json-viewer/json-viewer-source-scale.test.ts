@@ -416,3 +416,25 @@ it('lets an ancestor --lr-json-viewer-max-height size the source tree unless max
   expect(blockSize(el)).to.equal('320px');
 });
 
+it('keeps the provider tree across a same-task DOM move and reprojects after a real disconnect', async () => {
+  const { provider, counters } = source(3);
+  const host = await fixture<HTMLDivElement>(html`<div><lr-json-viewer .strings=${strings} .treeSource=${provider}></lr-json-viewer><p></p></div>`);
+  const el = host.querySelector<LyraJsonViewer>('lr-json-viewer')!;
+  await ready(el);
+  const projects = counters.projects;
+  const moves: Array<() => void> = [() => { el.remove(); host.append(el); }];
+  const moveBefore = (host as unknown as { moveBefore?: (node: Node, child: Node | null) => void }).moveBefore;
+  if (typeof moveBefore === 'function') moves.push(() => moveBefore.call(host, el, host.firstChild));
+  for (const move of moves) {
+    move();
+    await el.updateComplete;
+    for (let frame = 0; frame < 3; frame++) await nextFrame();
+    expect(counters.projects, 'a same-task move does not reproject').to.equal(projects);
+    expect(el.shadowRoot!.querySelector('[data-source-key="k0"]') !== null, 'the loaded rows stay rendered').to.equal(true);
+  }
+  el.remove();
+  await new Promise<void>((resolve) => setTimeout(resolve));
+  host.append(el);
+  await waitUntil(() => counters.projects > projects, 'a real disconnect reprojects on reconnect');
+  await ready(el);
+});

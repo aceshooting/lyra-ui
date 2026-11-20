@@ -319,7 +319,8 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
    *  to 20,000 scalar columns, and each write/content commit to 1,000,000 input UTF-16 units.
    *  lr-overflow reports loss; effective retained lines also depend on their lengths. */
   @property({ converter: blankNumberConverter(5000), attribute: 'max-scrollback' }) maxScrollback = 5000;
-  /** Keeps the view pinned to the newest output. Defaults to `true`; reflects to the `follow` attribute. */
+  /** Keeps the view pinned to the newest output; setting it to `true` scrolls to the latest line at once,
+   *  silently. Defaults to `true`; reflects to the `follow` attribute. */
   @property({ type: Boolean, reflect: true, converter: trueDefaultBooleanConverter }) follow = true;
   /** Keeps each line on one row (horizontally scrollable) instead of soft-wrapping it. */
   @property({ type: Boolean, attribute: 'without-wrap', reflect: true }) withoutWrap = false;
@@ -478,6 +479,15 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     }
     if (changed.has('maxScrollback')) this.trimScrollback();
     if (changed.has('announceOutput') && !this.announceOutput) this.cancelPendingAnnouncement();
+    if (this.followReengaged(changed)) {
+      const last = this.buffer[this.buffer.length - 1];
+      this.scrollTargetLineNumber = last ? last.number : null;
+    }
+  }
+
+  /** `follow` went from `false` to `true` in this update, from any source (a direct write included). */
+  private followReengaged(changed: PropertyValues): boolean {
+    return changed.has('follow') && this.follow && changed.get('follow') === false;
   }
 
   // --- Buffer / cursor model -------------------------------------------------
@@ -1107,6 +1117,18 @@ export class LyraTerminal extends LyraElement<LyraTerminalEventMap> {
     this.explicitRowRefresh = false;
     if (explicitRefresh || ['highlights', 'activeHighlightId', 'locale', 'strings', 'scrollTargetLineNumber'].some(key => changed.has(key))) {
       this.renderRoot.querySelector<HTMLElement & { requestUpdate(): void }>(tag('virtual-list'))?.requestUpdate();
+    }
+    // An unchanged `activeItemId` does not scroll again, so re-engaging follow while the target
+    // already is the newest line (the reader scrolled away with no new output) scrolls explicitly.
+    if (this.followReengaged(changed) && !changed.has('scrollTargetLineNumber') && this.buffer.length) {
+      const list = this.renderRoot.querySelector<HTMLElement & {
+        updateComplete: Promise<boolean>;
+        scrollToIndex(index: number, options?: { align?: 'end'; behavior?: 'auto' }): void;
+      }>(tag('virtual-list'));
+      // After the list's own pending update, so its geometry already reflects the current rows.
+      void list?.updateComplete.then(() => {
+        if (this.follow && list.isConnected && this.buffer.length) list.scrollToIndex(this.lines.length - 1, { align: 'end', behavior: 'auto' });
+      });
     }
   }
 

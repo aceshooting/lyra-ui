@@ -33032,7 +33032,9 @@ reopen the selected match’s ancestors while unrelated manual collapse remains 
 **Complete provider hierarchy:** `treeSource: JsonViewerTreeSource | undefined`
 (attribute: false) supplies a complete logical hierarchy without flattening it or copying it into
 `data`. A defined provider takes display precedence; invalid defined input shows a localized source
-error. Setting `undefined` restores the current `data`. `maxNodes` and `expandDepth` govern only
+error. Setting `undefined` restores the current `data`. A same-task DOM move keeps the loaded provider
+rows, search and copy state; a genuine disconnect releases them a microtask later and reprojects on
+reconnect. `maxNodes` and `expandDepth` govern only
 the legacy `data` route; `maxHeight` also constrains the source scroller.
 
 ```ts
@@ -40422,6 +40424,10 @@ or `<source>` set with no allowlisted URL never reaches the native element; the 
 it. The internal
 play/pause control's `focus`/`blur` are relayed exactly once as owner-realm native `FocusEvent`s
 (bubbling and composed, preserving `relatedTarget`).
+When the play/pause button, the poster play action or `togglePlay()` has its playback request
+rejected, `lr-render-error` (`detail: { error }`, the native rejection) is emitted and the localized
+`error` part is shown and announced, as for a failed source; an interrupted request (`AbortError`)
+is not reported, and visibility-driven resumes stay silent. `play()` itself returns the rejection.
 With the optional panorama, `lr-panorama-camera-change` (`detail: { camera }`, after a user gesture or
 keyboard change), `lr-panorama-hotspot-select` (`detail: { hotspot, id, index }`) and
 `lr-engine-fallback` (`detail: { from, to, reason }`) are emitted; none is cancelable.
@@ -42218,7 +42224,10 @@ canvas capability becomes available.
   canvas-local coordinates (`top`, `left`, `right`, `bottom`, `width`, `height`), when a chart is
   drawn
 - `chart: LyraChartInstance | undefined` (readonly-by-convention) — peer-neutral structural view of
-  the live Chart.js instance; absent before load and after disconnect
+  the live Chart.js instance; absent before load and after disconnect. A same-task DOM move
+  (`moveBefore()`, or removal and re-insertion in one task) keeps it, as it keeps `lr-lite-chart`'s
+  prepared data, `lr-box-plot`'s plot and `lr-chart-3d`'s renderer; a genuine disconnect releases
+  them a microtask later
 - `appendData(label, values, maxPoints?)` — appends one aligned numeric category and keeps a
   rolling window of the newest `maxPoints` (at most 10,000, also the default: `labels` and each
   series keep only the first 10,000 entries of a longer assigned array, with a localized `limit`
@@ -55774,7 +55783,8 @@ ceiling, marking `matchCount` as a lower bound rather than an exact total),
 `lr-highlight-activate` (`detail: { highlightId }`), and `lr-text-select` (`detail: {
 text, anchor, rects }`). The terminal reports a selection inside its viewport on key or pointer release, or once a keyboard or touch selection settles, once for unchanged endpoints.
 User scrolling and the jump-to-latest control emit `lr-follow-change`. Search and anchor navigation
-release following silently. Copy outcomes are announced. When an input or line exceeds the character
+release following silently, and setting `follow` to `true` directly scrolls to the latest line at once,
+also without an event. Copy outcomes are announced. When an input or line exceeds the character
 limit, `part="limit"` displays the localized `terminalOutputTruncated` note until the buffer is replaced or cleared.
 
 **CSS parts:** `base`, `toolbar` (only rendered when copy/download are enabled), `copy-button`,

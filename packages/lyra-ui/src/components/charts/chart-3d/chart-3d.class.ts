@@ -17,6 +17,7 @@ import {
 import { formatChartValue } from '../../../internal/chart-number-format.js';
 import { resolveListMove } from '../../../internal/list-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { specialistTokens } from '../../../internal/specialist-host-tokens.styles.js';
 import {
   LARGE_DATA_PAGE_SIZE,
@@ -386,17 +387,24 @@ export class LyraChart3d extends LyraElement<LyraChart3dEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    // A same-task DOM move keeps the running renderer and its camera.
+    if (this.detached.cancel()) return;
     // A reconnected chart restarts its renderer from the same inputs.
     this.requestUpdate();
   }
 
-  override disconnectedCallback(): void {
+  private readonly detached = new DeferredTeardown(() => {
     this.renderer.disconnect();
     this.focusWithin = false;
+  });
+
+  override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.detached.schedule();
   }
 
   override adoptedCallback(): void {
+    this.detached.flush();
     super.adoptedCallback();
     this.renderer.disconnect();
     this.announcements.adopted();

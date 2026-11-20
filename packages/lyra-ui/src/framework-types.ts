@@ -15039,6 +15039,7 @@ export interface LyraComponentTypeMap {
       | 'lr-engine-fallback'
       | 'lr-panorama-camera-change'
       | 'lr-panorama-hotspot-select'
+      | 'lr-render-error'
       | 'pause'
       | 'play'
       | 'timeupdate'

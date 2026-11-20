@@ -37,6 +37,7 @@ import type { LyraSpatialBounds, LyraSpatialBin, LyraSpatialChartPoint, LyraSpat
 export type { LyraSpatialBounds, LyraSpatialBin, LyraSpatialChartPoint, LyraSpatialChartSeries, LyraSpatialChartSource, LyraChartSpatialPointSelectDetail, LyraSpatialBinSelectDetail } from '../../../utilities/data-spatial.js';
 
 import { SourceRequestController } from '../../../internal/source-request-controller.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { prepareChartModel, revealPreparedSourcePoint, type PreparedChartModel, type LyraChartPreparedData, type LyraChartSourcePointSelectDetail, type LyraChartSourceCategorySelectDetail } from './chart-prepared-data.js';
 import type { LyraSeriesPointRef } from '../../../utilities/data-preparation.js';
 export type { LyraChartPreparedData, LyraChartSourcePointSelectDetail, LyraChartSourceCategorySelectDetail } from './chart-prepared-data.js';
@@ -1186,7 +1187,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   private preparedModel?: PreparedChartModel;
   private preparedEffective?: { model: PreparedChartModel; data: EffectiveChartData };
   private readonly preparedRequests = new SourceRequestController(this, {
-    channels: ['point'] as const, onReset: () => { this.preparedPending = false; },
+    channels: ['point'] as const, onReset: () => { this.preparedPending = false; }, deferDisconnect: true,
   });
 
   private refreshPreparedModel(): void {
@@ -2249,6 +2250,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    // A same-task DOM move keeps the drawn Chart.js instance, its zoom and its observers.
+    if (this.detached.cancel()) return;
     this.preparedDirty = true;
     this.stopAnnotationRegistrationWatch?.();
     this.stopAnnotationRegistrationWatch = onAnnotationPluginRegistered(() =>
@@ -2346,7 +2349,15 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     }
   }
 
+  private readonly detached = new DeferredTeardown(() => this.teardownConnection());
+
   override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.detached.schedule();
+  }
+
+  /** @internal A genuine disconnect's release, deferred a microtask so a same-task DOM move can cancel it. */
+  protected teardownConnection(): void {
     this.preparedGeneration = {};
     this.invalidateSpatialReveal(); this.spatial?.reset();
     this.preparedRequests.refresh();
@@ -2357,7 +2368,6 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     this.cancelDeferredTable?.();
     this.cancelDeferredTable = undefined;
     this.deferredTableRows = undefined;
-    super.disconnectedCallback();
     this.stopAnnotationRegistrationWatch?.();
     this.stopAnnotationRegistrationWatch = undefined;
     this.lastDataTruncationAnnouncement = '';
@@ -2381,6 +2391,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   override adoptedCallback(): void {
+    this.detached.flush();
     this.spatial?.authority.adopted(); this.invalidateSpatialReveal();
     this.preparedRequests.adopted();
     this.chartSync.disconnect();
@@ -5518,7 +5529,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const next = visible ? hidden.filter((item) => item !== index) : [...hidden, index].sort((a, b) => a - b);
     const detail: LyraChartDatumVisibilityChangeDetail = { index, visible, hiddenDatums: next };
     const proposed = this.emit('lr-datum-visibility-change-request', detail, { cancelable: true });
-    if (proposed.defaultPrevented || this.chart !== chart || generation !== this.legendDataGeneration) return;
+    if (proposed.defaultPrevented || !this.isConnected || this.chart !== chart || generation !== this.legendDataGeneration) return;
     this.hiddenDatums = next;
     this.withCanvasRenderer(() => {
       this.applyDatumVisibility();

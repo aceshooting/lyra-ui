@@ -85,7 +85,8 @@ ceiling, marking `matchCount` as a lower bound rather than an exact total),
 `lr-highlight-activate` (`detail: { highlightId }`), and `lr-text-select` (`detail: {
 text, anchor, rects }`). The terminal reports a selection inside its viewport on key or pointer release, or once a keyboard or touch selection settles, once for unchanged endpoints.
 User scrolling and the jump-to-latest control emit `lr-follow-change`. Search and anchor navigation
-release following silently. Copy outcomes are announced. When an input or line exceeds the character
+release following silently, and setting `follow` to `true` directly scrolls to the latest line at once,
+also without an event. Copy outcomes are announced. When an input or line exceeds the character
 limit, `part="limit"` displays the localized `terminalOutputTruncated` note until the buffer is replaced or cleared.
 
 **CSS parts:** `base`, `toolbar` (only rendered when copy/download are enabled), `copy-button`,

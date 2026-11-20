@@ -2763,7 +2763,7 @@ export type LyraRemoveConditionEvent = LyraConditionBuilderEventMap['lr-remove-c
 export type LyraRenameEvent = LyraConversationItemEventMap['lr-rename'];
 
 /**
- * `lr-render-error` — dispatched by 32 components: `<lr-archive-viewer>`, `<lr-av-player>`,
+ * `lr-render-error` — dispatched by 33 components: `<lr-archive-viewer>`, `<lr-av-player>`,
  * `<lr-calendar-viewer>`, `<lr-contact-viewer>`, `<lr-csv-viewer>`, `<lr-dataset-viewer>`,
  * `<lr-document-compare>`, `<lr-document-preview>`, `<lr-document-viewer>`, `<lr-docx-viewer>`,
  * `<lr-ebook-viewer>`, `<lr-email-viewer>`, `<lr-geojson-viewer>`, `<lr-html-viewer>`,
@@ -2771,7 +2771,7 @@ export type LyraRenameEvent = LyraConversationItemEventMap['lr-rename'];
  * `<lr-message-parts>`, `<lr-model-viewer>`, `<lr-notebook-viewer>`, `<lr-pan-zoom>`,
  * `<lr-pdf-viewer>`, `<lr-pptx-viewer>`, `<lr-spreadsheet-viewer>`, `<lr-streaming-text-core>`,
  * `<lr-streaming-text>`, `<lr-svg-viewer>`, `<lr-tool-call-block>`, `<lr-tool-result-view>`,
- * `<lr-widget-renderer>`, `<lr-xml-viewer>`; detail union of 31, e.g.
+ * `<lr-video>`, `<lr-widget-renderer>`, `<lr-xml-viewer>`; detail union of 32, e.g.
  * `LyraArchiveViewerEventMap['lr-render-error']`.
  */
 export type LyraRenderErrorEvent =
@@ -2804,6 +2804,7 @@ export type LyraRenderErrorEvent =
   | LyraSvgViewerEventMap['lr-render-error']
   | LyraToolCallBlockEventMap['lr-render-error']
   | LyraToolResultViewEventMap['lr-render-error']
+  | LyraVideoEventMap['lr-render-error']
   | LyraWidgetRendererEventMap['lr-render-error']
   | LyraXmlViewerEventMap['lr-render-error'];
 

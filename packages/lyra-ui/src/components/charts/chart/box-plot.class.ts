@@ -6,6 +6,7 @@ import type { LyraEventDetailSnapshot } from '../../../internal/lyra-element.js'
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { prefersReducedMotion } from '../../../internal/motion.js';
 import { createCanvasChart, createReducedMotionWatch, disposeChart, guardCanvasRenderer, hostWindow, syncChartHeight } from './chart-surface-shared.js';
@@ -458,6 +459,8 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    // A same-task DOM move keeps the drawn chart and its observers.
+    if (this.detached.cancel()) return;
     this.stopAnnotationRegistrationWatch?.();
     this.stopAnnotationRegistrationWatch = onAnnotationPluginRegistered(() =>
       this.rebuildAfterAnnotationRegistration()
@@ -528,8 +531,14 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
     this.drawIfVisible();
   }
 
+  private readonly detached = new DeferredTeardown(() => this.teardownConnection());
+
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.detached.schedule();
+  }
+
+  private teardownConnection(): void {
     this.stopAnnotationRegistrationWatch?.();
     this.stopAnnotationRegistrationWatch = undefined;
     this.lastDataTruncationAnnouncement = '';
@@ -544,6 +553,7 @@ export class LyraBoxPlot extends LyraElement<LyraBoxPlotEventMap> {
   }
 
   override adoptedCallback(): void {
+    this.detached.flush();
     this.canvasTokens.clear();
     super.adoptedCallback();
     this.announcements.adopted();

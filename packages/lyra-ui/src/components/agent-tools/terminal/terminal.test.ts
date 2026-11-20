@@ -1191,6 +1191,41 @@ describe('lr-terminal', () => {
     expect(list.activeItemId).to.equal(3);
   });
 
+  it('a direct follow = true scrolls to the latest line, with no new output and no echo', async () => {
+    const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
+    el.write('a\nb\nc');
+    await settleVirtualList(el);
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as LyraVirtualList;
+    expect(list.activeItemId).to.equal(3);
+    // The reader scrolls away with no new output: the scroll target already is the newest line, so
+    // re-engaging follow cannot rely on an activeItemId change and must scroll explicitly.
+    const released = oneEvent(el, 'lr-follow-change');
+    list.dispatchEvent(new CustomEvent('lr-visible-range-change', { detail: { start: 0, end: 0 }, bubbles: true, composed: true }));
+    await released;
+    await el.updateComplete;
+    const scrolls: Array<[number, unknown]> = [];
+    const original = list.scrollToIndex.bind(list);
+    list.scrollToIndex = (index, options) => { scrolls.push([index, options?.align]); original(index, options); };
+    let echoed = false;
+    el.addEventListener('lr-follow-change', () => { echoed = true; });
+    el.follow = true;
+    await el.updateComplete;
+    await waitUntil(() => scrolls.length > 0, 'a direct follow = true must scroll to the latest line');
+    expect(scrolls).to.deep.equal([[2, 'end']]);
+    expect(echoed).to.be.false;
+  });
+
+  it('a direct follow = true after silent output targets the newest line', async () => {
+    const el = (await fixture(html`<lr-terminal follow="false"></lr-terminal>`)) as LyraTerminal;
+    el.write('a\nb\nc');
+    await el.updateComplete;
+    const list = el.shadowRoot!.querySelector('lr-virtual-list') as HTMLElement & { activeItemId: unknown };
+    expect(list.activeItemId).to.equal('');
+    el.follow = true;
+    await el.updateComplete;
+    expect(list.activeItemId).to.equal(3);
+  });
+
   it('scrollToBottom() on an empty buffer clears the scroll target instead of throwing', async () => {
     const el = (await fixture(html`<lr-terminal></lr-terminal>`)) as LyraTerminal;
     el.scrollToBottom();

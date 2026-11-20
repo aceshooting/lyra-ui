@@ -166248,6 +166248,12 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-render-error",
+            "type": "CustomEvent<{ error: unknown }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "pause",
             "type": "Event",
             "cancelable": "never",

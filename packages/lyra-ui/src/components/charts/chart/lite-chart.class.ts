@@ -30,6 +30,7 @@ import {
 import { property, state, query } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { specialistTokens } from '../../../internal/specialist-host-tokens.styles.js';
 import { nextId, srOnly } from '../../../internal/a11y.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
@@ -598,7 +599,7 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
   private preparedModel?: PreparedChartModel;
   private preparedEffective?: { model: PreparedChartModel; datasets: readonly LyraLiteChartSeries[] };
   private readonly preparedRequests = new SourceRequestController(this, {
-    channels: ['point'] as const, onReset: () => { this.preparedPending = false; },
+    channels: ['point'] as const, onReset: () => { this.preparedPending = false; }, deferDisconnect: true,
   });
 
   private refreshPreparedModel(): void {
@@ -1129,6 +1130,8 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    // A same-task DOM move keeps the prepared model, any revealed point and the observers.
+    if (this.detached.cancel()) return;
     // Rejoin the document's synchronization group even when a surviving SVG keeps the same size.
     this.requestUpdate();
     this.armResizeObserver();
@@ -1192,21 +1195,30 @@ export class LyraLiteChart extends LyraElement<LyraLiteChartEventMap> {
     this.syncAxisTitleTargets();
   }
 
+  private readonly detached = new DeferredTeardown(() => this.teardownConnection());
+
   override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.detached.schedule();
+  }
+
+  private teardownConnection(): void {
     this.preparedRequests.refresh();
     this.preparedModel = this.preparedBaseModel = undefined;
     this.preparedEffective = undefined;
     this.preparedDirty = true;
     this.clearDeferredTable();
     this.chartSync.disconnect();
-    super.disconnectedCallback();
     this.lastDataTruncationAnnouncement = '';
     this.isMounting = true;
     this.resetResizeObserver();
-
+    // An update already queued before this deferred release has consumed its dirty flag; rebuild
+    // the base model from the retained input so a detached chart still exports its data.
+    this.requestUpdate('preparedView', null);
   }
 
   override adoptedCallback(): void {
+    this.detached.flush();
     this.preparedRequests.adopted();
     this.clearDeferredTable();
     this.chartSync.disconnect();

@@ -214,9 +214,9 @@ export class LyraHistogram extends LyraChart {
     super.requestUpdate(name, oldValue, options);
   }
 
-  override disconnectedCallback(): void {
+  protected override teardownConnection(): void {
     this.cancelSampleBatches();
-    super.disconnectedCallback();
+    super.teardownConnection();
   }
 
   private continueSampleBatch(): void {

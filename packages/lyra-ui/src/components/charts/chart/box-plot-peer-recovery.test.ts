@@ -1,4 +1,4 @@
-import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { Chart } from 'chart.js';
 import type { LyraBoxPlot } from '../../lr-box-plot.js';
 import '../../lr-box-plot.js';
@@ -34,7 +34,8 @@ it('contains native hit-testing failures and accepts the next valid box activati
 });
 
 for (const reconnect of [false, true]) for (const phase of ['hit testing', 'datasetIndex', 'index'] as const) {
-  it(`rejects a box hit that ${reconnect ? 'reconnects' : 'disconnects'} its owner during ${phase}`, async () => {
+  // A same-task move keeps the owner and its chart, so the hit stands; a removal rejects it.
+  it(`${reconnect ? 'honors a box hit that moves' : 'rejects a box hit that disconnects'} its owner during ${phase}`, async () => {
     const element = await mount();
     const parent = element.parentNode!;
     const chart = runtime(element)!;
@@ -58,9 +59,14 @@ for (const reconnect of [false, true]) for (const phase of ['hit testing', 'data
     try {
       click(chart);
       expect(retired).to.equal(true);
-      expect(activations).to.deep.equal([]);
+      expect(activations).to.deep.equal(reconnect ? ['datum', 'point'] : []);
     } finally { chart.getElementsAtEventForMode = original; }
-    if (!reconnect) parent.append(element);
+    if (reconnect) {
+      expect(runtime(element) === chart, 'a same-task move keeps the chart').to.equal(true);
+      return;
+    }
+    await aTimeout(0);
+    parent.append(element);
     await waitUntil(() => runtime(element) !== undefined && runtime(element) !== chart);
     const current = runtime(element)!;
     const currentHitTest = current.getElementsAtEventForMode;
@@ -77,7 +83,9 @@ it('ignores a retained callback from a retired box chart before invoking its nat
   const chart = runtime(element)!;
   const callback = chart.options.onClick;
   const parent = element.parentNode!;
-  element.remove(); parent.append(element);
+  element.remove();
+  await aTimeout(0);
+  parent.append(element);
   await waitUntil(() => runtime(element) !== undefined && runtime(element) !== chart);
   let calls = 0;
   const activations: unknown[] = [];

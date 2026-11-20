@@ -1,4 +1,4 @@
-import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, fixture, fixtureCleanup, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 import { captureReentrantUpdateWarning } from '../../../../test/expected-lit-update.js';
 import { nextFrame } from '../../../../test/frames.js';
@@ -113,6 +113,10 @@ describe('lr-chart-3d optional renderer', () => {
   });
 
   afterEach(async () => {
+    // Release this test's charts (a genuine disconnect retires their renderers a microtask later)
+    // before the next test installs a fresh peer.
+    fixtureCleanup();
+    await aTimeout(0);
     chart3dPointsLoader.override(undefined);
     chart3dEngineEnvironment.available = available;
     chart3dEngineEnvironment.visible = visible;
@@ -672,6 +676,8 @@ describe('lr-chart-3d optional renderer', () => {
       const first = peer.host!;
       const parent = el.parentElement!;
       el.remove();
+      // A genuine disconnect retires the renderer a microtask later; a same-task move keeps it.
+      await aTimeout(0);
       expect(peer.disposed).to.equal(1);
       first.pick(0, PICK);
       first.restored!();
@@ -761,6 +767,7 @@ describe('lr-chart-3d optional renderer', () => {
     peer.disposeHook = () => { throw new Error('untrusted peer disposal detail'); };
     try {
       el.remove();
+      await aTimeout(0);
       expect(peer.disposed).to.equal(1);
       retired.hover(1);
       retired.restored?.();

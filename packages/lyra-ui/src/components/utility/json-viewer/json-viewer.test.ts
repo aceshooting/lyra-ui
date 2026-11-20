@@ -1306,6 +1306,8 @@ describe("imperative search API", () => {
     await el.runSearch("name");
     await el.searchNext();
     el.remove();
+    // A genuine disconnect disarms announcements a microtask later; a same-task move stays live.
+    await Promise.resolve();
 
     const pendingMove = el.searchNext();
     document.body.append(el);

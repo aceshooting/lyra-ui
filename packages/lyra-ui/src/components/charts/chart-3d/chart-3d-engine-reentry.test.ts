@@ -117,6 +117,8 @@ describe('lr-chart-3d renderer lifecycle re-entry', () => {
     await waitUntil(() => el.shadowRoot!.querySelector('[part~="fit-button"]') !== null, 'the renderer did not become ready', { timeout: 5000 });
     const retired = run.hosts[0]!;
     el.remove();
+    // A genuine disconnect retires the renderer a microtask later; a same-task move keeps it.
+    await aTimeout(0);
     retired.rendering!({ software: true });
     wrapper.append(el);
     await waitUntil(() => run.hosts.length === 2 && el.shadowRoot!.querySelector('[part~="fit-button"]') !== null, 'the renderer did not restart', { timeout: 5000 });

@@ -6,6 +6,7 @@ import type {
 import type { LyraVirtualList, LyraVirtualListIndexedSource } from '../components/layout/virtual-list/virtual-list.class.js';
 import { SourceRequestController, sourceCount, sourceRevision, type SourceRequestLease } from './source-request-controller.js';
 import { SourceWindowController, type SourceWindowSlot } from './source-window-controller.js';
+import { DeferredTeardown } from './deferred-teardown.js';
 import { yieldViewerTask } from './resource-loader.js';
 import { deepActiveElementIn } from './active-element.js';
 import { isRepeatedActivationKey, shouldIgnoreNavigationKey } from './list-navigation.js';
@@ -37,6 +38,9 @@ export interface HierarchySourceOptions<T> {
   };
   readonly onChange: () => void;
   readonly accepted: (action: LyraHierarchyAction, row: Row<T> | undefined, state: string, isCurrent: () => boolean) => void;
+  /** Keeps the projection, loaded rows and in-flight work across a same-task DOM move; a genuine
+   *  disconnect still resets them, a microtask later. */
+  readonly deferDisconnect?: boolean;
 }
 interface ProjectJob<T> {
   readonly source: Source<T>;
@@ -171,8 +175,10 @@ export class HierarchySourceController<T> implements ReactiveController {
         maxUnits <= maxRowUnits + 65_536 || typeof unitsOf !== 'function') throw new RangeError('Invalid hierarchy payload bounds');
       this.payload = Object.freeze({ maxUnits, maxRowUnits, unitsOf });
     }
-    this.requests = new SourceRequestController(host, { channels: ['project', 'navigate', 'search', 'copy'], onReset: () => this.reset() });
-    this.window = new SourceWindowController(host, { pageSize: 100, maxRows: 400, maxPages: 4, maxConcurrent: 2,
+    const deferDisconnect = options.deferDisconnect === true;
+    this.requests = new SourceRequestController(host, { channels: ['project', 'navigate', 'search', 'copy'], onReset: () => this.reset(), deferDisconnect });
+    if (deferDisconnect) this.detached = new DeferredTeardown(() => this.release());
+    this.window = new SourceWindowController(host, { pageSize: 100, maxRows: 400, maxPages: 4, maxConcurrent: 2, deferDisconnect,
       ...(this.payload ? { maxWeight: this.payload.maxUnits - this.payload.maxRowUnits - 65_536,
         weightOf: (row: Row<T>) => this.rowUnits(row) } : {}),
       keyOf: row => row.key, normalize: value => this.normalize(value), onChange: () => this.changed(),
@@ -596,7 +602,15 @@ export class HierarchySourceController<T> implements ReactiveController {
     }
     if (target !== undefined) { event.preventDefault(); void this.navigate(target, step); }
   }
-  adopted(): void { this.dirty = true; this.requests.adopted(); this.window.adopted(); this.changed(); }
-  hostConnected(): void { this.dirty = true; this.changed(); }
-  hostDisconnected(): void { this.dirty = true; this.current?.settle(false); this.queued?.settle(false); this.list = undefined; }
+  private readonly detached?: DeferredTeardown;
+  adopted(): void { this.detached?.flush(); this.dirty = true; this.requests.adopted(); this.window.adopted(); this.changed(); }
+  hostConnected(): void {
+    if (this.detached?.cancel()) return;
+    this.dirty = true; this.changed();
+  }
+  hostDisconnected(): void {
+    if (this.detached) this.detached.schedule();
+    else this.release();
+  }
+  private release(): void { this.dirty = true; this.current?.settle(false); this.queued?.settle(false); this.list = undefined; }
 }

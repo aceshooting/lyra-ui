@@ -96,6 +96,10 @@ or `<source>` set with no allowlisted URL never reaches the native element; the 
 it. The internal
 play/pause control's `focus`/`blur` are relayed exactly once as owner-realm native `FocusEvent`s
 (bubbling and composed, preserving `relatedTarget`).
+When the play/pause button, the poster play action or `togglePlay()` has its playback request
+rejected, `lr-render-error` (`detail: { error }`, the native rejection) is emitted and the localized
+`error` part is shown and announced, as for a failed source; an interrupted request (`AbortError`)
+is not reported, and visibility-driven resumes stay silent. `play()` itself returns the rejection.
 With the optional panorama, `lr-panorama-camera-change` (`detail: { camera }`, after a user gesture or
 keyboard change), `lr-panorama-hotspot-select` (`detail: { hotspot, id, index }`) and
 `lr-engine-fallback` (`detail: { from, to, reason }`) are emitted; none is cancelable.

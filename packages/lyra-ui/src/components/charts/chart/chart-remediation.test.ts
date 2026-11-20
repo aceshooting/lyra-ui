@@ -1,5 +1,5 @@
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
-import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { Chart, PointElement } from 'chart.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import '../../lr-chart.js';
@@ -143,6 +143,8 @@ for (const tag of chartTags) {
       observer.deliver(true);
       await liveChart(current);
       current.remove();
+      // A genuine disconnect (not a same-task move, which keeps the drawn chart).
+      await aTimeout(0);
       document.body.append(current);
       await waitUntil(ready, `${tag} peer did not reload`, { timeout: 5000 });
       await current.updateComplete;

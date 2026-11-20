@@ -1221,7 +1221,9 @@ it('re-arms the ResizeObserver on reconnect after a disconnect, so a resize stil
     expect((observeCalls[0]) === (svgEl)).to.equal(true);
 
     const parent = el.parentNode!;
-    parent.removeChild(el); // disconnectedCallback() disconnects the old observer
+    parent.removeChild(el);
+    // A genuine disconnect disconnects the old observer a microtask later; a same-task move keeps it.
+    await new Promise((resolve) => setTimeout(resolve, 0));
     parent.appendChild(el); // connectedCallback() re-creates + re-observes
 
     // Re-arming on reconnect: a *second* observe() call, still targeting the

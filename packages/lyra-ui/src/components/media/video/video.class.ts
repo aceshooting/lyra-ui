@@ -61,6 +61,7 @@ export interface LyraVideoEventMap {
   'lr-engine-fallback': CustomEvent<Engine3dFallbackDetail>;
   'lr-panorama-camera-change': CustomEvent<{ camera: LyraPanoramaCamera }>;
   'lr-panorama-hotspot-select': CustomEvent<LyraPanoramaHotspotSelectDetail>;
+  'lr-render-error': CustomEvent<{ error: unknown }>;
   ended: Event;
   error: Event;
   loadedmetadata: Event;
@@ -145,6 +146,10 @@ function unsupportedPromise(host: Element, message: string): Promise<never> {
  *   separately relayed.
  * @event {Event} volumechange - Relayed native video event; non-bubbling, non-composed, and
  *   non-cancelable.
+ * @event lr-render-error - An internal play control's (play/pause button, poster play,
+ *   `togglePlay()`) playback request was rejected. `detail: { error }` carries the native rejection;
+ *   an interrupted request (`AbortError`) is not reported, and visibility-driven resumes stay silent
+ *   under the autoplay policy.
  * @event {FocusEvent} focus - Relayed once from the internal play/pause control as a bubbling,
  *   composed native event.
  * @event {FocusEvent} blur - Relayed once from the internal play/pause control as a bubbling,
@@ -154,7 +159,8 @@ function unsupportedPromise(host: Element, message: string): Promise<never> {
  * @csspart caption-overlay - Caption positioning layer.
  * @csspart controls - Custom control bar.
  * @csspart controls-overlay - Bottom controls positioning layer.
- * @csspart error - Localized notice shown when the source failed to load or no source was allowlisted.
+ * @csspart error - Localized notice shown when the source failed to load, no source was allowlisted, or an
+ *   internal play control's request was rejected.
  * @csspart poster-overlay - Poster positioning layer.
  * @csspart poster-play-button - Poster play action.
  * @csspart progress - Native range input used to scrub. When disabled, its timeline track retains resting paint.
@@ -342,7 +348,8 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   @property({ converter: blankNumberConverter(1), attribute: 'playback-rate' }) playbackRate = 1;
 
   @state() private posterVisible = true;
-  /** The current source failed: rejected before load (unsafe or no allowlisted source) or a native error. */
+  /** The current source failed: rejected before load (unsafe or no allowlisted source), a native
+   *  error, or an internal play control's rejected request. */
   @state() private sourceFailed = false;
   private readonly failureAnnouncements = new AnnouncementSinkController(this);
   @state() private captionText = '';
@@ -788,7 +795,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
 
   /** Plays when paused and pauses when playing. */
   togglePlay(): void {
-    if (this.videoEl?.paused ?? true) void this.play().catch(() => undefined);
+    if (this.videoEl?.paused ?? true) this.playFromControl();
     else this.pause();
   }
 
@@ -835,6 +842,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
       case 'play':
         this.isPlaying = true;
         this.posterVisible = false;
+        this.sourceFailed = false;
         break;
       case 'pause':
       case 'ended':
@@ -890,8 +898,22 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   };
 
   private onPosterPlay = (): void => {
-    void this.play().catch(() => undefined);
+    this.playFromControl();
   };
+
+  /** Plays for an internal control. Nobody else holds this promise, so a rejection for the current
+   *  media is reported like a failed source; an interrupted request (`AbortError`) is not a failure. */
+  private playFromControl(): void {
+    const media = this.videoEl;
+    const generation = this.mediaController.generation;
+    void this.play().catch((error: unknown) => {
+      if (!this.isConnected || !this.mediaController.isCurrentGeneration(generation, media)) return;
+      if ((error as { name?: unknown } | null)?.name === 'AbortError') return;
+      this.sourceFailed = true;
+      this.failureAnnouncements.announceAssertive(this.localize('avPlayerFailedToLoad'));
+      this.emit('lr-render-error', { error });
+    });
+  }
 
   /** Platform capability read from this element's current owner realm, including before refs are
    * populated on first render. Public methods separately re-check their concrete live targets. */

@@ -79,7 +79,9 @@ reopen the selected match’s ancestors while unrelated manual collapse remains 
 **Complete provider hierarchy:** `treeSource: JsonViewerTreeSource | undefined`
 (attribute: false) supplies a complete logical hierarchy without flattening it or copying it into
 `data`. A defined provider takes display precedence; invalid defined input shows a localized source
-error. Setting `undefined` restores the current `data`. `maxNodes` and `expandDepth` govern only
+error. Setting `undefined` restores the current `data`. A same-task DOM move keeps the loaded provider
+rows, search and copy state; a genuine disconnect releases them a microtask later and reprojects on
+reconnect. `maxNodes` and `expandDepth` govern only
 the legacy `data` route; `maxHeight` also constrains the source scroller.
 
 ```ts

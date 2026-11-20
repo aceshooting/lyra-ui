@@ -31,7 +31,7 @@ for (const tag of ['lr-chart', 'lr-box-plot']) {
       for (const value of [20, 30]) {
         setData(value);
         await el.updateComplete;
-        expect((el as unknown as { chart?: unknown }).chart).to.equal(undefined);
+        expect((el as unknown as { chart?: unknown }).chart === undefined).to.equal(true);
         const table = el.shadowRoot!.querySelector('[part="data-table"]')!;
         expect(table.hasAttribute('data-visually-hidden')).to.equal(false);
         expect(table.textContent).to.include('Sales');
@@ -63,7 +63,9 @@ for (const tag of ['lr-chart', 'lr-box-plot']) {
       HTMLCanvasElement.prototype.getContext = original;
       el.remove();
     }
-    expect((el as unknown as { chart?: unknown }).chart).to.equal(undefined);
+    // A genuine disconnect releases the runtime a microtask later.
+    await Promise.resolve();
+    expect((el as unknown as { chart?: unknown }).chart === undefined).to.equal(true);
   });
 }
 
@@ -102,7 +104,7 @@ for (const tag of ['lr-chart', 'lr-box-plot']) {
       runtime.draw();
       await waitUntil(() => !!el.shadowRoot!.querySelector('[part="error"]'),
         'Failed peer should render its fallback', { timeout: 5000 });
-      expect(runtime.chart).to.equal(undefined);
+      expect(runtime.chart === undefined).to.equal(true);
       expect(destroyed).to.equal(1);
       expect(updates).to.equal(0);
       expect(el.shadowRoot!.querySelector('[part="error"]') !== null).to.equal(true);

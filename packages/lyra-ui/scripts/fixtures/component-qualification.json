@@ -5197,7 +5197,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 505,
+              "line": 508,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -5520,7 +5520,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 505,
+              "line": 508,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -6578,7 +6578,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 505,
+              "line": 508,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -8964,7 +8964,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 505,
+              "line": 508,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -19181,7 +19181,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 505,
+              "line": 508,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27742,7 +27742,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 505,
+              "line": 508,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -29964,7 +29964,7 @@
           "evidence": [
             {
               "file": "src/components/utility/json-viewer/json-viewer.class.ts",
-              "line": 711,
+              "line": 714,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -31320,7 +31320,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 505,
+              "line": 508,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -31683,7 +31683,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 505,
+              "line": 508,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -41210,7 +41210,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 505,
+              "line": 508,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -41514,7 +41514,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 505,
+              "line": 508,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -44327,7 +44327,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 505,
+              "line": 508,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -48607,7 +48607,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 505,
+              "line": 508,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -55954,7 +55954,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/terminal/terminal.class.ts",
-              "line": 930,
+              "line": 940,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

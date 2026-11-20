@@ -1,5 +1,6 @@
 import { graphSourceCountText } from '../../../internal/graph-source-messages.js';
 import { OwnedFrame } from '../../../internal/owned-timer.js';
+import { loadLazyChildren } from '../../../internal/lazy-children.js';
 import { resolveBoundedCanvasAllocation } from '../../../internal/canvas.js';
 import { readCanvasRgba } from '../../../internal/canvas-color.js';
 import { capturePointer, releasePointer } from '../../../internal/pointer-capture.js';
@@ -129,7 +130,8 @@ import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFA
 export type GraphSource = LyraGraphSource<LyraGraphNode, LyraGraphEdge & { readonly id: string }>;
 type GraphSourceValue = LyraGraphRecord<LyraGraphNode, LyraGraphEdge & { readonly id: string }>;
 type GraphSourceRecord = LyraSourceRecord<GraphSourceValue>;
-let paginationRegistration: Promise<unknown> | undefined;
+// Source navigation registers the pager the first time it renders.
+const GRAPH_CHILDREN = { pagination: () => import('../../lr-pagination.js') };
 const EMPTY_SOURCE_QUERY: LyraGraphSourceQuery = Object.freeze({ kind: 'nodes', search: '', centerKey: null, direction: 'both', nodeTypes: Object.freeze([]) });
 function graphSourceField(value: unknown, key: PropertyKey): unknown {
   if (value === null || typeof value !== 'object') throw new TypeError('Invalid graph record');
@@ -1528,9 +1530,12 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     return pending;
   }
 
+  /** The pager's registration and first render, settled by `updateComplete`. */
+  private childRegistration?: Promise<unknown>;
+
   protected override async getUpdateComplete(): Promise<boolean> {
     const complete = await super.getUpdateComplete();
-    if (this.sourceMode) await paginationRegistration;
+    await this.childRegistration;
     const pending = this.view !== '2d' ? this.spatialLoad : this.layout === 'layered' ? this.layeredLoad : undefined;
     if (pending) {
       await pending;
@@ -3476,9 +3481,6 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
     if (this.view !== '2d' && !this.loadFailed && !this.sourceList) void this.ensureSpatial();
     if (this.view === '2d' && this.layout === 'layered' && !this.loadFailed) void this.ensureLayered();
     super.willUpdate(changed);
-    if (this.graphSource !== undefined) {
-      paginationRegistration ??= import('../../lr-pagination.js').catch(() => { paginationRegistration = undefined; });
-    }
     if (changed.has('view') && this.isConnected) {
       if (this.view !== '2d') {
         this.loadGeneration += 1;
@@ -3677,6 +3679,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.childRegistration = loadLazyChildren(GRAPH_CHILDREN, this.renderRoot) ?? this.childRegistration;
     this.publishSourceComposition();
     if (this.sourceMode && !this.sourcePages.state.pending && this.sourceRestoreFocus) {
       const repair = this.sourceRestoreFocus;

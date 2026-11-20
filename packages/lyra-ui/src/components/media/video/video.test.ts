@@ -675,6 +675,30 @@ describe('lr-video public contract', () => {
     expect((await caught) === failure).to.equal(true);
   });
 
+  it('reports an internal play-toggle rejection with lr-render-error, a visible notice and an announcement', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video src=${VIDEO_SRC}></lr-video>`);
+    const media = nativeVideo(el);
+    const failure = new DOMException('Playback was blocked', 'NotAllowedError');
+    Object.defineProperty(media, 'play', { configurable: true, value: () => Promise.reject(failure) });
+    const reported = oneEvent(el, 'lr-render-error');
+    el.togglePlay();
+    const event = await reported as CustomEvent<{ error: unknown }>;
+    expect(event.detail.error === failure).to.equal(true);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="error"]')?.textContent).to.equal('The media failed to load.');
+    await waitUntil(() => sinkTexts('assertive').includes('The media failed to load.'), 'the failure was announced');
+    // An interrupted play (pause() before it started) is not a failure.
+    let interruptions = 0;
+    el.addEventListener('lr-render-error', () => { interruptions += 1; });
+    Object.defineProperty(media, 'play', {
+      configurable: true,
+      value: () => Promise.reject(new DOMException('Interrupted by pause()', 'AbortError')),
+    });
+    el.togglePlay();
+    await aTimeout(0);
+    expect(interruptions).to.equal(0);
+  });
+
   it('maps autoplay-muted to native autoplay and muted state without changing the authored muted property', async () => {
     const el = await fixture<LyraVideo>(html`<lr-video autoplay-muted></lr-video>`);
     const media = nativeVideo(el);

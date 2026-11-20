@@ -25,6 +25,7 @@ import {
 import { styles } from './json-viewer.styles.js';
 import type { LyraHierarchySource, LyraHierarchyQuery, LyraInspectionNode } from '../../../data-sources.js';
 import { HierarchySourceController, hierarchyField } from '../../../internal/hierarchy-source-controller.js';
+import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import {
   hasHierarchySourceCopy,
   hierarchyCopyScope,
@@ -488,7 +489,7 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
   private sourceAnnouncement?: string;
   private readonly hierarchy = new HierarchySourceController<LyraInspectionNode>(this, {
     normalize: (value, key) => this.normalizeSourceNode(value, key),
-    onChange: () => this.requestUpdate('sourceState', null), accepted: () => {},
+    onChange: () => this.requestUpdate('sourceState', null), accepted: () => {}, deferDisconnect: true,
     payload: { maxUnits: 2_000_000, maxRowUnits: 327_702,
       unitsOf: node => node.name.length + node.path.length + (node.value?.length ?? 0) + node.kind.length },
   });
@@ -701,6 +702,8 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    // A same-task DOM move keeps the loaded tree, search and copy state.
+    if (this.detached.cancel()) return;
     this.sourceBinding = undefined;
     this.requestUpdate('sourceReconnect', null);
     this.searchAnnouncementsArmed = false;
@@ -746,17 +749,22 @@ export class LyraJsonViewer extends LyraElement<LyraJsonViewerEventMap> {
     this.scrollRegionBody = undefined;
   }
 
-  override disconnectedCallback(): void {
+  private readonly detached = new DeferredTeardown(() => {
     this.releaseScrollRegion();
     this.invalidateSourceSearch();
     this.sourceBinding = undefined;
     this.copyFeedback.clear();
     this.searchAnnouncementGeneration += 1;
     this.searchAnnouncementsArmed = false;
+  });
+
+  override disconnectedCallback(): void {
+    this.detached.schedule();
     super.disconnectedCallback();
   }
 
   override adoptedCallback(): void {
+    this.detached.flush();
     this.invalidateSourceSearch();
     this.sourceBinding = undefined;
     this.hierarchy.adopted();

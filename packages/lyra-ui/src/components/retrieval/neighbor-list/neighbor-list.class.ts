@@ -3,6 +3,7 @@ import type { GraphSource } from '../graph/graph.class.js';
 import type { LyraGraphNode } from '../graph/graph-model.js';
 import type { LyraGraphSourceQuery, LyraGraphSourceSummary, LyraSourceRecord } from '../../../data-sources.js';
 import { SourcePageController } from '../../../internal/source-page-controller.js';
+import { loadLazyChildren } from '../../../internal/lazy-children.js';
 import { sourceCount, sourceRevision } from '../../../internal/source-request-controller.js';
 import { findSourceRow } from '../../../internal/source-row.js';
 
@@ -77,7 +78,8 @@ import { LYRA_DEFAULT_graphDataListLimit, LYRA_DEFAULT_neighborExpand, LYRA_DEFA
 import { LYRA_DEFAULT_loading, LYRA_DEFAULT_neighborDirectionBoth, LYRA_DEFAULT_neighborDirectionIn, LYRA_DEFAULT_neighborDirectionOut, LYRA_DEFAULT_retry } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-let paginationRegistration: Promise<unknown> | undefined;
+// Source navigation registers the pager the first time it renders.
+const NEIGHBOR_LIST_CHILDREN = { pagination: () => import('../../lr-pagination.js') };
 let virtualListRegistration: Promise<unknown> | undefined;
 
 export interface LyraNeighborRow {
@@ -365,17 +367,17 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
     super.requestUpdate(...args);
   }
 
+  /** The pager's registration and first render, settled by `updateComplete`. */
+  private childRegistration?: Promise<unknown>;
+
   protected override async getUpdateComplete(): Promise<boolean> {
     const complete = await super.getUpdateComplete();
-    if (this.graphSource !== undefined && this.centerKey !== null) await paginationRegistration;
+    await this.childRegistration;
     return complete;
   }
 
   protected override willUpdate(changed: PropertyValues<this>): void {
     super.willUpdate(changed);
-    if (this.graphSource !== undefined && this.centerKey !== null) {
-      paginationRegistration ??= import('../../lr-pagination.js').catch(() => { paginationRegistration = undefined; });
-    }
     this.syncSource();
     if (this.graphSource !== undefined) {
       const state = this.sourcePages.state;
@@ -645,6 +647,7 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
+    this.childRegistration = loadLazyChildren(NEIGHBOR_LIST_CHILDREN, this.renderRoot) ?? this.childRegistration;
     if (this.graphSource !== undefined) {
       const state = this.sourcePages.state;
       const status = this.sourceError || state.error ? 'error' : state.pending ? 'loading' : 'ready';

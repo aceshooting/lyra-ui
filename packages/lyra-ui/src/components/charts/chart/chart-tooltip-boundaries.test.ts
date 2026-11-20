@@ -100,7 +100,8 @@ it('contains a peer hit-testing failure without emitting an activation and recov
 });
 
 for (const reconnectDuringHit of [false, true]) for (const phase of ['hit testing', 'array admission', 'index admission'] as const) {
-  it(`ignores a hit from a peer retired ${reconnectDuringHit ? 'and synchronously reconnected' : 'by disconnection'} during ${phase}`, async () => {
+  // A same-task move keeps the peer, so its hit stands; a removal retires it.
+  it(`${reconnectDuringHit ? 'honors a hit from a peer moved' : 'ignores a hit from a peer retired by disconnection'} during ${phase}`, async () => {
     const el = await fixture<LyraChart>(html`<lr-chart without-animation .labels=${['North']}
       .datasets=${[{ label: 'Sales', data: [4] }]}></lr-chart>`);
     await waitUntil(() => el.chart !== undefined);
@@ -130,10 +131,14 @@ for (const reconnectDuringHit of [false, true]) for (const phase of ['hit testin
     try {
       chart.options.onClick?.call(chart, { type: 'click', x: 50, y: 50, native: new MouseEvent('click') }, [], chart);
       expect(retired).to.equal(true);
-      expect(activations).to.deep.equal([]);
+      expect(activations).to.deep.equal(reconnectDuringHit ? ['datum', 'point'] : []);
     } finally { chart.getElementsAtEventForMode = original; }
-
-    if (!reconnectDuringHit) parent.append(el);
+    if (reconnectDuringHit) {
+      expect(el.chart === (chart as unknown), 'a same-task move keeps the peer').to.equal(true);
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    parent.append(el);
     await waitUntil(() => el.chart !== undefined && el.chart !== (chart as unknown));
     const current = el.chart as unknown as Chart;
     const hitTest = current.getElementsAtEventForMode;
