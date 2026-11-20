@@ -4342,7 +4342,8 @@ page gives it.
 buttons. The buttons accept the shared
 `--lr-icon-button-bg` (default `transparent`), `--lr-icon-button-border` (default `0`),
 `--lr-icon-button-color` (default `var(--lr-color-text)`), and `--lr-icon-button-radius` (default
-`var(--lr-radius)`); plus shared tokens —
+`var(--lr-radius)`), and the hover and pressed overrides `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color-hover` and `--lr-icon-button-color-active`
+on the built-in controls; plus shared tokens —
 `--lr-icon-button-size` (each button's minimum hit area, unchanged by `frame`), `--lr-shadow-m`,
 `--lr-color-surface`, `--lr-color-border-subtle`, `--lr-radius`, `--lr-space-2xs`,
 `--lr-focus-ring-width`/`-color`/`-offset`.
@@ -5097,7 +5098,8 @@ the nested table.
 
 The provider query type is `DocumentLibrarySourceQuery { readonly searchTerm: string;
 readonly tagFilter: readonly string[]; readonly sortKey: LibraryDocumentSortKey;
-readonly sortDir: 'asc' | 'desc'; readonly filter: LyraDocumentLibrary['filter'] }`.
+readonly sortDir: 'asc' | 'desc';
+readonly filter: ((document: LibraryDocument, query: string) => boolean) | undefined }`.
 The component's `filter` property uses this same callback contract.
 
 Set `maxDocuments` (`max-documents`, default 10,000, range 0–100,000) to bound the local inventory. Read `documentsTruncated` for the count of omitted source positions, including invalid or duplicate records. A `limit` note displays that count. Changing the cap re-admits the assigned collection.
@@ -5362,7 +5364,8 @@ resting longhands plus `--lr-graph-query-builder-run-hover-bg` and
 shared `--lr-icon-button-bg` (default `transparent`), `--lr-icon-button-border` (default `0`),
 `--lr-icon-button-color` (default
 `var(--lr-graph-query-builder-saved-delete-color, var(--lr-color-text-quiet))`), and
-`--lr-icon-button-radius` (default `var(--lr-radius-xs)`). Unset hooks preserve the current shared
+`--lr-icon-button-radius` (default `var(--lr-radius-xs)`), and the hover and pressed overrides
+`--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color-hover` and `--lr-icon-button-color-active`. Unset hooks preserve the current shared
 surface/text/brand/danger colors and hover/active mixes. They are inline `var()` fallbacks at the
 longhand that consumes them, so an override on a parent themes every descendant builder without
 being shadowed by a declaration on the component host.

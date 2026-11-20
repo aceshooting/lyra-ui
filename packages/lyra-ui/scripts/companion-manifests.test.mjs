@@ -7,6 +7,7 @@ test('names each companion element once, with a family and import path', () => {
   assert.equal(new Set(tags).size, tags.length);
   for (const companion of COMPANION_MANIFESTS) {
     assert.match(companion.importPath, new RegExp(`^${companion.package}/`, 'u'));
+    assert.match(companion.classImportPath, new RegExp(`^${companion.package}/`, 'u'));
     assert.ok(companion.family && companion.status && companion.since);
   }
   assert.equal(companionForTag('lr-gen-view')?.directory, 'lyra-gen');

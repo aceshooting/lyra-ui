@@ -151,15 +151,18 @@ gate. Read `EXEMPTIONS` for the current list and reasons.
   `enrollments` (`{ module, exportName, kind, document, family, locator }`: a new public contract and
   its authored locator) and `relocations` (`{ module, toModule, exportName, kind,
   expectedFingerprint }`, moving a declaration into a shared module while keeping its public
-  re-exports). At least one owner is required, and the authored documentation is committed and
+  re-exports) and `removals` (`{ module, exportName, kind, expectedFingerprint }`: a documented owner
+  whose declaration is no longer exported anywhere). At least one owner is required, and the authored documentation is committed and
   reviewed first. After canonical regeneration the updater derives fingerprints and routes with the
   existing scanner, preserves existing routes and locators, and rejects legacy owners, stale
   preimages, unchanged requests and unrelated drift; the complete census and the authored docs must
   pass their gap checks before the fixture is written. Review the before/after owner log; this is
   not a blanket rebaseline.
-- An update may add `additionalRoutes` (unique canonical `src/**/*.ts` paths): the live routes must
-  equal the existing routes plus exactly those, still with the exact old fingerprint. Without it an
-  update must change the fingerprint and keep the routes. A relocation keeps fingerprint and routes
+- An update may add `additionalRoutes` and/or `removedRoutes` (unique canonical `src/**/*.ts`
+  paths, never both for one route): the live routes must equal the existing routes minus exactly the
+  removed ones plus exactly the added ones, at least one route must remain, and the request still
+  names the exact old fingerprint. Without either an update must change the fingerprint and keep the
+  routes. A relocation keeps fingerprint and routes
   unless it pins `expectedTargetFingerprint` (dependency ownership participates in the fingerprint,
   so a pure move can change it); the old preimage and target hash must both match and differ.
   Neither enrollments nor relocations accept `additionalRoutes`; source and target owners cannot

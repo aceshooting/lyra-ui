@@ -5534,6 +5534,7 @@ export interface LyraComponentTypeMap {
       | 'lr-node-expand'
       | 'lr-relation-activate'
       | 'lr-retrieval-disclosure-change'
+      | 'lr-tab-hide'
       | 'lr-tab-show'
       | 'lr-toggle';
     cssNames: never;
@@ -6010,8 +6011,14 @@ export interface LyraComponentTypeMap {
       | '--lr-flow-controls-hover-bg'
       | '--lr-flow-controls-lock-active-color'
       | '--lr-icon-button-bg'
+      | '--lr-icon-button-bg-active'
+      | '--lr-icon-button-bg-hover'
       | '--lr-icon-button-border'
+      | '--lr-icon-button-border-active'
+      | '--lr-icon-button-border-hover'
       | '--lr-icon-button-color'
+      | '--lr-icon-button-color-active'
+      | '--lr-icon-button-color-hover'
       | '--lr-icon-button-radius';
     attributeAliases: {
       'without-lock'?: LyraFlowControls['withoutLock'];
@@ -6492,8 +6499,14 @@ export interface LyraComponentTypeMap {
       | '--lr-graph-query-builder-saved-load-active-bg'
       | '--lr-graph-query-builder-saved-load-color'
       | '--lr-icon-button-bg'
+      | '--lr-icon-button-bg-active'
+      | '--lr-icon-button-bg-hover'
       | '--lr-icon-button-border'
+      | '--lr-icon-button-border-active'
+      | '--lr-icon-button-border-hover'
       | '--lr-icon-button-color'
+      | '--lr-icon-button-color-active'
+      | '--lr-icon-button-color-hover'
       | '--lr-icon-button-radius';
     attributeAliases: {
       'custom-error'?: LyraGraphQueryBuilder['customError'];
@@ -7304,8 +7317,14 @@ export interface LyraComponentTypeMap {
       | 'lr-error'
       | 'lr-search-change';
     cssNames:       | '--lr-icon-button-bg'
+      | '--lr-icon-button-bg-active'
+      | '--lr-icon-button-bg-hover'
       | '--lr-icon-button-border'
+      | '--lr-icon-button-border-active'
+      | '--lr-icon-button-border-hover'
       | '--lr-icon-button-color'
+      | '--lr-icon-button-color-active'
+      | '--lr-icon-button-color-hover'
       | '--lr-icon-button-radius'
       | '--lr-json-viewer-active-outline'
       | '--lr-json-viewer-boolean-color'
@@ -10222,8 +10241,14 @@ export interface LyraComponentTypeMap {
     eventNames:       | 'lr-pause-change'
       | 'lr-poll-due';
     cssNames:       | '--lr-icon-button-bg'
+      | '--lr-icon-button-bg-active'
+      | '--lr-icon-button-bg-hover'
       | '--lr-icon-button-border'
+      | '--lr-icon-button-border-active'
+      | '--lr-icon-button-border-hover'
       | '--lr-icon-button-color'
+      | '--lr-icon-button-color-active'
+      | '--lr-icon-button-color-hover'
       | '--lr-icon-button-radius'
       | '--lr-poll-status-due-bg'
       | '--lr-poll-status-pause-active-bg'

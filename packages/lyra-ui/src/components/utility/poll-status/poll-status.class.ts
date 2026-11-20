@@ -66,6 +66,12 @@ export interface LyraPollStatusEventMap {
  * @cssprop --lr-icon-button-border - Resting border of the icon-only action buttons.
  * @cssprop --lr-icon-button-color - Resting foreground of the icon-only action buttons.
  * @cssprop --lr-icon-button-radius - Corner radius of the icon-only action buttons.
+ * @cssprop --lr-icon-button-bg-hover - Hover background of the icon-only action buttons.
+ * @cssprop --lr-icon-button-bg-active - Pressed background of the icon-only action buttons.
+ * @cssprop --lr-icon-button-border-hover - Hover border of the icon-only action buttons.
+ * @cssprop --lr-icon-button-border-active - Pressed border of the icon-only action buttons.
+ * @cssprop --lr-icon-button-color-hover - Hover foreground of the icon-only action buttons.
+ * @cssprop --lr-icon-button-color-active - Pressed foreground of the icon-only action buttons.
  * @status stable
  * @since 4.0.0
  */

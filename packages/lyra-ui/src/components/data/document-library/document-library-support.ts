@@ -1,4 +1,3 @@
-import type { LyraDocumentLibrary } from './document-library.class.js';
 import type { LyraPageSource, LyraCursorSource } from '../../../data-sources.js';
 import { cursorQueryText } from './document-library-cursor.js';
 import type { LibraryDocument, LibraryDocumentFreshness, LibraryDocumentSortKey } from './document-library-types.js';
@@ -11,7 +10,6 @@ import {
   UNSAFE_OWN_DATA_DESCRIPTOR,
 } from '../../../internal/data-descriptors.js';
 import type { TableSortDirection } from '../table/table.class.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: START
 
 /** Full-source document query; tags use AND semantics and filter receives folded search text. */
 export interface DocumentLibrarySourceQuery {
@@ -19,7 +17,8 @@ export interface DocumentLibrarySourceQuery {
   readonly tagFilter: readonly string[];
   readonly sortKey: LibraryDocumentSortKey;
   readonly sortDir: 'asc' | 'desc';
-  readonly filter: LyraDocumentLibrary['filter'];
+  /** The host's `filter` override, or `undefined` for the default match. */
+  readonly filter: ((document: LibraryDocument, query: string) => boolean) | undefined;
 }
 export type DocumentLibrarySource = LyraPageSource<LibraryDocument, DocumentLibrarySourceQuery>;
 /** Unknown-total document batches; the provider owns the complete query. */

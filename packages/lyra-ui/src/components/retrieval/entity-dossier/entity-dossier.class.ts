@@ -129,6 +129,8 @@ export type LyraEntityDossierDisclosureDetail =
  *   embedded provenance panel. `detail: { relation, sourceNodeId?, targetNodeId?, occurrenceIndex }`.
  * @event lr-tab-show - Surfaced unchanged from the embedded tabs.
  *   `detail: { tabId }`.
+ * @event lr-tab-hide - Surfaced unchanged from the embedded tabs for the outgoing tab.
+ *   `detail: { name }`.
  * @csspart base - The root wrapper, or the empty state's wrapper when `entity` is `null`.
  * @csspart header - The wrapper around the entity summary and the confidence stat.
  * @csspart entity-card - The nested `lr-entity-card`.

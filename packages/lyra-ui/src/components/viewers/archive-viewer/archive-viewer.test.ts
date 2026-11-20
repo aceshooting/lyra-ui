@@ -812,12 +812,14 @@ describe('lr-archive-viewer anchor contract across virtualization', () => {
       list.rowHeight = 40;
       await list.updateComplete;
       expect(list.shadowRoot!.textContent).to.not.include(names[targetIndex]);
-      // Simulates an element adopted into a document with no browsing context (e.g.
-      // `document.implementation.createHTMLDocument()`): `waitForArchiveRow()` cannot fall back to
-      // `requestAnimationFrame` and must give up instead of retrying forever.
+      // Reports a real document with no browsing context as the owner: `waitForArchiveRow()` cannot
+      // fall back to `requestAnimationFrame` and must give up instead of retrying forever, while the
+      // rest of the element (its announcer included) still meets a complete Document.
+      const detached = document.implementation.createHTMLDocument('');
+      expect(detached.defaultView).to.equal(null);
       Object.defineProperty(el, 'ownerDocument', {
         configurable: true,
-        get: () => ({ defaultView: null }),
+        get: () => detached,
       });
       try {
         expect(await el.scrollToAnchor({ kind: 'fragment', id: names[targetIndex]! })).to.be.false;

@@ -129,6 +129,8 @@ export function readTagFacts(manifest) {
           family: companion.family,
           className: decl.name,
           importPath: companion.importPath,
+          classImportPath: companion.classImportPath,
+          companionPackage: companion.package,
           modulePath: mod.path,
           purpose: summarize(decl.description ?? decl.summary ?? ''),
           status: decl.status,
@@ -1250,8 +1252,10 @@ export function buildComponentFile(
     '',
     `# \`${tag}\``,
     '',
-    `- **Import** \`import '@aceshooting/lyra-ui/components/${tag}.js';\` ` +
-      '(stable tag alias; registers the tag)',
+    facts.companionPackage
+      ? `- **Import** \`import '${facts.importPath}';\` (registers the tag; ships in \`${facts.companionPackage}\`)`
+      : `- **Import** \`import '@aceshooting/lyra-ui/components/${tag}.js';\` ` +
+        '(stable tag alias; registers the tag)',
     compoundUsageRegistrations.length
       ? '- **Compound usage registrations** ' +
         compoundUsageRegistrations
@@ -1264,7 +1268,7 @@ export function buildComponentFile(
         `registration dependencies of \`${tag}\``
       : null,
     `- **Class** \`${facts.className}\`, also available unregistered from` +
-      ` \`${facts.importPath.replace(/\.js$/, '.class.js')}\``,
+      ` \`${facts.classImportPath ?? facts.importPath.replace(/\.js$/, '.class.js')}\``,
     `- **Family** \`components/${facts.family}/\` — see \`llms/index.md\` for its siblings`,
     `- **Status** \`${facts.status}\` since \`${facts.since}\` — see the maturity and deprecation` +
       ' policy in `llms/shared.md`',

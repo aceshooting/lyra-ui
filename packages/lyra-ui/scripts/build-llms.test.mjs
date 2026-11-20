@@ -150,6 +150,34 @@ assert.doesNotMatch(
   'a narrow component reference must not link its unpublished authored family input',
 );
 
+// A companion element registers from its own package; its page must never point at a lyra-ui alias
+// the lyra-ui exports map does not carry.
+const companionFixture = buildComponentFile(
+  'lr-companion-fixture',
+  { tags: ['lr-companion-fixture'], text: '## `lr-companion-fixture`\n\nCompanion fixture.' },
+  new Map([
+    [
+      'lr-companion-fixture',
+      {
+        family: 'viewers',
+        className: 'LyraCompanionFixture',
+        importPath: '@aceshooting/lyra-example/fixture',
+        classImportPath: '@aceshooting/lyra-example/fixture.class',
+        companionPackage: '@aceshooting/lyra-example',
+        status: 'experimental',
+        since: '0.1.0',
+        deprecations: [],
+        cssParts: [],
+        cssProperties: [],
+      },
+    ],
+  ]),
+  new Map(),
+);
+assert.match(companionFixture, /- \*\*Import\*\* `import '@aceshooting\/lyra-example\/fixture';`/u);
+assert.match(companionFixture, /unregistered from `@aceshooting\/lyra-example\/fixture\.class`/u);
+assert.doesNotMatch(companionFixture, /@aceshooting\/lyra-ui\/components\/lr-companion-fixture/u);
+
 // A section documenting several tags publishes its full body only once, in the primary tag's file
 // (the first tag named in the section's own title) -- every sibling gets its own generated facts
 // plus a one-line pointer instead of a duplicated copy of the shared prose.

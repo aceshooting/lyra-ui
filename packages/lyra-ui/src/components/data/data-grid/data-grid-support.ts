@@ -7,8 +7,6 @@ import {
 } from '../../../internal/data-descriptors.js';
 import { resolveIntlLocale } from '../../../internal/intl-cache.js';
 import type { DataGridColumn, DataGridFilter, DataGridKey, DataGridJsonValue, DataGridPinSide, DataGridScrollOptions, DataGridSelectable, DataGridSortingState } from './data-grid-types.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: START
-// GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export * from './data-grid-types.js';
 

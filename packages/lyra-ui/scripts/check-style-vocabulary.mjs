@@ -298,7 +298,7 @@ function ringSourceFiles(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const file = join(directory, entry.name);
     if (entry.isDirectory()) return ringSourceFiles(file);
-    return /\.ts$/.test(entry.name) && !/\.(test|stories|generated|property\.test)\.ts$/.test(entry.name) ? [file] : [];
+    return entry.name.endsWith('.ts') && !/\.(test|stories|generated|property\.test)\.ts$/.test(entry.name) ? [file] : [];
   });
 }
 

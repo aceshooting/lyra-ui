@@ -10,7 +10,7 @@ const packagesDir = path.dirname(path.dirname(path.dirname(fileURLToPath(import.
 /**
  * `status` and `since` are the maturity the companion's own package declares for the tag (the
  * centralized lyra-ui metadata does not cover other packages). `family` places a companion tag in the `llms/<family>.md` that documents it; `importPath` is the
- * module a consumer imports to register it. `sourceRoot` is where its class module and stylesheet live.
+ * module a consumer imports to register it; `classImportPath` exports the class without registering it. `sourceRoot` is where its class module and stylesheet live.
  */
 export const COMPANION_MANIFESTS = Object.freeze([
   Object.freeze({
@@ -21,6 +21,7 @@ export const COMPANION_MANIFESTS = Object.freeze([
     status: 'experimental',
     since: '0.1.0',
     importPath: '@aceshooting/lyra-docs/docx/editor',
+    classImportPath: '@aceshooting/lyra-docs/docx/editor.class',
   }),
   Object.freeze({
     directory: 'lyra-gen',
@@ -30,6 +31,7 @@ export const COMPANION_MANIFESTS = Object.freeze([
     status: 'experimental',
     since: '0.1.0',
     importPath: '@aceshooting/lyra-gen/gen-view.js',
+    classImportPath: '@aceshooting/lyra-gen/gen-view.class.js',
   }),
 ]);
 

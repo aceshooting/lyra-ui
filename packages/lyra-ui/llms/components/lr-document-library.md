@@ -65,7 +65,8 @@ the nested table.
 
 The provider query type is `DocumentLibrarySourceQuery { readonly searchTerm: string;
 readonly tagFilter: readonly string[]; readonly sortKey: LibraryDocumentSortKey;
-readonly sortDir: 'asc' | 'desc'; readonly filter: LyraDocumentLibrary['filter'] }`.
+readonly sortDir: 'asc' | 'desc';
+readonly filter: ((document: LibraryDocument, query: string) => boolean) | undefined }`.
 The component's `filter` property uses this same callback contract.
 
 Set `maxDocuments` (`max-documents`, default 10,000, range 0–100,000) to bound the local inventory. Read `documentsTruncated` for the count of omitted source positions, including invalid or duplicate records. A `limit` note displays that count. Changing the cap re-admits the assigned collection.

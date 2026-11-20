@@ -59173,6 +59173,11 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-tab-hide",
+            "type": "LyraTabGroupEventMap['lr-tab-hide']",
+            "cancelable": "never"
+          },
+          {
             "name": "lr-tab-show",
             "type": "CustomEvent<{ tabId: LyraEntityDossierTab }>",
             "cancelable": "never",
@@ -64823,16 +64828,46 @@
             "default": "transparent"
           },
           {
+            "name": "--lr-icon-button-bg-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-icon-button-border",
             "deprecated": null,
             "hasDefault": true,
             "default": 0
           },
           {
+            "name": "--lr-icon-button-border-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-icon-button-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-icon-button-color-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-hover",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-icon-button-radius",
@@ -69833,16 +69868,46 @@
             "default": "transparent"
           },
           {
+            "name": "--lr-icon-button-bg-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-icon-button-border",
             "deprecated": null,
             "hasDefault": true,
             "default": 0
           },
           {
+            "name": "--lr-icon-button-border-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-icon-button-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-graph-query-builder-saved-delete-color, var(--lr-color-text-quiet))"
+          },
+          {
+            "name": "--lr-icon-button-color-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-hover",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-icon-button-radius",
@@ -78772,12 +78837,42 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-icon-button-bg-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-icon-button-border",
             "deprecated": null,
             "hasDefault": false
           },
           {
+            "name": "--lr-icon-button-border-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-icon-button-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-hover",
             "deprecated": null,
             "hasDefault": false
           },
@@ -111822,12 +111917,42 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-icon-button-bg-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-bg-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-icon-button-border",
             "deprecated": null,
             "hasDefault": false
           },
           {
+            "name": "--lr-icon-button-border-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-border-hover",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-icon-button-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-active",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-color-hover",
             "deprecated": null,
             "hasDefault": false
           },

@@ -24,7 +24,8 @@ const distribution = fc
     const binCounts = seeds.slice(0, widths.length);
     const valid = below + above + binCounts.reduce((a, b) => a + b, 0);
     const firstPopulated = binCounts.findIndex((count) => count > 0);
-    const lastPopulated = binCounts.findLastIndex((count) => count > 0);
+    let lastPopulated = binCounts.length - 1;
+    while (lastPopulated >= 0 && binCounts[lastPopulated]! <= 0) lastPopulated -= 1;
     const min = below > 0 ? edges[0]! - 1 : firstPopulated >= 0 ? edges[firstPopulated]! : edges[0]!;
     const max = above > 0 ? edges.at(-1)! + 1 : lastPopulated >= 0 ? edges[lastPopulated + 1]! - 1 : edges.at(-1)!;
     return {

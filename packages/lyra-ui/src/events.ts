@@ -3438,8 +3438,8 @@ export type LyraSwitchToggleRequestEvent = LyraSwitchEventMap['lr-switch-toggle-
 export type LyraTabChangeEvent = LyraKnowledgeBaseAdminEventMap['lr-tab-change'];
 
 /**
- * `lr-tab-hide` — dispatched by `<lr-tab-group>`; detail union of 2, e.g.
- * `LyraEntityDossierEventMap['lr-tab-hide']`.
+ * `lr-tab-hide` — dispatched by 2 components: `<lr-entity-dossier>`, `<lr-tab-group>`; detail
+ * union of 2, e.g. `LyraEntityDossierEventMap['lr-tab-hide']`.
  */
 export type LyraTabHideEvent =
   | LyraEntityDossierEventMap['lr-tab-hide']

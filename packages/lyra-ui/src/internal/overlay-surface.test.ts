@@ -664,7 +664,7 @@ it('recolours only the menu-item icon, and inherits the row colour while unset',
 
 it('paints a hovered menu-item row from the new hover hook', async () => {
   const tuned = await mountMenuItem(
-    `--lr-menu-item-hover-bg: ${SURFACE}; --lr-transition-fast: 0s;`,
+    `--lr-menu-item-hover-bg: ${SURFACE}; --lr-transition-fast: 0s; --lr-transition-interactive: none;`,
   );
   try {
     // `sendMouse` resolves when the synthesized command completes, which is not when the engine has
@@ -682,7 +682,7 @@ it('falls back to the shared brand-quiet fill while the hover hook is unset', as
   // way — only the unset arm proves the fallback arm still names the token this row has always
   // painted. The one existing assertion nearby covers the CHECKED row, so the plain row was
   // covered by accident rather than by design.
-  const unset = await mountMenuItem('--lr-transition-fast: 0s;');
+  const unset = await mountMenuItem('--lr-transition-fast: 0s; --lr-transition-interactive: none;');
   try {
     await hoverUntilMatched(unset.base, 'unset menu-item row under the pointer');
     expect(getComputedStyle(unset.base).backgroundColor, 'unset hovered row fill').to.equal(
@@ -699,7 +699,7 @@ it('steps a pressed menu-item row past the hover fill it was retuned to', async 
   // back to brand under the pointer. Polled rather than read straight after the press: `sendMouse`
   // resolving does not mean the engine has processed the pointer event it synthesized.
   const tuned = await mountMenuItem(
-    `--lr-menu-item-hover-bg: ${SURFACE}; --lr-transition-fast: 0s;`,
+    `--lr-menu-item-hover-bg: ${SURFACE}; --lr-transition-fast: 0s; --lr-transition-interactive: none;`,
   );
   try {
     await hoverUntilMatched(tuned.base, 'menu-item row under the pointer');

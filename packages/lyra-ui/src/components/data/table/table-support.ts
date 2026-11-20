@@ -3,7 +3,6 @@ import { sanitizeCssDeclarationValue } from '../../../internal/safe-css.js';
 // Type-only: registration (and the code) of the composed `<lr-empty>` comes from `table.ts`.
 import { literalSetConverter } from '../../../internal/converters.js';
 import { normalizeSize, type LyraSize, type LyraSizeStep } from '../../../internal/variants.js';
-// GENERATED DEFAULT-STRING SLICE IMPORT: START
 
 /** How `loading` renders. `'spinner'` (the default) replaces the grid with an indeterminate
  *  spinner; `'skeleton'` keeps the real grid — `<colgroup>`, `<thead>`, filter field, pagination

@@ -35,26 +35,31 @@ function assertLocator(locator) {
 
 export function assertSourceContractRequest(request) {
   const hasRelocations = request != null && Object.hasOwn(request, 'relocations');
-  exactKeys(request, ['schemaVersion', 'updates', 'enrollments', ...(hasRelocations ? ['relocations'] : [])],
-    'Source-contract request');
+  const hasRemovals = request != null && Object.hasOwn(request, 'removals');
+  exactKeys(request, ['schemaVersion', 'updates', 'enrollments', ...(hasRelocations ? ['relocations'] : []),
+    ...(hasRemovals ? ['removals'] : [])], 'Source-contract request');
   assert.equal(request.schemaVersion, 1, 'Source-contract request schemaVersion must be 1');
   const relocations = hasRelocations ? request.relocations : [];
-  assert.ok(Array.isArray(request.updates) && Array.isArray(request.enrollments) && Array.isArray(relocations),
-    'Source-contract updates, enrollments and relocations must be arrays');
-  assert.ok(request.updates.length + request.enrollments.length + relocations.length > 0,
+  const removals = hasRemovals ? request.removals : [];
+  assert.ok(Array.isArray(request.updates) && Array.isArray(request.enrollments) && Array.isArray(relocations) &&
+    Array.isArray(removals), 'Source-contract updates, enrollments, relocations and removals must be arrays');
+  assert.ok(request.updates.length + request.enrollments.length + relocations.length + removals.length > 0,
     'Source-contract request must name owners');
   const owners = new Set();
   for (const [operation, entries] of [
     ['update', request.updates], ['enrollment', request.enrollments], ['relocation', relocations],
+    ['removal', removals],
   ]) {
     for (const entry of entries) {
       const hasAdditionalRoutes = operation === 'update' && entry != null && Object.hasOwn(entry, 'additionalRoutes');
+      const hasRemovedRoutes = operation === 'update' && entry != null && Object.hasOwn(entry, 'removedRoutes');
       const hasTargetFingerprint = operation === 'relocation' && entry != null &&
         Object.hasOwn(entry, 'expectedTargetFingerprint');
       const fields = ['module', 'exportName', 'kind', ...(operation === 'enrollment'
         ? ['document', 'family', 'locator'] : ['expectedFingerprint'])];
       if (operation === 'relocation') fields.push('toModule');
       if (hasAdditionalRoutes) fields.push('additionalRoutes');
+      if (hasRemovedRoutes) fields.push('removedRoutes');
       if (hasTargetFingerprint) fields.push('expectedTargetFingerprint');
       exactKeys(entry, fields, `Source-contract ${operation}`);
       sourcePath(entry.module, 'src/', '.ts', 'Contract module');
@@ -66,6 +71,15 @@ export function assertSourceContractRequest(request) {
         entry.additionalRoutes.forEach(route => sourcePath(route, 'src/', '.ts', 'Additional contract route'));
         assert.equal(new Set(entry.additionalRoutes).size, entry.additionalRoutes.length,
           'Duplicate additional source-contract route');
+      }
+      if (hasRemovedRoutes) {
+        assert.ok(Array.isArray(entry.removedRoutes) && entry.removedRoutes.length > 0,
+          'Removed source-contract routes must be a nonempty array');
+        entry.removedRoutes.forEach(route => sourcePath(route, 'src/', '.ts', 'Removed contract route'));
+        assert.equal(new Set(entry.removedRoutes).size, entry.removedRoutes.length,
+          'Duplicate removed source-contract route');
+        assert.ok(!entry.removedRoutes.some(route => hasAdditionalRoutes && entry.additionalRoutes.includes(route)),
+          'A source-contract route cannot be both added and removed');
       }
       const modules = [entry.module];
       if (operation === 'relocation') {

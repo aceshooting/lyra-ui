@@ -48,19 +48,36 @@ export function prepareSourceContractBaseline(census, baseline, request) {
     assert.ok(owner && contract, `Update requires an existing documented and live source-contract owner ${key}`);
     assert.equal(owner.fingerprint, update.expectedFingerprint, `Stale source-contract fingerprint preimage ${key}`);
     const additionalRoutes = update.additionalRoutes ?? [];
+    const removedRoutes = update.removedRoutes ?? [];
+    const routeChange = additionalRoutes.length + removedRoutes.length > 0;
     assert.ok(Array.isArray(owner.routes) && owner.routes.length > 0,
       `Source-contract owner lacks recorded routes ${key}`);
-    if (additionalRoutes.length === 0) {
+    if (!routeChange) {
       assert.notEqual(contract.fingerprint, owner.fingerprint, `Source-contract fingerprint is unchanged ${key}`);
     }
     for (const route of additionalRoutes) {
       assert.ok(!owner.routes.includes(route), `Source-contract route is already recorded ${key}: ${route}`);
     }
-    assert.deepEqual([...owner.routes, ...additionalRoutes].sort(), contract.routes,
-      additionalRoutes.length > 0 ? `Source-contract routes changed beyond the requested additions ${key}`
+    for (const route of removedRoutes) {
+      assert.ok(owner.routes.includes(route), `Removed source-contract route is not recorded ${key}: ${route}`);
+    }
+    const expectedRoutes = [...owner.routes.filter(route => !removedRoutes.includes(route)), ...additionalRoutes];
+    assert.ok(expectedRoutes.length > 0, `Source-contract owner would keep no routes ${key}`);
+    assert.deepEqual(expectedRoutes.sort(), contract.routes,
+      routeChange ? `Source-contract routes changed beyond the requested route changes ${key}`
         : `Source-contract routes changed ${key}`);
-    if (additionalRoutes.length > 0) owner.routes = [...contract.routes];
+    if (routeChange) owner.routes = [...contract.routes];
     owner.fingerprint = contract.fingerprint;
+  }
+  for (const removal of request.removals ?? []) {
+    const key = sourceContractKey(removal);
+    assert.ok(!legacy.has(key), `Cannot remove legacy source-contract owner ${key}`);
+    const owner = documented.get(key);
+    assert.ok(owner, `Removal requires an existing documented source-contract owner ${key}`);
+    assert.ok(!actual.has(key), `Removed source-contract owner remains live ${key}`);
+    assert.equal(owner.fingerprint, removal.expectedFingerprint, `Stale source-contract fingerprint preimage ${key}`);
+    documented.delete(key);
+    next.documented.splice(next.documented.indexOf(owner), 1);
   }
   for (const enrollment of request.enrollments) {
     const key = sourceContractKey(enrollment);
@@ -109,10 +126,13 @@ export function writePreparedSourceContracts(root, request) {
     oldOwners.set(sourceContractKey({ ...relocation, module: relocation.toModule }),
       oldOwners.get(sourceContractKey(relocation)));
   }
-  const changes = next.documented.filter(owner => requested.has(sourceContractKey(owner))).map(owner => ({
-    before: oldOwners.get(sourceContractKey(owner)) ?? null,
-    after: owner,
-  }));
+  const changes = [
+    ...next.documented.filter(owner => requested.has(sourceContractKey(owner))).map(owner => ({
+      before: oldOwners.get(sourceContractKey(owner)) ?? null,
+      after: owner,
+    })),
+    ...(request.removals ?? []).map(removal => ({ before: oldOwners.get(sourceContractKey(removal)), after: null })),
+  ];
   assert.equal(readFileSync(file, 'utf8'), before, 'Source-contract baseline changed during preparation');
   const temporary = `${file}.${process.pid}.tmp`;
   let created = false;

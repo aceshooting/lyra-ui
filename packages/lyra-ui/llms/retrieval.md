@@ -2062,6 +2062,7 @@ shape?: 'circle' | 'square' | 'diamond' }`, the `lr-graph.nodeTypes` entry shape
 - `lr-node-expand` carries `{ nodeId }` from a neighbor row.
 - `lr-chunk-open` carries `{ chunkId, sourceId, anchor? }`.
 - `lr-tab-show` carries `{ tabId }`, where `tabId` is `relationships`, `chunks` or `provenance`.
+- `lr-tab-hide` carries `{ name }` for the outgoing tab, immediately before `lr-tab-show`.
 - `lr-entity-open` carries `{ entityId }` when a provenance chip opens.
 - `lr-drill` carries `{ communityId }` from a provenance community card.
 - `lr-relation-activate` carries `{ relation, sourceNodeId?, targetNodeId?, occurrenceIndex }` from a provenance path edge.

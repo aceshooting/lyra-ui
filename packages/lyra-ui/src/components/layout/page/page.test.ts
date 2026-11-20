@@ -2004,7 +2004,7 @@ it('operates foreign-realm navigation-toggle and delegated data-toggle controls'
 describe('Page state cssprops', () => {
   it('keeps pre-cssprop skip, navigation-toggle, backdrop, and drawer paint when props are unset', async () => {
     const page = (await fixture(html`
-      <lr-page style="inline-size: 320px; --lr-transition-base: 0ms;">
+      <lr-page style="inline-size: 320px; --lr-transition-base: 0ms; --lr-transition-interactive: none;">
         <a slot="navigation" href="#inside">Inside navigation</a>
         <p id="inside">Content</p>
       </lr-page>
@@ -2155,7 +2155,7 @@ describe('Page state cssprops', () => {
           --lr-page-navigation-drawer-shadow: none;
         "
       >
-        <lr-page style="inline-size: 320px; --lr-transition-base: 0ms;">
+        <lr-page style="inline-size: 320px; --lr-transition-base: 0ms; --lr-transition-interactive: none;">
           <a slot="navigation" href="#inside">Inside navigation</a>
           <p id="inside">Content</p>
         </lr-page>

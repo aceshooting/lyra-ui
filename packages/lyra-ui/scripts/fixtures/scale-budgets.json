@@ -537,7 +537,7 @@
     },
     "lr-funnel": {
       "10000 stages admission": {
-        "valueReads": 552
+        "valueReads": 0
       },
       "10000 stages label change": {
         "valueReads": 0

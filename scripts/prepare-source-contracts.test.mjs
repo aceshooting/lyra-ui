@@ -902,3 +902,118 @@ test('relocation does not conceal a field missing from the preserved authored de
   assert.equal(gaps[0].tag, 'lr-example');
   assert.deepEqual(gaps[0].names, ['label']);
 });
+
+test('the parser accepts explicit removed routes and owner removals', () => {
+  const { request } = fixture();
+  request.updates[0].removedRoutes = ['src/lyra.ts'];
+  request.removals = [{ ...owner('retired'), expectedFingerprint: fingerprints.previous }];
+  assert.deepEqual(parse(request), request);
+  assert.throws(() => parse(request, 'release'));
+  const removalOnly = { schemaVersion: 1, updates: [], enrollments: [], removals: request.removals };
+  assert.deepEqual(parse(removalOnly), removalOnly);
+});
+
+test('removed routes and owner removals reject malformed entries', () => {
+  for (const removedRoutes of [[], null, 'src/lyra.ts', ['src/lyra.ts', 'src/lyra.ts'], ['../src/lyra.ts'], ['src/lyra.js']]) {
+    rejectRequest(request => { request.updates[0].removedRoutes = removedRoutes; });
+  }
+  rejectRequest(request => {
+    request.updates[0].additionalRoutes = ['src/example.ts'];
+    request.updates[0].removedRoutes = ['src/example.ts'];
+  });
+  rejectRequest(request => { request.enrollments[0].removedRoutes = ['src/lyra.ts']; });
+  rejectRequest(request => { request.removals = [{ ...owner('retired') }]; });
+  rejectRequest(request => {
+    request.removals = [{ ...owner('retired'), expectedFingerprint: fingerprints.previous, removedRoutes: ['src/lyra.ts'] }];
+  });
+  rejectRequest(request => {
+    request.removals = [{ ...owner('example'), expectedFingerprint: fingerprints.previous }];
+  });
+  rejectRequest(request => { request.removals = {}; });
+});
+
+function routeRemovalFixture() {
+  const data = fixture();
+  const record = data.census.find(entry => entry.exportName === 'LyraExampleEntry');
+  record.routes = record.routes.filter(route => route !== 'src/lyra.ts');
+  data.request.updates[0].removedRoutes = ['src/lyra.ts'];
+  return data;
+}
+
+test('a signature update derives the exact routes left after the requested removals', () => {
+  const data = routeRemovalFixture();
+  const before = structuredClone(data);
+  deepFreeze(data);
+  const candidate = prepareSourceContractBaseline(data.census, data.baseline, data.request);
+  const updated = candidate.documented.find(entry => entry.exportName === 'LyraExampleEntry');
+  assert.equal(updated.fingerprint, fingerprints.current);
+  assert.deepEqual(updated.routes, [owner('example').module]);
+  assert.deepEqual(data, before);
+});
+
+for (const [name, change] of [
+  ['a removed route that was never recorded', data => {
+    data.request.updates[0].removedRoutes = ['src/testing.ts'];
+  }],
+  ['a removed route that is still live', data => {
+    data.census.find(entry => entry.exportName === 'LyraExampleEntry').routes.push('src/lyra.ts');
+  }],
+  ['a live route lost without being requested', data => {
+    data.census.find(entry => entry.exportName === 'LyraExampleEntry').routes = [];
+  }],
+  ['removing every recorded route', data => {
+    data.request.updates[0].removedRoutes = [owner('example').module, 'src/lyra.ts'];
+    data.census.find(entry => entry.exportName === 'LyraExampleEntry').routes = [];
+  }],
+]) {
+  test(`route removal rejects ${name} without mutating inputs`, () => {
+    const data = routeRemovalFixture();
+    change(data);
+    const before = structuredClone(data);
+    deepFreeze(data);
+    assert.throws(() => prepareSourceContractBaseline(data.census, data.baseline, data.request));
+    assert.deepEqual(data, before);
+  });
+}
+
+function ownerRemovalFixture() {
+  const data = fixture();
+  const retired = owner('retired');
+  data.baseline.documented.push(documentedRecord(retired, fingerprints.previous));
+  data.request.removals = [{ ...retired, expectedFingerprint: fingerprints.previous }];
+  return data;
+}
+
+test('an owner removal drops exactly the requested documented owner once it is no longer live', () => {
+  const data = ownerRemovalFixture();
+  const before = structuredClone(data);
+  deepFreeze(data);
+  const candidate = prepareSourceContractBaseline(data.census, data.baseline, data.request);
+  assert.deepEqual(candidate.documented.map(entry => entry.exportName),
+    ['LyraKeeperEntry', 'LyraExampleEntry', 'LyraExtraEntry']);
+  assert.deepEqual(data, before);
+});
+
+for (const [name, change] of [
+  ['an owner that is still live', data => {
+    data.census.push(censusRecord(owner('retired'), fingerprints.previous));
+  }],
+  ['a stale fingerprint preimage', data => {
+    data.request.removals[0].expectedFingerprint = fingerprints.unexpected;
+  }],
+  ['an owner absent from the baseline', data => {
+    data.baseline.documented.pop();
+  }],
+  ['a legacy owner', data => {
+    data.baseline.legacy.push(data.baseline.documented.pop());
+  }],
+]) {
+  test(`owner removal rejects ${name} without mutating inputs`, () => {
+    const data = ownerRemovalFixture();
+    change(data);
+    const before = structuredClone(data);
+    deepFreeze(data);
+    assert.throws(() => prepareSourceContractBaseline(data.census, data.baseline, data.request));
+    assert.deepEqual(data, before);
+  });
+}
