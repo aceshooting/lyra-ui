@@ -128,7 +128,9 @@ inherited from `LyraChart`, unaffected by the binning logic).
 `--lr-chart-tick-color`, `--lr-chart-tick-font-size`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
 `--lr-chart-tooltip-color`, `--lr-chart-legend-item-hover-bg`,
 `--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,
-`--lr-chart-data-table-button-active-bg`, `--lr-chart-data-table-toggle-hover-bg`,
+`--lr-chart-data-table-button-active-bg`, `--lr-chart-data-table-toggle-bg`, `--lr-chart-data-table-toggle-border-color`,
+`--lr-chart-data-table-toggle-color`, `--lr-chart-data-table-toggle-inline-size`,
+`--lr-chart-data-table-toggle-justify`, `--lr-chart-data-table-toggle-hover-bg`,
 `--lr-chart-data-table-toggle-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
 `--lr-chart-reset-zoom-button-active-bg`, `--lr-chart-canvas-hover-outline-width`, and
 `--lr-chart-canvas-hover-outline-color`, `--lr-chart-pattern-step`, plus `--lr-chart-legend-side-max` — inherited from `LyraChart`, identical in meaning, together with the

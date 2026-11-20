@@ -1,3 +1,4 @@
+import { OwnedResizeObserver } from '../../../internal/owned-observer.js';
 import { OwnedFrame } from '../../../internal/owned-timer.js';
 import { relayNativeEvent } from '../../../internal/native-event-relay.js';
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
@@ -345,10 +346,15 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     () => this.renderRoot.querySelector<HTMLElement>('[part="backdrop"]'),
   );
   private activeCommandId?: string;
-  private listResizeObserver?: ResizeObserver;
+  private readonly listResizeObserver = new OwnedResizeObserver(this, (entries) => {
+    this.scheduleRowPitchMeasurement();
+    const entry = entries.find(candidate => candidate.target === this.observedList);
+    if (!entry) return;
+    const height = entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
+    if (height > 0 && this.listViewportHeight !== height) this.listViewportHeight = height;
+  });
   private observedList?: HTMLElement;
-  private observedRow?: HTMLElement;
-  private observedGroup?: HTMLElement;
+  private readonly pitchSentinels = new Map<string, HTMLElement>();
   private readonly rowPitchFrame = new OwnedFrame(this);
   private readonly listScrollFrame = new OwnedFrame(this);
   /** Window that owns listeners, observers, and animation frames for the current connection. */
@@ -488,12 +494,11 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
 
   private observeList(list: HTMLElement | undefined): void {
     if (list !== this.observedList) {
-      if (this.observedList)
-        this.listResizeObserver?.unobserve(this.observedList);
-      this.clearPitchSentinels();
+      this.listResizeObserver.clear();
+      this.pitchSentinels.clear();
       this.observedList = list;
       if (list) {
-        this.listResizeObserver?.observe(list);
+        this.listResizeObserver.observe(list);
         // Measure up front as a fast path for browsers that delay the first ResizeObserver
         // callback. Queued, not synchronous: this runs inside Lit's updated() lifecycle, and a
         // reactive write from there logs "scheduled an update after an update completed" (the
@@ -505,35 +510,18 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
         });
       }
     }
-    this.observePitchSentinels();
-  }
-
-  private observePitchSentinels(): void {
-    const row =
-      this.renderRoot.querySelector<HTMLElement>('[part="command"]') ??
-      undefined;
-    const group =
-      this.renderRoot.querySelector<HTMLElement>('[part="group"]') ?? undefined;
-    if (row !== this.observedRow) {
-      if (this.observedRow)
-        this.listResizeObserver?.unobserve(this.observedRow);
-      this.observedRow = row;
-      if (row) this.listResizeObserver?.observe(row);
+    for (const part of ['command', 'group']) {
+      const next = this.renderRoot.querySelector<HTMLElement>(`[part="${part}"]`);
+      const previous = this.pitchSentinels.get(part);
+      if (previous === (next ?? undefined)) continue;
+      if (previous) this.listResizeObserver.unobserve(previous);
+      if (next) {
+        this.pitchSentinels.set(part, next);
+        this.listResizeObserver.observe(next);
+      } else {
+        this.pitchSentinels.delete(part);
+      }
     }
-    if (group !== this.observedGroup) {
-      if (this.observedGroup)
-        this.listResizeObserver?.unobserve(this.observedGroup);
-      this.observedGroup = group;
-      if (group) this.listResizeObserver?.observe(group);
-    }
-  }
-
-  private clearPitchSentinels(): void {
-    if (this.observedRow) this.listResizeObserver?.unobserve(this.observedRow);
-    if (this.observedGroup)
-      this.listResizeObserver?.unobserve(this.observedGroup);
-    this.observedRow = undefined;
-    this.observedGroup = undefined;
   }
 
   /** Resolves the two row pitches from their custom properties so the absolutely-positioned rows
@@ -543,16 +531,13 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
   private measureRowPitch(): void {
     const style = this.ownerDocument.defaultView?.getComputedStyle(this);
     if (!style) return;
-    const row = resolveCssTokenLength(
-      style.getPropertyValue('--lr-command-palette-row-height').trim() ||
-        style.getPropertyValue('--_lr-command-palette-row-height').trim(),
-      { host: this }
+    const pitch = (name: string) => resolveCssTokenLength(
+      style.getPropertyValue(`--lr-command-palette-${name}-height`).trim() ||
+        style.getPropertyValue(`--_lr-command-palette-${name}-height`).trim(),
+      { host: this },
     );
-    const group = resolveCssTokenLength(
-      style.getPropertyValue('--lr-command-palette-group-height').trim() ||
-        style.getPropertyValue('--_lr-command-palette-group-height').trim(),
-      { host: this }
-    );
+    const row = pitch('row');
+    const group = pitch('group');
     if (row !== undefined && row > 0 && row !== this.rowPitch)
       this.rowPitch = row;
     if (group !== undefined && group > 0 && group !== this.groupPitch)
@@ -580,26 +565,6 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
       registerHotkeyOwner(view, this, event => this.isConnected && this.matchesShortcut(event));
       view.addEventListener('keydown', this.onGlobalKeyDown);
     }
-    const ResizeObserverCtor = view?.ResizeObserver;
-    if (ResizeObserverCtor && view) {
-      let observer: ResizeObserver;
-      observer = new ResizeObserverCtor((entries) => {
-        if (this.listResizeObserver !== observer || this.runtimeWindow !== view)
-          return;
-        this.scheduleRowPitchMeasurement();
-        const entry = entries.find(
-          (candidate) => candidate.target === this.observedList
-        );
-        if (!entry) return;
-        const height =
-          entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
-        if (height > 0 && this.listViewportHeight !== height)
-          this.listViewportHeight = height;
-      });
-      this.listResizeObserver = observer;
-    } else {
-      this.listResizeObserver = undefined;
-    }
     if (this.hasUpdated) {
       this.syncInputLimitAnnouncement();
       this.observeList(
@@ -626,11 +591,9 @@ export class LyraCommandPalette extends LyraElement<LyraCommandPaletteEventMap> 
     this.modalSurface.disconnect();
     this.overlay?.suspend();
     this.releaseResultsSink();
-    this.listResizeObserver?.disconnect();
-    this.listResizeObserver = undefined;
+    this.listResizeObserver.clear();
     this.observedList = undefined;
-    this.observedRow = undefined;
-    this.observedGroup = undefined;
+    this.pitchSentinels.clear();
     this.listScrollFrame.cancel();
     this.rowPitchFrame.cancel();
     this.runtimeWindow = undefined;

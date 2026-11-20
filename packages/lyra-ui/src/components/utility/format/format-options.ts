@@ -1,23 +1,18 @@
-import { isDateObject } from '../../../internal/dom-guards.js';
 import type { ComplexAttributeConverter } from 'lit';
 
 export type LyraFormatNumberType = 'currency' | 'decimal' | 'percent';
 export type LyraFormatNumberNotation = 'standard' | 'compact' | 'scientific' | 'engineering';
 export type LyraFormatCurrencyDisplay = 'symbol' | 'narrowSymbol' | 'code' | 'name';
-export type LyraFormatBytesUnit = 'byte' | 'bit';
-export type LyraFormatDisplay = 'long' | 'short' | 'narrow';
 export type LyraFormatDateHour = 'auto' | '12' | '24';
 export type LyraFormatDateStyle = 'full' | 'long' | 'medium' | 'short';
 export type LyraFormatDateText = 'narrow' | 'short' | 'long';
 export type LyraFormatDateNumeric = 'numeric' | '2-digit';
 export type LyraFormatDateMonth = LyraFormatDateNumeric | LyraFormatDateText;
 export type LyraFormatDateTimeZoneName = 'short' | 'long';
-export type LyraRelativeTimeNumeric = 'always' | 'auto';
 
 const NUMBER_TYPES = ['currency', 'decimal', 'percent'] as const;
 const NUMBER_NOTATIONS = ['standard', 'compact', 'scientific', 'engineering'] as const;
 const CURRENCY_DISPLAYS = ['symbol', 'narrowSymbol', 'code', 'name'] as const;
-const DISPLAY_STYLES = ['long', 'short', 'narrow'] as const;
 const DATE_STYLES = ['full', 'long', 'medium', 'short'] as const;
 const DATE_TEXT_STYLES = ['narrow', 'short', 'long'] as const;
 const DATE_NUMERIC_STYLES = ['numeric', '2-digit'] as const;
@@ -136,85 +131,8 @@ export function dateTimeFormatOptions(input: DateFormatInputs): Intl.DateTimeFor
 }
 
 export { byteFormat, byteUnitIndex, safeByteUnitStep, type ByteFormatResult } from '../../../internal/bytes.js';
-
-/** Builds runtime-safe options for `Intl.RelativeTimeFormat`. */
-export function relativeTimeFormatOptions(
-  format: LyraFormatDisplay,
-  numeric: LyraRelativeTimeNumeric,
-): Intl.RelativeTimeFormatOptions {
-  return {
-    style: closedValue(format, DISPLAY_STYLES, 'long'),
-    numeric: closedValue(numeric, ['always', 'auto'] as const, 'auto'),
-  };
-}
-
-/**
- * Resolves only primitive date sources or native `Date` internal slots. This intentionally avoids
- * `new Date(object)`, which invokes caller-controlled conversion hooks on arbitrary objects.
- * Shared by `<lr-format-date>`, `<lr-relative-time>`, and `utilities/format.ts`'s `formatDate()` /
- * `formatRelativeTime()`.
- */
-export function resolveDateSource(value: unknown): Date | undefined {
-  if (value === null || value === undefined) return new Date();
-  if (typeof value === 'string' || typeof value === 'number') {
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? undefined : date;
-  }
-  if (!isDateObject(value)) return undefined;
-  try {
-    const epoch = Date.prototype.getTime.call(value);
-    return Number.isFinite(epoch) ? new Date(epoch) : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-export type LyraRelativeTimeUnit = 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year';
-
-const RELATIVE_TIME_DIVISORS: Record<LyraRelativeTimeUnit, number> = {
-  year: 31_536_000,
-  quarter: 7_884_000,
-  month: 2_628_000,
-  week: 604_800,
-  day: 86_400,
-  hour: 3_600,
-  minute: 60,
-  second: 1,
-};
-
-/** The relative-time unit ladder, largest-to-smallest -- shared by `<lr-relative-time>` and
- * `utilities/format.ts`'s `formatRelativeTime()`. */
-export const RELATIVE_TIME_UNITS = Object.keys(RELATIVE_TIME_DIVISORS) as LyraRelativeTimeUnit[];
-
-/** The number of seconds in one of `unit`, used both to auto-select a unit and to schedule the
- * next boundary a live `<lr-relative-time sync>` needs to re-render at. */
-export function relativeTimeDivisor(unit: LyraRelativeTimeUnit): number {
-  return RELATIVE_TIME_DIVISORS[unit];
-}
-
-export interface RelativeTimeState {
-  readonly seconds: number;
-  readonly requestedUnit: LyraRelativeTimeUnit | 'auto';
-  readonly selected: LyraRelativeTimeUnit;
-  readonly value: number;
-}
-
-/**
- * Selects the display unit and rounded magnitude for a relative-time delta (in seconds): the
- * largest unit whose divisor the magnitude still clears when `unit` is `'auto'`, or the
- * explicitly requested unit when it names a real one. Shared by `<lr-relative-time>` and
- * `utilities/format.ts`'s `formatRelativeTime()`.
- */
-export function resolveRelativeTimeState(seconds: number, unit: LyraRelativeTimeUnit | 'auto'): RelativeTimeState {
-  const requestedUnit = unit === 'auto' || RELATIVE_TIME_UNITS.includes(unit) ? unit : 'auto';
-  const selected =
-    requestedUnit === 'auto'
-      ? RELATIVE_TIME_UNITS.find((candidate) => Math.abs(seconds) >= relativeTimeDivisor(candidate)) ?? 'second'
-      : requestedUnit;
-  return {
-    seconds,
-    requestedUnit,
-    selected,
-    value: Math.round(seconds / relativeTimeDivisor(selected)),
-  };
-}
+export type { ByteUnitDisplay as LyraFormatDisplay, ByteUnitFamily as LyraFormatBytesUnit } from '../../../internal/bytes.js';
+export {
+  RELATIVE_TIME_UNITS, relativeTimeDivisor, relativeTimeFormatOptions, resolveDateSource, resolveRelativeTimeState,
+  type LyraRelativeTimeNumeric, type LyraRelativeTimeUnit, type RelativeTimeState,
+} from '../../../internal/locale-date.js';

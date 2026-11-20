@@ -696,7 +696,7 @@ matching `.eml` filenames in `<lr-document-viewer>`. Fail-closed behavior is exp
 
 ## `lr-calendar-viewer`
 
-`max-events` limits the number of events admitted per document (default 250, maximum 2,500). Changing it reloads the current source.
+`maxEvents` (attribute `max-events`) limits the number of events admitted per document (default 250, maximum 2,500). Changing it reloads the current source.
 
 Fetches and parses `.ics` calendars with the optional `ical.js` peer and renders each VEVENT as
 plain text, including its title, start/end time, location, and description. RFC 5545 `DATE` values
@@ -1181,6 +1181,9 @@ makes the host the sole named semantic owner; an explicitly empty host label kee
 label. `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
 
+The viewer body becomes a named keyboard scroll region while its content exceeds its allocation.
+It leaves the tab order when the content fits.
+
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on sanitized HTML text and emit the shared search/anchor events.
 
@@ -1389,7 +1392,7 @@ each parse pass remains synchronous.
 
 ## `lr-contact-viewer`
 
-`max-contacts` limits the number of contacts admitted per document (default 250, maximum 2,500). Changing it reloads the current source.
+`maxContacts` (attribute `max-contacts`) limits the number of contacts admitted per document (default 250, maximum 2,500). Changing it reloads the current source.
 
 Fetches a vCard document and renders one accessible card per contact. The document registry matches
 `.vcf` filenames and the `FN`, `ORG`, `TEL`, `EMAIL`, and `ADR` fields are displayed. `N` is parsed
@@ -1409,6 +1412,9 @@ precedence over `name` by attribute presence, including an explicitly empty valu
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract. Fragment
 resolution is an exact DOM `id` lookup, but generated contact cards define no fragment ids, so a
 fragment jump reports `found: false`. Use a text-quote anchor for contact content.
+
+The viewer body becomes a named keyboard scroll region while its content exceeds its allocation.
+It leaves the tab order when the content fits.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on rendered contact text and emit the shared search/anchor events.
@@ -1653,7 +1659,7 @@ prevents stale page/text/region work from scrolling or reporting success.
 
 Set `--lr-spreadsheet-viewer-background`, `--lr-spreadsheet-viewer-border` and `--lr-spreadsheet-viewer-border-radius` on the frame. `--lr-spreadsheet-viewer-header-row-bg` sets the column heading background.
 
-`scroll-mode="page"` lets the page scroll both axes, keeps the header sticky and ignores `max-height`. The default `self` uses the viewer’s own scrollport.
+Setting `scrollMode` to `page` (attribute `scroll-mode="page"`) lets the page scroll both axes, keeps the header sticky and ignores `max-height`. The default `self` uses the viewer’s own scrollport.
 
 Fetches `.xlsx` and `.xls` workbooks with the optional `xlsx` (SheetJS) peer, or reads a host-owned
 `dataSource`. Multiple worksheets render through a `<lr-tab-group>` switcher, and body rows use `<lr-virtual-list>`.
@@ -1831,7 +1837,7 @@ pass remains synchronous.
 
 Set `--lr-csv-viewer-background`, `--lr-csv-viewer-border` and `--lr-csv-viewer-border-radius` on the frame. `--lr-csv-viewer-header-row-bg` sets the column heading background.
 
-`scroll-mode="page"` lets the page scroll both axes, keeps the header sticky and ignores `max-height`. The default `self` uses the viewer’s own scrollport.
+Setting `scrollMode` to `page` (attribute `scroll-mode="page"`) lets the page scroll both axes, keeps the header sticky and ignores `max-height`. The default `self` uses the viewer’s own scrollport.
 
 Fetches CSV text with the optional `papaparse` peer, or reads a host-owned `dataSource`, and
 virtualizes body rows.

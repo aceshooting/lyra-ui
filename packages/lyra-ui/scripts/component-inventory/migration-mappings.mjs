@@ -47,6 +47,23 @@ const WA_CAROUSEL_V9_DRIFT = [
   },
 ];
 
+const WA_FILE_INPUT_V9_DRIFT = [
+  {
+    code: 'readonly-mismatch',
+    section: 'properties',
+    member: 'dragging',
+    expected: false,
+    actual: true,
+  },
+  {
+    code: 'readonly-mismatch',
+    section: 'properties',
+    member: 'fileCount',
+    expected: false,
+    actual: true,
+  },
+];
+
 const WA_VIDEO_PLAYING_DRIFT = [
   { code: 'missing-attribute', section: 'attributes', member: 'playing' },
   { code: 'readonly-mismatch', section: 'properties', member: 'playing', expected: false, actual: true },
@@ -374,8 +391,8 @@ const DECISION_OVERRIDES = new Map([
     {
       classification: 'warning-required',
       rationale:
-        'Lyra derives dragging and fileCount and ignores assignments to either. Migrated code that assigned either upstream field must instead drive them through drag interaction or the selected-files input contract.',
-      expectedDrift: [],
+        'Lyra exposes dragging and fileCount as getter-only derived state. Migrated code that assigned either upstream field must instead drive them through drag interaction or the selected-files input contract.',
+      expectedDrift: WA_FILE_INPUT_V9_DRIFT,
     },
   ],
   [

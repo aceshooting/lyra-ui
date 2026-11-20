@@ -67,8 +67,18 @@ describe('lr-approval-queue', () => {
     `)) as LyraApprovalQueue;
     (el.shadowRoot!.querySelector('[part="request"]') as HTMLButtonElement).click();
     await el.updateComplete;
+    const dialog = el.shadowRoot!.querySelector('lr-tool-approval-dialog') as HTMLElement & { readonly: boolean };
     expect(el.readonly).to.be.true;
-    expect((el.shadowRoot!.querySelector('lr-tool-approval-dialog') as HTMLElement & { readonly: boolean }).readonly).to.be.true;
+    expect(dialog.readonly).to.be.true;
+    el.readonly = false;
+    await el.updateComplete;
+    expect(el.hasAttribute('readonly')).to.equal(true);
+    expect(dialog.readonly).to.equal(false);
+    el.removeAttribute('readonly');
+    el.readonly = true;
+    await el.updateComplete;
+    expect(el.hasAttribute('readonly')).to.equal(false);
+    expect(dialog.readonly).to.equal(true);
   });
 
 

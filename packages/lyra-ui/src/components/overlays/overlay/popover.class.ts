@@ -1534,15 +1534,13 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       return;
     }
     const root = this.getRootNode() as Document | ShadowRoot;
-    const peers = [...root.querySelectorAll<LyraPopover>(tag('popover'))].filter((peer) =>
-      peer.isConnected &&
-      peer._open &&
-      !peer.virtualAnchor &&
-      peer.connectionSequence > 0
-    );
-    const winner = peers.reduce<LyraPopover | undefined>((latest, peer) =>
-      !latest || peer.connectionSequence > latest.connectionSequence ? peer : latest,
-    undefined);
+    const peers: LyraPopover[] = [];
+    let winner: LyraPopover | undefined;
+    for (const peer of root.querySelectorAll<LyraPopover>(tag('popover'))) {
+      if (!peer.isConnected || !peer._open || peer.virtualAnchor || !(peer.connectionSequence > 0)) continue;
+      peers.push(peer);
+      if (!winner || peer.connectionSequence > winner.connectionSequence) winner = peer;
+    }
     if (winner !== this) {
       if (!winner?.hasPopoverAncestor(this)) this.closeForInitialPeerReconciliation();
       return;

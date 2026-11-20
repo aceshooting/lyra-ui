@@ -16,6 +16,10 @@
 
 ## `lr-box-plot`
 
+The data table disclosure uses `--lr-box-plot-data-table-toggle-bg`, `--lr-box-plot-data-table-toggle-color` and
+`--lr-box-plot-data-table-toggle-border-color` at rest. Set `--lr-box-plot-data-table-toggle-inline-size` for its logical width
+and `--lr-box-plot-data-table-toggle-justify` for its grid alignment. Each falls back to the corresponding chart-family token.
+
 Box-and-whisker chart from a precomputed five-number summary (no raw sample data sent to the
 browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
 

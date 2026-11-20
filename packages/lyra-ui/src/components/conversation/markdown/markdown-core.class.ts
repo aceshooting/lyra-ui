@@ -220,7 +220,7 @@ export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
  * @cssprop [--lr-markdown-highlight-success-bg=var(--lr-color-success-quiet)] - Success highlight fill.
  * @cssprop [--lr-markdown-highlight-warning-bg=var(--lr-color-warning-quiet)] - Warning highlight fill.
  * @cssprop [--lr-markdown-highlight-danger-bg=var(--lr-color-danger-quiet)] - Danger highlight fill.
- * @cssprop [--lr-markdown-highlight-neutral-bg=var(--lr-color-surface-raised)] - Neutral highlight fill.
+ * @cssprop [--lr-markdown-highlight-neutral-bg=var(--lr-color-surface)] - Neutral highlight fill.
  * @cssprop [--lr-markdown-highlight-active-bg=var(--lr-color-brand-quiet)] - Active highlight fill.
  * @cssprop [--lr-markdown-highlight-active-outline-color=var(--lr-color-brand)] - Active
  *   highlight outline.

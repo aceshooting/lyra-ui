@@ -66,7 +66,7 @@ export interface LyraCheckboxGroupEventMap {
   input: Event;
   'lr-input': CustomEvent<Readonly<{ value: readonly string[] }>>;
   change: Event;
-  'lr-change': CustomEvent<LyraEventDetailSnapshot<LyraCheckboxGroupToggleRequestDetail>>;
+  'lr-change': CustomEvent<Readonly<{ value: readonly string[]; previousValue?: readonly string[]; option?: LyraCheckbox }>>;
   'lr-checkbox-group-toggle-request': CustomEvent<
     LyraEventDetailSnapshot<LyraCheckboxGroupToggleRequestDetail>
   >;

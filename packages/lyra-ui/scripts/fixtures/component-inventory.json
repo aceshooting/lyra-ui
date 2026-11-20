@@ -8327,7 +8327,7 @@
             "name": "readonly",
             "property": "readonly",
             "type": "boolean",
-            "reflects": true,
+            "reflects": false,
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
@@ -8408,7 +8408,7 @@
             "attribute": "readonly",
             "type": "boolean",
             "readonly": false,
-            "reflects": true,
+            "reflects": false,
             "deprecated": null,
             "hasDefault": true,
             "default": false
@@ -19455,7 +19455,7 @@
             "name": "--lr-callout-close-hover-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "color-mix(in oklab,transparent,var(--lr-color-mix-partner) var(--lr-color-mix-hover))"
+            "default": "var(--lr-color-brand-quiet)"
           },
           {
             "name": "--lr-callout-color",
@@ -26257,7 +26257,7 @@
           },
           {
             "name": "lr-change",
-            "type": "CustomEvent<LyraEventDetailSnapshot<LyraCheckboxGroupToggleRequestDetail>>",
+            "type": "CustomEvent<Readonly<{ value: readonly string[]; previousValue?: readonly string[]; option?: LyraCheckbox }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -48500,7 +48500,7 @@
             "name": "copyable",
             "property": "copyable",
             "type": "boolean",
-            "reflects": true,
+            "reflects": false,
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
@@ -48601,7 +48601,7 @@
             "attribute": "copyable",
             "type": "boolean",
             "readonly": false,
-            "reflects": true,
+            "reflects": false,
             "deprecated": null,
             "hasDefault": true,
             "default": false
@@ -54457,7 +54457,7 @@
             "name": "--lr-drop-zone-accept-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "color-mix(in srgb, var(--lr-color-success) 8%, transparent)"
+            "default": "color-mix(in srgb, var(--lr-color-success) 12%, transparent)"
           },
           {
             "name": "--lr-drop-zone-accept-border-color",
@@ -54517,7 +54517,7 @@
             "name": "--lr-drop-zone-reject-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "color-mix(in srgb, var(--lr-color-danger) 8%, transparent)"
+            "default": "color-mix(in srgb, var(--lr-color-danger) 12%, transparent)"
           },
           {
             "name": "--lr-drop-zone-reject-border-color",
@@ -61775,7 +61775,7 @@
             "name": "dragging",
             "attribute": null,
             "type": "boolean",
-            "readonly": false,
+            "readonly": true,
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
@@ -61804,7 +61804,7 @@
             "name": "fileCount",
             "attribute": null,
             "type": "number",
-            "readonly": false,
+            "readonly": true,
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
@@ -88694,7 +88694,7 @@
             "name": "--lr-markdown-highlight-neutral-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-surface-raised)"
+            "default": "var(--lr-color-surface)"
           },
           {
             "name": "--lr-markdown-highlight-success-bg",
@@ -89565,7 +89565,7 @@
             "name": "--lr-markdown-highlight-neutral-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-surface-raised)"
+            "default": "var(--lr-color-surface)"
           },
           {
             "name": "--lr-markdown-highlight-success-bg",
@@ -96419,7 +96419,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "[]"
           },
           {
             "name": "collapseState",
@@ -120621,7 +120622,7 @@
           },
           {
             "name": "lr-change",
-            "type": "CustomEvent<{ value: string; previousValue: string; option: LyraRadio; radio: LyraRadio }>",
+            "type": "CustomEvent<{ value: string; previousValue?: string; option: LyraRadio; radio: LyraRadio }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -125193,7 +125194,7 @@
         "events": [
           {
             "name": "lr-chunk-select",
-            "type": "CustomEvent<LyraEventDetailSnapshot<{ setId: string; chunk: RetrievalChunk; chunkId: string; sourceId: string }>>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ setId: string; chunk: RetrievalChunk; chunkId?: string; sourceId?: string }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -139849,7 +139850,7 @@
           },
           {
             "name": "lr-run-retry",
-            "type": "CustomEvent<LyraEventDetailSnapshot<{ runId: string; attempt: number }>>",
+            "type": "CustomEvent<LyraEventDetailSnapshot<{ runId: string; attempt?: number }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           }
@@ -154043,7 +154044,7 @@
         "events": [
           {
             "name": "lr-change",
-            "type": "CustomEvent<LyraEventDetailSnapshot<LyraToggleGroupToggleRequestDetail>>",
+            "type": "CustomEvent<Readonly<{ value: readonly string[]; previousValue?: readonly string[]; option?: LyraToggle }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -228492,7 +228493,7 @@
       "upstreamTier": "pro",
       "targetTag": "lr-file-input",
       "classification": "warning-required",
-      "rationale": "Lyra derives dragging and fileCount and ignores assignments to either. Migrated code that assigned either upstream field must instead drive them through drag interaction or the selected-files input contract.",
+      "rationale": "Lyra exposes dragging and fileCount as getter-only derived state. Migrated code that assigned either upstream field must instead drive them through drag interaction or the selected-files input contract.",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -228634,7 +228635,22 @@
           }
         ]
       },
-      "drift": []
+      "drift": [
+        {
+          "code": "readonly-mismatch",
+          "section": "properties",
+          "member": "dragging",
+          "expected": false,
+          "actual": true
+        },
+        {
+          "code": "readonly-mismatch",
+          "section": "properties",
+          "member": "fileCount",
+          "expected": false,
+          "actual": true
+        }
+      ]
     },
     {
       "upstream": "webawesome",

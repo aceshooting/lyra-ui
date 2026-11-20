@@ -975,6 +975,10 @@ announced. In particular, unavailable data labels do not remove generated table 
 
 ## `lr-lite-chart`
 
+The data table disclosure uses `--lr-lite-chart-data-table-toggle-bg`, `--lr-lite-chart-data-table-toggle-color` and
+`--lr-lite-chart-data-table-toggle-border-color` at rest. Set `--lr-lite-chart-data-table-toggle-inline-size` for its logical width
+and `--lr-lite-chart-data-table-toggle-justify` for its grid alignment. Each falls back to the corresponding chart-family token.
+
 `syncGroup: string = ''` (attribute `sync-group`) opts into
 [Synchronized categorical charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md#synchronized-categorical-charts). Its DOM `sync-crosshair` and
 `sync-tooltip` parts use the shared crosshair and tooltip tokens described there.
@@ -1488,7 +1492,9 @@ failure transition is announced through the shared document-level light-DOM asse
 `--lr-chart-tick-color`, `--lr-chart-tick-font-size`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
 `--lr-chart-tooltip-color`, `--lr-chart-legend-item-hover-bg`,
 `--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,
-`--lr-chart-data-table-button-active-bg`, `--lr-chart-data-table-toggle-hover-bg`,
+`--lr-chart-data-table-button-active-bg`, `--lr-chart-data-table-toggle-bg`, `--lr-chart-data-table-toggle-border-color`,
+`--lr-chart-data-table-toggle-color`, `--lr-chart-data-table-toggle-inline-size`,
+`--lr-chart-data-table-toggle-justify`, `--lr-chart-data-table-toggle-hover-bg`,
 `--lr-chart-data-table-toggle-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
 `--lr-chart-reset-zoom-button-active-bg`, `--lr-chart-canvas-hover-outline-width`, and
 `--lr-chart-canvas-hover-outline-color`, `--lr-chart-pattern-step`, plus `--lr-chart-legend-side-max` — all inherited from `LyraChart`, identical in meaning and default (see
@@ -1638,7 +1644,9 @@ inherited from `LyraChart`, unaffected by the binning logic).
 `--lr-chart-tick-color`, `--lr-chart-tick-font-size`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
 `--lr-chart-tooltip-color`, `--lr-chart-legend-item-hover-bg`,
 `--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,
-`--lr-chart-data-table-button-active-bg`, `--lr-chart-data-table-toggle-hover-bg`,
+`--lr-chart-data-table-button-active-bg`, `--lr-chart-data-table-toggle-bg`, `--lr-chart-data-table-toggle-border-color`,
+`--lr-chart-data-table-toggle-color`, `--lr-chart-data-table-toggle-inline-size`,
+`--lr-chart-data-table-toggle-justify`, `--lr-chart-data-table-toggle-hover-bg`,
 `--lr-chart-data-table-toggle-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
 `--lr-chart-reset-zoom-button-active-bg`, `--lr-chart-canvas-hover-outline-width`, and
 `--lr-chart-canvas-hover-outline-color`, `--lr-chart-pattern-step`, plus `--lr-chart-legend-side-max` — inherited from `LyraChart`, identical in meaning, together with the
@@ -1684,6 +1692,10 @@ their semantics, defaults, and gotchas.
 ---
 
 ## `lr-box-plot`
+
+The data table disclosure uses `--lr-box-plot-data-table-toggle-bg`, `--lr-box-plot-data-table-toggle-color` and
+`--lr-box-plot-data-table-toggle-border-color` at rest. Set `--lr-box-plot-data-table-toggle-inline-size` for its logical width
+and `--lr-box-plot-data-table-toggle-justify` for its grid alignment. Each falls back to the corresponding chart-family token.
 
 Box-and-whisker chart from a precomputed five-number summary (no raw sample data sent to the
 browser). Does **not** extend `LyraChart` — a deliberately bespoke API.

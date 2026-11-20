@@ -144,7 +144,7 @@ for (const name of ['lr-markdown', 'lr-markdown-core']) {
       el.highlights = [{ id: 'quote', tone: 'neutral', anchor: { kind: 'text-quote', quote: 'words' } }];
       await waitUntil(() => Boolean(el.shadowRoot!.querySelector('p mark')));
       const mark = el.shadowRoot!.querySelector('p mark')!;
-      expect(getComputedStyle(mark).backgroundColor).to.equal('rgb(210, 180, 140)');
+      expect(getComputedStyle(mark).backgroundColor).to.equal('rgb(255, 255, 255)');
       el.style.setProperty('--lr-markdown-highlight-neutral-bg', 'teal');
       expect(getComputedStyle(mark).backgroundColor).to.equal('rgb(0, 128, 128)');
     } finally {

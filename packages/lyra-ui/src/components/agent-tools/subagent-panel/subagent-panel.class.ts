@@ -49,7 +49,7 @@ export interface SubagentRun {
 export interface LyraSubagentPanelEventMap {
   'lr-run-activate': CustomEvent<LyraEventDetailSnapshot<AgentRunActivateDetail<SubagentRun>>>;
   'lr-run-cancel': CustomEvent<LyraEventDetailSnapshot<{ runId: string }>>;
-  'lr-run-retry': CustomEvent<LyraEventDetailSnapshot<{ runId: string; attempt: number }>>;
+  'lr-run-retry': CustomEvent<LyraEventDetailSnapshot<{ runId: string; attempt?: number }>>;
 }
 
 const ACTIVE = new Set<AgentStatusKind>(['queued', 'running', 'collecting', 'waiting-input', 'waiting-approval']);

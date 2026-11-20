@@ -102,9 +102,9 @@ its neutral drag state, before an accept/reject verdict) and `--lr-drop-zone-ove
 `--lr-drop-zone-overlay-padding` (default `var(--lr-space-l)`, retuned per `size` tier),
 `--lr-drop-zone-overlay-gap` (default `var(--lr-space-xs)`), and the drag accept/reject highlight —
 `--lr-drop-zone-accept-border-color`/`--lr-drop-zone-accept-bg` (defaults `var(--lr-color-success)`/
-`color-mix(in srgb, var(--lr-color-success) 8%, transparent)`) and
+`color-mix(in srgb, var(--lr-color-success) 12%, transparent)`) and
 `--lr-drop-zone-reject-border-color`/`--lr-drop-zone-reject-bg` (defaults `var(--lr-color-danger)`/
-`color-mix(in srgb, var(--lr-color-danger) 8%, transparent)`) — independently overridable on the
+`color-mix(in srgb, var(--lr-color-danger) 12%, transparent)`) — independently overridable on the
 element or any ancestor, mirroring `lr-file-input`'s equivalent hooks.
 
 **Optional peer deps:** none.

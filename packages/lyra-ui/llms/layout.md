@@ -211,8 +211,8 @@ number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-align
   leaves the last one open). Assigning it is silent, like `sizes`; a `sizes` assignment made
   together with it may already describe the fold (zero entries for the folded panels), otherwise a
   `sizes` value with a non-zero entry for a folded panel is rejected like any invalid layout. A
-  valid `storageKey` layout restores the set when this property is unset. An explicitly assigned
-  empty array expands every panel using its saved share. The
+  valid `storageKey` layout restores the set when the initial list is empty or omitted. Assigning
+  an empty list after initialization expands every panel using its saved share. The
   responsive `collapse` pane is independent: while it is `'rail'`/`'floating'` its own state governs
   that panel, and a per-panel fold of the same panel shows again once it is `'wide'`.
 

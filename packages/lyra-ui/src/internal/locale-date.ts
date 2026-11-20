@@ -1,3 +1,5 @@
+import type { ByteUnitDisplay } from './bytes.js';
+import { isDateObject } from './dom-guards.js';
 import { getDateTimeFormat, getNumberFormat } from './intl-cache.js';
 
 export type LocaleDateField = 'day' | 'month' | 'year';
@@ -73,4 +75,88 @@ export function normalizeLocaleDigits(
     normalized += value === undefined ? digits.get(character) ?? character : String(value);
   }
   return normalized;
+}
+
+export type LyraRelativeTimeNumeric = 'always' | 'auto';
+
+/** Builds runtime-safe options for `Intl.RelativeTimeFormat`. */
+export function relativeTimeFormatOptions(
+  format: ByteUnitDisplay,
+  numeric: LyraRelativeTimeNumeric,
+): Intl.RelativeTimeFormatOptions {
+  return {
+    style: format === 'short' || format === 'narrow' ? format : 'long',
+    numeric: numeric === 'always' ? 'always' : 'auto',
+  };
+}
+
+/**
+ * Resolves only primitive date sources or native `Date` internal slots. This intentionally avoids
+ * `new Date(object)`, which invokes caller-controlled conversion hooks on arbitrary objects.
+ * Shared by `<lr-format-date>`, `<lr-relative-time>`, and `utilities/format.ts`'s `formatDate()` /
+ * `formatRelativeTime()`.
+ */
+export function resolveDateSource(value: unknown): Date | undefined {
+  if (value === null || value === undefined) return new Date();
+  if (typeof value === 'string' || typeof value === 'number') {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? undefined : date;
+  }
+  if (!isDateObject(value)) return undefined;
+  try {
+    const epoch = Date.prototype.getTime.call(value);
+    return Number.isFinite(epoch) ? new Date(epoch) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export type LyraRelativeTimeUnit = 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year';
+
+const RELATIVE_TIME_DIVISORS: Record<LyraRelativeTimeUnit, number> = {
+  year: 31_536_000,
+  quarter: 7_884_000,
+  month: 2_628_000,
+  week: 604_800,
+  day: 86_400,
+  hour: 3_600,
+  minute: 60,
+  second: 1,
+};
+
+/** The relative-time unit ladder, largest-to-smallest -- shared by `<lr-relative-time>` and
+ * `utilities/format.ts`'s `formatRelativeTime()`. */
+export const RELATIVE_TIME_UNITS = /* @__PURE__ */ Object.keys(RELATIVE_TIME_DIVISORS) as LyraRelativeTimeUnit[];
+
+/** The number of seconds in one of `unit`, used both to auto-select a unit and to schedule the
+ * next boundary a live `<lr-relative-time sync>` needs to re-render at. */
+export function relativeTimeDivisor(unit: LyraRelativeTimeUnit): number {
+  return RELATIVE_TIME_DIVISORS[unit];
+}
+
+export interface RelativeTimeState {
+  readonly seconds: number;
+  readonly requestedUnit: LyraRelativeTimeUnit | 'auto';
+  readonly selected: LyraRelativeTimeUnit;
+  readonly value: number;
+}
+
+/**
+ * Selects the display unit and rounded magnitude for a relative-time delta (in seconds): the
+ * largest unit whose divisor the magnitude still clears when `unit` is `'auto'`, or the
+ * explicitly requested unit when it names a real one. Shared by `<lr-relative-time>` and
+ * `utilities/format.ts`'s `formatRelativeTime()`.
+ */
+export function resolveRelativeTimeState(seconds: number, unit: LyraRelativeTimeUnit | 'auto'): RelativeTimeState {
+  const requestedUnit = unit === 'auto' || RELATIVE_TIME_UNITS.includes(unit) ? unit : 'auto';
+  const selected =
+    requestedUnit === 'auto'
+      ? RELATIVE_TIME_UNITS.find((candidate) => Math.abs(seconds) >= relativeTimeDivisor(candidate)) ?? 'second'
+      : requestedUnit;
+  return {
+    seconds,
+    requestedUnit,
+    selected,
+    value: Math.round(seconds / relativeTimeDivisor(selected)),
+  };
 }

@@ -75,11 +75,11 @@ export const styles = css`
   }
   [part="overlay"][data-drag-state="accept"] {
     border-color: var(--lr-drop-zone-accept-border-color, var(--lr-color-success));
-    background: var(--lr-drop-zone-accept-bg, color-mix(in srgb, var(--lr-color-success) 8%, transparent));
+    background: var(--lr-drop-zone-accept-bg, color-mix(in srgb, var(--lr-color-success) 12%, transparent));
   }
   [part="overlay"][data-drag-state="reject"] {
     border-color: var(--lr-drop-zone-reject-border-color, var(--lr-color-danger));
-    background: var(--lr-drop-zone-reject-bg, color-mix(in srgb, var(--lr-color-danger) 8%, transparent));
+    background: var(--lr-drop-zone-reject-bg, color-mix(in srgb, var(--lr-color-danger) 12%, transparent));
   }
   @media (forced-colors: active) {
     [part="overlay"][data-drag-state="accept"] {

@@ -56,7 +56,7 @@ export interface LyraToggleGroupEventMap {
   'lr-toggle-group-toggle-request': CustomEvent<
     LyraEventDetailSnapshot<LyraToggleGroupToggleRequestDetail>
   >;
-  'lr-change': CustomEvent<LyraEventDetailSnapshot<LyraToggleGroupToggleRequestDetail>>;
+  'lr-change': CustomEvent<Readonly<{ value: readonly string[]; previousValue?: readonly string[]; option?: LyraToggle }>>;
 }
 
 const SELECTION_MODE = literalSetConverter<LyraToggleGroupSelectionMode>(

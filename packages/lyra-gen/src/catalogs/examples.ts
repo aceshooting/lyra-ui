@@ -89,13 +89,12 @@ const structuralComponents: Readonly<Record<string, LyraGenComponent>> = {
   stat: { tag: 'lr-stat', properties: { label, value: string(256), unit: string(64), caption: string(512), variant }, required: ['label', 'value'], load: () => import('@aceshooting/lyra-ui/components/lr-stat.js'), documentation: documentation('lr-stat') },
 };
 
-/** A reviewed, bounded subset of Lyra APIs, independent of the complete component inventory. */
-export const initialCatalog = createCatalog({
-  id: 'lyra-reviewed',
-  version: '1',
-  components: Object.fromEntries(Object.entries({ ...structuralComponents, ...formComponents, ...conversationComponents, ...dataComponents, ...retrievalComponents }).map(([role, component]) => {
-    const metadata = reviewedExamples[role];
-    if (!metadata) throw new TypeError(`Missing reviewed example for ${role}`);
-    return [role, { ...component, ...(component.bindings ? { fieldPurpose: 'general' as const } : {}), useWhen: metadata.useWhen, examples: [metadata.example] }];
-  })),
-});
+const builtInRoles: Record<string, LyraGenComponent> = Object.create(null) as Record<string, LyraGenComponent>;
+for (const [role, component] of Object.entries({ ...structuralComponents, ...formComponents, ...conversationComponents, ...dataComponents, ...retrievalComponents })) {
+  const metadata = reviewedExamples[role];
+  if (!metadata) throw new TypeError(`Missing reviewed example for ${role}`);
+  builtInRoles[role] = { ...component, ...(component.bindings ? { fieldPurpose: 'general' as const } : {}), useWhen: metadata.useWhen, examples: [metadata.example] };
+}
+
+/** The emitted-artifact check validates this immutable library-owned catalog before packaging. */
+export const initialCatalog: LyraGenCatalog = freeze({ id: 'lyra-reviewed', version: '1', components: builtInRoles });

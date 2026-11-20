@@ -69,7 +69,7 @@ entry. The built-in jump action delegates to this method.
 state or the built-in jump action re-engages it. Direct `follow` assignments and
 `scrollToBottom()` calls are controlled input and do not echo an event.
 
-**CSS parts:** `base` (the scroll container), `log` (the `role="log"` region wrapping final entries
+**CSS parts:** `window-notice` (count of omitted items), `base` (the scroll container), `log` (the `role="log"` region wrapping final entries
 only), `entry`, `speaker` (omitted for a row repeating the previous row's speaker), `text`
 (`dir="auto"`), `timestamp` (only while `with-timestamps`), `interim` (present alongside `entry` on
 an interim row), `interim-area` (the wrapper holding interim rows, rendered only while at least one

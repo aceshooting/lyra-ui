@@ -46,7 +46,7 @@ export interface RetrievalComparisonSet {
 }
 
 export interface LyraRetrievalCompareEventMap {
-  'lr-chunk-select': CustomEvent<LyraEventDetailSnapshot<{ setId: string; chunk: RetrievalChunk; chunkId: string; sourceId: string }>>;
+  'lr-chunk-select': CustomEvent<LyraEventDetailSnapshot<{ setId: string; chunk: RetrievalChunk; chunkId?: string; sourceId?: string }>>;
 }
 
 /**

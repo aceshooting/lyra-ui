@@ -18,7 +18,7 @@
 
 Set `--lr-csv-viewer-background`, `--lr-csv-viewer-border` and `--lr-csv-viewer-border-radius` on the frame. `--lr-csv-viewer-header-row-bg` sets the column heading background.
 
-`scroll-mode="page"` lets the page scroll both axes, keeps the header sticky and ignores `max-height`. The default `self` uses the viewer’s own scrollport.
+Setting `scrollMode` to `page` (attribute `scroll-mode="page"`) lets the page scroll both axes, keeps the header sticky and ignores `max-height`. The default `self` uses the viewer’s own scrollport.
 
 Fetches CSV text with the optional `papaparse` peer, or reads a host-owned `dataSource`, and
 virtualizes body rows.

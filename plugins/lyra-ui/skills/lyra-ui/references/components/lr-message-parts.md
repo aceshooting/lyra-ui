@@ -152,7 +152,7 @@ In block display, `lr-toggle` also arrives from tool-call blocks (`{ expanded, c
 `lr-render-error` from an expanded block carries `callId`; `lr-tool-call-chip-select` is not
 emitted. Tool errors are never announced; only `error` parts are.
 
-**CSS parts:** `base`, `part`, `part-streaming`, `part-interrupted`, `interruption`, `resume`, `text`, `reasoning`, `tool-call`, `tool-result`,
+**CSS parts:** `window-notice` (count of omitted items), `base`, `part`, `part-streaming`, `part-interrupted`, `interruption`, `resume`, `text`, `reasoning`, `tool-call`, `tool-result`,
 `tool-result-error`, `citation`, `attachment`, `data`, `audio`, `audio-control`,
 `audio-transcript`, `error`, `retry`. Block display forwards five block parts:
 `tool-block-header`, `tool-block-body`, `tool-block-args`, `tool-block-result`,

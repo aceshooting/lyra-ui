@@ -1,3 +1,14 @@
+import {
+  OWNED_PANEL_ATTRIBUTES,
+  snapshotPanelOwnership,
+  panelProjectionChanged,
+  restorePanelOwnership,
+  applyOwnedPanelStyle,
+  applyOwnedPanelStyleValue,
+  applyOwnedPanelHidden,
+  applyOwnedPanelAttribute,
+  type PanelOwnershipSnapshot,
+} from './multi-split-panel-ownership.js';
 import { resolveIdReferencesIn } from '../../../internal/aria-reflection.js';
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
 import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
@@ -112,7 +123,6 @@ interface DragState {
   acceptedResize: boolean;
 }
 
-const EMPTY_COLLAPSED_PANELS: readonly string[] = Object.freeze([]);
 
 /** A fixed-pixel-range constraint for one panel; index-aligned with `sizes`/
  *  `panelConstraints`. Either bound may be omitted to leave that side
@@ -143,32 +153,34 @@ interface ConstraintResolution {
   issue?: LyraMultiSplitConstraintIssueDetail;
 }
 
-// `position`/`inset-block`/`inset-inline-start`/`inset-inline-end` used to be owned here too, but
-// their floating-state value is always the same fixed literal ('absolute', '0') rather than
-// per-render computed data -- see multi-split.styles.ts's `::slotted([data-collapse-state='floating'])`
-// rule, which now owns them as ordinary (overridable) stylesheet rules instead. Only genuinely
-// live, per-render-computed properties stay here: `inline-size` mirrors the panel's own live,
-// draggable `sizes[i]` percent (by design, so there's no visual jump un-floating -- see updated()).
-const OWNED_PANEL_STYLE_PROPERTIES = ['flex', 'order', 'inline-size', '--_lr-multi-split-panel-min'] as const;
-/** Marker attributes projected onto panels: the responsive pane's state and the per-panel fold. */
-const OWNED_PANEL_ATTRIBUTES = ['data-collapse-state', 'data-panel-collapsed'] as const;
-
-type OwnedPanelAttribute = (typeof OWNED_PANEL_ATTRIBUTES)[number];
-
-type OwnedPanelStyleProperty = (typeof OWNED_PANEL_STYLE_PROPERTIES)[number];
-
-interface PanelStyleValue {
-  value: string;
-  priority: string;
+function validBound(value: number | undefined): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0;
 }
 
-interface PanelOwnershipSnapshot {
-  readonly styles: Map<OwnedPanelStyleProperty, PanelStyleValue>;
-  readonly appliedStyles: Map<OwnedPanelStyleProperty, PanelStyleValue>;
-  hidden: HTMLElement['hidden'];
-  appliedHidden?: HTMLElement['hidden'];
-  readonly attributes: Map<OwnedPanelAttribute, string | null>;
-  readonly appliedAttributes: Map<OwnedPanelAttribute, string | null>;
+function percentBound(
+  pixels: number | undefined,
+  percent: number | undefined,
+  containerSize: number,
+  fallback: number,
+  stricter: (left: number, right: number) => number,
+): number {
+  if (validBound(pixels) && containerSize > 0) {
+    const converted = pixels / containerSize * 100;
+    return validBound(percent) ? stricter(converted, percent) : converted;
+  }
+  return validBound(percent) ? percent : fallback;
+}
+
+/** A single bound replaces the shared floor. Mixed units keep their stricter value on resize. */
+function cssBound(pixels: number | undefined, percent: number | undefined, minimumFloor?: number): string {
+  if (!validBound(pixels)) {
+    if (validBound(percent)) return `${percent}%`;
+    return `${minimumFloor === undefined ? NO_MAX_PX : NO_MIN_PX}px`;
+  }
+  if (!validBound(percent)) return `${pixels}px`;
+  return minimumFloor === undefined
+    ? `min(${pixels}px, ${percent}%)`
+    : `max(${minimumFloor}%, ${pixels}px, ${percent}%)`;
 }
 
 /** Which pane (if any) participates in responsive collapse (see `collapse`). */
@@ -631,11 +643,8 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
    *  one panel always stays open: a set naming every panel leaves the last one open. Assigning this
    *  property is silent, like assigning `sizes`; `collapsePanel()`/`expandPanel()`/`togglePanel()`
    *  apply a change immediately, persist it under `storageKey`, and announce it. A valid stored
-   *  layout restores the collapsed set when this property is unset. An explicit empty array expands all panels. */
-  @property({ attribute: false })
-  get collapsedPanels(): readonly string[] { return this.authoredCollapsedPanels ?? EMPTY_COLLAPSED_PANELS; }
-  set collapsedPanels(value: readonly string[]) { this.authoredCollapsedPanels = value; }
-  private authoredCollapsedPanels?: readonly string[];
+   *  layout restores the collapsed set unless this property already names panels. */
+  @property({ attribute: false }) collapsedPanels: readonly string[] = [];
 
   /** Disables pointer and keyboard resizing of all dividers. */
   @property({ type: Boolean, reflect: true }) disabled = false;
@@ -783,7 +792,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
   private readonly panelOwnershipObserver = new OwnedMutationObserver(this, records => {
     const changed = records.some((record) => {
       const panel = record.target as HTMLElement;
-      return this.panelProjectionDiverged(panel, this.panelOwnership.get(panel)!);
+      return panelProjectionChanged(panel, this.panelOwnership.get(panel)!);
     });
     if (changed) this.requestUpdate();
   });
@@ -1692,32 +1701,18 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     value: readonly number[],
     collapsed: ReadonlySet<number> = this.collapsedIndexes()
   ): boolean {
-    if (!Array.isArray(value) || value.length !== this.panelCount) return false;
-    if (
-      !value.every((size, index) =>
-        collapsed.has(index) ? size === 0 : Number.isFinite(size) && size >= this.safeMin
-      )
-    )
-      return false;
-    return Math.abs(value.reduce((sum, size) => sum + size, 0) - 100) < 0.01;
+    return this.validPanelSizes(value, collapsed, this.safeMin);
   }
 
-  /** Post-mount assignments use the feasible shared floor. A configured `min` can exceed the
-   * aggregate available space, in which case interaction deliberately falls back to
-   * `normalizedDefaultMin()` rather than freezing every divider. */
-  private validLiveSizes(
-    value: readonly number[],
-    collapsed: ReadonlySet<number> = this.collapsedIndexes()
-  ): boolean {
-    if (!Array.isArray(value) || value.length !== this.panelCount) return false;
-    const floor = this.normalizedDefaultMin();
-    if (
-      !value.every((size, index) =>
-        collapsed.has(index) ? size === 0 : Number.isFinite(size) && size >= floor
-      )
-    )
-      return false;
-    return Math.abs(value.reduce((sum, size) => sum + size, 0) - 100) < 0.01;
+  /** Post-mount assignments use the feasible floor even when the requested minimum is too large. */
+  private validLiveSizes(value: readonly number[], collapsed = this.collapsedIndexes()): boolean {
+    return this.validPanelSizes(value, collapsed, this.normalizedDefaultMin());
+  }
+
+  private validPanelSizes(value: readonly number[], collapsed: ReadonlySet<number>, floor: number): boolean {
+    return Array.isArray(value) && value.length === this.panelCount &&
+      value.every((size, index) => collapsed.has(index) ? size === 0 : Number.isFinite(size) && size >= floor) &&
+      Math.abs(value.reduce((sum, size) => sum + size, 0) - 100) < 0.01;
   }
 
   /** Resolves `defaultSizes` to a percent-space array for `initializeSizes()`, or `null` when it is
@@ -1847,7 +1842,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       if (expandedSize !== undefined) this.expandedSizes.set(panelId, expandedSize);
     }
     // An authored set wins over the stored one; `syncCollapsedLayout()` then refolds toward it.
-    if (restoredCollapsed.length > 0 && this.authoredCollapsedPanels === undefined) {
+    if (restoredCollapsed.length > 0 && this.collapsedPanels.length === 0) {
       this.collapsedPanels = restoredCollapsed;
     }
     return true;
@@ -1903,154 +1898,6 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     }
   }
 
-  private readPanelStyle(
-    panel: HTMLElement,
-    property: OwnedPanelStyleProperty
-  ): PanelStyleValue {
-    return {
-      value: panel.style.getPropertyValue(property),
-      priority: panel.style.getPropertyPriority(property),
-    };
-  }
-
-  private samePanelStyle(
-    left: PanelStyleValue,
-    right: PanelStyleValue
-  ): boolean {
-    return left.value === right.value && left.priority === right.priority;
-  }
-
-  private snapshotPanelOwnership(panel: HTMLElement): PanelOwnershipSnapshot {
-    const styles = new Map<OwnedPanelStyleProperty, PanelStyleValue>();
-    for (const property of OWNED_PANEL_STYLE_PROPERTIES) {
-      styles.set(property, this.readPanelStyle(panel, property));
-    }
-    const attributes = new Map<OwnedPanelAttribute, string | null>();
-    for (const name of OWNED_PANEL_ATTRIBUTES) attributes.set(name, panel.getAttribute(name));
-    return {
-      styles,
-      appliedStyles: new Map(),
-      hidden: panel.hidden,
-      attributes,
-      appliedAttributes: new Map(),
-    };
-  }
-
-  /** Adopts author mutations made while a panel is owned before reasserting
-   * the effective split projection. These latest values become the release
-   * baseline, rather than the stale values from initial acquisition. */
-  private adoptPanelOwnership(
-    panel: HTMLElement,
-    snapshot: PanelOwnershipSnapshot
-  ): void {
-    for (const property of OWNED_PANEL_STYLE_PROPERTIES) {
-      const current = this.readPanelStyle(panel, property);
-      const applied = snapshot.appliedStyles.get(property);
-      if (
-        (applied && !this.samePanelStyle(current, applied)) ||
-        (!applied &&
-          !this.samePanelStyle(current, snapshot.styles.get(property)!))
-      ) {
-        snapshot.styles.set(property, current);
-      }
-    }
-    if (
-      (snapshot.appliedHidden !== undefined &&
-        panel.hidden !== snapshot.appliedHidden) ||
-      (snapshot.appliedHidden === undefined && panel.hidden !== snapshot.hidden)
-    ) {
-      snapshot.hidden = panel.hidden;
-    }
-    for (const name of OWNED_PANEL_ATTRIBUTES) {
-      const current = panel.getAttribute(name);
-      const expected = snapshot.appliedAttributes.has(name)
-        ? snapshot.appliedAttributes.get(name)
-        : snapshot.attributes.get(name);
-      if (current !== expected) snapshot.attributes.set(name, current);
-    }
-  }
-
-  private applyOwnedPanelStyle(
-    panel: HTMLElement,
-    snapshot: PanelOwnershipSnapshot,
-    property: OwnedPanelStyleProperty,
-    value: PanelStyleValue
-  ): void {
-    if (value.value === '') panel.style.removeProperty(property);
-    else panel.style.setProperty(property, value.value, value.priority);
-    snapshot.appliedStyles.set(property, this.readPanelStyle(panel, property));
-  }
-
-  private applyOwnedPanelStyleValue(
-    panel: HTMLElement,
-    snapshot: PanelOwnershipSnapshot,
-    property: OwnedPanelStyleProperty,
-    value: string
-  ): void {
-    this.applyOwnedPanelStyle(panel, snapshot, property, {
-      value,
-      priority: '',
-    });
-  }
-
-  private applyOwnedPanelHidden(
-    panel: HTMLElement,
-    snapshot: PanelOwnershipSnapshot,
-    hidden: HTMLElement['hidden']
-  ): void {
-    panel.hidden = hidden;
-    snapshot.appliedHidden = panel.hidden;
-  }
-
-  private applyOwnedPanelAttribute(
-    panel: HTMLElement,
-    snapshot: PanelOwnershipSnapshot,
-    name: OwnedPanelAttribute,
-    value: string | null
-  ): void {
-    if (value === null) panel.removeAttribute(name);
-    else panel.setAttribute(name, value);
-    snapshot.appliedAttributes.set(name, panel.getAttribute(name));
-  }
-
-  private restorePanelOwnership(
-    panel: HTMLElement,
-    snapshot: PanelOwnershipSnapshot
-  ): void {
-    this.adoptPanelOwnership(panel, snapshot);
-    for (const property of OWNED_PANEL_STYLE_PROPERTIES) {
-      const value = snapshot.styles.get(property)!;
-      if (value.value === '') panel.style.removeProperty(property);
-      else panel.style.setProperty(property, value.value, value.priority);
-    }
-    panel.hidden = snapshot.hidden;
-    for (const name of OWNED_PANEL_ATTRIBUTES) {
-      const value = snapshot.attributes.get(name) ?? null;
-      if (value === null) panel.removeAttribute(name);
-      else panel.setAttribute(name, value);
-    }
-  }
-
-  private panelProjectionDiverged(
-    panel: HTMLElement,
-    snapshot: PanelOwnershipSnapshot
-  ): boolean {
-    for (const property of OWNED_PANEL_STYLE_PROPERTIES) {
-      const current = this.readPanelStyle(panel, property);
-      const applied = snapshot.appliedStyles.get(property);
-      const expected = applied ?? snapshot.styles.get(property)!;
-      if (!this.samePanelStyle(current, expected)) return true;
-    }
-    if (panel.hidden !== (snapshot.appliedHidden ?? snapshot.hidden))
-      return true;
-    return OWNED_PANEL_ATTRIBUTES.some((name) => {
-      const expected = snapshot.appliedAttributes.has(name)
-        ? snapshot.appliedAttributes.get(name)
-        : snapshot.attributes.get(name);
-      return panel.getAttribute(name) !== expected;
-    });
-  }
-
   private observeOwnedPanels(): void {
     this.panelOwnershipObserver.clear();
     for (const panel of this.ownedPanels) {
@@ -2081,12 +1928,12 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     for (const panel of this.ownedPanels) {
       if (nextSet.has(panel)) continue;
       const snapshot = this.panelOwnership.get(panel);
-      if (snapshot) this.restorePanelOwnership(panel, snapshot);
+      if (snapshot) restorePanelOwnership(panel, snapshot);
       this.panelOwnership.delete(panel);
     }
     for (const panel of next) {
       if (!this.panelOwnership.has(panel)) {
-        this.panelOwnership.set(panel, this.snapshotPanelOwnership(panel));
+        this.panelOwnership.set(panel, snapshotPanelOwnership(panel));
       }
     }
 
@@ -2118,7 +1965,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     this.panelOwnershipObserver.clear();
     for (const panel of this.ownedPanels) {
       const snapshot = this.panelOwnership.get(panel);
-      if (snapshot) this.restorePanelOwnership(panel, snapshot);
+      if (snapshot) restorePanelOwnership(panel, snapshot);
     }
     this.ownedPanels = [];
     this.panelOwnership.clear();
@@ -2405,68 +2252,11 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
         bounds.push({ min: 0, max: 0 });
         continue;
       }
-      const constraint = this.panelConstraints[index];
-      let min = this.safeMin;
-      let max = Infinity;
-      let minSet = false;
-      let maxSet = false;
-      if (constraint) {
-        if (
-          constraint.minPx != null &&
-          Number.isFinite(constraint.minPx) &&
-          constraint.minPx >= 0 &&
-          containerSize > 0
-        ) {
-          min = (constraint.minPx / containerSize) * 100;
-          minSet = true;
-        }
-        if (
-          constraint.minPercent != null &&
-          Number.isFinite(constraint.minPercent) &&
-          constraint.minPercent >= 0
-        ) {
-          // The stricter (larger) of a px-derived and a directly-specified percent minimum —
-          // px alone still simply overwrites the component-wide safeMin floor, matching the
-          // pre-existing minPx-only behavior.
-          min = minSet
-            ? Math.max(min, constraint.minPercent)
-            : constraint.minPercent;
-          minSet = true;
-        }
-        if (
-          constraint.maxPx != null &&
-          Number.isFinite(constraint.maxPx) &&
-          constraint.maxPx >= 0 &&
-          containerSize > 0
-        ) {
-          max = (constraint.maxPx / containerSize) * 100;
-          maxSet = true;
-        }
-        if (
-          constraint.maxPercent != null &&
-          Number.isFinite(constraint.maxPercent) &&
-          constraint.maxPercent >= 0
-        ) {
-          // The stricter (smaller) of a px-derived and a directly-specified percent maximum.
-          max = maxSet
-            ? Math.min(max, constraint.maxPercent)
-            : constraint.maxPercent;
-          maxSet = true;
-        }
-        if (
-          (constraint.minPx != null &&
-            (!Number.isFinite(constraint.minPx) || constraint.minPx < 0)) ||
-          (constraint.maxPx != null &&
-            (!Number.isFinite(constraint.maxPx) || constraint.maxPx < 0)) ||
-          (constraint.minPercent != null &&
-            (!Number.isFinite(constraint.minPercent) ||
-              constraint.minPercent < 0)) ||
-          (constraint.maxPercent != null &&
-            (!Number.isFinite(constraint.maxPercent) ||
-              constraint.maxPercent < 0))
-        ) {
-          issueReason ??= 'minimum-exceeds-maximum';
-        }
+      const { minPx, maxPx, minPercent, maxPercent } = this.panelConstraints[index] ?? {};
+      const min = percentBound(minPx, minPercent, containerSize, this.safeMin, Math.max);
+      const max = percentBound(maxPx, maxPercent, containerSize, Infinity, Math.min);
+      if ([minPx, maxPx, minPercent, maxPercent].some(value => value != null && !validBound(value))) {
+        issueReason ??= 'minimum-exceeds-maximum';
       }
       if (min > max) issueReason ??= 'minimum-exceeds-maximum';
       bounds.push({ min, max });
@@ -2510,61 +2300,6 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
         constraint.minPercent != null ||
         constraint.maxPercent != null)
     );
-  }
-
-  /** Builds the min side of a constrained panel's CSS `clamp()` flex-basis. A single specified
-   *  bound (either unit) is used bare, preserving the exact pre-existing px-only shape; combining
-   *  two different unit types needs a native CSS `max()` so the browser keeps picking the stricter
-   *  (larger) bound after a container resize with no extra JS — the component's own percent-based
-   *  `min` floor is folded in as an always-present third term in that combined case only, since a
-   *  single bare bound already fully replaces it (mirrors `resolveConstraintBounds()`'s equivalent
-   *  overwrite-vs-combine split for the JS-side percent bounds). */
-  private minSideExpr(
-    constraint: LyraMultiSplitPanelConstraint | null | undefined
-  ): string {
-    const terms: string[] = [];
-    if (
-      constraint?.minPx != null &&
-      Number.isFinite(constraint.minPx) &&
-      constraint.minPx >= 0
-    ) {
-      terms.push(`${constraint.minPx}px`);
-    }
-    if (
-      constraint?.minPercent != null &&
-      Number.isFinite(constraint.minPercent) &&
-      constraint.minPercent >= 0
-    ) {
-      terms.push(`${constraint.minPercent}%`);
-    }
-    if (terms.length === 0) return `${NO_MIN_PX}px`;
-    if (terms.length === 1) return terms[0]!; // safe: exactly one term
-    return `max(${this.safeMin}%, ${terms.join(', ')})`;
-  }
-
-  /** The max-side mirror of `minSideExpr()` — uses CSS `min()` (stricter = smaller) when combining
-   *  both unit types; no equivalent shared floor exists to fold in for the max side. */
-  private maxSideExpr(
-    constraint: LyraMultiSplitPanelConstraint | null | undefined
-  ): string {
-    const terms: string[] = [];
-    if (
-      constraint?.maxPx != null &&
-      Number.isFinite(constraint.maxPx) &&
-      constraint.maxPx >= 0
-    ) {
-      terms.push(`${constraint.maxPx}px`);
-    }
-    if (
-      constraint?.maxPercent != null &&
-      Number.isFinite(constraint.maxPercent) &&
-      constraint.maxPercent >= 0
-    ) {
-      terms.push(`${constraint.maxPercent}%`);
-    }
-    if (terms.length === 0) return `${NO_MAX_PX}px`;
-    if (terms.length === 1) return terms[0]!; // safe: exactly one term
-    return `min(${terms.join(', ')})`;
   }
 
   private clampPair(
@@ -3032,7 +2767,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
     const panels = this.ownedPanels;
     for (const panel of panels) {
       const snapshot = this.panelOwnership.get(panel);
-      if (snapshot) this.adoptPanelOwnership(panel, snapshot);
+      if (snapshot) panelProjectionChanged(panel, snapshot, true);
     }
     const collapsingIndex = this.collapseActive ? this.collapsingIndex : -1;
     const collapsed = this.collapsedIndexes();
@@ -3093,27 +2828,27 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
         // Flex shrink must stop at a feasible pixel floor. If the allocation becomes too small,
         // share the space left after the real target gutters proportionally instead of overflowing.
         // The measured gutter budget stays independent of each panel's own font size.
-        this.applyOwnedPanelStyleValue(panel, snapshot, '--_lr-multi-split-panel-min',
+        applyOwnedPanelStyleValue(panel, snapshot, '--_lr-multi-split-panel-min',
           `min(${pixelMinimum}px, max(0px, calc((100% - var(--_lr-multi-split-gutters, 0px)) * ${pixelMinimum / pixelMinimumTotal})))`);
       } else {
-        this.applyOwnedPanelStyle(panel, snapshot, '--_lr-multi-split-panel-min', snapshot.styles.get('--_lr-multi-split-panel-min')!);
+        applyOwnedPanelStyle(panel, snapshot, '--_lr-multi-split-panel-min', snapshot.styles.get('--_lr-multi-split-panel-min')!);
       }
       // Collapse-only inline style is always cleared first, then re-applied
       // below only for the panel that needs it this pass. `position`/`inset-*`
       // no longer go through this owned-inline path at all — see
       // multi-split.styles.ts's `::slotted([data-collapse-state='floating'])`
       // rule, which owns their (always-fixed) floating-state value instead.
-      this.applyOwnedPanelStyle(
+      applyOwnedPanelStyle(
         panel,
         snapshot,
         'inline-size',
         snapshot.styles.get('inline-size')!
       );
-      this.applyOwnedPanelHidden(panel, snapshot, snapshot.hidden);
+      applyOwnedPanelHidden(panel, snapshot, snapshot.hidden);
 
       if (collapsingIndex === i && this.collapseState === 'rail') {
         // Fixed rail width instead of the normal clamp()/percent flex-basis.
-        this.applyOwnedPanelStyleValue(
+        applyOwnedPanelStyleValue(
           panel,
           snapshot,
           'flex',
@@ -3134,8 +2869,8 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
         // its own gutter and hairline in both branches too (the host-keyed
         // floating rule in multi-split.styles.ts), so the survivor really
         // does take the full track.
-        this.applyOwnedPanelStyleValue(panel, snapshot, 'flex', 'none');
-        this.applyOwnedPanelHidden(panel, snapshot, true);
+        applyOwnedPanelStyleValue(panel, snapshot, 'flex', 'none');
+        applyOwnedPanelHidden(panel, snapshot, true);
       } else if (collapsingIndex === i && this.collapseState === 'floating') {
         // `this.open` is true here. Lifted out of the flex flow entirely as
         // an overlay card, anchored to its own logical start/end edge,
@@ -3157,7 +2892,7 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
         // stable seam instead: unset, the fallback reproduces today's percent
         // exactly; set (e.g. on an ancestor, so it survives re-renders), it
         // wins over the percent fallback at ordinary specificity.
-        this.applyOwnedPanelStyleValue(
+        applyOwnedPanelStyleValue(
           panel,
           snapshot,
           'inline-size',
@@ -3168,66 +2903,36 @@ export class LyraMultiSplit extends LyraElement<LyraMultiSplitEventMap> {
       } else if (collapsed.has(i)) {
         // A per-panel fold: a fixed rail along the resize axis whatever the container width. Its
         // share already moved to the open panels in sizes (see syncCollapsedLayout()).
-        this.applyOwnedPanelStyleValue(
+        applyOwnedPanelStyleValue(
           panel,
           snapshot,
           'flex',
           '0 0 var(--_lr-multi-split-collapsed-panel-size)'
         );
-      } else if (collapsingIndex !== -1 && i !== collapsingIndex) {
-        // The pane(s) sharing the split with a currently rail/floating
-        // collapsed pane: grow to fill whatever space that pane no longer
-        // occupies (its full percent-basis space while floating, or
-        // percent-basis-minus-railWidth while railed), proportionally to
-        // their own relative `sizes` share for a 3+-panel split -- but still
-        // honor this panel's own panelConstraints via the same clamp()
-        // flex-basis the uncollapsed branch below uses, so a constrained
-        // sibling doesn't grow past its own maxPx (or below its own minPx)
-        // just because an adjacent pane collapsed.
-        this.applyOwnedPanelStyleValue(
-          panel,
-          snapshot,
-          'flex',
-          this.hasClampConstraint(constraint)
-            ? `0 1 clamp(${this.minSideExpr(
-                constraint
-              )}, ${percent}%, ${this.maxSideExpr(constraint)})`
-            : `${percent} 1 0%`
-        );
       } else {
-        // clamp() mixes units natively, so a constrained panel stays pinned
-        // between its px bounds across container resizes with no extra
-        // ResizeObserver -- the browser re-evaluates it on every layout pass.
-        // flex-shrink: 1 (not 0) lets the row's panels absorb the auto-inserted
-        // dividers' own combined width instead of the row's total content width
-        // overflowing the container by (panelCount - 1) * dividerWidth, which
-        // flex-shrink: 0 previously could not.
-        //
-        // An unconstrained panel's basis also folds in any space freed by a
-        // clamped sibling this render (see redistributedShare above); a
-        // constrained panel's own clamp() is untouched by that, since it's
-        // never itself a redistribution target.
-        const adjustedPercent = percent + (redistributedShare[i] ?? 0);
-        this.applyOwnedPanelStyleValue(
-          panel,
-          snapshot,
-          'flex',
-          this.hasClampConstraint(constraint)
-            ? `0 1 clamp(${this.minSideExpr(
-                constraint
-              )}, ${percent}%, ${this.maxSideExpr(constraint)})`
-            : `0 1 ${adjustedPercent}%`
-        );
+        // A constrained panel keeps its bounds. Unconstrained siblings grow into the share
+        // released by a collapsed pane or take the space freed by another panel's maximum.
+        let flex: string;
+        if (this.hasClampConstraint(constraint)) {
+          const minimum = cssBound(constraint?.minPx, constraint?.minPercent, this.safeMin);
+          const maximum = cssBound(constraint?.maxPx, constraint?.maxPercent);
+          flex = `0 1 clamp(${minimum}, ${percent}%, ${maximum})`;
+        } else if (collapsingIndex !== -1 && i !== collapsingIndex) {
+          flex = `${percent} 1 0%`;
+        } else {
+          flex = `0 1 ${percent + (redistributedShare[i] ?? 0)}%`;
+        }
+        applyOwnedPanelStyleValue(panel, snapshot, 'flex', flex);
       }
-      this.applyOwnedPanelStyleValue(panel, snapshot, 'order', String(i * 2));
+      applyOwnedPanelStyleValue(panel, snapshot, 'order', String(i * 2));
 
-      this.applyOwnedPanelAttribute(
+      applyOwnedPanelAttribute(
         panel,
         snapshot,
         'data-collapse-state',
         collapsingIndex === i ? this.collapseState : null
       );
-      this.applyOwnedPanelAttribute(
+      applyOwnedPanelAttribute(
         panel,
         snapshot,
         'data-panel-collapsed',

@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -63,4 +64,8 @@ export function checkGenBuildArtifacts(directory = packageDirectory) {
   console.log('Lyra Gen emitted-artifact and pure-root contracts passed.');
 }
 
-if (isMainModule(import.meta.url)) checkGenBuildArtifacts();
+if (isMainModule(import.meta.url)) {
+  checkGenBuildArtifacts();
+  const { createCatalog, initialCatalog } = await import('../dist/catalogs/examples.js');
+  assert.deepStrictEqual(createCatalog(initialCatalog), initialCatalog, 'The built-in catalog must match the validated host catalog shape.');
+}

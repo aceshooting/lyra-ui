@@ -18,7 +18,7 @@
 
 Set `--lr-spreadsheet-viewer-background`, `--lr-spreadsheet-viewer-border` and `--lr-spreadsheet-viewer-border-radius` on the frame. `--lr-spreadsheet-viewer-header-row-bg` sets the column heading background.
 
-`scroll-mode="page"` lets the page scroll both axes, keeps the header sticky and ignores `max-height`. The default `self` uses the viewer’s own scrollport.
+Setting `scrollMode` to `page` (attribute `scroll-mode="page"`) lets the page scroll both axes, keeps the header sticky and ignores `max-height`. The default `self` uses the viewer’s own scrollport.
 
 Fetches `.xlsx` and `.xls` workbooks with the optional `xlsx` (SheetJS) peer, or reads a host-owned
 `dataSource`. Multiple worksheets render through a `<lr-tab-group>` switcher, and body rows use `<lr-virtual-list>`.

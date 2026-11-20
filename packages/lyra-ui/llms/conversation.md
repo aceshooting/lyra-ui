@@ -436,7 +436,7 @@ can cover the other. Both surfaces use `white-space: pre` and scroll horizontall
 - `--lr-markdown-highlight-success-bg` — Success highlight fill. Default: `var(--lr-color-success-quiet)`.
 - `--lr-markdown-highlight-warning-bg` — Warning highlight fill. Default: `var(--lr-color-warning-quiet)`.
 - `--lr-markdown-highlight-danger-bg` — Danger highlight fill. Default: `var(--lr-color-danger-quiet)`.
-- `--lr-markdown-highlight-neutral-bg` — Neutral highlight fill. Default: `var(--lr-color-surface-raised)`.
+- `--lr-markdown-highlight-neutral-bg` — Neutral highlight fill. Default: `var(--lr-color-surface)`.
 - `--lr-markdown-highlight-active-bg` — Active highlight fill. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-markdown-highlight-active-outline-color` — Active highlight outline. Default: `var(--lr-color-brand)`.
 
@@ -574,7 +574,7 @@ const view = html`<lr-markdown-core
 - `--lr-markdown-highlight-success-bg` — Success highlight fill. Default: `var(--lr-color-success-quiet)`.
 - `--lr-markdown-highlight-warning-bg` — Warning highlight fill. Default: `var(--lr-color-warning-quiet)`.
 - `--lr-markdown-highlight-danger-bg` — Danger highlight fill. Default: `var(--lr-color-danger-quiet)`.
-- `--lr-markdown-highlight-neutral-bg` — Neutral highlight fill. Default: `var(--lr-color-surface-raised)`.
+- `--lr-markdown-highlight-neutral-bg` — Neutral highlight fill. Default: `var(--lr-color-surface)`.
 - `--lr-markdown-highlight-active-bg` — Active highlight fill. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-markdown-highlight-active-outline-color` — Active highlight outline. Default: `var(--lr-color-brand)`.
 
@@ -595,6 +595,12 @@ keeps the box and list gutter aligned. Header hooks are `--lr-markdown-code-head
 **Shared icon-button tokens:** the code-block action buttons read the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`. `--lr-markdown-code-copy-bg-hover` and `--lr-markdown-code-copy-bg-active` set the fenced copy button's hovered and pressed backgrounds.
 
 ## `lr-chat-message`
+
+For the collapse button, set `--lr-icon-button-radius` for the corners. The fill, border and foreground use these tokens in resting, hover and pressed states respectively.
+
+- `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color`
+- `--lr-icon-button-bg-hover`, `--lr-icon-button-border-hover`, `--lr-icon-button-color-hover`
+- `--lr-icon-button-bg-active`, `--lr-icon-button-border-active`, `--lr-icon-button-color-active`
 
 Customize the appearance with `--lr-chat-message-retry-color`, `--lr-chat-message-retry-border-color` and `--lr-chat-message-retry-hover-bg`.
 
@@ -1304,6 +1310,12 @@ instead. The pulse animation is suppressed under `prefers-reduced-motion: reduce
 
 ## `lr-conversation-item`
 
+For the rename button, set `--lr-icon-button-radius` for the corners. The fill, border and foreground use these tokens in resting, hover and pressed states respectively.
+
+- `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color`
+- `--lr-icon-button-bg-hover`, `--lr-icon-button-border-hover`, `--lr-icon-button-color-hover`
+- `--lr-icon-button-bg-active`, `--lr-icon-button-border-active`, `--lr-icon-button-color-active`
+
 Set `disabled` to disable selection and renaming. Disabling a row discards an open rename draft.
 
 Customize the appearance with `--lr-conversation-item-hover-bg`.
@@ -1500,6 +1512,15 @@ duration of an edit rather than just visually swapping content (a row mid-edit _
 ---
 
 ## `lr-model-select`
+
+The picker shares these styling controls with other catalog pickers.
+
+- Trigger geometry — `--lr-picker-expand-size`, `--lr-picker-font-size`, `--lr-picker-gap`, `--lr-picker-max-inline-size`, `--lr-picker-radius`, `--lr-picker-trigger-height`, `--lr-picker-trigger-min-height`, `--lr-picker-trigger-padding`.
+- Trigger colors — `--lr-picker-trigger-fill`, `--lr-picker-trigger-border-color`, `--lr-picker-trigger-hover-bg`, `--lr-picker-trigger-hover-border-color`, `--lr-picker-trigger-active-bg`, `--lr-picker-open-border-color`.
+- Option states — `--lr-picker-option-active-bg`, `--lr-picker-option-disabled-opacity`, `--lr-picker-option-selected-bg`, `--lr-picker-option-selected-border`, `--lr-picker-option-selected-color`, `--lr-picker-option-selected-font-weight`.
+- Synthetic option — `--lr-picker-option-synthetic-border-color`, `--lr-picker-option-synthetic-border-style`, `--lr-picker-option-synthetic-font-style`.
+
+Popup sizing uses the available space reported by `--lr-positioner-available-block-size` and `--lr-positioner-available-inline-size`.
 
 `--lr-model-select-trigger-hover-bg` and `--lr-model-select-trigger-active-bg` set the trigger background on hover and press.
 
@@ -2119,6 +2140,12 @@ failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immuta
 outcome, bubbling and composed.
 
 ## `lr-generation-metrics`
+
+For the stop button, set `--lr-icon-button-radius` for the corners. The fill, border and foreground use these tokens in resting, hover and pressed states respectively.
+
+- `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color`
+- `--lr-icon-button-bg-hover`, `--lr-icon-button-border-hover`, `--lr-icon-button-color-hover`
+- `--lr-icon-button-bg-active`, `--lr-icon-button-border-active`, `--lr-icon-button-color-active`
 
 A compact, ticking status readout shown alongside an in-progress AI response: elapsed time, token
 count, and token-throughput, plus a built-in Stop button. First-party invention (no Web Awesome
@@ -2809,6 +2836,12 @@ to the shared duration, while reduced-motion ambient output remains static.
 
 ## `lr-branch-picker`
 
+For the previous and next buttons, set `--lr-icon-button-radius` for the corners. The fill, border and foreground use these tokens in resting, hover and pressed states respectively.
+
+- `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color`
+- `--lr-icon-button-bg-hover`, `--lr-icon-button-border-hover`, `--lr-icon-button-color-hover`
+- `--lr-icon-button-bg-active`, `--lr-icon-button-border-active`, `--lr-icon-button-color-active`
+
 Set `disabled` to disable both chevrons and their toolbar actions while preserving the current position.
 
 The "‹ 2 / 5 ›" navigator across regenerated/edited variants of one message. Pure controlled: it
@@ -2923,6 +2956,12 @@ media rule then floors the rendered hit area at 2.75rem/44px regardless of how f
 override lowered it, so the shrink is safe on a touch device.
 
 ## `lr-message-feedback`
+
+For the feedback buttons, set `--lr-icon-button-radius` for the corners. The fill, border and foreground use these tokens in resting, hover and pressed states respectively.
+
+- `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color`
+- `--lr-icon-button-bg-hover`, `--lr-icon-button-border-hover`, `--lr-icon-button-color-hover`
+- `--lr-icon-button-bg-active`, `--lr-icon-button-border-active`, `--lr-icon-button-color-active`
 
 The feedback control registers `lr-chip` when it first renders reasons. Await `updateComplete` before using a rendered chip. Server renderers can import the chip entry to include its shadow content.
 
@@ -3188,7 +3227,7 @@ entry. The built-in jump action delegates to this method.
 state or the built-in jump action re-engages it. Direct `follow` assignments and
 `scrollToBottom()` calls are controlled input and do not echo an event.
 
-**CSS parts:** `base` (the scroll container), `log` (the `role="log"` region wrapping final entries
+**CSS parts:** `window-notice` (count of omitted items), `base` (the scroll container), `log` (the `role="log"` region wrapping final entries
 only), `entry`, `speaker` (omitted for a row repeating the previous row's speaker), `text`
 (`dir="auto"`), `timestamp` (only while `with-timestamps`), `interim` (present alongside `entry` on
 an interim row), `interim-area` (the wrapper holding interim rows, rendered only while at least one
@@ -3461,6 +3500,12 @@ Vector icons per chip, by name or by slot:
 ```
 
 ## `lr-thread-list`
+
+For the row actions and search clear button, set `--lr-icon-button-radius` for the corners. The fill, border and foreground use these tokens in resting, hover and pressed states respectively.
+
+- `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color`
+- `--lr-icon-button-bg-hover`, `--lr-icon-button-border-hover`, `--lr-icon-button-color-hover`
+- `--lr-icon-button-bg-active`, `--lr-icon-button-border-active`, `--lr-icon-button-color-active`
 
 A blank or unavailable group label falls back to the default group name. When an adornment callback throws, the group still renders its label and rows. The list registers its pagination control when a provider is present and its error control when an error is displayed. For server-rendered markup that needs these child definitions on the server, import their granular entries. Await the list’s `updateComplete` on the client before using either control.
 
@@ -4182,6 +4227,15 @@ consumer's control.
 
 ## `lr-voice-picker`
 
+The picker shares these styling controls with other catalog pickers.
+
+- Trigger geometry — `--lr-picker-expand-size`, `--lr-picker-font-size`, `--lr-picker-gap`, `--lr-picker-max-inline-size`, `--lr-picker-radius`, `--lr-picker-trigger-height`, `--lr-picker-trigger-min-height`, `--lr-picker-trigger-padding`.
+- Trigger colors — `--lr-picker-trigger-fill`, `--lr-picker-trigger-border-color`, `--lr-picker-trigger-hover-bg`, `--lr-picker-trigger-hover-border-color`, `--lr-picker-trigger-active-bg`, `--lr-picker-open-border-color`.
+- Option states — `--lr-picker-option-active-bg`, `--lr-picker-option-disabled-opacity`, `--lr-picker-option-selected-bg`, `--lr-picker-option-selected-border`, `--lr-picker-option-selected-color`, `--lr-picker-option-selected-font-weight`.
+- Synthetic option — `--lr-picker-option-synthetic-border-color`, `--lr-picker-option-synthetic-border-style`, `--lr-picker-option-synthetic-font-style`.
+
+Popup sizing uses the available space reported by `--lr-positioner-available-block-size` and `--lr-positioner-available-inline-size`.
+
 `--lr-voice-picker-trigger-hover-bg` and `--lr-voice-picker-trigger-active-bg` set the trigger background on hover and press.
 
 Picking the current voice closes the list without emitting a change. A rejected preview address or failed playback announces `voicePickerPreviewFailed`.
@@ -4765,7 +4819,7 @@ In block display, `lr-toggle` also arrives from tool-call blocks (`{ expanded, c
 `lr-render-error` from an expanded block carries `callId`; `lr-tool-call-chip-select` is not
 emitted. Tool errors are never announced; only `error` parts are.
 
-**CSS parts:** `base`, `part`, `part-streaming`, `part-interrupted`, `interruption`, `resume`, `text`, `reasoning`, `tool-call`, `tool-result`,
+**CSS parts:** `window-notice` (count of omitted items), `base`, `part`, `part-streaming`, `part-interrupted`, `interruption`, `resume`, `text`, `reasoning`, `tool-call`, `tool-result`,
 `tool-result-error`, `citation`, `attachment`, `data`, `audio`, `audio-control`,
 `audio-transcript`, `error`, `retry`. Block display forwards five block parts:
 `tool-block-header`, `tool-block-body`, `tool-block-args`, `tool-block-result`,

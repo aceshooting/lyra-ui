@@ -34,7 +34,7 @@ import { closeIcon, fileIcon } from '../../../internal/icons.js';
 import { styles } from './file-input.styles.js';
 import {
   classifyFiles, dragInstruction, EMPTY_MIME_TYPES, freezeDetail, handleDrop, mimeTypeFilter, rejectionMessages, selectionMessage, snapshotMimeTypes,
-  type FileIntakeDetail, type FileIntakeRejected, type FileIntakeResult,
+  type FileIntakeResult,
 } from './file-intake.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
@@ -88,9 +88,13 @@ function isElementTarget(value: EventTarget): value is Element {
   return candidate.nodeType === 1 && typeof candidate.matches === 'function';
 }
 
-export interface LyraFileInputRejectedFile extends FileIntakeRejected {}
+export interface LyraFileInputRejectedFile {
+  readonly file: File;
+  readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit' | 'maxFiles' | 'maxTotalSize';
+}
 
-export interface LyraFileInputFilesDetail extends FileIntakeDetail {
+export interface LyraFileInputFilesDetail {
+  readonly files: readonly File[];
   readonly rejected: readonly LyraFileInputRejectedFile[];
   /** Remaining allowance under `maxFiles` after this batch, at the control's running count
    *  (retained files, unless `nonRetaining`, plus `heldFileCount`) -- `null` while `maxFiles` is
@@ -552,23 +556,16 @@ export class LyraFileInput extends LyraFormControlElement<LyraFileInputEventMap>
     if (oldCount !== this._fileCount) this.requestUpdate('fileCount', oldCount);
   }
 
-  /** Readonly selected-file count derived from `files`. Assignment is ignored, so a framework
-   * binding that spreads every property cannot throw.
+  /** Readonly selected-file count derived from `files`.
    * @default 0 */
   get fileCount(): number {
     return this._fileCount;
   }
-  set fileCount(_value: number) {
-    // Derived from `files`.
-  }
 
-  /** Readonly state derived from the current drag session. Assignment is ignored.
+  /** Readonly state derived from the current drag session.
    * @default false */
   get dragging(): boolean {
     return this.dragState !== 'default';
-  }
-  set dragging(_value: boolean) {
-    // Derived from the drag session.
   }
 
   private get effectiveMultiple(): boolean {

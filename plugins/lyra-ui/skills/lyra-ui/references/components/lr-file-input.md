@@ -59,7 +59,7 @@ The shared file-intake event detail and rejection types are available as type-on
 - `files: File[] = []` — selected files; programmatic writes are event-silent and immediately
   synchronize rendering, validity, and form submission
 - `readonly fileCount: number` and `readonly dragging: boolean` — derived state. Assigning `files`
-  updates the selected-file count. Drag events update `dragging`. Assigning either is ignored, so a framework binding that spreads every property cannot throw.
+  updates the selected-file count. Drag events update `dragging`.
 - `name: string | null = null`, `required: boolean = false`, `form`, `labels`, `validity`,
   `validationMessage`, and `willValidate` — standard form-associated surface. One file submits as a
   `File`; `multiple` submits repeated entries under `name`

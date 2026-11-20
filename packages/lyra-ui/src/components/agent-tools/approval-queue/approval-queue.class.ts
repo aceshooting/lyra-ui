@@ -159,7 +159,7 @@ export class LyraApprovalQueue extends LyraElement<LyraApprovalQueueEventMap> {
   /** Whether the decision dialog is open. */
   @property({ type: Boolean, reflect: true }) open = false;
   /** Withholds argument editing in the nested approval dialog. */
-  @property({ type: Boolean, reflect: true }) readonly = false;
+  @property({ type: Boolean }) readonly = false;
   /** Accessible name and visible heading. Optional. Omitting it localizes the default
    *  `approvalQueueLabel` message; an explicit empty string renders no visible/accessible label. */
   @property() label?: string;

@@ -2,7 +2,7 @@
 import { isMainModule } from './is-main-module.mjs';
 
 import { readdir, readFile } from 'node:fs/promises';
-import { join, relative } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseProgram, visitAst } from './lib/ast.mjs';
 
@@ -30,7 +30,8 @@ import { parseProgram, visitAst } from './lib/ast.mjs';
 // Raised 25 -> 28: the optional-renderer controllers of `<lr-image-viewer>`, `<lr-video>` and
 // `<lr-graph>` receive `localize` as a forwarding callback whose key parameter is a closed
 // Engine3dMessageKey union (+3); their fallback notices read literal tables and stay decidable.
-const UNRESOLVED_CEILING = 28;
+// Measured 19 unresolved after resolving local aliases and finite imported callback keys.
+const UNRESOLVED_CEILING = 19;
 
 const componentsRoot = fileURLToPath(new URL('../src/components/', import.meta.url));
 const internalRoot = fileURLToPath(new URL('../src/internal/', import.meta.url));
@@ -62,6 +63,30 @@ const unwrap = (node) => {
   while (current && TRANSPARENT.has(current.type)) current = current.expression;
   return current;
 };
+
+/** Read an object made entirely of string-valued data properties. */
+function stringTable(node) {
+  if (node?.type !== 'ObjectExpression' || node.properties.length === 0) return undefined;
+  const byProperty = new Map();
+  for (const property of node.properties) {
+    const value = property.type === 'Property' && !property.computed ? literalString(property.value) : undefined;
+    const name =
+      property.type === 'Property' && !property.computed
+        ? property.key.type === 'Identifier'
+          ? property.key.name
+          : property.key.type === 'Literal'
+            ? String(property.key.value)
+            : undefined
+        : undefined;
+    // One non-literal member and the table stops being a closed set of keys, so the whole
+    // constant is dropped rather than half-resolved into a misleadingly short list.
+    if (value === undefined || name === undefined) {
+      return undefined;
+    }
+    byProperty.set(name, value);
+  }
+  return byProperty;
+}
 
 /**
  * `Map<name, {scalar?: string, byProperty: Map<string, string>, values: string[]}>` for every
@@ -95,28 +120,8 @@ export function stringConstants(program) {
       });
       return;
     }
-    if (init?.type !== 'ObjectExpression') return;
-    const byProperty = new Map();
-    let usable = init.properties.length > 0;
-    for (const property of init.properties) {
-      const value = property.type === 'Property' && !property.computed ? literalString(property.value) : undefined;
-      const name =
-        property.type === 'Property' && !property.computed
-          ? property.key.type === 'Identifier'
-            ? property.key.name
-            : property.key.type === 'Literal'
-              ? String(property.key.value)
-              : undefined
-          : undefined;
-      // One non-literal member and the table stops being a closed set of keys, so the whole
-      // constant is dropped rather than half-resolved into a misleadingly short list.
-      if (value === undefined || name === undefined) {
-        usable = false;
-        break;
-      }
-      byProperty.set(name, value);
-    }
-    if (usable) {
+    const byProperty = stringTable(init);
+    if (byProperty) {
       constants.set(node.id.name, {
         byProperty,
         values: [...byProperty.values()],
@@ -184,18 +189,20 @@ export function resolveKeys(node, constants) {
       return [...new Set(combinations)];
     }
     case 'MemberExpression': {
-      if (expression.object?.type !== 'Identifier') return undefined;
-      const table = constants.get(expression.object.name);
-      if (!table) return undefined;
+      const object = unwrap(expression.object);
+      const byProperty = object?.type === 'Identifier'
+        ? constants.get(object.name)?.byProperty
+        : stringTable(object);
+      if (!byProperty) return undefined;
       // `TABLE[whatever]` can produce any value in the table; `TABLE.named` produces exactly one.
-      if (expression.computed) return [...new Set(table.values)];
+      if (expression.computed) return [...new Set(byProperty.values())];
       const property =
         expression.property?.type === 'Identifier'
           ? expression.property.name
           : expression.property?.type === 'Literal'
             ? String(expression.property.value)
             : undefined;
-      const value = property === undefined ? undefined : table.byProperty.get(property);
+      const value = property === undefined ? undefined : byProperty.get(property);
       return value === undefined ? undefined : [value];
     }
     case 'Identifier': {
@@ -246,6 +253,148 @@ export function defaultStringKeys(source, file = 'localization.ts') {
   return keys;
 }
 
+/** Add bindings from parameters and declarations, dropping destructured property names. */
+function collectBindings(pattern, names) {
+  switch (pattern?.type) {
+    case 'Identifier':
+      names.add(pattern.name);
+      break;
+    case 'TSParameterProperty':
+      collectBindings(pattern.parameter, names);
+      break;
+    case 'RestElement':
+      collectBindings(pattern.argument, names);
+      break;
+    case 'AssignmentPattern':
+      collectBindings(pattern.left, names);
+      break;
+    case 'ArrayPattern':
+      for (const element of pattern.elements) collectBindings(element, names);
+      break;
+    case 'ObjectPattern':
+      for (const property of pattern.properties) {
+        collectBindings(property.type === 'Property' ? property.value : property, names);
+      }
+      break;
+  }
+}
+
+/** Look for a preceding const in the call's own block or a parameterless expression closure. */
+function localAlias(argument, call, parents) {
+  const expression = unwrap(argument);
+  if (expression?.type !== 'Identifier') return undefined;
+  let statement = call;
+  for (let parent = parents.get(statement); parent; parent = parents.get(statement)) {
+    if (parent.type === 'BlockStatement') {
+      for (const declaration of parent.body) {
+        if (declaration === statement) break;
+        if (declaration.type !== 'VariableDeclaration' || declaration.kind !== 'const') continue;
+        const binding = declaration.declarations.find((item) =>
+          item.id.type === 'Identifier' && item.id.name === expression.name
+        );
+        if (binding) return binding.init;
+      }
+      return undefined;
+    }
+    const simpleClosure = parent.type === 'ArrowFunctionExpression' &&
+      parent.params.length === 0 && parent.body === statement;
+    if ((!simpleClosure && parent.type.includes('Function')) || parent.type.startsWith('For') ||
+        parent.type === 'CatchClause' || parent.type === 'ClassExpression' ||
+        parent.type === 'SwitchStatement') return undefined;
+    statement = parent;
+  }
+  return undefined;
+}
+
+function literalTypeKeys(type) {
+  if (!type) return undefined;
+  const members = type.type === 'TSUnionType' ? type.types : [type];
+  const keys = members.map((member) =>
+    member.type === 'TSLiteralType' ? literalString(member.literal) : undefined
+  );
+  return keys.every((key) => key !== undefined) ? keys : undefined;
+}
+
+/** A callback whose only uses are invocations with literal keys needs no type inference. */
+function directCallbackKeys(body, name) {
+  const keys = new Set();
+  let references = 0;
+  let calls = 0;
+  visitAst(body, (node) => {
+    if (node.type === 'Identifier' && node.name === name) references++;
+    if (node.type !== 'CallExpression' || node.callee.type !== 'Identifier' || node.callee.name !== name) return;
+    const key = literalString(node.arguments[0]);
+    if (key !== undefined) {
+      calls++;
+      keys.add(key);
+    }
+  });
+  return calls > 0 && references === calls ? [...keys] : undefined;
+}
+
+/** Collect explicit string-literal unions used by exported functions' callback parameters. */
+function exportedCallbackKeys(program) {
+  const types = new Map();
+  for (const statement of program.body) {
+    const declaration = statement.declaration ?? statement;
+    if (declaration.type !== 'TSTypeAliasDeclaration' || declaration.typeParameters) continue;
+    const keys = literalTypeKeys(declaration.typeAnnotation);
+    if (keys) types.set(declaration.id.name, keys);
+  }
+  const callbacks = new Map();
+  for (const statement of program.body) {
+    const declaration = statement.declaration;
+    if (statement.type !== 'ExportNamedDeclaration' || declaration?.type !== 'FunctionDeclaration') continue;
+    const parameters = declaration.params.map((parameter) => {
+      const callback = parameter.typeAnnotation?.typeAnnotation;
+      if (callback?.type === 'TSFunctionType' && !callback.typeParameters) {
+        const type = callback.params[0]?.typeAnnotation?.typeAnnotation;
+        const keys = type?.type === 'TSTypeReference' && !type.typeArguments
+          ? types.get(type.typeName.name)
+          : literalTypeKeys(type);
+        if (keys) return keys;
+      }
+      return parameter.type === 'Identifier' && callback
+        ? directCallbackKeys(declaration.body, parameter.name)
+        : undefined;
+    });
+    if (parameters.some(Boolean)) callbacks.set(declaration.id.name, parameters);
+  }
+  return callbacks;
+}
+
+function importedCallbackKeys(program, file, modules, localBindings) {
+  const callbacks = new Map();
+  for (const statement of program.body) {
+    if (statement.type !== 'ImportDeclaration' || statement.importKind === 'type') continue;
+    const specifier = literalString(statement.source);
+    if (!specifier?.startsWith('.') || !specifier.endsWith('.js')) continue;
+    const functions = modules.get(join(dirname(file), specifier.replace(/\.js$/, '.ts')));
+    if (!functions) continue;
+    for (const entry of statement.specifiers) {
+      if (entry.type !== 'ImportSpecifier' || entry.importKind === 'type' || localBindings.has(entry.local.name)) continue;
+      const parameters = functions.get(entry.imported.name);
+      if (parameters) callbacks.set(entry.local.name, parameters);
+    }
+  }
+  return callbacks;
+}
+
+function forwardedKeys(argument, call, parents, callbacks) {
+  const expression = unwrap(argument);
+  const arrow = parents.get(call);
+  if (expression?.type !== 'Identifier' || arrow?.type !== 'ArrowFunctionExpression' ||
+      arrow.body !== call || arrow.params[0]?.type !== 'Identifier' ||
+      arrow.params[0].name !== expression.name) return undefined;
+  const invocation = parents.get(arrow);
+  if (invocation?.type !== 'CallExpression' || invocation.callee.type !== 'Identifier') return undefined;
+  const index = invocation.arguments.indexOf(arrow);
+  if (index < 0 || invocation.arguments.slice(0, index).some(({ type }) => type === 'SpreadElement')) {
+    return undefined;
+  }
+  return callbacks.get(invocation.callee.name)?.[index];
+}
+
 /**
  * Every `localize()` call in `source` as `{ keys, line, expression }`.
  *
@@ -253,13 +402,40 @@ export function defaultStringKeys(source, file = 'localization.ts') {
  * property read off a runtime object). Those are the calls the gate cannot vouch for, and the
  * runner counts and lists them rather than passing over them in silence.
  */
-export function localizeCalls(source, file = 'component.ts', sharedConstants = new Map()) {
+export function localizeCalls(source, file = 'component.ts', sharedConstants = new Map(), callbackModules = new Map()) {
   const program = parseProgram(file, source);
   // A module's own declarations win; the shared pool only fills in names it imported.
   const constants = new Map([...sharedConstants, ...stringConstants(program)]);
   const calls = [];
+  const callExpressions = [];
+  const parents = new WeakMap();
+  const localBindings = new Set();
   visitAst(program, (node) => {
-    if (node.type !== 'CallExpression') return;
+    for (const child of Object.values(node)) {
+      for (const item of Array.isArray(child) ? child : [child]) {
+        if (item?.type) parents.set(item, node);
+      }
+    }
+    if (node.type === 'CallExpression') callExpressions.push(node);
+    if (node.type === 'VariableDeclarator') {
+      const statement = parents.get(parents.get(node));
+      if (statement?.type !== 'Program' && statement?.type !== 'ExportNamedDeclaration') {
+        collectBindings(node.id, localBindings);
+      }
+    }
+    if (node.type.includes('Function')) {
+      for (const parameter of node.params ?? []) collectBindings(parameter, localBindings);
+      collectBindings(node.id, localBindings);
+    }
+    if (node.type === 'CatchClause') collectBindings(node.param, localBindings);
+    if (node.type === 'ClassDeclaration' || node.type === 'ClassExpression') {
+      collectBindings(node.id, localBindings);
+    }
+  });
+  // Refuse to resolve an alias's input through a table or scalar that can be shadowed.
+  const aliasConstants = new Map([...constants].filter(([name]) => !localBindings.has(name)));
+  const callbacks = importedCallbackKeys(program, file, callbackModules, localBindings);
+  for (const node of callExpressions) {
     // Helpers that receive `localize` as a parameter call it bare.
     const memberCall =
       node.callee?.type === 'MemberExpression' &&
@@ -267,11 +443,11 @@ export function localizeCalls(source, file = 'component.ts', sharedConstants = n
       node.callee.property?.type === 'Identifier' &&
       node.callee.property.name === 'localize';
     const bareCall = node.callee?.type === 'Identifier' && node.callee.name === 'localize';
-    if (!memberCall && !bareCall) {
-      return;
-    }
+    if (!memberCall && !bareCall) continue;
     const argument = node.arguments?.[0];
-    const keys = argument === undefined ? undefined : resolveKeys(argument, constants);
+    const alias = localAlias(argument, node, parents);
+    const keys = (alias ? resolveKeys(alias, aliasConstants) : resolveKeys(argument, constants)) ??
+      forwardedKeys(argument, node, parents, callbacks);
     calls.push({
       keys: keys && keys.length > 0 ? keys : undefined,
       line: lineAt(source, node.start ?? 0),
@@ -280,7 +456,7 @@ export function localizeCalls(source, file = 'component.ts', sharedConstants = n
           ? '(no argument)'
           : source.slice(argument.start ?? 0, argument.end ?? 0).replace(/\s+/g, ' ').trim(),
     });
-  });
+  }
   return calls;
 }
 
@@ -324,14 +500,24 @@ export function sharedStringConstants(componentSources) {
 }
 
 export function findMissingDefaultStrings(componentSources, localizationSource) {
-  const defaults = defaultStringKeys(localizationSource);
-  const shared = sharedStringConstants(componentSources);
-  return componentSources
-    .flatMap(({ file, source }) =>
-      literalLocalizeCalls(source, file, shared)
-        .filter(({ key }) => !defaults.has(key))
-        .map(({ key, line }) => ({ file, key, line })),
-    )
+  return missingDefaultStrings(scanLocalizeCalls(componentSources), defaultStringKeys(localizationSource));
+}
+
+function scanLocalizeCalls(sources) {
+  const shared = sharedStringConstants(sources);
+  const modules = new Map(sources.map(({ file, source }) =>
+    [file, exportedCallbackKeys(parseProgram(file, source))]
+  ));
+  return sources.flatMap(({ file, source }) =>
+    localizeCalls(source, file, shared, modules).map((call) => ({ ...call, file })),
+  );
+}
+
+function missingDefaultStrings(calls, defaults) {
+  return calls
+    .flatMap(({ file, keys, line }) => (keys ?? [])
+      .filter((key) => !defaults.has(key))
+      .map((key) => ({ file, key, line })))
     .sort((a, b) => a.key.localeCompare(b.key) || a.file.localeCompare(b.file) || a.line - b.line);
 }
 
@@ -366,14 +552,11 @@ async function main() {
     file: relative(packageRoot, file),
     source: sources[index],
   }));
-  const shared = sharedStringConstants(productionSources);
-  const all = productionSources.flatMap(({ file, source }) =>
-    localizeCalls(source, file, shared).map((call) => ({ ...call, file })),
-  );
+  const all = scanLocalizeCalls(productionSources);
   const resolved = all.filter(({ keys }) => keys !== undefined);
   const unresolved = all.filter(({ keys }) => keys === undefined);
   const keys = new Set(resolved.flatMap(({ keys: resolvedKeys }) => resolvedKeys));
-  const missing = findMissingDefaultStrings(productionSources, localizationSource);
+  const missing = missingDefaultStrings(resolved, defaultStringKeys(localizationSource));
   if (missing.length > 0) {
     console.error('Component localize() keys missing from DEFAULT_STRINGS:');
     for (const finding of missing) {

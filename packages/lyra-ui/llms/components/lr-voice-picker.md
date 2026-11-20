@@ -16,6 +16,15 @@
 
 ## `lr-voice-picker`
 
+The picker shares these styling controls with other catalog pickers.
+
+- Trigger geometry — `--lr-picker-expand-size`, `--lr-picker-font-size`, `--lr-picker-gap`, `--lr-picker-max-inline-size`, `--lr-picker-radius`, `--lr-picker-trigger-height`, `--lr-picker-trigger-min-height`, `--lr-picker-trigger-padding`.
+- Trigger colors — `--lr-picker-trigger-fill`, `--lr-picker-trigger-border-color`, `--lr-picker-trigger-hover-bg`, `--lr-picker-trigger-hover-border-color`, `--lr-picker-trigger-active-bg`, `--lr-picker-open-border-color`.
+- Option states — `--lr-picker-option-active-bg`, `--lr-picker-option-disabled-opacity`, `--lr-picker-option-selected-bg`, `--lr-picker-option-selected-border`, `--lr-picker-option-selected-color`, `--lr-picker-option-selected-font-weight`.
+- Synthetic option — `--lr-picker-option-synthetic-border-color`, `--lr-picker-option-synthetic-border-style`, `--lr-picker-option-synthetic-font-style`.
+
+Popup sizing uses the available space reported by `--lr-positioner-available-block-size` and `--lr-positioner-available-inline-size`.
+
 `--lr-voice-picker-trigger-hover-bg` and `--lr-voice-picker-trigger-active-bg` set the trigger background on hover and press.
 
 Picking the current voice closes the list without emitting a change. A rejected preview address or failed playback announces `voicePickerPreviewFailed`.

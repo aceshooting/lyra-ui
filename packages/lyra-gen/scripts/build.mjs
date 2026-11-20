@@ -3,7 +3,6 @@ import { readdirSync, readFileSync, rmSync, realpathSync, writeFileSync } from '
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { transformSync } from 'esbuild';
-import { checkGenBuildArtifacts } from './check-build-artifacts.mjs';
 
 export const packageDirectory = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -14,7 +13,7 @@ export function runCommand(command, args, directory) {
 }
 
 /** Remove only this package's emitted output before compiling, then verify the emitted boundary. */
-export function buildPackage(directory = packageDirectory, { run = runCommand, check = checkGenBuildArtifacts } = {}) {
+export function buildPackage(directory = packageDirectory, { run = runCommand, check = cwd => runCommand(process.execPath, ['scripts/check-build-artifacts.mjs'], cwd) } = {}) {
   rmSync(join(directory, 'dist'), { recursive: true, force: true });
   run(process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm', ['exec', 'tsc', '-p', 'tsconfig.build.json'], directory);
   const outputDirectory = join(directory, 'dist');

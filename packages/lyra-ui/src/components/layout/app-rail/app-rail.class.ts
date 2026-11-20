@@ -1,3 +1,4 @@
+import { OwnedResizeObserver } from '../../../internal/owned-observer.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { VetoWriteGuard, markVetoGuardWrite } from '../../../internal/veto-write-guard.js';
 import { layoutScale } from '../../../internal/layout-scale.js';
@@ -982,10 +983,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   private hotkeyWindow?: Window;
   private iconOnlyMatches = false;
   private mobileMatches = false;
-  private mqIconOnly?: MediaQueryList;
-  private mqMobile?: MediaQueryList;
-  private mqIconOnlyListener?: (event: MediaQueryListEvent) => void;
-  private mqMobileListener?: (event: MediaQueryListEvent) => void;
+  private releaseMediaQueries?: () => void;
   // Derived from mode === 'mobile' && open -- tracked as its own field
   // (rather than recomputed inline everywhere) so willUpdate can detect the
   // specific false->true/true->false transition regardless of which of the
@@ -1394,7 +1392,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
       }
     }
     this.observeResizerPosition();
-    if (!this.resizerPositionObserver || changed.has('railWidth') || changed.has('frame') ||
+    if (!this.resizerPositionObserver.active || changed.has('railWidth') || changed.has('frame') ||
         changed.has('mode') || changed.has('resizable') || changed.has('dir')) this.syncResizerPosition();
   }
 
@@ -1666,30 +1664,16 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     if (!view?.matchMedia) return;
     const iconOnlyQuery = view.matchMedia(`(max-width: ${this.iconOnlyBreakpoint})`);
     const mobileQuery = view.matchMedia(`(max-width: ${this.mobileBreakpoint})`);
-    const iconOnlyListener = (event: MediaQueryListEvent): void => {
-      if (
-        this.mqIconOnly !== iconOnlyQuery ||
-        !this.isConnected ||
-        this.ownerDocument.defaultView !== view
-      ) {
-        return;
-      }
-      this.onIconOnlyChange(event);
+    const guard = (handle: (event: MediaQueryListEvent) => void) => (event: MediaQueryListEvent) => {
+      if (this.releaseMediaQueries === release && this.isConnected && this.ownerDocument.defaultView === view) handle(event);
     };
-    const mobileListener = (event: MediaQueryListEvent): void => {
-      if (
-        this.mqMobile !== mobileQuery ||
-        !this.isConnected ||
-        this.ownerDocument.defaultView !== view
-      ) {
-        return;
-      }
-      this.onMobileChange(event);
+    const iconOnlyListener = guard(this.onIconOnlyChange);
+    const mobileListener = guard(this.onMobileChange);
+    const release = () => {
+      iconOnlyQuery.removeEventListener('change', iconOnlyListener);
+      mobileQuery.removeEventListener('change', mobileListener);
     };
-    this.mqIconOnly = iconOnlyQuery;
-    this.mqMobile = mobileQuery;
-    this.mqIconOnlyListener = iconOnlyListener;
-    this.mqMobileListener = mobileListener;
+    this.releaseMediaQueries = release;
     iconOnlyQuery.addEventListener('change', iconOnlyListener);
     mobileQuery.addEventListener('change', mobileListener);
     this.iconOnlyMatches = iconOnlyQuery.matches;
@@ -1705,16 +1689,9 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
   }
 
   private teardownMediaQueries(): void {
-    if (this.mqIconOnly && this.mqIconOnlyListener) {
-      this.mqIconOnly.removeEventListener('change', this.mqIconOnlyListener);
-    }
-    if (this.mqMobile && this.mqMobileListener) {
-      this.mqMobile.removeEventListener('change', this.mqMobileListener);
-    }
-    this.mqIconOnly = undefined;
-    this.mqMobile = undefined;
-    this.mqIconOnlyListener = undefined;
-    this.mqMobileListener = undefined;
+    const release = this.releaseMediaQueries;
+    this.releaseMediaQueries = undefined;
+    release?.();
   }
 
   // Split into two single-query listeners (rather than one shared handler
@@ -2084,7 +2061,7 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     this.requestRailResize(next);
   };
 
-  private resizerPositionObserver?: ResizeObserver;
+  private readonly resizerPositionObserver = new OwnedResizeObserver(this, () => this.syncResizerPosition());
   private observedResizer?: HTMLElement;
 
   private observeResizerPosition(): void {
@@ -2095,21 +2072,17 @@ export class LyraAppRail extends LyraElement<LyraAppRailEventMap> {
     }
     if (this.observedResizer === resizer) return;
     this.disconnectResizerPosition();
-    const ResizeObserverConstructor = this.ownerDocument.defaultView?.ResizeObserver;
-    if (!ResizeObserverConstructor) return;
-    // Width transitions and consumer token changes continue after Lit's update. Observe the
-    // allocated boxes so the separator stays on the painted edge, including a resized hit target.
-    this.resizerPositionObserver = new ResizeObserverConstructor(() => this.syncResizerPosition());
-    this.resizerPositionObserver.observe(this, { box: 'border-box' });
-    this.resizerPositionObserver.observe(this.baseEl, { box: 'border-box' });
-    this.resizerPositionObserver.observe(resizer, { box: 'border-box' });
+    // Width transitions can continue after a render, including on the separator hit target.
+    for (const target of [this, this.baseEl, resizer]) {
+      this.resizerPositionObserver.observe(target, { box: 'border-box' });
+    }
+    if (!this.resizerPositionObserver.active) return;
     this.observedResizer = resizer;
     this.syncResizerPosition();
   }
 
   private disconnectResizerPosition(): void {
-    this.resizerPositionObserver?.disconnect();
-    this.resizerPositionObserver = undefined;
+    this.resizerPositionObserver.clear();
     this.observedResizer = undefined;
   }
 

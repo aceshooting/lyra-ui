@@ -55,7 +55,7 @@ export interface LyraRadioGroupEventMap {
   input: Event;
   change: Event;
   'lr-input': CustomEvent<{ value: string; option: LyraRadio; radio: LyraRadio }>;
-  'lr-change': CustomEvent<{ value: string; previousValue: string; option: LyraRadio; radio: LyraRadio }>;
+  'lr-change': CustomEvent<{ value: string; previousValue?: string; option: LyraRadio; radio: LyraRadio }>;
   'lr-activate': CustomEvent<{ value: string; option: LyraRadio; radio: LyraRadio }>;
   'lr-invalid': CustomEvent<null>;
 }

@@ -18,7 +18,7 @@
 
 Its composed icon-button controls read the shared `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color` and `--lr-icon-button-radius` tokens for their resting paint.
 
-The `copyable` property reflects to the host attribute and defaults to false. Listen for `lr-copy-error` for
+Set `copyable` by property or attribute to show the copy button. It defaults to false. Listen for `lr-copy-error` for
 a clipboard failure or check `event.composedPath()[0]` to identify the origin of a bubbling `lr-error`.
 Apply `max-height`, `context-lines`, `layout` and `copyable` directly to a standalone diff viewer.
 An overflowing diff becomes a keyboard tab stop named by the host’s `aria-label` or the localized `diffViewLabel`.

@@ -12,20 +12,19 @@
  * locale-data lookup that is orders of magnitude slower than reusing an existing instance.
  */
 
+import {
+  byteFormat, safeByteUnitStep, type ByteUnitDisplay as LyraFormatDisplay, type ByteUnitFamily as LyraFormatBytesUnit,
+} from '../internal/bytes.js';
 import { getDateTimeFormat, getNumberFormat, getRelativeTimeFormat } from '../internal/intl-cache.js';
 import { resolveActiveOrExplicitLocale } from '../internal/localization-runtime.js';
 import { finiteInteger } from '../internal/numbers.js';
 import {
-  byteFormat,
   relativeTimeFormatOptions,
   resolveDateSource,
   resolveRelativeTimeState,
-  safeByteUnitStep,
-  type LyraFormatBytesUnit,
-  type LyraFormatDisplay,
   type LyraRelativeTimeNumeric,
   type LyraRelativeTimeUnit,
-} from '../components/utility/format/format-options.js';
+} from '../internal/locale-date.js';
 
 /** A number, `bigint`, or decimal/integer string. Passing a `bigint` or string preserves every
  * digit through formatting -- a plain `number` is IEEE-754 float64 and cannot exactly represent

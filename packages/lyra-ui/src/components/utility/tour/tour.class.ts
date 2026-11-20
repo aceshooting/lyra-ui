@@ -694,9 +694,7 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
   }
 
   private clampIndex(index: number): number {
-    const total = this.steps.length;
-    if (total === 0) return 0;
-    return finiteInteger(index, 0, 0, total - 1);
+    return finiteInteger(index, 0, 0, Math.max(0, this.steps.length - 1));
   }
 
   private transitionTo(index: number, via: StepNavigation): void {
@@ -1081,12 +1079,11 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
     // accessible name either.
     const authoredName = this.accessibleLabel;
     const useHeading = authoredName === null && headingName.length > 0;
-    const suppliedName = authoredName?.trim() ?? '';
     const fallbackName = this.localize('tourStepOf', undefined, {
       current: this.formatProgressNumber(this.activeIndex + 1),
       total: this.formatProgressNumber(total),
     });
-    const panelName = authoredName === null ? fallbackName : suppliedName;
+    const panelName = authoredName?.trim() ?? fallbackName;
     const hasBodyContent = this.hasSlotContent || !!step.content;
     const describedBy = [hasBodyContent ? this.bodyId : '', this.withoutProgress ? '' : this.progressTextId]
       .filter((id) => id.length > 0)

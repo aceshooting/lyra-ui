@@ -85,10 +85,8 @@ as their standalone fallback. An explicit `variant` maps all generic slots local
 unset preserves an ancestor's mapping. Explicit `appearance` works with either source and uses the
 same brand fallback when there is no surrounding context. Public callout hooks are consumed at use
 sites through private defaults, so a value inherited from a theme ancestor has the same authority
-as one set directly on the callout. The close button paints a translucent hover fill over the
-panel using `--lr-color-mix-partner` and `--lr-color-mix-hover`. Set `--lr-callout-close-hover-bg`
-to override the hover fill independently of the panel. To retain the previous brand-colored hover,
-set it to `var(--lr-color-brand-quiet)`.
+as one set directly on the callout. The close button uses `--lr-color-brand-quiet` for its hover fill.
+Set `--lr-callout-close-hover-bg` to override that fill independently of the panel.
 
 Three more: `--lr-callout-font-size` (private default
 `var(--lr-form-control-font-size, var(--lr-font-size-m))` — the callout's text size; each explicit

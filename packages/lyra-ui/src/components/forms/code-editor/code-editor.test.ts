@@ -1716,6 +1716,19 @@ describe('lr-code-editor size', () => {
     expect(parseFloat(xs.fontSize)).to.be.below(parseFloat(m.fontSize));
   });
 
+  it('uses the small space token at medium size and honors both levels of padding override', async () => {
+    for (const size of ['m', 'medium'] as const) {
+      const el = await fixture<LyraCodeEditor>(html`<lr-code-editor size=${size}
+        style="--lr-space-s: 7px; --lr-space-m: 19px"></lr-code-editor>`);
+      const padding = () => getComputedStyle(textareaOf(el)).paddingTop;
+      expect(padding()).to.equal('7px');
+      el.style.setProperty('--lr-form-control-padding-inline', '11px');
+      expect(padding()).to.equal('11px');
+      el.style.setProperty('--lr-code-editor-padding', '13px');
+      expect(padding()).to.equal('13px');
+    }
+  });
+
   it('grows padding/font-size/min-block-size at "xl" beyond the default tier', async () => {
     const mEl = await fixture<LyraCodeEditor>(
       html`<lr-code-editor value="one"></lr-code-editor>`,

@@ -2313,14 +2313,21 @@ it('reports an inexact search when admitted Unicode text exceeds the folding wor
   expect(detail?.matchCountExact).to.equal(true);
 });
 
-it('reflects both property transitions for the opt-in copy action', async () => {
+it('updates the opt-in copy action while preserving the authored host attribute', async () => {
   const el = await fixture<LyraDiffView>(html`<lr-diff-view></lr-diff-view>`);
   for (const enabled of [false, true, false]) {
     el.copyable = enabled;
     await el.updateComplete;
-    expect(el.hasAttribute('copyable')).to.equal(enabled);
+    expect(el.hasAttribute('copyable')).to.equal(false);
     expect(Boolean(el.shadowRoot!.querySelector('[part="copy-button"]'))).to.equal(enabled);
   }
+  el.setAttribute('copyable', '');
+  await el.updateComplete;
+  expect(el.copyable).to.equal(true);
+  el.copyable = false;
+  await el.updateComplete;
+  expect(el.hasAttribute('copyable')).to.equal(true);
+  expect(el.shadowRoot!.querySelector('[part="copy-button"]') === null).to.equal(true);
 });
 
 it('applies the action hover and pressed colors to the rendered buttons', async () => {

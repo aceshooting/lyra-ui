@@ -1,3 +1,5 @@
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { ViewerSourceController, ViewerSourceUrlNotAllowedError, type ViewerSourceToken } from '../../../internal/viewer-source-controller.js';
 import { property, state } from 'lit/decorators.js';
@@ -119,8 +121,19 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
   });
   private readonly announcements = new ViewerAnnouncementController(this);
 
+  private releaseScrollRegion?: () => void;
+
+  private syncScrollRegion(): void {
+    this.releaseScrollRegion?.();
+    const body = this.renderRoot.querySelector<HTMLElement>('[part="body"]');
+    this.releaseScrollRegion = body && this.isConnected
+      ? makeScrollRegionFocusable(body, normalizeLabel(this.name) ?? this.localize('htmlViewerLabel'))
+      : undefined;
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncScrollRegion();
     this.announcements.transition(
       'load',
       this.fetchState.kind,
@@ -132,6 +145,7 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) this.syncScrollRegion();
     this.announcements.connect();
     if (this.detached.cancel() && this.fetchState.kind !== 'loading') return;
     if (this.hasUpdated && this.src) this.scheduleAfterUpdate(() => { void this.load(); });
@@ -144,6 +158,8 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
 
   override disconnectedCallback(): void {
     this.announcements.disconnect();
+    this.releaseScrollRegion?.();
+    this.releaseScrollRegion = undefined;
     super.disconnectedCallback();
     this.detached.schedule();
   }

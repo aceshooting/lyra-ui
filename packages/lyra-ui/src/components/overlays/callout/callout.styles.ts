@@ -6,7 +6,7 @@ export const styles = css`
     box-sizing: border-box;
     max-inline-size: 100%;
     /* The close hover is independently themeable so retinting it never changes the host surface. */
-    --_lr-callout-close-hover-bg: color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover));
+    --_lr-callout-close-hover-bg: var(--lr-color-brand-quiet);
     /* This callout's own default paint for the close control, set on the HOST for organization
        only -- nothing here reads an --lr-icon-button-* token to compute it. The close-button rule
        below writes these onto lr-icon-button's own --_lr-icon-button-<token>-default tier (never

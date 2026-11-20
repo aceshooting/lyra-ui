@@ -218,7 +218,6 @@ assert.equal(
   'two modules disagreeing about a name drops it rather than merging an over-wide key set',
 );
 
-console.log('Default-string checker self-tests passed.');
 
 // Helpers that receive the component's localize function call it bare; those keys are checked too.
 const bareHelper = `
@@ -236,3 +235,83 @@ assert.deepEqual(
   ['misspelled-key'],
   'a misspelled key in a bare localize() call fails the gate',
 );
+
+const localAliases = `
+  const LABELS = { known: 'present', absent: 'missingTableKey' };
+  function render(kind) {
+    const label = LABELS[kind];
+    localize(label);
+    const error = kind ? 'present' : 'missingConditionalKey';
+    const message = () => localize(error);
+    const inline = { primary: 'present', secondary: 'missingInlineKey' }[kind];
+    localize(inline);
+    const runtime = getRuntimeValue();
+    localize(runtime);
+    ((label) => localize(label))(runtime);
+    for (const label of runtime) localize(label);
+    const openTable = { primary: 'present', secondary: runtime }[kind];
+    localize(openTable);
+  }
+`;
+assert.deepEqual(
+  findMissingDefaultStrings([{ file: 'aliases.ts', source: localAliases }], localization)
+    .map(({ key }) => key),
+  ['missingConditionalKey', 'missingInlineKey', 'missingTableKey'],
+  'finite aliases still report missing English defaults',
+);
+assert.deepEqual(
+  unresolvedLocalizeCalls(localAliases).map(({ expression }) => expression),
+  ['runtime', 'label', 'label', 'openTable'],
+  'runtime values, shadowed parameters and incomplete tables stay unresolved',
+);
+
+assert.deepEqual(
+  unresolvedLocalizeCalls(`
+    const LABELS = { primary: 'present' };
+    function renderOther({ LABELS }, kind) {
+      const shadowedTable = LABELS[kind];
+      localize(shadowedTable);
+    }
+  `).map(({ expression }) => expression),
+  ['shadowedTable'],
+  'a runtime table parameter does not resolve through a shadowed module constant',
+);
+
+const forwardingSources = [
+  {
+    file: 'internal/format.ts',
+    source: `
+      type Unit = 'present' | 'missingUnit';
+      export function format(translate: (key: Unit) => string) { return translate('present'); }
+      export function region(translate: (key: 'missingRegion') => string) { return translate('missingRegion'); }
+      export function notice(translate: (key: string) => string) { return translate('missingNotice'); }
+      export function unknown(translate: (key: string) => string) { return translate(getRuntimeValue()); }
+      export function escapes(translate: (key: string) => string) {
+        giveToOtherCode(translate);
+        return translate('notANarrowedKey');
+      }
+    `,
+  },
+  {
+    file: 'components/example.ts',
+    source: `
+      import { format as formatUnit, region, notice, unknown, escapes } from '../internal/format.js';
+      import { format } from './unrelated.js';
+      formatUnit(key => this.localize(key));
+      region(key => this.localize(key));
+      notice(key => this.localize(key));
+      unknown(key => this.localize(key));
+      escapes(key => this.localize(key));
+      format(key => this.localize(key));
+    `,
+  },
+];
+assert.deepEqual(
+  findMissingDefaultStrings(forwardingSources, localization)
+    .filter(({ file }) => file === 'components/example.ts')
+    .map(({ key }) => key),
+  ['missingNotice', 'missingRegion', 'missingUnit'],
+  'imported forwarders expose actual finite keys while runtime, escaped and unrelated callbacks remain unresolved',
+);
+
+console.log('Default-string checker self-tests passed.');

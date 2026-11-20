@@ -1,3 +1,5 @@
+import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { makeScrollRegionFocusable } from '../../../internal/scroll-region.js';
 import { splitLines } from '../../../internal/text-lines.js';
 import { bdi } from '../../../internal/bidi.js';
 import { ViewerSourceController, ViewerSourceUrlNotAllowedError, type ViewerSourceToken } from '../../../internal/viewer-source-controller.js';
@@ -147,8 +149,19 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
   private lastLoadSrc = '';
   private readonly announcements = new ViewerAnnouncementController(this);
 
+  private releaseScrollRegion?: () => void;
+
+  private syncScrollRegion(): void {
+    this.releaseScrollRegion?.();
+    const body = this.renderRoot.querySelector<HTMLElement>('[part="body"]');
+    this.releaseScrollRegion = body && this.isConnected
+      ? makeScrollRegionFocusable(body, normalizeLabel(this.name) ?? this.localize('contactViewerLabel'))
+      : undefined;
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated) this.syncScrollRegion();
     this.announcements.connect();
     if (this.detached.cancel() && this.fetchState.kind !== 'loading') return;
     if (this.hasUpdated && this.src) {
@@ -162,6 +175,8 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
 
   override disconnectedCallback(): void {
     this.announcements.disconnect();
+    this.releaseScrollRegion?.();
+    this.releaseScrollRegion = undefined;
     super.disconnectedCallback();
     this.detached.schedule();
   }
@@ -174,6 +189,7 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncScrollRegion();
     this.announcements.transition(
       'load',
       this.fetchState.kind,

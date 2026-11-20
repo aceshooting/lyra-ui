@@ -1,3 +1,5 @@
+import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { twoFrames } from '../../../../test/frames.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import './html-viewer.js';
@@ -10,6 +12,44 @@ import type { LyraHighlight } from '../document-viewer/anchors.js';
 function response(body: string, ok = true): Response { return { ok, status: ok ? 200 : 500, statusText: ok ? 'OK' : 'Error', text: () => Promise.resolve(body) } as Response; }
 
 describe('lr-html-viewer', () => {
+
+  it('makes the body a named keyboard stop only while content overflows', async () => {
+    const original = window.fetch;
+    window.fetch = async () => response('<p>Read this paragraph.</p>'.repeat(20));
+    try {
+      const el = await fixture<HTMLElementTagNameMap['lr-html-viewer']>(html`
+        <lr-html-viewer name="Report" max-height="100px" src="https://example.test/document.html"></lr-html-viewer>
+      `);
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="html"]') !== null);
+      const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+      await waitUntil(() => body.getAttribute('tabindex') === '0');
+      expect(body.scrollHeight).to.be.greaterThan(body.clientHeight);
+      expect(body.getAttribute('role')).to.equal('region');
+      expect(body.getAttribute('aria-label')).to.equal('Report');
+      await focusByKeyboard(body);
+      expect(el.shadowRoot!.activeElement === body).to.equal(true);
+      await sendKeys({ press: 'ArrowDown' });
+      await waitUntil(() => body.scrollTop > 0, 'arrow key did not scroll the focused body');
+
+      const parent = el.parentElement!;
+      el.remove();
+      el.name = '  ';
+      el.strings = { htmlViewerLabel: 'Document body' };
+      await el.updateComplete;
+      expect(body.hasAttribute('tabindex')).to.equal(false);
+      parent.append(el);
+      await waitUntil(() => body.getAttribute('tabindex') === '0');
+      expect(body.getAttribute('aria-label')).to.equal('Document body');
+
+      el.maxHeight = 'none';
+      await waitUntil(() => !body.hasAttribute('tabindex'));
+      expect(body.scrollHeight).to.be.at.most(body.clientHeight + 1);
+      expect(body.hasAttribute('role')).to.equal(false);
+      expect(body.hasAttribute('aria-label')).to.equal(false);
+    } finally {
+      window.fetch = original;
+    }
+  });
   it('does not search its own empty-state text', async () => {
     const el = await fixture<LyraHtmlViewer>(html`<lr-html-viewer></lr-html-viewer>`);
     const note = el.shadowRoot!.querySelector('[part="body"]')!.textContent!.trim();

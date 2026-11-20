@@ -5,7 +5,7 @@ import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import "./file-input.js";
 import {
   DEFAULT_MAX_FILE_SIZE_BYTES,
-  type LyraFileInput,
+  LyraFileInput,
 } from "./file-input.js";
 import { resolveValidityAnchor } from "../../../internal/anchored-validity.js";
 import { ANNOUNCEMENT_SINK_ATTRIBUTE } from "../../../internal/announcer.js";
@@ -1856,12 +1856,13 @@ describe("reviewed Web Awesome Pro file-input surface", () => {
       html`<lr-file-input></lr-file-input>`
     )) as LyraFileInput;
 
-    expect(() => {
-      (el as unknown as { fileCount: number }).fileCount = 4;
-    }).not.to.throw();
-    expect(() => {
-      (el as unknown as { dragging: boolean }).dragging = true;
-    }).not.to.throw();
+    for (const name of ['fileCount', 'dragging'] as const) {
+      const descriptor = Object.getOwnPropertyDescriptor(LyraFileInput.prototype, name);
+      expect(typeof descriptor?.get).to.equal('function');
+      expect(descriptor?.set).to.equal(undefined);
+    }
+    expect(Reflect.set(el, 'fileCount', 4)).to.be.false;
+    expect(Reflect.set(el, 'dragging', true)).to.be.false;
     expect(el.fileCount).to.equal(0);
     expect(el.dragging).to.equal(false);
 
@@ -2925,17 +2926,6 @@ it("discards a non-array write to files instead of throwing", async () => {
   )) as LyraFileInput;
   el.files = "not-an-array" as unknown as File[];
   expect(el.files).to.deep.equal([]);
-});
-
-it("ignores a same-value write to the readonly dragging property", async () => {
-  const el = (await fixture(
-    html`<lr-file-input></lr-file-input>`
-  )) as LyraFileInput;
-  expect(el.dragging).to.be.false;
-  expect(() => {
-    (el as unknown as { dragging: boolean }).dragging = false;
-  }).not.to.throw();
-  expect(el.dragging).to.be.false;
 });
 
 it("trims files to a single entry when multiple flips off while several are selected", async () => {

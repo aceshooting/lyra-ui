@@ -22387,8 +22387,8 @@ number; maxPx?: number; minPercent?: number; maxPercent?: number }`, index-align
   leaves the last one open). Assigning it is silent, like `sizes`; a `sizes` assignment made
   together with it may already describe the fold (zero entries for the folded panels), otherwise a
   `sizes` value with a non-zero entry for a folded panel is rejected like any invalid layout. A
-  valid `storageKey` layout restores the set when this property is unset. An explicitly assigned
-  empty array expands every panel using its saved share. The
+  valid `storageKey` layout restores the set when the initial list is empty or omitted. Assigning
+  an empty list after initialization expands every panel using its saved share. The
   responsive `collapse` pane is independent: while it is `'rail'`/`'floating'` its own state governs
   that panel, and a per-panel fold of the same panel shows again once it is `'wide'`.
 
@@ -31878,10 +31878,8 @@ as their standalone fallback. An explicit `variant` maps all generic slots local
 unset preserves an ancestor's mapping. Explicit `appearance` works with either source and uses the
 same brand fallback when there is no surrounding context. Public callout hooks are consumed at use
 sites through private defaults, so a value inherited from a theme ancestor has the same authority
-as one set directly on the callout. The close button paints a translucent hover fill over the
-panel using `--lr-color-mix-partner` and `--lr-color-mix-hover`. Set `--lr-callout-close-hover-bg`
-to override the hover fill independently of the panel. To retain the previous brand-colored hover,
-set it to `var(--lr-color-brand-quiet)`.
+as one set directly on the callout. The close button uses `--lr-color-brand-quiet` for its hover fill.
+Set `--lr-callout-close-hover-bg` to override that fill independently of the panel.
 
 Three more: `--lr-callout-font-size` (private default
 `var(--lr-form-control-font-size, var(--lr-font-size-m))` — the callout's text size; each explicit
@@ -33555,7 +33553,7 @@ fresh `query` is the proxy for "the caret may have moved").
 
 Its composed icon-button controls read the shared `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color` and `--lr-icon-button-radius` tokens for their resting paint.
 
-The `copyable` property reflects to the host attribute and defaults to false. Listen for `lr-copy-error` for
+Set `copyable` by property or attribute to show the copy button. It defaults to false. Listen for `lr-copy-error` for
 a clipboard failure or check `event.composedPath()[0]` to identify the origin of a bubbling `lr-error`.
 Apply `max-height`, `context-lines`, `layout` and `copyable` directly to a standalone diff viewer.
 An overflowing diff becomes a keyboard tab stop named by the host’s `aria-label` or the localized `diffViewLabel`.
@@ -37733,9 +37731,9 @@ its neutral drag state, before an accept/reject verdict) and `--lr-drop-zone-ove
 `--lr-drop-zone-overlay-padding` (default `var(--lr-space-l)`, retuned per `size` tier),
 `--lr-drop-zone-overlay-gap` (default `var(--lr-space-xs)`), and the drag accept/reject highlight —
 `--lr-drop-zone-accept-border-color`/`--lr-drop-zone-accept-bg` (defaults `var(--lr-color-success)`/
-`color-mix(in srgb, var(--lr-color-success) 8%, transparent)`) and
+`color-mix(in srgb, var(--lr-color-success) 12%, transparent)`) and
 `--lr-drop-zone-reject-border-color`/`--lr-drop-zone-reject-bg` (defaults `var(--lr-color-danger)`/
-`color-mix(in srgb, var(--lr-color-danger) 8%, transparent)`) — independently overridable on the
+`color-mix(in srgb, var(--lr-color-danger) 12%, transparent)`) — independently overridable on the
 element or any ancestor, mirroring `lr-file-input`'s equivalent hooks.
 
 **Optional peer deps:** none.
@@ -37835,7 +37833,7 @@ The shared file-intake event detail and rejection types are available as type-on
 - `files: File[] = []` — selected files; programmatic writes are event-silent and immediately
   synchronize rendering, validity, and form submission
 - `readonly fileCount: number` and `readonly dragging: boolean` — derived state. Assigning `files`
-  updates the selected-file count. Drag events update `dragging`. Assigning either is ignored, so a framework binding that spreads every property cannot throw.
+  updates the selected-file count. Drag events update `dragging`.
 - `name: string | null = null`, `required: boolean = false`, `form`, `labels`, `validity`,
   `validationMessage`, and `willValidate` — standard form-associated surface. One file submits as a
   `File`; `multiple` submits repeated entries under `name`
@@ -42540,6 +42538,10 @@ announced. In particular, unavailable data labels do not remove generated table 
 
 ## `lr-lite-chart`
 
+The data table disclosure uses `--lr-lite-chart-data-table-toggle-bg`, `--lr-lite-chart-data-table-toggle-color` and
+`--lr-lite-chart-data-table-toggle-border-color` at rest. Set `--lr-lite-chart-data-table-toggle-inline-size` for its logical width
+and `--lr-lite-chart-data-table-toggle-justify` for its grid alignment. Each falls back to the corresponding chart-family token.
+
 `syncGroup: string = ''` (attribute `sync-group`) opts into
 [Synchronized categorical charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md#synchronized-categorical-charts). Its DOM `sync-crosshair` and
 `sync-tooltip` parts use the shared crosshair and tooltip tokens described there.
@@ -43052,7 +43054,9 @@ failure transition is announced through the shared document-level light-DOM asse
 `--lr-chart-tick-color`, `--lr-chart-tick-font-size`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
 `--lr-chart-tooltip-color`, `--lr-chart-legend-item-hover-bg`,
 `--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,
-`--lr-chart-data-table-button-active-bg`, `--lr-chart-data-table-toggle-hover-bg`,
+`--lr-chart-data-table-button-active-bg`, `--lr-chart-data-table-toggle-bg`, `--lr-chart-data-table-toggle-border-color`,
+`--lr-chart-data-table-toggle-color`, `--lr-chart-data-table-toggle-inline-size`,
+`--lr-chart-data-table-toggle-justify`, `--lr-chart-data-table-toggle-hover-bg`,
 `--lr-chart-data-table-toggle-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
 `--lr-chart-reset-zoom-button-active-bg`, `--lr-chart-canvas-hover-outline-width`, and
 `--lr-chart-canvas-hover-outline-color`, `--lr-chart-pattern-step`, plus `--lr-chart-legend-side-max` — all inherited from `LyraChart`, identical in meaning and default (see
@@ -43202,7 +43206,9 @@ inherited from `LyraChart`, unaffected by the binning logic).
 `--lr-chart-tick-color`, `--lr-chart-tick-font-size`, `--lr-chart-legend-color`, `--lr-chart-tooltip-bg`,
 `--lr-chart-tooltip-color`, `--lr-chart-legend-item-hover-bg`,
 `--lr-chart-legend-item-active-bg`, `--lr-chart-data-table-button-hover-bg`,
-`--lr-chart-data-table-button-active-bg`, `--lr-chart-data-table-toggle-hover-bg`,
+`--lr-chart-data-table-button-active-bg`, `--lr-chart-data-table-toggle-bg`, `--lr-chart-data-table-toggle-border-color`,
+`--lr-chart-data-table-toggle-color`, `--lr-chart-data-table-toggle-inline-size`,
+`--lr-chart-data-table-toggle-justify`, `--lr-chart-data-table-toggle-hover-bg`,
 `--lr-chart-data-table-toggle-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
 `--lr-chart-reset-zoom-button-active-bg`, `--lr-chart-canvas-hover-outline-width`, and
 `--lr-chart-canvas-hover-outline-color`, `--lr-chart-pattern-step`, plus `--lr-chart-legend-side-max` — inherited from `LyraChart`, identical in meaning, together with the
@@ -43248,6 +43254,10 @@ their semantics, defaults, and gotchas.
 ---
 
 ## `lr-box-plot`
+
+The data table disclosure uses `--lr-box-plot-data-table-toggle-bg`, `--lr-box-plot-data-table-toggle-color` and
+`--lr-box-plot-data-table-toggle-border-color` at rest. Set `--lr-box-plot-data-table-toggle-inline-size` for its logical width
+and `--lr-box-plot-data-table-toggle-justify` for its grid alignment. Each falls back to the corresponding chart-family token.
 
 Box-and-whisker chart from a precomputed five-number summary (no raw sample data sent to the
 browser). Does **not** extend `LyraChart` — a deliberately bespoke API.
@@ -44781,7 +44791,7 @@ matching `.eml` filenames in `<lr-document-viewer>`. Fail-closed behavior is exp
 
 ## `lr-calendar-viewer`
 
-`max-events` limits the number of events admitted per document (default 250, maximum 2,500). Changing it reloads the current source.
+`maxEvents` (attribute `max-events`) limits the number of events admitted per document (default 250, maximum 2,500). Changing it reloads the current source.
 
 Fetches and parses `.ics` calendars with the optional `ical.js` peer and renders each VEVENT as
 plain text, including its title, start/end time, location, and description. RFC 5545 `DATE` values
@@ -45266,6 +45276,9 @@ makes the host the sole named semantic owner; an explicitly empty host label kee
 label. `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
 
+The viewer body becomes a named keyboard scroll region while its content exceeds its allocation.
+It leaves the tab order when the content fits.
+
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on sanitized HTML text and emit the shared search/anchor events.
 
@@ -45474,7 +45487,7 @@ each parse pass remains synchronous.
 
 ## `lr-contact-viewer`
 
-`max-contacts` limits the number of contacts admitted per document (default 250, maximum 2,500). Changing it reloads the current source.
+`maxContacts` (attribute `max-contacts`) limits the number of contacts admitted per document (default 250, maximum 2,500). Changing it reloads the current source.
 
 Fetches a vCard document and renders one accessible card per contact. The document registry matches
 `.vcf` filenames and the `FN`, `ORG`, `TEL`, `EMAIL`, and `ADR` fields are displayed. `N` is parsed
@@ -45494,6 +45507,9 @@ precedence over `name` by attribute presence, including an explicitly empty valu
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract. Fragment
 resolution is an exact DOM `id` lookup, but generated contact cards define no fragment ids, so a
 fragment jump reports `found: false`. Use a text-quote anchor for contact content.
+
+The viewer body becomes a named keyboard scroll region while its content exceeds its allocation.
+It leaves the tab order when the content fits.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on rendered contact text and emit the shared search/anchor events.
@@ -45738,7 +45754,7 @@ prevents stale page/text/region work from scrolling or reporting success.
 
 Set `--lr-spreadsheet-viewer-background`, `--lr-spreadsheet-viewer-border` and `--lr-spreadsheet-viewer-border-radius` on the frame. `--lr-spreadsheet-viewer-header-row-bg` sets the column heading background.
 
-`scroll-mode="page"` lets the page scroll both axes, keeps the header sticky and ignores `max-height`. The default `self` uses the viewer’s own scrollport.
+Setting `scrollMode` to `page` (attribute `scroll-mode="page"`) lets the page scroll both axes, keeps the header sticky and ignores `max-height`. The default `self` uses the viewer’s own scrollport.
 
 Fetches `.xlsx` and `.xls` workbooks with the optional `xlsx` (SheetJS) peer, or reads a host-owned
 `dataSource`. Multiple worksheets render through a `<lr-tab-group>` switcher, and body rows use `<lr-virtual-list>`.
@@ -45916,7 +45932,7 @@ pass remains synchronous.
 
 Set `--lr-csv-viewer-background`, `--lr-csv-viewer-border` and `--lr-csv-viewer-border-radius` on the frame. `--lr-csv-viewer-header-row-bg` sets the column heading background.
 
-`scroll-mode="page"` lets the page scroll both axes, keeps the header sticky and ignores `max-height`. The default `self` uses the viewer’s own scrollport.
+Setting `scrollMode` to `page` (attribute `scroll-mode="page"`) lets the page scroll both axes, keeps the header sticky and ignores `max-height`. The default `self` uses the viewer’s own scrollport.
 
 Fetches CSV text with the optional `papaparse` peer, or reads a host-owned `dataSource`, and
 virtualizes body rows.
@@ -48078,7 +48094,7 @@ can cover the other. Both surfaces use `white-space: pre` and scroll horizontall
 - `--lr-markdown-highlight-success-bg` — Success highlight fill. Default: `var(--lr-color-success-quiet)`.
 - `--lr-markdown-highlight-warning-bg` — Warning highlight fill. Default: `var(--lr-color-warning-quiet)`.
 - `--lr-markdown-highlight-danger-bg` — Danger highlight fill. Default: `var(--lr-color-danger-quiet)`.
-- `--lr-markdown-highlight-neutral-bg` — Neutral highlight fill. Default: `var(--lr-color-surface-raised)`.
+- `--lr-markdown-highlight-neutral-bg` — Neutral highlight fill. Default: `var(--lr-color-surface)`.
 - `--lr-markdown-highlight-active-bg` — Active highlight fill. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-markdown-highlight-active-outline-color` — Active highlight outline. Default: `var(--lr-color-brand)`.
 
@@ -48216,7 +48232,7 @@ const view = html`<lr-markdown-core
 - `--lr-markdown-highlight-success-bg` — Success highlight fill. Default: `var(--lr-color-success-quiet)`.
 - `--lr-markdown-highlight-warning-bg` — Warning highlight fill. Default: `var(--lr-color-warning-quiet)`.
 - `--lr-markdown-highlight-danger-bg` — Danger highlight fill. Default: `var(--lr-color-danger-quiet)`.
-- `--lr-markdown-highlight-neutral-bg` — Neutral highlight fill. Default: `var(--lr-color-surface-raised)`.
+- `--lr-markdown-highlight-neutral-bg` — Neutral highlight fill. Default: `var(--lr-color-surface)`.
 - `--lr-markdown-highlight-active-bg` — Active highlight fill. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-markdown-highlight-active-outline-color` — Active highlight outline. Default: `var(--lr-color-brand)`.
 
@@ -48237,6 +48253,12 @@ keeps the box and list gutter aligned. Header hooks are `--lr-markdown-code-head
 **Shared icon-button tokens:** the code-block action buttons read the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`. `--lr-markdown-code-copy-bg-hover` and `--lr-markdown-code-copy-bg-active` set the fenced copy button's hovered and pressed backgrounds.
 
 ## `lr-chat-message`
+
+For the collapse button, set `--lr-icon-button-radius` for the corners. The fill, border and foreground use these tokens in resting, hover and pressed states respectively.
+
+- `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color`
+- `--lr-icon-button-bg-hover`, `--lr-icon-button-border-hover`, `--lr-icon-button-color-hover`
+- `--lr-icon-button-bg-active`, `--lr-icon-button-border-active`, `--lr-icon-button-color-active`
 
 Customize the appearance with `--lr-chat-message-retry-color`, `--lr-chat-message-retry-border-color` and `--lr-chat-message-retry-hover-bg`.
 
@@ -48946,6 +48968,12 @@ instead. The pulse animation is suppressed under `prefers-reduced-motion: reduce
 
 ## `lr-conversation-item`
 
+For the rename button, set `--lr-icon-button-radius` for the corners. The fill, border and foreground use these tokens in resting, hover and pressed states respectively.
+
+- `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color`
+- `--lr-icon-button-bg-hover`, `--lr-icon-button-border-hover`, `--lr-icon-button-color-hover`
+- `--lr-icon-button-bg-active`, `--lr-icon-button-border-active`, `--lr-icon-button-color-active`
+
 Set `disabled` to disable selection and renaming. Disabling a row discards an open rename draft.
 
 Customize the appearance with `--lr-conversation-item-hover-bg`.
@@ -49142,6 +49170,15 @@ duration of an edit rather than just visually swapping content (a row mid-edit _
 ---
 
 ## `lr-model-select`
+
+The picker shares these styling controls with other catalog pickers.
+
+- Trigger geometry — `--lr-picker-expand-size`, `--lr-picker-font-size`, `--lr-picker-gap`, `--lr-picker-max-inline-size`, `--lr-picker-radius`, `--lr-picker-trigger-height`, `--lr-picker-trigger-min-height`, `--lr-picker-trigger-padding`.
+- Trigger colors — `--lr-picker-trigger-fill`, `--lr-picker-trigger-border-color`, `--lr-picker-trigger-hover-bg`, `--lr-picker-trigger-hover-border-color`, `--lr-picker-trigger-active-bg`, `--lr-picker-open-border-color`.
+- Option states — `--lr-picker-option-active-bg`, `--lr-picker-option-disabled-opacity`, `--lr-picker-option-selected-bg`, `--lr-picker-option-selected-border`, `--lr-picker-option-selected-color`, `--lr-picker-option-selected-font-weight`.
+- Synthetic option — `--lr-picker-option-synthetic-border-color`, `--lr-picker-option-synthetic-border-style`, `--lr-picker-option-synthetic-font-style`.
+
+Popup sizing uses the available space reported by `--lr-positioner-available-block-size` and `--lr-positioner-available-inline-size`.
 
 `--lr-model-select-trigger-hover-bg` and `--lr-model-select-trigger-active-bg` set the trigger background on hover and press.
 
@@ -49761,6 +49798,12 @@ failed writes pass through as `lr-copy` and `lr-copy-error`, carrying the immuta
 outcome, bubbling and composed.
 
 ## `lr-generation-metrics`
+
+For the stop button, set `--lr-icon-button-radius` for the corners. The fill, border and foreground use these tokens in resting, hover and pressed states respectively.
+
+- `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color`
+- `--lr-icon-button-bg-hover`, `--lr-icon-button-border-hover`, `--lr-icon-button-color-hover`
+- `--lr-icon-button-bg-active`, `--lr-icon-button-border-active`, `--lr-icon-button-color-active`
 
 A compact, ticking status readout shown alongside an in-progress AI response: elapsed time, token
 count, and token-throughput, plus a built-in Stop button. First-party invention (no Web Awesome
@@ -50451,6 +50494,12 @@ to the shared duration, while reduced-motion ambient output remains static.
 
 ## `lr-branch-picker`
 
+For the previous and next buttons, set `--lr-icon-button-radius` for the corners. The fill, border and foreground use these tokens in resting, hover and pressed states respectively.
+
+- `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color`
+- `--lr-icon-button-bg-hover`, `--lr-icon-button-border-hover`, `--lr-icon-button-color-hover`
+- `--lr-icon-button-bg-active`, `--lr-icon-button-border-active`, `--lr-icon-button-color-active`
+
 Set `disabled` to disable both chevrons and their toolbar actions while preserving the current position.
 
 The "‹ 2 / 5 ›" navigator across regenerated/edited variants of one message. Pure controlled: it
@@ -50565,6 +50614,12 @@ media rule then floors the rendered hit area at 2.75rem/44px regardless of how f
 override lowered it, so the shrink is safe on a touch device.
 
 ## `lr-message-feedback`
+
+For the feedback buttons, set `--lr-icon-button-radius` for the corners. The fill, border and foreground use these tokens in resting, hover and pressed states respectively.
+
+- `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color`
+- `--lr-icon-button-bg-hover`, `--lr-icon-button-border-hover`, `--lr-icon-button-color-hover`
+- `--lr-icon-button-bg-active`, `--lr-icon-button-border-active`, `--lr-icon-button-color-active`
 
 The feedback control registers `lr-chip` when it first renders reasons. Await `updateComplete` before using a rendered chip. Server renderers can import the chip entry to include its shadow content.
 
@@ -50830,7 +50885,7 @@ entry. The built-in jump action delegates to this method.
 state or the built-in jump action re-engages it. Direct `follow` assignments and
 `scrollToBottom()` calls are controlled input and do not echo an event.
 
-**CSS parts:** `base` (the scroll container), `log` (the `role="log"` region wrapping final entries
+**CSS parts:** `window-notice` (count of omitted items), `base` (the scroll container), `log` (the `role="log"` region wrapping final entries
 only), `entry`, `speaker` (omitted for a row repeating the previous row's speaker), `text`
 (`dir="auto"`), `timestamp` (only while `with-timestamps`), `interim` (present alongside `entry` on
 an interim row), `interim-area` (the wrapper holding interim rows, rendered only while at least one
@@ -51103,6 +51158,12 @@ Vector icons per chip, by name or by slot:
 ```
 
 ## `lr-thread-list`
+
+For the row actions and search clear button, set `--lr-icon-button-radius` for the corners. The fill, border and foreground use these tokens in resting, hover and pressed states respectively.
+
+- `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color`
+- `--lr-icon-button-bg-hover`, `--lr-icon-button-border-hover`, `--lr-icon-button-color-hover`
+- `--lr-icon-button-bg-active`, `--lr-icon-button-border-active`, `--lr-icon-button-color-active`
 
 A blank or unavailable group label falls back to the default group name. When an adornment callback throws, the group still renders its label and rows. The list registers its pagination control when a provider is present and its error control when an error is displayed. For server-rendered markup that needs these child definitions on the server, import their granular entries. Await the list’s `updateComplete` on the client before using either control.
 
@@ -51824,6 +51885,15 @@ consumer's control.
 
 ## `lr-voice-picker`
 
+The picker shares these styling controls with other catalog pickers.
+
+- Trigger geometry — `--lr-picker-expand-size`, `--lr-picker-font-size`, `--lr-picker-gap`, `--lr-picker-max-inline-size`, `--lr-picker-radius`, `--lr-picker-trigger-height`, `--lr-picker-trigger-min-height`, `--lr-picker-trigger-padding`.
+- Trigger colors — `--lr-picker-trigger-fill`, `--lr-picker-trigger-border-color`, `--lr-picker-trigger-hover-bg`, `--lr-picker-trigger-hover-border-color`, `--lr-picker-trigger-active-bg`, `--lr-picker-open-border-color`.
+- Option states — `--lr-picker-option-active-bg`, `--lr-picker-option-disabled-opacity`, `--lr-picker-option-selected-bg`, `--lr-picker-option-selected-border`, `--lr-picker-option-selected-color`, `--lr-picker-option-selected-font-weight`.
+- Synthetic option — `--lr-picker-option-synthetic-border-color`, `--lr-picker-option-synthetic-border-style`, `--lr-picker-option-synthetic-font-style`.
+
+Popup sizing uses the available space reported by `--lr-positioner-available-block-size` and `--lr-positioner-available-inline-size`.
+
 `--lr-voice-picker-trigger-hover-bg` and `--lr-voice-picker-trigger-active-bg` set the trigger background on hover and press.
 
 Picking the current voice closes the list without emitting a change. A rejected preview address or failed playback announces `voicePickerPreviewFailed`.
@@ -52406,7 +52476,7 @@ In block display, `lr-toggle` also arrives from tool-call blocks (`{ expanded, c
 `lr-render-error` from an expanded block carries `callId`; `lr-tool-call-chip-select` is not
 emitted. Tool errors are never announced; only `error` parts are.
 
-**CSS parts:** `base`, `part`, `part-streaming`, `part-interrupted`, `interruption`, `resume`, `text`, `reasoning`, `tool-call`, `tool-result`,
+**CSS parts:** `window-notice` (count of omitted items), `base`, `part`, `part-streaming`, `part-interrupted`, `interruption`, `resume`, `text`, `reasoning`, `tool-call`, `tool-result`,
 `tool-result-error`, `citation`, `attachment`, `data`, `audio`, `audio-control`,
 `audio-transcript`, `error`, `retry`. Block display forwards five block parts:
 `tool-block-header`, `tool-block-body`, `tool-block-args`, `tool-block-result`,

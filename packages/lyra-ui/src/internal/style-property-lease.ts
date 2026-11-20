@@ -5,7 +5,7 @@ export interface InlineStylePropertyLease {
   release(): void;
 }
 
-interface InlineStyleValue {
+export interface InlineStyleValue {
   value: string;
   priority: string;
 }
@@ -15,14 +15,14 @@ export type InlineStylePropertyResolver = (
   externalPriority: string,
 ) => { value: string; priority?: string };
 
-function readProperty(element: HTMLElement, property: string): InlineStyleValue {
+export function readInlineStyleValue(element: HTMLElement, property: string): InlineStyleValue {
   return {
     value: element.style.getPropertyValue(property),
     priority: element.style.getPropertyPriority(property),
   };
 }
 
-function sameProperty(left: InlineStyleValue, right: InlineStyleValue): boolean {
+export function sameInlineStyleValue(left: InlineStyleValue, right: InlineStyleValue): boolean {
   return left.value === right.value && left.priority === right.priority;
 }
 
@@ -47,7 +47,7 @@ export function leaseInlineStyleProperty(
   priority = '',
   resolveOwned?: InlineStylePropertyResolver,
 ): InlineStylePropertyLease {
-  let external = readProperty(element, property);
+  let external = readInlineStyleValue(element, property);
   let owned = { value, priority };
   let released = false;
   const MutationObserverConstructor =
@@ -61,19 +61,19 @@ export function leaseInlineStyleProperty(
   const applyOwned = (): void => {
     observer?.disconnect();
     writeProperty(element, property, owned);
-    owned = readProperty(element, property);
+    owned = readInlineStyleValue(element, property);
     observe();
   };
   const captureExternal = (): void => {
-    const current = readProperty(element, property);
-    if (!sameProperty(current, owned)) external = current;
+    const current = readInlineStyleValue(element, property);
+    if (!sameInlineStyleValue(current, owned)) external = current;
   };
 
   if (MutationObserverConstructor) {
     observer = new MutationObserverConstructor(() => {
       if (released) return;
-      const current = readProperty(element, property);
-      if (sameProperty(current, owned)) return;
+      const current = readInlineStyleValue(element, property);
+      if (sameInlineStyleValue(current, owned)) return;
       external = current;
       const resolved = resolveOwned?.(external.value, external.priority);
       if (resolved) owned = { value: resolved.value, priority: resolved.priority ?? '' };

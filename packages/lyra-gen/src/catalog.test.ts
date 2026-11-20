@@ -8,6 +8,9 @@ import { validateSchema } from './schema.js';
 test('reviewed catalog exposes only frozen schemas and explicit lazy component loaders', () => {
   assert.ok(Object.keys(initialCatalog.components).length >= 25);
   assert.ok(Object.isFrozen(initialCatalog));
+  assert.ok(Object.isFrozen(initialCatalog.components));
+  assert.equal(Object.getPrototypeOf(initialCatalog.components), null);
+  assert.deepEqual(createCatalog(initialCatalog), initialCatalog);
   for (const component of Object.values(initialCatalog.components)) {
     assert.ok(Object.isFrozen(component.properties));
     for (const property of Object.values(component.properties)) assert.equal(validateSchema(property.default ?? null, property).diagnostics.some(item => item.code === 'schema.invalid'), false);

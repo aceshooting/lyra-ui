@@ -46,6 +46,23 @@ async function fixture(t) {
   return { root, packageDirectory, coverageDirectory };
 }
 
+test('SSR coverage serves a build-folded private sibling module from source', async t => {
+  const options = await fixture(t);
+  // The published build inlines a single-consumer static style module into its class and deletes
+  // it from dist; the source-mapped consumer still imports that sibling.
+  await writeFile(join(options.packageDirectory, 'src/folded.styles.ts'), 'export const styles = "folded";\n');
+  await writeFile(join(options.packageDirectory, 'src/consumer.ts'), 'import { styles } from "./folded.styles.js";\nexport const read = () => styles;\n');
+  await writeFile(join(options.packageDirectory, 'dist/consumer.js'), 'export const read = () => "dist";\n');
+  await writeFile(join(options.packageDirectory, 'scripts/check-ssr.mjs'), [
+    'import assert from "node:assert/strict";',
+    'import { read } from "../dist/consumer.js";',
+    'assert.equal(read(), "folded");',
+  ].join('\n'));
+  await collectSsrCoverage(options);
+  const coverage = readSsrCoverage(options);
+  assert.ok(Object.hasOwn(coverage, join(options.packageDirectory, 'src/folded.styles.ts')), 'the folded sibling maps to its source');
+});
+
 test('SSR coverage captures both modes and isolated child imports without crediting unused branches', async t => {
   const options = await fixture(t);
   await collectSsrCoverage(options);

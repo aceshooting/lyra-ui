@@ -6,14 +6,14 @@ const TONES = [
   ['success', 'var(--lr-color-success-quiet)'],
   ['warning', 'var(--lr-color-warning-quiet)'],
   ['danger', 'var(--lr-color-danger-quiet)'],
-  // surface-raised, not surface: content usually sits on --lr-color-surface, where a neutral mark
-  // would have no contrast.
   ['neutral', 'var(--lr-color-surface-raised)'],
 ] as const;
 
 export interface HighlightToneStyleOptions {
   /** Selector containing the `<mark>` fallback elements. Defaults to `[part='content']`. */
   readonly scope?: string;
+  /** Fill used when the component's neutral highlight token is unset. */
+  readonly neutralBackground?: string;
   /** Marks are clickable: pointer cursor plus hover and press fills mixed from the tone. */
   readonly interactive?: boolean;
   /** Custom property naming the active mark's outline colour. Defaults to
@@ -31,17 +31,19 @@ export interface HighlightToneStyleOptions {
 export function highlightToneStyles(prefix: string, options: HighlightToneStyleOptions = {}): CSSResult {
   const scope = options.scope ?? "[part='content']";
   const token = (tone: string): string => `--lr-${prefix}-highlight-${tone}-bg`;
+  const fill = (tone: string, fallback: string): string =>
+    `var(${token(tone)}, ${tone === 'neutral' ? options.neutralBackground ?? fallback : fallback})`;
   const carrier = `--_lr-${prefix}-highlight-background`;
   const outline = options.activeOutlineToken ?? `--lr-${prefix}-highlight-active-outline-color`;
   const mark = `${scope} mark[data-lr-highlight-tone]`;
   const rules: string[] = [];
   for (const [tone, fallback] of TONES) {
-    rules.push(`::highlight(lr-highlight-${tone}) { background-color: var(${token(tone)}, ${fallback}); }`);
+    rules.push(`::highlight(lr-highlight-${tone}) { background-color: ${fill(tone, fallback)}; }`);
   }
   rules.push(`::highlight(lr-highlight-active) { background-color: var(${token('active')}, var(--lr-color-brand-quiet)); text-decoration: underline; }`);
   rules.push(`${mark} { ${carrier}: var(${token('accent')}, ${TONES[0][1]}); background: var(${carrier}); color: inherit; border-radius: calc(var(--lr-radius) * 0.5); }`);
   for (const [tone, fallback] of TONES.slice(1)) {
-    rules.push(`${scope} mark[data-lr-highlight-tone='${tone}'] { ${carrier}: var(${token(tone)}, ${fallback}); }`);
+    rules.push(`${scope} mark[data-lr-highlight-tone='${tone}'] { ${carrier}: ${fill(tone, fallback)}; }`);
   }
   if (options.interactive) {
     rules.push(`${mark} { cursor: pointer; transition: background-color var(--lr-transition-fast); }`);

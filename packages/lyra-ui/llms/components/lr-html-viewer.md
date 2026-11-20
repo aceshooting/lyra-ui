@@ -32,6 +32,9 @@ makes the host the sole named semantic owner; an explicitly empty host label kee
 label. `highlights`, `activeHighlightId`, `anchor`, and
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract.
 
+The viewer body becomes a named keyboard scroll region while its content exceeds its allocation.
+It leaves the tab order when the content fits.
+
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on sanitized HTML text and emit the shared search/anchor events.
 

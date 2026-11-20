@@ -280,7 +280,7 @@ export class LyraDiffView extends DocumentAnchorTarget(LyraDiffViewBase) {
 
   /** Shows a copy-to-clipboard button for the full unified-diff text. `false` (the default)
    *  renders no button. */
-  @property({ type: Boolean, reflect: true }) copyable = false;
+  @property({ type: Boolean }) copyable = false;
 
   /** A CSS length (e.g. `"20rem"`); once set, the view scrolls internally past this height
    *  instead of growing the page. Invalid values are ignored. */

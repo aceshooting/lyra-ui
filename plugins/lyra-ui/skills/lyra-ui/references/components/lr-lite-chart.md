@@ -16,6 +16,10 @@
 
 ## `lr-lite-chart`
 
+The data table disclosure uses `--lr-lite-chart-data-table-toggle-bg`, `--lr-lite-chart-data-table-toggle-color` and
+`--lr-lite-chart-data-table-toggle-border-color` at rest. Set `--lr-lite-chart-data-table-toggle-inline-size` for its logical width
+and `--lr-lite-chart-data-table-toggle-justify` for its grid alignment. Each falls back to the corresponding chart-family token.
+
 `syncGroup: string = ''` (attribute `sync-group`) opts into
 [Synchronized categorical charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md#synchronized-categorical-charts). Its DOM `sync-crosshair` and
 `sync-tooltip` parts use the shared crosshair and tooltip tokens described there.

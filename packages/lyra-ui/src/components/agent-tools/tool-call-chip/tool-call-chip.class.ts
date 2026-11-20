@@ -366,14 +366,11 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
     return this.displayName || this.name || this.localize('toolCall');
   }
 
-  private get accessibleLabel(): string {
-    const parts = this.category ? [this.category, this.shownName] : [this.shownName];
+  private accessibleLabel(name: string, status: string, duration: string | null): string {
+    const parts = this.category ? [this.category, name] : [name];
     if (this.summary) parts.push(this.summary);
-    parts.push(this.localize(TOOL_STATUS_LABEL_KEY[this.status]));
-    const durationMs = this.safeDurationMs;
-    if (durationMs != null) {
-      parts.push(this.localizedDuration(durationMs));
-    }
+    parts.push(status);
+    if (duration !== null) parts.push(duration);
     return parts.join(this.localize('accessibleLabelSeparator'));
   }
 
@@ -385,14 +382,16 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
     const hasCategory = (this.category ?? '').length > 0;
     const hasSummary = (this.summary ?? '').length > 0;
     const durationMs = this.safeDurationMs;
-    const hasDuration = durationMs != null;
+    const duration = durationMs === null ? null : this.localizedDuration(durationMs);
     const status = this.status;
+    const statusText = this.localize(TOOL_STATUS_LABEL_KEY[status]);
+    const name = this.shownName;
 
     return html`
       <button
         part="base"
         type="button"
-        aria-label=${this.accessibleLabel}
+        aria-label=${this.accessibleLabel(name, statusText, duration)}
         aria-describedby=${this.hasDetailSlot && (this.tooltipOpen || this.focusDescribed)
           ? this.tooltipId
           : nothing}
@@ -408,19 +407,13 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
         <span part="label">
           <span part="category" ?hidden=${!hasCategory}>${this.category}</span>
           ${hasCategory ? html`<span aria-hidden="true">·</span>` : nothing}
-          <span part="name">${this.shownName}</span>
+          <span part="name">${name}</span>
           ${hasSummary ? html`<span aria-hidden="true">:</span>` : nothing}
           <span part="summary" ?hidden=${!hasSummary}>${this.summary}</span>
         </span>
         <span part="meta">
-          <span part="status-text"
-            >${this.localize(TOOL_STATUS_LABEL_KEY[status])}</span
-          >
-          <span part="duration" ?hidden=${!hasDuration}
-            >${durationMs != null
-              ? this.localizedDuration(durationMs)
-              : nothing}</span
-          >
+          <span part="status-text">${statusText}</span>
+          <span part="duration" ?hidden=${duration === null}>${duration ?? nothing}</span>
         </span>
       </button>
       <div

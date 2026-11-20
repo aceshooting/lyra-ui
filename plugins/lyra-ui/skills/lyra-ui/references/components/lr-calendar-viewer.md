@@ -16,7 +16,7 @@
 
 ## `lr-calendar-viewer`
 
-`max-events` limits the number of events admitted per document (default 250, maximum 2,500). Changing it reloads the current source.
+`maxEvents` (attribute `max-events`) limits the number of events admitted per document (default 250, maximum 2,500). Changing it reloads the current source.
 
 Fetches and parses `.ics` calendars with the optional `ical.js` peer and renders each VEVENT as
 plain text, including its title, start/end time, location, and description. RFC 5545 `DATE` values

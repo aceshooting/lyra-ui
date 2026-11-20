@@ -16,7 +16,7 @@ import {
 } from '../../../internal/drop-session-controller.js';
 import {
   classifyFiles, dragInstruction, EMPTY_MIME_TYPES, freezeDetail, handleDrop, mimeTypeFilter, rejectionMessages, selectionMessage, snapshotMimeTypes,
-  type FileIntakeDetail, type FileIntakeRejected, type FileIntakeResult,
+  type FileIntakeResult,
 } from '../file-input/file-intake.js';
 import type { LyraSize } from '../../../internal/variants.js';
 import { styles } from './drop-zone.styles.js';
@@ -26,9 +26,13 @@ import { LYRA_DEFAULT_dropzoneRejectedType, LYRA_DEFAULT_dropzoneReleaseToAdd, L
 import { LYRA_DEFAULT_collapse, LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-export interface LyraDropZoneRejectedFile extends FileIntakeRejected {}
+export interface LyraDropZoneRejectedFile {
+  readonly file: File;
+  readonly reason: 'type' | 'count' | 'size' | 'directory' | 'read' | 'limit' | 'maxFiles' | 'maxTotalSize';
+}
 
-export interface LyraDropZoneFilesDetail extends FileIntakeDetail {
+export interface LyraDropZoneFilesDetail {
+  readonly files: readonly File[];
   readonly rejected: readonly LyraDropZoneRejectedFile[];
   /** Remaining allowance under `maxFiles` after this drop, at the control's running count
    *  (`heldFileCount`, since this component retains nothing of its own between drops) -- `null`
@@ -112,11 +116,11 @@ export interface LyraDropZoneEventMap {
  * @cssprop [--lr-drop-zone-overlay-gap=var(--lr-space-xs)] - Gap between the overlay icon and text.
  * @cssprop [--lr-drop-zone-accept-border-color=var(--lr-color-success)] - Border color of
  * `[part="overlay"][data-drag-state="accept"]`.
- * @cssprop [--lr-drop-zone-accept-bg=color-mix(in srgb, var(--lr-color-success) 8%, transparent)] -
+ * @cssprop [--lr-drop-zone-accept-bg=color-mix(in srgb, var(--lr-color-success) 12%, transparent)] -
  * Background of `[part="overlay"][data-drag-state="accept"]`.
  * @cssprop [--lr-drop-zone-reject-border-color=var(--lr-color-danger)] - Border color of
  * `[part="overlay"][data-drag-state="reject"]`.
- * @cssprop [--lr-drop-zone-reject-bg=color-mix(in srgb, var(--lr-color-danger) 8%, transparent)] -
+ * @cssprop [--lr-drop-zone-reject-bg=color-mix(in srgb, var(--lr-color-danger) 12%, transparent)] -
  * Background of `[part="overlay"][data-drag-state="reject"]`.
  * @status experimental
  * @since 16.0.0

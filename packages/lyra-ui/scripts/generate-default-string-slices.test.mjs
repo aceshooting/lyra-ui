@@ -587,7 +587,7 @@ export function attachInternalsSafely(): void {}
   await writeFile(
     path.join(internal, 'kbd-incidental.ts'),
     `export const incidental = [
-  'collapse', 'details', 'map', 'navigation', 'open', 'search', 'select',
+  'collapse', 'details', 'map', 'open',
 ];
 `,
   );

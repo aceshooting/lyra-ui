@@ -16,7 +16,7 @@
 
 ## `lr-contact-viewer`
 
-`max-contacts` limits the number of contacts admitted per document (default 250, maximum 2,500). Changing it reloads the current source.
+`maxContacts` (attribute `max-contacts`) limits the number of contacts admitted per document (default 250, maximum 2,500). Changing it reloads the current source.
 
 Fetches a vCard document and renders one accessible card per contact. The document registry matches
 `.vcf` filenames and the `FN`, `ORG`, `TEL`, `EMAIL`, and `ADR` fields are displayed. `N` is parsed
@@ -36,6 +36,9 @@ precedence over `name` by attribute presence, including an explicitly empty valu
 `anchorKinds` (`['text-quote', 'fragment']`) provide the shared text-viewer contract. Fragment
 resolution is an exact DOM `id` lookup, but generated contact cards define no fragment ids, so a
 fragment jump reports `found: false`. Use a text-quote anchor for contact content.
+
+The viewer body becomes a named keyboard scroll region while its content exceeds its allocation.
+It leaves the tab order when the content fits.
 
 **Methods:** `search(query)`, `searchNext()`, `searchPrevious()`, `clearSearch()`, and
 `scrollToAnchor()` operate on rendered contact text and emit the shared search/anchor events.

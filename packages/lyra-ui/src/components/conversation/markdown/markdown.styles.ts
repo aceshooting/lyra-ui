@@ -253,7 +253,7 @@ export const styles = css`
   [part='math'][data-display='inline'] {
     display: inline-block;
   }
-  ${highlightToneStyles('markdown')}
+  ${highlightToneStyles('markdown', { neutralBackground: 'var(--lr-color-surface)' })}
 
   [part~='code-block-frame']:where([data-lr-code-chrome]) {
     margin-block: 0 var(--lr-space-s);

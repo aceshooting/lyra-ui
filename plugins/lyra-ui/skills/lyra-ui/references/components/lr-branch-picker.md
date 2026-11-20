@@ -16,6 +16,12 @@
 
 ## `lr-branch-picker`
 
+For the previous and next buttons, set `--lr-icon-button-radius` for the corners. The fill, border and foreground use these tokens in resting, hover and pressed states respectively.
+
+- `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color`
+- `--lr-icon-button-bg-hover`, `--lr-icon-button-border-hover`, `--lr-icon-button-color-hover`
+- `--lr-icon-button-bg-active`, `--lr-icon-button-border-active`, `--lr-icon-button-color-active`
+
 Set `disabled` to disable both chevrons and their toolbar actions while preserving the current position.
 
 The "‹ 2 / 5 ›" navigator across regenerated/edited variants of one message. Pure controlled: it

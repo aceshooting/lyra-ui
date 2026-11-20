@@ -16,6 +16,12 @@
 
 ## `lr-chat-message`
 
+For the collapse button, set `--lr-icon-button-radius` for the corners. The fill, border and foreground use these tokens in resting, hover and pressed states respectively.
+
+- `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color`
+- `--lr-icon-button-bg-hover`, `--lr-icon-button-border-hover`, `--lr-icon-button-color-hover`
+- `--lr-icon-button-bg-active`, `--lr-icon-button-border-active`, `--lr-icon-button-color-active`
+
 Customize the appearance with `--lr-chat-message-retry-color`, `--lr-chat-message-retry-border-color` and `--lr-chat-message-retry-hover-bg`.
 
 A role-based message bubble _shell_ for a chat/agent conversation surface. It renders none of the
