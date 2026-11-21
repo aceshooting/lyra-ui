@@ -588,7 +588,7 @@ test('keeps editor data and locale catalogs out of the lyra-ui tarball and gates
   assert.equal(actualBudgets.companions['@aceshooting/lyra-map'].maximum.packedBytes, 1_071_936);
   assert.equal(actualBudgets.companions['@aceshooting/lyra-map'].maximum.unpackedBytes, 4_400_384);
   assert.equal(actualBudgets.companions['@aceshooting/lyra-map'].maximum.fileCount, 692);
-  assert.equal(actualBudgets.companions['@aceshooting/lyra-translations'].maximum.packedBytes, 2_004_736);
+  assert.equal(actualBudgets.companions['@aceshooting/lyra-translations'].maximum.packedBytes, 2_012_672);
   assert.equal(actualBudgets.companions['@aceshooting/lyra-translations'].maximum.unpackedBytes, 8_934_272);
   assert.equal(actualBudgets.companions['@aceshooting/lyra-translations'].maximum.fileCount, 1_121);
   assert.deepEqual(

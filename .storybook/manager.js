@@ -7,6 +7,15 @@ import {
   storyTheme,
 } from './story-theme.js';
 
+// Storybook 10.6.8 schedules sibling-story preloading with an unguarded requestIdleCallback(),
+// which WebKit does not implement, so every story render in Safari throws in the manager. Supply
+// a macrotask fallback only where the API is missing; engines that have it keep the native one.
+if (typeof globalThis.requestIdleCallback !== 'function') {
+  globalThis.requestIdleCallback = (callback) =>
+    setTimeout(() => callback({ didTimeout: false, timeRemaining: () => 0 }), 1);
+  globalThis.cancelIdleCallback = (handle) => clearTimeout(handle);
+}
+
 addons.setConfig({
   theme: LYRA_STORYBOOK_THEMES.dark,
 });

@@ -43,7 +43,7 @@ export interface SvgChartOptions {
   activate: (index: number) => void;
 }
 
-export interface SvgChartTable {
+interface SvgChartTable {
   readonly caption: string;
   readonly headers: readonly string[];
   readonly rows: readonly (readonly string[])[];
