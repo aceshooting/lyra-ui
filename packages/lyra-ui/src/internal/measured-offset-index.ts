@@ -78,7 +78,9 @@ export class MeasuredOffsetIndex {
   /** Replaces every height (and the estimate used for later growth). */
   reset(heights: readonly number[], estimate = this.fallback): void {
     this.fallback = this.clamp(estimate, Math.max(1, this.minimum));
-    this.rebuild(Array.from(heights, (height) => this.clamp(height, this.fallback)));
+    const clamped: number[] = [];
+    for (let index = 0; index < heights.length; index += 1) clamped.push(this.clamp(heights[index]!, this.fallback));
+    this.rebuild(clamped);
   }
 
   /** Height of one item (0 outside the range). */

@@ -1426,34 +1426,40 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     const result: Row[] = [];
     const visited = new Set<unknown>();
     const seenRowKeys = new Set<DataGridKey>();
+    // Roots are read in order and only descendants use the stack, so a flat collection allocates
+    // no per-row traversal records; the visit order is the same depth-first pre-order.
+    const roots = this.data;
+    const limit = this.rowLimit;
+    const childCache = this.childRows ? this.childCache() : undefined;
     const stack: Array<{ readonly row: Row; readonly depth: number }> = [];
-    for (let index = this.data.length - 1; index >= 0; index -= 1) {
-      stack.push({ row: this.data[index]!, depth: 0 });
-    }
+    let rootIndex = 0;
     let truncated = this.dataAdmissionTruncated;
-    while (stack.length > 0 && result.length < this.rowLimit) {
-      const current = stack.pop()!;
-      const trackIdentity =
-        (typeof current.row === 'object' && current.row !== null) ||
-        typeof current.row === 'function';
-      if (!trackIdentity) continue;
-      if (trackIdentity && visited.has(current.row)) continue;
-      if (trackIdentity) visited.add(current.row);
-      const rowKey = this.rowIdentity(current.row);
+    while (result.length < limit) {
+      let row: Row;
+      let depth = 0;
+      const nested = stack.pop();
+      if (nested) ({ row, depth } = nested);
+      else if (rootIndex < roots.length) row = roots[rootIndex++]!;
+      else break;
+      if ((typeof row !== 'object' || row === null) && typeof row !== 'function') continue;
+      if (visited.has(row)) continue;
+      visited.add(row);
+      const rowKey = this.rowIdentity(row);
       if (rowKey === undefined || seenRowKeys.has(rowKey)) continue;
       seenRowKeys.add(rowKey);
-      result.push(current.row);
-      const children = this.childrenFor(current.row);
+      result.push(row);
+      if (!childCache) continue;
+      const children = this.childrenFor(row, childCache);
       if (children.length === 0) continue;
-      if (current.depth >= DATA_GRID_TREE_DEPTH_LIMIT) {
+      if (depth >= DATA_GRID_TREE_DEPTH_LIMIT) {
         truncated = true;
         continue;
       }
       for (let index = children.length - 1; index >= 0; index -= 1) {
-        stack.push({ row: children[index]!, depth: current.depth + 1 });
+        stack.push({ row: children[index]!, depth: depth + 1 });
       }
     }
-    if (stack.length > 0) truncated = true;
+    if (stack.length > 0 || rootIndex < roots.length) truncated = true;
     return { rows: Object.freeze(result), truncated };
   }
 
@@ -1464,6 +1470,9 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   private get canonicalRootRows(): readonly Row[] {
     const source = this.allSourceRows;
     return this.memoize('roots', [source, this.data], () => {
+      // Without nesting the projection is the data minus skipped entries, in data order, so an
+      // equal length means every root was kept.
+      if (!this.childRows && source.length === this.data.length) return source;
       const canonical = new Set(source);
       return this.data.filter((row) => canonical.delete(row));
     });
@@ -1632,8 +1641,11 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     return searchRows(filtered, this.columns, this.searchTerm, this.effectiveLocale, this.searchFn, haystacks);
   }
 
-  private childrenFor(row: Row): Row[] {
-    const cache = this.memoize('children', [this.data, this.childRows, this.rowLimit, this.pipelineEpoch], () => new Map<Row, Row[]>());
+  private childCache(): Map<Row, Row[]> {
+    return this.memoize('children', [this.data, this.childRows, this.rowLimit, this.pipelineEpoch], () => new Map<Row, Row[]>());
+  }
+
+  private childrenFor(row: Row, cache = this.childCache()): Row[] {
     const existing = cache.get(row);
     if (existing) return existing;
     const children = this.readChildren(row);
@@ -2762,11 +2774,15 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     // traversal. The next projection rebuilds it so caller-owned row changes remain visible.
     let byIdentity: ReadonlyMap<DataGridKey, Row> | undefined;
     const visited = new Set<unknown>();
-    const stack = [...this.pageRows]
-      .reverse()
-      .map((row) => ({ row, depth: 0 }));
-    while (stack.length > 0 && result.length < this.rowLimit) {
-      const current = stack.pop()!;
+    // Page rows are read in order; only expanded descendants use the stack (same pre-order).
+    const roots = this.pageRows;
+    const limit = this.rowLimit;
+    const expandedKeys = this.expandedKeys;
+    const stack: Array<{ readonly row: Row; readonly depth: number }> = [];
+    let rootIndex = 0;
+    while (result.length < limit) {
+      const current = stack.pop() ?? (rootIndex < roots.length ? { row: roots[rootIndex++]!, depth: 0 } : undefined);
+      if (!current) break;
       const trackIdentity =
         (typeof current.row === 'object' && current.row !== null) ||
         typeof current.row === 'function';
@@ -2784,7 +2800,8 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
         sourceIndex: safeIndex,
       });
       if (
-        !arrayHasKey(this.expandedKeys, key) ||
+        expandedKeys.length === 0 ||
+        !arrayHasKey(expandedKeys, key) ||
         current.depth >= DATA_GRID_TREE_DEPTH_LIMIT
       )
         continue;
@@ -2883,11 +2900,12 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
   }
 
   private invalidateRowMeasurements(): boolean {
-    const anchor = this.lastMeasurementAnchor ?? this.captureMeasurementAnchor();
     if (this.measuredItemHeights.size === 0) {
       this.measuredItemOffsetsDirty = true;
       return false;
     }
+    // Only a reset of real measurements needs an anchor; capturing one re-indexes every offset.
+    const anchor = this.lastMeasurementAnchor ?? this.captureMeasurementAnchor();
     if (anchor) this.pendingMeasurementAnchor = anchor;
     this.measuredItemHeights.clear();
     this.measuredItemOffsetsDirty = true;

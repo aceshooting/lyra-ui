@@ -16708,7 +16708,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.class.ts",
-              "line": 2443,
+              "line": 2455,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
