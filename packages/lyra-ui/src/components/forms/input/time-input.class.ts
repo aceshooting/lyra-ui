@@ -1081,6 +1081,7 @@ export class LyraTimeInput extends FormAssociated(LyraTimeInputBase) {
 
   /** Focuses the active segment unless the control is directly or fieldset disabled. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     if (isLiveDisabled(this)) return;
     const order = this.segmentOrder;
     const activeSegment = this.activeSegmentFor(order);

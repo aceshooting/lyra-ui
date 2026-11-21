@@ -3520,3 +3520,17 @@ it('supports an inherited font weight override on native button and link surface
   group.style.setProperty('--lr-button-font-weight', '400');
   for (const base of bases) expect(getComputedStyle(base).fontWeight).to.equal('400');
 });
+
+it('lets an explicit --lr-button-width stretch appearance="link", which stays text-wide by default', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`
+    <div style="inline-size: 300px">
+      <lr-button appearance="link" style="inline-size: 100%">Plain link</lr-button>
+      <lr-button appearance="link" style="inline-size: 100%; --lr-button-width: 100%">Full link</lr-button>
+    </div>
+  `);
+  const [plain, full] = [...wrapper.querySelectorAll('lr-button')] as LyraButton[];
+  await Promise.all([plain!.updateComplete, full!.updateComplete]);
+  const width = (el: LyraButton) => el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!.getBoundingClientRect().width;
+  expect(width(full!)).to.equal(300);
+  expect(width(plain!)).to.be.below(150);
+});

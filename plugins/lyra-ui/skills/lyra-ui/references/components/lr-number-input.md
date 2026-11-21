@@ -9,13 +9,18 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 23 parts, 29 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 23 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `input-wrapper`: `--lr-input-gap`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-number-input`
+
+Inherits `lr-input`'s `label-placement` attribute and its label-column tokens
+(`--lr-form-control-label-inline-size`, `--lr-form-control-label-gap`,
+`--lr-form-control-label-collapse-inline-size`) and touch floor
+(`--lr-form-control-touch-font-size-min`).
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`.

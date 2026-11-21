@@ -5,8 +5,9 @@ import {
   formControlInvalidBorder,
   formControlRequiredMarker,
   formControlTextWrap,
+  formControlTouchFontFloor,
 } from '../../../internal/form-control.styles.js';
-import { formControlChrome } from '../../../internal/form-control/chrome.styles.js';
+import { formControlChrome, formControlLabelPlacement } from '../../../internal/form-control/chrome.styles.js';
 import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
 
 export const styles = css`
@@ -45,6 +46,7 @@ export const styles = css`
     --_lr-input-radius-default: var(--lr-radius-pill);
   }
   ${formControlChrome}
+  ${formControlLabelPlacement}
 
   ${formControlRequiredMarker}
   [part~='input-wrapper'] {
@@ -232,4 +234,5 @@ export const styles = css`
     ${formControlTextWrap}
   }
   ${formControlInvalidBorder(css`[part~='input-wrapper']`)}
+  ${formControlTouchFontFloor(css`[part='input']`, css`var(--lr-input-font-size, var(--_lr-input-font-size-default))`)}
 `;

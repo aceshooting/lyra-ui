@@ -9,8 +9,9 @@ import {
   formControlInvalidBorder,
   formControlRequiredMarker,
   formControlTextWrap,
+  formControlTouchFontFloor,
 } from '../../../internal/form-control.styles.js';
-import { formControlChrome } from '../../../internal/form-control/chrome.styles.js';
+import { formControlChrome, formControlLabelPlacement } from '../../../internal/form-control/chrome.styles.js';
 import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
 import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
@@ -57,6 +58,7 @@ export const styles = css`
   }
   ${formControlAppearance}
   ${formControlChrome}
+  ${formControlLabelPlacement}
 
   ${formControlRequiredMarker}
   [part='input-wrapper'] {
@@ -272,4 +274,5 @@ export const styles = css`
   ${glassIndependentRootStyles}
   ${glassSurface('[part="popup"]', css`var(--lr-overlay-surface, var(--_lr-overlay-surface, var(--lr-color-surface-container-high)))`, undefined, true)}
   ${formControlInvalidBorder(css`[part="input-wrapper"]`)}
+  ${formControlTouchFontFloor(css`[part="input"]`, css`var(--lr-date-input-font-size, var(--_lr-date-input-font-size))`)}
 `;

@@ -12745,7 +12745,7 @@
           "evidence": [
             {
               "file": "src/components/forms/color-picker/color-picker.class.ts",
-              "line": 1266,
+              "line": 1270,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -13019,7 +13019,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2707,
+              "line": 2755,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -13058,6 +13058,7 @@
           "src/components/forms/combobox/choice-catalog-availability.test.ts",
           "src/components/forms/combobox/choice-catalog-interaction.test.ts",
           "src/components/forms/combobox/combobox-catalog.test.ts",
+          "src/components/forms/combobox/combobox-commit-text.test.ts",
           "src/components/forms/combobox/combobox-form-lifecycle.test.ts",
           "src/components/forms/combobox/combobox-live-option-writes.test.ts",
           "src/components/forms/combobox/combobox-min-query-length.test.ts",
@@ -30000,7 +30001,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input-shared.ts",
-              "line": 875,
+              "line": 893,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -32827,7 +32828,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.class.ts",
-              "line": 1004,
+              "line": 1008,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -38214,7 +38215,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input-shared.ts",
-              "line": 875,
+              "line": 893,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39460,7 +39461,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input-shared.ts",
-              "line": 875,
+              "line": 893,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39692,7 +39693,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2707,
+              "line": 2755,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39731,6 +39732,7 @@
           "src/components/forms/combobox/choice-catalog-availability.test.ts",
           "src/components/forms/combobox/choice-catalog-interaction.test.ts",
           "src/components/forms/combobox/combobox-catalog.test.ts",
+          "src/components/forms/combobox/combobox-commit-text.test.ts",
           "src/components/forms/combobox/combobox-form-lifecycle.test.ts",
           "src/components/forms/combobox/combobox-live-option-writes.test.ts",
           "src/components/forms/combobox/combobox-min-query-length.test.ts",
@@ -39917,7 +39919,7 @@
           "evidence": [
             {
               "file": "src/components/forms/otp-input/otp-input.class.ts",
-              "line": 370,
+              "line": 373,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -51283,6 +51285,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/forms/slider/slider-marks.test.ts",
+              "test": "keeps marks decorative and the handle value text authoritative",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/forms/slider/slider-rendering-a11y.test.ts",
               "test": "is accessible as a labeled two-handle range with markers, a tooltip and a hint",
               "target": "el",
@@ -51354,8 +51362,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/slider/slider-rendering-a11y.test.ts",
-              "test": "contains standalone unbroken label, reference, and hint content at 320px in LTR and RTL",
+              "file": "src/components/forms/slider/slider-marks.test.ts",
+              "test": "thins overlapping labels at 320px and restores them when the slider widens",
               "kind": "320px allocation test signal"
             }
           ]
@@ -51429,7 +51437,7 @@
           "evidence": [
             {
               "file": "src/components/forms/slider/slider.class.ts",
-              "line": 822,
+              "line": 856,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -51467,6 +51475,7 @@
         "tests": [
           "src/components/forms/slider/choice-endpoints.test.ts",
           "src/components/forms/slider/slider-form-lifecycle.test.ts",
+          "src/components/forms/slider/slider-marks.test.ts",
           "src/components/forms/slider/slider-pending-focus-authority.test.ts",
           "src/components/forms/slider/slider-pointer-ownership.test.ts",
           "src/components/forms/slider/slider-remediation.test.ts",
@@ -57210,7 +57219,7 @@
           "evidence": [
             {
               "file": "src/components/forms/textarea/textarea.class.ts",
-              "line": 706,
+              "line": 724,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -57871,7 +57880,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input-shared.ts",
-              "line": 875,
+              "line": 893,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

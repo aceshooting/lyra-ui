@@ -263,6 +263,9 @@ export interface LyraLocalePickerEventMap {
  * @slot error - Custom error content.
  * @csspart limit - Localized notice when input admission omits catalog data.
  * @csspart form-control - The outer wrapper around label, trigger, listbox, error and hint.
+ * @cssprop [--lr-form-control-touch-font-size-min=16px] - Font-size floor of the editable text
+ *   surface under a coarse or hover-less pointer, which stops mobile Safari zooming on focus. `0px`
+ *   disables it.
  * @cssprop [--lr-form-control-invalid-border-color=var(--lr-color-danger)] - Resting border while the
  *   field matches `:state(user-invalid)`; shared by every field, overridden by a component-specific
  *   invalid border where one exists.
@@ -587,6 +590,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
 
   /** Focus the internal trigger unless the form control is effectively disabled. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     if (!isLiveDisabled(this)) this.triggerElement?.focus(options);
   }
   /** Blur the internal trigger or the optional focused search input. */

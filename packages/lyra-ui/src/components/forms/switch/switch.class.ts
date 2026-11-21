@@ -171,6 +171,7 @@ class LyraSwitchBase extends LyraElement<LyraSwitchEventMap> {}
  * @cssprop [--height=var(--lr-switch-track-block-size)] - WA/Shoelace alias for the track's block
  * size.
  * @cssprop [--thumb-size=calc(var(--height, var(--lr-switch-track-block-size)) - (var(--lr-switch-thumb-offset) * 2))] - WA/Shoelace thumb diameter alias.
+ * @cssprop [--lr-switch-label-font-size=var(--lr-font-size-md-sm)] - Font size of `[part='label']`.
  * @cssprop [--lr-switch-label-color=var(--lr-color-text)] - Text color of `[part='label']`, and
  *   the checked-state fallback when `--lr-switch-checked-label-color` is unset.
  * @cssprop [--lr-switch-checked-label-color=var(--lr-switch-label-color)] - Text color of
@@ -259,6 +260,7 @@ export class LyraSwitch extends CheckedFormAssociated(LyraSwitchBase) {
 
   /** Moves focus to the internal switch control. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     if (!this.liveDisabled) this[VALIDITY_ANCHOR]()?.focus(options);
   }
 

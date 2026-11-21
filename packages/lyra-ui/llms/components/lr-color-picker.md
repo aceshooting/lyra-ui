@@ -9,12 +9,15 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 44 parts, 39 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 44 parts, 40 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-color-picker`
+
+Under a coarse pointer the editable text is floored at `--lr-form-control-touch-font-size-min`
+(default `16px`; `0px` opts out) so mobile Safari does not zoom on focus; see "Touch font floor".
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`.

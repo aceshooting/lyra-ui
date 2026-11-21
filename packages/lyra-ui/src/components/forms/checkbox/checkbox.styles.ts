@@ -127,8 +127,8 @@ export const styles = css`
           var(--lr-checkbox-box-size, var(--_lr-checkbox-box-size))
         )
     );
-    font-size: var(--lr-font-size-md-sm);
-    color: var(--lr-color-text);
+    font-size: var(--lr-checkbox-label-font-size, var(--lr-font-size-md-sm));
+    color: var(--lr-checkbox-label-color, var(--lr-color-text));
   }
 
   [part~="hint"] {

@@ -927,3 +927,13 @@ export const TopLayer: Story = {
     </div>
   `,
 };
+
+export const CommitText: Story = {
+  render: () => html`
+    <lr-combobox label="Description" commit="text" style="max-inline-size:var(--lr-size-24rem)">
+      <lr-option value="art-1">Steel bracket</lr-option>
+      <lr-option value="art-2">Steel bolt</lr-option>
+      <lr-option value="art-3">Brass hinge</lr-option>
+    </lr-combobox>
+  `,
+};

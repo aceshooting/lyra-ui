@@ -9,13 +9,16 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 26 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `form-control-label`: `--lr-form-control-required-content`
+- **Themeable via** 30 parts, 34 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `form-control-label`: `--lr-form-control-required-content`; `marks`: `--lr-slider-mark-bg`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-slider`
+
+Labelled `marks` render in the `marks` part: one `mark` per tick, a `mark-label` per label, and
+`mark-label-thinned` on a label hidden for overlapping its neighbour.
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`.
@@ -94,6 +97,22 @@ single numeric string entry.
   unstepped grid (`step` ≤ 0) or for one implying more than 100 intervals — ten million ticks would
   be visually indistinguishable and would hang the page, so the grid is dropped rather than
   half-drawn
+- `marks: readonly LyraSliderMark[] = []` (property only; `{ value: number; label?: string }`) —
+  ticks at arbitrary positions, each optionally labelled, for hour or year scales. Positions are
+  logical, so the scale mirrors under RTL. Marks outside `min`..`max` or with a non-finite value
+  are skipped. Labels hang below the track (beside it when vertical) and the control reserves their
+  line; labels that would overlap at the current width are thinned, measured after each render and
+  on resize, keeping the first of each crowded run (the thinned ones carry the extra
+  `mark-label-thinned` part and are hidden). Decorative (`aria-hidden`): give the same wording to
+  `valueFormatter` so `aria-valuetext` carries it. Parts `marks`, `mark`, `mark-label`; tokens
+  `--lr-slider-mark-bg` (default `var(--lr-slider-marker-bg)`), `--lr-slider-mark-label-font-size`
+  (default `var(--lr-font-size-xs)`), `--lr-slider-mark-label-color` (default
+  `var(--lr-color-text-quiet)`), `--lr-slider-mark-label-gap` (default `var(--lr-space-xs)`, the
+  minimum space between visible labels)
+
+  ```js
+  slider.marks = [0, 6, 12, 18, 24].map((hour) => ({ value: hour, label: `${hour}:00` }));
+  ```
 - `withTooltip: boolean = false` (attribute `with-tooltip`) — shows a live value bubble
   above each handle while that handle is focused or being dragged. Its text is `valueFormatter`'s
   result when one is supplied, otherwise the locale-formatted number
@@ -188,7 +207,10 @@ live value bubble per handle, present only with `with-tooltip`), `tooltip-visibl
 the part name because `::part(tooltip)[data-visible]` is invalid CSS and never matches; write
 `::part(tooltip-visible)`). The tooltip also exposes `tooltip__tooltip`, `tooltip__content`, and
 `tooltip__arrow`. `value` is the opt-in readout; `label-row` contains the separate label and value
-nodes when `withValue` and `valuePlacement="label"` are enabled.
+nodes when `withValue` and `valuePlacement="label"` are enabled. `marks` is the container for
+`marks` (present only while at least one mark is in range), `mark` one tick, `mark-label` one
+visible label, and `mark-label-thinned` is added to a label hidden because it would overlap its
+neighbour.
 
 **CSS custom states:** `disabled`, `dragging`, `focused`, `required`, `optional`, `valid`,
 `invalid`, `user-valid`, and `user-invalid`. A slider always has a finite numeric value, so

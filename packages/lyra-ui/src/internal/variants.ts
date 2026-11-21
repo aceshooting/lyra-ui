@@ -46,6 +46,12 @@ export type LyraFrame = 'card' | 'plain';
  */
 export type LyraLabelDisplay = 'visible' | 'hidden';
 
+/**
+ * Where a form control's label sits: above the field (`top`, the default) or in an inline-start
+ * column beside it (`start`), collapsing back above the field in a narrow allocation.
+ */
+export type LyraLabelPlacement = 'top' | 'start';
+
 /** The canonical six-step size ladder. */
 export type LyraSizeStep = '2xs' | 'xs' | 's' | 'm' | 'l' | 'xl';
 

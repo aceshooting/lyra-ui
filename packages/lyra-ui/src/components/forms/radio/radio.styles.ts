@@ -134,8 +134,8 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: break-word;
-    color: var(--lr-color-text);
-    font-size: var(--lr-font-size-md-sm);
+    color: var(--lr-radio-label-color, var(--lr-color-text));
+    font-size: var(--lr-radio-label-font-size, var(--lr-font-size-md-sm));
   }
   @media (prefers-reduced-motion: reduce) {
     [part~="circle"] {

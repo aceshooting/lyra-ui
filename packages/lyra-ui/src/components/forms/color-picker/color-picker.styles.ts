@@ -4,7 +4,7 @@ import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
 import { glassIndependentRootStyles } from '../../../internal/glass-independent-root.styles.js';
-import { formControlFocusHalo, formControlLabelTypography, formControlRequiredMarker, formControlSupportingTone } from '../../../internal/form-control.styles.js';
+import { formControlFocusHalo, formControlLabelTypography, formControlRequiredMarker, formControlSupportingTone, formControlTouchFontFloor } from '../../../internal/form-control.styles.js';
 import {
   overlaySurfaceFill,
   overlaySurfaceControlEdge,
@@ -690,4 +690,5 @@ export const styles = css`
       outline: var(--lr-border-width-medium) double Highlight;
     }
   }
+  ${formControlTouchFontFloor(css`[part~="input"]`, css`var(--lr-font-size-sm)`)}
 `;

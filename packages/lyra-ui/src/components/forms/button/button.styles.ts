@@ -433,7 +433,9 @@ export const styles = css`
      consumer's geometry, and it zeroes min-block-size and block-size so a pinned --lr-button-height
      cannot box an inline link. */
   :host([appearance="link"]) [part~="base"] {
-    inline-size: auto;
+    /* The link shrinks to its text, but an explicit --lr-button-width still wins (a full-width
+       link-look row). */
+    inline-size: var(--lr-button-width, auto);
     padding: 0;
     border: 0;
     min-block-size: 0;

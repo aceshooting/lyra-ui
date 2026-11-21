@@ -351,6 +351,7 @@ export class LyraIconButton extends LyraElement<LyraIconButtonEventMap> {
   }
 
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     if (!this.effectiveDisabled) this.baseEl?.focus(options);
   }
   override blur(): void { this.baseEl?.blur(); }

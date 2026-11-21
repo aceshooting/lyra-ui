@@ -1957,6 +1957,12 @@ reliable way to theme a group of matching components:
 State and size selectors change only the private fallback. An inherited or direct public value
 continues to win in every state and size tier.
 
+Retune one control through its component hook, not by setting a shared output such as
+`--lr-color-text` or `--lr-font-size-md-sm` on its host: the shared output also reaches every other
+surface inside that control, and a theme scope re-derives it. For example, `--lr-checkbox-label-color`
+and `--lr-checkbox-label-font-size` (and the `lr-radio` / `lr-switch` equivalents) restyle a choice
+label alone.
+
 **Diagnostic:** if a `--lr-theme-*` input has no effect on a nested component, check that the element
 carrying it is a theme scope (the development build warns once per page about an inline input on an
 element that is not, and `findUnscopedThemeInputs()` lists them). If a documented component-specific hook
@@ -1976,6 +1982,10 @@ as leaving it alone: it wins over the fallback arm and makes the per-size minimu
 code. See each control's own reference page for its exact pair.
 
 ### Tokens with a contract attached
+
+- **`--lr-form-control-touch-font-size-min`** (default `16px`) floors the font size of every text
+  field under a coarse or hover-less pointer, so mobile Safari does not zoom on focus. Keep it at
+  16px or above for that guarantee; `0px` opts out. See `llms/components/lr-input.md`.
 
 - **`--lr-theme-icon-button-size`** (default `2.25rem`) backs `--lr-icon-button-size`, the tappable
   box of **every** icon-only control in the library — `lr-icon-button` itself, and the
@@ -7789,6 +7799,43 @@ It is one shared rule, so it is identical on `lr-checkbox-group`, `lr-radio-grou
 `lr-voice-picker`. Prefer it to dropping `label`: a control with no label has no name. The attribute
 reflects, so `[label-display='hidden']` is also a styling hook.
 
+## Label beside the field: `label-placement`
+
+`lr-input` (and `lr-number-input`), `lr-textarea`, `lr-select`, `lr-combobox` and `lr-date-input`
+take `label-placement="start"` (property `labelPlacement: 'top' | 'start'`, default `'top'`,
+reflected) for settings forms with an aligned label column. The label sits in an inline-start
+column of `--lr-form-control-label-inline-size` (default `30%`), `--lr-form-control-label-gap`
+(default `var(--lr-space-m)`) from the field, and the hint and error stay aligned under the field.
+When the control is narrower than `--lr-form-control-label-collapse-inline-size` (default
+`var(--lr-size-20rem)`) the label returns above the field, so a phone layout needs no media query.
+The switch reads the control's own width, so the breakpoint is a themeable token and the host needs
+no size containment. The `<label for>` association is unchanged.
+
+```html
+<form style="--lr-form-control-label-inline-size: 10rem">
+  <lr-input label="Reference" label-placement="start"></lr-input>
+  <lr-select label="Carrier" label-placement="start">…</lr-select>
+</form>
+```
+
+## Touch font floor
+
+Mobile Safari zooms the page when focus enters a text field whose computed font size is below
+16px, and the form-control scale sits below that up to `size="m"`. Under a coarse or hover-less
+pointer every text-entry surface — `lr-input`, `lr-number-input`, `lr-textarea`, `lr-select`,
+`lr-combobox`, `lr-date-input`, `lr-phone-input`, `lr-token-input`, `lr-otp-input`, and the text
+fields of `lr-color-picker`, `lr-emoji-picker` and `lr-locale-picker` — is floored at
+`--lr-form-control-touch-font-size-min` (default `16px`, the platform threshold). A larger
+authored size is kept and fine pointers are untouched; set the token to `0px` to opt out. No
+`::part()` rule is needed.
+
+## Focusing a control right after creating it
+
+`focus()` called on a freshly connected control before its first render is queued and applied once
+it renders, so `const field = document.createElement('lr-input'); host.append(field);
+field.focus();` focuses the native input without awaiting `updateComplete`. A disabled control
+still ignores it, and removing the control before it renders drops the queued focus.
+
 ## Authored errors and constraint validation
 
 A visible `error-text` or populated `error` slot marks the control’s focus target
@@ -7966,6 +8013,14 @@ other value (a plain object, a function) is dropped from the row instead of reac
 
 ### `lr-combobox`
 
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in
+an inline-start column, sized by `--lr-form-control-label-inline-size` (default `30%`) and
+`--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below
+`--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside
+the field: `label-placement`". Under a coarse pointer the editable text is floored at
+`--lr-form-control-touch-font-size-min` (default `16px`; `0px` opts out) so mobile Safari does not
+zoom on focus; see "Touch font floor".
+
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
 **Properties:**
@@ -7998,7 +8053,23 @@ other value (a plain object, a function) is dropped from the row instead of reac
   combobox appends and selects the option if creation is still enabled, the field is editable,
   and the request was accepted. This also applies in `multiple` mode.
 - `allowCustomValue: boolean = false` (attribute `allow-custom-value`) — single-select only;
-  commits arbitrary text on Enter without creating an option
+  commits arbitrary text on Enter without creating an option. A pick still commits the option's
+  `value`; for a free-text field use `commit="text"`
+- `commit: 'value' | 'text' = 'value'` (attribute `commit`, reflected) — single-select only. `text`
+  makes a free-text field with suggestions: picking an option writes its **label** into `value` (so
+  the form value is the text) and reports the option's `data` in the `lr-change` /
+  `lr-change-request` detail; typed text commits on Enter (consumed while the list is open,
+  otherwise followed by implicit form submission) and when focus leaves; the text stays after blur,
+  and reopening edits it in place instead of blanking the field. Escape closes the list and drops
+  an uncommitted edit. No `allow-custom-value` is needed, and no unknown-value badge is shown.
+  The list opens on focus in every mode, and a press on the already-focused input reopens it:
+
+  ```html
+  <lr-combobox label="Description" name="description" commit="text">
+    <lr-option value="art-1">Steel bracket</lr-option>
+    <lr-option value="art-2">Steel bolt</lr-option>
+  </lr-combobox>
+  ```
 - `withUnknownOption: boolean = false` (attribute `with-unknown-option`, reflected) — appends every
   committed value that no option or async row claims to the end of the listbox as a synthetic,
   badged, keyboard-reachable, re-selectable row. Off by default. The synthetic row is filtered by
@@ -8664,6 +8735,14 @@ synchronous and fires no `input`/`change`/`lr-change` event.
 <a id="popup-select-keyboard"></a>
 
 ## `lr-select`
+
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in
+an inline-start column, sized by `--lr-form-control-label-inline-size` (default `30%`) and
+`--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below
+`--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside
+the field: `label-placement`". Under a coarse pointer the editable text is floored at
+`--lr-form-control-touch-font-size-min` (default `16px`; `0px` opts out) so mobile Safari does not
+zoom on focus; see "Touch font floor".
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`.
@@ -9433,6 +9512,14 @@ day-cell/grid-column size; its private default follows the `size` tier — `2xs`
 
 ### `lr-date-input`
 
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in
+an inline-start column, sized by `--lr-form-control-label-inline-size` (default `30%`) and
+`--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below
+`--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside
+the field: `label-placement`". Under a coarse pointer the editable text is floored at
+`--lr-form-control-touch-font-size-min` (default `16px`; `0px` opts out) so mobile Safari does not
+zoom on focus; see "Touch font floor".
+
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
 Text field + calendar popover, **form-associated** via the shared `FormAssociated` mixin (`name`,
@@ -9775,6 +9862,14 @@ and `dateTimeFormat(locale, options)`.
 ---
 
 ## `lr-textarea`
+
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in
+an inline-start column, sized by `--lr-form-control-label-inline-size` (default `30%`) and
+`--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below
+`--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside
+the field: `label-placement`". Under a coarse pointer the editable text is floored at
+`--lr-form-control-touch-font-size-min` (default `16px`; `0px` opts out) so mobile Safari does not
+zoom on focus; see "Touch font floor".
 
 `--lr-textarea-placeholder-color` styles the native placeholder and defaults to `--lr-color-text-quiet`.
 
@@ -10252,7 +10347,34 @@ override also applies while pressed, and the border fallback remains the resting
 hover and press. For removed historical tokens, see the [release history archive](https://github.com/aceshooting/lyra-ui/tree/main/docs/changelog).
 
 `--lr-button-width` (default `100%`) is the internal control's inline size, so it follows the host's
-own width; override it to `auto` for a compact inline composition. `--lr-button-active-scale`
+own width; override it to `auto` for a compact inline composition. `appearance="link"` shrinks to
+its text by default but honours an explicitly set `--lr-button-width`, so a full-width link-look
+row is `style="inline-size: 100%; --lr-button-width: 100%"` on the host.
+
+**Long labels.** Set `wrap` to let the label break onto several lines instead of overriding
+`::part(base)` or `::part(label)` white-space; without it the label stays on one line and
+ellipsizes.
+
+**A menu-item look without part rules.** The geometry is all public tokens:
+
+```css
+.menu-like lr-button {
+  inline-size: 100%;
+  --lr-button-width: 100%;
+  --lr-button-justify: flex-start;
+  --lr-button-padding-inline: var(--lr-space-s);
+  --lr-button-min-height: var(--lr-form-control-height-s);
+  --lr-button-shadow: none;
+}
+```
+
+```html
+<div class="menu-like">
+  <lr-button appearance="plain">Rename</lr-button>
+  <lr-button appearance="plain">Duplicate</lr-button>
+</div>
+```
+ `--lr-button-active-scale`
 (default `0.9875`) is the `:active` press-scale, dropped under `prefers-reduced-motion`.
 `--lr-button-spinner-duration` (default `var(--lr-duration-ambient) linear`, i.e. `1.8s linear`) is
 the `loading` spinner's rotation period and timing; that token itself collapses to `0.001ms` under
@@ -10510,6 +10632,23 @@ natural aspect ratio.
 **CSS parts:** `base`/`button` (the same native button or anchor), `fallback` (only present in the
 DOM while at least one top-level slotted element needs the bare-geometry fallback above)
 
+`lr-icon-button` already rests plain (transparent fill, no border, inherited colour), so it needs
+no appearance attribute or reset rules to sit quietly in a toolbar.
+
+**An exact square.** Because `--lr-icon-button-padding-inline` defaults to `0`, a glyph smaller than
+the floor makes the button exactly `--lr-icon-button-size` on both axes; no `::part(button)`
+width/height rule is needed. Set the size on the element for one button, or
+`--lr-icon-button-size-scope` on a wrapper for a toolbar, and keep the slotted glyph (or
+`--lr-icon-size`) at or below it:
+
+```html
+<lr-icon-button icon="info-circle" label="Details" style="--lr-icon-button-size: 2rem"></lr-icon-button>
+```
+
+Under a coarse pointer the ancestor levers still floor the box at the touch target; that is the
+accessible behaviour, not a sizing bug. The same recipe gives `lr-locale-picker`'s flag-only
+trigger an exact square through `--lr-locale-picker-trigger-height`.
+
 **Themeable custom properties:** `--lr-icon-button-size` (default `2.25rem`) is the **minimum**
 tappable inline and block size of the native button — a floor, not a fixed size. Content larger
 than it grows the button and keeps its own aspect ratio; a small glyph pads out to it. It is a
@@ -10591,6 +10730,14 @@ them leaves rendering unchanged.
 ```
 
 ## `lr-input`
+
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in
+an inline-start column, sized by `--lr-form-control-label-inline-size` (default `30%`) and
+`--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below
+`--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside
+the field: `label-placement`". Under a coarse pointer the editable text is floored at
+`--lr-form-control-touch-font-size-min` (default `16px`; `0px` opts out) so mobile Safari does not
+zoom on focus; see "Touch font floor".
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`.
@@ -11051,6 +11198,11 @@ first field's, referenced here by id.
 
 ## `lr-number-input`
 
+Inherits `lr-input`'s `label-placement` attribute and its label-column tokens
+(`--lr-form-control-label-inline-size`, `--lr-form-control-label-gap`,
+`--lr-form-control-label-collapse-inline-size`) and touch floor
+(`--lr-form-control-touch-font-size-min`).
+
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`.
 
@@ -11453,6 +11605,11 @@ ancestor to change every unset time input beneath it.
 
 ## `lr-native-time-input`
 
+Inherits `lr-input`'s `label-placement` attribute and its label-column tokens
+(`--lr-form-control-label-inline-size`, `--lr-form-control-label-gap`,
+`--lr-form-control-label-collapse-inline-size`) and touch floor
+(`--lr-form-control-touch-font-size-min`).
+
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`.
 
@@ -11545,6 +11702,9 @@ entry for the flush and cancellation rules.
 ---
 
 ## `lr-phone-input`
+
+Under a coarse pointer the editable text is floored at `--lr-form-control-touch-font-size-min`
+(default `16px`; `0px` opts out) so mobile Safari does not zoom on focus; see "Touch font floor".
 
 `--lr-phone-input-placeholder-color` styles the native placeholder and defaults to `--lr-color-text-quiet`.
 
@@ -12591,6 +12751,13 @@ corresponding brand/brand-quiet/danger token. While checked or indeterminate, an
 `--lr-checkbox-checked-border-color`, so a themed checked border survives the pointer.
 `--lr-checkbox-box-radius` (default `calc(var(--lr-form-control-radius) * 0.6)`) retunes
 `[part='box']`'s corner radius without a `::part(box)` rule.
+`--lr-checkbox-label-font-size` (default `var(--lr-font-size-md-sm)`) and
+`--lr-checkbox-label-color` (default `var(--lr-color-text)`) set `[part='label']`'s text size and
+colour without a `::part(label)` rule; `lr-radio` and `lr-switch` take the same pair
+(`--lr-radio-label-*`, `--lr-switch-label-*`). Use these hooks rather than a shared output such as
+`--lr-color-text` on the host: a shared output retints every surface inside the control that reads
+it and is re-derived at each theme scope, so the component hook (or a `--lr-theme-*` input on a
+theme scope) is the supported override layer.
 
 **`--lr-checkbox-box-size`** — the edge length of `[part='box']`, defaulting to
 `min(var(--lr-icon-button-size), calc(var(--lr-form-control-height) * 0.7))`. Derived from the
@@ -12814,6 +12981,7 @@ its outer footprint.
 also the checked-state fallback. `--lr-switch-checked-thumb-fill` (default
 `var(--lr-switch-thumb-fill)`) independently retints the thumb only while checked, leaving the
 unchecked thumb untouched.
+`--lr-switch-label-font-size` (default `var(--lr-font-size-md-sm)`) sets `[part='label']`'s text size.
 `--lr-switch-label-color` (default `var(--lr-color-text)`) controls `[part='label']`'s text color,
 and is also the checked-state fallback. `--lr-switch-checked-label-color` (default
 `var(--lr-switch-label-color)`) independently retints the label only while checked. Both label hooks
@@ -12858,6 +13026,9 @@ checkbox and does not emit `lr-change`.
 <a id="range-controls"></a>
 
 ## `lr-slider`
+
+Labelled `marks` render in the `marks` part: one `mark` per tick, a `mark-label` per label, and
+`mark-label-thinned` on a label hidden for overlapping its neighbour.
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`.
@@ -12936,6 +13107,22 @@ single numeric string entry.
   unstepped grid (`step` ≤ 0) or for one implying more than 100 intervals — ten million ticks would
   be visually indistinguishable and would hang the page, so the grid is dropped rather than
   half-drawn
+- `marks: readonly LyraSliderMark[] = []` (property only; `{ value: number; label?: string }`) —
+  ticks at arbitrary positions, each optionally labelled, for hour or year scales. Positions are
+  logical, so the scale mirrors under RTL. Marks outside `min`..`max` or with a non-finite value
+  are skipped. Labels hang below the track (beside it when vertical) and the control reserves their
+  line; labels that would overlap at the current width are thinned, measured after each render and
+  on resize, keeping the first of each crowded run (the thinned ones carry the extra
+  `mark-label-thinned` part and are hidden). Decorative (`aria-hidden`): give the same wording to
+  `valueFormatter` so `aria-valuetext` carries it. Parts `marks`, `mark`, `mark-label`; tokens
+  `--lr-slider-mark-bg` (default `var(--lr-slider-marker-bg)`), `--lr-slider-mark-label-font-size`
+  (default `var(--lr-font-size-xs)`), `--lr-slider-mark-label-color` (default
+  `var(--lr-color-text-quiet)`), `--lr-slider-mark-label-gap` (default `var(--lr-space-xs)`, the
+  minimum space between visible labels)
+
+  ```js
+  slider.marks = [0, 6, 12, 18, 24].map((hour) => ({ value: hour, label: `${hour}:00` }));
+  ```
 - `withTooltip: boolean = false` (attribute `with-tooltip`) — shows a live value bubble
   above each handle while that handle is focused or being dragged. Its text is `valueFormatter`'s
   result when one is supplied, otherwise the locale-formatted number
@@ -13030,7 +13217,10 @@ live value bubble per handle, present only with `with-tooltip`), `tooltip-visibl
 the part name because `::part(tooltip)[data-visible]` is invalid CSS and never matches; write
 `::part(tooltip-visible)`). The tooltip also exposes `tooltip__tooltip`, `tooltip__content`, and
 `tooltip__arrow`. `value` is the opt-in readout; `label-row` contains the separate label and value
-nodes when `withValue` and `valuePlacement="label"` are enabled.
+nodes when `withValue` and `valuePlacement="label"` are enabled. `marks` is the container for
+`marks` (present only while at least one mark is in range), `mark` one tick, `mark-label` one
+visible label, and `mark-label-thinned` is added to a label hidden because it would overlap its
+neighbour.
 
 **CSS custom states:** `disabled`, `dragging`, `focused`, `required`, `optional`, `valid`,
 `invalid`, `user-valid`, and `user-invalid`. A slider always has a finite numeric value, so
@@ -13276,6 +13466,9 @@ an empty-label control; the visible density can still grow with the shared size 
   Exactly the same knob, purpose, and sideways-inheritance caveat as `--lr-checkbox-label-indent` —
   see `llms/components/lr-checkbox.md` for the formula to align a sibling hint element.
 
+`--lr-radio-label-font-size` (default `var(--lr-font-size-md-sm)`) and `--lr-radio-label-color`
+(default `var(--lr-color-text)`) set `[part='label']`'s text size and colour.
+
 `--lr-radio-bg` (default `var(--lr-color-surface)`) and `--lr-radio-border-color` (default
 `var(--lr-color-border)`) paint the unchecked `[part='circle']` at rest.
 `--lr-radio-checked-border-color` (default `var(--lr-color-brand)`) and `--lr-radio-checked-dot-color`
@@ -13300,6 +13493,9 @@ and scale.
 ```
 
 ## `lr-radio-button`
+
+Shares `lr-radio`'s label tokens: `--lr-radio-label-font-size` (default `var(--lr-font-size-md-sm)`)
+and `--lr-radio-label-color` (default `var(--lr-color-text)`).
 
 The same single-choice control as `lr-radio`, rendered as a button instead of a circle. Mirrors
 `sl-radio-button`.
@@ -13415,6 +13611,9 @@ the only one of the set worth setting on this tag.
 ---
 
 ## `lr-otp-input`
+
+Under a coarse pointer the editable text is floored at `--lr-form-control-touch-font-size-min`
+(default `16px`; `0px` opts out) so mobile Safari does not zoom on focus; see "Touch font floor".
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`.
@@ -13883,6 +14082,9 @@ a `.value=${...}` binding on first render) is applied once they arrive.
 
 ## `lr-token-input`
 
+Under a coarse pointer the editable text is floored at `--lr-form-control-touch-font-size-min`
+(default `16px`; `0px` opts out) so mobile Safari does not zoom on focus; see "Touch font floor".
+
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`.
 
@@ -14250,6 +14452,9 @@ declaration to retheme every internal scroll container in the library, including
 
 ## `lr-color-picker`
 
+Under a coarse pointer the editable text is floored at `--lr-form-control-touch-font-size-min`
+(default `16px`; `0px` opts out) so mobile Safari does not zoom on focus; see "Touch font floor".
+
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`.
 
@@ -14609,6 +14814,9 @@ of authoring `positioning-strategy`/`hoist` on each instance.
 
 ## `lr-emoji-picker`
 
+Under a coarse pointer the editable text is floored at `--lr-form-control-touch-font-size-min`
+(default `16px`; `0px` opts out) so mobile Safari does not zoom on focus; see "Touch font floor".
+
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`.
 
@@ -14945,6 +15153,9 @@ and color-mix treatments as fallbacks. Disabled actions still dim through `--lr-
 the same library-wide token every other disabled control reads.
 
 ## `lr-locale-picker`
+
+Under a coarse pointer the editable text is floored at `--lr-form-control-touch-font-size-min`
+(default `16px`; `0px` opts out) so mobile Safari does not zoom on focus; see "Touch font floor".
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`.

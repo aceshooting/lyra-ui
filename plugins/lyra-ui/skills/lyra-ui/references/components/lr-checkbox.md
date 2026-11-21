@@ -9,8 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `box`: `--lr-checkbox-bg`, `--lr-checkbox-border-color`, `--lr-checkbox-checked-bg`, `--lr-checkbox-checked-border-color`, `--lr-checkbox-box-radius`, `--lr-checkbox-box-size`
+- **Themeable via** 15 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `box`: `--lr-checkbox-bg`, `--lr-checkbox-border-color`, `--lr-checkbox-checked-bg`, `--lr-checkbox-checked-border-color`, `--lr-checkbox-box-radius`, `--lr-checkbox-box-size`; `label`: `--lr-checkbox-label-font-size`, `--lr-checkbox-label-color`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -146,6 +146,13 @@ corresponding brand/brand-quiet/danger token. While checked or indeterminate, an
 `--lr-checkbox-checked-border-color`, so a themed checked border survives the pointer.
 `--lr-checkbox-box-radius` (default `calc(var(--lr-form-control-radius) * 0.6)`) retunes
 `[part='box']`'s corner radius without a `::part(box)` rule.
+`--lr-checkbox-label-font-size` (default `var(--lr-font-size-md-sm)`) and
+`--lr-checkbox-label-color` (default `var(--lr-color-text)`) set `[part='label']`'s text size and
+colour without a `::part(label)` rule; `lr-radio` and `lr-switch` take the same pair
+(`--lr-radio-label-*`, `--lr-switch-label-*`). Use these hooks rather than a shared output such as
+`--lr-color-text` on the host: a shared output retints every surface inside the control that reads
+it and is re-derived at each theme scope, so the component hook (or a `--lr-theme-*` input on a
+theme scope) is the supported override layer.
 
 **`--lr-checkbox-box-size`** — the edge length of `[part='box']`, defaulting to
 `min(var(--lr-icon-button-size), calc(var(--lr-form-control-height) * 0.7))`. Derived from the

@@ -1024,6 +1024,7 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
   /** Moves focus to the first rendered field, matching {@link click}'s target -- the same forwarder
    *  every other Lyra form control uses so the global `autofocus` attribute reaches it too. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     if (this.effectiveDisabled) return;
     this.focusFirstControl(options);
   }

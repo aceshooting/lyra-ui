@@ -1,6 +1,6 @@
 import { activeFill, activeFillTowardText, disabledControl, focusRing, focusRingInset, focusRingInwardOffset, focusRingOffsetInward, hoverFill, hoverFillTowardText, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
-import { formControlFocusHalo, formControlLabelTypography, formControlRequiredMarker, formControlSupportingTone, formControlTextWrap } from '../../../internal/form-control.styles.js';
+import { formControlFocusHalo, formControlLabelTypography, formControlRequiredMarker, formControlSupportingTone, formControlTextWrap, formControlTouchFontFloor } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
   [part='limit'] {
@@ -382,4 +382,5 @@ export const styles = css`
       outline: var(--lr-border-width-medium) double Highlight;
     }
   }
+  ${formControlTouchFontFloor(css`[part='search']`)}
 `;

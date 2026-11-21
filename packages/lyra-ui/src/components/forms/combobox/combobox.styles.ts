@@ -9,8 +9,9 @@ import {
   formControlInvalidBorder,
   formControlRequiredMarker,
   formControlTextWrap,
+  formControlTouchFontFloor,
 } from '../../../internal/form-control.styles.js';
-import { formControlChrome } from '../../../internal/form-control/chrome.styles.js';
+import { formControlChrome, formControlLabelPlacement } from '../../../internal/form-control/chrome.styles.js';
 import {
   overlaySurface,
   overlaySurfaceControlEdge,
@@ -143,6 +144,7 @@ export const styles = css`
     --_lr-combobox-tag-font-size: var(--lr-font-size-m);
   }
   ${formControlChrome}
+  ${formControlLabelPlacement}
 
   ${formControlRequiredMarker}
 
@@ -621,4 +623,5 @@ export const styles = css`
   ${glassSurface('[part="listbox"]', css`var(--lr-overlay-surface, var(--_lr-overlay-surface, var(--lr-color-surface-container-high)))`, undefined, true)}
   ${forcedColorsSelected}
   ${formControlInvalidBorder(css`[part="combobox"]`)}
+  ${formControlTouchFontFloor(css`[part="combobox-input"]`)}
 `;

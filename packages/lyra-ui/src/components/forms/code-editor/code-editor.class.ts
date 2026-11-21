@@ -434,6 +434,7 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
     if (!isLiveDisabled(this)) this.textarea?.click();
   }
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     if (!isLiveDisabled(this)) this.textarea?.focus(options);
   }
   override blur(): void {

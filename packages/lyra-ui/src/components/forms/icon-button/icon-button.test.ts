@@ -1052,3 +1052,11 @@ it('renders the pressed property on the internal button, over a host aria-presse
   await el.updateComplete;
   expect(control().hasAttribute('aria-pressed')).to.equal(false);
 });
+
+it('renders an exact square at --lr-icon-button-size when the glyph fits, with no part rule', async () => {
+  const el = await fixture<LyraIconButton>(html`
+    <lr-icon-button label="Details" style="--lr-icon-button-size: 2rem"><span style="display:block;inline-size:12px;block-size:12px"></span></lr-icon-button>
+  `);
+  const rect = el.shadowRoot!.querySelector<HTMLElement>('[part~="button"]')!.getBoundingClientRect();
+  expect([rect.width, rect.height]).to.deep.equal([32, 32]);
+});

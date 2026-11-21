@@ -8,6 +8,7 @@ import {
   formControlInvalidBorder,
   formControlRequiredMarker,
   formControlTextWrap,
+  formControlTouchFontFloor,
 } from '../../../internal/form-control.styles.js';
 import { formControlChrome } from '../../../internal/form-control/chrome.styles.js';
 import {
@@ -373,4 +374,5 @@ export const styles = css`
   ${glassIndependentRootStyles}
   ${glassSurface('[part="listbox"]', css`var(--lr-overlay-surface, var(--_lr-overlay-surface, var(--lr-color-surface-container-high)))`, undefined, true)}
   ${formControlInvalidBorder(css`[part='trigger']`)}
+  ${formControlTouchFontFloor(css`[part='search-input']`)}
 `;

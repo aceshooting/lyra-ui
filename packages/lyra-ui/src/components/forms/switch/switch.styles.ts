@@ -197,7 +197,7 @@ export const styles = css`
      stylesheet's default "[hidden] { display: none }" rule needs no author-side override when
      hasLabelSlot is false. */
   [part="label"] {
-    font-size: var(--lr-font-size-md-sm);
+    font-size: var(--lr-switch-label-font-size, var(--lr-font-size-md-sm));
     color: var(--lr-switch-label-color, var(--lr-color-text));
   }
   /* :state(checked), not [part~='checked']/[checked] -- the host 'checked' ATTRIBUTE reflects

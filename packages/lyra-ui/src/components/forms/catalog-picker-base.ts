@@ -207,7 +207,10 @@ export abstract class LyraCatalogPickerBase extends FormAssociated(CatalogPicker
   /** @internal */
   [VALIDITY_ANCHOR](): HTMLElement | null { return resolveValidityAnchor(this.control) ?? null; }
   /** Focus the visible trigger or optional filter when enabled. */
-  override focus(options?: FocusOptions): void { if (!isLiveDisabled(this)) this.control?.focus(options); }
+  override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
+    if (!isLiveDisabled(this)) this.control?.focus(options);
+  }
   /** Blur the visible control. */
   override blur(): void { this.control?.blur(); }
   /** Activate the visible trigger or optional filter when enabled. */

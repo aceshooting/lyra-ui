@@ -2710,6 +2710,8 @@ export interface LyraComponentTypeMap {
       | '--lr-checkbox-checked-border-color'
       | '--lr-checkbox-hover-border-color'
       | '--lr-checkbox-invalid-border-color'
+      | '--lr-checkbox-label-color'
+      | '--lr-checkbox-label-font-size'
       | '--lr-checkbox-label-indent';
     attributeAliases: {
       'checked'?: LyraCheckbox['defaultChecked'];
@@ -3327,6 +3329,7 @@ export interface LyraComponentTypeMap {
       | '--lr-form-control-required-color'
       | '--lr-form-control-required-content'
       | '--lr-form-control-required-offset'
+      | '--lr-form-control-touch-font-size-min'
       | '--lr-overlay-border'
       | '--lr-overlay-radius'
       | '--lr-overlay-shadow-anchored'
@@ -3359,6 +3362,7 @@ export interface LyraComponentTypeMap {
       | 'autocomplete'
       | 'autocorrect'
       | 'clearable'
+      | 'commit'
       | 'customError'
       | 'defaultValue'
       | 'disabled'
@@ -3377,6 +3381,7 @@ export interface LyraComponentTypeMap {
       | 'inputValue'
       | 'label'
       | 'labelDisplay'
+      | 'labelPlacement'
       | 'loading'
       | 'loadingText'
       | 'locale'
@@ -3463,12 +3468,16 @@ export interface LyraComponentTypeMap {
       | '--lr-form-control-focus-shadow'
       | '--lr-form-control-font-size'
       | '--lr-form-control-invalid-border-color'
+      | '--lr-form-control-label-collapse-inline-size'
       | '--lr-form-control-label-color'
       | '--lr-form-control-label-font-size'
       | '--lr-form-control-label-font-weight'
+      | '--lr-form-control-label-gap'
+      | '--lr-form-control-label-inline-size'
       | '--lr-form-control-required-color'
       | '--lr-form-control-required-content'
       | '--lr-form-control-required-offset'
+      | '--lr-form-control-touch-font-size-min'
       | '--lr-overlay-border'
       | '--lr-overlay-radius'
       | '--lr-overlay-shadow-anchored'
@@ -3487,6 +3496,7 @@ export interface LyraComponentTypeMap {
       'help-text'?: LyraCombobox['helpText'];
       'inputmode'?: LyraCombobox['inputMode'];
       'label-display'?: LyraCombobox['labelDisplay'];
+      'label-placement'?: LyraCombobox['labelPlacement'];
       'loading-text'?: LyraCombobox['loadingText'];
       'max-options-visible'?: LyraCombobox['maxOptionsVisible'];
       'max-render'?: LyraCombobox['maxRender'];
@@ -4393,6 +4403,7 @@ export interface LyraComponentTypeMap {
       | 'isDateDisabled'
       | 'label'
       | 'labelDisplay'
+      | 'labelPlacement'
       | 'locale'
       | 'max'
       | 'maxRange'
@@ -4470,12 +4481,16 @@ export interface LyraComponentTypeMap {
       | '--lr-form-control-focus-shadow'
       | '--lr-form-control-font-size'
       | '--lr-form-control-invalid-border-color'
+      | '--lr-form-control-label-collapse-inline-size'
       | '--lr-form-control-label-color'
       | '--lr-form-control-label-font-size'
       | '--lr-form-control-label-font-weight'
+      | '--lr-form-control-label-gap'
+      | '--lr-form-control-label-inline-size'
       | '--lr-form-control-required-color'
       | '--lr-form-control-required-content'
       | '--lr-form-control-required-offset'
+      | '--lr-form-control-touch-font-size-min'
       | '--lr-overlay-border'
       | '--lr-overlay-radius'
       | '--lr-overlay-surface'
@@ -4495,6 +4510,7 @@ export interface LyraComponentTypeMap {
       'first-day-of-week'?: LyraDateInput['firstDayOfWeek'];
       'inputmode'?: LyraDateInput['inputMode'];
       'label-display'?: LyraDateInput['labelDisplay'];
+      'label-placement'?: LyraDateInput['labelPlacement'];
       'max-range'?: LyraDateInput['maxRange'];
       'min-range'?: LyraDateInput['minRange'];
       'open-label'?: LyraDateInput['openLabel'];
@@ -5643,7 +5659,8 @@ export interface LyraComponentTypeMap {
       | '--lr-form-control-label-font-weight'
       | '--lr-form-control-required-color'
       | '--lr-form-control-required-content'
-      | '--lr-form-control-required-offset';
+      | '--lr-form-control-required-offset'
+      | '--lr-form-control-touch-font-size-min';
     attributeAliases: {
       'aria-label'?: LyraEmojiPicker['accessibleLabel'];
       'custom-error'?: LyraEmojiPicker['customError'];
@@ -7442,6 +7459,7 @@ export interface LyraComponentTypeMap {
       | 'inputMode'
       | 'label'
       | 'labelDisplay'
+      | 'labelPlacement'
       | 'locale'
       | 'match'
       | 'max'
@@ -7493,12 +7511,16 @@ export interface LyraComponentTypeMap {
     cssNames:       | '--lr-form-control-focus-shadow'
       | '--lr-form-control-font-size'
       | '--lr-form-control-invalid-border-color'
+      | '--lr-form-control-label-collapse-inline-size'
       | '--lr-form-control-label-color'
       | '--lr-form-control-label-font-size'
       | '--lr-form-control-label-font-weight'
+      | '--lr-form-control-label-gap'
+      | '--lr-form-control-label-inline-size'
       | '--lr-form-control-required-color'
       | '--lr-form-control-required-content'
       | '--lr-form-control-required-offset'
+      | '--lr-form-control-touch-font-size-min'
       | '--lr-input-action-active-bg'
       | '--lr-input-action-active-color'
       | '--lr-input-action-color'
@@ -7528,6 +7550,7 @@ export interface LyraComponentTypeMap {
       'help-text'?: LyraInput['helpText'];
       'inputmode'?: LyraInput['inputMode'];
       'label-display'?: LyraInput['labelDisplay'];
+      'label-placement'?: LyraInput['labelPlacement'];
       'no-spin-buttons'?: LyraInput['noSpinButtons'];
       'password-toggle'?: LyraInput['passwordToggle'];
       'password-visible'?: LyraInput['passwordVisible'];
@@ -8246,6 +8269,7 @@ export interface LyraComponentTypeMap {
       | '--lr-form-control-required-color'
       | '--lr-form-control-required-content'
       | '--lr-form-control-required-offset'
+      | '--lr-form-control-touch-font-size-min'
       | '--lr-locale-picker-expand-size'
       | '--lr-locale-picker-font-size'
       | '--lr-locale-picker-gap'
@@ -9414,6 +9438,7 @@ export interface LyraComponentTypeMap {
       | 'inputMode'
       | 'label'
       | 'labelDisplay'
+      | 'labelPlacement'
       | 'locale'
       | 'match'
       | 'max'
@@ -9463,12 +9488,16 @@ export interface LyraComponentTypeMap {
     cssNames:       | '--lr-form-control-focus-shadow'
       | '--lr-form-control-font-size'
       | '--lr-form-control-invalid-border-color'
+      | '--lr-form-control-label-collapse-inline-size'
       | '--lr-form-control-label-color'
       | '--lr-form-control-label-font-size'
       | '--lr-form-control-label-font-weight'
+      | '--lr-form-control-label-gap'
+      | '--lr-form-control-label-inline-size'
       | '--lr-form-control-required-color'
       | '--lr-form-control-required-content'
       | '--lr-form-control-required-offset'
+      | '--lr-form-control-touch-font-size-min'
       | '--lr-input-action-active-bg'
       | '--lr-input-action-active-color'
       | '--lr-input-action-color'
@@ -9498,6 +9527,7 @@ export interface LyraComponentTypeMap {
       'help-text'?: LyraNativeTimeInput['helpText'];
       'inputmode'?: LyraNativeTimeInput['inputMode'];
       'label-display'?: LyraNativeTimeInput['labelDisplay'];
+      'label-placement'?: LyraNativeTimeInput['labelPlacement'];
       'password-toggle'?: LyraNativeTimeInput['passwordToggle'];
       'password-visible'?: LyraNativeTimeInput['passwordVisible'];
       'value'?: LyraNativeTimeInput['defaultValue'];
@@ -9730,6 +9760,7 @@ export interface LyraComponentTypeMap {
       | 'inputMode'
       | 'label'
       | 'labelDisplay'
+      | 'labelPlacement'
       | 'locale'
       | 'localized'
       | 'match'
@@ -9783,12 +9814,16 @@ export interface LyraComponentTypeMap {
     cssNames:       | '--lr-form-control-focus-shadow'
       | '--lr-form-control-font-size'
       | '--lr-form-control-invalid-border-color'
+      | '--lr-form-control-label-collapse-inline-size'
       | '--lr-form-control-label-color'
       | '--lr-form-control-label-font-size'
       | '--lr-form-control-label-font-weight'
+      | '--lr-form-control-label-gap'
+      | '--lr-form-control-label-inline-size'
       | '--lr-form-control-required-color'
       | '--lr-form-control-required-content'
       | '--lr-form-control-required-offset'
+      | '--lr-form-control-touch-font-size-min'
       | '--lr-input-action-active-bg'
       | '--lr-input-action-active-color'
       | '--lr-input-action-color'
@@ -9818,6 +9853,7 @@ export interface LyraComponentTypeMap {
       'help-text'?: LyraNumberInput['helpText'];
       'inputmode'?: LyraNumberInput['inputMode'];
       'label-display'?: LyraNumberInput['labelDisplay'];
+      'label-placement'?: LyraNumberInput['labelPlacement'];
       'no-spin-buttons'?: LyraNumberInput['noSpinButtons'];
       'password-toggle'?: LyraNumberInput['passwordToggle'];
       'password-visible'?: LyraNumberInput['passwordVisible'];
@@ -9919,6 +9955,7 @@ export interface LyraComponentTypeMap {
       | '--lr-form-control-required-color'
       | '--lr-form-control-required-content'
       | '--lr-form-control-required-offset'
+      | '--lr-form-control-touch-font-size-min'
       | '--lr-otp-input-active-border-color'
       | '--lr-otp-input-active-ring-color'
       | '--lr-otp-input-hover-border-color'
@@ -10333,6 +10370,7 @@ export interface LyraComponentTypeMap {
       | '--lr-form-control-required-color'
       | '--lr-form-control-required-content'
       | '--lr-form-control-required-offset'
+      | '--lr-form-control-touch-font-size-min'
       | '--lr-phone-input-border-color'
       | '--lr-phone-input-control-height'
       | '--lr-phone-input-control-min-height'
@@ -11352,6 +11390,8 @@ export interface LyraComponentTypeMap {
       | '--lr-radio-dot-size'
       | '--lr-radio-hover-border-color'
       | '--lr-radio-invalid-border-color'
+      | '--lr-radio-label-color'
+      | '--lr-radio-label-font-size'
       | '--lr-radio-label-indent'
       | '--lr-radio-radius';
     attributeAliases: {
@@ -11417,6 +11457,8 @@ export interface LyraComponentTypeMap {
       | '--lr-radio-dot-size'
       | '--lr-radio-hover-border-color'
       | '--lr-radio-invalid-border-color'
+      | '--lr-radio-label-color'
+      | '--lr-radio-label-font-size'
       | '--lr-radio-label-indent'
       | '--lr-radio-radius';
     attributeAliases: {
@@ -12305,6 +12347,7 @@ export interface LyraComponentTypeMap {
       | 'hoist'
       | 'label'
       | 'labelDisplay'
+      | 'labelPlacement'
       | 'loading'
       | 'locale'
       | 'maxOptionsVisible'
@@ -12351,12 +12394,16 @@ export interface LyraComponentTypeMap {
       | '--lr-form-control-focus-shadow'
       | '--lr-form-control-font-size'
       | '--lr-form-control-invalid-border-color'
+      | '--lr-form-control-label-collapse-inline-size'
       | '--lr-form-control-label-color'
       | '--lr-form-control-label-font-size'
       | '--lr-form-control-label-font-weight'
+      | '--lr-form-control-label-gap'
+      | '--lr-form-control-label-inline-size'
       | '--lr-form-control-required-color'
       | '--lr-form-control-required-content'
       | '--lr-form-control-required-offset'
+      | '--lr-form-control-touch-font-size-min'
       | '--lr-overlay-border'
       | '--lr-overlay-radius'
       | '--lr-overlay-shadow-anchored'
@@ -12398,6 +12445,7 @@ export interface LyraComponentTypeMap {
       'error-text'?: LyraSelect['errorText'];
       'help-text'?: LyraSelect['helpText'];
       'label-display'?: LyraSelect['labelDisplay'];
+      'label-placement'?: LyraSelect['labelPlacement'];
       'max-options-visible'?: LyraSelect['maxOptionsVisible'];
       'max-render'?: LyraSelect['maxRender'];
       'positioning-strategy'?: LyraSelect['positioningStrategy'];
@@ -12592,6 +12640,7 @@ export interface LyraComponentTypeMap {
       | 'label'
       | 'labelDisplay'
       | 'locale'
+      | 'marks'
       | 'max'
       | 'maxValue'
       | 'min'
@@ -12639,6 +12688,10 @@ export interface LyraComponentTypeMap {
       | '--lr-form-control-required-offset'
       | '--lr-slider-gap'
       | '--lr-slider-indicator-bg'
+      | '--lr-slider-mark-bg'
+      | '--lr-slider-mark-label-color'
+      | '--lr-slider-mark-label-font-size'
+      | '--lr-slider-mark-label-gap'
       | '--lr-slider-marker-bg'
       | '--lr-slider-row-size'
       | '--lr-slider-thumb-active-ring-color'
@@ -13400,6 +13453,7 @@ export interface LyraComponentTypeMap {
       | '--lr-switch-gap'
       | '--lr-switch-invalid-border'
       | '--lr-switch-label-color'
+      | '--lr-switch-label-font-size'
       | '--lr-switch-thumb-fill'
       | '--lr-switch-thumb-offset'
       | '--lr-switch-track-active-fill'
@@ -13889,6 +13943,7 @@ export interface LyraComponentTypeMap {
       | 'inputMode'
       | 'label'
       | 'labelDisplay'
+      | 'labelPlacement'
       | 'locale'
       | 'maxlength'
       | 'minlength'
@@ -13928,12 +13983,16 @@ export interface LyraComponentTypeMap {
     cssNames:       | '--lr-form-control-focus-shadow'
       | '--lr-form-control-font-size'
       | '--lr-form-control-invalid-border-color'
+      | '--lr-form-control-label-collapse-inline-size'
       | '--lr-form-control-label-color'
       | '--lr-form-control-label-font-size'
       | '--lr-form-control-label-font-weight'
+      | '--lr-form-control-label-gap'
+      | '--lr-form-control-label-inline-size'
       | '--lr-form-control-required-color'
       | '--lr-form-control-required-content'
       | '--lr-form-control-required-offset'
+      | '--lr-form-control-touch-font-size-min'
       | '--lr-textarea-border-color'
       | '--lr-textarea-fill'
       | '--lr-textarea-focus-border-color'
@@ -13953,6 +14012,7 @@ export interface LyraComponentTypeMap {
       'help-text'?: LyraTextarea['helpText'];
       'inputmode'?: LyraTextarea['inputMode'];
       'label-display'?: LyraTextarea['labelDisplay'];
+      'label-placement'?: LyraTextarea['labelPlacement'];
       'value'?: LyraTextarea['defaultValue'];
       'with-count'?: LyraTextarea['withCount'];
       'with-hint'?: LyraTextarea['withHint'];
@@ -14598,6 +14658,7 @@ export interface LyraComponentTypeMap {
       | '--lr-form-control-required-color'
       | '--lr-form-control-required-content'
       | '--lr-form-control-required-offset'
+      | '--lr-form-control-touch-font-size-min'
       | '--lr-token-input-action-hover-bg'
       | '--lr-token-input-border-color'
       | '--lr-token-input-control-height'

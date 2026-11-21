@@ -9,13 +9,16 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `button`: `--lr-radio-button-bg`, `--lr-radio-button-border-color`; `circle`: `--lr-radio-bg`, `--lr-radio-border-color`, `--lr-radio-checked-border-color`, `--lr-radio-circle-size`; `dot`: `--lr-radio-checked-dot-color`, `--lr-radio-dot-size`
+- **Themeable via** 13 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `button`: `--lr-radio-button-bg`, `--lr-radio-button-border-color`; `circle`: `--lr-radio-bg`, `--lr-radio-border-color`, `--lr-radio-checked-border-color`, `--lr-radio-circle-size`; `dot`: `--lr-radio-checked-dot-color`, `--lr-radio-dot-size`; `label`: `--lr-radio-label-color`, `--lr-radio-label-font-size`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-radio-button`
+
+Shares `lr-radio`'s label tokens: `--lr-radio-label-font-size` (default `var(--lr-font-size-md-sm)`)
+and `--lr-radio-label-color` (default `var(--lr-color-text)`).
 
 The same single-choice control as `lr-radio`, rendered as a button instead of a circle. Mirrors
 `sl-radio-button`.

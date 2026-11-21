@@ -9,13 +9,16 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `emoji-picker-element-data` — see `llms/peers.md`
-- **Themeable via** 19 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `form-control-label`: `--lr-form-control-required-content`; `search-wrapper`: `--lr-emoji-picker-search-clear-gap`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-emoji-picker`
+
+Under a coarse pointer the editable text is floored at `--lr-form-control-touch-font-size-min`
+(default `16px`; `0px` opts out) so mobile Safari does not zoom on focus; see "Touch font floor".
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`.

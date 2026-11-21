@@ -26248,6 +26248,18 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-checkbox-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-checkbox-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-md-sm)"
+          },
+          {
             "name": "--lr-checkbox-label-indent",
             "deprecated": null,
             "hasDefault": true,
@@ -33396,6 +33408,12 @@
             "default": 0
           },
           {
+            "name": "--lr-form-control-touch-font-size-min",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "16px"
+          },
+          {
             "name": "--lr-overlay-border",
             "deprecated": null,
             "hasDefault": true,
@@ -33798,6 +33816,16 @@
             "default": false
           },
           {
+            "name": "commit",
+            "property": "commit",
+            "type": "LyraComboboxCommit",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "value"
+          },
+          {
             "name": "custom-error",
             "property": "customError",
             "type": "string | null",
@@ -33914,6 +33942,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "visible"
+          },
+          {
+            "name": "label-placement",
+            "property": "labelPlacement",
+            "type": "LyraLabelPlacement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
           },
           {
             "name": "loading",
@@ -34252,6 +34290,16 @@
             "default": false
           },
           {
+            "name": "commit",
+            "attribute": "commit",
+            "type": "LyraComboboxCommit",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "value"
+          },
+          {
             "name": "customError",
             "attribute": "custom-error",
             "type": "string | null",
@@ -34442,6 +34490,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "visible"
+          },
+          {
+            "name": "labelPlacement",
+            "attribute": "label-placement",
+            "type": "LyraLabelPlacement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
           },
           {
             "name": "labels",
@@ -35294,6 +35352,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-form-control-label-collapse-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-20rem)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -35312,6 +35376,18 @@
             "default": "var(--lr-font-weight-semibold)"
           },
           {
+            "name": "--lr-form-control-label-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
+          },
+          {
+            "name": "--lr-form-control-label-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "30%"
+          },
+          {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
             "hasDefault": true,
@@ -35328,6 +35404,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0
+          },
+          {
+            "name": "--lr-form-control-touch-font-size-min",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "16px"
           },
           {
             "name": "--lr-overlay-border",
@@ -46175,6 +46257,16 @@
             "default": "visible"
           },
           {
+            "name": "label-placement",
+            "property": "labelPlacement",
+            "type": "LyraLabelPlacement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -46749,6 +46841,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "visible"
+          },
+          {
+            "name": "labelPlacement",
+            "attribute": "label-placement",
+            "type": "LyraLabelPlacement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
           },
           {
             "name": "labels",
@@ -47497,6 +47599,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-form-control-label-collapse-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-20rem)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -47515,6 +47623,18 @@
             "default": "var(--lr-font-weight-semibold)"
           },
           {
+            "name": "--lr-form-control-label-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
+          },
+          {
+            "name": "--lr-form-control-label-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "30%"
+          },
+          {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
             "hasDefault": true,
@@ -47531,6 +47651,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0
+          },
+          {
+            "name": "--lr-form-control-touch-font-size-min",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "16px"
           },
           {
             "name": "--lr-overlay-border",
@@ -59897,6 +60023,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0
+          },
+          {
+            "name": "--lr-form-control-touch-font-size-min",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "16px"
           }
         ],
         "cssStates": [],
@@ -79202,6 +79334,16 @@
             "default": "visible"
           },
           {
+            "name": "label-placement",
+            "property": "labelPlacement",
+            "type": "LyraLabelPlacement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -79663,6 +79805,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "visible"
+          },
+          {
+            "name": "labelPlacement",
+            "attribute": "label-placement",
+            "type": "LyraLabelPlacement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
           },
           {
             "name": "labels",
@@ -80157,6 +80309,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-form-control-label-collapse-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-20rem)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -80175,6 +80333,18 @@
             "default": "var(--lr-font-weight-semibold)"
           },
           {
+            "name": "--lr-form-control-label-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
+          },
+          {
+            "name": "--lr-form-control-label-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "30%"
+          },
+          {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
             "hasDefault": true,
@@ -80191,6 +80361,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0
+          },
+          {
+            "name": "--lr-form-control-touch-font-size-min",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "16px"
           },
           {
             "name": "--lr-input-action-active-bg",
@@ -88251,6 +88427,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0
+          },
+          {
+            "name": "--lr-form-control-touch-font-size-min",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "16px"
           },
           {
             "name": "--lr-locale-picker-expand-size",
@@ -100820,6 +101002,16 @@
             "default": "visible"
           },
           {
+            "name": "label-placement",
+            "property": "labelPlacement",
+            "type": "LyraLabelPlacement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -101271,6 +101463,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "visible"
+          },
+          {
+            "name": "labelPlacement",
+            "attribute": "label-placement",
+            "type": "LyraLabelPlacement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
           },
           {
             "name": "labels",
@@ -101759,6 +101961,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-form-control-label-collapse-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-20rem)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -101777,6 +101985,18 @@
             "default": "var(--lr-font-weight-semibold)"
           },
           {
+            "name": "--lr-form-control-label-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
+          },
+          {
+            "name": "--lr-form-control-label-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "30%"
+          },
+          {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
             "hasDefault": true,
@@ -101793,6 +102013,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0
+          },
+          {
+            "name": "--lr-form-control-touch-font-size-min",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "16px"
           },
           {
             "name": "--lr-input-action-active-bg",
@@ -104537,6 +104763,16 @@
             "default": "visible"
           },
           {
+            "name": "label-placement",
+            "property": "labelPlacement",
+            "type": "LyraLabelPlacement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -105019,6 +105255,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "visible"
+          },
+          {
+            "name": "labelPlacement",
+            "attribute": "label-placement",
+            "type": "LyraLabelPlacement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
           },
           {
             "name": "labels",
@@ -105573,6 +105819,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-form-control-label-collapse-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-20rem)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -105591,6 +105843,18 @@
             "default": "var(--lr-font-weight-semibold)"
           },
           {
+            "name": "--lr-form-control-label-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
+          },
+          {
+            "name": "--lr-form-control-label-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "30%"
+          },
+          {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
             "hasDefault": true,
@@ -105607,6 +105871,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0
+          },
+          {
+            "name": "--lr-form-control-touch-font-size-min",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "16px"
           },
           {
             "name": "--lr-input-action-active-bg",
@@ -107256,6 +107526,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0
+          },
+          {
+            "name": "--lr-form-control-touch-font-size-min",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "16px"
           },
           {
             "name": "--lr-otp-input-active-border-color",
@@ -112371,6 +112647,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0
+          },
+          {
+            "name": "--lr-form-control-touch-font-size-min",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "16px"
           },
           {
             "name": "--lr-phone-input-border-color",
@@ -122898,6 +123180,18 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-radio-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-radio-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-md-sm)"
+          },
+          {
             "name": "--lr-radio-label-indent",
             "deprecated": null,
             "hasDefault": true,
@@ -123780,6 +124074,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-radio-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-radio-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-md-sm)"
           },
           {
             "name": "--lr-radio-label-indent",
@@ -133917,6 +134223,16 @@
             "default": "visible"
           },
           {
+            "name": "label-placement",
+            "property": "labelPlacement",
+            "type": "LyraLabelPlacement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
+          },
+          {
             "name": "loading",
             "property": "loading",
             "type": "boolean",
@@ -134304,6 +134620,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "visible"
+          },
+          {
+            "name": "labelPlacement",
+            "attribute": "label-placement",
+            "type": "LyraLabelPlacement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
           },
           {
             "name": "labels",
@@ -134877,6 +135203,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-form-control-label-collapse-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-20rem)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -134895,6 +135227,18 @@
             "default": "var(--lr-font-weight-semibold)"
           },
           {
+            "name": "--lr-form-control-label-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
+          },
+          {
+            "name": "--lr-form-control-label-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "30%"
+          },
+          {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
             "hasDefault": true,
@@ -134911,6 +135255,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0
+          },
+          {
+            "name": "--lr-form-control-touch-font-size-min",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "16px"
           },
           {
             "name": "--lr-overlay-border",
@@ -137794,6 +138144,16 @@
             "default": ""
           },
           {
+            "name": "marks",
+            "attribute": null,
+            "type": "readonly LyraSliderMark[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
+          {
             "name": "max",
             "attribute": "max",
             "type": "number",
@@ -138195,11 +138555,27 @@
             "deprecated": null
           },
           {
+            "name": "mark",
+            "deprecated": null
+          },
+          {
+            "name": "mark-label",
+            "deprecated": null
+          },
+          {
+            "name": "mark-label-thinned",
+            "deprecated": null
+          },
+          {
             "name": "marker",
             "deprecated": null
           },
           {
             "name": "markers",
+            "deprecated": null
+          },
+          {
+            "name": "marks",
             "deprecated": null
           },
           {
@@ -138299,6 +138675,30 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-slider-mark-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-slider-marker-bg)"
+          },
+          {
+            "name": "--lr-slider-mark-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-slider-mark-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-xs)"
+          },
+          {
+            "name": "--lr-slider-mark-label-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
           },
           {
             "name": "--lr-slider-marker-bg",
@@ -146215,6 +146615,12 @@
             "default": "var(--lr-color-text)"
           },
           {
+            "name": "--lr-switch-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-md-sm)"
+          },
+          {
             "name": "--lr-switch-thumb-fill",
             "deprecated": null,
             "hasDefault": true,
@@ -151660,6 +152066,16 @@
             "default": "visible"
           },
           {
+            "name": "label-placement",
+            "property": "labelPlacement",
+            "type": "LyraLabelPlacement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -152056,6 +152472,16 @@
             "default": "visible"
           },
           {
+            "name": "labelPlacement",
+            "attribute": "label-placement",
+            "type": "LyraLabelPlacement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
+          },
+          {
             "name": "labels",
             "attribute": null,
             "type": "NodeList",
@@ -152441,6 +152867,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-form-control-label-collapse-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-20rem)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -152459,6 +152891,18 @@
             "default": "var(--lr-font-weight-semibold)"
           },
           {
+            "name": "--lr-form-control-label-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
+          },
+          {
+            "name": "--lr-form-control-label-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "30%"
+          },
+          {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
             "hasDefault": true,
@@ -152475,6 +152919,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0
+          },
+          {
+            "name": "--lr-form-control-touch-font-size-min",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "16px"
           },
           {
             "name": "--lr-textarea-border-color",
@@ -160025,6 +160475,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0
+          },
+          {
+            "name": "--lr-form-control-touch-font-size-min",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "16px"
           },
           {
             "name": "--lr-token-input-action-hover-bg",

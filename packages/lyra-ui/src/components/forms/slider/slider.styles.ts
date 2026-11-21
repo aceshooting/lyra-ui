@@ -120,6 +120,47 @@ export const styles = css`
     border-radius: var(--lr-radius-xs);
     background: var(--lr-slider-marker-bg, var(--lr-color-surface));
   }
+  /* Arbitrary-position marks: the tick reads like a with-markers tick, the label hangs below the
+     track. The base reserves the label line so the scale never overlaps the content after it. */
+  [part="marks"] {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    column-gap: var(--lr-slider-mark-label-gap, var(--lr-space-xs));
+  }
+  [part="mark"] {
+    position: absolute;
+    inset-block-start: 50%;
+    inline-size: calc(var(--lr-slider-track-thickness, var(--_lr-slider-track-thickness)) * 0.5);
+    block-size: calc(var(--lr-slider-track-thickness, var(--_lr-slider-track-thickness)) * 1.5);
+    transform: translate(-50%, -50%);
+    border-radius: var(--lr-radius-xs);
+    background: var(--lr-slider-mark-bg, var(--lr-slider-marker-bg, var(--lr-color-surface)));
+  }
+  [part~="mark-label"] {
+    position: absolute;
+    inset-block-start: calc(100% + var(--lr-space-2xs));
+    transform: translateX(-50%);
+    color: var(--lr-slider-mark-label-color, var(--lr-color-text-quiet));
+    font-size: var(--lr-slider-mark-label-font-size, var(--lr-font-size-xs));
+    line-height: var(--lr-line-height-normal);
+    white-space: nowrap;
+  }
+  [part~="mark-label-thinned"] {
+    visibility: hidden;
+  }
+  [part~="base"][data-mark-labels] {
+    margin-block-end: calc(
+      var(--lr-slider-mark-label-font-size, var(--lr-font-size-xs)) * var(--lr-line-height-normal) +
+        var(--lr-space-2xs)
+    );
+  }
+  :host(:dir(rtl)) [part="mark"] {
+    transform: translate(50%, -50%);
+  }
+  :host(:dir(rtl)) [part~="mark-label"] {
+    transform: translateX(50%);
+  }
   [part~="thumb"] {
     position: absolute;
     inset-block-start: 50%;
@@ -515,6 +556,25 @@ export const styles = css`
       )
     );
     transform: translate(-50%, 50%);
+  }
+  :host([orientation="vertical"]) [part="mark"] {
+    inset-block-start: auto;
+    inset-inline-start: 50%;
+    inline-size: calc(var(--lr-slider-track-thickness, var(--_lr-slider-track-thickness)) * 1.5);
+    block-size: calc(var(--lr-slider-track-thickness, var(--_lr-slider-track-thickness)) * 0.5);
+    transform: translate(-50%, 50%);
+  }
+  :host([orientation="vertical"]) [part~="mark-label"] {
+    inset-block-start: auto;
+    inset-inline-start: calc(100% + var(--lr-space-xs));
+    transform: translateY(50%);
+  }
+  :host([orientation="vertical"]) [part~="base"][data-mark-labels] {
+    margin-block-end: 0;
+    margin-inline-end: var(--lr-size-4rem);
+  }
+  :host([orientation="vertical"]:dir(rtl)) [part="mark"] {
+    transform: translate(50%, 50%);
   }
   :host([orientation="vertical"]) [part~="tooltip"] {
     inset-block-start: auto;

@@ -273,6 +273,7 @@ export type { LyraPickerDetailValue, LyraPickerValue } from './internal/picker-v
 export type {
   ComboboxSourceResult,
   LyraComboboxChangeEvent,
+  LyraComboboxCommit,
   LyraComboboxInputEvent,
   LyraComboboxPlacement,
   LyraComboboxSelectionDirection,
@@ -2186,6 +2187,7 @@ export type { LyraSignaturePadEventMap, SignatureStroke } from './components/for
 export type {
   LyraSliderChangeDetail,
   LyraSliderEventMap,
+  LyraSliderMark,
   SliderHandle,
   SliderOrientation,
   SliderTooltipPlacement,
@@ -2237,6 +2239,7 @@ export type {
   LyraAppearance,
   LyraFrame,
   LyraLabelDisplay,
+  LyraLabelPlacement,
   LyraSize,
   LyraSizeAlias,
   LyraSizeStep,

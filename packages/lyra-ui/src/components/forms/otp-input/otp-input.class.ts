@@ -158,6 +158,9 @@ class LyraOtpInputBase extends LyraElement<LyraOtpInputEventMap> {
  * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
  * rather than `invalid`: a pristine required field is genuinely invalid, but colouring it red
  * before the user has entered a digit is hostile.
+ * @cssprop [--lr-form-control-touch-font-size-min=16px] - Font-size floor of the editable text
+ *   surface under a coarse or hover-less pointer, which stops mobile Safari zooming on focus. `0px`
+ *   disables it.
  * @cssprop [--lr-form-control-invalid-border-color] - Shared invalid border color, overridden by a component-specific invalid border.
  * @cssprop [--lr-otp-input-placeholder-color=var(--lr-color-text-quiet)] - Placeholder text color.
  * @csspart base - The outer wrapper; retained alias for `form-control`.
@@ -584,6 +587,7 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
   }
 
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     if (!isLiveDisabled(this)) this.control?.focus(options);
   }
   override blur(): void {

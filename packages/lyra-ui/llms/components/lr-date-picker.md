@@ -226,6 +226,14 @@ day-cell/grid-column size; its private default follows the `size` tier — `2xs`
 
 ### `lr-date-input`
 
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in
+an inline-start column, sized by `--lr-form-control-label-inline-size` (default `30%`) and
+`--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below
+`--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside
+the field: `label-placement`". Under a coarse pointer the editable text is floored at
+`--lr-form-control-touch-font-size-min` (default `16px`; `0px` opts out) so mobile Safari does not
+zoom on focus; see "Touch font floor".
+
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
 Text field + calendar popover, **form-associated** via the shared `FormAssociated` mixin (`name`,

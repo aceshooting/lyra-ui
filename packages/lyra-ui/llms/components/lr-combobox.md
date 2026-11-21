@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 35 parts, 41 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 35 parts, 45 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `combobox`: `--lr-combobox-gap`, `--lr-combobox-radius`; `form-control-label`: `--lr-form-control-required-content`; `option-badge`: `--lr-combobox-option-badge-bg`
 - **Documented with** `lr-option` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -124,6 +124,14 @@ other value (a plain object, a function) is dropped from the row instead of reac
 
 ### `lr-combobox`
 
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in
+an inline-start column, sized by `--lr-form-control-label-inline-size` (default `30%`) and
+`--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below
+`--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside
+the field: `label-placement`". Under a coarse pointer the editable text is floored at
+`--lr-form-control-touch-font-size-min` (default `16px`; `0px` opts out) so mobile Safari does not
+zoom on focus; see "Touch font floor".
+
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
 **Properties:**
@@ -156,7 +164,23 @@ other value (a plain object, a function) is dropped from the row instead of reac
   combobox appends and selects the option if creation is still enabled, the field is editable,
   and the request was accepted. This also applies in `multiple` mode.
 - `allowCustomValue: boolean = false` (attribute `allow-custom-value`) — single-select only;
-  commits arbitrary text on Enter without creating an option
+  commits arbitrary text on Enter without creating an option. A pick still commits the option's
+  `value`; for a free-text field use `commit="text"`
+- `commit: 'value' | 'text' = 'value'` (attribute `commit`, reflected) — single-select only. `text`
+  makes a free-text field with suggestions: picking an option writes its **label** into `value` (so
+  the form value is the text) and reports the option's `data` in the `lr-change` /
+  `lr-change-request` detail; typed text commits on Enter (consumed while the list is open,
+  otherwise followed by implicit form submission) and when focus leaves; the text stays after blur,
+  and reopening edits it in place instead of blanking the field. Escape closes the list and drops
+  an uncommitted edit. No `allow-custom-value` is needed, and no unknown-value badge is shown.
+  The list opens on focus in every mode, and a press on the already-focused input reopens it:
+
+  ```html
+  <lr-combobox label="Description" name="description" commit="text">
+    <lr-option value="art-1">Steel bracket</lr-option>
+    <lr-option value="art-2">Steel bolt</lr-option>
+  </lr-combobox>
+  ```
 - `withUnknownOption: boolean = false` (attribute `with-unknown-option`, reflected) — appends every
   committed value that no option or async row claims to the end of the listbox as a synthetic,
   badged, keyboard-reachable, re-selectable row. Off by default. The synthetic row is filtered by

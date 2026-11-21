@@ -268,6 +268,9 @@ const emojiHaystacks = new WeakMap<EmojiPickerItem, { locale: string; value: str
  * @slot error - Custom error content.
  * @csspart limit - Localized notice when input admission omits catalog data.
  * @csspart form-control - The outer wrapper around label, base, error and hint.
+ * @cssprop [--lr-form-control-touch-font-size-min=16px] - Font-size floor of the editable text
+ *   surface under a coarse or hover-less pointer, which stops mobile Safari zooming on focus. `0px`
+ *   disables it.
  * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=inherit] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
@@ -594,6 +597,7 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
 
   /** Moves focus to the search combobox while the form control is enabled. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     if (!isLiveDisabled(this)) this.searchEl?.focus(options);
   }
 

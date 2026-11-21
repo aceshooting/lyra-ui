@@ -161,6 +161,8 @@ class LyraCheckboxBase extends LyraElement<LyraCheckboxEventMap> {}
  * @csspart hint - Web Awesome name for the supporting-text wrapper.
  * @csspart form-control-help-text - Shoelace name for the same supporting-text wrapper.
  * @csspart error - The error message.
+ * @cssprop [--lr-checkbox-label-font-size=var(--lr-font-size-md-sm)] - Font size of `[part='label']`.
+ * @cssprop [--lr-checkbox-label-color=var(--lr-color-text)] - Text color of `[part='label']`.
  * @cssprop [--lr-checkbox-label-indent=calc(var(--lr-checkbox-box-size) + var(--lr-space-s))] -
  * The inline distance from the control's start edge to the start of the label text, i.e. the box's
  * own floor plus the gap next to it — so it tracks `size` along with the box. Published so a
@@ -396,6 +398,7 @@ export class LyraCheckbox extends CheckedFormAssociated(LyraCheckboxBase) {
 
   /** Moves focus to the internal checkbox control. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     if (!this.liveDisabled) this[VALIDITY_ANCHOR]()?.focus(options);
   }
 

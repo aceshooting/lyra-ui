@@ -39,6 +39,7 @@ import {
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
 import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
+import { OwnedResizeObserver } from '../../../internal/owned-observer.js';
 import { acquireResolvedAriaRelationship, type ResolvedAriaRelationshipLease } from '../../../internal/aria-controls.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -79,6 +80,13 @@ export type SliderHandle = 'value' | 'min' | 'max';
 export type SliderValueDisplay = 'numeric' | 'formatted';
 /** Places the optional readout beside the track or opposite the visible label. */
 export type SliderValuePlacement = 'inline' | 'label';
+/** One tick on an `lr-slider` scale, at any position, optionally labelled. */
+export type LyraSliderMark = {
+  /** Position in the slider's `min`..`max` domain; marks outside it are not drawn. */
+  value: number;
+  /** Visible text under the tick. Omit for an unlabelled tick. */
+  label?: string;
+};
 
 /** Formats a finite, clamped slider value for `aria-valuetext` (and for the
  *  `with-tooltip` bubble); return a nullish value to omit `aria-valuetext`
@@ -183,6 +191,12 @@ class LyraSliderBase extends LyraFormControlElement<LyraSliderEventMap> {}
  *   between the two handles in `range` mode.
  * @csspart markers - The tick-mark container rendered when `with-markers` is set.
  * @csspart marker - One `step`-grid tick mark.
+ * @csspart marks - The container for `marks`, rendered when at least one mark is in range.
+ * @csspart mark - One tick from `marks`.
+ * @csspart mark-label - The visible label of a labelled mark. Decorative (`aria-hidden`): the
+ *   handle's `aria-valuetext` already conveys the value.
+ * @csspart mark-label-thinned - Also carried by a mark label hidden because it would overlap the
+ *   previous visible label at the current width.
  * @csspart thumb - A draggable handle (`role="slider"`). Present on every handle, including
  *   both range handles.
  * @csspart thumb-min - The lower handle in `range` mode (also carries `thumb`).
@@ -222,6 +236,11 @@ class LyraSliderBase extends LyraFormControlElement<LyraSliderEventMap> {}
  * @cssprop [--lr-slider-indicator-bg=var(--lr-color-brand)] - Filled indicator color; takes
  *   precedence over the `--track-color-active` alias.
  * @cssprop [--lr-slider-marker-bg=var(--lr-color-surface)] - Tick-mark color for `with-markers`.
+ * @cssprop [--lr-slider-mark-bg=var(--lr-slider-marker-bg)] - Tick color for `marks`.
+ * @cssprop [--lr-slider-mark-label-font-size=var(--lr-font-size-xs)] - Mark label font size.
+ * @cssprop [--lr-slider-mark-label-color=var(--lr-color-text-quiet)] - Mark label color.
+ * @cssprop [--lr-slider-mark-label-gap=var(--lr-space-xs)] - Minimum space between two visible
+ *   mark labels; a label closer than this to the previous one is thinned.
  * @cssprop [--lr-slider-thumb-bg=var(--lr-color-brand)] - Resting thumb background.
  * @cssprop [--lr-slider-thumb-border-color=var(--lr-color-surface)] - Resting thumb border.
  * @cssprop [--lr-slider-thumb-hover-ring-color=var(--lr-color-brand-quiet)] - Thumb ring while
@@ -666,6 +685,19 @@ export class LyraSlider extends LyraSliderBase {
   /** Whether to draw a tick mark at every `step` position along the track. */
   @property({ type: Boolean, attribute: 'with-markers' }) withMarkers = false;
 
+  /**
+   * Ticks at arbitrary positions, each optionally labelled (hours, years, thresholds). Positions are
+   * logical, so the scale mirrors under RTL with the track. Labels that would overlap at the
+   * current width are thinned (measured after each render and on resize), keeping the first of
+   * each crowded run. Labels are decorative; use `valueFormatter` so `aria-valuetext` carries the
+   * same wording. Independent of `with-markers`, which draws the unlabelled `step` grid.
+   * @default []
+   */
+  @property({ attribute: false }) marks: readonly LyraSliderMark[] = [];
+
+  private observedMarks?: Element;
+  private readonly markObserver = new OwnedResizeObserver(this, () => this.thinMarkLabels());
+
   /** Whether to show a live value bubble beside each focused or dragged handle. */
   @property({ type: Boolean, attribute: 'with-tooltip' }) withTooltip = false;
 
@@ -812,6 +844,8 @@ export class LyraSlider extends LyraSliderBase {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.syncExternalDescription();
+    // Label geometry only moves with these; a resize re-measures through the observer.
+    if (['marks', 'min', 'max', 'orientation', 'size'].some((key) => changed.has(key))) this.thinMarkLabels();
     if (changed.has('readonly')) this.syncValidityStates();
     if (!changed.has('range')) return;
     const transfer = this.rangeFocusTransfer;
@@ -873,6 +907,8 @@ export class LyraSlider extends LyraSliderBase {
     this.focusedHandle = null;
     this.syncInteractionStates();
     this.cancelAutofocusFrame();
+    this.markObserver.clear();
+    this.observedMarks = undefined;
   }
 
   override adoptedCallback(): void {
@@ -1064,6 +1100,7 @@ export class LyraSlider extends LyraSliderBase {
 
   /** Moves focus to the first internal thumb control (the lower handle in `range` mode). */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     if (!this.effectiveDisabled) this.firstThumb()?.focus(options);
   }
 
@@ -1493,6 +1530,50 @@ export class LyraSlider extends LyraSliderBase {
     });
   }
 
+  /** In-domain `marks`, as sorted axis percentages with a usable label. */
+  private markPositions(): { percent: number; label: string | undefined }[] {
+    const { lo, hi } = this.domain();
+    if (!(hi > lo) || !Array.isArray(this.marks)) return [];
+    const positions: { percent: number; label: string | undefined }[] = [];
+    for (const mark of this.marks) {
+      const value = (mark as LyraSliderMark | null | undefined)?.value;
+      if (typeof value !== 'number' || !Number.isFinite(value) || value < lo || value > hi) continue;
+      const label = typeof mark.label === 'string' && mark.label.trim() !== '' ? mark.label : undefined;
+      positions.push({ percent: finiteRatio(value, lo, hi) * 100, label });
+    }
+    return positions.sort((a, b) => a.percent - b.percent);
+  }
+
+  /** Hides each mark label that would overlap the previous visible one along the axis. */
+  private thinMarkLabels(): void {
+    const container = this.renderRoot.querySelector<HTMLElement>('[part="marks"]');
+    const labels = container ? [...container.querySelectorAll<HTMLElement>('[part~="mark-label"]')] : [];
+    if (!container || labels.length === 0) {
+      if (this.observedMarks) this.markObserver.clear();
+      this.observedMarks = undefined;
+      return;
+    }
+    if (this.observedMarks !== container) {
+      this.markObserver.clear();
+      this.markObserver.observe(container);
+      this.observedMarks = container;
+    }
+    const vertical = this.orientation === 'vertical';
+    const gap = finiteNumber(parseFloat(getComputedStyle(container).columnGap), 0);
+    for (const label of labels) label.part.remove('mark-label-thinned');
+    // Walk along the visual axis: left to right, or bottom-up on a vertical scale.
+    const boxes = labels.map((label) => {
+      const rect = label.getBoundingClientRect();
+      return vertical ? { label, start: -rect.bottom, end: -rect.top } : { label, start: rect.left, end: rect.right };
+    });
+    boxes.sort((a, b) => a.start - b.start);
+    let edge = Number.NEGATIVE_INFINITY;
+    for (const { label, start, end } of boxes) {
+      if (start < edge + gap) label.part.add('mark-label-thinned');
+      else edge = end;
+    }
+  }
+
   private renderHandle(
     handle: SliderHandle,
     describedBy: string | undefined,
@@ -1595,6 +1676,8 @@ export class LyraSlider extends LyraSliderBase {
       ? `inset-block-end:${startPercent}%;block-size:${span}%`
       : `inset-inline-start:${startPercent}%;inline-size:${span}%`;
     const markers = this.markerPercents();
+    const marks = this.markPositions();
+    const markLabels = marks.some((mark) => mark.label !== undefined);
     const label = html`
       <div id=${LABEL_ID} part="label form-control-label" ?hidden=${!hasLabel}>
         ${this.label}<slot name="label"></slot>
@@ -1615,6 +1698,7 @@ export class LyraSlider extends LyraSliderBase {
         role=${this.range ? 'group' : nothing}
         aria-label=${this.range && !labelledBy ? this.resolvedLabel() : nothing}
         aria-labelledby=${this.range && labelledBy ? labelledBy : nothing}
+        ?data-mark-labels=${markLabels}
         @pointerdown=${this.onBasePointerDown}
       >
         <div class="track-axis">
@@ -1624,6 +1708,15 @@ export class LyraSlider extends LyraSliderBase {
             ? html`<div part="markers" aria-hidden="true">
                 ${markers.map(
                   (percent) => html`<span part="marker" style=${this.offsetStyle(percent)}></span>`,
+                )}
+              </div>`
+            : nothing}
+          ${marks.length > 0
+            ? html`<div part="marks" aria-hidden="true">
+                ${marks.map(
+                  ({ percent, label }) => html`<span part="mark" style=${this.offsetStyle(percent)}></span>${label === undefined
+                    ? nothing
+                    : html`<span part="mark-label" style=${this.offsetStyle(percent)}>${label}</span>`}`,
                 )}
               </div>`
             : nothing}

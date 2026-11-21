@@ -142,6 +142,8 @@ class LyraRadioBase extends LyraElement<LyraRadioEventMap> {}
  * @csspart label - The default slot wrapper; hidden while it has no real content.
  * @csspart end - The `appearance="button"` trailing-content wrapper; hidden while empty.
  * @csspart suffix - Shoelace-compatible alias on the same trailing-content wrapper.
+ * @cssprop [--lr-radio-label-font-size=var(--lr-font-size-md-sm)] - Font size of `[part='label']`.
+ * @cssprop [--lr-radio-label-color=var(--lr-color-text)] - Text color of `[part='label']`.
  * @cssprop [--lr-radio-label-indent=calc(var(--lr-radio-circle-size) + var(--lr-space-s))] -
  * The inline distance from the control's start edge to the start of the label text, i.e. the
  * circle's own floor plus the gap next to it — so it tracks `size` along with the circle. Published
@@ -593,6 +595,7 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
     if (!this.effectiveDisabled) this[VALIDITY_ANCHOR]()?.click();
   }
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     if (!this.effectiveDisabled) this[VALIDITY_ANCHOR]()?.focus(options);
   }
   override blur(): void {

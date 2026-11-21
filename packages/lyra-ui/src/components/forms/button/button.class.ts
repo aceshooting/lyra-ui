@@ -175,7 +175,8 @@ export interface LyraButtonEventMap {
  * @csspart spinner - The loading spinner, present only while `loading` is `true`.
  * @cssprop [--lr-button-width=100%] - Inline size of the internal button. The host
  * defaults it to `100%` so the native button follows the host's own width; override to
- * `auto` (or any other value) for a compact inline composition.
+ * `auto` (or any other value) for a compact inline composition. `appearance="link"` defaults
+ * to `auto` and honours an explicitly set value.
  * @cssprop [--lr-button-hover-base=var(--lr-color-surface)] - The colour the hover and press
  * mixes move away from. Each painted appearance re-points it at its own fill
  * (`--lr-button-fill` for `filled`/`filled-outlined`, `--lr-button-accent-fill` for `accent`); the
@@ -668,6 +669,7 @@ export class LyraButton extends LyraFormControlElement<LyraButtonEventMap> {
   }
 
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     if (!this.effectiveDisabled && !this.loading) this.baseEl?.focus(options);
   }
 

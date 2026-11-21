@@ -7,6 +7,7 @@ import {
   formControlRequiredMarker,
   formControlSupportingText,
   formControlTextWrap,
+  formControlTouchFontFloor,
 } from '../../../internal/form-control.styles.js';
 import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
 import { activeFill, disabledControl, focusRingInset, interactiveTransition } from '../../../internal/interactive-control.styles.js';
@@ -292,4 +293,5 @@ export const styles = css`
     ${formControlTextWrap}
   }
   ${formControlInvalidBorder(css`[part='input-wrapper']`, css`--lr-phone-input-invalid-border-color`)}
+  ${formControlTouchFontFloor(css`[part='input']`)}
 `;

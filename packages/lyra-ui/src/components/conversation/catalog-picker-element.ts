@@ -352,7 +352,10 @@ export abstract class LyraCatalogPickerElement<Events> extends LyraFormControlEl
   /** Clicks the active trigger or editable input; the free-text path also focuses it. */
   override click(): void { this.catalogEditing.click(); }
   /** Focuses the active trigger or editable input. */
-  override focus(options?: FocusOptions): void { this.catalogEditing.focus(options); }
+  override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
+    this.catalogEditing.focus(options);
+  }
   /** Blurs the active trigger or editable input. */
   override blur(): void { this.catalogEditing.blur(); }
 

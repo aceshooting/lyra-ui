@@ -48,7 +48,7 @@ import { PopupController, emitPopupEvent, outsidePressHandler } from '../../../i
 import { revealRow } from '../../../internal/reveal-row.js';
 import { DebounceController } from '../../../internal/debounce-controller.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraAppearance, LyraSize, LyraLabelDisplay } from '../../../internal/variants.js';
+import type { LyraAppearance, LyraSize, LyraLabelDisplay, LyraLabelPlacement } from '../../../internal/variants.js';
 import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
 import { styles } from './combobox.styles.js';
 import type { LyraOption } from './option.class.js';
@@ -110,6 +110,8 @@ installFormControlLabelSupport();
 export type OptionFilter = (option: LyraOption, query: string) => boolean;
 
 export type LyraComboboxPlacement = 'top' | 'bottom';
+/** What a single-select `lr-combobox` pick commits: the option's `value`, or its label as free text. */
+export type LyraComboboxCommit = 'value' | 'text';
 
 /** The full shared `LyraAppearance` vocabulary, matching `<lr-select>`'s trigger. A value outside
  *  this set -- a typo, or any other unsupported string -- clamps to the documented `'outlined'`
@@ -554,6 +556,15 @@ export type LyraComboboxSourceErrorEvent =
  * `preventDefault()` also cancels the native `invalid` event behind it, suppressing the
  * browser's own validation bubble so an app can present the failure its own way.
  * @csspart form-control - The outer wrapper around label, combobox, listbox, error and hint.
+ * @cssprop [--lr-form-control-touch-font-size-min=16px] - Font-size floor of the editable text
+ *   surface under a coarse or hover-less pointer, which stops mobile Safari zooming on focus. `0px`
+ *   disables it.
+ * @cssprop [--lr-form-control-label-inline-size=30%] - Label column width while
+ *   `label-placement="start"`.
+ * @cssprop [--lr-form-control-label-gap=var(--lr-space-m)] - Space between the label column and
+ *   the field while `label-placement="start"`.
+ * @cssprop [--lr-form-control-label-collapse-inline-size=var(--lr-size-20rem)] - Control width
+ *   below which `label-placement="start"` returns the label above the field.
  * @cssprop [--lr-form-control-invalid-border-color=var(--lr-color-danger)] - Resting border while the
  *   field matches `:state(user-invalid)`; shared by every field, overridden by a component-specific
  *   invalid border where one exists.
@@ -784,6 +795,14 @@ export class LyraCombobox<
    * @attr label-display
    */
   @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
+  /**
+   * Where the label sits: `top` (default) above the field, or `start` in an inline-start column
+   * of `--lr-form-control-label-inline-size`, with hint and error aligned under the field. Below
+   * `--lr-form-control-label-collapse-inline-size` the label returns above the field. The label
+   * association is unchanged. Reflected so `[label-placement]` selectors match.
+   * @attr label-placement
+   */
+  @property({ attribute: 'label-placement', reflect: true }) labelPlacement: LyraLabelPlacement = 'top';
   @property() hint = '';
   /** Supporting text used when the hint property is empty. */
   @property({ attribute: 'help-text' }) helpText = '';
@@ -810,6 +829,16 @@ export class LyraCombobox<
   /** Lets a single-select combobox commit arbitrary text without adding an option. */
   @property({ type: Boolean, attribute: 'allow-custom-value' })
   allowCustomValue = false;
+  /**
+   * What a single-select pick commits. `'value'` (the default) commits the picked option's
+   * `value`. `'text'` turns the control into a free-text field with suggestions: a pick writes the
+   * option's label into `value` (so the form value is the text) and reports the option's `data` in
+   * the `lr-change` detail, typed text is committed on Enter or when focus leaves, and the text is
+   * kept after blur and is editable in place when the list reopens. `'text'` already accepts any
+   * text, so it needs no `allow-custom-value`. Ignored while `multiple` is set.
+   * @default 'value'
+   */
+  @property({ reflect: true }) commit: LyraComboboxCommit = 'value';
   /**
    * Appends every committed value that no option or async row claims to the end of the listbox as
    * a synthetic, re-selectable row badged with the localized `notInCatalog` text -- the policy
@@ -1040,6 +1069,8 @@ export class LyraCombobox<
   /** Public `inputValue` and `setRangeText()` writes remain visible while closed; stale user filter
    * text left behind by a direct `open = false` write does not. */
   private explicitInputValue = false;
+  /** `commit="text"`: the user has edited the text since the last commit or close. */
+  private textEdited = false;
   @state() private activeIndex = -1;
   @state() private options: LyraOption[] = [];
   @state() private optionsObserved = false;
@@ -1291,6 +1322,7 @@ export class LyraCombobox<
   }
 
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     if (!isLiveDisabled(this)) this.inputEl?.focus(options);
   }
 
@@ -2295,6 +2327,8 @@ export class LyraCombobox<
   }
 
   private labelFor(value: string, occurrenceIndex?: number): string {
+    // Free-text mode commits the text itself, so the value is its own label.
+    if (this.commitsText) return value;
     // An explicitly blank (or whitespace-only) label carries no useful information -- fall
     // through to the next candidate (ultimately the raw value) exactly as a missing label would,
     // rather than rendering/announcing an empty segment.
@@ -2360,7 +2394,7 @@ export class LyraCombobox<
    * one, so it must never show this badge.
    */
   private isUnknownValue(value: string): boolean {
-    if (!this.source && !this.optionsObserved) return false;
+    if (this.commitsText || (!this.source && !this.optionsObserved)) return false;
     if (this.loading || (this.source && !this.sourceEverSettled)) return false;
     return !(
       (!this.source && !this.multiple && this.singleSelectedOption?.value === value) ||
@@ -2560,6 +2594,11 @@ export class LyraCombobox<
     });
   }
 
+  /** Whether picks and typed text commit the text itself (`commit="text"`, single-select). */
+  private get commitsText(): boolean {
+    return this.commit === 'text' && !this.multiple;
+  }
+
   private get displayValue(): string {
     if (this.multiple || this.open || this.explicitInputValue)
       return this.query;
@@ -2607,7 +2646,15 @@ export class LyraCombobox<
   /** Opens the listbox and resolves after `lr-after-show`; a below-minimum query resolves
    * immediately without starting an opening. */
   show(): Promise<void> {
-    if (this.open || this.interactionBarred || !this.meetsMinimumQuery(this.query)) return Promise.resolve();
+    if (this.open || this.interactionBarred) return Promise.resolve();
+    // Free-text mode reopens on the committed text, so the field stays editable in place rather
+    // than blanking into an empty filter.
+    const committedText = this._selected[0] ?? '';
+    if (this.commitsText && !this.textEdited && !this.explicitInputValue && this.query !== committedText) {
+      this.query = committedText;
+      if (this.source) this.runSource(this.query);
+    }
+    if (!this.meetsMinimumQuery(this.query)) return Promise.resolve();
     const settled = this.popupController.wait(true);
     this.open = true;
     if (!this.open) this.popupController.release('lr-after-show');
@@ -2637,6 +2684,7 @@ export class LyraCombobox<
       const queryChanged = this.query !== '';
       this.query = '';
       this.explicitInputValue = false;
+      this.textEdited = false;
       if (queryChanged && this.source) {
         this.asyncRows = [];
         this.sourceFailed = false;
@@ -2894,13 +2942,13 @@ export class LyraCombobox<
 
   /** Native notifications use Event; typed selection details belong to the lr-prefixed pair.
    * Text editing retains the original InputEvent metadata. */
-  private emitValueEvents(): void {
+  private emitValueEvents(rowData?: readonly unknown[]): void {
     // Pinned to the un-narrowed class. Inside the class body `Multiple` is an unresolved type
     // parameter, which leaves the detail type an unresolved conditional that no concrete argument
     // list can be checked against -- the same reason `<lr-popover>`'s own lifecycle emits resolve
     // against its base event map. The constraint already guarantees the payload's shape.
     const self = this as unknown as LyraCombobox<boolean>;
-    const data = this.resolveSelectedRowSlots().map((row) => row?.data);
+    const data = rowData ? [...rowData] : this.resolveSelectedRowSlots().map((row) => row?.data);
     const previousValue = (this.multiple ? [...this.previousSelection] : this.previousSelection[0] ?? '') as LyraPickerDetailValue<boolean>;
     const detail = { value: self.value, previousValue, data };
     emitValueEvents(self, 'input', detail, detail => self.emit('lr-input', detail));
@@ -2979,11 +3027,30 @@ export class LyraCombobox<
     if (selectionChanged) this.emitValueEvents();
   }
 
+  /** `commit="text"`: commits `text` as the value, reporting a picked row's `data` when given. */
+  private commitText(text: string, row?: ComboboxSourceRow): void {
+    const changed = (this._selected[0] ?? '') !== text;
+    const values = text ? [text] : [];
+    if (changed && !this.acceptsSelection(values, undefined, row && [row])) return;
+    this.touched = true;
+    this.assignValue(values);
+    this.query = '';
+    this.explicitInputValue = false;
+    this.textEdited = false;
+    void this.hide();
+    if (changed) this.emitValueEvents(row && [row.data]);
+  }
+
   private pickRow(row: ComboboxSourceRow, createdOption?: LyraOption): void {
     const sourceOption = this.sourceOptionsByRow.get(row);
     if (isLiveDisabled(this) || this.readonly || row.disabled || (sourceOption && !isCatalogOptionAvailable(sourceOption, this))) return;
     if (row.createInput !== undefined) {
       this.createOption(row.createInput);
+      return;
+    }
+    if (this.commitsText) {
+      this.commitText(row.label, row);
+      this.emit('lr-activate', { value: row.value });
       return;
     }
     const values = this.multiple ? [...new Set(this._selected)] : [row.value];
@@ -3070,6 +3137,7 @@ export class LyraCombobox<
     }
     this.query = '';
     this.explicitInputValue = false;
+    this.textEdited = false;
     if (this.source) this.runSource(this.query);
     if (hadSelection) {
       this.emitValueEvents();
@@ -3081,6 +3149,7 @@ export class LyraCombobox<
   private onInput = (e: Event): void => {
     if (isLiveDisabled(this) || this.readonly) return;
     this.explicitInputValue = false;
+    this.textEdited = this.commitsText;
     this.query = (e.target as HTMLInputElement).value;
     this.activeIndex = -1;
     void this.show();
@@ -3242,6 +3311,7 @@ export class LyraCombobox<
     const target = event.relatedTarget;
     if (target && typeof (target as Node).nodeType === 'number' && trigger?.contains(target as Node)) return;
     this.restoreFocusOnClose = false;
+    if (this.commitsText && this.textEdited && !isLiveDisabled(this) && !this.readonly) this.commitText(this.query);
     void this.hide();
   };
 
@@ -3282,6 +3352,14 @@ export class LyraCombobox<
           e.preventDefault();
           this.pickRow(activeRow);
           break;
+        }
+        if (this.commitsText && this.textEdited) {
+          const wasOpen = this.open;
+          this.commitText(this.query);
+          if (wasOpen) {
+            e.preventDefault();
+            break;
+          }
         }
         const create = this.createRow;
         if (this.open && create) {
@@ -3342,7 +3420,11 @@ export class LyraCombobox<
     // text editing from the combobox's own input. Its own `focus` handler (`onInputFocus`) already
     // opens the listbox, so nothing else needs to run on this path. Mirrors
     // `internal/catalog-picker.ts`'s `handleComboMouseDown`.
-    if (e.composedPath()[0] === this.inputEl) return;
+    if (e.composedPath()[0] === this.inputEl) {
+      // A press on the already-focused input gets no new focus event, so reopen here.
+      if ((this.renderRoot as ShadowRoot).activeElement === this.inputEl && !this.open && !this.readonly) void this.show();
+      return;
+    }
     if ((e.target as HTMLElement).closest('button')) return;
     e.preventDefault();
     this.inputEl?.focus();

@@ -249,7 +249,34 @@ override also applies while pressed, and the border fallback remains the resting
 hover and press. For removed historical tokens, see the [release history archive](https://github.com/aceshooting/lyra-ui/tree/main/docs/changelog).
 
 `--lr-button-width` (default `100%`) is the internal control's inline size, so it follows the host's
-own width; override it to `auto` for a compact inline composition. `--lr-button-active-scale`
+own width; override it to `auto` for a compact inline composition. `appearance="link"` shrinks to
+its text by default but honours an explicitly set `--lr-button-width`, so a full-width link-look
+row is `style="inline-size: 100%; --lr-button-width: 100%"` on the host.
+
+**Long labels.** Set `wrap` to let the label break onto several lines instead of overriding
+`::part(base)` or `::part(label)` white-space; without it the label stays on one line and
+ellipsizes.
+
+**A menu-item look without part rules.** The geometry is all public tokens:
+
+```css
+.menu-like lr-button {
+  inline-size: 100%;
+  --lr-button-width: 100%;
+  --lr-button-justify: flex-start;
+  --lr-button-padding-inline: var(--lr-space-s);
+  --lr-button-min-height: var(--lr-form-control-height-s);
+  --lr-button-shadow: none;
+}
+```
+
+```html
+<div class="menu-like">
+  <lr-button appearance="plain">Rename</lr-button>
+  <lr-button appearance="plain">Duplicate</lr-button>
+</div>
+```
+ `--lr-button-active-scale`
 (default `0.9875`) is the `:active` press-scale, dropped under `prefers-reduced-motion`.
 `--lr-button-spinner-duration` (default `var(--lr-duration-ambient) linear`, i.e. `1.8s linear`) is
 the `loading` spinner's rotation period and timing; that token itself collapses to `0.001ms` under

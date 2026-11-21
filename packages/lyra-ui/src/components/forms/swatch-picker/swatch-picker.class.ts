@@ -483,6 +483,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
 
   /** Moves focus to the tabbable swatch. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     this.cancelFocusReveal();
     if (this.disabled) return;
     this.tabbableSwatch()?.focus(options);

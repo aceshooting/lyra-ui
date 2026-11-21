@@ -9,8 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `circle`: `--lr-radio-bg`, `--lr-radio-border-color`, `--lr-radio-checked-border-color`, `--lr-radio-circle-size`; `dot`: `--lr-radio-checked-dot-color`, `--lr-radio-dot-size`
+- **Themeable via** 13 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `circle`: `--lr-radio-bg`, `--lr-radio-border-color`, `--lr-radio-checked-border-color`, `--lr-radio-circle-size`; `dot`: `--lr-radio-checked-dot-color`, `--lr-radio-dot-size`; `label`: `--lr-radio-label-font-size`, `--lr-radio-label-color`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -117,6 +117,9 @@ an empty-label control; the visible density can still grow with the shared size 
   cannot drift; setting it on the element (or on `lr-radio` in your own stylesheet) moves the label.
   Exactly the same knob, purpose, and sideways-inheritance caveat as `--lr-checkbox-label-indent` —
   see `llms/components/lr-checkbox.md` for the formula to align a sibling hint element.
+
+`--lr-radio-label-font-size` (default `var(--lr-font-size-md-sm)`) and `--lr-radio-label-color`
+(default `var(--lr-color-text)`) set `[part='label']`'s text size and colour.
 
 `--lr-radio-bg` (default `var(--lr-color-surface)`) and `--lr-radio-border-color` (default
 `var(--lr-color-border)`) paint the unchecked `[part='circle']` at rest.

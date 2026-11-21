@@ -9,12 +9,15 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-phone-input`
+
+Under a coarse pointer the editable text is floored at `--lr-form-control-touch-font-size-min`
+(default `16px`; `0px` opts out) so mobile Safari does not zoom on focus; see "Touch font floor".
 
 `--lr-phone-input-placeholder-color` styles the native placeholder and defaults to `--lr-color-text-quiet`.
 

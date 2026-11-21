@@ -279,6 +279,7 @@ export class LyraToggle extends LyraElement<LyraToggleEventMap> {
   }
 
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     if (!this.effectiveDisabled) this.button?.focus(options);
   }
 

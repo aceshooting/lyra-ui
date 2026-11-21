@@ -647,6 +647,7 @@ export class LyraTimeRange extends LyraFormControlElement<LyraTimeRangeEventMap>
 
   /** Moves focus to the start handle. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     if (!this.liveDisabled) {
       (this.renderRoot?.querySelector('[part="handle-start"]') as HTMLElement | null)?.focus(options);
     }

@@ -173,6 +173,9 @@ const stringArrayConverter = {
  * @event lr-invalid - The token list failed a validity check. Cancelable: calling
  * `preventDefault()` also cancels the native `invalid` event behind it, suppressing the
  * browser's own validation bubble so an app can present the failure its own way.
+ * @cssprop [--lr-form-control-touch-font-size-min=16px] - Font-size floor of the editable text
+ *   surface under a coarse or hover-less pointer, which stops mobile Safari zooming on focus. `0px`
+ *   disables it.
  * @cssprop [--lr-form-control-invalid-border-color] - Shared invalid border color, overridden by a component-specific invalid border.
  * @cssprop [--lr-token-input-placeholder-color=var(--lr-color-text-quiet)] - Placeholder text color.
  * @csspart form-control - Outer control wrapper.
@@ -707,6 +710,7 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
   /** Reads both component state and the UA's synchronous fieldset cascade before actions mutate
    * or enter one of this compound control's still-rendered native focus surfaces. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     if (isLiveDisabled(this)) return;
     this.inputEl?.focus(options);
   }

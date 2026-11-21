@@ -1902,6 +1902,12 @@ reliable way to theme a group of matching components:
 State and size selectors change only the private fallback. An inherited or direct public value
 continues to win in every state and size tier.
 
+Retune one control through its component hook, not by setting a shared output such as
+`--lr-color-text` or `--lr-font-size-md-sm` on its host: the shared output also reaches every other
+surface inside that control, and a theme scope re-derives it. For example, `--lr-checkbox-label-color`
+and `--lr-checkbox-label-font-size` (and the `lr-radio` / `lr-switch` equivalents) restyle a choice
+label alone.
+
 **Diagnostic:** if a `--lr-theme-*` input has no effect on a nested component, check that the element
 carrying it is a theme scope (the development build warns once per page about an inline input on an
 element that is not, and `findUnscopedThemeInputs()` lists them). If a documented component-specific hook
@@ -1921,6 +1927,10 @@ as leaving it alone: it wins over the fallback arm and makes the per-size minimu
 code. See each control's own reference page for its exact pair.
 
 ### Tokens with a contract attached
+
+- **`--lr-form-control-touch-font-size-min`** (default `16px`) floors the font size of every text
+  field under a coarse or hover-less pointer, so mobile Safari does not zoom on focus. Keep it at
+  16px or above for that guarantee; `0px` opts out. See `llms/components/lr-input.md`.
 
 - **`--lr-theme-icon-button-size`** (default `2.25rem`) backs `--lr-icon-button-size`, the tappable
   box of **every** icon-only control in the library — `lr-icon-button` itself, and the

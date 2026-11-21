@@ -5,8 +5,9 @@ import {
   formControlInvalidBorder,
   formControlRequiredMarker,
   formControlTextWrap,
+  formControlTouchFontFloor,
 } from '../../../internal/form-control.styles.js';
-import { formControlChrome } from '../../../internal/form-control/chrome.styles.js';
+import { formControlChrome, formControlLabelPlacement } from '../../../internal/form-control/chrome.styles.js';
 import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
 import { disabledControl } from '../../../internal/interactive-control.styles.js';
 
@@ -51,6 +52,7 @@ export const styles = css`
     block-size: 100%;
   }
   ${formControlChrome}
+  ${formControlLabelPlacement}
 
   ${formControlRequiredMarker}
   /* A column flex box: the native resize grip writes inline width/height onto the <textarea>
@@ -146,4 +148,5 @@ export const styles = css`
     ${formControlTextWrap}
   }
   ${formControlInvalidBorder(css`[part="textarea"]`)}
+  ${formControlTouchFontFloor(css`[part="textarea"]`, css`var(--lr-textarea-font-size, var(--_lr-textarea-font-size))`)}
 `;

@@ -382,6 +382,9 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   private afterUpdateCallbacks?: Map<string, () => void>;
   /** Callbacks that came due while detached, replayed on reconnect. */
   private deferredAfterUpdate?: Map<string, () => void>;
+  /** Options of a `focus()` call queued by `deferFocusUntilRendered()`, until the first render. */
+  private pendingFocusOptions?: FocusOptions;
+  private replayingFocus = false;
   private stopInheritedContextObservation?: () => void;
   /** `undefined` until the first connect decides it, then true only between that connect and the
    *  first update of an element whose shadow DOM a server already rendered. See
@@ -538,6 +541,8 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   }
 
   override disconnectedCallback(): void {
+    // A focus queued before the first render belongs to this connection only.
+    this.pendingFocusOptions = undefined;
     if (this.pendingLoadController) this.pendingLoadInterrupted = true;
     this.pendingLoadController?.abort();
     this.pendingLoadController = undefined;
@@ -594,6 +599,39 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     // relays the native `focus` event and changes reactive `focused` state, which Lit correctly
     // diagnoses as an update scheduled from inside the update that just completed.
     this.scheduleAfterUpdate(() => this.focus(), 'lr-global-autofocus');
+  }
+
+  /**
+   * Queues a `focus()` call that arrives before the first render, when the internal element a
+   * component's `focus()` override delegates to does not exist yet.
+   *
+   * Call it first in such an override: `if (this.deferFocusUntilRendered(options)) return;`. While
+   * the element is connected and has not rendered, it records `options` and returns `true`; once
+   * the first update completes it calls `focus(options)` again, so the override's own disabled
+   * and target checks run against the rendered state. Repeated calls before that collapse to one
+   * focus with the latest options, and disconnecting before the first render drops it. After the
+   * first render (or while disconnected) it returns `false` and the override proceeds as before.
+   * Server-rendered shadow content is already focusable, so hydration never queues.
+   */
+  protected deferFocusUntilRendered(options?: FocusOptions): boolean {
+    if (this.hasUpdated || !this.isConnected || this.hydratingServerShadow || this.replayingFocus) return false;
+    const queued = this.pendingFocusOptions !== undefined;
+    this.pendingFocusOptions = options ?? {};
+    if (!queued) {
+      void this.updateComplete.then(() => {
+        const pending = this.pendingFocusOptions;
+        this.pendingFocusOptions = undefined;
+        if (!pending) return;
+        // Replayed once: an update that never renders (`shouldUpdate()` false) must not requeue.
+        this.replayingFocus = true;
+        try {
+          this.focus(pending);
+        } finally {
+          this.replayingFocus = false;
+        }
+      });
+    }
+    return true;
   }
 
   /**

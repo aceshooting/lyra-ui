@@ -1085,6 +1085,7 @@ const active = shadowFocusTarget(this);
 
   /** Focus the current roving day (or the first item in a non-day view). */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     this.rovingTarget?.focus(options);
   }
 

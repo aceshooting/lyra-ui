@@ -24,7 +24,7 @@ import { setCustomState } from '../../../internal/custom-states.js';
 import { lengthLimitConverter, lengthViolations, normalizeLengthLimit } from '../../../internal/length-constraints.js';
 import { styles } from './textarea.styles.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraAppearance, LyraSize, LyraLabelDisplay } from '../../../internal/variants.js';
+import type { LyraAppearance, LyraSize, LyraLabelDisplay, LyraLabelPlacement } from '../../../internal/variants.js';
 import type {
   LyraSelectionDirection,
   LyraTextWrap,
@@ -136,6 +136,15 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
  * @slot hint - Custom hint content.
  * @slot help-text - Shoelace alias for `hint`.
  * @slot error - Custom error content.
+ * @cssprop [--lr-form-control-touch-font-size-min=16px] - Font-size floor of the editable text
+ *   surface under a coarse or hover-less pointer, which stops mobile Safari zooming on focus. `0px`
+ *   disables it.
+ * @cssprop [--lr-form-control-label-inline-size=30%] - Label column width while
+ *   `label-placement="start"`.
+ * @cssprop [--lr-form-control-label-gap=var(--lr-space-m)] - Space between the label column and
+ *   the field while `label-placement="start"`.
+ * @cssprop [--lr-form-control-label-collapse-inline-size=var(--lr-size-20rem)] - Control width
+ *   below which `label-placement="start"` returns the label above the field.
  * @cssprop [--lr-form-control-invalid-border-color=var(--lr-color-danger)] - Resting border while the
  *   field matches `:state(user-invalid)`; shared by every field, overridden by a component-specific
  *   invalid border where one exists.
@@ -300,6 +309,14 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
    * @attr label-display
    */
   @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
+  /**
+   * Where the label sits: `top` (default) above the field, or `start` in an inline-start column
+   * of `--lr-form-control-label-inline-size`, with hint and error aligned under the field. Below
+   * `--lr-form-control-label-collapse-inline-size` the label returns above the field. The label
+   * association is unchanged. Reflected so `[label-placement]` selectors match.
+   * @attr label-placement
+   */
+  @property({ attribute: 'label-placement', reflect: true }) labelPlacement: LyraLabelPlacement = 'top';
   @property() hint = '';
   /** Shoelace alias for {@link hint}. `hint` wins when both are set. */
   @property({ attribute: 'help-text' }) helpText = '';
@@ -417,6 +434,7 @@ export class LyraTextarea extends FormAssociated(LyraTextareaBase) {
   }
 
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     if (!isLiveDisabled(this)) this.textareaEl?.focus(options);
   }
 

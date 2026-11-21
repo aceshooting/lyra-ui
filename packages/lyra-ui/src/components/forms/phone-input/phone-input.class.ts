@@ -144,6 +144,9 @@ class LyraPhoneInputBase extends LyraElement<LyraPhoneInputEventMap> {}
  * @event lr-invalid - The phone input failed a validity check. Cancelable: `preventDefault()`
  *   forwards to the native `invalid` event, suppressing the browser's own validation bubble and the
  *   focus/scroll `reportValidity()` would otherwise perform.
+ * @cssprop [--lr-form-control-touch-font-size-min=16px] - Font-size floor of the editable text
+ *   surface under a coarse or hover-less pointer, which stops mobile Safari zooming on focus. `0px`
+ *   disables it.
  * @cssprop [--lr-form-control-invalid-border-color] - Shared invalid border color, overridden by a component-specific invalid border.
  * @cssprop [--lr-phone-input-placeholder-color=var(--lr-color-text-quiet)] - Placeholder text color.
  * @csspart form-control - The outer form-control wrapper.
@@ -746,6 +749,7 @@ export class LyraPhoneInput extends FormAssociated(LyraPhoneInputBase) {
 
   /** Focus the internal telephone input unless the form control is effectively disabled. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     if (!isLiveDisabled(this)) this.inputElement?.focus(options);
   }
 

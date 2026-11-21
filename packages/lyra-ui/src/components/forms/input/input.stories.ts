@@ -360,3 +360,12 @@ export const FontFamily: Story = {
   render: () => html`<lr-input label="API key" value="sk-0123-abcd"
     style="--lr-input-font-family: var(--lr-font-mono)"></lr-input>`,
 };
+
+export const LabelPlacementStart: Story = {
+  render: () => html`
+    <div style="display:grid;gap:var(--lr-space-m);max-inline-size:var(--lr-size-36rem)">
+      <lr-input label="Reference" label-placement="start" hint="As printed on the parcel"></lr-input>
+      <lr-input label="Weight" type="number" label-placement="start"></lr-input>
+    </div>
+  `,
+};

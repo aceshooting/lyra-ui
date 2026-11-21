@@ -9,13 +9,21 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 35 parts, 44 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 35 parts, 48 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `form-control-label`: `--lr-form-control-required-content`; `option-badge`: `--lr-select-option-badge-bg`; `tag__remove-button`: `--lr-select-tag-remove-hover-bg`; `unknown-value`: `--lr-select-unknown-value-border-style`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-select`
+
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in
+an inline-start column, sized by `--lr-form-control-label-inline-size` (default `30%`) and
+`--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below
+`--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside
+the field: `label-placement`". Under a coarse pointer the editable text is floored at
+`--lr-form-control-touch-font-size-min` (default `16px`; `0px` opts out) so mobile Safari does not
+zoom on focus; see "Touch font floor".
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`.

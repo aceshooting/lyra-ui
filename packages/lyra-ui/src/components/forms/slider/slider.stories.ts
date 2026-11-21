@@ -406,3 +406,12 @@ export const FractionalBindings: Story = {
       style="max-inline-size:var(--lr-size-20rem)"></lr-slider>
   `,
 };
+
+export const LabelledMarks: Story = {
+  render: () => html`
+    <lr-slider label="Opening hours" range min="0" max="24" step="1" min-value="8" max-value="18"
+      .marks=${Array.from({ length: 13 }, (_unused, index) => ({ value: index * 2, label: `${String(index * 2).padStart(2, '0')}:00` }))}
+      .valueFormatter=${(value: number) => `${String(value).padStart(2, '0')}:00`}
+      style="max-inline-size:var(--lr-size-30rem)"></lr-slider>
+  `,
+};

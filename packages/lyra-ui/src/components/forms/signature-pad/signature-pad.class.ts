@@ -362,6 +362,7 @@ export class LyraSignaturePad extends LyraElement<LyraSignaturePadEventMap> {
   }
 
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     if (this.inactive) return;
     this.surface?.focus(options);
   }

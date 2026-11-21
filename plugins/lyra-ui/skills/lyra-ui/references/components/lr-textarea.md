@@ -9,12 +9,20 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-textarea`
+
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in
+an inline-start column, sized by `--lr-form-control-label-inline-size` (default `30%`) and
+`--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below
+`--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside
+the field: `label-placement`". Under a coarse pointer the editable text is floored at
+`--lr-form-control-touch-font-size-min` (default `16px`; `0px` opts out) so mobile Safari does not
+zoom on focus; see "Touch font floor".
 
 `--lr-textarea-placeholder-color` styles the native placeholder and defaults to `--lr-color-text-quiet`.
 

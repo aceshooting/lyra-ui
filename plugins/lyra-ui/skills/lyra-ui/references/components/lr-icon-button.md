@@ -137,6 +137,23 @@ natural aspect ratio.
 **CSS parts:** `base`/`button` (the same native button or anchor), `fallback` (only present in the
 DOM while at least one top-level slotted element needs the bare-geometry fallback above)
 
+`lr-icon-button` already rests plain (transparent fill, no border, inherited colour), so it needs
+no appearance attribute or reset rules to sit quietly in a toolbar.
+
+**An exact square.** Because `--lr-icon-button-padding-inline` defaults to `0`, a glyph smaller than
+the floor makes the button exactly `--lr-icon-button-size` on both axes; no `::part(button)`
+width/height rule is needed. Set the size on the element for one button, or
+`--lr-icon-button-size-scope` on a wrapper for a toolbar, and keep the slotted glyph (or
+`--lr-icon-size`) at or below it:
+
+```html
+<lr-icon-button icon="info-circle" label="Details" style="--lr-icon-button-size: 2rem"></lr-icon-button>
+```
+
+Under a coarse pointer the ancestor levers still floor the box at the touch target; that is the
+accessible behaviour, not a sizing bug. The same recipe gives `lr-locale-picker`'s flag-only
+trigger an exact square through `--lr-locale-picker-trigger-height`.
+
 **Themeable custom properties:** `--lr-icon-button-size` (default `2.25rem`) is the **minimum**
 tappable inline and block size of the native button — a floor, not a fixed size. Content larger
 than it grows the button and keeps its own aspect ratio; a small glyph pads out to it. It is a
