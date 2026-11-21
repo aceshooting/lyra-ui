@@ -12782,6 +12782,7 @@ export interface LyraComponentTypeMap {
       | '--lr-stat-trend-good-color'
       | '--lr-stat-value-brand-color'
       | '--lr-stat-value-danger-color'
+      | '--lr-stat-value-font-family'
       | '--lr-stat-value-hover-color'
       | '--lr-stat-value-success-color'
       | '--lr-stat-value-warning-color';

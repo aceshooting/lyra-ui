@@ -108,6 +108,8 @@ export interface StatRow {
  * @cssprop [--lr-stat-emphasis-value-color=var(--lr-color-brand)] - Headline value color when
  *   `emphasis` is set on a neutral stat. Independent of the accent edge and `brand` variant.
  * @cssprop [--lr-stat-value-hover-color=var(--lr-color-brand)] - Exact-value hover color for neutral values.
+ * @cssprop [--lr-stat-value-font-family=inherit] - Font of the headline, row and exact values. Digits are
+ *   tabular, so numbers align without a monospace face that lacks non-Latin glyphs.
  * @cssprop [--lr-stat-link-hover-border-color=var(--lr-color-brand)] - Linked-card border on hover.
  * @cssprop [--lr-stat-link-hover-shadow=var(--lr-shadow-s)] - Linked-card shadow on hover.
  * @cssprop [--lr-stat-link-active-border-color=var(--lr-stat-link-hover-border-color,var(--lr-color-brand))] - Linked-card border while pressed.

@@ -140604,6 +140604,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-stat-value-font-family",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-stat-value-hover-color",
             "deprecated": null,
             "hasDefault": true,

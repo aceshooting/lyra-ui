@@ -53151,6 +53151,7 @@
           "src/components/data/stat/stat-boundaries.test.ts",
           "src/components/data/stat/stat-remediation-b09.test.ts",
           "src/components/data/stat/stat-remediation.test.ts",
+          "src/components/data/stat/stat-value-font.test.ts",
           "src/components/data/stat/stat.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",

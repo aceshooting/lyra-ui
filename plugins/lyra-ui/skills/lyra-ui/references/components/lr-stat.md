@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -78,6 +78,8 @@ value: string; readonly exactValue?: string }`; at most the first 10,000 rows ar
   has keyboard focus (`:focus-visible`) the exact text is also shown on its own line below the
   value, since browsers show no `title` tooltip on keyboard focus. Rows and a linked stat's card
   link reveal theirs the same way. `--lr-stat-value-hover-color` sets the hover color for neutral exact values.
+  Values use the surrounding text font with tabular digits, so text values such as names render in
+  every script; set `--lr-stat-value-font-family: var(--lr-font-mono)` for the previous monospace look.
 - `sub: string = ''` — a secondary line distinct from `caption`, e.g. a comparison-period label,
   rendered as `[part="sub"]` between the trend pill and the caption; hidden entirely when unset
 - `prose: boolean = false` (reflected) — CSS-only variant that shrinks/lightens `[part="value"]` and

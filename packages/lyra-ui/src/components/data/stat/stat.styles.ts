@@ -138,7 +138,8 @@ export const styles = css`
     overflow-wrap: anywhere;
     font-size: var(--lr-font-size-2xl);
     font-weight: var(--lr-font-weight-bold);
-    font-family: var(--lr-font-mono);
+    font-family: var(--lr-stat-value-font-family, inherit);
+    font-variant-numeric: tabular-nums;
   }
   /* [part='value']/[part='row-value'] take tabindex="0" whenever exactValue/row.exactValue is set
      (stat.class.ts), so they need their own visible focus ring. */
@@ -173,7 +174,8 @@ export const styles = css`
     flex-basis: 100%;
     min-inline-size: 0;
     overflow-wrap: anywhere;
-    font-family: var(--lr-font-mono);
+    font-family: var(--lr-stat-value-font-family, inherit);
+    font-variant-numeric: tabular-nums;
     font-size: var(--lr-font-size-sm);
     color: var(--lr-color-text-quiet);
   }
@@ -280,7 +282,8 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;
-    font-family: var(--lr-font-mono);
+    font-family: var(--lr-stat-value-font-family, inherit);
+    font-variant-numeric: tabular-nums;
     font-weight: var(--lr-font-weight-semibold);
   }
   /* Orthogonal to the status variant: an accent edge marking a stat emphasized (e.g. the
