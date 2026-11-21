@@ -9,7 +9,7 @@
 export const CHART_BAND_LOWER_KEY = 'lyraBandLower';
 
 /** Default `--lr-chart-band-opacity`. */
-export const DEFAULT_CHART_BAND_OPACITY = 0.2;
+const DEFAULT_CHART_BAND_OPACITY = 0.2;
 
 /** Semantic (source-index) lower bounds of each generated band dataset. */
 export const chartBandLowerValues = new WeakMap<object, readonly (number | null)[]>();
