@@ -50,7 +50,22 @@ export interface LyraChartSeries {
    * point's palette index. Only meaningful for line-type series.
    */
   readonly segmentColors?: readonly string[];
-  readonly type?: 'line' | 'bar';
+  /**
+   * Per-series renderer. `'line'`/`'bar'` override the chart type for a mixed chart. `'band'`
+   * draws a filled range between `lower` and `upper` (a confidence interval or percentile
+   * envelope) beneath every line, on `line` and `bar` charts; `data` is then ignored. The fill uses
+   * the series color at `--lr-chart-band-opacity`, and the tooltip, legend swatch, generated data
+   * table, keyboard announcement and CSV export carry both bounds.
+   */
+  readonly type?: 'line' | 'bar' | 'band';
+  /**
+   * Lower bound per category for a `type: 'band'` series. `lower` and `upper` are clamped to the
+   * shorter of the two (with a development warning); a row missing either bound is a gap, and a
+   * row whose bounds are reversed is reordered.
+   */
+  readonly lower?: readonly (number | null)[];
+  /** Upper bound per category for a `type: 'band'` series; see `lower`. */
+  readonly upper?: readonly (number | null)[];
 }
 
 

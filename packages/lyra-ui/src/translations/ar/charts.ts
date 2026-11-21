@@ -15,6 +15,7 @@ const strings: LyraLocaleStrings = {
   chartPointLabel: 'النقطة {n}',
   chartPointCoordinates: 'الإحداثي x: {x}، الإحداثي y: {y}',
   chartBubblePointCoordinates: 'الإحداثي x: {x}، الإحداثي y: {y}، نصف القطر: {radius}',
+  chartBandRange: 'من {lower} إلى {upper}',
   chartLabeledPoint: '{label} — {coordinates}',
   chartSeriesNoData: '{label}: لا توجد بيانات',
   chartSummaryWithData: 'مخطط {type}. {summaries}.',

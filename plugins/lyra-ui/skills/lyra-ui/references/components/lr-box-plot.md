@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
 - **Deprecations** none
 - **Optional peers** `@sgratzl/chartjs-chart-boxplot`, `chart.js` — see `llms/peers.md`
-- **Themeable via** 12 parts, 38 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 45 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `canvas`: `--lr-chart-canvas-hover-outline-color`, `--lr-chart-canvas-hover-outline-width`; `legend-swatch`: `--lr-chart-pattern-step`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -173,7 +173,7 @@ individual raw-sample dots drawn alongside each box; `0` disables them. `--lr-ch
 `--lr-chart-canvas-hover-outline-width` (default `var(--lr-border-width-thin)`) sizes the `canvas`
 hover outline; `--lr-chart-canvas-hover-outline-color` (default `var(--lr-chart-grid-color, var(--lr-color-border))`) sets
 its color. `--lr-chart-legend-item-active-bg` and `--lr-chart-legend-item-hover-bg` retune the
-pressed and hovered legend rows, and `--lr-chart-legend-side-max` caps a side legend — the same tokens and defaults as
+pressed and hovered legend rows, the legend layout tokens `--lr-chart-legend-gap`, `--lr-chart-legend-padding`, `--lr-chart-legend-font-size`, `--lr-chart-legend-item-min-height`, `--lr-chart-legend-item-padding`, `--lr-chart-legend-swatch-size`, `--lr-chart-legend-swatch-radius` size and space it, and `--lr-chart-legend-side-max` caps a side legend — the same tokens and defaults as
 `lr-chart`. Its own `dataTableToggle` disclosure button carries box-plot-namespaced hooks that
 fall back to the family-wide pair: `--lr-box-plot-data-table-toggle-hover-bg` (defaults to
 `--lr-chart-data-table-toggle-hover-bg`, then `--lr-color-brand-quiet`) and

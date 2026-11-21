@@ -259,6 +259,15 @@ function summaryOf(point: LyraBoxPlotSummary): LyraBoxPlotSummary {
  * @cssprop [--lr-chart-tooltip-bg=var(--lr-color-surface)] - Canvas tooltip background.
  * @cssprop [--lr-chart-tooltip-color=var(--lr-color-text)] - Canvas tooltip text color.
  * @cssprop [--lr-chart-legend-side-max=var(--lr-size-15rem)] - Maximum side-legend track size.
+ * @cssprop [--lr-chart-legend-gap=var(--lr-space-xs)] - Gap between DOM legend items.
+ * @cssprop [--lr-chart-legend-padding=var(--lr-space-xs)] - Block padding of the DOM legend.
+ * @cssprop [--lr-chart-legend-font-size=1em] - DOM legend label font size.
+ * @cssprop [--lr-chart-legend-item-min-height=var(--lr-icon-button-size)] - Minimum block size
+ *   of a legend visibility button. Lowering it below the shared hit-area floor trades pointer
+ *   target size for density.
+ * @cssprop [--lr-chart-legend-item-padding=var(--lr-space-2xs)] - Padding of a legend visibility button.
+ * @cssprop [--lr-chart-legend-swatch-size=var(--lr-space-s)] - Legend swatch inline and block size.
+ * @cssprop [--lr-chart-legend-swatch-radius=var(--lr-radius-xs)] - Legend swatch corner radius.
  * @cssprop [--lr-chart-legend-item-hover-bg=var(--lr-color-brand-quiet)] - Legend-item hover background.
  * @cssprop --lr-chart-legend-item-active-bg - Legend-item pressed background.
  * @cssprop [--lr-chart-canvas-hover-outline-width=var(--lr-border-width-thin)] - Width of the

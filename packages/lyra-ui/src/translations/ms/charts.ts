@@ -15,6 +15,7 @@ const strings: LyraLocaleStrings = {
   chartPointLabel: 'Titik {n}',
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, jejari {radius}',
+  chartBandRange: '{lower} hingga {upper}',
   chartLabeledPoint: '{label}: {coordinates}',
   chartSeriesNoData: '{label}: tiada data',
   chartSummaryWithData: 'Carta {type}. {summaries}.',

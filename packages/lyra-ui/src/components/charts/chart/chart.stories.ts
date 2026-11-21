@@ -627,3 +627,34 @@ export const PreparedOverview: Story = {
     </div>`;
   },
 };
+
+/** A `type: 'band'` series fills a per-category lower/upper range beneath the median line. */
+export const RangeBand: Story = {
+  name: 'Range band (percentile envelope)',
+  render: () => {
+    const series: LyraChartSeries[] = [
+      { label: 'p10–p90', type: 'band', lower: [8, 9, 11, 10, 12, 13], upper: [14, 16, 18, 17, 19, 21] },
+      { label: 'Median', data: [11, 12, 14, 13, 15, 17] },
+    ];
+    return html`<lr-chart type="line" style="width: 28rem; --lr-chart-band-opacity: 0.25"
+      .labels=${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']} .datasets=${series}></lr-chart>`;
+  },
+};
+
+/** Dense legend layout through the shared legend tokens instead of `::part()` rules. */
+export const DenseLegendTokens: Story = {
+  render: () => {
+    const series: LyraChartSeries[] = [
+      { label: 'North', data: [4, 6, 5] }, { label: 'South', data: [3, 5, 7] }, { label: 'East', data: [6, 4, 3] },
+    ];
+    return html`<lr-chart type="bar" style="
+        width: 22rem;
+        --lr-chart-legend-gap: var(--lr-space-2xs);
+        --lr-chart-legend-padding: 0;
+        --lr-chart-legend-font-size: var(--lr-font-size-xs);
+        --lr-chart-legend-item-padding: 0 var(--lr-space-2xs);
+        --lr-chart-legend-swatch-size: var(--lr-space-xs);
+        --lr-chart-legend-swatch-radius: var(--lr-radius-pill);
+      " .labels=${['Q1', 'Q2', 'Q3']} .datasets=${series}></lr-chart>`;
+  },
+};

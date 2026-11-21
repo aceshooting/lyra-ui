@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 21 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 21 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `legend-swatch`: `--lr-chart-pattern-step`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -399,7 +399,12 @@ category line; `--lr-chart-tooltip-bg` (default `var(--lr-color-surface)`) and
 `--lr-chart-color-5`, `--lr-chart-color-6`, `--lr-chart-color-7`, and `--lr-chart-color-8` (each
 defaulting to the matching `var(--lr-color-chart-N)` ramp entry) — the per-series colors, so one element can be recolored
 without moving the library-wide ramp; `--lr-chart-legend-side-max` (default
-`var(--lr-size-15rem)`) caps side legend allocation; `--lr-lite-chart-selected-outline-color` (default
+`var(--lr-size-15rem)`) caps side legend allocation; the shared legend layout tokens
+`--lr-chart-legend-gap` (default `var(--lr-space-s)`), `--lr-chart-legend-padding` (default
+`var(--lr-space-xs)`), `--lr-chart-legend-font-size` (default `var(--lr-font-size-xs)`),
+`--lr-chart-legend-swatch-size` (default `var(--lr-size-0-7em)`) and
+`--lr-chart-legend-swatch-radius` (default `var(--lr-radius-xs)`) restyle the legend without
+`::part()` rules; `--lr-lite-chart-selected-outline-color` (default
 `var(--lr-color-brand)`) — the stroke drawn on
 selected `[part='bar']` and `[part='point']` marks whose category index is in `selectedIndices`;
 `--lr-lite-chart-selected-outline-width` (default `var(--lr-size-2px)`) — that stroke's width.

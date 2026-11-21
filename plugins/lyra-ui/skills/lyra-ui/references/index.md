@@ -227,17 +227,17 @@ and optional peers are excluded, so a second component usually costs much less t
 
 ## Charts — `components/charts/` (13)
 
-- `lr-chart` · lr-chart.js · `stable` since `4.0.0` · ~94 KiB gzip — the core Chart.js wrapper used directly and by the typed Chart.js tags plus `<lr-histogram>`.
+- `lr-chart` · lr-chart.js · `stable` since `4.0.0` · ~96 KiB gzip — the core Chart.js wrapper used directly and by the typed Chart.js tags plus `<lr-histogram>`.
 - `lr-lite-chart` · lr-lite-chart.js · `stable` since `4.0.0` · ~71 KiB gzip — a dependency-free bar/line chart, plain SVG/DOM rendering with zero peer dependencies (unlike `lr-chart`, which wraps `chart.js`).
-- `lr-line-chart` · lr-line-chart.js · `stable` since `4.0.0` · ~94 KiB gzip — `<lr-chart>` with a `"line"` default and the mirrored writable type.
-- `lr-bar-chart` · lr-bar-chart.js · `stable` since `4.0.0` · ~94 KiB gzip — `<lr-chart>` with a `"bar"` default.
-- `lr-pie-chart` · lr-pie-chart.js · `stable` since `4.0.0` · ~94 KiB gzip — `<lr-chart>` with a `"pie"` default and the mirrored writable type.
-- `lr-doughnut-chart` · lr-doughnut-chart.js · `stable` since `4.0.0` · ~94 KiB gzip — `<lr-chart>` with a `"doughnut"` default and the mirrored writable type.
-- `lr-radar-chart` · lr-radar-chart.js · `stable` since `4.0.0` · ~94 KiB gzip — `<lr-chart>` with a `"radar"` default and the mirrored writable type.
-- `lr-polar-area-chart` · lr-polar-area-chart.js · `stable` since `4.0.0` · ~94 KiB gzip — `<lr-chart>` with a `"polarArea"` default and the mirrored writable type.
-- `lr-bubble-chart` · lr-bubble-chart.js · `stable` since `4.0.0` · ~94 KiB gzip — `<lr-chart>` with a `"bubble"` default and the mirrored writable type.
-- `lr-scatter-chart` · lr-scatter-chart.js · `stable` since `4.0.0` · ~94 KiB gzip — `<lr-chart>` with a `"scatter"` default and the mirrored writable type.
-- `lr-histogram` · lr-histogram.js · `stable` since `4.0.0` · ~98 KiB gzip — bins `values` into `bins` equal-width buckets and renders them as a bar chart.
+- `lr-line-chart` · lr-line-chart.js · `stable` since `4.0.0` · ~96 KiB gzip — `<lr-chart>` with a `"line"` default and the mirrored writable type.
+- `lr-bar-chart` · lr-bar-chart.js · `stable` since `4.0.0` · ~96 KiB gzip — `<lr-chart>` with a `"bar"` default.
+- `lr-pie-chart` · lr-pie-chart.js · `stable` since `4.0.0` · ~96 KiB gzip — `<lr-chart>` with a `"pie"` default and the mirrored writable type.
+- `lr-doughnut-chart` · lr-doughnut-chart.js · `stable` since `4.0.0` · ~96 KiB gzip — `<lr-chart>` with a `"doughnut"` default and the mirrored writable type.
+- `lr-radar-chart` · lr-radar-chart.js · `stable` since `4.0.0` · ~96 KiB gzip — `<lr-chart>` with a `"radar"` default and the mirrored writable type.
+- `lr-polar-area-chart` · lr-polar-area-chart.js · `stable` since `4.0.0` · ~96 KiB gzip — `<lr-chart>` with a `"polarArea"` default and the mirrored writable type.
+- `lr-bubble-chart` · lr-bubble-chart.js · `stable` since `4.0.0` · ~96 KiB gzip — `<lr-chart>` with a `"bubble"` default and the mirrored writable type.
+- `lr-scatter-chart` · lr-scatter-chart.js · `stable` since `4.0.0` · ~96 KiB gzip — `<lr-chart>` with a `"scatter"` default and the mirrored writable type.
+- `lr-histogram` · lr-histogram.js · `stable` since `4.0.0` · ~100 KiB gzip — bins `values` into `bins` equal-width buckets and renders them as a bar chart.
 - `lr-box-plot` · lr-box-plot.js · `stable` since `4.0.0` · ~53 KiB gzip — a box-and-whisker chart from precomputed five-number summaries (no raw sample data is shipped to the browser).
 - `lr-chart-3d` · lr-chart-3d.js · `experimental` since `30.0.0` · ~44 KiB gzip — a bounded three-dimensional scatter, bubble or source-order line chart over immutable typed columns, with an always-available accessible...
 
@@ -336,7 +336,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-eval-run` · lr-eval-run.js · `stable` since `9.0.0` · ~228 KiB gzip — an evaluation batch's live progress: an overall `<lr-progress-bar>` counting terminal (done/error/cancelled) examples against the batch...
 - `lr-policy-summary` · lr-policy-summary.js · `stable` since `4.1.0` · ~50 KiB gzip — a read-only list of guardrail, permission, privacy, and tool-policy decisions, each carrying an `allow` / `deny` / `needs-review` state...
 - `lr-tool-timeline` · lr-tool-timeline.js · `stable` since `4.1.0` · ~156 KiB gzip — a chronological list of an agent run's tool/function calls, each rendered through `<lr-tool-call-chip>` (name/status/duration) and...
-- `lr-agent-eval-dashboard` · lr-agent-eval-dashboard.js · `stable` since `6.2.0` · ~85 KiB gzip — a controlled evaluation overview with metric cards, a trend chart, and run-status history.
+- `lr-agent-eval-dashboard` · lr-agent-eval-dashboard.js · `stable` since `6.2.0` · ~86 KiB gzip — a controlled evaluation overview with metric cards, a trend chart, and run-status history.
 - `lr-approval-queue` · lr-approval-queue.js · `stable` since `6.2.0` · ~109 KiB gzip — a controlled queue of tool calls that need human approval, with a keyboard-accessible request list and a single reused...
 - `lr-mcp-app` · lr-mcp-app.js · `stable` since `7.0.0` · ~38 KiB gzip — hosts an MCP App-style executable UI resource in a uniquely-origin sandbox.
 - `lr-prompt-studio` · lr-prompt-studio.js · `stable` since `7.0.0` · ~41 KiB gzip — a provider-neutral prompt-development workbench for ordered role messages, `{{variable}}` substitution, version selection, preview, save...

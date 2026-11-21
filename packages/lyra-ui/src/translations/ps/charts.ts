@@ -15,6 +15,7 @@ const strings: LyraLocaleStrings = {
   chartPointLabel: 'ټکی {n}',
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, شعاع {radius}',
+  chartBandRange: 'له {lower} څخه تر {upper} پورې',
   chartLabeledPoint: '{label}: {coordinates}',
   chartSeriesNoData: '{label}: معلومات نشته',
   chartSummaryWithData: '{type} چارټ. {summaries}.',

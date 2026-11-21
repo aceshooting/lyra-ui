@@ -15,6 +15,7 @@ const strings: LyraLocaleStrings = {
   chartPointLabel: 'Elembo {n}',
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, rayon {radius}',
+  chartBandRange: 'longwa na {lower} tii na {upper}',
   chartLabeledPoint: '{label}: {coordinates}',
   chartSeriesNoData: '{label}: data ezali te',
   chartSummaryWithData: 'Graphique {type}. {summaries}.',

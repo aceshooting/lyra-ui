@@ -95,7 +95,7 @@ Build the package first. The [checked report](https://github.com/aceshooting/lyr
 | `comparison` | `caption`, optional `rowLabel` (first column header, default `Item`), `columns`: 2-6 labels, `rows`: 1-50 of `label` and `values` (one scalar per column) | `table`; column keys `c0` (row label), `c1`... |
 | `steps` | `label`, `items`: 1-12 of `label`, optional `description`; optional zero-based `current` | read-only `stepper` (`lr-stepper`); earlier steps completed, later pending |
 
-The overlay also adds the `stepper` primitive role and extends `stat` with optional `deltaPercent` and `goodDirection`. A `comparison` row whose `values` length differs from `columns` is rejected at that row. Expansion happens during validation, so renderers and stored output only ever contain primitive nodes; an expanded id that collides with an existing id is a duplicate-identity failure.
+The overlay also adds the `stepper` primitive role. The reviewed `stat` role already accepts optional `frame` (`card`/`plain`), `deltaPercent` and `goodDirection` (`up`/`down`); the overlay guarantees the two trend props on a custom base that omits them. A `comparison` row whose `values` length differs from `columns` is rejected at that row. Expansion happens during validation, so renderers and stored output only ever contain primitive nodes; an expanded id that collides with an existing id is a duplicate-identity failure.
 
 ```ts
 import { answerBlocksCatalog } from '@aceshooting/lyra-gen/catalog.js';

@@ -15,6 +15,7 @@ const strings: LyraLocaleStrings = {
   chartPointLabel: 'အမှတ် {n}',
   chartPointCoordinates: 'x ဝင်ရိုး {x}၊ y ဝင်ရိုး {y}',
   chartBubblePointCoordinates: 'x ဝင်ရိုး {x}၊ y ဝင်ရိုး {y}၊ အချင်းဝက် {radius}',
+  chartBandRange: '{lower} မှ {upper} အထိ',
   chartLabeledPoint: '{label} — {coordinates}',
   chartSeriesNoData: '{label}: ဒေတာမရှိပါ',
   chartSummaryWithData: '{type} ဇယား။ {summaries}။',

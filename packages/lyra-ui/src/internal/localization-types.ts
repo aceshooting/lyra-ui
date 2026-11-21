@@ -322,6 +322,7 @@ export type LyraMessageKey =
   | 'chartPointLabel'
   | 'chartPointCoordinates'
   | 'chartBubblePointCoordinates'
+  | 'chartBandRange'
   | 'chartLabeledPoint'
   | 'chartLegend'
   | 'resetZoom'

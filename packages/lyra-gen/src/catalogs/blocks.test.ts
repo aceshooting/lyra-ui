@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { answerBlocksCatalog, createCatalog, initialCatalog } from '../catalog.js';
+import { answerBlocksCatalog, createCatalog, dataCatalog, initialCatalog } from '../catalog.js';
 import { buildCatalogPrompt, exportCatalogJsonSchema } from '../prompts.js';
 import { validateView } from '../runtime.js';
 import type { LyraGenNode } from '../types.js';
@@ -21,7 +21,7 @@ test('overlay identity, composition and untouched base', () => {
   for (const role of ['kpi-row', 'comparison', 'steps', 'stepper']) assert.ok(Object.hasOwn(overlay.components, role));
   for (const [role, component] of Object.entries(initialCatalog.components)) if (role !== 'stat') assert.equal(overlay.components[role], component);
   assert.equal(Object.hasOwn(initialCatalog.components, 'kpi-row'), false);
-  assert.equal(Object.hasOwn(initialCatalog.components['stat']!.properties, 'deltaPercent'), false);
+  assert.deepEqual(overlay.components['stat']!.properties, initialCatalog.components['stat']!.properties);
   assert.equal(JSON.stringify(initialCatalog.components, (_, value: unknown) => (typeof value === 'function' ? 'fn' : value)), before);
   assert.equal(initialCatalog.id, 'lyra-reviewed');
 });
@@ -126,4 +126,15 @@ test('runtime expansion yields the primitive tree', () => {
   assert.equal(first!.type, 'row');
   assert.deepEqual(first!.children!.map(child => child.id), ['k--0', 'k--1']);
   assert.equal(second!.type, 'stepper');
+});
+
+test('the data catalog stat role accepts frame and trend props and rejects unknown values', () => {
+  const stat = (props: Record<string, string | number>): LyraGenNode => ({ id: 'total', type: 'stat', props: { label: 'Revenue', value: '1.2M', ...props } });
+  const accepted = validateView(view(stat({ frame: 'plain', deltaPercent: -2.5, goodDirection: 'down' }), dataCatalog as typeof blocks), dataCatalog);
+  assert.ok(accepted.ok, JSON.stringify(accepted.diagnostics));
+  for (const [props, path] of [[{ goodDirection: 'sideways' }, '/root/props/goodDirection'], [{ frame: 'raised' }, '/root/props/frame'], [{ deltaPercent: '4' }, '/root/props/deltaPercent']] as const) {
+    const result = validateView(view(stat(props), dataCatalog as typeof blocks), dataCatalog);
+    assert.ok(!result.ok, path);
+    assert.ok(result.diagnostics.some(d => d.path.startsWith(path)), `${path}: ${JSON.stringify(result.diagnostics)}`);
+  }
 });

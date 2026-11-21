@@ -7,6 +7,7 @@ import { isSafeNonArrayObject as isChartRecord } from '../../../internal/object-
 
 export const MAX_CHART_INPUT_ENTRIES = 10_000;
 const CHART_INPUT_CAP_WARNING_KEY = 'lr-chart-input-cap';
+const BAND_LENGTH_WARNING_KEY = 'lr-chart-band-length';
 export const MAX_CHART_CONFIGURATION_DEPTH = 32;
 const OMIT_CHART_CONFIGURATION_VALUE = Symbol('omit-chart-configuration-value');
 
@@ -47,6 +48,8 @@ export function chartEnumerableKeys(value: object): readonly string[] | undefine
 interface CanonicalChartSeriesSnapshot {
   readonly data: readonly (number | null)[];
   readonly points?: readonly (LyraChartPoint | null)[];
+  /** Band lower bounds aligned with `data`, which then carries the upper bounds. */
+  readonly lower?: readonly (number | null)[];
 }
 
 // A source object can forge any exported/non-private property marker. Provenance belongs outside
@@ -76,6 +79,14 @@ export function canonicalSeriesData(
 ): readonly (number | null)[] {
   const canonical = canonicalChartSeries(series);
   return canonical ? canonicalChartSeriesSnapshots.get(canonical)!.data : [];
+}
+
+/** The canonical lower bounds of a `type: 'band'` series, aligned with its canonical data. */
+export function canonicalSeriesLower(
+  series: LyraChartSeries
+): readonly (number | null)[] | undefined {
+  const canonical = canonicalChartSeries(series);
+  return canonical ? canonicalChartSeriesSnapshots.get(canonical)!.lower : undefined;
 }
 
 export function canonicalSeriesPoints(
@@ -276,6 +287,8 @@ const CHART_SERIES_PROPERTIES = [
   'pointRadius',
   'segmentColors',
   'type',
+  'lower',
+  'upper',
 ] as const;
 
 /** The simplified surface tolerates an omitted label/data payload, but every admitted field is
@@ -319,7 +332,9 @@ export function projectChartSeries(value: unknown): LyraChartSeries | undefined 
     pointColors?: readonly string[];
     pointRadius?: number | readonly number[];
     segmentColors?: readonly string[];
-    type?: 'line' | 'bar';
+    type?: 'line' | 'bar' | 'band';
+    lower?: readonly (number | null)[];
+    upper?: readonly (number | null)[];
   } = { label: label ?? '' };
   const rawData = valueAt('data');
   const rawDataAdmission = admitChartArray(rawData);
@@ -367,7 +382,15 @@ export function projectChartSeries(value: unknown): LyraChartSeries | undefined 
     if (radii) output.pointRadius = radii;
   }
   if (segmentColors) output.segmentColors = segmentColors;
-  if (type === 'line' || type === 'bar') output.type = type;
+  if (type === 'line' || type === 'bar' || type === 'band') output.type = type;
+  if (type === 'band') {
+    const band = projectChartBand(valueAt('lower'), valueAt('upper'), output);
+    const series = Object.freeze(output) as LyraChartSeries;
+    retainChartInputLimit(band.rawLower, series);
+    retainChartInputLimit(band.rawUpper, series);
+    canonicalChartSeriesSnapshots.set(series, { data: band.upper, lower: band.lower });
+    return series;
+  }
   const series = Object.freeze(output) as LyraChartSeries;
   retainChartInputLimit(rawData, series);
   retainChartInputLimit(rawPoints, series);
@@ -378,9 +401,50 @@ export function projectChartSeries(value: unknown): LyraChartSeries | undefined 
   return series;
 }
 
+/**
+ * Admits a band's `lower`/`upper` pair. Both are clamped to the shorter length (with a
+ * development warning), and a row missing either bound is a gap in both, so every rendered row
+ * has a complete range. The public fields keep the caller-owned array identities.
+ */
+function projectChartBand(
+  rawLower: unknown,
+  rawUpper: unknown,
+  output: { lower?: readonly (number | null)[]; upper?: readonly (number | null)[]; data?: readonly (number | null)[] },
+): { lower: readonly (number | null)[]; upper: readonly (number | null)[]; rawLower: unknown; rawUpper: unknown } {
+  const lowerAdmission = admitChartArray(rawLower);
+  const upperAdmission = admitChartArray(rawUpper);
+  const lower = projectChartNumberData(rawLower, lowerAdmission) ?? [];
+  const upper = projectChartNumberData(rawUpper, upperAdmission) ?? [];
+  if (lowerAdmission) output.lower = lowerAdmission.source as unknown as readonly (number | null)[];
+  if (upperAdmission) output.upper = upperAdmission.source as unknown as readonly (number | null)[];
+  delete output.data;
+  if (lower.length !== upper.length && DEV_DIAGNOSTICS)
+    devWarnOnce(BAND_LENGTH_WARNING_KEY,
+      'lr-chart: a band series has lower and upper arrays of different lengths; both are clamped to the shorter one.');
+  const length = Math.min(lower.length, upper.length);
+  const lowerValues: (number | null)[] = [];
+  const upperValues: (number | null)[] = [];
+  for (let index = 0; index < length; index += 1) {
+    const low = lower[index]!, high = upper[index]!;
+    const complete = low !== null && high !== null;
+    lowerValues.push(complete ? Math.min(low, high) : null);
+    upperValues.push(complete ? Math.max(low, high) : null);
+  }
+  return { lower: Object.freeze(lowerValues), upper: Object.freeze(upperValues), rawLower, rawUpper };
+}
+
 /** Replaces numeric data on an already admitted series without rereading retained values. */
-export function appendChartSeries(series: LyraChartSeries, data: readonly (number | null)[]): LyraChartSeries {
-  const values = Object.freeze(data);
+export function appendChartSeries(series: LyraChartSeries, data: readonly (number | null)[], limit = data.length): LyraChartSeries {
+  const lower = canonicalChartSeriesSnapshots.get(series)?.lower;
+  if (lower) {
+    // One appended number cannot express a range, so a streamed band row is a gap in both bounds.
+    const upper = Object.freeze(data.map((value, index) => index === data.length - 1 ? null : value).slice(-limit));
+    const bounds = Object.freeze([...lower, ...Array.from({ length: data.length - lower.length }, () => null)].slice(-limit));
+    const result = Object.freeze({ ...series, lower: bounds, upper });
+    canonicalChartSeriesSnapshots.set(result, { data: upper, lower: bounds });
+    return result;
+  }
+  const values = Object.freeze(data.slice(-limit));
   const result = Object.freeze({ ...series, data: values });
   canonicalChartSeriesSnapshots.set(result, { data: values });
   return result;

@@ -3429,7 +3429,7 @@
       "module": "src/components/charts/chart/chart-types.ts",
       "exportName": "LyraChartSeries",
       "kind": "interface",
-      "fingerprint": "265a3149936807cc6111",
+      "fingerprint": "ea819f57418bbcd4cec3",
       "routes": [
         "src/all.ts",
         "src/components/charts/chart/chart.class.ts",
@@ -14302,7 +14302,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "7e5eb3fe37095d339083",
+      "fingerprint": "8195a45db4b96d6fb6c7",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15248,7 +15248,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "71dd5f93d0da1fb01261",
+      "fingerprint": "9064268fb1029e345bf6",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15382,7 +15382,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "b43ffaef0e51d63a4bbf",
+      "fingerprint": "391d8500c2ad3105e82b",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15984,7 +15984,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "23bca6907a60badcd1e7",
+      "fingerprint": "e016c8cb0010c8ba7ff4",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16000,7 +16000,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "f04b2193d76690b89496",
+      "fingerprint": "88247d1eefaf7d63aa57",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16543,7 +16543,7 @@
       "module": "src/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "ce6b0b1209a5abc5b368",
+      "fingerprint": "4d565124060d6e02b6b7",
       "routes": [
         "src/localization.ts",
         "src/utilities/index.ts"
@@ -16560,7 +16560,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "8b67e4115fcb314c12ab",
+      "fingerprint": "3444cdd95c7e32be3cfe",
       "routes": [
         "src/vue.ts"
       ],
@@ -16952,7 +16952,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "66baed8a30d67f3660c7",
+      "fingerprint": "6c2e5bdc017c0d01f8b2",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -16977,7 +16977,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocaleDelta",
       "kind": "function",
-      "fingerprint": "cbe765ad1ded2dacf253",
+      "fingerprint": "7e17553b5ed2d249fc89",
       "routes": [
         "src/localization.ts"
       ],

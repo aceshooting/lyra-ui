@@ -304,6 +304,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   chartPointLabel: 'Point {n}',
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, radius {radius}',
+  chartBandRange: '{lower} to {upper}',
   chartLabeledPoint: '{label}: {coordinates}',
   chartLegend: 'Chart legend',
   resetZoom: 'Reset zoom',

@@ -5221,7 +5221,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 508,
+              "line": 517,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -5267,6 +5267,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-active-datum.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-band.test.ts",
           "src/components/charts/chart/chart-bidi.test.ts",
           "src/components/charts/chart/chart-blank-labels.test.ts",
           "src/components/charts/chart/chart-canvas-unavailable.test.ts",
@@ -5293,6 +5294,7 @@
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
           "src/components/charts/chart/chart-late-feature-request.test.ts",
           "src/components/charts/chart/chart-legend-lifecycle.test.ts",
+          "src/components/charts/chart/chart-legend-tokens.test.ts",
           "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-legend-visibility.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
@@ -5544,7 +5546,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 508,
+              "line": 517,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -5590,6 +5592,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-active-datum.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-band.test.ts",
           "src/components/charts/chart/chart-bidi.test.ts",
           "src/components/charts/chart/chart-blank-labels.test.ts",
           "src/components/charts/chart/chart-canvas-unavailable.test.ts",
@@ -5616,6 +5619,7 @@
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
           "src/components/charts/chart/chart-late-feature-request.test.ts",
           "src/components/charts/chart/chart-legend-lifecycle.test.ts",
+          "src/components/charts/chart/chart-legend-tokens.test.ts",
           "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-legend-visibility.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
@@ -6602,7 +6606,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 508,
+              "line": 517,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -6648,6 +6652,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-active-datum.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-band.test.ts",
           "src/components/charts/chart/chart-bidi.test.ts",
           "src/components/charts/chart/chart-blank-labels.test.ts",
           "src/components/charts/chart/chart-canvas-unavailable.test.ts",
@@ -6674,6 +6679,7 @@
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
           "src/components/charts/chart/chart-late-feature-request.test.ts",
           "src/components/charts/chart/chart-legend-lifecycle.test.ts",
+          "src/components/charts/chart/chart-legend-tokens.test.ts",
           "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-legend-visibility.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
@@ -8988,7 +8994,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 508,
+              "line": 517,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -9042,6 +9048,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-active-datum.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-band.test.ts",
           "src/components/charts/chart/chart-bidi.test.ts",
           "src/components/charts/chart/chart-blank-labels.test.ts",
           "src/components/charts/chart/chart-canvas-unavailable.test.ts",
@@ -9068,6 +9075,7 @@
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
           "src/components/charts/chart/chart-late-feature-request.test.ts",
           "src/components/charts/chart/chart-legend-lifecycle.test.ts",
+          "src/components/charts/chart/chart-legend-tokens.test.ts",
           "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-legend-visibility.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
@@ -19593,7 +19601,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 508,
+              "line": 517,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -19639,6 +19647,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-active-datum.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-band.test.ts",
           "src/components/charts/chart/chart-bidi.test.ts",
           "src/components/charts/chart/chart-blank-labels.test.ts",
           "src/components/charts/chart/chart-canvas-unavailable.test.ts",
@@ -19665,6 +19674,7 @@
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
           "src/components/charts/chart/chart-late-feature-request.test.ts",
           "src/components/charts/chart/chart-legend-lifecycle.test.ts",
+          "src/components/charts/chart/chart-legend-tokens.test.ts",
           "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-legend-visibility.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
@@ -28343,7 +28353,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 508,
+              "line": 517,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -28389,6 +28399,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-active-datum.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-band.test.ts",
           "src/components/charts/chart/chart-bidi.test.ts",
           "src/components/charts/chart/chart-blank-labels.test.ts",
           "src/components/charts/chart/chart-canvas-unavailable.test.ts",
@@ -28415,6 +28426,7 @@
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
           "src/components/charts/chart/chart-late-feature-request.test.ts",
           "src/components/charts/chart/chart-legend-lifecycle.test.ts",
+          "src/components/charts/chart/chart-legend-tokens.test.ts",
           "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-legend-visibility.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
@@ -31923,7 +31935,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 508,
+              "line": 517,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -31969,6 +31981,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-active-datum.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-band.test.ts",
           "src/components/charts/chart/chart-bidi.test.ts",
           "src/components/charts/chart/chart-blank-labels.test.ts",
           "src/components/charts/chart/chart-canvas-unavailable.test.ts",
@@ -31995,6 +32008,7 @@
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
           "src/components/charts/chart/chart-late-feature-request.test.ts",
           "src/components/charts/chart/chart-legend-lifecycle.test.ts",
+          "src/components/charts/chart/chart-legend-tokens.test.ts",
           "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-legend-visibility.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
@@ -32286,7 +32300,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 508,
+              "line": 517,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -32332,6 +32346,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-active-datum.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-band.test.ts",
           "src/components/charts/chart/chart-bidi.test.ts",
           "src/components/charts/chart/chart-blank-labels.test.ts",
           "src/components/charts/chart/chart-canvas-unavailable.test.ts",
@@ -32358,6 +32373,7 @@
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
           "src/components/charts/chart/chart-late-feature-request.test.ts",
           "src/components/charts/chart/chart-legend-lifecycle.test.ts",
+          "src/components/charts/chart/chart-legend-tokens.test.ts",
           "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-legend-visibility.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
@@ -41828,7 +41844,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 508,
+              "line": 517,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -41881,6 +41897,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-active-datum.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-band.test.ts",
           "src/components/charts/chart/chart-bidi.test.ts",
           "src/components/charts/chart/chart-blank-labels.test.ts",
           "src/components/charts/chart/chart-canvas-unavailable.test.ts",
@@ -41907,6 +41924,7 @@
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
           "src/components/charts/chart/chart-late-feature-request.test.ts",
           "src/components/charts/chart/chart-legend-lifecycle.test.ts",
+          "src/components/charts/chart/chart-legend-tokens.test.ts",
           "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-legend-visibility.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
@@ -42132,7 +42150,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 508,
+              "line": 517,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -42178,6 +42196,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-active-datum.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-band.test.ts",
           "src/components/charts/chart/chart-bidi.test.ts",
           "src/components/charts/chart/chart-blank-labels.test.ts",
           "src/components/charts/chart/chart-canvas-unavailable.test.ts",
@@ -42204,6 +42223,7 @@
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
           "src/components/charts/chart/chart-late-feature-request.test.ts",
           "src/components/charts/chart/chart-legend-lifecycle.test.ts",
+          "src/components/charts/chart/chart-legend-tokens.test.ts",
           "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-legend-visibility.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
@@ -44945,7 +44965,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 508,
+              "line": 517,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -44991,6 +45011,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-active-datum.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-band.test.ts",
           "src/components/charts/chart/chart-bidi.test.ts",
           "src/components/charts/chart/chart-blank-labels.test.ts",
           "src/components/charts/chart/chart-canvas-unavailable.test.ts",
@@ -45017,6 +45038,7 @@
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
           "src/components/charts/chart/chart-late-feature-request.test.ts",
           "src/components/charts/chart/chart-legend-lifecycle.test.ts",
+          "src/components/charts/chart/chart-legend-tokens.test.ts",
           "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-legend-visibility.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",
@@ -49409,7 +49431,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 508,
+              "line": 517,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -49455,6 +49477,7 @@
           "src/components/charts/chart/box-plot.test.ts",
           "src/components/charts/chart/chart-active-datum.test.ts",
           "src/components/charts/chart/chart-annotation-registration.test.ts",
+          "src/components/charts/chart/chart-band.test.ts",
           "src/components/charts/chart/chart-bidi.test.ts",
           "src/components/charts/chart/chart-blank-labels.test.ts",
           "src/components/charts/chart/chart-canvas-unavailable.test.ts",
@@ -49481,6 +49504,7 @@
           "src/components/charts/chart/chart-keyboard-cue.test.ts",
           "src/components/charts/chart/chart-late-feature-request.test.ts",
           "src/components/charts/chart/chart-legend-lifecycle.test.ts",
+          "src/components/charts/chart/chart-legend-tokens.test.ts",
           "src/components/charts/chart/chart-legend-updates.test.ts",
           "src/components/charts/chart/chart-legend-visibility.test.ts",
           "src/components/charts/chart/chart-peer-boundaries.test.ts",

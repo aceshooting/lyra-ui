@@ -197,6 +197,30 @@ canvas capability becomes available.
     `segment.borderColor` scriptable option, so it is only meaningful for line-type series.
     Typical use is threshold/anomaly banding along one line. A series that omits it (or passes an
     empty array) emits no `segment` key at all, leaving line rendering untouched.
+  - `type: 'band'` with `lower` and `upper` (one bound per category) draws a filled range — a
+    confidence interval, a p10–p90 envelope or a min/max range — beneath every line on `line` and
+    `bar` charts; `data` is ignored. The fill is the series color at `--lr-chart-band-opacity`
+    (default `0.2`), the value scale widens to the lower bounds unless `min`/`max` are configured,
+    and a band never stacks. Mismatched `lower`/`upper` lengths clamp to the shorter one with a
+    development warning; a row missing either bound is a gap, and reversed bounds are reordered.
+    The tooltip, generated table cell and keyboard announcement read the localized
+    `chartBandRange` range (`{lower} to {upper}`), formatters receive the bounds with
+    `statistic: 'min'`/`'max'`, CSV export writes `<label> lower` and `<label> upper` columns, the
+    summary range starts at the lowest bound, and the legend swatch (`data-band`) shows a
+    translucent fill inside a solid edge. `appendData()` streams a band row as a gap. On other
+    chart types a band plots its upper bounds as a plain series.
+
+    ```html
+    <lr-chart type="line" id="forecast"></lr-chart>
+    <script type="module">
+      const chart = document.querySelector('#forecast');
+      chart.labels = ['Mon', 'Tue', 'Wed', 'Thu'];
+      chart.datasets = [
+        { label: 'p10–p90', type: 'band', lower: [8, 9, 11, 10], upper: [14, 16, 18, 17] },
+        { label: 'Median', data: [11, 12, 14, 13] },
+      ];
+    </script>
+    ```
 - `hiddenDatasets?: readonly number[]` (attribute: false) — complete controlled DOM-legend
   visibility state. Leave it `undefined` (the default) to honor each effective dataset's declarative
   `hidden` value; pass `[]` to deliberately show every dataset, or a canonical list of zero-based
@@ -835,7 +859,17 @@ labels) once set, but NOT by default: Chart.js's `RadialLinearScale` gives `poin
 distinct built-in default (10px, not this token's 12px tick default), so leaving the token unset
 keeps that separate default rather than adopting the tick size; setting the token brings both the
 ticks and the point labels to the same size; plus
-`--lr-chart-legend-item-hover-bg` / `--lr-chart-legend-item-active-bg`,
+`--lr-chart-legend-item-hover-bg` / `--lr-chart-legend-item-active-bg`; the DOM legend layout
+tokens `--lr-chart-legend-gap` (default `var(--lr-space-xs)`), `--lr-chart-legend-padding` (block
+padding, default `var(--lr-space-xs)`), `--lr-chart-legend-font-size` (default `1em`),
+`--lr-chart-legend-item-min-height` (default `var(--lr-icon-button-size)`; lowering it below the
+shared hit-area floor trades pointer target size for density), `--lr-chart-legend-item-padding`
+(default `var(--lr-space-2xs)`), `--lr-chart-legend-swatch-size` (default `var(--lr-space-s)`) and
+`--lr-chart-legend-swatch-radius` (default `var(--lr-radius-xs)`), shared by every chart rendering
+this legend (`lr-chart`, its typed aliases such as `lr-doughnut-chart`, and `lr-box-plot`);
+`lr-lite-chart` honors the same gap, padding, font-size, swatch-size and swatch-radius names
+with its own defaults (`var(--lr-space-s)` gap, `var(--lr-font-size-xs)` text, `var(--lr-size-0-7em)`
+swatch); `--lr-chart-band-opacity` (default `0.2`) sets the fill alpha of `type: 'band'` series;
 `--lr-chart-data-table-button-hover-bg` / `--lr-chart-data-table-button-active-bg`,
 `--lr-chart-data-table-toggle-hover-bg` / `--lr-chart-data-table-toggle-active-bg` (the
 `dataTableToggle` disclosure button), and
@@ -1358,7 +1392,12 @@ category line; `--lr-chart-tooltip-bg` (default `var(--lr-color-surface)`) and
 `--lr-chart-color-5`, `--lr-chart-color-6`, `--lr-chart-color-7`, and `--lr-chart-color-8` (each
 defaulting to the matching `var(--lr-color-chart-N)` ramp entry) — the per-series colors, so one element can be recolored
 without moving the library-wide ramp; `--lr-chart-legend-side-max` (default
-`var(--lr-size-15rem)`) caps side legend allocation; `--lr-lite-chart-selected-outline-color` (default
+`var(--lr-size-15rem)`) caps side legend allocation; the shared legend layout tokens
+`--lr-chart-legend-gap` (default `var(--lr-space-s)`), `--lr-chart-legend-padding` (default
+`var(--lr-space-xs)`), `--lr-chart-legend-font-size` (default `var(--lr-font-size-xs)`),
+`--lr-chart-legend-swatch-size` (default `var(--lr-size-0-7em)`) and
+`--lr-chart-legend-swatch-radius` (default `var(--lr-radius-xs)`) restyle the legend without
+`::part()` rules; `--lr-lite-chart-selected-outline-color` (default
 `var(--lr-color-brand)`) — the stroke drawn on
 selected `[part='bar']` and `[part='point']` marks whose category index is in `selectedIndices`;
 `--lr-lite-chart-selected-outline-width` (default `var(--lr-size-2px)`) — that stroke's width.
@@ -1498,7 +1537,7 @@ failure transition is announced through the shared document-level light-DOM asse
 `--lr-chart-data-table-toggle-justify`, `--lr-chart-data-table-toggle-hover-bg`,
 `--lr-chart-data-table-toggle-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
 `--lr-chart-reset-zoom-button-active-bg`, `--lr-chart-canvas-hover-outline-width`, and
-`--lr-chart-canvas-hover-outline-color`, `--lr-chart-pattern-step`, plus `--lr-chart-legend-side-max` — all inherited from `LyraChart`, identical in meaning and default (see
+`--lr-chart-canvas-hover-outline-color`, `--lr-chart-pattern-step`, `--lr-chart-band-opacity`, the legend layout tokens `--lr-chart-legend-gap`, `--lr-chart-legend-padding`, `--lr-chart-legend-font-size`, `--lr-chart-legend-item-min-height`, `--lr-chart-legend-item-padding`, `--lr-chart-legend-swatch-size`, `--lr-chart-legend-swatch-radius`, plus `--lr-chart-legend-side-max` — all inherited from `LyraChart`, identical in meaning and default (see
 `lr-chart` above); each of the eight variants below reads the same set, so one rule retunes them
 together. The mirrored hooks are `--border-color-1`,
 `--border-color-2`, `--border-color-3`, `--border-color-4`, `--border-color-5`,
@@ -1650,7 +1689,7 @@ inherited from `LyraChart`, unaffected by the binning logic).
 `--lr-chart-data-table-toggle-justify`, `--lr-chart-data-table-toggle-hover-bg`,
 `--lr-chart-data-table-toggle-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
 `--lr-chart-reset-zoom-button-active-bg`, `--lr-chart-canvas-hover-outline-width`, and
-`--lr-chart-canvas-hover-outline-color`, `--lr-chart-pattern-step`, plus `--lr-chart-legend-side-max` — inherited from `LyraChart`, identical in meaning, together with the
+`--lr-chart-canvas-hover-outline-color`, `--lr-chart-pattern-step`, `--lr-chart-band-opacity`, the legend layout tokens `--lr-chart-legend-gap`, `--lr-chart-legend-padding`, `--lr-chart-legend-font-size`, `--lr-chart-legend-item-min-height`, `--lr-chart-legend-item-padding`, `--lr-chart-legend-swatch-size`, `--lr-chart-legend-swatch-radius`, plus `--lr-chart-legend-side-max` — inherited from `LyraChart`, identical in meaning, together with the
 mirrored `--border-color-1`,
 `--border-color-2`,
 `--border-color-3`, `--border-color-4`, `--border-color-5`, `--border-color-6`, `--fill-color-1`,
@@ -1850,7 +1889,7 @@ individual raw-sample dots drawn alongside each box; `0` disables them. `--lr-ch
 `--lr-chart-canvas-hover-outline-width` (default `var(--lr-border-width-thin)`) sizes the `canvas`
 hover outline; `--lr-chart-canvas-hover-outline-color` (default `var(--lr-chart-grid-color, var(--lr-color-border))`) sets
 its color. `--lr-chart-legend-item-active-bg` and `--lr-chart-legend-item-hover-bg` retune the
-pressed and hovered legend rows, and `--lr-chart-legend-side-max` caps a side legend — the same tokens and defaults as
+pressed and hovered legend rows, the legend layout tokens `--lr-chart-legend-gap`, `--lr-chart-legend-padding`, `--lr-chart-legend-font-size`, `--lr-chart-legend-item-min-height`, `--lr-chart-legend-item-padding`, `--lr-chart-legend-swatch-size`, `--lr-chart-legend-swatch-radius` size and space it, and `--lr-chart-legend-side-max` caps a side legend — the same tokens and defaults as
 `lr-chart`. Its own `dataTableToggle` disclosure button carries box-plot-namespaced hooks that
 fall back to the family-wide pair: `--lr-box-plot-data-table-toggle-hover-bg` (defaults to
 `--lr-chart-data-table-toggle-hover-bg`, then `--lr-color-brand-quiet`) and
@@ -2426,7 +2465,9 @@ These named interfaces and helper signatures are available to typed integrations
     readonly pointColors?: readonly string[];
     readonly pointRadius?: number | readonly number[];
     readonly segmentColors?: readonly string[];
-    readonly type?: 'line' | 'bar';
+    readonly type?: 'line' | 'bar' | 'band';
+    readonly lower?: readonly (number | null)[];
+    readonly upper?: readonly (number | null)[];
   }`
 
 - **`components-charts-chart-histogram-bin-contracts`** — Supporting data types and helpers for this component family.

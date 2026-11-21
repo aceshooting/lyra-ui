@@ -15,6 +15,7 @@ const strings: LyraLocaleStrings = {
   chartPointLabel: 'Σημείο {n}',
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, ακτίνα {radius}',
+  chartBandRange: 'από {lower} έως {upper}',
   chartLabeledPoint: '{label}: {coordinates}',
   chartSeriesNoData: '{label}: δεν υπάρχουν δεδομένα',
   chartSummaryWithData: 'Γράφημα {type}. {summaries}.',

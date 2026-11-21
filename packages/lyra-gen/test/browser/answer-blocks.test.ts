@@ -38,6 +38,13 @@ function expectedTag(kind: string): string {
 }
 
 describe('composite answer blocks rendered qualification', () => {
+  it('renders a stat role with frame and trend props on lr-stat', async () => {
+    const host = await mount({ id: 'subject', type: 'stat', props: { label: 'Churn', value: '2.1%', frame: 'plain', deltaPercent: -0.4, goodDirection: 'down' } });
+    const stat = host.shadowRoot!.querySelector<HTMLElement>('lr-stat')!;
+    expect([Reflect.get(stat, 'frame'), Reflect.get(stat, 'deltaPercent'), Reflect.get(stat, 'goodDirection')]).to.deep.equal(['plain', -0.4, 'down']);
+    expect(stat.getAttribute('frame')).to.equal('plain');
+  });
+
   it('renders each block as its expanded Lyra primitives with the supplied values', async () => {
     const kpi = await mount(blocks['kpi-row']!);
     const stats = [...kpi.shadowRoot!.querySelectorAll<HTMLElement>('lr-stat')];

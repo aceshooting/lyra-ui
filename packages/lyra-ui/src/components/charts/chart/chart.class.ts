@@ -12,6 +12,7 @@ import {
   canonicalChartDataSnapshots,
   canonicalChartSeries,
   canonicalSeriesData,
+  canonicalSeriesLower,
   canonicalSeriesPoints,
   chartRecordValue,
   projectChartNumberData,
@@ -76,6 +77,7 @@ import { csvRow } from '../../../internal/csv.js';
 import { finiteAdd, finiteNumber } from '../../../internal/numbers.js';
 import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import { showChartActiveDatum } from './chart-active-datum.js';
+import { CHART_BAND_LOWER_KEY, chartBandLowerValues, chartBandOpacity, drawChartBands, extendChartBandLimits } from './chart-band.js';
 
 import { readOwnDataValue, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
@@ -148,7 +150,7 @@ import { chartKeyboardStep, spatialBinAt, spatialKeyboardItems } from './chart-s
 import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chartAnnotationsUnavailable, LYRA_DEFAULT_chartAxisTotal, LYRA_DEFAULT_chartBubblePointCoordinates, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartDataLabelsUnavailable, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartLabeledPoint, LYRA_DEFAULT_chartMissingLibrary, LYRA_DEFAULT_chartPlotSampled, LYRA_DEFAULT_chartPointCoordinates, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartPreparedSummaryZoom, LYRA_DEFAULT_chartPrimaryAxis, LYRA_DEFAULT_chartRenderUnavailable, LYRA_DEFAULT_chartSecondaryAxis, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartSpatialBin, LYRA_DEFAULT_chartSpatialDensityLegend, LYRA_DEFAULT_chartSpatialHidden, LYRA_DEFAULT_chartSpatialPoint, LYRA_DEFAULT_chartSpatialRadiusDomain, LYRA_DEFAULT_chartSpatialSummary, LYRA_DEFAULT_chartStackTotalsUnavailable, LYRA_DEFAULT_chartSummaryEmpty, LYRA_DEFAULT_chartSummaryWithData, LYRA_DEFAULT_chartTypeBar, LYRA_DEFAULT_chartTypeBubble, LYRA_DEFAULT_chartTypeDoughnut, LYRA_DEFAULT_chartTypeLine, LYRA_DEFAULT_chartTypePie, LYRA_DEFAULT_chartTypePolarArea, LYRA_DEFAULT_chartTypeRadar, LYRA_DEFAULT_chartTypeScatter, LYRA_DEFAULT_chartValuePercentageLabel, LYRA_DEFAULT_chartZoomUnavailable, LYRA_DEFAULT_liteChartMarkSummary } from '../../../internal/default-strings/charts.generated.js';
+import { LYRA_DEFAULT_chartAnnotationsUnavailable, LYRA_DEFAULT_chartAxisTotal, LYRA_DEFAULT_chartBandRange, LYRA_DEFAULT_chartBubblePointCoordinates, LYRA_DEFAULT_chartCategory, LYRA_DEFAULT_chartDataLabelsUnavailable, LYRA_DEFAULT_chartDataSampled, LYRA_DEFAULT_chartLabeledPoint, LYRA_DEFAULT_chartMissingLibrary, LYRA_DEFAULT_chartPlotSampled, LYRA_DEFAULT_chartPointCoordinates, LYRA_DEFAULT_chartPointLabel, LYRA_DEFAULT_chartPreparedSummaryZoom, LYRA_DEFAULT_chartPrimaryAxis, LYRA_DEFAULT_chartRenderUnavailable, LYRA_DEFAULT_chartSecondaryAxis, LYRA_DEFAULT_chartSeriesLabel, LYRA_DEFAULT_chartSeriesNoData, LYRA_DEFAULT_chartSpatialBin, LYRA_DEFAULT_chartSpatialDensityLegend, LYRA_DEFAULT_chartSpatialHidden, LYRA_DEFAULT_chartSpatialPoint, LYRA_DEFAULT_chartSpatialRadiusDomain, LYRA_DEFAULT_chartSpatialSummary, LYRA_DEFAULT_chartStackTotalsUnavailable, LYRA_DEFAULT_chartSummaryEmpty, LYRA_DEFAULT_chartSummaryWithData, LYRA_DEFAULT_chartTypeBar, LYRA_DEFAULT_chartTypeBubble, LYRA_DEFAULT_chartTypeDoughnut, LYRA_DEFAULT_chartTypeLine, LYRA_DEFAULT_chartTypePie, LYRA_DEFAULT_chartTypePolarArea, LYRA_DEFAULT_chartTypeRadar, LYRA_DEFAULT_chartTypeScatter, LYRA_DEFAULT_chartValuePercentageLabel, LYRA_DEFAULT_chartZoomUnavailable, LYRA_DEFAULT_liteChartMarkSummary } from '../../../internal/default-strings/charts.generated.js';
 import { LYRA_DEFAULT_chart, LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartInputLimit, LYRA_DEFAULT_chartLegend, LYRA_DEFAULT_chartPreparedSummary, LYRA_DEFAULT_chartPreparedUnavailable, LYRA_DEFAULT_chartSummary, LYRA_DEFAULT_chartSummarySeparator, LYRA_DEFAULT_chartTotal, LYRA_DEFAULT_chartTrendDecreasing, LYRA_DEFAULT_chartTrendFlat, LYRA_DEFAULT_chartTrendIncreasing, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_resetZoom } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -825,6 +827,17 @@ function isDenseChartSize(size: LyraSize): boolean {
  *   `getComputedStyle` on every draw.
  * @cssprop [--lr-chart-legend-side-max=var(--lr-size-15rem)] - Maximum inline size reserved for a
  *   side-positioned DOM legend; the track is also capped at one third of the chart allocation.
+ * @cssprop [--lr-chart-legend-gap=var(--lr-space-xs)] - Gap between DOM legend items.
+ * @cssprop [--lr-chart-legend-padding=var(--lr-space-xs)] - Block padding of the DOM legend.
+ * @cssprop [--lr-chart-legend-font-size=1em] - DOM legend label font size.
+ * @cssprop [--lr-chart-legend-item-min-height=var(--lr-icon-button-size)] - Minimum block size
+ *   of a legend visibility button. Lowering it below the shared hit-area floor trades pointer
+ *   target size for density.
+ * @cssprop [--lr-chart-legend-item-padding=var(--lr-space-2xs)] - Padding of a legend visibility button.
+ * @cssprop [--lr-chart-legend-swatch-size=var(--lr-space-s)] - Legend swatch inline and block size.
+ * @cssprop [--lr-chart-legend-swatch-radius=var(--lr-radius-xs)] - Legend swatch corner radius.
+ * @cssprop [--lr-chart-band-opacity=0.2] - Fill alpha (0-1) of a `type: 'band'` series and its
+ *   legend swatch. Resolved via `getComputedStyle` on every draw.
  * @cssprop [--lr-chart-legend-item-hover-bg=var(--lr-color-brand-quiet)] - Hover background of a
  *   legend visibility button.
  * @cssprop --lr-chart-legend-item-active-bg - Pressed background of a legend visibility button;
@@ -899,6 +912,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     chart: LYRA_DEFAULT_chart,
     chartAnnotationsUnavailable: LYRA_DEFAULT_chartAnnotationsUnavailable,
     chartAxisTotal: LYRA_DEFAULT_chartAxisTotal,
+    chartBandRange: LYRA_DEFAULT_chartBandRange,
     chartBubblePointCoordinates: LYRA_DEFAULT_chartBubblePointCoordinates,
     chartCategory: LYRA_DEFAULT_chartCategory,
     chartData: LYRA_DEFAULT_chartData,
@@ -1753,6 +1767,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
           yAxisID: series.axis === 'y2' ? 'y2' : 'y',
         };
         canonicalChartDatasetValues.set(dataset, values);
+        const lower = canonicalSeriesLower(series);
+        if (lower) chartBandLowerValues.set(dataset, lower);
         return Object.freeze(dataset);
       }),
     };
@@ -1956,7 +1972,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             ...Array.from({ length: Math.max(0, domainLength - current.length) }, () => null),
             appendedValues[index] ?? null,
           ];
-          return appendChartSeries(series, data.slice(-limit));
+          return appendChartSeries(series, data, limit);
         });
         this.datasets = datasets;
       }
@@ -2016,7 +2032,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         ...Array.from({ length: Math.max(0, domainLength - current.length) }, () => null),
         appendedValues[index] ?? null,
       ];
-      return appendChartSeries(series, data.slice(-limit));
+      return appendChartSeries(series, data, limit);
     });
     this.labels = labels.slice(-limit);
     this.datasets = datasets;
@@ -2043,6 +2059,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       return {
         dataset,
         label,
+        band: chartBandLowerValues.get(dataset),
         point: this.isPointDataset(dataset),
         radius: points.some((point) => point.r != null),
         pointLabel: points.some((point) => point.label != null),
@@ -2051,7 +2068,9 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const header = csvRow([
       'label',
       ...columns.flatMap((column) =>
-        column.point
+        column.band
+          ? [`${column.label} lower`, `${column.label} upper`]
+          : column.point
           ? [
               `${column.label} x`,
               `${column.label} y`,
@@ -2091,6 +2110,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             seriesLabel: column.label,
             ...(axis === undefined ? {} : { axis }),
           } satisfies LyraChartFormatterMetadata;
+          if (column.band) {
+            return [exportCell(column.band[index], { ...metadata, statistic: 'min' }),
+              exportCell(value, { ...metadata, statistic: 'max' })];
+          }
           if (!column.point) return [exportCell(value, metadata)];
           const point = normalizedChartPoint(value);
           if (!point) {
@@ -2200,6 +2223,11 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     // Each tooltip line is drawn as its own canvas string; isolate it in its own first-strong
     // direction so a number-first formatted value keeps its order inside an RTL chart.
     beforeTooltipDraw: tooltipIsolationHook(() => this.effectiveDirection),
+    // Range bands: widen the value scale to their lower bounds, then fill beneath every dataset.
+    afterDataLimits: (chart: RuntimeChart, args: { scale: Parameters<typeof extendChartBandLimits>[1] }): void =>
+      extendChartBandLimits(chart, args.scale),
+    beforeDatasetsDraw: (chart: RuntimeChart): void => drawChartBands(chart, () =>
+      chartBandOpacity(getComputedStyle(this).getPropertyValue('--lr-chart-band-opacity'))),
   };
   // Tracks the *effective* Chart.js type actually passed to `new Chart()` —
   // i.e. `config.type` post-merge, not `this.type` — since `config.type` (the
@@ -2778,6 +2806,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   ): LyraChartDatasetConfiguration {
     const series = canonicalChartSeries(s);
     if (!series) return { label: '', data: [] };
+    // A band renders on cartesian line/bar charts only; elsewhere its upper bounds plot as a plain
+    // series of the chart's own type.
+    const bandLower = series.type === 'band' && (effectiveType === 'line' || effectiveType === 'bar')
+      ? canonicalSeriesLower(series) : undefined;
     const points = canonicalSeriesPoints(series);
     const values = points ?? canonicalSeriesData(series);
     const normalize: (value: unknown) => number | LyraChartPoint | null = points
@@ -2829,9 +2861,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             }
           )
         : undefined;
-    const fill = series.fill ?? this.area;
+    const fill = bandLower ? false : series.fill ?? this.area;
     const backgroundColor = colors ?? sliceFillColors ?? fillFallback;
-    const datasetType = series.type ?? effectiveType;
+    const seriesType = series.type === 'band' ? undefined : series.type;
+    const datasetType = bandLower ? 'line' : seriesType ?? effectiveType;
     const connectedStroke = datasetType === 'line' || datasetType === 'radar';
     const authoredSegmentColors =
       series.segmentColors?.length && rowIndexes
@@ -2889,7 +2922,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       // `series.type` (an explicit per-series mixed-type override, e.g. a line
       // series over a bar chart of the *same* effective family) is passed
       // through.
-      type: series.type,
+      type: bandLower ? (effectiveType === 'bar' ? 'line' : undefined) : seriesType,
       fill,
       ...(datasetType === 'bar' && this.hasConfiguredBarOption('borderRadius')
         ? {} : { borderRadius: chartStyle.borderRadius }),
@@ -2940,7 +2973,40 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       // Only spread in when the series sets a `stack` id, so a series without one produces the
       // exact dataset object it always did (Chart.js's own ungrouped default).
       ...(series.stack !== undefined ? { stack: series.stack } : {}),
+      ...(bandLower ? this.bandDatasetOptions(series, index, bandLower, encodedBackgroundColor, rowIndexes) : {}),
     };
+  }
+
+  /** The Chart.js overrides that turn a line dataset of upper bounds into a filled range band. */
+  private bandDatasetOptions(
+    series: LyraChartSeries,
+    index: number,
+    lower: readonly (number | null)[],
+    background: unknown,
+    rowIndexes?: readonly number[],
+  ): Record<string, unknown> {
+    return {
+      // The plugin paints the fill; the edges and resting points stay out of the way, while hover
+      // keeps a point on the upper edge for the tooltip.
+      showLine: false,
+      pointRadius: 0,
+      backgroundColor: Array.isArray(background) ? background[0] : background,
+      // A band never accumulates into a stack of lines.
+      stack: series.stack ?? `lr-band-${index}`,
+      [CHART_BAND_LOWER_KEY]: rowIndexes ? rowIndexes.map(row => lower[row] ?? null) : lower,
+    };
+  }
+
+  /** Formats one band row as a localized range, or `undefined` when the datum is not a band row. */
+  private bandRangeText(
+    dataset: LyraChartDatasetConfiguration | undefined,
+    index: number,
+    upper: number | undefined,
+    format: (value: number, statistic: LyraChartStatistic) => string,
+  ): string | undefined {
+    const lower = dataset === undefined ? undefined : chartBandLowerValues.get(dataset)?.[index];
+    if (typeof lower !== 'number' || upper === undefined) return undefined;
+    return this.localize('chartBandRange', undefined, { lower: format(lower, 'min'), upper: format(upper, 'max') });
   }
 
   /** Let Chart.js resolve an authored default -- including scriptable/indexable values -- at its
@@ -3658,6 +3724,10 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
         : coordinates;
     }
     const numeric = chartDatumNumericValue(value);
+    const range = metadata.datasetIndex === undefined || metadata.index === undefined
+      ? undefined
+      : this.bandRangeText(this.effectiveData().datasets[metadata.datasetIndex], metadata.index, numeric, format);
+    if (range !== undefined) return range;
     return numeric === undefined ? labelText(value) : format(numeric);
   }
 
@@ -4183,6 +4253,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
   }
 
   private tooltipLabel(context: ChartTooltipContext, horizontal = false): string | undefined {
+    const band = this.tooltipBandLabel(context);
+    if (band !== undefined) return band;
     const parsed = projectChartDatum(chartDatasetValue(context, 'parsed'));
     const raw = projectChartDatum(chartDatasetValue(context, 'raw'));
     const parsedPoint = normalizedChartPoint(parsed);
@@ -4229,6 +4301,28 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
           String(formatted),
         )
       : String(formatted);
+  }
+
+  /** A band item's tooltip line: its series label and both bounds, in source index space. */
+  private tooltipBandLabel(context: ChartTooltipContext): string | undefined {
+    if (!chartDatasetValue(chartDatasetValue(context, 'dataset'), CHART_BAND_LOWER_KEY)) return undefined;
+    const effective = this.effectiveData();
+    const hit = this.callbackIndexes(context, effective);
+    if (!hit) return undefined;
+    const datasetIndex = this.visualDatasetSourceIndexes?.[hit.datasetIndex] ?? hit.datasetIndex;
+    const index = this.visualRowSourceIndexes?.[hit.index] ?? hit.index;
+    const dataset = effective.datasets[datasetIndex]!;
+    const metadata = this.sourceDatumFormatterMetadata(datasetIndex, index, effective);
+    const range = this.bandRangeText(dataset, index, chartDatumNumericValue(this.datasetValues(dataset)[index]),
+      (value, statistic) => {
+        const formatted = this.formatValue(value, 'tooltip', { ...metadata, statistic });
+        return typeof formatted === 'string' ? formatted : this.formatSummaryValue(value);
+      });
+    if (range === undefined) return undefined;
+    const label = chartDatasetLabel(dataset);
+    return label
+      ? canvasSentence((value) => this.localize('chartValueLabel', undefined, { label, value }), range)
+      : range;
   }
 
   /**
@@ -4516,6 +4610,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     // pie/doughnut default only kicks in without an explicit raw `config.data` escape hatch.
     const wantsTooltipLabelCallback =
       !!(this.formatter || this.valueFormatter) ||
+      (!rawDataEscapeHatch && this.datasets.some(series => series.type === 'band')) ||
       ((effectiveType === 'pie' || effectiveType === 'doughnut') && !rawDataEscapeHatch);
     const prepared = this.preparedModel;
     const labels = prepared ? this.effectiveData().labels : this.canonicalLabels();
@@ -4951,19 +5046,22 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     let minIndex = 0;
     let max = 0;
     let maxIndex = 0;
+    // A band's range reaches down to its lower bounds; its trend follows the upper edge.
+    const lower = chartBandLowerValues.get(dataset);
     for (const [index, datum] of this.datasetValues(dataset).entries()) {
       const value = chartDatumNumericValue(datum);
       if (value === undefined) continue;
+      const floor = lower?.[index] ?? value;
       if (count === 0) {
         first = value;
-        min = value;
+        min = floor;
         minIndex = index;
         max = value;
         maxIndex = index;
       }
       last = value;
-      if (value < min) {
-        min = value;
+      if (floor < min) {
+        min = floor;
         minIndex = index;
       }
       if (value > max) {
@@ -5373,12 +5471,14 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             type="button"
             tabindex=${this.dataTableVisible ? '0' : '-1'}
             @click=${() => this.activateDatum(detail)}
-          >${isolateHtml(point
+          >${isolateHtml(this.bandRangeText(dataset, index, value,
+              (number, statistic) => this.formatTableValue(number, { ...metadata, statistic })) ??
+            (point
             ? this.datumDisplayValue(datum, {
                 surface: 'table',
                 ...metadata,
               })
-            : this.formatTableValue(value, metadata), direction)}</button></td>`;
+            : this.formatTableValue(value, metadata)), direction)}</button></td>`;
         })}
         ${stackAxes.map((axis) => {
           const total = stackTotals.get(axis)?.[index];
@@ -5634,7 +5734,8 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
                 part="legend-swatch"
                 aria-hidden="true"
                 data-encoding=${encoding ?? nothing}
-                style="background-color:${this.legendColor(
+                data-band=${!datumMode && chartBandLowerValues.has(dataset) ? '' : nothing}
+                style="${!datumMode && chartBandLowerValues.has(dataset) ? '--_lr-chart-swatch-color' : 'background-color'}:${this.legendColor(
                   dataset,
                   datasetIndex,
                   palette,

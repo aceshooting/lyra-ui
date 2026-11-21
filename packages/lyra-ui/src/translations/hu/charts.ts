@@ -15,6 +15,7 @@ const strings: LyraLocaleStrings = {
   chartPointLabel: '{n}. pont',
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, sugár {radius}',
+  chartBandRange: '{lower} – {upper}',
   chartLabeledPoint: '{label}: {coordinates}',
   chartSeriesNoData: '{label}: nincs adat',
   chartSummaryWithData: 'Diagram ({type}). {summaries}.',

@@ -164,10 +164,10 @@ export const styles = css`
     grid-area: legend;
     display: flex;
     flex-wrap: wrap;
-    gap: var(--lr-space-s);
+    gap: var(--lr-chart-legend-gap, var(--lr-space-s));
     justify-content: center;
     flex: 0 0 auto;
-    padding-block: var(--lr-space-xs);
+    padding-block: var(--lr-chart-legend-padding, var(--lr-space-xs));
   }
   [part='legend-item'] {
     display: inline-flex;
@@ -176,13 +176,13 @@ export const styles = css`
     max-inline-size: 100%;
     overflow-wrap: anywhere;
     gap: var(--lr-space-2xs);
-    font-size: var(--lr-font-size-xs);
+    font-size: var(--lr-chart-legend-font-size, var(--lr-font-size-xs));
     color: var(--lr-chart-legend-color, var(--_lr-chart-legend-color));
   }
   [part='legend-swatch'] {
-    inline-size: var(--lr-size-0-7em);
-    block-size: var(--lr-size-0-7em);
-    border-radius: var(--lr-radius-xs);
+    inline-size: var(--lr-chart-legend-swatch-size, var(--lr-size-0-7em));
+    block-size: var(--lr-chart-legend-swatch-size, var(--lr-size-0-7em));
+    border-radius: var(--lr-chart-legend-swatch-radius, var(--lr-radius-xs));
     flex: 0 0 auto;
   }
   ${forcedColorLegendSwatchStyles}

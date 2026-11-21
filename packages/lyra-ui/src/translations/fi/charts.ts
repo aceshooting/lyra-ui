@@ -15,6 +15,7 @@ const strings: LyraLocaleStrings = {
   chartPointLabel: 'Piste {n}',
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, säde {radius}',
+  chartBandRange: '{lower}–{upper}',
   chartLabeledPoint: '{label}: {coordinates}',
   chartSeriesNoData: '{label}: ei tietoja',
   chartSummaryWithData: 'Kaavio ({type}). {summaries}.',

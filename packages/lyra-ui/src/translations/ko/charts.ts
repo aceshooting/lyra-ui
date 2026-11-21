@@ -15,6 +15,7 @@ const strings: LyraLocaleStrings = {
   chartPointLabel: '포인트 {n}',
   chartPointCoordinates: 'x: {x}, y: {y}',
   chartBubblePointCoordinates: 'x: {x}, y: {y}, 반경: {radius}',
+  chartBandRange: '{lower}부터 {upper}까지',
   chartLabeledPoint: '{label}: {coordinates}',
   chartSeriesNoData: '{label}: 데이터 없음',
   chartSummaryWithData: '{type} 차트. {summaries}.',

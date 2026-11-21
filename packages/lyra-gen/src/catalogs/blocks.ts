@@ -1,5 +1,5 @@
 import type { JsonObject, JsonValue, LyraGenCatalog, LyraGenComponent, LyraGenNode, LyraGenSchema } from '../types.js';
-import { array, choice, count, documentation, label, number, object, scalar, string } from './shared.js';
+import { array, choice, count, deltaPercent, documentation, goodDirection, label, number, object, scalar, string } from './shared.js';
 
 /** Primitive roles a base catalog must already define before composite answer blocks can expand into them. */
 const expandsInto = Object.freeze(['row', 'stat', 'table'] as const);
@@ -9,8 +9,8 @@ const kpiItem = object({
   label,
   value: { anyOf: [string(256), number] } as LyraGenSchema,
   caption: string(512),
-  deltaPercent: number,
-  goodDirection: choice('up', 'down'),
+  deltaPercent,
+  goodDirection,
 }, ['label', 'value']);
 const rowCell: LyraGenSchema = scalar;
 const comparisonRow = object({ label, values: array(rowCell, 6) }, ['label', 'values']);
@@ -123,10 +123,10 @@ const blocks: Readonly<Record<string, LyraGenComponent>> = {
   },
 };
 
-/** Overlay role definitions: the three blocks, the `stepper` primitive and a `stat` extended with delta props. */
+/** Overlay role definitions: the three blocks, the `stepper` primitive and a `stat` guaranteed to accept the delta props a custom base may omit. */
 export function answerBlockComponents(base: LyraGenCatalog): Readonly<Record<string, LyraGenComponent>> {
   for (const role of expandsInto) if (!Object.hasOwn(base.components, role)) throw new TypeError(`Answer blocks require the ${role} role in the base catalog.`);
   for (const role of [...Object.keys(blocks), 'stepper']) if (Object.hasOwn(base.components, role)) throw new TypeError(`The base catalog already defines ${role}.`);
   const stat = base.components['stat']!;
-  return { stat: { ...stat, properties: { ...stat.properties, deltaPercent: number, goodDirection: choice('up', 'down') } }, stepper, ...blocks };
+  return { stat: { ...stat, properties: { ...stat.properties, deltaPercent, goodDirection } }, stepper, ...blocks };
 }

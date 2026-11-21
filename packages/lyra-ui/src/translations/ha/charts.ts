@@ -15,6 +15,7 @@ const strings: LyraLocaleStrings = {
   chartPointLabel: 'Maki {n}',
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, zangon da’ira {radius}',
+  chartBandRange: 'daga {lower} zuwa {upper}',
   chartLabeledPoint: 'Alama {label}: {coordinates}',
   chartSeriesNoData: '{label}: babu bayanai',
   chartSummaryWithData: 'Jadawalin {type}. {summaries}.',

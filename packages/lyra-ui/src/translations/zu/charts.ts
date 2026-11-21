@@ -15,6 +15,7 @@ const strings: LyraLocaleStrings = {
   chartPointLabel: 'Iphuzu {n}',
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, irediyasi {radius}',
+  chartBandRange: 'kusukela ku-{lower} kuya ku-{upper}',
   chartLabeledPoint: '{label}: {coordinates}',
   chartSeriesNoData: '{label}: ayikho idatha',
   chartSummaryWithData: 'Ishadi le-{type}. {summaries}.',

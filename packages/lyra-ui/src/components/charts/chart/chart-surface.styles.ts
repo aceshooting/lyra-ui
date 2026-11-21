@@ -55,10 +55,11 @@ export const chartSurfaceStyles = css`
     grid-area: legend;
     display: flex;
     flex-wrap: wrap;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-chart-legend-gap, var(--lr-space-xs));
     min-inline-size: 0;
     max-inline-size: 100%;
-    padding-block: var(--lr-space-xs);
+    padding-block: var(--lr-chart-legend-padding, var(--lr-space-xs));
+    font-size: var(--lr-chart-legend-font-size, 1em);
   }
   [part~='legend-item'] {
     display: inline-flex;
@@ -69,10 +70,11 @@ export const chartSurfaceStyles = css`
        slack and making this a no-op. */
     justify-content: center;
     ${iconHitTarget}
+    min-block-size: var(--lr-chart-legend-item-min-height, var(--lr-icon-button-size));
     max-inline-size: 100%;
     border: 0;
     border-radius: var(--lr-radius);
-    padding: var(--lr-space-2xs);
+    padding: var(--lr-chart-legend-item-padding, var(--lr-space-2xs));
     gap: var(--lr-space-2xs);
     background: transparent;
     color: var(--lr-chart-legend-color, var(--_lr-chart-legend-color));
@@ -101,10 +103,19 @@ export const chartSurfaceStyles = css`
     text-decoration-thickness: var(--lr-border-width-medium);
   }
   [part='legend-swatch'] {
-    inline-size: var(--lr-space-s);
-    block-size: var(--lr-space-s);
+    inline-size: var(--lr-chart-legend-swatch-size, var(--lr-space-s));
+    block-size: var(--lr-chart-legend-swatch-size, var(--lr-space-s));
     flex: 0 0 auto;
-    border-radius: var(--lr-radius-xs);
+    border-radius: var(--lr-chart-legend-swatch-radius, var(--lr-radius-xs));
+  }
+  /* A range band reads as a translucent fill inside a solid edge, like the band it names. */
+  [part='legend-swatch']:where([data-band]) {
+    background-color: color-mix(
+      in srgb,
+      var(--_lr-chart-swatch-color) calc(var(--lr-chart-band-opacity, 0.2) * 100%),
+      transparent
+    );
+    box-shadow: inset 0 0 0 var(--lr-border-width-thin) var(--_lr-chart-swatch-color);
   }
   ${forcedColorLegendSwatchStyles}
 

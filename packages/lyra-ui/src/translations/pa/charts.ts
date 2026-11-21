@@ -15,6 +15,7 @@ const strings: LyraLocaleStrings = {
   chartPointLabel: 'ਬਿੰਦੂ {n}',
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, ਅਰਧ-ਵਿਆਸ {radius}',
+  chartBandRange: '{lower} ਤੋਂ {upper} ਤੱਕ',
   chartLabeledPoint: '{label}: {coordinates}',
   chartSeriesNoData: '{label}: ਕੋਈ ਡਾਟਾ ਨਹੀਂ',
   chartSummaryWithData: '{type} ਚਾਰਟ। {summaries}।',

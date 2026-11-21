@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 19 parts, 44 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 52 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `canvas`: `--lr-chart-canvas-hover-outline-color`, `--lr-chart-canvas-hover-outline-width`; `legend-swatch`: `--lr-chart-pattern-step`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -134,7 +134,7 @@ inherited from `LyraChart`, unaffected by the binning logic).
 `--lr-chart-data-table-toggle-justify`, `--lr-chart-data-table-toggle-hover-bg`,
 `--lr-chart-data-table-toggle-active-bg`, `--lr-chart-reset-zoom-button-hover-bg`,
 `--lr-chart-reset-zoom-button-active-bg`, `--lr-chart-canvas-hover-outline-width`, and
-`--lr-chart-canvas-hover-outline-color`, `--lr-chart-pattern-step`, plus `--lr-chart-legend-side-max` — inherited from `LyraChart`, identical in meaning, together with the
+`--lr-chart-canvas-hover-outline-color`, `--lr-chart-pattern-step`, `--lr-chart-band-opacity`, the legend layout tokens `--lr-chart-legend-gap`, `--lr-chart-legend-padding`, `--lr-chart-legend-font-size`, `--lr-chart-legend-item-min-height`, `--lr-chart-legend-item-padding`, `--lr-chart-legend-swatch-size`, `--lr-chart-legend-swatch-radius`, plus `--lr-chart-legend-side-max` — inherited from `LyraChart`, identical in meaning, together with the
 mirrored `--border-color-1`,
 `--border-color-2`,
 `--border-color-3`, `--border-color-4`, `--border-color-5`, `--border-color-6`, `--fill-color-1`,

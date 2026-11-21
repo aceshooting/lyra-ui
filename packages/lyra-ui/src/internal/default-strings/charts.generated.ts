@@ -25,6 +25,7 @@ export const LYRA_DEFAULT_chart3dYAxis: LyraMessage = 'Y';
 export const LYRA_DEFAULT_chart3dZAxis: LyraMessage = 'Z';
 export const LYRA_DEFAULT_chartAnnotationsUnavailable: LyraMessage = 'Chart annotations are unavailable, but the core chart remains available.';
 export const LYRA_DEFAULT_chartAxisTotal: LyraMessage = '{axis} total';
+export const LYRA_DEFAULT_chartBandRange: LyraMessage = '{lower} to {upper}';
 export const LYRA_DEFAULT_chartBubblePointCoordinates: LyraMessage = 'x {x}, y {y}, radius {radius}';
 export const LYRA_DEFAULT_chartCategory: LyraMessage = 'Category';
 export const LYRA_DEFAULT_chartDataLabelsUnavailable: LyraMessage = 'Data labels are unavailable, but the core chart remains available.';

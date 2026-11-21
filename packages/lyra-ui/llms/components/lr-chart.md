@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 19 parts, 44 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 52 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `canvas`: `--lr-chart-canvas-hover-outline-color`, `--lr-chart-canvas-hover-outline-width`; `legend-swatch`: `--lr-chart-pattern-step`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -144,6 +144,30 @@ canvas capability becomes available.
     `segment.borderColor` scriptable option, so it is only meaningful for line-type series.
     Typical use is threshold/anomaly banding along one line. A series that omits it (or passes an
     empty array) emits no `segment` key at all, leaving line rendering untouched.
+  - `type: 'band'` with `lower` and `upper` (one bound per category) draws a filled range — a
+    confidence interval, a p10–p90 envelope or a min/max range — beneath every line on `line` and
+    `bar` charts; `data` is ignored. The fill is the series color at `--lr-chart-band-opacity`
+    (default `0.2`), the value scale widens to the lower bounds unless `min`/`max` are configured,
+    and a band never stacks. Mismatched `lower`/`upper` lengths clamp to the shorter one with a
+    development warning; a row missing either bound is a gap, and reversed bounds are reordered.
+    The tooltip, generated table cell and keyboard announcement read the localized
+    `chartBandRange` range (`{lower} to {upper}`), formatters receive the bounds with
+    `statistic: 'min'`/`'max'`, CSV export writes `<label> lower` and `<label> upper` columns, the
+    summary range starts at the lowest bound, and the legend swatch (`data-band`) shows a
+    translucent fill inside a solid edge. `appendData()` streams a band row as a gap. On other
+    chart types a band plots its upper bounds as a plain series.
+
+    ```html
+    <lr-chart type="line" id="forecast"></lr-chart>
+    <script type="module">
+      const chart = document.querySelector('#forecast');
+      chart.labels = ['Mon', 'Tue', 'Wed', 'Thu'];
+      chart.datasets = [
+        { label: 'p10–p90', type: 'band', lower: [8, 9, 11, 10], upper: [14, 16, 18, 17] },
+        { label: 'Median', data: [11, 12, 14, 13] },
+      ];
+    </script>
+    ```
 - `hiddenDatasets?: readonly number[]` (attribute: false) — complete controlled DOM-legend
   visibility state. Leave it `undefined` (the default) to honor each effective dataset's declarative
   `hidden` value; pass `[]` to deliberately show every dataset, or a canonical list of zero-based
@@ -782,7 +806,17 @@ labels) once set, but NOT by default: Chart.js's `RadialLinearScale` gives `poin
 distinct built-in default (10px, not this token's 12px tick default), so leaving the token unset
 keeps that separate default rather than adopting the tick size; setting the token brings both the
 ticks and the point labels to the same size; plus
-`--lr-chart-legend-item-hover-bg` / `--lr-chart-legend-item-active-bg`,
+`--lr-chart-legend-item-hover-bg` / `--lr-chart-legend-item-active-bg`; the DOM legend layout
+tokens `--lr-chart-legend-gap` (default `var(--lr-space-xs)`), `--lr-chart-legend-padding` (block
+padding, default `var(--lr-space-xs)`), `--lr-chart-legend-font-size` (default `1em`),
+`--lr-chart-legend-item-min-height` (default `var(--lr-icon-button-size)`; lowering it below the
+shared hit-area floor trades pointer target size for density), `--lr-chart-legend-item-padding`
+(default `var(--lr-space-2xs)`), `--lr-chart-legend-swatch-size` (default `var(--lr-space-s)`) and
+`--lr-chart-legend-swatch-radius` (default `var(--lr-radius-xs)`), shared by every chart rendering
+this legend (`lr-chart`, its typed aliases such as `lr-doughnut-chart`, and `lr-box-plot`);
+`lr-lite-chart` honors the same gap, padding, font-size, swatch-size and swatch-radius names
+with its own defaults (`var(--lr-space-s)` gap, `var(--lr-font-size-xs)` text, `var(--lr-size-0-7em)`
+swatch); `--lr-chart-band-opacity` (default `0.2`) sets the fill alpha of `type: 'band'` series;
 `--lr-chart-data-table-button-hover-bg` / `--lr-chart-data-table-button-active-bg`,
 `--lr-chart-data-table-toggle-hover-bg` / `--lr-chart-data-table-toggle-active-bg` (the
 `dataTableToggle` disclosure button), and

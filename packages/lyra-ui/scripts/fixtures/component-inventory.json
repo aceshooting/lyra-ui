@@ -13974,6 +13974,12 @@
             "default": "var(--lr-border-width-medium)"
           },
           {
+            "name": "--lr-chart-band-opacity",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0.2
+          },
+          {
             "name": "--lr-chart-canvas-hover-outline-color",
             "deprecated": null,
             "hasDefault": true,
@@ -14056,6 +14062,18 @@
             "default": "var(--lr-color-text)"
           },
           {
+            "name": "--lr-chart-legend-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "1em"
+          },
+          {
+            "name": "--lr-chart-legend-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-chart-legend-item-active-bg",
             "deprecated": null,
             "hasDefault": false
@@ -14067,10 +14085,40 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-chart-legend-item-min-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-size)"
+          },
+          {
+            "name": "--lr-chart-legend-item-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
+          },
+          {
+            "name": "--lr-chart-legend-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-chart-legend-side-max",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-15rem)"
+          },
+          {
+            "name": "--lr-chart-legend-swatch-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius-xs)"
+          },
+          {
+            "name": "--lr-chart-legend-swatch-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
           },
           {
             "name": "--lr-chart-pattern-step",
@@ -14732,6 +14780,18 @@
             "default": "var(--lr-color-text)"
           },
           {
+            "name": "--lr-chart-legend-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "1em"
+          },
+          {
+            "name": "--lr-chart-legend-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-chart-legend-item-active-bg",
             "deprecated": null,
             "hasDefault": false
@@ -14743,10 +14803,40 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-chart-legend-item-min-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-size)"
+          },
+          {
+            "name": "--lr-chart-legend-item-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
+          },
+          {
+            "name": "--lr-chart-legend-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-chart-legend-side-max",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-15rem)"
+          },
+          {
+            "name": "--lr-chart-legend-swatch-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius-xs)"
+          },
+          {
+            "name": "--lr-chart-legend-swatch-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
           },
           {
             "name": "--lr-chart-pattern-step",
@@ -16881,6 +16971,12 @@
             "default": "var(--lr-border-width-medium)"
           },
           {
+            "name": "--lr-chart-band-opacity",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0.2
+          },
+          {
             "name": "--lr-chart-canvas-hover-outline-color",
             "deprecated": null,
             "hasDefault": true,
@@ -16963,6 +17059,18 @@
             "default": "var(--lr-color-text)"
           },
           {
+            "name": "--lr-chart-legend-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "1em"
+          },
+          {
+            "name": "--lr-chart-legend-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-chart-legend-item-active-bg",
             "deprecated": null,
             "hasDefault": false
@@ -16974,10 +17082,40 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-chart-legend-item-min-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-size)"
+          },
+          {
+            "name": "--lr-chart-legend-item-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
+          },
+          {
+            "name": "--lr-chart-legend-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-chart-legend-side-max",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-15rem)"
+          },
+          {
+            "name": "--lr-chart-legend-swatch-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius-xs)"
+          },
+          {
+            "name": "--lr-chart-legend-swatch-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
           },
           {
             "name": "--lr-chart-pattern-step",
@@ -22579,6 +22717,12 @@
             "default": "var(--lr-border-width-medium)"
           },
           {
+            "name": "--lr-chart-band-opacity",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0.2
+          },
+          {
             "name": "--lr-chart-canvas-hover-outline-color",
             "deprecated": null,
             "hasDefault": true,
@@ -22661,6 +22805,18 @@
             "default": "var(--lr-color-text)"
           },
           {
+            "name": "--lr-chart-legend-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "1em"
+          },
+          {
+            "name": "--lr-chart-legend-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-chart-legend-item-active-bg",
             "deprecated": null,
             "hasDefault": false
@@ -22672,10 +22828,40 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-chart-legend-item-min-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-size)"
+          },
+          {
+            "name": "--lr-chart-legend-item-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
+          },
+          {
+            "name": "--lr-chart-legend-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-chart-legend-side-max",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-15rem)"
+          },
+          {
+            "name": "--lr-chart-legend-swatch-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius-xs)"
+          },
+          {
+            "name": "--lr-chart-legend-swatch-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
           },
           {
             "name": "--lr-chart-pattern-step",
@@ -54607,6 +54793,12 @@
             "default": "var(--lr-border-width-medium)"
           },
           {
+            "name": "--lr-chart-band-opacity",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0.2
+          },
+          {
             "name": "--lr-chart-canvas-hover-outline-color",
             "deprecated": null,
             "hasDefault": true,
@@ -54689,6 +54881,18 @@
             "default": "var(--lr-color-text)"
           },
           {
+            "name": "--lr-chart-legend-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "1em"
+          },
+          {
+            "name": "--lr-chart-legend-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-chart-legend-item-active-bg",
             "deprecated": null,
             "hasDefault": false
@@ -54700,10 +54904,40 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-chart-legend-item-min-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-size)"
+          },
+          {
+            "name": "--lr-chart-legend-item-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
+          },
+          {
+            "name": "--lr-chart-legend-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-chart-legend-side-max",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-15rem)"
+          },
+          {
+            "name": "--lr-chart-legend-swatch-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius-xs)"
+          },
+          {
+            "name": "--lr-chart-legend-swatch-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
           },
           {
             "name": "--lr-chart-pattern-step",
@@ -75047,6 +75281,12 @@
             "default": "var(--lr-border-width-medium)"
           },
           {
+            "name": "--lr-chart-band-opacity",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0.2
+          },
+          {
             "name": "--lr-chart-canvas-hover-outline-color",
             "deprecated": null,
             "hasDefault": true,
@@ -75129,6 +75369,18 @@
             "default": "var(--lr-color-text)"
           },
           {
+            "name": "--lr-chart-legend-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "1em"
+          },
+          {
+            "name": "--lr-chart-legend-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-chart-legend-item-active-bg",
             "deprecated": null,
             "hasDefault": false
@@ -75140,10 +75392,40 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-chart-legend-item-min-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-size)"
+          },
+          {
+            "name": "--lr-chart-legend-item-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
+          },
+          {
+            "name": "--lr-chart-legend-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-chart-legend-side-max",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-15rem)"
+          },
+          {
+            "name": "--lr-chart-legend-swatch-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius-xs)"
+          },
+          {
+            "name": "--lr-chart-legend-swatch-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
           },
           {
             "name": "--lr-chart-pattern-step",
@@ -85657,6 +85939,12 @@
             "default": "var(--lr-border-width-medium)"
           },
           {
+            "name": "--lr-chart-band-opacity",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0.2
+          },
+          {
             "name": "--lr-chart-canvas-hover-outline-color",
             "deprecated": null,
             "hasDefault": true,
@@ -85739,6 +86027,18 @@
             "default": "var(--lr-color-text)"
           },
           {
+            "name": "--lr-chart-legend-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "1em"
+          },
+          {
+            "name": "--lr-chart-legend-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-chart-legend-item-active-bg",
             "deprecated": null,
             "hasDefault": false
@@ -85750,10 +86050,40 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-chart-legend-item-min-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-size)"
+          },
+          {
+            "name": "--lr-chart-legend-item-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
+          },
+          {
+            "name": "--lr-chart-legend-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-chart-legend-side-max",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-15rem)"
+          },
+          {
+            "name": "--lr-chart-legend-swatch-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius-xs)"
+          },
+          {
+            "name": "--lr-chart-legend-swatch-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
           },
           {
             "name": "--lr-chart-pattern-step",
@@ -86731,10 +87061,40 @@
             "default": "var(--lr-color-text)"
           },
           {
+            "name": "--lr-chart-legend-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-xs)"
+          },
+          {
+            "name": "--lr-chart-legend-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
+          },
+          {
+            "name": "--lr-chart-legend-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-chart-legend-side-max",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-15rem)"
+          },
+          {
+            "name": "--lr-chart-legend-swatch-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius-xs)"
+          },
+          {
+            "name": "--lr-chart-legend-swatch-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-0-7em)"
           },
           {
             "name": "--lr-chart-pattern-step",
@@ -113055,6 +113415,12 @@
             "default": "var(--lr-border-width-medium)"
           },
           {
+            "name": "--lr-chart-band-opacity",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0.2
+          },
+          {
             "name": "--lr-chart-canvas-hover-outline-color",
             "deprecated": null,
             "hasDefault": true,
@@ -113137,6 +113503,18 @@
             "default": "var(--lr-color-text)"
           },
           {
+            "name": "--lr-chart-legend-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "1em"
+          },
+          {
+            "name": "--lr-chart-legend-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-chart-legend-item-active-bg",
             "deprecated": null,
             "hasDefault": false
@@ -113148,10 +113526,40 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-chart-legend-item-min-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-size)"
+          },
+          {
+            "name": "--lr-chart-legend-item-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
+          },
+          {
+            "name": "--lr-chart-legend-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-chart-legend-side-max",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-15rem)"
+          },
+          {
+            "name": "--lr-chart-legend-swatch-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius-xs)"
+          },
+          {
+            "name": "--lr-chart-legend-swatch-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
           },
           {
             "name": "--lr-chart-pattern-step",
@@ -114226,6 +114634,12 @@
             "default": "var(--lr-border-width-medium)"
           },
           {
+            "name": "--lr-chart-band-opacity",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0.2
+          },
+          {
             "name": "--lr-chart-canvas-hover-outline-color",
             "deprecated": null,
             "hasDefault": true,
@@ -114308,6 +114722,18 @@
             "default": "var(--lr-color-text)"
           },
           {
+            "name": "--lr-chart-legend-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "1em"
+          },
+          {
+            "name": "--lr-chart-legend-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-chart-legend-item-active-bg",
             "deprecated": null,
             "hasDefault": false
@@ -114319,10 +114745,40 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-chart-legend-item-min-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-size)"
+          },
+          {
+            "name": "--lr-chart-legend-item-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
+          },
+          {
+            "name": "--lr-chart-legend-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-chart-legend-side-max",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-15rem)"
+          },
+          {
+            "name": "--lr-chart-legend-swatch-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius-xs)"
+          },
+          {
+            "name": "--lr-chart-legend-swatch-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
           },
           {
             "name": "--lr-chart-pattern-step",
@@ -121318,6 +121774,12 @@
             "default": "var(--lr-border-width-medium)"
           },
           {
+            "name": "--lr-chart-band-opacity",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0.2
+          },
+          {
             "name": "--lr-chart-canvas-hover-outline-color",
             "deprecated": null,
             "hasDefault": true,
@@ -121400,6 +121862,18 @@
             "default": "var(--lr-color-text)"
           },
           {
+            "name": "--lr-chart-legend-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "1em"
+          },
+          {
+            "name": "--lr-chart-legend-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-chart-legend-item-active-bg",
             "deprecated": null,
             "hasDefault": false
@@ -121411,10 +121885,40 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-chart-legend-item-min-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-size)"
+          },
+          {
+            "name": "--lr-chart-legend-item-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
+          },
+          {
+            "name": "--lr-chart-legend-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-chart-legend-side-max",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-15rem)"
+          },
+          {
+            "name": "--lr-chart-legend-swatch-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius-xs)"
+          },
+          {
+            "name": "--lr-chart-legend-swatch-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
           },
           {
             "name": "--lr-chart-pattern-step",
@@ -131840,6 +132344,12 @@
             "default": "var(--lr-border-width-medium)"
           },
           {
+            "name": "--lr-chart-band-opacity",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0.2
+          },
+          {
             "name": "--lr-chart-canvas-hover-outline-color",
             "deprecated": null,
             "hasDefault": true,
@@ -131922,6 +132432,18 @@
             "default": "var(--lr-color-text)"
           },
           {
+            "name": "--lr-chart-legend-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "1em"
+          },
+          {
+            "name": "--lr-chart-legend-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-chart-legend-item-active-bg",
             "deprecated": null,
             "hasDefault": false
@@ -131933,10 +132455,40 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-chart-legend-item-min-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-size)"
+          },
+          {
+            "name": "--lr-chart-legend-item-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-2xs)"
+          },
+          {
+            "name": "--lr-chart-legend-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-chart-legend-side-max",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-15rem)"
+          },
+          {
+            "name": "--lr-chart-legend-swatch-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius-xs)"
+          },
+          {
+            "name": "--lr-chart-legend-swatch-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
           },
           {
             "name": "--lr-chart-pattern-step",

@@ -508,6 +508,11 @@ export interface LyraLiteChartEventMap {
  * @cssprop [--lr-chart-tick-font-size=var(--lr-font-size-2xs)] - Axis tick-label font size. Same
  *   token name as `lr-chart`'s canvas equivalent, so theming either retunes both.
  * @cssprop [--lr-chart-legend-color=var(--lr-color-text)] - Legend label color.
+ * @cssprop [--lr-chart-legend-gap=var(--lr-space-s)] - Gap between legend items.
+ * @cssprop [--lr-chart-legend-padding=var(--lr-space-xs)] - Block padding of the legend.
+ * @cssprop [--lr-chart-legend-font-size=var(--lr-font-size-xs)] - Legend label font size.
+ * @cssprop [--lr-chart-legend-swatch-size=var(--lr-size-0-7em)] - Legend swatch inline and block size.
+ * @cssprop [--lr-chart-legend-swatch-radius=var(--lr-radius-xs)] - Legend swatch corner radius.
  * @cssprop [--lr-chart-legend-side-max=var(--lr-size-15rem)] - Maximum side-legend track size.
  * @cssprop [--lr-chart-color-1=var(--lr-color-chart-1)] - First series color.
  * @cssprop [--lr-chart-color-2=var(--lr-color-chart-2)] - Second series color.

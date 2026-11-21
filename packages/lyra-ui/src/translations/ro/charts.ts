@@ -15,6 +15,7 @@ const strings: LyraLocaleStrings = {
   chartPointLabel: 'Punctul {n}',
   chartPointCoordinates: 'x {x}, y {y}',
   chartBubblePointCoordinates: 'x {x}, y {y}, rază {radius}',
+  chartBandRange: 'de la {lower} la {upper}',
   chartLabeledPoint: '{label}: {coordinates}',
   chartSeriesNoData: '{label}: fără date',
   chartSummaryWithData: 'Grafic de tip {type}. {summaries}.',

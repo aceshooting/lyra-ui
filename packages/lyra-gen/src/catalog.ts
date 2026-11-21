@@ -66,8 +66,8 @@ export const catalogPresets: Readonly<Record<LyraGenCatalogPresetName, LyraGenCa
 /**
  * Opt-in overlay adding the composite answer blocks `kpi-row`, `comparison` and `steps` and the
  * read-only `stepper` primitive they expand into. The result has id `<base id>+blocks` and the base
- * version; `stat` additionally accepts `deltaPercent` and `goodDirection`. The base catalog is not
- * modified. Throws a `TypeError` when the base lacks `row`, `stat` or `table`, or already defines
+ * version; `stat` always accepts `deltaPercent` and `goodDirection`, even over a custom base that
+ * omits them. The base catalog is not modified. Throws a `TypeError` when the base lacks `row`, `stat` or `table`, or already defines
  * a block or `stepper` role.
  */
 export function answerBlocksCatalog(base: LyraGenCatalog = initialCatalog): LyraGenCatalog {

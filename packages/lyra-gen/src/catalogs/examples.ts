@@ -4,7 +4,7 @@ import { formComponents } from './forms.js';
 import { conversationComponents } from './conversation.js';
 import { dataComponents } from './data.js';
 import { retrievalComponents } from './retrieval.js';
-import { appearance, boolean, choice, documentation, label, size, string, variant } from './shared.js';
+import { appearance, boolean, choice, deltaPercent, documentation, frame, goodDirection, label, size, string, variant } from './shared.js';
 import type { LyraGenNode } from '../types.js';
 
 /** Small original examples are validated against the same runtime contract as generated views. */
@@ -18,7 +18,7 @@ export const reviewedExamples: Readonly<Record<string, { readonly useWhen: strin
   alert: { useWhen: 'Explain a relevant status or recoverable problem.', example: { id: 'notice', type: 'alert', props: { open: true, variant: 'warning' }, text: 'The selected period has partial data.' } },
   empty: { useWhen: 'Explain why a valid result currently contains no records.', example: { id: 'empty', type: 'empty', props: { heading: 'No matching records', description: 'Try a different period.' } } },
   skeleton: { useWhen: 'Reserve space during a bounded loading operation.', example: { id: 'loading', type: 'skeleton', props: { label: 'Loading summary', shape: 'rect', effect: 'none' } } },
-  stat: { useWhen: 'Highlight one named metric with a readable value and unit.', example: { id: 'total', type: 'stat', props: { label: 'Open tasks', value: '12', caption: 'This week' } } },
+  stat: { useWhen: 'Highlight one named metric with a readable value, unit and optional trend delta.', example: { id: 'total', type: 'stat', props: { label: 'Open tasks', value: '12', caption: 'This week', deltaPercent: -8, goodDirection: 'down' } } },
   form: { useWhen: 'Group host-approved fields under native validation and explicit submission.', example: { id: 'preferences', type: 'form', props: { ariaLabel: 'Display preferences' }, children: [{ id: 'help', type: 'text', text: 'Fields require host authorization.' }] } },
   button: { useWhen: 'Offer an explicitly named host action or a form submit/reset control.', example: { id: 'apply', type: 'button', props: { type: 'button', variant: 'brand' }, text: 'Apply filters' } },
   input: { useWhen: 'Collect one host-approved short text, search, email or numeric field.', example: { id: 'query', type: 'input', props: { label: 'Search terms', type: 'search', value: '' } } },
@@ -94,7 +94,7 @@ const structuralComponents: Readonly<Record<string, LyraGenComponent>> = {
   alert: { tag: 'lr-alert', properties: { variant, open: boolean, closable: boolean }, text: true, children: ['text', 'button'], optionalChildren: ['text', 'button'], slots: [''], load: () => import('@aceshooting/lyra-ui/components/lr-alert.js'), documentation: documentation('lr-alert') },
   empty: { tag: 'lr-empty', properties: { heading: label, description: string(1024), size }, required: ['heading'], children: ['button'], optionalChildren: ['button'], slots: ['actions'], load: () => import('@aceshooting/lyra-ui/components/lr-empty.js'), documentation: documentation('lr-empty') },
   skeleton: { tag: 'lr-skeleton', properties: { label, shape: choice('rect', 'circle', 'text'), effect: choice('none', 'pulse', 'sheen') }, load: () => import('@aceshooting/lyra-ui/components/lr-skeleton.js'), documentation: documentation('lr-skeleton') },
-  stat: { tag: 'lr-stat', properties: { label, value: string(256), unit: string(64), caption: string(512), variant }, required: ['label', 'value'], load: () => import('@aceshooting/lyra-ui/components/lr-stat.js'), documentation: documentation('lr-stat') },
+  stat: { tag: 'lr-stat', properties: { label, value: string(256), unit: string(64), caption: string(512), variant, frame, deltaPercent, goodDirection }, required: ['label', 'value'], load: () => import('@aceshooting/lyra-ui/components/lr-stat.js'), documentation: documentation('lr-stat') },
 };
 
 const builtInRoles: Record<string, LyraGenComponent> = Object.create(null) as Record<string, LyraGenComponent>;
