@@ -32061,6 +32061,12 @@
             "default": 0
           },
           {
+            "name": "--lr-theme-scrollbar-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
             "name": "--lr-theme-scrollbar-gutter",
             "deprecated": null,
             "hasDefault": true,
@@ -35439,6 +35445,24 @@
             "name": "--lr-positioning-strategy",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-theme-scrollbar-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "--lr-theme-scrollbar-gutter",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "--lr-theme-scrollbar-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
           },
           {
             "name": "--show-duration",
@@ -60029,6 +60053,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "16px"
+          },
+          {
+            "name": "--lr-theme-scrollbar-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
           }
         ],
         "cssStates": [],
@@ -94890,6 +94920,24 @@
             "name": "--lr-positioning-strategy",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-theme-scrollbar-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "--lr-theme-scrollbar-gutter",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "--lr-theme-scrollbar-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
           }
         ],
         "cssStates": [],
@@ -116225,6 +116273,16 @@
             "default": ""
           },
           {
+            "name": "forElement",
+            "attribute": null,
+            "type": "HTMLElement | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "hideDelay",
             "attribute": "hide-delay",
             "type": "number",
@@ -135448,6 +135506,24 @@
             "default": "dashed"
           },
           {
+            "name": "--lr-theme-scrollbar-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "--lr-theme-scrollbar-gutter",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
+            "name": "--lr-theme-scrollbar-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
             "name": "--show-duration",
             "deprecated": null,
             "hasDefault": true,
@@ -144769,6 +144845,235 @@
       }
     },
     {
+      "tag": "lr-style-panel",
+      "family": "utility",
+      "classModule": "src/components/utility/style-panel/style-panel.class.ts",
+      "registrationModule": "src/components/lr-style-panel.ts",
+      "rootIncluded": true,
+      "rootExclusion": null,
+      "optionalPeers": [],
+      "maturity": {
+        "status": "experimental",
+        "since": "unreleased",
+        "deprecated": null,
+        "profile": "new-component-experimental",
+        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "deprecations": []
+      },
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "accessibility": "automated",
+        "scale": "unmeasured",
+        "ledger": "scripts/fixtures/component-qualification.json"
+      },
+      "dependencies": {
+        "direct": [
+          "lr-button",
+          "lr-option",
+          "lr-segmented",
+          "lr-select",
+          "lr-slider",
+          "lr-swatch-picker"
+        ],
+        "transitive": [],
+        "ledger": "scripts/fixtures/component-integration.json"
+      },
+      "counterparts": [],
+      "surface": {
+        "attributes": [
+          {
+            "name": "axes",
+            "property": "axes",
+            "type": "unknown",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "mode look surface surface-opacity density accent"
+          },
+          {
+            "name": "disabled",
+            "property": "disabled",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "label",
+            "property": "label",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "without-reset",
+            "property": "withoutReset",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          }
+        ],
+        "properties": [
+          {
+            "name": "axes",
+            "attribute": "axes",
+            "type": "unknown",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "mode look surface surface-opacity density accent"
+          },
+          {
+            "name": "disabled",
+            "attribute": "disabled",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "label",
+            "attribute": "label",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "looks",
+            "attribute": null,
+            "type": "readonly LyraLookEntry[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "LYRA_LOOKS"
+          },
+          {
+            "name": "withoutReset",
+            "attribute": "without-reset",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          }
+        ],
+        "slots": [],
+        "events": [
+          {
+            "name": "lr-change",
+            "type": "CustomEvent<LyraStyleChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          }
+        ],
+        "parts": [
+          {
+            "name": "accent",
+            "deprecated": null
+          },
+          {
+            "name": "accent-label",
+            "deprecated": null
+          },
+          {
+            "name": "accent-picker",
+            "deprecated": null
+          },
+          {
+            "name": "base",
+            "deprecated": null
+          },
+          {
+            "name": "density",
+            "deprecated": null
+          },
+          {
+            "name": "look",
+            "deprecated": null
+          },
+          {
+            "name": "mode",
+            "deprecated": null
+          },
+          {
+            "name": "reset",
+            "deprecated": null
+          },
+          {
+            "name": "surface",
+            "deprecated": null
+          },
+          {
+            "name": "surface-opacity",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [
+          {
+            "name": "--lr-style-panel-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
+          }
+        ],
+        "cssStates": [],
+        "methods": [],
+        "staticProperties": [],
+        "staticMethods": [],
+        "moduleExports": [],
+        "form": {
+          "associated": false,
+          "properties": [
+            "disabled"
+          ],
+          "methods": []
+        },
+        "native": {
+          "forwardedEvents": [],
+          "delegatedMethods": []
+        }
+      }
+    },
+    {
       "tag": "lr-subagent-panel",
       "family": "agent-tools",
       "classModule": "src/components/agent-tools/subagent-panel/subagent-panel.class.ts",
@@ -149548,6 +149853,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-theme-scrollbar-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
           },
           {
             "name": "--lr-theme-scrollbar-gutter",
@@ -155676,6 +155987,12 @@
             "name": "--lr-positioning-strategy",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-theme-scrollbar-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
           },
           {
             "name": "--lr-time-input-action-active-bg",

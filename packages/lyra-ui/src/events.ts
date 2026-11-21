@@ -232,6 +232,7 @@ import type { LyraMutationObserverEventMap } from './components/utility/mutation
 import type { LyraPollStatusEventMap } from './components/utility/poll-status/poll-status.class.js';
 import type { LyraRandomContentEventMap } from './components/utility/random-content/random-content.class.js';
 import type { LyraResizeObserverEventMap } from './components/utility/resize-observer/resize-observer.class.js';
+import type { LyraStylePanelEventMap } from './components/utility/style-panel/style-panel.class.js';
 import type { LyraTourEventMap } from './components/utility/tour/tour.class.js';
 import type { LyraArchiveViewerEventMap } from './components/viewers/archive-viewer/archive-viewer.class.js';
 import type { LyraCalendarViewerEventMap } from './components/viewers/calendar-viewer/calendar-viewer.class.js';
@@ -618,7 +619,7 @@ export type LyraCellMoveEvent = LyraDashboardGridEventMap['lr-cell-move'];
 export type LyraCellResizeEvent = LyraDashboardGridEventMap['lr-cell-resize'];
 
 /**
- * `lr-change` — dispatched by 47 components: `<lr-chat-composer>`, `<lr-checkbox-group>`,
+ * `lr-change` — dispatched by 48 components: `<lr-chat-composer>`, `<lr-checkbox-group>`,
  * `<lr-checkbox>`, `<lr-code-editor>`, `<lr-color-picker>`, `<lr-combobox>`,
  * `<lr-country-picker>`, `<lr-currency-picker>`, `<lr-date-input>`, `<lr-date-picker>`,
  * `<lr-emoji-picker>`, `<lr-file-input>`, `<lr-graph-query-builder>`, `<lr-image-comparer>`,
@@ -626,10 +627,10 @@ export type LyraCellResizeEvent = LyraDashboardGridEventMap['lr-cell-resize'];
  * `<lr-model-settings-panel>`, `<lr-native-time-input>`, `<lr-number-input>`, `<lr-otp-input>`,
  * `<lr-phone-input>`, `<lr-prompt-input>`, `<lr-prompt-studio>`, `<lr-radio-button>`,
  * `<lr-radio-group>`, `<lr-radio>`, `<lr-rating>`, `<lr-rubric-form>`, `<lr-segmented>`,
- * `<lr-select>`, `<lr-signature-pad>`, `<lr-slider>`, `<lr-swatch-picker>`, `<lr-switch>`,
- * `<lr-textarea>`, `<lr-time-input>`, `<lr-time-range>`, `<lr-time-zone-picker>`,
+ * `<lr-select>`, `<lr-signature-pad>`, `<lr-slider>`, `<lr-style-panel>`, `<lr-swatch-picker>`,
+ * `<lr-switch>`, `<lr-textarea>`, `<lr-time-input>`, `<lr-time-range>`, `<lr-time-zone-picker>`,
  * `<lr-toggle-group>`, `<lr-toggle>`, `<lr-token-input>`, `<lr-tool-param-form>`,
- * `<lr-tool-select-dialog>`, `<lr-unit-picker>`, `<lr-voice-picker>`; detail union of 41, e.g.
+ * `<lr-tool-select-dialog>`, `<lr-unit-picker>`, `<lr-voice-picker>`; detail union of 42, e.g.
  * `LyraCatalogPickerEventMap['lr-change']`.
  */
 export type LyraChangeEvent =
@@ -663,6 +664,7 @@ export type LyraChangeEvent =
   | LyraSelectEventMap['lr-change']
   | LyraSignaturePadEventMap['lr-change']
   | LyraSliderEventMap['lr-change']
+  | LyraStylePanelEventMap['lr-change']
   | LyraSwatchPickerEventMap['lr-change']
   | LyraSwitchEventMap['lr-change']
   | LyraTextareaEventMap['lr-change']

@@ -9,8 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `editor`: `--lr-code-editor-radius`, `--lr-theme-scrollbar-width`, `--lr-theme-scrollbar-gutter`
+- **Themeable via** 8 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `editor`: `--lr-code-editor-radius`, `--lr-theme-scrollbar-width`, `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-color`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -156,9 +156,10 @@ the editor frame once its textarea is focused — one name for every field-shape
 library, so a halo is configured once instead of per component. It is additive: the focus outline
 is the accessibility answer to focus and is never replaced by it.
 The `editor` scroll frame also honors the opt-in theme-level
-`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`auto`, matching
-its previous unconditional `scrollbar-width: auto`) — set either on `:root` or any ancestor for one
-declaration to retheme every internal scroll container in the library, including `lr-table`,
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color` hooks
+(defaults `auto`/`auto`/`auto`, matching its previous unconditional `scrollbar-width: auto`) — set any
+of them on `:root` or any ancestor for one declaration to retheme every internal scroll container in
+the library, including `lr-table`,
 `lr-virtual-list`, `lr-scroller`, `lr-carousel`, and `lr-code-block`.
 
 **Known gotchas:**

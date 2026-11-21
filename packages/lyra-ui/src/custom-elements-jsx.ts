@@ -562,6 +562,8 @@ export type LyraStreamingTextReactProps = LyraReactElementProps<'lr-streaming-te
 
 export type LyraStreamingTextCoreReactProps = LyraReactElementProps<'lr-streaming-text-core'>;
 
+export type LyraStylePanelReactProps = LyraReactElementProps<'lr-style-panel'>;
+
 export type LyraSubagentPanelReactProps = LyraReactElementProps<'lr-subagent-panel'>;
 
 export type LyraSuggestionChipsReactProps = LyraReactElementProps<'lr-suggestion-chips'>;
@@ -933,6 +935,7 @@ export interface LyraReactIntrinsicElements {
   'lr-stream-status': LyraStreamStatusReactProps;
   'lr-streaming-text': LyraStreamingTextReactProps;
   'lr-streaming-text-core': LyraStreamingTextCoreReactProps;
+  'lr-style-panel': LyraStylePanelReactProps;
   'lr-subagent-panel': LyraSubagentPanelReactProps;
   'lr-suggestion-chips': LyraSuggestionChipsReactProps;
   'lr-svg-viewer': LyraSvgViewerReactProps;

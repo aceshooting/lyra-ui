@@ -241,6 +241,39 @@ export const HoverTrigger: Story = {
   `,
 };
 
+export const HoverCard: Story = {
+  name: 'trigger="hover-card" over list rows',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`trigger="hover-card"` is a supplementary preview: it opens after the pointer rests on its owner (or on keyboard focus), stays open while the pointer is over the owner or the card, never pins on click (the click goes to the row and dismisses the card), and adds no disclosure ARIA to the owner. One popover serves every row: `forElement` is re-pointed at the hovered row, no ids needed.',
+      },
+    },
+  },
+  render: () => {
+    const point = (event: PointerEvent): void => {
+      const row = (event.target as Element).closest('li');
+      const card = (event.currentTarget as HTMLElement).querySelector('lr-popover') as
+        (HTMLElement & { forElement: HTMLElement | null }) | null;
+      if (row && card && card.forElement !== row) card.forElement = row;
+    };
+    return html`
+      <div @pointerover=${point} style="max-inline-size: 16rem;">
+        <ul style="display: grid; gap: var(--lr-space-xs); margin: 0; padding: 0; list-style: none;">
+          ${['Research', 'Design', 'Support'].map(
+            (name) => html`<li tabindex="0" style="padding: var(--lr-space-xs) var(--lr-space-s);">${name}</li>`,
+          )}
+        </ul>
+        <lr-popover trigger="hover-card" show-delay="300" hide-delay="150" hover-bridge placement="right-start">
+          <p>Folder details</p>
+          <button data-popover="close">Edit</button>
+        </lr-popover>
+      </div>
+    `;
+  },
+};
+
 export const FocusTrigger: Story = {
   name: 'trigger="focus" with focus-within retention',
   parameters: {

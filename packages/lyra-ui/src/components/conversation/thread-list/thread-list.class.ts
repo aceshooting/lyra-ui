@@ -250,7 +250,9 @@ const THREADS_AND_SLOTTED_CONTENT_WARNING =
  * @csspart retry-button - The built-in retry control rendered into the error state's `actions`.
  * @csspart viewport - The real scroll container, exported from the internal `lr-virtual-list`. It
  *   fills this component's height with no consumer CSS (and falls back to `lr-virtual-list`'s own
- *   24rem `--lr-virtual-list-height` default when the container has no resolvable height).
+ *   24rem `--lr-virtual-list-height` default when the container has no resolvable height). It
+ *   honors the theme-level `--lr-theme-scrollbar-width`, `--lr-theme-scrollbar-gutter` and
+ *   `--lr-theme-scrollbar-color` hooks (each defaulting to `auto`), like every internal scroller.
  * @csspart row-action - A built-in pin/archive/delete icon button (data mode, when `rowActions` includes it).
  * @csspart pin-glyph - The small pin indicator shown in a pinned row's `meta` slot (data mode).
  * @csspart group-header - A date/custom group header in data mode.

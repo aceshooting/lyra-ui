@@ -11,7 +11,7 @@ import {
   sendMouse,
   sendWheel,
 } from '../../../../test/wtr-mouse.js';
-import { readScrollbarWidth } from '../../../../test/scrollbar-reporting.js';
+import { readScrollbarColor, readScrollbarWidth } from '../../../../test/scrollbar-reporting.js';
 
 // These fixtures deliberately verify that retired attributes remain inert.
 expectStaleAttribute('lr-code-editor', 'line-numbers');
@@ -115,11 +115,12 @@ it('reads the theme-level scrollbar hook on the editor scrollport, defaulting to
   const computed = getComputedStyle(editor);
   expect(readScrollbarWidth(editor, '[part="editor"]')).to.equal('auto');
   expect(computed.scrollbarGutter).to.equal('auto');
+  expect(readScrollbarColor(editor) ?? 'auto').to.equal('auto');
 });
 
 it('lets a --lr-theme-scrollbar-width/-gutter ancestor override retune the editor scrollport', async () => {
   const wrapper = await fixture<HTMLElement>(html`
-    <div style="--lr-theme-scrollbar-width: thin; --lr-theme-scrollbar-gutter: stable">
+    <div style="--lr-theme-scrollbar-width: thin; --lr-theme-scrollbar-gutter: stable; --lr-theme-scrollbar-color: rgb(255, 0, 0) rgb(0, 0, 255)">
       <lr-code-editor></lr-code-editor>
     </div>
   `);
@@ -129,6 +130,9 @@ it('lets a --lr-theme-scrollbar-width/-gutter ancestor override retune the edito
   const computed = getComputedStyle(editor);
   expect(readScrollbarWidth(editor, '[part="editor"]')).to.equal('thin');
   expect(computed.scrollbarGutter).to.equal('stable');
+  const color = readScrollbarColor(editor);
+  if (color === null) expect(CSS.supports('scrollbar-color', 'red blue')).to.equal(false);
+  else expect(color).to.equal('rgb(255, 0, 0) rgb(0, 0, 255)');
 });
 
 it('falls back from an invalid runtime resize value without injecting declarations', async () => {

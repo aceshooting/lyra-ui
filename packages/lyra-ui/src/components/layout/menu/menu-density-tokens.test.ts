@@ -5,6 +5,7 @@ import '../../lr-menu-label.js';
 import '../../lr-dropdown.js';
 import type { LyraDropdown } from '../../overlays/overlay/dropdown.class.js';
 import { resolvedInShadow } from '../../../../test/shadow-style.js';
+import { readScrollbarColor, readScrollbarWidth } from '../../../../test/scrollbar-reporting.js';
 
 const DENSE = [
   '--lr-transition-fast: 0ms',
@@ -71,5 +72,21 @@ describe('menu density tokens', () => {
     );
     expect(base.fontSize).to.equal(resolvedInShadow(item, 'font-size: var(--lr-form-control-font-size)', 'font-size'));
     expect(icon.fontSize).to.equal(base.fontSize);
+  });
+
+  it('retune the list scrollbar from the theme-level scrollbar hooks, defaulting to auto', async () => {
+    const { menu } = await openMenu('--lr-transition-fast: 0ms');
+    const list = menu.shadowRoot!.querySelector('[part="list"]') as HTMLElement;
+    expect(readScrollbarWidth(list, '[part="list"]')).to.equal('auto');
+    expect(getComputedStyle(list).scrollbarGutter).to.equal('auto');
+    expect(readScrollbarColor(list) ?? 'auto').to.equal('auto');
+    menu.style.setProperty('--lr-theme-scrollbar-width', 'thin');
+    menu.style.setProperty('--lr-theme-scrollbar-gutter', 'stable');
+    menu.style.setProperty('--lr-theme-scrollbar-color', 'rgb(255, 0, 0) rgb(0, 0, 255)');
+    expect(readScrollbarWidth(list, '[part="list"]')).to.equal('thin');
+    expect(getComputedStyle(list).scrollbarGutter).to.equal('stable');
+    const color = readScrollbarColor(list);
+    if (color === null) expect(CSS.supports('scrollbar-color', 'red blue')).to.equal(false);
+    else expect(color).to.equal('rgb(255, 0, 0) rgb(0, 0, 255)');
   });
 });

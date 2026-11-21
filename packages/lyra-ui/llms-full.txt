@@ -40,7 +40,7 @@ whole catalog. `llms/index.md` maps every tag to its family and entry point.
 - **Data display, dashboards & flow canvas** — 30 tags in `components/data/`
 - **Layout, navigation & structure** — 40 tags in `components/layout/`
 - **Overlays, status & feedback** — 23 tags in `components/overlays/`
-- **Utilities, formatting & observers** — 20 tags in `components/utility/`
+- **Utilities, formatting & observers** — 21 tags in `components/utility/`
 - **Media, files & maps** — 23 tags in `components/media/`
 - **Charts** — 13 tags in `components/charts/`
 - **Document & file viewers** — 24 tags in `components/viewers/`
@@ -2138,10 +2138,13 @@ accent accepts one of Lyra's named palettes or an absolute CSS color. A custom c
 accentBackground is an absolute CSS color used as the accent ramps' reference surface. surface is a separate visual treatment: solid or glass. density selects compact, comfortable, or touch. These axes remain independent, so changing the look does not reset mode, accent, surface, or density.
 
 `LYRA_LOOKS` lists the built-in looks for an appearance picker, in display order, as frozen
-`{ id, name, optional, stylesheet }` entries: `name` is the look's untranslated proper name,
-`optional` is true when `theme.css` alone does not carry the look, and `stylesheet` is its standalone
+`{ id, name, labelKey, optional, stylesheet }` entries: `name` is the look's untranslated English
+name, `labelKey` is the message key of its localized name (`styleLookShadcn`, `styleLookLyra`,
+`styleLookMaterial`, `styleLookData`, `styleLookTerminal`, `styleLookHighContrast`; resolve it with
+a component's `localize()` or read it from a registered catalog), `optional` is true when `theme.css` alone does not carry the look, and `stylesheet` is its standalone
 `looks/<id>.css` sheet (null for `lyra`, which `theme-core.css` carries). Offer an application look by
-appending its own entry:
+appending its own entry (an application entry may omit `labelKey`). `lr-style-panel` renders this
+list, localized, without any wiring:
 
 ```js
 import { LYRA_LOOKS, setLyraStyle } from '@aceshooting/lyra-ui/theme.js';
@@ -5838,6 +5841,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-stream-status': LyraStreamStatusReactProps;
   'lr-streaming-text': LyraStreamingTextReactProps;
   'lr-streaming-text-core': LyraStreamingTextCoreReactProps;
+  'lr-style-panel': LyraStylePanelReactProps;
   'lr-subagent-panel': LyraSubagentPanelReactProps;
   'lr-suggestion-chips': LyraSuggestionChipsReactProps;
   'lr-svg-viewer': LyraSvgViewerReactProps;
@@ -6285,6 +6289,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-stream-status': LyraComponentTypeMap['lr-stream-status']['element'];
   'lr-streaming-text': LyraComponentTypeMap['lr-streaming-text']['element'];
   'lr-streaming-text-core': LyraComponentTypeMap['lr-streaming-text-core']['element'];
+  'lr-style-panel': LyraComponentTypeMap['lr-style-panel']['element'];
   'lr-subagent-panel': LyraComponentTypeMap['lr-subagent-panel']['element'];
   'lr-suggestion-chips': LyraComponentTypeMap['lr-suggestion-chips']['element'];
   'lr-svg-viewer': LyraComponentTypeMap['lr-svg-viewer']['element'];
@@ -6603,6 +6608,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-stream-status': LyraStreamStatusSvelteProps;
   'lr-streaming-text': LyraStreamingTextSvelteProps;
   'lr-streaming-text-core': LyraStreamingTextCoreSvelteProps;
+  'lr-style-panel': LyraStylePanelSvelteProps;
   'lr-subagent-panel': LyraSubagentPanelSvelteProps;
   'lr-suggestion-chips': LyraSuggestionChipsSvelteProps;
   'lr-svg-viewer': LyraSvgViewerSvelteProps;
@@ -6763,6 +6769,7 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraLookEntry {
   readonly id: LyraLookId;
   readonly name: string;
+  readonly labelKey?: LyraMessageKey;
   readonly optional: boolean;
   readonly stylesheet: string | null;
 }`
@@ -7078,6 +7085,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-stream-status': LyraStreamStatusVueProps;
   'lr-streaming-text': LyraStreamingTextVueProps;
   'lr-streaming-text-core': LyraStreamingTextCoreVueProps;
+  'lr-style-panel': LyraStylePanelVueProps;
   'lr-subagent-panel': LyraSubagentPanelVueProps;
   'lr-suggestion-chips': LyraSuggestionChipsVueProps;
   'lr-svg-viewer': LyraSvgViewerVueProps;
@@ -8462,7 +8470,9 @@ mirroring `lr-select`'s identical two-part overflow chip), `tag-label`, `tag__co
 `tag__remove-button`, `tag__remove-button__base`, `combobox-input`,
 `clear-button`, `unknown-value` (the dashed/italic badge shown next to the closed single-select
 input, or on a `multiple`-mode tag, when the committed value matches no current option/row),
-`expand-icon`, `listbox`,
+`expand-icon`, `listbox` (the scrolling popup; it honors the theme-level
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color` hooks, each
+defaulting to `auto`),
 `group-label` (the heading of an option group — rows sharing a `group` — named as on `lr-select` and
 `lr-emoji-picker` so one rule styles every grouped list; it labels the `role="group"` wrapper here),
 `option`,
@@ -8596,7 +8606,19 @@ box visibly (nothing is clipped or made unreachable), so leave it unset there.
   submitted value in place, including when another option shares its old value
 - `title: string = ''` — tooltip text forwarded to the row the owning `lr-select`/`lr-combobox` renders
   for this option and to its multiple-mode tag; never part of the accessible name; omitted when empty
-- `group: string = ''` (section header)
+- `group: string = ''` (attribute `group`, not reflected) — the group heading this option belongs
+  under. The owning `lr-select`/`lr-combobox` renders a `group-label` heading row, wrapped with the
+  following rows in a `role="group"` it labels, whenever an option's `group` differs from the
+  previous option's. Consecutive options sharing a value form one group (keep each group's options
+  adjacent; a repeated value later in the list starts a second group). Empty means no heading:
+
+  ```html
+  <lr-select label="Model">
+    <lr-option group="Hosted" value="large">Large</lr-option>
+    <lr-option group="Hosted" value="small">Small</lr-option>
+    <lr-option group="Local" value="local">On device</lr-option>
+  </lr-select>
+  ```
 - `searchText: string = ''` (attribute `search-text` — extra text the filter matches beyond the
   visible label)
 - `sub: string = ''` (optional secondary line rendered under the label, e.g. a status/date summary)
@@ -9086,7 +9108,9 @@ is encoded in the part name instead), `unknown-value` (the dashed/italic badge s
 trigger label, or on a `multiple`-mode tag, when the committed value matches no current
 `<lr-option>`), `clear-button` (the `with-clear` button, present only while
 there is a selection to clear), `listbox` (the managed nonmodal popup, layered by
-`--lr-overlay-stack-index` with `--lr-layer-dropdown` as its standalone fallback),
+`--lr-overlay-stack-index` with `--lr-layer-dropdown` as its standalone fallback; its scrollbar
+honors the theme-level `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color`
+hooks, each defaulting to `auto`),
 `group-label` (a heading row emitted inside the listbox whenever an option's `group` differs from
 the previous one's — its stable ID labels a `role="group"` wrapper that semantically owns the
 following option rows; options with an empty `group` get no heading or group wrapper),
@@ -11550,8 +11574,8 @@ undeclared on the host so ancestor themes work. The upstream-compatible `--colum
 (default `calc(var(--lr-size-1em) * 3)`) retain their component-font-relative sizing through the
 Lyra `--lr-size-1em` token. `--show-duration` and `--hide-duration` similarly use Lyra
 duration-token fallbacks. Each `column` also honors the opt-in theme-level
-`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `thin`/`auto`, matching
-its previous unconditional `scrollbar-width: thin`) — set either on `:root` or any ancestor for one
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color` hooks
+(defaults `thin`/`auto`/`auto`, matching its previous unconditional `scrollbar-width: thin`) — set any of them on `:root` or any ancestor for one
 declaration to retheme every internal scroll container in the library.
 
 The shared field halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow` while
@@ -14423,9 +14447,10 @@ the editor frame once its textarea is focused — one name for every field-shape
 library, so a halo is configured once instead of per component. It is additive: the focus outline
 is the accessibility answer to focus and is never replaced by it.
 The `editor` scroll frame also honors the opt-in theme-level
-`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`auto`, matching
-its previous unconditional `scrollbar-width: auto`) — set either on `:root` or any ancestor for one
-declaration to retheme every internal scroll container in the library, including `lr-table`,
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color` hooks
+(defaults `auto`/`auto`/`auto`, matching its previous unconditional `scrollbar-width: auto`) — set any
+of them on `:root` or any ancestor for one declaration to retheme every internal scroll container in
+the library, including `lr-table`,
 `lr-virtual-list`, `lr-scroller`, `lr-carousel`, and `lr-code-block`.
 
 **Known gotchas:**
@@ -14977,8 +15002,8 @@ pitch, so `--lr-emoji-picker-row-height` must stay at or above the item size plu
 band (`--lr-space-l`) — the default's own formula — or consecutive rows overlap. Columns per
 windowed row are additionally capped at 20 regardless of available width.
 The `grid` scroll container also honors the opt-in theme-level
-`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`stable`, matching
-its previous unconditional `scrollbar-gutter: stable`) — set either on `:root` or any ancestor for
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color` hooks
+(defaults `auto`/`stable`/`auto`, matching its previous unconditional `scrollbar-gutter: stable`) — set any of them on `:root` or any ancestor for
 one declaration to retheme every internal scroll container in the library.
 
 **Optional peer dependency:** install `emoji-picker-element-data` with
@@ -17899,7 +17924,7 @@ The `sort-icon` part styles only the indicator; these tokens style the header ce
 so multiple `sticky` columns stack instead of overlapping; it is a read-out, not a knob you set.
 `--lr-table-heat-t` is likewise component-written (each `[data-heat]` cell's position on the ramp).
 `[part="base"]`, the table's own scroll container, also honors the opt-in theme-level
-`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`auto`) — set either on `:root` or any ancestor for one
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color` hooks (defaults `auto`/`auto`/`auto`) — set any of them on `:root` or any ancestor for one
 declaration to retheme every internal scroll container in the library, including
 `lr-virtual-list`, `lr-scroller`, `lr-carousel`, `lr-code-block`, and `lr-code-editor`.
 
@@ -26920,7 +26945,9 @@ Row chrome is controlled through the menu-item properties listed below.
 List density: `--lr-menu-padding` (default `var(--lr-space-xs)`) pads `[part="list"]` and
 `--lr-menu-gap` (default `0`) spaces its rows. Both apply inside `lr-dropdown` too and are read only
 through `var()` fallbacks, so one declaration on the menu or an ancestor retunes the list without a
-`::part(list)` rule.
+`::part(list)` rule. The scrolling list also honors the theme-level
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color` hooks
+(defaults `auto`/`auto`/`auto`), like every other internal scroll container.
 
 Width is a pair, applied to the standalone surface and to a submenu's own surface alike:
 `--lr-menu-max-inline-size` (default `var(--lr-size-20rem)`) and `--lr-menu-min-inline-size`
@@ -31678,6 +31705,14 @@ If the import fails, leave the native disclosure visible and usable.
   as the canonical list; unlike `<lr-tooltip>`, a list left with no recognized keyword resolves to
   `'click'` rather than to manual, so a typo can never strand a popover's content behind `show()`.
   Both the slotted trigger and a `for=`-resolved external trigger honour every keyword.
+  `hover-card` (popover only, not a tooltip keyword) is a supplementary preview, the hover-card or
+  link-preview pattern: it opens like `hover focus` (pointer rest after `showDelay`, or keyboard
+  focus) and stays open while the pointer is over the owner or the popup (`hideDelay`,
+  `hover-bridge`), but a click on the owner never pins it — the click passes through to the owner
+  (navigation, selection) and dismisses the card without moving focus — and the owner receives no
+  generated `aria-haspopup`/`aria-expanded`/`aria-controls`. It wins over every keyword beside it
+  except `manual`. Keep the card's content reachable elsewhere, since it is a preview, not a
+  disclosure.
 - `showDelay: number = 0` (attribute `show-delay`) — ms before a `hover`/`focus` interaction opens
   the popover.
 - `hideDelay: number = 0` (attribute `hide-delay`) — ms before the interaction ending closes it; the
@@ -31696,6 +31731,20 @@ If the import fails, leave the native disclosure visible and usable.
   suppressing every DOM interaction owner.
   Assigning `null` is the mapped setter-only clearing spelling: it removes the attribute and the
   getter continues to return `''`
+- `forElement: HTMLElement | null = null` (property only) — element-reference counterpart of `for`,
+  for an owner with no id or outside this popover's root. While connected it wins over `for` for
+  both positioning and interaction (a slotted trigger still wins interaction, a direct `.anchor`
+  still wins positioning); removing it while open closes the surface. Under `hover-card`,
+  re-pointing it at an element the pointer is already over starts the `showDelay` timer, and an
+  open card moves to the new owner without closing, so one popover can serve a whole list:
+
+  ```js
+  const card = document.querySelector('lr-popover[trigger="hover-card"]');
+  list.addEventListener('pointerover', (event) => {
+    const row = event.target.closest('li');
+    if (row && card.forElement !== row) card.forElement = row;
+  });
+  ```
 - `anchor: Element | null = null` (property only) — positioning-only direct anchor, taking priority
   over `for` and the interaction owner but never receiving click listeners or generated ARIA; a
   `showAt()` virtual anchor still wins
@@ -36028,6 +36077,63 @@ These named interfaces and helper signatures are available to typed integrations
 `lr-known-date` also emits typed `lr-input` and `lr-change` after its corresponding native events.
 Both use the existing `LyraKnownDateEventDetail`, including `value`; native InputEvent metadata and
 legacy native-event detail remain available for compatibility.
+
+## `lr-style-panel`
+
+Ready-made appearance controls bound to the document style runtime (`setLyraStyle()` /
+`getLyraStyle()` from `@aceshooting/lyra-ui/theme.js`), so an application does not hand-build the
+same settings panel. It composes `lr-segmented` (colour mode with sun/moon/monitor glyphs, surface,
+density), `lr-select` (look), `lr-slider` (glass opacity), `lr-swatch-picker` in `gemstone` mode
+(accent) and an `lr-button` reset, all with localized labels. Experimental.
+
+Each control writes its own axis through `setLyraStyle()`, which persists and applies it like any
+other caller. The panel re-reads the style on every window `lr-style-change`, so another panel, an
+application call or an operating-system mode flip updates it too. The glass opacity slider is
+disabled while the surface is `solid`. The reset button calls `resetLyraStyle()` with only the fields
+of the axes the panel shows (`accent` also resets `accentBackground`). A custom accent colour that is
+not a named gemstone leaves no swatch selected; a `mode` of `unset` leaves no mode segment selected.
+
+**Properties:**
+
+- `axes: string = 'mode look surface surface-opacity density accent'` — space-separated controls
+  to render, in order (`LyraStylePanelAxis` names one). Unknown tokens and duplicates are dropped; a
+  list with none renders every control.
+- `looks: readonly LyraLookEntry[] = LYRA_LOOKS` (property only) — the looks the look control
+  offers. Built-in entries show their localized name through `labelKey`; an application entry
+  without `labelKey` shows its `name`. A non-array value falls back to `LYRA_LOOKS`.
+- `label?: string` — accessible name of the `role="group"` container; omitted, the localized
+  "Appearance" (`stylePanelLabel`). An empty string is kept.
+- `withoutReset: boolean = false` (attribute `without-reset`, reflected) — hides the reset button.
+- `disabled: boolean = false` (reflected) — disables every control.
+
+**Events:** `lr-change` (`detail: LyraStyleChangeDetail`, `{ style, changed }`) — the user changed the
+style through this panel; the same detail as the window `lr-style-change` the change caused. A write
+that changes nothing emits nothing. The child controls' own `lr-change`, `lr-input`, request and
+popup events stay inside the panel.
+
+**CSS parts:** `base` (the `role="group"` container), `mode`, `look`, `surface`, `surface-opacity`,
+`density` (the child controls themselves), `accent` (the accent row), `accent-label`,
+`accent-picker`, `reset`.
+
+**CSS custom properties:** `--lr-style-panel-gap` (default `var(--lr-space-m)`) — space between the
+controls. The accent caption reads `--lr-form-control-label-font-size`, `-font-weight` and `-color`
+like the other captions.
+
+**Localization:** `stylePanelLabel`, `stylePanelMode`, `stylePanelModeLight`, `stylePanelModeDark`,
+`stylePanelModeSystem`, `stylePanelLook`, `stylePanelSurface`, `stylePanelSurfaceSolid`,
+`stylePanelSurfaceGlass`, `stylePanelSurfaceOpacity`, `stylePanelDensity`,
+`stylePanelDensityCompact`, `stylePanelDensityComfortable`, `stylePanelDensityTouch`,
+`stylePanelAccent`, `stylePanelReset`, the gemstone names `styleAccentEmerald` … `styleAccentHematite`
+and the look names `styleLookShadcn` … `styleLookHighContrast`.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/lr-style-panel.js';
+</script>
+
+<lr-style-panel></lr-style-panel>
+<lr-style-panel axes="mode accent" without-reset></lr-style-panel>
+```
 
 # Media, files & maps (`components/media/`)
 
@@ -53140,7 +53246,9 @@ mirroring `<lr-input>`'s own `clearable` contract's part name), `list` (the list
 `error` (the built-in `<lr-empty>` host rendered while `error` is set, with `error-base`/
 `error-icon`/`error-heading`/`error-description`/`error-actions` exported from its own parts, plus
 `retry-button` for the built-in retry control), `viewport` (the actual internal virtual-list
-scroll container, suitable for scrollbar styling), `row-action` (a built-in pin/archive/delete icon
+scroll container, suitable for scrollbar styling; it honors the theme-level
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color` hooks, each
+defaulting to `auto`, so one ancestor declaration retunes it with every other internal scroller), `row-action` (a built-in pin/archive/delete icon
 button), `pin-glyph` (the small pin indicator on a pinned row), `group-header`, `group-toggle` (named
 by its visible group label while `aria-expanded` reports the state),
 `group-label`, `group-adornment`, `group-icon`, `group-icon-collapsed`, `group-sticky` (`sticky-groups` only: the pinned copy of the current

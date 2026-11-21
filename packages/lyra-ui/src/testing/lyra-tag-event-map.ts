@@ -243,6 +243,7 @@ import type { LyraMutationObserverEventMap } from '../components/utility/mutatio
 import type { LyraPollStatusEventMap } from '../components/utility/poll-status/poll-status.class.js';
 import type { LyraRandomContentEventMap } from '../components/utility/random-content/random-content.class.js';
 import type { LyraResizeObserverEventMap } from '../components/utility/resize-observer/resize-observer.class.js';
+import type { LyraStylePanelEventMap } from '../components/utility/style-panel/style-panel.class.js';
 import type { LyraTourEventMap } from '../components/utility/tour/tour.class.js';
 import type { LyraArchiveViewerEventMap } from '../components/viewers/archive-viewer/archive-viewer.class.js';
 import type { LyraCalendarViewerEventMap } from '../components/viewers/calendar-viewer/calendar-viewer.class.js';
@@ -496,6 +497,7 @@ export interface LyraTagEventTypes {
   'lr-stream-status': LyraStreamStatusEventMap;
   'lr-streaming-text': LyraStreamingTextEventMap;
   'lr-streaming-text-core': LyraStreamingTextCoreEventMap;
+  'lr-style-panel': LyraStylePanelEventMap;
   'lr-subagent-panel': LyraSubagentPanelEventMap;
   'lr-suggestion-chips': LyraSuggestionChipsEventMap;
   'lr-svg-viewer': LyraSvgViewerEventMap;

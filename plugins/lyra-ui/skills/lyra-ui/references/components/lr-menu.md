@@ -9,8 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 3 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `list`: `--lr-menu-gap`, `--lr-menu-padding`
+- **Themeable via** 3 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `list`: `--lr-menu-gap`, `--lr-menu-padding`, `--lr-theme-scrollbar-color`, `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-width`
 - **Documented with** `lr-menu-item`, `lr-dropdown-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -102,7 +102,9 @@ Row chrome is controlled through the menu-item properties listed below.
 List density: `--lr-menu-padding` (default `var(--lr-space-xs)`) pads `[part="list"]` and
 `--lr-menu-gap` (default `0`) spaces its rows. Both apply inside `lr-dropdown` too and are read only
 through `var()` fallbacks, so one declaration on the menu or an ancestor retunes the list without a
-`::part(list)` rule.
+`::part(list)` rule. The scrolling list also honors the theme-level
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color` hooks
+(defaults `auto`/`auto`/`auto`), like every other internal scroll container.
 
 Width is a pair, applied to the standalone surface and to a submenu's own surface alike:
 `--lr-menu-max-inline-size` (default `var(--lr-size-20rem)`) and `--lr-menu-min-inline-size`

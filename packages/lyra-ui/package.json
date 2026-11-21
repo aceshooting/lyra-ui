@@ -1403,6 +1403,10 @@
       "types": "./dist/components/lr-streaming-text.d.ts",
       "default": "./dist/components/lr-streaming-text.js"
     },
+    "./components/lr-style-panel.js": {
+      "types": "./dist/components/lr-style-panel.d.ts",
+      "default": "./dist/components/lr-style-panel.js"
+    },
     "./components/lr-subagent-panel.js": {
       "types": "./dist/components/lr-subagent-panel.d.ts",
       "default": "./dist/components/lr-subagent-panel.js"
@@ -1729,6 +1733,7 @@
     "./components/utility/poll-status/poll-status.class.js": "./dist/components/utility/poll-status/poll-status.class.js",
     "./components/utility/random-content/random-content.class.js": "./dist/components/utility/random-content/random-content.class.js",
     "./components/utility/resize-observer/resize-observer.class.js": "./dist/components/utility/resize-observer/resize-observer.class.js",
+    "./components/utility/style-panel/style-panel.class.js": "./dist/components/utility/style-panel/style-panel.class.js",
     "./components/utility/tour/tour.class.js": "./dist/components/utility/tour/tour.class.js",
     "./components/utility/visually-hidden/visually-hidden.class.js": "./dist/components/utility/visually-hidden/visually-hidden.class.js",
     "./components/viewers": "./dist/components/viewers/index.js",

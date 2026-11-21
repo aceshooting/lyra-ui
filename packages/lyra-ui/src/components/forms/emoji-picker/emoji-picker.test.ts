@@ -8,7 +8,7 @@ import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { setForcedColors } from '../../../../test/wtr-media.js';
-import { readScrollbarWidth } from '../../../../test/scrollbar-reporting.js';
+import { readScrollbarColor, readScrollbarWidth } from '../../../../test/scrollbar-reporting.js';
 
 const groups: EmojiPickerGroup[] = [
   {
@@ -612,12 +612,14 @@ it('reads the theme-level scrollbar hook on the grid, defaulting to its own stab
   const computed = getComputedStyle(grid);
   expect(computed.scrollbarGutter).to.equal('stable');
   expect(readScrollbarWidth(grid, '[part="grid"]')).to.equal('auto');
+  expect(readScrollbarColor(grid) ?? 'auto').to.equal('auto');
 });
 
 it('lets a --lr-theme-scrollbar-width/-gutter ancestor override retune the grid', async () => {
   const wrapper = document.createElement('div');
   wrapper.style.setProperty('--lr-theme-scrollbar-width', 'thin');
   wrapper.style.setProperty('--lr-theme-scrollbar-gutter', 'auto');
+  wrapper.style.setProperty('--lr-theme-scrollbar-color', 'rgb(255, 0, 0) rgb(0, 0, 255)');
   created.push(wrapper);
   document.body.append(wrapper);
 
@@ -631,6 +633,9 @@ it('lets a --lr-theme-scrollbar-width/-gutter ancestor override retune the grid'
   const computed = getComputedStyle(grid);
   expect(readScrollbarWidth(grid, '[part="grid"]')).to.equal('thin');
   expect(computed.scrollbarGutter).to.equal('auto');
+  const color = readScrollbarColor(grid);
+  if (color === null) expect(CSS.supports('scrollbar-color', 'red blue')).to.equal(false);
+  else expect(color).to.equal('rgb(255, 0, 0) rgb(0, 0, 255)');
 });
 
 describe('search filtering', () => {

@@ -93,7 +93,7 @@ privacy rules.
 
 - **Overlays, status & feedback** (`components/overlays/`, 23) — `lr-toast`, `lr-toast-item`, `lr-empty`, `lr-skeleton`, `lr-drawer`, `lr-dialog`, `lr-chip`, `lr-chip-group`, `lr-kbd`, `lr-popup`, `lr-popover`, `lr-tooltip`, `lr-dropdown`, `lr-context-menu`, `lr-spinner`, `lr-progress-bar`, `lr-progress-ring`, `lr-badge`, `lr-tag`, `lr-alert`, `lr-callout`, `lr-rating`, `lr-help`
 
-- **Utilities, formatting & observers** (`components/utility/`, 20) — `lr-export-button`, `lr-copy-button`, `lr-resize-observer`, `lr-intersection-observer`, `lr-mutation-observer`, `lr-json-viewer`, `lr-live-region`, `lr-poll-status`, `lr-mention-popover`, `lr-diff-view`, `lr-icon`, `lr-visually-hidden`, `lr-divider`, `lr-format-number`, `lr-format-date`, `lr-format-bytes`, `lr-relative-time`, `lr-known-date`, `lr-random-content`, `lr-tour`
+- **Utilities, formatting & observers** (`components/utility/`, 21) — `lr-export-button`, `lr-copy-button`, `lr-resize-observer`, `lr-intersection-observer`, `lr-mutation-observer`, `lr-json-viewer`, `lr-live-region`, `lr-poll-status`, `lr-mention-popover`, `lr-diff-view`, `lr-icon`, `lr-visually-hidden`, `lr-divider`, `lr-format-number`, `lr-format-date`, `lr-format-bytes`, `lr-relative-time`, `lr-known-date`, `lr-random-content`, `lr-tour`, `lr-style-panel`
 
 - **Media, files & maps** (`components/media/`, 23) — `lr-flag`, `lr-sequence-playback`, `lr-map`, `lr-map-anchor`, `lr-drop-zone`, `lr-file-input`, `lr-image-comparer`, `lr-zoomable-frame`, `lr-pan-zoom`, `lr-attachment-chip`, `lr-file-icon`, `lr-media-card`, `lr-attachment-trigger`, `lr-avatar`, `lr-animated-image`, `lr-animation`, `lr-avatar-group`, `lr-lightbox`, `lr-qr-code`, `lr-image-viewer`, `lr-av-player`, `lr-video`, `lr-video-playlist`
 

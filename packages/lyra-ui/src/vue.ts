@@ -557,6 +557,8 @@ export type LyraStreamingTextVueProps = LyraVueCustomElement<'lr-streaming-text'
 
 export type LyraStreamingTextCoreVueProps = LyraVueCustomElement<'lr-streaming-text-core'>;
 
+export type LyraStylePanelVueProps = LyraVueCustomElement<'lr-style-panel'>;
+
 export type LyraSubagentPanelVueProps = LyraVueCustomElement<'lr-subagent-panel'>;
 
 export type LyraSuggestionChipsVueProps = LyraVueCustomElement<'lr-suggestion-chips'>;
@@ -928,6 +930,7 @@ export interface LyraVueGlobalComponents {
   'lr-stream-status': LyraStreamStatusVueProps;
   'lr-streaming-text': LyraStreamingTextVueProps;
   'lr-streaming-text-core': LyraStreamingTextCoreVueProps;
+  'lr-style-panel': LyraStylePanelVueProps;
   'lr-subagent-panel': LyraSubagentPanelVueProps;
   'lr-suggestion-chips': LyraSuggestionChipsVueProps;
   'lr-svg-viewer': LyraSvgViewerVueProps;

@@ -9,8 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 35 parts, 48 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `form-control-label`: `--lr-form-control-required-content`; `option-badge`: `--lr-select-option-badge-bg`; `tag__remove-button`: `--lr-select-tag-remove-hover-bg`; `unknown-value`: `--lr-select-unknown-value-border-style`
+- **Themeable via** 35 parts, 51 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `form-control-label`: `--lr-form-control-required-content`; `listbox`: `--lr-theme-scrollbar-color`, `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-width`; `option-badge`: `--lr-select-option-badge-bg`; `tag__remove-button`: `--lr-select-tag-remove-hover-bg`; `unknown-value`: `--lr-select-unknown-value-border-style`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -375,7 +375,9 @@ is encoded in the part name instead), `unknown-value` (the dashed/italic badge s
 trigger label, or on a `multiple`-mode tag, when the committed value matches no current
 `<lr-option>`), `clear-button` (the `with-clear` button, present only while
 there is a selection to clear), `listbox` (the managed nonmodal popup, layered by
-`--lr-overlay-stack-index` with `--lr-layer-dropdown` as its standalone fallback),
+`--lr-overlay-stack-index` with `--lr-layer-dropdown` as its standalone fallback; its scrollbar
+honors the theme-level `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color`
+hooks, each defaulting to `auto`),
 `group-label` (a heading row emitted inside the listbox whenever an option's `group` differs from
 the previous one's — its stable ID labels a `role="group"` wrapper that semantically owns the
 following option rows; options with an empty `group` get no heading or group wrapper),

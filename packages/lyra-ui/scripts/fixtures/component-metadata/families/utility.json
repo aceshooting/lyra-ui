@@ -1,7 +1,9 @@
 {
   "family": "utility",
   "assignments": {
-    "new-component-experimental": [],
+    "new-component-experimental": [
+      "lr-style-panel"
+    ],
     "published-stable": [
       "lr-copy-button",
       "lr-diff-view",

@@ -778,7 +778,9 @@ mirroring `lr-select`'s identical two-part overflow chip), `tag-label`, `tag__co
 `tag__remove-button`, `tag__remove-button__base`, `combobox-input`,
 `clear-button`, `unknown-value` (the dashed/italic badge shown next to the closed single-select
 input, or on a `multiple`-mode tag, when the committed value matches no current option/row),
-`expand-icon`, `listbox`,
+`expand-icon`, `listbox` (the scrolling popup; it honors the theme-level
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color` hooks, each
+defaulting to `auto`),
 `group-label` (the heading of an option group — rows sharing a `group` — named as on `lr-select` and
 `lr-emoji-picker` so one rule styles every grouped list; it labels the `role="group"` wrapper here),
 `option`,
@@ -912,7 +914,19 @@ box visibly (nothing is clipped or made unreachable), so leave it unset there.
   submitted value in place, including when another option shares its old value
 - `title: string = ''` — tooltip text forwarded to the row the owning `lr-select`/`lr-combobox` renders
   for this option and to its multiple-mode tag; never part of the accessible name; omitted when empty
-- `group: string = ''` (section header)
+- `group: string = ''` (attribute `group`, not reflected) — the group heading this option belongs
+  under. The owning `lr-select`/`lr-combobox` renders a `group-label` heading row, wrapped with the
+  following rows in a `role="group"` it labels, whenever an option's `group` differs from the
+  previous option's. Consecutive options sharing a value form one group (keep each group's options
+  adjacent; a repeated value later in the list starts a second group). Empty means no heading:
+
+  ```html
+  <lr-select label="Model">
+    <lr-option group="Hosted" value="large">Large</lr-option>
+    <lr-option group="Hosted" value="small">Small</lr-option>
+    <lr-option group="Local" value="local">On device</lr-option>
+  </lr-select>
+  ```
 - `searchText: string = ''` (attribute `search-text` — extra text the filter matches beyond the
   visible label)
 - `sub: string = ''` (optional secondary line rendered under the label, e.g. a status/date summary)
@@ -1402,7 +1416,9 @@ is encoded in the part name instead), `unknown-value` (the dashed/italic badge s
 trigger label, or on a `multiple`-mode tag, when the committed value matches no current
 `<lr-option>`), `clear-button` (the `with-clear` button, present only while
 there is a selection to clear), `listbox` (the managed nonmodal popup, layered by
-`--lr-overlay-stack-index` with `--lr-layer-dropdown` as its standalone fallback),
+`--lr-overlay-stack-index` with `--lr-layer-dropdown` as its standalone fallback; its scrollbar
+honors the theme-level `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color`
+hooks, each defaulting to `auto`),
 `group-label` (a heading row emitted inside the listbox whenever an option's `group` differs from
 the previous one's — its stable ID labels a `role="group"` wrapper that semantically owns the
 following option rows; options with an empty `group` get no heading or group wrapper),
@@ -3866,8 +3882,8 @@ undeclared on the host so ancestor themes work. The upstream-compatible `--colum
 (default `calc(var(--lr-size-1em) * 3)`) retain their component-font-relative sizing through the
 Lyra `--lr-size-1em` token. `--show-duration` and `--hide-duration` similarly use Lyra
 duration-token fallbacks. Each `column` also honors the opt-in theme-level
-`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `thin`/`auto`, matching
-its previous unconditional `scrollbar-width: thin`) — set either on `:root` or any ancestor for one
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color` hooks
+(defaults `thin`/`auto`/`auto`, matching its previous unconditional `scrollbar-width: thin`) — set any of them on `:root` or any ancestor for one
 declaration to retheme every internal scroll container in the library.
 
 The shared field halo `--lr-form-control-focus-shadow` (default `none`) paints a `box-shadow` while
@@ -6739,9 +6755,10 @@ the editor frame once its textarea is focused — one name for every field-shape
 library, so a halo is configured once instead of per component. It is additive: the focus outline
 is the accessibility answer to focus and is never replaced by it.
 The `editor` scroll frame also honors the opt-in theme-level
-`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`auto`, matching
-its previous unconditional `scrollbar-width: auto`) — set either on `:root` or any ancestor for one
-declaration to retheme every internal scroll container in the library, including `lr-table`,
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color` hooks
+(defaults `auto`/`auto`/`auto`, matching its previous unconditional `scrollbar-width: auto`) — set any
+of them on `:root` or any ancestor for one declaration to retheme every internal scroll container in
+the library, including `lr-table`,
 `lr-virtual-list`, `lr-scroller`, `lr-carousel`, and `lr-code-block`.
 
 **Known gotchas:**
@@ -7293,8 +7310,8 @@ pitch, so `--lr-emoji-picker-row-height` must stay at or above the item size plu
 band (`--lr-space-l`) — the default's own formula — or consecutive rows overlap. Columns per
 windowed row are additionally capped at 20 regardless of available width.
 The `grid` scroll container also honors the opt-in theme-level
-`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`stable`, matching
-its previous unconditional `scrollbar-gutter: stable`) — set either on `:root` or any ancestor for
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color` hooks
+(defaults `auto`/`stable`/`auto`, matching its previous unconditional `scrollbar-gutter: stable`) — set any of them on `:root` or any ancestor for
 one declaration to retheme every internal scroll container in the library.
 
 **Optional peer dependency:** install `emoji-picker-element-data` with

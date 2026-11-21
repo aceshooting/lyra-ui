@@ -3,7 +3,7 @@ import '../../lr-table.js';
 import '../../lr-select.js';
 import type { LyraTable, TableColumn } from '../../lr-table.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
-import { readScrollbarWidth } from '../../../../test/scrollbar-reporting.js';
+import { readScrollbarColor, readScrollbarWidth } from '../../../../test/scrollbar-reporting.js';
 // Registers the real shipped `ar` catalog's `data` slice so the `lang="ar-EG"` resize-value
 // test below (which only overrides `resizeValuePixels`) can render without tripping the
 // dev-mode locale-fallback warning that strict-console platform lanes treat as fatal.
@@ -54,11 +54,12 @@ it('reads the theme-level scrollbar hook on the base scrollport, defaulting to a
   const computed = getComputedStyle(base);
   expect(readScrollbarWidth(base, '[part="base"]')).to.equal('auto');
   expect(computed.scrollbarGutter).to.equal('auto');
+  expect(readScrollbarColor(base) ?? 'auto').to.equal('auto');
 });
 
-it('lets a --lr-theme-scrollbar-width/-gutter ancestor override retune the base scrollport', async () => {
+it('lets a --lr-theme-scrollbar-width/-gutter/-color ancestor override retune the base scrollport', async () => {
   const wrapper = await fixture<HTMLElement>(html`
-    <div style="--lr-theme-scrollbar-width: thin; --lr-theme-scrollbar-gutter: stable">
+    <div style="--lr-theme-scrollbar-width: thin; --lr-theme-scrollbar-gutter: stable; --lr-theme-scrollbar-color: rgb(255, 0, 0) rgb(0, 0, 255)">
       <lr-table></lr-table>
     </div>
   `);
@@ -70,6 +71,9 @@ it('lets a --lr-theme-scrollbar-width/-gutter ancestor override retune the base 
   const computed = getComputedStyle(base);
   expect(readScrollbarWidth(base, '[part="base"]')).to.equal('thin');
   expect(computed.scrollbarGutter).to.equal('stable');
+  const color = readScrollbarColor(base);
+  if (color === null) expect(CSS.supports('scrollbar-color', 'red blue')).to.equal(false);
+  else expect(color).to.equal('rgb(255, 0, 0) rgb(0, 0, 255)');
 });
 
 it('renders [part="reveal-columns-button"] only when at least one column declares a priority and a priority column is actually hidden', async () => {

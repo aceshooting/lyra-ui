@@ -564,6 +564,8 @@ export type LyraStreamingTextSvelteProps = LyraSvelteElementProps<'lr-streaming-
 
 export type LyraStreamingTextCoreSvelteProps = LyraSvelteElementProps<'lr-streaming-text-core'>;
 
+export type LyraStylePanelSvelteProps = LyraSvelteElementProps<'lr-style-panel'>;
+
 export type LyraSubagentPanelSvelteProps = LyraSvelteElementProps<'lr-subagent-panel'>;
 
 export type LyraSuggestionChipsSvelteProps = LyraSvelteElementProps<'lr-suggestion-chips'>;
@@ -935,6 +937,7 @@ export interface LyraSvelteElements {
   'lr-stream-status': LyraStreamStatusSvelteProps;
   'lr-streaming-text': LyraStreamingTextSvelteProps;
   'lr-streaming-text-core': LyraStreamingTextCoreSvelteProps;
+  'lr-style-panel': LyraStylePanelSvelteProps;
   'lr-subagent-panel': LyraSubagentPanelSvelteProps;
   'lr-suggestion-chips': LyraSuggestionChipsSvelteProps;
   'lr-svg-viewer': LyraSvgViewerSvelteProps;
@@ -1254,6 +1257,7 @@ export interface LyraElementTagNameMap {
   'lr-stream-status': LyraComponentTypeMap['lr-stream-status']['element'];
   'lr-streaming-text': LyraComponentTypeMap['lr-streaming-text']['element'];
   'lr-streaming-text-core': LyraComponentTypeMap['lr-streaming-text-core']['element'];
+  'lr-style-panel': LyraComponentTypeMap['lr-style-panel']['element'];
   'lr-subagent-panel': LyraComponentTypeMap['lr-subagent-panel']['element'];
   'lr-suggestion-chips': LyraComponentTypeMap['lr-suggestion-chips']['element'];
   'lr-svg-viewer': LyraComponentTypeMap['lr-svg-viewer']['element'];

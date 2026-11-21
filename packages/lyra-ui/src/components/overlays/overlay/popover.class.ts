@@ -126,14 +126,21 @@ const POPUP_ROLE = literalSetConverter<LyraPopupRole>(
  * narrows `wa-popover`/`wa-dropdown`/`sl-dropdown` focus activation deliberately, following the
  * WAI-ARIA tooltip pattern. `'manual'` refuses every interaction and leaves the surface entirely
  * to `show()`/`hide()`/`open`, and wins over any keyword beside it.
+ *
+ * `'hover-card'` (popover only) is a supplementary preview: it opens like `hover focus` (pointer
+ * rest after `showDelay`, or keyboard focus), but a click on the owner never pins it -- the click
+ * passes through to the owner and dismisses the preview -- and the owner receives no generated
+ * `aria-haspopup`/`aria-expanded`/`aria-controls`. It wins over every keyword beside it except
+ * `'manual'`.
  */
-export type LyraPopoverTrigger = 'click' | 'hover' | 'focus' | 'manual';
+export type LyraPopoverTrigger = 'click' | 'hover' | 'focus' | 'manual' | 'hover-card';
 
 const POPOVER_TRIGGER_KEYWORDS: readonly LyraPopoverTrigger[] = [
   'click',
   'hover',
   'focus',
   'manual',
+  'hover-card',
 ];
 
 /**
@@ -186,8 +193,17 @@ export interface LyraPopoverEventMap {
  * `hover-bridge` to have the positioner clip an invisible quad across the `distance` gap so a
  * pointer travelling from the trigger to the popup never leaves both at once.
  *
+ * `trigger="hover-card"` makes the surface a supplementary preview (the hover-card or link-preview
+ * pattern): it opens on pointer rest or keyboard focus, stays open while the pointer is over the
+ * owner or the popup, never pins on click (a click on the owner passes through and dismisses it)
+ * and adds no disclosure ARIA to the owner. Its content should also be reachable elsewhere.
+ * Assign `forElement` to point one popover at any element, such as the hovered row of a list,
+ * without giving it an id; re-pointing it at an element the pointer is already over starts the
+ * `showDelay` timer, and an open card moves to the new owner without closing.
+ *
  * Interaction/ARIA ownership is resolved separately from positioning. A slotted trigger wins and
- * receives the click listener; without one, a live HTML element resolved by `for` owns interaction.
+ * receives the click listener; without one, a connected `forElement`, then a live HTML element
+ * resolved by `for`, owns interaction.
  * Only its semantic composed focus target receives `aria-haspopup`, `aria-expanded`, and
  * `aria-controls`, and becomes the focus-return target. Generic wrapper hosts receive no generated
  * trigger ARIA. Native controls and authored roles supporting expansion retain their own state. A
@@ -390,6 +406,10 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   set for(next: string | null) {
     this._for = next ?? '';
   }
+  /** Element-reference counterpart of `for`, for an owner without an id or outside this popover's
+   *  root. While connected it wins over `for` for both positioning and interaction; a slotted
+   *  trigger still wins interaction and a direct `.anchor` still wins positioning. */
+  @property({ attribute: false }) forElement: HTMLElement | null = null;
   /** Positioning-only element anchor. Takes precedence over `for` and the interaction owner, but
    *  never receives click listeners or generated ARIA. */
   @property({ attribute: false }) anchor: Element | null = null;
@@ -412,7 +432,8 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   private _trigger = 'click';
   /**
    * Space-separated list of the interactions that open the popover -- see
-   * {@link LyraPopoverTrigger} for the keywords, which are exactly `<lr-tooltip>`'s. Unrecognized
+   * {@link LyraPopoverTrigger} for the keywords, which are `<lr-tooltip>`'s plus the popover-only
+   * `hover-card` preview mode (no click pinning, no disclosure ARIA). Unrecognized
    * tokens are dropped and a list left with none resolves back to `'click'`, so the property always
    * reads back as a canonical list. `focus` means keyboard focus: the focused element must match
    * `:focus-visible` and the last input must not have been a pointer press; use `show()` for
@@ -442,8 +463,13 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   protected get isManualTrigger(): boolean {
     return this.triggerKeywords.includes('manual');
   }
+  /** A hover card opens like `hover focus` but never pins and never stamps disclosure ARIA. */
+  protected get isHoverCard(): boolean {
+    return !this.isManualTrigger && this.triggerKeywords.includes('hover-card');
+  }
   /** Whether `keyword` is one of the interactions currently allowed to open this popover. */
   protected opensOn(keyword: LyraPopoverTrigger): boolean {
+    if (this.isHoverCard) return keyword === 'hover' || keyword === 'focus';
     return !this.isManualTrigger && this.triggerKeywords.includes(keyword);
   }
   /** Delay (ms) between a `hover`/`focus` interaction and the popover opening. NaN, negative and
@@ -747,10 +773,11 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     if (changed.has('hideDelay') && this.delayTimer.pendingDirection === 'hide') {
       this.requestDelayedTransition(false, true);
     }
-    if (changed.has('for') || changed.has('anchor') || changed.has('open')) {
+    if (changed.has('for') || changed.has('forElement') || changed.has('anchor') || changed.has('open')) {
       this.syncAnchorIdentityObservation();
     }
-    if (changed.has('for')) this.syncInteractionTrigger();
+    if (changed.has('for') || changed.has('forElement')) this.syncInteractionTrigger();
+    else if (changed.has('trigger')) this.syncTriggerA11y();
     if (
       this.directionChanged ||
       changed.has('open') ||
@@ -762,6 +789,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       changed.has('distance') ||
       changed.has('skidding') ||
       changed.has('for') ||
+      changed.has('forElement') ||
       changed.has('anchor') ||
       changed.has('arrow') ||
       changed.has('withoutArrow') ||
@@ -903,7 +931,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     // A `for` target can be inserted or replaced while closed and owns interaction, so it remains
     // observable. A direct anchor has no interaction contract and only needs structural tracking
     // while an open surface is actively positioned against it. Slotted triggers use slotchange.
-    const directAnchor = this.open ? (this.anchor ?? undefined) : undefined;
+    const directAnchor = this.open ? (this.anchor ?? this.forElement ?? undefined) : undefined;
     this.anchorIdentity.observe(this, directAnchor, this.for, () => this.anchor, (directAnchorRemoved) => {
       // The trigger's own subtree and upgrade observers re-sync an unchanged trigger.
       if (this.resolveInteractionTrigger() !== this.triggerElement) this.syncInteractionTrigger();
@@ -917,8 +945,16 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     });
   }
 
+  /** The `forElement` reference while it is connected in this popover's document. */
+  private get connectedForElement(): HTMLElement | undefined {
+    const element = this.forElement;
+    return element?.isConnected && element.ownerDocument === this.ownerDocument ? element : undefined;
+  }
+
   private resolveInteractionTrigger(): HTMLElement | undefined {
-    return resolveOverlayInteractionTrigger(this, this.virtualAnchor, this.slottedTrigger, this.for);
+    return resolveOverlayInteractionTrigger(
+      this, this.virtualAnchor, this.slottedTrigger ?? this.connectedForElement, this.for,
+    );
   }
 
   private syncInteractionTrigger(slotChanged = false): void {
@@ -959,6 +995,10 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
       }
       this.updatePopoverRestoreFocusTarget();
       this.positionPopup();
+    } else if (this.isHoverCard && next && next !== previous && next.matches(':hover')) {
+      // The pointer is already resting on a newly assigned owner, so no mouseenter will follow.
+      // Deferred: this can run from updated(), where an inline open would be a change-in-update.
+      this.requestDelayedTransition(true, true);
     }
   }
   /** Registers every open popover with the shared, topmost-stack-aware overlay manager. Popovers
@@ -1052,7 +1092,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     return resolveOverlayAnchor(this, {
       virtualAnchor: this.virtualAnchor,
       anchor: this.anchor,
-      for: this.for,
+      for: this.connectedForElement ? '' : this.for,
       trigger: this.triggerElement,
     });
   }
@@ -1175,7 +1215,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     this.observeAccessibleTrigger(accessibleTrigger);
     // An unresolved/disabled custom trigger may still resolve to its generic host. Do not give
     // that wrapper widget state while waiting for its real control to become available.
-    const semanticTrigger = accessibleTrigger && supportsTriggerExpansion(accessibleTrigger)
+    const semanticTrigger = accessibleTrigger && !this.isHoverCard && supportsTriggerExpansion(accessibleTrigger)
       ? accessibleTrigger : null;
     if (this.accessibleTriggerAria) {
       this.accessibleTriggerAria.update(semanticTrigger, contribution);
@@ -1251,6 +1291,12 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     this.syncTriggerA11y();
     if (this.isManualTrigger) return;
     this.cancelPendingTransition();
+    if (this.isHoverCard) {
+      // A preview never pins: the click belongs to the owner (navigation, selection) and simply
+      // dismisses the card, leaving focus wherever the click put it.
+      if (this.open) void this.hide({ focusTrigger: false });
+      return;
+    }
     if (this.opensOn('click') && !this.opensOn('hover') && !this.opensOn('focus')) {
       if (this.open) void this.hide();
       else void this.show();

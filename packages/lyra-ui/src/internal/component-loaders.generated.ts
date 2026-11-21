@@ -266,6 +266,7 @@ export const COMPONENT_LOADERS: Readonly<Record<AutoloadableTagName, () => Promi
   'lr-stream-status': () => import('../components/conversation/stream-status/stream-status.class.js').then((module) => module.LyraStreamStatus),
   'lr-streaming-text': () => import('../components/conversation/streaming-text/streaming-text.class.js').then((module) => module.LyraStreamingText),
   'lr-streaming-text-core': () => import('../components/conversation/streaming-text/streaming-text-core.class.js').then((module) => module.LyraStreamingTextCore),
+  'lr-style-panel': () => import('../components/utility/style-panel/style-panel.class.js').then((module) => module.LyraStylePanel),
   'lr-subagent-panel': () => import('../components/agent-tools/subagent-panel/subagent-panel.class.js').then((module) => module.LyraSubagentPanel),
   'lr-suggestion-chips': () => import('../components/conversation/suggestion-chips/suggestion-chips.class.js').then((module) => module.LyraSuggestionChips),
   'lr-svg-viewer': () => import('../components/viewers/svg-viewer/svg-viewer.class.js').then((module) => module.LyraSvgViewer),

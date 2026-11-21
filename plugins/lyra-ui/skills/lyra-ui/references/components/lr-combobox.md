@@ -9,8 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 35 parts, 45 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `combobox`: `--lr-combobox-gap`, `--lr-combobox-radius`; `form-control-label`: `--lr-form-control-required-content`; `option-badge`: `--lr-combobox-option-badge-bg`
+- **Themeable via** 35 parts, 48 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `combobox`: `--lr-combobox-gap`, `--lr-combobox-radius`; `form-control-label`: `--lr-form-control-required-content`; `listbox`: `--lr-theme-scrollbar-color`, `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-width`; `option-badge`: `--lr-combobox-option-badge-bg`
 - **Documented with** `lr-option` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -581,7 +581,9 @@ mirroring `lr-select`'s identical two-part overflow chip), `tag-label`, `tag__co
 `tag__remove-button`, `tag__remove-button__base`, `combobox-input`,
 `clear-button`, `unknown-value` (the dashed/italic badge shown next to the closed single-select
 input, or on a `multiple`-mode tag, when the committed value matches no current option/row),
-`expand-icon`, `listbox`,
+`expand-icon`, `listbox` (the scrolling popup; it honors the theme-level
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color` hooks, each
+defaulting to `auto`),
 `group-label` (the heading of an option group — rows sharing a `group` — named as on `lr-select` and
 `lr-emoji-picker` so one rule styles every grouped list; it labels the `role="group"` wrapper here),
 `option`,
@@ -715,7 +717,19 @@ box visibly (nothing is clipped or made unreachable), so leave it unset there.
   submitted value in place, including when another option shares its old value
 - `title: string = ''` — tooltip text forwarded to the row the owning `lr-select`/`lr-combobox` renders
   for this option and to its multiple-mode tag; never part of the accessible name; omitted when empty
-- `group: string = ''` (section header)
+- `group: string = ''` (attribute `group`, not reflected) — the group heading this option belongs
+  under. The owning `lr-select`/`lr-combobox` renders a `group-label` heading row, wrapped with the
+  following rows in a `role="group"` it labels, whenever an option's `group` differs from the
+  previous option's. Consecutive options sharing a value form one group (keep each group's options
+  adjacent; a repeated value later in the list starts a second group). Empty means no heading:
+
+  ```html
+  <lr-select label="Model">
+    <lr-option group="Hosted" value="large">Large</lr-option>
+    <lr-option group="Hosted" value="small">Small</lr-option>
+    <lr-option group="Local" value="local">On device</lr-option>
+  </lr-select>
+  ```
 - `searchText: string = ''` (attribute `search-text` — extra text the filter matches beyond the
   visible label)
 - `sub: string = ''` (optional secondary line rendered under the label, e.g. a status/date summary)

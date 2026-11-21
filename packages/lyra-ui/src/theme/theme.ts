@@ -14,6 +14,7 @@ import { devWarnOnce, litDevWarnings } from '../internal/dev-warning.js';
 import { finiteRange } from '../internal/numbers.js';
 import { LOOK_SLOTTED_INPUTS as STYLE_SLOTTED } from '../internal/portable-look-inputs.js';
 import type { LyraThemeTokenName, LyraThemeTokens, LyraThemeTokenValue } from '../internal/theme-token-types.js';
+import type { LyraMessageKey } from '../internal/localization-types.js';
 import { readStyleOwnership, type StyleOwnership } from './style-ownership.js';
 import { resolveStyleStartup } from './startup-resolution.js';
 
@@ -1136,8 +1137,14 @@ export interface LyraLook { readonly id: LyraLookId; readonly tokens: LyraThemeT
 /** One built-in look, as listed by {@link LYRA_LOOKS}. */
 export interface LyraLookEntry {
   readonly id: LyraLookId;
-  /** The look's display name. Look names are proper names and stay untranslated. */
+  /** The look's untranslated English display name. */
   readonly name: string;
+  /**
+   * The message key of the look's localized display name, for `localize()`, `.strings` overrides
+   * and registered locale catalogs. Every built-in entry carries one; proper names (`shadcn`,
+   * `Lyra`) read the same in every locale. An application entry may omit it to show `name`.
+   */
+  readonly labelKey?: LyraMessageKey;
   /** True when `theme.css` alone does not carry the look and its `looks/<id>.css` sheet is required. */
   readonly optional: boolean;
   /** The look's standalone stylesheet for a `theme-core.css` page, or null when that sheet carries it. */
@@ -1148,10 +1155,12 @@ export interface LyraLookEntry {
  * selects one. Frozen. Append an application's own `defineLyraLook()` results to offer them too.
  */
 export const LYRA_LOOKS: readonly LyraLookEntry[] = /* @__PURE__ */ Object.freeze(([
-  ['shadcn', 'shadcn', false], ['lyra', 'Lyra', false], ['material', 'Material', true],
-  ['data', 'Data', true], ['terminal', 'Terminal', true], ['high-contrast', 'High contrast', true],
-] as const).map(([id, name, optional]): LyraLookEntry =>
-  Object.freeze({ id, name, optional, stylesheet: id === 'lyra' ? null : `looks/${id}.css` })));
+  ['shadcn', 'shadcn', 'styleLookShadcn', false], ['lyra', 'Lyra', 'styleLookLyra', false],
+  ['material', 'Material', 'styleLookMaterial', true], ['data', 'Data', 'styleLookData', true],
+  ['terminal', 'Terminal', 'styleLookTerminal', true],
+  ['high-contrast', 'High contrast', 'styleLookHighContrast', true],
+] as const).map(([id, name, labelKey, optional]): LyraLookEntry =>
+  Object.freeze({ id, name, labelKey, optional, stylesheet: id === 'lyra' ? null : `looks/${id}.css` })));
 export interface LyraStyle {
   readonly look: LyraLookId;
   readonly lookForm: 'stylesheet' | 'runtime';

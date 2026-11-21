@@ -9,8 +9,8 @@ component’s compatibility status. The machine-readable source is
 
 ## Current evidence
 
-- Public tags: **316**
-- Exact same-test/same-instance populated or open axe evidence: **315**
+- Public tags: **317**
+- Exact same-test/same-instance populated or open axe evidence: **316**
 - Narrow reviewed axe-state exemptions: **1**
 - Missing axe qualification: **0**
 - Visual-regression enrollment: **92** tags
@@ -323,6 +323,7 @@ complete enrolled set. Axe is not assistive-technology testing.
 | [`lr-stream-status`](component-integration.md#lr-stream-status) | stable | automated | source signal | source signal | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | unmeasured |
 | [`lr-streaming-text`](component-integration.md#lr-streaming-text) | stable | automated | not recorded | not recorded | source signal | not recorded | configured CI | render-and-hydrate | complete | not recorded | not recorded | not enrolled | not verified | measured |
 | [`lr-streaming-text-core`](component-integration.md#lr-streaming-text-core) | experimental | automated | not recorded | not recorded | source signal | not recorded | configured CI | render-and-hydrate | not enrolled | not recorded | not recorded | not enrolled | not verified | measured |
+| [`lr-style-panel`](component-integration.md#lr-style-panel) | experimental | automated | not recorded | source signal | N/A | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | unmeasured |
 | [`lr-subagent-panel`](component-integration.md#lr-subagent-panel) | stable | automated | source signal | not recorded | not recorded | not recorded | configured CI | render-and-hydrate | complete | N/A | N/A | not enrolled | not verified | unmeasured |
 | [`lr-suggestion-chips`](component-integration.md#lr-suggestion-chips) | stable | automated | source signal | source signal | not recorded | not recorded | configured CI | render-and-hydrate | not enrolled | N/A | source signal | not enrolled | not verified | unmeasured |
 | [`lr-svg-viewer`](component-integration.md#lr-svg-viewer) | stable | automated | source signal | source signal | N/A | source signal | configured CI | render-and-hydrate | not enrolled | source signal | source signal | not enrolled | not verified | unmeasured |

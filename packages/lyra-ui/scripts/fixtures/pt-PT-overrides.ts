@@ -443,6 +443,8 @@ const strings: LyraLocaleStrings = {
   modelViewerRotateRight: 'Rodar para a direita',
   modelViewerRotateUp: 'Rodar para cima',
   modelViewerRotateDown: 'Rodar para baixo',
+  stylePanelReset: 'Repor as predefinições',
+  styleAccentHematite: 'Hematite',
   docxEditorCommands: 'Procurar comandos',
   docxEditorReview: 'Rever',
   docxEditorOutlineEmpty: 'Não foram encontrados títulos no corpo do documento.',

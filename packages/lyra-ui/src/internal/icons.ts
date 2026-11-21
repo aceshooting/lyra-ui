@@ -65,6 +65,24 @@ export function closeIcon(): SVGTemplateResult {
   `);
 }
 
+/** A sun, for a light colour scheme. */
+export function sunIcon(): SVGTemplateResult {
+  return iconFrame(svg`
+    <circle cx="12" cy="12" r="4"></circle>
+    <path d="M12 2v2 M12 20v2 M4.93 4.93l1.41 1.41 M17.66 17.66l1.41 1.41 M2 12h2 M20 12h2 M4.93 19.07l1.41-1.41 M17.66 6.34l1.41-1.41"></path>
+  `);
+}
+
+/** A crescent moon, for a dark colour scheme. */
+export function moonIcon(): SVGTemplateResult {
+  return iconFrame(svg`<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"></path>`);
+}
+
+/** A display on a stand, for following the operating system's setting. */
+export function monitorIcon(): SVGTemplateResult {
+  return iconFrame(svg`<rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M8 20h8 M12 16v4"></path>`);
+}
+
 /** A three-bar "hamburger" glyph, for navigation and menu toggles. */
 export function menuIcon(): SVGTemplateResult {
   return iconFrame(svg`

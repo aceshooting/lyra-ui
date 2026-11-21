@@ -2487,3 +2487,60 @@ These named interfaces and helper signatures are available to typed integrations
 `lr-known-date` also emits typed `lr-input` and `lr-change` after its corresponding native events.
 Both use the existing `LyraKnownDateEventDetail`, including `value`; native InputEvent metadata and
 legacy native-event detail remain available for compatibility.
+
+## `lr-style-panel`
+
+Ready-made appearance controls bound to the document style runtime (`setLyraStyle()` /
+`getLyraStyle()` from `@aceshooting/lyra-ui/theme.js`), so an application does not hand-build the
+same settings panel. It composes `lr-segmented` (colour mode with sun/moon/monitor glyphs, surface,
+density), `lr-select` (look), `lr-slider` (glass opacity), `lr-swatch-picker` in `gemstone` mode
+(accent) and an `lr-button` reset, all with localized labels. Experimental.
+
+Each control writes its own axis through `setLyraStyle()`, which persists and applies it like any
+other caller. The panel re-reads the style on every window `lr-style-change`, so another panel, an
+application call or an operating-system mode flip updates it too. The glass opacity slider is
+disabled while the surface is `solid`. The reset button calls `resetLyraStyle()` with only the fields
+of the axes the panel shows (`accent` also resets `accentBackground`). A custom accent colour that is
+not a named gemstone leaves no swatch selected; a `mode` of `unset` leaves no mode segment selected.
+
+**Properties:**
+
+- `axes: string = 'mode look surface surface-opacity density accent'` — space-separated controls
+  to render, in order (`LyraStylePanelAxis` names one). Unknown tokens and duplicates are dropped; a
+  list with none renders every control.
+- `looks: readonly LyraLookEntry[] = LYRA_LOOKS` (property only) — the looks the look control
+  offers. Built-in entries show their localized name through `labelKey`; an application entry
+  without `labelKey` shows its `name`. A non-array value falls back to `LYRA_LOOKS`.
+- `label?: string` — accessible name of the `role="group"` container; omitted, the localized
+  "Appearance" (`stylePanelLabel`). An empty string is kept.
+- `withoutReset: boolean = false` (attribute `without-reset`, reflected) — hides the reset button.
+- `disabled: boolean = false` (reflected) — disables every control.
+
+**Events:** `lr-change` (`detail: LyraStyleChangeDetail`, `{ style, changed }`) — the user changed the
+style through this panel; the same detail as the window `lr-style-change` the change caused. A write
+that changes nothing emits nothing. The child controls' own `lr-change`, `lr-input`, request and
+popup events stay inside the panel.
+
+**CSS parts:** `base` (the `role="group"` container), `mode`, `look`, `surface`, `surface-opacity`,
+`density` (the child controls themselves), `accent` (the accent row), `accent-label`,
+`accent-picker`, `reset`.
+
+**CSS custom properties:** `--lr-style-panel-gap` (default `var(--lr-space-m)`) — space between the
+controls. The accent caption reads `--lr-form-control-label-font-size`, `-font-weight` and `-color`
+like the other captions.
+
+**Localization:** `stylePanelLabel`, `stylePanelMode`, `stylePanelModeLight`, `stylePanelModeDark`,
+`stylePanelModeSystem`, `stylePanelLook`, `stylePanelSurface`, `stylePanelSurfaceSolid`,
+`stylePanelSurfaceGlass`, `stylePanelSurfaceOpacity`, `stylePanelDensity`,
+`stylePanelDensityCompact`, `stylePanelDensityComfortable`, `stylePanelDensityTouch`,
+`stylePanelAccent`, `stylePanelReset`, the gemstone names `styleAccentEmerald` … `styleAccentHematite`
+and the look names `styleLookShadcn` … `styleLookHighContrast`.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/lr-style-panel.js';
+</script>
+
+<lr-style-panel></lr-style-panel>
+<lr-style-panel axes="mode accent" without-reset></lr-style-panel>
+```

@@ -145,6 +145,11 @@ export const styles = css`
     );
     overflow-x: hidden;
     overflow-y: auto;
+    /* Opt-in theme-level scrollbar hooks, read directly with this list's previous 'auto' as the
+       fallback, so nothing changes until an ancestor or :root sets the --lr-theme-* input. */
+    scrollbar-width: var(--lr-theme-scrollbar-width, auto);
+    scrollbar-gutter: var(--lr-theme-scrollbar-gutter, auto);
+    scrollbar-color: var(--lr-theme-scrollbar-color, auto);
     /* Density hooks read only through var() fallbacks, so a theme wrapper or the menu itself can
        retune them; unset they are the spacing this list always used. */
     gap: var(--lr-menu-gap, 0);

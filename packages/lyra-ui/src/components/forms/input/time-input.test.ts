@@ -8,7 +8,7 @@ import {
   sendMouse,
   settlePointer,
 } from '../../../../test/wtr-mouse.js';
-import { readScrollbarWidth } from '../../../../test/scrollbar-reporting.js';
+import { readScrollbarColor, readScrollbarWidth } from '../../../../test/scrollbar-reporting.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import '../../lr-time-input.js';
 import type { LyraTimeInput } from './time-input.class.js';
@@ -963,11 +963,12 @@ describe('lr-time-input popup dismissal, autofill, and stepping', () => {
     const computed = getComputedStyle(column);
     expect(readScrollbarWidth(column, '[part="column"]')).to.equal('thin');
     expect(computed.scrollbarGutter).to.equal('auto');
+    expect(readScrollbarColor(column) ?? 'auto').to.equal('auto');
   });
 
   it('lets a --lr-theme-scrollbar-width/-gutter ancestor override retune each column', async () => {
     const wrapper = await fixture<HTMLElement>(html`
-      <div style="--lr-theme-scrollbar-width: none; --lr-theme-scrollbar-gutter: stable">
+      <div style="--lr-theme-scrollbar-width: none; --lr-theme-scrollbar-gutter: stable; --lr-theme-scrollbar-color: rgb(255, 0, 0) rgb(0, 0, 255)">
         <lr-time-input value="10:00"></lr-time-input>
       </div>
     `);
@@ -978,6 +979,9 @@ describe('lr-time-input popup dismissal, autofill, and stepping', () => {
     const computed = getComputedStyle(column);
     expect(readScrollbarWidth(column, '[part="column"]')).to.equal('none');
     expect(computed.scrollbarGutter).to.equal('stable');
+    const color = readScrollbarColor(column);
+    if (color === null) expect(CSS.supports('scrollbar-color', 'red blue')).to.equal(false);
+    else expect(color).to.equal('rgb(255, 0, 0) rgb(0, 0, 255)');
   });
 
   it('keeps the mirrored picker dimensions relative to the component font size', async () => {

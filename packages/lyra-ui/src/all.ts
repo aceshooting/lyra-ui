@@ -249,6 +249,7 @@ import './components/lr-stepper.js';
 import './components/lr-stream-status.js';
 import './components/lr-streaming-text.js';
 import './components/lr-streaming-text-core.js';
+import './components/lr-style-panel.js';
 import './components/lr-subagent-panel.js';
 import './components/lr-suggestion-chips.js';
 import './components/lr-svg-viewer.js';

@@ -1628,6 +1628,14 @@ If the import fails, leave the native disclosure visible and usable.
   as the canonical list; unlike `<lr-tooltip>`, a list left with no recognized keyword resolves to
   `'click'` rather than to manual, so a typo can never strand a popover's content behind `show()`.
   Both the slotted trigger and a `for=`-resolved external trigger honour every keyword.
+  `hover-card` (popover only, not a tooltip keyword) is a supplementary preview, the hover-card or
+  link-preview pattern: it opens like `hover focus` (pointer rest after `showDelay`, or keyboard
+  focus) and stays open while the pointer is over the owner or the popup (`hideDelay`,
+  `hover-bridge`), but a click on the owner never pins it — the click passes through to the owner
+  (navigation, selection) and dismisses the card without moving focus — and the owner receives no
+  generated `aria-haspopup`/`aria-expanded`/`aria-controls`. It wins over every keyword beside it
+  except `manual`. Keep the card's content reachable elsewhere, since it is a preview, not a
+  disclosure.
 - `showDelay: number = 0` (attribute `show-delay`) — ms before a `hover`/`focus` interaction opens
   the popover.
 - `hideDelay: number = 0` (attribute `hide-delay`) — ms before the interaction ending closes it; the
@@ -1646,6 +1654,20 @@ If the import fails, leave the native disclosure visible and usable.
   suppressing every DOM interaction owner.
   Assigning `null` is the mapped setter-only clearing spelling: it removes the attribute and the
   getter continues to return `''`
+- `forElement: HTMLElement | null = null` (property only) — element-reference counterpart of `for`,
+  for an owner with no id or outside this popover's root. While connected it wins over `for` for
+  both positioning and interaction (a slotted trigger still wins interaction, a direct `.anchor`
+  still wins positioning); removing it while open closes the surface. Under `hover-card`,
+  re-pointing it at an element the pointer is already over starts the `showDelay` timer, and an
+  open card moves to the new owner without closing, so one popover can serve a whole list:
+
+  ```js
+  const card = document.querySelector('lr-popover[trigger="hover-card"]');
+  list.addEventListener('pointerover', (event) => {
+    const row = event.target.closest('li');
+    if (row && card.forElement !== row) card.forElement = row;
+  });
+  ```
 - `anchor: Element | null = null` (property only) — positioning-only direct anchor, taking priority
   over `for` and the interaction owner but never receiving click listeners or generated ARIA; a
   `showAt()` virtual anchor still wins

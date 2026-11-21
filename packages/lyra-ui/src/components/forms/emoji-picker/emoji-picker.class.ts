@@ -360,6 +360,8 @@ const emojiHaystacks = new WeakMap<EmojiPickerItem, { locale: string; value: str
  *   themeable independently of error text and invalid borders.
  * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
  *   required marker.
+ * @cssprop [--lr-theme-scrollbar-color=auto] - Opt-in theme-level `scrollbar-color` (thumb then
+ *   track) honored by the `grid` scroll container; set on `:root` or any ancestor to retune every internal scroll container.
  * @status stable
  * @since 4.0.0
  */

@@ -7,6 +7,7 @@ import { nothing } from "lit";
 import { sendKeys } from "@web/test-runner-commands";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { focusByKeyboard } from "../../../../test/wtr-focus.js";
+import { readScrollbarColor, readScrollbarWidth } from "../../../../test/scrollbar-reporting.js";
 import "../../lr-thread-list.js";
 import "../../lr-chip.js";
 import "../../lr-menu.js";
@@ -5107,4 +5108,25 @@ describe("dense group headers and glyph opt-outs", () => {
     expect(accessibleName(button).replace(/\s+/g, " ").trim()).to.contain("Pinned");
     await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
   });
+});
+
+it('retunes the viewport scrollbar from the theme-level scrollbar hooks, defaulting to auto', async () => {
+  const wrapper = await fixture<HTMLElement>(html`<div>
+    <lr-thread-list .threads=${[{ id: 'a', title: 'Launch notes' }]}></lr-thread-list>
+  </div>`);
+  const el = wrapper.querySelector('lr-thread-list') as LyraThreadList;
+  await waitUntil(() => dataRows(el).length === 1);
+  const list = el.shadowRoot!.querySelector('lr-virtual-list') as LyraVirtualList;
+  const viewport = list.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  expect(readScrollbarWidth(viewport, '[part="base"]')).to.equal('auto');
+  expect(getComputedStyle(viewport).scrollbarGutter).to.equal('auto');
+  expect(readScrollbarColor(viewport) ?? 'auto').to.equal('auto');
+  wrapper.style.setProperty('--lr-theme-scrollbar-width', 'thin');
+  wrapper.style.setProperty('--lr-theme-scrollbar-gutter', 'stable');
+  wrapper.style.setProperty('--lr-theme-scrollbar-color', 'rgb(255, 0, 0) rgb(0, 0, 255)');
+  expect(readScrollbarWidth(viewport, '[part="base"]')).to.equal('thin');
+  expect(getComputedStyle(viewport).scrollbarGutter).to.equal('stable');
+  const color = readScrollbarColor(viewport);
+  if (color === null) expect(CSS.supports('scrollbar-color', 'red blue')).to.equal(false);
+  else expect(color).to.equal('rgb(255, 0, 0) rgb(0, 0, 255)');
 });

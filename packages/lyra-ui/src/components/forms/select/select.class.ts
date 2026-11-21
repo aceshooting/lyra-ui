@@ -490,6 +490,12 @@ export type LyraSelectInputEvent<Multiple extends boolean = boolean> =
  *   (re)positioned. Set it once on `:root`, a theme, or one clipping ancestor to change every
  *   unset select beneath it instead of authoring `positioning-strategy`/`hoist` on each instance;
  *   an explicit value on the instance always wins over it.
+ * @cssprop [--lr-theme-scrollbar-width=auto] - Opt-in theme-level scrollbar width honored by the
+ *   scrolling `listbox`; set on `:root` or any ancestor to retune every internal scroll container.
+ * @cssprop [--lr-theme-scrollbar-gutter=auto] - Opt-in theme-level scrollbar gutter honored by the
+ *   scrolling `listbox`; see `--lr-theme-scrollbar-width`.
+ * @cssprop [--lr-theme-scrollbar-color=auto] - Opt-in theme-level `scrollbar-color` (thumb then
+ *   track) honored by the scrolling `listbox`; see `--lr-theme-scrollbar-width`.
  * @status stable
  * @since 4.0.0
  */

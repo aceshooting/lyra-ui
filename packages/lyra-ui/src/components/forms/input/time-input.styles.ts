@@ -274,6 +274,7 @@ export const styles = css`
        nothing changes for a consumer who never sets the theme input. */
     scrollbar-width: var(--lr-theme-scrollbar-width, thin);
     scrollbar-gutter: var(--lr-theme-scrollbar-gutter, auto);
+    scrollbar-color: var(--lr-theme-scrollbar-color, auto);
   }
   [part~='column-item'] {
     flex: 0 0 var(--column-item-height, calc(var(--lr-size-1em) * 2.25));

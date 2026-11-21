@@ -187,6 +187,7 @@ export const styles = css`
        --lr-theme-scrollbar-* directly, with this grid's own previous literal as the fallback, so
        nothing changes for a consumer who never sets the theme input. */
     scrollbar-gutter: var(--lr-theme-scrollbar-gutter, stable);
+    scrollbar-color: var(--lr-theme-scrollbar-color, auto);
     scrollbar-width: var(--lr-theme-scrollbar-width, auto);
   }
   /* Off-flow geometry probes, not parts -- never exposed to consumers. A custom property computes

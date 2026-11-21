@@ -9,8 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `emoji-picker-element-data` — see `llms/peers.md`
-- **Themeable via** 19 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `form-control-label`: `--lr-form-control-required-content`; `search-wrapper`: `--lr-emoji-picker-search-clear-gap`
+- **Themeable via** 19 parts, 34 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `form-control-label`: `--lr-form-control-required-content`; `grid`: `--lr-theme-scrollbar-color`; `search-wrapper`: `--lr-emoji-picker-search-clear-gap`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -188,8 +188,8 @@ pitch, so `--lr-emoji-picker-row-height` must stay at or above the item size plu
 band (`--lr-space-l`) — the default's own formula — or consecutive rows overlap. Columns per
 windowed row are additionally capped at 20 regardless of available width.
 The `grid` scroll container also honors the opt-in theme-level
-`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`stable`, matching
-its previous unconditional `scrollbar-gutter: stable`) — set either on `:root` or any ancestor for
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color` hooks
+(defaults `auto`/`stable`/`auto`, matching its previous unconditional `scrollbar-gutter: stable`) — set any of them on `:root` or any ancestor for
 one declaration to retheme every internal scroll container in the library.
 
 **Optional peer dependency:** install `emoji-picker-element-data` with

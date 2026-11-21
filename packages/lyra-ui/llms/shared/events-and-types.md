@@ -1326,6 +1326,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-stream-status': LyraStreamStatusReactProps;
   'lr-streaming-text': LyraStreamingTextReactProps;
   'lr-streaming-text-core': LyraStreamingTextCoreReactProps;
+  'lr-style-panel': LyraStylePanelReactProps;
   'lr-subagent-panel': LyraSubagentPanelReactProps;
   'lr-suggestion-chips': LyraSuggestionChipsReactProps;
   'lr-svg-viewer': LyraSvgViewerReactProps;
@@ -1773,6 +1774,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-stream-status': LyraComponentTypeMap['lr-stream-status']['element'];
   'lr-streaming-text': LyraComponentTypeMap['lr-streaming-text']['element'];
   'lr-streaming-text-core': LyraComponentTypeMap['lr-streaming-text-core']['element'];
+  'lr-style-panel': LyraComponentTypeMap['lr-style-panel']['element'];
   'lr-subagent-panel': LyraComponentTypeMap['lr-subagent-panel']['element'];
   'lr-suggestion-chips': LyraComponentTypeMap['lr-suggestion-chips']['element'];
   'lr-svg-viewer': LyraComponentTypeMap['lr-svg-viewer']['element'];
@@ -2091,6 +2093,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-stream-status': LyraStreamStatusSvelteProps;
   'lr-streaming-text': LyraStreamingTextSvelteProps;
   'lr-streaming-text-core': LyraStreamingTextCoreSvelteProps;
+  'lr-style-panel': LyraStylePanelSvelteProps;
   'lr-subagent-panel': LyraSubagentPanelSvelteProps;
   'lr-suggestion-chips': LyraSuggestionChipsSvelteProps;
   'lr-svg-viewer': LyraSvgViewerSvelteProps;
@@ -2251,6 +2254,7 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraLookEntry {
   readonly id: LyraLookId;
   readonly name: string;
+  readonly labelKey?: LyraMessageKey;
   readonly optional: boolean;
   readonly stylesheet: string | null;
 }`
@@ -2566,6 +2570,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-stream-status': LyraStreamStatusVueProps;
   'lr-streaming-text': LyraStreamingTextVueProps;
   'lr-streaming-text-core': LyraStreamingTextCoreVueProps;
+  'lr-style-panel': LyraStylePanelVueProps;
   'lr-subagent-panel': LyraSubagentPanelVueProps;
   'lr-suggestion-chips': LyraSuggestionChipsVueProps;
   'lr-svg-viewer': LyraSvgViewerVueProps;

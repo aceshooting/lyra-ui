@@ -9,8 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 59 parts, 39 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-width`; `header-cell`: `--lr-table-header-sorted-bg`; `row`: `--lr-table-row-selected-bg`
+- **Themeable via** 59 parts, 40 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-theme-scrollbar-color`, `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-width`; `header-cell`: `--lr-table-header-sorted-bg`; `row`: `--lr-table-row-selected-bg`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -651,7 +651,7 @@ The `sort-icon` part styles only the indicator; these tokens style the header ce
 so multiple `sticky` columns stack instead of overlapping; it is a read-out, not a knob you set.
 `--lr-table-heat-t` is likewise component-written (each `[data-heat]` cell's position on the ramp).
 `[part="base"]`, the table's own scroll container, also honors the opt-in theme-level
-`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`auto`) — set either on `:root` or any ancestor for one
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color` hooks (defaults `auto`/`auto`/`auto`) — set any of them on `:root` or any ancestor for one
 declaration to retheme every internal scroll container in the library, including
 `lr-virtual-list`, `lr-scroller`, `lr-carousel`, `lr-code-block`, and `lr-code-editor`.
 

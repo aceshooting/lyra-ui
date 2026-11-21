@@ -36855,7 +36855,7 @@
     "current": {
       "version": "31.2.1",
       "sourceCommit": null,
-      "manifestSha256": "cad469cce61c477a9c346fe25af18f594375bad00349b5cfe2497cd640ffe3ba",
+      "manifestSha256": "7aeb79a2ad13408312aa6cf6825f6129a38e691dafe62115fdd1c536a37fcb36",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",
@@ -37119,6 +37119,7 @@
         "lr-stream-status",
         "lr-streaming-text",
         "lr-streaming-text-core",
+        "lr-style-panel",
         "lr-subagent-panel",
         "lr-suggestion-chips",
         "lr-svg-viewer",

@@ -293,6 +293,7 @@ import type { LyraMutationObserver, LyraMutationObserverEventMap } from './compo
 import type { LyraPollStatus, LyraPollStatusEventMap } from './components/utility/poll-status/poll-status.class.js';
 import type { LyraRandomContent, LyraRandomContentEventMap } from './components/utility/random-content/random-content.class.js';
 import type { LyraResizeObserver, LyraResizeObserverEventMap } from './components/utility/resize-observer/resize-observer.class.js';
+import type { LyraStylePanel, LyraStylePanelEventMap } from './components/utility/style-panel/style-panel.class.js';
 import type { LyraTour, LyraTourEventMap } from './components/utility/tour/tour.class.js';
 import type { LyraVisuallyHidden } from './components/utility/visually-hidden/visually-hidden.class.js';
 import type { LyraArchiveViewer, LyraArchiveViewerEventMap } from './components/viewers/archive-viewer/archive-viewer.class.js';
@@ -3234,6 +3235,7 @@ export interface LyraComponentTypeMap {
       | '--lr-form-control-required-color'
       | '--lr-form-control-required-content'
       | '--lr-form-control-required-offset'
+      | '--lr-theme-scrollbar-color'
       | '--lr-theme-scrollbar-gutter'
       | '--lr-theme-scrollbar-width';
     attributeAliases: {
@@ -3483,6 +3485,9 @@ export interface LyraComponentTypeMap {
       | '--lr-overlay-shadow-anchored'
       | '--lr-overlay-surface'
       | '--lr-positioning-strategy'
+      | '--lr-theme-scrollbar-color'
+      | '--lr-theme-scrollbar-gutter'
+      | '--lr-theme-scrollbar-width'
       | '--show-duration'
       | '--tag-max-size';
     attributeAliases: {
@@ -5382,6 +5387,7 @@ export interface LyraComponentTypeMap {
       | 'disabled'
       | 'distance'
       | 'for'
+      | 'forElement'
       | 'hideDelay'
       | 'hoist'
       | 'hoverBridge'
@@ -5660,7 +5666,8 @@ export interface LyraComponentTypeMap {
       | '--lr-form-control-required-color'
       | '--lr-form-control-required-content'
       | '--lr-form-control-required-offset'
-      | '--lr-form-control-touch-font-size-min';
+      | '--lr-form-control-touch-font-size-min'
+      | '--lr-theme-scrollbar-color';
     attributeAliases: {
       'aria-label'?: LyraEmojiPicker['accessibleLabel'];
       'custom-error'?: LyraEmojiPicker['customError'];
@@ -8872,7 +8879,10 @@ export interface LyraComponentTypeMap {
       | '--lr-overlay-radius'
       | '--lr-overlay-shadow-anchored'
       | '--lr-overlay-surface'
-      | '--lr-positioning-strategy';
+      | '--lr-positioning-strategy'
+      | '--lr-theme-scrollbar-color'
+      | '--lr-theme-scrollbar-gutter'
+      | '--lr-theme-scrollbar-width';
     attributeAliases: {
       'top-layer'?: LyraMenu['topLayer'];
     };
@@ -10748,6 +10758,7 @@ export interface LyraComponentTypeMap {
       | 'disabled'
       | 'distance'
       | 'for'
+      | 'forElement'
       | 'hideDelay'
       | 'hoverBridge'
       | 'interactionBoundary'
@@ -12436,6 +12447,9 @@ export interface LyraComponentTypeMap {
       | '--lr-select-trigger-padding'
       | '--lr-select-unknown-value-border-color'
       | '--lr-select-unknown-value-border-style'
+      | '--lr-theme-scrollbar-color'
+      | '--lr-theme-scrollbar-gutter'
+      | '--lr-theme-scrollbar-width'
       | '--show-duration'
       | '--tag-max-size';
     attributeAliases: {
@@ -13285,6 +13299,26 @@ export interface LyraComponentTypeMap {
       'without-syntax-highlighting'?: LyraStreamingTextCore['withoutSyntaxHighlighting'];
     };
   };
+  'lr-style-panel': {
+    element: LyraStylePanel;
+    properties: LyraElementProperties<
+      LyraStylePanel,
+      | 'axes'
+      | 'disabled'
+      | 'label'
+      | 'locale'
+      | 'looks'
+      | 'strings'
+      | 'withoutReset',
+      {}
+    >;
+    events: LyraStylePanelEventMap;
+    eventNames:       | 'lr-change';
+    cssNames:       | '--lr-style-panel-gap';
+    attributeAliases: {
+      'without-reset'?: LyraStylePanel['withoutReset'];
+    };
+  };
   'lr-subagent-panel': {
     element: LyraSubagentPanel;
     properties: LyraElementProperties<
@@ -13678,6 +13712,7 @@ export interface LyraComponentTypeMap {
       | '--lr-table-stack-label-size'
       | '--lr-table-sticky-offset'
       | '--lr-table-surface'
+      | '--lr-theme-scrollbar-color'
       | '--lr-theme-scrollbar-gutter'
       | '--lr-theme-scrollbar-width';
     attributeAliases: {
@@ -14235,6 +14270,7 @@ export interface LyraComponentTypeMap {
       | '--lr-overlay-shadow-anchored'
       | '--lr-overlay-surface'
       | '--lr-positioning-strategy'
+      | '--lr-theme-scrollbar-color'
       | '--lr-time-input-action-active-bg'
       | '--lr-time-input-action-color'
       | '--lr-time-input-action-hover-bg'

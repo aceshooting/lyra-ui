@@ -70,6 +70,7 @@ export const styles = css`
        --lr-theme-* input on an ancestor sees no change. */
     scrollbar-width: var(--lr-theme-scrollbar-width, auto);
     scrollbar-gutter: var(--lr-theme-scrollbar-gutter, auto);
+    scrollbar-color: var(--lr-theme-scrollbar-color, auto);
     min-block-size: var(
       --lr-code-editor-min-block-size,
       var(--_lr-code-editor-min-block-size)

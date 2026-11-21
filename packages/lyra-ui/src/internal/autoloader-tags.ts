@@ -264,6 +264,7 @@ export const AUTOLOADER_TAGS = [
   'lr-stream-status',
   'lr-streaming-text',
   'lr-streaming-text-core',
+  'lr-style-panel',
   'lr-subagent-panel',
   'lr-suggestion-chips',
   'lr-svg-viewer',

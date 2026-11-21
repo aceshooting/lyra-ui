@@ -15,6 +15,7 @@ import type { LyraOption } from "../../lr-option.js";
 import type { LyraColorPicker } from "../../lr-color-picker.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
 import { focusByKeyboard } from "../../../../test/wtr-focus.js";
+import { readScrollbarColor, readScrollbarWidth } from "../../../../test/scrollbar-reporting.js";
 import { chooseOption } from "../../../testing/interaction-drivers.js";
 import { RESET_OPTION_SELECTED_FROM_OWNER, SET_OPTION_SELECTED_FROM_OWNER } from "../../../internal/option-selection.js";
 import { __setAnchoredOverlayRuntimeLoaderForTesting, type AnchoredOverlayRuntime } from '../../../internal/anchored-overlay-runtime.js';
@@ -4004,5 +4005,30 @@ it('rechecks creation policy after the synchronous create listener returns', asy
     expect(el.querySelectorAll('lr-option').length).to.equal(0);
     expect(el.value).to.equal('');
     expect(changes).to.equal(0);
+  }
+});
+
+it('retunes the select and combobox listbox scrollbars from the theme-level hooks, defaulting to auto', async () => {
+  const wrapper = await fixture<HTMLElement>(html`<div>
+    <lr-combobox label="Fruit"><lr-option value="a">Apple</lr-option></lr-combobox>
+    <lr-select label="Fruit"><lr-option value="a">Apple</lr-option></lr-select>
+  </div>`);
+  const hosts = [...wrapper.children] as (HTMLElement & { updateComplete: Promise<unknown> })[];
+  await Promise.all(hosts.map((host) => host.updateComplete));
+  const listboxes = hosts.map((host) => host.shadowRoot!.querySelector<HTMLElement>('[part="listbox"]')!);
+  for (const listbox of listboxes) {
+    expect(readScrollbarWidth(listbox, '[part="listbox"]')).to.equal('auto');
+    expect(getComputedStyle(listbox).scrollbarGutter).to.equal('auto');
+    expect(readScrollbarColor(listbox) ?? 'auto').to.equal('auto');
+  }
+  wrapper.style.setProperty('--lr-theme-scrollbar-width', 'thin');
+  wrapper.style.setProperty('--lr-theme-scrollbar-gutter', 'stable');
+  wrapper.style.setProperty('--lr-theme-scrollbar-color', 'rgb(255, 0, 0) rgb(0, 0, 255)');
+  for (const listbox of listboxes) {
+    expect(readScrollbarWidth(listbox, '[part="listbox"]')).to.equal('thin');
+    expect(getComputedStyle(listbox).scrollbarGutter).to.equal('stable');
+    const color = readScrollbarColor(listbox);
+    if (color === null) expect(CSS.supports('scrollbar-color', 'red blue')).to.equal(false);
+    else expect(color).to.equal('rgb(255, 0, 0) rgb(0, 0, 255)');
   }
 });

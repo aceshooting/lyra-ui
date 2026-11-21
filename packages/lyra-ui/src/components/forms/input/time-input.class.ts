@@ -351,6 +351,8 @@ function containsElement(container: Element | null, value: unknown): value is El
  *   picker's `fixed` default, read from computed style when it is (re)positioned. Set it once on
  *   `:root`, a theme, or one clipping ancestor to change every unset time input beneath it; an
  *   unrecognized value falls back to `fixed`.
+ * @cssprop [--lr-theme-scrollbar-color=auto] - Opt-in theme-level `scrollbar-color` (thumb then
+ *   track) honored by the scrolling `column` lists; set on `:root` or any ancestor to retune every internal scroll container.
  * @status stable
  * @since 4.0.0
  */

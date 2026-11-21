@@ -413,6 +413,11 @@ export const styles = css`
     );
     overflow-y: auto;
     overflow-x: hidden;
+    /* Opt-in theme-level scrollbar hooks, read directly with this listbox's previous 'auto' as the
+       fallback, so nothing changes until an ancestor or :root sets the --lr-theme-* input. */
+    scrollbar-width: var(--lr-theme-scrollbar-width, auto);
+    scrollbar-gutter: var(--lr-theme-scrollbar-gutter, auto);
+    scrollbar-color: var(--lr-theme-scrollbar-color, auto);
     inline-size: max-content;
     padding: var(--lr-space-xs);
     /* The shared overlay-surface family (internal/overlay-surface.styles.ts). The popup is the

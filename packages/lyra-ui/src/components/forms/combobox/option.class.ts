@@ -167,7 +167,10 @@ export class LyraOption extends LyraElement<LyraOptionEventMap> {
    * option (and to a multiple-mode tag). It never changes the accessible name. */
   @property() override title = '';
 
-  /** Optional section header this option belongs under. */
+  /** Optional group heading this option belongs under (attribute `group`, not reflected). The
+   * owning `lr-select`/`lr-combobox` starts a new heading row (part `group-label`) with a
+   * `role="group"` wrapper whenever an option's `group` differs from the previous option's, so
+   * consecutive options sharing a value form one group. An empty value renders no heading. */
   @property() group = '';
 
   /** Extra text the filter should match beyond the label. */

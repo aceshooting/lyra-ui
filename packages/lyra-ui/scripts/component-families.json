@@ -316,6 +316,7 @@
     "sankey": "data",
     "chord": "data",
     "choropleth": "data",
-    "help": "overlays"
+    "help": "overlays",
+    "style-panel": "utility"
   }
 }

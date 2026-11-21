@@ -2083,10 +2083,13 @@ accent accepts one of Lyra's named palettes or an absolute CSS color. A custom c
 accentBackground is an absolute CSS color used as the accent ramps' reference surface. surface is a separate visual treatment: solid or glass. density selects compact, comfortable, or touch. These axes remain independent, so changing the look does not reset mode, accent, surface, or density.
 
 `LYRA_LOOKS` lists the built-in looks for an appearance picker, in display order, as frozen
-`{ id, name, optional, stylesheet }` entries: `name` is the look's untranslated proper name,
-`optional` is true when `theme.css` alone does not carry the look, and `stylesheet` is its standalone
+`{ id, name, labelKey, optional, stylesheet }` entries: `name` is the look's untranslated English
+name, `labelKey` is the message key of its localized name (`styleLookShadcn`, `styleLookLyra`,
+`styleLookMaterial`, `styleLookData`, `styleLookTerminal`, `styleLookHighContrast`; resolve it with
+a component's `localize()` or read it from a registered catalog), `optional` is true when `theme.css` alone does not carry the look, and `stylesheet` is its standalone
 `looks/<id>.css` sheet (null for `lyra`, which `theme-core.css` carries). Offer an application look by
-appending its own entry:
+appending its own entry (an application entry may omit `labelKey`). `lr-style-panel` renders this
+list, localized, without any wiring:
 
 ```js
 import { LYRA_LOOKS, setLyraStyle } from '@aceshooting/lyra-ui/theme.js';
@@ -5783,6 +5786,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-stream-status': LyraStreamStatusReactProps;
   'lr-streaming-text': LyraStreamingTextReactProps;
   'lr-streaming-text-core': LyraStreamingTextCoreReactProps;
+  'lr-style-panel': LyraStylePanelReactProps;
   'lr-subagent-panel': LyraSubagentPanelReactProps;
   'lr-suggestion-chips': LyraSuggestionChipsReactProps;
   'lr-svg-viewer': LyraSvgViewerReactProps;
@@ -6230,6 +6234,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-stream-status': LyraComponentTypeMap['lr-stream-status']['element'];
   'lr-streaming-text': LyraComponentTypeMap['lr-streaming-text']['element'];
   'lr-streaming-text-core': LyraComponentTypeMap['lr-streaming-text-core']['element'];
+  'lr-style-panel': LyraComponentTypeMap['lr-style-panel']['element'];
   'lr-subagent-panel': LyraComponentTypeMap['lr-subagent-panel']['element'];
   'lr-suggestion-chips': LyraComponentTypeMap['lr-suggestion-chips']['element'];
   'lr-svg-viewer': LyraComponentTypeMap['lr-svg-viewer']['element'];
@@ -6548,6 +6553,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-stream-status': LyraStreamStatusSvelteProps;
   'lr-streaming-text': LyraStreamingTextSvelteProps;
   'lr-streaming-text-core': LyraStreamingTextCoreSvelteProps;
+  'lr-style-panel': LyraStylePanelSvelteProps;
   'lr-subagent-panel': LyraSubagentPanelSvelteProps;
   'lr-suggestion-chips': LyraSuggestionChipsSvelteProps;
   'lr-svg-viewer': LyraSvgViewerSvelteProps;
@@ -6708,6 +6714,7 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraLookEntry {
   readonly id: LyraLookId;
   readonly name: string;
+  readonly labelKey?: LyraMessageKey;
   readonly optional: boolean;
   readonly stylesheet: string | null;
 }`
@@ -7023,6 +7030,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-stream-status': LyraStreamStatusVueProps;
   'lr-streaming-text': LyraStreamingTextVueProps;
   'lr-streaming-text-core': LyraStreamingTextCoreVueProps;
+  'lr-style-panel': LyraStylePanelVueProps;
   'lr-subagent-panel': LyraSubagentPanelVueProps;
   'lr-suggestion-chips': LyraSuggestionChipsVueProps;
   'lr-svg-viewer': LyraSvgViewerVueProps;

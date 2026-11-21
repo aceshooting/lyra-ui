@@ -3847,7 +3847,9 @@ mirroring `<lr-input>`'s own `clearable` contract's part name), `list` (the list
 `error` (the built-in `<lr-empty>` host rendered while `error` is set, with `error-base`/
 `error-icon`/`error-heading`/`error-description`/`error-actions` exported from its own parts, plus
 `retry-button` for the built-in retry control), `viewport` (the actual internal virtual-list
-scroll container, suitable for scrollbar styling), `row-action` (a built-in pin/archive/delete icon
+scroll container, suitable for scrollbar styling; it honors the theme-level
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color` hooks, each
+defaulting to `auto`, so one ancestor declaration retunes it with every other internal scroller), `row-action` (a built-in pin/archive/delete icon
 button), `pin-glyph` (the small pin indicator on a pinned row), `group-header`, `group-toggle` (named
 by its visible group label while `aria-expanded` reports the state),
 `group-label`, `group-adornment`, `group-icon`, `group-icon-collapsed`, `group-sticky` (`sticky-groups` only: the pinned copy of the current

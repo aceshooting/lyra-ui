@@ -1038,10 +1038,13 @@ accent accepts one of Lyra's named palettes or an absolute CSS color. A custom c
 accentBackground is an absolute CSS color used as the accent ramps' reference surface. surface is a separate visual treatment: solid or glass. density selects compact, comfortable, or touch. These axes remain independent, so changing the look does not reset mode, accent, surface, or density.
 
 `LYRA_LOOKS` lists the built-in looks for an appearance picker, in display order, as frozen
-`{ id, name, optional, stylesheet }` entries: `name` is the look's untranslated proper name,
-`optional` is true when `theme.css` alone does not carry the look, and `stylesheet` is its standalone
+`{ id, name, labelKey, optional, stylesheet }` entries: `name` is the look's untranslated English
+name, `labelKey` is the message key of its localized name (`styleLookShadcn`, `styleLookLyra`,
+`styleLookMaterial`, `styleLookData`, `styleLookTerminal`, `styleLookHighContrast`; resolve it with
+a component's `localize()` or read it from a registered catalog), `optional` is true when `theme.css` alone does not carry the look, and `stylesheet` is its standalone
 `looks/<id>.css` sheet (null for `lyra`, which `theme-core.css` carries). Offer an application look by
-appending its own entry:
+appending its own entry (an application entry may omit `labelKey`). `lr-style-panel` renders this
+list, localized, without any wiring:
 
 ```js
 import { LYRA_LOOKS, setLyraStyle } from '@aceshooting/lyra-ui/theme.js';

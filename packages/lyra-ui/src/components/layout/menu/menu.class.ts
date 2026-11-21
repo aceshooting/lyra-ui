@@ -207,6 +207,12 @@ function registerMenuWidthScale(doc: Document): void {
  *   submenu surface's `fixed` default, read from computed style when a submenu is (re)positioned.
  *   Set it once on `:root`, a theme, or one clipping ancestor to change every unset submenu
  *   beneath it; an unrecognized value falls back to `fixed`.
+ * @cssprop [--lr-theme-scrollbar-width=auto] - Opt-in theme-level scrollbar width honored by the
+ *   scrolling `list`; set on `:root` or any ancestor to retune every internal scroll container.
+ * @cssprop [--lr-theme-scrollbar-gutter=auto] - Opt-in theme-level scrollbar gutter honored by the
+ *   scrolling `list`; see `--lr-theme-scrollbar-width`.
+ * @cssprop [--lr-theme-scrollbar-color=auto] - Opt-in theme-level `scrollbar-color` (thumb then
+ *   track) honored by the scrolling `list`; see `--lr-theme-scrollbar-width`.
  * @status stable
  * @since 4.0.0
  */

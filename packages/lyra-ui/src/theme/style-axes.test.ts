@@ -656,6 +656,9 @@ describe('LYRA_LOOKS', () => {
     expect(Object.isFrozen(LYRA_LOOKS)).to.equal(true);
     expect(LYRA_LOOKS.every(entry => Object.isFrozen(entry))).to.equal(true);
     expect(LYRA_LOOKS.map(entry => entry.id)).to.deep.equal(['shadcn', 'lyra', 'material', 'data', 'terminal', 'high-contrast']);
+    expect(LYRA_LOOKS.map(entry => entry.labelKey)).to.deep.equal([
+      'styleLookShadcn', 'styleLookLyra', 'styleLookMaterial', 'styleLookData', 'styleLookTerminal', 'styleLookHighContrast',
+    ]);
     const theme = await (await fetch(new URL('../theme.css', import.meta.url))).text();
     for (const entry of LYRA_LOOKS) {
       expect(theme.includes(`data-lr-look='${entry.id}'`), entry.id).to.equal(!entry.optional);

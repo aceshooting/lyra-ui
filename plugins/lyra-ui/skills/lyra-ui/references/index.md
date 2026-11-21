@@ -2,7 +2,7 @@
 
 # Component index
 
-318 custom elements, grouped by the source family they live in.
+319 custom elements, grouped by the source family they live in.
 
 **Reading one component.** Its reference file path is derived from the tag — no search needed:
 `llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`): import path, optional peers,
@@ -69,7 +69,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-toggle-group` · lr-toggle-group.js · `experimental` since `21.0.0` · ~40 KiB gzip — a set of `<lr-toggle>` children behind one tab stop.
 - `lr-currency-picker` · lr-currency-picker.js · `experimental` since `25.5.0` · ~118 KiB gzip — a form-associated currency-code selector.
 - `lr-country-picker` · lr-country-picker.js · `experimental` since `25.5.0` · ~118 KiB gzip — a form-associated country and territory selector.
-- `lr-time-zone-picker` · lr-time-zone-picker.js · `experimental` since `25.5.0` · ~116 KiB gzip — a form-associated time-zone identifier selector.
+- `lr-time-zone-picker` · lr-time-zone-picker.js · `experimental` since `25.5.0` · ~117 KiB gzip — a form-associated time-zone identifier selector.
 - `lr-unit-picker` · lr-unit-picker.js · `experimental` since `25.5.0` · ~117 KiB gzip — a form-associated measurement-unit identifier selector.
 - `lr-signature-pad` · lr-signature-pad.js · `experimental` since `26.0.0` · ~42 KiB gzip — a form control that captures a drawn signature with a pointer, touch or the keyboard, and submits it as a PNG data URL.
 
@@ -173,9 +173,9 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-alert` · lr-alert.js · `stable` since `8.0.0` · ~50 KiB gzip — a closed-by-default inline alert that can also move into the shared toast stack.
 - `lr-callout` · lr-callout.js · `stable` since `4.0.0` · ~44 KiB gzip — an inline message surface for status, warning, and error content.
 - `lr-rating` · lr-rating.js · `stable` since `4.0.0` · ~34 KiB gzip — a keyboard-accessible star rating control.
-- `lr-help` · lr-help.js · `experimental` since `unreleased` · ~65 KiB gzip — a compact "?" explanation disclosure: an `<lr-icon-button>` trigger that opens an `<lr-popover>` holding the slotted explanation.
+- `lr-help` · lr-help.js · `experimental` since `unreleased` · ~66 KiB gzip — a compact "?" explanation disclosure: an `<lr-icon-button>` trigger that opens an `<lr-popover>` holding the slotted explanation.
 
-## Utilities, formatting & observers — `components/utility/` (20)
+## Utilities, formatting & observers — `components/utility/` (21)
 
 - `lr-export-button` · lr-export-button.js · `stable` since `4.0.0` · ~58 KiB gzip — a CSV/JSON download button, single-format or a format-choice menu.
 - `lr-copy-button` · lr-copy-button.js · `stable` since `4.0.0` · ~74 KiB gzip — a standalone icon-only copy-to-clipboard affordance for a plain single/multi-line text value in a layout the consumer controls (e.g.
@@ -197,6 +197,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-known-date` · lr-known-date.js · `stable` since `4.0.0` · ~51 KiB gzip — a date a user already knows (a birthdate, a passport issue/expiry date) collected as three plain, labeled day/month/year number fields in...
 - `lr-random-content` · lr-random-content.js · `stable` since `4.0.0` · ~41 KiB gzip — displays a randomly (or sequentially) chosen subset of its slotted children and hides the rest, for A/B copy testing, testimonial/quote...
 - `lr-tour` · lr-tour.js · `stable` since `4.0.0` · ~58 KiB gzip — - a spotlight-and-step guided walkthrough for first-run onboarding.
+- `lr-style-panel` · lr-style-panel.js · `experimental` since `unreleased` · ~127 KiB gzip — ready-made appearance controls bound to the document style runtime (`setLyraStyle()`/`getLyraStyle()` from `theme.js`): colour mode...
 
 ## Media, files & maps — `components/media/` (23)
 
@@ -212,7 +213,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-attachment-chip` · lr-attachment-chip.js · `stable` since `4.0.0` · ~31 KiB gzip — a compact chip representing one file queued for (or already part of) a chat message: a composer's pre-send attachment tray, or a sent...
 - `lr-file-icon` · lr-file-icon.js · `stable` since `4.0.0` · ~28 KiB gzip — Displays a file-format badge from a MIME type: an unlocalized format token or generic glyph, with a localized accessible name.
 - `lr-media-card` · lr-media-card.js · `stable` since `4.0.0` · ~31 KiB gzip — a lightweight inline preview for one already-sent, already-available attachment inside a rendered chat message body (e.g.
-- `lr-attachment-trigger` · lr-attachment-trigger.js · `stable` since `4.0.0` · ~93 KiB gzip — a compact attach affordance designed for a chat composer's start slot (see `<lr-chat-composer>`'s own `start` slot, which this drops...
+- `lr-attachment-trigger` · lr-attachment-trigger.js · `stable` since `4.0.0` · ~94 KiB gzip — a compact attach affordance designed for a chat composer's start slot (see `<lr-chat-composer>`'s own `start` slot, which this drops...
 - `lr-avatar` · lr-avatar.js · `stable` since `4.0.0` · ~25 KiB gzip — a small, fixed-size identity marker: an image, an `icon`-slotted fallback glyph, or an initials fallback, in that priority order.
 - `lr-animated-image` · lr-animated-image.js · `stable` since `4.0.0` · ~27 KiB gzip — - displays an animated GIF/APNG/WebP with a play/pause control, defaulting to a frozen first frame both at rest and automatically under...
 - `lr-animation` · lr-animation.js · `stable` since `4.0.0` · ~30 KiB gzip — `<lr-animation>` declaratively animates its single slotted child through the native Web Animations API: a small curated preset catalog...
@@ -313,7 +314,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-thinking-panel` · lr-thinking-panel.js · `stable` since `4.0.0` · ~30 KiB gzip — a collapsible panel for an AI agent's intermediate reasoning/"thinking" transcript, kept visually and semantically distinct from its...
 - `lr-stack-trace` · lr-stack-trace.js · `stable` since `4.0.0` · ~34 KiB gzip — parses common V8/JS-TS, Firefox/Safari, and Python stack traces into a leading message plus activatable frames, splitting...
 - `lr-tool-approval-dialog` · lr-tool-approval-dialog.js · `stable` since `4.0.0` · ~99 KiB gzip — a human-in-the-loop gate: presents one proposed tool/function call (`toolName` + `args`) and blocks an agent from executing it until a...
-- `lr-tool-param-form` · lr-tool-param-form.js · `stable` since `4.0.0` · ~109 KiB gzip — renders one form control per top-level property of a JSON Schema object, for ad hoc tool invocation or approval-editing UIs (e.g.
+- `lr-tool-param-form` · lr-tool-param-form.js · `stable` since `4.0.0` · ~110 KiB gzip — renders one form control per top-level property of a JSON Schema object, for ad hoc tool invocation or approval-editing UIs (e.g.
 - `lr-result-card` · lr-result-card.js · `stable` since `4.0.0` · ~24 KiB gzip — a small bordered card shell for a custom tool-result renderer's body (see `<lr-tool-result-view>`'s `registerToolRenderer()` in...
 - `lr-result-field` · lr-result-field.js · `stable` since `4.0.0` · ~24 KiB gzip — a single label/value row, meant for use inside a `<lr-result-card>` body (though it works standalone too).
 - `lr-compare-panel` · lr-compare-panel.js · `stable` since `4.0.0` · ~35 KiB gzip — side-by-side A/B output comparison with a winner vote (LMSYS-arena / LangSmith-pairwise style): two slotted panes, a vote bar...
@@ -379,7 +380,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-retrieval-trace` · lr-retrieval-trace.js · `stable` since `4.1.0` · ~87 KiB gzip — a retrieval pipeline's stage timeline (query rewriting, embedding, retrieval, reranking, filtering), rendered through...
 - `lr-rag-answer` · lr-rag-answer.js · `stable` since `6.2.0` · ~141 KiB gzip — a controlled grounded-answer surface combining sanitized Markdown, citation badges, a grounding assessment, and source previews.
 - `lr-embedding-explorer` · lr-embedding-explorer.js · `stable` since `6.2.0` · ~56 KiB gzip — an accessible embedding projection viewer with a dependency-free builtin SVG renderer and an optional WebGL point renderer.
-- `lr-knowledge-base-admin` · lr-knowledge-base-admin.js · `stable` since `6.2.0` · ~176 KiB gzip — a responsive operations shell composing the existing controlled source inventory and ingestion queue into one tabbed knowledge-base view.
+- `lr-knowledge-base-admin` · lr-knowledge-base-admin.js · `stable` since `6.2.0` · ~177 KiB gzip — a responsive operations shell composing the existing controlled source inventory and ingestion queue into one tabbed knowledge-base view.
 - `lr-claim-evidence` · lr-claim-evidence.js · `stable` since `7.0.0` · ~68 KiB gzip — a controlled claim-by-claim grounding audit.
 - `lr-retrieval-compare` · lr-retrieval-compare.js · `stable` since `7.0.0` · ~45 KiB gzip — a side-by-side retrieval/reranking workbench that makes rank, overlap, and dense/sparse/rerank/final score changes inspectable.
 - `lr-rag-eval-dashboard` · lr-rag-eval-dashboard.js · `stable` since `7.0.0` · ~89 KiB gzip — a controlled RAG quality overview with current metric cards, per-metric trends, evaluation slices, and run history.
