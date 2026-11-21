@@ -14,6 +14,20 @@ Deprecation is explicit metadata, independent of status: it records a replacemen
 rationale and earliest removal version. An API deprecated in major M remains available throughout
 M+1 and cannot be removed before M+2, for stable and experimental APIs alike.
 
+**9.0.0 took a one-time exception to that policy, and says so rather than quietly breaking it.**
+Three members whose recorded removal window had genuinely opened were removed normally
+(`lr-tool-call-chip`/`lr-message-parts`' `lr-tool-chip-select`, and `lr-flow-canvas`'
+`--lr-flow-canvas-node-current-outline-color`). Alongside them, a small set of members that had
+_never_ been deprecated were renamed and their old spellings removed in the same release, without the
+customary M+1 warning period — `lr-usage-badge`'s `compact`, `lr-chart`'s `horizontal`,
+`lr-rag-answer`/`lr-retrieval-results`' `error`, `lr-ingestion-queue`'s
+`virtualizeThreshold` → `virtualizeAt`,
+`lr-knowledge-base`'s `lr-kb-*` events, `lr-data-grid`'s `columns`/`filename` option fields, and
+`lr-test-results`' two legacy detail-slot spellings, plus the component-specific
+`LyraModelCatalog`/`LyraVoiceCatalog` aliases in favor of the shared `LyraCatalog<T>`. Every one has
+a mechanical migration listed in the 9.0.0 changelog entry and in `migration.md`. From 9.0.0 onward
+the M+2 rule applies as written; treat the above as a documented exception, not a precedent.
+
 Deprecation also covers **slot content** inside a supported slot, such as non-item menu content;
 the slot description identifies it. Deprecated **package entry points**, **stylesheets**,
 **exported types/functions/constants**, and **global events/root attributes** appear under
@@ -46,7 +60,7 @@ Family-wide breaking-change summaries open each authored `llms/<family>.md`, and
 `llms/components/<tag>.md` header links its family summary. `llms/migration.md` covers only
 `wa-*`/`sl-*` renames, not Lyra release history.
 
-The [v23-to-v24 migration guide](./shared/v23-to-v24-migration.md) gives the removed routes, ordered consumer
+The [archived v23-to-v24 migration guide](https://github.com/aceshooting/lyra-ui/blob/main/docs/archive/llms/shared/v23-to-v24-migration.md) gives the removed routes, ordered consumer
 cleanup and retained-profile instructions. Use stable tag-shaped registration entries, a component's
 registration-free `.class.js` subpath, the split SSR/hydration entries, and the current style API.
 
@@ -111,7 +125,7 @@ The entry points, then:
   or future exports. Prefer the owning entry for that component's complete contract and smaller
   bundles.
 
-- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 300
+- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 301
   root-included tags — everything **except** the 15 inventory-designated optional-peer-family tags:
   `lr-chart` and its 8 typed subclasses (`lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`,
   `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`,
@@ -421,7 +435,7 @@ through `@aceshooting/lyra-ui/events` for listeners on an ancestor, `document` o
 "TypeScript" below.
 
 For event-detail compatibility fields removed in the v23-to-v24 upgrade,
-use step 7 of the [migration checklist](./shared/v23-to-v24-migration.md#migrate-a-project-in-reviewable-steps).
+use step 7 of the [archived migration checklist](https://github.com/aceshooting/lyra-ui/blob/main/docs/archive/llms/shared/v23-to-v24-migration.md#migrate-a-project-in-reviewable-steps).
 Those nested detail fields are separate from deprecated event names and are not automatic renames.
 
 ## TypeScript
@@ -3416,7 +3430,7 @@ and adapters emit empty JavaScript and do not register elements.
 ## SSR and declarative shadow DOM
 
 When replacing the removed combined `ssr-loader.js` route, split browser hydration from component
-registration and server rendering as shown below. The [v23-to-v24 migration guide](./shared/v23-to-v24-migration.md)
+registration and server rendering as shown below. The [archived v23-to-v24 migration guide](https://github.com/aceshooting/lyra-ui/blob/main/docs/archive/llms/shared/v23-to-v24-migration.md)
 has the ordered upgrade steps and environment-specific import mapping.
 
 Root, `all.js`, and granular component imports are server-safe under the supported Node 22+ runtime.

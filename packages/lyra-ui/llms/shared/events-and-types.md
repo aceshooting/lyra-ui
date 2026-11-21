@@ -31,7 +31,7 @@ through `@aceshooting/lyra-ui/events` for listeners on an ancestor, `document` o
 "TypeScript" below.
 
 For event-detail compatibility fields removed in the v23-to-v24 upgrade,
-use step 7 of the [migration checklist](v23-to-v24-migration.md#migrate-a-project-in-reviewable-steps).
+use step 7 of the [archived migration checklist](https://github.com/aceshooting/lyra-ui/blob/main/docs/archive/llms/shared/v23-to-v24-migration.md#migrate-a-project-in-reviewable-steps).
 Those nested detail fields are separate from deprecated event names and are not automatic renames.
 
 ## TypeScript

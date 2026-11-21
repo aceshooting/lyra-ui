@@ -44,7 +44,7 @@ a live example, source code, and API reference.
   <a href="https://aceshooting.github.io/lyra-ui/"><img src=".github/readme/preview-table.png" width="32%" alt="Lyra UI sortable table example" /></a>
   <a href="https://aceshooting.github.io/lyra-ui/"><img src=".github/readme/preview-chart.png" width="32%" alt="Lyra UI line chart example" /></a>
 </p>
-<p align="center"><sub>A few of 315 custom elements — <a href="https://aceshooting.github.io/lyra-ui/">browse them all live →</a></sub></p>
+<p align="center"><sub>A few of 316 custom elements — <a href="https://aceshooting.github.io/lyra-ui/">browse them all live →</a></sub></p>
 
 ## Table of Contents
 
@@ -179,7 +179,7 @@ breaks in each major since v22, with the matching `lyra-ui-migrate` profile; ful
 
 ## Components
 
-315 custom elements across eleven component families. Every tag has a live, interactive example on the
+316 custom elements across eleven component families. Every tag has a live, interactive example on the
 [docs site](https://aceshooting.github.io/lyra-ui/); for the full per-tag reference (Web Awesome
 mirror, props, events, slots, parts) see
 [`packages/lyra-ui/README.md#components`](./packages/lyra-ui/README.md#components).
@@ -192,7 +192,7 @@ the entry stays valid if the component's internal family changes. Import
 |---|---|
 | `forms` | button, input, textarea, select, combobox, date picker, phone/token input, color and swatch pickers, emoji picker, locale/currency pickers, code editor, checkbox/radio/switch/slider, toggle and toggle group, time range, rubric form |
 | `layout` | page, tabs, menu, menubar, navigation menu, command palette, breadcrumb, details, card, widget, split, stepper, carousel, scroller, app rail, dock panel, dashboard grid, drilldown panel, filter bar, segmented, virtual list, responsive panel |
-| `overlays` | dialog, drawer, overlay, context menu, toast, callout, badge, chip, kbd, rating, progress, spinner, skeleton, empty |
+| `overlays` | dialog, drawer, overlay, context menu, help disclosure, toast, callout, badge, chip, kbd, rating, progress, spinner, skeleton, empty |
 | `data` | table, data grid, tree, timeline, calendar, gauge, heatmap, sparkline, word cloud, treemap, Sankey and chord diagrams, choropleth map, stat, pagination, query builder, flow canvas and nodes, sequence strip, file tree, env list, context meter |
 | `charts` | Chart.js-backed `lr-chart` (optional peer) |
 | `conversation` | chat message, composer and viewport, structured message parts, prompt input and queue, streaming text, markdown, code block, model select, realtime session, selection toolbar, branch picker, checkpoint, message actions and feedback, push-to-talk, audio visualizer, thread list |
@@ -204,7 +204,7 @@ the entry stays valid if the component's internal family changes. Import
 
 ## Theming, internationalization & RTL
 
-All 315 tags share three guarantees, not opt-in per component: **theming** through `--lr-*` design tokens (declared once per document and
+All 316 tags share three guarantees, not opt-in per component: **theming** through `--lr-*` design tokens (declared once per document and
 re-derived at [theme scopes](./packages/lyra-ui/llms/shared/styles-and-tokens.md#theme-scopes); a light/dark base in `theme.css`, optional looks, and an independent style API for look, surface, density, mode and accent;
 [styling guide](./packages/lyra-ui/llms/shared/styles-and-tokens.md#composing-looks-surfaces-and-density)),
 **internationalization** through one runtime (`registerLyraLocale`/`setLyraLocale` or a per-instance `.strings`

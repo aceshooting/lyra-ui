@@ -4,7 +4,7 @@ These measurements and the complete source census apply to source commit
 `d84c7197186615bd35297cd723aef438801d7b7e`. This evidence is published in a later
 commit; it does not claim that the publication commit was measured.
 
-The [methodology](../../../statement-coverage.md) defines locked `v8-to-istanbul`
+The [methodology](../../../../statement-coverage.md) defines locked `v8-to-istanbul`
 9.3.0 physical-source-line statement counters, not AST instrumentation or a Codecov
 line percentage. The scope includes all seven packages and original repository
 tooling, examples, executable manifest/workflow text and original patch additions.
@@ -94,4 +94,4 @@ The retained upstream-patch proof excludes only 19,595 byte-identical lines relo
 from actual deleted blocks in the pinned upstream source, using the fixed minimum of
 20 consecutive lines. Source-lock and patch hashes were reverified at the measured commit;
 the earlier extraction was not falsely presented as a new run. All unmatched additions
-remain uncovered. See the [public proof and reproducer](../../../statement-coverage.md#original-patch-code-and-moved-upstream-blocks).
+remain uncovered. See the [public proof and reproducer](../../../../statement-coverage.md#original-patch-code-and-moved-upstream-blocks).

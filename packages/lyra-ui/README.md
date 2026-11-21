@@ -27,7 +27,7 @@
 library for accessible forms, dashboards, charts, data visualization, and AI chat/agent interfaces.
 Built with [Lit](https://lit.dev), it works with Lit, React, Vue, Angular, Svelte, and plain JavaScript.
 It is a practical open-source alternative to [Shoelace](https://shoelace.style/) and
-[Web Awesome](https://webawesome.com/), with 315 custom elements, native custom-element APIs,
+[Web Awesome](https://webawesome.com/), with 316 custom elements, native custom-element APIs,
 tree-shakeable, granular per-component imports, its own `--lr-*` design tokens, built-in localization and RTL support,
 and no runtime dependency on either project.
 
@@ -70,7 +70,7 @@ has the full rules, and `--check` lists what's left without changing any files.
 | **v27** | Locales moved to `@aceshooting/lyra-translations`, editor data to `@aceshooting/lyra-ide`; one `ToolStatus` union; some changed defaults | `--origin=lyra-v26`, [notes](../../docs/changelog/v27.md) |
 | **v26** | Form events use native `input`/`change` plus typed `lr-input`/`lr-change`; resize, focus and viewer-diagnostic events changed | `--origin=lyra-v25`, [notes](../../docs/changelog/v26.md) |
 | **v25** | Built-in look is now Shadcn, Glass, Emerald and System mode | Set the look you want explicitly, [notes](../../docs/changelog/v25.md) |
-| **v24** | Theme/preset facade, nested registration routes and `ssr-loader.js` removed | `--origin=lyra-v22`, [v23→v24 guide](./llms/shared/v23-to-v24-migration.md), [notes](../../docs/changelog/v24.md) |
+| **v24** | Theme/preset facade, nested registration routes and `ssr-loader.js` removed | `--origin=lyra-v22`, [archived v23→v24 guide](https://github.com/aceshooting/lyra-ui/blob/main/docs/archive/llms/shared/v23-to-v24-migration.md), [notes](../../docs/changelog/v24.md) |
 | **v23** | APIs deprecated before v22 removed | `--origin=lyra-v21`, [notes](../../docs/changelog/v23.md) |
 | **v22** | Requires Node 22 and the Popover API; Lyra-only events and defaults normalized | `--origin=lyra-v21`, [notes](../../docs/changelog/v22.md) |
 
@@ -142,7 +142,7 @@ import "@aceshooting/lyra-ui/components/lr-option.js";
 - **Family entries** (`@aceshooting/lyra-ui/components/forms`, likewise `overlays`, `agent-tools`, `charts`,
   `conversation`, `data`, `layout`, `media`, `retrieval`, `utility`, `viewers`) register every tag in the family;
   they are side-effectful and cannot be tree-shaken, so prefer granular paths.
-- **Everything:** `import "@aceshooting/lyra-ui/all.js"` registers 300 tags — every component **except** the 15 optional-peer
+- **Everything:** `import "@aceshooting/lyra-ui/all.js"` registers 301 tags — every component **except** the 15 optional-peer
   tags (`<lr-chart>` and typed subclasses, `<lr-box-plot>`, `<lr-histogram>`, `<lr-map>`, `<lr-graph>`,
   `<lr-knowledge-graph-explorer>`, `<lr-geojson-viewer>`), which need their own subpath import.
   `<lr-flag>` with `country`/`language` also needs `@aceshooting/lyra-ui/components/media/flag/flag-peer.js` once.
@@ -318,7 +318,7 @@ A per-tag entry can register several elements (`components/lr-table.js` also def
 
 ## Components
 
-All 315 tags appear below: the table lists components mirroring a Web Awesome or Shoelace tag, the lists after it the
+All 316 tags appear below: the table lists components mirroring a Web Awesome or Shoelace tag, the lists after it the
 original ones. Purpose and import path: [`llms/index.md`](./llms/index.md); full APIs: `llms/components/<tag>.md`
 and the [live docs](https://aceshooting.github.io/lyra-ui/).
 
@@ -407,7 +407,7 @@ and the [live docs](https://aceshooting.github.io/lyra-ui/).
 - **Agent runs & observability:** `<lr-agent-run>`, `<lr-agent-workspace>`, `<lr-subagent-panel>`, `<lr-agent-trace>`, `<lr-mcp-app>`, `<lr-prompt-studio>`, `<lr-json-schema-viewer>`, `<lr-tool-timeline>`, `<lr-memory-panel>`, `<lr-policy-summary>`, `<lr-approval-queue>`.
 - **Dashboards & orchestration:** `<lr-dashboard-grid>`, `<lr-filter-bar>`, `<lr-condition-builder>`, `<lr-drilldown-panel>`.
 - **Evaluation:** `<lr-eval-dataset>`, `<lr-eval-run>`, `<lr-eval-result>`, `<lr-agent-eval-dashboard>`.
-- **Overlays:** `<lr-context-menu>`.
+- **Overlays:** `<lr-context-menu>`, `<lr-help>`.
 - **Charts:** `<lr-box-plot>`, `<lr-histogram>`, `<lr-lite-chart>`, `<lr-chart-3d>`.
 - **Map & file-input:** `<lr-map>`, experimental `<lr-map-anchor>`, `<lr-drop-zone>`.
 - **Conversation & Agent UI:** `<lr-chat-message>`, `<lr-message-parts>`, `<lr-chat-viewport>`, `<lr-prompt-input>`, `<lr-prompt-queue>`, `<lr-selection-toolbar>`, `<lr-realtime-session>`, `<lr-message-actions>`, `<lr-message-feedback>`, `<lr-branch-picker>`, `<lr-typing-indicator>`, `<lr-streaming-text>`, `<lr-streaming-text-core>`, `<lr-thinking-panel>`, `<lr-activity-feed>`, `<lr-task-list>`, `<lr-generation-metrics>`, `<lr-stream-status>`, `<lr-checkpoint>`, `<lr-handoff-divider>`, `<lr-code-block>`, `<lr-artifact-panel>`, `<lr-live-region>`, `<lr-chat-composer>`, `<lr-suggestion-chips>`, `<lr-emoji-picker>`, `<lr-attachment-chip>`, `<lr-attachment-trigger>`, `<lr-mention-popover>`, `<lr-tool-call-block>`, `<lr-tool-call-chip>`, `<lr-tool-result-view>`, `<lr-tool-result-dialog>`, `<lr-tool-approval-dialog>`, `<lr-confirm-bar>`, `<lr-tool-param-form>`, `<lr-change-review>`, `<lr-agent-question>`, `<lr-permission-rules>`, `<lr-permission-grant>`, `<lr-connector-manager>`, `<lr-background-runs>`, `<lr-research-progress>`, `<lr-budget-meter>`, `<lr-tool-select-dialog>`, `<lr-command-palette>`, `<lr-widget-renderer>`, `<lr-json-viewer>`, `<lr-citation-badge>`, `<lr-source-list>`, `<lr-source-card>`, `<lr-conversation-item>`, `<lr-virtual-list>`, `<lr-thread-list>`, `<lr-app-rail>`, `<lr-app-rail-item>`, `<lr-app-rail-group>`, `<lr-navigation-menu>`, `<lr-navigation-menu-item>`, `<lr-menubar>`, `<lr-menubar-item>`, `<lr-responsive-panel>`, `<lr-dock-panel>`, `<lr-model-select>`, `<lr-model-settings-panel>`, `<lr-voice-picker>`, `<lr-audio-visualizer>`, `<lr-push-to-talk>`, `<lr-transcript-feed>`, `<lr-context-meter>`, `<lr-usage-badge>`, `<lr-control-group>`, `<lr-reorder-list>`, `<lr-reorder-item>`, `<lr-pan-zoom>`, `<lr-chip>`, `<lr-chip-group>`, `<lr-kbd>`, `<lr-result-card>`, `<lr-result-field>`, `<lr-document-preview>`, `<lr-document-viewer>`, `<lr-svg-viewer>`, `<lr-image-viewer>`, `<lr-highlight-layer>`, `<lr-html-viewer>`, `<lr-xml-viewer>`, `<lr-dataset-viewer>`, `<lr-contact-viewer>`, `<lr-pdf-viewer>`, `<lr-page-rail>`, `<lr-av-player>`, `<lr-notebook-viewer>`, `<lr-spreadsheet-viewer>`, `<lr-csv-viewer>`, `<lr-geojson-viewer>`, `<lr-model-viewer>`, `<lr-docx-viewer>`, `<lr-email-viewer>`, `<lr-calendar-viewer>`, `<lr-archive-viewer>`, `<lr-ebook-viewer>`, `<lr-pptx-viewer>`, `<lr-file-icon>`, `<lr-media-card>`, `<lr-stepper>`, `<lr-segmented>`, `<lr-swatch-picker>`, `<lr-diff-view>`, `<lr-commit-card>`, `<lr-poll-status>`, `<lr-code-block-core>`, `<lr-code-editor>`, `<lr-terminal>`, `<lr-stack-trace>`, `<lr-trace-tree>`, `<lr-span-waterfall>`, `<lr-test-results>`, `<lr-env-list>`, `<lr-file-tree>`, `<lr-browser-frame>`, `<lr-compare-panel>`, `<lr-rubric-form>`, `<lr-calendar>`, `<lr-markdown-core>`.

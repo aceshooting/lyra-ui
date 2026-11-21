@@ -17,7 +17,7 @@ Evidence must include exact commit, complete run status, commands, package total
 ## Current qualification status
 
 No release from 30.0.0 onward has a qualified whole-project statement report. The only recorded
-[evidence](evidence/statement-coverage/d84c7197186615bd35297cd723aef438801d7b7e/README.md) predates
+[evidence](archive/evidence/statement-coverage/d84c7197186615bd35297cd723aef438801d7b7e/README.md) predates
 30.0.0 and retains its recorded source and scope. The final UI Codecov result and remaining
 coverage work are tracked in [test health](roadmap/test-health.md); neither a UI-only report nor
 passing release and focused tests establishes this document's whole-project evidence requirement.

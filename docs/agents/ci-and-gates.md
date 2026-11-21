@@ -753,8 +753,8 @@ supplies the existing keyless signing identity. See the
 This extension applies only to tags whose commit contains the complete-asset workflow. Dispatching
 recovery on an older tag runs the older code; dispatching on `main` to sign that tag remains rejected
 by source binding. Do not rewrite historical tags or claim their unsigned source/standalone assets
-are covered. Demonstrating complete signing requires a future qualified release containing this
-workflow and successful verification of every payload on that release.
+are covered. Releases from `lyra-ui@30.0.0` contain this workflow; complete signing of a release is
+demonstrated only by successful verification of every payload on that release.
 
 Component release history needs a non-shallow clone with tags (`fetch-depth: 0` in every lint
 worker). `history.taggedCurrent` preserves the immutable current-version tag record while the mutable

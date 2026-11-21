@@ -1,4 +1,6 @@
-# Upgrading from v23 to v24
+# Archived: Upgrading from v23 to v24
+
+Moved from packages/lyra-ui/llms/shared/v23-to-v24-migration.md; no longer shipped in the package. The upgrade it describes predates 30.0.0; release notes are in [`docs/changelog/v24.md`](../../../changelog/v24.md).
 
 ## Migration scope
 
@@ -12,7 +14,7 @@ entry points. The nested event-detail compatibility fields below are outside the
 metadata-driven CLI cohort, so migrating their consumers requires event-specific review rather
 than a broad property or event rewrite.
 
-Use the generated [migration reference](../migration.md) for the exact v22 deprecation record,
+Use the generated [migration reference](../../../../packages/lyra-ui/llms/migration.md) for the exact v22 deprecation record,
 replacement and warning by component. Use the focused guides below for the supported import,
 styling, event and SSR contracts; this document is the project cleanup sequence, not a duplicate
 member inventory.
@@ -84,8 +86,8 @@ member inventory.
    Keep utility and shared type imports from the curated package root where documented. Replace an
    obsolete nested registration path with `components/lr-<tag>.js`; use `all.js` only when the page
    intentionally needs the complete browser registration set. Do not replace class imports with
-   registration side effects when code needs a constructor, or vice versa. The [imports guide](./imports-and-registration.md)
-   lists the route shapes and [events and types guide](./events-and-types.md) explains component and
+   registration side effects when code needs a constructor, or vice versa. The [imports guide](../../../../packages/lyra-ui/llms/shared/imports-and-registration.md)
+   lists the route shapes and [events and types guide](../../../../packages/lyra-ui/llms/shared/events-and-types.md) explains component and
    framework type paths.
 5. **Split old combined SSR loading by environment.** `ssr-loader.js` is removed because it
    combined browser hydration support and all registrations. In a hydrating browser, import
@@ -93,7 +95,7 @@ member inventory.
    `components/lr-<tag>.js` registrations (or `all.js`). On the server, use
    `@aceshooting/lyra-ui/ssr.js` for renderer helpers and diagnostics; import
    `@aceshooting/lyra-ui/ssr/all.js` only when the server should register every tag. There is no
-   `server.js` replacement. Follow the [SSR guide](./frameworks-and-ssr.md#ssr-and-declarative-shadow-dom)
+   `server.js` replacement. Follow the [SSR guide](../../../../packages/lyra-ui/llms/shared/frameworks-and-ssr.md#ssr-and-declarative-shadow-dom)
    for renderer order, hydration diagnostics and per-tag SSR behavior.
 6. **Move theme code to the independent style axes.** The old `setLyraTheme()` / `getLyraTheme()`
    facade, preset exports and fixed Shadcn stylesheet are removed. Use `setLyraStyle()`,
@@ -111,7 +113,7 @@ member inventory.
    to match a gemstone name remains a color; choose the explicit named accent only when that is what
    the application means. Listen for `lr-style-change` and read `event.detail.style` and
    `event.detail.changed`. Existing version-1 saved preference records remain readable, but callers
-   must move writes to the v24 style API. See [styles and tokens](./styles-and-tokens.md#composing-looks-surfaces-and-density)
+   must move writes to the v24 style API. See [styles and tokens](../../../../packages/lyra-ui/llms/shared/styles-and-tokens.md#composing-looks-surfaces-and-density)
    for scope, persistence and look registration examples.
 7. **Migrate the event-detail compatibility fields by behavior.** The 44 metadata-backed v24
    member records (27 events, 15 properties and 2 attributes) are a separate cohort from these ten

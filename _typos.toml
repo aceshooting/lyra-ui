@@ -35,6 +35,7 @@ extend-exclude = [
   "CHANGELOG.md",
   "docs/changelog/",
   "docs/evidence/",
+  "docs/archive/evidence/",
   "packages/lyra-flags/THIRD_PARTY_NOTICES.md",
 
   # Public signing-key armor is cryptographic data.

@@ -268,7 +268,7 @@
   comment, respectively; these use the same marker shape as `check-source-policy.mjs`.
 - **Composed-child `exportparts` is on-demand, not blanket.** `::part()` pierces exactly one shadow
   boundary, so a composed `lr-*` child's internals are unreachable unless the parent forwards them.
-  Only ~34 of ~321 composed-child edges forward, and that is deliberate: forwarding invents new
+  Most composed-child edges do not forward, and that is deliberate: forwarding invents new
   permanent public part names, and most composed children are decorative or single-purpose. The rule
   is therefore **forward when the child is the primary surface a consumer must style** — the
   discriminator `lr-document-library` demonstrates by forwarding `row`/`cell`/`header-cell` for its

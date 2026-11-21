@@ -33,7 +33,7 @@ and adapters emit empty JavaScript and do not register elements.
 ## SSR and declarative shadow DOM
 
 When replacing the removed combined `ssr-loader.js` route, split browser hydration from component
-registration and server rendering as shown below. The [v23-to-v24 migration guide](v23-to-v24-migration.md)
+registration and server rendering as shown below. The [archived v23-to-v24 migration guide](https://github.com/aceshooting/lyra-ui/blob/main/docs/archive/llms/shared/v23-to-v24-migration.md)
 has the ordered upgrade steps and environment-specific import mapping.
 
 Root, `all.js`, and granular component imports are server-safe under the supported Node 22+ runtime.

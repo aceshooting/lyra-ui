@@ -114,7 +114,7 @@ pnpm benchmark:compare benchmarks/baselines/baseline.json benchmarks/results/can
 
 ## Save a reviewed baseline
 
-See the [saved baseline notes](baselines/README.md) for the dated stress run and matching workload command.
+The 28.x saved baselines, their notes and matching workload command are [archived](../docs/archive/benchmarks/baselines/README.md).
 
 Default results and temporary artifacts are ignored. To create a deliberately reviewable baseline, choose a new file under `benchmarks/baselines/`, validate it, inspect its workload/environment coverage and commit it explicitly:
 

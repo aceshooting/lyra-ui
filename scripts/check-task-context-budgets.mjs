@@ -45,13 +45,6 @@ export const ROUTES = [
     ],
   },
   {
-    id: 'v23-v24-upgrade',
-    steps: [
-      { path: 'llms.txt', kind: 'full', label: 'entry index' },
-      { path: 'llms/shared/v23-to-v24-migration.md', kind: 'full', label: 'upgrade guide' },
-    ],
-  },
-  {
     id: 'v29-v30-upgrade',
     steps: [
       { path: 'llms.txt', kind: 'full', label: 'entry index' },
