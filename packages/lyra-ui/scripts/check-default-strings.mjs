@@ -31,7 +31,8 @@ import { parseProgram, visitAst } from './lib/ast.mjs';
 // `<lr-graph>` receive `localize` as a forwarding callback whose key parameter is a closed
 // Engine3dMessageKey union (+3); their fallback notices read literal tables and stay decidable.
 // Measured 19 unresolved after resolving local aliases and finite imported callback keys.
-const UNRESOLVED_CEILING = 19;
+// Raised 19 -> 20: `<lr-style-panel>` localizes each look's label key from the shared look table (+1).
+const UNRESOLVED_CEILING = 20;
 
 const componentsRoot = fileURLToPath(new URL('../src/components/', import.meta.url));
 const internalRoot = fileURLToPath(new URL('../src/internal/', import.meta.url));

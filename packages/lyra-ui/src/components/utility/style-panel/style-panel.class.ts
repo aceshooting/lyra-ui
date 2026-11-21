@@ -169,7 +169,7 @@ export class LyraStylePanel extends LyraElement<LyraStylePanelEventMap> {
    * `density` and `accent`. Unknown tokens are dropped; a list with none renders every control.
    * @default 'mode look surface surface-opacity density accent'
    */
-  @property() axes = STYLE_PANEL_AXES.join(' ');
+  @property() axes: string = STYLE_PANEL_AXES.join(' ');
 
   /** The looks the look control offers, in order. Built-in entries show their localized name and
    *  application entries without a `labelKey` show `name`. */

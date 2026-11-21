@@ -145212,7 +145212,7 @@
           {
             "name": "axes",
             "property": "axes",
-            "type": "unknown",
+            "type": "string",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -145263,7 +145263,7 @@
           {
             "name": "axes",
             "attribute": "axes",
-            "type": "unknown",
+            "type": "string",
             "readonly": false,
             "reflects": false,
             "deprecated": null,

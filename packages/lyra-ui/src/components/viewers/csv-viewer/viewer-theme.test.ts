@@ -32,7 +32,7 @@ for (const [name, content, selector, response] of actions) {
       const button = el.shadowRoot!.querySelector<HTMLElement>(selector)!;
       el.style.setProperty('--lr-transition-fast', '0s');
       el.style.setProperty('--lr-transition-interactive', 'none');
-      for (const [state, color] of [['background', 'red'], ['hover-background', 'blue'], ['active-background', 'green']] as const) {
+      for (const [state, color] of [['bg', 'red'], ['hover-bg', 'blue'], ['active-bg', 'green']] as const) {
         el.style.setProperty(`--lr-${name}-viewer-action-${state}`, color);
       }
       await resetMouse();
