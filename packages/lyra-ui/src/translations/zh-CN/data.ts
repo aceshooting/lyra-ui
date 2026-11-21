@@ -45,6 +45,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: '下个月',
   paginationPage: '页',
   paginationJumpToPage: '跳转到第 {page} 页',
+  paginationPageSize: '每页条数',
+  paginationPageSizeOption: '每页 {count} 条',
   paginationInvalidPage: '请输入 1 到 {max} 之间的页码。',
   paginationInvalidPageUnknownTotal: '请输入 1 或更大的整数页码。',
   paginationEmptySummary: '共{total}{itemLabel}',

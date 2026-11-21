@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 23 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 24 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -126,6 +126,16 @@ The pager revalidates the requested page after `lr-before-page-change` returns. 
   (attribute `last-label`) —
   optional accessible-name overrides for the icon-only edge buttons rendered by
   `with-edges`
+- `pageSizeOptions: readonly number[] = []` (JS property only) — opts in to a page-size selector,
+  a native `<select>` (`[part="page-size"]`) after the navigation controls, rendered in `standard`
+  and `compact` formats and in indeterminate mode. Values that are not finite positive integers are
+  dropped, duplicates collapse, and the list sorts ascending; the applied `pageSize` is always
+  offered even when absent from the list. Each option reads the localized `paginationPageSizeOption`
+  message (`"{count} per page"`). Empty, the default, renders no selector and no extra DOM.
+  `hide-single-page` hides the selector together with the rest of the pager
+- `pageSizeLabel?: string` (attribute `page-size-label`) — accessible-name override for the
+  page-size selector; omitted, empty or whitespace-only localizes the `paginationPageSize` message
+  (`"Items per page"`)
 
 Omitting any of those five control-label properties resolves the matching locale message. Any
 non-blank supplied string is an explicit per-instance override and renders verbatim, including the
@@ -152,9 +162,19 @@ intent, and it is otherwise unobservable, because the page buttons and the jump 
 shadow root, so a retargeted `click` names no page and pressing Enter on the jump field produces no
 click at all. When a request _does_ move the page, `lr-before-page-change` and `lr-page-change` are
 emitted first. Link-mode anchors navigate without emitting it.
+`lr-before-page-size-change` (frozen `detail: { page: number, pageSize: number }`, bubbles and
+composes, cancelable) fires when the page-size selector picks a different size; `pageSize` is the
+proposed size and `page` is `floor(((page - 1) * oldSize) / pageSize) + 1`, the page that keeps the
+current first item in view, clamped to the new page count when the total is known. Preventing it,
+or a listener that changes `page` or `pageSize` itself, suppresses the request and restores the
+selector to the applied size. If accepted, `lr-page-size-change` follows with the same frozen detail
+(non-cancelable). Like `page`, `pageSize` stays controlled: the selector keeps showing the applied
+size until the host sets both `pageSize` and `page` from the detail. When the applied `pageSize`
+changes while the selector is shown, the polite region announces it (`"{count} per page"`), followed
+by the usual applied-page announcement when `page` changes too. Focus stays on the selector.
 `focus` and `blur` are re-dispatched as exactly one bubbling, composed native `FocusEvent` from
-whichever internal control the user reached — a page button or link, previous/next, first/last, or
-the page input. The shadow-origin event is stopped, and the host event preserves its native focus
+whichever internal control the user reached — a page button or link, previous/next, first/last,
+the page input, or the page-size selector. The shadow-origin event is stopped, and the host event preserves its native focus
 payload, including `relatedTarget`.
 
 **Methods:** `focus(options?)`, `blur()` and `click()` resolve the primary control for the active
@@ -168,7 +188,9 @@ directional glyph while leaving its localized accessible name on the owning cont
 **CSS parts:** `base` and `pagination` are aliases on the same navigation wrapper; `summary`,
 `controls`, `pages`, `button`, `page`, `page-current`, `ellipsis`,
 `first-button`, `first-icon`, `previous-button`, `previous-icon`, `page-field`, `label`, `page-input`,
-`page-count`, `page-error`, `next-button`, `next-icon`, `last-button`, `last-icon`, `live-region`.
+`page-count`, `page-error`, `next-button`, `next-icon`, `last-button`, `last-icon`, `page-size`,
+`live-region`. `page-size` exists only while `pageSizeOptions` is non-empty and takes the shared
+control fill, border, radius, hover and pressed hooks.
 
 `page-error` is the visible correction message (`paginationInvalidPage`, or
 `paginationInvalidPageUnknownTotal` in indeterminate mode) rendered while the page-jump draft is

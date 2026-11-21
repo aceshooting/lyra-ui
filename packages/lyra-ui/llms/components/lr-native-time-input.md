@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 29 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -61,7 +61,7 @@ and `suffix`. Conditional parts appear only when their associated content or act
 `--lr-form-control-required-offset`, `--lr-input-action-active-bg`,
 `--lr-input-action-active-color`, `--lr-input-action-color`, `--lr-input-action-hover-color`,
 `--lr-input-border-color`, `--lr-input-control-height`, `--lr-input-control-min-height`,
-`--lr-input-fill`, `--lr-input-focus-border-color`, `--lr-input-font-size`, `--lr-input-gap`,
+`--lr-input-fill`, `--lr-input-focus-border-color`, `--lr-input-font-family`, `--lr-input-font-size`, `--lr-input-gap`,
 `--lr-input-padding-block`, `--lr-input-padding-inline`, `--lr-input-placeholder-color`,
 `--lr-input-radius`, `--lr-input-time-picker-active-bg`, `--lr-input-time-picker-focus-bg`,
 `--lr-input-time-picker-focus-ring`, and `--lr-input-time-picker-hover-bg`, with the same meanings

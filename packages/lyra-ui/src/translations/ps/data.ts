@@ -47,6 +47,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'راتلونکې میاشت',
   paginationPage: 'پاڼه',
   paginationJumpToPage: '{page} پاڼې ته ورټوپ کول',
+  paginationPageSize: 'په هره پاڼه کې توکي',
+  paginationPageSizeOption: 'په هره پاڼه کې {count}',
   paginationInvalidPage: 'له 1 څخه تر {max} پورې پاڼه ولیکئ.',
   paginationInvalidPageUnknownTotal: 'د 1 یا ډېر یو بشپړ پاڼې شمېره ولیکئ.',
   paginationEmptySummary: '{total} {itemLabel}',

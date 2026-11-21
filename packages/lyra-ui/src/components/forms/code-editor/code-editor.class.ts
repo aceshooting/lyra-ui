@@ -108,6 +108,8 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * @csspart error - Validation message.
  * @cssprop [--lr-code-editor-min-block-size=var(--lr-size-8rem)] - Minimum block size of the editor frame and its textarea. Comes from the active `size` tier by default; assign it directly to override that tier's value.
  * @cssprop [--lr-code-editor-padding=var(--lr-form-control-padding-inline)] - Padding of the gutter (block side only) and the textarea (all sides), from the active `size` tier.
+ * @cssprop [--lr-code-editor-font-family=var(--lr-font-mono)] - Font family of the gutter's line numbers, the
+ * measuring layer and the textarea, so all three keep the same glyph metrics.
  * @cssprop [--lr-code-editor-font-size=var(--lr-form-control-font-size)] - Font size of the gutter's line numbers and the textarea, from the active `size` tier.
  * @cssprop [--lr-code-editor-line-height=1.5] - Line height shared by the gutter and the textarea, so line numbers stay aligned with their lines.
  * @cssprop [--lr-code-editor-tab-size=2] - The textarea's `tab-size`. The single channel for tab width — the class writes this token rather than setting `tab-size` directly.

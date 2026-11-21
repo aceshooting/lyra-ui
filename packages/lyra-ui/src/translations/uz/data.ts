@@ -47,6 +47,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Keyingi oy',
   paginationPage: 'Sahifa',
   paginationJumpToPage: '{page}-sahifaga oʻtish',
+  paginationPageSize: 'Har sahifadagi elementlar',
+  paginationPageSizeOption: 'Sahifada {count} tadan',
   paginationInvalidPage: '1 dan {max} gacha sahifa kiriting.',
   paginationInvalidPageUnknownTotal: '1 yoki undan katta butun sahifa raqamini kiriting.',
   paginationEmptySummary: '{total} {itemLabel}',

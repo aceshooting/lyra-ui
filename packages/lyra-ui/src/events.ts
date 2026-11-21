@@ -526,6 +526,12 @@ export type LyraBeforePageChangeEvent =
   | LyraPaginationEventMap['lr-before-page-change'];
 
 /**
+ * `lr-before-page-size-change` — dispatched by `<lr-pagination>`; detail
+ * `LyraPaginationEventMap['lr-before-page-size-change']`.
+ */
+export type LyraBeforePageSizeChangeEvent = LyraPaginationEventMap['lr-before-page-size-change'];
+
+/**
  * `lr-branch-change` — dispatched by `<lr-branch-picker>`; detail
  * `LyraBranchPickerEventMap['lr-branch-change']`.
  */
@@ -2412,6 +2418,12 @@ export type LyraPageRequestEvent = LyraTableEventMap['lr-page-request'];
 export type LyraPageSelectEvent = LyraPageRailEventMap['lr-page-select'];
 
 /**
+ * `lr-page-size-change` — dispatched by `<lr-pagination>`; detail
+ * `LyraPaginationEventMap['lr-page-size-change']`.
+ */
+export type LyraPageSizeChangeEvent = LyraPaginationEventMap['lr-page-size-change'];
+
+/**
  * `lr-page-viewer-state-change` — dispatched by 3 components: `<lr-document-viewer>`,
  * `<lr-pdf-viewer>`, `<lr-pptx-viewer>`; detail union of 3, e.g.
  * `LyraDocumentViewerEventMap['lr-page-viewer-state-change']`.
@@ -3999,6 +4011,7 @@ export interface LyraGlobalEventMap {
   'lr-autoload-preload': LyraAutoloadPreloadEvent;
   'lr-autoload-traversal-error': LyraAutoloadTraversalErrorEvent;
   'lr-before-page-change': LyraBeforePageChangeEvent;
+  'lr-before-page-size-change': LyraBeforePageSizeChangeEvent;
   'lr-branch-change': LyraBranchChangeEvent;
   'lr-bulk-toggle': LyraBulkToggleEvent;
   'lr-calendar-geometry-change': LyraCalendarGeometryChangeEvent;
@@ -4235,6 +4248,7 @@ export interface LyraGlobalEventMap {
   'lr-page-change': LyraPageChangeEvent;
   'lr-page-request': LyraPageRequestEvent;
   'lr-page-select': LyraPageSelectEvent;
+  'lr-page-size-change': LyraPageSizeChangeEvent;
   'lr-page-viewer-state-change': LyraPageViewerStateChangeEvent;
   'lr-palette-place': LyraPalettePlaceEvent;
   'lr-panorama-camera-change': LyraPanoramaCameraChangeEvent;

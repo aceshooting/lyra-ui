@@ -51,6 +51,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Kitas mėnuo',
   paginationPage: 'Puslapis',
   paginationJumpToPage: 'Pereiti į {page} puslapį',
+  paginationPageSize: 'Elementų puslapyje',
+  paginationPageSizeOption: '{count} puslapyje',
   paginationInvalidPage: 'Įveskite puslapį nuo 1 iki {max}.',
   paginationInvalidPageUnknownTotal: 'Įveskite sveikąjį puslapio numerį, ne mažesnį kaip 1.',
   paginationEmptySummary: '{total} {itemLabel}',

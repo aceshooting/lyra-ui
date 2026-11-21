@@ -754,9 +754,24 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       // A tab's name comes from its own label text, not from whether the group is currently
       // displayed; without this a hidden group falls back to the bare panel id.
       ignoreInheritedVisibility: true,
+      // The native rendered-layout check fails for every element under a `display: none`
+      // ancestor of the group, so a group mounted hidden named a rich label by its panel key and
+      // kept that name once shown. Apply it only while the group itself renders; author exclusion
+      // (`hidden`, `aria-hidden`, `inert`, own `display: none`/`content-visibility: hidden`) is
+      // pruned by the subtree predicate either way.
+      requireRendered: this.isHostRendered(),
     })
       .replace(/\s+/g, ' ')
       .trim();
+  }
+
+  /** Whether this group participates in rendered layout, so a descendant's native render check
+   *  reflects its own state rather than an unrendered ancestor outside the group. */
+  private isHostRendered(): boolean {
+    const host = this as HTMLElement & {
+      checkVisibility?: (options?: { contentVisibilityAuto?: boolean }) => boolean;
+    };
+    return typeof host.checkVisibility !== 'function' || host.checkVisibility();
   }
 
   private libraryOwnsSourceInert(element: Element): boolean {

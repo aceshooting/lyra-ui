@@ -53,6 +53,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'An chéad mhí eile',
   paginationPage: 'Leathanach',
   paginationJumpToPage: 'Léim go leathanach {page}',
+  paginationPageSize: 'Míreanna in aghaidh an leathanaigh',
+  paginationPageSizeOption: '{count} in aghaidh an leathanaigh',
   paginationInvalidPage: 'Cuir isteach leathanach ó 1 go {max}.',
   paginationInvalidPageUnknownTotal: 'Cuir isteach uimhir leathanaigh slánuimhir 1 nó níos mó.',
   paginationEmptySummary: '{total} {itemLabel}',

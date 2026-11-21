@@ -85,6 +85,7 @@ export const styles = css`
     background: var(--lr-textarea-fill, var(--_lr-textarea-fill));
     color: var(--lr-color-text);
     font: inherit;
+    font-family: var(--lr-textarea-font-family, inherit);
     font-size: var(--lr-textarea-font-size, var(--_lr-textarea-font-size));
     line-height: var(--lr-line-height-normal);
     /* Hover below only repaints border-color, so that is all this needs; without it this field's

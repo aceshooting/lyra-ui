@@ -47,6 +47,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Mwezi ujao',
   paginationPage: 'Ukurasa',
   paginationJumpToPage: 'Nenda kwenye ukurasa {page}',
+  paginationPageSize: 'Vipengee kwa kila ukurasa',
+  paginationPageSizeOption: '{count} kwa kila ukurasa',
   paginationInvalidPage: 'Weka ukurasa kuanzia 1 hadi {max}.',
   paginationInvalidPageUnknownTotal: 'Weka nambari kamili ya ukurasa ya 1 au zaidi.',
   paginationEmptySummary: '{total} {itemLabel}',

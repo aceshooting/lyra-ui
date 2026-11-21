@@ -47,6 +47,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Seuraava kuukausi',
   paginationPage: 'Sivu',
   paginationJumpToPage: 'Siirry sivulle {page}',
+  paginationPageSize: 'Kohteita sivulla',
+  paginationPageSizeOption: '{count} sivulla',
   paginationInvalidPage: 'Anna sivu väliltä 1–{max}.',
   paginationInvalidPageUnknownTotal: 'Anna kokonaisluku sivunumeroksi (vähintään 1).',
   paginationEmptySummary: '{total} {itemLabel}',

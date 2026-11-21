@@ -223,6 +223,8 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   paginationLabel: 'Pagination',
   paginationPage: 'Page',
   paginationJumpToPage: 'Jump to page {page}',
+  paginationPageSize: 'Items per page',
+  paginationPageSizeOption: '{count} per page',
   paginationInvalidPage: 'Enter a page from 1 to {max}.',
   paginationInvalidPageUnknownTotal: 'Enter a whole page number of 1 or more.',
   branchPickerLabel: 'Response versions',

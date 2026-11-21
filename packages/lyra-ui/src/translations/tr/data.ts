@@ -47,6 +47,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Sonraki ay',
   paginationPage: 'Sayfa',
   paginationJumpToPage: '{page}. sayfaya git',
+  paginationPageSize: 'Sayfa başına öğe',
+  paginationPageSizeOption: 'Sayfa başına {count}',
   paginationInvalidPage: '1 ile {max} arasında bir sayfa girin.',
   paginationInvalidPageUnknownTotal: '1 veya daha büyük bir tam sayfa numarası girin.',
   paginationEmptySummary: '{total} {itemLabel}',

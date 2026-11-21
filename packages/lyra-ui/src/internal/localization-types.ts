@@ -244,6 +244,8 @@ export type LyraMessageKey =
   | 'paginationLabel'
   | 'paginationPage'
   | 'paginationJumpToPage'
+  | 'paginationPageSize'
+  | 'paginationPageSizeOption'
   | 'paginationInvalidPage'
   | 'paginationInvalidPageUnknownTotal'
   | 'branchPickerLabel'

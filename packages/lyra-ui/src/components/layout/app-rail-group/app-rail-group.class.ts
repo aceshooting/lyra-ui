@@ -21,6 +21,12 @@ export interface LyraAppRailGroupToggleDetail {
   expanded: boolean;
 }
 
+/** Which element paints a collapsible group's hover, focus and press fills. */
+export type LyraAppRailGroupHighlight = 'toggle' | 'header';
+
+/** When `[part="header-actions"]` is shown. */
+export type LyraAppRailGroupHeaderActionsReveal = 'always' | 'hover';
+
 export interface LyraAppRailGroupEventMap {
   'lr-toggle-request': CustomEvent<LyraAppRailGroupToggleDetail>;
   'lr-toggle': CustomEvent<LyraAppRailGroupToggleDetail>;
@@ -72,7 +78,8 @@ export interface LyraAppRailGroupEventMap {
  *   `collapsed` is written, and never emitted for a vetoed or listener-resolved request.
  *   `detail: LyraAppRailGroupToggleDetail` — `expanded` is the settled state.
  * @csspart base - The `role="group"` container.
- * @csspart header - The row holding the heading and any header actions.
+ * @csspart header - The row holding the heading and any header actions. With `collapsible` and
+ *   `highlight="header"` it paints the hover, focus and press fills behind both.
  * @csspart heading - The heading landmark. Carries `role="heading"` and `aria-level`.
  * @csspart heading-text - The wrapper around the heading text/slot; visually clipped while
  *   `icon-only`, keeping the group's accessible name intact.
@@ -100,6 +107,10 @@ export interface LyraAppRailGroupEventMap {
  *   same brand-quiet active mix the rest of the rail uses.
  * @cssprop [--lr-app-rail-group-active-color=var(--lr-color-brand)] - Collapse-control pressed
  *   foreground.
+ * @cssprop [--lr-app-rail-group-header-hover-bg=var(--lr-app-rail-group-hover-bg)] - `[part="header"]`'s
+ *   fill while hovered or holding focus, with `collapsible` and `highlight="header"`.
+ * @cssprop [--lr-app-rail-group-header-active-bg=var(--lr-app-rail-group-active-bg)] - `[part="header"]`'s
+ *   fill while the collapse control is pressed, with `collapsible` and `highlight="header"`.
  *
  * @example
  * ```html
@@ -150,6 +161,20 @@ export class LyraAppRailGroup extends LyraElement<LyraAppRailGroupEventMap> {
    *  renders, so a consumer can drive collapse entirely from its own chrome without opting in
    *  here. */
   @property({ type: Boolean, reflect: true }) collapsible = false;
+
+  /** Which element paints a collapsible group's hover, focus and press fills. `toggle` (the
+   *  default) paints only the collapse control. `header` paints `[part="header"]` instead, so one
+   *  fill covers the collapse control and `header-actions` alike while the header is hovered or
+   *  holds focus; the actions stay outside the collapse button. No effect without `collapsible`.
+   *  An unrecognized value behaves as `toggle`. */
+  @property({ reflect: true }) highlight: LyraAppRailGroupHighlight = 'toggle';
+
+  /** When `[part="header-actions"]` is shown. `always` (the default) keeps it visible. `hover`
+   *  fades it in only while the header is hovered or holds focus; it keeps its space and stays in
+   *  the focus order, so a keyboard user tabbing to an action reveals it. Devices without a
+   *  hovering pointer always show it. An unrecognized value behaves as `always`. */
+  @property({ attribute: 'header-actions-reveal', reflect: true })
+  headerActionsReveal: LyraAppRailGroupHeaderActionsReveal = 'always';
 
   /** Whether the group's content is hidden. `false` by default — a nav section that hid itself on
    *  first paint would be the surprising default.

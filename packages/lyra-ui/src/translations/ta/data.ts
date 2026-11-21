@@ -47,6 +47,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'அடுத்த மாதம்',
   paginationPage: 'பக்கம்',
   paginationJumpToPage: 'பக்கம் {page}-க்குச் செல்',
+  paginationPageSize: 'ஒரு பக்கத்திற்கான உருப்படிகள்',
+  paginationPageSizeOption: 'ஒரு பக்கத்திற்கு {count}',
   paginationInvalidPage: '1 முதல் {max} வரையிலான பக்கத்தை உள்ளிடவும்.',
   paginationInvalidPageUnknownTotal: '1 அல்லது அதற்கு மேற்பட்ட முழு பக்க எண்ணை உள்ளிடவும்.',
   paginationEmptySummary: '{total} {itemLabel}',

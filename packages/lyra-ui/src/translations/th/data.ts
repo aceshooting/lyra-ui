@@ -45,6 +45,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'เดือนถัดไป',
   paginationPage: 'หน้า',
   paginationJumpToPage: 'ไปยังหน้า {page}',
+  paginationPageSize: 'จำนวนรายการต่อหน้า',
+  paginationPageSizeOption: '{count} รายการต่อหน้า',
   paginationInvalidPage: 'กรอกหน้าตั้งแต่ 1 ถึง {max}',
   paginationInvalidPageUnknownTotal: 'กรอกหมายเลขหน้าเป็นจำนวนเต็มตั้งแต่ 1 ขึ้นไป',
   paginationEmptySummary: '{total} {itemLabel}',

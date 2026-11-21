@@ -45,6 +45,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: '次の月',
   paginationPage: 'ページ',
   paginationJumpToPage: '{page}ページに移動',
+  paginationPageSize: '1ページあたりの項目数',
+  paginationPageSizeOption: '1ページ{count}件',
   paginationInvalidPage: '1 から {max} までのページを入力してください。',
   paginationInvalidPageUnknownTotal: '1 以上の整数のページ番号を入力してください。',
   paginationEmptySummary: '{total} {itemLabel}',

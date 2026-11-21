@@ -47,6 +47,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Επόμενος μήνας',
   paginationPage: 'Σελίδα',
   paginationJumpToPage: 'Μετάβαση στη σελίδα {page}',
+  paginationPageSize: 'Στοιχεία ανά σελίδα',
+  paginationPageSizeOption: '{count} ανά σελίδα',
   paginationInvalidPage: 'Εισαγάγετε μια σελίδα από 1 έως {max}.',
   paginationInvalidPageUnknownTotal: 'Εισαγάγετε έναν ακέραιο αριθμό σελίδας 1 ή μεγαλύτερο.',
   paginationEmptySummary: '{total} {itemLabel}',

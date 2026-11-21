@@ -384,6 +384,80 @@ export const styles = css`
   [part="page-input"]:where([aria-invalid="true"]) {
     border-color: var(--lr-pagination-invalid-border, var(--lr-color-danger));
   }
+  .page-size-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
+  [part="page-size"] {
+    box-sizing: border-box;
+    block-size: max(
+      var(--lr-pagination-control-size, var(--_lr-pagination-control-size)),
+      var(--lr-icon-button-size)
+    );
+    min-block-size: var(--lr-icon-button-size);
+    min-inline-size: var(--lr-icon-button-size);
+    padding-block: 0;
+    padding-inline: var(--lr-space-s) var(--lr-space-l);
+    border: var(--lr-border-width-thin) solid
+      var(
+        --lr-pagination-control-border-color,
+        var(--_lr-pagination-control-border-color-default)
+      );
+    border-radius: var(
+      --lr-pagination-control-radius,
+      var(--_lr-pagination-control-radius)
+    );
+    background: var(
+      --lr-pagination-control-bg,
+      var(--_lr-pagination-control-bg-default)
+    );
+    color: var(--lr-pagination-control-color, var(--lr-color-text));
+    font: inherit;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+    transition: background-color var(--lr-transition-fast), border-color var(--lr-transition-fast);
+  }
+  [part="page-size"] option {
+    background: var(--lr-color-surface);
+    color: var(--lr-color-text);
+  }
+  /* Hover and press after the resting rule, at its (0,1,0) once :where() zeroes the state. */
+  [part="page-size"]:where(:hover):where(:not(:disabled)) {
+    background: var(--lr-pagination-hover-bg, var(--lr-color-brand-quiet));
+    border-color: var(
+      --lr-pagination-hover-border-color,
+      var(--lr-color-brand)
+    );
+  }
+  [part="page-size"]:where(:active):where(:not(:disabled)) {
+    background: var(
+      --lr-pagination-active-bg,
+      ${activeFill('var(--lr-color-brand-quiet)')}
+    );
+    border-color: var(
+      --lr-pagination-active-border-color,
+      var(--lr-color-brand)
+    );
+  }
+  [part="page-size"]:where(:focus-visible) {
+    ${focusRing}
+  }
+  [part="page-size"]:where(:disabled) {
+    ${disabledControl}
+  }
+  .page-size-chevron {
+    position: absolute;
+    inset-inline-end: var(--lr-space-xs);
+    display: inline-flex;
+    color: var(--lr-color-text-quiet);
+    line-height: var(--lr-line-height-none);
+    pointer-events: none;
+  }
+  .page-size-chevron svg {
+    transform: rotate(90deg);
+  }
   [part="page-error"] {
     color: var(--lr-color-danger);
     font-size: var(--lr-font-size-sm);

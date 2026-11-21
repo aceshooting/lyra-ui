@@ -47,6 +47,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Келесі ай',
   paginationPage: 'Бет',
   paginationJumpToPage: 'Бетке өту: {page}',
+  paginationPageSize: 'Беттегі элементтер',
+  paginationPageSizeOption: 'Бетіне {count}',
   paginationInvalidPage: '1 мен {max} аралығындағы бетті енгізіңіз.',
   paginationInvalidPageUnknownTotal: '1 немесе одан үлкен бүтін бет нөмірін енгізіңіз.',
   paginationEmptySummary: '{total} {itemLabel}',

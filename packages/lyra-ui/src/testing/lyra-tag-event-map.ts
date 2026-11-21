@@ -630,7 +630,7 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-number-input': { 'lr-invalid': true },
   'lr-otp-input': { 'lr-complete': true, 'lr-invalid': true },
   'lr-page': { 'lr-nav-toggle-request': true },
-  'lr-pagination': { 'lr-before-page-change': true },
+  'lr-pagination': { 'lr-before-page-change': true, 'lr-before-page-size-change': true },
   'lr-permission-rules': { 'lr-permission-rule-change-request': true },
   'lr-phone-input': { 'lr-invalid': true },
   'lr-pie-chart': { 'lr-datum-visibility-change-request': true, 'lr-legend-visibility-change-request': true },

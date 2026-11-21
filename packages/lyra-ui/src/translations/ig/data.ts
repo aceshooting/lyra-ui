@@ -45,6 +45,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Ọnwa na-abịa',
   paginationPage: 'Peeji',
   paginationJumpToPage: 'Gaa na peeji {page}',
+  paginationPageSize: 'Ihe kwa peeji',
+  paginationPageSizeOption: '{count} kwa peeji',
   paginationInvalidPage: 'Tinye peeji site na 1 ruo {max}.',
   paginationInvalidPageUnknownTotal: 'Tinye nọmba peeji zuru ezu nke 1 ma ọ bụ karịa.',
   paginationEmptySummary: '{total} {itemLabel}',

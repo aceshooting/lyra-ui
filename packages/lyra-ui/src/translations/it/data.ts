@@ -49,6 +49,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Mese successivo',
   paginationPage: 'Pagina',
   paginationJumpToPage: 'Vai alla pagina {page}',
+  paginationPageSize: 'Elementi per pagina',
+  paginationPageSizeOption: '{count} per pagina',
   paginationInvalidPage: 'Inserisci una pagina da 1 a {max}.',
   paginationInvalidPageUnknownTotal: 'Inserisci un numero di pagina intero pari o superiore a 1.',
   paginationEmptySummary: '{total} {itemLabel}',

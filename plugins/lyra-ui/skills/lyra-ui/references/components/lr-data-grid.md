@@ -107,6 +107,7 @@ changing borrowed row content or callback-dependent external state in place.
 - `pageSize: number = 20` (`page-size`).
 - `pageSizeOptions: readonly number[] = [10, 20, 50, 100]` (JS-only). A finite current `pageSize`
   absent from this list is still inserted into the selector, keeping visible and IDL state aligned.
+  The selector lists the finite positive integers only, de-duplicated and sorted ascending.
 - `paginate: boolean = false` (`paginate`, reflected).
 - `pinnable: boolean = false` (`pinnable`, reflected).
 - `reorderable: boolean = false` (`reorderable`, reflected).

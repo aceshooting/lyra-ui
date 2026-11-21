@@ -2305,6 +2305,8 @@ With no label text the part is hidden and no glyph is painted.
   so their private defaults follow the tier; the two tightest tiers take a smaller radius. Public
   values inherited from an ancestor or set directly on the host win in every tier. `pill` changes
   the private `--lr-textarea-radius` default to `--lr-radius-pill`.
+- `--lr-textarea-font-family` (default `inherit`) — the native textarea's font family, for example
+  `var(--lr-font-mono)` for a code-like field; the label, hint and counter keep the host font.
 - `--lr-textarea-fill` (default `var(--lr-color-surface)`) and `--lr-textarea-border-color` (default
   `var(--lr-color-border)`) — the field's background and border color, whose private defaults
   change per `appearance` rather than per `size`. The documented defaults are
@@ -3137,6 +3139,8 @@ no glyph is painted.
 `--lr-input-font-size`, `--lr-input-control-min-height` — all four have private defaults that follow
 `size` (`2xs`…`xl`), while inherited or direct public values remain authoritative; the same pattern
 `lr-select`'s `--lr-select-trigger-padding`/`--lr-select-font-size` use.
+`--lr-input-font-family` (default `inherit`) sets only the native input's font family, leaving
+the label and hint on the host font.
 `--lr-input-control-height` pins an **exact** outer control-row height (both floors and caps it) —
 for example to pixel-match an `<lr-select>` or `<lr-combobox>` in the same toolbar row. It is
 undeclared by default, leaving `--lr-input-control-min-height` as a floor only and the row free to
@@ -3507,9 +3511,9 @@ component ever renders.
 
 **Themeable custom properties:** inherited from `lr-input`, identical in meaning —
 `--lr-input-control-min-height`, `--lr-input-control-height`, `--lr-input-padding-block`,
-`--lr-input-padding-inline`, `--lr-input-font-size`, `--lr-input-gap`, `--lr-input-radius`,
+`--lr-input-padding-inline`, `--lr-input-font-family`, `--lr-input-font-size`, `--lr-input-gap`, `--lr-input-radius`,
 `--lr-input-fill`, and `--lr-input-border-color` (all
-but `--lr-input-control-height` and `--lr-input-gap` follow the active `size` tier;
+but `--lr-input-control-height`, `--lr-input-font-family` (default `inherit`) and `--lr-input-gap` follow the active `size` tier;
 `--lr-input-control-height` stays undeclared until you pin an exact
 row height, `--lr-input-fill`/`--lr-input-border-color` swap per `appearance` instead of per tier,
 and `--lr-input-gap` — like `--lr-button-gap` — is constant across the ladder). The steppers take their font size from `--lr-input-font-size` and their
@@ -3812,7 +3816,7 @@ and `suffix`. Conditional parts appear only when their associated content or act
 `--lr-form-control-required-offset`, `--lr-input-action-active-bg`,
 `--lr-input-action-active-color`, `--lr-input-action-color`, `--lr-input-action-hover-color`,
 `--lr-input-border-color`, `--lr-input-control-height`, `--lr-input-control-min-height`,
-`--lr-input-fill`, `--lr-input-focus-border-color`, `--lr-input-font-size`, `--lr-input-gap`,
+`--lr-input-fill`, `--lr-input-focus-border-color`, `--lr-input-font-family`, `--lr-input-font-size`, `--lr-input-gap`,
 `--lr-input-padding-block`, `--lr-input-padding-inline`, `--lr-input-placeholder-color`,
 `--lr-input-radius`, `--lr-input-time-picker-active-bg`, `--lr-input-time-picker-focus-bg`,
 `--lr-input-time-picker-focus-ring`, and `--lr-input-time-picker-hover-bg`, with the same meanings
@@ -6514,7 +6518,9 @@ With no label text the element is hidden and no glyph is painted.
 frame's and textarea's height floor), `--lr-code-editor-padding` (default `--lr-form-control-padding-inline`, the
 gutter's block-side padding and the textarea's all-side padding), and `--lr-code-editor-font-size`
 (default `--lr-form-control-font-size`, the gutter's and textarea's font size) — all three come from the active
-`size` tier by default, and assigning one directly overrides that tier's value. Also
+`size` tier by default, and assigning one directly overrides that tier's value.
+`--lr-code-editor-font-family` (default `var(--lr-font-mono)`) sets the gutter's, measuring layer's and
+textarea's font family together so line numbers keep the text's metrics. Also
 `--lr-code-editor-line-height` (default `1.5`, applied to both gutter and textarea so line numbers
 stay aligned with their lines).
 `--lr-code-editor-tab-size` (default `2`) is read by the `textarea` part's rule and drives both the

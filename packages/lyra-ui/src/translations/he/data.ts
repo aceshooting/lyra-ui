@@ -49,6 +49,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'החודש הבא',
   paginationPage: 'עמוד',
   paginationJumpToPage: 'עבור לעמוד {page}',
+  paginationPageSize: 'פריטים בעמוד',
+  paginationPageSizeOption: '{count} בעמוד',
   paginationInvalidPage: 'הזן עמוד מ-1 עד {max}.',
   paginationInvalidPageUnknownTotal: 'הזן מספר עמוד שלם, 1 או יותר.',
   paginationEmptySummary: '{total} {itemLabel}',

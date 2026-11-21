@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 23 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 23 parts, 29 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -158,9 +158,9 @@ component ever renders.
 
 **Themeable custom properties:** inherited from `lr-input`, identical in meaning —
 `--lr-input-control-min-height`, `--lr-input-control-height`, `--lr-input-padding-block`,
-`--lr-input-padding-inline`, `--lr-input-font-size`, `--lr-input-gap`, `--lr-input-radius`,
+`--lr-input-padding-inline`, `--lr-input-font-family`, `--lr-input-font-size`, `--lr-input-gap`, `--lr-input-radius`,
 `--lr-input-fill`, and `--lr-input-border-color` (all
-but `--lr-input-control-height` and `--lr-input-gap` follow the active `size` tier;
+but `--lr-input-control-height`, `--lr-input-font-family` (default `inherit`) and `--lr-input-gap` follow the active `size` tier;
 `--lr-input-control-height` stays undeclared until you pin an exact
 row height, `--lr-input-fill`/`--lr-input-border-color` swap per `appearance` instead of per tier,
 and `--lr-input-gap` — like `--lr-button-gap` — is constant across the ladder). The steppers take their font size from `--lr-input-font-size` and their

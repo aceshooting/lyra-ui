@@ -18,9 +18,10 @@ import { safeLinkHref } from '../../../internal/safe-url.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
 import { repairControlFocusOnUpdate } from '../../../internal/control-focus-repair.js';
+import { pageSizeChoices, remapPageForSize } from '../../../internal/page-size.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_paginationAppliedUnknownTotal, LYRA_DEFAULT_paginationEmptySummary, LYRA_DEFAULT_paginationInvalidPage, LYRA_DEFAULT_paginationInvalidPageUnknownTotal, LYRA_DEFAULT_paginationJumpToPage, LYRA_DEFAULT_paginationPage } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_paginationAppliedUnknownTotal, LYRA_DEFAULT_paginationEmptySummary, LYRA_DEFAULT_paginationInvalidPage, LYRA_DEFAULT_paginationInvalidPageUnknownTotal, LYRA_DEFAULT_paginationJumpToPage, LYRA_DEFAULT_paginationPage, LYRA_DEFAULT_paginationPageSize, LYRA_DEFAULT_paginationPageSizeOption } from '../../../internal/default-strings/data.generated.js';
 import { LYRA_DEFAULT_items, LYRA_DEFAULT_next, LYRA_DEFAULT_paginationApplied, LYRA_DEFAULT_paginationFirstPage, LYRA_DEFAULT_paginationLabel, LYRA_DEFAULT_paginationLastPage, LYRA_DEFAULT_paginationSummary, LYRA_DEFAULT_previous } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -37,6 +38,8 @@ export interface LyraPaginationChangeDetail {
 export interface LyraPaginationEventMap {
   'lr-before-page-change': CustomEvent<LyraPaginationChangeDetail>;
   'lr-page-change': CustomEvent<LyraPaginationChangeDetail>;
+  'lr-before-page-size-change': CustomEvent<LyraPaginationChangeDetail>;
+  'lr-page-size-change': CustomEvent<LyraPaginationChangeDetail>;
   'lr-activate': CustomEvent<{ value: number }>;
   blur: FocusEvent;
   focus: FocusEvent;
@@ -178,6 +181,15 @@ function paginationItems(
  *   on the jump field produces no click. When a request does move the page,
  *   `lr-before-page-change` and `lr-page-change` are emitted first. Link-mode anchors navigate
  *   without emitting.
+ * @event lr-before-page-size-change - Fired before a page-size selector request (rendered only
+ *   when `pageSizeOptions` is non-empty). `detail: { page, pageSize }` carries the proposed size
+ *   and the page that keeps the current first item in view. Cancelable; vetoing it suppresses
+ *   `lr-page-size-change` and restores the selector to the applied size.
+ * @event lr-page-size-change - Fired when the page-size selector requests a different size.
+ *   `detail: { page, pageSize }`, where `page` is `floor(((page - 1) * oldSize) / pageSize) + 1`,
+ *   clamped to the new page count when the total is known. The component remains controlled: it
+ *   mutates neither `pageSize` nor `page`, and the selector keeps showing the applied size until
+ *   the consumer sets both.
  * @slot first-icon - Replacement for the first-page icon.
  * @slot previous-icon - Replacement for the previous-page icon.
  * @slot next-icon - Replacement for the next-page icon.
@@ -205,6 +217,8 @@ function paginationItems(
  * @csspart page-count - The total page count shown after the input (`format="compact"`).
  * @csspart page-error - The visible correction message for an out-of-range or non-integer page-jump
  *   draft; it describes the input, and committing that draft also announces it politely.
+ * @csspart page-size - The native page-size `<select>`, rendered after the navigation controls
+ *   only while `pageSizeOptions` is non-empty, in every format including indeterminate mode.
  * @csspart next-button - The next-page button.
  * @csspart next-icon - The next-page directional icon.
  * @csspart last-button - The last-page button, rendered with `with-edges`.
@@ -270,6 +284,8 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     paginationLabel: LYRA_DEFAULT_paginationLabel,
     paginationLastPage: LYRA_DEFAULT_paginationLastPage,
     paginationPage: LYRA_DEFAULT_paginationPage,
+    paginationPageSize: LYRA_DEFAULT_paginationPageSize,
+    paginationPageSizeOption: LYRA_DEFAULT_paginationPageSizeOption,
     paginationSummary: LYRA_DEFAULT_paginationSummary,
     previous: LYRA_DEFAULT_previous,
   };
@@ -337,6 +353,26 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   /** Resting look of every control. The applied page stays a solid brand chip in all of them, so
    *  it is never the appearance that decides whether the current page is identifiable. */
   @property({ reflect: true }) appearance: LyraAppearance = 'outlined';
+
+  private _pageSizeOptions: readonly number[] = Object.freeze([]);
+  /** Page sizes offered by an opt-in page-size selector. JS property only. Values that are not
+   *  finite positive integers are dropped, duplicates collapse and the list sorts ascending; the
+   *  applied `pageSize` is always offered even when absent. Empty (the default) renders no selector.
+   * @default [] */
+  @property({ attribute: false })
+  get pageSizeOptions(): readonly number[] {
+    return this._pageSizeOptions;
+  }
+  set pageSizeOptions(value: readonly number[]) {
+    const previous = this._pageSizeOptions;
+    const next = Object.freeze(pageSizeChoices(value, 0));
+    if (next.length === previous.length && next.every((size, index) => size === previous[index])) return;
+    this._pageSizeOptions = next;
+    this.requestUpdate('pageSizeOptions', previous);
+  }
+  /** Accessible-name override for the page-size selector. Omitting it, or an empty or
+   *  whitespace-only value, localizes the `paginationPageSize` message. */
+  @property({ attribute: 'page-size-label' }) pageSizeLabel?: string;
 
   /** Optional item noun used in the summary. Empty uses the localized `item`/`items` keys. */
   @property({ attribute: 'item-label' }) itemLabel = '';
@@ -539,6 +575,11 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
       this.draftPage = this.hasPages ? String(this.currentPage) : '';
       this.invalidDraft = false;
     }
+    if (this.initialized && changed.has('pageSize') && this.pageSizeOptions.length > 0 && this.normalizedPageSize > 0) {
+      // Same contract as an applied page: announced once the controlled value changes.
+      this.liveText = this.pageSizeOptionText(this.normalizedPageSize);
+      this.sink.announcePolite(this.liveText);
+    }
     if (this.initialized && changed.has('page') && this.indeterminate) {
       this.liveText = this.localize('paginationAppliedUnknownTotal', undefined, {
         page: this.formatLocaleNumber(this.currentPage),
@@ -645,6 +686,64 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
     }
     this.requestPage(page);
   };
+
+  private pageSizeOptionText(size: number): string {
+    return this.localize('paginationPageSizeOption', undefined, { count: this.formatLocaleNumber(size) });
+  }
+
+  /** Mirrors `requestPage()`: propose, honor a veto or a listener's own change, then request. */
+  private onPageSizeChange = (event: Event): void => {
+    const select = event.currentTarget as HTMLSelectElement;
+    const restore = (): void => {
+      select.value = String(this.normalizedPageSize);
+    };
+    const pageSize = Number(select.value);
+    const previousSize = this.pageSize;
+    const previousPage = this.page;
+    if (this.controlsDisabled || !Number.isInteger(pageSize) || pageSize < 1 || pageSize === this.normalizedPageSize) {
+      restore();
+      return;
+    }
+    const page = remapPageForSize(
+      Math.max(1, this.currentPage),
+      this.normalizedPageSize,
+      pageSize,
+      this.indeterminate ? 0 : this.normalizedTotalItems,
+    );
+    const detail = (): LyraPaginationChangeDetail => Object.freeze({ page, pageSize });
+    const vetoed = this.emit('lr-before-page-size-change', detail(), { cancelable: true }).defaultPrevented;
+    if (vetoed || !this.isConnected || this.controlsDisabled || this.page !== previousPage || this.pageSize !== previousSize) {
+      restore();
+      return;
+    }
+    this.emit('lr-page-size-change', detail());
+    // A controlled selector reflects the applied property again after a request.
+    restore();
+  };
+
+  private renderPageSize(): TemplateResult | typeof nothing {
+    if (this.pageSizeOptions.length === 0) return nothing;
+    const applied = this.normalizedPageSize;
+    const choices = pageSizeChoices(this.pageSizeOptions, applied);
+    const label = normalizeLabel(this.pageSizeLabel) ?? this.localize('paginationPageSize');
+    // Each option binds `selected` rather than the select's `.value`, which would be assigned
+    // before the options render and dropped; `live()` re-checks it after a restore.
+    return html`<span class="page-size-wrapper"
+      ><select
+        part="page-size"
+        aria-label=${label}
+        ?disabled=${this.controlsDisabled}
+        @change=${this.onPageSizeChange}
+        @focus=${this.onControlFocus}
+        @blur=${this.onControlBlur}
+      >
+        ${choices.map(
+          (size) => html`<option value=${size} .selected=${live(size === applied)}>${this.pageSizeOptionText(size)}</option>`
+        )}
+      </select
+      ><span class="page-size-chevron" aria-hidden="true">${chevronIcon()}</span></span
+    >`;
+  }
 
   private onPageKeyDown = (event: KeyboardEvent): void => {
     if (event.key !== 'Enter' || shouldIgnoreActivationKey(event)) return;
@@ -874,7 +973,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   constructor() {
     super();
     // A control that disables itself while focused (the spent next/last button) hands focus on.
-    repairControlFocusOnUpdate(this, () => this.renderRoot.querySelectorAll<HTMLElement>('[part~="page-current"], button, input'));
+    repairControlFocusOnUpdate(this, () => this.renderRoot.querySelectorAll<HTMLElement>('[part~="page-current"], button, input, select'));
   }
 
   override render(): TemplateResult | typeof nothing {
@@ -896,6 +995,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
           ${this.indeterminate || this.format === 'compact' ? this.renderPageField() : this.renderPageList()}
           ${this.withoutNav ? nothing : this.renderNavButton('next')}
           ${showEdges ? this.renderEdgeButton('last') : nothing}
+          ${this.renderPageSize()}
         </div>
         <span part="live-region" class="sr-only" aria-hidden="true">${this.liveText}</span>
       </nav>

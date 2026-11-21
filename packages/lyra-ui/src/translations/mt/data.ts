@@ -53,6 +53,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Ix-xahar li jmiss',
   paginationPage: 'Paġna',
   paginationJumpToPage: 'Aqbeż għall-paġna {page}',
+  paginationPageSize: 'Oġġetti għal kull paġna',
+  paginationPageSizeOption: '{count} għal kull paġna',
   paginationInvalidPage: 'Idħol paġna minn 1 sa {max}.',
   paginationInvalidPageUnknownTotal: 'Idħol numru sħiħ ta\' paġna ta\' 1 jew aktar.',
   paginationEmptySummary: '{total} {itemLabel}',

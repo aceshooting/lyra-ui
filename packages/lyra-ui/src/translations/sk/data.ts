@@ -51,6 +51,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Ďalší mesiac',
   paginationPage: 'Stránka',
   paginationJumpToPage: 'Prejsť na stránku {page}',
+  paginationPageSize: 'Položiek na stranu',
+  paginationPageSizeOption: '{count} na stranu',
   paginationInvalidPage: 'Zadajte stranu od 1 do {max}.',
   paginationInvalidPageUnknownTotal: 'Zadajte celé číslo strany 1 alebo viac.',
   paginationEmptySummary: '{total} {itemLabel}',

@@ -126,9 +126,47 @@ export const styles = css`
     justify-content: center;
   }
 
+  /* highlight="header": the header row paints the fill behind the collapse control and the
+     header actions together, and the control itself stays clear. */
+  :host([collapsible][highlight="header"]) [part="header"] {
+    border-radius: var(--lr-radius);
+    transition: var(--lr-transition-interactive);
+  }
+  :host([collapsible][highlight="header"]) [part="header"]:is(:hover, :focus-within) {
+    background: var(
+      --lr-app-rail-group-header-hover-bg,
+      var(--lr-app-rail-group-hover-bg, var(--lr-color-brand-quiet))
+    );
+  }
+  :host([collapsible][highlight="header"]) [part="header"]:is(:hover, :focus-within) [part="toggle"] {
+    color: var(--lr-app-rail-group-hover-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
+  }
+  :host([collapsible][highlight="header"]) [part="header"]:has([part="toggle"]:active) {
+    background: var(
+      --lr-app-rail-group-header-active-bg,
+      var(--lr-app-rail-group-active-bg, ${activeFill('var(--lr-color-brand-quiet)')})
+    );
+  }
+  :host([collapsible][highlight="header"]) [part="header"] [part="toggle"]:is(:hover, :active) {
+    background: transparent;
+  }
+  /* header-actions-reveal="hover": faded out (never removed, so it keeps its space and its place
+     in the focus order) until the header is hovered or holds focus. */
+  @media (hover: hover) {
+    :host([header-actions-reveal="hover"]) [part="header-actions"] {
+      opacity: 0;
+      transition: opacity var(--lr-transition-fast);
+    }
+    :host([header-actions-reveal="hover"]) [part="header"]:is(:hover, :focus-within) [part="header-actions"] {
+      opacity: 1;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     [part="toggle"],
-    [part="toggle-icon"] {
+    [part="toggle-icon"],
+    [part="header"],
+    [part="header-actions"] {
       transition: none !important;
     }
   }

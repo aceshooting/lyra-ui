@@ -47,6 +47,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Ji\'a itti aanu',
   paginationPage: 'Fuula',
   paginationJumpToPage: 'Gara fuula {page}tti darbi',
+  paginationPageSize: 'Wantoota fuula tokko irratti',
+  paginationPageSizeOption: 'Fuula tokko irratti {count}',
   paginationInvalidPage: 'Fuula 1 hanga {max} galchi.',
   paginationInvalidPageUnknownTotal: 'Lakkoofsa fuulaa guutuu 1 ykn isaa ol galchi.',
   paginationEmptySummary: '{total} {itemLabel}',

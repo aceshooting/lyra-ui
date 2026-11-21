@@ -100,7 +100,7 @@ export const styles = css`
     white-space: pre;
     user-select: none;
     font: inherit;
-    font-family: var(--lr-font-mono);
+    font-family: var(--lr-code-editor-font-family, var(--lr-font-mono));
     font-size: var(
       --lr-code-editor-font-size,
       var(--lr-form-control-font-size)
@@ -134,7 +134,7 @@ export const styles = css`
     padding: var(--lr-code-editor-padding, var(--lr-form-control-padding-inline));
     color: transparent;
     font: inherit;
-    font-family: var(--lr-font-mono);
+    font-family: var(--lr-code-editor-font-family, var(--lr-font-mono));
     font-size: var(
       --lr-code-editor-font-size,
       var(--lr-form-control-font-size)
@@ -202,7 +202,7 @@ export const styles = css`
     background: transparent;
     color: var(--lr-color-text);
     font: inherit;
-    font-family: var(--lr-font-mono);
+    font-family: var(--lr-code-editor-font-family, var(--lr-font-mono));
     font-size: var(
       --lr-code-editor-font-size,
       var(--lr-form-control-font-size)

@@ -47,6 +47,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Wata mai zuwa',
   paginationPage: 'Shafi',
   paginationJumpToPage: 'Je zuwa shafi {page}',
+  paginationPageSize: 'Abubuwa a kowane shafi',
+  paginationPageSizeOption: '{count} a kowane shafi',
   paginationInvalidPage: 'Shigar da shafi daga 1 zuwa {max}.',
   paginationInvalidPageUnknownTotal: 'Shigar da cikakken lambar shafi ta 1 ko fiye.',
   paginationEmptySummary: '{total} {itemLabel}',

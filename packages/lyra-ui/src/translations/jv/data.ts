@@ -45,6 +45,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Sasi sabanjure',
   paginationPage: 'Kaca',
   paginationJumpToPage: 'Lumpat menyang kaca {page}',
+  paginationPageSize: 'Item saben kaca',
+  paginationPageSizeOption: '{count} saben kaca',
   paginationInvalidPage: 'Lebokna kaca saka 1 nganti {max}.',
   paginationInvalidPageUnknownTotal: 'Lebokna nomer kaca wutuh 1 utawa luwih.',
   paginationEmptySummary: '{total} {itemLabel}',

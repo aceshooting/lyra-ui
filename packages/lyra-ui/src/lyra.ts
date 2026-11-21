@@ -1057,10 +1057,14 @@ export {
 } from './components/layout/app-rail/app-rail-mode.js';
 export type {
   LyraAppRailItemEventMap,
+  LyraAppRailItemHighlight,
   LyraAppRailItemToggleDetail,
+  LyraAppRailItemTogglePlacement,
 } from './components/layout/app-rail/app-rail-item.class.js';
 export type {
   LyraAppRailGroupEventMap,
+  LyraAppRailGroupHeaderActionsReveal,
+  LyraAppRailGroupHighlight,
   LyraAppRailGroupToggleDetail,
 } from './components/layout/app-rail-group/app-rail-group.class.js';
 export type {

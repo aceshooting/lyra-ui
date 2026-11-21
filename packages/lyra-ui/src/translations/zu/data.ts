@@ -47,6 +47,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Inyanga ezayo',
   paginationPage: 'Ikhasi',
   paginationJumpToPage: 'Yiya ekhasini {page}',
+  paginationPageSize: 'Izinto ekhasini',
+  paginationPageSizeOption: '{count} ekhasini',
   paginationInvalidPage: 'Faka ikhasi kusukela ku-1 kuya ku-{max}.',
   paginationInvalidPageUnknownTotal: 'Faka inombolo yekhasi ephelele engu-1 noma ngaphezulu.',
   paginationEmptySummary: '{total} {itemLabel}',

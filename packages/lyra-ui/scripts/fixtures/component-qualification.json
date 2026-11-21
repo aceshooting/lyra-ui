@@ -2355,8 +2355,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/app-rail/app-rail-item.test.ts",
-              "test": "suppresses the icon-only indicator the same way under dir=\"rtl\"",
+              "file": "src/components/layout/app-rail/app-rail-item-row-layout.test.ts",
+              "test": "places the disclosure before the link at start, mirrored under RTL, and sizes it by token",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -2483,6 +2483,7 @@
         "tests": [
           "src/components/layout/app-rail/app-rail-auto-hide.test.ts",
           "src/components/layout/app-rail/app-rail-focus-return.test.ts",
+          "src/components/layout/app-rail/app-rail-item-row-layout.test.ts",
           "src/components/layout/app-rail/app-rail-item-top-layer.test.ts",
           "src/components/layout/app-rail/app-rail-item.test.ts",
           "src/components/layout/app-rail/app-rail-mobile-shadow.test.ts",
@@ -2672,6 +2673,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/app-rail-group/app-rail-group-header-highlight.test.ts",
           "src/components/layout/app-rail-group/app-rail-group.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -2822,8 +2824,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/app-rail/app-rail-item.test.ts",
-              "test": "suppresses the icon-only indicator the same way under dir=\"rtl\"",
+              "file": "src/components/layout/app-rail/app-rail-item-row-layout.test.ts",
+              "test": "places the disclosure before the link at start, mirrored under RTL, and sizes it by token",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -2939,6 +2941,7 @@
         "tests": [
           "src/components/layout/app-rail/app-rail-auto-hide.test.ts",
           "src/components/layout/app-rail/app-rail-focus-return.test.ts",
+          "src/components/layout/app-rail/app-rail-item-row-layout.test.ts",
           "src/components/layout/app-rail/app-rail-item-top-layer.test.ts",
           "src/components/layout/app-rail/app-rail-item.test.ts",
           "src/components/layout/app-rail/app-rail-mobile-shadow.test.ts",
@@ -16708,7 +16711,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.class.ts",
-              "line": 2455,
+              "line": 2456,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -29778,7 +29781,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input-shared.ts",
-              "line": 873,
+              "line": 875,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -37977,7 +37980,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input-shared.ts",
-              "line": 873,
+              "line": 875,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39223,7 +39226,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input-shared.ts",
-              "line": 873,
+              "line": 875,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -40159,6 +40162,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/data/pagination/pagination-page-size.test.ts",
+              "test": "renders under dir=\"rtl\" and passes axe with the selector shown",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/data/pagination/pagination.test.ts",
               "test": "disables every control for empty data, disabled, and loading states",
               "target": "el",
@@ -40213,8 +40222,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/pagination/pagination.test.ts",
-              "test": "mirrors the directional icons under RTL",
+              "file": "src/components/data/pagination/pagination-page-size.test.ts",
+              "test": "renders under dir=\"rtl\" and passes axe with the selector shown",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -40339,6 +40348,7 @@
         "tests": [
           "src/components/data/pagination/pagination-blank-labels.test.ts",
           "src/components/data/pagination/pagination-page-jump.test.ts",
+          "src/components/data/pagination/pagination-page-size.test.ts",
           "src/components/data/pagination/pagination-remediation-b08.test.ts",
           "src/components/data/pagination/pagination-window-boundaries.test.ts",
           "src/components/data/pagination/pagination.test.ts"
@@ -55141,6 +55151,7 @@
           "src/components/layout/tab-group/navigation-contracts.test.ts",
           "src/components/layout/tab-group/tab-group-emit-timing.test.ts",
           "src/components/layout/tab-group/tab-group-focus.test.ts",
+          "src/components/layout/tab-group/tab-group-hidden-ancestor.test.ts",
           "src/components/layout/tab-group/tab-group-key-guards.test.ts",
           "src/components/layout/tab-group/tab-group-projected-label.test.ts",
           "src/components/layout/tab-group/tab-group-reconcile-cost.test.ts",
@@ -55401,6 +55412,7 @@
           "src/components/layout/tab-group/navigation-contracts.test.ts",
           "src/components/layout/tab-group/tab-group-emit-timing.test.ts",
           "src/components/layout/tab-group/tab-group-focus.test.ts",
+          "src/components/layout/tab-group/tab-group-hidden-ancestor.test.ts",
           "src/components/layout/tab-group/tab-group-key-guards.test.ts",
           "src/components/layout/tab-group/tab-group-projected-label.test.ts",
           "src/components/layout/tab-group/tab-group-reconcile-cost.test.ts",
@@ -55656,6 +55668,7 @@
           "src/components/layout/tab-group/navigation-contracts.test.ts",
           "src/components/layout/tab-group/tab-group-emit-timing.test.ts",
           "src/components/layout/tab-group/tab-group-focus.test.ts",
+          "src/components/layout/tab-group/tab-group-hidden-ancestor.test.ts",
           "src/components/layout/tab-group/tab-group-key-guards.test.ts",
           "src/components/layout/tab-group/tab-group-projected-label.test.ts",
           "src/components/layout/tab-group/tab-group-reconcile-cost.test.ts",
@@ -56936,7 +56949,7 @@
           "evidence": [
             {
               "file": "src/components/forms/textarea/textarea.class.ts",
-              "line": 703,
+              "line": 706,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -57591,7 +57604,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input-shared.ts",
-              "line": 873,
+              "line": 875,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

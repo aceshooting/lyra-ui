@@ -45,6 +45,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Tháng sau',
   paginationPage: 'Trang',
   paginationJumpToPage: 'Đi đến trang {page}',
+  paginationPageSize: 'Số mục mỗi trang',
+  paginationPageSizeOption: '{count} mục mỗi trang',
   paginationInvalidPage: 'Nhập một trang từ 1 đến {max}.',
   paginationInvalidPageUnknownTotal: 'Nhập số trang nguyên từ 1 trở lên.',
   paginationEmptySummary: '{total} {itemLabel}',

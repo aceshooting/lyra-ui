@@ -51,6 +51,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Наступний місяць',
   paginationPage: 'Сторінка',
   paginationJumpToPage: 'Перейти до сторінки {page}',
+  paginationPageSize: 'Елементів на сторінку',
+  paginationPageSizeOption: '{count} на сторінку',
   paginationInvalidPage: 'Введіть сторінку від 1 до {max}.',
   paginationInvalidPageUnknownTotal: 'Введіть ціле число сторінки, 1 або більше.',
   paginationEmptySummary: '{total} {itemLabel}',

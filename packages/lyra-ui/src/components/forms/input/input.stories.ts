@@ -354,3 +354,9 @@ export const PendingStepConstraints: StoryObj = {
     </div>
   `,
 };
+
+/** `--lr-input-font-family` restyles only the field text; the label keeps the host font. */
+export const FontFamily: Story = {
+  render: () => html`<lr-input label="API key" value="sk-0123-abcd"
+    style="--lr-input-font-family: var(--lr-font-mono)"></lr-input>`,
+};

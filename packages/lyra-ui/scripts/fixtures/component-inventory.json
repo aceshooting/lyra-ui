@@ -7551,6 +7551,16 @@
             "default": false
           },
           {
+            "name": "header-actions-reveal",
+            "property": "headerActionsReveal",
+            "type": "LyraAppRailGroupHeaderActionsReveal",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "always"
+          },
+          {
             "name": "heading",
             "property": "heading",
             "type": "string",
@@ -7569,6 +7579,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "3"
+          },
+          {
+            "name": "highlight",
+            "property": "highlight",
+            "type": "LyraAppRailGroupHighlight",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "toggle"
           },
           {
             "name": "icon-only",
@@ -7612,6 +7632,16 @@
             "default": false
           },
           {
+            "name": "headerActionsReveal",
+            "attribute": "header-actions-reveal",
+            "type": "LyraAppRailGroupHeaderActionsReveal",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "always"
+          },
+          {
             "name": "heading",
             "attribute": "heading",
             "type": "string",
@@ -7630,6 +7660,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "3"
+          },
+          {
+            "name": "highlight",
+            "attribute": "highlight",
+            "type": "LyraAppRailGroupHighlight",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "toggle"
           },
           {
             "name": "locale",
@@ -7721,6 +7761,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-xs)"
+          },
+          {
+            "name": "--lr-app-rail-group-header-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-app-rail-group-active-bg)"
+          },
+          {
+            "name": "--lr-app-rail-group-header-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-app-rail-group-hover-bg)"
           },
           {
             "name": "--lr-app-rail-group-heading-color",
@@ -7846,6 +7898,16 @@
             "default": false
           },
           {
+            "name": "highlight",
+            "property": "highlight",
+            "type": "LyraAppRailItemHighlight",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "base"
+          },
+          {
             "name": "href",
             "property": "href",
             "type": "string",
@@ -7892,6 +7954,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "toggle-placement",
+            "property": "togglePlacement",
+            "type": "LyraAppRailItemTogglePlacement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "end"
           },
           {
             "name": "tooltip",
@@ -7946,6 +8018,16 @@
             "default": false
           },
           {
+            "name": "highlight",
+            "attribute": "highlight",
+            "type": "LyraAppRailItemHighlight",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "base"
+          },
+          {
             "name": "href",
             "attribute": "href",
             "type": "string",
@@ -7983,6 +8065,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "togglePlacement",
+            "attribute": "toggle-placement",
+            "type": "LyraAppRailItemTogglePlacement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "end"
           },
           {
             "name": "tooltip",
@@ -8071,6 +8163,10 @@
             "deprecated": null
           },
           {
+            "name": "row",
+            "deprecated": null
+          },
+          {
             "name": "toggle",
             "deprecated": null
           },
@@ -8094,6 +8190,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-app-rail-item-children-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-app-rail-item-gap)"
           },
           {
             "name": "--lr-app-rail-item-color",
@@ -8222,6 +8324,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-radius)"
+          },
+          {
+            "name": "--lr-app-rail-item-toggle-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-size)"
           },
           {
             "name": "--lr-overlay-border",
@@ -31444,6 +31552,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-code-editor-font-family",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-mono)"
           },
           {
             "name": "--lr-code-editor-font-size",
@@ -79188,6 +79302,12 @@
             "default": "var(--lr-color-brand)"
           },
           {
+            "name": "--lr-input-font-family",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-input-font-size",
             "deprecated": null,
             "hasDefault": true,
@@ -100239,6 +100359,12 @@
             "default": "var(--lr-color-brand)"
           },
           {
+            "name": "--lr-input-font-family",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-input-font-size",
             "deprecated": null,
             "hasDefault": true,
@@ -104047,6 +104173,12 @@
             "default": "var(--lr-color-brand)"
           },
           {
+            "name": "--lr-input-font-family",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-input-font-size",
             "deprecated": null,
             "hasDefault": true,
@@ -107217,6 +107349,15 @@
             "default": 10
           },
           {
+            "name": "page-size-label",
+            "property": "pageSizeLabel",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "previous-label",
             "property": "previousLabel",
             "type": "string | undefined",
@@ -107463,6 +107604,25 @@
             "default": 10
           },
           {
+            "name": "pageSizeLabel",
+            "attribute": "page-size-label",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "pageSizeOptions",
+            "attribute": null,
+            "type": "readonly number[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
+          {
             "name": "previousLabel",
             "attribute": "previous-label",
             "type": "string | undefined",
@@ -107591,7 +107751,19 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-before-page-size-change",
+            "type": "CustomEvent<LyraPaginationChangeDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-page-change",
+            "type": "CustomEvent<LyraPaginationChangeDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-page-size-change",
             "type": "CustomEvent<LyraPaginationChangeDetail>",
             "cancelable": "never",
             "constructor": "CustomEvent"
@@ -107668,6 +107840,10 @@
           },
           {
             "name": "page-input",
+            "deprecated": null
+          },
+          {
+            "name": "page-size",
             "deprecated": null
           },
           {
@@ -150322,6 +150498,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-textarea-font-family",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
           },
           {
             "name": "--lr-textarea-font-size",

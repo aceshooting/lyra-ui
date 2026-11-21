@@ -72,3 +72,17 @@ export const QuietHeading: StoryObj = {
     </lr-app-rail-group>
   `,
 };
+
+/** `highlight="header"` paints one fill behind the collapse control and its add button, and
+ *  `header-actions-reveal="hover"` shows the button only while the header is hovered or focused. */
+export const HeaderHighlight: StoryObj = {
+  render: () => html`
+    <div style="inline-size: 16rem">
+      <lr-app-rail-group collapsible highlight="header" header-actions-reveal="hover" heading="Projects">
+        <button slot="header-actions" type="button" aria-label="Add project">+</button>
+        <lr-app-rail-item href="/atlas">Atlas</lr-app-rail-item>
+        <lr-app-rail-item href="/beacon">Beacon</lr-app-rail-item>
+      </lr-app-rail-group>
+    </div>
+  `,
+};

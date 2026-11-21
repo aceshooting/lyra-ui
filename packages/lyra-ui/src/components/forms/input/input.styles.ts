@@ -94,6 +94,7 @@ export const styles = css`
     background: transparent;
     color: var(--lr-color-text);
     font: inherit;
+    font-family: var(--lr-input-font-family, inherit);
     font-size: var(--lr-input-font-size, var(--_lr-input-font-size-default));
   }
   :host([dir='ltr' i]) [part='input'][dir='auto'] {

@@ -47,6 +47,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'తదుపరి నెల',
   paginationPage: 'పేజీ',
   paginationJumpToPage: '{page}వ పేజీకి వెళ్లండి',
+  paginationPageSize: 'ప్రతి పేజీలో అంశాలు',
+  paginationPageSizeOption: 'ప్రతి పేజీకి {count}',
   paginationInvalidPage: '1 నుండి {max} వరకు ఒక పేజీని నమోదు చేయండి.',
   paginationInvalidPageUnknownTotal: '1 లేదా అంతకంటే ఎక్కువ ఉన్న పూర్తి పేజీ సంఖ్యను నమోదు చేయండి.',
   paginationEmptySummary: '{total} {itemLabel}',

@@ -47,6 +47,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Neste måned',
   paginationPage: 'Side',
   paginationJumpToPage: 'Gå til side {page}',
+  paginationPageSize: 'Elementer per side',
+  paginationPageSizeOption: '{count} per side',
   paginationInvalidPage: 'Skriv inn en side fra 1 til {max}.',
   paginationInvalidPageUnknownTotal: 'Skriv inn et helt sidetall på 1 eller mer.',
   paginationEmptySummary: '{total} {itemLabel}',

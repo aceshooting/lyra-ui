@@ -47,6 +47,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Sanza ekoya',
   paginationPage: 'Lokasa',
   paginationJumpToPage: 'Kende na lokasa {page}',
+  paginationPageSize: 'Biloko na lokasa',
+  paginationPageSizeOption: '{count} na lokasa',
   paginationInvalidPage: 'Koma lokasa uta na 1 tii {max}.',
   paginationInvalidPageUnknownTotal: 'Koma motango ya lokasa mobimba ya 1 to koleka.',
   paginationEmptySummary: '{total} {itemLabel}',

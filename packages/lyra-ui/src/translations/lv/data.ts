@@ -49,6 +49,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Nākamais mēnesis',
   paginationPage: 'Lapa',
   paginationJumpToPage: 'Pāriet uz {page}. lapu',
+  paginationPageSize: 'Vienumi lapā',
+  paginationPageSizeOption: '{count} lapā',
   paginationInvalidPage: 'Ievadiet lapu no 1 līdz {max}.',
   paginationInvalidPageUnknownTotal: 'Ievadiet veselu lapas numuru, kas nav mazāks par 1.',
   paginationEmptySummary: '{total} {itemLabel}',

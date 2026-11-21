@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 29 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -245,6 +245,8 @@ no glyph is painted.
 `--lr-input-font-size`, `--lr-input-control-min-height` — all four have private defaults that follow
 `size` (`2xs`…`xl`), while inherited or direct public values remain authoritative; the same pattern
 `lr-select`'s `--lr-select-trigger-padding`/`--lr-select-font-size` use.
+`--lr-input-font-family` (default `inherit`) sets only the native input's font family, leaving
+the label and hint on the host font.
 `--lr-input-control-height` pins an **exact** outer control-row height (both floors and caps it) —
 for example to pixel-match an `<lr-select>` or `<lr-combobox>` in the same toolbar row. It is
 undeclared by default, leaving `--lr-input-control-min-height` as a floor only and the row free to

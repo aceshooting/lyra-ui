@@ -177,6 +177,41 @@ export const IndeterminateTotal: Story = {
   },
 };
 
+/** `pageSizeOptions` (a JS property) opts in to a page-size selector, in every format and in
+ *  indeterminate mode. A change emits the cancelable `lr-before-page-size-change`, then
+ *  `lr-page-size-change` with `{ page, pageSize }`, where `page` keeps the current first item in
+ *  view. The component stays controlled: the listener applies both values. */
+export const PageSizeSelector: Story = {
+  render: () => {
+    const apply = (event: Event): void => {
+      const el = event.currentTarget as LyraPagination;
+      const { page, pageSize } = (event as CustomEvent<{ page: number; pageSize: number }>).detail;
+      el.pageSize = pageSize;
+      el.page = page;
+    };
+    return html`<div style="display:grid;gap:var(--lr-space-m)">
+      <lr-pagination
+        total="237"
+        page-size="20"
+        page="3"
+        with-summary
+        .pageSizeOptions=${[10, 20, 50, 100]}
+        @lr-page-change=${apply}
+        @lr-page-size-change=${apply}
+      ></lr-pagination>
+      <lr-pagination
+        format="compact"
+        total="237"
+        page-size="20"
+        page-size-label="Results per page"
+        .pageSizeOptions=${[10, 20, 50]}
+        @lr-page-change=${apply}
+        @lr-page-size-change=${apply}
+      ></lr-pagination>
+    </div>`;
+  },
+};
+
 export const CancelableRequest: Story = {
   parameters: {
     docs: {

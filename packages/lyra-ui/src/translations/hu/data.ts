@@ -47,6 +47,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Következő hónap',
   paginationPage: 'Oldal',
   paginationJumpToPage: 'Ugrás az oldalra: {page}',
+  paginationPageSize: 'Elemek oldalanként',
+  paginationPageSizeOption: '{count} oldalanként',
   paginationInvalidPage: 'Adjon meg egy oldalt 1 és {max} között.',
   paginationInvalidPageUnknownTotal: 'Adjon meg egy 1 vagy nagyobb egész oldalszámot.',
   paginationEmptySummary: '{total} {itemLabel}',

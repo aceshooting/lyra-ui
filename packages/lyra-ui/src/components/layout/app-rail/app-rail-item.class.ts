@@ -45,6 +45,12 @@ export interface LyraAppRailItemToggleDetail {
   expanded: boolean;
 }
 
+/** Which edge of the row `[part="toggle"]` sits on. */
+export type LyraAppRailItemTogglePlacement = 'start' | 'end';
+
+/** Which element paints the hover, press and current fills. */
+export type LyraAppRailItemHighlight = 'base' | 'row';
+
 export interface LyraAppRailItemEventMap {
   'lr-toggle-request': CustomEvent<LyraAppRailItemToggleDetail>;
   'lr-toggle': CustomEvent<LyraAppRailItemToggleDetail>;
@@ -117,8 +123,12 @@ export interface LyraAppRailItemEventMap {
  * @event lr-toggle - The item finished expanding or collapsing its `children`. Non-cancelable,
  *   emitted after `expanded` is written, and never emitted for a vetoed or listener-resolved
  *   request. `detail: LyraAppRailItemToggleDetail` — `expanded` is the settled state.
+ * @csspart row - The wrapper around `[part="base"]`, `[part="meta"]`, `[part="end"]` and
+ *   `[part="toggle"]`. With `highlight="row"` it paints the hover, press and current fills across
+ *   all of them, while each control inside keeps its own activation and focus order.
  * @csspart base - The link or button receiving focus and activation.
- * @csspart icon - The icon wrapper.
+ * @csspart icon - The icon wrapper. Hidden while nothing is slotted into `start`, so an item without
+ *   an icon reserves no icon column and no gap before its label.
  * @csspart label - The label wrapper; visually clipped in icon-only mode.
  * @csspart current-indicator - A decorative inline indicator rendered only while the item is
  *   `current`/`aria-current="page"`, mirroring `<lr-conversation-item>`'s shipped
@@ -128,7 +138,8 @@ export interface LyraAppRailItemEventMap {
  *   for the same reason.
  * @csspart toggle - The disclosure control, hidden in icon-only and rendered only with content in
  *   `children`. A sibling of `[part="base"]`, never nested inside it, so activating one never
- *   triggers the other. Carries `aria-expanded` in both states and `aria-controls` pointing at
+ *   triggers the other. `toggle-placement` puts it after `[part="end"]` (`end`) or before
+ *   `[part="base"]` (`start`). Carries `aria-expanded` in both states and `aria-controls` pointing at
  *   `[part="children"]`'s id; its accessible name is a localized `this.localize()` template
  *   interpolating this item's own label, with no literal fallback.
  * @csspart toggle-icon - The wrapper around the disclosure chevron. Direction-aware through this
@@ -182,6 +193,10 @@ export interface LyraAppRailItemEventMap {
  * @cssprop [--lr-app-rail-item-gap=var(--lr-space-s)] - Gap between `[part="icon"]` and
  *   `[part="label"]`, and between the item's own control and its `[part="meta"]`/`[part="end"]`
  *   adornments.
+ * @cssprop [--lr-app-rail-item-children-gap=var(--lr-app-rail-item-gap)] - Gap between the item's
+ *   own row and its `[part="children"]` list, independent of the gap inside the row.
+ * @cssprop [--lr-app-rail-item-toggle-size=var(--lr-icon-button-size)] - Inline and block size of
+ *   `[part="toggle"]`'s square. Floored at the 24 CSS px minimum pointer target.
  * @cssprop [--lr-app-rail-item-meta-color=var(--lr-color-text-quiet)] - `[part="meta"]`'s text
  *   color; quiet by default so a count reads as secondary to the label beside it.
  * @cssprop [--lr-app-rail-item-meta-font-size=var(--lr-font-size-sm)] - `[part="meta"]`'s
@@ -232,6 +247,20 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
   /** Link relationship tokens for the anchor; `opener` is dropped and a `target` always adds
    *  `noopener noreferrer`. */
   @property() rel?: string;
+
+  /** Where the `children` disclosure sits in the row: `end` (the default) after `[part="end"]`,
+   *  or `start` before `[part="base"]` -- the leading chevron of a folder tree. Logical, so `start`
+   *  is the right edge under RTL. Either way the disclosure stays a sibling of the link or button,
+   *  and it comes first in the focus order when placed at the start. An unrecognized value
+   *  behaves as `end`. */
+  @property({ attribute: 'toggle-placement', reflect: true })
+  togglePlacement: LyraAppRailItemTogglePlacement = 'end';
+
+  /** Which element paints the hover, press and current fills. `base` (the default) paints only
+   *  `[part="base"]`. `row` paints `[part="row"]` instead, so one continuous fill also covers
+   *  `meta`, `end` and the disclosure; those keep their own activation and focus order, and the
+   *  focus ring stays on the control that has focus. An unrecognized value behaves as `base`. */
+  @property({ reflect: true }) highlight: LyraAppRailItemHighlight = 'base';
 
   /** Prevents activation while retaining the item in the rail. */
   @property({ type: Boolean, reflect: true }) disabled = false;
@@ -302,7 +331,7 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
   private readonly toggleGuard = new VetoWriteGuard();
 
   @state() private showTooltip = false;
-  /** `meta`/`end` wrapper presence. `:empty` cannot see slotted light-DOM content (the wrapper
+  /** `start`/`meta`/`end` wrapper presence. `:empty` cannot see slotted light-DOM content (the wrapper
    *  always holds a `<slot>` element), and a forwarded empty slot is not content. */
   private readonly slots = new SlotPresenceController(this);
   private stopPositioning?: () => void;
@@ -563,7 +592,7 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
       ${this.current ? html`<span part="current-indicator" aria-hidden="true"></span>` : nothing}
       ${renderInertPresentation(
         html`<slot name="start"></slot>`,
-        { part: 'icon' },
+        { part: 'icon', hidden: !this.slots.has('start') },
       )}
       <span part="label"><slot></slot></span>
     `;
@@ -600,8 +629,11 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
           ><slot name="children"></slot
         ></span>`
       : nothing;
+    const toggleAtStart = this.togglePlacement === 'start';
+    const toggleStart = toggleAtStart ? toggle : nothing;
+    const toggleEnd = toggleAtStart ? nothing : toggle;
     const row = href && !this.disabled
-      ? html`<a
+      ? html`${toggleStart}<a
             part="base"
             href=${href}
             target=${this.target || nothing}
@@ -613,8 +645,8 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
             @mouseleave=${this.onBlurHide}
             @focus=${this.onFocusShow}
             @blur=${this.onBlurHide}
-          >${content}</a>${adornments}${toggle}${tooltip}`
-      : html`<button
+          >${content}</a>${adornments}${toggleEnd}${tooltip}`
+      : html`${toggleStart}<button
             part="base"
             type="button"
             ?disabled=${this.disabled}
@@ -625,12 +657,12 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
             @mouseleave=${this.onBlurHide}
             @focus=${this.onFocusShow}
             @blur=${this.onBlurHide}
-          >${content}</button>${adornments}${toggle}${tooltip}`;
+          >${content}</button>${adornments}${toggleEnd}${tooltip}`;
     // :host lays out as a column of [row, children-list] so `[part="children"]` stacks BELOW the
     // row instead of squeezing into it; the row's own flex/gap/alignment CSS (unchanged from
     // before this feature existed) now lives on this wrapper instead of :host. When `hasChildren`
     // is false, `childrenList` is `nothing` and the row alone reproduces the exact prior layout.
-    return html`<div class="row">${row}</div>${childrenList}`;
+    return html`<div class="row" part="row">${row}</div>${childrenList}`;
   }
 }
 

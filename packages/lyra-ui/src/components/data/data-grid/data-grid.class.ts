@@ -33,6 +33,7 @@ import {
   finiteInteger,
   finiteRange,
 } from '../../../internal/numbers.js';
+import { pageSizeChoices } from '../../../internal/page-size.js';
 import { DebounceController } from '../../../internal/debounce-controller.js';
 import { renderDataState } from '../../../internal/data-state-renderer.js';
 import { sizes } from '../../../internal/sizes.styles.js';
@@ -5537,16 +5538,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     const format = getNumberFormat(this.effectiveLocale, {
       maximumFractionDigits: 0,
     });
-    const configuredPageSizes = [
-      ...new Set(
-        this.pageSizeOptions
-          .map((value) => finiteCount(value))
-          .filter((value) => value > 0)
-      ),
-    ];
-    const pageSizes = configuredPageSizes.includes(this.safePageSize)
-      ? configuredPageSizes
-      : [this.safePageSize, ...configuredPageSizes];
+    const pageSizes = pageSizeChoices(this.pageSizeOptions, this.safePageSize);
     // Not `.value` on the <select>: it would be assigned before the options render, and dropped.
     return html`
       <div part="pager">

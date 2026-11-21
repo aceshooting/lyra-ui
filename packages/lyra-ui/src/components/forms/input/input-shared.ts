@@ -195,6 +195,8 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  *   the control row, from the active `size` tier.
  * @cssprop [--lr-input-font-size=var(--lr-form-control-font-size)] - Font size of the native input,
  *   from the active `size` tier.
+ * @cssprop [--lr-input-font-family=inherit] - Font family of the native input. It inherits the
+ *   host's font by default; set it to restyle only the field text without touching the label or hint.
  * @cssprop [--lr-input-gap=var(--lr-space-xs)] - Gap between the start/end adornments and the
  * native input in the control row. Unlike the size knobs above it does not vary by `size` tier.
  * Override it to retune without a `::part(input-wrapper)` rule.

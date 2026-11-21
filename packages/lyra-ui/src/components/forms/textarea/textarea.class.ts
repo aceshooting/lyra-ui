@@ -167,6 +167,9 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
  * border.
  * @cssprop [--lr-textarea-font-size=var(--lr-form-control-font-size)] - Font size of the native
  * textarea, from the active `size` tier of the shared ladder.
+ * @cssprop [--lr-textarea-font-family=inherit] - Font family of the native textarea. It inherits the
+ * host's font by default; set it (for example to `var(--lr-font-mono)`) to restyle only the field
+ * text without touching the label, hint or counter.
  * @cssprop [--lr-textarea-radius=var(--lr-form-control-radius)] - Corner radius of the field, from
  * the active `size` tier of the shared ladder (the two tightest tiers take a smaller radius).
  * `pill` changes the private default to `--lr-radius-pill`; a public value still wins.

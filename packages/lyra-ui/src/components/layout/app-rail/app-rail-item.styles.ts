@@ -1,6 +1,6 @@
 import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
-import { activeFill, disabledControl, focusRing, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, hoverFill } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { visuallyHidden } from '../../../internal/a11y.js';
 import { minimumPointerTarget } from '../../../internal/minimum-pointer-target.styles.js';
@@ -15,7 +15,7 @@ export const styles = css`
        .row and a REAL [part="children"]. */
     display: flex;
     flex-direction: column;
-    gap: var(--lr-app-rail-item-gap, var(--lr-space-s));
+    gap: var(--lr-app-rail-item-children-gap, var(--lr-app-rail-item-gap, var(--lr-space-s)));
     inline-size: 100%;
   }
   /* Everything this item rendered before it could own children: the link/button and its
@@ -140,6 +140,10 @@ export const styles = css`
     inline-size: var(--lr-app-rail-item-icon-size, var(--lr-icon-button-size));
     min-inline-size: var(--lr-app-rail-item-icon-size, var(--lr-icon-button-size));
   }
+  /* Nothing slotted into start: no icon column and, as a display:none flex item, no gap. */
+  [part="icon"][hidden] {
+    display: none;
+  }
   [part="meta"],
   [part="end"] {
     display: inline-flex;
@@ -238,8 +242,18 @@ export const styles = css`
     flex: 0 0 auto;
     align-items: center;
     justify-content: center;
-    ${iconHitTarget}
-    aspect-ratio: 1;
+    /* The square follows the token, but its used size never drops below the minimum pointer
+       target, however small the requested value. */
+    inline-size: max(
+      ${minimumPointerTarget},
+      var(--lr-app-rail-item-toggle-size, var(--lr-icon-button-size))
+    );
+    block-size: max(
+      ${minimumPointerTarget},
+      var(--lr-app-rail-item-toggle-size, var(--lr-icon-button-size))
+    );
+    min-inline-size: var(--lr-app-rail-item-toggle-size, var(--lr-icon-button-size));
+    min-block-size: var(--lr-app-rail-item-toggle-size, var(--lr-icon-button-size));
     padding: 0;
     border: 0;
     border-radius: var(--lr-radius);
@@ -319,6 +333,43 @@ export const styles = css`
   :host([icon-only]) [part="toggle"],
   :host([icon-only]) [part="children"] {
     display: none;
+  }
+  /* highlight="row": the row paints the hover, press and current fills, and the base stays clear
+     so the fill reads as one continuous shape behind base, meta, end and the disclosure. Each
+     control keeps its own focus ring. */
+  :host([highlight="row"]) [part="row"] {
+    border-radius: var(--lr-app-rail-item-radius, var(--lr-radius));
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
+  }
+  :host([highlight="row"]) [part="row"] > [part="base"]:is(:hover, :active, [aria-current="page"]),
+  :host([highlight="row"]) [part="row"] > [part="toggle"]:is(:hover, :active) {
+    background: transparent;
+  }
+  :host([highlight="row"]:not([disabled])) [part="row"]:hover {
+    background: var(--lr-app-rail-item-hover-bg, var(--lr-color-brand-quiet));
+  }
+  :host([highlight="row"]:not([disabled])) [part="row"]:hover > [part="base"] {
+    color: var(--lr-app-rail-item-hover-color, var(--_lr-glass-brand-text, var(--lr-color-brand)));
+  }
+  :host([highlight="row"][current]) [part="row"] {
+    background: var(--lr-app-rail-item-current-bg, var(--lr-color-brand-quiet));
+  }
+  :host([highlight="row"][current]:not([disabled])) [part="row"]:hover {
+    background: var(
+      --lr-app-rail-item-current-hover-bg,
+      ${hoverFill('var(--lr-app-rail-item-current-bg, var(--lr-color-brand-quiet))')}
+    );
+  }
+  :host([highlight="row"]:not([disabled])) [part="row"]:has(> [part="base"]:active, > [part="toggle"]:active) {
+    background: var(
+      --lr-app-rail-item-active-bg,
+      ${activeFill('var(--lr-color-brand-quiet)')}
+    );
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :host([highlight="row"]) [part="row"] {
+      transition: none;
+    }
   }
   ${forcedColorsPart('[part="base"][aria-current="page"]')}
 `;

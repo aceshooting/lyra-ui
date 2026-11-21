@@ -274,3 +274,40 @@ export const TopLayer: StoryObj = {
     </div>
   `,
 };
+
+/** A folder tree: the disclosure leads the row (`toggle-placement="start"`) in a smaller box, and
+ *  rows without a `start` icon reserve no icon column. */
+export const LeadingDisclosure: StoryObj = {
+  render: () => html`
+    <nav style="inline-size: 16rem; --lr-app-rail-item-toggle-size: 1.5rem; --lr-app-rail-item-children-gap: var(--lr-space-2xs)">
+      <lr-app-rail-item href="/docs" toggle-placement="start" expanded>
+        Documents
+        <lr-app-rail-item slot="children" href="/docs/plans">Plans</lr-app-rail-item>
+        <lr-app-rail-item slot="children" href="/docs/notes" current>Notes</lr-app-rail-item>
+      </lr-app-rail-item>
+      <lr-app-rail-item href="/media" toggle-placement="start">
+        Media
+        <lr-app-rail-item slot="children" href="/media/photos">Photos</lr-app-rail-item>
+      </lr-app-rail-item>
+    </nav>
+  `,
+};
+
+/** `highlight="row"`: one hover and current fill spans the label, the age and the overflow
+ *  trigger, which keeps its own click and focus order. */
+export const RowHighlight: StoryObj = {
+  render: () => html`
+    <nav style="inline-size: 18rem; display: grid; gap: var(--lr-space-2xs)">
+      <lr-app-rail-item highlight="row" href="/t/1" current>
+        Quarterly planning
+        <span slot="meta">2d</span>
+        <button slot="end" type="button" aria-label="More actions">…</button>
+      </lr-app-rail-item>
+      <lr-app-rail-item highlight="row" href="/t/2">
+        Release checklist
+        <span slot="meta">5d</span>
+        <button slot="end" type="button" aria-label="More actions">…</button>
+      </lr-app-rail-item>
+    </nav>
+  `,
+};

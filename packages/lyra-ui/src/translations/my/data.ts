@@ -45,6 +45,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'နောက်လ',
   paginationPage: 'စာမျက်နှာ',
   paginationJumpToPage: 'စာမျက်နှာ {page} သို့ သွားရန်',
+  paginationPageSize: 'စာမျက်နှာတစ်ခုလျှင် ပစ္စည်းအရေအတွက်',
+  paginationPageSizeOption: 'စာမျက်နှာတစ်ခုလျှင် {count}',
   paginationInvalidPage: '1 မှ {max} အတွင်း စာမျက်နှာတစ်ခု ထည့်ပါ။',
   paginationInvalidPageUnknownTotal: '1 နှင့်အထက် စာမျက်နှာ ကိန်းပြည့်နံပါတ်တစ်ခု ထည့်ပါ။',
   paginationEmptySummary: '{total} {itemLabel}',

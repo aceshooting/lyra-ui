@@ -49,6 +49,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Следећи месец',
   paginationPage: 'Страница',
   paginationJumpToPage: 'Иди на страницу {page}',
+  paginationPageSize: 'Ставки по страници',
+  paginationPageSizeOption: '{count} по страници',
   paginationInvalidPage: 'Унесите страницу од 1 до {max}.',
   paginationInvalidPageUnknownTotal: 'Унесите цео број странице, 1 или више.',
   paginationEmptySummary: '{total} {itemLabel}',

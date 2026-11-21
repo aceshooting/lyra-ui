@@ -47,6 +47,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Järgmine kuu',
   paginationPage: 'Lehekülg',
   paginationJumpToPage: 'Mine leheküljele {page}',
+  paginationPageSize: 'Kirjeid lehel',
+  paginationPageSizeOption: '{count} lehel',
   paginationInvalidPage: 'Sisesta lehekülg vahemikus 1 kuni {max}.',
   paginationInvalidPageUnknownTotal: 'Sisesta täisarvuline leheküljenumber, mis on vähemalt 1.',
   paginationEmptySummary: '{total} {itemLabel}',

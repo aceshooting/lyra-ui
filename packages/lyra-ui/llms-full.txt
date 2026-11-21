@@ -9889,6 +9889,8 @@ With no label text the part is hidden and no glyph is painted.
   so their private defaults follow the tier; the two tightest tiers take a smaller radius. Public
   values inherited from an ancestor or set directly on the host win in every tier. `pill` changes
   the private `--lr-textarea-radius` default to `--lr-radius-pill`.
+- `--lr-textarea-font-family` (default `inherit`) — the native textarea's font family, for example
+  `var(--lr-font-mono)` for a code-like field; the label, hint and counter keep the host font.
 - `--lr-textarea-fill` (default `var(--lr-color-surface)`) and `--lr-textarea-border-color` (default
   `var(--lr-color-border)`) — the field's background and border color, whose private defaults
   change per `appearance` rather than per `size`. The documented defaults are
@@ -10721,6 +10723,8 @@ no glyph is painted.
 `--lr-input-font-size`, `--lr-input-control-min-height` — all four have private defaults that follow
 `size` (`2xs`…`xl`), while inherited or direct public values remain authoritative; the same pattern
 `lr-select`'s `--lr-select-trigger-padding`/`--lr-select-font-size` use.
+`--lr-input-font-family` (default `inherit`) sets only the native input's font family, leaving
+the label and hint on the host font.
 `--lr-input-control-height` pins an **exact** outer control-row height (both floors and caps it) —
 for example to pixel-match an `<lr-select>` or `<lr-combobox>` in the same toolbar row. It is
 undeclared by default, leaving `--lr-input-control-min-height` as a floor only and the row free to
@@ -11091,9 +11095,9 @@ component ever renders.
 
 **Themeable custom properties:** inherited from `lr-input`, identical in meaning —
 `--lr-input-control-min-height`, `--lr-input-control-height`, `--lr-input-padding-block`,
-`--lr-input-padding-inline`, `--lr-input-font-size`, `--lr-input-gap`, `--lr-input-radius`,
+`--lr-input-padding-inline`, `--lr-input-font-family`, `--lr-input-font-size`, `--lr-input-gap`, `--lr-input-radius`,
 `--lr-input-fill`, and `--lr-input-border-color` (all
-but `--lr-input-control-height` and `--lr-input-gap` follow the active `size` tier;
+but `--lr-input-control-height`, `--lr-input-font-family` (default `inherit`) and `--lr-input-gap` follow the active `size` tier;
 `--lr-input-control-height` stays undeclared until you pin an exact
 row height, `--lr-input-fill`/`--lr-input-border-color` swap per `appearance` instead of per tier,
 and `--lr-input-gap` — like `--lr-button-gap` — is constant across the ladder). The steppers take their font size from `--lr-input-font-size` and their
@@ -11396,7 +11400,7 @@ and `suffix`. Conditional parts appear only when their associated content or act
 `--lr-form-control-required-offset`, `--lr-input-action-active-bg`,
 `--lr-input-action-active-color`, `--lr-input-action-color`, `--lr-input-action-hover-color`,
 `--lr-input-border-color`, `--lr-input-control-height`, `--lr-input-control-min-height`,
-`--lr-input-fill`, `--lr-input-focus-border-color`, `--lr-input-font-size`, `--lr-input-gap`,
+`--lr-input-fill`, `--lr-input-focus-border-color`, `--lr-input-font-family`, `--lr-input-font-size`, `--lr-input-gap`,
 `--lr-input-padding-block`, `--lr-input-padding-inline`, `--lr-input-placeholder-color`,
 `--lr-input-radius`, `--lr-input-time-picker-active-bg`, `--lr-input-time-picker-focus-bg`,
 `--lr-input-time-picker-focus-ring`, and `--lr-input-time-picker-hover-bg`, with the same meanings
@@ -14098,7 +14102,9 @@ With no label text the element is hidden and no glyph is painted.
 frame's and textarea's height floor), `--lr-code-editor-padding` (default `--lr-form-control-padding-inline`, the
 gutter's block-side padding and the textarea's all-side padding), and `--lr-code-editor-font-size`
 (default `--lr-form-control-font-size`, the gutter's and textarea's font size) — all three come from the active
-`size` tier by default, and assigning one directly overrides that tier's value. Also
+`size` tier by default, and assigning one directly overrides that tier's value.
+`--lr-code-editor-font-family` (default `var(--lr-font-mono)`) sets the gutter's, measuring layer's and
+textarea's font family together so line numbers keep the text's metrics. Also
 `--lr-code-editor-line-height` (default `1.5`, applied to both gutter and textarea so line numbers
 stay aligned with their lines).
 `--lr-code-editor-tab-size` (default `2`) is read by the `textarea` part's rule and drives both the
@@ -16663,6 +16669,7 @@ changing borrowed row content or callback-dependent external state in place.
 - `pageSize: number = 20` (`page-size`).
 - `pageSizeOptions: readonly number[] = [10, 20, 50, 100]` (JS-only). A finite current `pageSize`
   absent from this list is still inserted into the selector, keeping visible and IDL state aligned.
+  The selector lists the finite positive integers only, de-duplicated and sorted ascending.
 - `paginate: boolean = false` (`paginate`, reflected).
 - `pinnable: boolean = false` (`pinnable`, reflected).
 - `reorderable: boolean = false` (`reorderable`, reflected).
@@ -17738,6 +17745,16 @@ The pager revalidates the requested page after `lr-before-page-change` returns. 
   (attribute `last-label`) —
   optional accessible-name overrides for the icon-only edge buttons rendered by
   `with-edges`
+- `pageSizeOptions: readonly number[] = []` (JS property only) — opts in to a page-size selector,
+  a native `<select>` (`[part="page-size"]`) after the navigation controls, rendered in `standard`
+  and `compact` formats and in indeterminate mode. Values that are not finite positive integers are
+  dropped, duplicates collapse, and the list sorts ascending; the applied `pageSize` is always
+  offered even when absent from the list. Each option reads the localized `paginationPageSizeOption`
+  message (`"{count} per page"`). Empty, the default, renders no selector and no extra DOM.
+  `hide-single-page` hides the selector together with the rest of the pager
+- `pageSizeLabel?: string` (attribute `page-size-label`) — accessible-name override for the
+  page-size selector; omitted, empty or whitespace-only localizes the `paginationPageSize` message
+  (`"Items per page"`)
 
 Omitting any of those five control-label properties resolves the matching locale message. Any
 non-blank supplied string is an explicit per-instance override and renders verbatim, including the
@@ -17764,9 +17781,19 @@ intent, and it is otherwise unobservable, because the page buttons and the jump 
 shadow root, so a retargeted `click` names no page and pressing Enter on the jump field produces no
 click at all. When a request _does_ move the page, `lr-before-page-change` and `lr-page-change` are
 emitted first. Link-mode anchors navigate without emitting it.
+`lr-before-page-size-change` (frozen `detail: { page: number, pageSize: number }`, bubbles and
+composes, cancelable) fires when the page-size selector picks a different size; `pageSize` is the
+proposed size and `page` is `floor(((page - 1) * oldSize) / pageSize) + 1`, the page that keeps the
+current first item in view, clamped to the new page count when the total is known. Preventing it,
+or a listener that changes `page` or `pageSize` itself, suppresses the request and restores the
+selector to the applied size. If accepted, `lr-page-size-change` follows with the same frozen detail
+(non-cancelable). Like `page`, `pageSize` stays controlled: the selector keeps showing the applied
+size until the host sets both `pageSize` and `page` from the detail. When the applied `pageSize`
+changes while the selector is shown, the polite region announces it (`"{count} per page"`), followed
+by the usual applied-page announcement when `page` changes too. Focus stays on the selector.
 `focus` and `blur` are re-dispatched as exactly one bubbling, composed native `FocusEvent` from
-whichever internal control the user reached — a page button or link, previous/next, first/last, or
-the page input. The shadow-origin event is stopped, and the host event preserves its native focus
+whichever internal control the user reached — a page button or link, previous/next, first/last,
+the page input, or the page-size selector. The shadow-origin event is stopped, and the host event preserves its native focus
 payload, including `relatedTarget`.
 
 **Methods:** `focus(options?)`, `blur()` and `click()` resolve the primary control for the active
@@ -17780,7 +17807,9 @@ directional glyph while leaving its localized accessible name on the owning cont
 **CSS parts:** `base` and `pagination` are aliases on the same navigation wrapper; `summary`,
 `controls`, `pages`, `button`, `page`, `page-current`, `ellipsis`,
 `first-button`, `first-icon`, `previous-button`, `previous-icon`, `page-field`, `label`, `page-input`,
-`page-count`, `page-error`, `next-button`, `next-icon`, `last-button`, `last-icon`, `live-region`.
+`page-count`, `page-error`, `next-button`, `next-icon`, `last-button`, `last-icon`, `page-size`,
+`live-region`. `page-size` exists only while `pageSizeOptions` is non-empty and takes the shared
+control fill, border, radius, hover and pressed hooks.
 
 `page-error` is the visible correction message (`paginationInvalidPage`, or
 `paginationInvalidPageUnknownTotal` in indeterminate mode) rendered while the page-jump draft is
@@ -25931,6 +25960,13 @@ out of default-width compact rails, or use a rail that never collapses.
   renders the item without its children.
   Driven through the same request/commit pair as `<lr-app-rail-group>`'s `collapsed`, see Events
   below.
+- `togglePlacement: 'start' | 'end' = 'end'` (attribute `toggle-placement`, reflected) — where the
+  `children` disclosure sits: `end` after `[part="end"]`, or `start` before `[part="base"]` (the
+  leading chevron of a folder tree). Logical, so `start` is the right edge under RTL. The
+  disclosure stays a sibling of the link/button; at `start` it is also first in the focus order.
+- `highlight: 'base' | 'row' = 'base'` (reflected) — which element paints the hover, press and
+  current fills. `row` paints `[part="row"]`, so one continuous fill covers `base`, `meta`, `end`
+  and the disclosure, while each keeps its own activation, focus order and focus ring.
 
 A host `aria-label` is copied to the rendered native link or button by attribute presence,
 including an explicitly empty value; without it, the default slot supplies the native name. The
@@ -25992,7 +26028,9 @@ Both wrappers (`[part="meta"]`, `[part="end"]`) are hidden while empty, so an it
 renders no extra wrappers. While the mobile overlay is open, a click on `meta` or `end` content does
 not close it; a click elsewhere in the rail's default slot does.
 
-**CSS parts:** `base`, `icon`, `label`, `current-indicator` (a decorative inline indicator rendered
+**CSS parts:** `row` (the wrapper around `base`, `meta`, `end` and `toggle`; paints the fills with
+`highlight="row"`), `base`, `icon` (hidden while `start` is empty, so an icon-less item reserves no
+icon column and no gap before its label), `label`, `current-indicator` (a decorative inline indicator rendered
 only while the item is `current`/`aria-current="page"`, mirroring `<lr-conversation-item>`'s
 shipped `active-indicator` part — suppressed by default while `icon-only`, see the current-ring
 tokens below), `tooltip` (the hover or keyboard-focus flyout (the focused control matches `:focus-visible` and no pointer press preceded it), only rendered while
@@ -26069,6 +26107,11 @@ its own `fixed` default when nothing is set. There is no per-instance `positioni
 property on `<lr-app-rail-item>`; set the custom property on `:root`, a theme, or one clipping
 ancestor to change every unset rail item's flyout beneath it.
 
+`--lr-app-rail-item-children-gap` (defaults to `--lr-app-rail-item-gap`) sets the gap between the
+item's own row and its `[part="children"]` list, independent of the gap inside the row.
+`--lr-app-rail-item-toggle-size` (default `var(--lr-icon-button-size)`) sizes the disclosure's
+square on both axes, floored at the 24 CSS px minimum pointer target.
+
 `--lr-app-rail-item-indent` (default `var(--lr-space-l)`) sets `[part="children"]`'s
 `padding-inline-start`. Applied once per nesting level — a doubly-nested `children` list compounds
 two insets automatically, since each level's own `[part="children"]` applies the token again.
@@ -26113,6 +26156,14 @@ never disagree with what is rendered inside it.
 - `collapsed: boolean = false` (reflected) — whether the content is hidden. `collapsed` governs
   visibility whether or not `collapsible` is set, so a consumer can drive collapse entirely from its
   own chrome.
+- `highlight: 'toggle' | 'header' = 'toggle'` (reflected) — with `collapsible`, which element paints
+  the hover, focus and press fills. `header` paints `[part="header"]` while it is hovered or holds
+  focus, so one fill covers the collapse control and `header-actions`; the actions stay outside
+  the collapse button.
+- `headerActionsReveal: 'always' | 'hover' = 'always'` (attribute `header-actions-reveal`,
+  reflected) — `hover` fades `[part="header-actions"]` in only while the header is hovered or holds
+  focus. It keeps its space and its place in the focus order, so tabbing to an action reveals it;
+  devices without a hovering pointer always show it.
 
 **Events:** `lr-toggle-request` — cancelable, emitted before `collapsed` changes from the built-in
 control (`detail: { expanded }` is the proposed state). Call `preventDefault()` to keep the current state,
@@ -26138,7 +26189,9 @@ closes it). Collapsing a group that holds focus moves focus to the collapse cont
 `--lr-app-rail-group-hover-bg` (default `var(--lr-color-brand-quiet)`),
 `--lr-app-rail-group-hover-color` (default `var(--lr-color-brand)`),
 `--lr-app-rail-group-active-bg` (no default), `--lr-app-rail-group-active-color` (default
-`var(--lr-color-brand)`).
+`var(--lr-color-brand)`). With `highlight="header"`, `--lr-app-rail-group-header-hover-bg` (defaults
+to `--lr-app-rail-group-hover-bg`) and `--lr-app-rail-group-header-active-bg` (defaults to
+`--lr-app-rail-group-active-bg`) paint `[part="header"]`.
 
 The owning rail marks a slotted group `icon-only` exactly as it marks a slotted item, and the group
 forwards that to the items and nested groups it *directly* owns — including ones appended later —

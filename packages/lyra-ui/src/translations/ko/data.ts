@@ -45,6 +45,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: '다음 달',
   paginationPage: '페이지',
   paginationJumpToPage: '페이지로 이동 {page}',
+  paginationPageSize: '페이지당 항목 수',
+  paginationPageSizeOption: '페이지당 {count}개',
   paginationInvalidPage: '1에서 {max} 사이의 페이지를 입력하세요.',
   paginationInvalidPageUnknownTotal: '1 이상의 정수 페이지 번호를 입력하세요.',
   paginationEmptySummary: '{total} {itemLabel}',

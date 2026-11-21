@@ -226,3 +226,9 @@ export const Appearance: Story = {
     </div>
   `,
 };
+
+/** `--lr-code-editor-font-family` swaps the face of the gutter and the text together. */
+export const FontFamily: Story = {
+  render: () => html`<lr-code-editor label="Query" value="SELECT 1;"
+    style="--lr-code-editor-font-family: ui-monospace, monospace"></lr-code-editor>`,
+};

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -227,6 +227,8 @@ With no label text the part is hidden and no glyph is painted.
   so their private defaults follow the tier; the two tightest tiers take a smaller radius. Public
   values inherited from an ancestor or set directly on the host win in every tier. `pill` changes
   the private `--lr-textarea-radius` default to `--lr-radius-pill`.
+- `--lr-textarea-font-family` (default `inherit`) — the native textarea's font family, for example
+  `var(--lr-font-mono)` for a code-like field; the label, hint and counter keep the host font.
 - `--lr-textarea-fill` (default `var(--lr-color-surface)`) and `--lr-textarea-border-color` (default
   `var(--lr-color-border)`) — the field's background and border color, whose private defaults
   change per `appearance` rather than per `size`. The documented defaults are

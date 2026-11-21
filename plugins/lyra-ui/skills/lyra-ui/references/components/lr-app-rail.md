@@ -633,6 +633,13 @@ out of default-width compact rails, or use a rail that never collapses.
   renders the item without its children.
   Driven through the same request/commit pair as `<lr-app-rail-group>`'s `collapsed`, see Events
   below.
+- `togglePlacement: 'start' | 'end' = 'end'` (attribute `toggle-placement`, reflected) — where the
+  `children` disclosure sits: `end` after `[part="end"]`, or `start` before `[part="base"]` (the
+  leading chevron of a folder tree). Logical, so `start` is the right edge under RTL. The
+  disclosure stays a sibling of the link/button; at `start` it is also first in the focus order.
+- `highlight: 'base' | 'row' = 'base'` (reflected) — which element paints the hover, press and
+  current fills. `row` paints `[part="row"]`, so one continuous fill covers `base`, `meta`, `end`
+  and the disclosure, while each keeps its own activation, focus order and focus ring.
 
 A host `aria-label` is copied to the rendered native link or button by attribute presence,
 including an explicitly empty value; without it, the default slot supplies the native name. The
@@ -694,7 +701,9 @@ Both wrappers (`[part="meta"]`, `[part="end"]`) are hidden while empty, so an it
 renders no extra wrappers. While the mobile overlay is open, a click on `meta` or `end` content does
 not close it; a click elsewhere in the rail's default slot does.
 
-**CSS parts:** `base`, `icon`, `label`, `current-indicator` (a decorative inline indicator rendered
+**CSS parts:** `row` (the wrapper around `base`, `meta`, `end` and `toggle`; paints the fills with
+`highlight="row"`), `base`, `icon` (hidden while `start` is empty, so an icon-less item reserves no
+icon column and no gap before its label), `label`, `current-indicator` (a decorative inline indicator rendered
 only while the item is `current`/`aria-current="page"`, mirroring `<lr-conversation-item>`'s
 shipped `active-indicator` part — suppressed by default while `icon-only`, see the current-ring
 tokens below), `tooltip` (the hover or keyboard-focus flyout (the focused control matches `:focus-visible` and no pointer press preceded it), only rendered while
@@ -771,6 +780,11 @@ its own `fixed` default when nothing is set. There is no per-instance `positioni
 property on `<lr-app-rail-item>`; set the custom property on `:root`, a theme, or one clipping
 ancestor to change every unset rail item's flyout beneath it.
 
+`--lr-app-rail-item-children-gap` (defaults to `--lr-app-rail-item-gap`) sets the gap between the
+item's own row and its `[part="children"]` list, independent of the gap inside the row.
+`--lr-app-rail-item-toggle-size` (default `var(--lr-icon-button-size)`) sizes the disclosure's
+square on both axes, floored at the 24 CSS px minimum pointer target.
+
 `--lr-app-rail-item-indent` (default `var(--lr-space-l)`) sets `[part="children"]`'s
 `padding-inline-start`. Applied once per nesting level — a doubly-nested `children` list compounds
 two insets automatically, since each level's own `[part="children"]` applies the token again.
@@ -815,6 +829,14 @@ never disagree with what is rendered inside it.
 - `collapsed: boolean = false` (reflected) — whether the content is hidden. `collapsed` governs
   visibility whether or not `collapsible` is set, so a consumer can drive collapse entirely from its
   own chrome.
+- `highlight: 'toggle' | 'header' = 'toggle'` (reflected) — with `collapsible`, which element paints
+  the hover, focus and press fills. `header` paints `[part="header"]` while it is hovered or holds
+  focus, so one fill covers the collapse control and `header-actions`; the actions stay outside
+  the collapse button.
+- `headerActionsReveal: 'always' | 'hover' = 'always'` (attribute `header-actions-reveal`,
+  reflected) — `hover` fades `[part="header-actions"]` in only while the header is hovered or holds
+  focus. It keeps its space and its place in the focus order, so tabbing to an action reveals it;
+  devices without a hovering pointer always show it.
 
 **Events:** `lr-toggle-request` — cancelable, emitted before `collapsed` changes from the built-in
 control (`detail: { expanded }` is the proposed state). Call `preventDefault()` to keep the current state,
@@ -840,7 +862,9 @@ closes it). Collapsing a group that holds focus moves focus to the collapse cont
 `--lr-app-rail-group-hover-bg` (default `var(--lr-color-brand-quiet)`),
 `--lr-app-rail-group-hover-color` (default `var(--lr-color-brand)`),
 `--lr-app-rail-group-active-bg` (no default), `--lr-app-rail-group-active-color` (default
-`var(--lr-color-brand)`).
+`var(--lr-color-brand)`). With `highlight="header"`, `--lr-app-rail-group-header-hover-bg` (defaults
+to `--lr-app-rail-group-hover-bg`) and `--lr-app-rail-group-header-active-bg` (defaults to
+`--lr-app-rail-group-active-bg`) paint `[part="header"]`.
 
 The owning rail marks a slotted group `icon-only` exactly as it marks a slotted item, and the group
 forwards that to the items and nested groups it *directly* owns — including ones appended later —

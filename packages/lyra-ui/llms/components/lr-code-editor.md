@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -126,7 +126,9 @@ With no label text the element is hidden and no glyph is painted.
 frame's and textarea's height floor), `--lr-code-editor-padding` (default `--lr-form-control-padding-inline`, the
 gutter's block-side padding and the textarea's all-side padding), and `--lr-code-editor-font-size`
 (default `--lr-form-control-font-size`, the gutter's and textarea's font size) — all three come from the active
-`size` tier by default, and assigning one directly overrides that tier's value. Also
+`size` tier by default, and assigning one directly overrides that tier's value.
+`--lr-code-editor-font-family` (default `var(--lr-font-mono)`) sets the gutter's, measuring layer's and
+textarea's font family together so line numbers keep the text's metrics. Also
 `--lr-code-editor-line-height` (default `1.5`, applied to both gutter and textarea so line numbers
 stay aligned with their lines).
 `--lr-code-editor-tab-size` (default `2`) is read by the `textarea` part's rule and drives both the

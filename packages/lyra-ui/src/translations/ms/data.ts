@@ -45,6 +45,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Bulan seterusnya',
   paginationPage: 'Halaman',
   paginationJumpToPage: 'Pergi ke halaman {page}',
+  paginationPageSize: 'Item setiap halaman',
+  paginationPageSizeOption: '{count} setiap halaman',
   paginationInvalidPage: 'Masukkan halaman dari 1 hingga {max}.',
   paginationInvalidPageUnknownTotal: 'Masukkan nombor halaman bulat 1 atau lebih.',
   paginationEmptySummary: '{total} {itemLabel}',

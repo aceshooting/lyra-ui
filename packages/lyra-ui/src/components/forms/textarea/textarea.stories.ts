@@ -279,3 +279,9 @@ export const PlaceholderColor: Story = {
   render: () => html`<lr-textarea label="Notes" placeholder="Enter a value"
     style="--lr-textarea-placeholder-color: var(--lr-color-neutral)"></lr-textarea>`,
 };
+
+/** `--lr-textarea-font-family` restyles only the field text; label and hint keep the host font. */
+export const FontFamily: Story = {
+  render: () => html`<lr-textarea label="Snippet" hint="Shown in a monospace face"
+    value="const answer = 42;" style="--lr-textarea-font-family: var(--lr-font-mono)"></lr-textarea>`,
+};

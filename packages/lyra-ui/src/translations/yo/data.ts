@@ -45,6 +45,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Oṣù tó ń bọ̀',
   paginationPage: 'Ojúewé',
   paginationJumpToPage: 'Lọ sí ojúewé {page}',
+  paginationPageSize: 'Àwọn ohun kọ̀ọ̀kan fún ojúewé kọ̀ọ̀kan',
+  paginationPageSizeOption: '{count} fún ojúewé kọ̀ọ̀kan',
   paginationInvalidPage: 'Tẹ ojúewé láti 1 sí {max}.',
   paginationInvalidPageUnknownTotal: 'Tẹ nọ́mbà ojúewé odidi tó jẹ́ 1 tàbí jù bẹ́ẹ̀ lọ.',
   paginationEmptySummary: '{total} {itemLabel}',

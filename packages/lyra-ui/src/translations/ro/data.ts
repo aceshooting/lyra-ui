@@ -49,6 +49,8 @@ const strings: LyraLocaleStrings = {
   calendarNextMonth: 'Luna următoare',
   paginationPage: 'Pagină',
   paginationJumpToPage: 'Salt la pagina {page}',
+  paginationPageSize: 'Elemente pe pagină',
+  paginationPageSizeOption: '{count} pe pagină',
   paginationInvalidPage: 'Introdu o pagină de la 1 la {max}.',
   paginationInvalidPageUnknownTotal: 'Introdu un număr întreg de pagină egal cu 1 sau mai mare.',
   paginationEmptySummary: '{total} {itemLabel}',
