@@ -119,9 +119,12 @@ export async function runCommandsAndSearch(page, check, { createEditor, saveEdit
     });
     assert.deepEqual(changed, { ok: true, delta: 1 });
     await paints(page);
-    const rows = await palette(id).evaluate(element => element.commands.map(row => ({ disabled: row.disabled, description: row.description })));
-    assert.ok(rows.every(row => row.disabled));
-    assert.ok(rows.every(row => row.description.includes('original selection changed')));
+    const rows = await palette(id).evaluate(element => element.commands.map(row => ({ id: row.commandId, disabled: row.disabled, description: row.description })));
+    // New and Open replace the whole document, so only selection-bound rows go stale.
+    const selectionBound = rows.filter(row => row.id !== 'new' && row.id !== 'open');
+    assert.ok(selectionBound.length > 0 && selectionBound.every(row => row.disabled));
+    assert.ok(selectionBound.every(row => row.description.includes('original selection changed')));
+    assert.deepEqual(rows.filter(row => row.id === 'new' || row.id === 'open').map(row => row.disabled), [false, false]);
     await page.keyboard.press('Escape');
     await remove(id);
   });

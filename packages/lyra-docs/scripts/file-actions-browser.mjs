@@ -205,6 +205,31 @@ export async function runFileActions(page, check, { createEditor }) {
     } finally { await editor.evaluate(element => element.remove()); }
   });
 
+  await check('palette Open stays available when the selection settles after the palette opens', async () => {
+    await createEditor(page, id);
+    try {
+      await editor.evaluate(async element => { element.fileActions = ''; await element.updateComplete; });
+      await editor.locator('.docx-pages').click();
+      await page.keyboard.press('ControlOrMeta+K');
+      const palette = editor.locator('[part="command-palette"]');
+      await palette.getByRole('dialog').waitFor({ state: 'visible' });
+      await palette.getByRole('combobox').fill('Open');
+      // A caret that lands late from the preceding click bumps the selection version mid-palette.
+      await editor.evaluate(async element => {
+        element.session.selectionVersion++;
+        element.session.publish();
+        await element.updateComplete;
+      });
+      assert.equal(await editor.evaluate(element => element.shadowRoot.querySelector('[part="command-palette"]')
+        .commands.find(command => command.commandId === 'open').disabled), false);
+      const chooser = await openFileChooser(page, editor.locator('[part="file-input"]'), () => page.keyboard.press('Enter'));
+      const bytes = await page.evaluate(() => window.__docxTest.fixture('basic-editing'));
+      await chooser.setFiles({ name: 'Settled.docx',
+        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from(bytes) });
+      await page.waitForFunction(id => document.getElementById(id).shadowRoot.querySelector('[part="filename"]').textContent === 'Settled.docx', id);
+    } finally { await editor.evaluate(element => element.remove()); }
+  });
+
   await check('palette Open on a dirty document waits for confirmation before opening the native picker', async () => {
     await createEditor(page, id);
     try {

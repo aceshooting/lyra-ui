@@ -2021,9 +2021,10 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
     this.palette()?.close();
   }
 
-  private commandIntentValid(): boolean {
+  private commandIntentValid(selectionBound = true): boolean {
     const intent = this.commandIntent;
     if (!intent || !this.isConnected || intent.session !== this.session) return false;
+    if (!selectionBound) return true;
     const state = this.session?.snapshot();
     return (state?.revision?.documentId ?? null) === (intent.revision?.documentId ?? null) &&
       (state?.revision?.value ?? null) === (intent.revision?.value ?? null) &&
@@ -2032,7 +2033,10 @@ export class LyraDocxEditor extends LyraElement<DocxEditorEvents> {
 
   private commandAvailability(item: DocxCommandDescriptor): DocxCommandAvailability {
     const state = this.currentSnapshot;
-    if (!this.commandIntentValid()) return { enabled: false, reason: 'stale-selection' };
+    // New and Open replace the whole document, so a selection that settles after the palette
+    // opened (a late caret from the click that preceded the shortcut) must not disable them.
+    const documentWide = item.intent === 'new' || item.intent === 'open';
+    if (!this.commandIntentValid(!documentWide)) return { enabled: false, reason: 'stale-selection' };
     if (this.openInProgress || state?.activity) return { enabled: false, reason: 'busy' };
     if (state?.composing) return { enabled: false, reason: 'composing' };
     if (item.intent === 'new' || item.intent === 'open') return { enabled: true };
