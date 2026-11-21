@@ -3584,9 +3584,10 @@ menu's fallback name; a `label` or `aria-label` on the menu itself takes precede
   opens, nested ones included, in the browser top layer, placed `fixed` whatever
   `--lr-positioning-strategy` resolves to, so it paints above a sibling surface stacked higher than a
   `z-index`ed fixed or sticky header, toolbar or rail the menu sits in. No DOM node moves; a submenu
-  leaves the top layer once it settles closed. Applies live while open; without Popover API support
-  submenus keep their ordinary `z-index`. An enclosing menu's or `<lr-menubar>`'s `top-layer`
-  applies too.
+  leaves the top layer once it settles closed. Without Popover API support submenus keep their
+  ordinary `z-index`. An enclosing menu's or `<lr-menubar>`'s `top-layer` applies too. The menu's
+  own and an enclosing menu's apply live to an open submenu; the menubar's applies the next time a
+  menu opens.
   A submenu surface stacks at its enclosing overlay's `--lr-overlay-stack-index`, falling back to
   `--lr-layer-dropdown`.
 

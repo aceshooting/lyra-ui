@@ -97,8 +97,10 @@ const AUTHORED_PROFILE_KEYS = ['origin', 'fromMajor', 'toMajor', 'aliasRemovalMa
 /**
  * Entries that no `lr-*` tag owns (RFC 0003). `module` rewrites a package specifier (exactly, or by
  * `prefix` minus `except`), `export` re-binds a removed root-barrel name onto its replacement, and
- * `locale-key` reports a removed localization string key, `css-property` a removed custom property (or
- * prefix of them) and `part` a part whose meaning changed on one component; the last three never edit.
+ * `locale-key` reports a removed localization string key (`to` names its replacement and may be
+ * omitted when there is none; `tag` scopes it to the one component that stopped reading a key others
+ * keep), `css-property` a removed custom property (or prefix of them) and `part` a part whose meaning
+ * changed on one component; the last three never edit.
  */
 const GLOBAL_KINDS = Object.freeze(['module', 'export', 'locale-key', 'css-property', 'part']);
 const EXPORT_BARREL_PATTERN = /^\.\/components\/[a-z][a-z0-9-]*$/;
@@ -279,11 +281,17 @@ function validateGlobalEntry(findings, label, entry) {
     }
     return;
   }
-  for (const field of ['prefix', 'except', 'tag']) {
+  for (const field of optional ? ['prefix', 'except'] : ['prefix', 'except', 'tag']) {
     if (Object.hasOwn(entry, field)) findings.push(`${label}: ${field} applies to module, part and custom property entries only`);
   }
+  if (optional && Object.hasOwn(entry, 'tag') && (typeof entry.tag !== 'string' || !TAG_PATTERN.test(entry.tag))) {
+    findings.push(`${label}: tag must be an lr-* element name`);
+  }
   if (typeof entry.from !== 'string' || !JS_IDENTIFIER_PATTERN.test(entry.from)) findings.push(`${label}: from must be an identifier`);
-  if (typeof entry.to !== 'string' || !JS_IDENTIFIER_PATTERN.test(entry.to)) findings.push(`${label}: to must be an identifier`);
+  // A removed locale key with no replacement omits `to`.
+  if (!(optional && !Object.hasOwn(entry, 'to')) && (typeof entry.to !== 'string' || !JS_IDENTIFIER_PATTERN.test(entry.to))) {
+    findings.push(`${label}: to must be an identifier`);
+  }
   if (entry.from === entry.to) findings.push(`${label}: from and to must differ`);
   if (entry.kind === 'export' && entry.module !== '.' && !(typeof entry.module === 'string' && EXPORT_BARREL_PATTERN.test(entry.module))) {
     findings.push(`${label}: an export entry needs module "." (the package root) or a ./components/<family> barrel`);
@@ -1018,6 +1026,8 @@ export function validateRenameLedger(ledger, { inventory, exportDeprecations = [
         const component = ownerFor(components, compatibilityContext, entry.tag);
         if (!component) findings.push(`${label}: component is not in the inventory`);
         else if (!surfaceEntry(component, 'part', entry.from)) findings.push(`${label}: the part is not on the public surface`);
+      } else if (entry.kind === 'locale-key' && entry.tag) {
+        if (!ownerFor(components, compatibilityContext, entry.tag)) findings.push(`${label}: component is not in the inventory`);
       } else if (entry.kind === 'css-property') {
         const stillThere = [...components.values()].some((component) => (component.surface?.cssProperties ?? [])
           .some((property) => entry.prefix ? property.name.startsWith(entry.from) : property.name === entry.from));

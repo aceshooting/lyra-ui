@@ -693,12 +693,18 @@ function applyGlobals(text, file, entries, { inComment, inCss, openingTokens, re
 
   if (localeKeys.length && /registerLyraLocale|bridgeLyraLocale|\.strings\b|@aceshooting\/lyra-ui/.test(text)) {
     for (const entry of localeKeys) {
+      // A tag-scoped key is still read by other components, so only a file naming that tag is in scope.
+      if (entry.tag && !text.includes(entry.tag)) continue;
+      const instead = entry.to ? `use ${entry.to}` : 'it has no replacement';
+      const message = entry.tag
+        ? `${entry.tag} no longer reads the localization key ${entry.from}; ${instead}: ${entry.summary}`
+        : `The localization key ${entry.from} was removed; ${instead}: ${entry.summary}`;
       for (const match of text.matchAll(new RegExp(`(?<![$\\w.-])${entry.from}(?![$\\w-])`, 'g'))) {
         const before = text[match.index - 1] ?? '';
         const after = text.slice(match.index + entry.from.length, match.index + entry.from.length + 12);
         const quoted = /['"`]/.test(before) && /^['"`]/.test(after);
         if (inComment(match.index) || !(quoted || /^\s*:/.test(after))) continue;
-        review(match.index, entry, entry.from, `The localization key ${entry.from} was removed; use ${entry.to}: ${entry.summary}`);
+        review(match.index, entry, entry.from, message);
       }
     }
   }

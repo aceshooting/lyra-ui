@@ -625,7 +625,7 @@ export class LyraDocxViewer extends DocumentAnchorTarget(LyraDocxViewerBase) {
       resolved.range.commonAncestorContainer.nodeType === elementNode
         ? resolved.range.commonAncestorContainer as Element
         : resolved.range.commonAncestorContainer.parentElement;
-    if (target) revealInOwnScroller(target);
+    if (target) revealInOwnScroller(target, 'nearest', motionScrollBehavior(this, 'auto'));
     this.activateHighlight(highlight.id);
   }
 

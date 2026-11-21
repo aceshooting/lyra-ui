@@ -81,7 +81,9 @@ describe('lr-eval-run remediation', () => {
     expect(leaked).to.deep.equal([]);
   });
 
-  it('marks the example render-limit notice as a note and announces it when it first appears', async () => {
+  it('marks the example render-limit notice as a note and announces it when it first appears', async function () {
+    // Rendering the full 500-row ceiling takes about 5 s in WebKit, close to the 6 s default.
+    this.timeout(30_000);
     const many: EvalExampleResult[] = Array.from({ length: 501 }, (_, i) => ({
       id: `e${i}`, input: { text: 'Question' }, output: { text: 'Answer' }, status: { kind: 'done' },
     }));

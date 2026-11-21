@@ -121,11 +121,13 @@ const RADIO_GROUP_ORIENTATION = literalSetConverter<RadioGroupOrientation>(
  * carries the proposed value while `value` still holds the current one. Cancelable: calling
  * `preventDefault()` keeps the current selection, and none of `input`/`lr-input`/`change`/`lr-change`
  * fire. A listener may instead resolve the request by assigning `value` (or a radio's `checked`)
- * itself, which also suppresses the built-in commit. `lr-activate` still follows.
+ * itself, which also suppresses the built-in commit. A refused or redirected request emits no
+ * `lr-activate` and, from the keyboard, leaves focus on the radio it started from.
  * @event lr-input - Prefixed alias for `input`; `detail: { value, option, radio }`.
  * @event lr-change - A radio was selected. `detail: { value, previousValue, option, radio }`.
  * @event lr-activate - An available radio was activated by click, Space or an arrow/Home/End key,
- * whether or not the selection moved; emitted after `lr-change` when it did.
+ * whether or not the selection moved; emitted after `lr-change` when it did, and not at all when
+ * `lr-radio-group-select-request` was refused or redirected.
  * `detail: { value, option, radio }`.
  * @event lr-invalid - The group's owned validity control failed a validity check. Cancelable:
  * calling `preventDefault()` also cancels the native `invalid` event behind it, suppressing the
@@ -684,6 +686,8 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
           this.emit('lr-change', { ...detail, previousValue });
         },
       });
+      // Refused, or resolved by the listener to another radio: not an activation of this one.
+      if (!radio.checked) return false;
     }
     this.emit('lr-activate', detail);
     return true;
@@ -715,13 +719,12 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
     event.preventDefault();
     // safe: radios is non-empty (guarded above) and nextIndex is a modulo/clamp into range.
     const next = radios[nextIndex]!;
-    next.focus();
     // Route through the radio's own activation path, not selectRadio() directly: that path is
     // what emits `input`/`change`. Committing here instead would fire only the group's
     // `lr-change`, so a consumer bound to the native-mirroring events would miss every keyboard
     // selection while still receiving them for click and Space. Native <input type=radio> fires
-    // both on arrow navigation.
-    next.activateFromGroup();
+    // both on arrow navigation. The request runs first, so a refused one leaves focus in place.
+    if (next.activateFromGroup()) next.focus();
   };
   private onRadioSlotChange = (): void => {
     this.syncRadios();

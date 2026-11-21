@@ -16,11 +16,13 @@ export function labeledGroupDescription(host: LabeledGroupHost): HostDescription
   return new HostDescriptionController(host, () => host.renderRoot.querySelector<HTMLElement>('[part~="base"]'));
 }
 
-/** The group wrapper: an explicitly empty host `aria-label` or `accessibleLabel` leaves the group
- *  unnamed; otherwise the resolved accessible name (host label, then a non-blank `label`). */
+/** The group wrapper: a non-empty host `aria-label` names it first; an explicitly empty host
+ *  `aria-label`, or an empty `accessibleLabel` without a host label, leaves the group unnamed;
+ *  otherwise a non-blank `label` names it. */
 export function renderLabeledGroup(host: LabeledGroupHost): TemplateResult {
+  const authored = hostAriaLabel(host);
   const name =
-    hostAriaLabel(host) === '' || host.accessibleLabel === ''
+    authored === '' || (authored === null && host.accessibleLabel === '')
       ? ''
       : resolveAccessibleName(host, host.label) ?? nothing;
   return html`<div part="base" role="group" aria-label=${name}><slot></slot></div>`;

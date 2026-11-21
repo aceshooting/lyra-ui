@@ -616,10 +616,10 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     promotionTextCounts: ReadonlyMap<string, number>,
   ): string | undefined {
     if (promotionTextCounts.size === 0) return undefined;
-    const label = collapseWhitespaceAndSoftHyphen(text).trim();
+    const label = boundedAccessibleContext(collapseWhitespaceAndSoftHyphen(text));
     const context = label && promotionTextCounts.get(label) === 1
-      ? boundedAccessibleContext(label)
-      : labelWithVisibleText(boundedAccessibleContext(label), this.localize('memoryPanelAddPosition', undefined, {
+      ? label
+      : labelWithVisibleText(label, this.localize('memoryPanelAddPosition', undefined, {
           index: this.formatLocaleNumber(index + 1),
         }));
     return labelWithVisibleText(this.localize('memoryPanelAdd'), context);
@@ -940,7 +940,8 @@ export class LyraMemoryPanel extends LyraElement<LyraMemoryPanelEventMap> {
     const promotionTextCounts = new Map<string, number>();
     if (scope === 'short-term' && eligibleItems.length > 1) {
       for (const item of eligibleItems) {
-        const label = collapseWhitespaceAndSoftHyphen(item.text).trim();
+        // Counted on the bounded text the name carries, so rows that differ only past it stay distinct.
+        const label = boundedAccessibleContext(collapseWhitespaceAndSoftHyphen(item.text));
         promotionTextCounts.set(label, (promotionTextCounts.get(label) ?? 0) + 1);
       }
     }

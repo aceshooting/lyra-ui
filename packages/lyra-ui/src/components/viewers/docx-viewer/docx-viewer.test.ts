@@ -1177,6 +1177,33 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
     }
   });
 
+  it('reveals an activated highlight without animation under reduced motion', async () => {
+    const { el, restore } = await loadWithMarkup(`${'<p>Filler paragraph.</p>'.repeat(80)}<p>Ada wrote the first program.</p>`);
+    const scrollTo = Element.prototype.scrollTo;
+    const scrollIntoView = Element.prototype.scrollIntoView;
+    const behaviors: unknown[] = [];
+    try {
+      el.style.cssText = 'display:block;block-size:160px';
+      el.highlights = [{ id: 'ada', label: 'Ada passage', anchor: { kind: 'text-quote', quote: 'Ada wrote' } }];
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="highlight-action"]') !== null);
+      await setReducedMotion('reduce');
+      Element.prototype.scrollTo = function (this: Element, ...args: unknown[]) {
+        behaviors.push((args[0] as ScrollToOptions | undefined)?.behavior);
+      } as typeof Element.prototype.scrollTo;
+      Element.prototype.scrollIntoView = function (this: Element, options?: boolean | ScrollIntoViewOptions) {
+        behaviors.push(typeof options === 'object' ? options.behavior : undefined);
+      };
+      el.shadowRoot!.querySelector<HTMLButtonElement>('[part="highlight-action"]')!.click();
+      expect(behaviors.length, 'the activation reveals its target').to.be.greaterThan(0);
+      expect(behaviors.every((behavior) => behavior === 'instant'), String(behaviors)).to.equal(true);
+    } finally {
+      Element.prototype.scrollTo = scrollTo;
+      Element.prototype.scrollIntoView = scrollIntoView;
+      await setReducedMotion('no-preference');
+      restore();
+    }
+  });
+
   it('honors the composite focus-ring shorthand on a rendered highlight action', async () => {
     const { el, restore } = await loadWithMarkup('<p>Ada wrote the first program.</p>');
     try {

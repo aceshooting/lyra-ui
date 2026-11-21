@@ -25,14 +25,14 @@ describe('lr-rating change request', () => {
     await el.updateComplete;
     expect(el.value).to.equal(2);
     expect(el.getAttribute('aria-valuenow')).to.equal('2');
-    expect(log).to.deep.equal(['request:3:2:2:true', 'lr-activate']);
+    expect(log, 'a refused or redirected request activates nothing').to.deep.equal(['request:3:2:2:true']);
 
     log.length = 0;
     mode = 'resolve';
     await sendKeys({ press: 'ArrowRight' });
     await el.updateComplete;
     expect(el.value, 'a listener write wins over the proposal').to.equal(5);
-    expect(log).to.deep.equal(['request:3:2:2:true', 'lr-activate']);
+    expect(log, 'a refused or redirected request activates nothing').to.deep.equal(['request:3:2:2:true']);
 
     log.length = 0;
     mode = 'same';
@@ -40,7 +40,7 @@ describe('lr-rating change request', () => {
     await sendKeys({ press: 'ArrowRight' });
     await el.updateComplete;
     expect(el.value, 'writing back the held value still suppresses the commit').to.equal(2);
-    expect(log).to.deep.equal(['request:3:2:2:true', 'lr-activate']);
+    expect(log, 'a refused or redirected request activates nothing').to.deep.equal(['request:3:2:2:true']);
 
     log.length = 0;
     mode = 'allow';

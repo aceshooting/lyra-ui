@@ -3,6 +3,7 @@ import '../../lr-video.js';
 import type { LyraVideo } from './video.class.js';
 import type { Engine3dHost, Engine3dInstance } from '../../../internal/engine-3d-loader.js';
 import { panoramaLoader, panoramaEnvironment } from '../image-viewer/image-viewer-panorama.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 const urls: string[] = [];
 async function ready(el: LyraVideo): Promise<HTMLVideoElement> {
@@ -206,6 +207,23 @@ describe('lr-video panorama', function () {
     expect(notice.textContent).to.include('Renderer unavailable').and.to.include('Native video restored');
     expect(notice.textContent).not.to.include('private cleanup detail');
     el.remove(); expect(disposed).to.equal(1);
+  });
+
+  it('hands poster play focus to the control-bar play button even when hotspots are listed', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video style="inline-size:480px;block-size:320px" poster="https://example.test/poster.jpg"
+      engine="webgl" projection="equirectangular" .hotspots=${[{ id: 'exit', yaw: 0, pitch: 0 }]}></lr-video>`);
+    await el.updateComplete;
+    const root = el.shadowRoot!;
+    expect(root.querySelector('[part="panorama-hotspot"][tabindex="0"]') !== null, 'a hotspot is listed').to.equal(true);
+    const video = el.getVideoElement()!;
+    video.play = () => Promise.resolve();
+    const poster = root.querySelector<HTMLButtonElement>('[part="poster-play-button"]')!;
+    await focusByKeyboard(poster);
+    poster.click();
+    video.dispatchEvent(new Event('play'));
+    await el.updateComplete;
+    expect(root.querySelector('[part="poster-play-button"]') === null).to.equal(true);
+    expect(root.activeElement?.getAttribute('data-control') ?? root.activeElement?.getAttribute('part')).to.equal('play');
   });
 
 });

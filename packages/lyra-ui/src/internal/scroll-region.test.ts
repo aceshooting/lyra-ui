@@ -16,6 +16,20 @@ describe('scroll region', () => {
     dispose();
   });
 
+  it('drops the kept tabindex once focus leaves a body that stopped overflowing', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div><div style="block-size:40px;overflow:auto"><div style="block-size:200px"></div></div><button>after</button></div>`);
+    const body = wrapper.firstElementChild as HTMLElement;
+    const dispose = makeScrollRegionFocusable(body, 'Result');
+    body.focus();
+    body.style.blockSize = '400px';
+    await waitUntil(() => body.getAttribute('tabindex') === '-1', 'focused body keeps a programmatic stop');
+    wrapper.querySelector('button')!.focus();
+    await waitUntil(() => !body.hasAttribute('tabindex'), 'stale stop removed after focus leaves');
+    expect(body.hasAttribute('role')).to.equal(false);
+    dispose();
+  });
+
   it('adds no tab stop to a non-overflowing body, omits a blank name and cleans up', async () => {
     const short = await fixture<HTMLElement>(html`<div style="overflow:auto"><p>short</p></div>`);
     const stop = makeScrollRegionFocusable(short, 'Name');

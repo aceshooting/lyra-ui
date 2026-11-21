@@ -45,6 +45,16 @@ describe('<lr-button-group>', () => {
     expect(base.getAttribute('aria-label')).to.equal('Visible actions');
   });
 
+  it('keeps a non-empty host aria-label attribute over an empty accessibleLabel property', async () => {
+    const el = await fixture<LyraButtonGroup>(html`
+      <lr-button-group label="Visible actions" aria-label="Author actions"><lr-button>Open</lr-button></lr-button-group>
+    `);
+    el.accessibleLabel = '';
+    await el.updateComplete;
+    expect(el.getAttribute('aria-label')).to.equal('Author actions');
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Author actions');
+  });
+
   it('is accessible', async () => {
     const el = await fixture<LyraButtonGroup>(html`<lr-button-group label="Actions"><lr-button>Open</lr-button></lr-button-group>`);
     await expect(el).to.be.accessible();

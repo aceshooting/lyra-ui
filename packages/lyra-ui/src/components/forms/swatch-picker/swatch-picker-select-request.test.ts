@@ -31,15 +31,22 @@ describe('lr-swatch-picker select request', () => {
     await el.updateComplete;
     expect(el.value).to.equal('blue');
     expect(swatch(el, 0).getAttribute('aria-checked')).to.equal('true');
-    expect(log).to.deep.equal(['request:green:blue:blue:true', 'lr-activate']);
+    expect(log).to.deep.equal(['request:green:blue:blue:true']);
 
     log.length = 0;
-    mode = 'resolve';
+    mode = 'veto';
     await focusByKeyboard(swatch(el, 0));
     await sendKeys({ press: 'ArrowRight' });
     await el.updateComplete;
+    expect(el.shadowRoot!.activeElement === swatch(el, 0), 'a refused arrow key leaves focus in place').to.equal(true);
+    expect(log).to.deep.equal(['request:green:blue:blue:true']);
+
+    log.length = 0;
+    mode = 'resolve';
+    await sendKeys({ press: 'ArrowRight' });
+    await el.updateComplete;
     expect(el.value, 'a listener write wins over the proposal').to.equal('red');
-    expect(log).to.deep.equal(['request:green:blue:blue:true', 'lr-activate']);
+    expect(log).to.deep.equal(['request:green:blue:blue:true']);
 
     log.length = 0;
     mode = 'same';
@@ -48,7 +55,7 @@ describe('lr-swatch-picker select request', () => {
     swatch(el, 2).click();
     await el.updateComplete;
     expect(el.value, 'writing back the held value still suppresses the commit').to.equal('blue');
-    expect(log).to.deep.equal(['request:red:blue:blue:true', 'lr-activate']);
+    expect(log).to.deep.equal(['request:red:blue:blue:true']);
 
     log.length = 0;
     mode = 'allow';

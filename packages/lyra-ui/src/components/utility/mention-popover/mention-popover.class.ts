@@ -1200,7 +1200,7 @@ export class LyraMentionPopover extends LyraElement<LyraMentionPopoverEventMap> 
    *  with no disabled row, this is the same `clamp(activeIndex, 0, rows.length - 1)` it always
    *  computed. */
   private clampedIndex(rows: readonly Readonly<LyraMentionItem>[]): number {
-    return nearestEnabledIndex(this.activeIndex, rows.length, (at) => rows[at]?.disabled === true);
+    return nearestEnabledIndex(this.activeIndex, rows.length, (at) => !!rows[at]?.disabled);
   }
 
   private rowId(index: number): string {

@@ -8,6 +8,8 @@ interface LazyChildren {
   readonly remaining: Map<string, () => Promise<unknown>>;
   readonly pending: Map<string, Promise<boolean>>;
   readonly names: readonly string[];
+  /** One selector matching any still-remaining child undefined; rebuilt when `remaining` changes. */
+  selector: string | undefined;
 }
 
 const owners = new Map<string, LazyChildren>();
@@ -17,6 +19,7 @@ const stateFor = (loaders: LazyChildLoaders): LazyChildren => ({
   remaining: new Map(Object.entries(loaders)),
   pending: new Map(),
   names: Object.keys(loaders),
+  selector: undefined,
 });
 
 /**
@@ -34,8 +37,12 @@ export function defineLazyChildren(owner: string, loaders: LazyChildLoaders): vo
  * `undefined` when none is outstanding. `owner` is either a name installed by
  * `defineLazyChildren()` or a module-level loader record a class module owns itself (children it
  * must reach whichever entry registered it). Each child loads once per page; a failed import is
- * forgotten so a later call retries it, and the returned promise never rejects, so a host's
- * `updateComplete` stays settleable. It resolves `false` when any of the awaited imports failed.
+ * forgotten so the next call, from the host's next update, retries it. Nothing schedules that
+ * update: a host that must recover without one awaits the result and requests it itself. The
+ * returned promise never rejects, so a host's `updateComplete` stays settleable; it resolves
+ * `false` when any of the awaited imports failed. A root that contains none of the remaining
+ * children costs one selector query, so hosts that update often still gate the call on a cheap
+ * condition for the state that renders those children.
  */
 export function loadLazyChildren(owner: string | LazyChildLoaders, root: ParentNode): Promise<boolean> | undefined {
   let children: LazyChildren | undefined;
@@ -48,14 +55,18 @@ export function loadLazyChildren(owner: string | LazyChildLoaders, root: ParentN
   if (!children) return undefined;
   const state = children;
   const loads: Promise<boolean>[] = [...state.pending.values()];
-  for (const [name, load] of state.remaining) {
+  state.selector ??= Array.from(state.remaining.keys(), (name) => `${tag(name)}:not(:defined)`).join(',');
+  const outstanding = state.selector !== '' && root.querySelector(state.selector) !== null;
+  if (outstanding) for (const [name, load] of state.remaining) {
     if (!root.querySelector(`${tag(name)}:not(:defined)`)) continue;
     state.remaining.delete(name);
+    state.selector = undefined;
     const attempt = Promise.resolve()
       .then(load)
       .then(() => true, (error: unknown) => {
         state.remaining.set(name, load);
-        if (DEV_DIAGNOSTICS) devWarn(`Lyra: <${tag(name)}> could not be registered; it is retried on the next render. ${String(error)}`);
+        state.selector = undefined;
+        if (DEV_DIAGNOSTICS) devWarn(`Lyra: <${tag(name)}> could not be registered; it is retried when its host next updates. ${String(error)}`);
         return false;
       })
       .finally(() => {

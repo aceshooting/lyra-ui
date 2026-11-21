@@ -1,6 +1,7 @@
 import type * as HierarchySourceControllerModule from './hierarchy-source-controller.js';
 import type * as HierarchySourceViewModule from './hierarchy-source-view.js';
 import type * as HierarchySummarySourceModule from './hierarchy-summary-source.js';
+import { requestContextUpdate } from './context-update.js';
 import { DEV_DIAGNOSTICS, devWarn } from './dev-warning.js';
 
 /** The provider controller, virtualized view and summary adapter a source-mode host renders with. */
@@ -47,7 +48,7 @@ export interface HierarchySourceRuntimeHost {
  * One host's access to the shared runtime: synchronous through {@link runtime} once loaded, and a
  * guarded load before that. A load that settles after its binding was invalidated, the host
  * disconnected or moved to another document resolves `undefined`, as does a failed load (the next
- * request retries); a live request schedules the render that can now use the runtime.
+ * request retries); a live request schedules the context render that can now use the runtime.
  */
 export class HierarchySourceRuntimeGate {
   private loaded?: HierarchySourceRuntime;
@@ -98,7 +99,8 @@ export class HierarchySourceRuntimeGate {
     }
     this.loaded = runtime;
     if (!bound() || !host.isConnected || host.ownerDocument !== owner) return undefined;
-    host.requestUpdate();
+    // Named, so a provider-backed host renders with the runtime without treating it as a refresh.
+    requestContextUpdate(host);
     return runtime;
   }
 }

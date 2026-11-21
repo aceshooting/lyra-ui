@@ -842,11 +842,11 @@ export function buildLyraRenameReference(renameLedger, inventory, { exportDeprec
         '| Kind | From | To | Handling |',
         '|---|---|---|---|',
         ...profile.globals.map((entry) => {
-          const from = entry.kind === 'export' ? `${entry.from} (${entry.module === '.' ? 'package root' : entry.module})` : entry.kind === 'part' ? `<${entry.tag}> ::part(${entry.from})` : entry.prefix ? `${entry.from}*` : entry.from;
+          const from = entry.kind === 'export' ? `${entry.from} (${entry.module === '.' ? 'package root' : entry.module})` : entry.kind === 'part' ? `<${entry.tag}> ::part(${entry.from})` : entry.kind === 'locale-key' && entry.tag ? `<${entry.tag}> ${entry.from}` : entry.prefix ? `${entry.from}*` : entry.from;
           const handling = entry.kind === 'module'
             ? `Rewritten${entry.except ? ` except ${entry.except.map((prefix) => `\`${cell(prefix)}\``).join(', ')}` : ''}. ${entry.summary}`
             : entry.kind === 'export' ? `Import clause re-bound; other uses reported. ${entry.summary}` : `Reported only. ${entry.summary}`;
-          const to = entry.kind === 'part' || entry.kind === 'css-property' ? cell(entry.to) : `\`${cell(entry.to)}${entry.prefix ? '*' : ''}\``;
+          const to = entry.kind === 'part' || entry.kind === 'css-property' ? cell(entry.to) : entry.to === undefined ? 'No replacement' : `\`${cell(entry.to)}${entry.prefix ? '*' : ''}\``;
           return `| ${entry.kind} | \`${cell(from)}\` | ${to} | ${cell(handling)} |`;
         }),
         '',

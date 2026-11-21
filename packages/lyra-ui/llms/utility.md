@@ -2217,7 +2217,10 @@ When the tour ends, focus returns to the element that held it when the tour star
 
 - `open: boolean = false` (reflected) — no separate `show()`/`hide()`; after the initial silent
   render, writes run `start()`/`end('api')` with their events, so `open = false` can be vetoed through
-  `lr-tour-end-request`
+  `lr-tour-end-request`. An `open` declared at mount while `steps` is still empty waits (reflected,
+  nothing rendered, no event) for the next `steps` assignment, however late: non-empty steps start
+  the tour, an empty array ends it with `lr-tour-end` reason `unavailable`, and unsetting `open`
+  ends the wait like any `end('api')`
 - `steps: readonly Readonly<LyraTourStep>[] = []` (attribute: false) — assignment takes a shallow
   frozen snapshot; empty renders nothing
 - `activeIndex: number = 0` (attribute `active-index`, reflected) — clamped to

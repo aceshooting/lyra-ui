@@ -26,7 +26,7 @@ import {
   Announcer,
 } from '../../../internal/announcer.js';
 import { isRtl } from '../../../internal/rtl.js';
-import { prefersReducedMotion } from '../../../internal/motion.js';
+import { motionScrollBehavior, prefersReducedMotion } from '../../../internal/motion.js';
 import { observeReducedMotion } from '../../../internal/motion-observer.js';
 import { layeredLayout } from '../../../internal/layered-layout.js';
 import { clamp, finiteNumber, finiteRange, nearestEnabledIndex } from '../../../internal/numbers.js';
@@ -628,7 +628,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
     this.sourceState++; await this.updateComplete; if (!current()) return false;
     const target = [...this.renderRoot.querySelectorAll<HTMLElement>('[data-source-key]')].find(row => row.dataset['sourceKey'] === key);
     if (!target) return false;
-    revealInOwnScroller(target); if (!current()) return false; target.focus({ preventScroll: true }); return current();
+    revealInOwnScroller(target, 'nearest', motionScrollBehavior(this, 'auto')); if (!current()) return false; target.focus({ preventScroll: true }); return current();
   }
   private async focusSourceRecord(
     index: number,
@@ -667,7 +667,7 @@ export class LyraFlowCanvas extends LyraElement<LyraFlowCanvasEventMap> {
       for (; index >= page * size && index < Math.min(total, (page + 1) * size); index += direction) {
         const button = buttons[index % size];
         if (!button || button.disabled) continue;
-        revealInOwnScroller(button);
+        revealInOwnScroller(button, 'nearest', motionScrollBehavior(this, 'auto'));
         if (current()) button.focus({ preventScroll: true });
         return;
       }

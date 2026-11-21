@@ -2,6 +2,7 @@ import { expect } from '@open-wc/testing';
 import * as controller from './hierarchy-source-controller.js';
 import * as view from './hierarchy-source-view.js';
 import * as summary from './hierarchy-summary-source.js';
+import { LYRA_CONTEXT_UPDATE } from './context-update.js';
 import {
   __resetHierarchySourceRuntimeForTesting,
   HierarchySourceRuntimeGate,
@@ -11,7 +12,10 @@ import {
 afterEach(() => __resetHierarchySourceRuntimeForTesting());
 
 function gateHost() {
-  return { isConnected: true, ownerDocument: document, updates: 0, requestUpdate() { this.updates++; } };
+  return {
+    isConnected: true, ownerDocument: document, updates: 0, names: [] as unknown[],
+    requestUpdate(name?: PropertyKey) { this.updates++; this.names.push(name); },
+  };
 }
 
 describe('loadHierarchySourceRuntime', () => {
@@ -46,6 +50,7 @@ describe('HierarchySourceRuntimeGate', () => {
     expect(runtime?.view === view).to.equal(true);
     expect(gate.runtime === runtime).to.equal(true);
     expect(host.updates).to.equal(1);
+    expect(host.names, 'a named context render, never the explicit refresh').to.deep.equal([LYRA_CONTEXT_UPDATE]);
     expect(await gate.ensure(() => true) === runtime).to.equal(true);
     expect(await gate.ensure(() => false) === undefined).to.equal(true);
     host.isConnected = false;

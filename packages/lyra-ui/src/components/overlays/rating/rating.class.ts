@@ -158,9 +158,11 @@ function starSolid(): SVGTemplateResult {
  *   rating while `value` still holds the current one. Cancelable: calling `preventDefault()` keeps
  *   the current rating, and none of `input`/`lr-input`/`change`/`lr-change` fire. A listener may
  *   instead resolve the request by assigning `value` itself, which also suppresses the built-in
- *   commit. `lr-activate` still follows. A gesture that would not move the value requests nothing.
+ *   commit. A refused or redirected request emits no `lr-activate`. A gesture that would not move
+ *   the value requests nothing.
  * @event lr-activate - Fired on every interactive commit of a rating -- a click on a symbol, or an
- *   Arrow/Page/Home/End key -- whether or not the value actually moved. `detail: { value }` carries the
+ *   Arrow/Page/Home/End key -- whether or not the value actually moved, unless
+ *   `lr-rating-change-request` refused or redirected it. `detail: { value }` carries the
  *   committed rating. Bubbling and composed, so a host outside the shadow tree receives it.
  *   Not cancelable: it is a notification that the user committed a rating, not a veto point, and
  *   nothing in this component branches on it. Re-committing the current rating is the case
@@ -729,7 +731,7 @@ export class LyraRating extends LyraFormControlElement<LyraRatingEventMap> {
     this.markInteracted();
     const clamped = clampSteppedValue(next, 0, this.safeMax, this.safePrecision);
     if (clamped !== this.value) {
-      requestThenCommit({
+      const request = requestThenCommit({
         requestDetail: { value: clamped, previousValue: this.value },
         emitRequest: (request, init: { cancelable: true }) =>
           this.emit('lr-rating-change-request', request, init),
@@ -742,6 +744,8 @@ export class LyraRating extends LyraFormControlElement<LyraRatingEventMap> {
           emitValueEvents(this, 'change', detail, detail => this.emit('lr-change', detail));
         },
       });
+      // Refused, or resolved by the listener to another rating: nothing was committed here.
+      if (request.defaultPrevented || this.value !== clamped) return;
     }
     // Every interactive commit reports, including the re-commit of the current rating that
     // `lr-change` is defined to stay silent for. See the class doc's `lr-activate` entry.

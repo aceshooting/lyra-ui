@@ -4066,8 +4066,11 @@ receives the `start` alias slot's content), `end`, `country`
 content, like every sibling field. Style
 the invalid state with `:state(user-invalid)`, the `data-invalid` host attribute (present while
 invalid after interaction, including after a failed submit or `reportValidity()`), or
-`--lr-phone-input-invalid-border-color`. Its fallback is `--lr-form-control-invalid-border-color`,
-then `--lr-color-danger`; the invalid edge yields to the focus edge. Focus shows the
+`--lr-phone-input-invalid-border-color`. The built-in invalid edge follows `:state(user-invalid)`,
+so it can appear with the first invalid keystroke, while `data-invalid` still waits for a commit,
+blur or validity report. Its
+fallback is `--lr-form-control-invalid-border-color`, then `--lr-color-danger`; the invalid edge
+yields to the focus edge. Focus shows the
 brand border and the optional halo, with no extra outline ring. `appearance` (`'outlined'` default,
 `'filled-outlined'`, `'filled'`, `'plain'`, `'accent'`, reflected) paints the row
 exactly like `lr-input`. Native invalid/focus feedback therefore has one
@@ -4482,7 +4485,8 @@ gemstone?: GemstoneKey; readonly disabled?: boolean }`; a valid CSS `color` is u
 dispatched before a click or Arrow/Home/End key selects a swatch other than the current one, while
 `value` still holds the current selection. `preventDefault()` keeps the selection and suppresses
 `lr-change`; a listener may instead resolve the request by assigning `value` itself, which also
-suppresses the built-in commit. `lr-activate` still follows either way.
+suppresses the built-in commit. A refused or redirected request emits no `lr-activate`, and an
+arrow key it refused leaves focus on the swatch it started from.
 `lr-change` (`detail: { value, previousValue }`) — fired only when the selected value actually
 changes via click or keyboard (re-selecting the current swatch is a no-op).
 `lr-activate` (`detail: { value }`) — fired on **every** activation of a swatch (a click, or an
@@ -5543,7 +5547,7 @@ the radio that is already checked, after the value events when the selection mov
 standalone radio checks itself, it dispatches the cancelable `lr-radio-select-request`
 (`{ checked: true, value }`, while `checked` still reads `false`): `preventDefault()` leaves it
 unchecked with no value events, and a listener that writes `checked` itself suppresses the built-in
-commit; `lr-activate` still follows. Standalone
+commit; a request that leaves it unchecked emits no `lr-activate`. Standalone
 radios sharing a non-empty `name` and form owner are mutually exclusive: selecting one unchecks the
 others (arrow-key movement between them still needs `lr-radio-group`). The internal control's native
 `focus` and `blur` are re-dispatched as bubbling, composed host events.
@@ -6020,7 +6024,8 @@ those events. Before a user activation moves the selection, the group dispatches
 holds the current selection), like the request events of `lr-checkbox-group` and
 `lr-toggle-group`: `preventDefault()` keeps the current selection and fires no value events, and a
 listener that resolves the request by assigning `value` (or a radio's `checked`) suppresses the
-built-in commit. `lr-activate` still follows either way. `lr-invalid` (no detail) is the group's
+built-in commit. A refused or redirected request emits no `lr-activate`, and an arrow key it refused
+leaves focus on the radio it started from, as in `lr-segmented` and `lr-tab-group`. `lr-invalid` (no detail) is the group's
 cancelable alias of a failed validity check; `preventDefault()` also cancels the native `invalid`
 event behind it.
 

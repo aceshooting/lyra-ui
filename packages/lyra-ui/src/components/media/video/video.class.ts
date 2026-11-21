@@ -1320,7 +1320,10 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   constructor() {
     super();
     // A panorama page button disables itself on the first or last page; focus moves to the other, then the current hotspot.
-    repairControlFocusOnUpdate(this, () => [this.renderRoot.querySelector<HTMLElement>('[part="panorama-hotspot"][tabindex="0"]')]);
+    // Only a page button hands focus to the hotspot: the poster play button's own restore owns its handoff.
+    repairControlFocusOnUpdate(this, (control) => control.getAttribute('part') === 'panorama-page'
+      ? [this.renderRoot.querySelector<HTMLElement>('[part="panorama-hotspot"][tabindex="0"]')]
+      : []);
   }
 
   override render(): TemplateResult {

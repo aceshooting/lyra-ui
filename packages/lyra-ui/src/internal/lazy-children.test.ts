@@ -72,4 +72,19 @@ describe('loadLazyChildren', () => {
     expect(loadLazyChildren(loaders, document.createElement('div'))).to.equal(undefined);
     expect(attempts).to.equal(0);
   });
+
+  it('scans a root once per call when none of several remaining children is present', () => {
+    const loaders: LazyChildLoaders = {
+      'lazy-child-scan-a': () => Promise.resolve(),
+      'lazy-child-scan-b': () => Promise.resolve(),
+      'lazy-child-scan-c': () => Promise.resolve(),
+    };
+    const root = document.createElement('div');
+    const query = root.querySelector.bind(root);
+    let scans = 0;
+    root.querySelector = ((selector: string) => { scans += 1; return query(selector); }) as typeof root.querySelector;
+    expect(loadLazyChildren(loaders, root)).to.equal(undefined);
+    expect(loadLazyChildren(loaders, root)).to.equal(undefined);
+    expect(scans).to.equal(2);
+  });
 });

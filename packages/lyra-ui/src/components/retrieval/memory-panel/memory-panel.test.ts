@@ -2007,6 +2007,20 @@ it('distinguishes promotion actions when row text is repeated or blank', async (
   ]);
 });
 
+it('distinguishes promotion actions whose row text differs only past the bounded context', async () => {
+  const prefix = 'The user keeps a long running note about the deployment pipeline and its failing stage ';
+  const el = await fixture<LyraMemoryPanel>(html`
+    <lr-memory-panel
+      .shortTerm=${[{ id: 'a', text: `${prefix}alpha` }, { id: 'b', text: `${prefix}beta` }]}
+      .strings=${{ memoryPanelAdd: 'Promote', memoryPanelAddPosition: 'row {index}' }}
+    ></lr-memory-panel>
+  `);
+  const names = [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="add-button"]')].map((button) => accessibleName(button));
+  expect(names).to.have.lengthOf(2);
+  expect(names[0]!.endsWith('row 1'), names[0]).to.equal(true);
+  expect(names[1]!.endsWith('row 2'), names[1]).to.equal(true);
+});
+
 it('leaves a populated panel to its host-authored name without a second shadow role or label', async () => {
   const el = await fixture<LyraMemoryPanel>(html`
     <lr-memory-panel

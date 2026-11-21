@@ -176,7 +176,9 @@ class LyraPhoneInputBase extends LyraElement<LyraPhoneInputEventMap> {}
  *   the country trigger's leading corners. The `pill` attribute swaps it for `--lr-radius-pill`.
  * @cssprop [--lr-phone-input-focus-border-color=var(--lr-color-brand)] - Focused row border color.
  * @cssprop [--lr-phone-input-invalid-border-color=var(--lr-form-control-invalid-border-color,var(--lr-color-danger))] -
- *   Row border color while the field is user-invalid (`data-invalid`).
+ *   Row border color while the field matches `:state(user-invalid)`: invalid after the user's
+ *   first edit, commit or blur (or a validity report), so it can turn on with the first keystroke
+ *   rather than waiting for blur.
  * @cssprop [--lr-phone-input-country-hover-bg=var(--lr-color-brand-quiet)] - Country trigger hover background.
  * @cssprop [--lr-phone-input-control-min-height=var(--lr-form-control-height)] - Input-wrapper
  *   block-size floor. Reads the shared form-control height ladder, so retuning

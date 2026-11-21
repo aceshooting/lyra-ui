@@ -6,8 +6,6 @@
   scale. `npx lyra-ui-migrate --origin=lyra-v31 --check src` reports each listener to review.
 - `lr-filter-bar`, `lr-data-grid`, `lr-message-feedback` and `lr-eval-dataset` drop listeners for
   the removed `lr-menu-item-change` and `lr-chip-select` events, which no component dispatches.
-- `lr-flow-canvas` documents `lr-edge-activate` without the removed `source`/`target` fields, and
-  the `lr-geojson-viewer` guide states that only the viewers family barrel exports
-  `LyraGeojsonView`.
+- `lr-flow-canvas` documents `lr-edge-activate` without the removed `source`/`target` fields.
 - `lr-file-tree` forwards its `.strings` overrides to the inner tree, so a `noData` override
   reaches the empty state of object data.

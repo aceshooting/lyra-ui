@@ -8294,6 +8294,14 @@
         },
         {
           "kind": "locale-key",
+          "from": "showAllColumns",
+          "to": "dataGridColumns",
+          "tag": "lr-data-grid",
+          "summary": "lr-data-grid names its columns-menu trigger with dataGridColumns (\"Columns\"); a showAllColumns override no longer reaches the grid, though lr-table still reads it.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
           "from": "stackTraceHideFrames",
           "to": "stackTraceInternalFrames",
           "summary": "lr-stack-trace names its internal-frame toggle with the constant stackTraceInternalFrames key; a string override under the old key no longer applies.",
@@ -8318,6 +8326,18 @@
           "from": "testResultsExpandTest",
           "to": "testResultsToggleTest",
           "summary": "lr-test-results names its detail toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "threadGroupCollapse",
+          "summary": "lr-thread-list names each group toggle by its visible group label while aria-expanded reports the state; a string override under the old key no longer applies and has no replacement.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "threadGroupExpand",
+          "summary": "lr-thread-list names each group toggle by its visible group label while aria-expanded reports the state; a string override under the old key no longer applies and has no replacement.",
           "since": "32.0.0"
         },
         {

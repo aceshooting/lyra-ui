@@ -84,6 +84,14 @@ for (const [items, key, expected] of [
   });
 }
 
+it('skips a resting highlight past a row an untyped caller disables with a truthy non-boolean', async () => {
+  const { el } = await open([
+    { suggestionId: 'untyped', label: 'Untyped', disabled: 1 } as unknown as LyraMentionItem,
+    { suggestionId: 'enabled', label: 'Enabled' },
+  ]);
+  expect(el.activeDescendantElement?.dataset['id'] ?? null).to.equal('enabled');
+});
+
 it('scrolls back to the first option on Home and honors a consumed native navigation key', async () => {
   const items = Array.from({ length: 30 }, (_, index) => ({ suggestionId: `member-${index}`, label: `Member ${index}` }));
   const { el, anchor } = await open(items);

@@ -259,7 +259,9 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
    * hide transition and leaves the top layer once it settles closed. An enclosing menu's or
    * `<lr-menubar>`'s `top-layer` applies too. Stacking contexts are deliberately not detected
    * automatically. Without native Popover API support a submenu keeps its ordinary `z-index`
-   * stacking. Same contract as `<lr-dropdown>`'s `top-layer`. Changes apply live while open.
+   * stacking. Same contract as `<lr-dropdown>`'s `top-layer`. Changes to this menu's own or an
+   * enclosing menu's `top-layer` apply live while a submenu is open; `<lr-menubar>`'s applies the
+   * next time a menu opens.
    * @default false
    */
   @property({ type: Boolean, attribute: 'top-layer', reflect: true }) topLayer = false;
@@ -512,9 +514,17 @@ export class LyraMenu extends LyraElement<LyraMenuEventMap> {
       this.syncPresentationState();
     }
     if (changed.has('dropdownSize')) this.applyDropdownSize();
-    if (changed.has('topLayer') && this.hasUpdated && this.presentationOpen && this.submenuAnchor) {
-      this.reposition();
+    if (changed.has('topLayer') && changed.get('topLayer') !== undefined) {
+      this.refreshSubmenuTopLayer();
+      // An enclosing menu's `top-layer` applies to every open submenu inside it.
+      for (const menu of this.querySelectorAll<LyraMenu>(tag('menu'))) menu.refreshSubmenuTopLayer?.();
     }
+  }
+
+  /** @internal Re-places this submenu, while open, in the layer its own or an ancestor's
+   *  `top-layer` now selects. */
+  refreshSubmenuTopLayer(): void {
+    if (this.hasUpdated && this.presentationOpen && this.submenuAnchor) this.reposition();
   }
 
   /** Whether this submenu opens in the top layer: its own `topLayer`, an enclosing menu's, or the

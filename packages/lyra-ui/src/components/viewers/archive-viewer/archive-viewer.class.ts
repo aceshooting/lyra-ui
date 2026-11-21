@@ -1,5 +1,6 @@
 import { viewerFailureMessage } from '../../../internal/viewer-failure-message.js';
 import { revealInOwnScroller } from '../../../internal/reveal-row.js';
+import { motionScrollBehavior } from '../../../internal/motion.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { ViewerSourceController, ViewerSourceUrlNotAllowedError, type ViewerSourceToken } from '../../../internal/viewer-source-controller.js';
 import { property, state } from 'lit/decorators.js';
@@ -328,7 +329,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
         : null;
       // The optional call is a silent no-op when nothing matched, so the found-state of this query
       // -- not an unconditional `true` -- is this branch's real result.
-      if (target) revealInOwnScroller(target);
+      if (target) revealInOwnScroller(target, 'nearest', motionScrollBehavior(this, 'auto'));
       return target != null;
     }
     // TextViewerTarget's deliberately narrowed exported mixin type omits its protected hooks, so

@@ -88,7 +88,8 @@ gemstone?: GemstoneKey; readonly disabled?: boolean }`; a valid CSS `color` is u
 dispatched before a click or Arrow/Home/End key selects a swatch other than the current one, while
 `value` still holds the current selection. `preventDefault()` keeps the selection and suppresses
 `lr-change`; a listener may instead resolve the request by assigning `value` itself, which also
-suppresses the built-in commit. `lr-activate` still follows either way.
+suppresses the built-in commit. A refused or redirected request emits no `lr-activate`, and an
+arrow key it refused leaves focus on the swatch it started from.
 `lr-change` (`detail: { value, previousValue }`) — fired only when the selected value actually
 changes via click or keyboard (re-selecting the current swatch is a no-op).
 `lr-activate` (`detail: { value }`) — fired on **every** activation of a swatch (a click, or an

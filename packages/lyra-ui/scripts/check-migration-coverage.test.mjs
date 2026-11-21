@@ -224,6 +224,9 @@ const polarityErrors = (result) =>
   finding(barrel({ module: './components/ghost' }), /\.\/components\/ghost is not an exported barrel/);
   finding(only('locale-key', { from: 'newLabel' }), /the key still exists/);
   finding(only('locale-key', { to: 'missingLabel' }), /missingLabel is not a default string key/);
+  const relaxed = [{ kind: 'locale-key', from: 'newLabel', to: 'newLabel2', tag: 'lr-x' }, { kind: 'locale-key', from: 'goneLabel' }];
+  assert.deepEqual(analyzeGlobalsSurface(ledger(relaxed), { ...surface, stringKeys: new Set(['newLabel', 'newLabel2']) }), [],
+    'a tag-scoped key may stay for other components, and a removed key may name no replacement');
 }
 
 console.log('migration-coverage tests passed.');

@@ -394,7 +394,10 @@ export class LyraTour extends LyraElement<LyraTourEventMap> {
 
   private _open = false;
   /** Whether the tour is open. After the first render, writes run `start()`/`end('api')`, with their
-   *  events and the cancelable end request. */
+   *  events and the cancelable end request. An `open` declared before the first render while `steps`
+   *  is still empty waits, with nothing rendered and no event, for the next `steps` assignment
+   *  however late it comes: non-empty steps start the tour, an empty array ends it with
+   *  `lr-tour-end` reason `unavailable`, and unsetting `open` ends the wait like any `end('api')`. */
   @property({ type: Boolean, reflect: true })
   get open(): boolean {
     return this._open;

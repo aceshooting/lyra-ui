@@ -1239,7 +1239,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
-    this.menuRegistration = loadLazyChildren(DATA_GRID_CHILDREN, this.renderRoot) ?? this.menuRegistration;
+    if (this.withColumnsMenu) this.menuRegistration = loadLazyChildren(DATA_GRID_CHILDREN, this.renderRoot) ?? this.menuRegistration;
     this.childRegistration = loadLazyChildren('data-grid', this.renderRoot) ?? this.childRegistration;
     this.renderedDisplayItems = this.displayItems;
     this.renderedColumns = this.visibleColumns;

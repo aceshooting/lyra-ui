@@ -769,7 +769,9 @@ it('normalizes duplicate example ids first-wins before progress and disclosures'
   expect(rows[0]!.textContent).not.to.contain('Later example');
 });
 
-it('caps rendered example rows at the render ceiling and shows a localized limit notice', async () => {
+it('caps rendered example rows at the render ceiling and shows a localized limit notice', async function () {
+  // Rendering the full 500-row ceiling takes about 5 s in WebKit, close to the 6 s default.
+  this.timeout(30_000);
   const many: EvalExampleResult[] = Array.from({ length: 600 }, (_, index) => ({
     id: `ex-${index}`,
     status: { kind: 'done' as const },

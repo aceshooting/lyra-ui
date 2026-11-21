@@ -67,6 +67,18 @@ describe('top-layer on lr-menu', () => {
     share.closeSubmenu();
   });
 
+  it('applies an enclosing menu\'s top-layer live to an already open submenu', async () => {
+    const { menu, share } = await mount(false);
+    const popup = await openSubmenu(share);
+    expect(popup.matches(':popover-open')).to.equal(false);
+    menu.topLayer = true;
+    await waitUntil(() => popup.matches(':popover-open'), 'the open submenu is promoted');
+    menu.topLayer = false;
+    await waitUntil(() => !popup.matches(':popover-open'), 'unsetting it releases the open submenu');
+    expect(share.getAttribute('aria-expanded')).to.equal('true');
+    share.closeSubmenu();
+  });
+
   it('stacks a submenu at its enclosing overlay\'s leased stack index', async () => {
     const dropdown = await fixture<LyraDropdown>(html`<lr-dropdown data-lr-theme-scope style=${NO_MOTION}>
       <button slot="trigger">Open</button>

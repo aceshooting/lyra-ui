@@ -36855,7 +36855,7 @@
     "current": {
       "version": "31.2.1",
       "sourceCommit": null,
-      "manifestSha256": "5b1df800b335afbf17acaba2c3241ccb6a3ac83428a0b4b8d2b2e48a2e09258f",
+      "manifestSha256": "8f7fe32ea630dbfa2c14c318f3564e1c043138d2259fc8dfb4deb97949131b54",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",

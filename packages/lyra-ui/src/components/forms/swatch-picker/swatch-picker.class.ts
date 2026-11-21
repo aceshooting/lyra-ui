@@ -109,11 +109,13 @@ export interface LyraSwatchPickerEventMap {
  *   carries the proposed value while `value` still holds the current one. Cancelable: calling
  *   `preventDefault()` keeps the current selection and `lr-change` does not fire. A listener may
  *   instead resolve the request by assigning `value` itself, which also suppresses the built-in
- *   commit. `lr-activate` still follows.
+ *   commit. A refused or redirected request emits no `lr-activate` and, from the keyboard, leaves
+ *   focus on the swatch it started from.
  * @event lr-change - Fired when the selected value changes via click or keyboard.
  *   `detail: { value, previousValue }`.
  * @event lr-activate - Fired on every activation of a swatch -- a click, or an Arrow/Home/End key
- *   that lands on one -- whether or not the selection actually moved. `detail: { value }` carries
+ *   that lands on one -- whether or not the selection actually moved, unless a select request
+ *   refused or redirected it. `detail: { value }` carries
  *   the activated swatch's own value. Bubbling and composed, so a host outside the shadow tree
  *   receives it. Not cancelable: it is a notification that the user picked a swatch, not a veto
  *   point, and nothing in this component branches on it. Re-picking the current value is the case
@@ -347,12 +349,13 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     return selectedIndex;
   }
 
-  private select(option: SwatchPickerItem, index: number): void {
-    if (this.disabled || option.disabled) return;
+  /** Returns false when a `lr-swatch-picker-select-request` listener refused or redirected it. */
+  private select(option: SwatchPickerItem, index: number): boolean {
+    if (this.disabled || option.disabled) return false;
     const previousIndex = this.resolveSelectedIndex();
     if (index !== previousIndex || option.value !== this.value) {
       const previousValue = this.value;
-      requestThenCommit({
+      const request = requestThenCommit({
         requestDetail: { value: option.value, previousValue },
         emitRequest: (request, init: { cancelable: true }) =>
           this.emit('lr-swatch-picker-select-request', request, init),
@@ -365,10 +368,12 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
           this.emit('lr-change', { value: option.value, previousValue });
         },
       });
+      if (request.defaultPrevented || this.value !== option.value) return false;
     }
     // Every activation of an enabled swatch reports, including the re-pick of the current value
     // that `lr-change` is defined to stay silent for. See the class doc's `lr-activate` entry.
     this.emit('lr-activate', { value: option.value });
+    return true;
   }
 
   private focusSwatch(index: number): void {
@@ -531,8 +536,8 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     if (targetIndex < 0) return;
     e.preventDefault();
     const target = navigable[targetIndex]!;
-    this.select(target, targetIndex);
-    this.focusSwatch(targetIndex);
+    // The request runs first, so a refused or redirected one leaves focus in place.
+    if (this.select(target, targetIndex)) this.focusSwatch(targetIndex);
   };
 
   override render(): TemplateResult {

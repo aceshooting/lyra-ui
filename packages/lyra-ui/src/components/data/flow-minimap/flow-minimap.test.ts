@@ -336,6 +336,25 @@ it('wheeling over the map accumulates trackpad deltas into whole steps and leave
   expect(wrapper.viewport.zoom).to.be.closeTo(zoomBefore * 1.2, 1e-9);
 });
 
+it('drops a partial wheel notch once the pointer leaves the minimap', async () => {
+  const wrapper = (await fixture(html`
+    <lr-flow-canvas style="width:400px;height:300px">
+      <lr-flow-minimap slot="bottom-end"></lr-flow-minimap>
+    </lr-flow-canvas>
+  `)) as LyraFlowCanvas;
+  wrapper.nodes = nodes;
+  await wrapper.updateComplete;
+  await new Promise((r) => requestAnimationFrame(r));
+  const minimap = wrapper.querySelector('lr-flow-minimap') as LyraFlowMinimap;
+  await minimap.updateComplete;
+  const map = minimap.shadowRoot!.querySelector('[part="map"]') as SVGSVGElement;
+  const zoomBefore = wrapper.viewport.zoom;
+  for (let i = 0; i < 9; i += 1) map.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -10 }));
+  minimap.dispatchEvent(new PointerEvent('pointerleave'));
+  map.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, deltaY: -10 }));
+  expect(wrapper.viewport.zoom, 'a later gesture starts from a whole notch').to.equal(zoomBefore);
+});
+
 it('the viewport rect is the single focusable stop; +/-/Enter/Home/arrows drive the canvas', async () => {
   const wrapper = (await fixture(html`
     <lr-flow-canvas style="width:400px;height:300px">

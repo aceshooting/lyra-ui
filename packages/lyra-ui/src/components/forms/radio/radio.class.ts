@@ -94,8 +94,9 @@ class LyraRadioBase extends LyraElement<LyraRadioEventMap> {}
  *   standalone radio; `detail: { checked: true, value }`, while `checked` still holds `false`.
  *   Cancelable: calling `preventDefault()` leaves the radio unchecked, and none of
  *   `input`/`lr-input`/`change`/`lr-change` fire. A listener may instead resolve the request by
- *   writing `checked` itself, which also suppresses the built-in commit. `lr-activate` still
- *   follows. An owning radio group emits `lr-radio-group-select-request` instead.
+ *   writing `checked` itself, which also suppresses the built-in commit. A request that leaves the
+ *   radio unchecked emits no `lr-activate`. An owning radio group emits
+ *   `lr-radio-group-select-request` instead.
  * @event input - A standalone radio was selected; native-style and composed.
  * @event lr-input - Standalone prefixed compatibility alias for `input`.
  *   `detail: { checked, value }`.
@@ -103,7 +104,8 @@ class LyraRadioBase extends LyraElement<LyraRadioEventMap> {}
  * @event lr-change - Standalone prefixed compatibility alias for `change`.
  *   `detail: { checked, value }`. An owning radio group emits its aggregate value-event sequence
  *   instead of any child value events.
- * @event lr-activate - A standalone radio was activated, including when it was already checked.
+ * @event lr-activate - A standalone radio was activated, including when it was already checked,
+ *   but not when `lr-radio-select-request` left it unchecked.
  *   `detail: { value }`. An owning radio group emits its own `lr-activate` instead.
  * @event focus - The internal radio received focus.
  * @event blur - The internal radio lost focus.
@@ -617,19 +619,20 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
     return group;
   }
   /** @internal Group-driven activation (arrow keys). Shares the click/Space path so every
-   *  modality emits the same native/prefixed value-event sequence from the owning group. */
-  activateFromGroup(): void {
-    this.select();
+   *  modality emits the same native/prefixed value-event sequence from the owning group. Returns
+   *  whether the activation stood (`false` when refused or redirected). */
+  activateFromGroup(): boolean {
+    return this.select();
   }
 
-  private select(): void {
+  private select(): boolean {
     const group = this.group();
-    if (this.effectiveDisabled) return;
+    if (this.effectiveDisabled) return false;
     if (group) {
       const wasChecked = this.checked;
-      group.selectRadio?.(this);
+      const selected = group.selectRadio?.(this) ?? false;
       if (!wasChecked && this.checked) this.setInteracted(true);
-      return;
+      return selected;
     }
     if (!this.checked) {
       requestThenCommit({
@@ -646,8 +649,10 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
           emitValueEvents(this, 'change', detail, captured => this.emit('lr-change', captured));
         },
       });
+      if (!this.checked) return false;
     }
     this.emit('lr-activate', { value: this.value });
+    return true;
   }
   /** Follow native tree, form and name boundaries, including externally associated controls.
    * Refresh only on selection, requiredness and membership changes. */

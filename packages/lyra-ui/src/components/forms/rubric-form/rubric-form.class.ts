@@ -1059,7 +1059,9 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    this.childRegistration = loadLazyChildren(RUBRIC_CHILDREN, this.renderRoot) ?? this.childRegistration;
+    if (this._keys.some((key) => key.type === 'category')) {
+      this.childRegistration = loadLazyChildren(RUBRIC_CHILDREN, this.renderRoot) ?? this.childRegistration;
+    }
     this.structuredValidity.publish();
       if (this.pendingFocusFirst) {
       this.pendingFocusFirst = false;

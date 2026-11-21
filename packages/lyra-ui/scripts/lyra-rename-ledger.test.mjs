@@ -1998,6 +1998,26 @@ test('a locale-key global reports keys and quoted strings, and an acknowledgemen
   assert.equal(v26("const oldLabel = { oldLabel: 1 };", 'unrelated.ts').warnings.length, 0, 'a file that never touches Lyra is left alone');
 });
 
+test('a locale-key global may name no replacement or scope itself to one component', () => {
+  const scoped = (text, file) => migrateText(text, buildMigrationContract(inventory, {
+    renameLedger: globalsLedger((profile) => {
+      profile.globals.splice(1, 1,
+        { kind: 'locale-key', from: 'goneLabel', summary: 'The visible label names it.', since: '27.0.0' },
+        { kind: 'locale-key', from: 'sharedLabel', to: 'newLabel', tag: 'lr-table', summary: 'Own key.', since: '27.0.0' });
+    }),
+  }), { file, origin: 'lyra-v26' });
+  const gone = scoped("registerLyraLocale('fr', { goneLabel: 'a' });\n", 'gone.ts');
+  assert.deepEqual(gone.warnings.map((warning) => warning.warningCode), ['GLOBAL_REVIEW']);
+  assert.match(gone.warnings[0].message, /goneLabel was removed; it has no replacement/);
+  assert.equal(scoped("el.strings = { sharedLabel: 'a' };\n", 'other.ts').warnings.length, 0, 'a file without the tag is out of scope');
+  const owned = scoped("html`<lr-table .strings=${{ sharedLabel: 'a' }}></lr-table>`;\n", 'owned.ts');
+  assert.match(owned.warnings[0]?.message ?? '', /lr-table no longer reads the localization key sharedLabel; use newLabel/);
+  assert.deepEqual(validateRenameLedgerShape(globalsLedger((profile) => {
+    profile.globals[1] = { kind: 'locale-key', from: 'oldLabel', tag: 'lr-table', summary: 'Own key.', since: '27.0.0' };
+  })), []);
+  assertFinding(validateRenameLedgerShape(globalsLedger((profile) => { profile.globals[1].tag = 'button'; })), /tag must be an lr-\* element name/);
+});
+
 test('the theme-scopes rule runs through the profile, shares one implementation, and honors acknowledgements', () => {
   const lit = [
     "const t = html`<div style=\"--lr-theme-border-radius-m: 4px\"><lr-button></lr-button></div>`;",

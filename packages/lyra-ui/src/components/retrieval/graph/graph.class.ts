@@ -3672,7 +3672,7 @@ export class LyraGraph extends LyraElement<LyraGraphEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    this.childRegistration = loadLazyChildren(GRAPH_CHILDREN, this.renderRoot) ?? this.childRegistration;
+    if (this.sourceMode) this.childRegistration = loadLazyChildren(GRAPH_CHILDREN, this.renderRoot) ?? this.childRegistration;
     this.publishSourceComposition();
     if (this.sourceMode && !this.sourcePages.state.pending && this.sourceRestoreFocus) {
       const repair = this.sourceRestoreFocus;

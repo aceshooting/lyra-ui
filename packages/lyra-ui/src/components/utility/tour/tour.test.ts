@@ -2717,6 +2717,20 @@ it('keeps a declarative open pending until steps arrive, whichever is assigned f
   expect(ended).to.equal(0);
 });
 
+it('keeps waiting for steps through unrelated updates and ends as unavailable on an empty assignment', async () => {
+  const el = await fixture<LyraTour>(html`<lr-tour open></lr-tour>`);
+  const reasons: string[] = [];
+  el.addEventListener('lr-tour-end', event => reasons.push((event as CustomEvent<{ reason: string }>).detail.reason));
+  el.strings = { tourSkip: 'Skip it' };
+  await el.updateComplete;
+  expect(el.open, 'an unrelated update keeps the request pending').to.equal(true);
+  expect(reasons).to.deep.equal([]);
+  el.steps = [];
+  await el.updateComplete;
+  expect(el.open).to.equal(false);
+  expect(reasons).to.deep.equal(['unavailable']);
+});
+
 it('does not report a step activation while the tour is closed', async () => {
   const el = await fixture<LyraTour>(html`<lr-tour .steps=${makeSteps(4)}></lr-tour>`);
   const events: unknown[] = [];

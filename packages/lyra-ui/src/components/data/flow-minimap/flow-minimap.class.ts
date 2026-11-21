@@ -236,6 +236,7 @@ export class LyraFlowMinimap extends LyraElement {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.resetWheelRemainder();
     this.announceNextSnapshot = false;
     this.liveText = '';
     this.clearClickSuppression();
@@ -462,8 +463,15 @@ export class LyraFlowMinimap extends LyraElement {
     this.invokeCanvas(action, 'setViewport', [{ x: width / 2 - point.x * zoom, y: height / 2 - point.y * zoom, zoom }]);
   };
 
-  /** Wheel motion not yet worth a whole zoom step; trackpad deltas accumulate into notches. */
+  /** Wheel motion not yet worth a whole zoom step; trackpad deltas accumulate into notches. A
+   *  remainder belongs to one gesture: leaving the minimap or disconnecting drops it. */
   private wheelRemainder = 0;
+  private readonly resetWheelRemainder = (): void => { this.wheelRemainder = 0; };
+
+  constructor() {
+    super();
+    this.addEventListener('pointerleave', this.resetWheelRemainder);
+  }
 
   private onMapWheel = (e: WheelEvent): void => {
     const action = this.captureInteraction(e);

@@ -20,7 +20,8 @@ export type ScrollRegionHandle = (() => void) & { refresh(): void };
  * `slotchange`), so slotted content that grows inside a fixed-size body is seen too. Returns a
  * disposer that disconnects the observer and removes what was added. A pre-existing author
  * `tabindex`/`role`/`aria-label` is never overwritten. When the body stops overflowing while it
- * holds focus, its tab stop drops to `tabindex="-1"` so focus is not lost. `role: false` keeps the element's own role (a landmark
+ * holds focus, its tab stop drops to `tabindex="-1"` so focus is not lost, and is removed once
+ * focus leaves it (unless it overflows again). `role: false` keeps the element's own role (a landmark
  * such as `<aside>`). Call it only while `el`
  * is connected: Lit also runs `updated()` on a detached host, so a host syncing from there checks
  * `isConnected` and re-syncs on reconnect (`ScrollRegionController` does both).
@@ -38,10 +39,19 @@ export function makeScrollRegionFocusable(
     el.setAttribute(attribute, value);
     added.add(attribute);
   };
+  let disposed = false;
+  // A stop kept only for the focused body is re-checked once focus leaves it.
+  const onFocusOut = (): void => {
+    queueMicrotask(() => {
+      if (!disposed) sync();
+    });
+  };
   const clear = (keepFocus: boolean): void => {
     for (const attribute of added) {
-      if (keepFocus && attribute === 'tabindex' && el.matches(':focus')) el.setAttribute(attribute, '-1');
-      else {
+      if (keepFocus && attribute === 'tabindex' && el.matches(':focus')) {
+        el.setAttribute(attribute, '-1');
+        el.addEventListener('focusout', onFocusOut, { once: true });
+      } else {
         el.removeAttribute(attribute);
         added.delete(attribute);
       }
@@ -81,6 +91,8 @@ export function makeScrollRegionFocusable(
   el.addEventListener('slotchange', refresh);
   refresh();
   return Object.assign(() => {
+    disposed = true;
+    el.removeEventListener('focusout', onFocusOut);
     el.removeEventListener('slotchange', refresh);
     observer?.disconnect();
     observer = undefined;

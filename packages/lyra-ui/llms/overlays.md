@@ -3173,7 +3173,8 @@ Left unset, the built-in star outline/solid pair is unchanged.
   click or Arrow/Page/Home/End key changes the rating, while `value` still holds the current one; a
   gesture that would not move the value requests nothing. `preventDefault()` keeps the rating and
   suppresses `input`/`lr-input`/`change`/`lr-change`; a listener may instead resolve the request by
-  assigning `value` itself, which also suppresses the built-in commit. `lr-activate` still follows.
+  assigning `value` itself, which also suppresses the built-in commit. A refused or redirected
+  request emits no `lr-activate`.
 - `lr-input` — `detail: { value }` after the native `input` event when an interactive commit
   changes the value. Programmatic writes and unchanged commits are silent.
 - `change` — a native `Event` (bubbling, composed, non-cancelable, and carrying no `detail`) emitted

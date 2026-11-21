@@ -74,7 +74,7 @@ the radio that is already checked, after the value events when the selection mov
 standalone radio checks itself, it dispatches the cancelable `lr-radio-select-request`
 (`{ checked: true, value }`, while `checked` still reads `false`): `preventDefault()` leaves it
 unchecked with no value events, and a listener that writes `checked` itself suppresses the built-in
-commit; `lr-activate` still follows. Standalone
+commit; a request that leaves it unchecked emits no `lr-activate`. Standalone
 radios sharing a non-empty `name` and form owner are mutually exclusive: selecting one unchecks the
 others (arrow-key movement between them still needs `lr-radio-group`). The internal control's native
 `focus` and `blur` are re-dispatched as bubbling, composed host events.

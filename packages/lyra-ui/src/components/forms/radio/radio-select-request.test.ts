@@ -30,17 +30,23 @@ describe('radio selection request', () => {
     await group.updateComplete;
     expect(group.value).to.equal('free');
     expect([free!.checked, pro!.checked]).to.deep.equal([true, false]);
-    expect(log).to.deep.equal(['request:free', 'lr-activate']);
+    expect(log, 'a refused request activates nothing').to.deep.equal(['request:free']);
     expect(requests).to.deep.equal([{ value: 'pro', previousValue: 'free', same: true }]);
 
     log.length = 0;
-    mode = 'resolve';
     await focusByKeyboard(free!);
+    await sendKeys({ press: 'ArrowDown' });
+    await group.updateComplete;
+    expect(document.activeElement === free, 'a refused arrow key leaves focus in place').to.equal(true);
+    expect(log).to.deep.equal(['request:free']);
+
+    log.length = 0;
+    mode = 'resolve';
     await sendKeys({ press: 'ArrowDown' });
     await group.updateComplete;
     expect(group.value, 'a listener write wins over the proposal').to.equal('team');
     expect(team!.checked).to.equal(true);
-    expect(log).to.deep.equal(['request:free', 'lr-activate']);
+    expect(log).to.deep.equal(['request:free']);
 
     log.length = 0;
     mode = 'allow';
@@ -61,6 +67,6 @@ describe('radio selection request', () => {
     radio.click();
     await radio.updateComplete;
     expect(radio.checked).to.equal(false);
-    expect(log).to.deep.equal(['request:true:yes:false', 'lr-activate']);
+    expect(log).to.deep.equal(['request:true:yes:false']);
   });
 });

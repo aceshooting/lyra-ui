@@ -297,8 +297,9 @@ export function analyzeGlobalsSurface(renameLedger, surface) {
           if (!hasName(barrel, entry.to)) errors.push(`${label}: ${entry.to} is not exported by ${owner}`);
         }
       } else if (entry.kind === 'locale-key') {
-        if (surface.stringKeys.has(entry.from)) errors.push(`${label}: the key still exists in the default strings`);
-        if (!surface.stringKeys.has(entry.to)) errors.push(`${label}: ${entry.to} is not a default string key`);
+        // A tag-scoped entry records one component that stopped reading a key others still use.
+        if (!entry.tag && surface.stringKeys.has(entry.from)) errors.push(`${label}: the key still exists in the default strings`);
+        if (entry.to !== undefined && !surface.stringKeys.has(entry.to)) errors.push(`${label}: ${entry.to} is not a default string key`);
       }
     }
   }
