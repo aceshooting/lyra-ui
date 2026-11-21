@@ -4608,11 +4608,12 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
     const rawDataEscapeHatch = this.hasExplicitConfigData();
     // Matches the condition the tooltip `label` callback has always been gated on -- the
     // pie/doughnut default only kicks in without an explicit raw `config.data` escape hatch.
+    const prepared = this.preparedModel;
+    // Prepared data carries no band series, so only the legacy `datasets` input is consulted.
     const wantsTooltipLabelCallback =
       !!(this.formatter || this.valueFormatter) ||
-      (!rawDataEscapeHatch && this.datasets.some(series => series.type === 'band')) ||
+      (!prepared && !rawDataEscapeHatch && this.datasets.some(series => series.type === 'band')) ||
       ((effectiveType === 'pie' || effectiveType === 'doughnut') && !rawDataEscapeHatch);
-    const prepared = this.preparedModel;
     const labels = prepared ? this.effectiveData().labels : this.canonicalLabels();
     const inputSeries: readonly LyraChartSeries[] = prepared ? prepared.series.map(series => ({ label: series.label, data: series.values })) : this.datasets;
     let visualRows: readonly number[] | undefined;

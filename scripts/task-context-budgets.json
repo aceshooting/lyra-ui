@@ -14,15 +14,15 @@
       "published23Utf8Bytes": 64183,
       "reviewedCheckpointUtf8Bytes": 58280,
       "reviewedCheckpointProxyTokens": 14112,
-      "ceilingUtf8Bytes": 62584,
-      "$comment": "The table reference gained the stacked small-screen layout, row links and offset pagination in 32.0.0, measuring 62,584 UTF-8 bytes; the ceiling advances to that exact measurement."
+      "ceilingUtf8Bytes": 62655,
+      "$comment": "The table reference gained the stacked small-screen layout, row links and offset pagination in 32.0.0, measuring 62,584 UTF-8 bytes; the ceiling advances to that exact measurement. Later 32.0.0 reference additions then brought the route to 62,655 UTF-8 bytes; the ceiling advances to that exact measurement."
     },
     "component-discovery": {
       "published23Utf8Bytes": 106727,
       "reviewedCheckpointUtf8Bytes": 98043,
       "reviewedCheckpointProxyTokens": 24161,
-      "ceilingUtf8Bytes": 103192,
-      "$comment": "The 32.0.0 discovery route, carrying the new data-grid pagination, request-event and pager-focus guidance, measured 102,070 UTF-8 bytes. The table and data-grid references then gained the pager and skeleton registration notes, column fit on Enter, row-context editor names and the constant row-toggle name, bringing the route to 103,100 UTF-8 bytes. The pagination page-size selector and its events then brought it to 103,192 UTF-8 bytes; its ceiling advances to that exact measurement."
+      "ceilingUtf8Bytes": 106644,
+      "$comment": "The 32.0.0 discovery route, carrying the new data-grid pagination, request-event and pager-focus guidance, measured 102,070 UTF-8 bytes. The table and data-grid references then gained the pager and skeleton registration notes, column fit on Enter, row-context editor names and the constant row-toggle name, bringing the route to 103,100 UTF-8 bytes. The pagination page-size selector and its events then brought it to 103,192 UTF-8 bytes; its ceiling advances to that exact measurement. The lr-style-panel, lr-help and remaining 32.0.0 reference additions then brought the route to 106,644 UTF-8 bytes; the ceiling advances to that exact measurement."
     },
     "imports-ssr": {
       "published23Utf8Bytes": 43687,

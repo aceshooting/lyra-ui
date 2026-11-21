@@ -161,7 +161,7 @@ describe('toast() inside native modal dialogs', () => {
     await sendMouse({ type: 'click', position: [Math.round(bounds.x + bounds.width / 2), Math.round(bounds.y + bounds.height / 2)] });
     expect(invoked).to.equal(true);
     await waitUntil(() => dialog.querySelector('[data-lr-live-region="polite"]')?.textContent?.includes('Nested status') === true);
-    dialog.querySelector<HTMLButtonElement>('button[slot="footer"]')!.click();
+    dialog.querySelector<HTMLElement>('[data-lr-confirm-action="cancel"]')!.click();
     expect(await result).to.equal(false);
     expect(native.open).to.equal(true);
     await waitUntil(() => !item.isConnected);

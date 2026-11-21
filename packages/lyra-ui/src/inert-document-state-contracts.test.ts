@@ -24,6 +24,8 @@ describe('authored boolean states while staging an element in an inert document'
         const staging = document.implementation.createHTMLDocument('State staging');
         const element = document.createElement(name) as LyraElement;
         if (name === 'lr-table') element.setAttribute('aria-label', 'Staged records');
+        // A dot-only badge must be named; the empty staged fixture names it like an author would.
+        if (name === 'lr-badge' || name === 'lr-tag') element.setAttribute('aria-label', 'Staged status');
         if (name === 'lr-emoji-picker') Reflect.set(element, 'loadGroups', () => Promise.resolve(null));
         if (name === 'lr-locale-picker') Reflect.set(element, 'withoutFlags', true);
         document.body.append(element);

@@ -152,7 +152,11 @@ export class LyraBadge<
    *  with `aria-label` so colour is never the only cue. `attention="pulse"` pulses the dot. */
   @property({ type: Boolean, reflect: true }) dot = false;
 
+  /** Host accessible name; on a dot-only badge it also gives the host `role="img"` unless the
+   *  author set a role. */
   @property({ attribute: 'aria-label' }) private hostAriaLabel: string | null = null;
+  /** Host accessible name by reference; on a dot-only badge it also gives the host `role="img"`
+   *  unless the author set a role. */
   @property({ attribute: 'aria-labelledby' }) private hostAriaLabelledBy: string | null = null;
 
   /** Whether this element, not the author, wrote the host's `role="img"`. */

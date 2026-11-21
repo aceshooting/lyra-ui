@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { expect, fixture, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import type { LyraHelp } from './help.class.js';
 import type { LyraPopover } from '../../lr-popover.js';
@@ -57,8 +57,14 @@ it('opens on click, pins until a second click, and is accessible while open', as
 it('reveals on keyboard focus only and Escape closes it with focus kept on the trigger', async () => {
   const el = await mount();
   const { popover, control } = parts(el);
+  let shows = 0;
+  popover.addEventListener('lr-show', () => shows++);
   await focusAfterPointer(control());
-  await new Promise((resolve) => setTimeout(resolve, 400));
+  // lr-help keeps the default zero show delay, so a reveal would be requested within the focus
+  // task; two frames are ample for a deferred one to surface.
+  await nextFrame();
+  await nextFrame();
+  expect(shows, 'pointer focus requests no reveal').to.equal(0);
   expect(popover.open, 'pointer focus does not open').to.equal(false);
   control().blur();
 

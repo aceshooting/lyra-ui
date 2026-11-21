@@ -64,8 +64,8 @@ export const styles = css`
   /* App chrome that owns part of a map edge pushes every corner control stack inward by the same
      logical inset, before and after construction. */
   .initialization-controls, .maplibregl-control-container {
-    padding-block: var(--lr-map-controls-inset-block-start, 0px) var(--lr-map-controls-inset-block-end, 0px);
-    padding-inline: var(--lr-map-controls-inset-inline-start, 0px) var(--lr-map-controls-inset-inline-end, 0px);
+    padding-block: var(--lr-map-controls-inset-block-start, 0) var(--lr-map-controls-inset-block-end, 0);
+    padding-inline: var(--lr-map-controls-inset-inline-start, 0) var(--lr-map-controls-inset-inline-end, 0);
   }
   .initialization-row { display: grid; grid-template-columns: minmax(0, max-content) minmax(0, max-content); justify-content: space-between; min-inline-size: 0; }
   .initialization-row-top { grid-row: 1; }
@@ -175,7 +175,7 @@ export const styles = css`
     row-gap: var(--lr-space-xs);
     padding-block: calc(var(--lr-space-s) + var(--_lr-map-controls-top, 0px) + var(--lr-map-controls-inset-block-start, 0px))
       calc(var(--lr-space-s) + var(--_lr-map-controls-bottom, 0px) + var(--lr-map-controls-inset-block-end, 0px));
-    padding-inline: var(--lr-map-controls-inset-inline-start, 0px) var(--lr-map-controls-inset-inline-end, 0px);
+    padding-inline: var(--lr-map-controls-inset-inline-start, 0) var(--lr-map-controls-inset-inline-end, 0);
   }
   [part='base']:has(> :is([part='pick-controls'], [part='drawing-controls'], [part='scene-panel']))
     > :is([part='legend'], [part='scene-panel']) {
@@ -429,7 +429,7 @@ export const styles = css`
     min-inline-size: 0;
     overflow: auto;
     overscroll-behavior: contain;
-    padding-inline-end: var(--lr-map-anchor-close-reservation, 0px);
+    padding-inline-end: var(--lr-map-anchor-close-reservation, 0);
   }
   /* Placement and close state must survive consumer display rules on the public part. */
   [part='anchor']:where([hidden]) { display: none !important; }

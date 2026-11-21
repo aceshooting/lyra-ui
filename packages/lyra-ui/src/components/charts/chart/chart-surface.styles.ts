@@ -59,7 +59,7 @@ export const chartSurfaceStyles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     padding-block: var(--lr-chart-legend-padding, var(--lr-space-xs));
-    font-size: var(--lr-chart-legend-font-size, 1em);
+    font-size: var(--lr-chart-legend-font-size, inherit);
   }
   [part~='legend-item'] {
     display: inline-flex;

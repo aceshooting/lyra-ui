@@ -4,6 +4,7 @@ import { LYRA_SHAPE_PRESETS } from './options/shape.js';
 import { focusByKeyboard } from '../../test/wtr-focus.js';
 import { confirm } from '../components/overlays/dialog/confirm.js';
 import type { LyraDialog } from '../components/overlays/dialog/dialog.class.js';
+import type { LyraButton } from '../components/forms/button/button.class.js';
 import '../components/lr-table.js';
 import '../components/lr-data-grid.js';
 import type { LyraTable } from '../components/data/table/table.class.js';
@@ -157,12 +158,15 @@ it('gives body-mounted confirmation actions the body scope shape and touch targe
     result = confirm({ title: 'Continue?', confirmLabel: 'Continue', cancelLabel: 'Cancel' });
     dialog = body.querySelector<LyraDialog>('lr-dialog')!;
     await dialog.updateComplete;
-    const buttons = [...dialog.querySelectorAll<HTMLButtonElement>('button[slot="footer"]')];
+    // The actions are slotted lr-button elements; the shape and hit area belong to their base.
+    const buttons = [...dialog.querySelectorAll<LyraButton>('lr-button[data-lr-confirm-action]')];
     expect(buttons.length).to.equal(2);
+    await Promise.all(buttons.map((button) => button.updateComplete));
     const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
     for (const button of buttons) {
-      expect(Number.parseFloat(getComputedStyle(button).borderTopLeftRadius)).to.equal(1.5 * rem);
-      expect(button.getBoundingClientRect().height).to.be.at.least(Math.max(44, 2.75 * rem));
+      const base = button.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
+      expect(Number.parseFloat(getComputedStyle(base).borderTopLeftRadius)).to.equal(1.5 * rem);
+      expect(base.getBoundingClientRect().height).to.be.at.least(Math.max(44, 2.75 * rem));
     }
     expect(toRgba(getComputedStyle(dialog.shadowRoot!.querySelector('[part~="panel"]')!).backgroundColor)).to.deep.equal(toRgba('color-mix(in srgb, color-mix(in srgb, rgb(53 42 36) 20%, color-mix(in srgb, rgb(24 18 15) 10%, black)) 60%, transparent)'));
     buttons[0]!.click();
