@@ -3080,8 +3080,7 @@
         "status": "retained"
       },
       "evidence": [
-        "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.styles.ts",
-        "src/components/overlays/dialog/confirm.ts"
+        "src/components/agent-tools/tool-approval-dialog/tool-approval-dialog.styles.ts"
       ]
     },
     "--lr-size-1-1rem": {

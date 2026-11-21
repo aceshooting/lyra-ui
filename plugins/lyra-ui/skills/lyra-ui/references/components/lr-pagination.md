@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 24 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 24 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `page-field`: `--lr-pagination-page-field-gap`; `page-input`: `--lr-pagination-invalid-border-color`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -354,3 +354,5 @@ pagination.hrefTemplate = (page) =>
   keep their own tokens
 
 ---
+
+Its inner text inputs honour `--lr-form-control-touch-font-size-min` under touch density.

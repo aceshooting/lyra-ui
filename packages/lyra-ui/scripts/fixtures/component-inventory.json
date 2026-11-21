@@ -32085,6 +32085,11 @@
             "default": "none"
           },
           {
+            "name": "--lr-form-control-height",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-form-control-invalid-border-color",
             "deprecated": null,
             "hasDefault": false
@@ -33479,6 +33484,11 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-form-control-height",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-collapse-inline-size",
@@ -35473,6 +35483,11 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-height",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-form-control-invalid-border-color",
             "deprecated": null,
             "hasDefault": true,
@@ -36271,6 +36286,11 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-overlay-stack-index, var(--lr-layer-modal))"
+          },
+          {
+            "name": "--lr-form-control-touch-font-size-min",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-overlay-border",
@@ -45314,6 +45334,11 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-touch-font-size-min",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--max-height",
             "deprecated": null,
             "hasDefault": true,
@@ -47819,6 +47844,11 @@
           },
           {
             "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-height",
             "deprecated": null,
             "hasDefault": false
           },
@@ -88632,6 +88662,11 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-height",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-form-control-invalid-border-color",
             "deprecated": null,
             "hasDefault": true,
@@ -107826,6 +107861,11 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-height",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-form-control-invalid-border-color",
             "deprecated": null,
             "hasDefault": false
@@ -110008,6 +110048,11 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-form-control-touch-font-size-min",
+            "deprecated": null,
+            "hasDefault": false
+          },
           {
             "name": "--lr-pagination-active-bg",
             "deprecated": null,
@@ -112983,6 +113028,11 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-form-control-height",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-invalid-border-color",
@@ -135609,6 +135659,11 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-height",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-form-control-invalid-border-color",
             "deprecated": null,
             "hasDefault": true,
@@ -137508,6 +137563,11 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-form-control-height",
+            "deprecated": null,
+            "hasDefault": false
+          },
           {
             "name": "--lr-form-control-invalid-border-color",
             "deprecated": null,
@@ -150033,6 +150093,11 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-form-control-touch-font-size-min",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-table-cell-border-color",
             "deprecated": null,
             "hasDefault": true,
@@ -153564,6 +153629,11 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-height",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-form-control-invalid-border-color",
             "deprecated": null,
             "hasDefault": true,
@@ -156326,6 +156396,11 @@
           },
           {
             "name": "--lr-form-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-form-control-height",
             "deprecated": null,
             "hasDefault": false
           },
@@ -161224,6 +161299,11 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-form-control-height",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-invalid-border-color",

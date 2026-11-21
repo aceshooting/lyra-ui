@@ -158,6 +158,7 @@ class LyraOtpInputBase extends LyraElement<LyraOtpInputEventMap> {
  * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
  * rather than `invalid`: a pristine required field is genuinely invalid, but colouring it red
  * before the user has entered a digit is hostile.
+ * @cssprop --lr-form-control-height - Single-line field height; a start-placed label aligns to the first line of a taller field.
  * @cssprop [--lr-form-control-touch-font-size-min=16px] - Font-size floor of the editable text
  *   surface under a coarse or hover-less pointer, which stops mobile Safari zooming on focus. `0px`
  *   disables it.

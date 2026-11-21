@@ -173,6 +173,7 @@ const stringArrayConverter = {
  * @event lr-invalid - The token list failed a validity check. Cancelable: calling
  * `preventDefault()` also cancels the native `invalid` event behind it, suppressing the
  * browser's own validation bubble so an app can present the failure its own way.
+ * @cssprop --lr-form-control-height - Single-line field height; a start-placed label aligns to the first line of a taller field.
  * @cssprop [--lr-form-control-touch-font-size-min=16px] - Font-size floor of the editable text
  *   surface under a coarse or hover-less pointer, which stops mobile Safari zooming on focus. `0px`
  *   disables it.

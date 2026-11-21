@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 26 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -242,3 +242,5 @@ control cannot be edited and restores the current intrinsic result when editing 
 ---
 
 <a id="radio-group-controls"></a>
+
+The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.

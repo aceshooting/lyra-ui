@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -157,3 +157,5 @@ shipped.
 - `--lr-command-palette-group-height` — Virtual group-heading height. Default:
   `var(--lr-size-2rem)`. Its live resolved value drives heading/row transforms and the result extent
   together.
+
+Its inner text inputs honour `--lr-form-control-touch-font-size-min` under touch density.

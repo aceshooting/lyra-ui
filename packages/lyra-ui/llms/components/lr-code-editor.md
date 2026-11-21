@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 29 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `editor`: `--lr-code-editor-radius`, `--lr-theme-scrollbar-width`, `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-color`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -178,3 +178,5 @@ the library, including `lr-table`,
   textarea's value, gutter line count, selection offsets and ordinary FormData state.
 
 **Additional API surface:** `click()` activates the internal editing surface.
+
+The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.

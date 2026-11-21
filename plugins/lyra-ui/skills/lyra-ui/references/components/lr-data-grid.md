@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 62 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 62 parts, 29 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -383,3 +383,5 @@ string; templates and Nodes fall back to the raw value. Server export/copy inclu
 rows because the browser does not possess unloaded pages.
 
 ---
+
+Its inner text inputs honour `--lr-form-control-touch-font-size-min` under touch density.

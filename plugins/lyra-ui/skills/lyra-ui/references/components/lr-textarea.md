@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -265,3 +265,5 @@ including when that allocation shrinks after the content renders.
 - `click()` — Activates the internal textarea.
 
 ---
+
+The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.

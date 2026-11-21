@@ -246,6 +246,7 @@ export interface LyraCommandPaletteEventMap {
  * @csspart shortcut - A command's trailing shortcut hint. Only rendered when the command has a
  *   `shortcut`.
  * @csspart empty - The "no results" message. Only rendered when the filter matches no command.
+ * @cssprop --lr-form-control-touch-font-size-min - Minimum font size of the inner text inputs under touch density.
  * @cssprop [--lr-command-palette-z-index=var(--lr-overlay-stack-index, var(--lr-layer-modal))] - Stacking index of the backdrop.
  * @cssprop [--lr-command-palette-max-inline-size=var(--lr-size-48rem)] - Maximum dialog width.
  * @cssprop [--lr-command-palette-max-block-size=70vh] - Maximum dialog height.

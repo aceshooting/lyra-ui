@@ -144,6 +144,7 @@ class LyraPhoneInputBase extends LyraElement<LyraPhoneInputEventMap> {}
  * @event lr-invalid - The phone input failed a validity check. Cancelable: `preventDefault()`
  *   forwards to the native `invalid` event, suppressing the browser's own validation bubble and the
  *   focus/scroll `reportValidity()` would otherwise perform.
+ * @cssprop --lr-form-control-height - Single-line field height; a start-placed label aligns to the first line of a taller field.
  * @cssprop [--lr-form-control-touch-font-size-min=16px] - Font-size floor of the editable text
  *   surface under a coarse or hover-less pointer, which stops mobile Safari zooming on focus. `0px`
  *   disables it.

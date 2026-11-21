@@ -95,6 +95,7 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * the native `invalid` event, suppressing the browser's own validation bubble and the focus/scroll
  * `reportValidity()` would otherwise perform.
  * @csspart form-control - Outer wrapper.
+ * @cssprop --lr-form-control-height - Single-line field height; a start-placed label aligns to the first line of a taller field.
  * @cssprop [--lr-form-control-invalid-border-color] - Shared invalid border color, overridden by a component-specific invalid border.
  * @cssprop [--lr-form-control-label-font-size=inherit] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.

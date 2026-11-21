@@ -249,6 +249,7 @@ function containsElement(container: Element | null, value: unknown): value is El
  * @slot footer - Replaces the default Now footer action.
  * @csspart form-control - The outer form-control wrapper.
  * @csspart form-control-input - The row containing segments and actions.
+ * @cssprop --lr-form-control-height - Single-line field height; a start-placed label aligns to the first line of a taller field.
  * @cssprop [--lr-form-control-invalid-border-color=var(--lr-color-danger)] - Resting border while the
  *   field matches `:state(user-invalid)`; shared by every field, overridden by a component-specific
  *   invalid border where one exists.

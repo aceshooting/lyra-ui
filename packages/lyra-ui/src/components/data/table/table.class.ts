@@ -135,6 +135,7 @@ const DEFAULT_PAGE_SIZE = 100;
  * @csspart cell-label - The visible column caption a stacked body cell shows before its value
  *   (`stack` is `always`, or `auto` below the breakpoint); hidden from assistive technology, which
  *   already reads the column header.
+ * @cssprop --lr-form-control-touch-font-size-min - Minimum font size of the inner text inputs under touch density.
  * @cssprop [--lr-table-stack-breakpoint=var(--lr-size-36rem)] - Allocation below which `stack="auto"` stacks rows.
  * @cssprop [--lr-table-stack-label-inline-size=40%] - Inline size of a stacked cell's caption; the value flows after it.
  * @csspart cell-link - The real anchor wrapping a body cell's resting content while the column's

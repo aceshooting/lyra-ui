@@ -381,6 +381,7 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * @csspart date-input - The date-input wrapper.
  * @csspart base - Permanent compatibility name for the nested base wrapper.
  * @csspart form-control - The outer form-control wrapper.
+ * @cssprop --lr-form-control-height - Single-line field height; a start-placed label aligns to the first line of a taller field.
  * @cssprop [--lr-form-control-touch-font-size-min=16px] - Font-size floor of the editable text
  *   surface under a coarse or hover-less pointer, which stops mobile Safari zooming on focus. `0px`
  *   disables it.

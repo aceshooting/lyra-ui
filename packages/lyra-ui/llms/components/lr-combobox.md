@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 35 parts, 48 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 35 parts, 49 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `combobox`: `--lr-combobox-gap`, `--lr-combobox-radius`; `form-control-label`: `--lr-form-control-required-content`; `listbox`: `--lr-theme-scrollbar-color`, `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-width`; `option-badge`: `--lr-combobox-option-badge-bg`
 - **Documented with** `lr-option` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -858,3 +858,5 @@ synchronous and fires no `input`/`change`/`lr-change` event.
 ---
 
 <a id="popup-select-keyboard"></a>
+
+The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.

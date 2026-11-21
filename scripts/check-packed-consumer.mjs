@@ -339,8 +339,9 @@ const bundleEntries = {
     // lr-graph onto the shared focus-repair and search helpers, the shared overlay, roving focus
     // and slot helpers it loads grew since, and its pager now carries the page-size selector;
     // graph's own code shrank. Reviewed exception for 32.0.0; the ceiling is the next 64-byte
-    // boundary.
-    maxRawBytes: 476_864,
+    // boundary. Contained pager request events and the queued-focus cancellation bring it to
+    // 478,965 raw bytes; the ceiling advances to the next 64-byte boundary.
+    maxRawBytes: 479_040,
   },
 };
 

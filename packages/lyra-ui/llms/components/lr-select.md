@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 35 parts, 51 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 35 parts, 52 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `form-control-label`: `--lr-form-control-required-content`; `listbox`: `--lr-theme-scrollbar-color`, `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-width`; `option-badge`: `--lr-select-option-badge-bg`; `tag__remove-button`: `--lr-select-tag-remove-hover-bg`; `unknown-value`: `--lr-select-unknown-value-border-style`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -584,3 +584,5 @@ state mixes from this same token. Scoped independently of `--lr-select-trigger-h
 ---
 
 <a id="date-and-range-controls"></a>
+
+The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.

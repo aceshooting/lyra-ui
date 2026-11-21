@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 36 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 37 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `form-control-label`: `--lr-form-control-required-content`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -226,3 +226,5 @@ floor that input keeps once tokens have consumed the row), and `--lr-token-input
   row holds focus. Default: `none`. Additive — the focus outline and the focused border are
   never replaced by it.
 - `--lr-token-input-invalid-border-color` overrides the shared `--lr-form-control-invalid-border-color` on this row. The default is `--lr-color-danger`.
+
+The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.

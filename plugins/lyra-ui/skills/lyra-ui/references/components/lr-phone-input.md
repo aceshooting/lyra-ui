@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 26 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -335,3 +335,5 @@ import "@aceshooting/lyra-ui/components/media/flag/flag-peer.js";
 ---
 
 <a id="time-range-controls"></a>
+
+The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.

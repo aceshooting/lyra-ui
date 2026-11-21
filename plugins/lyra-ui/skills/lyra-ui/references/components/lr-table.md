@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 59 parts, 40 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 59 parts, 41 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-theme-scrollbar-color`, `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-width`; `header-cell`: `--lr-table-header-sorted-bg`; `row`: `--lr-table-row-selected-bg`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -743,3 +743,5 @@ declaration to retheme every internal scroll container in the library, including
   drafts, while persistent selects re-apply refreshed selections (see `editTrigger`).
 
 ---
+
+Its inner text inputs honour `--lr-form-control-touch-font-size-min` under touch density.

@@ -683,6 +683,8 @@ rows because the browser does not possess unloaded pages.
 
 ---
 
+Its inner text inputs honour `--lr-form-control-touch-font-size-min` under touch density.
+
 ## `lr-table`
 
 Sort/select-aware table with a bounded 100-row default page, filtering, pagination, and loading
@@ -1412,6 +1414,8 @@ declaration to retheme every internal scroll container in the library, including
 
 ---
 
+Its inner text inputs honour `--lr-form-control-touch-font-size-min` under touch density.
+
 ## `lr-pagination`
 
 Controlled page navigation for server-side or client-side data sets: a numbered page list with
@@ -1751,6 +1755,8 @@ pagination.hrefTemplate = (page) =>
   keep their own tokens
 
 ---
+
+Its inner text inputs honour `--lr-form-control-touch-font-size-min` under touch density.
 
 ## `lr-gauge`
 

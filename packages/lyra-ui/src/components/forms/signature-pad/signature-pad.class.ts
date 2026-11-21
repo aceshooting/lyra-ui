@@ -108,6 +108,7 @@ function pathData(stroke: SignatureStroke): string {
  * @slot hint - Rich hint content, after the `hint` text.
  * @slot error - Rich error content, after the `errorText` text.
  * @csspart form-control - Wrapper around the label, pad, error and hint.
+ * @cssprop --lr-form-control-height - Single-line field height; a start-placed label aligns to the first line of a taller field.
  * @cssprop [--lr-form-control-invalid-border-color] - Shared invalid border color, overridden by a component-specific invalid border.
  * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.

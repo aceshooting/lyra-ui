@@ -4603,6 +4603,8 @@ shipped.
   `var(--lr-size-2rem)`. Its live resolved value drives heading/row transforms and the result extent
   together.
 
+Its inner text inputs honour `--lr-form-control-touch-font-size-min` under touch density.
+
 ## `lr-details`, `lr-accordion`, and `lr-accordion-item`
 
 `lr-details` is a native-semantics disclosure panel; it mirrors `wa-details` / `sl-details`.

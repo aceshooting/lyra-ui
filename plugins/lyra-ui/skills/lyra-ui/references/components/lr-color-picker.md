@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 44 parts, 43 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 44 parts, 44 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -381,3 +381,5 @@ of authoring `positioning-strategy`/`hoist` on each instance.
 - A disconnect/reconnect cycle (a drag-and-drop reparent, a virtualized list reordering) closes the
   panel rather than leaving it rendered at a stale, frozen position, and an abandoned half-typed
   entry in the text field is discarded rather than reappearing on the next open.
+
+The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.

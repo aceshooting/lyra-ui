@@ -1068,6 +1068,8 @@ synchronous and fires no `input`/`change`/`lr-change` event.
 
 <a id="popup-select-keyboard"></a>
 
+The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.
+
 ## `lr-select`
 
 `labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in
@@ -1637,6 +1639,8 @@ state mixes from this same token. Scoped independently of `--lr-select-trigger-h
 ---
 
 <a id="date-and-range-controls"></a>
+
+The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.
 
 ## `lr-date-picker` / `lr-date-input` (+ `calendar-core.ts`)
 
@@ -2446,6 +2450,8 @@ including when that allocation shrinks after the content renders.
 - `click()` — Activates the internal textarea.
 
 ---
+
+The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.
 
 ## `lr-button`
 
@@ -4359,6 +4365,8 @@ import "@aceshooting/lyra-ui/components/media/flag/flag-peer.js";
 
 <a id="time-range-controls"></a>
 
+The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.
+
 ## `lr-time-range`
 
 A two-handle brush/scrubber over a numeric domain (no date logic — callers map their own time axis
@@ -6175,6 +6183,8 @@ control cannot be edited and restores the current intrinsic result when editing 
 
 <a id="radio-group-controls"></a>
 
+The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.
+
 ## `lr-radio-group`
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
@@ -6630,6 +6640,8 @@ floor that input keeps once tokens have consumed the row), and `--lr-token-input
   never replaced by it.
 - `--lr-token-input-invalid-border-color` overrides the shared `--lr-form-control-invalid-border-color` on this row. The default is `--lr-color-danger`.
 
+The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.
+
 ## `lr-code-editor`
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
@@ -6793,6 +6805,8 @@ the library, including `lr-table`,
   textarea's value, gutter line count, selection offsets and ordinary FormData state.
 
 **Additional API surface:** `click()` activates the internal editing surface.
+
+The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.
 
 ## `lr-color-picker`
 
@@ -7161,6 +7175,8 @@ of authoring `positioning-strategy`/`hoist` on each instance.
 - A disconnect/reconnect cycle (a drag-and-drop reparent, a virtualized list reordering) closes the
   panel rather than leaving it rendered at a stale, frozen position, and an abandoned half-typed
   entry in the text field is discarded rather than reappearing on the next open.
+
+The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.
 
 ## `lr-emoji-picker`
 
@@ -7831,6 +7847,8 @@ only once it has registered the requested messages; it must not change the activ
   never replaced by it.
 - `--lr-locale-picker-option-selected-border-color` — Selected option border. Default: `var(--lr-color-brand)`.
 - `--lr-locale-picker-option-selected-color` — Selected option text. Default: `var(--lr-color-brand)`.
+
+The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.
 
 ## Consumer integration notes
 
@@ -8949,3 +8967,5 @@ Date-picker, date-input, OTP-input, rating, model-select, voice-picker, and rubr
 typed pair. Time-range adds `detail.value: { start, end }` while keeping top-level `start`/`end`.
 Color-picker's `lr-input` includes `{ value }`. Combobox filter typing keeps its separate `lr-filter`
 contract; typed value events describe committed selections, not the filter query.
+
+The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.

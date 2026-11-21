@@ -263,6 +263,7 @@ export interface LyraLocalePickerEventMap {
  * @slot error - Custom error content.
  * @csspart limit - Localized notice when input admission omits catalog data.
  * @csspart form-control - The outer wrapper around label, trigger, listbox, error and hint.
+ * @cssprop --lr-form-control-height - Single-line field height; a start-placed label aligns to the first line of a taller field.
  * @cssprop [--lr-form-control-touch-font-size-min=16px] - Font-size floor of the editable text
  *   surface under a coarse or hover-less pointer, which stops mobile Safari zooming on focus. `0px`
  *   disables it.

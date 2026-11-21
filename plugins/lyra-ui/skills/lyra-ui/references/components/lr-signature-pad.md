@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -138,3 +138,5 @@ Date-picker, date-input, OTP-input, rating, model-select, voice-picker, and rubr
 typed pair. Time-range adds `detail.value: { start, end }` while keeping top-level `start`/`end`.
 Color-picker's `lr-input` includes `{ value }`. Combobox filter typing keeps its separate `lr-filter`
 contract; typed value events describe committed selections, not the filter query.
+
+The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.

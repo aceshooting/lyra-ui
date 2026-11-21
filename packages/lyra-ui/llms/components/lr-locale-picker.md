@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 34 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 35 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -343,3 +343,5 @@ only once it has registered the requested messages; it must not change the activ
   never replaced by it.
 - `--lr-locale-picker-option-selected-border-color` — Selected option border. Default: `var(--lr-color-brand)`.
 - `--lr-locale-picker-option-selected-color` — Selected option text. Default: `var(--lr-color-brand)`.
+
+The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.

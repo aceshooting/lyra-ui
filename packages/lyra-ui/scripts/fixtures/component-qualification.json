@@ -12745,7 +12745,7 @@
           "evidence": [
             {
               "file": "src/components/forms/color-picker/color-picker.class.ts",
-              "line": 1284,
+              "line": 1285,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -13019,7 +13019,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2777,
+              "line": 2778,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -16740,7 +16740,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.class.ts",
-              "line": 2462,
+              "line": 2463,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -32829,7 +32829,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.class.ts",
-              "line": 1022,
+              "line": 1023,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39694,7 +39694,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2777,
+              "line": 2778,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39920,7 +39920,7 @@
           "evidence": [
             {
               "file": "src/components/forms/otp-input/otp-input.class.ts",
-              "line": 387,
+              "line": 388,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -57398,7 +57398,7 @@
           "evidence": [
             {
               "file": "src/components/forms/textarea/textarea.class.ts",
-              "line": 724,
+              "line": 725,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

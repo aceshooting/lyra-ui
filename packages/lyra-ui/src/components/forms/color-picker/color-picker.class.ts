@@ -324,6 +324,7 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * @csspart base - Permanent compatibility name on the same field wrapper as `color-picker`.
  * @csspart color-picker - The field wrapper. It is the same node as `base` and `form-control`.
  * @csspart form-control - The field wrapper. It is the same node as `base` and `color-picker`.
+ * @cssprop --lr-form-control-height - Single-line field height; a start-placed label aligns to the first line of a taller field.
  * @cssprop [--lr-form-control-touch-font-size-min=16px] - Font-size floor of the editable text
  *   surface under a coarse or hover-less pointer, which stops mobile Safari zooming on focus. `0px`
  *   disables it.

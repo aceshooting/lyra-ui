@@ -277,6 +277,7 @@ function pageDetail(page: number, pageSize: number): DataGridPageDetail {
  * @csspart tree-limit - Localized notice rendered when nested input exceeds the maxRows node or
  *   64-descendant-level projection budget.
  * @csspart row-limit - Localized notice rendered when flat input exceeds maxRows rows.
+ * @cssprop --lr-form-control-touch-font-size-min - Minimum font size of the inner text inputs under touch density.
  * @cssprop [--accent-color=var(--lr-color-brand)] - Accent used by focus and active states.
  * @cssprop [--background-color=var(--lr-color-surface)] - Grid background.
  * @cssprop [--border-color=var(--lr-color-border)] - Border color of the grid's controls (search,

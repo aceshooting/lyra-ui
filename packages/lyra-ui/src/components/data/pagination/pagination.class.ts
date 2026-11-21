@@ -236,6 +236,7 @@ function paginationItems(
  * (`acquireAnnouncementSink()` in `internal/announcer.ts`), because a live region inside a shadow
  * root is not reliably announced; this part is a styling/inspection surface only.
  * @cssstate disabled - Applied when the public `disabled` property is true.
+ * @cssprop --lr-form-control-touch-font-size-min - Minimum font size of the inner text inputs under touch density.
  * @cssprop --lr-pagination-control-size - Control inline/block size; defaults from the `size` variant.
  * @cssprop --lr-pagination-font-size - Control font size; defaults from the `size` variant.
  * @cssprop --lr-pagination-control-bg - Resting background of every control; defaults from the
