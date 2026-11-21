@@ -57848,7 +57848,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/thread-list/thread-list.class.ts",
-              "line": 888,
+              "line": 889,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

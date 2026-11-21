@@ -1,3 +1,4 @@
+import { srOnly } from '../../../internal/a11y.js';
 import { OwnedMutationObserver } from '../../../internal/owned-observer.js';
 import { isElementNode } from '../../../internal/dom-guards.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
@@ -395,7 +396,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   protected static override readonly ownedCollectionProperties = Object.freeze(['threads', 'groupOrder', 'collapsedGroupIds', 'rowActions']);
   protected static override readonly identityCollectionProperties = Object.freeze(['threads']);
 
-  static override styles = [LyraElement.styles, contextualSizes, styles];
+  static override styles = [LyraElement.styles, contextualSizes, srOnly, styles];
   private readonly inputLimitAnnouncements = new AnnouncementSinkController(this);
   private get inputLimitMessage(): string {
     if (this.sourceMode) return '';

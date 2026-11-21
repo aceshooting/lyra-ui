@@ -341,7 +341,7 @@ const bundleEntries = {
     // graph's own code shrank. Reviewed exception for 32.0.0; the ceiling is the next 64-byte
     // boundary. Contained pager request events and the queued-focus cancellation bring it to
     // 478,965 raw bytes; the ceiling advances to the next 64-byte boundary.
-    maxRawBytes: 479_040,
+    maxRawBytes: 478_976,
   },
 };
 

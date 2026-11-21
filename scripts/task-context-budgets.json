@@ -14,8 +14,8 @@
       "published23Utf8Bytes": 64183,
       "reviewedCheckpointUtf8Bytes": 58280,
       "reviewedCheckpointProxyTokens": 14112,
-      "ceilingUtf8Bytes": 62883,
-      "$comment": "The table reference gained the stacked small-screen layout, row links and offset pagination in 32.0.0, measuring 62,584 UTF-8 bytes; the ceiling advances to that exact measurement. Later 32.0.0 reference additions then brought the route to 62,655 UTF-8 bytes; the ceiling advances to that exact measurement. The lr-table event rename and pager reference updates bring it to 62,883 UTF-8 bytes; the ceiling advances to that exact measurement."
+      "ceilingUtf8Bytes": 62974,
+      "$comment": "The table reference gained the stacked small-screen layout, row links and offset pagination in 32.0.0, measuring 62,584 UTF-8 bytes; the ceiling advances to that exact measurement. Later 32.0.0 reference additions then brought the route to 62,655 UTF-8 bytes; the ceiling advances to that exact measurement. The lr-table event rename and pager reference updates bring it to 62,883 UTF-8 bytes; the ceiling advances to that exact measurement. The contained pager request event note brings it to 62,974 UTF-8 bytes; the ceiling advances to that exact measurement."
     },
     "component-discovery": {
       "published23Utf8Bytes": 106727,
