@@ -118,7 +118,7 @@ interface AlertAutoHideTimer {
  * @cssprop [--lr-alert-close-active-bg=color-mix(in oklab,transparent,var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
  *   The close button's pressed background, independently scoped from `--lr-alert-close-hover-bg`.
  * @cssprop --lr-alert-bg - Panel background.
- * @cssprop --lr-alert-border - Panel border color.
+ * @cssprop --lr-alert-border-color - Panel border color.
  * @cssprop --lr-alert-color - Panel text color.
  * @cssprop --lr-alert-radius - Panel corner radius.
  * @cssprop --lr-alert-shadow - Panel shadow.

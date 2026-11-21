@@ -2312,6 +2312,26 @@ test('lyra-v31 reports every name removed in 32.0.0 and accepts the resolved, ty
   }
 });
 
+test('lyra-v31 rewrites every renamed published CSS custom property to its -color name', () => {
+  const profile = readRenameLedger().profiles.find(entry => entry.origin === 'lyra-v31');
+  const tokens = profile.globals.filter(entry => entry.kind === 'css-property');
+  assert.deepEqual(tokens.map(entry => entry.from).sort(), [
+    '--lr-callout-border', '--lr-checkbox-active-border', '--lr-checkbox-active-ring', '--lr-checkbox-checked-border',
+    '--lr-checkbox-group-invalid-border', '--lr-checkbox-hover-border', '--lr-checkbox-invalid-border', '--lr-radio-group-invalid-border',
+  ]);
+  const current = buildMigrationContract(checkedInventory, {
+    renameLedger: readRenameLedger(), exportDeprecations: readExportDeprecations(), compatibilityContext: checkedCompatibilityContext,
+  });
+  for (const entry of tokens) {
+    const input = `:root { ${entry.from}: red; }\n`;
+    const result = migrateText(input, current, { file: 'theme.css', origin: 'lyra-v31' });
+    assert.equal(result.content, `:root { ${entry.to}: red; }\n`, entry.from);
+    assert.deepEqual(result.changes.map(change => [change.action, change.target]), [['rewrite-css-property', entry.to]], entry.from);
+    const rerun = migrateText(result.content, current, { file: 'theme.css', origin: 'lyra-v31' });
+    assert.deepEqual(rerun.changes, [], `${entry.to} is stable`);
+  }
+});
+
 test('lyra-v31 re-binds the removed viewers-barrel subclass to the canonical class and reports other routes', () => {
   const current = buildMigrationContract(checkedInventory, {
     renameLedger: readRenameLedger(), exportDeprecations: readExportDeprecations(), compatibilityContext: checkedCompatibilityContext,
@@ -2334,7 +2354,7 @@ test('lyra-v31 re-binds the removed viewers-barrel subclass to the canonical cla
   assert.deepEqual(result.warnings.filter((warning) => warning.warningCode === 'GLOBAL_REVIEW').map((warning) => warning.line), [3, 5]);
   assert.equal(migrate(result.content).changes.length, 0, 'idempotent');
   const ledger = readRenameLedger();
-  ledger.profiles.find((entry) => entry.origin === 'lyra-v31').globals[0].module = './components/viewers/index.js';
+  ledger.profiles.find((entry) => entry.origin === 'lyra-v31').globals.find((entry) => entry.kind === 'export').module = './components/viewers/index.js';
   assertFinding(validateRenameLedgerShape(ledger), /needs module "\." \(the package root\) or a \.\/components\/<family> barrel/);
 });
 

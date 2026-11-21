@@ -589,7 +589,8 @@ const exportSpecifier = (entry) => (entry.module === '.' ? LYRA_PACKAGE : `${LYR
  * else. An `export` entry rewrites a named import or re-export from its barrel (the package root, or
  * the `./components/<family>` barrel its `module` names) to `New as Old` (or `New as Local` when
  * already aliased), so no scope analysis is needed, and reports every other use.
- * A `locale-key` entry only reports.
+ * A `css-property` entry whose `to` is one custom property rewrites the exact name; a prefix or prose
+ * guidance reports. A `locale-key` entry only reports.
  */
 function applyGlobals(text, file, entries, { inComment, inCss, openingTokens, rewrite, warn }) {
   const modules = entries.filter((entry) => entry.kind === 'module');
@@ -673,9 +674,19 @@ function applyGlobals(text, file, entries, { inComment, inCss, openingTokens, re
 
   for (const entry of entries.filter((candidate) => candidate.kind === 'css-property')) {
     const pattern = new RegExp(`${regexEscape(entry.from)}${entry.prefix ? '[\\w-]*' : '(?![\\w-])'}`, 'g');
+    // An exact removed name whose guidance is itself one custom property is a mechanical rename:
+    // custom properties inherit, so the replacement keeps the declaration's reach.
+    const exact = !entry.prefix && /^--[\w-]+$/.test(entry.to);
     for (const match of text.matchAll(pattern)) {
       if (inComment(match.index)) continue;
-      review(match.index, entry, match[0], `The custom property ${match[0]} was removed: ${entry.summary} Use ${entry.to}.`);
+      if (exact) {
+        rewrite(match.index, match.index + match[0].length, entry.to, {
+          tag: null, member: match[0], action: 'rewrite-css-property', target: entry.to,
+          message: `Rewrite ${entry.from} to ${entry.to}: ${entry.summary}`,
+        });
+      } else {
+        review(match.index, entry, match[0], `The custom property ${match[0]} was removed: ${entry.summary} Use ${entry.to}.`);
+      }
     }
   }
   const parts = entries.filter((candidate) => candidate.kind === 'part');

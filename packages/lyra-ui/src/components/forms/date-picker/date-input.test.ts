@@ -2110,3 +2110,28 @@ it("resolves a logical left/right placement against the writing direction, like 
     expect(onEnd(), direction).to.be.true;
   }
 });
+
+it('keeps the calendar lr-change-request inside and reports one lr-change from the host per pick', async () => {
+  const el = await fixture<LyraDateInput>(html`<lr-date-input label="Date" value="2026-05-14"></lr-date-input>`);
+  const seen: string[] = [];
+  const onRequest = (event: Event): void => {
+    seen.push(`request:${event.target === el ? 'host' : 'other'}`);
+  };
+  const onChange = (event: Event): void => {
+    seen.push(`change:${event.target === el ? 'host' : 'other'}`);
+  };
+  document.addEventListener('lr-change-request', onRequest);
+  document.addEventListener('lr-change', onChange);
+  try {
+    await el.show();
+    const picker = el.shadowRoot!.querySelector<LyraDatePicker>('[part="date-picker"]')!;
+    await picker.updateComplete;
+    picker.shadowRoot!.querySelector<HTMLButtonElement>('[part~="day"][data-date="2026-05-15"]')!.click();
+    await el.updateComplete;
+    expect(el.value).to.equal('2026-05-15');
+    expect(seen).to.deep.equal(['change:host']);
+  } finally {
+    document.removeEventListener('lr-change-request', onRequest);
+    document.removeEventListener('lr-change', onChange);
+  }
+});

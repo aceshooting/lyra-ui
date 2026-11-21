@@ -519,12 +519,13 @@ export type LyraAutoloadPreloadEvent = AutoloaderEventMap['lr-autoload-preload']
 export type LyraAutoloadTraversalErrorEvent = AutoloaderEventMap['lr-autoload-traversal-error'];
 
 /**
- * `lr-before-page-change` — dispatched by 2 components: `<lr-data-grid>`, `<lr-pagination>`;
- * detail union of 2, e.g. `LyraDataGridEventMap['lr-before-page-change']`.
+ * `lr-before-page-change` — dispatched by 3 components: `<lr-data-grid>`, `<lr-pagination>`,
+ * `<lr-table>`; detail union of 3, e.g. `LyraDataGridEventMap['lr-before-page-change']`.
  */
 export type LyraBeforePageChangeEvent =
   | LyraDataGridEventMap['lr-before-page-change']
-  | LyraPaginationEventMap['lr-before-page-change'];
+  | LyraPaginationEventMap['lr-before-page-change']
+  | LyraTableEventMap['lr-before-page-change'];
 
 /**
  * `lr-before-page-size-change` — dispatched by `<lr-pagination>`; detail
@@ -684,18 +685,26 @@ export type LyraChangeEvent =
 export type LyraChangeDecisionRequestEvent = LyraChangeReviewEventMap['lr-change-decision-request'];
 
 /**
- * `lr-change-request` — dispatched by 11 components: `<lr-combobox>`, `<lr-country-picker>`,
- * `<lr-currency-picker>`, `<lr-locale-picker>`, `<lr-model-select>`, `<lr-prompt-studio>`,
- * `<lr-select>`, `<lr-time-zone-picker>`, `<lr-tool-select-dialog>`, `<lr-unit-picker>`,
- * `<lr-voice-picker>`; detail union of 8, e.g. `LyraCatalogPickerEventMap['lr-change-request']`.
+ * `lr-change-request` — dispatched by 17 components: `<lr-color-picker>`, `<lr-combobox>`,
+ * `<lr-country-picker>`, `<lr-currency-picker>`, `<lr-date-picker>`, `<lr-locale-picker>`,
+ * `<lr-model-select>`, `<lr-prompt-studio>`, `<lr-radio-group>`, `<lr-rating>`, `<lr-segmented>`,
+ * `<lr-select>`, `<lr-swatch-picker>`, `<lr-time-zone-picker>`, `<lr-tool-select-dialog>`,
+ * `<lr-unit-picker>`, `<lr-voice-picker>`; detail union of 14, e.g.
+ * `LyraCatalogPickerEventMap['lr-change-request']`.
  */
 export type LyraChangeRequestEvent =
   | LyraCatalogPickerEventMap['lr-change-request']
+  | LyraColorPickerEventMap['lr-change-request']
   | LyraComboboxEventMap['lr-change-request']
+  | LyraDatePickerEventMap['lr-change-request']
   | LyraLocalePickerEventMap['lr-change-request']
   | LyraModelSelectEventMap['lr-change-request']
   | LyraPromptStudioEventMap['lr-change-request']
+  | LyraRadioGroupEventMap['lr-change-request']
+  | LyraRatingEventMap['lr-change-request']
+  | LyraSegmentedEventMap['lr-change-request']
   | LyraSelectEventMap['lr-change-request']
+  | LyraSwatchPickerEventMap['lr-change-request']
   | LyraToolSelectDialogEventMap['lr-change-request']
   | LyraVoicePickerEventMap['lr-change-request'];
 
@@ -860,12 +869,6 @@ export type LyraCollapseEvent =
 export type LyraCollisionEvent = LyraDashboardGridEventMap['lr-collision'];
 
 /**
- * `lr-color-picker-change-request` — dispatched by `<lr-color-picker>`; detail
- * `LyraColorPickerEventMap['lr-color-picker-change-request']`.
- */
-export type LyraColorPickerChangeRequestEvent = LyraColorPickerEventMap['lr-color-picker-change-request'];
-
-/**
  * `lr-column-move` — dispatched by `<lr-data-grid>`; detail
  * `LyraDataGridEventMap['lr-column-move']`.
  */
@@ -1015,12 +1018,6 @@ export type LyraCueChangeEvent = LyraAvPlayerEventMap['lr-cue-change'];
  * `LyraDataGridEventMap['lr-data-error']`.
  */
 export type LyraDataErrorEvent = LyraDataGridEventMap['lr-data-error'];
-
-/**
- * `lr-date-picker-select-request` — dispatched by `<lr-date-picker>`; detail
- * `LyraDatePickerEventMap['lr-date-picker-select-request']`.
- */
-export type LyraDatePickerSelectRequestEvent = LyraDatePickerEventMap['lr-date-picker-select-request'];
 
 /**
  * `lr-date-select` — dispatched by `<lr-calendar>`; detail
@@ -2409,11 +2406,6 @@ export type LyraPageChangeEvent =
   | LyraTableEventMap['lr-page-change'];
 
 /**
- * `lr-page-request` — dispatched by `<lr-table>`; detail `LyraTableEventMap['lr-page-request']`.
- */
-export type LyraPageRequestEvent = LyraTableEventMap['lr-page-request'];
-
-/**
  * `lr-page-select` — dispatched by `<lr-page-rail>`; detail
  * `LyraPageRailEventMap['lr-page-select']`.
  */
@@ -2663,12 +2655,6 @@ export type LyraQueueChangeEvent =
   | LyraPromptQueueEventMap['lr-queue-change'];
 
 /**
- * `lr-radio-group-select-request` — dispatched by `<lr-radio-group>`; detail
- * `LyraRadioGroupEventMap['lr-radio-group-select-request']`.
- */
-export type LyraRadioGroupSelectRequestEvent = LyraRadioGroupEventMap['lr-radio-group-select-request'];
-
-/**
  * `lr-radio-select-request` — dispatched by 2 components: `<lr-radio-button>`, `<lr-radio>`;
  * detail `LyraRadioEventMap['lr-radio-select-request']`.
  */
@@ -2691,12 +2677,6 @@ export type LyraRailResizeRequestEvent = LyraAppRailEventMap['lr-rail-resize-req
  * `LyraAvPlayerEventMap['lr-rate-change']`.
  */
 export type LyraRateChangeEvent = LyraAvPlayerEventMap['lr-rate-change'];
-
-/**
- * `lr-rating-change-request` — dispatched by `<lr-rating>`; detail
- * `LyraRatingEventMap['lr-rating-change-request']`.
- */
-export type LyraRatingChangeRequestEvent = LyraRatingEventMap['lr-rating-change-request'];
 
 /**
  * `lr-readonly-change` — dispatched by `<lr-flow-controls>`; detail
@@ -3032,18 +3012,22 @@ export type LyraRowExpandRequestEvent =
   | LyraTableEventMap['lr-row-expand-request'];
 
 /**
- * `lr-row-expand-toggle` — dispatched by 2 components: `<lr-data-grid>`, `<lr-table>`; detail
- * union of 2, e.g. `LyraDataGridEventMap['lr-row-expand-toggle']`.
+ * `lr-row-expand-toggle` — dispatched by `<lr-table>`; detail
+ * `LyraTableEventMap['lr-row-expand-toggle']`.
  */
-export type LyraRowExpandToggleEvent =
-  | LyraDataGridEventMap['lr-row-expand-toggle']
-  | LyraTableEventMap['lr-row-expand-toggle'];
+export type LyraRowExpandToggleEvent = LyraTableEventMap['lr-row-expand-toggle'];
 
 /**
  * `lr-row-select` — dispatched by `<lr-data-grid>`; detail
  * `LyraDataGridEventMap['lr-row-select']`.
  */
 export type LyraRowSelectEvent = LyraDataGridEventMap['lr-row-select'];
+
+/**
+ * `lr-row-select-request` — dispatched by `<lr-data-grid>`; detail
+ * `LyraDataGridEventMap['lr-row-select-request']`.
+ */
+export type LyraRowSelectRequestEvent = LyraDataGridEventMap['lr-row-select-request'];
 
 /**
  * `lr-run` — dispatched by `<lr-prompt-studio>`; detail `LyraPromptStudioEventMap['lr-run']`.
@@ -3153,12 +3137,6 @@ export type LyraSegmentActivateRequestEvent = LyraContextMeterEventMap['lr-segme
 export type LyraSegmentSelectionChangeEvent = LyraContextMeterEventMap['lr-segment-selection-change'];
 
 /**
- * `lr-segmented-select-request` — dispatched by `<lr-segmented>`; detail
- * `LyraSegmentedEventMap['lr-segmented-select-request']`.
- */
-export type LyraSegmentedSelectRequestEvent = LyraSegmentedEventMap['lr-segmented-select-request'];
-
-/**
  * `lr-select` — dispatched by 8 components: `<lr-command-palette>`, `<lr-context-menu>`,
  * `<lr-conversation-item>`, `<lr-dropdown>`, `<lr-menu>`, `<lr-menubar>`, `<lr-node-palette>`,
  * `<lr-thread-list>`; detail union of 8, e.g. `LyraCommandPaletteEventMap['lr-select']`.
@@ -3180,13 +3158,12 @@ export type LyraSelectEvent =
 export type LyraSelectionActionEvent = LyraSelectionToolbarEventMap['lr-selection-action'];
 
 /**
- * `lr-selection-change` — dispatched by 10 components: `<lr-data-grid>`, `<lr-document-library>`,
- * `<lr-flow-canvas>`, `<lr-graph>`, `<lr-heatmap>`, `<lr-knowledge-graph-explorer>`,
- * `<lr-retrieval-results>`, `<lr-source-picker>`, `<lr-table>`, `<lr-tree>`; detail union of 10,
- * e.g. `LyraDataGridEventMap['lr-selection-change']`.
+ * `lr-selection-change` — dispatched by 9 components: `<lr-document-library>`, `<lr-flow-canvas>`,
+ * `<lr-graph>`, `<lr-heatmap>`, `<lr-knowledge-graph-explorer>`, `<lr-retrieval-results>`,
+ * `<lr-source-picker>`, `<lr-table>`, `<lr-tree>`; detail union of 9, e.g.
+ * `LyraDocumentLibraryEventMap['lr-selection-change']`.
  */
 export type LyraSelectionChangeEvent =
-  | LyraDataGridEventMap['lr-selection-change']
   | LyraDocumentLibraryEventMap['lr-selection-change']
   | LyraFlowCanvasEventMap['lr-selection-change']
   | LyraGraphEventMap['lr-selection-change']
@@ -3211,12 +3188,6 @@ export type LyraSelectionChangeRequestEvent =
  * `LyraFlowCanvasEventMap['lr-selection-delete']`.
  */
 export type LyraSelectionDeleteEvent = LyraFlowCanvasEventMap['lr-selection-delete'];
-
-/**
- * `lr-selection-request` — dispatched by `<lr-data-grid>`; detail
- * `LyraDataGridEventMap['lr-selection-request']`.
- */
-export type LyraSelectionRequestEvent = LyraDataGridEventMap['lr-selection-request'];
 
 /**
  * `lr-send-now` — dispatched by 2 components: `<lr-prompt-input>`, `<lr-prompt-queue>`; detail
@@ -3285,12 +3256,11 @@ export type LyraSlideChangeEvent =
   | LyraPptxViewerEventMap['lr-slide-change'];
 
 /**
- * `lr-sort` — dispatched by 6 components: `<lr-data-grid>`, `<lr-document-library>`,
- * `<lr-eval-dataset>`, `<lr-eval-result>`, `<lr-knowledge-base>`, `<lr-table>`; detail union of 6,
- * e.g. `LyraDataGridEventMap['lr-sort']`.
+ * `lr-sort` — dispatched by 5 components: `<lr-document-library>`, `<lr-eval-dataset>`,
+ * `<lr-eval-result>`, `<lr-knowledge-base>`, `<lr-table>`; detail union of 5, e.g.
+ * `LyraDocumentLibraryEventMap['lr-sort']`.
  */
 export type LyraSortEvent =
-  | LyraDataGridEventMap['lr-sort']
   | LyraDocumentLibraryEventMap['lr-sort']
   | LyraEvalDatasetEventMap['lr-sort']
   | LyraEvalResultEventMap['lr-sort']
@@ -3509,12 +3479,6 @@ export type LyraSubmitEvent =
  * `LyraSuggestionChipsEventMap['lr-suggestion-select']`.
  */
 export type LyraSuggestionSelectEvent = LyraSuggestionChipsEventMap['lr-suggestion-select'];
-
-/**
- * `lr-swatch-picker-select-request` — dispatched by `<lr-swatch-picker>`; detail
- * `LyraSwatchPickerEventMap['lr-swatch-picker-select-request']`.
- */
-export type LyraSwatchPickerSelectRequestEvent = LyraSwatchPickerEventMap['lr-swatch-picker-select-request'];
 
 /**
  * `lr-switch-toggle-request` — dispatched by `<lr-switch>`; detail
@@ -3925,10 +3889,10 @@ export type LyraWidgetStateChangeEvent = LyraWidgetRendererEventMap['lr-widget-s
 export type LyraWidgetViewChangeEvent = LyraWidgetEventMap['lr-widget-view-change'];
 
 /**
- * `lr-widget-view-request` — dispatched by `<lr-widget>`; detail
- * `LyraWidgetEventMap['lr-widget-view-request']`.
+ * `lr-widget-view-change-request` — dispatched by `<lr-widget>`; detail
+ * `LyraWidgetEventMap['lr-widget-view-change-request']`.
  */
-export type LyraWidgetViewRequestEvent = LyraWidgetEventMap['lr-widget-view-request'];
+export type LyraWidgetViewChangeRequestEvent = LyraWidgetEventMap['lr-widget-view-change-request'];
 
 /**
  * `lr-word-activate` — dispatched by `<lr-word-cloud>`; detail
@@ -4048,7 +4012,6 @@ export interface LyraGlobalEventMap {
   'lr-cluster-activate': LyraClusterActivateEvent;
   'lr-collapse': LyraCollapseEvent;
   'lr-collision': LyraCollisionEvent;
-  'lr-color-picker-change-request': LyraColorPickerChangeRequestEvent;
   'lr-column-move': LyraColumnMoveEvent;
   'lr-column-pin': LyraColumnPinEvent;
   'lr-column-resize': LyraColumnResizeEvent;
@@ -4065,7 +4028,6 @@ export interface LyraGlobalEventMap {
   'lr-create': LyraCreateEvent;
   'lr-cue-change': LyraCueChangeEvent;
   'lr-data-error': LyraDataErrorEvent;
-  'lr-date-picker-select-request': LyraDatePickerSelectRequestEvent;
   'lr-date-select': LyraDateSelectEvent;
   'lr-datum-activate': LyraDatumActivateEvent;
   'lr-datum-visibility-change': LyraDatumVisibilityChangeEvent;
@@ -4248,7 +4210,6 @@ export interface LyraGlobalEventMap {
   'lr-overflow-activate': LyraOverflowActivateEvent;
   'lr-overflow-toggle': LyraOverflowToggleEvent;
   'lr-page-change': LyraPageChangeEvent;
-  'lr-page-request': LyraPageRequestEvent;
   'lr-page-select': LyraPageSelectEvent;
   'lr-page-size-change': LyraPageSizeChangeEvent;
   'lr-page-viewer-state-change': LyraPageViewerStateChangeEvent;
@@ -4286,12 +4247,10 @@ export interface LyraGlobalEventMap {
   'lr-question-input': LyraQuestionInputEvent;
   'lr-question-response': LyraQuestionResponseEvent;
   'lr-queue-change': LyraQueueChangeEvent;
-  'lr-radio-group-select-request': LyraRadioGroupSelectRequestEvent;
   'lr-radio-select-request': LyraRadioSelectRequestEvent;
   'lr-rail-resize': LyraRailResizeEvent;
   'lr-rail-resize-request': LyraRailResizeRequestEvent;
   'lr-rate-change': LyraRateChangeEvent;
-  'lr-rating-change-request': LyraRatingChangeRequestEvent;
   'lr-readonly-change': LyraReadonlyChangeEvent;
   'lr-record-cancel': LyraRecordCancelEvent;
   'lr-record-chunk': LyraRecordChunkEvent;
@@ -4335,6 +4294,7 @@ export interface LyraGlobalEventMap {
   'lr-row-expand-request': LyraRowExpandRequestEvent;
   'lr-row-expand-toggle': LyraRowExpandToggleEvent;
   'lr-row-select': LyraRowSelectEvent;
+  'lr-row-select-request': LyraRowSelectRequestEvent;
   'lr-run': LyraRunEvent;
   'lr-run-activate': LyraRunActivateEvent;
   'lr-run-cancel': LyraRunCancelEvent;
@@ -4346,13 +4306,11 @@ export interface LyraGlobalEventMap {
   'lr-search-change': LyraSearchChangeEvent;
   'lr-segment-activate-request': LyraSegmentActivateRequestEvent;
   'lr-segment-selection-change': LyraSegmentSelectionChangeEvent;
-  'lr-segmented-select-request': LyraSegmentedSelectRequestEvent;
   'lr-select': LyraSelectEvent;
   'lr-selection-action': LyraSelectionActionEvent;
   'lr-selection-change': LyraSelectionChangeEvent;
   'lr-selection-change-request': LyraSelectionChangeRequestEvent;
   'lr-selection-delete': LyraSelectionDeleteEvent;
-  'lr-selection-request': LyraSelectionRequestEvent;
   'lr-send-now': LyraSendNowEvent;
   'lr-sequence-step': LyraSequenceStepEvent;
   'lr-show': LyraShowEvent;
@@ -4388,7 +4346,6 @@ export interface LyraGlobalEventMap {
   'lr-stop': LyraStopEvent;
   'lr-submit': LyraSubmitEvent;
   'lr-suggestion-select': LyraSuggestionSelectEvent;
-  'lr-swatch-picker-select-request': LyraSwatchPickerSelectRequestEvent;
   'lr-switch-toggle-request': LyraSwitchToggleRequestEvent;
   'lr-tab-change': LyraTabChangeEvent;
   'lr-tab-group-select-request': LyraTabGroupSelectRequestEvent;
@@ -4442,7 +4399,7 @@ export interface LyraGlobalEventMap {
   'lr-widget-action': LyraWidgetActionEvent;
   'lr-widget-state-change': LyraWidgetStateChangeEvent;
   'lr-widget-view-change': LyraWidgetViewChangeEvent;
-  'lr-widget-view-request': LyraWidgetViewRequestEvent;
+  'lr-widget-view-change-request': LyraWidgetViewChangeRequestEvent;
   'lr-word-activate': LyraWordActivateEvent;
   'lr-zoom': LyraZoomEvent;
   'lr-zoom-change': LyraZoomChangeEvent;

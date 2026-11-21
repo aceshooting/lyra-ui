@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 44 parts, 40 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 44 parts, 43 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -146,6 +146,12 @@ and:
   value (or the mirrored default); when neither spelling is authored, the panel is actually placed
   with the cascading `--lr-positioning-strategy` custom property honored ahead of that default —
   see **Themeable custom properties** below
+- `labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) — `'start'`
+  puts the label in an inline-start column beside the trigger (or the inline panel), sized by
+  `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default
+  `var(--lr-space-m)`), with hint and error under it, returning above the field below
+  `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label
+  beside the field: `label-placement`" in the shared forms notes
 - `withLabel: boolean = false` (`with-label`, reflected) and `withHint: boolean = false`
   (`with-hint`, reflected) — SSR hints that the corresponding slots are populated, so their chrome
   is present before client-side slot observation
@@ -192,7 +198,7 @@ one bubbling/composed native `Event` named `change`, followed by `lr-change` wit
 accepted text-field change/Enter, or an eyedropper result. A drag or repeated key can therefore
 emit several `input`/`lr-input` edit pairs but only one `change`/`lr-change` commit pair.
 Before a swatch click, an accepted text entry or an eyedropper result changes the value, the
-cancelable `lr-color-picker-change-request` (`detail: { value, previousValue }`, the proposed
+cancelable `lr-change-request` (`detail: { value, previousValue }`, the proposed
 serialized colour while `value` still holds the current one) is dispatched. `preventDefault()`
 keeps the current colour and suppresses every `input`/`lr-input`/`change`/`lr-change`; a listener
 may instead resolve the request by assigning `value` itself, which also suppresses the built-in

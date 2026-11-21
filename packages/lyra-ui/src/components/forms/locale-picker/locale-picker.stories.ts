@@ -318,3 +318,13 @@ export const PopupLifecycle: Story = {
     </div>`;
   },
 };
+
+/** `label-placement="start"` sets the label in an inline-start column, with the hint under the
+ *  field; below `--lr-form-control-label-collapse-inline-size` it returns above the field. */
+export const LabelPlacementStart: StoryObj = {
+  render: () => html`
+    <div style="display:grid;gap:var(--lr-space-m);max-inline-size:var(--lr-size-36rem)">
+      <lr-locale-picker label="Language" label-placement="start" hint="Applies to every page" .locales=${['en', 'fr', 'de']} value="en"></lr-locale-picker>
+    </div>
+  `,
+};

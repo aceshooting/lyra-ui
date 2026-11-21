@@ -8,9 +8,9 @@ export const styles = css`
   }
   ${delimitedGridStyles(css`--lr-csv-viewer-max-height`)}
   [part='base'] {
-    background: var(--lr-csv-viewer-background, transparent);
+    background: var(--lr-csv-viewer-bg, transparent);
     border: var(--lr-csv-viewer-border, none);
-    border-radius: var(--lr-csv-viewer-border-radius, 0);
+    border-radius: var(--lr-csv-viewer-radius, 0);
   }
   [part='header-row'] {
     background: var(--lr-csv-viewer-header-row-bg, var(--lr-color-surface));

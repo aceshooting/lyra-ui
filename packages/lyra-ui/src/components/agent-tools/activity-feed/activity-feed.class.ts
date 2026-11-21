@@ -147,7 +147,7 @@ function variantDotPart(variant: LyraVariant): string {
  * @event lr-follow-change - A user scroll released or re-engaged `follow`. `detail: {
  *   following }`. Direct property/attribute assignments never echo an event.
  * @cssprop [--lr-activity-feed-header-hover-bg] - Hover fill of the header.
- * @cssprop [--lr-activity-feed-header-pressed-bg] - Pressed fill of the header.
+ * @cssprop [--lr-activity-feed-header-active-bg] - Pressed fill of the header.
  * @csspart limit - Notice of input entries omitted by retention limits.
  * @csspart base - The outer container.
  * @csspart header - The clickable header (`<button>`).

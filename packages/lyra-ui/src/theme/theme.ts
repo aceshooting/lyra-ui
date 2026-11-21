@@ -985,7 +985,7 @@ function applyStoredStyleBeforePaint(
     if (desired.size || (mode === 'unset' && accent && !accentName)) desiredAttributes['data-lr-theme-scope'] = '';
     if (!modeOnly && !resolver) material(desired, record['treatment'] as LyraSurface);
     const opacity = record['surfaceOpacity'] as number;
-    if (!modeOnly && opacity !== model.defaults.surfaceOpacity) desired.set('--lr-theme-surface-opacity', `${opacity / 100}`);
+    if (!modeOnly && opacity !== model.defaults.surfaceOpacity) desired.set('--lr-theme-surface-opacity', `${opacity}`);
     const ownershipKey = Symbol.for('@aceshooting/lyra-ui.style-ownership.v1');
     const node = root as unknown as Record<symbol, unknown>;
     let previous: StyleOwnership | undefined;
@@ -1173,8 +1173,8 @@ export interface LyraStyle {
   readonly accentBackground: LyraAccentBackground;
   readonly overrides?: LyraThemeTokens;
   /**
-   * Glass surface opacity as a 0-100 percentage, written to `--lr-theme-surface-opacity` as 0-1.
-   * The default, 60, leaves the stylesheet value in place.
+   * Glass surface opacity from 0 to 1, the same scale `--lr-theme-surface-opacity` uses.
+   * The default, 0.6, leaves the stylesheet value in place.
    */
   readonly surfaceOpacity: number;
   readonly resolvedMode: 'light' | 'dark' | null;
@@ -1187,7 +1187,7 @@ export interface LyraStyleChoices {
   accent?: LyraAccent;
   accentBackground?: LyraAccentBackground;
   overrides?: LyraThemeTokens | null;
-  /** A 0-100 percentage, clamped; null or a non-finite value restores the default 60. */
+  /** An opacity from 0 to 1, clamped; null or a non-finite value restores the default 0.6. */
   surfaceOpacity?: number | null;
 }
 /** Complete scoped choices: an omitted axis inherits; null passed to the helper removes the scope. */
@@ -1325,7 +1325,7 @@ const STYLE_GEMSTONES: Readonly<Record<string, string>> = {
   'hematite': '#94a3b8',
 };
 // GENERATED STYLE MODEL: END
-const STYLE_STARTUP_DEFAULTS = Object.freeze({ ...STYLE_DEFAULTS, surfaceOpacity: 60 });
+const STYLE_STARTUP_DEFAULTS = Object.freeze({ ...STYLE_DEFAULTS, surfaceOpacity: 0.6 });
 
 const LOOK_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const LOOK_STAMP = Symbol.for('@aceshooting/lyra-ui.look.v1');
@@ -1454,7 +1454,7 @@ function normalizeStyleChoices(raw: unknown, base: StyleState): StyleState {
   const overrides = readOwnDataValue(raw, 'overrides');
   if (overrides !== undefined) next.overrides = styleTokens(overrides);
   const opacity = readOwnDataValue(raw, 'surfaceOpacity');
-  if (opacity !== undefined) next.surfaceOpacity = finiteRange(typeof opacity === 'number' ? opacity : Number.NaN, DEFAULT_STYLE.surfaceOpacity, 0, 100);
+  if (opacity !== undefined) next.surfaceOpacity = finiteRange(typeof opacity === 'number' ? opacity : Number.NaN, DEFAULT_STYLE.surfaceOpacity, 0, 1);
   return next;
 }
 function styleFromRecord(value: unknown, browserColors = false): StyleState {
@@ -1784,7 +1784,7 @@ function applyStyleState(element: Element, state: StyleState, fields?: ReadonlyS
     styleMaterial(desired, state.surface);
   }
   if ((!fields || fields.has('surfaceOpacity')) && state.surfaceOpacity !== DEFAULT_STYLE.surfaceOpacity) {
-    desired.set('--lr-theme-surface-opacity', `${state.surfaceOpacity / 100}`);
+    desired.set('--lr-theme-surface-opacity', `${state.surfaceOpacity}`);
   }
   if (!state.accent && snapshot.accent) {
     attributes['data-lr-accent'] = 'none';

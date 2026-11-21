@@ -9,7 +9,7 @@ describe('lr-rating change request', () => {
     const el = await fixture<LyraRating>(html`<lr-rating label="Score" value="2"></lr-rating>`);
     const log: string[] = [];
     let mode: 'veto' | 'resolve' | 'same' | 'allow' = 'veto';
-    el.addEventListener('lr-rating-change-request', (event) => {
+    el.addEventListener('lr-change-request', (event) => {
       const { value, previousValue } = event.detail;
       log.push(`request:${value}:${previousValue}:${el.value}:${String(event.cancelable)}`);
       if (mode === 'veto') event.preventDefault();

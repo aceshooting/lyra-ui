@@ -11,7 +11,7 @@ component's view change under the shared `lr-view-change` name.
 - **Breaking:** `lr-graph` emits `lr-graph-view-change` in place of `lr-view-change` for a toolbar
   view switch, and `lr-knowledge-graph-explorer` lets that event bubble out under the same new
   name. The detail is unchanged (`{ view }`).
-- **Breaking:** `lr-widget` emits `lr-widget-view-request` and `lr-widget-view-change` in place of
+- **Breaking:** `lr-widget` emits `lr-widget-view-change-request` and `lr-widget-view-change` in place of
   `lr-view-request` and `lr-view-change`. The details are unchanged (`{ viewId }`).
 - `lr-date-picker` keeps `lr-view-change` (`{ view, date }`), the name its Web Awesome counterpart
   uses.

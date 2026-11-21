@@ -856,7 +856,7 @@ export class LyraEvalDataset extends LyraElement<LyraEvalDatasetEventMap> {
           @lr-column-resize=${this.stopOwnedEvent}
           @lr-row-activate=${this.onGridRowActivate}
           @lr-row-expand-request=${this.stopOwnedEvent}
-          @lr-page-request=${this.stopOwnedEvent}
+          @lr-before-page-change=${this.stopOwnedEvent}
           @lr-column-resize-request=${this.stopOwnedEvent}
           @lr-row-click=${this.stopOwnedEvent}
         ></lr-table>

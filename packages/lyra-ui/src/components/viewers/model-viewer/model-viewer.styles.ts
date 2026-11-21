@@ -7,9 +7,9 @@ export const styles = css`
   :host {
     display: block;
     min-inline-size: 0;
-    --_lr-model-viewer-control-fill: var(--lr-model-viewer-action-background, var(--lr-color-surface));
-    --_lr-model-viewer-control-hover-fill: var(--lr-model-viewer-action-hover-background, var(--lr-color-surface-raised));
-    --_lr-model-viewer-control-active-fill: var(--lr-model-viewer-action-active-background, ${activeFill('var(--_lr-model-viewer-control-fill)')});
+    --_lr-model-viewer-control-fill: var(--lr-model-viewer-action-bg, var(--lr-color-surface));
+    --_lr-model-viewer-control-hover-fill: var(--lr-model-viewer-action-hover-bg, var(--lr-color-surface-raised));
+    --_lr-model-viewer-control-active-fill: var(--lr-model-viewer-action-active-bg, ${activeFill('var(--_lr-model-viewer-control-fill)')});
   }
   [part='base'] {
     ${inlineSizeContainer}

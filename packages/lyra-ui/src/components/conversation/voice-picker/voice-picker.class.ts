@@ -169,6 +169,12 @@ export interface LyraVoicePickerEventMap {
  * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=inherit] - Text color of the field label.
+ * @cssprop [--lr-form-control-label-inline-size=30%] - Label column width while
+ *   `label-placement="start"`.
+ * @cssprop [--lr-form-control-label-gap=var(--lr-space-m)] - Space between the label column and
+ *   the field while `label-placement="start"`.
+ * @cssprop [--lr-form-control-label-collapse-inline-size=var(--lr-size-20rem)] - Control width
+ *   below which `label-placement="start"` returns the label above the field.
  * @csspart form-control-label - The `<label>` element containing the `label` property and slot.
  * @csspart trigger - The trigger button (closed-dropdown mode).
  * @csspart combobox - The text-input container (free-text mode).
@@ -875,7 +881,7 @@ export class LyraVoicePicker extends LyraCatalogPickerElement<LyraVoicePickerEve
 
   override render(): TemplateResult {
     return html`<div part="form-control" tabindex="-1">
-      ${this.inputLimited ? html`<p part="limit">${this.localize('catalogPickerInputLimit')}</p>` : nothing}
+      ${this.inputLimited ? html`<p part="limit" data-form-control-row>${this.localize('catalogPickerInputLimit')}</p>` : nothing}
       ${this.closedMode ? this.renderClosed() : this.renderFreeText()}
     </div>`;
   }

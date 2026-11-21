@@ -1439,3 +1439,56 @@ it('paints control hover from --lr-table-control-hover-bg', async () => {
     await resetMouse();
   }
 });
+
+describe('lr-table page proposal', () => {
+  async function pagedClientTable(): Promise<LyraTable<Row>> {
+    const el = (await fixture(html`<lr-table page-size="1" pagination-mode="client"></lr-table>`)) as LyraTable<Row>;
+    el.columns = columns;
+    el.rows = rows;
+    await el.updateComplete;
+    await el.shadowRoot!.querySelector<HTMLElement & { updateComplete: Promise<unknown> }>('lr-pagination')!.updateComplete;
+    return el;
+  }
+
+  function nextButton(el: LyraTable<Row>): HTMLButtonElement {
+    const button = el.shadowRoot!.querySelector('lr-pagination')!.shadowRoot!
+      .querySelector<HTMLButtonElement>('[part~="next-button"]');
+    if (!button) throw new Error('Missing pager next button');
+    return button;
+  }
+
+  it('reaches a document listener once, from the table, and a veto keeps the page without lr-page-change', async () => {
+    const el = await pagedClientTable();
+    const seen: string[] = [];
+    const onDocument = (event: Event): void => {
+      seen.push(`${event.target === el ? 'table' : 'other'}:${event.cancelable}`);
+      event.preventDefault();
+    };
+    let changes = 0;
+    el.addEventListener('lr-page-change', () => { changes++; });
+    document.addEventListener('lr-before-page-change', onDocument);
+    try {
+      nextButton(el).click();
+      await el.updateComplete;
+    } finally {
+      document.removeEventListener('lr-before-page-change', onDocument);
+    }
+    expect(seen).to.deep.equal(['table:true']);
+    expect(el.page).to.equal(1);
+    expect(el.getAttribute('page')).to.equal('1');
+    expect(changes).to.equal(0);
+  });
+
+  it('proposes the one-based page with its page size and zero-based offset before committing it', async () => {
+    const el = await pagedClientTable();
+    const proposal = oneEvent(el, 'lr-before-page-change');
+    const committed = oneEvent(el, 'lr-page-change');
+    nextButton(el).click();
+    const request = await proposal;
+    expect(request.detail).to.deep.equal({ page: 2, pageSize: 1, offset: 1 });
+    expect(Object.isFrozen(request.detail)).to.equal(true);
+    expect((await committed).detail).to.deep.equal({ page: 2 });
+    await el.updateComplete;
+    expect(el.page).to.equal(2);
+  });
+});

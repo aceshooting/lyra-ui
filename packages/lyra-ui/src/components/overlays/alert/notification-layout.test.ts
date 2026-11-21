@@ -109,7 +109,7 @@ for (const [name, template, part] of [
 it('themes each alert panel edge and ink independently of its appearance', async () => {
   const el = await fixture<HTMLElement>(html`<lr-alert open appearance="accent" style="
     --lr-alert-bg:rgb(12, 13, 14);--lr-alert-color:rgb(220, 221, 222);
-    --lr-alert-border:rgb(30, 40, 50);--lr-alert-radius:13px;
+    --lr-alert-border-color:rgb(30, 40, 50);--lr-alert-radius:13px;
     --lr-alert-shadow:rgb(0, 0, 0) 0px 0px 3px">Saved</lr-alert>`);
   const panel = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]')!);
   expect(panel.backgroundColor).to.equal('rgb(12, 13, 14)');

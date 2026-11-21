@@ -501,6 +501,7 @@ export class LyraRetrievalSearch extends LyraElement<LyraRetrievalSearchEventMap
             .items=${this.modeItems()}
             .value=${this.mode}
             label=${this.localize('retrievalModeLabel')}
+            @lr-change-request=${this.stopOwnedEvent}
             @lr-change=${this.onModeChange}
             @lr-activate=${this.stopOwnedEvent}
           ></lr-segmented>

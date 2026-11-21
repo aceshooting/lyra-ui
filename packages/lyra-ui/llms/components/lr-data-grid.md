@@ -244,13 +244,16 @@ writes); `lr-row-collapse`, `lr-row-expand`, `lr-group-collapse`, and `lr-group-
 row expand/collapse details use canonical `rowKey` plus mirrored `key`. Cancelable
 `lr-sort-request` (readonly `{ sort }`) precedes `lr-sort-change`; veto leaves sort unchanged
 and suppresses `lr-sort-change`.
-Use `lr-sort` for the accepted primary sort. Its frozen detail carries `phase: 'commit'`, `sortKey`, `sortDir`, and the ordered `sort` array. Clearing uses an empty key and a null direction.
-`lr-selection-request` proposes frozen `{ selectedRowKeys }`; `lr-selection-change` reports the accepted keys and selected rows. `lr-row-expand-request` proposes `{ row, rowKey, key, expanded }`; `lr-row-expand-toggle` reports the accepted change. Existing `lr-sort-change`, `lr-row-select`, `lr-row-expand` and `lr-row-collapse` listeners continue to work.
+Cancelable `lr-row-select-request` proposes frozen `{ selectedRowKeys }` before `lr-row-select`; veto
+keeps the selection and suppresses `lr-row-select`. Cancelable `lr-row-expand-request` proposes
+`{ row, rowKey, key, expanded }` before `lr-row-expand` or `lr-row-collapse`; veto leaves the row
+unchanged. Each user selection, sort or expansion emits exactly one request and, when accepted, one
+commit event.
 `lr-before-page-change` proposes zero-based `{ page, pageSize, offset }` for page navigation and page-size changes; `offset` is `page * pageSize`, and `lr-page-change` and each `dataSource` request carry the same `offset`. An accepted pager activation also emits `lr-activate` with zero-based `{ value }`, including activation of the current page.
 `lr-copy` (`{ ok: true, text }` on fulfillment); `lr-copy-error` (`{ ok: false, text, reason, error }` on failure); `lr-error` is a compatibility notice without raw
 platform text. `lr-retry-request` (`detail: null`, cancelable) means the built-in retry
 button was activated while `error` is set; its default clears `error`, and veto leaves it set.
-All library events bubble and are composed. Cancelable events include `lr-before-page-change`, `lr-selection-request`, `lr-row-expand-request`, `lr-cell-contextmenu`,
+All library events bubble and are composed. Cancelable events include `lr-before-page-change`, `lr-row-select-request`, `lr-row-expand-request`, `lr-cell-contextmenu`,
 `lr-column-resize-request`, `lr-sort-request`, and `lr-retry-request`. Details and owned collections
 are frozen. Toolbar-search and column-filter inputs re-emit `focus`/`blur` once from the host as
 bubbling, composed native `FocusEvent`s, preserving `relatedTarget`.

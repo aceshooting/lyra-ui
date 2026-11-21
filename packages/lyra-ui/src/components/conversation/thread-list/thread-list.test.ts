@@ -5091,16 +5091,16 @@ describe("dense group headers and glyph opt-outs", () => {
     const list = el.shadowRoot!.querySelector("lr-virtual-list")!;
     const root = () => list.shadowRoot!;
     await waitUntil(() => root().querySelector('[part~="pin-glyph"]') != null && root().querySelector('[part~="sticky-group"] [part~="group-icon"]') != null);
-    expect(el.withoutPinGlyph).to.equal(false);
+    expect(el.withoutPinIcon).to.equal(false);
     expect(el.withoutGroupIcon).to.equal(false);
     expect(root().querySelectorAll('[part~="group-icon"]').length).to.be.greaterThan(1);
 
-    el.withoutPinGlyph = true;
+    el.withoutPinIcon = true;
     el.withoutGroupIcon = true;
     await el.updateComplete;
     await list.updateComplete;
     await waitUntil(() => root().querySelector('[part~="group-icon"]') == null && root().querySelector('[part~="pin-glyph"]') == null);
-    expect(el.hasAttribute("without-pin-glyph")).to.equal(true);
+    expect(el.hasAttribute("without-pin-icon")).to.equal(true);
     expect(el.hasAttribute("without-group-icon")).to.equal(true);
     expect(root().querySelector('[part="group-toggle"]')!.getAttribute("aria-expanded")).to.equal("true");
     const pinnedRow = dataRows(el).find((row) => row.getAttribute("conversation-id") === "p")!;

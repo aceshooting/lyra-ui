@@ -190,8 +190,8 @@ Override the `conversationActionWithTitle` string to change how the action and t
 `withArchived: boolean
 = false` (attribute `with-archived`, reflected) — data mode: include `archived` threads (in their own
 trailing group). `withoutRename: boolean = false` (attribute `without-rename`, reflected) — forwarded to
-each data-mode row, turning its inline rename off. `withoutPinGlyph: boolean = false` (attribute
-`without-pin-glyph`, reflected) — data mode: omits the `pin-glyph` indicator; each pinned row keeps a
+each data-mode row, turning its inline rename off. `withoutPinIcon: boolean = false` (attribute
+`without-pin-icon`, reflected) — data mode: omits the `pin-glyph` indicator; each pinned row keeps a
 visually hidden "Pinned" label, so its accessible name is unchanged. `withoutGroupIcon: boolean =
 false` (attribute `without-group-icon`, reflected) — data mode: omits the decorative `group-icon`
 chevron from group headers and their sticky copy; the toggle keeps `aria-expanded`. Row density

@@ -51,7 +51,7 @@ const SWATCH_PICKER_MODE = literalSetConverter<LyraSwatchPickerMode>(
   'swatch'
 );
 
-/** Detail of `lr-swatch-picker-select-request`. */
+/** Detail of `lr-change-request`. */
 export interface LyraSwatchPickerSelectRequestDetail {
   /** The value the activated swatch proposes. */
   readonly value: string;
@@ -60,7 +60,7 @@ export interface LyraSwatchPickerSelectRequestDetail {
 }
 
 export interface LyraSwatchPickerEventMap {
-  'lr-swatch-picker-select-request': CustomEvent<LyraSwatchPickerSelectRequestDetail>;
+  'lr-change-request': CustomEvent<LyraSwatchPickerSelectRequestDetail>;
   'lr-change': CustomEvent<{ value: string; previousValue?: string | null }>;
   'lr-activate': CustomEvent<{ value: string }>;
 }
@@ -104,7 +104,7 @@ export interface LyraSwatchPickerEventMap {
  * blocked focus keeps outside focus in place.
  *
  * @customElement lr-swatch-picker
- * @event lr-swatch-picker-select-request - A user activation (click or an Arrow/Home/End key) is
+ * @event lr-change-request - A user activation (click or an Arrow/Home/End key) is
  *   about to select a swatch other than the current selection; `detail: { value, previousValue }`
  *   carries the proposed value while `value` still holds the current one. Cancelable: calling
  *   `preventDefault()` keeps the current selection and `lr-change` does not fire. A listener may
@@ -265,7 +265,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     this._items = Object.freeze(snapshots);
     this.requestUpdate('items', old);
   }
-  // A listener that answers `lr-swatch-picker-select-request` by writing `value` finishes before
+  // A listener that answers `lr-change-request` by writing `value` finishes before
   // the built-in commit runs; the guard records that it wrote at all.
   private readonly selectGuard = new VetoWriteGuard();
   private _value: string | null = null;
@@ -349,7 +349,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
     return selectedIndex;
   }
 
-  /** Returns false when a `lr-swatch-picker-select-request` listener refused or redirected it. */
+  /** Returns false when a `lr-change-request` listener refused or redirected it. */
   private select(option: SwatchPickerItem, index: number): boolean {
     if (this.disabled || option.disabled) return false;
     const previousIndex = this.resolveSelectedIndex();
@@ -358,7 +358,7 @@ export class LyraSwatchPicker extends LyraElement<LyraSwatchPickerEventMap> {
       const request = requestThenCommit({
         requestDetail: { value: option.value, previousValue },
         emitRequest: (request, init: { cancelable: true }) =>
-          this.emit('lr-swatch-picker-select-request', request, init),
+          this.emit('lr-change-request', request, init),
         guard: this.selectGuard,
         commit: () => {
           if (this.disabled || option.disabled || !this.items.includes(option)) return;

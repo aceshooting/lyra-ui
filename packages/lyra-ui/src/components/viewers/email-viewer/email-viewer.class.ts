@@ -64,7 +64,7 @@ type EmailFetchState =
   | { kind: 'error'; message: () => string };
 
 export interface LyraEmailViewerEventMap extends LyraTextViewerTargetEventMap {
-  'lr-load': CustomEvent<Record<string, never>>;
+  'lr-load': CustomEvent<null>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-attachment-open': CustomEvent<LyraEventDetailSnapshot<LyraEmailAttachmentOpenDetail>>;
   'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
@@ -353,7 +353,7 @@ function isQuoteToggleElement(target: EventTarget): target is Element {
  * body. Text-quote anchors remain available across all rendered message text.
  *
  * @customElement lr-email-viewer
- * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with empty detail.
+ * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with a `null` detail.
  * @event lr-render-error - Fired when fetching or parsing the message fails.
  * @event lr-attachment-open - An attachment button was activated. Recursively frozen `detail:
  *   { attachment: { filename, mimeType, content?: Blob } }`; read bytes with `arrayBuffer()`.
@@ -393,9 +393,9 @@ function isQuoteToggleElement(target: EventTarget): target is Element {
  *   (`emailViewerQuotedText`) in both states, with `aria-expanded` carrying the state.
  * @csspart error - The error region.
  * @csspart spinner - The visible tokenized loading treatment and ordinary text label.
- * @cssprop --lr-email-viewer-action-background - Resting background of viewer actions.
- * @cssprop --lr-email-viewer-action-hover-background - Hover background of viewer actions.
- * @cssprop --lr-email-viewer-action-active-background - Pressed background of viewer actions.
+ * @cssprop --lr-email-viewer-action-bg - Resting background of viewer actions.
+ * @cssprop --lr-email-viewer-action-hover-bg - Hover background of viewer actions.
+ * @cssprop --lr-email-viewer-action-active-bg - Pressed background of viewer actions.
  * @cssprop [--lr-email-viewer-max-height=none] - Maximum block size of `[part="body"]` before it
  *   scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
  * @status stable
@@ -580,7 +580,7 @@ export class LyraEmailViewer extends TextViewerTarget(LyraEmailViewerBase) {
       this.fetchState.kind === 'error' ? this.fetchState.message() : this.localize('loadingDocument'),
     );
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
-    if (this.isConnected && changed.has('fetchState') && this.fetchState.kind === 'loaded') this.emit('lr-load', {});
+    if (this.isConnected && changed.has('fetchState') && this.fetchState.kind === 'loaded') this.emit('lr-load', null);
   }
 
   private async load(): Promise<void> {

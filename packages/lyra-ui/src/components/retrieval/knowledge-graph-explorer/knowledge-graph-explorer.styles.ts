@@ -44,7 +44,7 @@ export const styles = css`
     cursor: pointer;
     transition: var(--lr-transition-interactive);
   }
-  [part='source-clear']:hover { background: var(--lr-knowledge-graph-explorer-source-action-hover-fill, var(--lr-color-brand-quiet)); }
+  [part='source-clear']:hover { background: var(--lr-knowledge-graph-explorer-source-action-hover-bg, var(--lr-color-brand-quiet)); }
   [part='source-clear']:active { background: ${activeFill('var(--lr-color-brand-quiet)')}; }
   [part='source-clear']:focus-visible { ${focusRing} }
   [part='source-status'] { overflow-wrap: anywhere; margin-block: var(--lr-space-xs); }

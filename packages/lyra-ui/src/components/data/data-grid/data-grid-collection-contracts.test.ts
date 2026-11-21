@@ -3,15 +3,15 @@ import { sinkTexts } from '../../../../test/announcements.js';
 import { columns, dataGrid, header, rows, type Person } from '../../../../test/data-grid.js';
 import type { LyraPagination } from '../pagination/pagination.class.js';
 
-it('publishes the accepted sort and selection through the shared collection events', async () => {
+it('publishes the accepted sort and selection through lr-sort-change and lr-row-select', async () => {
   const grid = await dataGrid(html`<lr-data-grid label="People" row-key="id" selection-mode="multiple"
     .columns=${columns} .data=${rows}></lr-data-grid>`);
   const sorts: unknown[] = [];
   const selections: unknown[] = [];
-  grid.addEventListener('lr-sort', event => sorts.push((event as CustomEvent).detail));
-  grid.addEventListener('lr-selection-change', event => selections.push((event as CustomEvent).detail.selectedRowKeys));
+  grid.addEventListener('lr-sort-change', event => sorts.push((event as CustomEvent).detail));
+  grid.addEventListener('lr-row-select', event => selections.push((event as CustomEvent).detail.selectedRowKeys));
   header(grid, 'name').click();
-  expect(sorts).to.deep.equal([{ phase: 'commit', sortKey: 'name', sortDir: 'asc', sort: [{ id: 'name', desc: false }] }]);
+  expect(sorts).to.deep.equal([{ sort: [{ id: 'name', desc: false }] }]);
   grid.shadowRoot!.querySelector<HTMLInputElement>('[part="select-all-checkbox"]')!.click();
   expect(selections.length).to.equal(1);
   expect((selections[0] as number[]).slice().sort()).to.deep.equal([1, 2, 3]);
@@ -27,10 +27,12 @@ it('honors a row expansion veto before writing keys or notifying listeners', asy
     requests.push((event as CustomEvent).detail.expanded);
     event.preventDefault();
   }, { once: true });
-  grid.addEventListener('lr-row-expand-toggle', event => commits.push((event as CustomEvent).detail.expanded));
+  grid.addEventListener('lr-row-expand', () => commits.push(true));
+  grid.addEventListener('lr-row-collapse', () => commits.push(false));
   button.click();
   expect(grid.expandedKeys).to.deep.equal([]);
   expect(requests).to.deep.equal([true]);
+  expect(commits).to.deep.equal([]);
   button.click();
   button.click();
   expect(commits).to.deep.equal([true, false]);
@@ -138,13 +140,13 @@ it('leaves selection with the owner when a proposal is canceled or replaces the 
   const grid = await dataGrid(html`<lr-data-grid label="People" row-key="id" selection-mode="multiple" .columns=${columns} .data=${rows}></lr-data-grid>`);
   const all = grid.shadowRoot!.querySelector<HTMLInputElement>('[part="select-all-checkbox"]')!;
   let commits = 0;
-  grid.addEventListener('lr-selection-change', () => { commits++; });
-  grid.addEventListener('lr-selection-request', event => event.preventDefault(), { once: true });
+  grid.addEventListener('lr-row-select', () => { commits++; });
+  grid.addEventListener('lr-row-select-request', event => event.preventDefault(), { once: true });
   all.click();
   await grid.updateComplete;
   expect(all.checked).to.equal(false);
   expect(grid.selectedKeys).to.deep.equal([]);
-  grid.addEventListener('lr-selection-request', () => { grid.selectedRowKeys = [2]; }, { once: true });
+  grid.addEventListener('lr-row-select-request', () => { grid.selectedRowKeys = [2]; }, { once: true });
   all.click();
   expect(grid.selectedKeys).to.deep.equal([2]);
   expect(commits).to.equal(0);
@@ -170,7 +172,7 @@ it('restores the page-size selector after a veto and respects a synchronous page
   expect([grid.page, grid.pageSize, select.value]).to.deep.equal([2, 10, '10']);
   let resetEvents = 0;
   grid.addEventListener('lr-page-change', () => { resetEvents++; });
-  grid.addEventListener('lr-sort', () => { grid.page = 3; }, { once: true });
+  grid.addEventListener('lr-sort-change', () => { grid.page = 3; }, { once: true });
   header(grid, 'name').click();
   expect([grid.page, resetEvents]).to.deep.equal([3, 0]);
 });
@@ -197,13 +199,13 @@ it('includes the row key in the constant disclosure name when the first visible 
   expect(button.getAttribute('aria-expanded')).to.equal('true');
 });
 
-it('publishes an empty primary sort when the final sorted column is cleared', async () => {
+it('publishes an empty sort when the final sorted column is cleared', async () => {
   const grid = await dataGrid(html`<lr-data-grid label="People" .columns=${columns} .data=${rows}></lr-data-grid>`);
   const details: unknown[] = [];
-  grid.addEventListener('lr-sort', event => details.push((event as CustomEvent).detail));
+  grid.addEventListener('lr-sort-change', event => details.push((event as CustomEvent).detail));
   const column = header(grid, 'name');
   for (let click = 0; click < 3; click++) column.click();
-  expect(details.at(-1)).to.deep.equal({ phase: 'commit', sortKey: '', sortDir: null, sort: [] });
+  expect(details.at(-1)).to.deep.equal({ sort: [] });
 });
 
 it('ignores an obsolete filter clear and safely rejects a row array with an unreadable length', async () => {

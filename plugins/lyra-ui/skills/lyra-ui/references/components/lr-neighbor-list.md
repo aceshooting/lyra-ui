@@ -16,7 +16,7 @@
 
 ## `lr-neighbor-list`
 
-Arrow keys, Home and End move between rows. Inline arrows switch between navigation and expansion. Source pagination registers on first use. For server-rendered pager markup, import the pagination entry before rendering. Set `--lr-neighbor-list-node-hover-fill` to customize the hovered control background.
+Arrow keys, Home and End move between rows. Inline arrows switch between navigation and expansion. Source pagination registers on first use. For server-rendered pager markup, import the pagination entry before rendering. Set `--lr-neighbor-list-node-hover-bg` to customize the hovered control background.
 
 One entity's relationship rows: relation, direction, neighbor, with per-row navigate and
 expand-in-graph affordances. Never computes neighbors itself (the host derives rows from its own

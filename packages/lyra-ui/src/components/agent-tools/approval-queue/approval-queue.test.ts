@@ -583,6 +583,18 @@ describe('lr-approval-queue', () => {
     expect(el.shadowRoot!.querySelectorAll('[part="empty"]')).to.have.lengthOf(1);
   });
 
+  it('paints the pressed row from --lr-approval-queue-row-active-bg', async () => {
+    const el = await fixture<LyraApprovalQueue>(html`<lr-approval-queue data-lr-theme-scope style="--lr-transition-fast: 0s; --lr-approval-queue-row-active-bg: rgb(1, 2, 3)" .requests=${[{ id: 'call-1', toolName: 'pending_tool', args: {} }]}></lr-approval-queue>`);
+    const target = el.shadowRoot!.querySelector<HTMLElement>('[part="request"]')!;
+    try {
+      await hoverUntilMatched(target, 'pressed target never reached hover');
+      await sendMouse({ type: 'down' });
+      await waitUntil(() => getComputedStyle(target).backgroundColor === 'rgb(1, 2, 3)', 'the active token never painted');
+    } finally {
+      await resetMouse();
+    }
+  });
+
   it('paints and de-affords a resolved row while a pending sibling keeps its hover and press feedback', async () => {
     const mixed: ToolApprovalRequest[] = [
       { id: 'call-1', toolName: 'pending_tool', args: {} },

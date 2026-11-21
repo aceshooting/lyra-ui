@@ -644,6 +644,19 @@ describe('copy', () => {
     expect(getComputedStyle(el.shadowRoot!.querySelector('[part="attribute-value"]')!).color).to.equal('rgb(4, 5, 6)');
   });
 
+  it('paints the copy button and node toggle from --lr-xml-viewer-action-bg', async () => {
+    const el = (await fixture(html`<lr-xml-viewer
+      .xml=${SIMPLE_XML}
+      copyable
+      style="--lr-xml-viewer-action-bg: rgb(1, 2, 3)"
+    ></lr-xml-viewer>`)) as LyraXmlViewer;
+    await el.updateComplete;
+    const copy = el.shadowRoot!.querySelector<HTMLElement>('[part="toolbar"] [part="copy-button"]')!;
+    const toggle = el.shadowRoot!.querySelector<HTMLElement>('[part="toggle"]')!;
+    expect(getComputedStyle(copy).backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(toggle).backgroundColor).to.equal('rgb(1, 2, 3)');
+  });
+
   it('floors the copy button at the icon-button hit area', async () => {
     const el = (await fixture(html`<lr-xml-viewer
       .xml=${SIMPLE_XML}

@@ -125,4 +125,4 @@ The running glyph spins and the pending glyph pulses at `--lr-transition-ambient
 </script>
 ```
 
-**Pointer-state tokens:** `--lr-tool-call-block-header-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-tool-call-block-header-pressed-bg`.
+**Pointer-state tokens:** `--lr-tool-call-block-header-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-tool-call-block-header-active-bg`.

@@ -13,7 +13,7 @@ describe('lr-eval-result child event containment', () => {
   it('keeps nested diff, review and grid events inside its shadow root', async () => {
     const el = await fixture<LyraEvalResult>(html`<lr-eval-result .rubricKeys=${[{ key: 'note', type: 'comment' }]}
       .runs=${[{ id: 'a', label: 'A', output: 'one' }, { id: 'b', label: 'B', output: 'two' }]}></lr-eval-result>`);
-    const types = ['lr-search-change', 'lr-highlight-activate', 'lr-anchor-result', 'lr-change', 'lr-row-expand-request', 'lr-page-request', 'lr-column-resize-request'];
+    const types = ['lr-search-change', 'lr-highlight-activate', 'lr-anchor-result', 'lr-change', 'lr-row-expand-request', 'lr-before-page-change', 'lr-column-resize-request'];
     const leaked: string[] = [];
     for (const type of types) el.addEventListener(type, () => leaked.push(type));
     const fire = (selector: string, type: string) => el.shadowRoot!.querySelector(selector)!

@@ -113,7 +113,7 @@ export interface LyraNeighborListEventMap {
  * @event lr-entity-select - A row's node button was activated. `detail: { entityId }`.
  * @event lr-node-expand - A row's expand button was activated (only rendered when `expandable`).
  * `detail: { nodeId }`.
- * @cssprop [--lr-neighbor-list-node-hover-fill=var(--lr-color-brand-quiet)] - Background of the hovered control.
+ * @cssprop [--lr-neighbor-list-node-hover-bg=var(--lr-color-brand-quiet)] - Background of the hovered control.
  * @csspart base - The stable root wrapper across empty, populated and virtualized states. It owns
  *   `role="group"` and the fallback name unless a non-empty host `aria-label` owns the component;
  *   a nested list owns the row semantics in non-virtualized mode.

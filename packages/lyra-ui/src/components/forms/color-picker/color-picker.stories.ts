@@ -283,3 +283,13 @@ export const PositioningStrategy: Story = {
     </div>
   `,
 };
+
+/** `label-placement="start"` sets the label in an inline-start column, with the hint under the
+ *  field; below `--lr-form-control-label-collapse-inline-size` it returns above the field. */
+export const LabelPlacementStart: StoryObj = {
+  render: () => html`
+    <div style="display:grid;gap:var(--lr-space-m);max-inline-size:var(--lr-size-36rem)">
+      <lr-color-picker label="Accent" label-placement="start" hint="Used for links and buttons" value=${ACCENT}></lr-color-picker>
+    </div>
+  `,
+};

@@ -107,11 +107,11 @@ export interface LyraHighlightLayerEventMap {
  * @cssprop --lr-highlight-layer-neutral-bg - Neutral highlight background.
  * @cssprop --lr-highlight-layer-neutral-outline - Neutral highlight outline.
  * @cssprop --lr-highlight-layer-flash-bg - Flash-state background.
- * @cssprop [--lr-highlight-layer-action-background=var(--lr-color-surface)] - Resting background of
+ * @cssprop [--lr-highlight-layer-action-bg=var(--lr-color-surface)] - Resting background of
  *   the highlight action buttons.
- * @cssprop [--lr-highlight-layer-action-hover-background=var(--lr-color-surface-raised)] - Hover background
+ * @cssprop [--lr-highlight-layer-action-hover-bg=var(--lr-color-surface-raised)] - Hover background
  *   of the highlight action buttons.
- * @cssprop --lr-highlight-layer-action-active-background - Pressed background of the highlight action buttons. Defaults to
+ * @cssprop --lr-highlight-layer-action-active-bg - Pressed background of the highlight action buttons. Defaults to
  *   the hover background mixed by the press step.
  * @status stable
  * @since 4.0.0

@@ -25,7 +25,7 @@ import { finiteInteger, finiteNumber } from '../../../internal/numbers.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { styles } from './code-editor.styles.js';
 import { sanitizeCssResize, type LyraTextResize } from '../../../internal/safe-css.js';
-import type { LyraAppearance, LyraLabelDisplay, LyraSize } from '../../../internal/variants.js';
+import type { LyraAppearance, LyraLabelDisplay, LyraSize, LyraLabelPlacement } from '../../../internal/variants.js';
 import type { LyraTextWrap } from '../../../internal/shared-unions.js';
 import {
   autocorrectConverter,
@@ -99,6 +99,12 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * @cssprop [--lr-form-control-label-font-size=inherit] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
+ * @cssprop [--lr-form-control-label-inline-size=30%] - Label column width while
+ *   `label-placement="start"`.
+ * @cssprop [--lr-form-control-label-gap=var(--lr-space-m)] - Space between the label column and
+ *   the field while `label-placement="start"`.
+ * @cssprop [--lr-form-control-label-collapse-inline-size=var(--lr-size-20rem)] - Control width
+ *   below which `label-placement="start"` returns the label above the field.
  * @csspart form-control-label - Label. Also carries the `label` part token for compatibility.
  * @csspart label - Alias of `form-control-label`.
  * @csspart editor - Editor frame and the component's only scrollport.
@@ -208,6 +214,14 @@ export class LyraCodeEditor extends FormAssociated(LyraCodeEditorBase) {
    * @attr label-display
    */
   @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
+  /**
+   * Where the label sits: `top` (default) above the field, or `start` in an inline-start column
+   * of `--lr-form-control-label-inline-size`, with hint and error aligned under the field. Below
+   * `--lr-form-control-label-collapse-inline-size` the label returns above the field. The label
+   * association is unchanged. Reflected so `[label-placement]` selectors match.
+   * @attr label-placement
+   */
+  @property({ attribute: 'label-placement', reflect: true }) labelPlacement: LyraLabelPlacement = 'top';
   /** Supporting instructions shown below the editor. */
   @property() hint = '';
   /** Error shown below the editor and associated with its text field. */

@@ -3214,9 +3214,9 @@ for (const placement of ['top', 'bottom', 'start', 'end'] as const) {
     expect(body.scrollHeight, 'body owns scrolling by default').to.be.greaterThan(body.clientHeight);
     expect(getComputedStyle(body).overflowY).to.equal('auto');
 
-    group.setAttribute('fill', '');
+    group.setAttribute('fill-body', '');
     await group.updateComplete;
-    expect(group.fill).to.equal(true);
+    expect(group.fillBody).to.equal(true);
     expect(getComputedStyle(body).overflowY).to.equal('clip');
     expect(listPanel!.offsetHeight).to.equal(body.clientHeight);
     expect(list!.offsetHeight).to.equal(base.offsetHeight);
@@ -3232,9 +3232,9 @@ for (const placement of ['top', 'bottom', 'start', 'end'] as const) {
     expect(summaryPanel!.offsetHeight).to.equal(body.clientHeight);
     expect(summary!.offsetHeight).to.equal(body.clientHeight - parseInt(getComputedStyle(summaryPanel!).paddingBlockStart));
 
-    group.fill = false;
+    group.fillBody = false;
     await group.updateComplete;
-    expect(group.hasAttribute('fill')).to.equal(false);
+    expect(group.hasAttribute('fill-body')).to.equal(false);
     expect(getComputedStyle(body).overflowY).to.equal('auto');
     expect(summary!.offsetHeight).to.be.lessThan(body.clientHeight);
   });
@@ -3243,7 +3243,7 @@ for (const placement of ['top', 'bottom', 'start', 'end'] as const) {
 
 it('keeps the keyboard focus ring inside a filled panel so the body does not clip it', async () => {
   const group = await fixture<LyraTabGroup>(basic());
-  group.fill = true;
+  group.fillBody = true;
   group.style.blockSize = '180px';
   await group.updateComplete;
   const [panel] = panels(group);

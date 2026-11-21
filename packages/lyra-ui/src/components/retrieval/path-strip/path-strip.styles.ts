@@ -46,7 +46,7 @@ export const styles = css`
   }
   [part='node']:hover,
   [part='relation']:hover {
-    background: var(--lr-path-strip-action-hover-fill, var(--lr-color-brand-quiet));
+    background: var(--lr-path-strip-action-hover-bg, var(--lr-color-brand-quiet));
   }
   [part='node']:active,
   [part='relation']:active {

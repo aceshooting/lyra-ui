@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -20,6 +20,8 @@ Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-lab
 `--lr-form-control-label-color`.
 
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
+
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`".
 
 A form-associated country/territory selector with localized names and decorative emoji flags.
 Import `@aceshooting/lyra-ui/components/lr-country-picker.js`. The default catalog is the pinned

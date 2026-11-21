@@ -437,7 +437,7 @@ describe('lr-embedding-explorer engine and columns', () => {
 
   it('paints the selected row and disabled pager from separate theme tokens', async () => {
     const el = await fixture<LyraEmbeddingExplorer>(html`<lr-embedding-explorer engine="webgl" .selectedPointId=${'x'}
-      style="--lr-embedding-explorer-row-selected-fill:rgb(7,48,68);--lr-embedding-explorer-page-disabled-fill:rgb(22,34,55)"
+      style="--lr-embedding-explorer-row-selected-bg:rgb(7,48,68);--lr-embedding-explorer-page-disabled-bg:rgb(22,34,55)"
       .points=${[{id:'x',x:1,y:1}]}></lr-embedding-explorer>`);
     await waitUntil(() => el.shadowRoot!.querySelector('[part="row"]') !== null);
     const row = el.shadowRoot!.querySelector('[part="row"][aria-selected="true"]')!;

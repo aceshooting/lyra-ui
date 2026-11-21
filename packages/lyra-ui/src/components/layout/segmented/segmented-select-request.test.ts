@@ -18,7 +18,7 @@ describe('segmented select request', () => {
     const log: string[] = [];
     const requests: LyraSegmentedSelectRequestDetail[] = [];
     let mode: 'veto' | 'resolve' | 'allow' = 'veto';
-    el.addEventListener('lr-segmented-select-request', (event) => {
+    el.addEventListener('lr-change-request', (event) => {
       requests.push({ ...event.detail });
       log.push(`request:${el.value}:${String(event.cancelable)}`);
       if (mode === 'veto') event.preventDefault();
@@ -32,6 +32,14 @@ describe('segmented select request', () => {
     expect(segment(el, 0).getAttribute('aria-checked')).to.equal('true');
     expect(log).to.deep.equal(['request:a:true']);
     expect(requests).to.deep.equal([{ value: 'b', previousValue: 'a' }]);
+
+    log.length = 0;
+    await focusByKeyboard(segment(el, 0));
+    await sendKeys({ press: 'ArrowRight' });
+    await el.updateComplete;
+    expect(el.value, 'a vetoed arrow key keeps the selection').to.equal('a');
+    expect(segment(el, 1).getAttribute('aria-checked')).to.equal('false');
+    expect(log).to.deep.equal(['request:a:true']);
 
     log.length = 0;
     mode = 'resolve';

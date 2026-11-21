@@ -1,6 +1,6 @@
-import { expect, fixture, html } from '@open-wc/testing';
+import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { setForcedColors } from '../../../../test/wtr-media.js';
-import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import '../../lr-activity-feed.js';
 import type { LyraActivityFeed } from '../../lr-activity-feed.js';
 
@@ -99,4 +99,16 @@ it('uses the themed header hover color', async () => {
     await hoverUntilMatched(target, 'header hover');
     expect(getComputedStyle(target).backgroundColor).to.equal('rgb(5, 10, 15)');
   } finally { await resetMouse(); }
+});
+
+it('paints the pressed header from --lr-activity-feed-header-active-bg', async () => {
+  const el = await fixture<LyraActivityFeed>(html`<lr-activity-feed data-lr-theme-scope style="--lr-transition-fast: 0s; --lr-activity-feed-header-active-bg: rgb(1, 2, 3)"></lr-activity-feed>`);
+  const header = el.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!;
+  try {
+    await hoverUntilMatched(header, 'header never reached hover');
+    await sendMouse({ type: 'down' });
+    await waitUntil(() => getComputedStyle(header).backgroundColor === 'rgb(1, 2, 3)', 'the active token never painted');
+  } finally {
+    await resetMouse();
+  }
 });

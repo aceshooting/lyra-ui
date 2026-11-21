@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { formControlLabelPlacement } from '../../../internal/form-control/chrome.styles.js';
 import {
   formControlFocusHalo,
   formControlInvalidBorder,
@@ -294,4 +295,5 @@ export const styles = css`
   }
   ${formControlInvalidBorder(css`[part='input-wrapper']`, css`--lr-phone-input-invalid-border-color`)}
   ${formControlTouchFontFloor(css`[part='input']`)}
+  ${formControlLabelPlacement}
 `;

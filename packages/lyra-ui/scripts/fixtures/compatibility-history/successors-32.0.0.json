@@ -143,7 +143,7 @@
    },
    "replacement": {
     "kind": "event",
-    "name": "lr-widget-view-request"
+    "name": "lr-widget-view-change-request"
    }
   }
  ]

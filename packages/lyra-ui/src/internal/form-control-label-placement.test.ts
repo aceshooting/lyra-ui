@@ -1,35 +1,79 @@
-import { expect, fixture, html } from '@open-wc/testing';
+import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import type { LitElement } from 'lit';
 import { tag } from './prefix.js';
+import { expectDevWarning } from '../../test/expected-dev-warnings.js';
 import '../components/lr-input.js';
 import '../components/lr-textarea.js';
 import '../components/lr-select.js';
 import '../components/lr-option.js';
 import '../components/lr-combobox.js';
 import '../components/lr-date-input.js';
+import '../components/lr-time-input.js';
+import '../components/lr-phone-input.js';
+import '../components/lr-token-input.js';
+import '../components/lr-locale-picker.js';
+import '../components/lr-code-editor.js';
+import '../components/lr-otp-input.js';
+import '../components/lr-signature-pad.js';
+import '../components/lr-country-picker.js';
+import '../components/lr-currency-picker.js';
+import '../components/lr-time-zone-picker.js';
+import '../components/lr-unit-picker.js';
+import '../components/lr-model-select.js';
+import '../components/lr-voice-picker.js';
+import '../components/lr-color-picker.js';
 
-const NAMES = ['input', 'textarea', 'select', 'combobox', 'date-input'] as const;
+const NAMES = [
+  'input', 'textarea', 'select', 'combobox', 'date-input', 'time-input', 'phone-input', 'token-input',
+  'locale-picker', 'code-editor', 'otp-input', 'signature-pad', 'country-picker', 'currency-picker',
+  'time-zone-picker', 'unit-picker', 'model-select', 'voice-picker', 'color-picker',
+] as const;
 
-async function mount(name: string, width: number, dir: 'ltr' | 'rtl' = 'ltr', placement = 'start') {
+type Placed = LitElement & { labelPlacement: string };
+
+/** Per-control attributes that keep the fixture free of optional peers (no flag resolver here). */
+const EXTRA_ATTRIBUTES: Partial<Record<string, Record<string, string>>> = {
+  'locale-picker': { 'without-flags': '' },
+};
+
+/** The shadow root holding `[part~="form-control"]`: the host's own, or, for a control that
+ *  composes an inner field (the catalog pickers), that field's. */
+async function controlRoot(el: Placed): Promise<ShadowRoot> {
+  const own = el.shadowRoot!;
+  if (own.querySelector('[part~="form-control"]')) return own;
+  const inner = [...own.querySelectorAll<LitElement>('*')]
+    .find((node) => node.shadowRoot?.querySelector('[part~="form-control"]'))!;
+  await inner.updateComplete;
+  expect(inner.getAttribute('label-placement'), 'forwarded to the inner field').to.equal(el.getAttribute('label-placement'));
+  return inner.shadowRoot!;
+}
+
+async function mount(name: string, width: number, dir: 'ltr' | 'rtl' = 'ltr', placement = 'start', setup?: (el: Placed) => void) {
   const wrapper = await fixture<HTMLDivElement>(html`<div dir=${dir} style="inline-size: ${width}px"></div>`);
-  const el = document.createElement(tag(name)) as LitElement & { labelPlacement: string };
+  const el = document.createElement(tag(name)) as Placed;
   el.setAttribute('label', 'Shipping reference');
   el.setAttribute('hint', 'As printed on the label');
   if (placement) el.setAttribute('label-placement', placement);
+  for (const [attribute, value] of Object.entries(EXTRA_ATTRIBUTES[name] ?? {})) el.setAttribute(attribute, value);
   el.style.display = 'block';
+  setup?.(el);
   wrapper.append(el);
   await el.updateComplete;
-  const root = el.shadowRoot!;
+  const root = await controlRoot(el);
   const control = root.querySelector<HTMLElement>('[part~="form-control"]')!;
   const label = root.querySelector<HTMLElement>('[part~="form-control-label"]')!.getBoundingClientRect();
   const field = [...control.children]
-    .filter((child) => !child.matches('[part~="form-control-label"], [part~="hint"], [part~="error"]'))
+    .filter((child) => !child.matches('[part~="form-control-label"], [part~="hint"], [part~="error"], [data-form-control-row]'))
     .map((child) => child.getBoundingClientRect())
     .find((rect) => rect.width > 1 && rect.height > 1)!;
   const hint = root.querySelector<HTMLElement>('[part~="hint"]')!;
-  const hintStart = hint.getBoundingClientRect()[dir === 'ltr' ? 'left' : 'right'] +
-    (dir === 'ltr' ? 1 : -1) * parseFloat(getComputedStyle(hint).paddingInlineStart);
-  return { el, label, field, hintStart };
+  return { el, root, control, label, field, hintStart: contentStart(hint, dir) };
+}
+
+/** Inline-start edge of a row's content box, past its inline-start padding. */
+function contentStart(row: HTMLElement, dir: 'ltr' | 'rtl'): number {
+  return row.getBoundingClientRect()[dir === 'ltr' ? 'left' : 'right'] +
+    (dir === 'ltr' ? 1 : -1) * parseFloat(getComputedStyle(row).paddingInlineStart);
 }
 
 for (const name of NAMES) {
@@ -53,3 +97,28 @@ for (const name of NAMES) {
     }
   });
 }
+
+/** A status row (`data-form-control-row`) spans the wrapper and starts its text under the field. */
+function expectFullRowUnderField(row: HTMLElement, control: HTMLElement, field: DOMRect): void {
+  const rect = row.getBoundingClientRect();
+  expect(Math.abs(rect.width - control.getBoundingClientRect().width), 'full row').to.be.below(1);
+  expect(Math.abs(contentStart(row, 'ltr') - field.left), 'aligned under the field').to.be.below(1);
+}
+
+it('model-select wraps its catalog-limit notice into a full row instead of a column', async () => {
+  expectDevWarning('lyra-collection-truncated:lr-model-select:catalog');
+  const { root, control, field } = await mount('model-select', 640, 'ltr', 'start', (el) => {
+    (el as Placed & { catalog: unknown[] }).catalog = Array.from({ length: 2000 }, (_, i) => ({ id: `id${i}`, label: `Row ${i}` }));
+  });
+  expectFullRowUnderField(root.querySelector<HTMLElement>('[part="limit"]')!, control, field);
+});
+
+it('locale-picker wraps its load status into a full row under the field', async () => {
+  const { el, root, control, field } = await mount('locale-picker', 640, 'ltr', 'start', (picker) => {
+    Object.assign(picker, { open: true, locale: 'en', value: 'en', locales: ['en', 'fr'] });
+  });
+  (el as Placed & { localeLoader: () => Promise<void> }).localeLoader = () => new Promise<void>(() => {});
+  root.querySelector<HTMLElement>('[part="option"][data-value="fr"]')!.click();
+  await waitUntil(() => root.querySelector('[part="load-status"]'));
+  expectFullRowUnderField(root.querySelector<HTMLElement>('[part="load-status"]')!, control, field);
+});

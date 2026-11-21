@@ -318,13 +318,13 @@ export const styles = css`
     ${iconAction}
     flex-shrink: 0;
     --_lr-icon-button-background-default: var(--lr-markdown-code-copy-bg, transparent);
-    --_lr-icon-button-background-hover-default: var(--lr-markdown-code-copy-bg-hover, var(--lr-color-brand-quiet));
-    --_lr-icon-button-color-hover-default: var(--lr-markdown-code-copy-color-hover, var(--lr-color-brand));
+    --_lr-icon-button-background-hover-default: var(--lr-markdown-code-copy-hover-bg, var(--lr-color-brand-quiet));
+    --_lr-icon-button-color-hover-default: var(--lr-markdown-code-copy-hover-color, var(--lr-color-brand));
     --_lr-icon-button-color-active-default: var(
-      --lr-markdown-code-copy-color-active,
-      var(--lr-markdown-code-copy-color-hover, var(--lr-color-brand))
+      --lr-markdown-code-copy-active-color,
+      var(--lr-markdown-code-copy-hover-color, var(--lr-color-brand))
     );
-    --_lr-icon-button-background-active-default: var(--lr-markdown-code-copy-bg-active, ${activeFill('var(--lr-color-brand-quiet)')});
+    --_lr-icon-button-background-active-default: var(--lr-markdown-code-copy-active-bg, ${activeFill('var(--lr-color-brand-quiet)')});
   }
   [part~='code-block-copy']:where([data-lr-code-chrome]) svg {
     inline-size: var(--lr-size-1em);

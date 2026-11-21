@@ -138,7 +138,7 @@ const calloutAppearanceConverter = {
  * @cssprop [--lr-callout-bg=var(--lr-color-fill-quiet,var(--lr-color-brand-fill-quiet))] -
  *   The host surface's background: an inherited semantic quiet fill, with brand as the standalone
  *   fallback.
- * @cssprop [--lr-callout-border=var(--lr-color-fill-loud,var(--lr-color-brand-fill-loud))] - The
+ * @cssprop [--lr-callout-border-color=var(--lr-color-fill-loud,var(--lr-color-brand-fill-loud))] - The
  *   host surface's border color.
  * @cssprop [--lr-callout-color=var(--lr-color-fill-loud,var(--lr-color-brand-fill-loud))] - The
  *   host surface's text color.

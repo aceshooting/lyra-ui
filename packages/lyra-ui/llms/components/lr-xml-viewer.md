@@ -17,7 +17,7 @@
 
 ## `lr-xml-viewer`
 
-Action backgrounds accept `--lr-xml-viewer-action-background`, `--lr-xml-viewer-action-hover-background` and `--lr-xml-viewer-action-active-background`.
+Action backgrounds accept `--lr-xml-viewer-action-bg`, `--lr-xml-viewer-action-hover-bg` and `--lr-xml-viewer-action-active-bg`.
 
 Collapsible, copyable, `DOMParser`-based tree view for XML documents, mirroring `lr-json-viewer`'s
 UX (`expand-depth`, `copyable`, structural-path-keyed expand state that survives a same-shape
@@ -169,7 +169,7 @@ inside a collapsed subtree paints once that subtree is expanded.
 Painting retains at most 100 resolved entries from a 1,000-entry candidate window; an active entry
 anywhere in the bounded 10,000-record host snapshot is placed first inside both ceilings.
 
-**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+**Events:** `lr-load` carries a `null` detail and bubbles across shadow roots after the parsed document renders;
 `lr-copy` — emitted only after the owning realm's clipboard write fulfills, with
 `detail: { ok: true, text }`. Clipboard absence, synchronous throws, and rejected writes instead
 show the localized `copyFailed` label and emit generic `lr-error` plus `lr-copy-error` with

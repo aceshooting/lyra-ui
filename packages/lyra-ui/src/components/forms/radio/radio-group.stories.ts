@@ -165,7 +165,7 @@ export const ConfirmBeforeSwitching: StoryObj = {
     docs: {
       description: {
         story:
-          '`lr-radio-group-select-request` is cancelable and fires before the selection moves. Calling `preventDefault()` keeps the current plan, so no `input`/`change` events fire; here the Enterprise plan is held back until its checkbox is ticked.',
+          '`lr-change-request` is cancelable and fires before the selection moves. Calling `preventDefault()` keeps the current plan, so no `input`/`change` events fire; here the Enterprise plan is held back until its checkbox is ticked.',
       },
     },
   },
@@ -175,7 +175,7 @@ export const ConfirmBeforeSwitching: StoryObj = {
       <lr-radio-group
         label="Plan"
         value="team"
-        @lr-radio-group-select-request=${(e: CustomEvent<{ value: string }>) => {
+        @lr-change-request=${(e: CustomEvent<{ value: string }>) => {
           const allowed = (document.getElementById('radio-group-allow-enterprise') as HTMLInputElement | null)?.checked;
           if (e.detail.value === 'enterprise' && !allowed) e.preventDefault();
         }}

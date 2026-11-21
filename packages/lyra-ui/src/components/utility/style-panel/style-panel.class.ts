@@ -21,9 +21,10 @@ import { GEMSTONE_KEYS, GEMSTONES, type GemstoneKey } from '../../../theme/gemst
 import type { LyraSegmentedItem } from '../../layout/segmented/segmented.class.js';
 import type { SwatchPickerItem } from '../../forms/swatch-picker/swatch-picker.class.js';
 import { styles } from './style-panel.styles.js';
+import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_map } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_copy, LYRA_DEFAULT_date, LYRA_DEFAULT_map } from '../../../internal/default-strings/shared.generated.js';
 import { LYRA_DEFAULT_styleAccentAmethyst, LYRA_DEFAULT_styleAccentAquamarine, LYRA_DEFAULT_styleAccentEmerald, LYRA_DEFAULT_styleAccentHematite, LYRA_DEFAULT_styleAccentPeridot, LYRA_DEFAULT_styleAccentRuby, LYRA_DEFAULT_styleAccentSapphire, LYRA_DEFAULT_styleAccentTopaz, LYRA_DEFAULT_styleAccentTourmaline, LYRA_DEFAULT_styleLookData, LYRA_DEFAULT_styleLookHighContrast, LYRA_DEFAULT_styleLookLyra, LYRA_DEFAULT_styleLookMaterial, LYRA_DEFAULT_styleLookShadcn, LYRA_DEFAULT_styleLookTerminal, LYRA_DEFAULT_stylePanelAccent, LYRA_DEFAULT_stylePanelDensity, LYRA_DEFAULT_stylePanelDensityComfortable, LYRA_DEFAULT_stylePanelDensityCompact, LYRA_DEFAULT_stylePanelDensityTouch, LYRA_DEFAULT_stylePanelLabel, LYRA_DEFAULT_stylePanelLook, LYRA_DEFAULT_stylePanelMode, LYRA_DEFAULT_stylePanelModeDark, LYRA_DEFAULT_stylePanelModeLight, LYRA_DEFAULT_stylePanelModeSystem, LYRA_DEFAULT_stylePanelReset, LYRA_DEFAULT_stylePanelSurface, LYRA_DEFAULT_stylePanelSurfaceGlass, LYRA_DEFAULT_stylePanelSurfaceOpacity, LYRA_DEFAULT_stylePanelSurfaceSolid } from '../../../internal/default-strings/utility.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -94,7 +95,8 @@ export interface LyraStylePanelEventMap {
  * @csspart mode - The colour mode `lr-segmented`.
  * @csspart look - The look `lr-select`.
  * @csspart surface - The surface `lr-segmented`.
- * @csspart surface-opacity - The glass opacity `lr-slider`.
+ * @csspart surface-opacity - The glass opacity `lr-slider`, valued 0 to 1 like `surfaceOpacity` and shown
+ *   as a percentage.
  * @csspart density - The density `lr-segmented`.
  * @csspart accent - The accent row, holding its caption and swatches.
  * @csspart accent-label - The accent caption.
@@ -109,6 +111,8 @@ export class LyraStylePanel extends LyraElement<LyraStylePanelEventMap> {
   /** @internal */
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
+    copy: LYRA_DEFAULT_copy,
+    date: LYRA_DEFAULT_date,
     map: LYRA_DEFAULT_map,
     styleAccentAmethyst: LYRA_DEFAULT_styleAccentAmethyst,
     styleAccentAquamarine: LYRA_DEFAULT_styleAccentAquamarine,
@@ -144,13 +148,18 @@ export class LyraStylePanel extends LyraElement<LyraStylePanelEventMap> {
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
+  protected static override collectionSupport = eventCollectionSupport;
+
+  /** `lr-change` detail (including its `changed` list) is detached and frozen before dispatch. */
+  protected static override readonly immutableEventDetails = Object.freeze(['lr-change']);
+
   static override styles = [LyraElement.styles, styles];
 
   /** Child value requests and change events stay inside the panel, which reports its own. */
   protected override createRenderRoot(): HTMLElement | DocumentFragment {
     const root = super.createRenderRoot();
     containShadowChildEvents(root, [
-      ...BUILDER_CHILD_EVENTS, 'lr-segmented-select-request', 'lr-swatch-picker-select-request',
+      ...BUILDER_CHILD_EVENTS, 'lr-change-request',
     ]);
     return root;
   }
@@ -242,7 +251,7 @@ export class LyraStylePanel extends LyraElement<LyraStylePanelEventMap> {
   };
 
   private readonly formatOpacity = (value: number): string =>
-    getNumberFormat(this.effectiveLocale, { style: 'percent', maximumFractionDigits: 0 }).format(value / 100);
+    getNumberFormat(this.effectiveLocale, { style: 'percent', maximumFractionDigits: 0 }).format(value);
 
   private lookLabel(entry: LyraLookEntry): string {
     return entry.labelKey ? this.localize(entry.labelKey) : entry.name;
@@ -277,7 +286,7 @@ export class LyraStylePanel extends LyraElement<LyraStylePanelEventMap> {
       }
       case 'surface-opacity':
         return html`<lr-slider part="surface-opacity" .label=${this.localize('stylePanelSurfaceOpacity')}
-          .min=${0} .max=${100} .step=${1} .valueAsNumber=${live(style.surfaceOpacity)}
+          .min=${0} .max=${1} .step=${0.01} .valueAsNumber=${live(style.surfaceOpacity)}
           .valueFormatter=${this.formatOpacity} .withValue=${true} value-display="formatted" value-placement="label"
           .disabled=${this.disabled || style.surface !== 'glass'}
           @lr-change=${this.onOpacityChange}></lr-slider>`;

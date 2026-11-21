@@ -62,4 +62,14 @@ describe('lr-eval-dataset remediation', () => {
     el.shadowRoot!.querySelector('lr-chip-group')!.dispatchEvent(new CustomEvent('lr-overflow-toggle', { bubbles: true, composed: true, detail: {} }));
     expect(leaked).to.deep.equal([]);
   });
+
+  it('contains the embedded table page proposal inside its shadow root', async () => {
+    const el = await fixture<LyraEvalDataset>(html`<lr-eval-dataset .examples=${examples()}></lr-eval-dataset>`);
+    let leaked = 0;
+    el.addEventListener('lr-before-page-change', () => { leaked++; });
+    el.shadowRoot!.querySelector('lr-table')!.dispatchEvent(new CustomEvent('lr-before-page-change', {
+      bubbles: true, composed: true, cancelable: true, detail: { page: 2, pageSize: 10, offset: 10 },
+    }));
+    expect(leaked).to.equal(0);
+  });
 });

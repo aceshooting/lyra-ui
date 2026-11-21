@@ -1153,6 +1153,18 @@ describe('header text contrast at rest, hover and press', () => {
   }
 });
 
+it('paints the pressed header from --lr-thinking-panel-header-active-bg', async () => {
+  const el = await fixture<LyraThinkingPanel>(html`<lr-thinking-panel data-lr-theme-scope style="--lr-transition-fast: 0s; --lr-thinking-panel-header-active-bg: rgb(1, 2, 3)" mode="post-hoc" .durationMs=${4200}></lr-thinking-panel>`);
+  const target = el.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!;
+  try {
+    await hoverUntilMatched(target, 'pressed target never reached hover');
+    await sendMouse({ type: 'down' });
+    await waitUntil(() => getComputedStyle(target).backgroundColor === 'rgb(1, 2, 3)', 'the active token never painted');
+  } finally {
+    await resetMouse();
+  }
+});
+
 describe('lr-thinking-panel deprecated --lr-thinking-panel-background alias', () => {
   const fill = (el: LyraThinkingPanel): string =>
     getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).backgroundColor;

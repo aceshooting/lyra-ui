@@ -224,14 +224,14 @@ export const styles = css`
     min-block-size: 0;
     overflow: auto;
   }
-  :host([fill]) [part="body"] {
+  :host([fill-body]) [part="body"] {
     overflow: clip;
   }
-  :host([fill]) [part="panel"] {
+  :host([fill-body]) [part="panel"] {
     block-size: 100%;
     box-sizing: border-box;
   }
-  :host([fill]) [part="panel"] ::slotted(${unsafeCSS(tag('tab-panel'))}) {
+  :host([fill-body]) [part="panel"] ::slotted(${unsafeCSS(tag('tab-panel'))}) {
     --_lr-tab-panel-block-size: 100%;
     block-size: 100%;
     box-sizing: border-box;

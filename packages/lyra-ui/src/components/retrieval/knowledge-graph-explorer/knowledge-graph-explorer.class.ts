@@ -284,7 +284,7 @@ export interface LyraKnowledgeGraphExplorerEventMap {
  * @event lr-community-activate - Bubbles straight through from the composed `lr-graph`, unmodified.
  *   `detail: { communityId }`.
  * @event lr-relation-activate - Bubbles straight through from the composed `lr-path-strip`, unmodified.
- * @cssprop [--lr-knowledge-graph-explorer-source-action-hover-fill=var(--lr-color-brand-quiet)] - Background of the hovered control.
+ * @cssprop [--lr-knowledge-graph-explorer-source-action-hover-bg=var(--lr-color-brand-quiet)] - Background of the hovered control.
  * @csspart base - The root wrapper. It owns `role="group"` and the fallback name unless a
  *   non-empty host `aria-label` makes the host the sole overall owner.
  * @csspart toolbar - The row wrapping the search input and the type-filter legend.

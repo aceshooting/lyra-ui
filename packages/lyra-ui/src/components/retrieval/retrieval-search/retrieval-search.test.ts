@@ -252,6 +252,7 @@ it('reports a real mode pick as lr-mode-change after updating mode', async () =>
   await mode.updateComplete;
   const seen: string[] = [];
   el.addEventListener('lr-mode-change', (event) => seen.push(`${(event as CustomEvent<{ mode: string }>).detail.mode}|${el.mode}`));
+  el.addEventListener('lr-change-request', () => seen.push('leaked request'));
   mode.shadowRoot!.querySelector<HTMLElement>('[part="segment"][data-value="keyword"]')!.click();
   await el.updateComplete;
   expect(seen).to.deep.equal(['keyword|keyword']);

@@ -191,4 +191,4 @@ status icons without changing shared status tokens. `--lr-task-list-bg` (default
 `::part(base)` override; the border-color hook also colors the header/body divider that
 `frame="plain"` keeps.
 
-**Pointer-state tokens:** `--lr-task-list-header-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-task-list-header-pressed-bg`, `--lr-task-list-item-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-task-list-item-pressed-bg`.
+**Pointer-state tokens:** `--lr-task-list-header-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-task-list-header-active-bg`, `--lr-task-list-item-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-task-list-item-active-bg`.

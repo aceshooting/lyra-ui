@@ -173,7 +173,7 @@ export interface LyraWidgetEventMap {
   'lr-toggle': CustomEvent<{ expanded: boolean }>;
   'lr-fullscreen-request': CustomEvent<{ fullscreen: boolean }>;
   'lr-fullscreen-change': CustomEvent<{ fullscreen: boolean }>;
-  'lr-widget-view-request': CustomEvent<{ viewId: string }>;
+  'lr-widget-view-change-request': CustomEvent<{ viewId: string }>;
   'lr-widget-view-change': CustomEvent<{ viewId: string }>;
   'lr-activate': CustomEvent<{ value: string }>;
 }
@@ -214,7 +214,7 @@ export interface LyraWidgetEventMap {
  * @event lr-fullscreen-change - Non-cancelable post-commit notification, fired after the
  *   fullscreen toggle, Escape, or a backdrop click accepts the change. Not fired when a consumer
  *   sets `fullscreen` directly. `detail: { fullscreen }` (the new `fullscreen` state).
- * @event lr-widget-view-request - A cancelable proposed `activeViewId` from a header view-toggle click.
+ * @event lr-widget-view-change-request - A cancelable proposed `activeViewId` from a header view-toggle click.
  *   Call `preventDefault()` to leave `activeViewId` unchanged. Not fired when a consumer sets
  *   `activeViewId` directly. `detail: { viewId }`.
  * @event lr-widget-view-change - Non-cancelable post-commit notification, fired after a header
@@ -224,11 +224,11 @@ export interface LyraWidgetEventMap {
  * @event lr-activate - Fired on every accepted header view-toggle activation, whether or not
  *   `activeViewId` actually moved. `detail: { value }` carries the activated view's `viewId`.
  *   Bubbling and composed, so a host outside the shadow tree receives it. Not cancelable:
- *   `lr-widget-view-request` is this component's veto point, and a vetoed activation emits no activation
+ *   `lr-widget-view-change-request` is this component's veto point, and a vetoed activation emits no activation
  *   at all. Re-picking the active view is the case `lr-widget-view-change` deliberately stays silent for
  *   -- "rebuild that view" is a real intent -- and it is otherwise unobservable, because the
  *   toggles live in this shadow root, so a retargeted `click` names no view. When an activation
- *   does move the view, `lr-widget-view-request` and `lr-widget-view-change` are emitted first. Not fired when a
+ *   does move the view, `lr-widget-view-change-request` and `lr-widget-view-change` are emitted first. Not fired when a
  *   consumer sets `activeViewId` directly.
  * @csspart base - The panel root (dialog role + backdrop when fullscreen).
  * @csspart header - The header row containing the title, actions, and toggle buttons.
@@ -740,7 +740,7 @@ export class LyraWidget extends LyraElement<LyraWidgetEventMap> {
     if (!current()) return;
     const previous = this.activeViewId;
     if (viewId !== previous) {
-      const request = this.emit('lr-widget-view-request', { viewId }, { cancelable: true });
+      const request = this.emit('lr-widget-view-change-request', { viewId }, { cancelable: true });
       if (request.defaultPrevented || !current() || this.activeViewId !== previous) return;
       this.activeViewId = viewId;
       this.emit('lr-widget-view-change', { viewId });

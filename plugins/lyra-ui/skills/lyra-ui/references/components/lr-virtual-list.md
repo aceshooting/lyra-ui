@@ -264,7 +264,7 @@ on the panel.
 `var(--lr-color-surface)`, the pinned `sticky-group` overlay's background), `--lr-virtual-list-height` (default `24rem` — the host's bounded
 scroll extent; component-specific since a virtualized list is meaningless without a sized viewport,
 and ignored while `scrollElement` names an external scroller, whose own height is the visible band),
-`--lr-virtual-list-active-row-background` (background of the `active-item-id` row; default a subtle currentColor tint),
+`--lr-virtual-list-active-row-bg` (background of the `active-item-id` row; default a subtle currentColor tint),
 `--lr-virtual-list-row-mark-bg` (default `revert`),
 `--lr-virtual-list-row-mark-color` (default `revert`),
 `--lr-virtual-list-row-mark-radius` (default `0`), and

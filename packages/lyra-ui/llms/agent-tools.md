@@ -878,7 +878,7 @@ ways, both feeding the same coalesced (at most one per animation frame) scroll-t
 
 ---
 
-**Pointer-state tokens:** `--lr-thinking-panel-header-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-thinking-panel-header-pressed-bg`.
+**Pointer-state tokens:** `--lr-thinking-panel-header-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-thinking-panel-header-active-bg`.
 
 ## `lr-stack-trace`
 
@@ -1001,7 +1001,7 @@ Pass custom classifiers as `{ internalPatterns: ['node_modules/', /vendor\//] }`
 
 ---
 
-**Pointer-state tokens:** `--lr-stack-trace-internal-toggle-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-stack-trace-internal-toggle-pressed-bg`.
+**Pointer-state tokens:** `--lr-stack-trace-internal-toggle-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-stack-trace-internal-toggle-active-bg`.
 
 ## `lr-tool-approval-dialog`
 
@@ -1988,7 +1988,7 @@ status icons without changing shared status tokens. `--lr-task-list-bg` (default
 `::part(base)` override; the border-color hook also colors the header/body divider that
 `frame="plain"` keeps.
 
-**Pointer-state tokens:** `--lr-task-list-header-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-task-list-header-pressed-bg`, `--lr-task-list-item-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-task-list-item-pressed-bg`.
+**Pointer-state tokens:** `--lr-task-list-header-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-task-list-header-active-bg`, `--lr-task-list-item-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-task-list-item-active-bg`.
 
 ## `lr-terminal`
 
@@ -2365,7 +2365,7 @@ entries, the body renders through an internal `<lr-virtual-list>` instead of a p
 The plain list's `[part="body"]` is a tab stop only while it overflows its cap, so a keyboard user
 can scroll a long log while a short one adds no stop; the virtual list is its own keyboard target.
 
-`--lr-activity-feed-header-hover-bg` and `--lr-activity-feed-header-pressed-bg`
+`--lr-activity-feed-header-hover-bg` and `--lr-activity-feed-header-active-bg`
 set the header's pointer feedback.
 
 `entries` retains the newest 10,000 identities. The visible `limit` part discloses omitted entries
@@ -3958,7 +3958,7 @@ state), so the selection is announced, not merely painted. Other request rows ex
 
 **Heading level:** `headingLevel` (attribute `heading-level`, default `'2'`) sets the outline level of the title; `'none'` preserves its text without a heading role.
 
-**Pointer-state tokens:** `--lr-approval-queue-row-hover-bg` (default `var(--lr-color-surface-raised)`), `--lr-approval-queue-row-pressed-bg`.
+**Pointer-state tokens:** `--lr-approval-queue-row-hover-bg` (default `var(--lr-color-surface-raised)`), `--lr-approval-queue-row-active-bg`.
 
 ## `lr-mcp-app`
 
@@ -5115,7 +5115,7 @@ The running glyph spins and the pending glyph pulses at `--lr-transition-ambient
 </script>
 ```
 
-**Pointer-state tokens:** `--lr-tool-call-block-header-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-tool-call-block-header-pressed-bg`.
+**Pointer-state tokens:** `--lr-tool-call-block-header-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-tool-call-block-header-active-bg`.
 
 ## `lr-change-review`
 

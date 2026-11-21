@@ -97,7 +97,7 @@ export const styles = css`
      (which follows the text colour), so it reads as a distinctly deeper step than hover in both
      light and dark themes. */
   [part='request']:not(:disabled):active {
-    background: var(--lr-approval-queue-row-pressed-bg, ${activeFill('var(--lr-approval-queue-row-hover-bg, var(--lr-color-surface-raised))')});
+    background: var(--lr-approval-queue-row-active-bg, ${activeFill('var(--lr-approval-queue-row-hover-bg, var(--lr-color-surface-raised))')});
   }
 
   [part='request']:focus-visible {

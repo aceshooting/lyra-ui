@@ -804,6 +804,18 @@ describe('<lr-tool-call-block>', () => {
 });
 
 
+it('paints the pressed header from --lr-tool-call-block-header-active-bg', async () => {
+  const el = await fixture<Block>(html`<lr-tool-call-block data-lr-theme-scope style="--lr-transition-fast: 0s; --lr-tool-call-block-header-active-bg: rgb(1, 2, 3)" name="web_search" status="success" label="Search"></lr-tool-call-block>`);
+  const target = el.shadowRoot!.querySelector<HTMLElement>('[part="header"]')!;
+  try {
+    await hoverUntilMatched(target, 'pressed target never reached hover');
+    await sendMouse({ type: 'down' });
+    await waitUntil(() => getComputedStyle(target).backgroundColor === 'rgb(1, 2, 3)', 'the active token never painted');
+  } finally {
+    await resetMouse();
+  }
+});
+
 describe('lr-tool-call-block deprecated --lr-tool-call-block-background alias', () => {
   it('paints from --lr-tool-call-block-bg, still honours the old name, and lets the canonical name win', async () => {
     const fill = async (style: string): Promise<string> => {

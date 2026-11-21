@@ -172,4 +172,4 @@ ways, both feeding the same coalesced (at most one per animation frame) scroll-t
 
 ---
 
-**Pointer-state tokens:** `--lr-thinking-panel-header-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-thinking-panel-header-pressed-bg`.
+**Pointer-state tokens:** `--lr-thinking-panel-header-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-thinking-panel-header-active-bg`.

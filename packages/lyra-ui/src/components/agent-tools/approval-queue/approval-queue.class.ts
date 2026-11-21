@@ -118,7 +118,7 @@ export interface LyraApprovalQueueEventMap {
  * @csspart limit - Localized notice shown when `requests` exceeds the 500-row render ceiling.
  * @cssprop [--lr-approval-queue-selected-border=var(--lr-color-brand)] - Selected request border.
  * @cssprop [--lr-approval-queue-row-hover-bg=var(--lr-color-surface-raised)] - Hover background of a `[part="request"]` row.
- * @cssprop --lr-approval-queue-row-pressed-bg - Pressed background of a request row. Defaults to the hover background mixed by the press step.
+ * @cssprop --lr-approval-queue-row-active-bg - Pressed background of a request row. Defaults to the hover background mixed by the press step.
  * @status stable
  * @since 6.2.0
  */

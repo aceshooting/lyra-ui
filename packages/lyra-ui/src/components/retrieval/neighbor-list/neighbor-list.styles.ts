@@ -67,7 +67,7 @@ export const styles = css`
   }
   [part='node-label']:hover,
   lr-virtual-list::part(node-label):hover {
-    background: var(--lr-neighbor-list-node-hover-fill, var(--lr-color-brand-quiet));
+    background: var(--lr-neighbor-list-node-hover-bg, var(--lr-color-brand-quiet));
   }
   [part='node-label']:active,
   lr-virtual-list::part(node-label):active {

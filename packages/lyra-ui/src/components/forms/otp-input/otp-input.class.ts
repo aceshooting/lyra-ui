@@ -17,7 +17,7 @@ import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { contextualSizes } from '../../../internal/contextual-vocabulary.styles.js';
 import { submitFormImplicitly, submitOnEnter } from '../../../internal/submit-on-enter.js';
-import type { LyraAppearance, LyraLabelDisplay, LyraSize } from '../../../internal/variants.js';
+import type { LyraAppearance, LyraLabelDisplay, LyraSize, LyraLabelPlacement } from '../../../internal/variants.js';
 import type { LyraSelectionDirection } from '../../../internal/shared-unions.js';
 import { styles } from './otp-input.styles.js';
 import {
@@ -170,6 +170,12 @@ class LyraOtpInputBase extends LyraElement<LyraOtpInputEventMap> {
  * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
+ * @cssprop [--lr-form-control-label-inline-size=30%] - Label column width while
+ *   `label-placement="start"`.
+ * @cssprop [--lr-form-control-label-gap=var(--lr-space-m)] - Space between the label column and
+ *   the field while `label-placement="start"`.
+ * @cssprop [--lr-form-control-label-collapse-inline-size=var(--lr-size-20rem)] - Control width
+ *   below which `label-placement="start"` returns the label above the field.
  * @csspart form-control-label - The field label; shared form-control alias for `label`.
  * @csspart field - Retained Lyra alias for the row of segments.
  * @csspart segments - The allocation-bounded, horizontally scrollable row of fixed-size segments;
@@ -242,6 +248,14 @@ export class LyraOtpInput extends FormAssociated(LyraOtpInputBase) {
    * @attr label-display
    */
   @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
+  /**
+   * Where the label sits: `top` (default) above the field, or `start` in an inline-start column
+   * of `--lr-form-control-label-inline-size`, with hint and error aligned under the field. Below
+   * `--lr-form-control-label-collapse-inline-size` the label returns above the field. The label
+   * association is unchanged. Reflected so `[label-placement]` selectors match.
+   * @attr label-placement
+   */
+  @property({ attribute: 'label-placement', reflect: true }) labelPlacement: LyraLabelPlacement = 'top';
   /** Supporting text, rendered before any `hint`-slot content. */
   @property() hint = '';
   /** Validation text, rendered before any `error`-slot content; marks the input invalid. */

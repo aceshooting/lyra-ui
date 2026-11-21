@@ -80,7 +80,7 @@ work directly and take normal author precedence. `inline` removes the host's bor
 and padding.
 
 **Themeable custom properties:** `--lr-callout-bg`, `--lr-callout-color`, and
-`--lr-callout-border` read the inherited generic semantic quiet/loud slots, with brand quiet/loud
+`--lr-callout-border-color` read the inherited generic semantic quiet/loud slots, with brand quiet/loud
 as their standalone fallback. An explicit `variant` maps all generic slots locally; leaving it
 unset preserves an ancestor's mapping. Explicit `appearance` works with either source and uses the
 same brand fallback when there is no surrounding context. Public callout hooks are consumed at use

@@ -1,6 +1,7 @@
 import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
 import { activeFill, focusRing, focusRingInsetOffset, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { formControlLabelPlacement } from '../../../internal/form-control/chrome.styles.js';
 import { formControlFocusHalo, formControlInvalidBorder, formControlLabelDisplay, formControlLabelTypography, formControlRequiredMarker, formControlSupportingTone, formControlTextWrap, formControlTouchFontFloor } from '../../../internal/form-control.styles.js';
 import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
@@ -316,4 +317,5 @@ export const styles = css`
   }
   ${formControlInvalidBorder(css`[part="input-wrapper"]`, css`--lr-token-input-invalid-border-color`)}
   ${formControlTouchFontFloor(css`[part="input"]`)}
+  ${formControlLabelPlacement}
 `;

@@ -60,7 +60,7 @@ import {
   type LyraColorPickerOutputFormat,
 } from './color-core.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraSize } from '../../../internal/variants.js';
+import type { LyraLabelPlacement, LyraSize } from '../../../internal/variants.js';
 import { styles } from './color-picker.styles.js';
 import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -238,7 +238,7 @@ export interface LyraColorPickerEventMap {
   focus: FocusEvent;
   'lr-change': CustomEvent<{ value: string; previousValue?: string }>;
   /** Cancelable proposal before a swatch, text-entry or eyedropper pick commits. */
-  'lr-color-picker-change-request': CustomEvent<{ value: string; previousValue: string }>;
+  'lr-change-request': CustomEvent<{ value: string; previousValue: string }>;
   'lr-show': CustomEvent<null>;
   'lr-after-show': CustomEvent<null>;
   'lr-hide': CustomEvent<null>;
@@ -292,7 +292,7 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * @event lr-change - Shoelace-compatible commit alias carrying the newly serialized value;
  *   emitted alongside native `change`. `previousValue` is the value before the gesture.
  * @event lr-input - Shoelace-compatible edit alias, emitted alongside each native `input` event with `detail: { value, previousValue }`.
- * @event lr-color-picker-change-request - A swatch click, a text entry or an eyedropper result is
+ * @event lr-change-request - A swatch click, a text entry or an eyedropper result is
  *   about to change the value; `detail: { value, previousValue }` carries the proposed serialized
  *   colour while `value` still holds the current one. Cancelable: `preventDefault()` keeps the
  *   current colour and none of `input`/`lr-input`/`change`/`lr-change` follow. A listener may
@@ -330,6 +330,12 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=inherit] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
+ * @cssprop [--lr-form-control-label-inline-size=30%] - Label column width while
+ *   `label-placement="start"`.
+ * @cssprop [--lr-form-control-label-gap=var(--lr-space-m)] - Space between the label column and
+ *   the field while `label-placement="start"`.
+ * @cssprop [--lr-form-control-label-collapse-inline-size=var(--lr-size-20rem)] - Control width
+ *   below which `label-placement="start"` returns the label above the field.
  * @csspart form-control-label - The label. It also carries the `label` compatibility name.
  * @csspart label - Permanent compatibility name on the same label as `form-control-label`.
  * @csspart trigger-container - The row wrapping the trigger.
@@ -469,6 +475,14 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
   static override styles = [LyraElement.styles, srOnly, sizes, styles];
 
   @property() label = '';
+  /**
+   * Where the label sits: `top` (default) above the field, or `start` in an inline-start column
+   * of `--lr-form-control-label-inline-size`, with hint and error aligned under the field. Below
+   * `--lr-form-control-label-collapse-inline-size` the label returns above the field. The label
+   * association is unchanged. Reflected so `[label-placement]` selectors match.
+   * @attr label-placement
+   */
+  @property({ attribute: 'label-placement', reflect: true }) labelPlacement: LyraLabelPlacement = 'top';
   @property() hint = '';
   /** Server-rendering hint that the `label` slot is populated before client slot observation. */
   @property({ type: Boolean, attribute: 'with-label', reflect: true }) withLabel = false;
@@ -972,7 +986,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     emitValueEvents(this, 'change', { value: this.value, previousValue }, detail => this.emit('lr-change', detail));
   }
 
-  // A listener that answers `lr-color-picker-change-request` by writing `value` finishes before
+  // A listener that answers `lr-change-request` by writing `value` finishes before
   // the built-in commit runs; the guard records that it wrote at all.
   private readonly changeGuard = new VetoWriteGuard();
 
@@ -987,7 +1001,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
     requestThenCommit({
       requestDetail: { value: formatColor(next, this.activeFormat(), this.uppercase), previousValue },
       emitRequest: (detail, init: { cancelable: true }) =>
-        this.emit('lr-color-picker-change-request', detail, init),
+        this.emit('lr-change-request', detail, init),
       guard: this.changeGuard,
       commit: () => {
         if (isLiveDisabled(this) || this.readonly) return;

@@ -69,7 +69,7 @@ export interface LyraRadioGroupSelectRequestDetail {
 export interface LyraRadioGroupEventMap {
   input: Event;
   change: Event;
-  'lr-radio-group-select-request': CustomEvent<LyraRadioGroupSelectRequestDetail>;
+  'lr-change-request': CustomEvent<LyraRadioGroupSelectRequestDetail>;
   'lr-input': CustomEvent<{ value: string; option: LyraRadio; radio: LyraRadio }>;
   'lr-change': CustomEvent<{ value: string; previousValue?: string; option: LyraRadio; radio: LyraRadio }>;
   'lr-activate': CustomEvent<{ value: string; option: LyraRadio; radio: LyraRadio }>;
@@ -116,7 +116,7 @@ const RADIO_GROUP_ORIENTATION = literalSetConverter<RadioGroupOrientation>(
  * @event {Event} change - Native event fired after `input` for the same group selection.
  * `option` identifies the acted-on radio; `radio` remains an equal compatibility alias.
  *
- * @event lr-radio-group-select-request - A user activation (click, Space or an arrow/Home/End
+ * @event lr-change-request - A user activation (click, Space or an arrow/Home/End
  * key) is about to select an unselected radio; `detail: { value, previousValue, option, radio }`
  * carries the proposed value while `value` still holds the current one. Cancelable: calling
  * `preventDefault()` keeps the current selection, and none of `input`/`lr-input`/`change`/`lr-change`
@@ -127,7 +127,7 @@ const RADIO_GROUP_ORIENTATION = literalSetConverter<RadioGroupOrientation>(
  * @event lr-change - A radio was selected. `detail: { value, previousValue, option, radio }`.
  * @event lr-activate - An available radio was activated by click, Space or an arrow/Home/End key,
  * whether or not the selection moved; emitted after `lr-change` when it did, and not at all when
- * `lr-radio-group-select-request` was refused or redirected.
+ * `lr-change-request` was refused or redirected.
  * `detail: { value, option, radio }`.
  * @event lr-invalid - The group's owned validity control failed a validity check. Cancelable:
  * calling `preventDefault()` also cancels the native `invalid` event behind it, suppressing the
@@ -184,13 +184,13 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
   protected static override collectionSupport = collectionSupport;
 
   protected static override readonly immutableEventDetails = Object.freeze([
-    'lr-radio-group-select-request',
+    'lr-change-request',
     'lr-input',
     'lr-change',
     'lr-activate',
   ]);
   protected static override readonly identityEventDetailProperties = Object.freeze({
-    'lr-radio-group-select-request': Object.freeze(['option', 'radio']),
+    'lr-change-request': Object.freeze(['option', 'radio']),
     'lr-input': Object.freeze(['option', 'radio']),
     'lr-change': Object.freeze(['option', 'radio']),
     'lr-activate': Object.freeze(['option', 'radio']),
@@ -652,7 +652,7 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
     this._valueDirty = true;
     this.syncRadios(radio.checked ? radio : undefined);
   }
-  // A listener that answers `lr-radio-group-select-request` by writing `value` (or a radio's
+  // A listener that answers `lr-change-request` by writing `value` (or a radio's
   // `checked`) finishes before the built-in commit runs; the guard records that it wrote at all.
   private readonly selectGuard = new VetoWriteGuard();
 
@@ -665,7 +665,7 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
       requestThenCommit({
         requestDetail: { value: radio.value, previousValue, option: radio, radio },
         emitRequest: (request, init: { cancelable: true }) =>
-          this.emit('lr-radio-group-select-request', request, init),
+          this.emit('lr-change-request', request, init),
         guard: this.selectGuard,
         commit: () => {
           if (this.effectiveDisabled || !this.ownsRadio(radio) || !this.isRadioAvailable(radio) || radio.checked) return;

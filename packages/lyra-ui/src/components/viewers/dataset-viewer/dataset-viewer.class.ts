@@ -70,7 +70,7 @@ export type DatasetViewerScrollMode = TableViewerScrollMode;
 
 export interface LyraDatasetViewerEventMap
   extends Omit<LyraAnchorTargetEventMap, 'lr-text-select'> {
-  'lr-load': CustomEvent<Record<string, never>>;
+  'lr-load': CustomEvent<null>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-viewer-diagnostic': CustomEvent<LyraViewerDiagnosticEventDetail>;
   /** Fired whenever the search query, match count, or active match index changes, from
@@ -108,7 +108,7 @@ class LyraDatasetViewerBase extends LyraElement<LyraDatasetViewerEventMap> {}
  * Remote parsing yields between admission/materialization passes; parsing itself remains synchronous.
  *
  * @customElement lr-dataset-viewer
- * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with empty detail.
+ * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with a `null` detail.
  * @event lr-render-error - Fired when fetching or parsing fails, or the resource guard rejects the
  *   table.
  * @event lr-viewer-diagnostic - Structured, non-fatal PapaParse diagnostics when a recoverable
@@ -142,9 +142,9 @@ class LyraDatasetViewerBase extends LyraElement<LyraDatasetViewerEventMap> {}
  *   placeholders.
  * @csspart spinner - The visible tokenized loading treatment and ordinary text label.
  * @csspart error - The error message region.
- * @cssprop --lr-dataset-viewer-background - Background of the viewer frame.
+ * @cssprop --lr-dataset-viewer-bg - Background of the viewer frame.
  * @cssprop --lr-dataset-viewer-border - Border of the viewer frame.
- * @cssprop --lr-dataset-viewer-border-radius - Corner radius of the viewer frame.
+ * @cssprop --lr-dataset-viewer-radius - Corner radius of the viewer frame.
  * @cssprop [--lr-dataset-viewer-max-height=none] - Maximum block size of `[part="body"]` before it
  *   scrolls internally. The `maxHeight` property sets this token inline on `[part="base"]`.
  *   `scrollMode='page'` deliberately ignores the cap and hands both axes to page flow so the
@@ -400,7 +400,7 @@ export class LyraDatasetViewer extends DocumentAnchorTarget(
     if (list && this.scrollMode === 'self') {
       list.scrollElement = this.renderRoot.querySelector<HTMLElement>('[part="body"]') ?? undefined;
     }
-    if (this.isConnected && changed.has('fetchState') && this.dataSource === undefined && (this.fetchState.kind === 'loaded' || this.fetchState.kind === 'empty')) this.emit('lr-load', {});
+    if (this.isConnected && changed.has('fetchState') && this.dataSource === undefined && (this.fetchState.kind === 'loaded' || this.fetchState.kind === 'empty')) this.emit('lr-load', null);
   }
 
   private async load(): Promise<void> {

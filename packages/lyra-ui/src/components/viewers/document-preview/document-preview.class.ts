@@ -263,11 +263,11 @@ export interface LyraDocumentPreviewEventMap {
  * @cssprop [--lr-document-preview-highlight-warning-color=var(--lr-color-warning)] - Warning highlight border and hover tint.
  * @cssprop [--lr-document-preview-highlight-danger-color=var(--lr-color-danger)] - Danger highlight border and hover tint.
  * @cssprop [--lr-document-preview-highlight-neutral-color=var(--lr-color-neutral)] - Neutral highlight border and hover tint.
- * @cssprop [--lr-document-preview-action-background=var(--lr-color-surface)] - Resting background of
+ * @cssprop [--lr-document-preview-action-bg=var(--lr-color-surface)] - Resting background of
  *   the region highlight action buttons.
- * @cssprop [--lr-document-preview-action-hover-background=var(--lr-color-surface-raised)] - Hover background
+ * @cssprop [--lr-document-preview-action-hover-bg=var(--lr-color-surface-raised)] - Hover background
  *   of the region highlight action buttons.
- * @cssprop --lr-document-preview-action-active-background - Pressed background of the region highlight action buttons. Defaults to
+ * @cssprop --lr-document-preview-action-active-bg - Pressed background of the region highlight action buttons. Defaults to
  *   the hover background mixed by the press step.
  * @status stable
  * @since 4.0.0

@@ -17,7 +17,7 @@
 
 ## `lr-spreadsheet-viewer`
 
-Set `--lr-spreadsheet-viewer-background`, `--lr-spreadsheet-viewer-border` and `--lr-spreadsheet-viewer-border-radius` on the frame. `--lr-spreadsheet-viewer-header-row-bg` sets the column heading background.
+Set `--lr-spreadsheet-viewer-bg`, `--lr-spreadsheet-viewer-border` and `--lr-spreadsheet-viewer-radius` on the frame. `--lr-spreadsheet-viewer-header-row-bg` sets the column heading background.
 
 Setting `scrollMode` to `page` (attribute `scroll-mode="page"`) lets the page scroll both axes, keeps the header sticky and ignores `max-height`. The default `self` uses the viewer’s own scrollport.
 
@@ -133,7 +133,7 @@ query behaves like `clearSearch()`); `searchNext()`/`searchPrevious()` advance/s
 matches (wrapping, resolving `false` when there are none); `clearSearch()` clears the query,
 matches, and painted marks.
 
-**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+**Events:** `lr-load` carries a `null` detail and bubbles across shadow roots after the parsed document renders;
 `lr-render-error` with `detail.error` when fetching, parsing, in-memory admission, or
 data-source validation/read/search fails.
 `lr-highlight-activate` (`detail: { highlightId }`) — a `highlights` cell was clicked or activated via

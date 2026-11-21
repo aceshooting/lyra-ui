@@ -1,6 +1,7 @@
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { activeFill, disabledControl, focusRing, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { formControlLabelPlacement } from '../../../internal/form-control/chrome.styles.js';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
 import { glassIndependentRootStyles } from '../../../internal/glass-independent-root.styles.js';
@@ -691,4 +692,5 @@ export const styles = css`
     }
   }
   ${formControlTouchFontFloor(css`[part~="input"]`, css`var(--lr-font-size-sm)`)}
+  ${formControlLabelPlacement}
 `;

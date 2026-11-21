@@ -31,7 +31,7 @@ entries, the body renders through an internal `<lr-virtual-list>` instead of a p
 The plain list's `[part="body"]` is a tab stop only while it overflows its cap, so a keyboard user
 can scroll a long log while a short one adds no stop; the virtual list is its own keyboard target.
 
-`--lr-activity-feed-header-hover-bg` and `--lr-activity-feed-header-pressed-bg`
+`--lr-activity-feed-header-hover-bg` and `--lr-activity-feed-header-active-bg`
 set the header's pointer feedback.
 
 `entries` retains the newest 10,000 identities. The visible `limit` part discloses omitted entries

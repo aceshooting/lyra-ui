@@ -75,7 +75,7 @@ type ResolvedRegionHighlight = LyraHighlight & {
 
 
 export interface LyraSvgViewerEventMap extends Omit<LyraAnchorTargetEventMap, 'lr-text-select'> {
-  'lr-load': CustomEvent<Record<string, never>>;
+  'lr-load': CustomEvent<null>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
 }
 
@@ -95,7 +95,7 @@ class LyraSvgViewerBase extends LyraElement<LyraSvgViewerEventMap> {}
  * snapshot and placed first inside both paint ceilings.
  *
  * @customElement lr-svg-viewer
- * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with empty detail.
+ * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with a `null` detail.
  * @event lr-render-error - Fired when fetching or sanitizing the document fails.
  * @event lr-highlight-activate - A region highlight was activated. `detail: { highlightId }`.
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
@@ -123,9 +123,9 @@ class LyraSvgViewerBase extends LyraElement<LyraSvgViewerEventMap> {}
  * @csspart highlight-actions - Non-overlapping actions used instead of on-image targets when the
  *   minimum hit areas of two or more region highlights would overlap.
  * @csspart region-highlight-action - One non-overlapping highlight action.
- * @cssprop --lr-svg-viewer-action-background - Resting background of viewer actions.
- * @cssprop --lr-svg-viewer-action-hover-background - Hover background of viewer actions.
- * @cssprop --lr-svg-viewer-action-active-background - Pressed background of viewer actions.
+ * @cssprop --lr-svg-viewer-action-bg - Resting background of viewer actions.
+ * @cssprop --lr-svg-viewer-action-hover-bg - Hover background of viewer actions.
+ * @cssprop --lr-svg-viewer-action-active-bg - Pressed background of viewer actions.
  * @cssprop [--lr-svg-viewer-max-height=none] - Maximum block size of the scrollable body before it scrolls internally. Also settable via the `max-height` property.
  * @cssprop [--lr-svg-viewer-active-border=var(--lr-color-warning, var(--lr-color-brand))] - Border
  *   and outer-ring color of the `[part="region-highlight"]` matching `activeHighlightId`. The ring
@@ -244,7 +244,7 @@ export class LyraSvgViewer extends DocumentAnchorTarget(LyraSvgViewerBase) {
     );
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
     if (changed.has('highlights') || changed.has('activeHighlightId')) this.regionTargets.sync();
-    if (this.isConnected && changed.has('fetchState') && this.fetchState.kind === 'loaded') this.emit('lr-load', {});
+    if (this.isConnected && changed.has('fetchState') && this.fetchState.kind === 'loaded') this.emit('lr-load', null);
   }
 
   private load(): Promise<void> {

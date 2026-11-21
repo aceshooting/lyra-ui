@@ -65,7 +65,7 @@ const MAX_RENDERED_TYPES = 200;
  *   unchanged. This request is the sole veto point for the gesture.
  * @event lr-visibility-change - `detail: { hiddenTypes }` — the complete updated array, fired
  *   after an accepted toggle has assigned and announced it.
- * @cssprop [--lr-graph-legend-item-hover-fill=color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover))] - Background of the hovered control.
+ * @cssprop [--lr-graph-legend-item-hover-bg=color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover))] - Background of the hovered control.
  * @csspart base - The legend wrapper. It owns `role="group"` and the fallback name unless a
  *   non-empty host `aria-label` makes the host the sole overall owner.
  * @csspart item - One row per type — a `<button>`, or a plain `<div>` while `withoutInteraction` is

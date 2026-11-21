@@ -18,7 +18,7 @@ describe('lr-swatch-picker select request', () => {
       .items=${items}></lr-swatch-picker>`);
     const log: string[] = [];
     let mode: 'veto' | 'resolve' | 'same' | 'allow' = 'veto';
-    el.addEventListener('lr-swatch-picker-select-request', (event) => {
+    el.addEventListener('lr-change-request', (event) => {
       const { value, previousValue } = event.detail;
       log.push(`request:${value}:${String(previousValue)}:${String(el.value)}:${String(event.cancelable)}`);
       if (mode === 'veto') event.preventDefault();
@@ -39,6 +39,7 @@ describe('lr-swatch-picker select request', () => {
     await sendKeys({ press: 'ArrowRight' });
     await el.updateComplete;
     expect(el.shadowRoot!.activeElement === swatch(el, 0), 'a refused arrow key leaves focus in place').to.equal(true);
+    expect(el.value).to.equal('blue');
     expect(log).to.deep.equal(['request:green:blue:blue:true']);
 
     log.length = 0;

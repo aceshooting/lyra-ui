@@ -136,4 +136,4 @@ Pass custom classifiers as `{ internalPatterns: ['node_modules/', /vendor\//] }`
 
 ---
 
-**Pointer-state tokens:** `--lr-stack-trace-internal-toggle-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-stack-trace-internal-toggle-pressed-bg`.
+**Pointer-state tokens:** `--lr-stack-trace-internal-toggle-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-stack-trace-internal-toggle-active-bg`.

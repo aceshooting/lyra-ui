@@ -86,7 +86,7 @@ Left unset, the built-in star outline/solid pair is unchanged.
 
 **Events:**
 
-- `lr-rating-change-request` — `detail: { value, previousValue }`, cancelable. Dispatched before a
+- `lr-change-request` — `detail: { value, previousValue }`, cancelable. Dispatched before a
   click or Arrow/Page/Home/End key changes the rating, while `value` still holds the current one; a
   gesture that would not move the value requests nothing. `preventDefault()` keeps the rating and
   suppresses `input`/`lr-input`/`change`/`lr-change`; a listener may instead resolve the request by

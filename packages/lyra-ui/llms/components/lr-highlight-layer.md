@@ -63,4 +63,4 @@ opaque one-frame fill.
 tone independently, defaulting to the corresponding Lyra quiet background and foreground tokens.
 `--lr-highlight-layer-flash-bg` controls the temporary flash state (default
 `--lr-color-brand`).
-Highlight action buttons accept `--lr-highlight-layer-action-background` (default `var(--lr-color-surface)`), `--lr-highlight-layer-action-hover-background` (default `var(--lr-color-surface-raised)`) and `--lr-highlight-layer-action-active-background`.
+Highlight action buttons accept `--lr-highlight-layer-action-bg` (default `var(--lr-color-surface)`), `--lr-highlight-layer-action-hover-bg` (default `var(--lr-color-surface-raised)`) and `--lr-highlight-layer-action-active-bg`.

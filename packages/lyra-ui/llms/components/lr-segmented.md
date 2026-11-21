@@ -77,7 +77,7 @@ string; label: string; icon?: unknown; disabled?: boolean }`; `icon` renders as 
 
 **Events:**
 
-- `lr-segmented-select-request` (`detail: { value, previousValue }`) — a click or Arrow/Home/End
+- `lr-change-request` (`detail: { value, previousValue }`) — a click or Arrow/Home/End
   key is about to select a segment whose value differs from `value`, which still holds
   `previousValue` while it dispatches. Cancelable: `preventDefault()` keeps the current selection,
   and neither `lr-change` nor `lr-activate` fires. A listener may instead resolve it by assigning

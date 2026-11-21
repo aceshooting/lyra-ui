@@ -1,5 +1,6 @@
 import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
 import { css } from 'lit';
+import { formControlLabelPlacement } from '../../../internal/form-control/chrome.styles.js';
 import {
   formControlLabelTypography,
   formControlTextWrap,
@@ -265,4 +266,5 @@ export const styles = css`
     ${formControlTextWrap}
   }
   ${formControlLabelDisplay}
+  ${formControlLabelPlacement}
 `;

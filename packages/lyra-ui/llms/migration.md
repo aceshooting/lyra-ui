@@ -1755,7 +1755,7 @@ events with the same name, and check nested event targets and existing canonical
 | `<lr-provenance-panel>` | `lr-toggle` | `lr-retrieval-disclosure-change` | The replacement is the namespaced disclosure event; its detail differs: narrow on kind and read section and chunkId instead of itemId. |
 | `<lr-retrieval-trace>` | `lr-toggle` | `lr-retrieval-disclosure-change` | The replacement is the namespaced disclosure event; its detail differs: narrow on kind and read stageId and chunkId instead of itemId. |
 | `<lr-widget>` | `lr-view-change` | `lr-widget-view-change` | The replacement carries the same detail. |
-| `<lr-widget>` | `lr-view-request` | `lr-widget-view-request` | The replacement carries the same cancelable detail. Move preventDefault() to the replacement listener. |
+| `<lr-widget>` | `lr-view-request` | `lr-widget-view-change-request` | The replacement carries the same cancelable detail. Move preventDefault() to the replacement listener. |
 
 | Component | Property | Semantic change in Lyra 32 (reported, never rewritten) |
 |---|---|---|
@@ -1770,6 +1770,14 @@ working; other uses (a deep import, a namespace member) and removed localization
 
 | Kind | From | To | Handling |
 |---|---|---|---|
+| css-property | `--lr-callout-border` | --lr-callout-border-color | Reported only. lr-callout names its border color with the -color suffix, like lr-alert. |
+| css-property | `--lr-checkbox-active-border` | --lr-checkbox-active-border-color | Reported only. lr-checkbox state tokens use the -color suffix of lr-radio; the old name is no longer read. |
+| css-property | `--lr-checkbox-active-ring` | --lr-checkbox-active-ring-color | Reported only. lr-checkbox state tokens use the -color suffix of lr-radio; the old name is no longer read. |
+| css-property | `--lr-checkbox-checked-border` | --lr-checkbox-checked-border-color | Reported only. lr-checkbox state tokens use the -color suffix of lr-radio; the old name is no longer read. |
+| css-property | `--lr-checkbox-group-invalid-border` | --lr-checkbox-group-invalid-border-color | Reported only. lr-checkbox-group state tokens use the -color suffix of lr-radio; the old name is no longer read. |
+| css-property | `--lr-checkbox-hover-border` | --lr-checkbox-hover-border-color | Reported only. lr-checkbox state tokens use the -color suffix of lr-radio; the old name is no longer read. |
+| css-property | `--lr-checkbox-invalid-border` | --lr-checkbox-invalid-border-color | Reported only. lr-checkbox state tokens use the -color suffix of lr-radio; the old name is no longer read. |
+| css-property | `--lr-radio-group-invalid-border` | --lr-radio-group-invalid-border-color | Reported only. lr-radio-group state tokens use the -color suffix of lr-radio; the old name is no longer read. |
 | export | `LyraGeojsonView (./components/viewers)` | `LyraGeoJsonViewer` | Import clause re-bound; other uses reported. The viewers barrel no longer exports the LyraGeojsonView subclass; LyraGeoJsonViewer is the one GeoJSON viewer class. |
 | locale-key | `appRailCollapse` | `toggleNavigation` | Reported only. lr-app-rail names its collapse toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
 | locale-key | `appRailExpand` | `toggleNavigation` | Reported only. lr-app-rail names its collapse toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |

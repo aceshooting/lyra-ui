@@ -619,7 +619,7 @@ fullscreen }` is the state proposed by the fullscreen toggle, Escape, or a backd
 `preventDefault()` to leave `fullscreen` unchanged. Not emitted when a consumer assigns
 `fullscreen` directly), `lr-fullscreen-change` (non-cancelable; `detail: { fullscreen }` is the
 accepted state — also fired when fullscreen is exited via Escape or a backdrop click, not just the
-toggle button. Not emitted when a consumer assigns `fullscreen` directly), `lr-widget-view-request`
+toggle button. Not emitted when a consumer assigns `fullscreen` directly), `lr-widget-view-change-request`
 (cancelable; `detail: { viewId }` is the view proposed by a header view-toggle click. Call
 `preventDefault()` to leave `activeViewId` unchanged. Not emitted when a consumer assigns
 `activeViewId` directly), `lr-widget-view-change` (non-cancelable; `detail: { viewId }`, the accepted
@@ -628,11 +628,11 @@ forcing a fallback to the first remaining view. Not emitted when a consumer sets
 directly, even to a now-invalid id), and
 `lr-activate` (non-cancelable; `detail: { value }` — note the key is `value`, not `viewId` — is the
 activated view's `viewId`, fired on **every** accepted header view-toggle activation whether or not
-`activeViewId` actually moved. `lr-widget-view-request` stays the veto point, and a vetoed activation emits
+`activeViewId` actually moved. `lr-widget-view-change-request` stays the veto point, and a vetoed activation emits
 no activation at all. Use it for the repeat pick `lr-widget-view-change` deliberately stays silent for —
 "rebuild that view" is a real intent — which is otherwise unobservable, because the toggles live in
 this shadow root, so a retargeted `click` names no view. When an activation _does_ move the view,
-`lr-widget-view-request` and `lr-widget-view-change` are emitted first. Not emitted when a consumer sets
+`lr-widget-view-change-request` and `lr-widget-view-change` are emitted first. Not emitted when a consumer sets
 `activeViewId` directly)
 
 **Slots:** default (the panel body, rendered only while `views` is empty), `start` (optional leading
@@ -1090,6 +1090,10 @@ A tab strip. Mirrors `wa-tab-group` / `sl-tab-group`.
 With manual activation, removing the focused unselected tab rehomes actual focus to a valid survivor
 while retaining a valid selected tab and panel. This repair emits no show/hide events and preserves
 focus already held by an outside control.
+
+In a host with a definite block size, `fill-body` (`fillBody`) stretches the active panel to the
+body's block size and moves scrolling into the panel content, the same attribute `lr-card` and
+`lr-dialog` use. Without it, the body scrolls and each panel keeps its content height.
 
 **Renamed in 8.0.0.** This element used to be `<lr-tabs>`. The tag is now `<lr-tab-group>`, its
 single `lr-tabs-change` event is now the `lr-tab-hide` → `lr-tab-show` pair below, and every
@@ -1934,7 +1938,7 @@ string; label: string; icon?: unknown; disabled?: boolean }`; `icon` renders as 
 
 **Events:**
 
-- `lr-segmented-select-request` (`detail: { value, previousValue }`) — a click or Arrow/Home/End
+- `lr-change-request` (`detail: { value, previousValue }`) — a click or Arrow/Home/End
   key is about to select a segment whose value differs from `value`, which still holds
   `previousValue` while it dispatches. Cancelable: `preventDefault()` keeps the current selection,
   and neither `lr-change` nor `lr-activate` fires. A listener may instead resolve it by assigning
@@ -2327,7 +2331,7 @@ on the panel.
 `var(--lr-color-surface)`, the pinned `sticky-group` overlay's background), `--lr-virtual-list-height` (default `24rem` — the host's bounded
 scroll extent; component-specific since a virtualized list is meaningless without a sized viewport,
 and ignored while `scrollElement` names an external scroller, whose own height is the visible band),
-`--lr-virtual-list-active-row-background` (background of the `active-item-id` row; default a subtle currentColor tint),
+`--lr-virtual-list-active-row-bg` (background of the `active-item-id` row; default a subtle currentColor tint),
 `--lr-virtual-list-row-mark-bg` (default `revert`),
 `--lr-virtual-list-row-mark-color` (default `revert`),
 `--lr-virtual-list-row-mark-radius` (default `0`), and

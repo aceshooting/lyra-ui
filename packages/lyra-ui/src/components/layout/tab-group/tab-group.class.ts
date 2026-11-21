@@ -303,8 +303,8 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   placement: LyraTabGroupPlacement = 'top';
 
   /** Fills the body with the active panel in a fixed block allocation. The panel content
-   * manages its own scrolling. */
-  @property({ type: Boolean, reflect: true }) fill = false;
+   * manages its own scrolling. Reflects as `fill-body`, matching `lr-card` and `lr-dialog`. */
+  @property({ type: Boolean, attribute: 'fill-body', reflect: true }) fillBody = false;
 
   /** `auto` (the default) moves selection with focus. `manual` moves focus only and waits for
    *  Enter or Space — the APG requirement for panels that are expensive to reveal. */

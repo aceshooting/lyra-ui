@@ -1072,7 +1072,7 @@ export const ReviewBeforePaging: Story = {
     <label><input type="checkbox" checked /> Keep this page open</label>
     <lr-table aria-label="Scores" pagination-mode="client" page-size="1"
       .columns=${columns} .rows=${rows}
-      @lr-page-request=${(event: Event) => {
+      @lr-before-page-change=${(event: Event) => {
         const table = event.currentTarget as HTMLElement;
         if (table.previousElementSibling?.querySelector('input')?.checked) event.preventDefault();
       }}

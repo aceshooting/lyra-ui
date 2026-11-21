@@ -1,6 +1,7 @@
 import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
 import { iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { formControlLabelPlacement } from '../../../internal/form-control/chrome.styles.js';
 import { formControlLabelTypography, formControlRequiredMarker, formControlSupportingText, formControlLabelDisplay, formControlTouchFontFloor } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
@@ -160,4 +161,5 @@ export const styles = css`
   }
   ${formControlLabelDisplay}
   ${formControlTouchFontFloor(css`[part='control']`)}
+  ${formControlLabelPlacement}
 `;

@@ -30,6 +30,10 @@ With manual activation, removing the focused unselected tab rehomes actual focus
 while retaining a valid selected tab and panel. This repair emits no show/hide events and preserves
 focus already held by an outside control.
 
+In a host with a definite block size, `fill-body` (`fillBody`) stretches the active panel to the
+body's block size and moves scrolling into the panel content, the same attribute `lr-card` and
+`lr-dialog` use. Without it, the body scrolls and each panel keeps its content height.
+
 **Renamed in 8.0.0.** This element used to be `<lr-tabs>`. The tag is now `<lr-tab-group>`, its
 single `lr-tabs-change` event is now the `lr-tab-hide` → `lr-tab-show` pair below, and every
 `--lr-tabs-*` custom property is now spelled `--lr-tab-group-*` (`--lr-tabs-selected-color` →

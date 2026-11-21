@@ -34,7 +34,7 @@ import { LYRA_DEFAULT_archiveViewerEmpty, LYRA_DEFAULT_archiveViewerFile, LYRA_D
 
 export interface ArchiveEntry { name: string; dir: boolean; size: number; }
 type ArchiveState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; entries: ArchiveEntry[] } | { kind: 'error'; message: () => string };
-export interface LyraArchiveViewerEventMap extends LyraTextViewerTargetEventMap { 'lr-load': CustomEvent<Record<string, never>>;
+export interface LyraArchiveViewerEventMap extends LyraTextViewerTargetEventMap { 'lr-load': CustomEvent<null>;
   'lr-render-error': CustomEvent<{ error: unknown }>; }
 
 const MAX_ARCHIVE_ENTRIES = 10_000;
@@ -59,7 +59,7 @@ const ArchiveTextViewerTargetBase = TextViewerTarget(LyraArchiveViewerBase, 'hig
  * selections and painted highlights are likewise scoped to entry paths in the nested virtual list.
  *
  * @customElement lr-archive-viewer
- * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with empty detail.
+ * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with a `null` detail.
  * @event lr-render-error - Fired when fetching or parsing the archive fails.
  * @event lr-search-change - Fired when archive-path search state or its active match changes,
  *   including source-reset and effective-locale re-evaluation.
@@ -238,7 +238,7 @@ export class LyraArchiveViewer extends ArchiveTextViewerTargetBase {
         }, 'search');
       }
     }
-    if (this.isConnected && changed.has('fetchState') && this.fetchState.kind === 'loaded') this.emit('lr-load', {});
+    if (this.isConnected && changed.has('fetchState') && this.fetchState.kind === 'loaded') this.emit('lr-load', null);
   }
 
   private readonly detached = new DeferredTeardown(() => this.transport.cancel());

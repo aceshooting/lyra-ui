@@ -10,7 +10,7 @@ import {
   formControlTextWrap,
   formControlTouchFontFloor,
 } from '../../../internal/form-control.styles.js';
-import { formControlChrome } from '../../../internal/form-control/chrome.styles.js';
+import { formControlChrome, formControlLabelPlacement } from '../../../internal/form-control/chrome.styles.js';
 import {
   overlaySurfaceFill,
   overlaySurfaceControlEdge,
@@ -72,6 +72,7 @@ export const styles = css`
   }
 
   ${formControlChrome}
+  ${formControlLabelPlacement}
 
   ${formControlRequiredMarker}
 

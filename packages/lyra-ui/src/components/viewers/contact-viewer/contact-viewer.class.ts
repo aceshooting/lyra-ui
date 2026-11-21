@@ -33,7 +33,7 @@ import { LYRA_DEFAULT_contactViewerAddressFormat, LYRA_DEFAULT_contactViewerAddr
 
 type ContactFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; contacts: VCardContact[] } | { kind: 'empty' } | { kind: 'error'; message: () => string };
 export interface LyraContactViewerEventMap extends LyraTextViewerTargetEventMap {
-  'lr-load': CustomEvent<Record<string, never>>;
+  'lr-load': CustomEvent<null>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
@@ -51,7 +51,7 @@ class LyraContactViewerBase extends LyraElement<LyraContactViewerEventMap> {}
  * generated contact cards have no fragment ids; such a jump reports `found: false`.
  *
  * @customElement lr-contact-viewer
- * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with empty detail.
+ * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with a `null` detail.
  * @event lr-render-error - Fired when fetching or parsing the document fails.
  * @event {CustomEvent<LyraSearchChangeDetail>} lr-search-change -
  *   Fired whenever search state changes. `matchCountExact=false` makes the retained count a lower
@@ -187,7 +187,7 @@ export class LyraContactViewer extends TextViewerTarget(LyraContactViewerBase) {
       this.fetchState.kind === 'error' ? this.fetchState.message() : this.localize('loadingDocument'),
     );
     if (changed.has('src') || changed.has('maxContacts')) this.scheduleAfterUpdate(() => { void this.load(); });
-    if (this.isConnected && changed.has('fetchState') && (this.fetchState.kind === 'loaded' || this.fetchState.kind === 'empty')) this.emit('lr-load', {});
+    if (this.isConnected && changed.has('fetchState') && (this.fetchState.kind === 'loaded' || this.fetchState.kind === 'empty')) this.emit('lr-load', null);
   }
 
   private load(): Promise<void> {

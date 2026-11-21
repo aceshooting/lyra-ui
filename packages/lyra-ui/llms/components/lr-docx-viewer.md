@@ -114,7 +114,7 @@ highlight falling back to that same token would render as unhighlighted.
 `--lr-docx-viewer-search-match-bg`,
 `--lr-docx-viewer-search-match-active-bg`, and
 `--lr-docx-viewer-search-match-active-color` style resting and active search matches.
-Highlight action buttons accept `--lr-docx-viewer-action-background` (default `var(--lr-color-surface)`), `--lr-docx-viewer-action-hover-background` (default `var(--lr-color-surface-raised)`) and `--lr-docx-viewer-action-active-background`.
+Highlight action buttons accept `--lr-docx-viewer-action-bg` (default `var(--lr-color-surface)`), `--lr-docx-viewer-action-hover-bg` (default `var(--lr-color-surface-raised)`) and `--lr-docx-viewer-action-active-bg`.
 
 **Optional peer dependencies:** install `mammoth` and `dompurify` with `pnpm add mammoth dompurify`.
 The component registers an eager `application/vnd.openxmlformats-officedocument.wordprocessingml.document`

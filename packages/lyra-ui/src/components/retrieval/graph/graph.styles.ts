@@ -119,7 +119,7 @@ export const styles = css`
   }
   [part="spatial-control"]:hover:where(:not(:disabled)),
   [part="spatial-list-item"]:hover {
-    background: var(--lr-graph-spatial-control-hover-fill, ${hoverFill('var(--_lr-spatial-fill)')});
+    background: var(--lr-graph-spatial-control-hover-bg, ${hoverFill('var(--_lr-spatial-fill)')});
   }
   [part="spatial-control"]:active:where(:not(:disabled)),
   [part="spatial-list-item"]:active {

@@ -70,4 +70,4 @@ state), so the selection is announced, not merely painted. Other request rows ex
 
 **Heading level:** `headingLevel` (attribute `heading-level`, default `'2'`) sets the outline level of the title; `'none'` preserves its text without a heading role.
 
-**Pointer-state tokens:** `--lr-approval-queue-row-hover-bg` (default `var(--lr-color-surface-raised)`), `--lr-approval-queue-row-pressed-bg`.
+**Pointer-state tokens:** `--lr-approval-queue-row-hover-bg` (default `var(--lr-color-surface-raised)`), `--lr-approval-queue-row-active-bg`.

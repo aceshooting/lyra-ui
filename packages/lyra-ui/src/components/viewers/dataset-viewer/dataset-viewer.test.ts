@@ -92,6 +92,15 @@ describe('lr-dataset-viewer', () => {
     }
   });
 
+  it('paints its base from --lr-dataset-viewer-bg and --lr-dataset-viewer-radius', async () => {
+    const el = (await fixture(
+      html`<lr-dataset-viewer style="--lr-dataset-viewer-bg: rgb(1, 2, 3); --lr-dataset-viewer-radius: 7px"></lr-dataset-viewer>`
+    )) as LyraDatasetViewer;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    expect(getComputedStyle(base).backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(base).borderTopLeftRadius).to.equal('7px');
+  });
+
   it('renders an empty localized state by default', async () => {
     const el = (await fixture(
       html`<lr-dataset-viewer></lr-dataset-viewer>`

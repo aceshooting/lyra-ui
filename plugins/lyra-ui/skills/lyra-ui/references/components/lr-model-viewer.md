@@ -16,7 +16,7 @@
 
 ## `lr-model-viewer`
 
-Action backgrounds accept `--lr-model-viewer-action-background`, `--lr-model-viewer-action-hover-background` and `--lr-model-viewer-action-active-background`.
+Action backgrounds accept `--lr-model-viewer-action-bg`, `--lr-model-viewer-action-hover-bg` and `--lr-model-viewer-action-active-bg`.
 
 The interactive viewport has a separate accessible name, supplied by `modelViewerViewport` (“Interactive model” in English).
 

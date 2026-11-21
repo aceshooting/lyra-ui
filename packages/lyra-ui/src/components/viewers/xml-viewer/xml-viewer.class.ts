@@ -265,7 +265,7 @@ export interface LyraXmlViewerEventMap {
   'lr-error': CustomEvent<null>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
   'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
-  'lr-load': CustomEvent<Record<string, never>>;
+  'lr-load': CustomEvent<null>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
   'lr-highlight-activate': CustomEvent<HighlightActivateDetail>;
@@ -342,7 +342,7 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
  *   query, matchCount, matchCountExact, activeIndex }`. Search accepts at most 4,096 query code
  *   units, scans at most 4,000,000 tag/attribute/text code units, and retains at most 10,000
  *   matches; a false `matchCountExact` makes `matchCount` a lower bound after any ceiling.
- * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with empty detail.
+ * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with a `null` detail.
  * @event lr-render-error - Fired when fetching or parsing the document fails, including a
  *   parse error or exceeding the node cap. `detail: { error }`.
  * @event lr-anchor-result - Fired after an `anchor` property assignment or a `scrollToAnchor()`
@@ -379,9 +379,9 @@ class LyraXmlViewerBase extends LyraElement<LyraXmlViewerEventMap> {}
  *   element row; emits `lr-highlight-activate`.
  * @csspart error - The error region.
  * @csspart spinner - Visible ordinary loading content with a motion-safe progress indicator.
- * @cssprop --lr-xml-viewer-action-background - Resting background of viewer actions.
- * @cssprop --lr-xml-viewer-action-hover-background - Hover background of viewer actions.
- * @cssprop --lr-xml-viewer-action-active-background - Pressed background of viewer actions.
+ * @cssprop --lr-xml-viewer-action-bg - Resting background of viewer actions.
+ * @cssprop --lr-xml-viewer-action-hover-bg - Hover background of viewer actions.
+ * @cssprop --lr-xml-viewer-action-active-bg - Pressed background of viewer actions.
  * @cssprop [--lr-xml-viewer-active-attribute-color=var(--lr-color-brand)] - Outline color of the
  *   `[part="attribute"]` an attribute-addressing `node-path` anchor resolved to.
  * @cssprop [--lr-xml-viewer-tag-color=var(--lr-color-brand)] - Text color of `[part="tag"]`, an
@@ -833,7 +833,7 @@ export class LyraXmlViewer extends DocumentAnchorTarget(LyraXmlViewerBase) {
       this.pendingSearchStateEvent = false;
       this.emitSearchChange();
     }
-    if (this.isConnected && changed.has('xmlState') && this.xmlState.kind === 'loaded') this.emit('lr-load', {});
+    if (this.isConnected && changed.has('xmlState') && this.xmlState.kind === 'loaded') this.emit('lr-load', null);
   }
 
   private readonly detached = new DeferredTeardown(() => this.releaseDetachedDocument());

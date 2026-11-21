@@ -160,16 +160,16 @@ export const styles = css`
   [part="region-highlight-action"] {
     ${iconHitTarget}
     ${nativeControlSurface}
-    background: var(--lr-document-preview-action-background, var(--lr-color-surface));
+    background: var(--lr-document-preview-action-bg, var(--lr-color-surface));
     ${interactiveTransition}
     border-radius: var(--lr-radius-xs);
     cursor: pointer;
   }
   [part="region-highlight-action"]:hover {
-    background: var(--lr-document-preview-action-hover-background, var(--lr-color-surface-raised));
+    background: var(--lr-document-preview-action-hover-bg, var(--lr-color-surface-raised));
   }
   [part="region-highlight-action"]:active {
-    background: var(--lr-document-preview-action-active-background, ${activeFill('var(--lr-document-preview-action-hover-background, var(--lr-color-surface-raised))')});
+    background: var(--lr-document-preview-action-active-bg, ${activeFill('var(--lr-document-preview-action-hover-bg, var(--lr-color-surface-raised))')});
   }
   [part="region-highlight-action"]:focus-visible {
     ${focusRingShorthand}

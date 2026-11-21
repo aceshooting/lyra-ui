@@ -42,7 +42,7 @@ export const styles = css`
     --_lr-callout-gap: var(--lr-space-s);
 
     padding: var(--lr-callout-padding, var(--_lr-callout-padding));
-    border: var(--lr-border-width-thin) solid var(--lr-callout-border, var(--_lr-callout-border));
+    border: var(--lr-border-width-thin) solid var(--lr-callout-border-color, var(--_lr-callout-border));
     border-radius: var(--lr-radius-xs);
     background: var(--lr-callout-bg, var(--_lr-callout-background));
     color: var(--lr-callout-color, var(--_lr-callout-color));

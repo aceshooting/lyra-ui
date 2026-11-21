@@ -109,10 +109,16 @@ reflects, so `[label-display='hidden']` is also a styling hook.
 
 ## Label beside the field: `label-placement`
 
-`lr-input` (and `lr-number-input`), `lr-textarea`, `lr-select`, `lr-combobox` and `lr-date-input`
-take `label-placement="start"` (property `labelPlacement: 'top' | 'start'`, default `'top'`,
-reflected) for settings forms with an aligned label column. The label sits in an inline-start
-column of `--lr-form-control-label-inline-size` (default `30%`), `--lr-form-control-label-gap`
+Every field-shaped control takes `label-placement="start"` (property
+`labelPlacement: 'top' | 'start'`, default `'top'`, reflected) for settings forms with an aligned
+label column: `lr-input` (and `lr-number-input`, `lr-native-time-input`), `lr-textarea`,
+`lr-select`, `lr-combobox`, `lr-date-input`, `lr-time-input`, `lr-phone-input`, `lr-token-input`,
+`lr-otp-input`, `lr-code-editor`, `lr-signature-pad`, `lr-color-picker`, `lr-locale-picker`, the
+catalog pickers (`lr-country-picker`, `lr-currency-picker`, `lr-time-zone-picker`,
+`lr-unit-picker`) and, in the conversation family, `lr-model-select` and `lr-voice-picker`. Group
+controls whose label is a legend over several choices (`lr-checkbox-group`, `lr-radio-group`,
+`lr-segmented`) and `lr-slider`, whose label row can carry the value readout, keep the label
+above. The label sits in an inline-start column of `--lr-form-control-label-inline-size` (default `30%`), `--lr-form-control-label-gap`
 (default `var(--lr-space-m)`) from the field, and the hint and error stay aligned under the field.
 When the control is narrower than `--lr-form-control-label-collapse-inline-size` (default
 `var(--lr-size-20rem)`) the label returns above the field, so a phone layout needs no media query.
@@ -1799,7 +1805,7 @@ and pending-range limits; activating an unavailable period is a no-op. The previ
 buttons announce the displayed month or period titles. The cell for today, or for the period
 containing today, carries `aria-current="date"` independently of the selection.
 
-**Events:** `lr-date-picker-select-request` (`detail: { value, previousValue }`) is the one
+**Events:** `lr-change-request` (`detail: { value, previousValue }`) is the one
 cancelable event: it is dispatched before a day pick (click, Enter or Space) or a preset button
 writes `value`, while `value` still holds the current ISO value; in range mode the first click of a
 new range proposes the lone start date. `preventDefault()` keeps `value` and `appliedPreset` and
@@ -3726,6 +3732,8 @@ Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-lab
 
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`".
+
 A locale-aware segmented field and column picker mirroring `wa-time-input`. Its wire and submitted
 value is always timezone-free, 24-hour ASCII: `HH:mm`, or `HH:mm:ss` when seconds are visible.
 Locale changes segment order, separators, digits, and day-period labels — never the wire value.
@@ -4036,6 +4044,8 @@ Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-lab
 `--lr-form-control-label-color`.
 
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
+
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`".
 
 A form-associated, country-aware telephone field. The submitted `value` is either canonical E.164
 (for example `+352621123456`) or `''` while the editable input is empty, incomplete, or invalid.
@@ -4651,7 +4661,7 @@ gemstone?: GemstoneKey; readonly disabled?: boolean }`; a valid CSS `color` is u
   semantics), so an ancestor `<fieldset disabled>` does not cascade into it — disable the picker
   itself alongside the fieldset when a form needs both.
 
-**Events:** `lr-swatch-picker-select-request` (`detail: { value, previousValue }`) — cancelable,
+**Events:** `lr-change-request` (`detail: { value, previousValue }`) — cancelable,
 dispatched before a click or Arrow/Home/End key selects a swatch other than the current one, while
 `value` still holds the current selection. `preventDefault()` keeps the selection and suppresses
 `lr-change`; a listener may instead resolve the request by assigning `value` itself, which also
@@ -5944,6 +5954,8 @@ Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-lab
 
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`".
+
 A form-associated one-time-code field: several character segments that together hold one value.
 Mirrors `wa-otp-input`.
 
@@ -6229,7 +6241,7 @@ reference the same acted-on child. The selected child does not emit its standalo
 value events. Every activation of an available radio — click, Space, or an arrow/Home/End key,
 including one on the already-selected option — also emits `lr-activate` (`{ value, option, radio }`) after
 those events. Before a user activation moves the selection, the group dispatches the cancelable
-`lr-radio-group-select-request` (`{ value, previousValue, option, radio }`, while `value` still
+`lr-change-request` (`{ value, previousValue, option, radio }`, while `value` still
 holds the current selection), like the request events of `lr-checkbox-group` and
 `lr-toggle-group`: `preventDefault()` keeps the current selection and fires no value events, and a
 listener that resolves the request by assigning `value` (or a radio's `checked`) suppresses the
@@ -6239,7 +6251,7 @@ cancelable alias of a failed validity check; `preventDefault()` also cancels the
 event behind it.
 
 ```js
-group.addEventListener('lr-radio-group-select-request', (event) => {
+group.addEventListener('lr-change-request', (event) => {
   if (event.detail.value === 'enterprise' && !confirm('Switch plan?')) event.preventDefault();
 });
 ```
@@ -6413,6 +6425,8 @@ Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-lab
 `--lr-form-control-label-color`.
 
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
+
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`".
 
 An editable form-associated token list. Enter, comma, Tab, or blur commits a token; Tab is not
 prevented, so focus still advances normally. Backspace removes the last token. `value` is a
@@ -6621,6 +6635,8 @@ Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-lab
 
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`".
+
 Long translated form chrome wraps within the host, while long source stays reachable through the
 editor's internal scroll extent instead of widening the page. The `Narrow RTL long content
 (320px)` story covers both boundaries together.
@@ -6647,6 +6663,7 @@ property and the attribute are equivalent: `el.appearance = 'filled'` repaints t
 **Properties:**
 
 - `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`, reflected) — `'hidden'` removes the label visually while it stays the accessible name; hint, error and required semantics are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
+- `labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) — `'start'` puts the label in an inline-start column with hint and error under the field (see "Label beside the field: `label-placement`" in the shared forms notes).
 - `language: string = ''` — reflected on the host and projected onto the `editor` part as
   `data-language`; purely a consumer-reachable styling/metadata hook, nothing tokenizes the text
 - `withoutLineNumbers: boolean = false` (attribute `without-line-numbers`, reflected) — omits the
@@ -6907,6 +6924,12 @@ and:
   value (or the mirrored default); when neither spelling is authored, the panel is actually placed
   with the cascading `--lr-positioning-strategy` custom property honored ahead of that default —
   see **Themeable custom properties** below
+- `labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) — `'start'`
+  puts the label in an inline-start column beside the trigger (or the inline panel), sized by
+  `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default
+  `var(--lr-space-m)`), with hint and error under it, returning above the field below
+  `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label
+  beside the field: `label-placement`" in the shared forms notes
 - `withLabel: boolean = false` (`with-label`, reflected) and `withHint: boolean = false`
   (`with-hint`, reflected) — SSR hints that the corresponding slots are populated, so their chrome
   is present before client-side slot observation
@@ -6953,7 +6976,7 @@ one bubbling/composed native `Event` named `change`, followed by `lr-change` wit
 accepted text-field change/Enter, or an eyedropper result. A drag or repeated key can therefore
 emit several `input`/`lr-input` edit pairs but only one `change`/`lr-change` commit pair.
 Before a swatch click, an accepted text entry or an eyedropper result changes the value, the
-cancelable `lr-color-picker-change-request` (`detail: { value, previousValue }`, the proposed
+cancelable `lr-change-request` (`detail: { value, previousValue }`, the proposed
 serialized colour while `value` still holds the current one) is dispatched. `preventDefault()`
 keeps the current colour and suppresses every `input`/`lr-input`/`change`/`lr-change`; a listener
 may instead resolve the request by assigning `value` itself, which also suppresses the built-in
@@ -7486,6 +7509,8 @@ Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-lab
 `--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`.
 
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
+
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`".
 
 A closed-list locale switcher over the library's own locale registry. First-party invention (no
 Web Awesome equivalent). With `locales` unset (the default), the offered rows are exactly
@@ -8322,6 +8347,8 @@ Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-lab
 
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`".
+
 A form-associated, single-currency selector with a compact ISO-code trigger and localized currency
 names and symbols in its options. It composes `lr-select` (or `lr-combobox` when searchable) and `lr-option`; no additional popover,
 currency-name table or optional peer is needed. Selection changes the field value only: exchange
@@ -8512,6 +8539,8 @@ Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-lab
 
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`".
+
 A form-associated country/territory selector with localized names and decorative emoji flags.
 Import `@aceshooting/lyra-ui/components/lr-country-picker.js`. The default catalog is the pinned
 249-code ISO alpha-2 list. `value` defaults to `''`; valid two-letter values are trimmed and
@@ -8636,6 +8665,8 @@ Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-lab
 
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`".
+
 A form-associated identifier selector. Import
 `@aceshooting/lyra-ui/components/lr-time-zone-picker.js`. It follows the
 [shared field contract](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/components/lr-country-picker.md),
@@ -8692,6 +8723,8 @@ Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-lab
 `--lr-form-control-label-color`.
 
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
+
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`".
 
 A form-associated measurement-unit selector. Import
 `@aceshooting/lyra-ui/components/lr-unit-picker.js`. It follows the
@@ -8797,6 +8830,8 @@ Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-lab
 
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`".
+
 A form control that captures a drawn signature with a mouse, touch, a stylus or the keyboard and
 submits it as a PNG data URL. Strokes are stored as fractions of the pad box and drawn as SVG, so a
 resize, zoom or theme change never redraws or distorts them; the surface fills its allocation's
@@ -8827,6 +8862,7 @@ property and the attribute are equivalent: `el.appearance = 'filled'` repaints t
 **Properties:**
 
 - `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`, reflected) — `'hidden'` removes the label visually while it stays the accessible name; hint, error and required semantics are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
+- `labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) — `'start'` puts the label in an inline-start column with hint and error under the field (see "Label beside the field: `label-placement`" in the shared forms notes).
 - `readonly` (default `false`) keeps the signature focusable and submittable while blocking drawing
   and clearing. Setting it discards an in-progress stroke.
 

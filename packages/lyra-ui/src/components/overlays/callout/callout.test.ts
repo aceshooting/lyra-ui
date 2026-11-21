@@ -141,6 +141,13 @@ it('draws the close glyph with the shared SVG icon instead of a font-dependent t
   expect((glyph.textContent ?? '').trim()).to.equal('');
 });
 
+it('paints its border from --lr-callout-border-color', async () => {
+  const el = (await fixture(html`
+    <lr-callout style="--lr-callout-border-color: rgb(1, 2, 3)">Message</lr-callout>
+  `)) as LyraCallout;
+  expect(getComputedStyle(el).borderTopColor).to.equal('rgb(1, 2, 3)');
+});
+
 it('inherits the panel font through the close control and text glyph', async () => {
   const el = (await fixture(html`
     <lr-callout closable style="--lr-callout-font-size: 20px">Message</lr-callout>

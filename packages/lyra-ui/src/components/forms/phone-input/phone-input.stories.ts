@@ -302,3 +302,13 @@ export const PlaceholderColor: Story = {
   render: () => html`<lr-phone-input label="Phone" placeholder="Enter a value"
     style="--lr-phone-input-placeholder-color: var(--lr-color-neutral)"></lr-phone-input>`,
 };
+
+/** `label-placement="start"` sets the label in an inline-start column, with the hint under the
+ *  field; below `--lr-form-control-label-collapse-inline-size` it returns above the field. */
+export const LabelPlacementStart: StoryObj = {
+  render: () => html`
+    <div style="display:grid;gap:var(--lr-space-m);max-inline-size:var(--lr-size-36rem)">
+      <lr-phone-input label="Phone" label-placement="start" hint="Used for delivery updates" default-country="LU" .adapter=${demoAdapter}></lr-phone-input>
+    </div>
+  `,
+};

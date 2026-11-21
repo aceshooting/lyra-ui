@@ -33,7 +33,7 @@ type HtmlFetchState =
   | { kind: 'error'; message: () => string };
 
 export interface LyraHtmlViewerEventMap extends LyraTextViewerTargetEventMap {
-  'lr-load': CustomEvent<Record<string, never>>;
+  'lr-load': CustomEvent<null>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
   'lr-anchor-result': CustomEvent<AnchorResultDetail>;
@@ -54,7 +54,7 @@ class LyraHtmlViewerBase extends LyraElement<LyraHtmlViewerEventMap> {}
  * rendered preview.
  *
  * @customElement lr-html-viewer
- * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with empty detail.
+ * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with a `null` detail.
  * @event lr-render-error - Fired when fetching or sanitizing the document fails.
  * @event {CustomEvent<LyraSearchChangeDetail>} lr-search-change -
  *   Fired whenever search state changes. `matchCountExact=false` makes the retained count a lower
@@ -136,7 +136,7 @@ export class LyraHtmlViewer extends TextViewerTarget(LyraHtmlViewerBase) {
       this.fetchState.kind === 'error' ? this.fetchState.message() : this.localize('loadingDocument'),
     );
     if (changed.has('src')) this.scheduleAfterUpdate(() => { void this.load(); });
-    if (this.isConnected && changed.has('fetchState') && this.fetchState.kind === 'loaded') this.emit('lr-load', {});
+    if (this.isConnected && changed.has('fetchState') && this.fetchState.kind === 'loaded') this.emit('lr-load', null);
   }
 
   override connectedCallback(): void {

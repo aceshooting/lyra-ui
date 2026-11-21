@@ -36,7 +36,7 @@ export interface LyraSegmentedItem {
  *  that wrap (`wrap`), or a fixed-column grid (`grid`). */
 export type LyraSegmentedLayout = 'scroll' | 'wrap' | 'grid';
 
-/** Detail of `lr-segmented-select-request`. */
+/** Detail of `lr-change-request`. */
 export interface LyraSegmentedSelectRequestDetail {
   /** Value of the segment the user is selecting. */
   readonly value: string;
@@ -45,7 +45,7 @@ export interface LyraSegmentedSelectRequestDetail {
 }
 
 export interface LyraSegmentedEventMap {
-  'lr-segmented-select-request': CustomEvent<LyraSegmentedSelectRequestDetail>;
+  'lr-change-request': CustomEvent<LyraSegmentedSelectRequestDetail>;
   'lr-change': CustomEvent<{ value: string }>;
   'lr-activate': CustomEvent<{ value: string }>;
 }
@@ -124,7 +124,7 @@ function snapshotSegmentedItems(
  * This composite is not form-associated; the caption does not add label-click behavior.
  *
  * @customElement lr-segmented
- * @event lr-segmented-select-request - A user activation (click, or an Arrow/Home/End key) is
+ * @event lr-change-request - A user activation (click, or an Arrow/Home/End key) is
  *   about to select a segment whose value differs from `value`; `detail: { value, previousValue }`
  *   carries the proposed value while `value` still holds the current one. Cancelable: calling
  *   `preventDefault()` keeps the current selection, and neither `lr-change` nor `lr-activate`
@@ -245,7 +245,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     this.itemsSnapshot.assign(this, 'items', value);
   }
 
-  // A listener that answers `lr-segmented-select-request` by assigning `value` finishes before the
+  // A listener that answers `lr-change-request` by assigning `value` finishes before the
   // built-in commit runs; the guard records that it wrote at all, even the value already held.
   private readonly selectGuard = new VetoWriteGuard();
   private _value = '';
@@ -327,7 +327,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     this.renderRoot.querySelector('[part="base"]')
   );
 
-  /** Returns false when a `lr-segmented-select-request` listener refused or redirected it. */
+  /** Returns false when a `lr-change-request` listener refused or redirected it. */
   private select(item: Readonly<LyraSegmentedItem>): boolean {
     if (item.disabled || this.disabled) return false;
     if (item !== this.selectedItem) {
@@ -337,7 +337,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
         const request = requestThenCommit({
           requestDetail: { value: item.value, previousValue: this.value },
           emitRequest: (detail, init: { cancelable: true }) =>
-            this.emit('lr-segmented-select-request', detail, init),
+            this.emit('lr-change-request', detail, init),
           guard: this.selectGuard,
           commit: () => {
             if (item.disabled || this.disabled) return;

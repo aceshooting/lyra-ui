@@ -104,7 +104,12 @@ const DEFAULT_PAGE_SIZE = 100;
  *   unparameterized table, the default `K`. Not cancelable in either case: it announces a
  *   selection that has already changed rather than proposing one.
  * @event lr-filter-change - The filter field changed. Frozen readonly `detail: { filterText }`.
- * @event lr-page-request - Cancelable one-based page proposal with readonly `{ page }`.
+ * @event lr-before-page-change - Cancelable page proposal from the nested pager, fired on the host
+ *   before `lr-page-change`. Frozen readonly `detail: { page, pageSize, offset }`: `page` is
+ *   one-based, like `page` itself and `<lr-pagination>`, and `offset` is `(page - 1) * pageSize`,
+ *   the zero-based index of the page's first row. The nested pager's own event of this name stops
+ *   inside the shadow root, so one page action reaches a document listener once, targeted at the
+ *   table. Vetoing it keeps `page` and suppresses `lr-page-change`.
  * @event lr-page-change - A pagination control requested a page. Frozen readonly `detail: { page }`.
  * @event lr-cell-edit - An inline editor committed a value. `detail: { row, columnKey, value }`.
  * @event lr-column-resize-request - Cancelable proposal before accepting a keyboard resize or
@@ -131,7 +136,7 @@ const DEFAULT_PAGE_SIZE = 100;
  *   (`stack` is `always`, or `auto` below the breakpoint); hidden from assistive technology, which
  *   already reads the column header.
  * @cssprop [--lr-table-stack-breakpoint=var(--lr-size-36rem)] - Allocation below which `stack="auto"` stacks rows.
- * @cssprop [--lr-table-stack-label-size=40%] - Inline size of a stacked cell's caption; the value flows after it.
+ * @cssprop [--lr-table-stack-label-inline-size=40%] - Inline size of a stacked cell's caption; the value flows after it.
  * @csspart cell-link - The real anchor wrapping a body cell's resting content while the column's
  *   `href(row)` returns a safe URL. It carries the column's `target` and a guarded `rel`.
  * @csspart cell-content - The `display: block` wrapper around a body cell's resting content,
@@ -1922,7 +1927,10 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   private onPaginationRequest = (event: CustomEvent<{ page: number }>): void => {
     event.stopPropagation();
     const { page, pageSize, rows, totalItems, paginationMode, filterText, unknownTotal, hasNext } = this;
-    if (this.emit('lr-page-request', Object.freeze({ page: event.detail.page }), { cancelable: true }).defaultPrevented ||
+    const requested = event.detail.page;
+    const size = this.normalizedPageSize;
+    const detail = Object.freeze({ page: requested, pageSize: size, offset: (requested - 1) * size });
+    if (this.emit('lr-before-page-change', detail, { cancelable: true }).defaultPrevented ||
       !this.isConnected || this.page !== page || this.pageSize !== pageSize || this.rows !== rows ||
       this.totalItems !== totalItems || this.paginationMode !== paginationMode || this.filterText !== filterText ||
       this.unknownTotal !== unknownTotal || this.hasNext !== hasNext) event.preventDefault();

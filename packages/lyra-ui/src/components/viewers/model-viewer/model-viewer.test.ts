@@ -319,6 +319,10 @@ describe('camera controls', () => {
     expect(toolbarButtons(viewer).map(button => button.disabled)).to.deep.equal([true, true, true, true, true, true, true]);
     expect(surfaceOf(viewer).getAttribute('tabindex')).to.equal('-1');
   });
+  it('paints toolbar actions from --lr-model-viewer-action-bg', async () => {
+    const viewer = await fixture<LyraModelViewer>(html`<lr-model-viewer src=${source} format="obj" style="--lr-model-viewer-action-bg: rgb(1, 2, 3)"></lr-model-viewer>`); await ready(viewer);
+    expect(getComputedStyle(toolbarButtons(viewer)[0]!).backgroundColor).to.equal('rgb(1, 2, 3)');
+  });
   it('labels and operates every toolbar action and reports each as a user camera change', async () => {
     const viewer = await fixture<LyraModelViewer>(html`<lr-model-viewer src=${source} format="obj"></lr-model-viewer>`); await ready(viewer);
     const cameras: Array<{ yaw: number; pitch: number; distance: number }> = [];

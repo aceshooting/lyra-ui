@@ -4,7 +4,7 @@ import { glassSurface } from '../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../internal/glass-scroll-layer.styles.js';
 import { glassIndependentRootStyles } from '../../internal/glass-independent-root.styles.js';
 import { formControlFocusHalo, formControlRequiredMarker } from '../../internal/form-control.styles.js';
-import { formControlChrome } from '../../internal/form-control/chrome.styles.js';
+import { formControlChrome, formControlLabelPlacement } from '../../internal/form-control/chrome.styles.js';
 import {
   anchoredPopupOpen,
   anchoredPopupReveal,
@@ -88,6 +88,7 @@ export function catalogPickerStyles(
     }
 
     ${formControlChrome}
+    ${formControlLabelPlacement}
 
     ${formControlRequiredMarker}
 

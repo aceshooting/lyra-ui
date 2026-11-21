@@ -291,7 +291,7 @@ export const WideGfmTables: Story = {
   </div>`,
 };
 export const CodeBlockHeaders: Story = {
-  render: () => html`<lr-markdown code-block-header style="--lr-markdown-code-block-bg: var(--lr-color-surface-raised); --lr-markdown-content-min-size: var(--lr-size-3rem); --lr-markdown-code-copy-bg-hover: var(--lr-color-warning-quiet)" .content=${'```ts\nconst greeting = "Hello";\n```\n\n    indented code'}></lr-markdown>`,
+  render: () => html`<lr-markdown code-block-header style="--lr-markdown-code-block-bg: var(--lr-color-surface-raised); --lr-markdown-content-min-size: var(--lr-size-3rem); --lr-markdown-code-copy-hover-bg: var(--lr-color-warning-quiet)" .content=${'```ts\nconst greeting = "Hello";\n```\n\n    indented code'}></lr-markdown>`,
 };
 export const RightToLeftCode: Story = {
   parameters: { docs: { description: { story: 'Arabic prose with inline code, a fenced block with one long line, an indented block and an authored `<pre>` of Arabic verse in sanitize mode. Code reads left-to-right; prose and the authored verse follow their own direction.' } } },

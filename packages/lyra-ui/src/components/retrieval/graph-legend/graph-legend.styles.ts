@@ -37,7 +37,7 @@ export const styles = css`
     transition: var(--lr-transition-interactive);
   }
   button[part~='item']:hover {
-    background: var(--lr-graph-legend-item-hover-fill, ${hoverFill('transparent')});
+    background: var(--lr-graph-legend-item-hover-bg, ${hoverFill('transparent')});
   }
   button[part~='item']:active {
     background: ${activeFill('transparent')};

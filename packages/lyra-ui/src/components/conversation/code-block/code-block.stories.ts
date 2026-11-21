@@ -67,7 +67,7 @@ export const ThemedScrollbar: Story = {
         language="typescript"
         .code=${tsSample}
         collapsible line-numbers activatable-lines
-        style="max-width: 32rem; --lr-code-block-max-height: 6rem; --lr-code-block-header-bg: var(--lr-color-surface-raised); --lr-code-block-padding: var(--lr-space-m); --lr-code-block-toggle-bg-hover: var(--lr-color-warning-quiet); --lr-code-block-gutter-bg-hover: var(--lr-color-warning-quiet);"
+        style="max-width: 32rem; --lr-code-block-max-height: 6rem; --lr-code-block-header-bg: var(--lr-color-surface-raised); --lr-code-block-padding: var(--lr-space-m); --lr-code-block-toggle-hover-bg: var(--lr-color-warning-quiet); --lr-code-block-gutter-hover-bg: var(--lr-color-warning-quiet);"
       ></lr-code-block>
     </div>
   `,

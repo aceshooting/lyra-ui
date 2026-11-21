@@ -49,7 +49,7 @@ it('includes the row key in the default expand and collapse names', async () => 
 it('lets the table owner veto a page request before the client page changes', async () => {
   const table = await fixture<LyraTable<Row>>(html`<lr-table page-size="1" .rows=${rows}
     .columns=${columns} .rowKey=${(r: Row) => r.id}></lr-table>`);
-  table.addEventListener('lr-page-request', event => event.preventDefault());
+  table.addEventListener('lr-before-page-change', event => event.preventDefault());
   table.shadowRoot!.querySelector('lr-pagination')!.shadowRoot!.querySelector<HTMLButtonElement>('[part~="next-button"]')!.click();
   expect(table.page).to.equal(1);
 });

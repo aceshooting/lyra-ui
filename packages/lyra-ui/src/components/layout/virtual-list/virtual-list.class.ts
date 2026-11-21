@@ -456,7 +456,7 @@ export interface LyraVirtualListEventMap {
  *   virtualized list needs a bounded scroll extent, so this ships a default rather than
  *   collapsing to zero when a caller does not size the host. Ignored while `scrollElement` names an
  *   external scroller, whose own height is the visible band.
- * @cssprop [--lr-virtual-list-active-row-background=color-mix(in srgb, currentColor 8%, transparent)] -
+ * @cssprop [--lr-virtual-list-active-row-bg=color-mix(in srgb, currentColor 8%, transparent)] -
  *   Background of the row matching `active-item-id` (the `aria-current="true"` row). Set to
  *   `transparent` to opt out.
  * @cssprop [--lr-virtual-list-hover-outline-width=var(--lr-border-width-thin)] - Outline width of

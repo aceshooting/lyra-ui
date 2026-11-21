@@ -110,17 +110,17 @@ export const styles = css`
   [part='highlight-action'] {
     ${iconHitTarget}
     ${nativeControlSurface}
-    background: var(--lr-highlight-layer-action-background, var(--lr-color-surface));
+    background: var(--lr-highlight-layer-action-bg, var(--lr-color-surface));
     ${interactiveTransition}
     border-radius: var(--lr-radius-xs);
     pointer-events: auto;
     cursor: pointer;
   }
   [part='highlight-action']:hover {
-    background: var(--lr-highlight-layer-action-hover-background, var(--lr-color-surface-raised));
+    background: var(--lr-highlight-layer-action-hover-bg, var(--lr-color-surface-raised));
   }
   [part='highlight-action']:active {
-    background: var(--lr-highlight-layer-action-active-background, ${activeFill('var(--lr-highlight-layer-action-hover-background, var(--lr-color-surface-raised))')});
+    background: var(--lr-highlight-layer-action-active-bg, ${activeFill('var(--lr-highlight-layer-action-hover-bg, var(--lr-color-surface-raised))')});
   }
   [part='highlight-action']:focus-visible {
     ${focusRingShorthand}

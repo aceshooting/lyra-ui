@@ -605,7 +605,7 @@ export const ManualFocusRemoval: StoryObj = {
 
 export const FilledPanel: Story = {
   render: () => html`
-    <lr-tab-group fill style="block-size: 16rem">
+    <lr-tab-group fill-body style="block-size: 16rem">
       <lr-tab panel="files">Files</lr-tab>
       <lr-tab panel="summary">Summary</lr-tab>
       <lr-tab-panel name="files">

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `editor`: `--lr-code-editor-radius`, `--lr-theme-scrollbar-width`, `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-color`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -21,6 +21,8 @@ Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-lab
 `--lr-form-control-label-color`.
 
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
+
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`".
 
 Long translated form chrome wraps within the host, while long source stays reachable through the
 editor's internal scroll extent instead of widening the page. The `Narrow RTL long content
@@ -48,6 +50,7 @@ property and the attribute are equivalent: `el.appearance = 'filled'` repaints t
 **Properties:**
 
 - `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`, reflected) — `'hidden'` removes the label visually while it stays the accessible name; hint, error and required semantics are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
+- `labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) — `'start'` puts the label in an inline-start column with hint and error under the field (see "Label beside the field: `label-placement`" in the shared forms notes).
 - `language: string = ''` — reflected on the host and projected onto the `editor` part as
   `data-language`; purely a consumer-reachable styling/metadata hook, nothing tokenizes the text
 - `withoutLineNumbers: boolean = false` (attribute `without-line-numbers`, reflected) — omits the

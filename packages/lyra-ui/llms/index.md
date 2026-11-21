@@ -46,9 +46,9 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-icon-button` · lr-icon-button.js · `stable` since `4.0.0` · ~40 KiB gzip — an accessible icon-only action button.
 - `lr-input` · lr-input.js · `stable` since `4.0.0` · ~46 KiB gzip — a single-line plain-text input primitive, the `lr-*` equivalent of a plain `wa-input`, form-associated via the `FormAssociated` mixin...
 - `lr-number-input` · lr-number-input.js · `stable` since `4.0.0` · ~48 KiB gzip — a numeric field with the complete `lr-input` form, validation, and native editing contract, plus its own increment/decrement stepper pair.
-- `lr-time-input` · lr-time-input.js · `stable` since `4.0.0` · ~72 KiB gzip — a locale-aware segmented time field with an attached column picker.
+- `lr-time-input` · lr-time-input.js · `stable` since `4.0.0` · ~73 KiB gzip — a locale-aware segmented time field with an attached column picker.
 - `lr-native-time-input` · lr-native-time-input.js · `stable` since `8.0.0` · ~46 KiB gzip — the browser-native time field preserved from Lyra 7.
-- `lr-phone-input` · lr-phone-input.js · `stable` since `4.0.0` · ~55 KiB gzip — a country-aware telephone field whose form value is canonical E.164.
+- `lr-phone-input` · lr-phone-input.js · `stable` since `4.0.0` · ~56 KiB gzip — a country-aware telephone field whose form value is canonical E.164.
 - `lr-time-range` · lr-time-range.js · `stable` since `4.0.0` · ~39 KiB gzip — a two-handle brush/scrubber over a numeric domain.
 - `lr-swatch-picker` · lr-swatch-picker.js · `stable` since `4.0.0` · ~29 KiB gzip — - a single-select picker over a small, fixed set of color swatches with the WAI-ARIA APG `radiogroup` contract built in...
 - `lr-checkbox` · lr-checkbox.js · `stable` since `4.0.0` · ~46 KiB gzip — a boolean form control.
@@ -59,7 +59,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-otp-input` · lr-otp-input.js · `stable` since `8.0.0` · ~44 KiB gzip — a form-associated one-time-code field: several character segments that together hold one value.
 - `lr-radio-group` · lr-radio-group.js · `stable` since `4.0.0` · ~45 KiB gzip — a labeled, keyboard-navigable group of radios.
 - `lr-checkbox-group` · lr-checkbox-group.js · `stable` since `4.0.0` · ~43 KiB gzip — a form-associated group of `<lr-checkbox>` elements.
-- `lr-token-input` · lr-token-input.js · `stable` since `4.0.0` · ~46 KiB gzip — an editable, form-associated list of removable tokens.
+- `lr-token-input` · lr-token-input.js · `stable` since `4.0.0` · ~47 KiB gzip — an editable, form-associated list of removable tokens.
 - `lr-code-editor` · lr-code-editor.js · `stable` since `4.0.0` · ~44 KiB gzip — dependency-free multiline code editing surface with optional line numbers.
 - `lr-color-picker` · lr-color-picker.js · `stable` since `4.0.0` · ~72 KiB gzip — a form-associated colour picker: a compact swatch trigger that opens a popover with a saturation/brightness grid, a hue slider, an...
 - `lr-emoji-picker` · lr-emoji-picker.js · `stable` since `4.0.0` · ~50 KiB gzip — a searchable, keyboard-navigable, form-associated emoji picker.
@@ -297,7 +297,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-checkpoint` · lr-checkpoint.js · `stable` since `4.0.0` · ~27 KiB gzip — an inline conversation restore point: a labeled marker between messages whose Restore affordance confirms inline, then hands the host a...
 - `lr-usage-badge` · lr-usage-badge.js · `stable` since `4.0.0` · ~50 KiB gzip — a compact, static resource strip for one message or run: tokens in/out, cost, latency, with a hover or keyboard-focus tooltip breakdown.
 - `lr-widget-renderer` · lr-widget-renderer.js · `stable` since `4.0.0` · ~115 KiB gzip — renders an agent-streamed declarative JSON widget tree through an allowlisted `type -> lyra tag` registry (see `registry.ts`/`resolve.ts`...
-- `lr-voice-picker` · lr-voice-picker.js · `stable` since `4.0.0` · ~75 KiB gzip — a TTS voice selector over a host-supplied `catalog`, mirroring `lr-model-select`'s closed-dropdown/free-text-combobox dual mode...
+- `lr-voice-picker` · lr-voice-picker.js · `stable` since `4.0.0` · ~76 KiB gzip — a TTS voice selector over a host-supplied `catalog`, mirroring `lr-model-select`'s closed-dropdown/free-text-combobox dual mode...
 - `lr-agent-workspace` · lr-agent-workspace.js · `stable` since `4.2.0` · ~317 KiB gzip — a responsive, controlled shell for an AI conversation and its supporting agent state.
 - `lr-message-parts` · lr-message-parts.js · `stable` since `7.0.0` · ~215 KiB gzip — renders ordered, interleavable provider-neutral AI message parts.
 - `lr-prompt-input` · lr-prompt-input.js · `stable` since `7.0.0` · ~172 KiB gzip — a composed AI prompt surface combining the chat composer with attachments, model and voice selection, retrieval sources, mentions, slash...

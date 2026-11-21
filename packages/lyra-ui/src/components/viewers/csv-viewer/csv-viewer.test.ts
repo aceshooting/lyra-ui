@@ -74,6 +74,15 @@ describe('lr-csv-viewer', () => {
     }
   });
 
+  it('paints its base from --lr-csv-viewer-bg and --lr-csv-viewer-radius', async () => {
+    const el = (await fixture(
+      html`<lr-csv-viewer style="--lr-csv-viewer-bg: rgb(1, 2, 3); --lr-csv-viewer-radius: 7px"></lr-csv-viewer>`
+    )) as LyraCsvViewer;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    expect(getComputedStyle(base).backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(base).borderTopLeftRadius).to.equal('7px');
+  });
+
   it('renders an empty localized state by default', async () => {
     const el = (await fixture(
       html`<lr-csv-viewer></lr-csv-viewer>`

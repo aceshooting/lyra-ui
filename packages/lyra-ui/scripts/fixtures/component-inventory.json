@@ -2663,12 +2663,12 @@
             "default": "var(--lr-color-brand)"
           },
           {
-            "name": "--lr-activity-feed-header-hover-bg",
+            "name": "--lr-activity-feed-header-active-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-activity-feed-header-pressed-bg",
+            "name": "--lr-activity-feed-header-hover-bg",
             "deprecated": null,
             "hasDefault": false
           },
@@ -5414,7 +5414,7 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-alert-border",
+            "name": "--lr-alert-border-color",
             "deprecated": null,
             "hasDefault": false
           },
@@ -8741,15 +8741,15 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-approval-queue-row-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-approval-queue-row-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-surface-raised)"
-          },
-          {
-            "name": "--lr-approval-queue-row-pressed-bg",
-            "deprecated": null,
-            "hasDefault": false
           },
           {
             "name": "--lr-approval-queue-selected-border",
@@ -8974,7 +8974,7 @@
           },
           {
             "name": "lr-load",
-            "type": "CustomEvent<Record<string, never>>",
+            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent",
             "bubbles": true,
@@ -19483,7 +19483,7 @@
           },
           {
             "name": "lr-load",
-            "type": "CustomEvent<Record<string, never>>",
+            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent",
             "bubbles": true,
@@ -19969,7 +19969,7 @@
             "default": "var(--lr-color-fill-quiet,var(--lr-color-brand-fill-quiet))"
           },
           {
-            "name": "--lr-callout-border",
+            "name": "--lr-callout-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-fill-loud,var(--lr-color-brand-fill-loud))"
@@ -30264,24 +30264,24 @@
             "default": "var(--lr-font-mono)"
           },
           {
+            "name": "--lr-code-block-gutter-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-code-block-gutter-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "transparent"
           },
           {
-            "name": "--lr-code-block-gutter-bg-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-code-block-gutter-bg-hover",
+            "name": "--lr-code-block-gutter-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
           },
           {
-            "name": "--lr-code-block-gutter-color-hover",
+            "name": "--lr-code-block-gutter-hover-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "inherit"
@@ -30347,21 +30347,21 @@
             "default": 2
           },
           {
-            "name": "--lr-code-block-toggle-bg",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "transparent"
-          },
-          {
-            "name": "--lr-code-block-toggle-bg-active",
+            "name": "--lr-code-block-toggle-active-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-code-block-toggle-bg-hover",
+            "name": "--lr-code-block-toggle-active-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-brand-quiet)"
+            "default": "var(--lr-code-block-toggle-hover-color)"
+          },
+          {
+            "name": "--lr-code-block-toggle-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "transparent"
           },
           {
             "name": "--lr-code-block-toggle-color",
@@ -30370,13 +30370,13 @@
             "default": "var(--lr-color-text-quiet)"
           },
           {
-            "name": "--lr-code-block-toggle-color-active",
+            "name": "--lr-code-block-toggle-hover-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-code-block-toggle-color-hover)"
+            "default": "var(--lr-color-brand-quiet)"
           },
           {
-            "name": "--lr-code-block-toggle-color-hover",
+            "name": "--lr-code-block-toggle-hover-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -30888,24 +30888,24 @@
             "default": "var(--lr-font-mono)"
           },
           {
+            "name": "--lr-code-block-gutter-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-code-block-gutter-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "transparent"
           },
           {
-            "name": "--lr-code-block-gutter-bg-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-code-block-gutter-bg-hover",
+            "name": "--lr-code-block-gutter-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
           },
           {
-            "name": "--lr-code-block-gutter-color-hover",
+            "name": "--lr-code-block-gutter-hover-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "inherit"
@@ -30971,21 +30971,21 @@
             "default": 2
           },
           {
-            "name": "--lr-code-block-toggle-bg",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "transparent"
-          },
-          {
-            "name": "--lr-code-block-toggle-bg-active",
+            "name": "--lr-code-block-toggle-active-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-code-block-toggle-bg-hover",
+            "name": "--lr-code-block-toggle-active-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-color-brand-quiet)"
+            "default": "var(--lr-code-block-toggle-hover-color)"
+          },
+          {
+            "name": "--lr-code-block-toggle-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "transparent"
           },
           {
             "name": "--lr-code-block-toggle-color",
@@ -30994,13 +30994,13 @@
             "default": "var(--lr-color-text-quiet)"
           },
           {
-            "name": "--lr-code-block-toggle-color-active",
+            "name": "--lr-code-block-toggle-hover-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-code-block-toggle-color-hover)"
+            "default": "var(--lr-color-brand-quiet)"
           },
           {
-            "name": "--lr-code-block-toggle-color-hover",
+            "name": "--lr-code-block-toggle-hover-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -31233,6 +31233,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "visible"
+          },
+          {
+            "name": "label-placement",
+            "property": "labelPlacement",
+            "type": "LyraLabelPlacement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
           },
           {
             "name": "language",
@@ -31602,6 +31612,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "visible"
+          },
+          {
+            "name": "labelPlacement",
+            "attribute": "label-placement",
+            "type": "LyraLabelPlacement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
           },
           {
             "name": "labels",
@@ -32025,6 +32045,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-label-collapse-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-20rem)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -32041,6 +32067,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-font-weight-semibold)"
+          },
+          {
+            "name": "--lr-form-control-label-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
+          },
+          {
+            "name": "--lr-form-control-label-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "30%"
           },
           {
             "name": "--lr-form-control-required-color",
@@ -32476,6 +32514,16 @@
             "default": ""
           },
           {
+            "name": "label-placement",
+            "property": "labelPlacement",
+            "type": "LyraLabelPlacement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -32758,6 +32806,16 @@
             "default": ""
           },
           {
+            "name": "labelPlacement",
+            "attribute": "label-placement",
+            "type": "LyraLabelPlacement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
+          },
+          {
             "name": "labels",
             "attribute": null,
             "type": "NodeList",
@@ -33025,7 +33083,7 @@
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-color-picker-change-request",
+            "name": "lr-change-request",
             "type": "CustomEvent<{ value: string; previousValue: string }>",
             "cancelable": "always",
             "constructor": "CustomEvent"
@@ -33378,6 +33436,12 @@
             "default": "none"
           },
           {
+            "name": "--lr-form-control-label-collapse-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-20rem)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -33394,6 +33458,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
+          },
+          {
+            "name": "--lr-form-control-label-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "30%"
           },
           {
             "name": "--lr-form-control-required-color",
@@ -38404,7 +38480,7 @@
           },
           {
             "name": "lr-load",
-            "type": "CustomEvent<Record<string, never>>",
+            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent",
             "bubbles": true,
@@ -40957,6 +41033,16 @@
             "default": "visible"
           },
           {
+            "name": "label-placement",
+            "property": "labelPlacement",
+            "type": "LyraLabelPlacement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -41224,6 +41310,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "visible"
+          },
+          {
+            "name": "labelPlacement",
+            "attribute": "label-placement",
+            "type": "LyraLabelPlacement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
           },
           {
             "name": "labels",
@@ -41543,6 +41639,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-form-control-label-collapse-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-20rem)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -41559,6 +41661,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-font-weight-semibold)"
+          },
+          {
+            "name": "--lr-form-control-label-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
+          },
+          {
+            "name": "--lr-form-control-label-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "30%"
           }
         ],
         "cssStates": [],
@@ -42016,7 +42130,7 @@
           },
           {
             "name": "lr-load",
-            "type": "CustomEvent<Record<string, never>>",
+            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent",
             "bubbles": true,
@@ -42097,17 +42211,12 @@
         ],
         "cssProperties": [
           {
-            "name": "--lr-csv-viewer-background",
+            "name": "--lr-csv-viewer-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
             "name": "--lr-csv-viewer-border",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-csv-viewer-border-radius",
             "deprecated": null,
             "hasDefault": false
           },
@@ -42138,6 +42247,11 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-csv-viewer-radius",
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "cssStates": [],
@@ -42399,6 +42513,16 @@
             "default": "visible"
           },
           {
+            "name": "label-placement",
+            "property": "labelPlacement",
+            "type": "LyraLabelPlacement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -42656,6 +42780,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "visible"
+          },
+          {
+            "name": "labelPlacement",
+            "attribute": "label-placement",
+            "type": "LyraLabelPlacement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
           },
           {
             "name": "labels",
@@ -42971,6 +43105,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-form-control-label-collapse-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-20rem)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -42987,6 +43127,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-font-weight-semibold)"
+          },
+          {
+            "name": "--lr-form-control-label-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
+          },
+          {
+            "name": "--lr-form-control-label-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "30%"
           }
         ],
         "cssStates": [],
@@ -44682,38 +44834,20 @@
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-row-expand-toggle",
-            "type": "CustomEvent<Readonly<DataGridRowDetail<Row> & { expanded: boolean }>>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
             "name": "lr-row-select",
             "type": "CustomEvent<Readonly<DataGridSelectionDetail<Row>>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-search-change",
-            "type": "CustomEvent<Readonly<{ searchTerm: string }>>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-selection-change",
-            "type": "CustomEvent<Readonly<DataGridSelectionDetail<Row>>>",
-            "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-selection-request",
+            "name": "lr-row-select-request",
             "type": "CustomEvent<Readonly<{ selectedRowKeys: readonly DataGridKey[] }>>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-sort",
-            "type": "CustomEvent<Readonly<{ phase: 'commit'; sortKey: string; sortDir: 'asc' | 'desc' | null; sort: DataGridSortingState }>>",
+            "name": "lr-search-change",
+            "type": "CustomEvent<Readonly<{ searchTerm: string }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -45804,7 +45938,7 @@
           },
           {
             "name": "lr-load",
-            "type": "CustomEvent<Record<string, never>>",
+            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent",
             "bubbles": true,
@@ -45885,17 +46019,12 @@
         ],
         "cssProperties": [
           {
-            "name": "--lr-dataset-viewer-background",
+            "name": "--lr-dataset-viewer-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
             "name": "--lr-dataset-viewer-border",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-dataset-viewer-border-radius",
             "deprecated": null,
             "hasDefault": false
           },
@@ -45927,6 +46056,11 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-dataset-viewer-radius",
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "cssStates": [],
@@ -48724,15 +48858,15 @@
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-clear",
-            "type": "CustomEvent<null>",
-            "cancelable": "never",
+            "name": "lr-change-request",
+            "type": "CustomEvent<LyraDatePickerSelectRequestDetail>",
+            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-date-picker-select-request",
-            "type": "CustomEvent<LyraDatePickerSelectRequestDetail>",
-            "cancelable": "always",
+            "name": "lr-clear",
+            "type": "CustomEvent<null>",
+            "cancelable": "never",
             "constructor": "CustomEvent"
           },
           {
@@ -52989,18 +53123,18 @@
         ],
         "cssProperties": [
           {
-            "name": "--lr-document-preview-action-active-background",
+            "name": "--lr-document-preview-action-active-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-document-preview-action-background",
+            "name": "--lr-document-preview-action-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-surface)"
           },
           {
-            "name": "--lr-document-preview-action-hover-background",
+            "name": "--lr-document-preview-action-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-surface-raised)"
@@ -53793,18 +53927,18 @@
         ],
         "cssProperties": [
           {
-            "name": "--lr-docx-viewer-action-active-background",
+            "name": "--lr-docx-viewer-action-active-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-docx-viewer-action-background",
+            "name": "--lr-docx-viewer-action-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-surface)"
           },
           {
-            "name": "--lr-docx-viewer-action-hover-background",
+            "name": "--lr-docx-viewer-action-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-surface-raised)"
@@ -58702,7 +58836,7 @@
           },
           {
             "name": "lr-load",
-            "type": "CustomEvent<Record<string, never>>",
+            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent",
             "bubbles": true,
@@ -58839,17 +58973,17 @@
         ],
         "cssProperties": [
           {
-            "name": "--lr-email-viewer-action-active-background",
+            "name": "--lr-email-viewer-action-active-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-email-viewer-action-background",
+            "name": "--lr-email-viewer-action-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-email-viewer-action-hover-background",
+            "name": "--lr-email-viewer-action-hover-bg",
             "deprecated": null,
             "hasDefault": false
           },
@@ -59305,13 +59439,13 @@
             "default": "360px"
           },
           {
-            "name": "--lr-embedding-explorer-page-disabled-fill",
+            "name": "--lr-embedding-explorer-page-disabled-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-surface)"
           },
           {
-            "name": "--lr-embedding-explorer-row-selected-fill",
+            "name": "--lr-embedding-explorer-row-selected-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-fill-quiet)"
@@ -69981,7 +70115,7 @@
           },
           {
             "name": "lr-load",
-            "type": "CustomEvent<Record<string, never>>",
+            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent",
             "bubbles": true,
@@ -71127,7 +71261,7 @@
             "default": "var(--lr-color-success)"
           },
           {
-            "name": "--lr-graph-spatial-control-hover-fill",
+            "name": "--lr-graph-spatial-control-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "color-mix(in oklab, var(--_lr-spatial-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover))"
@@ -71435,7 +71569,7 @@
             "default": 0.5
           },
           {
-            "name": "--lr-graph-legend-item-hover-fill",
+            "name": "--lr-graph-legend-item-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover))"
@@ -74322,18 +74456,18 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-highlight-layer-action-active-background",
+            "name": "--lr-highlight-layer-action-active-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-highlight-layer-action-background",
+            "name": "--lr-highlight-layer-action-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-surface)"
           },
           {
-            "name": "--lr-highlight-layer-action-hover-background",
+            "name": "--lr-highlight-layer-action-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-surface-raised)"
@@ -75921,7 +76055,7 @@
           },
           {
             "name": "lr-load",
-            "type": "CustomEvent<Record<string, never>>",
+            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent",
             "bubbles": true,
@@ -83569,7 +83703,7 @@
             "default": "var(--lr-size-24rem)"
           },
           {
-            "name": "--lr-knowledge-graph-explorer-source-action-hover-fill",
+            "name": "--lr-knowledge-graph-explorer-source-action-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
@@ -87801,6 +87935,16 @@
             "default": "visible"
           },
           {
+            "name": "label-placement",
+            "property": "labelPlacement",
+            "type": "LyraLabelPlacement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -88063,6 +88207,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "visible"
+          },
+          {
+            "name": "labelPlacement",
+            "attribute": "label-placement",
+            "type": "LyraLabelPlacement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
           },
           {
             "name": "labels",
@@ -88423,6 +88577,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-form-control-label-collapse-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-20rem)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -88439,6 +88599,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-font-weight-semibold)"
+          },
+          {
+            "name": "--lr-form-control-label-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
+          },
+          {
+            "name": "--lr-form-control-label-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "30%"
           },
           {
             "name": "--lr-form-control-required-color",
@@ -91959,39 +92131,39 @@
             "default": "var(--lr-radius)"
           },
           {
+            "name": "--lr-markdown-code-copy-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-markdown-code-copy-active-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-markdown-code-copy-hover-color)"
+          },
+          {
             "name": "--lr-markdown-code-copy-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "transparent"
           },
           {
-            "name": "--lr-markdown-code-copy-bg-active",
+            "name": "--lr-markdown-code-copy-error-color",
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
           },
           {
-            "name": "--lr-markdown-code-copy-bg-hover",
+            "name": "--lr-markdown-code-copy-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
           },
           {
-            "name": "--lr-markdown-code-copy-color-active",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-markdown-code-copy-color-hover)"
-          },
-          {
-            "name": "--lr-markdown-code-copy-color-hover",
+            "name": "--lr-markdown-code-copy-hover-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
-          },
-          {
-            "name": "--lr-markdown-code-copy-error-color",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-color-danger)"
           },
           {
             "name": "--lr-markdown-code-copy-success-color",
@@ -92920,39 +93092,39 @@
             "default": "var(--lr-radius)"
           },
           {
+            "name": "--lr-markdown-code-copy-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-markdown-code-copy-active-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-markdown-code-copy-hover-color)"
+          },
+          {
             "name": "--lr-markdown-code-copy-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "transparent"
           },
           {
-            "name": "--lr-markdown-code-copy-bg-active",
+            "name": "--lr-markdown-code-copy-error-color",
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "var(--lr-color-danger)"
           },
           {
-            "name": "--lr-markdown-code-copy-bg-hover",
+            "name": "--lr-markdown-code-copy-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
           },
           {
-            "name": "--lr-markdown-code-copy-color-active",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-markdown-code-copy-color-hover)"
-          },
-          {
-            "name": "--lr-markdown-code-copy-color-hover",
+            "name": "--lr-markdown-code-copy-hover-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
-          },
-          {
-            "name": "--lr-markdown-code-copy-error-color",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-color-danger)"
           },
           {
             "name": "--lr-markdown-code-copy-success-color",
@@ -98070,6 +98242,16 @@
             "default": "visible"
           },
           {
+            "name": "label-placement",
+            "property": "labelPlacement",
+            "type": "LyraLabelPlacement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -98323,6 +98505,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "visible"
+          },
+          {
+            "name": "labelPlacement",
+            "attribute": "label-placement",
+            "type": "LyraLabelPlacement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
           },
           {
             "name": "labels",
@@ -98640,6 +98832,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-label-collapse-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-20rem)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -98656,6 +98854,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-font-weight-semibold)"
+          },
+          {
+            "name": "--lr-form-control-label-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
+          },
+          {
+            "name": "--lr-form-control-label-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "30%"
           },
           {
             "name": "--lr-form-control-padding-block",
@@ -99833,17 +100043,17 @@
         ],
         "cssProperties": [
           {
-            "name": "--lr-model-viewer-action-active-background",
+            "name": "--lr-model-viewer-action-active-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-model-viewer-action-background",
+            "name": "--lr-model-viewer-action-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-model-viewer-action-hover-background",
+            "name": "--lr-model-viewer-action-hover-bg",
             "deprecated": null,
             "hasDefault": false
           },
@@ -103684,7 +103894,7 @@
         ],
         "cssProperties": [
           {
-            "name": "--lr-neighbor-list-node-hover-fill",
+            "name": "--lr-neighbor-list-node-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
@@ -104038,7 +104248,7 @@
             "default": "var(--lr-input-action-color, var(--lr-color-text-quiet))"
           },
           {
-            "name": "--lr-node-palette-item-hover-fill",
+            "name": "--lr-node-palette-item-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-neutral-fill-quiet)"
@@ -106937,6 +107147,16 @@
             "default": "visible"
           },
           {
+            "name": "label-placement",
+            "property": "labelPlacement",
+            "type": "LyraLabelPlacement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
+          },
+          {
             "name": "length",
             "property": "length",
             "type": "number",
@@ -107215,6 +107435,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "visible"
+          },
+          {
+            "name": "labelPlacement",
+            "attribute": "label-placement",
+            "type": "LyraLabelPlacement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
           },
           {
             "name": "labels",
@@ -107540,6 +107770,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-label-collapse-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-20rem)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -107556,6 +107792,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-font-weight-semibold)"
+          },
+          {
+            "name": "--lr-form-control-label-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
+          },
+          {
+            "name": "--lr-form-control-label-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "30%"
           },
           {
             "name": "--lr-form-control-required-color",
@@ -110488,7 +110736,7 @@
         ],
         "cssProperties": [
           {
-            "name": "--lr-path-strip-action-hover-fill",
+            "name": "--lr-path-strip-action-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
@@ -111930,6 +112178,16 @@
             "default": "visible"
           },
           {
+            "name": "label-placement",
+            "property": "labelPlacement",
+            "type": "LyraLabelPlacement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -112325,6 +112583,16 @@
             "default": "visible"
           },
           {
+            "name": "labelPlacement",
+            "attribute": "label-placement",
+            "type": "LyraLabelPlacement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
+          },
+          {
             "name": "labels",
             "attribute": null,
             "type": "NodeList",
@@ -112661,6 +112929,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-label-collapse-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-20rem)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -112677,6 +112951,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-font-weight-semibold)"
+          },
+          {
+            "name": "--lr-form-control-label-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
+          },
+          {
+            "name": "--lr-form-control-label-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "30%"
           },
           {
             "name": "--lr-form-control-required-color",
@@ -124938,6 +125224,12 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-change-request",
+            "type": "CustomEvent<LyraRadioGroupSelectRequestDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-input",
             "type": "CustomEvent<{ value: string; option: LyraRadio; radio: LyraRadio }>",
             "cancelable": "never",
@@ -124946,12 +125238,6 @@
           {
             "name": "lr-invalid",
             "type": "CustomEvent<null>",
-            "cancelable": "always",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-radio-group-select-request",
-            "type": "CustomEvent<LyraRadioGroupSelectRequestDetail>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           }
@@ -126800,6 +127086,12 @@
             "constructor": "CustomEvent"
           },
           {
+            "name": "lr-change-request",
+            "type": "CustomEvent<LyraRatingChangeRequestDetail>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-hover",
             "type": "CustomEvent<{ phase: LyraRatingHoverPhase; value: number }>",
             "cancelable": "never",
@@ -126814,12 +127106,6 @@
           {
             "name": "lr-invalid",
             "type": "CustomEvent<null>",
-            "cancelable": "always",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-rating-change-request",
-            "type": "CustomEvent<LyraRatingChangeRequestDetail>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           }
@@ -133859,7 +134145,7 @@
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-segmented-select-request",
+            "name": "lr-change-request",
             "type": "CustomEvent<LyraSegmentedSelectRequestDetail>",
             "cancelable": "always",
             "constructor": "CustomEvent"
@@ -136876,6 +137162,16 @@
             "default": "visible"
           },
           {
+            "name": "label-placement",
+            "property": "labelPlacement",
+            "type": "LyraLabelPlacement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -136983,6 +137279,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "visible"
+          },
+          {
+            "name": "labelPlacement",
+            "attribute": "label-placement",
+            "type": "LyraLabelPlacement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
           },
           {
             "name": "locale",
@@ -137140,6 +137446,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-label-collapse-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-20rem)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -137156,6 +137468,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-font-weight-semibold)"
+          },
+          {
+            "name": "--lr-form-control-label-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
+          },
+          {
+            "name": "--lr-form-control-label-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "30%"
           },
           {
             "name": "--lr-form-control-required-color",
@@ -141663,7 +141987,7 @@
           },
           {
             "name": "lr-load",
-            "type": "CustomEvent<Record<string, never>>",
+            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent",
             "bubbles": true,
@@ -141742,17 +142066,12 @@
         ],
         "cssProperties": [
           {
-            "name": "--lr-spreadsheet-viewer-background",
+            "name": "--lr-spreadsheet-viewer-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
             "name": "--lr-spreadsheet-viewer-border",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-spreadsheet-viewer-border-radius",
             "deprecated": null,
             "hasDefault": false
           },
@@ -141789,6 +142108,11 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-spreadsheet-viewer-radius",
+            "deprecated": null,
+            "hasDefault": false
           }
         ],
         "cssStates": [],
@@ -142168,15 +142492,15 @@
             "default": "var(--lr-color-text-quiet)"
           },
           {
+            "name": "--lr-stack-trace-internal-toggle-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-stack-trace-internal-toggle-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
-          },
-          {
-            "name": "--lr-stack-trace-internal-toggle-pressed-bg",
-            "deprecated": null,
-            "hasDefault": false
           },
           {
             "name": "--lr-stack-trace-max-height",
@@ -145859,7 +146183,7 @@
           },
           {
             "name": "lr-load",
-            "type": "CustomEvent<Record<string, never>>",
+            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent",
             "bubbles": true,
@@ -145944,17 +146268,17 @@
         ],
         "cssProperties": [
           {
-            "name": "--lr-svg-viewer-action-active-background",
+            "name": "--lr-svg-viewer-action-active-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-svg-viewer-action-background",
+            "name": "--lr-svg-viewer-action-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-svg-viewer-action-hover-background",
+            "name": "--lr-svg-viewer-action-hover-bg",
             "deprecated": null,
             "hasDefault": false
           },
@@ -146219,7 +146543,7 @@
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-swatch-picker-select-request",
+            "name": "lr-change-request",
             "type": "CustomEvent<LyraSwatchPickerSelectRequestDetail>",
             "cancelable": "always",
             "constructor": "CustomEvent"
@@ -147507,8 +147831,8 @@
             "default": null
           },
           {
-            "name": "fill",
-            "property": "fill",
+            "name": "fill-body",
+            "property": "fillBody",
             "type": "boolean",
             "reflects": true,
             "inferred": false,
@@ -147617,8 +147941,8 @@
             "hasDefault": false
           },
           {
-            "name": "fill",
-            "attribute": "fill",
+            "name": "fillBody",
+            "attribute": "fill-body",
             "type": "boolean",
             "readonly": false,
             "reflects": true,
@@ -149311,6 +149635,12 @@
             "composed": true
           },
           {
+            "name": "lr-before-page-change",
+            "type": "CustomEvent<Readonly<{ page: number; pageSize: number; offset: number }>>",
+            "cancelable": "always",
+            "constructor": "CustomEvent"
+          },
+          {
             "name": "lr-cell-edit",
             "type": "CustomEvent<Readonly<{ row: T; columnKey: string; value: string | number }>>",
             "cancelable": "never",
@@ -149344,12 +149674,6 @@
             "name": "lr-page-change",
             "type": "CustomEvent<Readonly<{ page: number }>>",
             "cancelable": "never",
-            "constructor": "CustomEvent"
-          },
-          {
-            "name": "lr-page-request",
-            "type": "CustomEvent<Readonly<{ page: number }>>",
-            "cancelable": "always",
             "constructor": "CustomEvent"
           },
           {
@@ -149837,7 +150161,7 @@
             "default": "var(--lr-size-36rem)"
           },
           {
-            "name": "--lr-table-stack-label-size",
+            "name": "--lr-table-stack-label-inline-size",
             "deprecated": null,
             "hasDefault": true,
             "default": "40%"
@@ -150957,15 +151281,15 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-task-list-header-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-task-list-header-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
-          },
-          {
-            "name": "--lr-task-list-header-pressed-bg",
-            "deprecated": null,
-            "hasDefault": false
           },
           {
             "name": "--lr-task-list-incomplete-color",
@@ -150974,15 +151298,15 @@
             "default": "var(--lr-color-text-quiet)"
           },
           {
+            "name": "--lr-task-list-item-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-task-list-item-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
-          },
-          {
-            "name": "--lr-task-list-item-pressed-bg",
-            "deprecated": null,
-            "hasDefault": false
           },
           {
             "name": "--lr-task-list-pending-color",
@@ -153874,15 +154198,15 @@
             "default": "var(--lr-space-2xs) var(--lr-space-s)"
           },
           {
+            "name": "--lr-thinking-panel-header-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-thinking-panel-header-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
-          },
-          {
-            "name": "--lr-thinking-panel-header-pressed-bg",
-            "deprecated": null,
-            "hasDefault": false
           },
           {
             "name": "--lr-thinking-panel-max-block-size",
@@ -154108,8 +154432,8 @@
             "default": false
           },
           {
-            "name": "without-pin-glyph",
-            "property": "withoutPinGlyph",
+            "name": "without-pin-icon",
+            "property": "withoutPinIcon",
             "type": "boolean",
             "reflects": true,
             "inferred": false,
@@ -154415,8 +154739,8 @@
             "default": false
           },
           {
-            "name": "withoutPinGlyph",
-            "attribute": "without-pin-glyph",
+            "name": "withoutPinIcon",
+            "attribute": "without-pin-icon",
             "type": "boolean",
             "readonly": false,
             "reflects": true,
@@ -155142,6 +155466,16 @@
             "default": "visible"
           },
           {
+            "name": "label-placement",
+            "property": "labelPlacement",
+            "type": "LyraLabelPlacement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -155442,6 +155776,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "visible"
+          },
+          {
+            "name": "labelPlacement",
+            "attribute": "label-placement",
+            "type": "LyraLabelPlacement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
           },
           {
             "name": "labels",
@@ -155924,6 +156268,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-form-control-label-collapse-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-20rem)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -155940,6 +156290,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-font-weight-semibold)"
+          },
+          {
+            "name": "--lr-form-control-label-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
+          },
+          {
+            "name": "--lr-form-control-label-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "30%"
           },
           {
             "name": "--lr-form-control-required-color",
@@ -157236,6 +157598,16 @@
             "default": "visible"
           },
           {
+            "name": "label-placement",
+            "property": "labelPlacement",
+            "type": "LyraLabelPlacement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -157484,6 +157856,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "visible"
+          },
+          {
+            "name": "labelPlacement",
+            "attribute": "label-placement",
+            "type": "LyraLabelPlacement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
           },
           {
             "name": "labels",
@@ -157808,6 +158190,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-form-control-label-collapse-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-20rem)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -157824,6 +158212,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-font-weight-semibold)"
+          },
+          {
+            "name": "--lr-form-control-label-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
+          },
+          {
+            "name": "--lr-form-control-label-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "30%"
           }
         ],
         "cssStates": [],
@@ -160156,6 +160556,16 @@
             "default": "visible"
           },
           {
+            "name": "label-placement",
+            "property": "labelPlacement",
+            "type": "LyraLabelPlacement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -160438,6 +160848,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "visible"
+          },
+          {
+            "name": "labelPlacement",
+            "attribute": "label-placement",
+            "type": "LyraLabelPlacement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
           },
           {
             "name": "labels",
@@ -160758,6 +161178,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-label-collapse-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-20rem)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -160774,6 +161200,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-font-weight-semibold)"
+          },
+          {
+            "name": "--lr-form-control-label-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
+          },
+          {
+            "name": "--lr-form-control-label-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "30%"
           },
           {
             "name": "--lr-form-control-required-color",
@@ -162235,15 +162673,15 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-tool-call-block-header-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-tool-call-block-header-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
-          },
-          {
-            "name": "--lr-tool-call-block-header-pressed-bg",
-            "deprecated": null,
-            "hasDefault": false
           },
           {
             "name": "--lr-tool-call-block-radius",
@@ -168948,6 +169386,16 @@
             "default": "visible"
           },
           {
+            "name": "label-placement",
+            "property": "labelPlacement",
+            "type": "LyraLabelPlacement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -169196,6 +169644,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "visible"
+          },
+          {
+            "name": "labelPlacement",
+            "attribute": "label-placement",
+            "type": "LyraLabelPlacement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
           },
           {
             "name": "labels",
@@ -169520,6 +169978,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-form-control-label-collapse-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-20rem)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -169536,6 +170000,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-font-weight-semibold)"
+          },
+          {
+            "name": "--lr-form-control-label-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
+          },
+          {
+            "name": "--lr-form-control-label-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "30%"
           }
         ],
         "cssStates": [],
@@ -171641,7 +172117,7 @@
             "default": "auto"
           },
           {
-            "name": "--lr-virtual-list-active-row-background",
+            "name": "--lr-virtual-list-active-row-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "color-mix(in srgb, currentColor 8%, transparent)"
@@ -172061,6 +172537,16 @@
             "default": "visible"
           },
           {
+            "name": "label-placement",
+            "property": "labelPlacement",
+            "type": "LyraLabelPlacement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -172324,6 +172810,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "visible"
+          },
+          {
+            "name": "labelPlacement",
+            "attribute": "label-placement",
+            "type": "LyraLabelPlacement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
           },
           {
             "name": "labels",
@@ -172675,6 +173171,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-label-collapse-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-20rem)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -172691,6 +173193,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-font-weight-semibold)"
+          },
+          {
+            "name": "--lr-form-control-label-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
+          },
+          {
+            "name": "--lr-form-control-label-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "30%"
           },
           {
             "name": "--lr-form-control-padding-block",
@@ -173614,7 +174128,7 @@
             "constructor": "CustomEvent"
           },
           {
-            "name": "lr-widget-view-request",
+            "name": "lr-widget-view-change-request",
             "type": "CustomEvent<{ viewId: string }>",
             "cancelable": "always",
             "constructor": "CustomEvent"
@@ -174670,7 +175184,7 @@
           },
           {
             "name": "lr-load",
-            "type": "CustomEvent<Record<string, never>>",
+            "type": "CustomEvent<null>",
             "cancelable": "never",
             "constructor": "CustomEvent",
             "bubbles": true,
@@ -174805,17 +175319,17 @@
         ],
         "cssProperties": [
           {
-            "name": "--lr-xml-viewer-action-active-background",
+            "name": "--lr-xml-viewer-action-active-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-xml-viewer-action-background",
+            "name": "--lr-xml-viewer-action-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-xml-viewer-action-hover-background",
+            "name": "--lr-xml-viewer-action-hover-bg",
             "deprecated": null,
             "hasDefault": false
           },

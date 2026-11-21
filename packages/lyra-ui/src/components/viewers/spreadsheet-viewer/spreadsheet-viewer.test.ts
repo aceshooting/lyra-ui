@@ -125,6 +125,15 @@ describe('lr-spreadsheet-viewer', () => {
     ).to.be.at.most(1);
   });
 
+  it('paints its base from --lr-spreadsheet-viewer-bg and --lr-spreadsheet-viewer-radius', async () => {
+    const el = (await fixture(
+      html`<lr-spreadsheet-viewer style="--lr-spreadsheet-viewer-bg: rgb(1, 2, 3); --lr-spreadsheet-viewer-radius: 7px"></lr-spreadsheet-viewer>`
+    )) as LyraSpreadsheetViewer;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    expect(getComputedStyle(base).backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(base).borderTopLeftRadius).to.equal('7px');
+  });
+
   it('renders an empty localized state by default', async () => {
     const el = (await fixture(
       html`<lr-spreadsheet-viewer></lr-spreadsheet-viewer>`

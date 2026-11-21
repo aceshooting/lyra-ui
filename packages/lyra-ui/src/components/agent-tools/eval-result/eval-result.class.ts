@@ -586,7 +586,7 @@ export class LyraEvalResult extends LyraElement<LyraEvalResultEventMap> {
           }}
           @lr-row-click=${this.stopOwnedEvent}
           @lr-row-expand-request=${this.stopOwnedEvent}
-          @lr-page-request=${this.stopOwnedEvent}
+          @lr-before-page-change=${this.stopOwnedEvent}
           @lr-column-resize-request=${this.stopOwnedEvent}
         ></lr-table>
         ${selectionLoading || selectionFailed ? html`<div part="selection-status">${this.localize(selectionFailed ? 'sourceSelectionFailed' : 'sourceSelectionLoading')}${selectionFailed ? html`<button part="selection-retry" data-agent-action type="button" @click=${() => { if (current() && this.pairVersion === pairVersion) this.syncPair(true); }}>${this.localize('retry')}</button>` : nothing}</div>` : nothing}

@@ -17,7 +17,7 @@
 
 ## `lr-svg-viewer`
 
-Action backgrounds accept `--lr-svg-viewer-action-background`, `--lr-svg-viewer-action-hover-background` and `--lr-svg-viewer-action-active-background`.
+Action backgrounds accept `--lr-svg-viewer-action-bg`, `--lr-svg-viewer-action-hover-bg` and `--lr-svg-viewer-action-active-bg`.
 
 Fetches an SVG document, sanitizes it with the optional `dompurify` peer, and renders it inline.
 The shared `passive-svg` profile (the same post-sanitization engine used for embedded viewer markup)
@@ -64,7 +64,7 @@ when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnega
 carrying the same boolean. Called before the SVG has finished loading it retries for up to 5s (real
 timers) rather than failing immediately.
 
-**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+**Events:** `lr-load` carries a `null` detail and bubbles across shadow roots after the parsed document renders;
 `lr-render-error` with `detail.error` when fetching or sanitizing fails.
 `lr-highlight-activate` (`detail: { highlightId }`) — a region highlight was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found: boolean }`) — fired after an `anchor` assignment

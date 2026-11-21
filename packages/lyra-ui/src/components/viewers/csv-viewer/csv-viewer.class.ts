@@ -80,7 +80,7 @@ function indexKeyFunction(_item: unknown, index: number): number {
 
 export interface LyraCsvViewerEventMap
   extends Omit<LyraAnchorTargetEventMap, 'lr-text-select'> {
-  'lr-load': CustomEvent<Record<string, never>>;
+  'lr-load': CustomEvent<null>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-viewer-diagnostic': CustomEvent<LyraViewerDiagnosticEventDetail>;
   /** Fired whenever the search query, match count, or active match index changes, from
@@ -115,7 +115,7 @@ class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
  * Remote parsing yields between admission/materialization passes; parsing itself remains synchronous.
  *
  * @customElement lr-csv-viewer
- * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with empty detail.
+ * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with a `null` detail.
  * @event lr-render-error - Fired when fetching or parsing fails, a parser is unavailable, or the
  *   bounded parse exceeds a resource ceiling.
  * @event lr-viewer-diagnostic - Structured, non-fatal PapaParse diagnostics when a partial grid
@@ -144,9 +144,9 @@ class LyraCsvViewerBase extends LyraElement<LyraCsvViewerEventMap> {}
  *   and annotation message through separate `{value}` and `{label}` placeholders.
  * @csspart spinner - The visible tokenized loading treatment and ordinary text label.
  * @csspart error - The error message region.
- * @cssprop --lr-csv-viewer-background - Background of the viewer frame.
+ * @cssprop --lr-csv-viewer-bg - Background of the viewer frame.
  * @cssprop --lr-csv-viewer-border - Border of the viewer frame.
- * @cssprop --lr-csv-viewer-border-radius - Corner radius of the viewer frame.
+ * @cssprop --lr-csv-viewer-radius - Corner radius of the viewer frame.
  * @cssprop --lr-csv-viewer-header-row-bg - Background of the column headings.
  * @cssprop [--lr-csv-viewer-highlight-color=var(--lr-color-brand)] - Outline color of a highlighted
  *   cell. The active highlight changes a private warning-color default; an inherited or direct
@@ -355,7 +355,7 @@ export class LyraCsvViewer extends DocumentAnchorTarget(LyraCsvViewerBase) {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.table.updated(changed, this.fetchState);
-    if (this.isConnected && changed.has('fetchState') && this.dataSource === undefined && this.fetchState.kind === 'loaded') this.emit('lr-load', {});
+    if (this.isConnected && changed.has('fetchState') && this.dataSource === undefined && this.fetchState.kind === 'loaded') this.emit('lr-load', null);
   }
 
   private async load(): Promise<void> {

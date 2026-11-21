@@ -591,34 +591,34 @@ describe('portable style definitions', () => {
 describe('surfaceOpacity style field', () => {
   const opacity = (element: Element = document.documentElement): string => getComputedStyle(element).getPropertyValue('--lr-theme-surface-opacity').trim();
 
-  it('sets, persists, reports and resets the Glass opacity percentage', async () => {
-    expect(getLyraStyle().surfaceOpacity).to.equal(60);
+  it('sets, persists, reports and resets the Glass opacity on the 0-1 token scale', async () => {
+    expect(getLyraStyle().surfaceOpacity).to.equal(0.6);
     expect(opacity()).to.equal('0.6');
     const changed = oneEvent(window, 'lr-style-change');
-    expect(setLyraStyle({ surfaceOpacity: 35 }).surfaceOpacity).to.equal(35);
+    expect(setLyraStyle({ surfaceOpacity: 0.35 }).surfaceOpacity).to.equal(0.35);
     const { detail } = await changed;
     expect(detail.changed).to.deep.equal(['surfaceOpacity']);
-    expect(detail.style.surfaceOpacity).to.equal(35);
+    expect(detail.style.surfaceOpacity).to.equal(0.35);
     expect(opacity()).to.equal('0.35');
-    expect(JSON.parse(localStorage.getItem('lyra-theme')!).surfaceOpacity).to.equal(35);
-    expect(getLyraStyle().surfaceOpacity).to.equal(35);
+    expect(JSON.parse(localStorage.getItem('lyra-theme')!).surfaceOpacity).to.equal(0.35);
+    expect(getLyraStyle().surfaceOpacity).to.equal(0.35);
     setLyraStyle({ density: 'compact' });
-    expect(getLyraStyle().surfaceOpacity, 'an unrelated axis keeps the opacity').to.equal(35);
+    expect(getLyraStyle().surfaceOpacity, 'an unrelated axis keeps the opacity').to.equal(0.35);
     resetLyraStyle(['surfaceOpacity']);
-    expect(getLyraStyle()).to.include({ surfaceOpacity: 60, density: 'compact' });
+    expect(getLyraStyle()).to.include({ surfaceOpacity: 0.6, density: 'compact' });
     expect(document.documentElement.style.getPropertyValue('--lr-theme-surface-opacity')).to.equal('');
     expect(opacity()).to.equal('0.6');
     expect(JSON.parse(localStorage.getItem('lyra-theme')!)).to.not.have.property('surfaceOpacity');
   });
 
   it('clamps out-of-range values and restores the default for invalid ones', () => {
-    expect(setLyraStyle({ surfaceOpacity: 140 }).surfaceOpacity).to.equal(100);
+    expect(setLyraStyle({ surfaceOpacity: 1.4 }).surfaceOpacity).to.equal(1);
     expect(opacity()).to.equal('1');
-    expect(setLyraStyle({ surfaceOpacity: -5 }).surfaceOpacity).to.equal(0);
+    expect(setLyraStyle({ surfaceOpacity: -0.05 }).surfaceOpacity).to.equal(0);
     expect(opacity()).to.equal('0');
     for (const invalid of [Number.NaN, Number.POSITIVE_INFINITY, '40' as unknown as number, null]) {
-      setLyraStyle({ surfaceOpacity: 20 });
-      expect(setLyraStyle({ surfaceOpacity: invalid }).surfaceOpacity, String(invalid)).to.equal(60);
+      setLyraStyle({ surfaceOpacity: 0.2 });
+      expect(setLyraStyle({ surfaceOpacity: invalid }).surfaceOpacity, String(invalid)).to.equal(0.6);
     }
   });
 
@@ -626,7 +626,7 @@ describe('surfaceOpacity style field', () => {
     const root = document.documentElement;
     root.style.setProperty('--lr-theme-surface-opacity', '0.8');
     try {
-      setLyraStyle({ surfaceOpacity: 25 });
+      setLyraStyle({ surfaceOpacity: 0.25 });
       expect(opacity()).to.equal('0.25');
       resetLyraStyle(['surfaceOpacity']);
       expect(opacity()).to.equal('0.8');
@@ -634,16 +634,17 @@ describe('surfaceOpacity style field', () => {
   });
 
   it('parses saved records with, without and with corrupt opacity', () => {
-    expect(parseLyraStyleRecord({ version: 2, look: 'shadcn' }).surfaceOpacity).to.equal(60);
-    expect(parseLyraStyleRecord({ version: 2, surfaceOpacity: 42.5 }).surfaceOpacity).to.equal(42.5);
-    expect(parseLyraStyleRecord({ version: 2, surfaceOpacity: 300 }).surfaceOpacity).to.equal(100);
-    expect(parseLyraStyleRecord({ version: 2, surfaceOpacity: '30' }).surfaceOpacity).to.equal(60);
-    expect(parseLyraStyleRecord({ version: 2, surfaceOpacity: null }).surfaceOpacity).to.equal(60);
+    expect(parseLyraStyleRecord({ version: 2, look: 'shadcn' }).surfaceOpacity).to.equal(0.6);
+    expect(parseLyraStyleRecord({ version: 2, surfaceOpacity: 0.425 }).surfaceOpacity).to.equal(0.425);
+    expect(parseLyraStyleRecord({ version: 2, surfaceOpacity: 3 }).surfaceOpacity).to.equal(1);
+    expect(parseLyraStyleRecord({ version: 2, surfaceOpacity: -2 }).surfaceOpacity).to.equal(0);
+    expect(parseLyraStyleRecord({ version: 2, surfaceOpacity: '0.3' }).surfaceOpacity).to.equal(0.6);
+    expect(parseLyraStyleRecord({ version: 2, surfaceOpacity: null }).surfaceOpacity).to.equal(0.6);
   });
 
   it('scopes an opacity on one element only', async () => {
     const scope = await fixture<HTMLDivElement>(html`<div></div>`);
-    applyLyraStyleScope(scope, { surfaceOpacity: 90 });
+    applyLyraStyleScope(scope, { surfaceOpacity: 0.9 });
     expect(opacity(scope)).to.equal('0.9');
     expect(opacity()).to.equal('0.6');
     applyLyraStyleScope(scope, null);

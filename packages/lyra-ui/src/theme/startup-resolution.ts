@@ -71,9 +71,9 @@ export function resolveStyleStartup(
     delete result['accentName'];
     result['accent'] = savedAccent;
   }
-  // A finite saved Glass opacity percentage clamps to 0-100; anything else keeps the default.
+  // A finite saved Glass opacity clamps to 0-1; anything else keeps the default.
   const opacity = field(saved, 'surfaceOpacity');
-  if (typeof opacity === 'number' && Number.isFinite(opacity)) result['surfaceOpacity'] = Math.min(100, Math.max(0, opacity));
+  if (typeof opacity === 'number' && Number.isFinite(opacity)) result['surfaceOpacity'] = Math.min(1, Math.max(0, opacity));
   const background = pair(field(saved, 'surface'));
   if (background !== undefined) result['surface'] = background;
   const overrides = Object.entries(map(field(saved, 'overrides')) ?? {}).filter(([name, input]) => allowed(name, input));

@@ -16,7 +16,7 @@
 
 ## `lr-knowledge-graph-explorer`
 
-The default details card and neighbor list register when the first selection needs them. For server-rendered detail markup, import the entity-card and neighbor-list entries before rendering. Set `--lr-knowledge-graph-explorer-source-action-hover-fill` to customize the hovered control background.
+The default details card and neighbor list register when the first selection needs them. For server-rendered detail markup, import the entity-card and neighbor-list entries before rendering. Set `--lr-knowledge-graph-explorer-source-action-hover-bg` to customize the hovered control background.
 
 `engine: Engine3dPreference = 'builtin'` forwards the renderer preference to the composed graph.
 `engine="webgl"` requests its companion for the 3D view. `lr-engine-fallback` bubbles unchanged

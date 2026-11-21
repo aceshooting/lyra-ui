@@ -17,7 +17,7 @@
 
 ## `lr-graph`
 
-Both SVG and canvas expose up to 200 entries in the screen-reader data list. Source pagination registers when the navigator first renders. For server-rendered pager markup, import the pagination entry before rendering. Set `--lr-graph-spatial-control-hover-fill` to customize the hovered control background.
+Both SVG and canvas expose up to 200 entries in the screen-reader data list. Source pagination registers when the navigator first renders. For server-rendered pager markup, import the pagination entry before rendering. Set `--lr-graph-spatial-control-hover-bg` to customize the hovered control background.
 
 **Optional WebGL engine:** `engine: Engine3dPreference = 'builtin'` accepts `'builtin'`
 or `'webgl'`; invalid values normalize to `'builtin'`. The 3D view lazily requests

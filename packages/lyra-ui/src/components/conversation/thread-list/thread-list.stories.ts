@@ -713,7 +713,7 @@ export const MillionSource: Story = {
 export const DenseRail: Story = {
   render: () => html`<lr-thread-list
     size="s"
-    without-pin-glyph
+    without-pin-icon
     without-group-icon
     style="block-size: 20rem; max-inline-size: 18rem; --lr-thread-list-group-header-padding: var(--lr-space-2xs) var(--lr-space-xs); --lr-thread-list-group-toggle-font-size: var(--lr-font-size-xs); --lr-thread-list-group-toggle-min-block-size: var(--lr-size-1-5rem);"
     .threads=${threads}

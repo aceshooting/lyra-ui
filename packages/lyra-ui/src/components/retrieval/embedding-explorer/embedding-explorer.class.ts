@@ -142,8 +142,8 @@ export interface LyraEmbeddingExplorerEventMap {
  * @event lr-spatial-bin-select - A density region was activated; detail contains revision, bounds and count.
  * @csspart bin - One focusable density region, distinct from representative point overlays.
  * @csspart error - Invalid or unavailable spatial source feedback.
- * @cssprop [--lr-embedding-explorer-row-selected-fill=var(--lr-color-brand-fill-quiet)] - Selected row background.
- * @cssprop [--lr-embedding-explorer-page-disabled-fill=var(--lr-color-surface)] - Disabled page button background.
+ * @cssprop [--lr-embedding-explorer-row-selected-bg=var(--lr-color-brand-fill-quiet)] - Selected row background.
+ * @cssprop [--lr-embedding-explorer-page-disabled-bg=var(--lr-color-surface)] - Disabled page button background.
  * @csspart base - The root wrapper.
  * @csspart plot - The SVG projection plot.
  * @csspart point - One focusable embedding point.

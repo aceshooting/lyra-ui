@@ -531,6 +531,18 @@ describe('lr-stack-trace chrome', () => {
     expect(base.scrollHeight).to.be.greaterThan(base.clientHeight);
   });
 
+  it('paints the pressed internal toggle from --lr-stack-trace-internal-toggle-active-bg', async () => {
+    const el = await fixture<LyraStackTrace>(html`<lr-stack-trace data-lr-theme-scope style="--lr-transition-fast: 0s; --lr-stack-trace-internal-toggle-active-bg: rgb(1, 2, 3)" .trace=${trace}></lr-stack-trace>`);
+    const target = el.shadowRoot!.querySelector<HTMLElement>('[part="internal-toggle"]')!;
+    try {
+      await hoverUntilMatched(target, 'pressed target never reached hover');
+      await sendMouse({ type: 'down' });
+      await waitUntil(() => getComputedStyle(target).backgroundColor === 'rgb(1, 2, 3)', 'the active token never painted');
+    } finally {
+      await resetMouse();
+    }
+  });
+
   it('keeps the copy button and frame buttons visibly interactive under plain (their chrome is their own)', async () => {
     const el = (await fixture(
       html`<lr-stack-trace

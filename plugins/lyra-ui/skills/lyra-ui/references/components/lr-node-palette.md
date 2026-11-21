@@ -16,7 +16,7 @@
 
 ## `lr-node-palette`
 
-The first replacement of `items` confirms or expires a keyboard reorder. Disconnecting expires it. Set `--lr-node-palette-item-hover-fill` to customize the hovered control background.
+The first replacement of `items` confirms or expires a keyboard reorder. Disconnecting expires it. Set `--lr-node-palette-item-hover-bg` to customize the hovered control background.
 
 Its native search field honors the shared `--lr-input-*` search hooks and `--lr-icon-button-*` action hooks listed in the component reference.
 

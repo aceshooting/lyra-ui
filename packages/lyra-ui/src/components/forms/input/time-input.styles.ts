@@ -1,6 +1,7 @@
 import { anchoredPopupReveal, anchoredPopupOpen } from '../../../internal/overlay-surface.styles.js';
 import { activeFill, disabledControl, focusRing, focusRingInsetOffset, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { formControlLabelPlacement } from '../../../internal/form-control/chrome.styles.js';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
@@ -371,4 +372,5 @@ export const styles = css`
   ${glassIndependentRootStyles}
   ${glassSurface('[part="popup"]', css`var(--lr-overlay-surface, var(--lr-color-surface-raised))`, undefined, true)}
   ${formControlInvalidBorder(css`[part~='time-input']`)}
+  ${formControlLabelPlacement}
 `;

@@ -742,7 +742,7 @@ export const styles = css`
   [part='base'][data-stacked] [part='cell-label'] {
     display: inline-block;
     box-sizing: border-box;
-    inline-size: var(--lr-table-stack-label-size, 40%);
+    inline-size: var(--lr-table-stack-label-inline-size, 40%);
     padding-inline-end: var(--lr-space-s);
     vertical-align: top;
   }

@@ -161,7 +161,7 @@ export interface LyraThinkingPanelEventMap {
  *   Inward offset of the mouse-hover preview on `[part="body"]`, keeping the outline inside its
  *   own scrollport so it is not clipped at the edge.
  * @cssprop [--lr-thinking-panel-header-hover-bg=var(--lr-color-brand-quiet)] - Hover background of `[part="header"]`.
- * @cssprop --lr-thinking-panel-header-pressed-bg - Pressed background of the header. Defaults to the hover background mixed by the press step.
+ * @cssprop --lr-thinking-panel-header-active-bg - Pressed background of the header. Defaults to the hover background mixed by the press step.
  * @status stable
  * @since 4.0.0
  */

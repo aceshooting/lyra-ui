@@ -95,8 +95,8 @@ class LyraRadioBase extends LyraElement<LyraRadioEventMap> {}
  *   Cancelable: calling `preventDefault()` leaves the radio unchecked, and none of
  *   `input`/`lr-input`/`change`/`lr-change` fire. A listener may instead resolve the request by
  *   writing `checked` itself, which also suppresses the built-in commit. A request that leaves the
- *   radio unchecked emits no `lr-activate`. An owning radio group emits
- *   `lr-radio-group-select-request` instead.
+ *   radio unchecked emits no `lr-activate`. A radio owned by a group emits no request; the group
+ *   emits `lr-change-request` instead.
  * @event input - A standalone radio was selected; native-style and composed.
  * @event lr-input - Standalone prefixed compatibility alias for `input`.
  *   `detail: { checked, value }`.

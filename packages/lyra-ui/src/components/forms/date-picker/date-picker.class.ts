@@ -131,7 +131,7 @@ const viewConverter: ComplexAttributeConverter<LyraDatePickerView> = {
   toAttribute: normalizeView,
 };
 
-/** Detail of `lr-date-picker-select-request`. */
+/** Detail of `lr-change-request`. */
 export interface LyraDatePickerSelectRequestDetail {
   /** The ISO value the pick proposes (`YYYY-MM-DD`, or `YYYY-MM-DD/YYYY-MM-DD` for a range). */
   readonly value: string;
@@ -140,7 +140,7 @@ export interface LyraDatePickerSelectRequestDetail {
 }
 
 export interface LyraDatePickerEventMap {
-  'lr-date-picker-select-request': CustomEvent<LyraDatePickerSelectRequestDetail>;
+  'lr-change-request': CustomEvent<LyraDatePickerSelectRequestDetail>;
   'lr-input': CustomEvent<{ value: string; previousValue?: string }>;
   'lr-change': CustomEvent<{ value: string; previousValue?: string }>;
   input: InputEvent;
@@ -263,7 +263,7 @@ function canonicalDateRangePresets(
  * navigation stay within the supported ISO years 0000–9999.
  *
  * @customElement lr-date-picker
- * @event lr-date-picker-select-request - A user pick (a day click or Enter/Space on a day, or a
+ * @event lr-change-request - A user pick (a day click or Enter/Space on a day, or a
  *   quick-range preset button) is about to write `value`; `detail: { value, previousValue }`
  *   carries the proposed ISO value while `value` still holds the current one. In range mode the
  *   first click of a new range proposes the lone start date. Cancelable: calling
@@ -396,7 +396,7 @@ export class LyraDatePicker extends LyraElement<LyraDatePickerEventMap> {
   protected static override readonly ownedCollectionProperties = Object.freeze(['presets']);
   protected static override readonly identityCollectionProperties = Object.freeze(['presets']);
 
-  // A listener that answers `lr-date-picker-select-request` by writing `value` finishes before
+  // A listener that answers `lr-change-request` by writing `value` finishes before
   // the built-in commit runs; the guard records that it wrote at all.
   private readonly selectGuard = new VetoWriteGuard();
   private _value = '';
@@ -974,7 +974,7 @@ const active = shadowFocusTarget(this);
     requestThenCommit({
       requestDetail: { value: this.serialize(from, to), previousValue: this.value },
       emitRequest: (request, init: { cancelable: true }) =>
-        this.emit('lr-date-picker-select-request', request, init),
+        this.emit('lr-change-request', request, init),
       guard: this.selectGuard,
       commit: () => {
         if (this.readonly) return;

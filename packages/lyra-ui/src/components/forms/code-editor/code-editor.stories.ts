@@ -232,3 +232,13 @@ export const FontFamily: Story = {
   render: () => html`<lr-code-editor label="Query" value="SELECT 1;"
     style="--lr-code-editor-font-family: ui-monospace, monospace"></lr-code-editor>`,
 };
+
+/** `label-placement="start"` sets the label in an inline-start column, with the hint under the
+ *  field; below `--lr-form-control-label-collapse-inline-size` it returns above the field. */
+export const LabelPlacementStart: StoryObj = {
+  render: () => html`
+    <div style="display:grid;gap:var(--lr-space-m);max-inline-size:var(--lr-size-36rem)">
+      <lr-code-editor label="Payload" label-placement="start" hint="JSON sent with the webhook" language="json" value='{ "ok": true }'></lr-code-editor>
+    </div>
+  `,
+};

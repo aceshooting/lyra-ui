@@ -543,13 +543,16 @@ writes); `lr-row-collapse`, `lr-row-expand`, `lr-group-collapse`, and `lr-group-
 row expand/collapse details use canonical `rowKey` plus mirrored `key`. Cancelable
 `lr-sort-request` (readonly `{ sort }`) precedes `lr-sort-change`; veto leaves sort unchanged
 and suppresses `lr-sort-change`.
-Use `lr-sort` for the accepted primary sort. Its frozen detail carries `phase: 'commit'`, `sortKey`, `sortDir`, and the ordered `sort` array. Clearing uses an empty key and a null direction.
-`lr-selection-request` proposes frozen `{ selectedRowKeys }`; `lr-selection-change` reports the accepted keys and selected rows. `lr-row-expand-request` proposes `{ row, rowKey, key, expanded }`; `lr-row-expand-toggle` reports the accepted change. Existing `lr-sort-change`, `lr-row-select`, `lr-row-expand` and `lr-row-collapse` listeners continue to work.
+Cancelable `lr-row-select-request` proposes frozen `{ selectedRowKeys }` before `lr-row-select`; veto
+keeps the selection and suppresses `lr-row-select`. Cancelable `lr-row-expand-request` proposes
+`{ row, rowKey, key, expanded }` before `lr-row-expand` or `lr-row-collapse`; veto leaves the row
+unchanged. Each user selection, sort or expansion emits exactly one request and, when accepted, one
+commit event.
 `lr-before-page-change` proposes zero-based `{ page, pageSize, offset }` for page navigation and page-size changes; `offset` is `page * pageSize`, and `lr-page-change` and each `dataSource` request carry the same `offset`. An accepted pager activation also emits `lr-activate` with zero-based `{ value }`, including activation of the current page.
 `lr-copy` (`{ ok: true, text }` on fulfillment); `lr-copy-error` (`{ ok: false, text, reason, error }` on failure); `lr-error` is a compatibility notice without raw
 platform text. `lr-retry-request` (`detail: null`, cancelable) means the built-in retry
 button was activated while `error` is set; its default clears `error`, and veto leaves it set.
-All library events bubble and are composed. Cancelable events include `lr-before-page-change`, `lr-selection-request`, `lr-row-expand-request`, `lr-cell-contextmenu`,
+All library events bubble and are composed. Cancelable events include `lr-before-page-change`, `lr-row-select-request`, `lr-row-expand-request`, `lr-cell-contextmenu`,
 `lr-column-resize-request`, `lr-sort-request`, and `lr-retry-request`. Details and owned collections
 are frozen. Toolbar-search and column-filter inputs re-emit `focus`/`blur` once from the host as
 bubbling, composed native `FocusEvent`s, preserving `relatedTarget`.
@@ -889,7 +892,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   all work — a custom property cannot drive a `@container` query, so the component measures it).
   The grid/row/gridcell roles, sortable headers (wrapped into a strip above the cards), selection,
   activation, editing, expansion and `href` links keep working; `sticky` columns stop pinning while
-  stacked. `--lr-table-stack-label-size` (default `40%`) sets the caption's inline size. Unsupported
+  stacked. `--lr-table-stack-label-inline-size` (default `40%`) sets the caption's inline size. Unsupported
   values normalize to `'never'`, which renders exactly the previous markup
 - `layout: 'auto'|'fixed' = 'auto'` (reflected) — a **floor** on the `<table>`'s `table-layout`, not
   an override. `'fixed'` forces the fixed algorithm even when no column declares a `width`, so every
@@ -1162,13 +1165,14 @@ same way. The panel deliberately does **not** repeat `data-row-key`, so a `[data
 still resolves exactly one element per row. Prefer these three methods over building a selector from
 any of the attributes — a consumer-supplied key is not safe to interpolate into CSS unescaped.
 
-The table emits a cancelable `lr-page-request` with a one-based `{ page }` before applying a pager change. Preventing it preserves the current page and suppresses `lr-page-change`.
+The table emits a cancelable `lr-before-page-change` before applying a pager change. Preventing it preserves the current page and suppresses `lr-page-change`. The nested pager's own `lr-before-page-change` stays inside the shadow root, so a document listener hears one event per page action, targeted at the table.
 
 **Events:** `lr-sort-request` (cancelable frozen readonly
 `detail: { phase: 'request', sortKey, sortDir }`) precedes `lr-sort` (frozen readonly
 `detail: { phase: 'commit', sortKey, sortDir }`) only when accepted. Client mode also updates its
-sort properties; server mode leaves them controlled. `lr-page-request` is cancelable and proposes
-a one-based page with frozen readonly `detail: { page }` before `lr-page-change`. Other events are `lr-row-activate`
+sort properties; server mode leaves them controlled. `lr-before-page-change` is cancelable and proposes
+frozen readonly `detail: { page, pageSize, offset }` before `lr-page-change`: `page` is one-based like
+`<lr-pagination>`, and `offset` is `(page - 1) * pageSize`. Other events are `lr-row-activate`
 (a row was activated by pointer or Enter/Space, `detail: { row }`), `lr-load-more`,
 `lr-priority-columns-visibility-change` (frozen readonly `detail: { visible }`), and the expansion
 pair `lr-row-expand-request` (**cancelable**, frozen readonly `detail: { row, rowKey, expanded }`,

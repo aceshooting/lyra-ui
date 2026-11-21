@@ -23,6 +23,12 @@ const base = (el: LyraTable<Row>) => el.shadowRoot!.querySelector<HTMLElement>('
 const labels = (el: LyraTable<Row>) => Array.from(el.shadowRoot!.querySelectorAll('[part="cell-label"]'), (n) => n.textContent);
 
 describe('lr-table stack', () => {
+  it('sizes the stacked caption from --lr-table-stack-label-inline-size', async () => {
+    const el = await table('640px', 'always', '--lr-table-stack-label-inline-size: 90px');
+    const label = el.shadowRoot!.querySelector<HTMLElement>('[part="cell-label"]')!;
+    expect(getComputedStyle(label).inlineSize).to.equal('90px');
+  });
+
   it('always stacks rows as blocks with visible column captions and unchanged roles', async () => {
     const el = await table('640px', 'always');
     expect(base(el).hasAttribute('data-stacked')).to.equal(true);

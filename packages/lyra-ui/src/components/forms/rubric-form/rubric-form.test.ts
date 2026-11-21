@@ -517,6 +517,23 @@ describe("lr-rubric-form", () => {
     expect(ev.detail.value.accuracy).to.equal(4);
   });
 
+  it("keeps a real segmented pick's lr-change-request inside and reports the score as its own lr-input", async () => {
+    const el = (await fixture(
+      html`<lr-rubric-form .keys=${KEYS}></lr-rubric-form>`
+    )) as LyraRubricForm;
+    await el.updateComplete;
+    const segmented = el.shadowRoot!.querySelector(
+      '[data-key="accuracy"] lr-segmented'
+    ) as HTMLElement & { updateComplete: Promise<unknown> };
+    await segmented.updateComplete;
+    let requestLeaks = 0;
+    el.addEventListener("lr-change-request", () => requestLeaks++);
+    const input = oneEvent(el, "lr-input");
+    segmented.shadowRoot!.querySelector<HTMLElement>('[part~="segment"][data-value="4"]')!.click();
+    expect((await input).detail.value.accuracy).to.equal(4);
+    expect(requestLeaks).to.equal(0);
+  });
+
   it("emits lr-input with the full value object when a multiple category control changes", async () => {
     const keys: RubricKey[] = [
       {

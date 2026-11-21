@@ -665,6 +665,26 @@ describe('region highlights', () => {
     }
   });
 
+  it('paints region highlight actions from --lr-svg-viewer-action-bg', async () => {
+    const el = await fixture<LyraSvgViewer>(html`
+      <lr-svg-viewer style="--lr-svg-viewer-action-bg: rgb(1, 2, 3)"></lr-svg-viewer>
+    `);
+    const restore = fetchSvg('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120"></svg>');
+    try {
+      el.src = 'https://example.test/icon.svg';
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="svg"]') !== null);
+      el.highlights = [
+        { id: 'a', anchor: { kind: 'region', rect: { x: 50, y: 50, width: 1, height: 1 } } },
+        { id: 'b', anchor: { kind: 'region', rect: { x: 51, y: 50, width: 1, height: 1 } } },
+      ];
+      await el.updateComplete;
+      const action = el.shadowRoot!.querySelector('[part="region-highlight-action"]') as HTMLElement;
+      expect(getComputedStyle(action).backgroundColor).to.equal('rgb(1, 2, 3)');
+    } finally {
+      restore();
+    }
+  });
+
   it('honors the composite focus-ring shorthand on rendered region targets and actions', async () => {
     const el = await fixture<LyraSvgViewer>(html`
       <lr-svg-viewer style="--lr-focus-ring: 5px dashed rgb(1, 2, 3)"></lr-svg-viewer>

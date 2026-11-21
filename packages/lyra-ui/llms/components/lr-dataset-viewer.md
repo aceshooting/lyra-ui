@@ -17,7 +17,7 @@
 
 ## `lr-dataset-viewer`
 
-Set `--lr-dataset-viewer-background`, `--lr-dataset-viewer-border` and `--lr-dataset-viewer-border-radius` on the frame. `--lr-dataset-viewer-header-row-bg` sets the column heading background.
+Set `--lr-dataset-viewer-bg`, `--lr-dataset-viewer-border` and `--lr-dataset-viewer-radius` on the frame. `--lr-dataset-viewer-header-row-bg` sets the column heading background.
 
 Fetches tab-, pipe-, or delimiter-separated text, or reads a host-owned `dataSource`, and renders a
 virtualized, accessible table (a `role="table"` container with a sticky `role="row"` header, composed with `<lr-virtual-list
@@ -140,7 +140,7 @@ value, ordered row then column (empty/whitespace query behaves like
 `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through matches (wrapping,
 resolving `false` when there are none); `clearSearch()` clears the query, matches, and cursor.
 
-**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+**Events:** `lr-load` carries a `null` detail and bubbles across shadow roots after the parsed document renders;
 `lr-render-error` with `detail.error` when fetching, parsing, in-memory admission, or
 data-source validation/read/search fails.
 `lr-viewer-diagnostic` reports up to 100 recoverable PapaParse errors in one

@@ -20,7 +20,7 @@ it('paints the active-item-id row with a visible background that a token overrid
   await waitUntil(() => row() !== null);
   const other = list.shadowRoot!.querySelector<HTMLElement>('[part="row"][aria-current="false"]')!;
   expect(getComputedStyle(row()).backgroundColor).not.to.equal(getComputedStyle(other).backgroundColor);
-  list.style.setProperty('--lr-virtual-list-active-row-background', 'transparent');
+  list.style.setProperty('--lr-virtual-list-active-row-bg', 'transparent');
   expect(getComputedStyle(row()).backgroundColor).to.equal(getComputedStyle(other).backgroundColor);
 });
 

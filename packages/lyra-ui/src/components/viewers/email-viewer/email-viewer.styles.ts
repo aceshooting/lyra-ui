@@ -104,7 +104,7 @@ export const styles = css`
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: none;
     border-radius: var(--lr-radius);
-    background: var(--lr-email-viewer-action-background, var(--lr-color-brand-quiet));
+    background: var(--lr-email-viewer-action-bg, var(--lr-color-brand-quiet));
     color: inherit;
     font: inherit;
     font-size: var(--lr-font-size-sm);
@@ -112,10 +112,10 @@ export const styles = css`
     ${interactiveTransition}
   }
   [part="attachment-button"]:hover {
-    background: var(--lr-email-viewer-action-hover-background, ${hoverFill('var(--lr-email-viewer-action-background, var(--lr-color-brand-quiet))')});
+    background: var(--lr-email-viewer-action-hover-bg, ${hoverFill('var(--lr-email-viewer-action-bg, var(--lr-color-brand-quiet))')});
   }
   [part="attachment-button"]:active {
-    background: var(--lr-email-viewer-action-active-background, ${activeFill('var(--lr-email-viewer-action-background, var(--lr-color-brand-quiet))')});
+    background: var(--lr-email-viewer-action-active-bg, ${activeFill('var(--lr-email-viewer-action-bg, var(--lr-color-brand-quiet))')});
   }
   [part="attachment-button"]:focus-visible {
     ${focusRingShorthand}
@@ -139,7 +139,7 @@ export const styles = css`
     padding: var(--lr-space-2xs) var(--lr-space-xs);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    background: var(--lr-email-viewer-action-background, var(--lr-color-surface));
+    background: var(--lr-email-viewer-action-bg, var(--lr-color-surface));
     color: var(--lr-color-brand);
     font: inherit;
     font-size: var(--lr-font-size-sm);
@@ -147,10 +147,10 @@ export const styles = css`
     ${interactiveTransition}
   }
   [part="quote-toggle"]:hover {
-    background: var(--lr-email-viewer-action-hover-background, var(--lr-color-brand-quiet));
+    background: var(--lr-email-viewer-action-hover-bg, var(--lr-color-brand-quiet));
   }
   [part="quote-toggle"]:active {
-    background: var(--lr-email-viewer-action-active-background, ${activeFill('var(--lr-color-brand-quiet)')});
+    background: var(--lr-email-viewer-action-active-bg, ${activeFill('var(--lr-color-brand-quiet)')});
   }
   [part="quote-toggle"]:focus-visible {
     ${focusRingShorthand}

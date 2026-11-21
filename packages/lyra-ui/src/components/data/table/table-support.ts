@@ -561,7 +561,8 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
   'lr-retry-request': CustomEvent<null>;
   'lr-selection-change': CustomEvent<Readonly<{ selectedRowKeys: readonly K[] }>>;
   'lr-filter-change': CustomEvent<Readonly<{ filterText: string }>>;
-  'lr-page-request': CustomEvent<Readonly<{ page: number }>>;
+  /** One-based `page`; `offset` is `(page - 1) * pageSize`. */
+  'lr-before-page-change': CustomEvent<Readonly<{ page: number; pageSize: number; offset: number }>>;
   'lr-page-change': CustomEvent<Readonly<{ page: number }>>;
   'lr-cell-edit': CustomEvent<Readonly<{ row: T; columnKey: string; value: string | number }>>;
   'lr-column-resize-request': CustomEvent<Readonly<{ columnKey: string; width: number }>>;

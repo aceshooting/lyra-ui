@@ -888,6 +888,18 @@ describe('header text contrast at rest, hover and press', () => {
 });
 
 
+it('paints the pressed header from --lr-task-list-header-active-bg', async () => {
+  const el = await fixture<LyraTaskList>(html`<lr-task-list data-lr-theme-scope style="--lr-transition-fast: 0s; --lr-task-list-header-active-bg: rgb(1, 2, 3)" .items=${items}></lr-task-list>`);
+  const target = el.shadowRoot!.querySelector<HTMLElement>('button[part="header"]')!;
+  try {
+    await hoverUntilMatched(target, 'pressed target never reached hover');
+    await sendMouse({ type: 'down' });
+    await waitUntil(() => getComputedStyle(target).backgroundColor === 'rgb(1, 2, 3)', 'the active token never painted');
+  } finally {
+    await resetMouse();
+  }
+});
+
 describe('lr-task-list deprecated --lr-task-list-background alias', () => {
   const fill = (el: LyraTaskList): string =>
     getComputedStyle(el.shadowRoot!.querySelector('[part="base"]') as HTMLElement).backgroundColor;

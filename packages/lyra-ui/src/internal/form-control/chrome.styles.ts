@@ -12,6 +12,10 @@ import { formControlLabelDisplay, formControlLabelTypography, formControlSupport
  * scaled far past any real size is either negative (wide: clamp to the column) or huge (narrow:
  * clamp to the full row). Logical properties keep it correct under RTL.
  *
+ * The wrapper's direct children are the label, the field, and full-width rows: `hint`, `error`
+ * and any other status row a control renders beside them, marked `data-form-control-row` so it
+ * wraps under the field like the hint instead of taking a column of its own.
+ *
  * Interpolate it after `formControlChrome` only in a control that declares `labelPlacement`, so the
  * label-column tokens are advertised where they work.
  */
@@ -35,7 +39,7 @@ export const formControlLabelPlacement = css`
     box-sizing: border-box;
     margin-block-end: clamp(0px, (var(--_lr-label-collapse) - 100%) * 9999, var(--lr-space-xs));
   }
-  :host([label-placement='start']) [part~='form-control'] > :is([part~='hint'], [part~='error']) {
+  :host([label-placement='start']) [part~='form-control'] > :is([part~='hint'], [part~='error'], [data-form-control-row]) {
     flex: 0 0 100%;
     box-sizing: border-box;
     padding-inline-start: clamp(

@@ -132,15 +132,15 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-xs);
     color: var(--lr-color-text);
-    background: var(--lr-svg-viewer-action-background, var(--lr-color-surface));
+    background: var(--lr-svg-viewer-action-bg, var(--lr-color-surface));
     cursor: pointer;
     ${interactiveTransition}
   }
   [part="region-highlight-action"]:hover {
-    background: var(--lr-svg-viewer-action-hover-background, var(--lr-color-surface-raised));
+    background: var(--lr-svg-viewer-action-hover-bg, var(--lr-color-surface-raised));
   }
   [part="region-highlight-action"]:active {
-    background: var(--lr-svg-viewer-action-active-background, ${activeFill('var(--lr-color-surface-raised)')});
+    background: var(--lr-svg-viewer-action-active-bg, ${activeFill('var(--lr-color-surface-raised)')});
   }
   [part="region-highlight-action"]:focus-visible {
     ${focusRingShorthand}

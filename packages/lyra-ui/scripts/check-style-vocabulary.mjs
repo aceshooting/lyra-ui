@@ -294,6 +294,40 @@ export function focusRingFindings(where, rawSource) {
   return findings;
 }
 
+/**
+ * Component token names follow one spelling: `-bg` (not `-background`), `-radius` (not
+ * `-border-radius`), the state before the property (`-hover-bg`, not `-bg-hover`), and `-bg` for a
+ * state-qualified CSS background (a state-qualified `-fill` is reserved for SVG/canvas paint). Each
+ * exception is a published name kept for compatibility, with the reason.
+ */
+export const TOKEN_NAME_EXCEPTIONS = new Map([
+  ['--lr-badge-background', 'published override alias of --lr-badge-bg'],
+  ['--lr-skeleton-border-radius', 'published Shoelace-paired name'],
+  ['--lr-switch-track-hover-fill', 'published track paint token'],
+  ['--lr-switch-track-active-fill', 'published track paint token'],
+]);
+
+const TOKEN_NAME_RULES = [
+  [/-(?:background|border-radius)$/, 'spell the suffix `-bg` / `-radius`'],
+  [/-(?:bg|color|border-color)-(?:hover|active)$/, 'put the state before the property (`-hover-bg`, `-active-color`)'],
+  [/-(?:hover|active|pressed|selected|disabled|current|checked)-fill$/, 'a state-qualified background is `-<state>-bg`'],
+];
+
+/** `@cssprop` names that break the component token spelling. */
+export function tokenNameFindings(where, rawSource) {
+  const findings = [];
+  for (const match of rawSource.matchAll(/@cssprop(?:erty)?\s+\[?(--lr-[a-z0-9-]+)/g)) {
+    const name = match[1];
+    // lr-icon-button's published state tokens are forwarded by many hosts and keep their order.
+    if (TOKEN_NAME_EXCEPTIONS.has(name) || name.startsWith('--lr-icon-button-')) continue;
+    const rule = TOKEN_NAME_RULES.find(([pattern]) => pattern.test(name));
+    if (!rule) continue;
+    const line = rawSource.slice(0, match.index).split('\n').length;
+    findings.push(`${where}:${line}: \`${name}\` -- ${rule[1]}`);
+  }
+  return findings;
+}
+
 function ringSourceFiles(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const file = join(directory, entry.name);
@@ -321,7 +355,9 @@ if (isMainModule(import.meta.url)) {
 
   for (const file of ringSourceFiles(join(packageDir, 'src'))) {
     const where = relative(packageDir, file).replaceAll('\\', '/');
-    findings.push(...focusRingFindings(where, readFileSync(file, 'utf8')));
+    const source = readFileSync(file, 'utf8');
+    findings.push(...focusRingFindings(where, source));
+    findings.push(...tokenNameFindings(where, source));
   }
 
   if (findings.length) {

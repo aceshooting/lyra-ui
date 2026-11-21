@@ -24,8 +24,9 @@ density), `lr-select` (look), `lr-slider` (glass opacity), `lr-swatch-picker` in
 
 Each control writes its own axis through `setLyraStyle()`, which persists and applies it like any
 other caller. The panel re-reads the style on every window `lr-style-change`, so another panel, an
-application call or an operating-system mode flip updates it too. The glass opacity slider is
-disabled while the surface is `solid`. The reset button calls `resetLyraStyle()` with only the fields
+application call or an operating-system mode flip updates it too. The glass opacity slider runs
+from 0 to 1 in steps of 0.01, the same scale as `surfaceOpacity`, and shows the value as a
+percentage; it is disabled while the surface is `solid`. The reset button calls `resetLyraStyle()` with only the fields
 of the axes the panel shows (`accent` also resets `accentBackground`). A custom accent colour that is
 not a named gemstone leaves no swatch selected; a `mode` of `unset` leaves no mode segment selected.
 

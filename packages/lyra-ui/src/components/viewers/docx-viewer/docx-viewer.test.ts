@@ -1156,6 +1156,20 @@ describe('scrollToAnchor / highlights (text-quote)', () => {
     }
   });
 
+  it('paints highlight actions from --lr-docx-viewer-action-bg', async () => {
+    const { el, restore } = await loadWithMarkup('<p>Ada wrote the first program.</p>');
+    try {
+      el.style.setProperty('--lr-docx-viewer-action-bg', 'rgb(1, 2, 3)');
+      el.highlights = [{ id: 'ada', label: 'Ada passage', anchor: { kind: 'text-quote', quote: 'Ada wrote' } }];
+      await el.updateComplete;
+      await waitUntil(() => el.shadowRoot!.querySelector('[part="highlight-action"]') !== null);
+      const action = el.shadowRoot!.querySelector<HTMLElement>('[part="highlight-action"]')!;
+      expect(getComputedStyle(action).backgroundColor).to.equal('rgb(1, 2, 3)');
+    } finally {
+      restore();
+    }
+  });
+
   it('renders a native keyboard action for each resolved text-quote highlight', async () => {
     const { el, restore } = await loadWithMarkup('<p>Ada wrote the first program.</p>');
     try {

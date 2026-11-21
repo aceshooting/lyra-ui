@@ -1,6 +1,8 @@
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { toRgba } from '../../../../test/color-contrast.js';
 import '../../lr-data-grid.js';
 import type { LyraDataGrid } from '../../lr-data-grid.js';
@@ -900,4 +902,68 @@ it('drops the last column divider so the frame alone draws the inline-end edge',
     expect(Number.parseFloat(getComputedStyle(cells[0]!).borderInlineEndWidth)).to.be.greaterThan(0);
     expect(getComputedStyle(cells[cells.length - 1]!).borderInlineEndWidth).to.equal('0px');
   }
+});
+
+describe('data-grid user action events', () => {
+  /** Records the type and cancelability of every event the grid host itself dispatches. */
+  function recordDispatches(grid: LyraDataGrid<Person>): { log: string[]; restore(): void } {
+    const log: string[] = [];
+    const original = grid.dispatchEvent;
+    grid.dispatchEvent = function (this: LyraDataGrid<Person>, event: Event): boolean {
+      log.push(event.cancelable ? `${event.type} (cancelable)` : event.type);
+      return original.call(this, event);
+    };
+    return { log, restore: () => { grid.dispatchEvent = original; } };
+  }
+
+  function firstCell(grid: LyraDataGrid<Person>): HTMLElement {
+    const found = grid.shadowRoot!.querySelector<HTMLElement>('[role="gridcell"][data-row-position="0"][data-column-position="1"]');
+    if (!found) throw new Error('Missing first data cell');
+    return found;
+  }
+
+  it('fires one cancelable request then one commit for a keyboard selection, a header sort and a row expansion', async () => {
+    const grid = await dataGrid(html`<lr-data-grid label="People" row-key="id" selection-mode="multiple"
+      .columns=${columns} .data=${rows} .rowDetail=${(row: Person) => row.name}></lr-data-grid>`);
+    const recorder = recordDispatches(grid);
+    try {
+      await focusByKeyboard(firstCell(grid));
+      recorder.log.length = 0;
+      const selected = oneEvent(grid, 'lr-row-select');
+      await sendKeys({ press: ' ' });
+      await selected;
+      await grid.updateComplete;
+      expect(recorder.log).to.deep.equal(['lr-row-select-request (cancelable)', 'lr-row-select']);
+      expect(grid.selectedKeys).to.deep.equal([1]);
+
+      recorder.log.length = 0;
+      header(grid, 'name').click();
+      await grid.updateComplete;
+      expect(recorder.log).to.deep.equal(['lr-sort-request (cancelable)', 'lr-sort-change']);
+
+      recorder.log.length = 0;
+      grid.shadowRoot!.querySelector<HTMLButtonElement>('[part="expand-button"]')!.click();
+      await grid.updateComplete;
+      expect(recorder.log).to.deep.equal(['lr-row-expand-request (cancelable)', 'lr-row-expand']);
+    } finally {
+      recorder.restore();
+    }
+  });
+
+  it('keeps the selection when lr-row-select-request is vetoed from the keyboard', async () => {
+    const grid = await dataGrid(html`<lr-data-grid label="People" row-key="id" selection-mode="multiple"
+      .columns=${columns} .data=${rows}></lr-data-grid>`);
+    let commits = 0;
+    grid.addEventListener('lr-row-select', () => { commits++; });
+    await focusByKeyboard(firstCell(grid));
+    const request = oneEvent(grid, 'lr-row-select-request');
+    grid.addEventListener('lr-row-select-request', (event) => event.preventDefault(), { once: true });
+    await sendKeys({ press: ' ' });
+    const proposal = await request;
+    await grid.updateComplete;
+    expect([...proposal.detail.selectedRowKeys]).to.deep.equal([1]);
+    expect(grid.selectedKeys).to.deep.equal([]);
+    expect(grid.shadowRoot!.querySelector<HTMLInputElement>('[part~="row"] input[type="checkbox"]')!.checked).to.equal(false);
+    expect(commits).to.equal(0);
+  });
 });

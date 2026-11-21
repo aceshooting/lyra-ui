@@ -12745,7 +12745,7 @@
           "evidence": [
             {
               "file": "src/components/forms/color-picker/color-picker.class.ts",
-              "line": 1270,
+              "line": 1284,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -16740,7 +16740,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.class.ts",
-              "line": 2464,
+              "line": 2462,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -32829,7 +32829,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.class.ts",
-              "line": 1008,
+              "line": 1022,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39920,7 +39920,7 @@
           "evidence": [
             {
               "file": "src/components/forms/otp-input/otp-input.class.ts",
-              "line": 373,
+              "line": 387,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -48634,7 +48634,7 @@
           "evidence": [
             {
               "file": "src/components/retrieval/retrieval-search/retrieval-search.test.ts",
-              "line": 1106,
+              "line": 1107,
               "kind": "320px allocation test signal"
             }
           ]
@@ -54198,7 +54198,6 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "scale",
-          "keyboard",
           "narrowAllocation",
           "visual",
           "forcedColors",
@@ -54229,9 +54228,14 @@
         },
         "keyboard": {
           "applicability": "applicable",
-          "status": "not-recorded",
-          "evidence": [],
-          "limitation": "Interactive implementation detected without a recorded component keyboard-test signal."
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/utility/style-panel/style-panel.test.ts",
+              "test": "moves the glass opacity slider in percent steps and writes the 0-1 value",
+              "kind": "component keyboard exercise signal"
+            }
+          ]
         },
         "rtl": {
           "applicability": "applicable",
@@ -54332,7 +54336,6 @@
       },
       "knownLimitations": [
         "No deterministic scale budget has been measured for this tag.",
-        "Interactive implementation detected without a recorded component keyboard-test signal.",
         "No component-owned motion declaration or programmatic animation was detected.",
         "No component-local 320px allocation assertion is recorded.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
@@ -64467,7 +64470,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/voice-picker/voice-picker.class.ts",
-              "line": 581,
+              "line": 587,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

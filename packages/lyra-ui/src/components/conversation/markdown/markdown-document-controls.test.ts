@@ -158,7 +158,7 @@ for (const name of ['lr-markdown', 'lr-markdown-core']) {
     el.content = '\x60\x60\x60\nsource\n\x60\x60\x60';
     await waitUntil(() => Boolean(el.shadowRoot!.querySelector('button')));
     const button = el.shadowRoot!.querySelector('button')!;
-    el.style.cssText = '--lr-markdown-code-copy-bg:red;--lr-markdown-code-copy-bg-hover:green;--lr-markdown-code-copy-bg-active:blue';
+    el.style.cssText = '--lr-markdown-code-copy-bg:red;--lr-markdown-code-copy-hover-bg:green;--lr-markdown-code-copy-active-bg:blue';
     const background = () => getComputedStyle(button).backgroundColor;
     try {
       await resetMouse();

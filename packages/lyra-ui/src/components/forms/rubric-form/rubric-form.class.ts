@@ -1106,6 +1106,7 @@ export class LyraRubricForm extends LyraFormControlElement<LyraRubricFormEventMa
         .value=${value}
         label=${accessibleLabel}
         @lr-input=${this.stopChildEvent}
+        @lr-change-request=${this.stopChildEvent}
         @lr-change=${(e: CustomEvent<{ value: string }>) => {
           e.stopPropagation();
           this.setFieldValue(k.key, Number(e.detail.value));

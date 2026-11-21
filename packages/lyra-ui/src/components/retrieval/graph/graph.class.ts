@@ -426,7 +426,7 @@ export interface LyraGraphEventMap {
  * logical totals come from the provider; neighborhood/summary coverage is disclosed separately.
  * fit() frames the current scene, not the full source. Dragging changes local layout only.
  * Removing graphSource restores the current legacy arrays without modifying their getters.
- * @cssprop [--lr-graph-spatial-control-hover-fill=color-mix(in oklab, var(--_lr-spatial-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] - Background of the hovered control.
+ * @cssprop [--lr-graph-spatial-control-hover-bg=color-mix(in oklab, var(--_lr-spatial-fill), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] - Background of the hovered control.
  * @csspart source-navigator - Global node/edge query, record list and pagination.
  * @csspart source-kind - Record kind selector.
  * @csspart source-search - Search input for global records.

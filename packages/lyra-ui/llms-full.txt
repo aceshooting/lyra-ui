@@ -2129,7 +2129,7 @@ resetLyraStyle(["look"]); // reset only the look axis
 setLyraStyle({ mode: "unset", accent: null, accentBackground: null, overrides: null });
 ~~~
 
-setLyraStyle() accepts independent choices for look, surface, density, mode, accent, accentBackground, overrides, and surfaceOpacity (a 0–100 Glass opacity percentage; see Glass surfaces). Omitted axes keep their current selection. Null restores the built-in value for look, surface, density and mode; `accent: null` explicitly clears the accent, and null clears accentBackground or overrides. `resetLyraStyle()` restores Shadcn/Glass/Emerald/System/comfortable; a field list resets only those fields. The returned LyraStyle snapshot includes the selected values, a resolved mode when the choice is system, and lookForm to distinguish a stylesheet look from a runtime look.
+setLyraStyle() accepts independent choices for look, surface, density, mode, accent, accentBackground, overrides, and surfaceOpacity (a 0–1 Glass opacity; see Glass surfaces). Omitted axes keep their current selection. Null restores the built-in value for look, surface, density and mode; `accent: null` explicitly clears the accent, and null clears accentBackground or overrides. `resetLyraStyle()` restores Shadcn/Glass/Emerald/System/comfortable; a field list resets only those fields. The returned LyraStyle snapshot includes the selected values, a resolved mode when the choice is system, and lookForm to distinguish a stylesheet look from a runtime look.
 
 mode is light, dark, system, or unset. Explicit modes set both data-lr-theme and data-theme; system follows the operating system and updates both attributes when it changes; unset removes Lyra's mode attributes. The lr-style-change event carries { style, changed }, where changed lists the affected fields. Applications can listen to this one event for document style changes.
 
@@ -7659,11 +7659,11 @@ new material root. Surface-colored outlined card and disclosure interiors let ne
 controls use their solid border colors while preserving the enclosing edge against glass.
 Filled accent interiors retain qualification. Native descendants retain inherited public color
 aliases. Custom translucent content fills require the author to choose suitable control borders.
-A design panel can offer a Glass opacity range from 0–100%, shown when the selected surface is
-Glass. `setLyraStyle({ surfaceOpacity })` takes that percentage directly: it clamps to 0–100, writes
-`--lr-theme-surface-opacity` as 0–1 on the document root, persists it with the other style choices,
+A design panel can offer a Glass opacity range, shown when the selected surface is Glass.
+`setLyraStyle({ surfaceOpacity })` takes the same 0–1 scale as the token: it clamps to 0–1, writes
+`--lr-theme-surface-opacity` on the document root, persists it with the other style choices,
 reports it as `getLyraStyle().surfaceOpacity` and in `lr-style-change` (`changed` includes
-`'surfaceOpacity'`), and `lyraThemeBootstrap` restores it before first paint. The default, 60, writes
+`'surfaceOpacity'`), and `lyraThemeBootstrap` restores it before first paint. The default, 0.6, writes
 nothing and leaves the stylesheet value in place; `null` or a non-finite value restores it, as does
 `resetLyraStyle(['surfaceOpacity'])`. `applyLyraStyleScope(element, { surfaceOpacity })` sets it for one
 subtree. Native `.lr-surface-chrome` wrappers and eligible component chrome consume the same input:
@@ -7671,8 +7671,9 @@ subtree. Native `.lr-surface-chrome` wrappers and eligible component chrome cons
 ```js
 import { getLyraStyle, resetLyraStyle, setLyraStyle } from '@aceshooting/lyra-ui/theme.js';
 
-slider.value = getLyraStyle().surfaceOpacity; // 60 until the user picks another value
-slider.addEventListener('input', () => setLyraStyle({ surfaceOpacity: Number(slider.value) }));
+// <input type="range" min="0" max="1" step="0.01">
+slider.value = String(getLyraStyle().surfaceOpacity); // 0.6 until the user picks another value
+slider.addEventListener('input', () => setLyraStyle({ surfaceOpacity: slider.valueAsNumber }));
 resetButton.addEventListener('click', () => resetLyraStyle(['surfaceOpacity']));
 ```
 
@@ -7808,10 +7809,16 @@ reflects, so `[label-display='hidden']` is also a styling hook.
 
 ## Label beside the field: `label-placement`
 
-`lr-input` (and `lr-number-input`), `lr-textarea`, `lr-select`, `lr-combobox` and `lr-date-input`
-take `label-placement="start"` (property `labelPlacement: 'top' | 'start'`, default `'top'`,
-reflected) for settings forms with an aligned label column. The label sits in an inline-start
-column of `--lr-form-control-label-inline-size` (default `30%`), `--lr-form-control-label-gap`
+Every field-shaped control takes `label-placement="start"` (property
+`labelPlacement: 'top' | 'start'`, default `'top'`, reflected) for settings forms with an aligned
+label column: `lr-input` (and `lr-number-input`, `lr-native-time-input`), `lr-textarea`,
+`lr-select`, `lr-combobox`, `lr-date-input`, `lr-time-input`, `lr-phone-input`, `lr-token-input`,
+`lr-otp-input`, `lr-code-editor`, `lr-signature-pad`, `lr-color-picker`, `lr-locale-picker`, the
+catalog pickers (`lr-country-picker`, `lr-currency-picker`, `lr-time-zone-picker`,
+`lr-unit-picker`) and, in the conversation family, `lr-model-select` and `lr-voice-picker`. Group
+controls whose label is a legend over several choices (`lr-checkbox-group`, `lr-radio-group`,
+`lr-segmented`) and `lr-slider`, whose label row can carry the value readout, keep the label
+above. The label sits in an inline-start column of `--lr-form-control-label-inline-size` (default `30%`), `--lr-form-control-label-gap`
 (default `var(--lr-space-m)`) from the field, and the hint and error stay aligned under the field.
 When the control is narrower than `--lr-form-control-label-collapse-inline-size` (default
 `var(--lr-size-20rem)`) the label returns above the field, so a phone layout needs no media query.
@@ -9498,7 +9505,7 @@ and pending-range limits; activating an unavailable period is a no-op. The previ
 buttons announce the displayed month or period titles. The cell for today, or for the period
 containing today, carries `aria-current="date"` independently of the selection.
 
-**Events:** `lr-date-picker-select-request` (`detail: { value, previousValue }`) is the one
+**Events:** `lr-change-request` (`detail: { value, previousValue }`) is the one
 cancelable event: it is dispatched before a day pick (click, Enter or Space) or a preset button
 writes `value`, while `value` still holds the current ISO value; in range mode the first click of a
 new range proposes the lone start date. `preventDefault()` keeps `value` and `appliedPreset` and
@@ -11425,6 +11432,8 @@ Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-lab
 
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`".
+
 A locale-aware segmented field and column picker mirroring `wa-time-input`. Its wire and submitted
 value is always timezone-free, 24-hour ASCII: `HH:mm`, or `HH:mm:ss` when seconds are visible.
 Locale changes segment order, separators, digits, and day-period labels — never the wire value.
@@ -11735,6 +11744,8 @@ Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-lab
 `--lr-form-control-label-color`.
 
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
+
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`".
 
 A form-associated, country-aware telephone field. The submitted `value` is either canonical E.164
 (for example `+352621123456`) or `''` while the editable input is empty, incomplete, or invalid.
@@ -12350,7 +12361,7 @@ gemstone?: GemstoneKey; readonly disabled?: boolean }`; a valid CSS `color` is u
   semantics), so an ancestor `<fieldset disabled>` does not cascade into it — disable the picker
   itself alongside the fieldset when a form needs both.
 
-**Events:** `lr-swatch-picker-select-request` (`detail: { value, previousValue }`) — cancelable,
+**Events:** `lr-change-request` (`detail: { value, previousValue }`) — cancelable,
 dispatched before a click or Arrow/Home/End key selects a swatch other than the current one, while
 `value` still holds the current selection. `preventDefault()` keeps the selection and suppresses
 `lr-change`; a listener may instead resolve the request by assigning `value` itself, which also
@@ -13643,6 +13654,8 @@ Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-lab
 
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`".
+
 A form-associated one-time-code field: several character segments that together hold one value.
 Mirrors `wa-otp-input`.
 
@@ -13928,7 +13941,7 @@ reference the same acted-on child. The selected child does not emit its standalo
 value events. Every activation of an available radio — click, Space, or an arrow/Home/End key,
 including one on the already-selected option — also emits `lr-activate` (`{ value, option, radio }`) after
 those events. Before a user activation moves the selection, the group dispatches the cancelable
-`lr-radio-group-select-request` (`{ value, previousValue, option, radio }`, while `value` still
+`lr-change-request` (`{ value, previousValue, option, radio }`, while `value` still
 holds the current selection), like the request events of `lr-checkbox-group` and
 `lr-toggle-group`: `preventDefault()` keeps the current selection and fires no value events, and a
 listener that resolves the request by assigning `value` (or a radio's `checked`) suppresses the
@@ -13938,7 +13951,7 @@ cancelable alias of a failed validity check; `preventDefault()` also cancels the
 event behind it.
 
 ```js
-group.addEventListener('lr-radio-group-select-request', (event) => {
+group.addEventListener('lr-change-request', (event) => {
   if (event.detail.value === 'enterprise' && !confirm('Switch plan?')) event.preventDefault();
 });
 ```
@@ -14112,6 +14125,8 @@ Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-lab
 `--lr-form-control-label-color`.
 
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
+
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`".
 
 An editable form-associated token list. Enter, comma, Tab, or blur commits a token; Tab is not
 prevented, so focus still advances normally. Backspace removes the last token. `value` is a
@@ -14320,6 +14335,8 @@ Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-lab
 
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`".
+
 Long translated form chrome wraps within the host, while long source stays reachable through the
 editor's internal scroll extent instead of widening the page. The `Narrow RTL long content
 (320px)` story covers both boundaries together.
@@ -14346,6 +14363,7 @@ property and the attribute are equivalent: `el.appearance = 'filled'` repaints t
 **Properties:**
 
 - `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`, reflected) — `'hidden'` removes the label visually while it stays the accessible name; hint, error and required semantics are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
+- `labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) — `'start'` puts the label in an inline-start column with hint and error under the field (see "Label beside the field: `label-placement`" in the shared forms notes).
 - `language: string = ''` — reflected on the host and projected onto the `editor` part as
   `data-language`; purely a consumer-reachable styling/metadata hook, nothing tokenizes the text
 - `withoutLineNumbers: boolean = false` (attribute `without-line-numbers`, reflected) — omits the
@@ -14606,6 +14624,12 @@ and:
   value (or the mirrored default); when neither spelling is authored, the panel is actually placed
   with the cascading `--lr-positioning-strategy` custom property honored ahead of that default —
   see **Themeable custom properties** below
+- `labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) — `'start'`
+  puts the label in an inline-start column beside the trigger (or the inline panel), sized by
+  `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default
+  `var(--lr-space-m)`), with hint and error under it, returning above the field below
+  `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label
+  beside the field: `label-placement`" in the shared forms notes
 - `withLabel: boolean = false` (`with-label`, reflected) and `withHint: boolean = false`
   (`with-hint`, reflected) — SSR hints that the corresponding slots are populated, so their chrome
   is present before client-side slot observation
@@ -14652,7 +14676,7 @@ one bubbling/composed native `Event` named `change`, followed by `lr-change` wit
 accepted text-field change/Enter, or an eyedropper result. A drag or repeated key can therefore
 emit several `input`/`lr-input` edit pairs but only one `change`/`lr-change` commit pair.
 Before a swatch click, an accepted text entry or an eyedropper result changes the value, the
-cancelable `lr-color-picker-change-request` (`detail: { value, previousValue }`, the proposed
+cancelable `lr-change-request` (`detail: { value, previousValue }`, the proposed
 serialized colour while `value` still holds the current one) is dispatched. `preventDefault()`
 keeps the current colour and suppresses every `input`/`lr-input`/`change`/`lr-change`; a listener
 may instead resolve the request by assigning `value` itself, which also suppresses the built-in
@@ -15185,6 +15209,8 @@ Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-lab
 `--lr-form-control-label-color`. The control text follows `--lr-form-control-font-size`.
 
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
+
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`".
 
 A closed-list locale switcher over the library's own locale registry. First-party invention (no
 Web Awesome equivalent). With `locales` unset (the default), the offered rows are exactly
@@ -16021,6 +16047,8 @@ Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-lab
 
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`".
+
 A form-associated, single-currency selector with a compact ISO-code trigger and localized currency
 names and symbols in its options. It composes `lr-select` (or `lr-combobox` when searchable) and `lr-option`; no additional popover,
 currency-name table or optional peer is needed. Selection changes the field value only: exchange
@@ -16211,6 +16239,8 @@ Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-lab
 
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`".
+
 A form-associated country/territory selector with localized names and decorative emoji flags.
 Import `@aceshooting/lyra-ui/components/lr-country-picker.js`. The default catalog is the pinned
 249-code ISO alpha-2 list. `value` defaults to `''`; valid two-letter values are trimmed and
@@ -16335,6 +16365,8 @@ Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-lab
 
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`".
+
 A form-associated identifier selector. Import
 `@aceshooting/lyra-ui/components/lr-time-zone-picker.js`. It follows the
 [shared field contract](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/components/lr-country-picker.md),
@@ -16391,6 +16423,8 @@ Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-lab
 `--lr-form-control-label-color`.
 
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
+
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`".
 
 A form-associated measurement-unit selector. Import
 `@aceshooting/lyra-ui/components/lr-unit-picker.js`. It follows the
@@ -16496,6 +16530,8 @@ Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-lab
 
 Attribute `label-display` (`'visible'` default, or `'hidden'`) removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`").
 
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`".
+
 A form control that captures a drawn signature with a mouse, touch, a stylus or the keyboard and
 submits it as a PNG data URL. Strokes are stored as fractions of the pad box and drawn as SVG, so a
 resize, zoom or theme change never redraws or distorts them; the surface fills its allocation's
@@ -16526,6 +16562,7 @@ property and the attribute are equivalent: `el.appearance = 'filled'` repaints t
 **Properties:**
 
 - `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`, reflected) — `'hidden'` removes the label visually while it stays the accessible name; hint, error and required semantics are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
+- `labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) — `'start'` puts the label in an inline-start column with hint and error under the field (see "Label beside the field: `label-placement`" in the shared forms notes).
 - `readonly` (default `false`) keeps the signature focusable and submittable while blocking drawing
   and clearing. Setting it discards an in-progress stroke.
 
@@ -17158,13 +17195,16 @@ writes); `lr-row-collapse`, `lr-row-expand`, `lr-group-collapse`, and `lr-group-
 row expand/collapse details use canonical `rowKey` plus mirrored `key`. Cancelable
 `lr-sort-request` (readonly `{ sort }`) precedes `lr-sort-change`; veto leaves sort unchanged
 and suppresses `lr-sort-change`.
-Use `lr-sort` for the accepted primary sort. Its frozen detail carries `phase: 'commit'`, `sortKey`, `sortDir`, and the ordered `sort` array. Clearing uses an empty key and a null direction.
-`lr-selection-request` proposes frozen `{ selectedRowKeys }`; `lr-selection-change` reports the accepted keys and selected rows. `lr-row-expand-request` proposes `{ row, rowKey, key, expanded }`; `lr-row-expand-toggle` reports the accepted change. Existing `lr-sort-change`, `lr-row-select`, `lr-row-expand` and `lr-row-collapse` listeners continue to work.
+Cancelable `lr-row-select-request` proposes frozen `{ selectedRowKeys }` before `lr-row-select`; veto
+keeps the selection and suppresses `lr-row-select`. Cancelable `lr-row-expand-request` proposes
+`{ row, rowKey, key, expanded }` before `lr-row-expand` or `lr-row-collapse`; veto leaves the row
+unchanged. Each user selection, sort or expansion emits exactly one request and, when accepted, one
+commit event.
 `lr-before-page-change` proposes zero-based `{ page, pageSize, offset }` for page navigation and page-size changes; `offset` is `page * pageSize`, and `lr-page-change` and each `dataSource` request carry the same `offset`. An accepted pager activation also emits `lr-activate` with zero-based `{ value }`, including activation of the current page.
 `lr-copy` (`{ ok: true, text }` on fulfillment); `lr-copy-error` (`{ ok: false, text, reason, error }` on failure); `lr-error` is a compatibility notice without raw
 platform text. `lr-retry-request` (`detail: null`, cancelable) means the built-in retry
 button was activated while `error` is set; its default clears `error`, and veto leaves it set.
-All library events bubble and are composed. Cancelable events include `lr-before-page-change`, `lr-selection-request`, `lr-row-expand-request`, `lr-cell-contextmenu`,
+All library events bubble and are composed. Cancelable events include `lr-before-page-change`, `lr-row-select-request`, `lr-row-expand-request`, `lr-cell-contextmenu`,
 `lr-column-resize-request`, `lr-sort-request`, and `lr-retry-request`. Details and owned collections
 are frozen. Toolbar-search and column-filter inputs re-emit `focus`/`blur` once from the host as
 bubbling, composed native `FocusEvent`s, preserving `relatedTarget`.
@@ -17504,7 +17544,7 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   all work — a custom property cannot drive a `@container` query, so the component measures it).
   The grid/row/gridcell roles, sortable headers (wrapped into a strip above the cards), selection,
   activation, editing, expansion and `href` links keep working; `sticky` columns stop pinning while
-  stacked. `--lr-table-stack-label-size` (default `40%`) sets the caption's inline size. Unsupported
+  stacked. `--lr-table-stack-label-inline-size` (default `40%`) sets the caption's inline size. Unsupported
   values normalize to `'never'`, which renders exactly the previous markup
 - `layout: 'auto'|'fixed' = 'auto'` (reflected) — a **floor** on the `<table>`'s `table-layout`, not
   an override. `'fixed'` forces the fixed algorithm even when no column declares a `width`, so every
@@ -17777,13 +17817,14 @@ same way. The panel deliberately does **not** repeat `data-row-key`, so a `[data
 still resolves exactly one element per row. Prefer these three methods over building a selector from
 any of the attributes — a consumer-supplied key is not safe to interpolate into CSS unescaped.
 
-The table emits a cancelable `lr-page-request` with a one-based `{ page }` before applying a pager change. Preventing it preserves the current page and suppresses `lr-page-change`.
+The table emits a cancelable `lr-before-page-change` before applying a pager change. Preventing it preserves the current page and suppresses `lr-page-change`. The nested pager's own `lr-before-page-change` stays inside the shadow root, so a document listener hears one event per page action, targeted at the table.
 
 **Events:** `lr-sort-request` (cancelable frozen readonly
 `detail: { phase: 'request', sortKey, sortDir }`) precedes `lr-sort` (frozen readonly
 `detail: { phase: 'commit', sortKey, sortDir }`) only when accepted. Client mode also updates its
-sort properties; server mode leaves them controlled. `lr-page-request` is cancelable and proposes
-a one-based page with frozen readonly `detail: { page }` before `lr-page-change`. Other events are `lr-row-activate`
+sort properties; server mode leaves them controlled. `lr-before-page-change` is cancelable and proposes
+frozen readonly `detail: { page, pageSize, offset }` before `lr-page-change`: `page` is one-based like
+`<lr-pagination>`, and `offset` is `(page - 1) * pageSize`. Other events are `lr-row-activate`
 (a row was activated by pointer or Enter/Space, `detail: { row }`), `lr-load-more`,
 `lr-priority-columns-visibility-change` (frozen readonly `detail: { visible }`), and the expansion
 pair `lr-row-expand-request` (**cancelable**, frozen readonly `detail: { row, rowKey, expanded }`,
@@ -23900,7 +23941,7 @@ fullscreen }` is the state proposed by the fullscreen toggle, Escape, or a backd
 `preventDefault()` to leave `fullscreen` unchanged. Not emitted when a consumer assigns
 `fullscreen` directly), `lr-fullscreen-change` (non-cancelable; `detail: { fullscreen }` is the
 accepted state — also fired when fullscreen is exited via Escape or a backdrop click, not just the
-toggle button. Not emitted when a consumer assigns `fullscreen` directly), `lr-widget-view-request`
+toggle button. Not emitted when a consumer assigns `fullscreen` directly), `lr-widget-view-change-request`
 (cancelable; `detail: { viewId }` is the view proposed by a header view-toggle click. Call
 `preventDefault()` to leave `activeViewId` unchanged. Not emitted when a consumer assigns
 `activeViewId` directly), `lr-widget-view-change` (non-cancelable; `detail: { viewId }`, the accepted
@@ -23909,11 +23950,11 @@ forcing a fallback to the first remaining view. Not emitted when a consumer sets
 directly, even to a now-invalid id), and
 `lr-activate` (non-cancelable; `detail: { value }` — note the key is `value`, not `viewId` — is the
 activated view's `viewId`, fired on **every** accepted header view-toggle activation whether or not
-`activeViewId` actually moved. `lr-widget-view-request` stays the veto point, and a vetoed activation emits
+`activeViewId` actually moved. `lr-widget-view-change-request` stays the veto point, and a vetoed activation emits
 no activation at all. Use it for the repeat pick `lr-widget-view-change` deliberately stays silent for —
 "rebuild that view" is a real intent — which is otherwise unobservable, because the toggles live in
 this shadow root, so a retargeted `click` names no view. When an activation _does_ move the view,
-`lr-widget-view-request` and `lr-widget-view-change` are emitted first. Not emitted when a consumer sets
+`lr-widget-view-change-request` and `lr-widget-view-change` are emitted first. Not emitted when a consumer sets
 `activeViewId` directly)
 
 **Slots:** default (the panel body, rendered only while `views` is empty), `start` (optional leading
@@ -24371,6 +24412,10 @@ A tab strip. Mirrors `wa-tab-group` / `sl-tab-group`.
 With manual activation, removing the focused unselected tab rehomes actual focus to a valid survivor
 while retaining a valid selected tab and panel. This repair emits no show/hide events and preserves
 focus already held by an outside control.
+
+In a host with a definite block size, `fill-body` (`fillBody`) stretches the active panel to the
+body's block size and moves scrolling into the panel content, the same attribute `lr-card` and
+`lr-dialog` use. Without it, the body scrolls and each panel keeps its content height.
 
 **Renamed in 8.0.0.** This element used to be `<lr-tabs>`. The tag is now `<lr-tab-group>`, its
 single `lr-tabs-change` event is now the `lr-tab-hide` → `lr-tab-show` pair below, and every
@@ -25215,7 +25260,7 @@ string; label: string; icon?: unknown; disabled?: boolean }`; `icon` renders as 
 
 **Events:**
 
-- `lr-segmented-select-request` (`detail: { value, previousValue }`) — a click or Arrow/Home/End
+- `lr-change-request` (`detail: { value, previousValue }`) — a click or Arrow/Home/End
   key is about to select a segment whose value differs from `value`, which still holds
   `previousValue` while it dispatches. Cancelable: `preventDefault()` keeps the current selection,
   and neither `lr-change` nor `lr-activate` fires. A listener may instead resolve it by assigning
@@ -25607,7 +25652,7 @@ on the panel.
 `var(--lr-color-surface)`, the pinned `sticky-group` overlay's background), `--lr-virtual-list-height` (default `24rem` — the host's bounded
 scroll extent; component-specific since a virtualized list is meaningless without a sized viewport,
 and ignored while `scrollElement` names an external scroller, whose own height is the visible band),
-`--lr-virtual-list-active-row-background` (background of the `active-item-id` row; default a subtle currentColor tint),
+`--lr-virtual-list-active-row-bg` (background of the `active-item-id` row; default a subtle currentColor tint),
 `--lr-virtual-list-row-mark-bg` (default `revert`),
 `--lr-virtual-list-row-mark-color` (default `revert`),
 `--lr-virtual-list-row-mark-radius` (default `0`), and
@@ -32984,7 +33029,7 @@ the remove button's `:hover` fill).
 
 The close control is a composed `<lr-icon-button>`, so it is themed through the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`.
 
-The `appearance` property accepts `filled-outlined` (default), `filled`, `outlined`, `plain`, and `accent`. Style the panel with `--lr-alert-bg`, `--lr-alert-border`, `--lr-alert-color`, `--lr-alert-radius`, and `--lr-alert-shadow`. After `lr-hide`, the cancelable `lr-close-request` and committed `lr-close` report `detail.reason` as `close-button`, `timeout`, or `programmatic`.
+The `appearance` property accepts `filled-outlined` (default), `filled`, `outlined`, `plain`, and `accent`. Style the panel with `--lr-alert-bg`, `--lr-alert-border-color`, `--lr-alert-color`, `--lr-alert-radius`, and `--lr-alert-shadow`. After `lr-hide`, the cancelable `lr-close-request` and committed `lr-close` report `detail.reason` as `close-button`, `timeout`, or `programmatic`.
 
 A closed-by-default alert that carries the pinned Shoelace alert surface under the `lr-` prefix,
 plus one additive Lyra property (`size`) that is inert until you set it.
@@ -33177,7 +33222,7 @@ work directly and take normal author precedence. `inline` removes the host's bor
 and padding.
 
 **Themeable custom properties:** `--lr-callout-bg`, `--lr-callout-color`, and
-`--lr-callout-border` read the inherited generic semantic quiet/loud slots, with brand quiet/loud
+`--lr-callout-border-color` read the inherited generic semantic quiet/loud slots, with brand quiet/loud
 as their standalone fallback. An explicit `variant` maps all generic slots locally; leaving it
 unset preserves an ancestor's mapping. Explicit `appearance` works with either source and uses the
 same brand fallback when there is no surrounding context. Public callout hooks are consumed at use
@@ -33313,7 +33358,7 @@ Left unset, the built-in star outline/solid pair is unchanged.
 
 **Events:**
 
-- `lr-rating-change-request` — `detail: { value, previousValue }`, cancelable. Dispatched before a
+- `lr-change-request` — `detail: { value, previousValue }`, cancelable. Dispatched before a
   click or Arrow/Page/Home/End key changes the rating, while `value` still holds the current one; a
   gesture that would not move the value requests nothing. `preventDefault()` keeps the rating and
   suppresses `input`/`lr-input`/`change`/`lr-change`; a listener may instead resolve the request by
@@ -36095,8 +36140,9 @@ density), `lr-select` (look), `lr-slider` (glass opacity), `lr-swatch-picker` in
 
 Each control writes its own axis through `setLyraStyle()`, which persists and applies it like any
 other caller. The panel re-reads the style on every window `lr-style-change`, so another panel, an
-application call or an operating-system mode flip updates it too. The glass opacity slider is
-disabled while the surface is `solid`. The reset button calls `resetLyraStyle()` with only the fields
+application call or an operating-system mode flip updates it too. The glass opacity slider runs
+from 0 to 1 in steps of 0.01, the same scale as `surfaceOpacity`, and shows the value as a
+percentage; it is disabled while the surface is `solid`. The reset button calls `resetLyraStyle()` with only the fields
 of the axes the panel shows (`accent` also resets `accentBackground`). A custom accent colour that is
 not a named gemstone leaves no swatch selected; a `mode` of `unset` leaves no mode segment selected.
 
@@ -45980,7 +46026,7 @@ Plus shared tokens
 and header rule), `--lr-radius`, `--lr-color-surface`, `--lr-space-s/-m/-l/-xs`,
 `--lr-color-text`, `--lr-color-text-quiet`, `--lr-color-danger`, `--lr-color-brand`,
 `--lr-color-on-brand`, `--lr-focus-ring-width/-color/-offset`, `--lr-transition-fast`.
-Region highlight action buttons accept `--lr-document-preview-action-background` (default `var(--lr-color-surface)`), `--lr-document-preview-action-hover-background` (default `var(--lr-color-surface-raised)`) and `--lr-document-preview-action-active-background`.
+Region highlight action buttons accept `--lr-document-preview-action-bg` (default `var(--lr-color-surface)`), `--lr-document-preview-action-hover-bg` (default `var(--lr-color-surface-raised)`) and `--lr-document-preview-action-active-bg`.
 
 **Optional peer deps:** none directly — the `unsupported` slot is commonly used to compose
 `<lr-code-block>` (which has its own optional `shiki` peer dependency; see that component's own
@@ -46373,7 +46419,7 @@ highlight falling back to that same token would render as unhighlighted.
 `--lr-docx-viewer-search-match-bg`,
 `--lr-docx-viewer-search-match-active-bg`, and
 `--lr-docx-viewer-search-match-active-color` style resting and active search matches.
-Highlight action buttons accept `--lr-docx-viewer-action-background` (default `var(--lr-color-surface)`), `--lr-docx-viewer-action-hover-background` (default `var(--lr-color-surface-raised)`) and `--lr-docx-viewer-action-active-background`.
+Highlight action buttons accept `--lr-docx-viewer-action-bg` (default `var(--lr-color-surface)`), `--lr-docx-viewer-action-hover-bg` (default `var(--lr-color-surface-raised)`) and `--lr-docx-viewer-action-active-bg`.
 
 **Optional peer dependencies:** install `mammoth` and `dompurify` with `pnpm add mammoth dompurify`.
 The component registers an eager `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
@@ -46400,7 +46446,7 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 
 ## `lr-email-viewer`
 
-Action backgrounds accept `--lr-email-viewer-action-background`, `--lr-email-viewer-action-hover-background` and `--lr-email-viewer-action-active-background`.
+Action backgrounds accept `--lr-email-viewer-action-bg`, `--lr-email-viewer-action-hover-bg` and `--lr-email-viewer-action-active-bg`.
 
 Fetches and parses `.eml` messages with the optional `postal-mime` peer. HTML message bodies are
 sanitized through the existing optional `dompurify` peer before rendering; plain-text messages
@@ -46455,7 +46501,7 @@ reports `found: false`; text-quote anchors use the rendered message body.
 
 **Events:**
 
-- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is an empty object.
+- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is `null`.
 - `lr-render-error` with `detail.error` when fetching or parsing fails.
 - `lr-attachment-open` — recursively frozen `detail: { attachment: { filename, mimeType,
   content?: Blob } }`; call `content.arrayBuffer()` to read the immutable copied bytes. This
@@ -46524,7 +46570,7 @@ fragment jump reports `found: false`. Use a text-quote anchor for event content.
 
 **Events:**
 
-- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is an empty object.
+- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is `null`.
 - `lr-render-error` with `detail.error` when fetching or parsing fails.
 - `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever rendered-calendar search state changes.
@@ -46587,7 +46633,7 @@ independently addressable through the fragment/anchor API. `search()`/`searchNex
 navigating search matches (and the resulting active-row highlight) correctly reaches every
 duplicate-named entry, not just the first.
 
-**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+**Events:** `lr-load` carries a `null` detail and bubbles across shadow roots after the parsed document renders;
 `lr-render-error` with `detail.error` when fetching or parsing fails;
 `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) from search,
 navigation, clear, canonical source reset, and effective-locale re-evaluation; `lr-text-select`
@@ -46874,7 +46920,7 @@ types are `LyraViewerDiagnostic`, `LyraViewerDiagnosticCode`, `LyraViewerDiagnos
 
 ## `lr-svg-viewer`
 
-Action backgrounds accept `--lr-svg-viewer-action-background`, `--lr-svg-viewer-action-hover-background` and `--lr-svg-viewer-action-active-background`.
+Action backgrounds accept `--lr-svg-viewer-action-bg`, `--lr-svg-viewer-action-hover-bg` and `--lr-svg-viewer-action-active-bg`.
 
 Fetches an SVG document, sanitizes it with the optional `dompurify` peer, and renders it inline.
 The shared `passive-svg` profile (the same post-sanitization engine used for embedded viewer markup)
@@ -46921,7 +46967,7 @@ when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnega
 carrying the same boolean. Called before the SVG has finished loading it retries for up to 5s (real
 timers) rather than failing immediately.
 
-**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+**Events:** `lr-load` carries a `null` detail and bubbles across shadow roots after the parsed document renders;
 `lr-render-error` with `detail.error` when fetching or sanitizing fails.
 `lr-highlight-activate` (`detail: { highlightId }`) — a region highlight was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found: boolean }`) — fired after an `anchor` assignment
@@ -46997,7 +47043,7 @@ own name. It leaves the tab order when the content fits.
 
 **Events:**
 
-- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is an empty object.
+- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is `null`.
 - `lr-render-error` with `detail.error` when fetching or sanitizing fails.
 - `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever rendered-document search state changes.
@@ -47029,7 +47075,7 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 
 ## `lr-dataset-viewer`
 
-Set `--lr-dataset-viewer-background`, `--lr-dataset-viewer-border` and `--lr-dataset-viewer-border-radius` on the frame. `--lr-dataset-viewer-header-row-bg` sets the column heading background.
+Set `--lr-dataset-viewer-bg`, `--lr-dataset-viewer-border` and `--lr-dataset-viewer-radius` on the frame. `--lr-dataset-viewer-header-row-bg` sets the column heading background.
 
 Fetches tab-, pipe-, or delimiter-separated text, or reads a host-owned `dataSource`, and renders a
 virtualized, accessible table (a `role="table"` container with a sticky `role="row"` header, composed with `<lr-virtual-list
@@ -47152,7 +47198,7 @@ value, ordered row then column (empty/whitespace query behaves like
 `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through matches (wrapping,
 resolving `false` when there are none); `clearSearch()` clears the query, matches, and cursor.
 
-**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+**Events:** `lr-load` carries a `null` detail and bubbles across shadow roots after the parsed document renders;
 `lr-render-error` with `detail.error` when fetching, parsing, in-memory admission, or
 data-source validation/read/search fails.
 `lr-viewer-diagnostic` reports up to 100 recoverable PapaParse errors in one
@@ -47237,7 +47283,7 @@ own name. It leaves the tab order when the content fits.
 
 **Events:**
 
-- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is an empty object.
+- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is `null`.
 - `lr-render-error` with `detail.error` when fetching or parsing fails.
 - `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever rendered-contact search state changes.
@@ -47475,7 +47521,7 @@ prevents stale page/text/region work from scrolling or reporting success.
 
 ## `lr-spreadsheet-viewer`
 
-Set `--lr-spreadsheet-viewer-background`, `--lr-spreadsheet-viewer-border` and `--lr-spreadsheet-viewer-border-radius` on the frame. `--lr-spreadsheet-viewer-header-row-bg` sets the column heading background.
+Set `--lr-spreadsheet-viewer-bg`, `--lr-spreadsheet-viewer-border` and `--lr-spreadsheet-viewer-radius` on the frame. `--lr-spreadsheet-viewer-header-row-bg` sets the column heading background.
 
 Setting `scrollMode` to `page` (attribute `scroll-mode="page"`) lets the page scroll both axes, keeps the header sticky and ignores `max-height`. The default `self` uses the viewer’s own scrollport.
 
@@ -47591,7 +47637,7 @@ query behaves like `clearSearch()`); `searchNext()`/`searchPrevious()` advance/s
 matches (wrapping, resolving `false` when there are none); `clearSearch()` clears the query,
 matches, and painted marks.
 
-**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+**Events:** `lr-load` carries a `null` detail and bubbles across shadow roots after the parsed document renders;
 `lr-render-error` with `detail.error` when fetching, parsing, in-memory admission, or
 data-source validation/read/search fails.
 `lr-highlight-activate` (`detail: { highlightId }`) — a `highlights` cell was clicked or activated via
@@ -47655,7 +47701,7 @@ pass remains synchronous.
 
 ## `lr-csv-viewer`
 
-Set `--lr-csv-viewer-background`, `--lr-csv-viewer-border` and `--lr-csv-viewer-border-radius` on the frame. `--lr-csv-viewer-header-row-bg` sets the column heading background.
+Set `--lr-csv-viewer-bg`, `--lr-csv-viewer-border` and `--lr-csv-viewer-radius` on the frame. `--lr-csv-viewer-header-row-bg` sets the column heading background.
 
 Setting `scrollMode` to `page` (attribute `scroll-mode="page"`) lets the page scroll both axes, keeps the header sticky and ignores `max-height`. The default `self` uses the viewer’s own scrollport.
 
@@ -47763,7 +47809,7 @@ behaves like `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step ba
 (wrapping, resolving `false` when there are none); `clearSearch()` clears the query, matches, and
 painted marks.
 
-**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+**Events:** `lr-load` carries a `null` detail and bubbles across shadow roots after the parsed document renders;
 `lr-render-error` with `detail.error` when fetching, parsing, in-memory admission, or
 data-source validation/read/search fails.
 `lr-viewer-diagnostic` reports up to 100 recoverable PapaParse errors in one
@@ -47989,7 +48035,7 @@ opaque one-frame fill.
 tone independently, defaulting to the corresponding Lyra quiet background and foreground tokens.
 `--lr-highlight-layer-flash-bg` controls the temporary flash state (default
 `--lr-color-brand`).
-Highlight action buttons accept `--lr-highlight-layer-action-background` (default `var(--lr-color-surface)`), `--lr-highlight-layer-action-hover-background` (default `var(--lr-color-surface-raised)`) and `--lr-highlight-layer-action-active-background`.
+Highlight action buttons accept `--lr-highlight-layer-action-bg` (default `var(--lr-color-surface)`), `--lr-highlight-layer-action-hover-bg` (default `var(--lr-color-surface-raised)`) and `--lr-highlight-layer-action-active-bg`.
 
 ## `lr-page-rail`
 
@@ -48200,7 +48246,7 @@ code-cell name. Sanitized SVG output is wrapped in a named `role="img"` with the
 
 ## `lr-xml-viewer`
 
-Action backgrounds accept `--lr-xml-viewer-action-background`, `--lr-xml-viewer-action-hover-background` and `--lr-xml-viewer-action-active-background`.
+Action backgrounds accept `--lr-xml-viewer-action-bg`, `--lr-xml-viewer-action-hover-bg` and `--lr-xml-viewer-action-active-bg`.
 
 Collapsible, copyable, `DOMParser`-based tree view for XML documents, mirroring `lr-json-viewer`'s
 UX (`expand-depth`, `copyable`, structural-path-keyed expand state that survives a same-shape
@@ -48352,7 +48398,7 @@ inside a collapsed subtree paints once that subtree is expanded.
 Painting retains at most 100 resolved entries from a 1,000-entry candidate window; an active entry
 anywhere in the bounded 10,000-record host snapshot is placed first inside both ceilings.
 
-**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+**Events:** `lr-load` carries a `null` detail and bubbles across shadow roots after the parsed document renders;
 `lr-copy` — emitted only after the owning realm's clipboard write fulfills, with
 `detail: { ok: true, text }`. Clipboard absence, synchronous throws, and rejected writes instead
 show the localized `copyFailed` label and emit generic `lr-error` plus `lr-copy-error` with
@@ -48602,7 +48648,7 @@ fragment jump reports `found: false`. Use a text-quote anchor for serialized met
 
 **Events:**
 
-- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is an empty object.
+- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is `null`.
 - `lr-viewer-diagnostic` reports `geojson-map-unavailable` with `fatal: false` when the JSON preview replaces the map.
 - `lr-render-error` — `detail: { error }` — fetch, parse, or shape-validation failure. A missing
   optional MapLibre peer is recoverable: it keeps the serialized metadata fallback visible and fires
@@ -48653,7 +48699,7 @@ its module-worker URL configured for the bundler before this viewer constructs t
 
 ## `lr-model-viewer`
 
-Action backgrounds accept `--lr-model-viewer-action-background`, `--lr-model-viewer-action-hover-background` and `--lr-model-viewer-action-active-background`.
+Action backgrounds accept `--lr-model-viewer-action-bg`, `--lr-model-viewer-action-hover-bg` and `--lr-model-viewer-action-active-bg`.
 
 The interactive viewport has a separate accessible name, supplied by `modelViewerViewport` (“Interactive model” in English).
 
@@ -49741,10 +49787,10 @@ rendered as authored, not neutralized.
 
 **Themeable custom properties:** `--lr-markdown-content-min-size` sets the content minimum
 on both logical axes (default `0`, so a one-line reply keeps its own line box). `--lr-markdown-code-copy-bg`,
-`--lr-markdown-code-copy-bg-hover`, and `--lr-markdown-code-copy-bg-active` set the fenced copy
+`--lr-markdown-code-copy-hover-bg`, and `--lr-markdown-code-copy-active-bg` set the fenced copy
 button background for its resting, hovered, and pressed states. Shared icon-button state tokens
-take precedence when specified. `--lr-markdown-code-copy-color-hover` (default `var(--lr-color-brand)`)
-and `--lr-markdown-code-copy-color-active` (default `var(--lr-markdown-code-copy-color-hover)`) set
+take precedence when specified. `--lr-markdown-code-copy-hover-color` (default `var(--lr-color-brand)`)
+and `--lr-markdown-code-copy-active-color` (default `var(--lr-markdown-code-copy-hover-color)`) set
 the copy glyph color while hovered and pressed, and `--lr-markdown-code-copy-success-color` /
 `--lr-markdown-code-copy-error-color` (defaults `var(--lr-color-success)` / `var(--lr-color-danger)`)
 its color after a successful or failed copy. `--lr-markdown-max-height` (default `none` — cap on
@@ -50032,7 +50078,7 @@ keeps the box and list gutter aligned. Header hooks are `--lr-markdown-code-head
 (default `var(--lr-color-surface)`) and `--lr-markdown-code-header-color`
 (default `var(--lr-color-text-quiet)`).
 
-**Shared icon-button tokens:** the code-block action buttons read the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`. `--lr-markdown-code-copy-bg-hover` and `--lr-markdown-code-copy-bg-active` set the fenced copy button's hovered and pressed backgrounds. `--lr-markdown-code-copy-color-hover` (default `var(--lr-color-brand)`) and `--lr-markdown-code-copy-color-active` set its glyph color in those states, and `--lr-markdown-code-copy-success-color` / `--lr-markdown-code-copy-error-color` (defaults `var(--lr-color-success)` / `var(--lr-color-danger)`) its copy feedback.
+**Shared icon-button tokens:** the code-block action buttons read the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`. `--lr-markdown-code-copy-hover-bg` and `--lr-markdown-code-copy-active-bg` set the fenced copy button's hovered and pressed backgrounds. `--lr-markdown-code-copy-hover-color` (default `var(--lr-color-brand)`) and `--lr-markdown-code-copy-active-color` set its glyph color in those states, and `--lr-markdown-code-copy-success-color` / `--lr-markdown-code-copy-error-color` (defaults `var(--lr-color-success)` / `var(--lr-color-danger)`) its copy feedback.
 
 ## `lr-chat-message`
 
@@ -50972,6 +51018,8 @@ The field label accepts `--lr-form-control-label-font-size`,
 
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`" in the shared forms notes.
+
 The model list follows the [shared surface treatment](./llms/shared/styles-and-tokens.md);
 its editing field retains an opaque fill.
 
@@ -51858,13 +51906,13 @@ remains the one exception that does not cross this way: use `--lr-theme-icon-but
 **Themeable custom properties:** `--lr-code-block-padding` controls code padding, `--lr-code-block-radius`
 controls the frame corners, and `--lr-code-block-header-bg`, `--lr-code-block-header-color` and
 `--lr-code-block-line-number-color` set the header background, filename color and gutter color.
-`--lr-code-block-toggle-bg`, `--lr-code-block-toggle-bg-hover`, and `--lr-code-block-toggle-bg-active`
-style the disclosure. `--lr-code-block-gutter-bg`, `--lr-code-block-gutter-bg-hover`, and
-`--lr-code-block-gutter-bg-active` style the line buttons. Each token applies to its own state.
-`--lr-code-block-toggle-color` (default `var(--lr-color-text-quiet)`), `--lr-code-block-toggle-color-hover`
-(default `var(--lr-color-brand)`) and `--lr-code-block-toggle-color-active` (default
-`var(--lr-code-block-toggle-color-hover)`) set the disclosure glyph color at rest, hovered and
-pressed; `--lr-code-block-gutter-color-hover` (default `inherit`, so it keeps the line-number color)
+`--lr-code-block-toggle-bg`, `--lr-code-block-toggle-hover-bg`, and `--lr-code-block-toggle-active-bg`
+style the disclosure. `--lr-code-block-gutter-bg`, `--lr-code-block-gutter-hover-bg`, and
+`--lr-code-block-gutter-active-bg` style the line buttons. Each token applies to its own state.
+`--lr-code-block-toggle-color` (default `var(--lr-color-text-quiet)`), `--lr-code-block-toggle-hover-color`
+(default `var(--lr-color-brand)`) and `--lr-code-block-toggle-active-color` (default
+`var(--lr-code-block-toggle-hover-color)`) set the disclosure glyph color at rest, hovered and
+pressed; `--lr-code-block-gutter-hover-color` (default `inherit`, so it keeps the line-number color)
 sets the hovered line button's text color.
 `--lr-code-block-max-height` (default `none` — an independently
 settable scroll cap; a `max-height` attribute writes the same property inline on `body` and wins),
@@ -52123,7 +52171,7 @@ const view = html`<lr-code-block-core
 
 ---
 
-**State tokens:** `--lr-code-block-toggle-bg-hover` and `--lr-code-block-toggle-bg-active` set the disclosure control's hovered and pressed backgrounds; `--lr-code-block-gutter-bg-hover` and `--lr-code-block-gutter-bg-active` do the same for the line buttons. `--lr-code-block-toggle-color` (default `var(--lr-color-text-quiet)`), `--lr-code-block-toggle-color-hover` (default `var(--lr-color-brand)`) and `--lr-code-block-toggle-color-active` set the disclosure glyph color per state, and `--lr-code-block-gutter-color-hover` (default `inherit`) the hovered line button's text.
+**State tokens:** `--lr-code-block-toggle-hover-bg` and `--lr-code-block-toggle-active-bg` set the disclosure control's hovered and pressed backgrounds; `--lr-code-block-gutter-hover-bg` and `--lr-code-block-gutter-active-bg` do the same for the line buttons. `--lr-code-block-toggle-color` (default `var(--lr-color-text-quiet)`), `--lr-code-block-toggle-hover-color` (default `var(--lr-color-brand)`) and `--lr-code-block-toggle-active-color` set the disclosure glyph color per state, and `--lr-code-block-gutter-hover-color` (default `inherit`) the hovered line button's text.
 
 ## `lr-model-settings-panel`
 
@@ -53143,8 +53191,8 @@ Override the `conversationActionWithTitle` string to change how the action and t
 `withArchived: boolean
 = false` (attribute `with-archived`, reflected) — data mode: include `archived` threads (in their own
 trailing group). `withoutRename: boolean = false` (attribute `without-rename`, reflected) — forwarded to
-each data-mode row, turning its inline rename off. `withoutPinGlyph: boolean = false` (attribute
-`without-pin-glyph`, reflected) — data mode: omits the `pin-glyph` indicator; each pinned row keeps a
+each data-mode row, turning its inline rename off. `withoutPinIcon: boolean = false` (attribute
+`without-pin-icon`, reflected) — data mode: omits the `pin-glyph` indicator; each pinned row keeps a
 visually hidden "Pinned" label, so its accessible name is unchanged. `withoutGroupIcon: boolean =
 false` (attribute `without-group-icon`, reflected) — data mode: omits the decorative `group-icon`
 chevron from group headers and their sticky copy; the toggle keeps `aria-expanded`. Row density
@@ -53743,6 +53791,8 @@ Visible `error-text` or slotted error content sets `aria-invalid="true"` on the 
 or free-text input while preserving the native validity of its value.
 
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
+
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`" in the shared forms notes.
 
 Override `--lr-voice-picker-trigger-padding`, `--lr-voice-picker-font-size`, and `--lr-voice-picker-expand-size` for trigger spacing, text size, and the expand control’s minimum target cap.
 
@@ -56073,7 +56123,7 @@ ways, both feeding the same coalesced (at most one per animation frame) scroll-t
 
 ---
 
-**Pointer-state tokens:** `--lr-thinking-panel-header-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-thinking-panel-header-pressed-bg`.
+**Pointer-state tokens:** `--lr-thinking-panel-header-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-thinking-panel-header-active-bg`.
 
 ## `lr-stack-trace`
 
@@ -56196,7 +56246,7 @@ Pass custom classifiers as `{ internalPatterns: ['node_modules/', /vendor\//] }`
 
 ---
 
-**Pointer-state tokens:** `--lr-stack-trace-internal-toggle-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-stack-trace-internal-toggle-pressed-bg`.
+**Pointer-state tokens:** `--lr-stack-trace-internal-toggle-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-stack-trace-internal-toggle-active-bg`.
 
 ## `lr-tool-approval-dialog`
 
@@ -57181,7 +57231,7 @@ status icons without changing shared status tokens. `--lr-task-list-bg` (default
 `::part(base)` override; the border-color hook also colors the header/body divider that
 `frame="plain"` keeps.
 
-**Pointer-state tokens:** `--lr-task-list-header-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-task-list-header-pressed-bg`, `--lr-task-list-item-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-task-list-item-pressed-bg`.
+**Pointer-state tokens:** `--lr-task-list-header-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-task-list-header-active-bg`, `--lr-task-list-item-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-task-list-item-active-bg`.
 
 ## `lr-terminal`
 
@@ -57558,7 +57608,7 @@ entries, the body renders through an internal `<lr-virtual-list>` instead of a p
 The plain list's `[part="body"]` is a tab stop only while it overflows its cap, so a keyboard user
 can scroll a long log while a short one adds no stop; the virtual list is its own keyboard target.
 
-`--lr-activity-feed-header-hover-bg` and `--lr-activity-feed-header-pressed-bg`
+`--lr-activity-feed-header-hover-bg` and `--lr-activity-feed-header-active-bg`
 set the header's pointer feedback.
 
 `entries` retains the newest 10,000 identities. The visible `limit` part discloses omitted entries
@@ -59147,7 +59197,7 @@ state), so the selection is announced, not merely painted. Other request rows ex
 
 **Heading level:** `headingLevel` (attribute `heading-level`, default `'2'`) sets the outline level of the title; `'none'` preserves its text without a heading role.
 
-**Pointer-state tokens:** `--lr-approval-queue-row-hover-bg` (default `var(--lr-color-surface-raised)`), `--lr-approval-queue-row-pressed-bg`.
+**Pointer-state tokens:** `--lr-approval-queue-row-hover-bg` (default `var(--lr-color-surface-raised)`), `--lr-approval-queue-row-active-bg`.
 
 ## `lr-mcp-app`
 
@@ -60304,7 +60354,7 @@ The running glyph spins and the pending glyph pulses at `--lr-transition-ambient
 </script>
 ```
 
-**Pointer-state tokens:** `--lr-tool-call-block-header-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-tool-call-block-header-pressed-bg`.
+**Pointer-state tokens:** `--lr-tool-call-block-header-hover-bg` (default `var(--lr-color-brand-quiet)`), `--lr-tool-call-block-header-active-bg`.
 
 ## `lr-change-review`
 
@@ -60775,7 +60825,7 @@ nodes and edges with `--lr-graph-node-fill` and `--lr-graph-edge-color`; the old
 
 ## `lr-graph`
 
-Both SVG and canvas expose up to 200 entries in the screen-reader data list. Source pagination registers when the navigator first renders. For server-rendered pager markup, import the pagination entry before rendering. Set `--lr-graph-spatial-control-hover-fill` to customize the hovered control background.
+Both SVG and canvas expose up to 200 entries in the screen-reader data list. Source pagination registers when the navigator first renders. For server-rendered pager markup, import the pagination entry before rendering. Set `--lr-graph-spatial-control-hover-bg` to customize the hovered control background.
 
 **Optional WebGL engine:** `engine: Engine3dPreference = 'builtin'` accepts `'builtin'`
 or `'webgl'`; invalid values normalize to `'builtin'`. The 3D view lazily requests
@@ -61361,7 +61411,7 @@ polling its own `requestAnimationFrame` loop.
 
 ## `lr-node-palette`
 
-The first replacement of `items` confirms or expires a keyboard reorder. Disconnecting expires it. Set `--lr-node-palette-item-hover-fill` to customize the hovered control background.
+The first replacement of `items` confirms or expires a keyboard reorder. Disconnecting expires it. Set `--lr-node-palette-item-hover-bg` to customize the hovered control background.
 
 Its native search field honors the shared `--lr-input-*` search hooks and `--lr-icon-button-*` action hooks listed in the component reference.
 
@@ -61466,7 +61516,7 @@ The search field accepts `--lr-input-fill`, `--lr-input-border-color`,
 
 ## `lr-graph-legend`
 
-Set `--lr-graph-legend-item-hover-fill` to customize the hovered control background.
+Set `--lr-graph-legend-item-hover-bg` to customize the hovered control background.
 
 A node-type legend for a paired `lr-graph`: one swatch + label + count row per node type, doubling
 as visibility filters. Never reads or writes a graph directly — the host forwards `types` in from
@@ -61700,7 +61750,7 @@ ancestor to change every unset entity chip beneath it.
 
 ## `lr-neighbor-list`
 
-Arrow keys, Home and End move between rows. Inline arrows switch between navigation and expansion. Source pagination registers on first use. For server-rendered pager markup, import the pagination entry before rendering. Set `--lr-neighbor-list-node-hover-fill` to customize the hovered control background.
+Arrow keys, Home and End move between rows. Inline arrows switch between navigation and expansion. Source pagination registers on first use. For server-rendered pager markup, import the pagination entry before rendering. Set `--lr-neighbor-list-node-hover-bg` to customize the hovered control background.
 
 One entity's relationship rows: relation, direction, neighbor, with per-row navigate and
 expand-in-graph affordances. Never computes neighbors itself (the host derives rows from its own
@@ -61834,7 +61884,7 @@ Source-mode parts: `source-status` (loading, failure, empty or missing-center fe
 
 ## `lr-path-strip`
 
-Set `--lr-path-strip-action-hover-fill` to customize the hovered control background.
+Set `--lr-path-strip-action-hover-bg` to customize the hovered control background.
 
 A linear node → relation → node chain rendering "why A connects to B" (GraphRAG local-search
 reasoning paths) as a compact, horizontally scrollable strip. One-dimensional and presentational: no
@@ -63381,7 +63431,7 @@ tokens.
 
 ## `lr-knowledge-graph-explorer`
 
-The default details card and neighbor list register when the first selection needs them. For server-rendered detail markup, import the entity-card and neighbor-list entries before rendering. Set `--lr-knowledge-graph-explorer-source-action-hover-fill` to customize the hovered control background.
+The default details card and neighbor list register when the first selection needs them. For server-rendered detail markup, import the entity-card and neighbor-list entries before rendering. Set `--lr-knowledge-graph-explorer-source-action-hover-bg` to customize the hovered control background.
 
 `engine: Engine3dPreference = 'builtin'` forwards the renderer preference to the composed graph.
 `engine="webgl"` requests its companion for the 3D view. `lr-engine-fallback` bubbles unchanged
@@ -64315,7 +64365,7 @@ source list. Either slot renders from its assigned content without requiring the
 
 ## `lr-embedding-explorer`
 
-The list view accepts `--lr-embedding-explorer-row-selected-fill` and `--lr-embedding-explorer-page-disabled-fill`. The cluster legend exposes `legend-item`, `legend-swatch` and `legend-label` through a display-only graph legend.
+The list view accepts `--lr-embedding-explorer-row-selected-bg` and `--lr-embedding-explorer-page-disabled-bg`. The cluster legend exposes `legend-item`, `legend-swatch` and `legend-label` through a display-only graph legend.
 
 Accessible embedding projection viewer with a dependency-free SVG default. Coordinates are
 projected by the host; the component normalizes them, colors clusters and emits selection events.

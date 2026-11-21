@@ -31,7 +31,7 @@ export const styles = css`
     box-sizing: border-box;
     overflow: hidden;
     padding: var(--_lr-alert-padding);
-    border: var(--lr-border-width-thin) solid var(--lr-alert-border, var(--_lr-alert-border, var(--lr-color-border-normal)));
+    border: var(--lr-border-width-thin) solid var(--lr-alert-border-color, var(--_lr-alert-border, var(--lr-color-border-normal)));
     border-radius: var(--lr-alert-radius, var(--lr-radius));
     background: var(--lr-alert-bg, var(--_lr-alert-fill, var(--lr-color-fill-quiet)));
     color: var(--lr-alert-color, var(--_lr-alert-text, var(--lr-color-on-quiet)));

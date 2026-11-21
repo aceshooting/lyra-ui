@@ -392,3 +392,13 @@ export const TopLayerInStickyToolbar: Story = {
     <div style="position: relative; z-index: 3; block-size: 8rem; background: var(--lr-color-surface-raised, var(--lr-color-surface));"></div>
   `,
 };
+
+/** `label-placement="start"` sets the label in an inline-start column, with the hint under the
+ *  field; below `--lr-form-control-label-collapse-inline-size` it returns above the field. */
+export const LabelPlacementStart: StoryObj = {
+  render: () => html`
+    <div style="display:grid;gap:var(--lr-space-m);max-inline-size:var(--lr-size-36rem)">
+      <lr-model-select label="Model" label-placement="start" hint="Used for new threads" .catalog=${OLLAMA_CATALOG}></lr-model-select>
+    </div>
+  `,
+};

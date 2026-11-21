@@ -57,8 +57,8 @@ export const styles = css`
   }
   [part='toggle'] {
     --_lr-code-block-toggle-bg: var(--lr-code-block-toggle-bg, transparent);
-    --_lr-code-block-toggle-bg-hover: var(--lr-code-block-toggle-bg-hover, var(--lr-color-brand-quiet));
-    --_lr-code-block-toggle-bg-active: var(--lr-code-block-toggle-bg-active, ${activeFill('var(--lr-color-brand-quiet)')});
+    --_lr-code-block-toggle-bg-hover: var(--lr-code-block-toggle-hover-bg, var(--lr-color-brand-quiet));
+    --_lr-code-block-toggle-bg-active: var(--lr-code-block-toggle-active-bg, ${activeFill('var(--lr-color-brand-quiet)')});
     /* Keep the glyph compact while giving the interactive box the shared
        minimum target size. */
     font: inherit;
@@ -79,11 +79,11 @@ export const styles = css`
   }
   [part='toggle']:hover {
     background: var(--_lr-code-block-toggle-bg-hover);
-    color: var(--lr-code-block-toggle-color-hover, var(--lr-color-brand));
+    color: var(--lr-code-block-toggle-hover-color, var(--lr-color-brand));
   }
   [part='toggle']:active {
     background: var(--_lr-code-block-toggle-bg-active);
-    color: var(--lr-code-block-toggle-color-active, var(--lr-code-block-toggle-color-hover, var(--lr-color-brand)));
+    color: var(--lr-code-block-toggle-active-color, var(--lr-code-block-toggle-hover-color, var(--lr-color-brand)));
   }
   [part='toggle'] .chevron {
     display: inline-flex;
@@ -305,8 +305,8 @@ export const styles = css`
   /* The gutter alone is interactive; source remains ordinary selectable text. */
   [part='pre'] button.line-gutter {
     --_lr-code-block-gutter-bg: var(--lr-code-block-gutter-bg, transparent);
-    --_lr-code-block-gutter-bg-hover: var(--lr-code-block-gutter-bg-hover, var(--lr-color-brand-quiet));
-    --_lr-code-block-gutter-bg-active: var(--lr-code-block-gutter-bg-active, ${activeFill('var(--lr-color-brand-quiet)')});
+    --_lr-code-block-gutter-bg-hover: var(--lr-code-block-gutter-hover-bg, var(--lr-color-brand-quiet));
+    --_lr-code-block-gutter-bg-active: var(--lr-code-block-gutter-active-bg, ${activeFill('var(--lr-color-brand-quiet)')});
     display: inline-flex;
     align-items: center;
     justify-content: end;
@@ -329,7 +329,7 @@ export const styles = css`
      rewrite must stay at least as specific as that resting rule. */
   [part='pre'] button.line-gutter:hover {
     background: var(--_lr-code-block-gutter-bg-hover);
-    color: var(--lr-code-block-gutter-color-hover, inherit);
+    color: var(--lr-code-block-gutter-hover-color, inherit);
   }
   [part='pre'] button.line-gutter:active {
     background: var(--_lr-code-block-gutter-bg-active);

@@ -43,7 +43,7 @@ import {
 import type { LyraLocaleDirection } from '../../../internal/localization.js';
 import { localeNativeName } from '../../media/flag/language-map.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraSize, LyraLabelDisplay } from '../../../internal/variants.js';
+import type { LyraSize, LyraLabelDisplay, LyraLabelPlacement } from '../../../internal/variants.js';
 import { styles } from './locale-picker.styles.js';
 import { autocorrectConverter, declaredDefaultConverter, spellcheckConverter } from '../../../internal/converters.js';
 import {
@@ -273,6 +273,12 @@ export interface LyraLocalePickerEventMap {
  * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=inherit] - Text color of the field label.
+ * @cssprop [--lr-form-control-label-inline-size=30%] - Label column width while
+ *   `label-placement="start"`.
+ * @cssprop [--lr-form-control-label-gap=var(--lr-space-m)] - Space between the label column and
+ *   the field while `label-placement="start"`.
+ * @cssprop [--lr-form-control-label-collapse-inline-size=var(--lr-size-20rem)] - Control width
+ *   below which `label-placement="start"` returns the label above the field.
  * @csspart form-control-label - The `<label>` element (only rendered — and only contributes to
  *   the accessible name — once `label` is non-empty).
  * @csspart trigger - The trigger button (positioning anchor).
@@ -492,6 +498,14 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
    * @attr label-display
    */
   @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
+  /**
+   * Where the label sits: `top` (default) above the field, or `start` in an inline-start column
+   * of `--lr-form-control-label-inline-size`, with hint and error aligned under the field. Below
+   * `--lr-form-control-label-collapse-inline-size` the label returns above the field. The label
+   * association is unchanged. Reflected so `[label-placement]` selectors match.
+   * @attr label-placement
+   */
+  @property({ attribute: 'label-placement', reflect: true }) labelPlacement: LyraLabelPlacement = 'top';
   @property() hint = '';
   @property({ attribute: 'error-text' }) errorText = '';
   /** Whether the option popup is open. Disabled controls reject direct reopen attempts, including
@@ -1625,7 +1639,7 @@ export class LyraLocalePicker extends LyraFormControlElement<LyraLocalePickerEve
           ` : this.listboxHidden ? nothing : guard([rows, this.value, this.withoutFlags, this.optionDisplay, this.effectiveLocale, this.strings], () => this.renderRows(rows, activeId))}
         </div>
         ${this.loadingTag !== undefined || this.loadFailureTag !== undefined ? html`
-          <div id="locale-picker-load-status" part="load-status" ?data-failed=${this.loadingTag === undefined}>
+          <div id="locale-picker-load-status" part="load-status" data-form-control-row ?data-failed=${this.loadingTag === undefined}>
             ${this.loadingTag !== undefined ? this.localize('loading') : this.localize('statusError')}
             ${this.loadFailureTag !== undefined ? html`<button part="load-retry" type="button" ?disabled=${this.effectiveDisabled} @click=${this.retryLocaleLoad}
               @focus=${this.searchable ? this.onTriggerFocus : nothing}

@@ -686,7 +686,7 @@ it('scales each swatch with the legend text', async () => {
 });
 
 it('paints the configured hover fill on its item', async () => {
-  const el = await fixture<HTMLElementTagNameMap['lr-graph-legend']>(html`<lr-graph-legend data-lr-theme-scope .types=${types} style="--lr-graph-legend-item-hover-fill:rgb(32,74,96);--lr-transition-fast:0s"></lr-graph-legend>`);
+  const el = await fixture<HTMLElementTagNameMap['lr-graph-legend']>(html`<lr-graph-legend data-lr-theme-scope .types=${types} style="--lr-graph-legend-item-hover-bg:rgb(32,74,96);--lr-transition-fast:0s"></lr-graph-legend>`);
   const button = el.shadowRoot!.querySelector('button[part="item"]')!;
   await hoverUntilMatched(button, 'hover the control');
   await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(32, 74, 96)', 'configured control hover fill');

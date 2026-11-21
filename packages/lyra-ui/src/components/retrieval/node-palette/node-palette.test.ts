@@ -1552,7 +1552,7 @@ describe('item admission and input boundaries', () => {
 });
 
 it('paints the configured hover fill on its item', async () => {
-  const el = await fixture<HTMLElementTagNameMap['lr-node-palette']>(html`<lr-node-palette data-lr-theme-scope .items=${items} style="--lr-node-palette-item-hover-fill:rgb(32,74,96);--lr-transition-fast:0s"></lr-node-palette>`);
+  const el = await fixture<HTMLElementTagNameMap['lr-node-palette']>(html`<lr-node-palette data-lr-theme-scope .items=${items} style="--lr-node-palette-item-hover-bg:rgb(32,74,96);--lr-transition-fast:0s"></lr-node-palette>`);
   const button = el.shadowRoot!.querySelector('[part="item"]')!;
   await hoverUntilMatched(button, 'hover the control');
   await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(32, 74, 96)', 'configured control hover fill');

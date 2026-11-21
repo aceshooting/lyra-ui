@@ -8075,12 +8075,68 @@
         {
           "tag": "lr-widget",
           "event": "lr-view-request",
-          "replacement": "lr-widget-view-request",
+          "replacement": "lr-widget-view-change-request",
           "direct": true,
           "summary": "The replacement carries the same cancelable detail. Move preventDefault() to the replacement listener."
         }
       ],
       "globals": [
+        {
+          "kind": "css-property",
+          "from": "--lr-callout-border",
+          "to": "--lr-callout-border-color",
+          "summary": "lr-callout names its border color with the -color suffix, like lr-alert.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-checkbox-active-border",
+          "to": "--lr-checkbox-active-border-color",
+          "summary": "lr-checkbox state tokens use the -color suffix of lr-radio; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-checkbox-active-ring",
+          "to": "--lr-checkbox-active-ring-color",
+          "summary": "lr-checkbox state tokens use the -color suffix of lr-radio; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-checkbox-checked-border",
+          "to": "--lr-checkbox-checked-border-color",
+          "summary": "lr-checkbox state tokens use the -color suffix of lr-radio; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-checkbox-group-invalid-border",
+          "to": "--lr-checkbox-group-invalid-border-color",
+          "summary": "lr-checkbox-group state tokens use the -color suffix of lr-radio; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-checkbox-hover-border",
+          "to": "--lr-checkbox-hover-border-color",
+          "summary": "lr-checkbox state tokens use the -color suffix of lr-radio; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-checkbox-invalid-border",
+          "to": "--lr-checkbox-invalid-border-color",
+          "summary": "lr-checkbox state tokens use the -color suffix of lr-radio; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-radio-group-invalid-border",
+          "to": "--lr-radio-group-invalid-border-color",
+          "summary": "lr-radio-group state tokens use the -color suffix of lr-radio; the old name is no longer read.",
+          "since": "32.0.0"
+        },
         {
           "kind": "export",
           "module": "./components/viewers",

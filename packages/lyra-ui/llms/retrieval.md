@@ -23,7 +23,7 @@ nodes and edges with `--lr-graph-node-fill` and `--lr-graph-edge-color`; the old
 
 ## `lr-graph`
 
-Both SVG and canvas expose up to 200 entries in the screen-reader data list. Source pagination registers when the navigator first renders. For server-rendered pager markup, import the pagination entry before rendering. Set `--lr-graph-spatial-control-hover-fill` to customize the hovered control background.
+Both SVG and canvas expose up to 200 entries in the screen-reader data list. Source pagination registers when the navigator first renders. For server-rendered pager markup, import the pagination entry before rendering. Set `--lr-graph-spatial-control-hover-bg` to customize the hovered control background.
 
 **Optional WebGL engine:** `engine: Engine3dPreference = 'builtin'` accepts `'builtin'`
 or `'webgl'`; invalid values normalize to `'builtin'`. The 3D view lazily requests
@@ -609,7 +609,7 @@ polling its own `requestAnimationFrame` loop.
 
 ## `lr-node-palette`
 
-The first replacement of `items` confirms or expires a keyboard reorder. Disconnecting expires it. Set `--lr-node-palette-item-hover-fill` to customize the hovered control background.
+The first replacement of `items` confirms or expires a keyboard reorder. Disconnecting expires it. Set `--lr-node-palette-item-hover-bg` to customize the hovered control background.
 
 Its native search field honors the shared `--lr-input-*` search hooks and `--lr-icon-button-*` action hooks listed in the component reference.
 
@@ -714,7 +714,7 @@ The search field accepts `--lr-input-fill`, `--lr-input-border-color`,
 
 ## `lr-graph-legend`
 
-Set `--lr-graph-legend-item-hover-fill` to customize the hovered control background.
+Set `--lr-graph-legend-item-hover-bg` to customize the hovered control background.
 
 A node-type legend for a paired `lr-graph`: one swatch + label + count row per node type, doubling
 as visibility filters. Never reads or writes a graph directly — the host forwards `types` in from
@@ -948,7 +948,7 @@ ancestor to change every unset entity chip beneath it.
 
 ## `lr-neighbor-list`
 
-Arrow keys, Home and End move between rows. Inline arrows switch between navigation and expansion. Source pagination registers on first use. For server-rendered pager markup, import the pagination entry before rendering. Set `--lr-neighbor-list-node-hover-fill` to customize the hovered control background.
+Arrow keys, Home and End move between rows. Inline arrows switch between navigation and expansion. Source pagination registers on first use. For server-rendered pager markup, import the pagination entry before rendering. Set `--lr-neighbor-list-node-hover-bg` to customize the hovered control background.
 
 One entity's relationship rows: relation, direction, neighbor, with per-row navigate and
 expand-in-graph affordances. Never computes neighbors itself (the host derives rows from its own
@@ -1082,7 +1082,7 @@ Source-mode parts: `source-status` (loading, failure, empty or missing-center fe
 
 ## `lr-path-strip`
 
-Set `--lr-path-strip-action-hover-fill` to customize the hovered control background.
+Set `--lr-path-strip-action-hover-bg` to customize the hovered control background.
 
 A linear node → relation → node chain rendering "why A connects to B" (GraphRAG local-search
 reasoning paths) as a compact, horizontally scrollable strip. One-dimensional and presentational: no
@@ -2629,7 +2629,7 @@ tokens.
 
 ## `lr-knowledge-graph-explorer`
 
-The default details card and neighbor list register when the first selection needs them. For server-rendered detail markup, import the entity-card and neighbor-list entries before rendering. Set `--lr-knowledge-graph-explorer-source-action-hover-fill` to customize the hovered control background.
+The default details card and neighbor list register when the first selection needs them. For server-rendered detail markup, import the entity-card and neighbor-list entries before rendering. Set `--lr-knowledge-graph-explorer-source-action-hover-bg` to customize the hovered control background.
 
 `engine: Engine3dPreference = 'builtin'` forwards the renderer preference to the composed graph.
 `engine="webgl"` requests its companion for the 3D view. `lr-engine-fallback` bubbles unchanged
@@ -3563,7 +3563,7 @@ source list. Either slot renders from its assigned content without requiring the
 
 ## `lr-embedding-explorer`
 
-The list view accepts `--lr-embedding-explorer-row-selected-fill` and `--lr-embedding-explorer-page-disabled-fill`. The cluster legend exposes `legend-item`, `legend-swatch` and `legend-label` through a display-only graph legend.
+The list view accepts `--lr-embedding-explorer-row-selected-bg` and `--lr-embedding-explorer-page-disabled-bg`. The cluster legend exposes `legend-item`, `legend-swatch` and `legend-label` through a display-only graph legend.
 
 Accessible embedding projection viewer with a dependency-free SVG default. Coordinates are
 projected by the host; the component normalizes them, colors clusters and emits selection events.

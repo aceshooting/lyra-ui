@@ -2900,7 +2900,7 @@ the remove button's `:hover` fill).
 
 The close control is a composed `<lr-icon-button>`, so it is themed through the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`.
 
-The `appearance` property accepts `filled-outlined` (default), `filled`, `outlined`, `plain`, and `accent`. Style the panel with `--lr-alert-bg`, `--lr-alert-border`, `--lr-alert-color`, `--lr-alert-radius`, and `--lr-alert-shadow`. After `lr-hide`, the cancelable `lr-close-request` and committed `lr-close` report `detail.reason` as `close-button`, `timeout`, or `programmatic`.
+The `appearance` property accepts `filled-outlined` (default), `filled`, `outlined`, `plain`, and `accent`. Style the panel with `--lr-alert-bg`, `--lr-alert-border-color`, `--lr-alert-color`, `--lr-alert-radius`, and `--lr-alert-shadow`. After `lr-hide`, the cancelable `lr-close-request` and committed `lr-close` report `detail.reason` as `close-button`, `timeout`, or `programmatic`.
 
 A closed-by-default alert that carries the pinned Shoelace alert surface under the `lr-` prefix,
 plus one additive Lyra property (`size`) that is inert until you set it.
@@ -3093,7 +3093,7 @@ work directly and take normal author precedence. `inline` removes the host's bor
 and padding.
 
 **Themeable custom properties:** `--lr-callout-bg`, `--lr-callout-color`, and
-`--lr-callout-border` read the inherited generic semantic quiet/loud slots, with brand quiet/loud
+`--lr-callout-border-color` read the inherited generic semantic quiet/loud slots, with brand quiet/loud
 as their standalone fallback. An explicit `variant` maps all generic slots locally; leaving it
 unset preserves an ancestor's mapping. Explicit `appearance` works with either source and uses the
 same brand fallback when there is no surrounding context. Public callout hooks are consumed at use
@@ -3229,7 +3229,7 @@ Left unset, the built-in star outline/solid pair is unchanged.
 
 **Events:**
 
-- `lr-rating-change-request` — `detail: { value, previousValue }`, cancelable. Dispatched before a
+- `lr-change-request` — `detail: { value, previousValue }`, cancelable. Dispatched before a
   click or Arrow/Page/Home/End key changes the rating, while `value` still holds the current one; a
   gesture that would not move the value requests nothing. `preventDefault()` keeps the rating and
   suppresses `input`/`lr-input`/`change`/`lr-change`; a listener may instead resolve the request by

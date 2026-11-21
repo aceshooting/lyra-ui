@@ -188,7 +188,7 @@ Plus shared tokens
 and header rule), `--lr-radius`, `--lr-color-surface`, `--lr-space-s/-m/-l/-xs`,
 `--lr-color-text`, `--lr-color-text-quiet`, `--lr-color-danger`, `--lr-color-brand`,
 `--lr-color-on-brand`, `--lr-focus-ring-width/-color/-offset`, `--lr-transition-fast`.
-Region highlight action buttons accept `--lr-document-preview-action-background` (default `var(--lr-color-surface)`), `--lr-document-preview-action-hover-background` (default `var(--lr-color-surface-raised)`) and `--lr-document-preview-action-active-background`.
+Region highlight action buttons accept `--lr-document-preview-action-bg` (default `var(--lr-color-surface)`), `--lr-document-preview-action-hover-bg` (default `var(--lr-color-surface-raised)`) and `--lr-document-preview-action-active-bg`.
 
 **Optional peer deps:** none directly — the `unsupported` slot is commonly used to compose
 `<lr-code-block>` (which has its own optional `shiki` peer dependency; see that component's own
@@ -581,7 +581,7 @@ highlight falling back to that same token would render as unhighlighted.
 `--lr-docx-viewer-search-match-bg`,
 `--lr-docx-viewer-search-match-active-bg`, and
 `--lr-docx-viewer-search-match-active-color` style resting and active search matches.
-Highlight action buttons accept `--lr-docx-viewer-action-background` (default `var(--lr-color-surface)`), `--lr-docx-viewer-action-hover-background` (default `var(--lr-color-surface-raised)`) and `--lr-docx-viewer-action-active-background`.
+Highlight action buttons accept `--lr-docx-viewer-action-bg` (default `var(--lr-color-surface)`), `--lr-docx-viewer-action-hover-bg` (default `var(--lr-color-surface-raised)`) and `--lr-docx-viewer-action-active-bg`.
 
 **Optional peer dependencies:** install `mammoth` and `dompurify` with `pnpm add mammoth dompurify`.
 The component registers an eager `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
@@ -608,7 +608,7 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 
 ## `lr-email-viewer`
 
-Action backgrounds accept `--lr-email-viewer-action-background`, `--lr-email-viewer-action-hover-background` and `--lr-email-viewer-action-active-background`.
+Action backgrounds accept `--lr-email-viewer-action-bg`, `--lr-email-viewer-action-hover-bg` and `--lr-email-viewer-action-active-bg`.
 
 Fetches and parses `.eml` messages with the optional `postal-mime` peer. HTML message bodies are
 sanitized through the existing optional `dompurify` peer before rendering; plain-text messages
@@ -663,7 +663,7 @@ reports `found: false`; text-quote anchors use the rendered message body.
 
 **Events:**
 
-- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is an empty object.
+- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is `null`.
 - `lr-render-error` with `detail.error` when fetching or parsing fails.
 - `lr-attachment-open` — recursively frozen `detail: { attachment: { filename, mimeType,
   content?: Blob } }`; call `content.arrayBuffer()` to read the immutable copied bytes. This
@@ -732,7 +732,7 @@ fragment jump reports `found: false`. Use a text-quote anchor for event content.
 
 **Events:**
 
-- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is an empty object.
+- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is `null`.
 - `lr-render-error` with `detail.error` when fetching or parsing fails.
 - `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever rendered-calendar search state changes.
@@ -795,7 +795,7 @@ independently addressable through the fragment/anchor API. `search()`/`searchNex
 navigating search matches (and the resulting active-row highlight) correctly reaches every
 duplicate-named entry, not just the first.
 
-**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+**Events:** `lr-load` carries a `null` detail and bubbles across shadow roots after the parsed document renders;
 `lr-render-error` with `detail.error` when fetching or parsing fails;
 `lr-search-change` (`detail: { query, matchCount, matchCountExact, activeIndex }`) from search,
 navigation, clear, canonical source reset, and effective-locale re-evaluation; `lr-text-select`
@@ -1082,7 +1082,7 @@ types are `LyraViewerDiagnostic`, `LyraViewerDiagnosticCode`, `LyraViewerDiagnos
 
 ## `lr-svg-viewer`
 
-Action backgrounds accept `--lr-svg-viewer-action-background`, `--lr-svg-viewer-action-hover-background` and `--lr-svg-viewer-action-active-background`.
+Action backgrounds accept `--lr-svg-viewer-action-bg`, `--lr-svg-viewer-action-hover-bg` and `--lr-svg-viewer-action-active-bg`.
 
 Fetches an SVG document, sanitizes it with the optional `dompurify` peer, and renders it inline.
 The shared `passive-svg` profile (the same post-sanitization engine used for embedded viewer markup)
@@ -1129,7 +1129,7 @@ when `x`/`y`/`width`/`height` are finite numbers and both dimensions are nonnega
 carrying the same boolean. Called before the SVG has finished loading it retries for up to 5s (real
 timers) rather than failing immediately.
 
-**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+**Events:** `lr-load` carries a `null` detail and bubbles across shadow roots after the parsed document renders;
 `lr-render-error` with `detail.error` when fetching or sanitizing fails.
 `lr-highlight-activate` (`detail: { highlightId }`) — a region highlight was clicked or activated via
 Enter/Space. `lr-anchor-result` (`detail: { found: boolean }`) — fired after an `anchor` assignment
@@ -1205,7 +1205,7 @@ own name. It leaves the tab order when the content fits.
 
 **Events:**
 
-- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is an empty object.
+- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is `null`.
 - `lr-render-error` with `detail.error` when fetching or sanitizing fails.
 - `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever rendered-document search state changes.
@@ -1237,7 +1237,7 @@ Remote resources are capped at 25 MB; exceeding it surfaces the localized
 
 ## `lr-dataset-viewer`
 
-Set `--lr-dataset-viewer-background`, `--lr-dataset-viewer-border` and `--lr-dataset-viewer-border-radius` on the frame. `--lr-dataset-viewer-header-row-bg` sets the column heading background.
+Set `--lr-dataset-viewer-bg`, `--lr-dataset-viewer-border` and `--lr-dataset-viewer-radius` on the frame. `--lr-dataset-viewer-header-row-bg` sets the column heading background.
 
 Fetches tab-, pipe-, or delimiter-separated text, or reads a host-owned `dataSource`, and renders a
 virtualized, accessible table (a `role="table"` container with a sticky `role="row"` header, composed with `<lr-virtual-list
@@ -1360,7 +1360,7 @@ value, ordered row then column (empty/whitespace query behaves like
 `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step back through matches (wrapping,
 resolving `false` when there are none); `clearSearch()` clears the query, matches, and cursor.
 
-**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+**Events:** `lr-load` carries a `null` detail and bubbles across shadow roots after the parsed document renders;
 `lr-render-error` with `detail.error` when fetching, parsing, in-memory admission, or
 data-source validation/read/search fails.
 `lr-viewer-diagnostic` reports up to 100 recoverable PapaParse errors in one
@@ -1445,7 +1445,7 @@ own name. It leaves the tab order when the content fits.
 
 **Events:**
 
-- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is an empty object.
+- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is `null`.
 - `lr-render-error` with `detail.error` when fetching or parsing fails.
 - `lr-search-change` — `detail: { query: string; matchCount: number; matchCountExact: boolean; activeIndex: number }` — fired
   whenever rendered-contact search state changes.
@@ -1683,7 +1683,7 @@ prevents stale page/text/region work from scrolling or reporting success.
 
 ## `lr-spreadsheet-viewer`
 
-Set `--lr-spreadsheet-viewer-background`, `--lr-spreadsheet-viewer-border` and `--lr-spreadsheet-viewer-border-radius` on the frame. `--lr-spreadsheet-viewer-header-row-bg` sets the column heading background.
+Set `--lr-spreadsheet-viewer-bg`, `--lr-spreadsheet-viewer-border` and `--lr-spreadsheet-viewer-radius` on the frame. `--lr-spreadsheet-viewer-header-row-bg` sets the column heading background.
 
 Setting `scrollMode` to `page` (attribute `scroll-mode="page"`) lets the page scroll both axes, keeps the header sticky and ignores `max-height`. The default `self` uses the viewer’s own scrollport.
 
@@ -1799,7 +1799,7 @@ query behaves like `clearSearch()`); `searchNext()`/`searchPrevious()` advance/s
 matches (wrapping, resolving `false` when there are none); `clearSearch()` clears the query,
 matches, and painted marks.
 
-**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+**Events:** `lr-load` carries a `null` detail and bubbles across shadow roots after the parsed document renders;
 `lr-render-error` with `detail.error` when fetching, parsing, in-memory admission, or
 data-source validation/read/search fails.
 `lr-highlight-activate` (`detail: { highlightId }`) — a `highlights` cell was clicked or activated via
@@ -1863,7 +1863,7 @@ pass remains synchronous.
 
 ## `lr-csv-viewer`
 
-Set `--lr-csv-viewer-background`, `--lr-csv-viewer-border` and `--lr-csv-viewer-border-radius` on the frame. `--lr-csv-viewer-header-row-bg` sets the column heading background.
+Set `--lr-csv-viewer-bg`, `--lr-csv-viewer-border` and `--lr-csv-viewer-radius` on the frame. `--lr-csv-viewer-header-row-bg` sets the column heading background.
 
 Setting `scrollMode` to `page` (attribute `scroll-mode="page"`) lets the page scroll both axes, keeps the header sticky and ignores `max-height`. The default `self` uses the viewer’s own scrollport.
 
@@ -1971,7 +1971,7 @@ behaves like `clearSearch()`); `searchNext()`/`searchPrevious()` advance/step ba
 (wrapping, resolving `false` when there are none); `clearSearch()` clears the query, matches, and
 painted marks.
 
-**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+**Events:** `lr-load` carries a `null` detail and bubbles across shadow roots after the parsed document renders;
 `lr-render-error` with `detail.error` when fetching, parsing, in-memory admission, or
 data-source validation/read/search fails.
 `lr-viewer-diagnostic` reports up to 100 recoverable PapaParse errors in one
@@ -2197,7 +2197,7 @@ opaque one-frame fill.
 tone independently, defaulting to the corresponding Lyra quiet background and foreground tokens.
 `--lr-highlight-layer-flash-bg` controls the temporary flash state (default
 `--lr-color-brand`).
-Highlight action buttons accept `--lr-highlight-layer-action-background` (default `var(--lr-color-surface)`), `--lr-highlight-layer-action-hover-background` (default `var(--lr-color-surface-raised)`) and `--lr-highlight-layer-action-active-background`.
+Highlight action buttons accept `--lr-highlight-layer-action-bg` (default `var(--lr-color-surface)`), `--lr-highlight-layer-action-hover-bg` (default `var(--lr-color-surface-raised)`) and `--lr-highlight-layer-action-active-bg`.
 ## `lr-page-rail`
 
 A virtualized vertical thumbnail rail for page-addressed documents, with per-page highlight heat
@@ -2407,7 +2407,7 @@ code-cell name. Sanitized SVG output is wrapped in a named `role="img"` with the
 
 ## `lr-xml-viewer`
 
-Action backgrounds accept `--lr-xml-viewer-action-background`, `--lr-xml-viewer-action-hover-background` and `--lr-xml-viewer-action-active-background`.
+Action backgrounds accept `--lr-xml-viewer-action-bg`, `--lr-xml-viewer-action-hover-bg` and `--lr-xml-viewer-action-active-bg`.
 
 Collapsible, copyable, `DOMParser`-based tree view for XML documents, mirroring `lr-json-viewer`'s
 UX (`expand-depth`, `copyable`, structural-path-keyed expand state that survives a same-shape
@@ -2559,7 +2559,7 @@ inside a collapsed subtree paints once that subtree is expanded.
 Painting retains at most 100 resolved entries from a 1,000-entry candidate window; an active entry
 anywhere in the bounded 10,000-record host snapshot is placed first inside both ceilings.
 
-**Events:** `lr-load` carries empty detail and bubbles across shadow roots after the parsed document renders;
+**Events:** `lr-load` carries a `null` detail and bubbles across shadow roots after the parsed document renders;
 `lr-copy` — emitted only after the owning realm's clipboard write fulfills, with
 `detail: { ok: true, text }`. Clipboard absence, synchronous throws, and rejected writes instead
 show the localized `copyFailed` label and emit generic `lr-error` plus `lr-copy-error` with
@@ -2809,7 +2809,7 @@ fragment jump reports `found: false`. Use a text-quote anchor for serialized met
 
 **Events:**
 
-- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is an empty object.
+- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is `null`.
 - `lr-viewer-diagnostic` reports `geojson-map-unavailable` with `fatal: false` when the JSON preview replaces the map.
 - `lr-render-error` — `detail: { error }` — fetch, parse, or shape-validation failure. A missing
   optional MapLibre peer is recoverable: it keeps the serialized metadata fallback visible and fires
@@ -2860,7 +2860,7 @@ its module-worker URL configured for the bundler before this viewer constructs t
 
 ## `lr-model-viewer`
 
-Action backgrounds accept `--lr-model-viewer-action-background`, `--lr-model-viewer-action-hover-background` and `--lr-model-viewer-action-active-background`.
+Action backgrounds accept `--lr-model-viewer-action-bg`, `--lr-model-viewer-action-hover-bg` and `--lr-model-viewer-action-active-bg`.
 
 The interactive viewport has a separate accessible name, supplied by `modelViewerViewport` (“Interactive model” in English).
 

@@ -82,7 +82,7 @@ describe('theme pre-paint bootstrap (module functions, called directly)', () => 
       attributes: { 'data-lr-theme': 'dark' }, painted: '#101418' },
     { name: 'system follows prefers-color-scheme', choices: { mode: 'system' },
       attributes: { 'data-lr-mode': 'system', 'data-lr-theme': systemDark() ? 'dark' : 'light' } },
-    { name: 'saved Glass opacity is applied before first paint', choices: { mode: 'light', surfaceOpacity: 35 },
+    { name: 'saved Glass opacity is applied before first paint', choices: { mode: 'light', surfaceOpacity: 0.35 },
       attributes: { 'data-lr-surface': 'glass' }, painted: '--lr-theme-surface-opacity: 0.35' },
     { name: 'unset leaves the mode attributes absent', choices: { mode: 'unset' },
       attributes: { 'data-lr-mode': null, 'data-lr-theme': null, 'data-theme': null } },
@@ -104,6 +104,17 @@ describe('theme pre-paint bootstrap (module functions, called directly)', () => 
       expect(snapshot()).to.deep.equal(direct);
     });
   }
+
+  it('clamps a saved Glass opacity outside 0-1 before first paint', () => {
+    for (const [saved, painted] of [[40, '1'], [-3, '0']] as const) {
+      for (const run of [applyLyraThemeBootstrapForTesting, () => new Function(lyraThemeBootstrap)()]) {
+        clearRoot();
+        localStorage.setItem(KEY, JSON.stringify({ version: 2, mode: 'light', surfaceOpacity: saved }));
+        run();
+        expect(document.documentElement.style.getPropertyValue('--lr-theme-surface-opacity'), String(saved)).to.equal(painted);
+      }
+    }
+  });
 
   it('falls back to the built-in profile for missing, corrupt, hostile or unreadable storage', () => {
     const resolved = systemDark() ? 'dark' : 'light';
@@ -137,7 +148,7 @@ describe('theme pre-paint bootstrap (module functions, called directly)', () => 
 
   it('restore "mode" repaints only the mode and keeps host-owned axes and the app storage key', () => {
     const root = document.documentElement;
-    localStorage.setItem('app-theme', storedRecord({ mode: 'dark', look: 'material', density: 'compact', accent: 'ruby', surfaceOpacity: 20 }));
+    localStorage.setItem('app-theme', storedRecord({ mode: 'dark', look: 'material', density: 'compact', accent: 'ruby', surfaceOpacity: 0.2 }));
     root.setAttribute('data-lr-look', 'host-look');
     root.setAttribute('data-lr-density', 'host-density');
     applyLyraThemeBootstrapForTesting({ storageKey: 'app-theme', restore: 'mode' });

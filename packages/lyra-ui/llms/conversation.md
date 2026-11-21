@@ -335,10 +335,10 @@ rendered as authored, not neutralized.
 
 **Themeable custom properties:** `--lr-markdown-content-min-size` sets the content minimum
 on both logical axes (default `0`, so a one-line reply keeps its own line box). `--lr-markdown-code-copy-bg`,
-`--lr-markdown-code-copy-bg-hover`, and `--lr-markdown-code-copy-bg-active` set the fenced copy
+`--lr-markdown-code-copy-hover-bg`, and `--lr-markdown-code-copy-active-bg` set the fenced copy
 button background for its resting, hovered, and pressed states. Shared icon-button state tokens
-take precedence when specified. `--lr-markdown-code-copy-color-hover` (default `var(--lr-color-brand)`)
-and `--lr-markdown-code-copy-color-active` (default `var(--lr-markdown-code-copy-color-hover)`) set
+take precedence when specified. `--lr-markdown-code-copy-hover-color` (default `var(--lr-color-brand)`)
+and `--lr-markdown-code-copy-active-color` (default `var(--lr-markdown-code-copy-hover-color)`) set
 the copy glyph color while hovered and pressed, and `--lr-markdown-code-copy-success-color` /
 `--lr-markdown-code-copy-error-color` (defaults `var(--lr-color-success)` / `var(--lr-color-danger)`)
 its color after a successful or failed copy. `--lr-markdown-max-height` (default `none` — cap on
@@ -626,7 +626,7 @@ keeps the box and list gutter aligned. Header hooks are `--lr-markdown-code-head
 (default `var(--lr-color-surface)`) and `--lr-markdown-code-header-color`
 (default `var(--lr-color-text-quiet)`).
 
-**Shared icon-button tokens:** the code-block action buttons read the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`. `--lr-markdown-code-copy-bg-hover` and `--lr-markdown-code-copy-bg-active` set the fenced copy button's hovered and pressed backgrounds. `--lr-markdown-code-copy-color-hover` (default `var(--lr-color-brand)`) and `--lr-markdown-code-copy-color-active` set its glyph color in those states, and `--lr-markdown-code-copy-success-color` / `--lr-markdown-code-copy-error-color` (defaults `var(--lr-color-success)` / `var(--lr-color-danger)`) its copy feedback.
+**Shared icon-button tokens:** the code-block action buttons read the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`. `--lr-markdown-code-copy-hover-bg` and `--lr-markdown-code-copy-active-bg` set the fenced copy button's hovered and pressed backgrounds. `--lr-markdown-code-copy-hover-color` (default `var(--lr-color-brand)`) and `--lr-markdown-code-copy-active-color` set its glyph color in those states, and `--lr-markdown-code-copy-success-color` / `--lr-markdown-code-copy-error-color` (defaults `var(--lr-color-success)` / `var(--lr-color-danger)`) its copy feedback.
 
 ## `lr-chat-message`
 
@@ -1566,6 +1566,8 @@ The field label accepts `--lr-form-control-label-font-size`,
 
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
 
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`" in the shared forms notes.
+
 The model list follows the [shared surface treatment](shared/styles-and-tokens.md);
 its editing field retains an opaque fill.
 
@@ -2452,13 +2454,13 @@ remains the one exception that does not cross this way: use `--lr-theme-icon-but
 **Themeable custom properties:** `--lr-code-block-padding` controls code padding, `--lr-code-block-radius`
 controls the frame corners, and `--lr-code-block-header-bg`, `--lr-code-block-header-color` and
 `--lr-code-block-line-number-color` set the header background, filename color and gutter color.
-`--lr-code-block-toggle-bg`, `--lr-code-block-toggle-bg-hover`, and `--lr-code-block-toggle-bg-active`
-style the disclosure. `--lr-code-block-gutter-bg`, `--lr-code-block-gutter-bg-hover`, and
-`--lr-code-block-gutter-bg-active` style the line buttons. Each token applies to its own state.
-`--lr-code-block-toggle-color` (default `var(--lr-color-text-quiet)`), `--lr-code-block-toggle-color-hover`
-(default `var(--lr-color-brand)`) and `--lr-code-block-toggle-color-active` (default
-`var(--lr-code-block-toggle-color-hover)`) set the disclosure glyph color at rest, hovered and
-pressed; `--lr-code-block-gutter-color-hover` (default `inherit`, so it keeps the line-number color)
+`--lr-code-block-toggle-bg`, `--lr-code-block-toggle-hover-bg`, and `--lr-code-block-toggle-active-bg`
+style the disclosure. `--lr-code-block-gutter-bg`, `--lr-code-block-gutter-hover-bg`, and
+`--lr-code-block-gutter-active-bg` style the line buttons. Each token applies to its own state.
+`--lr-code-block-toggle-color` (default `var(--lr-color-text-quiet)`), `--lr-code-block-toggle-hover-color`
+(default `var(--lr-color-brand)`) and `--lr-code-block-toggle-active-color` (default
+`var(--lr-code-block-toggle-hover-color)`) set the disclosure glyph color at rest, hovered and
+pressed; `--lr-code-block-gutter-hover-color` (default `inherit`, so it keeps the line-number color)
 sets the hovered line button's text color.
 `--lr-code-block-max-height` (default `none` — an independently
 settable scroll cap; a `max-height` attribute writes the same property inline on `body` and wins),
@@ -2717,7 +2719,7 @@ const view = html`<lr-code-block-core
 
 ---
 
-**State tokens:** `--lr-code-block-toggle-bg-hover` and `--lr-code-block-toggle-bg-active` set the disclosure control's hovered and pressed backgrounds; `--lr-code-block-gutter-bg-hover` and `--lr-code-block-gutter-bg-active` do the same for the line buttons. `--lr-code-block-toggle-color` (default `var(--lr-color-text-quiet)`), `--lr-code-block-toggle-color-hover` (default `var(--lr-color-brand)`) and `--lr-code-block-toggle-color-active` set the disclosure glyph color per state, and `--lr-code-block-gutter-color-hover` (default `inherit`) the hovered line button's text.
+**State tokens:** `--lr-code-block-toggle-hover-bg` and `--lr-code-block-toggle-active-bg` set the disclosure control's hovered and pressed backgrounds; `--lr-code-block-gutter-hover-bg` and `--lr-code-block-gutter-active-bg` do the same for the line buttons. `--lr-code-block-toggle-color` (default `var(--lr-color-text-quiet)`), `--lr-code-block-toggle-hover-color` (default `var(--lr-color-brand)`) and `--lr-code-block-toggle-active-color` set the disclosure glyph color per state, and `--lr-code-block-gutter-hover-color` (default `inherit`) the hovered line button's text.
 
 ## `lr-model-settings-panel`
 
@@ -3737,8 +3739,8 @@ Override the `conversationActionWithTitle` string to change how the action and t
 `withArchived: boolean
 = false` (attribute `with-archived`, reflected) — data mode: include `archived` threads (in their own
 trailing group). `withoutRename: boolean = false` (attribute `without-rename`, reflected) — forwarded to
-each data-mode row, turning its inline rename off. `withoutPinGlyph: boolean = false` (attribute
-`without-pin-glyph`, reflected) — data mode: omits the `pin-glyph` indicator; each pinned row keeps a
+each data-mode row, turning its inline rename off. `withoutPinIcon: boolean = false` (attribute
+`without-pin-icon`, reflected) — data mode: omits the `pin-glyph` indicator; each pinned row keeps a
 visually hidden "Pinned" label, so its accessible name is unchanged. `withoutGroupIcon: boolean =
 false` (attribute `without-group-icon`, reflected) — data mode: omits the decorative `group-icon`
 chevron from group headers and their sticky copy; the toggle keeps `aria-expanded`. Row density
@@ -4337,6 +4339,8 @@ Visible `error-text` or slotted error content sets `aria-invalid="true"` on the 
 or free-text input while preserving the native validity of its value.
 
 `labelDisplay: 'visible' | 'hidden' = 'visible'` (attribute `label-display`) — `'hidden'` removes the label visually while it stays the accessible name; hint and error are unaffected (see "Hiding the label visually: `label-display`" in the shared forms notes).
+
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column sized by `--lr-form-control-label-inline-size` (default `30%`) and `--lr-form-control-label-gap` (default `var(--lr-space-m)`), returning above the field below `--lr-form-control-label-collapse-inline-size` (default `var(--lr-size-20rem)`); see "Label beside the field: `label-placement`" in the shared forms notes.
 
 Override `--lr-voice-picker-trigger-padding`, `--lr-voice-picker-font-size`, and `--lr-voice-picker-expand-size` for trigger spacing, text size, and the expand control’s minimum target cap.
 

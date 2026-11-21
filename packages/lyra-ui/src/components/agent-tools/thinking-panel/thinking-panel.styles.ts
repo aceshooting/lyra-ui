@@ -61,7 +61,7 @@ export const styles = css`
   /* The hovered tint pushed a further --lr-color-mix-active toward --lr-color-mix-partner (which
      follows the text colour), so the press reads deeper than hover in light and dark alike. */
   [part="header"]:active {
-    background: var(--lr-thinking-panel-header-pressed-bg, ${activeFill('var(--lr-thinking-panel-header-hover-bg, var(--lr-color-brand-quiet))')});
+    background: var(--lr-thinking-panel-header-active-bg, ${activeFill('var(--lr-thinking-panel-header-hover-bg, var(--lr-color-brand-quiet))')});
     color: var(--lr-color-text);
   }
   [part="header"]:focus-visible {

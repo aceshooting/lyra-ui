@@ -60,7 +60,7 @@ interface PathOccurrence {
  * targetNodeId?, occurrenceIndex }` — source/target resolved from the adjacent retained node
  * elements, `undefined` when the path is malformed at that position. `occurrenceIndex` is the
  * element's index in the supplied path, so deliberately repeated identities remain distinct.
- * @cssprop [--lr-path-strip-action-hover-fill=var(--lr-color-brand-quiet)] - Background of the hovered control.
+ * @cssprop [--lr-path-strip-action-hover-bg=var(--lr-color-brand-quiet)] - Background of the hovered control.
  * @csspart base - The root wrapper, hosting the delegated roving-tabindex keydown handler.
  * @csspart node - One `node`-kind element (a `<button>`).
  * @csspart relation - One `edge`-kind element's relation label (a `<button>`).

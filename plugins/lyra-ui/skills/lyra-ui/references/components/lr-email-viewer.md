@@ -17,7 +17,7 @@
 
 ## `lr-email-viewer`
 
-Action backgrounds accept `--lr-email-viewer-action-background`, `--lr-email-viewer-action-hover-background` and `--lr-email-viewer-action-active-background`.
+Action backgrounds accept `--lr-email-viewer-action-bg`, `--lr-email-viewer-action-hover-bg` and `--lr-email-viewer-action-active-bg`.
 
 Fetches and parses `.eml` messages with the optional `postal-mime` peer. HTML message bodies are
 sanitized through the existing optional `dompurify` peer before rendering; plain-text messages
@@ -72,7 +72,7 @@ reports `found: false`; text-quote anchors use the rendered message body.
 
 **Events:**
 
-- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is an empty object.
+- `lr-load` bubbles across shadow roots after a successfully parsed document renders. Its detail is `null`.
 - `lr-render-error` with `detail.error` when fetching or parsing fails.
 - `lr-attachment-open` — recursively frozen `detail: { attachment: { filename, mimeType,
   content?: Blob } }`; call `content.arrayBuffer()` to read the immutable copied bytes. This

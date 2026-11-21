@@ -505,7 +505,7 @@ type GeoJsonViewerState =
 
 export interface LyraGeoJsonViewerEventMap
   extends LyraTextViewerTargetEventMap {
-  'lr-load': CustomEvent<Record<string, never>>;
+  'lr-load': CustomEvent<null>;
   'lr-viewer-diagnostic': CustomEvent<LyraViewerDiagnosticEventDetail>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
   'lr-search-change': CustomEvent<LyraSearchChangeDetail>;
@@ -526,7 +526,7 @@ class LyraGeoJsonViewerBase extends LyraElement<LyraGeoJsonViewerEventMap> {}
  * event the internal map raises stays inside the viewer.
  *
  * @customElement lr-geojson-viewer
- * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with empty detail.
+ * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with a `null` detail.
  * @event lr-viewer-diagnostic - Reports a recoverable maplibre-gl failure while the fallback remains visible.
  * @event lr-render-error - Fetch, parse, or shape-validation failure. A missing map library is
  *   recoverable and reported only through `lr-viewer-diagnostic`.
@@ -744,7 +744,7 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
       this.scheduleAfterUpdate(() => {
         void this.load();
       });
-    if (this.isConnected && changed.has('loadState') && this.loadState.kind === 'loaded') this.emit('lr-load', {});
+    if (this.isConnected && changed.has('loadState') && this.loadState.kind === 'loaded') this.emit('lr-load', null);
   }
 
   private fitLoadedData(): void {

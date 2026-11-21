@@ -17,7 +17,7 @@
 
 ## `lr-embedding-explorer`
 
-The list view accepts `--lr-embedding-explorer-row-selected-fill` and `--lr-embedding-explorer-page-disabled-fill`. The cluster legend exposes `legend-item`, `legend-swatch` and `legend-label` through a display-only graph legend.
+The list view accepts `--lr-embedding-explorer-row-selected-bg` and `--lr-embedding-explorer-page-disabled-bg`. The cluster legend exposes `legend-item`, `legend-swatch` and `legend-label` through a display-only graph legend.
 
 Accessible embedding projection viewer with a dependency-free SVG default. Coordinates are
 projected by the host; the component normalizes them, colors clusters and emits selection events.

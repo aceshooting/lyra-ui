@@ -84,7 +84,7 @@ gemstone?: GemstoneKey; readonly disabled?: boolean }`; a valid CSS `color` is u
   semantics), so an ancestor `<fieldset disabled>` does not cascade into it — disable the picker
   itself alongside the fieldset when a form needs both.
 
-**Events:** `lr-swatch-picker-select-request` (`detail: { value, previousValue }`) — cancelable,
+**Events:** `lr-change-request` (`detail: { value, previousValue }`) — cancelable,
 dispatched before a click or Arrow/Home/End key selects a swatch other than the current one, while
 `value` still holds the current selection. `preventDefault()` keeps the selection and suppresses
 `lr-change`; a listener may instead resolve the request by assigning `value` itself, which also

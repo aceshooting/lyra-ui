@@ -203,7 +203,7 @@ export const styles = css`
     color: var(--lr-color-text-quiet);
     border-radius: var(--lr-radius);
   }
-  [part='toggle'] { cursor: pointer; background: var(--lr-xml-viewer-action-background, transparent); }
+  [part='toggle'] { cursor: pointer; background: var(--lr-xml-viewer-action-bg, transparent); }
   [part='toggle'] .chevron {
     display: inline-flex;
     transform: rotate(0deg);
@@ -216,11 +216,11 @@ export const styles = css`
     transform: rotate(180deg);
   }
   [part='toggle']:hover {
-    background: var(--lr-xml-viewer-action-hover-background, var(--lr-color-brand-quiet));
+    background: var(--lr-xml-viewer-action-hover-bg, var(--lr-color-brand-quiet));
     color: var(--lr-color-brand);
   }
   [part='toggle']:active {
-    background: var(--lr-xml-viewer-action-active-background, ${activeFill('var(--lr-color-brand-quiet)')});
+    background: var(--lr-xml-viewer-action-active-bg, ${activeFill('var(--lr-color-brand-quiet)')});
     color: var(--lr-color-brand);
   }
   [part='toggle']:focus-visible,
@@ -235,7 +235,7 @@ export const styles = css`
     justify-content: center;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
-    background: var(--lr-xml-viewer-action-background, var(--lr-color-surface));
+    background: var(--lr-xml-viewer-action-bg, var(--lr-color-surface));
     color: var(--lr-color-text-quiet);
     cursor: pointer;
     font: inherit;
@@ -243,13 +243,13 @@ export const styles = css`
     padding: var(--lr-size-0-125rem) var(--lr-space-xs);
   }
   [part='copy-button']:hover {
-    background: var(--lr-xml-viewer-action-hover-background, var(--lr-color-brand-quiet));
+    background: var(--lr-xml-viewer-action-hover-bg, var(--lr-color-brand-quiet));
     color: var(--lr-color-brand);
   }
   /* Also the pressed state the row-reveal rule below needs: that rule only fades the button in, so
      the acknowledgement of the click itself lives here. */
   [part='copy-button']:active {
-    background: var(--lr-xml-viewer-action-active-background, ${activeFill('var(--lr-color-brand-quiet)')});
+    background: var(--lr-xml-viewer-action-active-bg, ${activeFill('var(--lr-color-brand-quiet)')});
     color: var(--lr-color-brand);
   }
   .row [part='copy-button'] {

@@ -2,7 +2,7 @@ import type { PropertyDeclarations } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { AutocorrectState } from '../../internal/native-text-control.js';
 import { autocorrectConverter, spellcheckFromAttributeConverter } from '../../internal/converters.js';
-import type { LyraLabelDisplay } from '../../internal/variants.js';
+import type { LyraLabelDisplay, LyraLabelPlacement } from '../../internal/variants.js';
 import { LyraFormControlElement } from '../../internal/form-control-element.js';
 import {
   getFormOwner,
@@ -76,6 +76,14 @@ export abstract class LyraCatalogPickerElement<Events> extends LyraFormControlEl
    * @attr label-display
    */
   @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
+  /**
+   * Where the label sits: `top` (default) above the field, or `start` in an inline-start column
+   * of `--lr-form-control-label-inline-size`, with hint and error aligned under the field. Below
+   * `--lr-form-control-label-collapse-inline-size` the label returns above the field. The label
+   * association is unchanged. Reflected so `[label-placement]` selectors match.
+   * @attr label-placement
+   */
+  @property({ attribute: 'label-placement', reflect: true }) labelPlacement: LyraLabelPlacement = 'top';
   /** Hint text below the field. Unset (the default): no hint chrome renders. */
   @property() hint = '';
   /** Error text below the field (overridden by slotted `error` content). Unset (the default): no

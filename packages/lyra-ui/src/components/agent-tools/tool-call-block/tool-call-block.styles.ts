@@ -78,7 +78,7 @@ export const styles = css`
   }
   /* Pressed text returns to the body colour: brand text on the deeper mix fails contrast. */
   :where([part='header']):active {
-    background: var(--lr-tool-call-block-header-pressed-bg, ${activeFill('var(--lr-tool-call-block-header-hover-bg, var(--lr-color-brand-quiet))')});
+    background: var(--lr-tool-call-block-header-active-bg, ${activeFill('var(--lr-tool-call-block-header-hover-bg, var(--lr-color-brand-quiet))')});
     color: var(--lr-color-text);
   }
   :where([part='header']):active :is([part='status-text'], [part='duration']) {

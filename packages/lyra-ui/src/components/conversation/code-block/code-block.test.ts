@@ -2212,6 +2212,38 @@ describe("gutter line-button pointer feedback", () => {
     });
   }
 
+  it("paints hovered disclosure and gutter controls from their component hover tokens", async function () {
+    if (window.matchMedia("(hover: none), (pointer: coarse)").matches)
+      this.skip();
+    const el = (await fixture(
+      html`<lr-code-block data-lr-theme-scope
+        style="--lr-transition-fast: 0s; --lr-code-block-toggle-hover-bg: rgb(1, 2, 3); --lr-code-block-gutter-hover-bg: rgb(4, 5, 6)"
+        code=${"a\nb"}
+        line-numbers
+        activatable-lines
+        collapsible
+      ></lr-code-block>`
+    )) as LyraCodeBlock;
+    await el.updateComplete;
+    const toggle = el.shadowRoot!.querySelector('[part="toggle"]') as HTMLElement;
+    const gutter = el.shadowRoot!.querySelector('[part~="line-button"]') as HTMLElement;
+    try {
+      await resetMouse();
+      await moveMouseTo(toggle);
+      await waitUntil(
+        () => getComputedStyle(toggle).backgroundColor === "rgb(1, 2, 3)",
+        "the hovered disclosure control never painted its hover token"
+      );
+      await moveMouseTo(gutter);
+      await waitUntil(
+        () => getComputedStyle(gutter).backgroundColor === "rgb(4, 5, 6)",
+        "the hovered gutter button never painted its hover token"
+      );
+    } finally {
+      await resetMouse();
+    }
+  });
+
   it("tints the gutter button while it is hovered", async function () {
     if (window.matchMedia("(hover: none), (pointer: coarse)").matches)
       this.skip();

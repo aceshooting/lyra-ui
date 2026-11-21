@@ -1595,9 +1595,9 @@ describe("region highlights (image format)", () => {
       ...el.shadowRoot!.querySelectorAll('[part="region-highlight-action"]'),
     ] as HTMLElement[];
     expect(actions.length).to.equal(2);
-    el.style.setProperty("--lr-document-preview-action-background", "rgb(1, 2, 3)");
+    el.style.setProperty("--lr-document-preview-action-bg", "rgb(1, 2, 3)");
     expect(getComputedStyle(actions[0]!).backgroundColor).to.equal("rgb(1, 2, 3)");
-    el.style.removeProperty("--lr-document-preview-action-background");
+    el.style.removeProperty("--lr-document-preview-action-bg");
     el.style.fontFamily = 'Georgia, serif';
     expect(getComputedStyle(actions[0]!).fontFamily).to.equal(getComputedStyle(el).fontFamily);
     const first = actions[0]!.getBoundingClientRect();
@@ -1606,6 +1606,28 @@ describe("region highlights (image format)", () => {
     const eventPromise = oneEvent(el, "lr-highlight-activate");
     actions[1]!.click();
     expect((await eventPromise).detail).to.deep.equal({ highlightId: "b" });
+  });
+
+  it('paints a hovered region highlight action from --lr-document-preview-action-hover-bg', async () => {
+    const el = (await fixture(html`
+      <lr-document-preview data-lr-theme-scope
+        mime-type="image/png"
+        src=${IMAGE_DATA_URI}
+        style="--lr-transition-fast: 0s; --lr-document-preview-action-hover-bg: rgb(4, 5, 6)"
+      ></lr-document-preview>
+    `)) as LyraDocumentPreview;
+    el.highlights = [
+      { id: 'a', label: 'First', anchor: { kind: 'region', rect: { x: 50, y: 50, width: 1, height: 1 } } },
+      { id: 'b', label: 'Second', anchor: { kind: 'region', rect: { x: 51, y: 50, width: 1, height: 1 } } },
+    ];
+    await el.updateComplete;
+    const action = el.shadowRoot!.querySelector<HTMLElement>('[part="region-highlight-action"]')!;
+    try {
+      await hoverUntilMatched(action, 'region highlight action never registered :hover');
+      await waitUntil(() => getComputedStyle(action).backgroundColor === 'rgb(4, 5, 6)', 'the hover token never painted');
+    } finally {
+      await resetMouse();
+    }
   });
 
   it('uses on-image targets until their minimum hit areas overlap', async () => {

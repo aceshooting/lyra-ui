@@ -2075,7 +2075,7 @@ resetLyraStyle(["look"]); // reset only the look axis
 setLyraStyle({ mode: "unset", accent: null, accentBackground: null, overrides: null });
 ~~~
 
-setLyraStyle() accepts independent choices for look, surface, density, mode, accent, accentBackground, overrides, and surfaceOpacity (a 0–100 Glass opacity percentage; see Glass surfaces). Omitted axes keep their current selection. Null restores the built-in value for look, surface, density and mode; `accent: null` explicitly clears the accent, and null clears accentBackground or overrides. `resetLyraStyle()` restores Shadcn/Glass/Emerald/System/comfortable; a field list resets only those fields. The returned LyraStyle snapshot includes the selected values, a resolved mode when the choice is system, and lookForm to distinguish a stylesheet look from a runtime look.
+setLyraStyle() accepts independent choices for look, surface, density, mode, accent, accentBackground, overrides, and surfaceOpacity (a 0–1 Glass opacity; see Glass surfaces). Omitted axes keep their current selection. Null restores the built-in value for look, surface, density and mode; `accent: null` explicitly clears the accent, and null clears accentBackground or overrides. `resetLyraStyle()` restores Shadcn/Glass/Emerald/System/comfortable; a field list resets only those fields. The returned LyraStyle snapshot includes the selected values, a resolved mode when the choice is system, and lookForm to distinguish a stylesheet look from a runtime look.
 
 mode is light, dark, system, or unset. Explicit modes set both data-lr-theme and data-theme; system follows the operating system and updates both attributes when it changes; unset removes Lyra's mode attributes. The lr-style-change event carries { style, changed }, where changed lists the affected fields. Applications can listen to this one event for document style changes.
 
@@ -7605,11 +7605,11 @@ new material root. Surface-colored outlined card and disclosure interiors let ne
 controls use their solid border colors while preserving the enclosing edge against glass.
 Filled accent interiors retain qualification. Native descendants retain inherited public color
 aliases. Custom translucent content fills require the author to choose suitable control borders.
-A design panel can offer a Glass opacity range from 0–100%, shown when the selected surface is
-Glass. `setLyraStyle({ surfaceOpacity })` takes that percentage directly: it clamps to 0–100, writes
-`--lr-theme-surface-opacity` as 0–1 on the document root, persists it with the other style choices,
+A design panel can offer a Glass opacity range, shown when the selected surface is Glass.
+`setLyraStyle({ surfaceOpacity })` takes the same 0–1 scale as the token: it clamps to 0–1, writes
+`--lr-theme-surface-opacity` on the document root, persists it with the other style choices,
 reports it as `getLyraStyle().surfaceOpacity` and in `lr-style-change` (`changed` includes
-`'surfaceOpacity'`), and `lyraThemeBootstrap` restores it before first paint. The default, 60, writes
+`'surfaceOpacity'`), and `lyraThemeBootstrap` restores it before first paint. The default, 0.6, writes
 nothing and leaves the stylesheet value in place; `null` or a non-finite value restores it, as does
 `resetLyraStyle(['surfaceOpacity'])`. `applyLyraStyleScope(element, { surfaceOpacity })` sets it for one
 subtree. Native `.lr-surface-chrome` wrappers and eligible component chrome consume the same input:
@@ -7617,8 +7617,9 @@ subtree. Native `.lr-surface-chrome` wrappers and eligible component chrome cons
 ```js
 import { getLyraStyle, resetLyraStyle, setLyraStyle } from '@aceshooting/lyra-ui/theme.js';
 
-slider.value = getLyraStyle().surfaceOpacity; // 60 until the user picks another value
-slider.addEventListener('input', () => setLyraStyle({ surfaceOpacity: Number(slider.value) }));
+// <input type="range" min="0" max="1" step="0.01">
+slider.value = String(getLyraStyle().surfaceOpacity); // 0.6 until the user picks another value
+slider.addEventListener('input', () => setLyraStyle({ surfaceOpacity: slider.valueAsNumber }));
 resetButton.addEventListener('click', () => resetLyraStyle(['surfaceOpacity']));
 ```
 

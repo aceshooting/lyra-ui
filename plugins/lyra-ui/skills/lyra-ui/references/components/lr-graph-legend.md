@@ -16,7 +16,7 @@
 
 ## `lr-graph-legend`
 
-Set `--lr-graph-legend-item-hover-fill` to customize the hovered control background.
+Set `--lr-graph-legend-item-hover-bg` to customize the hovered control background.
 
 A node-type legend for a paired `lr-graph`: one swatch + label + count row per node type, doubling
 as visibility filters. Never reads or writes a graph directly — the host forwards `types` in from

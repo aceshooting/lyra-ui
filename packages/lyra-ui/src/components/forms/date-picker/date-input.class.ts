@@ -2210,7 +2210,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
                 .weekdayFormat=${normalizeWeekdayFormat(this.weekdayFormat)}
                 .presets=${this.presets}
                 exportparts="presets, preset-button"
-                @lr-date-picker-select-request=${(event: Event) => event.stopPropagation()}
+                @lr-change-request=${(event: Event) => event.stopPropagation()}
                 @lr-input=${(event: Event) => event.stopPropagation()}
                 @lr-change=${(event: Event) => event.stopPropagation()}
                 @input=${this.onPickerInput}

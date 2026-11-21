@@ -88,7 +88,7 @@ function cell(value: unknown, locale: string): string {
 
 export interface LyraSpreadsheetViewerEventMap
   extends Omit<LyraAnchorTargetEventMap, 'lr-text-select'> {
-  'lr-load': CustomEvent<Record<string, never>>;
+  'lr-load': CustomEvent<null>;
   'lr-render-error': CustomEvent<{ error: unknown }>;
   /** Fired whenever the search query, match count, or active match index changes, from
    *  `search()`/`searchNext()`/`searchPrevious()`/`clearSearch()`. */
@@ -124,7 +124,7 @@ class LyraSpreadsheetViewerBase extends LyraElement<LyraSpreadsheetViewerEventMa
  * Remote parsing yields between admission/materialization passes; parsing itself remains synchronous.
  *
  * @customElement lr-spreadsheet-viewer
- * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with empty detail.
+ * @event lr-load - Fired after rendering a successfully parsed document. Bubbles and is composed with a `null` detail.
  * @event lr-render-error - Fired when fetching or parsing fails.
  * @event lr-highlight-activate - A `highlights` cell was clicked, or activated via Enter/Space
  *   while focused. `detail: { highlightId }`.
@@ -151,9 +151,9 @@ class LyraSpreadsheetViewerBase extends LyraElement<LyraSpreadsheetViewerEventMa
  *   placeholders.
  * @csspart spinner - Visible ordinary loading content with a motion-safe progress indicator.
  * @csspart error - The error message region.
- * @cssprop --lr-spreadsheet-viewer-background - Background of the viewer frame.
+ * @cssprop --lr-spreadsheet-viewer-bg - Background of the viewer frame.
  * @cssprop --lr-spreadsheet-viewer-border - Border of the viewer frame.
- * @cssprop --lr-spreadsheet-viewer-border-radius - Corner radius of the viewer frame.
+ * @cssprop --lr-spreadsheet-viewer-radius - Corner radius of the viewer frame.
  * @cssprop --lr-spreadsheet-viewer-header-row-bg - Background of the column headings.
  * @cssprop [--lr-spreadsheet-viewer-highlight-color=var(--lr-color-brand)] - Outline color of a
  *   highlighted cell. The active highlight changes a private warning-color default; an inherited
@@ -383,7 +383,7 @@ export class LyraSpreadsheetViewer extends DocumentAnchorTarget(
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     this.table.updated(changed, this.fetchState);
-    if (this.isConnected && changed.has('fetchState') && this.dataSource === undefined && this.fetchState.kind === 'loaded') this.emit('lr-load', {});
+    if (this.isConnected && changed.has('fetchState') && this.dataSource === undefined && this.fetchState.kind === 'loaded') this.emit('lr-load', null);
   }
 
   private async load(): Promise<void> {

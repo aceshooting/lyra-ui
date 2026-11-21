@@ -35,7 +35,7 @@ for (const [name, content, selector, body] of cases) {
     const onLoad = (event: Event) => {
       const viewer = event.target as HTMLElement;
       expect(viewer.shadowRoot!.querySelectorAll(selector).length).to.be.greaterThan(0);
-      expect((event as CustomEvent).detail).to.deep.equal({});
+      expect((event as CustomEvent).detail).to.equal(null);
       states.push(viewer.shadowRoot!.querySelector('[part="base"]')?.getAttribute('aria-busy') ?? null);
       expect(event.composed).to.equal(true);
       expect(event.cancelable).to.equal(false);

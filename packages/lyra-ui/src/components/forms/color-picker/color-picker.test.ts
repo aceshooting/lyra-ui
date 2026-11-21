@@ -2,6 +2,8 @@ import { accessibleName } from '../../../../test/accessible-name.js';
 import { expectValidAriaRules } from '../../../../test/aria-rules.js';
 import { fixture, expect, html, oneEvent, waitUntil } from "@open-wc/testing";
 import { hoverUntilMatched, resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
+import { sendKeys } from '@web/test-runner-commands';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import "../../lr-color-picker.js";
 import type { LyraColorPicker } from "../../lr-color-picker.js";
 import { expectStaleAttribute } from '../../../../test/expected-stale-attributes.js';
@@ -3323,4 +3325,40 @@ it('leaves swatch navigation inert when editing is disabled or readonly', async 
   expect(next.defaultPrevented).to.equal(true);
   expect(el.value).to.equal('#aabbcc');
   expect(parts(el, 'swatch')[1]!.getAttribute('aria-checked')).to.equal('true');
+});
+
+describe('lr-color-picker lr-change-request', () => {
+  it('sends one request per keyboard pick from the host, and a veto keeps the colour', async () => {
+    const el = await fixture<LyraColorPicker>(html`<lr-color-picker inline label="Accent" value="#ff0000"
+      swatches="#ff0000;#00ff00;#0000ff"></lr-color-picker>`);
+    const seen: string[] = [];
+    const onDocument = (event: Event): void => {
+      seen.push(`${event.target === el ? 'host' : 'other'}:${(event as CustomEvent<{ value: string }>).detail.value}`);
+    };
+    let veto = true;
+    el.addEventListener('lr-change-request', (event) => {
+      if (veto) event.preventDefault();
+    });
+    const changes: string[] = [];
+    el.addEventListener('lr-change', (event) => changes.push(event.detail.value));
+    document.addEventListener('lr-change-request', onDocument);
+    try {
+      await focusByKeyboard(parts(el, 'swatch')[0]!);
+      await sendKeys({ press: 'ArrowRight' });
+      await el.updateComplete;
+      expect(el.value).to.equal('#ff0000');
+      expect(changes).to.deep.equal([]);
+      expect(seen).to.deep.equal(['host:#00ff00']);
+
+      veto = false;
+      await focusByKeyboard(parts(el, 'swatch')[0]!);
+      await sendKeys({ press: 'ArrowRight' });
+      await el.updateComplete;
+      expect(el.value).to.equal('#00ff00');
+      expect(changes).to.deep.equal(['#00ff00']);
+      expect(seen).to.deep.equal(['host:#00ff00', 'host:#00ff00']);
+    } finally {
+      document.removeEventListener('lr-change-request', onDocument);
+    }
+  });
 });

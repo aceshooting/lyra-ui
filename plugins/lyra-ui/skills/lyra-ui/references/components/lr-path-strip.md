@@ -16,7 +16,7 @@
 
 ## `lr-path-strip`
 
-Set `--lr-path-strip-action-hover-fill` to customize the hovered control background.
+Set `--lr-path-strip-action-hover-bg` to customize the hovered control background.
 
 A linear node → relation → node chain rendering "why A connects to B" (GraphRAG local-search
 reasoning paths) as a compact, horizontally scrollable strip. One-dimensional and presentational: no

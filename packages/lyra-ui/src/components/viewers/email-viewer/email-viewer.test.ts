@@ -1883,6 +1883,19 @@ describe('message content and Lyra chrome', () => {
     }
   });
 
+  it('paints attachment buttons from --lr-email-viewer-action-bg', async () => {
+    const { el, restore } = await loaded(ATTACHMENT_EML);
+    try {
+      el.style.setProperty('--lr-transition-fast', '0s');
+      el.style.setProperty('--lr-email-viewer-action-bg', 'rgb(1, 2, 3)');
+      await untilRendered(el, '[part="attachment-button"]');
+      const button = el.shadowRoot!.querySelector('[part="attachment-button"]')!;
+      await waitUntil(() => getComputedStyle(button).backgroundColor === 'rgb(1, 2, 3)', 'the action token never painted');
+    } finally {
+      restore();
+    }
+  });
+
   it('keeps the attachments heading start-aligned', async () => {
     const { el, restore } = await loaded(ATTACHMENT_EML);
     try {

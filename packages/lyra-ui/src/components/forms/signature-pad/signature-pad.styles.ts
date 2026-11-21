@@ -2,6 +2,7 @@ import { outlinedActionStyles } from '../../../internal/icon-action.styles.js';
 import { formControlAppearance } from '../../../internal/form-control/appearance.styles.js';
 import { activeFill, disabledControl, focusRing, hoverFill } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { formControlLabelPlacement } from '../../../internal/form-control/chrome.styles.js';
 import { formControlLabelTypography, formControlRequiredMarker, formControlSupportingTone, formControlLabelDisplay } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
@@ -99,4 +100,5 @@ export const styles = css`
   }
   ${formControlSupportingTone}
   ${formControlLabelDisplay}
+  ${formControlLabelPlacement}
 `;

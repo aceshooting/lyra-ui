@@ -17,7 +17,7 @@ describe('radio selection request', () => {
     const log: string[] = [];
     const requests: Array<Omit<LyraRadioGroupSelectRequestDetail, 'option' | 'radio'> & { same: boolean }> = [];
     let mode: 'veto' | 'resolve' | 'allow' = 'veto';
-    group.addEventListener('lr-radio-group-select-request', (event) => {
+    group.addEventListener('lr-change-request', (event) => {
       const { value, previousValue, option, radio } = event.detail;
       requests.push({ value, previousValue, same: option === radio && option.value === value });
       log.push(`request:${String(group.value)}`);
@@ -38,6 +38,8 @@ describe('radio selection request', () => {
     await sendKeys({ press: 'ArrowDown' });
     await group.updateComplete;
     expect(document.activeElement === free, 'a refused arrow key leaves focus in place').to.equal(true);
+    expect(group.value).to.equal('free');
+    expect(pro!.checked).to.equal(false);
     expect(log).to.deep.equal(['request:free']);
 
     log.length = 0;

@@ -707,7 +707,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   /** Data mode: omits the `pin-glyph` indicator from pinned rows. Each pinned row keeps a visually
    *  hidden "Pinned" label in its `meta` slot, so assistive technology still hears the state. */
-  @property({ type: Boolean, attribute: 'without-pin-glyph', reflect: true }) withoutPinGlyph = false;
+  @property({ type: Boolean, attribute: 'without-pin-icon', reflect: true }) withoutPinIcon = false;
 
   /** Data mode: omits the decorative `group-icon` chevron from group headers (and their
    *  `sticky-groups` copy). The group toggle keeps `aria-expanded`, so its state is unchanged. */
@@ -1601,7 +1601,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
           : nothing}
         ${!thread.pinned
           ? nothing
-          : this.withoutPinGlyph
+          : this.withoutPinIcon
           ? html`<span slot="meta" class="sr-only">${this.localize('threadGroupPinned')}</span>`
           : html`<span slot="meta" part="row-meta pin-glyph"
               ><span role="img" aria-label=${this.localize('threadGroupPinned')}>${pinIcon()}</span> </span
@@ -1835,7 +1835,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
                 ? guard([this.withoutGroupIcon], () => (group: LyraVirtualListGroup) => this.renderStickyGroup(group))
                 : undefined}
               .renderItem=${guard([
-                this.activeConversationId, this.size, this.withoutRename, this.withoutPinGlyph, this.withoutGroupIcon, this.rowActions,
+                this.activeConversationId, this.size, this.withoutRename, this.withoutPinIcon, this.withoutGroupIcon, this.rowActions,
                 this.renderStart, this.renderRowContent, this.renderExcerpt, this.renderMeta,
                 this.renderActions, this.wrapRow, this.strings, this.effectiveLocale, this.effectiveDirection,
               ], () => (item: unknown) => this.renderItem(item))}

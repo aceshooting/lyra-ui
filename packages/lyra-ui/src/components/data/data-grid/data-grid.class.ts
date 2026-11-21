@@ -179,11 +179,10 @@ function pageDetail(page: number, pageSize: number): DataGridPageDetail {
  * @event lr-activate - Accepted pager activation, including the current page, with zero-based `{ value }`.
  * @event lr-before-page-change - Cancelable pager proposal with zero-based `{ page, pageSize, offset }`;
  *   `offset` is `page * pageSize`, the first row's zero-based index.
- * @event lr-selection-request - Cancelable user selection proposal with readonly `{ selectedRowKeys }`.
- * @event lr-selection-change - Selection committed, with readonly `{ selectedRowKeys, selectedKeys, selectedRows }`.
- * @event lr-row-expand-request - Cancelable row expansion proposal with `{ row, rowKey, expanded }`.
- * @event lr-row-expand-toggle - Accepted row expansion change with `{ row, rowKey, expanded }`.
- * @event lr-sort - Sort commit with `{ phase, sortKey, sortDir, sort }`. Clearing uses an empty key and null direction.
+ * @event lr-row-select-request - Cancelable user selection proposal with readonly `{ selectedRowKeys }`,
+ *   fired before `lr-row-select`. Vetoing it leaves the selection unchanged and suppresses `lr-row-select`.
+ * @event lr-row-expand-request - Cancelable row expansion proposal with `{ row, rowKey, key, expanded }`,
+ *   fired before `lr-row-expand` or `lr-row-collapse`. Vetoing it leaves the row unchanged.
  * @csspart page-summary - The localized range for the current page.
  * @csspart page-input - The compact pager's page-jump input.
  * @event lr-page-change - Fired after a user changes the zero-based page or page size, and after a
@@ -198,7 +197,6 @@ function pageDetail(page: number, pageSize: number): DataGridPageDetail {
  *   `selectedKeys` compatibility alias.
  * @event lr-sort-request - Cancelable sort proposal, fired before `sort` commits. Frozen readonly
  *   `detail: { sort }`. Vetoing it leaves `sort` unchanged and suppresses `lr-sort-change`.
- *   Both the grid and table emit the primary sort in `lr-sort` on commit.
  * @event lr-sort-change - Fired after a user changes sorting, unless a preceding `lr-sort-request`
  *   was vetoed.
  * @event focus - Native focus relayed once from the toolbar search or active column-filter input.
@@ -3844,8 +3842,6 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     const previousPage = this.page;
     this.sort = next;
     this.page = 0;
-    const primary = proposedSort[0];
-    this.emit('lr-sort', Object.freeze({ phase: 'commit', sortKey: primary?.id ?? '', sortDir: primary ? (primary.desc ? 'desc' : 'asc') : null, sort: proposedSort } as const));
     this.emit('lr-sort-change', Object.freeze({ sort: proposedSort }));
     this.emitPageReset(previousPage);
   }
@@ -4127,7 +4123,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     const { selectedKeys, data, rowKey, selectionMode, displayItems, selectableRows } = this;
     if (sameKeySet(selectedKeys, next)) return true;
     const detail = Object.freeze({ selectedRowKeys: freezeSnapshot(next) });
-    if (this.emit('lr-selection-request', detail, { cancelable: true }).defaultPrevented || !this.isConnected ||
+    if (this.emit('lr-row-select-request', detail, { cancelable: true }).defaultPrevented || !this.isConnected ||
       this.selectedKeys !== selectedKeys || this.data !== data || this.rowKey !== rowKey ||
       this.selectionMode !== selectionMode || this.displayItems !== displayItems || this.selectableRows !== selectableRows) {
       super.requestUpdate();
@@ -4142,7 +4138,6 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     const selectedRowKeys = freezeSnapshot(this.selectedRowKeys);
     const selectedRows = freezeSnapshot(this.selectedRows);
     const detail = Object.freeze({ selectedRowKeys, selectedKeys: selectedRowKeys, selectedRows });
-    this.emit('lr-selection-change', detail);
     this.emit('lr-row-select', detail);
   }
 
@@ -4228,7 +4223,6 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     if (expanded) this.collapseRow(item.key);
     else this.expandRow(item.key);
     if (emitUserEvent) {
-      this.emit('lr-row-expand-toggle', detail);
       this.emit(
         expanded ? 'lr-row-collapse' : 'lr-row-expand',
         Object.freeze({

@@ -94,3 +94,13 @@ export const InputLimit: StoryObj = {
   parameters: { docs: { description: { story: 'Catalog input loss is disclosed separately from the popup row window, including when repeated rows consume the inspected prefix.' } } },
   render: () => html`<lr-currency-picker label="Bounded catalog" .currencies=${Array.from({ length: 1025 }, () => 'USD')}></lr-currency-picker>`,
 };
+
+/** `label-placement="start"` sets the label in an inline-start column, with the hint under the
+ *  field; below `--lr-form-control-label-collapse-inline-size` it returns above the field. */
+export const LabelPlacementStart: StoryObj = {
+  render: () => html`
+    <div style="display:grid;gap:var(--lr-space-m);max-inline-size:var(--lr-size-36rem)">
+      <lr-currency-picker label="Currency" label-placement="start" hint="Used on invoices"></lr-currency-picker>
+    </div>
+  `,
+};

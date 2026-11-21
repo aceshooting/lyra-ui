@@ -189,7 +189,7 @@ and pending-range limits; activating an unavailable period is a no-op. The previ
 buttons announce the displayed month or period titles. The cell for today, or for the period
 containing today, carries `aria-current="date"` independently of the selection.
 
-**Events:** `lr-date-picker-select-request` (`detail: { value, previousValue }`) is the one
+**Events:** `lr-change-request` (`detail: { value, previousValue }`) is the one
 cancelable event: it is dispatched before a day pick (click, Enter or Space) or a preset button
 writes `value`, while `value` still holds the current ISO value; in range mode the first click of a
 new range proposes the lone start date. `preventDefault()` keeps `value` and `appliedPreset` and

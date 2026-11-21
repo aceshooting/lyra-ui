@@ -84,7 +84,7 @@ export type LyraRatingSymbolRenderer = (
   selected: boolean
 ) => unknown;
 
-/** Detail of `lr-rating-change-request`. */
+/** Detail of `lr-change-request`. */
 export interface LyraRatingChangeRequestDetail {
   /** The rating the gesture proposes, already clamped and stepped. */
   readonly value: number;
@@ -93,7 +93,7 @@ export interface LyraRatingChangeRequestDetail {
 }
 
 export interface LyraRatingEventMap {
-  'lr-rating-change-request': CustomEvent<LyraRatingChangeRequestDetail>;
+  'lr-change-request': CustomEvent<LyraRatingChangeRequestDetail>;
   input: Event;
   change: Event;
   'lr-input': CustomEvent<{ value: number }>;
@@ -153,7 +153,7 @@ function starSolid(): SVGTemplateResult {
  * @event change - Bubbling, composed native `Event` emitted when a user commits a new value,
  * immediately before `lr-change`. Programmatic writes and no-op gestures are silent.
  * @event lr-change - The rating changed. `detail: { value }`.
- * @event lr-rating-change-request - A user gesture (a click on a symbol, or an Arrow/Page/Home/End
+ * @event lr-change-request - A user gesture (a click on a symbol, or an Arrow/Page/Home/End
  *   key) is about to change the rating; `detail: { value, previousValue }` carries the proposed
  *   rating while `value` still holds the current one. Cancelable: calling `preventDefault()` keeps
  *   the current rating, and none of `input`/`lr-input`/`change`/`lr-change` fire. A listener may
@@ -162,7 +162,7 @@ function starSolid(): SVGTemplateResult {
  *   the value requests nothing.
  * @event lr-activate - Fired on every interactive commit of a rating -- a click on a symbol, or an
  *   Arrow/Page/Home/End key -- whether or not the value actually moved, unless
- *   `lr-rating-change-request` refused or redirected it. `detail: { value }` carries the
+ *   `lr-change-request` refused or redirected it. `detail: { value }` carries the
  *   committed rating. Bubbling and composed, so a host outside the shadow tree receives it.
  *   Not cancelable: it is a notification that the user committed a rating, not a veto point, and
  *   nothing in this component branches on it. Re-committing the current rating is the case
@@ -322,7 +322,7 @@ export class LyraRating extends LyraFormControlElement<LyraRatingEventMap> {
   private validityController: FormControlController;
   /** Consumer-supplied validation message reflected through `custom-error`. */
   declare customError: string | null;
-  // A listener that answers `lr-rating-change-request` by writing `value` finishes before the
+  // A listener that answers `lr-change-request` by writing `value` finishes before the
   // built-in commit runs; the guard records that it wrote at all.
   private readonly changeGuard = new VetoWriteGuard();
   private _value = 0;
@@ -734,7 +734,7 @@ export class LyraRating extends LyraFormControlElement<LyraRatingEventMap> {
       const request = requestThenCommit({
         requestDetail: { value: clamped, previousValue: this.value },
         emitRequest: (request, init: { cancelable: true }) =>
-          this.emit('lr-rating-change-request', request, init),
+          this.emit('lr-change-request', request, init),
         guard: this.changeGuard,
         commit: () => {
           if (!this.interactive) return;

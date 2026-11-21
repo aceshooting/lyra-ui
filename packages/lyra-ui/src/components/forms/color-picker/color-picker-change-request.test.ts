@@ -11,7 +11,7 @@ describe('color-picker change request', () => {
       swatches="#ff0000;#00ff00;#0000ff"></lr-color-picker>`);
     const log: string[] = [];
     let mode: 'veto' | 'resolve' | 'allow' = 'veto';
-    el.addEventListener('lr-color-picker-change-request', (event) => {
+    el.addEventListener('lr-change-request', (event) => {
       const { value, previousValue } = event.detail;
       log.push(`request:${value}:${String(previousValue)}:${el.value}:${String(event.cancelable)}`);
       if (mode === 'veto') event.preventDefault();

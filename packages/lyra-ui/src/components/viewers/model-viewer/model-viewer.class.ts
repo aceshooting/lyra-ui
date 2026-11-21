@@ -59,9 +59,9 @@ const KEY_ACTIONS: Readonly<Record<string, ModelAction>> = Object.freeze({
  * @csspart error - Visible localized failure text.
  * @csspart footer - The wrapper around the download link and the retry button.
  * @csspart download - The guarded source download link.
- * @cssprop --lr-model-viewer-action-background - Resting background of viewer actions.
- * @cssprop --lr-model-viewer-action-hover-background - Hover background of viewer actions.
- * @cssprop --lr-model-viewer-action-active-background - Pressed background of viewer actions.
+ * @cssprop --lr-model-viewer-action-bg - Resting background of viewer actions.
+ * @cssprop --lr-model-viewer-action-hover-bg - Hover background of viewer actions.
+ * @cssprop --lr-model-viewer-action-active-bg - Pressed background of viewer actions.
  * @cssprop [--lr-model-viewer-height=var(--lr-size-20rem)] - Block size of the camera surface.
  * @event lr-load - The current model finished parsing, including a valid model with no visible geometry. `detail: { format }`.
  * @event lr-render-error - The source or the engine failed. `detail: { error }`.

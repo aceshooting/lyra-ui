@@ -66,7 +66,7 @@ async function pickSegment(control: LyraSegmented, value: string): Promise<void>
 
 describe('<lr-style-panel>', () => {
   it('renders every axis with localized English labels and the current style, and is accessible', async () => {
-    setLyraStyle({ look: 'lyra', surface: 'glass', density: 'compact', accent: 'ruby', surfaceOpacity: 40 });
+    setLyraStyle({ look: 'lyra', surface: 'glass', density: 'compact', accent: 'ruby', surfaceOpacity: 0.4 });
     const el = await fixture<LyraStylePanel>(html`<lr-style-panel></lr-style-panel>`);
     await settled(el);
     const base = part<HTMLElement>(el, 'base');
@@ -84,7 +84,7 @@ describe('<lr-style-panel>', () => {
     expect(part<LyraSegmented>(el, 'surface').value).to.equal('glass');
     const opacity = part<LyraSlider>(el, 'surface-opacity');
     expect(opacity.label).to.equal('Glass opacity');
-    expect(opacity.valueAsNumber).to.equal(40);
+    expect(opacity.valueAsNumber).to.equal(0.4);
     expect(opacity.shadowRoot!.textContent).to.include('40%');
     expect(opacity.disabled).to.equal(false);
     expect(part<LyraSegmented>(el, 'density').value).to.equal('compact');
@@ -104,6 +104,8 @@ describe('<lr-style-panel>', () => {
     await settled(el);
     const outer: string[] = [];
     wrapper.addEventListener('lr-change', (event) => outer.push((event.target as Element).localName));
+    let requestLeaks = 0;
+    wrapper.addEventListener('lr-change-request', () => requestLeaks++);
 
     let change = oneEvent(el, 'lr-change');
     await pickSegment(part<LyraSegmented>(el, 'mode'), 'dark');
@@ -129,6 +131,7 @@ describe('<lr-style-panel>', () => {
     detail = ((await change) as CustomEvent<LyraStyleChangeDetail>).detail;
     expect(detail.style.accentName).to.equal('sapphire');
     expect(getLyraStyle().accentName).to.equal('sapphire');
+    expect(requestLeaks, 'child value requests stay inside the panel').to.equal(0);
 
     const look = part<LyraSelect>(el, 'look');
     look.value = 'lyra';
@@ -140,17 +143,38 @@ describe('<lr-style-panel>', () => {
     setLyraStyle({ surface: 'glass' });
     await settled(el);
     const opacity = part<LyraSlider>(el, 'surface-opacity');
-    opacity.valueAsNumber = 85;
+    opacity.valueAsNumber = 0.85;
     change = oneEvent(el, 'lr-change');
     opacity.dispatchEvent(new CustomEvent('lr-change', { bubbles: true, composed: true, detail: {} }));
     await change;
-    expect(getLyraStyle().surfaceOpacity).to.equal(85);
+    expect(getLyraStyle().surfaceOpacity).to.equal(0.85);
 
     // An empty look value and a write that changes nothing emit no panel lr-change.
     look.value = '';
     look.dispatchEvent(new CustomEvent('lr-change', { bubbles: true, composed: true, detail: {} }));
     opacity.dispatchEvent(new CustomEvent('lr-change', { bubbles: true, composed: true, detail: {} }));
     expect(outer).to.deep.equal(['lr-style-panel', 'lr-style-panel', 'lr-style-panel', 'lr-style-panel', 'lr-style-panel', 'lr-style-panel']);
+  });
+
+  it('moves the glass opacity slider in percent steps and writes the 0-1 value', async () => {
+    const el = await fixture<LyraStylePanel>(html`<lr-style-panel axes="surface-opacity"></lr-style-panel>`);
+    await settled(el);
+    const slider = part<LyraSlider>(el, 'surface-opacity');
+    const thumb = slider.shadowRoot!.querySelector<HTMLElement>('[part~="thumb"]')!;
+    expect(thumb.getAttribute('aria-valuenow')).to.equal('0.6');
+    expect(thumb.getAttribute('aria-valuetext')).to.equal('60%');
+    for (const [key, expected, text] of [['ArrowRight', 0.61, '61%'], ['End', 1, '100%'], ['Home', 0, '0%']] as const) {
+      const change = oneEvent(el, 'lr-change');
+      thumb.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+      thumb.dispatchEvent(new KeyboardEvent('keyup', { key, bubbles: true }));
+      const { detail } = (await change) as CustomEvent<LyraStyleChangeDetail>;
+      expect(detail.changed, key).to.deep.equal(['surfaceOpacity']);
+      expect(detail.style.surfaceOpacity, key).to.equal(expected);
+      expect(getLyraStyle().surfaceOpacity, key).to.equal(expected);
+      expect(getComputedStyle(document.documentElement).getPropertyValue('--lr-theme-surface-opacity').trim(), key).to.equal(String(expected));
+      await settled(el);
+      expect(thumb.getAttribute('aria-valuetext'), key).to.equal(text);
+    }
   });
 
   it('follows style changes made elsewhere and resets only the axes it shows', async () => {
@@ -166,6 +190,7 @@ describe('<lr-style-panel>', () => {
     part<HTMLElement>(el, 'reset').click();
     const { changed } = ((await change) as CustomEvent<LyraStyleChangeDetail>).detail;
     expect([...changed].sort()).to.deep.equal(['accent', 'density']);
+    expect(Object.isFrozen(changed), 'the changed list is a frozen snapshot').to.equal(true);
     expect(getLyraStyle().density).to.equal('comfortable');
     expect(getLyraStyle().accentName).to.equal('emerald');
     expect(getLyraStyle().look).to.equal('lyra');

@@ -838,6 +838,24 @@ describe('lr-highlight-layer', () => {
     expect((await eventPromise).detail).to.deep.equal({ highlightId: 'second' });
   });
 
+  it('paints overlap actions from --lr-highlight-layer-action-bg', async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div style="position:relative; width:400px; height:200px">
+        <lr-highlight-layer
+          style="--lr-highlight-layer-action-bg: rgb(1, 2, 3)"
+          .items=${[
+            { id: 'first', label: 'First', rects: [{ x: 50, y: 50, width: 1, height: 1 }] },
+            { id: 'second', label: 'Second', rects: [{ x: 51, y: 50, width: 1, height: 1 }] },
+          ]}
+        ></lr-highlight-layer>
+      </div>
+    `);
+    const el = wrapper.querySelector('lr-highlight-layer') as LyraHighlightLayer;
+    await el.updateComplete;
+    const action = el.shadowRoot!.querySelector<HTMLElement>('[part="highlight-action"]')!;
+    expect(getComputedStyle(action).backgroundColor).to.equal('rgb(1, 2, 3)');
+  });
+
   it('keeps in-place targets for highlights whose minimum hit areas do not overlap', async () => {
     const wrapper = await fixture<HTMLElement>(html`
       <div style="position:relative; width:400px; height:200px">
