@@ -34652,6 +34652,10 @@ source tree.
 - `--lr-icon-size` (unset by default) — when supplied, overrides both canvas dimensions. Without
   it, the selected `canvas` uses the font-relative sizes above. Stroke color is `currentColor` and
   the host is `color: inherit`, so color comes from surrounding text with no configuration.
+- `--lr-icon-stroke-width` (default `var(--lr-theme-icon-stroke-width, 1.75)`) — stroke weight of
+  the built-in stroked icons and any custom paths drawn inside them, in 24-unit viewBox units. A
+  look or app can set `--lr-theme-icon-stroke-width` once instead of styling `::part(svg)` on every
+  icon. A fetched `src` or library SVG keeps its own stroke and fill attributes.
 - `--lr-icon-rotate` (default `0deg`), `--lr-icon-flip-x` and `--lr-icon-flip-y` (default `1` each) —
   the transform inputs. `--lr-icon-rotate` is written inline from the `rotate` property and the flip
   factors are set to `-1` by `flip`, so set those properties rather than these tokens.
@@ -48874,6 +48878,29 @@ ordinal (`codeRegionIndexed` "Code {index}", `codeRegionWithLanguageIndexed` "{l
 adds at most eight elements toward the normal 20,000-node traversal bound.
 The `streaming-tail` part marks the stable text node used by progressive streaming updates.
 
+Prefer tokens over part rules for routine prose and code styling: `--lr-markdown-block-gap`
+(default `var(--lr-space-s)` — space after every paragraph, list, heading, blockquote, code block
+and table), `--lr-markdown-heading-1-font-size` (default `calc(var(--lr-size-1em) * 2)`),
+`--lr-markdown-heading-2-font-size` (default `var(--lr-size-1-5em)`),
+`--lr-markdown-heading-3-font-size` (default `calc(var(--lr-size-1em) * 1.17)`) and
+`--lr-markdown-heading-4-font-size` (default `var(--lr-size-1em)`) — together these restate the
+browser scale — `--lr-markdown-heading-font-weight`
+(default `var(--lr-font-weight-bold)`), `--lr-markdown-link-color` (default `var(--lr-color-brand)`)
+and `--lr-markdown-link-hover-color` (default the link colour), `--lr-markdown-blockquote-border-color`
+(default `var(--lr-color-border-subtle)`), `--lr-markdown-blockquote-color` (default
+`var(--lr-color-text-quiet)`) and `--lr-markdown-list-indent` (default `var(--lr-size-2-5rem)`).
+The `code-block` and `inline-code` surfaces have `--lr-markdown-code-block-padding`,
+`--lr-markdown-code-block-radius`, `--lr-markdown-code-block-bg`, `--lr-markdown-code-padding`,
+`--lr-markdown-code-radius` and `--lr-markdown-code-bg` (all listed below). Every token inherits, so
+a chat bubble with a filled background sets `--lr-markdown-link-color` once on that bubble:
+
+```css
+lr-chat-message[message-role='user'] {
+  --lr-markdown-block-gap: var(--lr-space-xs);
+  --lr-markdown-link-color: var(--lr-color-on-brand);
+}
+```
+
 Wide GFM tables scroll horizontally inside `table-wrapper`, a keyboard-focusable group named by
 `markdownTableRegion` (English: "Table"), or by `markdownTableRegionIndexed` ("Table {index}")
 when the document holds several tables. The label follows locale and `.strings` changes without
@@ -48931,8 +48958,8 @@ fenced `code-block` surface's padding), `--lr-markdown-code-block-radius` (defau
 `--lr-markdown-code-header-color` (default `var(--lr-color-text-quiet)`),
 `--lr-code-block-tab-size` (default `2` — tab
 width inside a rendered fenced or indented `code-block`), plus shared tokens
-`--lr-space-xs/-s/-m/-l`, `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-border`
-(blockquote bar), `--lr-color-border-subtle` (table cell rules), `--lr-color-text-quiet`,
+`--lr-space-xs/-s/-m/-l`, `--lr-color-brand-quiet`, `--lr-color-brand`,
+`--lr-color-border-subtle` (blockquote bar and table cell rules), `--lr-color-text-quiet`,
 `--lr-radius`.
 
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded via `markdown-loader.ts`'s
@@ -49132,7 +49159,13 @@ anchor-jump message), `content` (respects `max-height`), `heading`, `paragraph`,
 `streaming-tail` — identical to `<lr-markdown>`'s own parts.
 
 **Themeable custom properties:** identical to `<lr-markdown>`'s own tokens, including
-`--lr-markdown-content-min-size` and the three `--lr-markdown-code-copy-bg*` state tokens.
+`--lr-markdown-content-min-size`, the three `--lr-markdown-code-copy-bg*` state tokens and the prose
+tokens (`--lr-markdown-block-gap`, `--lr-markdown-heading-1-font-size`,
+`--lr-markdown-heading-2-font-size`, `--lr-markdown-heading-3-font-size`,
+`--lr-markdown-heading-4-font-size`,
+`--lr-markdown-heading-font-weight`, `--lr-markdown-link-color`, `--lr-markdown-link-hover-color`,
+`--lr-markdown-blockquote-border-color`, `--lr-markdown-blockquote-color`,
+`--lr-markdown-list-indent`).
 `--lr-markdown-max-height` (default `none` — cap on `[part="content"]`'s block size; the
 `maxHeight` property sets this token inline) and its code-surface tokens —
 `--lr-markdown-code-bg` (default `var(--lr-color-brand-quiet)`, shared by inline `code` and the
@@ -49686,7 +49719,10 @@ The plain frame uses its separate focus underline. For the built-in action butto
 colors for Send. `--lr-chat-composer-busy-color` (on-brand) pairs with `--lr-chat-composer-busy-bg`
 for Stop. `--lr-chat-composer-action-radius` defaults to `--lr-radius` and
 `--lr-chat-composer-action-size` defaults to automatic sizing with the shared icon-button minimum.
-Both apply to Send and Stop. `--lr-chat-composer-action-hover-bg` and
+Both apply to Send and Stop. `--lr-chat-composer-send-glyph-offset-inline` and
+`--lr-chat-composer-send-glyph-offset-block` (both default `0`) optically nudge the send glyph, for
+example to centre the paper plane in a round button; the inline offset is logical (positive moves
+toward the inline end) and mirrors with the glyph in RTL, so no `:dir(rtl)` rule is needed. `--lr-chat-composer-action-hover-bg` and
 `--lr-chat-composer-action-active-bg` default to a tint of the current action fill. The
 `--lr-chat-composer-action-hover-color`, `--lr-chat-composer-action-active-color`,
 `--lr-chat-composer-action-disabled-bg`, and `--lr-chat-composer-action-disabled-color` overrides
@@ -52298,7 +52334,12 @@ Override the `conversationActionWithTitle` string to change how the action and t
 `withArchived: boolean
 = false` (attribute `with-archived`, reflected) — data mode: include `archived` threads (in their own
 trailing group). `withoutRename: boolean = false` (attribute `without-rename`, reflected) — forwarded to
-each data-mode row, turning its inline rename off.
+each data-mode row, turning its inline rename off. `withoutPinGlyph: boolean = false` (attribute
+`without-pin-glyph`, reflected) — data mode: omits the `pin-glyph` indicator; each pinned row keeps a
+visually hidden "Pinned" label, so its accessible name is unchanged. `withoutGroupIcon: boolean =
+false` (attribute `without-group-icon`, reflected) — data mode: omits the decorative `group-icon`
+chevron from group headers and their sticky copy; the toggle keeps `aria-expanded`. Row density
+already follows `size`, which is forwarded to every row.
 `stickyGroups: boolean = false` (attribute `sticky-groups`, reflected) — data mode: pins
 the current date/custom group's header to the top of the scroll viewport while its rows are in view,
 pushing it off as the next group's header arrives. Group headers are ordinary virtualized rows, so
@@ -52456,6 +52497,13 @@ marks returned by `renderRowContent` or any other hook.
 
 **Sticky group header:** `--lr-thread-list-group-header-bg` (default `var(--lr-color-surface)`) keeps
 the pinned header opaque over scrolled rows.
+
+**Group header density:** `--lr-thread-list-group-header-padding` (default `var(--lr-space-xs)
+var(--lr-space-s)`), `--lr-thread-list-group-toggle-font-size` (default `var(--lr-size-1em)`) and
+`--lr-thread-list-group-toggle-color` (default `var(--lr-color-text-quiet)`) — both set on the header,
+so the toggle and its sticky copy match — plus `--lr-thread-list-group-toggle-font-weight` (default
+`var(--lr-font-weight-semibold)`) and `--lr-thread-list-group-toggle-min-block-size` (default
+`var(--lr-icon-button-size)`).
 
 **Themeable control states:** `--lr-thread-list-group-toggle-hover-bg` (default
 `var(--lr-color-surface-raised)`), `--lr-thread-list-group-toggle-hover-color` (default

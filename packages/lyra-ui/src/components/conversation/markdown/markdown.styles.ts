@@ -76,12 +76,30 @@ export const styles = css`
   }
   [part='heading'] {
     line-height: var(--lr-line-height-compact);
-    margin-block: var(--lr-space-l) var(--lr-space-s);
+    margin-block: var(--lr-space-l) var(--lr-markdown-block-gap, var(--lr-space-s));
+    font-weight: var(--lr-markdown-heading-font-weight, var(--lr-font-weight-bold));
+  }
+  /* The heading-size fallbacks restate the browser's own h1-h4 scale, so an unset token keeps it. */
+  h1[part='heading'] {
+    font-size: var(--lr-markdown-heading-1-font-size, calc(var(--lr-size-1em) * 2));
+  }
+  h2[part='heading'] {
+    font-size: var(--lr-markdown-heading-2-font-size, var(--lr-size-1-5em));
+  }
+  h3[part='heading'] {
+    font-size: var(--lr-markdown-heading-3-font-size, calc(var(--lr-size-1em) * 1.17));
+  }
+  h4[part='heading'] {
+    font-size: var(--lr-markdown-heading-4-font-size, var(--lr-size-1em));
   }
   [part='content'] p,
   [part='content'] ul,
   [part='content'] ol {
-    margin-block: 0 var(--lr-space-s);
+    margin-block: 0 var(--lr-markdown-block-gap, var(--lr-space-s));
+  }
+  [part='content'] ul,
+  [part='content'] ol {
+    padding-inline-start: var(--lr-markdown-list-indent, var(--lr-size-2-5rem));
   }
   ul > [part~='task-item'] {
     list-style: none;
@@ -134,7 +152,7 @@ export const styles = css`
   [part='code-block'] {
     font-family: var(--lr-markdown-font-mono, var(--lr-font-mono));
     line-height: var(--lr-line-height-normal);
-    margin-block: 0 var(--lr-space-s);
+    margin-block: 0 var(--lr-markdown-block-gap, var(--lr-space-s));
     padding: var(--lr-markdown-code-block-padding, var(--lr-space-s) var(--lr-space-m));
     border-radius: var(--lr-markdown-code-block-radius, var(--lr-radius));
     background: var(--lr-markdown-code-block-bg, var(--lr-markdown-code-bg, var(--lr-color-brand-quiet)));
@@ -193,8 +211,13 @@ export const styles = css`
     background-color: var(--shiki-dark-bg, transparent) !important;
   }
   [part='link'] {
-    color: var(--lr-color-brand);
+    color: var(--lr-markdown-link-color, var(--lr-color-brand));
     text-underline-offset: var(--lr-size-0-125rem);
+  }
+  /* no-pressed-state: a prose link navigates on activation; the hover colour is its only pointer
+     feedback, matching the browser's own link behaviour. */
+  [part='link']:hover {
+    color: var(--lr-markdown-link-hover-color, var(--lr-markdown-link-color, var(--lr-color-brand)));
   }
   /* Keeps an oversized source image inside the content wrapper: [part='content']'s
      overflow-wrap: anywhere covers text only, not replaced elements like <img>. */
@@ -202,14 +225,14 @@ export const styles = css`
     max-inline-size: 100%;
   }
   [part='blockquote'] {
-    margin-block: 0 var(--lr-space-s);
+    margin-block: 0 var(--lr-markdown-block-gap, var(--lr-space-s));
     margin-inline: 0;
     padding-inline-start: var(--lr-space-m);
-    border-inline-start: var(--lr-border-width-thick) solid var(--lr-color-border-subtle);
-    color: var(--lr-color-text-quiet);
+    border-inline-start: var(--lr-border-width-thick) solid var(--lr-markdown-blockquote-border-color, var(--lr-color-border-subtle));
+    color: var(--lr-markdown-blockquote-color, var(--lr-color-text-quiet));
   }
   [part='table-wrapper'] {
-    margin-block: 0 var(--lr-space-s);
+    margin-block: 0 var(--lr-markdown-block-gap, var(--lr-space-s));
     overflow-x: auto;
     overflow-y: hidden;
     overflow-inline: auto;
@@ -217,7 +240,7 @@ export const styles = css`
   }
   [part='table'] {
     border-collapse: collapse;
-    margin-block: 0 var(--lr-space-s);
+    margin-block: 0 var(--lr-markdown-block-gap, var(--lr-space-s));
     inline-size: 100%;
   }
   [part='table-wrapper'] > [part='table'] {
@@ -256,7 +279,7 @@ export const styles = css`
   ${highlightToneStyles('markdown', { neutralBackground: 'var(--lr-color-surface)' })}
 
   [part~='code-block-frame']:where([data-lr-code-chrome]) {
-    margin-block: 0 var(--lr-space-s);
+    margin-block: 0 var(--lr-markdown-block-gap, var(--lr-space-s));
     border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
     border-radius: var(--lr-markdown-code-block-radius, var(--lr-radius));
     overflow: clip;

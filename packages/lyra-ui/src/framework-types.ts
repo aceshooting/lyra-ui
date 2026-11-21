@@ -2493,6 +2493,8 @@ export interface LyraComponentTypeMap {
       | '--lr-chat-composer-gap'
       | '--lr-chat-composer-padding'
       | '--lr-chat-composer-radius'
+      | '--lr-chat-composer-send-glyph-offset-block'
+      | '--lr-chat-composer-send-glyph-offset-inline'
       | '--lr-chat-composer-shadow';
     attributeAliases: {
       'actions-layout'?: LyraChatComposer['actionsLayout'];
@@ -7080,6 +7082,7 @@ export interface LyraComponentTypeMap {
       | '--lr-icon-flip-y'
       | '--lr-icon-rotate'
       | '--lr-icon-size'
+      | '--lr-icon-stroke-width'
       | '--primary-color'
       | '--primary-opacity'
       | '--secondary-color'
@@ -8374,6 +8377,9 @@ export interface LyraComponentTypeMap {
       | '--lr-icon-button-color-active'
       | '--lr-icon-button-color-hover'
       | '--lr-icon-button-radius'
+      | '--lr-markdown-block-gap'
+      | '--lr-markdown-blockquote-border-color'
+      | '--lr-markdown-blockquote-color'
       | '--lr-markdown-code-bg'
       | '--lr-markdown-code-block-bg'
       | '--lr-markdown-code-block-padding'
@@ -8391,6 +8397,11 @@ export interface LyraComponentTypeMap {
       | '--lr-markdown-code-radius'
       | '--lr-markdown-content-min-size'
       | '--lr-markdown-font-mono'
+      | '--lr-markdown-heading-1-font-size'
+      | '--lr-markdown-heading-2-font-size'
+      | '--lr-markdown-heading-3-font-size'
+      | '--lr-markdown-heading-4-font-size'
+      | '--lr-markdown-heading-font-weight'
       | '--lr-markdown-highlight-accent-bg'
       | '--lr-markdown-highlight-active-bg'
       | '--lr-markdown-highlight-active-outline-color'
@@ -8398,6 +8409,9 @@ export interface LyraComponentTypeMap {
       | '--lr-markdown-highlight-neutral-bg'
       | '--lr-markdown-highlight-success-bg'
       | '--lr-markdown-highlight-warning-bg'
+      | '--lr-markdown-link-color'
+      | '--lr-markdown-link-hover-color'
+      | '--lr-markdown-list-indent'
       | '--lr-markdown-max-height'
       | '--lr-markdown-table-header-bg'
       | '--lr-markdown-task-checkbox-size';
@@ -8467,6 +8481,9 @@ export interface LyraComponentTypeMap {
       | '--lr-icon-button-color-active'
       | '--lr-icon-button-color-hover'
       | '--lr-icon-button-radius'
+      | '--lr-markdown-block-gap'
+      | '--lr-markdown-blockquote-border-color'
+      | '--lr-markdown-blockquote-color'
       | '--lr-markdown-code-bg'
       | '--lr-markdown-code-block-bg'
       | '--lr-markdown-code-block-padding'
@@ -8484,6 +8501,11 @@ export interface LyraComponentTypeMap {
       | '--lr-markdown-code-radius'
       | '--lr-markdown-content-min-size'
       | '--lr-markdown-font-mono'
+      | '--lr-markdown-heading-1-font-size'
+      | '--lr-markdown-heading-2-font-size'
+      | '--lr-markdown-heading-3-font-size'
+      | '--lr-markdown-heading-4-font-size'
+      | '--lr-markdown-heading-font-weight'
       | '--lr-markdown-highlight-accent-bg'
       | '--lr-markdown-highlight-active-bg'
       | '--lr-markdown-highlight-active-outline-color'
@@ -8491,6 +8513,9 @@ export interface LyraComponentTypeMap {
       | '--lr-markdown-highlight-neutral-bg'
       | '--lr-markdown-highlight-success-bg'
       | '--lr-markdown-highlight-warning-bg'
+      | '--lr-markdown-link-color'
+      | '--lr-markdown-link-hover-color'
+      | '--lr-markdown-list-indent'
       | '--lr-markdown-max-height'
       | '--lr-markdown-table-header-bg'
       | '--lr-markdown-task-checkbox-size';
@@ -13787,6 +13812,8 @@ export interface LyraComponentTypeMap {
       | 'strings'
       | 'threads'
       | 'withArchived'
+      | 'withoutGroupIcon'
+      | 'withoutPinGlyph'
       | 'withoutRename'
       | 'wrapRow',
       {}
@@ -13821,10 +13848,15 @@ export interface LyraComponentTypeMap {
       | '--lr-thread-list-excerpt-highlight-padding'
       | '--lr-thread-list-excerpt-highlight-radius'
       | '--lr-thread-list-group-header-bg'
+      | '--lr-thread-list-group-header-padding'
       | '--lr-thread-list-group-toggle-active-bg'
       | '--lr-thread-list-group-toggle-active-color'
+      | '--lr-thread-list-group-toggle-color'
+      | '--lr-thread-list-group-toggle-font-size'
+      | '--lr-thread-list-group-toggle-font-weight'
       | '--lr-thread-list-group-toggle-hover-bg'
       | '--lr-thread-list-group-toggle-hover-color'
+      | '--lr-thread-list-group-toggle-min-block-size'
       | '--lr-thread-list-row-action-active-bg'
       | '--lr-thread-list-row-action-active-color'
       | '--lr-thread-list-row-action-hover-bg'
@@ -13846,6 +13878,8 @@ export interface LyraComponentTypeMap {
       'source-page-size'?: LyraThreadList['sourcePageSize'];
       'sticky-groups'?: LyraThreadList['stickyGroups'];
       'with-archived'?: LyraThreadList['withArchived'];
+      'without-group-icon'?: LyraThreadList['withoutGroupIcon'];
+      'without-pin-glyph'?: LyraThreadList['withoutPinGlyph'];
       'without-rename'?: LyraThreadList['withoutRename'];
     };
   };

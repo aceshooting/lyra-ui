@@ -1813,6 +1813,31 @@ it("mirrors only the directional send glyph in RTL", async () => {
   expect(getComputedStyle(stopGlyph).transform).to.equal("none");
 });
 
+it("nudges the send glyph by the logical offset tokens, mirroring the inline offset in RTL", async () => {
+  const offsets = "--lr-chat-composer-send-glyph-offset-inline: 3px; --lr-chat-composer-send-glyph-offset-block: -2px";
+  const wrapper = await fixture<HTMLElement>(html`<div>
+    <lr-chat-composer></lr-chat-composer>
+    <lr-chat-composer dir="rtl"></lr-chat-composer>
+  </div>`);
+  const [ltr, rtl] = [...wrapper.querySelectorAll<LyraChatComposer>("lr-chat-composer")] as [LyraChatComposer, LyraChatComposer];
+  await Promise.all([ltr.updateComplete, rtl.updateComplete]);
+  const glyphRect = (el: LyraChatComposer) => {
+    const glyph = el.shadowRoot!.querySelector<HTMLElement>('[part="send-glyph"]')!;
+    const button = el.shadowRoot!.querySelector<HTMLElement>('[part="action-button"]')!;
+    const g = glyph.getBoundingClientRect();
+    const b = button.getBoundingClientRect();
+    return { x: g.left - b.left, y: g.top - b.top };
+  };
+  const before = { ltr: glyphRect(ltr), rtl: glyphRect(rtl) };
+  ltr.style.cssText = offsets;
+  rtl.style.cssText = offsets;
+  const after = { ltr: glyphRect(ltr), rtl: glyphRect(rtl) };
+  expect(after.ltr.x - before.ltr.x).to.be.closeTo(3, 0.01);
+  expect(after.ltr.y - before.ltr.y).to.be.closeTo(-2, 0.01);
+  expect(after.rtl.x - before.rtl.x).to.be.closeTo(-3, 0.01);
+  expect(after.rtl.y - before.rtl.y).to.be.closeTo(-2, 0.01);
+});
+
 describe("frame", () => {
   const baseOf = (el: LyraChatComposer): HTMLElement =>
     el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;

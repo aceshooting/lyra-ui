@@ -18,6 +18,12 @@ export const styles = css`
     overflow: visible;
   }
 
+  /* Only the built-in stroked set reads the weight token; a fetched src or library SVG keeps its own
+     stroke and fill attributes untouched. */
+  svg[data-lr-stroked] {
+    stroke-width: var(--lr-icon-stroke-width, var(--lr-theme-icon-stroke-width, 1.75));
+  }
+
   .semantic-owner {
     display: inline-flex;
     inline-size: 100%;

@@ -707,3 +707,15 @@ export const MillionSource: Story = {
   render: () => html`<p>Browse one million generated threads. Search by an exact thread number from 0 to 999999.</p><lr-thread-list searchable sticky-groups .dataSource=${millionThreadSource}
     @lr-source-page-change=${(event: CustomEvent<{ page: number }>) => console.log('source page', event.detail.page)}></lr-thread-list>`,
 };
+
+/** A compact history rail: smaller group headers through tokens, with the pin glyph and group
+ *  chevron omitted. Pinned rows keep a hidden "Pinned" label and groups keep `aria-expanded`. */
+export const DenseRail: Story = {
+  render: () => html`<lr-thread-list
+    size="s"
+    without-pin-glyph
+    without-group-icon
+    style="block-size: 20rem; max-inline-size: 18rem; --lr-thread-list-group-header-padding: var(--lr-space-2xs) var(--lr-space-xs); --lr-thread-list-group-toggle-font-size: var(--lr-font-size-xs); --lr-thread-list-group-toggle-min-block-size: var(--lr-size-1-5rem);"
+    .threads=${threads}
+  ></lr-thread-list>`,
+};

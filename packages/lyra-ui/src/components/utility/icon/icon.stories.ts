@@ -140,3 +140,12 @@ export const AlignedColumn: Story = {
     </div>
   `,
 };
+
+/** Built-in icons follow `--lr-icon-stroke-width` (or the `--lr-theme-icon-stroke-width` hook). */
+export const StrokeWidth: Story = {
+  render: () => html`
+    <div style="display:flex;gap:1rem;font-size:1.5rem">
+      ${['1', '1.75', '2.5'].map((width) => html`<lr-icon name="search" style=${`--lr-icon-stroke-width: ${width}`}></lr-icon>`)}
+    </div>
+  `,
+};

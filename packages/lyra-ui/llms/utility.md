@@ -1605,6 +1605,10 @@ source tree.
 - `--lr-icon-size` (unset by default) — when supplied, overrides both canvas dimensions. Without
   it, the selected `canvas` uses the font-relative sizes above. Stroke color is `currentColor` and
   the host is `color: inherit`, so color comes from surrounding text with no configuration.
+- `--lr-icon-stroke-width` (default `var(--lr-theme-icon-stroke-width, 1.75)`) — stroke weight of
+  the built-in stroked icons and any custom paths drawn inside them, in 24-unit viewBox units. A
+  look or app can set `--lr-theme-icon-stroke-width` once instead of styling `::part(svg)` on every
+  icon. A fetched `src` or library SVG keeps its own stroke and fill attributes.
 - `--lr-icon-rotate` (default `0deg`), `--lr-icon-flip-x` and `--lr-icon-flip-y` (default `1` each) —
   the transform inputs. `--lr-icon-rotate` is written inline from the `rotate` property and the flip
   factors are set to `-1` by `flip`, so set those properties rather than these tokens.

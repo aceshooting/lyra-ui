@@ -237,6 +237,18 @@ export interface LyraMarkdownEventMap extends LyraAnchorTargetEventMap {
  *   `code-block` surface.
  * @cssprop [--lr-markdown-table-header-bg=var(--lr-color-brand-quiet)] - Background of every
  *   rendered `[part="table"]` header cell (`<th>`).
+ * @cssprop [--lr-markdown-block-gap=var(--lr-space-s)] - Space after every rendered block
+ *   (paragraph, list, heading, blockquote, code block, table).
+ * @cssprop [--lr-markdown-heading-1-font-size=calc(var(--lr-size-1em) * 2)] - `<h1>` font size.
+ * @cssprop [--lr-markdown-heading-2-font-size=var(--lr-size-1-5em)] - `<h2>` font size.
+ * @cssprop [--lr-markdown-heading-3-font-size=calc(var(--lr-size-1em) * 1.17)] - `<h3>` font size.
+ * @cssprop [--lr-markdown-heading-4-font-size=var(--lr-size-1em)] - `<h4>` font size.
+ * @cssprop [--lr-markdown-heading-font-weight=var(--lr-font-weight-bold)] - Weight of every heading.
+ * @cssprop [--lr-markdown-link-color=var(--lr-color-brand)] - Rendered link colour.
+ * @cssprop [--lr-markdown-link-hover-color=var(--lr-markdown-link-color)] - Rendered link colour on hover.
+ * @cssprop [--lr-markdown-blockquote-border-color=var(--lr-color-border-subtle)] - Blockquote rule colour.
+ * @cssprop [--lr-markdown-blockquote-color=var(--lr-color-text-quiet)] - Blockquote text colour.
+ * @cssprop [--lr-markdown-list-indent=var(--lr-size-2-5rem)] - Inline-start indent of every list.
  * @cssprop [--lr-markdown-highlight-accent-bg=var(--lr-color-brand-quiet)] - Accent highlight fill.
  * @cssprop [--lr-markdown-highlight-success-bg=var(--lr-color-success-quiet)] - Success highlight fill.
  * @cssprop [--lr-markdown-highlight-warning-bg=var(--lr-color-warning-quiet)] - Warning highlight fill.

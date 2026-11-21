@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 24 parts, 38 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 24 parts, 49 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -104,7 +104,13 @@ anchor-jump message), `content` (respects `max-height`), `heading`, `paragraph`,
 `streaming-tail` — identical to `<lr-markdown>`'s own parts.
 
 **Themeable custom properties:** identical to `<lr-markdown>`'s own tokens, including
-`--lr-markdown-content-min-size` and the three `--lr-markdown-code-copy-bg*` state tokens.
+`--lr-markdown-content-min-size`, the three `--lr-markdown-code-copy-bg*` state tokens and the prose
+tokens (`--lr-markdown-block-gap`, `--lr-markdown-heading-1-font-size`,
+`--lr-markdown-heading-2-font-size`, `--lr-markdown-heading-3-font-size`,
+`--lr-markdown-heading-4-font-size`,
+`--lr-markdown-heading-font-weight`, `--lr-markdown-link-color`, `--lr-markdown-link-hover-color`,
+`--lr-markdown-blockquote-border-color`, `--lr-markdown-blockquote-color`,
+`--lr-markdown-list-indent`).
 `--lr-markdown-max-height` (default `none` — cap on `[part="content"]`'s block size; the
 `maxHeight` property sets this token inline) and its code-surface tokens —
 `--lr-markdown-code-bg` (default `var(--lr-color-brand-quiet)`, shared by inline `code` and the

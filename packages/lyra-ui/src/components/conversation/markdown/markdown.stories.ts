@@ -329,3 +329,11 @@ export const LazyLanguageGrammar: Story = {
   render: () => html`<lr-markdown .languageLoaders=${{ json: () => import('shiki/langs/json.mjs') }}
     .content=${'```json\n{"loaded": "on demand"}\n```'}></lr-markdown>`,
 };
+
+/** Dense prose for a chat bubble: block spacing, heading scale, link and blockquote tokens. */
+export const DenseProseTokens: Story = {
+  render: () => html`<lr-markdown
+    style="max-inline-size: 28rem; --lr-markdown-block-gap: var(--lr-space-2xs); --lr-markdown-heading-1-font-size: var(--lr-font-size-lg); --lr-markdown-heading-2-font-size: var(--lr-font-size-m); --lr-markdown-heading-font-weight: var(--lr-font-weight-semibold); --lr-markdown-link-color: var(--lr-color-text); --lr-markdown-link-hover-color: var(--lr-color-brand); --lr-markdown-blockquote-border-color: var(--lr-color-brand); --lr-markdown-list-indent: var(--lr-space-l);"
+    .content=${sample}
+  ></lr-markdown>`,
+};

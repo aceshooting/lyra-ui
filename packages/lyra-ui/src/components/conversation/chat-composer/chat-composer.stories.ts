@@ -368,3 +368,14 @@ export const EndAlignedToolbar: Story = {
     </lr-chat-composer>
   `,
 };
+
+/** A round send button with the paper-plane glyph optically centred; the inline nudge mirrors in RTL. */
+export const RoundSendButton: Story = {
+  render: () => html`
+    ${['ltr', 'rtl'].map((dir) => html`<lr-chat-composer
+      dir=${dir}
+      placeholder="Message the assistant…"
+      style="max-width: 32rem; display: block; margin-block-end: 1rem; --lr-chat-composer-action-radius: 50%; --lr-chat-composer-action-size: var(--lr-size-2-5rem); --lr-chat-composer-send-glyph-offset-inline: calc(var(--lr-size-1px) * -1); --lr-chat-composer-send-glyph-offset-block: var(--lr-size-1px);"
+    ></lr-chat-composer>`)}
+  `,
+};

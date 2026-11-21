@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 24 parts, 38 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 24 parts, 49 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -281,6 +281,29 @@ ordinal (`codeRegionIndexed` "Code {index}", `codeRegionWithLanguageIndexed` "{l
 adds at most eight elements toward the normal 20,000-node traversal bound.
 The `streaming-tail` part marks the stable text node used by progressive streaming updates.
 
+Prefer tokens over part rules for routine prose and code styling: `--lr-markdown-block-gap`
+(default `var(--lr-space-s)` — space after every paragraph, list, heading, blockquote, code block
+and table), `--lr-markdown-heading-1-font-size` (default `calc(var(--lr-size-1em) * 2)`),
+`--lr-markdown-heading-2-font-size` (default `var(--lr-size-1-5em)`),
+`--lr-markdown-heading-3-font-size` (default `calc(var(--lr-size-1em) * 1.17)`) and
+`--lr-markdown-heading-4-font-size` (default `var(--lr-size-1em)`) — together these restate the
+browser scale — `--lr-markdown-heading-font-weight`
+(default `var(--lr-font-weight-bold)`), `--lr-markdown-link-color` (default `var(--lr-color-brand)`)
+and `--lr-markdown-link-hover-color` (default the link colour), `--lr-markdown-blockquote-border-color`
+(default `var(--lr-color-border-subtle)`), `--lr-markdown-blockquote-color` (default
+`var(--lr-color-text-quiet)`) and `--lr-markdown-list-indent` (default `var(--lr-size-2-5rem)`).
+The `code-block` and `inline-code` surfaces have `--lr-markdown-code-block-padding`,
+`--lr-markdown-code-block-radius`, `--lr-markdown-code-block-bg`, `--lr-markdown-code-padding`,
+`--lr-markdown-code-radius` and `--lr-markdown-code-bg` (all listed below). Every token inherits, so
+a chat bubble with a filled background sets `--lr-markdown-link-color` once on that bubble:
+
+```css
+lr-chat-message[message-role='user'] {
+  --lr-markdown-block-gap: var(--lr-space-xs);
+  --lr-markdown-link-color: var(--lr-color-on-brand);
+}
+```
+
 Wide GFM tables scroll horizontally inside `table-wrapper`, a keyboard-focusable group named by
 `markdownTableRegion` (English: "Table"), or by `markdownTableRegionIndexed` ("Table {index}")
 when the document holds several tables. The label follows locale and `.strings` changes without
@@ -338,8 +361,8 @@ fenced `code-block` surface's padding), `--lr-markdown-code-block-radius` (defau
 `--lr-markdown-code-header-color` (default `var(--lr-color-text-quiet)`),
 `--lr-code-block-tab-size` (default `2` — tab
 width inside a rendered fenced or indented `code-block`), plus shared tokens
-`--lr-space-xs/-s/-m/-l`, `--lr-color-brand-quiet`, `--lr-color-brand`, `--lr-color-border`
-(blockquote bar), `--lr-color-border-subtle` (table cell rules), `--lr-color-text-quiet`,
+`--lr-space-xs/-s/-m/-l`, `--lr-color-brand-quiet`, `--lr-color-brand`,
+`--lr-color-border-subtle` (blockquote bar and table cell rules), `--lr-color-text-quiet`,
 `--lr-radius`.
 
 **Optional peer deps:** `marked`, `dompurify` (both lazy-loaded via `markdown-loader.ts`'s

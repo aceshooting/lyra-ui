@@ -263,8 +263,14 @@ export const styles = css`
   [part='stop-glyph'] {
     display: inline-flex;
   }
+  /* Optical nudge for the send glyph. translate applies in the button's own (unmirrored) space,
+     outside the RTL scaleX(-1), so the inline component flips sign here to stay logical. */
+  [part='send-glyph'] {
+    translate: var(--lr-chat-composer-send-glyph-offset-inline, 0) var(--lr-chat-composer-send-glyph-offset-block, 0);
+  }
   :host(:dir(rtl)) [part='send-glyph'] {
     transform: scaleX(-1);
+    translate: calc(-1 * var(--lr-chat-composer-send-glyph-offset-inline, 0px)) var(--lr-chat-composer-send-glyph-offset-block, 0);
   }
   /* Stop affordance while generating -- neutral/quiet rather than the resting brand fill, so it
      doesn't read as "send is still available" while a response is in flight. It reads a dedicated

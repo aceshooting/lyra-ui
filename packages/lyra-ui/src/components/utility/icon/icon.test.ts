@@ -277,6 +277,31 @@ function stubFetch(handler: (url: string, init?: RequestInit) => Promise<Respons
 
 const partCount = (el: LyraIcon, selector: string): number => el.shadowRoot!.querySelectorAll(selector).length;
 
+describe('lr-icon stroke weight', () => {
+  it('draws built-in icons at the 1.75 default, follows the token and theme hook, and leaves fetched SVG alone', async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div><lr-icon name="search"></lr-icon><lr-icon></lr-icon></div>`);
+    const [builtIn, fetched] = [...wrapper.querySelectorAll<LyraIcon>('lr-icon')] as [LyraIcon, LyraIcon];
+    const stroke = (el: LyraIcon): string => getComputedStyle(el.shadowRoot!.querySelector('[part="svg"]')!).strokeWidth;
+    expect(builtIn.shadowRoot!.querySelector('[part="svg"]')!.hasAttribute('stroke-width')).to.equal(false);
+    expect(stroke(builtIn)).to.equal('1.75px');
+    wrapper.style.setProperty('--lr-theme-icon-stroke-width', '1.5');
+    expect(stroke(builtIn)).to.equal('1.5px');
+    builtIn.style.setProperty('--lr-icon-stroke-width', '2');
+    expect(stroke(builtIn)).to.equal('2px');
+
+    const restore = stubFetch(() => Promise.resolve(svgResponse(CIRCLE_SVG)));
+    try {
+      const loaded = oneEvent(fetched, 'lr-load');
+      fetched.src = 'https://icons.test/stroke-weight.svg';
+      await loaded;
+      fetched.style.setProperty('--lr-icon-stroke-width', '3');
+      expect(stroke(fetched)).to.equal('1px');
+    } finally {
+      restore();
+    }
+  });
+});
+
 describe('lr-icon icon libraries', () => {
   afterEach(() => {
     __clearIconResourceCacheForTesting();

@@ -152,9 +152,12 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-xs);
     min-inline-size: 0;
-    padding: var(--lr-space-xs) var(--lr-space-s);
+    padding: var(--lr-thread-list-group-header-padding, var(--lr-space-xs) var(--lr-space-s));
     background: var(--lr-thread-list-group-header-bg, var(--lr-color-surface));
-    color: var(--lr-color-text-quiet);
+    /* Size and colour sit on the header, not the toggle, so the sticky-groups copy (which has no
+       toggle) keeps matching the real header the toggle inherits them from. */
+    color: var(--lr-thread-list-group-toggle-color, var(--lr-color-text-quiet));
+    font-size: var(--lr-thread-list-group-toggle-font-size, var(--lr-size-1em));
   }
   /* sticky-groups keeps lr-virtual-list's pinned copy pointer-transparent and inert. Only the real
      measured group row owns the collapse toggle; the copy repeats its label and icon visually. */
@@ -164,13 +167,13 @@ export const styles = css`
     align-items: center;
     gap: var(--lr-space-xs);
     min-inline-size: 0;
-    min-block-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-thread-list-group-toggle-min-block-size, var(--lr-icon-button-size));
     padding: 0;
     border: 0;
     background: transparent;
     color: inherit;
     font: inherit;
-    font-weight: var(--lr-font-weight-semibold);
+    font-weight: var(--lr-thread-list-group-toggle-font-weight, var(--lr-font-weight-semibold));
     text-align: start;
     cursor: pointer;
     ${interactiveTransition}

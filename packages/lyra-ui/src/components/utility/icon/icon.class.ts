@@ -99,6 +99,10 @@ export interface LyraIconEventMap {
  *   icon and its composed ancestors are exposed to the accessibility tree.
  * @csspart empty - Marker rendered when a remote icon resolved to an empty but valid document.
  * @cssprop [--lr-icon-size] - Optional inline and block size override for every canvas.
+ * @cssprop [--lr-icon-stroke-width=var(--lr-theme-icon-stroke-width, 1.75)] - Stroke weight of the
+ *   built-in stroked icons (and custom paths drawn inside them), in 24-unit viewBox units. A fetched
+ *   `src` or library SVG keeps its own stroke attributes. A look or app may set the
+ *   `--lr-theme-icon-stroke-width` hook once instead.
  * @cssprop [--lr-icon-rotate=0deg] - Rotation applied to the box. Written inline from the `rotate`
  *   property, so set that rather than this property.
  * @cssprop [--lr-icon-flip-x=1] - Horizontal scale factor, set to `-1` by `flip`.
@@ -471,10 +475,10 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
     const path = this.path || PATHS[this.name] || '';
     return html`<svg
         part="svg"
+        data-lr-stroked
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        stroke-width="1.75"
         stroke-linecap="round"
         stroke-linejoin="round"
         aria-hidden="true"

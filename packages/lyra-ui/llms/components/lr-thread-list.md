@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 46 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 46 parts, 37 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -189,7 +189,12 @@ Override the `conversationActionWithTitle` string to change how the action and t
 `withArchived: boolean
 = false` (attribute `with-archived`, reflected) — data mode: include `archived` threads (in their own
 trailing group). `withoutRename: boolean = false` (attribute `without-rename`, reflected) — forwarded to
-each data-mode row, turning its inline rename off.
+each data-mode row, turning its inline rename off. `withoutPinGlyph: boolean = false` (attribute
+`without-pin-glyph`, reflected) — data mode: omits the `pin-glyph` indicator; each pinned row keeps a
+visually hidden "Pinned" label, so its accessible name is unchanged. `withoutGroupIcon: boolean =
+false` (attribute `without-group-icon`, reflected) — data mode: omits the decorative `group-icon`
+chevron from group headers and their sticky copy; the toggle keeps `aria-expanded`. Row density
+already follows `size`, which is forwarded to every row.
 `stickyGroups: boolean = false` (attribute `sticky-groups`, reflected) — data mode: pins
 the current date/custom group's header to the top of the scroll viewport while its rows are in view,
 pushing it off as the next group's header arrives. Group headers are ordinary virtualized rows, so
@@ -347,6 +352,13 @@ marks returned by `renderRowContent` or any other hook.
 
 **Sticky group header:** `--lr-thread-list-group-header-bg` (default `var(--lr-color-surface)`) keeps
 the pinned header opaque over scrolled rows.
+
+**Group header density:** `--lr-thread-list-group-header-padding` (default `var(--lr-space-xs)
+var(--lr-space-s)`), `--lr-thread-list-group-toggle-font-size` (default `var(--lr-size-1em)`) and
+`--lr-thread-list-group-toggle-color` (default `var(--lr-color-text-quiet)`) — both set on the header,
+so the toggle and its sticky copy match — plus `--lr-thread-list-group-toggle-font-weight` (default
+`var(--lr-font-weight-semibold)`) and `--lr-thread-list-group-toggle-min-block-size` (default
+`var(--lr-icon-button-size)`).
 
 **Themeable control states:** `--lr-thread-list-group-toggle-hover-bg` (default
 `var(--lr-color-surface-raised)`), `--lr-thread-list-group-toggle-hover-color` (default

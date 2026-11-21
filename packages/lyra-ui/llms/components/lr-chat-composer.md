@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 10 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -163,7 +163,10 @@ The plain frame uses its separate focus underline. For the built-in action butto
 colors for Send. `--lr-chat-composer-busy-color` (on-brand) pairs with `--lr-chat-composer-busy-bg`
 for Stop. `--lr-chat-composer-action-radius` defaults to `--lr-radius` and
 `--lr-chat-composer-action-size` defaults to automatic sizing with the shared icon-button minimum.
-Both apply to Send and Stop. `--lr-chat-composer-action-hover-bg` and
+Both apply to Send and Stop. `--lr-chat-composer-send-glyph-offset-inline` and
+`--lr-chat-composer-send-glyph-offset-block` (both default `0`) optically nudge the send glyph, for
+example to centre the paper plane in a round button; the inline offset is logical (positive moves
+toward the inline end) and mirrors with the glyph in RTL, so no `:dir(rtl)` rule is needed. `--lr-chat-composer-action-hover-bg` and
 `--lr-chat-composer-action-active-bg` default to a tint of the current action fill. The
 `--lr-chat-composer-action-hover-color`, `--lr-chat-composer-action-active-color`,
 `--lr-chat-composer-action-disabled-bg`, and `--lr-chat-composer-action-disabled-color` overrides

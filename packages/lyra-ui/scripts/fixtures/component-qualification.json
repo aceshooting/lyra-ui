@@ -57283,6 +57283,12 @@
             },
             {
               "file": "src/components/conversation/thread-list/thread-list.test.ts",
+              "test": "omits the pin glyph and group chevron on request while the pinned and expanded states remain",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/conversation/thread-list/thread-list.test.ts",
               "test": "passes axe with a promoted row menu open",
               "target": "el",
               "state": "populated"
@@ -57416,7 +57422,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/thread-list/thread-list.class.ts",
-              "line": 870,
+              "line": 886,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

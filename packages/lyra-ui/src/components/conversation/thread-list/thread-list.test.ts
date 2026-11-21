@@ -5049,3 +5049,62 @@ it("keeps conversation search text out of spell-check, autocorrect and autofill"
   expect(input.getAttribute("autocorrect")).to.equal("off");
   expect(input.autocomplete).to.equal("off");
 });
+
+describe("dense group headers and glyph opt-outs", () => {
+  const dense = [
+    { id: "p", title: "Launch notes", pinned: true, timestamp: now },
+    { id: "t", title: "Today thread", timestamp: now },
+  ];
+
+  it("tunes group header typography through tokens and keeps the defaults unset", async () => {
+    const el = await fixture<LyraThreadList>(html`<lr-thread-list style="block-size:300px" .threads=${dense}></lr-thread-list>`);
+    const list = el.shadowRoot!.querySelector("lr-virtual-list")!;
+    await waitUntil(() => list.shadowRoot?.querySelector('[part="group-toggle"]') != null);
+    const header = list.shadowRoot!.querySelector<HTMLElement>('[part="group-header"]')!;
+    const toggle = list.shadowRoot!.querySelector<HTMLElement>('[part="group-toggle"]')!;
+    el.style.fontSize = "16px";
+    el.style.setProperty("--lr-color-text-quiet", "rgb(9, 9, 9)");
+    const read = () => ({
+      padding: getComputedStyle(header).padding,
+      fontSize: getComputedStyle(toggle).fontSize,
+      fontWeight: getComputedStyle(toggle).fontWeight,
+      color: getComputedStyle(toggle).color,
+      minBlockSize: getComputedStyle(toggle).minBlockSize,
+    });
+    const defaults = read();
+    expect(defaults.fontSize).to.equal("16px");
+    expect(defaults.color).to.equal("rgb(9, 9, 9)");
+    expect(Number.parseFloat(defaults.minBlockSize)).to.be.greaterThan(20);
+    el.style.setProperty("--lr-thread-list-group-header-padding", "1px 2px");
+    el.style.setProperty("--lr-thread-list-group-toggle-font-size", "11px");
+    el.style.setProperty("--lr-thread-list-group-toggle-font-weight", "400");
+    el.style.setProperty("--lr-thread-list-group-toggle-color", "rgb(1, 2, 3)");
+    el.style.setProperty("--lr-thread-list-group-toggle-min-block-size", "20px");
+    // The toggle's colour transitions, so wait for it to settle before reading the whole set.
+    await waitUntil(() => getComputedStyle(toggle).color === "rgb(1, 2, 3)", "toggle colour token did not apply");
+    expect(read()).to.deep.equal({ padding: "1px 2px", fontSize: "11px", fontWeight: "400", color: "rgb(1, 2, 3)", minBlockSize: "20px" });
+  });
+
+  it("omits the pin glyph and group chevron on request while the pinned and expanded states remain", async () => {
+    const el = await fixture<LyraThreadList>(html`<lr-thread-list style="block-size:300px" sticky-groups .threads=${dense}></lr-thread-list>`);
+    const list = el.shadowRoot!.querySelector("lr-virtual-list")!;
+    const root = () => list.shadowRoot!;
+    await waitUntil(() => root().querySelector('[part~="pin-glyph"]') != null && root().querySelector('[part~="sticky-group"] [part~="group-icon"]') != null);
+    expect(el.withoutPinGlyph).to.equal(false);
+    expect(el.withoutGroupIcon).to.equal(false);
+    expect(root().querySelectorAll('[part~="group-icon"]').length).to.be.greaterThan(1);
+
+    el.withoutPinGlyph = true;
+    el.withoutGroupIcon = true;
+    await el.updateComplete;
+    await list.updateComplete;
+    await waitUntil(() => root().querySelector('[part~="group-icon"]') == null && root().querySelector('[part~="pin-glyph"]') == null);
+    expect(el.hasAttribute("without-pin-glyph")).to.equal(true);
+    expect(el.hasAttribute("without-group-icon")).to.equal(true);
+    expect(root().querySelector('[part="group-toggle"]')!.getAttribute("aria-expanded")).to.equal("true");
+    const pinnedRow = dataRows(el).find((row) => row.getAttribute("conversation-id") === "p")!;
+    const button = pinnedRow.shadowRoot!.querySelector('[part="select-button"]')!;
+    expect(accessibleName(button).replace(/\s+/g, " ").trim()).to.contain("Pinned");
+    await expect(el).to.be.accessible({ ignoredRules: ['label-content-name-mismatch'] });
+  });
+});

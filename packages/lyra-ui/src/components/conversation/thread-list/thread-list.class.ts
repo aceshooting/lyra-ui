@@ -320,6 +320,14 @@ const THREADS_AND_SLOTTED_CONTENT_WARNING =
  *   field's clear button. Deliberately not tiered by `size`: it is a tap target floored at
  *   `--lr-icon-button-size`, not a text box, so only a larger value changes it.
  * @cssprop [--lr-thread-list-group-header-bg=var(--lr-color-surface)] - Group header background; sticky headers stay opaque so scrolled rows never show through.
+ * @cssprop [--lr-thread-list-group-header-padding=var(--lr-space-xs) var(--lr-space-s)] - Group header padding.
+ * @cssprop [--lr-thread-list-group-toggle-font-size=var(--lr-size-1em)] - Group label font size, set on
+ *   the header so the toggle and its `sticky-groups` copy match. Row density follows `size`.
+ * @cssprop [--lr-thread-list-group-toggle-font-weight=var(--lr-font-weight-semibold)] - Group-toggle font weight.
+ * @cssprop [--lr-thread-list-group-toggle-color=var(--lr-color-text-quiet)] - Group label colour at rest
+ *   (set on the header, inherited by the toggle).
+ * @cssprop [--lr-thread-list-group-toggle-min-block-size=var(--lr-icon-button-size)] - Group-toggle
+ *   minimum block size.
  * @cssprop [--lr-thread-list-group-toggle-hover-bg=var(--lr-color-surface-raised)] - Group-toggle hover background.
  * @cssprop [--lr-thread-list-group-toggle-hover-color=var(--lr-color-text)] - Group-toggle hover foreground.
  * @cssprop [--lr-thread-list-group-toggle-active-bg=color-mix(in oklab, var(--lr-thread-list-group-toggle-hover-bg, var(--lr-color-surface-raised)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Group-toggle pressed background.
@@ -694,6 +702,14 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
 
   /** Forwarded to each data-mode row: turns off its inline rename. */
   @property({ type: Boolean, attribute: 'without-rename', reflect: true }) withoutRename = false;
+
+  /** Data mode: omits the `pin-glyph` indicator from pinned rows. Each pinned row keeps a visually
+   *  hidden "Pinned" label in its `meta` slot, so assistive technology still hears the state. */
+  @property({ type: Boolean, attribute: 'without-pin-glyph', reflect: true }) withoutPinGlyph = false;
+
+  /** Data mode: omits the decorative `group-icon` chevron from group headers (and their
+   *  `sticky-groups` copy). The group toggle keeps `aria-expanded`, so its state is unchanged. */
+  @property({ type: Boolean, attribute: 'without-group-icon', reflect: true }) withoutGroupIcon = false;
 
   /** Data mode only: pins the current date/custom group's header to the top of the scroll viewport
    *  while its rows are in view, pushing it off as the next group's header arrives. Group headers
@@ -1498,11 +1514,13 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
     options: { sticky?: boolean } = {}
   ): TemplateResult {
     const nextCollapsed = !item.collapsed;
-    const icon = html`<span
-      part=${item.collapsed ? 'group-icon group-icon-collapsed' : 'group-icon'}
-      aria-hidden="true"
-      >${chevronIcon()}</span
-    >`;
+    const icon = this.withoutGroupIcon
+      ? nothing
+      : html`<span
+          part=${item.collapsed ? 'group-icon group-icon-collapsed' : 'group-icon'}
+          aria-hidden="true"
+          >${chevronIcon()}</span
+        >`;
     return html`
       <div
         part="group-header"
@@ -1579,11 +1597,13 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
               >${this.renderRowContent(source)}</span
             >`
           : nothing}
-        ${thread.pinned
-          ? html`<span slot="meta" part="row-meta pin-glyph"
+        ${!thread.pinned
+          ? nothing
+          : this.withoutPinGlyph
+          ? html`<span slot="meta" class="sr-only">${this.localize('threadGroupPinned')}</span>`
+          : html`<span slot="meta" part="row-meta pin-glyph"
               ><span role="img" aria-label=${this.localize('threadGroupPinned')}>${pinIcon()}</span> </span
-            >`
-          : nothing}
+            >`}
         ${this.renderMeta
           ? html`<span slot="meta" part="row-meta"
               >${this.renderMeta(source)}</span
@@ -1810,10 +1830,10 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
               .source=${source}
               .groups=${guard([groups], () => groups)}
               .renderStickyGroup=${this.stickyGroups
-                ? this.renderStickyGroup
+                ? guard([this.withoutGroupIcon], () => (group: LyraVirtualListGroup) => this.renderStickyGroup(group))
                 : undefined}
               .renderItem=${guard([
-                this.activeConversationId, this.size, this.withoutRename, this.rowActions,
+                this.activeConversationId, this.size, this.withoutRename, this.withoutPinGlyph, this.withoutGroupIcon, this.rowActions,
                 this.renderStart, this.renderRowContent, this.renderExcerpt, this.renderMeta,
                 this.renderActions, this.wrapRow, this.strings, this.effectiveLocale, this.effectiveDirection,
               ], () => (item: unknown) => this.renderItem(item))}

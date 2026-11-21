@@ -183,6 +183,9 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  * @cssprop [--lr-chat-composer-action-radius=var(--lr-radius)] - Send/Stop button corner radius.
  * @cssprop [--lr-chat-composer-action-size=auto] - Send/Stop button inline and block size, subject
  *   to the shared `--lr-icon-button-size` minimum hit target.
+ * @cssprop [--lr-chat-composer-send-glyph-offset-inline=0] - Optical inline nudge of the send glyph
+ *   (positive moves toward the inline end), mirrored automatically in RTL. Useful in a round button.
+ * @cssprop [--lr-chat-composer-send-glyph-offset-block=0] - Optical block nudge of the send glyph.
  * @cssprop --lr-chat-composer-action-hover-bg - Send/Stop hover background. Defaults to a tint of
  *   the current Send or Stop background.
  * @cssprop --lr-chat-composer-action-active-bg - Send/Stop pressed background. Defaults to a

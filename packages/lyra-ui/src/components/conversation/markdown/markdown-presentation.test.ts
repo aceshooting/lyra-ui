@@ -6,6 +6,7 @@ import '../../lr-code-block-core.js';
 import type { LyraMarkdown } from '../../lr-markdown.js';
 import type { LyraMarkdownCore } from '../../lr-markdown-core.js';
 import { loadMarkdownDeps } from './markdown-loader.js';
+import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 
 const markdownTags = ['lr-markdown', 'lr-markdown-core'] as const;
 
@@ -44,6 +45,75 @@ async function createMarkdown(tagName: (typeof markdownTags)[number], content: s
 describe('markdown presentation', () => {
   for (const tagName of markdownTags) {
     describe(tagName, () => {
+      it('applies the prose spacing, heading, link, blockquote and list tokens and keeps the defaults unset', async () => {
+        await loadMarkdownDeps();
+        const source = '# One\n\n## Two\n\n### Three\n\n#### Four\n\nText with [a link](https://example.com).\n\n> Quoted\n\n- item\n';
+        const { el } = await createMarkdown(tagName, source);
+        await waitUntil(() => el.shadowRoot?.querySelector('[part="list"]') != null);
+        const root = el.shadowRoot!;
+        const read = () => {
+          const headings = [...root.querySelectorAll<HTMLElement>('[part="heading"]')].map((node) => getComputedStyle(node));
+          const paragraph = getComputedStyle(root.querySelector('[part="paragraph"]')!);
+          const link = getComputedStyle(root.querySelector('[part="link"]')!);
+          const quote = getComputedStyle(root.querySelector('[part="blockquote"]')!);
+          const list = getComputedStyle(root.querySelector('[part="list"]')!);
+          return {
+            sizes: headings.map((heading) => heading.fontSize),
+            weight: headings[0]!.fontWeight,
+            headingGap: headings[3]!.marginBlockEnd,
+            paragraphGap: paragraph.marginBlockEnd,
+            link: link.color,
+            quoteBorder: quote.borderInlineStartColor,
+            quoteColor: quote.color,
+            quoteGap: quote.marginBlockEnd,
+            indent: list.paddingInlineStart,
+          };
+        };
+        el.style.fontSize = '16px';
+        el.style.setProperty('--lr-color-brand', 'rgb(1, 2, 3)');
+        const defaults = read();
+        [32, 24, 18.72, 16].forEach((size, index) => expect(Number.parseFloat(defaults.sizes[index]!)).to.be.closeTo(size, 0.01));
+        expect(defaults.weight).to.equal('700');
+        expect(defaults.link).to.equal('rgb(1, 2, 3)');
+        expect(defaults.indent).to.equal('40px');
+        expect(defaults.paragraphGap).to.equal(defaults.quoteGap);
+
+        el.style.cssText += [
+          'font-size: 16px',
+          '--lr-markdown-block-gap: 3px',
+          '--lr-markdown-heading-1-font-size: 21px',
+          '--lr-markdown-heading-2-font-size: 19px',
+          '--lr-markdown-heading-3-font-size: 17px',
+          '--lr-markdown-heading-4-font-size: 15px',
+          '--lr-markdown-heading-font-weight: 500',
+          '--lr-markdown-link-color: rgb(10, 20, 30)',
+          '--lr-markdown-link-hover-color: rgb(40, 50, 60)',
+          '--lr-markdown-blockquote-border-color: rgb(70, 80, 90)',
+          '--lr-markdown-blockquote-color: rgb(100, 110, 120)',
+          '--lr-markdown-list-indent: 12px',
+        ].join(';');
+        const tuned = read();
+        expect(tuned).to.deep.equal({
+          sizes: ['21px', '19px', '17px', '15px'],
+          weight: '500',
+          headingGap: '3px',
+          paragraphGap: '3px',
+          link: 'rgb(10, 20, 30)',
+          quoteBorder: 'rgb(70, 80, 90)',
+          quoteColor: 'rgb(100, 110, 120)',
+          quoteGap: '3px',
+          indent: '12px',
+        });
+
+        const link = root.querySelector<HTMLElement>('[part="link"]')!;
+        try {
+          await hoverUntilMatched(link, 'pointer did not reach the rendered link');
+          await waitUntil(() => getComputedStyle(link).color === 'rgb(40, 50, 60)', 'link hover token did not apply');
+        } finally {
+          await resetMouse();
+        }
+      });
+
       it('marks task items, removes their list markers, and styles read-only checkboxes in both themes', async () => {
         await loadMarkdownDeps();
         const { el } = await createMarkdown(tagName, '- [ ] An open task has enough words to wrap onto a second line while its checkbox stays at the start.\n- [x] Done item');
