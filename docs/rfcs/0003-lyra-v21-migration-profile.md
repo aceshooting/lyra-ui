@@ -67,7 +67,10 @@ land with that minor.
   `direct: true`: it is reported with its replacement like any retired event, and the coverage
   gate accepts it without a published policy record but rejects `direct` on a name that has one.
   The profile also carries a `detailChanges` entry for `lr-flow-canvas`'s `lr-edge-activate` and a
-  `propertyChanges` entry for `lr-token-input`'s `maxTokensVisible` default. Its
+  `propertyChanges` entry for `lr-token-input`'s `maxTokensVisible` default. A `css-property`
+  global whose `to` is one custom property (not a prefix) is rewritten as
+  `rewrite-css-property`, because custom properties inherit and the replacement keeps the
+  declaration's reach; prefix entries and prose guidance stay reported. Its
   `aliasRemovalMajor` is 33 because no deprecation record remains to pair with it.
 - **Gates.** `validateRenameLedgerShape()` checks both lists (also in the packaged projection);
   `check-migration-coverage.mjs` checks each `globals` entry against the real surface (old subpath

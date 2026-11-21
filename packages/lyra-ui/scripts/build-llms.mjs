@@ -836,8 +836,9 @@ export function buildLyraRenameReference(renameLedger, inventory, { exportDeprec
         'dynamic import, `require()`, CSS `@import`, `<link href>`/`<script src>` or a `node_modules/` path, and in any',
         'string of a JSON file such as `.vscode/settings.json` (pass it as an explicit target); anywhere else it is',
         'reported. A removed root or barrel export is re-bound as `New as Old` in the import clause, so local references keep',
-        'working; other uses (a deep import, a namespace member) and removed localization keys are reported as',
-        '`GLOBAL_REVIEW`, acknowledged as `lyra-migrate-reviewed: GLOBAL_REVIEW:<name>`.',
+        'working. A removed custom property whose replacement is one custom property is rewritten to it. Other uses (a',
+        'deep import, a namespace member), prefix or prose custom-property guidance and removed localization keys are',
+        'reported as `GLOBAL_REVIEW`, acknowledged as `lyra-migrate-reviewed: GLOBAL_REVIEW:<name>`.',
         '',
         '| Kind | From | To | Handling |',
         '|---|---|---|---|',
@@ -845,7 +846,9 @@ export function buildLyraRenameReference(renameLedger, inventory, { exportDeprec
           const from = entry.kind === 'export' ? `${entry.from} (${entry.module === '.' ? 'package root' : entry.module})` : entry.kind === 'part' ? `<${entry.tag}> ::part(${entry.from})` : entry.kind === 'locale-key' && entry.tag ? `<${entry.tag}> ${entry.from}` : entry.prefix ? `${entry.from}*` : entry.from;
           const handling = entry.kind === 'module'
             ? `Rewritten${entry.except ? ` except ${entry.except.map((prefix) => `\`${cell(prefix)}\``).join(', ')}` : ''}. ${entry.summary}`
-            : entry.kind === 'export' ? `Import clause re-bound; other uses reported. ${entry.summary}` : `Reported only. ${entry.summary}`;
+            : entry.kind === 'export' ? `Import clause re-bound; other uses reported. ${entry.summary}`
+              : entry.kind === 'css-property' && !entry.prefix && /^--[\w-]+$/.test(entry.to) ? `Rewritten; custom properties inherit, so the reach is unchanged. ${entry.summary}`
+                : `Reported only. ${entry.summary}`;
           const to = entry.kind === 'part' || entry.kind === 'css-property' ? cell(entry.to) : entry.to === undefined ? 'No replacement' : `\`${cell(entry.to)}${entry.prefix ? '*' : ''}\``;
           return `| ${entry.kind} | \`${cell(from)}\` | ${to} | ${cell(handling)} |`;
         }),
@@ -1164,13 +1167,26 @@ export function buildExportDeprecationsSection(records) {
   ].join('\n');
 }
 
+/**
+ * The index headline. lyra-ui's own tag count matches every other surface (README, manifest);
+ * companion-package tags documented here are counted separately with their package.
+ */
+export function countElements(tagFacts) {
+  const companions = [...tagFacts.values()].filter((facts) => facts.companionPackage);
+  const own = tagFacts.size - companions.length;
+  const extra = companions.length
+    ? ` plus ${companions.length} companion-package ${companions.length === 1 ? 'element' : 'elements'} (${companions.map((facts) => `\`${facts.tag}\` from \`${facts.companionPackage}\``).join(', ')})`
+    : '';
+  return `${own} lyra-ui custom elements${extra}, grouped by the source family they live in.`;
+}
+
 function buildIndex(sectionsByFamily, tagFacts, exportDeprecations = [], integration = new Map()) {
   const out = [
     GENERATED('custom-elements.json + llms/<family>.md'),
     '',
     '# Component index',
     '',
-    `${tagFacts.size} custom elements, grouped by the source family they live in.`,
+    countElements(tagFacts),
     '',
     '**Reading one component.** Its reference file path is derived from the tag — no search needed:',
     '`llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`): import path, optional peers,',
@@ -1627,9 +1643,12 @@ export function build({ write = true } = {}) {
   // taxonomy can never drift from llms-full.txt's (it used to carry its own hand-kept grouping).
   const shortIndex = [readFileSync(path.join(llmsDir, '00-llms-txt-intro.md'), 'utf8').trimEnd(), ''];
   for (const [family, title] of FAMILIES) {
+    // A companion-package tag is listed with its package and left out of the lyra-ui count.
     const tags = (sectionsByFamily.get(family) ?? []).flatMap((s) => s.tags);
+    const companionOf = (t) => tagFacts.get(t)?.companionPackage;
+    const own = tags.filter((t) => !companionOf(t)).length;
     shortIndex.push(
-      `- **${title}** (\`components/${family}/\`, ${tags.length}) — ${tags.map((t) => `\`${t}\``).join(', ')}`,
+      `- **${title}** (\`components/${family}/\`, ${own}) — ${tags.map((t) => companionOf(t) ? `\`${t}\` (\`${companionOf(t)}\`)` : `\`${t}\``).join(', ')}`,
       '',
     );
   }

@@ -8301,6 +8301,36 @@
         },
         {
           "kind": "locale-key",
+          "from": "fileSizeUnitB",
+          "summary": "File sizes word their byte units with Intl.NumberFormat in the component locale; a string override under the old key no longer applies and has no replacement.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "fileSizeUnitGb",
+          "summary": "File sizes word their byte units with Intl.NumberFormat in the component locale; a string override under the old key no longer applies and has no replacement.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "fileSizeUnitKb",
+          "summary": "File sizes word their byte units with Intl.NumberFormat in the component locale; a string override under the old key no longer applies and has no replacement.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "fileSizeUnitMb",
+          "summary": "File sizes word their byte units with Intl.NumberFormat in the component locale; a string override under the old key no longer applies and has no replacement.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
+          "from": "fileSizeUnitTb",
+          "summary": "File sizes word their byte units with Intl.NumberFormat in the component locale; a string override under the old key no longer applies and has no replacement.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "locale-key",
           "from": "jsonCollapseLabel",
           "to": "jsonToggleLabel",
           "summary": "lr-json-viewer names its node toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies.",

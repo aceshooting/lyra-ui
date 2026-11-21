@@ -926,6 +926,19 @@ assert.equal(sharedArtifact, `${sharedReference.trimEnd()}\n`, 'llms/shared.md m
 for (const [topic] of SHARED_TOPICS) {
   assert.ok(shortIndex?.includes(`./llms/shared/${topic}.md`), `generated llms.txt must expose the ${topic} route`);
 }
+{
+  // The headline and llms.txt family counts are lyra-ui's own tags, the number every other surface
+  // states; companion-package tags are named with their package instead of inflating the total.
+  const ownTags = JSON.parse(readFileSync(new URL('../custom-elements.json', import.meta.url), 'utf8')).modules
+    .flatMap((mod) => mod.declarations ?? []).filter((decl) => decl.customElement && decl.tagName).length;
+  assert.match(index, new RegExp(`^${ownTags} lyra-ui custom elements plus 2 companion-package elements \\(\`lr-docx-editor\` from \`@aceshooting/lyra-docs\`, \`lr-gen-view\` from \`@aceshooting/lyra-gen\`\\)`, 'mu'));
+  const familyCounts = [...shortIndex.matchAll(/^- \*\*[^*]+\*\* \(`components\/[a-z-]+\/`, (\d+)\)/gmu)].map((match) => Number(match[1]));
+  assert.equal(familyCounts.reduce((sum, count) => sum + count, 0), ownTags, 'llms.txt family counts must add up to the lyra-ui tag count');
+  assert.match(shortIndex, /`lr-docx-editor` \(`@aceshooting\/lyra-docs`\)/u);
+  // An exact custom-property rename is rewritten by lyra-ui-migrate, so the reference must not call it report-only.
+  assert.match(migration, /\| css-property \| `--lr-callout-border` \| --lr-callout-border-color \| Rewritten; custom properties inherit/u);
+  assert.match(migration, /\| locale-key \| `fileSizeUnitKb` \| No replacement \| Reported only\./u);
+}
 for (const oldHeading of [
   '## Component status, versioning, and deprecation',
   '## Importing and registering components',

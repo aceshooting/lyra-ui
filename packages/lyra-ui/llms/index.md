@@ -2,7 +2,7 @@
 
 # Component index
 
-319 custom elements, grouped by the source family they live in.
+317 lyra-ui custom elements plus 2 companion-package elements (`lr-docx-editor` from `@aceshooting/lyra-docs`, `lr-gen-view` from `@aceshooting/lyra-gen`), grouped by the source family they live in.
 
 **Reading one component.** Its reference file path is derived from the tag — no search needed:
 `llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`): import path, optional peers,

@@ -1657,8 +1657,9 @@ Entries no component owns. A module specifier is rewritten where it is provably 
 dynamic import, `require()`, CSS `@import`, `<link href>`/`<script src>` or a `node_modules/` path, and in any
 string of a JSON file such as `.vscode/settings.json` (pass it as an explicit target); anywhere else it is
 reported. A removed root or barrel export is re-bound as `New as Old` in the import clause, so local references keep
-working; other uses (a deep import, a namespace member) and removed localization keys are reported as
-`GLOBAL_REVIEW`, acknowledged as `lyra-migrate-reviewed: GLOBAL_REVIEW:<name>`.
+working. A removed custom property whose replacement is one custom property is rewritten to it. Other uses (a
+deep import, a namespace member), prefix or prose custom-property guidance and removed localization keys are
+reported as `GLOBAL_REVIEW`, acknowledged as `lyra-migrate-reviewed: GLOBAL_REVIEW:<name>`.
 
 | Kind | From | To | Handling |
 |---|---|---|---|
@@ -1765,19 +1766,20 @@ Entries no component owns. A module specifier is rewritten where it is provably 
 dynamic import, `require()`, CSS `@import`, `<link href>`/`<script src>` or a `node_modules/` path, and in any
 string of a JSON file such as `.vscode/settings.json` (pass it as an explicit target); anywhere else it is
 reported. A removed root or barrel export is re-bound as `New as Old` in the import clause, so local references keep
-working; other uses (a deep import, a namespace member) and removed localization keys are reported as
-`GLOBAL_REVIEW`, acknowledged as `lyra-migrate-reviewed: GLOBAL_REVIEW:<name>`.
+working. A removed custom property whose replacement is one custom property is rewritten to it. Other uses (a
+deep import, a namespace member), prefix or prose custom-property guidance and removed localization keys are
+reported as `GLOBAL_REVIEW`, acknowledged as `lyra-migrate-reviewed: GLOBAL_REVIEW:<name>`.
 
 | Kind | From | To | Handling |
 |---|---|---|---|
-| css-property | `--lr-callout-border` | --lr-callout-border-color | Reported only. lr-callout names its border color with the -color suffix, like lr-alert. |
-| css-property | `--lr-checkbox-active-border` | --lr-checkbox-active-border-color | Reported only. lr-checkbox state tokens use the -color suffix of lr-radio; the old name is no longer read. |
-| css-property | `--lr-checkbox-active-ring` | --lr-checkbox-active-ring-color | Reported only. lr-checkbox state tokens use the -color suffix of lr-radio; the old name is no longer read. |
-| css-property | `--lr-checkbox-checked-border` | --lr-checkbox-checked-border-color | Reported only. lr-checkbox state tokens use the -color suffix of lr-radio; the old name is no longer read. |
-| css-property | `--lr-checkbox-group-invalid-border` | --lr-checkbox-group-invalid-border-color | Reported only. lr-checkbox-group state tokens use the -color suffix of lr-radio; the old name is no longer read. |
-| css-property | `--lr-checkbox-hover-border` | --lr-checkbox-hover-border-color | Reported only. lr-checkbox state tokens use the -color suffix of lr-radio; the old name is no longer read. |
-| css-property | `--lr-checkbox-invalid-border` | --lr-checkbox-invalid-border-color | Reported only. lr-checkbox state tokens use the -color suffix of lr-radio; the old name is no longer read. |
-| css-property | `--lr-radio-group-invalid-border` | --lr-radio-group-invalid-border-color | Reported only. lr-radio-group state tokens use the -color suffix of lr-radio; the old name is no longer read. |
+| css-property | `--lr-callout-border` | --lr-callout-border-color | Rewritten; custom properties inherit, so the reach is unchanged. lr-callout names its border color with the -color suffix, like lr-alert. |
+| css-property | `--lr-checkbox-active-border` | --lr-checkbox-active-border-color | Rewritten; custom properties inherit, so the reach is unchanged. lr-checkbox state tokens use the -color suffix of lr-radio; the old name is no longer read. |
+| css-property | `--lr-checkbox-active-ring` | --lr-checkbox-active-ring-color | Rewritten; custom properties inherit, so the reach is unchanged. lr-checkbox state tokens use the -color suffix of lr-radio; the old name is no longer read. |
+| css-property | `--lr-checkbox-checked-border` | --lr-checkbox-checked-border-color | Rewritten; custom properties inherit, so the reach is unchanged. lr-checkbox state tokens use the -color suffix of lr-radio; the old name is no longer read. |
+| css-property | `--lr-checkbox-group-invalid-border` | --lr-checkbox-group-invalid-border-color | Rewritten; custom properties inherit, so the reach is unchanged. lr-checkbox-group state tokens use the -color suffix of lr-radio; the old name is no longer read. |
+| css-property | `--lr-checkbox-hover-border` | --lr-checkbox-hover-border-color | Rewritten; custom properties inherit, so the reach is unchanged. lr-checkbox state tokens use the -color suffix of lr-radio; the old name is no longer read. |
+| css-property | `--lr-checkbox-invalid-border` | --lr-checkbox-invalid-border-color | Rewritten; custom properties inherit, so the reach is unchanged. lr-checkbox state tokens use the -color suffix of lr-radio; the old name is no longer read. |
+| css-property | `--lr-radio-group-invalid-border` | --lr-radio-group-invalid-border-color | Rewritten; custom properties inherit, so the reach is unchanged. lr-radio-group state tokens use the -color suffix of lr-radio; the old name is no longer read. |
 | export | `LyraGeojsonView (./components/viewers)` | `LyraGeoJsonViewer` | Import clause re-bound; other uses reported. The viewers barrel no longer exports the LyraGeojsonView subclass; LyraGeoJsonViewer is the one GeoJSON viewer class. |
 | locale-key | `appRailCollapse` | `toggleNavigation` | Reported only. lr-app-rail names its collapse toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
 | locale-key | `appRailExpand` | `toggleNavigation` | Reported only. lr-app-rail names its collapse toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
@@ -1801,6 +1803,11 @@ working; other uses (a deep import, a namespace member) and removed localization
 | locale-key | `fileInputAcceptedOne` | `fileInputAccepted` | Reported only. lr-file-input and lr-drop-zone read one plural message; move the override into a category object under the new key. |
 | locale-key | `fileInputRejectedMany` | `fileInputRejected` | Reported only. lr-file-input and lr-drop-zone read one plural message; move the override into a category object under the new key. |
 | locale-key | `fileInputRejectedOne` | `fileInputRejected` | Reported only. lr-file-input and lr-drop-zone read one plural message; move the override into a category object under the new key. |
+| locale-key | `fileSizeUnitB` | No replacement | Reported only. File sizes word their byte units with Intl.NumberFormat in the component locale; a string override under the old key no longer applies and has no replacement. |
+| locale-key | `fileSizeUnitGb` | No replacement | Reported only. File sizes word their byte units with Intl.NumberFormat in the component locale; a string override under the old key no longer applies and has no replacement. |
+| locale-key | `fileSizeUnitKb` | No replacement | Reported only. File sizes word their byte units with Intl.NumberFormat in the component locale; a string override under the old key no longer applies and has no replacement. |
+| locale-key | `fileSizeUnitMb` | No replacement | Reported only. File sizes word their byte units with Intl.NumberFormat in the component locale; a string override under the old key no longer applies and has no replacement. |
+| locale-key | `fileSizeUnitTb` | No replacement | Reported only. File sizes word their byte units with Intl.NumberFormat in the component locale; a string override under the old key no longer applies and has no replacement. |
 | locale-key | `jsonCollapseLabel` | `jsonToggleLabel` | Reported only. lr-json-viewer names its node toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
 | locale-key | `jsonExpandLabel` | `jsonToggleLabel` | Reported only. lr-json-viewer names its node toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
 | locale-key | `mapSceneHide` | `mapScene` | Reported only. lr-map names its scene toggle with the constant mapScene key while aria-expanded reports the state; a string override under the old key no longer applies. |

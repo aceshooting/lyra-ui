@@ -125,7 +125,7 @@ The entry points, then:
   or future exports. Prefer the owning entry for that component's complete contract and smaller
   bundles.
 
-- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 301
+- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 302
   root-included tags — everything **except** the 15 inventory-designated optional-peer-family tags:
   `lr-chart` and its 8 typed subclasses (`lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`,
   `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`,
