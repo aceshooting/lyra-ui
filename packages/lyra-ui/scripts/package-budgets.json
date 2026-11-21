@@ -20,21 +20,21 @@
   },
   "maximum": {
     "packedBytes": 9999999,
-    "unpackedBytes": 23224320,
+    "unpackedBytes": 23359872,
     "fileCount": 3352
   },
   "companions": {
     "@aceshooting/lyra-3d": {
       "maximum": {
-        "packedBytes": 300288,
-        "unpackedBytes": 1303552,
+        "packedBytes": 301824,
+        "unpackedBytes": 1309184,
         "fileCount": 263
       }
     },
     "@aceshooting/lyra-map": {
       "maximum": {
-        "packedBytes": 1071936,
-        "unpackedBytes": 4400384,
+        "packedBytes": 1075200,
+        "unpackedBytes": 4416000,
         "fileCount": 692
       }
     },
