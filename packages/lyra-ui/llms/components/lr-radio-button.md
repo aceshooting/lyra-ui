@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 13 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `button`: `--lr-radio-button-bg`, `--lr-radio-button-border-color`; `circle`: `--lr-radio-bg`, `--lr-radio-border-color`, `--lr-radio-checked-border-color`, `--lr-radio-circle-size`; `dot`: `--lr-radio-checked-dot-color`, `--lr-radio-dot-size`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

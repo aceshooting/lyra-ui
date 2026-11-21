@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 9 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `viewport`: `--lr-flow-minimap-viewport-color`, `--lr-flow-minimap-viewport-min-size`; `viewport-hit-area`: `--lr-flow-minimap-viewport-min-size`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

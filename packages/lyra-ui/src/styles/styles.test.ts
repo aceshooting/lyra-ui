@@ -527,3 +527,31 @@ describe("reservations.css", () => {
     expect(skeleton.matches(":defined"), "upgraded").to.be.true;
   });
 });
+
+it("spans the static 12-column grid and collapses it to 6 and 1 columns by container width", async () => {
+  const el = await fixture(html`
+    <div>
+      <div id="grid12" class="lr-grid-12" style="inline-size: 1200px; --lr-layout-gap: 0px">
+        <div class="lr-span-3 lr-row-span-2">A</div>
+        <div class="lr-span-9">B</div>
+        <div>C</div>
+      </div>
+    </div>
+  `);
+  const grid = el.querySelector<HTMLElement>("#grid12")!;
+  const [a, b, c] = ["A", "B", "C"].map(
+    (text) => [...grid.children].find((child) => child.textContent === text) as HTMLElement
+  ) as [HTMLElement, HTMLElement, HTMLElement];
+  const widths = (): number[] => [a, b, c].map((child) => Math.round(child.getBoundingClientRect().width));
+  expect(getComputedStyle(grid).gridTemplateColumns.split(" ")).to.have.length(12);
+  expect(getComputedStyle(grid).containerType).to.equal("inline-size");
+  expect(widths()).to.deep.equal([300, 900, 100]);
+  expect(Math.round(a.getBoundingClientRect().height)).to.equal(
+    Math.round(b.getBoundingClientRect().height + c.getBoundingClientRect().height)
+  );
+  grid.style.inlineSize = "600px";
+  expect(widths(), "6-column range").to.deep.equal([300, 600, 100]);
+  grid.style.inlineSize = "320px";
+  expect(widths(), "single column").to.deep.equal([320, 320, 320]);
+  expect(getComputedStyle(a).gridRowEnd).to.equal("auto");
+});

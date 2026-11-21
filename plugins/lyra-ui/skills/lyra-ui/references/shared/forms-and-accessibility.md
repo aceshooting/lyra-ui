@@ -449,6 +449,34 @@ scope, so they are worth not searching the catalog for:
   as ordinary reflected properties, so binding is a one-way write from your route state plus a click
   handler that calls your router. Wire it once in your shell component; there is no Lyra-specific
   pattern to learn.
+
+  `href`-bearing components (`lr-button`, `lr-icon-button`, `lr-card`, `lr-menu-item`,
+  `lr-breadcrumb-item`, `lr-app-rail-item`) and anchors rendered in `lr-table` cells render real
+  links, so ordinary navigation, a new tab, and middle-click work without script. A single-page
+  application intercepts only the plain clicks: `isPlainPrimaryClick(event)` from
+  `@aceshooting/lyra-ui/utilities/plain-click.js` is true for an unhandled primary-button click with no
+  Ctrl, Meta, Shift or Alt key held. One delegated listener covers every component, because the click
+  composes out of the shadow root and the host keeps its `href`:
+
+  ```js
+  import { isPlainPrimaryClick } from '@aceshooting/lyra-ui/utilities/plain-click.js';
+
+  document.addEventListener('click', (event) => {
+    if (!isPlainPrimaryClick(event)) return;
+    const link = event.composedPath().find(
+      (node) => node instanceof Element && node.hasAttribute('href') && !node.hasAttribute('download'),
+    );
+    if (!link || (link.getAttribute('target') ?? '_self') !== '_self') return;
+    const url = new URL(link.getAttribute('href'), location.href);
+    if (url.origin !== location.origin) return;
+    event.preventDefault();
+    router.navigate(url.pathname + url.search + url.hash);
+  });
+  ```
+
+  The first match in the composed path is the innermost element, so a link inside a card row wins
+  over the card. A bubble-phase listener on the document runs after component handlers, so a click a
+  component already handled arrives with `defaultPrevented` set and is left alone.
 - **Data fetching, caching, and state management.** Components take data as properties and emit
   events; they never fetch on your behalf, except the documented viewers/`src`-taking components,
   which are explicit about it.

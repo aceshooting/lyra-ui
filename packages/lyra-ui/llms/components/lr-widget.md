@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 16 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `actions`: `--lr-scroll-fade-size`; `backdrop`: `--lr-widget-backdrop-inset`, `--lr-widget-overlay-color`; `base`: `--lr-widget-fullscreen-inset`; `collapse-button`: `--lr-widget-collapse-button-hover-bg`, `--lr-widget-collapse-button-hover-color`; `fullscreen-button`: `--lr-widget-fullscreen-button-hover-bg`, `--lr-widget-fullscreen-button-hover-color`; `view-toggle`: `--lr-widget-view-toggle-hover-bg`, `--lr-widget-view-toggle-hover-color`; `view-toggles`: `--lr-scroll-fade-size`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

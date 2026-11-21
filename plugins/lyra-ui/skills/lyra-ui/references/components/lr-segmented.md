@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 7 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-segmented-track-bg`, `--lr-segmented-track-border-color`, `--lr-segmented-track-height`, `--lr-segmented-track-min-height`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

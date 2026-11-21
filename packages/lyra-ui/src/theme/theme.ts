@@ -11,6 +11,7 @@ import { readCanvasRgba } from '../internal/canvas-color.js';
 import { readOwnDataValue } from '../internal/data-descriptors.js';
 import { contrastRatio, type Rgb } from '../internal/color-math.js';
 import { devWarnOnce, litDevWarnings } from '../internal/dev-warning.js';
+import { finiteRange } from '../internal/numbers.js';
 import { LOOK_SLOTTED_INPUTS as STYLE_SLOTTED } from '../internal/portable-look-inputs.js';
 import type { LyraThemeTokenName, LyraThemeTokens, LyraThemeTokenValue } from '../internal/theme-token-types.js';
 import { readStyleOwnership, type StyleOwnership } from './style-ownership.js';
@@ -879,7 +880,7 @@ function applyStoredStyleBeforePaint(
   readOwnership: typeof readStyleOwnership,
   resolveStartup: typeof resolveStyleStartup,
   material: typeof styleMaterial,
-  model: { restore: 'all' | 'mode'; defaults: typeof STYLE_DEFAULTS; inputs: string; surfaces: typeof STYLE_REFERENCE_SURFACES; contrast: typeof STYLE_CONTRAST_SURFACES; accent: typeof STYLE_GEMSTONES },
+  model: { restore: 'all' | 'mode'; defaults: typeof STYLE_STARTUP_DEFAULTS; inputs: string; surfaces: typeof STYLE_REFERENCE_SURFACES; contrast: typeof STYLE_CONTRAST_SURFACES; accent: typeof STYLE_GEMSTONES },
 ): void {
   const { surfaces: STYLE_REFERENCE_SURFACES, contrast: STYLE_CONTRAST_SURFACES, accent: STYLE_GEMSTONES } = model;
   // Store each property suffix once. The leading digit carries density/follow/accent membership.
@@ -982,6 +983,8 @@ function applyStoredStyleBeforePaint(
     }
     if (desired.size || (mode === 'unset' && accent && !accentName)) desiredAttributes['data-lr-theme-scope'] = '';
     if (!modeOnly && !resolver) material(desired, record['treatment'] as LyraSurface);
+    const opacity = record['surfaceOpacity'] as number;
+    if (!modeOnly && opacity !== model.defaults.surfaceOpacity) desired.set('--lr-theme-surface-opacity', `${opacity / 100}`);
     const ownershipKey = Symbol.for('@aceshooting/lyra-ui.style-ownership.v1');
     const node = root as unknown as Record<symbol, unknown>;
     let previous: StyleOwnership | undefined;
@@ -1054,7 +1057,7 @@ function bootstrapParts(options: LyraThemeBootstrapOptions): { storageKey: strin
       | (Number(ALL_RAMP_PROPERTIES.includes(name)) << 2);
     return `${flags}${name.slice(11)}`;
   }).join(' ');
-  const model = JSON.stringify({ restore: options.restore === 'mode' ? 'mode' : 'all', defaults: STYLE_DEFAULTS, inputs, surfaces: STYLE_REFERENCE_SURFACES, contrast: STYLE_CONTRAST_SURFACES, accent: STYLE_GEMSTONES });
+  const model = JSON.stringify({ restore: options.restore === 'mode' ? 'mode' : 'all', defaults: STYLE_STARTUP_DEFAULTS, inputs, surfaces: STYLE_REFERENCE_SURFACES, contrast: STYLE_CONTRAST_SURFACES, accent: STYLE_GEMSTONES });
   return { storageKey, model };
 }
 
@@ -1120,7 +1123,7 @@ export function createLyraThemeBootstrap(
 
 /** Independently selected style dimensions. */
 export type LyraStyleAxis = 'look' | 'surface' | 'density' | 'mode' | 'accent';
-export type LyraStyleField = LyraStyleAxis | 'accentBackground' | 'overrides';
+export type LyraStyleField = LyraStyleAxis | 'accentBackground' | 'overrides' | 'surfaceOpacity';
 export type LyraLookId = 'lyra' | 'shadcn' | 'material' | (string & {});
 export type LyraSurface = 'solid' | 'glass';
 export type LyraDensity = 'compact' | 'comfortable' | 'touch';
@@ -1130,6 +1133,25 @@ export type LyraAccentName = 'emerald' | 'peridot' | 'topaz' | 'ruby' | 'tourmal
 export type LyraAccent = LyraAccentName | LyraThemeAccent;
 export type LyraAccentBackground = string | { readonly light?: string | null; readonly dark?: string | null } | null;
 export interface LyraLook { readonly id: LyraLookId; readonly tokens: LyraThemeTokens; }
+/** One built-in look, as listed by {@link LYRA_LOOKS}. */
+export interface LyraLookEntry {
+  readonly id: LyraLookId;
+  /** The look's display name. Look names are proper names and stay untranslated. */
+  readonly name: string;
+  /** True when `theme.css` alone does not carry the look and its `looks/<id>.css` sheet is required. */
+  readonly optional: boolean;
+  /** The look's standalone stylesheet for a `theme-core.css` page, or null when that sheet carries it. */
+  readonly stylesheet: string | null;
+}
+/**
+ * Every built-in look in display order, for appearance pickers: `setLyraStyle({ look: entry.id })`
+ * selects one. Frozen. Append an application's own `defineLyraLook()` results to offer them too.
+ */
+export const LYRA_LOOKS: readonly LyraLookEntry[] = /* @__PURE__ */ Object.freeze(([
+  ['shadcn', 'shadcn', false], ['lyra', 'Lyra', false], ['material', 'Material', true],
+  ['data', 'Data', true], ['terminal', 'Terminal', true], ['high-contrast', 'High contrast', true],
+] as const).map(([id, name, optional]): LyraLookEntry =>
+  Object.freeze({ id, name, optional, stylesheet: id === 'lyra' ? null : `looks/${id}.css` })));
 export interface LyraStyle {
   readonly look: LyraLookId;
   readonly lookForm: 'stylesheet' | 'runtime';
@@ -1141,6 +1163,11 @@ export interface LyraStyle {
   readonly accentName: LyraAccentName | null;
   readonly accentBackground: LyraAccentBackground;
   readonly overrides?: LyraThemeTokens;
+  /**
+   * Glass surface opacity as a 0-100 percentage, written to `--lr-theme-surface-opacity` as 0-1.
+   * The default, 60, leaves the stylesheet value in place.
+   */
+  readonly surfaceOpacity: number;
   readonly resolvedMode: 'light' | 'dark' | null;
 }
 export interface LyraStyleChoices {
@@ -1151,6 +1178,8 @@ export interface LyraStyleChoices {
   accent?: LyraAccent;
   accentBackground?: LyraAccentBackground;
   overrides?: LyraThemeTokens | null;
+  /** A 0-100 percentage, clamped; null or a non-finite value restores the default 60. */
+  surfaceOpacity?: number | null;
 }
 /** Complete scoped choices: an omitted axis inherits; null passed to the helper removes the scope. */
 export interface LyraStyleScopeChoices {
@@ -1161,6 +1190,7 @@ export interface LyraStyleScopeChoices {
   accent?: LyraAccent;
   accentBackground?: LyraAccentBackground;
   overrides?: LyraThemeTokens;
+  surfaceOpacity?: number;
 }
 export interface LyraStyleChangeDetail {
   readonly style: Readonly<LyraStyle>;
@@ -1286,11 +1316,12 @@ const STYLE_GEMSTONES: Readonly<Record<string, string>> = {
   'hematite': '#94a3b8',
 };
 // GENERATED STYLE MODEL: END
+const STYLE_STARTUP_DEFAULTS = Object.freeze({ ...STYLE_DEFAULTS, surfaceOpacity: 60 });
 
 const LOOK_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const LOOK_STAMP = Symbol.for('@aceshooting/lyra-ui.look.v1');
 const STYLE_OWNERSHIP = Symbol.for('@aceshooting/lyra-ui.style-ownership.v1');
-const STYLE_FIELDS: readonly LyraStyleField[] = ['look', 'surface', 'density', 'mode', 'accent', 'accentBackground', 'overrides'];
+const STYLE_FIELDS: readonly LyraStyleField[] = ['look', 'surface', 'density', 'mode', 'accent', 'accentBackground', 'overrides', 'surfaceOpacity'];
 interface StyleState {
   look: string;
   tokens: LyraThemeTokens | null;
@@ -1301,8 +1332,9 @@ interface StyleState {
   accentName: LyraAccentName | null;
   accentBackground: LyraAccentBackground;
   overrides: LyraThemeTokens | null;
+  surfaceOpacity: number;
 }
-const DEFAULT_STYLE: Readonly<StyleState> = Object.freeze({ ...STYLE_DEFAULTS, tokens: null, accent: STYLE_GEMSTONES[STYLE_DEFAULTS.accent]!, accentName: STYLE_DEFAULTS.accent, accentBackground: null, overrides: null });
+const DEFAULT_STYLE: Readonly<StyleState> = Object.freeze({ ...STYLE_STARTUP_DEFAULTS, tokens: null, accent: STYLE_GEMSTONES[STYLE_DEFAULTS.accent]!, accentName: STYLE_DEFAULTS.accent, accentBackground: null, overrides: null });
 let lastStyle: StyleState = { ...DEFAULT_STYLE };
 let stylePersistenceFailed = false;
 let styleModeCleanup: (() => void) | undefined;
@@ -1412,15 +1444,18 @@ function normalizeStyleChoices(raw: unknown, base: StyleState): StyleState {
   if (background !== undefined) next.accentBackground = styleColorPair(background);
   const overrides = readOwnDataValue(raw, 'overrides');
   if (overrides !== undefined) next.overrides = styleTokens(overrides);
+  const opacity = readOwnDataValue(raw, 'surfaceOpacity');
+  if (opacity !== undefined) next.surfaceOpacity = finiteRange(typeof opacity === 'number' ? opacity : Number.NaN, DEFAULT_STYLE.surfaceOpacity, 0, 100);
   return next;
 }
 function styleFromRecord(value: unknown, browserColors = false): StyleState {
-  const record = resolveStyleStartup(value, STYLE_DEFAULTS, normalizeTokens,
+  const record = resolveStyleStartup(value, STYLE_STARTUP_DEFAULTS, normalizeTokens,
     input => styleColor(input, browserColors) ?? undefined,
     styleTokenAllowed, STYLE_GEMSTONES);
   const state = normalizeStyleChoices({
     look: readOwnDataValue(record, 'look'), mode: readOwnDataValue(record, 'mode'), density: readOwnDataValue(record, 'density'),
     surface: readOwnDataValue(record, 'treatment'), overrides: readOwnDataValue(record, 'overrides'), accentBackground: readOwnDataValue(record, 'surface'),
+    surfaceOpacity: readOwnDataValue(record, 'surfaceOpacity'),
   }, { ...DEFAULT_STYLE });
   // Legacy CSS keywords stay colors; only accentName selects the named palette.
   state.accent = styleAccent(readOwnDataValue(record, 'accent'));
@@ -1438,7 +1473,8 @@ function styleRecord(state: StyleState): Record<string, unknown> {
   return { version: 2, mode: state.mode, look: state.look, density: state.density, treatment: state.surface,
     accent: state.accent, surface: state.accentBackground,
     ...(state.accentName ? { accentName: state.accentName } : {}),
-    ...(state.tokens ? { tokens: state.tokens } : {}), ...(state.overrides ? { overrides: state.overrides } : {}) };
+    ...(state.tokens ? { tokens: state.tokens } : {}), ...(state.overrides ? { overrides: state.overrides } : {}),
+    ...(state.surfaceOpacity === DEFAULT_STYLE.surfaceOpacity ? {} : { surfaceOpacity: state.surfaceOpacity }) };
 }
 function styleResolvedMode(mode: LyraMode, view?: Window | null): 'light' | 'dark' | null {
   if (mode === 'unset') return null;
@@ -1449,7 +1485,7 @@ function styleSnapshot(state: StyleState, view?: Window | null): Readonly<LyraSt
   return Object.freeze({ look: state.look, lookForm: state.tokens ? 'runtime' : 'stylesheet', surface: state.surface,
     density: state.density, mode: state.mode, accent: state.accentName ?? state.accent, accentName: state.accentName,
     accentBackground: state.accentBackground, ...(state.overrides ? { overrides: state.overrides } : {}),
-    resolvedMode: styleResolvedMode(state.mode, view) });
+    surfaceOpacity: state.surfaceOpacity, resolvedMode: styleResolvedMode(state.mode, view) });
 }
 /** Normalizes a parsed persisted record without browser APIs; CSS color validation is syntactic. */
 export function parseLyraStyleRecord(value: unknown): Readonly<LyraStyle> {
@@ -1738,6 +1774,9 @@ function applyStyleState(element: Element, state: StyleState, fields?: ReadonlyS
   if ((!fields || fields.has('surface')) && element.ownerDocument.defaultView?.getComputedStyle(element).getPropertyValue('--_lr-style-resolver').trim() !== '1') {
     styleMaterial(desired, state.surface);
   }
+  if ((!fields || fields.has('surfaceOpacity')) && state.surfaceOpacity !== DEFAULT_STYLE.surfaceOpacity) {
+    desired.set('--lr-theme-surface-opacity', `${state.surfaceOpacity / 100}`);
+  }
   if (!state.accent && snapshot.accent) {
     attributes['data-lr-accent'] = 'none';
     if (!state.tokens && !state.overrides) delete attributes['data-lr-theme-scope'];
@@ -1883,7 +1922,7 @@ export function startLyraStyle(): Readonly<LyraStyle> {
 }
 /** Resets selected fields to defaults, or all fields when no list is supplied. */
 export function resetLyraStyle(fields: readonly LyraStyleField[] = STYLE_FIELDS): Readonly<LyraStyle> {
-  const defaults: LyraStyleChoices = { ...STYLE_DEFAULTS, accentBackground: null, overrides: null };
+  const defaults: LyraStyleChoices = { ...STYLE_DEFAULTS, accentBackground: null, overrides: null, surfaceOpacity: null };
   return setLyraStyle(Object.fromEntries(fields.filter(field => STYLE_FIELDS.includes(field)).map(field => [field, defaults[field]])));
 }
 /** Replaces one element's scoped choices. Omitted axes inherit; null restores author-owned values. */

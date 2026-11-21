@@ -9,7 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-theme-scrollbar-color`, `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-width`, `--lr-virtual-list-hover-outline-color`, `--lr-virtual-list-hover-outline-offset`, `--lr-virtual-list-hover-outline-style`, `--lr-virtual-list-hover-outline-width`; `sticky-group`: `--lr-virtual-list-sticky-group-bg`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -285,10 +286,10 @@ themeable with `--lr-virtual-list-hover-outline-width` (default
 `calc(-1 * var(--lr-border-width-thin))`). All four hover-outline hooks are inline fallbacks and
 there is intentionally no pressed state: the list viewport is a scroll surface rather than an
 activation target. `[part="base"]` also honors the opt-in theme-level
-`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`auto`, matching
-its previous unconditional `scrollbar-width: auto`) — set either on `:root` or any ancestor for one
-declaration to retheme every internal scroll container in the library, including `lr-table`,
-`lr-scroller`, `lr-carousel`, `lr-code-block`, and `lr-code-editor`.
+`--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color` hooks (defaults
+`auto`/`auto`/`auto`, matching its previous unconditional `scrollbar-width: auto`) — set any of them on
+`:root` or any ancestor for one declaration to retheme every internal scroll container in the
+library, including `lr-table`, `lr-scroller`, `lr-carousel`, `lr-code-block`, and `lr-code-editor`.
 
 **Optional peer deps:** none.
 

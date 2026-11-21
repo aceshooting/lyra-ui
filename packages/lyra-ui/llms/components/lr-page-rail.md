@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 15 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `heat-dot`: `--lr-page-rail-heat-accent-color`; `heat-dot-danger`: `--lr-page-rail-heat-danger-color`; `heat-dot-neutral`: `--lr-page-rail-heat-neutral-color`; `heat-dot-success`: `--lr-page-rail-heat-success-color`; `heat-dot-warning`: `--lr-page-rail-heat-warning-color`; `page`: `--lr-page-rail-current-bg`; `page-current`: `--lr-page-rail-current-bg`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

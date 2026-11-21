@@ -22,7 +22,7 @@ import type { LyraCodeBlock } from "../../lr-code-block.js";
 import type { ShikiHighlighter, ShikiHighlighterCore } from "./code-loader.js";
 import { __setShikiHighlighterCoreLoaderForTesting } from "./shiki-types.js";
 import { resetMouse, sendMouse } from "../../../../test/wtr-mouse.js";
-import { readScrollbarWidth } from "../../../../test/scrollbar-reporting.js";
+import { readScrollbarColor, readScrollbarWidth } from "../../../../test/scrollbar-reporting.js";
 import { renderedTemplateWhitespace } from '../../../../test/rendered-whitespace.js';
 
 type Internals = {
@@ -117,7 +117,7 @@ it("defaults to no language/filename, collapsible=false, collapsed=false, withou
 
 it("reads the theme-level scrollbar hook on the body scrollport, defaulting to auto", async () => {
   const wrapper = await fixture<HTMLElement>(html`
-    <div style="--lr-theme-scrollbar-width: thin; --lr-theme-scrollbar-gutter: stable">
+    <div style="--lr-theme-scrollbar-width: thin; --lr-theme-scrollbar-gutter: stable; --lr-theme-scrollbar-color: rgb(255, 0, 0) rgb(0, 0, 255)">
       <lr-code-block></lr-code-block>
     </div>
   `);
@@ -126,6 +126,8 @@ it("reads the theme-level scrollbar hook on the body scrollport, defaulting to a
   const body = el.shadowRoot!.querySelector('[part="body"]') as HTMLElement;
   const computed = getComputedStyle(body);
   expect(readScrollbarWidth(body, '[part="body"]')).to.equal("thin");
+  expect(readScrollbarColor(body) ?? "unsupported").to.be.oneOf(["rgb(255, 0, 0) rgb(0, 0, 255)", "unsupported"]);
+  expect(readScrollbarColor(body) === null).to.equal(!CSS.supports("scrollbar-color", "red blue"));
   expect(computed.scrollbarGutter).to.equal("stable");
 });
 

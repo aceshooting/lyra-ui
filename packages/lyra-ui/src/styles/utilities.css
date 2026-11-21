@@ -240,6 +240,125 @@
     );
   }
 
+  /* Static 12-column grid. Each .lr-span-n child spans n tracks and each .lr-row-span-n child n
+     rows. The grid is its own inline-size container: below 56rem spans count on a 6-column grid
+     (span n of 6, at most the full row; a child without a span class takes one of the 6), and
+     below 32rem every child takes the full row and a single row track. Container query conditions cannot read custom properties, so those widths are fixed. */
+  :where(.lr-grid-12) {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: var(
+      --lr-layout-gap,
+      var(--lr-space-m, var(--lr-theme-space-m, 0.75rem))
+    );
+    container-type: inline-size;
+    contain-intrinsic-inline-size: var(
+      --lr-grid-12-intrinsic-inline-size,
+      var(--lr-size-20rem, var(--lr-theme-size-20rem, 20rem))
+    );
+  }
+
+  :where(.lr-grid-12) > :where(.lr-span-1) {
+    grid-column: span 1;
+  }
+
+  :where(.lr-grid-12) > :where(.lr-span-2) {
+    grid-column: span 2;
+  }
+
+  :where(.lr-grid-12) > :where(.lr-span-3) {
+    grid-column: span 3;
+  }
+
+  :where(.lr-grid-12) > :where(.lr-span-4) {
+    grid-column: span 4;
+  }
+
+  :where(.lr-grid-12) > :where(.lr-span-5) {
+    grid-column: span 5;
+  }
+
+  :where(.lr-grid-12) > :where(.lr-span-6) {
+    grid-column: span 6;
+  }
+
+  :where(.lr-grid-12) > :where(.lr-span-7) {
+    grid-column: span 7;
+  }
+
+  :where(.lr-grid-12) > :where(.lr-span-8) {
+    grid-column: span 8;
+  }
+
+  :where(.lr-grid-12) > :where(.lr-span-9) {
+    grid-column: span 9;
+  }
+
+  :where(.lr-grid-12) > :where(.lr-span-10) {
+    grid-column: span 10;
+  }
+
+  :where(.lr-grid-12) > :where(.lr-span-11) {
+    grid-column: span 11;
+  }
+
+  :where(.lr-grid-12) > :where(.lr-span-12) {
+    grid-column: span 12;
+  }
+
+  :where(.lr-grid-12) > :where(.lr-row-span-2) {
+    grid-row: span 2;
+  }
+
+  :where(.lr-grid-12) > :where(.lr-row-span-3) {
+    grid-row: span 3;
+  }
+
+  :where(.lr-grid-12) > :where(.lr-row-span-4) {
+    grid-row: span 4;
+  }
+
+  @container (inline-size < 56rem) {
+    :where(.lr-grid-12 > *) {
+      grid-column: span 2;
+    }
+
+    :where(.lr-grid-12) > :where(.lr-span-1) {
+      grid-column: span 2;
+    }
+
+    :where(.lr-grid-12) > :where(.lr-span-2) {
+      grid-column: span 4;
+    }
+
+    :where(.lr-grid-12) > :where(.lr-span-3) {
+      grid-column: span 6;
+    }
+
+    :where(.lr-grid-12) > :where(.lr-span-4) {
+      grid-column: span 8;
+    }
+
+    :where(.lr-grid-12) > :where(.lr-span-5) {
+      grid-column: span 10;
+    }
+
+    :where(.lr-grid-12) > :where(.lr-span-6) {
+      grid-column: span 12;
+    }
+
+    :where(.lr-grid-12) > :where(.lr-span-7, .lr-span-8, .lr-span-9, .lr-span-10, .lr-span-11, .lr-span-12) {
+      grid-column: span 12;
+    }
+  }
+
+  @container (inline-size < 32rem) {
+    :where(.lr-grid-12 > *) {
+      grid-column: 1 / -1;
+      grid-row: auto;
+    }
+  }
+
   :where(.lr-row) {
     flex-direction: row;
   }

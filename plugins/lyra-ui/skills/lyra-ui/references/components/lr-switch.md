@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 12 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `label`: `--lr-switch-label-color`, `--lr-switch-checked-label-color`; `track`: `--lr-switch-invalid-border`, `--lr-switch-track-fill`, `--lr-switch-track-border`, `--lr-switch-checked-track-border`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

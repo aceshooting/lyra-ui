@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 19 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-confirm-bar-bg`, `--lr-confirm-bar-compact-padding`; `status`: `--lr-confirm-bar-approved-color`, `--lr-confirm-bar-denied-color`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

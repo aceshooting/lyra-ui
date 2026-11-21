@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** `dompurify`, `postal-mime` — see `llms/peers.md`
 - **Themeable via** 26 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-email-viewer-max-height`; `body`: `--lr-email-viewer-max-height`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** `dompurify` — see `llms/peers.md`
 - **Themeable via** 6 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-html-viewer-max-height`; `body`: `--lr-html-viewer-max-height`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

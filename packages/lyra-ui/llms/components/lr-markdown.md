@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 24 parts, 49 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `code-block`: `--lr-code-block-tab-size`, `--lr-markdown-code-bg`, `--lr-markdown-code-block-padding`, `--lr-markdown-code-block-radius`; `content`: `--lr-markdown-font-mono`, `--lr-markdown-max-height`; `table`: `--lr-markdown-table-header-bg`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

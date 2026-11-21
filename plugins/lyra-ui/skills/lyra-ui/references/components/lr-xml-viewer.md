@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 28 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `attribute`: `--lr-xml-viewer-active-attribute-color`; `attribute-value`: `--lr-xml-viewer-match-bg`; `node`: `--lr-xml-viewer-active-match-color`, `--lr-xml-viewer-match-color`; `tag`: `--lr-xml-viewer-tag-color`, `--lr-xml-viewer-match-bg`; `text`: `--lr-xml-viewer-match-color`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

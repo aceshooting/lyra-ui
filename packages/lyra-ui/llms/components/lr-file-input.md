@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 21 parts, 34 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `dropzone-icon`: `--lr-file-input-dropzone-icon-size`; `file`: `--lr-file-input-file-bg`, `--lr-file-input-file-border-color`, `--lr-file-input-file-radius`; `file-input`: `--lr-file-input-accept-bg`, `--lr-file-input-accept-border-color`, `--lr-file-input-compact-padding`, `--lr-file-input-dropzone-padding`, `--lr-file-input-radius`, `--lr-file-input-reject-bg`, `--lr-file-input-reject-border-color`; `file-thumbnail`: `--lr-file-input-thumbnail-size`; `form-control-label`: `--lr-form-control-required-content`; `remove-button`: `--lr-file-input-remove-hover-bg`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

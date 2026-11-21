@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** `papaparse` — see `llms/peers.md`
 - **Themeable via** 13 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-dataset-viewer-max-height`; `body`: `--lr-dataset-viewer-max-height`; `cell-highlight-action`: `--lr-dataset-viewer-cell-action-hover-bg`; `header-row`: `--lr-dataset-viewer-header-row-bg`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

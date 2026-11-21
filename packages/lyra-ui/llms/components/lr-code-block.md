@@ -9,7 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 16 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `body`: `--lr-code-block-max-height`, `--lr-theme-scrollbar-color`, `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-width`; `code`: `--lr-code-block-font`; `header`: `--lr-code-block-language-bg`; `language`: `--lr-code-block-language-bg`, `--lr-code-block-language-color`; `pre`: `--lr-code-block-font`, `--lr-code-block-language-color`, `--lr-code-block-tab-size`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -191,9 +192,9 @@ background and text color, independent of the active-line outline above — plus
 `--lr-color-surface`, `--lr-space-xs/-s/-m`, `--lr-font`, `--lr-color-text-quiet`,
 `--lr-color-text`, `--lr-color-brand`/`-brand-quiet`, `--lr-transition-fast`,
 `--lr-focus-ring-width/-color/-offset`. `body`, the scroll container, also honors the opt-in
-theme-level `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`auto`,
-matching its previous unconditional `scrollbar-width: auto`) — set either on `:root` or any
-ancestor for one declaration to retheme every internal scroll container in the library, including
+theme-level `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color`
+hooks (defaults `auto`/`auto`/`auto`, matching its previous unconditional `scrollbar-width: auto`) — set
+any of them on `:root` or any ancestor for one declaration to retheme every internal scroll container in the library, including
 `lr-table`, `lr-virtual-list`, `lr-scroller`, `lr-carousel`, and `lr-code-editor`.
 
 `base` is a flex column and `body` grows to fill whatever block space an explicitly sized host

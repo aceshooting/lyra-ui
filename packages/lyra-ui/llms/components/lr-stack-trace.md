@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 10 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-stack-trace-bg`, `--lr-stack-trace-compact-padding`, `--lr-stack-trace-max-height`; `group`: `--lr-stack-trace-compact-gap`; `internal-toggle`: `--lr-stack-trace-internal-toggle-hover-bg`; `message`: `--lr-stack-trace-compact-gap`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

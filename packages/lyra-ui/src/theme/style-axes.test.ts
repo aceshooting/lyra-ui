@@ -1,6 +1,6 @@
 import { expect, fixture, html, oneEvent } from '@open-wc/testing';
 import {
-  applyLyraStyleScope, createLyraThemeBootstrap, defineLyraLook, getLyraStyle,
+  applyLyraStyleScope, createLyraThemeBootstrap, defineLyraLook, getLyraStyle, LYRA_LOOKS,
   lyraStyleAttributes, parseLyraStyleRecord, resetLyraStyle, setLyraStyle,
 } from './theme.js';
 import { LYRA_SHADCN_LOOK } from './looks/shadcn.js';
@@ -58,7 +58,7 @@ beforeEach(() => {
 afterEach(() => {
   // Runtime cleanup needs its resolver even after a fixture models startup without stylesheets.
   document.adoptedStyleSheets = [...previousSheets, ...sheets];
-  setLyraStyle({ mode: 'unset', look: null, surface: null, density: null, accent: null, overrides: null, accentBackground: null });
+  setLyraStyle({ mode: 'unset', look: null, surface: null, density: null, accent: null, overrides: null, accentBackground: null, surfaceOpacity: null });
   applyLyraStyleScope(document.documentElement, null);
   document.adoptedStyleSheets = previousSheets;
   if (previousRecord === null) localStorage.removeItem('lyra-theme');
@@ -585,5 +585,92 @@ describe('portable style definitions', () => {
     const style = parseLyraStyleRecord({ version: 2, look: 'shadcn', treatment: 'glass', mode: 'system', density: 'compact', accentName: 'sapphire' });
     expect(style.resolvedMode).to.equal(null);
     expect(lyraStyleAttributes(style)).to.deep.equal({ 'data-lr-look': 'shadcn', 'data-lr-surface': 'glass', 'data-lr-density': 'compact', 'data-lr-mode': 'system', 'data-lr-accent': 'sapphire' });
+  });
+});
+
+describe('surfaceOpacity style field', () => {
+  const opacity = (element: Element = document.documentElement): string => getComputedStyle(element).getPropertyValue('--lr-theme-surface-opacity').trim();
+
+  it('sets, persists, reports and resets the Glass opacity percentage', async () => {
+    expect(getLyraStyle().surfaceOpacity).to.equal(60);
+    expect(opacity()).to.equal('0.6');
+    const changed = oneEvent(window, 'lr-style-change');
+    expect(setLyraStyle({ surfaceOpacity: 35 }).surfaceOpacity).to.equal(35);
+    const { detail } = await changed;
+    expect(detail.changed).to.deep.equal(['surfaceOpacity']);
+    expect(detail.style.surfaceOpacity).to.equal(35);
+    expect(opacity()).to.equal('0.35');
+    expect(JSON.parse(localStorage.getItem('lyra-theme')!).surfaceOpacity).to.equal(35);
+    expect(getLyraStyle().surfaceOpacity).to.equal(35);
+    setLyraStyle({ density: 'compact' });
+    expect(getLyraStyle().surfaceOpacity, 'an unrelated axis keeps the opacity').to.equal(35);
+    resetLyraStyle(['surfaceOpacity']);
+    expect(getLyraStyle()).to.include({ surfaceOpacity: 60, density: 'compact' });
+    expect(document.documentElement.style.getPropertyValue('--lr-theme-surface-opacity')).to.equal('');
+    expect(opacity()).to.equal('0.6');
+    expect(JSON.parse(localStorage.getItem('lyra-theme')!)).to.not.have.property('surfaceOpacity');
+  });
+
+  it('clamps out-of-range values and restores the default for invalid ones', () => {
+    expect(setLyraStyle({ surfaceOpacity: 140 }).surfaceOpacity).to.equal(100);
+    expect(opacity()).to.equal('1');
+    expect(setLyraStyle({ surfaceOpacity: -5 }).surfaceOpacity).to.equal(0);
+    expect(opacity()).to.equal('0');
+    for (const invalid of [Number.NaN, Number.POSITIVE_INFINITY, '40' as unknown as number, null]) {
+      setLyraStyle({ surfaceOpacity: 20 });
+      expect(setLyraStyle({ surfaceOpacity: invalid }).surfaceOpacity, String(invalid)).to.equal(60);
+    }
+  });
+
+  it('restores an author-owned inline opacity when the field returns to its default', () => {
+    const root = document.documentElement;
+    root.style.setProperty('--lr-theme-surface-opacity', '0.8');
+    try {
+      setLyraStyle({ surfaceOpacity: 25 });
+      expect(opacity()).to.equal('0.25');
+      resetLyraStyle(['surfaceOpacity']);
+      expect(opacity()).to.equal('0.8');
+    } finally { root.style.removeProperty('--lr-theme-surface-opacity'); }
+  });
+
+  it('parses saved records with, without and with corrupt opacity', () => {
+    expect(parseLyraStyleRecord({ version: 2, look: 'shadcn' }).surfaceOpacity).to.equal(60);
+    expect(parseLyraStyleRecord({ version: 2, surfaceOpacity: 42.5 }).surfaceOpacity).to.equal(42.5);
+    expect(parseLyraStyleRecord({ version: 2, surfaceOpacity: 300 }).surfaceOpacity).to.equal(100);
+    expect(parseLyraStyleRecord({ version: 2, surfaceOpacity: '30' }).surfaceOpacity).to.equal(60);
+    expect(parseLyraStyleRecord({ version: 2, surfaceOpacity: null }).surfaceOpacity).to.equal(60);
+  });
+
+  it('scopes an opacity on one element only', async () => {
+    const scope = await fixture<HTMLDivElement>(html`<div></div>`);
+    applyLyraStyleScope(scope, { surfaceOpacity: 90 });
+    expect(opacity(scope)).to.equal('0.9');
+    expect(opacity()).to.equal('0.6');
+    applyLyraStyleScope(scope, null);
+    expect(scope.style.getPropertyValue('--lr-theme-surface-opacity')).to.equal('');
+  });
+});
+
+describe('LYRA_LOOKS', () => {
+  it('lists every built-in look once, frozen, with a stylesheet that selects it', async () => {
+    expect(Object.isFrozen(LYRA_LOOKS)).to.equal(true);
+    expect(LYRA_LOOKS.every(entry => Object.isFrozen(entry))).to.equal(true);
+    expect(LYRA_LOOKS.map(entry => entry.id)).to.deep.equal(['shadcn', 'lyra', 'material', 'data', 'terminal', 'high-contrast']);
+    const theme = await (await fetch(new URL('../theme.css', import.meta.url))).text();
+    for (const entry of LYRA_LOOKS) {
+      expect(theme.includes(`data-lr-look='${entry.id}'`), entry.id).to.equal(!entry.optional);
+      if (entry.stylesheet === null) continue;
+      const response = await fetch(new URL(`../${entry.stylesheet}`, import.meta.url));
+      expect(response.ok, entry.stylesheet).to.equal(true);
+      expect((await response.text()).includes(`--_lr-look-installed: ${entry.id}-`), entry.stylesheet).to.equal(true);
+    }
+  });
+
+  it('selects each listed look through setLyraStyle', () => {
+    for (const { id } of LYRA_LOOKS) {
+      // The fixture installs only some look sheets; the missing-sheet diagnostic is not under test.
+      captureStyleDiagnostics(() => expect(setLyraStyle({ look: id }).look).to.equal(id));
+      expect(document.documentElement.getAttribute('data-lr-look')).to.equal(id);
+    }
   });
 });

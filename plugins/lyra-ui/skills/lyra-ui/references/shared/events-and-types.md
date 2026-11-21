@@ -2235,7 +2235,7 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraThemeTokenValue = string | { light?: string | null; dark?: string | null }`
   `LyraThemeTokens = Readonly<Record<LyraThemeTokenName, LyraThemeTokenValue>>`
   `LyraStyleAxis = 'look' | 'surface' | 'density' | 'mode' | 'accent'`
-  `LyraStyleField = LyraStyleAxis | 'accentBackground' | 'overrides'`
+  `LyraStyleField = LyraStyleAxis | 'accentBackground' | 'overrides' | 'surfaceOpacity'`
   `LyraLookId = 'lyra' | 'shadcn' | 'material' | (string & {})`
   `LyraSurface = 'solid' | 'glass'`
   `LyraDensity = 'compact' | 'comfortable' | 'touch'`
@@ -2247,6 +2247,13 @@ These named interfaces and helper signatures are available to typed integrations
   `defineLyraLook<const Look extends LyraLook>(look: Look): Readonly<Look>`
   `getLyraStyle(): Readonly<LyraStyle>`
   `lyraThemeBootstrap: string`
+  `LYRA_LOOKS: readonly LyraLookEntry[]`
+  `LyraLookEntry {
+  readonly id: LyraLookId;
+  readonly name: string;
+  readonly optional: boolean;
+  readonly stylesheet: string | null;
+}`
   `LyraLook {
   readonly id: LyraLookId;
   readonly tokens: LyraThemeTokens;
@@ -2264,6 +2271,7 @@ These named interfaces and helper signatures are available to typed integrations
   accent?: LyraAccent;
   accentBackground?: LyraAccentBackground;
   overrides?: LyraThemeTokens | null;
+  surfaceOpacity?: number | null;
 }`
   `LyraStyle {
   readonly look: LyraLookId;
@@ -2275,6 +2283,7 @@ These named interfaces and helper signatures are available to typed integrations
   readonly accentName: LyraAccentName | null;
   readonly accentBackground: LyraAccentBackground;
   readonly overrides?: LyraThemeTokens;
+  readonly surfaceOpacity: number;
   readonly resolvedMode: 'light' | 'dark' | null;
 }`
   `LyraStyleScopeChoices {
@@ -2285,6 +2294,7 @@ These named interfaces and helper signatures are available to typed integrations
   accent?: LyraAccent;
   accentBackground?: LyraAccentBackground;
   overrides?: LyraThemeTokens;
+  surfaceOpacity?: number;
 }`
   `parseLyraStyleRecord(value: unknown): Readonly<LyraStyle>`
   `resetLyraStyle(fields?: readonly LyraStyleField[]): Readonly<LyraStyle>`

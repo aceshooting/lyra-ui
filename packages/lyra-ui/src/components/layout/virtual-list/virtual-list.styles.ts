@@ -26,6 +26,7 @@ export const styles = css`
        --lr-theme-* input on an ancestor sees no change. */
     scrollbar-width: var(--lr-theme-scrollbar-width, auto);
     scrollbar-gutter: var(--lr-theme-scrollbar-gutter, auto);
+    scrollbar-color: var(--lr-theme-scrollbar-color, auto);
   }
   /* An external scrollElement hands the scrollport to a consumer-owned ancestor: this element
      stops scrolling and grows to the list's whole virtual extent, so the ancestor's own scrollbar

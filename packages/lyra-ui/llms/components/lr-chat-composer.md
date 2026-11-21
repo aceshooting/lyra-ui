@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 10 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `action-button`: `--lr-chat-composer-busy-bg`; `base`: `--lr-chat-composer-bg`, `--lr-chat-composer-padding`, `--lr-chat-composer-gap`, `--lr-chat-composer-focus-shadow`; `chips`: `--lr-chat-composer-gap`; `row`: `--lr-chat-composer-gap`; `textarea`: `--lr-chat-composer-busy-bg`; `toolbar`: `--lr-chat-composer-gap`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

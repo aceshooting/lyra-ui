@@ -2475,9 +2475,9 @@ background and text color, independent of the active-line outline above — plus
 `--lr-color-surface`, `--lr-space-xs/-s/-m`, `--lr-font`, `--lr-color-text-quiet`,
 `--lr-color-text`, `--lr-color-brand`/`-brand-quiet`, `--lr-transition-fast`,
 `--lr-focus-ring-width/-color/-offset`. `body`, the scroll container, also honors the opt-in
-theme-level `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults `auto`/`auto`,
-matching its previous unconditional `scrollbar-width: auto`) — set either on `:root` or any
-ancestor for one declaration to retheme every internal scroll container in the library, including
+theme-level `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color`
+hooks (defaults `auto`/`auto`/`auto`, matching its previous unconditional `scrollbar-width: auto`) — set
+any of them on `:root` or any ancestor for one declaration to retheme every internal scroll container in the library, including
 `lr-table`, `lr-virtual-list`, `lr-scroller`, `lr-carousel`, and `lr-code-editor`.
 
 `base` is a flex column and `body` grows to fill whatever block space an explicitly sized host
@@ -2674,7 +2674,7 @@ identical set to `<lr-code-block>`.
 `--lr-code-block-highlighted-line-bg` (default `var(--lr-color-warning-quiet)`),
 `--lr-code-block-language-bg` (default `var(--lr-color-brand-quiet)`), and
 `--lr-code-block-language-color` (default `var(--lr-color-brand)`), plus the same shared
-tokens, including the `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks `body` honors —
+tokens, including the `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color` hooks `body` honors —
 this component reuses `<lr-code-block>`'s stylesheet, so both share exactly the same scroll
 container. The last five are inline `var()` fallbacks at the point of use rather than `:host`
 declarations, so a page-, container-, or theme-level value reaches them; see `<lr-code-block>` above

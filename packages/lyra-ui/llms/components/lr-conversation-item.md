@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 13 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `actions`: `--lr-conversation-item-align`; `active-indicator`: `--lr-conversation-item-active-indicator-color`, `--lr-conversation-item-active-indicator-inset-inline`, `--lr-conversation-item-active-indicator-width`; `base`: `--lr-conversation-item-align`, `--lr-conversation-item-compact-gap`, `--lr-conversation-item-compact-padding`; `excerpt`: `--lr-conversation-item-active-color`, `--lr-conversation-item-align`; `select-button`: `--lr-conversation-item-align`; `timestamp`: `--lr-conversation-item-active-color`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

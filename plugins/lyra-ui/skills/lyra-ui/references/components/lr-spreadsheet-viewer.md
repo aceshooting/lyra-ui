@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** `xlsx` — see `llms/peers.md`
 - **Themeable via** 14 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-spreadsheet-viewer-max-height`; `body`: `--lr-spreadsheet-viewer-max-height`; `cell-highlight-action`: `--lr-spreadsheet-viewer-cell-action-hover-bg`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

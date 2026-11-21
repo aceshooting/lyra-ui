@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 4 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `header`: `--lr-source-list-compact-header-padding`, `--lr-source-list-header-hover-bg`; `list`: `--lr-source-list-compact-gap`, `--lr-source-list-compact-list-padding`
 - **Documented with** `lr-source-card` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 

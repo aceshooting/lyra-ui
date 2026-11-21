@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-result-card-bg`; `body`: `--lr-result-card-compact-body-gap`, `--lr-result-card-compact-body-padding`; `header`: `--lr-result-card-border-color`, `--lr-result-card-compact-header-gap`, `--lr-result-card-compact-header-padding`
 - **Documented with** `lr-result-field` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 

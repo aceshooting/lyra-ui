@@ -11,6 +11,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 16 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `panel`: `--lr-tab-group-panel-hover-outline-color`, `--lr-tab-group-panel-hover-outline-offset`, `--lr-tab-group-panel-hover-outline-style`, `--lr-tab-group-panel-hover-outline-width`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

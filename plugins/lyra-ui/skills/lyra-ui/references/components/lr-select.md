@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 35 parts, 44 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `form-control-label`: `--lr-form-control-required-content`; `option-badge`: `--lr-select-option-badge-bg`; `tag__remove-button`: `--lr-select-tag-remove-hover-bg`; `unknown-value`: `--lr-select-unknown-value-border-style`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

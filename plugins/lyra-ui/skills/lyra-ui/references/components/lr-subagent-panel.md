@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 16 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `cancel`: `--lr-subagent-panel-compact-action-padding`; `model`: `--lr-subagent-panel-compact-font-size`; `retry`: `--lr-subagent-panel-compact-action-padding`; `run-trigger`: `--lr-subagent-panel-compact-trigger-gap`, `--lr-subagent-panel-compact-trigger-padding`; `task`: `--lr-subagent-panel-compact-font-size`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

@@ -1164,7 +1164,7 @@ export function buildExportDeprecationsSection(records) {
   ].join('\n');
 }
 
-function buildIndex(sectionsByFamily, tagFacts, exportDeprecations = []) {
+function buildIndex(sectionsByFamily, tagFacts, exportDeprecations = [], integration = new Map()) {
   const out = [
     GENERATED('custom-elements.json + llms/<family>.md'),
     '',
@@ -1199,6 +1199,10 @@ function buildIndex(sectionsByFamily, tagFacts, exportDeprecations = []) {
     'compatibility guide remains at `llms/shared.md`. Design tokens: `llms/tokens.md`.',
     'Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.md`.',
     '',
+    '**Size.** `~N KiB gzip` is the measured standalone cost of importing that one registration entry',
+    'by itself, rounded to whole KiB. The shared Lit and Lyra layers are counted again in every entry',
+    'and optional peers are excluded, so a second component usually costs much less than its number.',
+    '',
   ];
   for (const [family, title] of FAMILIES) {
     const sections = sectionsByFamily.get(family) ?? [];
@@ -1211,7 +1215,7 @@ function buildIndex(sectionsByFamily, tagFacts, exportDeprecations = []) {
         if (!facts) continue;
         const shortPath = `${tag}.js`;
         out.push(
-          `- \`${tag}\` · ${shortPath} · \`${facts.status}\` since \`${facts.since}\` — ` +
+          `- \`${tag}\` · ${shortPath} · \`${facts.status}\` since \`${facts.since}\`${indexGzipLabel(integration.get(tag))} — ` +
             `${facts.purpose || fallback}`,
         );
       }
@@ -1221,6 +1225,31 @@ function buildIndex(sectionsByFamily, tagFacts, exportDeprecations = []) {
   const exportSection = buildExportDeprecationsSection(exportDeprecations);
   if (exportSection) out.push(exportSection);
   return out.join('\n');
+}
+
+/**
+ * Groups a component's `@cssprop` names under the `@csspart` names their descriptions reference
+ * (`[part="x"]`, `::part(x)` or a backticked part name), so a reference page can point from a part
+ * to the tokens that already style it. Parts no description names are omitted.
+ */
+export function partTokenGroups(facts) {
+  const escape = (value) => value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+  const groups = [];
+  for (const part of facts.cssParts ?? []) {
+    const name = escape(part.name);
+    const reference = new RegExp(`part[~*|^$]?=["']?${name}["'\\]]|::part\\(${name}\\)|\`${name}\``, 'u');
+    const tokens = (facts.cssProperties ?? [])
+      .filter((property) => reference.test(property.description ?? ''))
+      .map((property) => property.name);
+    if (tokens.length) groups.push({ part: part.name, tokens });
+  }
+  return groups;
+}
+
+/** The index's per-tag standalone gzip label, rounded to whole KiB; empty when unmeasured. */
+export function indexGzipLabel(entry) {
+  if (entry?.gzip?.status !== 'measured' || !Number.isFinite(entry.gzip.bytes)) return '';
+  return ` · ~${Math.max(1, Math.round(entry.gzip.bytes / 1024))} KiB gzip`;
 }
 
 /**
@@ -1246,6 +1275,7 @@ export function buildComponentFile(
   const peers = peersByTag.get(tag) ?? [];
   const cssPartNames = facts.cssParts?.map((p) => p.name) ?? [];
   const cssPropNames = facts.cssProperties?.map((p) => p.name) ?? [];
+  const partTokens = isPrimary ? partTokenGroups(facts) : [];
   const compoundUsageRegistrations = COMPOUND_USAGE_REGISTRATIONS[tag] ?? [];
   const deprecationLines = facts.deprecations.map((entry) => {
     const subject = formatDeprecationSubject(entry, tag);
@@ -1298,6 +1328,10 @@ export function buildComponentFile(
     cssPartNames.length || cssPropNames.length
       ? `- **Themeable via** ${cssPartNames.length} part${cssPartNames.length === 1 ? '' : 's'}, ${cssPropNames.length} custom propert${cssPropNames.length === 1 ? 'y' : 'ies'} — see ${isPrimary ? "this component's own `@csspart`/`@cssprop` list below" : `\`${primaryTag}.md\``}`
       : '- **Themeable via** nothing component-specific — inherits only the shared surface',
+    partTokens.length
+      ? '- **Tokens by part** (prefer these over a `::part()` rule) ' +
+        partTokens.map(({ part, tokens }) => `\`${part}\`: ${tokens.map((t) => `\`${t}\``).join(', ')}`).join('; ')
+      : null,
     documentedWithLine,
     '- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types):' +
       ' `llms/shared.md`',
@@ -1611,6 +1645,8 @@ export function build({ write = true } = {}) {
         sectionsByFamily,
         tagFacts,
         JSON.parse(read('scripts', 'fixtures', 'component-metadata.json')).exportDeprecations ?? [],
+        new Map((JSON.parse(read('scripts', 'fixtures', 'component-integration.json')).components ?? [])
+          .map((entry) => [entry.tag, entry])),
       ),
     ],
     [path.join(llmsDir, 'tokens.md'), buildTokens()],

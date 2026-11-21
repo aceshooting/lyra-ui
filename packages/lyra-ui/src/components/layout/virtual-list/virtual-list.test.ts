@@ -22,7 +22,7 @@ import {
   sendMouse,
   settlePointer,
 } from "../../../../test/wtr-mouse.js";
-import { readScrollbarWidth } from "../../../../test/scrollbar-reporting.js";
+import { readScrollbarColor, readScrollbarWidth } from "../../../../test/scrollbar-reporting.js";
 
 /** Sentinel for "emit no row-projection attribute at all", distinguishing the unset state from
  *  an explicit `row-projection="shadow"` in the byte-identity regression below. */
@@ -187,7 +187,7 @@ it("reads the theme-level scrollbar hook on the base viewport, defaulting to aut
 
 it("lets a --lr-theme-scrollbar-width/-gutter ancestor override retune the base viewport", async () => {
   const wrapper = await fixture<HTMLElement>(html`
-    <div style="--lr-theme-scrollbar-width: thin; --lr-theme-scrollbar-gutter: stable">
+    <div style="--lr-theme-scrollbar-width: thin; --lr-theme-scrollbar-gutter: stable; --lr-theme-scrollbar-color: rgb(255, 0, 0) rgb(0, 0, 255)">
       <lr-virtual-list
         style="--lr-virtual-list-height:200px"
         row-height="40"
@@ -202,6 +202,8 @@ it("lets a --lr-theme-scrollbar-width/-gutter ancestor override retune the base 
   const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
   const computed = getComputedStyle(base);
   expect(readScrollbarWidth(base, '[part="base"]')).to.equal("thin");
+  expect(readScrollbarColor(base) ?? "unsupported").to.be.oneOf(["rgb(255, 0, 0) rgb(0, 0, 255)", "unsupported"]);
+  expect(readScrollbarColor(base) === null).to.equal(!CSS.supports("scrollbar-color", "red blue"));
   expect(computed.scrollbarGutter).to.equal("stable");
 });
 

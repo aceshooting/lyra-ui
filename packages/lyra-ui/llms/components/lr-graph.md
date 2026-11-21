@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** `@aceshooting/lyra-3d`, `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
 - **Themeable via** 41 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `focus-halo`: `--lr-graph-focus-halo-color`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

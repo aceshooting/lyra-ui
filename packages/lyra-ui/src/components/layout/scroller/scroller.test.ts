@@ -9,7 +9,7 @@ import {
   resetMouse,
   sendMouse,
 } from "../../../../test/wtr-mouse.js";
-import { readScrollbarWidth } from "../../../../test/scrollbar-reporting.js";
+import { readScrollbarColor, readScrollbarWidth } from "../../../../test/scrollbar-reporting.js";
 
 /** `lr-scroll` and the edge recompute are coalesced through one `requestAnimationFrame` tick, so a
  *  synthetic `scroll` dispatch settles a frame later rather than synchronously. */
@@ -230,6 +230,23 @@ describe("<lr-scroller>", () => {
     await el.updateComplete;
     const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
     expect(readScrollbarWidth(viewport, '[part="viewport"]')).to.equal("thin");
+  });
+
+  it("reads the theme-level --lr-theme-scrollbar-color hook on the viewport, defaulting to auto", async () => {
+    const wrapper = await fixture(html`
+      <div><lr-scroller label="Items"><span>Content</span></lr-scroller></div>
+    `) as HTMLElement;
+    const el = wrapper.querySelector("lr-scroller") as LyraScroller;
+    await el.updateComplete;
+    const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
+    const resting = readScrollbarColor(viewport);
+    if (resting === null) {
+      expect(CSS.supports("scrollbar-color", "red blue")).to.equal(false);
+      return;
+    }
+    expect(resting).to.equal("auto");
+    wrapper.style.setProperty("--lr-theme-scrollbar-color", "rgb(255, 0, 0) rgb(0, 0, 255)");
+    expect(readScrollbarColor(viewport)).to.equal("rgb(255, 0, 0) rgb(0, 0, 255)");
   });
 
   it("keeps controls and edge cues inert until the first trustworthy measurement", async () => {

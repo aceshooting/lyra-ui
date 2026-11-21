@@ -167,3 +167,12 @@ export function readScrollbarWidth(partEl: Element, selector: string): string {
     `readScrollbarWidth: ${varRef.property} is unset and ${JSON.stringify(selector)}'s declaration has no CSS fallback`
   );
 }
+
+/**
+ * The computed `scrollbar-color` of `element`, or `null` on an engine that does not implement the
+ * property (where the declaration is dropped and there is no rendered value to assert).
+ */
+export function readScrollbarColor(element: Element): string | null {
+  if (!CSS.supports('scrollbar-color', 'red blue')) return null;
+  return getComputedStyle(element).getPropertyValue('scrollbar-color').trim();
+}

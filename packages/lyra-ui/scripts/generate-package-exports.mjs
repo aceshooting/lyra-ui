@@ -180,6 +180,7 @@ export const CURATED_UTILITY_MODULES = Object.freeze([
   'src/utilities/layered-layout.ts',
   'src/utilities/lyra-element.ts',
   'src/utilities/overlay-manager.ts',
+  'src/utilities/plain-click.ts',
   'src/utilities/positioner.ts',
   'src/utilities/prefix.ts',
   'src/utilities/scroll-lock.ts',

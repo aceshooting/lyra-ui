@@ -1202,19 +1202,21 @@ See the composition guide for the controlled picker and preference wiring.
 The four separate topbar controls—gemstone, mode, design, language—stay square `2.75rem` targets
 (44px at a 16px root), with localized names and tooltips. Use gemstone, sun/moon and horizontal-slider
 icons, and a country flag for language. Dense gemstone options do not reduce
-those launcher targets. Size icon launchers directly and keep their slotted glyphs bounded:
+those launcher targets. Size icon launchers through their tokens and keep their glyphs bounded:
 
 ```css
-.appearance-launcher { --lr-icon-button-size: 2.75rem; }
-.appearance-launcher::part(button) { inline-size: 2.75rem; block-size: 2.75rem; }
-.appearance-launcher > svg,
-.appearance-launcher > lr-icon { inline-size: 1.125rem; block-size: 1.125rem; }
+.appearance-launcher { --lr-icon-button-size: 2.75rem; --lr-icon-size: 1.125rem; }
+.appearance-launcher > svg { inline-size: 1.125rem; block-size: 1.125rem; }
 ```
 
-Apply `appearance-launcher` to each `lr-icon-button`, including buttons slotted through a popover.
+`--lr-icon-button-size` floors both axes of the button, so an icon-only launcher is already a
+square of that size; a `::part(button)` size rule adds nothing. `--lr-icon-size` sizes both a named
+`lr-icon` and a slotted `lr-icon`; only a raw slotted `<svg>` needs its own size. Apply
+`appearance-launcher` to each `lr-icon-button`, including buttons slotted through a popover.
 Keep the mode action separate from the design fields. Set the locale picker's
-`--lr-locale-picker-trigger-height: 2.75rem` and
-use its public flag-only trigger with readable menu entries:
+`--lr-locale-picker-trigger-height: 2.75rem`; its flag-only trigger is then a square of that height,
+so it needs no `::part(trigger)` rule either. Use that public flag-only trigger with readable menu
+entries:
 
 ```ts
 import '@aceshooting/lyra-ui/components/lr-locale-picker.js';
@@ -2022,6 +2024,22 @@ still wins over the built-in light or dark default.
 Each component host also keeps `:host([hidden]) { display: none !important; }` and an inherited
 `box-sizing: border-box` reset.
 
+**Prefer tokens over parts.** Before writing a `::part()` rule, check the component's CSS custom
+properties: its reference page lists them beside its parts, and most geometry and paint already has
+one, for example `--lr-icon-button-size` and `--lr-icon-button-padding-inline` for an icon button,
+`--lr-button-padding-*`, `--lr-button-min-height` and `--lr-button-font-size` for a button, or the
+`--lr-code-block-padding` and `--lr-code-block-radius` for a code block. A token survives internal
+restructuring, follows the component's own state rules (hover, pressed, disabled), and reaches nested
+compositions; a part rule does none of these. Reach for `::part()` only for a declaration no token
+covers.
+
+**Scrollbars.** Three opt-in theme inputs restyle the library's internal scroll containers at once:
+`--lr-theme-scrollbar-width` (`auto`, `thin` or `none`), `--lr-theme-scrollbar-gutter` (`auto` or
+`stable`) and `--lr-theme-scrollbar-color` (a thumb and a track color, for example
+`var(--lr-color-border-strong) transparent`). Each defaults to the container's own value (`auto` for
+color) and inherits, so set it on `:root` for the whole application or on any ancestor for one
+region. Engines without `scrollbar-color` support ignore the color input.
+
 ### Style runtime — @aceshooting/lyra-ui/theme.js
 
 The standalone style runtime has no Lit or component dependency and does not touch the document or storage when imported. It stores the selected style under localStorage['lyra-theme'], applies it to the document root, and announces changes through lr-style-change.
@@ -2048,13 +2066,27 @@ resetLyraStyle(["look"]); // reset only the look axis
 setLyraStyle({ mode: "unset", accent: null, accentBackground: null, overrides: null });
 ~~~
 
-setLyraStyle() accepts independent choices for look, surface, density, mode, accent, accentBackground, and overrides. Omitted axes keep their current selection. Null restores the built-in value for look, surface, density and mode; `accent: null` explicitly clears the accent, and null clears accentBackground or overrides. `resetLyraStyle()` restores Shadcn/Glass/Emerald/System/comfortable; a field list resets only those fields. The returned LyraStyle snapshot includes the selected values, a resolved mode when the choice is system, and lookForm to distinguish a stylesheet look from a runtime look.
+setLyraStyle() accepts independent choices for look, surface, density, mode, accent, accentBackground, overrides, and surfaceOpacity (a 0–100 Glass opacity percentage; see Glass surfaces). Omitted axes keep their current selection. Null restores the built-in value for look, surface, density and mode; `accent: null` explicitly clears the accent, and null clears accentBackground or overrides. `resetLyraStyle()` restores Shadcn/Glass/Emerald/System/comfortable; a field list resets only those fields. The returned LyraStyle snapshot includes the selected values, a resolved mode when the choice is system, and lookForm to distinguish a stylesheet look from a runtime look.
 
 mode is light, dark, system, or unset. Explicit modes set both data-lr-theme and data-theme; system follows the operating system and updates both attributes when it changes; unset removes Lyra's mode attributes. The lr-style-change event carries { style, changed }, where changed lists the affected fields. Applications can listen to this one event for document style changes.
 
 accent accepts one of Lyra's named palettes or an absolute CSS color. A custom color is shorthand for a brand color; an object can set colors for brand, success, warning, danger, and neutral independently. Each role can use a { light, dark } pair. Lyra derives quiet, normal, and loud fill, border, and on-color ramps. Foregrounds meet 4.5:1 contrast against their fills; normal and loud borders and the brand focus color meet 3:1 against the selected reference surface. Invalid colors fail closed.
 
 accentBackground is an absolute CSS color used as the accent ramps' reference surface. surface is a separate visual treatment: solid or glass. density selects compact, comfortable, or touch. These axes remain independent, so changing the look does not reset mode, accent, surface, or density.
+
+`LYRA_LOOKS` lists the built-in looks for an appearance picker, in display order, as frozen
+`{ id, name, optional, stylesheet }` entries: `name` is the look's untranslated proper name,
+`optional` is true when `theme.css` alone does not carry the look, and `stylesheet` is its standalone
+`looks/<id>.css` sheet (null for `lyra`, which `theme-core.css` carries). Offer an application look by
+appending its own entry:
+
+```js
+import { LYRA_LOOKS, setLyraStyle } from '@aceshooting/lyra-ui/theme.js';
+
+const looks = [...LYRA_LOOKS, { id: 'brand', name: 'Brand', optional: true, stylesheet: null }];
+select.options = looks.map(({ id, name }) => ({ value: id, label: name }));
+select.addEventListener('change', () => setLyraStyle({ look: select.value }));
+```
 
 A LyraLook is a named token definition. Define an application look with defineLyraLook({ id, tokens }), then pass it as the look choice. A look supplies --lr-theme-* inputs; overrides applies an independent map of those inputs to the document root. Both accept CSS strings or per-mode { light, dark } values. Overrides replace the previous map wholesale; compose them with object spread. Values are validated, trimmed, and deep-frozen. Invalid entries are ignored, and maps are limited to 512 entries.
 
@@ -2249,6 +2281,34 @@ scope, so they are worth not searching the catalog for:
   as ordinary reflected properties, so binding is a one-way write from your route state plus a click
   handler that calls your router. Wire it once in your shell component; there is no Lyra-specific
   pattern to learn.
+
+  `href`-bearing components (`lr-button`, `lr-icon-button`, `lr-card`, `lr-menu-item`,
+  `lr-breadcrumb-item`, `lr-app-rail-item`) and anchors rendered in `lr-table` cells render real
+  links, so ordinary navigation, a new tab, and middle-click work without script. A single-page
+  application intercepts only the plain clicks: `isPlainPrimaryClick(event)` from
+  `@aceshooting/lyra-ui/utilities/plain-click.js` is true for an unhandled primary-button click with no
+  Ctrl, Meta, Shift or Alt key held. One delegated listener covers every component, because the click
+  composes out of the shadow root and the host keeps its `href`:
+
+  ```js
+  import { isPlainPrimaryClick } from '@aceshooting/lyra-ui/utilities/plain-click.js';
+
+  document.addEventListener('click', (event) => {
+    if (!isPlainPrimaryClick(event)) return;
+    const link = event.composedPath().find(
+      (node) => node instanceof Element && node.hasAttribute('href') && !node.hasAttribute('download'),
+    );
+    if (!link || (link.getAttribute('target') ?? '_self') !== '_self') return;
+    const url = new URL(link.getAttribute('href'), location.href);
+    if (url.origin !== location.origin) return;
+    event.preventDefault();
+    router.navigate(url.pathname + url.search + url.hash);
+  });
+  ```
+
+  The first match in the composed path is the innermost element, so a link inside a card row wins
+  over the card. A bubble-phase listener on the document runs after component handlers, so a click a
+  component already handled arrives with `defaultPrevented` set and is left alone.
 - **Data fetching, caching, and state management.** Components take data as properties and emit
   events; they never fetch on your behalf, except the documented viewers/`src`-taking components,
   which are explicit about it.
@@ -2293,6 +2353,7 @@ the first connected Lyra element would otherwise adopt, available before any com
 | Group                       | Exact classes                                                                                                                                                     |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Display and composition     | `lr-block`, `lr-inline-block`, `lr-flex`, `lr-inline-flex`, `lr-grid`, `lr-flow-root`, `lr-stack`, `lr-cluster`, `lr-grid-auto`                                   |
+| Static 12-column grid       | `lr-grid-12`, `lr-span-1` – `lr-span-12`, `lr-row-span-2` – `lr-row-span-4`                                                                                         |
 | Flex direction and wrapping | `lr-row`, `lr-column`, `lr-wrap`, `lr-nowrap`, `lr-grow`, `lr-grow-0`, `lr-shrink`, `lr-shrink-0`                                                                 |
 | Item alignment              | `lr-items-start`, `lr-items-center`, `lr-items-end`, `lr-items-stretch`, `lr-items-baseline`, `lr-self-start`, `lr-self-center`, `lr-self-end`, `lr-self-stretch` |
 | Distribution                | `lr-justify-start`, `lr-justify-center`, `lr-justify-end`, `lr-justify-between`, `lr-justify-around`                                                              |
@@ -2305,6 +2366,23 @@ the first connected Lyra element would otherwise adopt, available before any com
 | Typography                  | `lr-typography`, `lr-not-typography`, `lr-heading-1`, `lr-heading-2`, `lr-heading-3`, `lr-heading-4`, `lr-inline-code`                                           |
 | Visibility and focus        | `lr-visually-hidden`, `lr-visually-hidden-focusable`, `lr-fouce-hidden`, `lr-hidden`                                                                              |
 | Page allocation             | `lr-page-mobile-only`, `lr-page-desktop-only`                                                                                                                     |
+
+`lr-grid-12` lays its direct children on 12 equal tracks for static tile dashboards; use
+`lr-dashboard-grid` when users rearrange or resize tiles. A child with `lr-span-n` spans n tracks
+and `lr-row-span-n` spans n rows. The grid is its own inline-size container and responds to its
+allocated width, not the viewport: below 56rem spans count on a 6-column grid (`lr-span-3` takes half
+the row, `lr-span-6` and wider the full row, an unspanned child one sixth), and below 32rem every
+child takes the full row and a single row track. Container query conditions cannot read custom
+properties, so these two widths are fixed. Source order is reading order at every width.
+
+```html
+<section class="lr-grid-12">
+  <lr-card class="lr-span-8 lr-row-span-2">Revenue</lr-card>
+  <lr-card class="lr-span-4">Orders</lr-card>
+  <lr-card class="lr-span-4">Refunds</lr-card>
+  <lr-card class="lr-span-12">Recent activity</lr-card>
+</section>
+```
 
 `lr-fouce-hidden` hides only an opted-in custom element while it matches `:not(:defined)`, then
 reveals it automatically after registration. `lr-visually-hidden-focusable` becomes visible on
@@ -2514,7 +2592,8 @@ and opacity tokens first. These additional hooks customize only the light-DOM bu
 
 | Hook                                      | Default/fallback and use                                                     |
 | ----------------------------------------- | ---------------------------------------------------------------------------- |
-| `--lr-layout-gap`                         | `--lr-space-m`; default gap for `lr-stack`, `lr-cluster`, and `lr-grid-auto` |
+| `--lr-layout-gap`                         | `--lr-space-m`; default gap for `lr-stack`, `lr-cluster`, `lr-grid-auto` and `lr-grid-12` |
+| `--lr-grid-12-intrinsic-inline-size`      | `--lr-size-20rem`; placeholder inline size of an `lr-grid-12` container that sizes to its content, such as a flex item without a set width |
 | `--lr-grid-min-inline-size`               | `--lr-size-14rem`; minimum auto-grid item inline size                        |
 | `--lr-content-max-inline-size`            | `--lr-size-48rem`; `lr-center` content measure                               |
 | `--lr-prose-max-inline-size`              | `65ch`; `lr-prose` and `lr-max-inline-prose` measure                         |
@@ -4064,6 +4143,12 @@ number }`.
 ResolveCssLengthOptions): number | undefined` and `ResolveCssLengthOptions { readonly host?:
 Element; readonly percentBase?: number; readonly viewportBasis?: Window | Readonly<{
 inlineSize: number; blockSize: number }> }`.
+- **`plain-click` → `isPlainPrimaryClick(event)`** — true only for an unhandled primary-button
+  click with no Ctrl, Meta, Shift or Alt key: the clicks a single-page application routes on the
+  client, leaving new-tab, download and already-handled clicks to the browser. Side-effect free; see
+  the client-side routing recipe in the forms and accessibility guide.
+  Its exact signatures are `isPlainPrimaryClick(event: LyraPlainClickInput): boolean` and
+  `LyraPlainClickInput = Pick<MouseEvent, 'button' | 'ctrlKey' | 'metaKey' | 'shiftKey' | 'altKey' | 'defaultPrevented'>`.
 - **`format` → `formatNumber(value, locale?, options?)`, `formatDate(value, locale?, options?)`,
   `formatRelativeTime(value, locale?, options?)`, and `formatBytes(value, locale?, options?)`** —
   pure, string-returning wrappers over the same memoized `Intl` formatter cache and locale
@@ -6604,7 +6689,7 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraThemeTokenValue = string | { light?: string | null; dark?: string | null }`
   `LyraThemeTokens = Readonly<Record<LyraThemeTokenName, LyraThemeTokenValue>>`
   `LyraStyleAxis = 'look' | 'surface' | 'density' | 'mode' | 'accent'`
-  `LyraStyleField = LyraStyleAxis | 'accentBackground' | 'overrides'`
+  `LyraStyleField = LyraStyleAxis | 'accentBackground' | 'overrides' | 'surfaceOpacity'`
   `LyraLookId = 'lyra' | 'shadcn' | 'material' | (string & {})`
   `LyraSurface = 'solid' | 'glass'`
   `LyraDensity = 'compact' | 'comfortable' | 'touch'`
@@ -6616,6 +6701,13 @@ These named interfaces and helper signatures are available to typed integrations
   `defineLyraLook<const Look extends LyraLook>(look: Look): Readonly<Look>`
   `getLyraStyle(): Readonly<LyraStyle>`
   `lyraThemeBootstrap: string`
+  `LYRA_LOOKS: readonly LyraLookEntry[]`
+  `LyraLookEntry {
+  readonly id: LyraLookId;
+  readonly name: string;
+  readonly optional: boolean;
+  readonly stylesheet: string | null;
+}`
   `LyraLook {
   readonly id: LyraLookId;
   readonly tokens: LyraThemeTokens;
@@ -6633,6 +6725,7 @@ These named interfaces and helper signatures are available to typed integrations
   accent?: LyraAccent;
   accentBackground?: LyraAccentBackground;
   overrides?: LyraThemeTokens | null;
+  surfaceOpacity?: number | null;
 }`
   `LyraStyle {
   readonly look: LyraLookId;
@@ -6644,6 +6737,7 @@ These named interfaces and helper signatures are available to typed integrations
   readonly accentName: LyraAccentName | null;
   readonly accentBackground: LyraAccentBackground;
   readonly overrides?: LyraThemeTokens;
+  readonly surfaceOpacity: number;
   readonly resolvedMode: 'light' | 'dark' | null;
 }`
   `LyraStyleScopeChoices {
@@ -6654,6 +6748,7 @@ These named interfaces and helper signatures are available to typed integrations
   accent?: LyraAccent;
   accentBackground?: LyraAccentBackground;
   overrides?: LyraThemeTokens;
+  surfaceOpacity?: number;
 }`
   `parseLyraStyleRecord(value: unknown): Readonly<LyraStyle>`
   `resetLyraStyle(fields?: readonly LyraStyleField[]): Readonly<LyraStyle>`
@@ -7492,21 +7587,20 @@ controls use their solid border colors while preserving the enclosing edge again
 Filled accent interiors retain qualification. Native descendants retain inherited public color
 aliases. Custom translucent content fills require the author to choose suitable control borders.
 A design panel can offer a Glass opacity range from 0–100%, shown when the selected surface is
-Glass. Start and reset it at 60%; convert the displayed percentage to the public token's 0–1 range.
-Apply this CSS input independently of look overrides: `setLyraStyle()` does not accept surface
-inputs in its `overrides` allowlist. Persist the percentage in the application's own settings and
-apply it before first paint, including after restoring those settings. Reset the app setting to 60
-and reapply it. Native `.lr-surface-chrome` wrappers and eligible component chrome consume the
-same input:
+Glass. `setLyraStyle({ surfaceOpacity })` takes that percentage directly: it clamps to 0–100, writes
+`--lr-theme-surface-opacity` as 0–1 on the document root, persists it with the other style choices,
+reports it as `getLyraStyle().surfaceOpacity` and in `lr-style-change` (`changed` includes
+`'surfaceOpacity'`), and `lyraThemeBootstrap` restores it before first paint. The default, 60, writes
+nothing and leaves the stylesheet value in place; `null` or a non-finite value restores it, as does
+`resetLyraStyle(['surfaceOpacity'])`. `applyLyraStyleScope(element, { surfaceOpacity })` sets it for one
+subtree. Native `.lr-surface-chrome` wrappers and eligible component chrome consume the same input:
 
 ```js
-function applyGlassOpacity(percent) {
-  if (!Number.isFinite(percent)) return;
-  const opacity = Math.min(100, Math.max(0, percent)) / 100;
-  document.documentElement.style.setProperty('--lr-theme-surface-opacity', String(opacity));
-}
+import { getLyraStyle, resetLyraStyle, setLyraStyle } from '@aceshooting/lyra-ui/theme.js';
 
-applyGlassOpacity(60); // Default and reset value; apply saved app settings before first paint.
+slider.value = getLyraStyle().surfaceOpacity; // 60 until the user picks another value
+slider.addEventListener('input', () => setLyraStyle({ surfaceOpacity: Number(slider.value) }));
+resetButton.addEventListener('click', () => resetLyraStyle(['surfaceOpacity']));
 ```
 
 Scrolling rail, popup, modal-panel and selection-toolbar surfaces keep a stationary decorative blur layer;

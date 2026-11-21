@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 6 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-thinking-panel-bg`; `body`: `--lr-thinking-panel-body-hover-outline-color`, `--lr-thinking-panel-body-hover-outline-offset`, `--lr-thinking-panel-body-hover-outline-style`, `--lr-thinking-panel-body-hover-outline-width`, `--lr-thinking-panel-compact-body-font-size`, `--lr-thinking-panel-compact-body-padding`, `--lr-thinking-panel-max-block-size`; `header`: `--lr-thinking-panel-compact-header-font-size`, `--lr-thinking-panel-compact-header-padding`, `--lr-thinking-panel-header-hover-bg`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

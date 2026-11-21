@@ -474,6 +474,8 @@ export interface LyraVirtualListEventMap {
  *   to retune every internal scroll container in the library at once.
  * @cssprop [--lr-theme-scrollbar-gutter=auto] - Opt-in theme-level scrollbar gutter honored by the
  *   `base` scroll viewport; see `--lr-theme-scrollbar-width`.
+ * @cssprop [--lr-theme-scrollbar-color=auto] - Opt-in theme-level `scrollbar-color` (thumb then
+ *   track) honored by `base` scroll viewport; see `--lr-theme-scrollbar-width`.
  * @status stable
  * @since 4.0.0
  */

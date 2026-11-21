@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 19 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `scroll-container`: `--lr-carousel-scroll-container-hover-outline-color`, `--lr-carousel-scroll-container-hover-outline-offset`, `--lr-carousel-scroll-container-hover-outline-style`, `--lr-carousel-scroll-container-hover-outline-width`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

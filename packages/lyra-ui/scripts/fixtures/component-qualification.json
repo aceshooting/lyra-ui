@@ -12113,7 +12113,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.class.ts",
-              "line": 318,
+              "line": 320,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -12326,7 +12326,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.class.ts",
-              "line": 318,
+              "line": 320,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

@@ -1798,6 +1798,7 @@
     "./utilities/layered-layout.js": "./dist/utilities/layered-layout.js",
     "./utilities/lyra-element.js": "./dist/utilities/lyra-element.js",
     "./utilities/overlay-manager.js": "./dist/utilities/overlay-manager.js",
+    "./utilities/plain-click.js": "./dist/utilities/plain-click.js",
     "./utilities/positioner.js": "./dist/utilities/positioner.js",
     "./utilities/prefix.js": "./dist/utilities/prefix.js",
     "./utilities/scoped-registry-loader.js": "./dist/utilities/scoped-registry-loader.js",

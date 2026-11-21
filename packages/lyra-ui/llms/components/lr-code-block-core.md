@@ -9,7 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 16 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `body`: `--lr-code-block-max-height`, `--lr-theme-scrollbar-color`, `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-width`; `code`: `--lr-code-block-font`; `header`: `--lr-code-block-language-bg`; `language`: `--lr-code-block-language-bg`, `--lr-code-block-language-color`; `pre`: `--lr-code-block-font`, `--lr-code-block-tab-size`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -129,7 +130,7 @@ identical set to `<lr-code-block>`.
 `--lr-code-block-highlighted-line-bg` (default `var(--lr-color-warning-quiet)`),
 `--lr-code-block-language-bg` (default `var(--lr-color-brand-quiet)`), and
 `--lr-code-block-language-color` (default `var(--lr-color-brand)`), plus the same shared
-tokens, including the `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks `body` honors —
+tokens, including the `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color` hooks `body` honors —
 this component reuses `<lr-code-block>`'s stylesheet, so both share exactly the same scroll
 container. The last five are inline `var()` fallbacks at the point of use rather than `:host`
 declarations, so a page-, container-, or theme-level value reaches them; see `<lr-code-block>` above

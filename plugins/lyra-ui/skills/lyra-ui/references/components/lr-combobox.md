@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 35 parts, 41 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `combobox`: `--lr-combobox-gap`, `--lr-combobox-radius`; `form-control-label`: `--lr-form-control-required-content`; `option-badge`: `--lr-combobox-option-badge-bg`
 - **Documented with** `lr-option` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 

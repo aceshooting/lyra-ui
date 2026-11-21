@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** `dompurify` — see `llms/peers.md`
 - **Themeable via** 17 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `region-highlight`: `--lr-svg-viewer-active-border`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

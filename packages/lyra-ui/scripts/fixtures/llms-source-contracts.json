@@ -14302,7 +14302,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "445a4144f3b621b109d3",
+      "fingerprint": "7e5eb3fe37095d339083",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15984,7 +15984,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "6e2724c26170abdfd6b8",
+      "fingerprint": "23bca6907a60badcd1e7",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16000,7 +16000,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "0c409cab1016483cd83a",
+      "fingerprint": "f04b2193d76690b89496",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16560,7 +16560,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "76a0916b1b5737b2675d",
+      "fingerprint": "8b67e4115fcb314c12ab",
       "routes": [
         "src/vue.ts"
       ],
@@ -16952,7 +16952,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "25804d9e51fe8ac7cd5a",
+      "fingerprint": "66baed8a30d67f3660c7",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -17281,7 +17281,7 @@
       "module": "src/theme/theme.ts",
       "exportName": "LyraStyle",
       "kind": "interface",
-      "fingerprint": "b7a5d46b110726ab6971",
+      "fingerprint": "6ecd26cb034a52a715b3",
       "routes": [
         "src/theme/theme.ts"
       ],
@@ -17297,7 +17297,7 @@
       "module": "src/theme/theme.ts",
       "exportName": "LyraStyleChangeDetail",
       "kind": "interface",
-      "fingerprint": "6ba5e89b4eeefcdbd047",
+      "fingerprint": "63dfdb5f822279353f1f",
       "routes": [
         "src/theme/theme.ts"
       ],
@@ -17313,7 +17313,7 @@
       "module": "src/theme/theme.ts",
       "exportName": "LyraStyleChoices",
       "kind": "interface",
-      "fingerprint": "fb345b42c7e9b617b1b5",
+      "fingerprint": "1a5283190b58c53178e8",
       "routes": [
         "src/theme/theme.ts"
       ],
@@ -17329,7 +17329,7 @@
       "module": "src/theme/theme.ts",
       "exportName": "LyraStyleScopeChoices",
       "kind": "interface",
-      "fingerprint": "d145a97ffda34e189968",
+      "fingerprint": "90dd08d07aa839acef4b",
       "routes": [
         "src/theme/theme.ts"
       ],
@@ -17345,7 +17345,7 @@
       "module": "src/theme/theme.ts",
       "exportName": "applyLyraStyleScope",
       "kind": "function",
-      "fingerprint": "608ca3f5f8e405948341",
+      "fingerprint": "6a72d56b032d5846e6a7",
       "routes": [
         "src/theme/theme.ts"
       ],
@@ -17377,7 +17377,7 @@
       "module": "src/theme/theme.ts",
       "exportName": "getLyraStyle",
       "kind": "function",
-      "fingerprint": "d331f4f0083bdaab9f3d",
+      "fingerprint": "282e64ed3343dbdcb400",
       "routes": [
         "src/theme/theme.ts"
       ],
@@ -17393,7 +17393,7 @@
       "module": "src/theme/theme.ts",
       "exportName": "lyraStyleAttributes",
       "kind": "function",
-      "fingerprint": "5f2d56c436988dc4bf46",
+      "fingerprint": "e9a4272382ae89ebe86c",
       "routes": [
         "src/theme/theme.ts"
       ],
@@ -17409,7 +17409,7 @@
       "module": "src/theme/theme.ts",
       "exportName": "parseLyraStyleRecord",
       "kind": "function",
-      "fingerprint": "e4b3f4ab4c8b2a4fb254",
+      "fingerprint": "36b8bc05ef95c3f0372f",
       "routes": [
         "src/theme/theme.ts"
       ],
@@ -17425,7 +17425,7 @@
       "module": "src/theme/theme.ts",
       "exportName": "resetLyraStyle",
       "kind": "function",
-      "fingerprint": "d0e69e08a0573ca6662c",
+      "fingerprint": "2a2c4f612e7675b36efb",
       "routes": [
         "src/theme/theme.ts"
       ],
@@ -17441,7 +17441,7 @@
       "module": "src/theme/theme.ts",
       "exportName": "setLyraStyle",
       "kind": "function",
-      "fingerprint": "72880251f6a7ccafa842",
+      "fingerprint": "bdba714a5719948c4641",
       "routes": [
         "src/theme/theme.ts"
       ],
@@ -18294,7 +18294,7 @@
       "module": "src/theme/theme.ts",
       "exportName": "startLyraStyle",
       "kind": "function",
-      "fingerprint": "21d303e65048a3a646d9",
+      "fingerprint": "2bad03a81b1b4984c431",
       "routes": [
         "src/theme/theme.ts"
       ],
@@ -22782,6 +22782,39 @@
         "kind": "utility",
         "name": "components-overlays-rating-rating-contracts",
         "declaration": "LyraRatingChangeRequestDetail"
+      }
+    },
+    {
+      "module": "src/theme/theme.ts",
+      "exportName": "LyraLookEntry",
+      "kind": "interface",
+      "fingerprint": "3a6f38704a0becdfe18f",
+      "routes": [
+        "src/theme/theme.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "theme-theme-contracts",
+        "declaration": "LyraLookEntry"
+      }
+    },
+    {
+      "module": "src/utilities/plain-click.ts",
+      "exportName": "isPlainPrimaryClick",
+      "kind": "function",
+      "fingerprint": "9eaefe8ded059900ac2a",
+      "routes": [
+        "src/utilities/index.ts",
+        "src/utilities/plain-click.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "plain-click",
+        "declaration": "isPlainPrimaryClick"
       }
     }
   ],

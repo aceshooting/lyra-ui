@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 18 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `cue`: `--lr-av-player-cue-hover-bg`, `--lr-av-player-cue-current-bg`, `--lr-av-player-cue-match-color`, `--lr-av-player-cue-active-match-color`; `rate-select`: `--lr-av-player-rate-select-hover-bg`, `--lr-av-player-rate-select-active-bg`; `timeline`: `--lr-av-player-timeline-hover-border-color`; `timeline-marker`: `--lr-av-player-marker-active-color`, `--lr-av-player-marker-bg`, `--lr-av-player-marker-success-bg`, `--lr-av-player-marker-warning-bg`, `--lr-av-player-marker-danger-bg`, `--lr-av-player-marker-neutral-bg`, `--lr-av-player-marker-fill`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

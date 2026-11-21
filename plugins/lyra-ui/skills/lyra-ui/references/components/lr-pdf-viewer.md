@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** `pdfjs-dist` — see `llms/peers.md`
 - **Themeable via** 20 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `text-span`: `--lr-pdf-viewer-text-selection-bg`; `toolbar`: `--lr-pdf-viewer-toolbar-bg`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

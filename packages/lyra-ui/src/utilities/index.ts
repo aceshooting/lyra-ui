@@ -104,6 +104,8 @@ export type {
 export { allDefined } from './defined.js';
 export type { AllDefinedOptions, LyraDefinitionRoot } from './defined.js';
 export { resolveCssLength } from './css-length.js';
+export { isPlainPrimaryClick } from './plain-click.js';
+export type { LyraPlainClickInput } from './plain-click.js';
 export type { ResolveCssLengthOptions } from './css-length.js';
 export { formatBytes, formatDate, formatNumber, formatRelativeTime } from './format.js';
 export type {

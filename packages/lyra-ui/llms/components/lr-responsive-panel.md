@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 6 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `backdrop`: `--lr-responsive-panel-overlay-color`; `panel`: `--lr-responsive-panel-bg`, `--lr-responsive-panel-overlay-panel-bg`, `--lr-responsive-panel-overlay-panel-shadow`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

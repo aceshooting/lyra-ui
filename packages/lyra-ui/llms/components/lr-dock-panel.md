@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `collapse-toggle`: `--lr-dock-panel-collapse-toggle-hover-bg`, `--lr-dock-panel-collapse-toggle-hover-color`, `--lr-dock-panel-handle-hover-color`; `handle`: `--lr-dock-panel-handle-active-color`, `--lr-dock-panel-handle-hover-color`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

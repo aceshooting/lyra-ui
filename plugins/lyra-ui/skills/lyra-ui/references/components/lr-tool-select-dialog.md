@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 26 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `body`: `--lr-tool-select-dialog-body-hover-outline-color`, `--lr-tool-select-dialog-body-hover-outline-offset`, `--lr-tool-select-dialog-body-hover-outline-style`, `--lr-tool-select-dialog-body-hover-outline-width`; `search-input`: `--lr-tool-select-dialog-search-hover-border-color`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

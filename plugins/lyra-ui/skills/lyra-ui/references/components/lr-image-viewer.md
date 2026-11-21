@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** `@aceshooting/lyra-3d` — see `llms/peers.md`
 - **Themeable via** 24 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `annotate-toggle`: `--lr-image-viewer-annotate-active-bg`, `--lr-image-viewer-annotate-active-border`; `annotation-box`: `--lr-image-viewer-annotation-box-border`, `--lr-image-viewer-annotation-box-bg`; `highlight`: `--lr-image-viewer-highlight-active-color`, `--lr-image-viewer-highlight-active-border-width`, `--lr-image-viewer-highlight-active-outline-width`, `--lr-image-viewer-highlight-active-outline-offset`, `--lr-image-viewer-annotation-box-border`, `--lr-image-viewer-highlight-fill`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

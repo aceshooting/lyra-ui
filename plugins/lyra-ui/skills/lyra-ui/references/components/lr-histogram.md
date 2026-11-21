@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
 - **Themeable via** 19 parts, 44 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `canvas`: `--lr-chart-canvas-hover-outline-color`, `--lr-chart-canvas-hover-outline-width`; `legend-swatch`: `--lr-chart-pattern-step`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

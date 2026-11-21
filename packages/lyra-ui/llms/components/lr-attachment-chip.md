@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 12 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-attachment-chip-compact-font-size`, `--lr-attachment-chip-compact-padding`, `--lr-attachment-chip-compact-thumbnail-only-padding`, `--lr-attachment-chip-padding`; `meta`: `--lr-attachment-chip-compact-thumbnail-only-padding`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

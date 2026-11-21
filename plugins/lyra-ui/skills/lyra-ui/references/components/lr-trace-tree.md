@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 23 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `cost`: `--lr-trace-tree-row-active-color`; `detail`: `--lr-trace-tree-row-active-color`; `duration`: `--lr-trace-tree-row-active-color`; `tokens-in`: `--lr-trace-tree-row-active-color`; `tokens-out`: `--lr-trace-tree-row-active-color`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

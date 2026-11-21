@@ -30184,6 +30184,12 @@
             "default": "var(--lr-color-brand)"
           },
           {
+            "name": "--lr-theme-scrollbar-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
             "name": "--lr-theme-scrollbar-gutter",
             "deprecated": null,
             "hasDefault": true,
@@ -30800,6 +30806,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-theme-scrollbar-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
           },
           {
             "name": "--lr-theme-scrollbar-gutter",
@@ -169972,6 +169984,12 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-theme-scrollbar-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
           {
             "name": "--lr-theme-scrollbar-gutter",
             "deprecated": null,

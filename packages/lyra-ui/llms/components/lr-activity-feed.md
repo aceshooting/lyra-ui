@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 18 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-activity-feed-bg`; `entry`: `--lr-activity-feed-compact-entry-padding`; `header`: `--lr-activity-feed-compact-header-padding`; `status-dot`: `--lr-activity-feed-live-status-color`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

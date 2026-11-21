@@ -168,6 +168,8 @@ export interface LyraCodeBlockCoreEventMap extends LyraCodeBlockBaseEventMap {}
  *   reuses its stylesheet).
  * @cssprop [--lr-theme-scrollbar-gutter=auto] - Opt-in theme-level scrollbar gutter honored by
  *   `body`; see `--lr-theme-scrollbar-width`.
+ * @cssprop [--lr-theme-scrollbar-color=auto] - Opt-in theme-level `scrollbar-color` (thumb then
+ *   track) honored by `body`; see `--lr-theme-scrollbar-width`.
  * @status stable
  * @since 4.0.0
  */

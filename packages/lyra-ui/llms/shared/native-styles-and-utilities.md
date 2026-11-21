@@ -38,6 +38,7 @@ the first connected Lyra element would otherwise adopt, available before any com
 | Group                       | Exact classes                                                                                                                                                     |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Display and composition     | `lr-block`, `lr-inline-block`, `lr-flex`, `lr-inline-flex`, `lr-grid`, `lr-flow-root`, `lr-stack`, `lr-cluster`, `lr-grid-auto`                                   |
+| Static 12-column grid       | `lr-grid-12`, `lr-span-1` – `lr-span-12`, `lr-row-span-2` – `lr-row-span-4`                                                                                         |
 | Flex direction and wrapping | `lr-row`, `lr-column`, `lr-wrap`, `lr-nowrap`, `lr-grow`, `lr-grow-0`, `lr-shrink`, `lr-shrink-0`                                                                 |
 | Item alignment              | `lr-items-start`, `lr-items-center`, `lr-items-end`, `lr-items-stretch`, `lr-items-baseline`, `lr-self-start`, `lr-self-center`, `lr-self-end`, `lr-self-stretch` |
 | Distribution                | `lr-justify-start`, `lr-justify-center`, `lr-justify-end`, `lr-justify-between`, `lr-justify-around`                                                              |
@@ -50,6 +51,23 @@ the first connected Lyra element would otherwise adopt, available before any com
 | Typography                  | `lr-typography`, `lr-not-typography`, `lr-heading-1`, `lr-heading-2`, `lr-heading-3`, `lr-heading-4`, `lr-inline-code`                                           |
 | Visibility and focus        | `lr-visually-hidden`, `lr-visually-hidden-focusable`, `lr-fouce-hidden`, `lr-hidden`                                                                              |
 | Page allocation             | `lr-page-mobile-only`, `lr-page-desktop-only`                                                                                                                     |
+
+`lr-grid-12` lays its direct children on 12 equal tracks for static tile dashboards; use
+`lr-dashboard-grid` when users rearrange or resize tiles. A child with `lr-span-n` spans n tracks
+and `lr-row-span-n` spans n rows. The grid is its own inline-size container and responds to its
+allocated width, not the viewport: below 56rem spans count on a 6-column grid (`lr-span-3` takes half
+the row, `lr-span-6` and wider the full row, an unspanned child one sixth), and below 32rem every
+child takes the full row and a single row track. Container query conditions cannot read custom
+properties, so these two widths are fixed. Source order is reading order at every width.
+
+```html
+<section class="lr-grid-12">
+  <lr-card class="lr-span-8 lr-row-span-2">Revenue</lr-card>
+  <lr-card class="lr-span-4">Orders</lr-card>
+  <lr-card class="lr-span-4">Refunds</lr-card>
+  <lr-card class="lr-span-12">Recent activity</lr-card>
+</section>
+```
 
 `lr-fouce-hidden` hides only an opted-in custom element while it matches `:not(:defined)`, then
 reveals it automatically after registration. `lr-visually-hidden-focusable` becomes visible on
@@ -259,7 +277,8 @@ and opacity tokens first. These additional hooks customize only the light-DOM bu
 
 | Hook                                      | Default/fallback and use                                                     |
 | ----------------------------------------- | ---------------------------------------------------------------------------- |
-| `--lr-layout-gap`                         | `--lr-space-m`; default gap for `lr-stack`, `lr-cluster`, and `lr-grid-auto` |
+| `--lr-layout-gap`                         | `--lr-space-m`; default gap for `lr-stack`, `lr-cluster`, `lr-grid-auto` and `lr-grid-12` |
+| `--lr-grid-12-intrinsic-inline-size`      | `--lr-size-20rem`; placeholder inline size of an `lr-grid-12` container that sizes to its content, such as a flex item without a set width |
 | `--lr-grid-min-inline-size`               | `--lr-size-14rem`; minimum auto-grid item inline size                        |
 | `--lr-content-max-inline-size`            | `--lr-size-48rem`; `lr-center` content measure                               |
 | `--lr-prose-max-inline-size`              | `65ch`; `lr-prose` and `lr-max-inline-prose` measure                         |

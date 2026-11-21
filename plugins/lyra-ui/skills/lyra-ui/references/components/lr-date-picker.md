@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 38 parts, 36 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `next`: `--lr-date-picker-nav-hover-bg`; `previous`: `--lr-date-picker-nav-hover-bg`
 - **Documented with** `lr-date-input` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 

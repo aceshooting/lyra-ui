@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** `@aceshooting/lyra-3d` — see `llms/peers.md`
 - **Themeable via** 17 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `plot`: `--lr-embedding-explorer-height`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

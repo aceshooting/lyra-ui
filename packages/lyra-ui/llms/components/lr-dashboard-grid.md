@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 5 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `resize-handle`: `--lr-dashboard-grid-resize-handle-color`, `--lr-dashboard-grid-resize-handle-hit-area`, `--lr-dashboard-grid-resize-handle-hover-bg`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

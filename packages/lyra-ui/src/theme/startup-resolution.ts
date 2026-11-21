@@ -3,7 +3,7 @@ import type { LyraThemeTokens, LyraThemeTokenValue } from '../internal/theme-tok
 /** @internal Pure saved-field resolution; serialized unchanged into the self-contained prepaint script. */
 export function resolveStyleStartup(
   saved: unknown,
-  defaults: { readonly look: string; readonly surface: string; readonly density: string; readonly mode: string; readonly accent: string },
+  defaults: { readonly look: string; readonly surface: string; readonly density: string; readonly mode: string; readonly accent: string; readonly surfaceOpacity: number },
   normalizeMap: (value: unknown) => LyraThemeTokens | null,
   color: (value: unknown) => string | undefined,
   allowed: (name: string, value: LyraThemeTokenValue) => boolean,
@@ -45,6 +45,7 @@ export function resolveStyleStartup(
   const result: Record<string, unknown> = {
     version: 2, look: defaults.look, treatment: defaults.surface, density: defaults.density,
     mode: defaults.mode, accent: gemstones[defaults.accent], accentName: defaults.accent, surface: null,
+    surfaceOpacity: defaults.surfaceOpacity,
   };
 
   const version = field(saved, 'version');
@@ -70,6 +71,9 @@ export function resolveStyleStartup(
     delete result['accentName'];
     result['accent'] = savedAccent;
   }
+  // A finite saved Glass opacity percentage clamps to 0-100; anything else keeps the default.
+  const opacity = field(saved, 'surfaceOpacity');
+  if (typeof opacity === 'number' && Number.isFinite(opacity)) result['surfaceOpacity'] = Math.min(100, Math.max(0, opacity));
   const background = pair(field(saved, 'surface'));
   if (background !== undefined) result['surface'] = background;
   const overrides = Object.entries(map(field(saved, 'overrides')) ?? {}).filter(([name, input]) => allowed(name, input));

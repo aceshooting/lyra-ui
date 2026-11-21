@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 9 parts, 36 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-button-gap`, `--lr-button-outlined-fill`, `--lr-button-padding-block`, `--lr-button-shadow`; `end`: `--lr-button-label-grow`; `label`: `--lr-button-label-grow`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

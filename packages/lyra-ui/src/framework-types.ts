@@ -3042,6 +3042,7 @@ export interface LyraComponentTypeMap {
       | '--lr-code-block-toggle-color'
       | '--lr-code-block-toggle-color-active'
       | '--lr-code-block-toggle-color-hover'
+      | '--lr-theme-scrollbar-color'
       | '--lr-theme-scrollbar-gutter'
       | '--lr-theme-scrollbar-width';
     attributeAliases: {
@@ -3108,6 +3109,7 @@ export interface LyraComponentTypeMap {
       | '--lr-code-block-toggle-color'
       | '--lr-code-block-toggle-color-active'
       | '--lr-code-block-toggle-color-hover'
+      | '--lr-theme-scrollbar-color'
       | '--lr-theme-scrollbar-gutter'
       | '--lr-theme-scrollbar-width';
     attributeAliases: {
@@ -15394,7 +15396,8 @@ export interface LyraComponentTypeMap {
     eventNames:       | 'lr-load-more'
       | 'lr-virtual-scroll'
       | 'lr-visible-range-change';
-    cssNames:       | '--lr-theme-scrollbar-gutter'
+    cssNames:       | '--lr-theme-scrollbar-color'
+      | '--lr-theme-scrollbar-gutter'
       | '--lr-theme-scrollbar-width'
       | '--lr-virtual-list-active-row-background'
       | '--lr-virtual-list-height'

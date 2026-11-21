@@ -14,6 +14,8 @@ import {
   FAMILIES,
   SHARED_TOPICS,
   findDanglingPositionalReferences,
+  indexGzipLabel,
+  partTokenGroups,
   primaryTagOfSection,
   readTagFacts,
   relocateMarkdownLinks,
@@ -1104,3 +1106,37 @@ assert.ok(
   /\| `chart\.js` \|[^\n]*`lr-chart`/.test(peers),
   'lr-chart genuinely imports chart.js and must stay attributed',
 );
+
+// A part's reference line points at the tokens whose descriptions name it, in any spelling.
+assert.deepEqual(
+  partTokenGroups({
+    cssParts: [{ name: 'body' }, { name: 'header' }, { name: 'unused' }],
+    cssProperties: [
+      { name: '--lr-x-max-height', description: 'Scroll cap applied to `body`.' },
+      { name: '--lr-x-badge-bg', description: 'Badge background in `[part="header"]`.' },
+      { name: '--lr-x-header-color', description: 'Color of ::part(header) text.' },
+      { name: '--lr-x-other', description: 'Mentions nobody, not even body.' },
+    ],
+  }),
+  [
+    { part: 'body', tokens: ['--lr-x-max-height'] },
+    { part: 'header', tokens: ['--lr-x-badge-bg', '--lr-x-header-color'] },
+  ],
+);
+assert.match(
+  buildComponentFile(
+    'lr-part-fixture',
+    { tags: ['lr-part-fixture'], text: '## `lr-part-fixture`\n\nFixture.' },
+    new Map([['lr-part-fixture', {
+      family: 'forms', className: 'LyraPartFixture', importPath: '@aceshooting/lyra-ui/components/lr-part-fixture.js',
+      status: 'stable', since: '1.0.0', deprecations: [],
+      cssParts: [{ name: 'body' }], cssProperties: [{ name: '--lr-part-fixture-gap', description: 'Gap inside `body`.' }],
+    }]]),
+    new Map(),
+  ),
+  /^- \*\*Tokens by part\*\* \(prefer these over a `::part\(\)` rule\) `body`: `--lr-part-fixture-gap`$/mu,
+);
+assert.equal(indexGzipLabel({ gzip: { status: 'measured', bytes: 30469 } }), ' · ~30 KiB gzip');
+assert.equal(indexGzipLabel({ gzip: { status: 'measured', bytes: 100 } }), ' · ~1 KiB gzip');
+assert.equal(indexGzipLabel({ gzip: { status: 'skipped' } }), '');
+assert.equal(indexGzipLabel(undefined), '');

@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 7 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `step`: `--lr-stepper-current-font-weight`; `step-check`: `--lr-stepper-check-color`; `step-index`: `--lr-stepper-current-index-bg`, `--lr-stepper-index-bg`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 10 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `viewport`: `--lr-scroller-hover-outline-color`, `--lr-scroller-hover-outline-offset`, `--lr-scroller-hover-outline-style`, `--lr-scroller-hover-outline-width`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -69,9 +70,9 @@ its own four-longhand outline shape, matching `lr-virtual-list`'s: `--lr-scrolle
 `--lr-scroller-hover-outline-color` (default `var(--lr-color-border)`, set to `transparent` to opt
 out entirely), and `--lr-scroller-hover-outline-offset` (default `var(--lr-focus-ring-offset)`).
 Unset, all four resolve to the rule's previous literal paint. The `viewport` part also honors the
-opt-in theme-level `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter` hooks (defaults
-`auto`/`auto`, matching its previous unconditional `scrollbar-width: auto`) — set either on `:root`
-or any ancestor for one declaration to retheme every internal scroll container in the library,
+opt-in theme-level `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color`
+hooks (defaults `auto`/`auto`/`auto`, matching its previous unconditional `scrollbar-width: auto`) — set
+any of them on `:root` or any ancestor for one declaration to retheme every internal scroll container in the library,
 including `lr-table`, `lr-virtual-list`, `lr-code-block`, and `lr-code-editor`.
 
 ```html

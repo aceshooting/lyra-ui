@@ -155,19 +155,21 @@ See the composition guide for the controlled picker and preference wiring.
 The four separate topbar controls—gemstone, mode, design, language—stay square `2.75rem` targets
 (44px at a 16px root), with localized names and tooltips. Use gemstone, sun/moon and horizontal-slider
 icons, and a country flag for language. Dense gemstone options do not reduce
-those launcher targets. Size icon launchers directly and keep their slotted glyphs bounded:
+those launcher targets. Size icon launchers through their tokens and keep their glyphs bounded:
 
 ```css
-.appearance-launcher { --lr-icon-button-size: 2.75rem; }
-.appearance-launcher::part(button) { inline-size: 2.75rem; block-size: 2.75rem; }
-.appearance-launcher > svg,
-.appearance-launcher > lr-icon { inline-size: 1.125rem; block-size: 1.125rem; }
+.appearance-launcher { --lr-icon-button-size: 2.75rem; --lr-icon-size: 1.125rem; }
+.appearance-launcher > svg { inline-size: 1.125rem; block-size: 1.125rem; }
 ```
 
-Apply `appearance-launcher` to each `lr-icon-button`, including buttons slotted through a popover.
+`--lr-icon-button-size` floors both axes of the button, so an icon-only launcher is already a
+square of that size; a `::part(button)` size rule adds nothing. `--lr-icon-size` sizes both a named
+`lr-icon` and a slotted `lr-icon`; only a raw slotted `<svg>` needs its own size. Apply
+`appearance-launcher` to each `lr-icon-button`, including buttons slotted through a popover.
 Keep the mode action separate from the design fields. Set the locale picker's
-`--lr-locale-picker-trigger-height: 2.75rem` and
-use its public flag-only trigger with readable menu entries:
+`--lr-locale-picker-trigger-height: 2.75rem`; its flag-only trigger is then a square of that height,
+so it needs no `::part(trigger)` rule either. Use that public flag-only trigger with readable menu
+entries:
 
 ```ts
 import '@aceshooting/lyra-ui/components/lr-locale-picker.js';
@@ -975,6 +977,22 @@ still wins over the built-in light or dark default.
 Each component host also keeps `:host([hidden]) { display: none !important; }` and an inherited
 `box-sizing: border-box` reset.
 
+**Prefer tokens over parts.** Before writing a `::part()` rule, check the component's CSS custom
+properties: its reference page lists them beside its parts, and most geometry and paint already has
+one, for example `--lr-icon-button-size` and `--lr-icon-button-padding-inline` for an icon button,
+`--lr-button-padding-*`, `--lr-button-min-height` and `--lr-button-font-size` for a button, or the
+`--lr-code-block-padding` and `--lr-code-block-radius` for a code block. A token survives internal
+restructuring, follows the component's own state rules (hover, pressed, disabled), and reaches nested
+compositions; a part rule does none of these. Reach for `::part()` only for a declaration no token
+covers.
+
+**Scrollbars.** Three opt-in theme inputs restyle the library's internal scroll containers at once:
+`--lr-theme-scrollbar-width` (`auto`, `thin` or `none`), `--lr-theme-scrollbar-gutter` (`auto` or
+`stable`) and `--lr-theme-scrollbar-color` (a thumb and a track color, for example
+`var(--lr-color-border-strong) transparent`). Each defaults to the container's own value (`auto` for
+color) and inherits, so set it on `:root` for the whole application or on any ancestor for one
+region. Engines without `scrollbar-color` support ignore the color input.
+
 ### Style runtime — @aceshooting/lyra-ui/theme.js
 
 The standalone style runtime has no Lit or component dependency and does not touch the document or storage when imported. It stores the selected style under localStorage['lyra-theme'], applies it to the document root, and announces changes through lr-style-change.
@@ -1001,13 +1019,27 @@ resetLyraStyle(["look"]); // reset only the look axis
 setLyraStyle({ mode: "unset", accent: null, accentBackground: null, overrides: null });
 ~~~
 
-setLyraStyle() accepts independent choices for look, surface, density, mode, accent, accentBackground, and overrides. Omitted axes keep their current selection. Null restores the built-in value for look, surface, density and mode; `accent: null` explicitly clears the accent, and null clears accentBackground or overrides. `resetLyraStyle()` restores Shadcn/Glass/Emerald/System/comfortable; a field list resets only those fields. The returned LyraStyle snapshot includes the selected values, a resolved mode when the choice is system, and lookForm to distinguish a stylesheet look from a runtime look.
+setLyraStyle() accepts independent choices for look, surface, density, mode, accent, accentBackground, overrides, and surfaceOpacity (a 0–100 Glass opacity percentage; see Glass surfaces). Omitted axes keep their current selection. Null restores the built-in value for look, surface, density and mode; `accent: null` explicitly clears the accent, and null clears accentBackground or overrides. `resetLyraStyle()` restores Shadcn/Glass/Emerald/System/comfortable; a field list resets only those fields. The returned LyraStyle snapshot includes the selected values, a resolved mode when the choice is system, and lookForm to distinguish a stylesheet look from a runtime look.
 
 mode is light, dark, system, or unset. Explicit modes set both data-lr-theme and data-theme; system follows the operating system and updates both attributes when it changes; unset removes Lyra's mode attributes. The lr-style-change event carries { style, changed }, where changed lists the affected fields. Applications can listen to this one event for document style changes.
 
 accent accepts one of Lyra's named palettes or an absolute CSS color. A custom color is shorthand for a brand color; an object can set colors for brand, success, warning, danger, and neutral independently. Each role can use a { light, dark } pair. Lyra derives quiet, normal, and loud fill, border, and on-color ramps. Foregrounds meet 4.5:1 contrast against their fills; normal and loud borders and the brand focus color meet 3:1 against the selected reference surface. Invalid colors fail closed.
 
 accentBackground is an absolute CSS color used as the accent ramps' reference surface. surface is a separate visual treatment: solid or glass. density selects compact, comfortable, or touch. These axes remain independent, so changing the look does not reset mode, accent, surface, or density.
+
+`LYRA_LOOKS` lists the built-in looks for an appearance picker, in display order, as frozen
+`{ id, name, optional, stylesheet }` entries: `name` is the look's untranslated proper name,
+`optional` is true when `theme.css` alone does not carry the look, and `stylesheet` is its standalone
+`looks/<id>.css` sheet (null for `lyra`, which `theme-core.css` carries). Offer an application look by
+appending its own entry:
+
+```js
+import { LYRA_LOOKS, setLyraStyle } from '@aceshooting/lyra-ui/theme.js';
+
+const looks = [...LYRA_LOOKS, { id: 'brand', name: 'Brand', optional: true, stylesheet: null }];
+select.options = looks.map(({ id, name }) => ({ value: id, label: name }));
+select.addEventListener('change', () => setLyraStyle({ look: select.value }));
+```
 
 A LyraLook is a named token definition. Define an application look with defineLyraLook({ id, tokens }), then pass it as the look choice. A look supplies --lr-theme-* inputs; overrides applies an independent map of those inputs to the document root. Both accept CSS strings or per-mode { light, dark } values. Overrides replace the previous map wholesale; compose them with object spread. Values are validated, trimmed, and deep-frozen. Invalid entries are ignored, and maps are limited to 512 entries.
 
@@ -1407,21 +1439,20 @@ controls use their solid border colors while preserving the enclosing edge again
 Filled accent interiors retain qualification. Native descendants retain inherited public color
 aliases. Custom translucent content fills require the author to choose suitable control borders.
 A design panel can offer a Glass opacity range from 0–100%, shown when the selected surface is
-Glass. Start and reset it at 60%; convert the displayed percentage to the public token's 0–1 range.
-Apply this CSS input independently of look overrides: `setLyraStyle()` does not accept surface
-inputs in its `overrides` allowlist. Persist the percentage in the application's own settings and
-apply it before first paint, including after restoring those settings. Reset the app setting to 60
-and reapply it. Native `.lr-surface-chrome` wrappers and eligible component chrome consume the
-same input:
+Glass. `setLyraStyle({ surfaceOpacity })` takes that percentage directly: it clamps to 0–100, writes
+`--lr-theme-surface-opacity` as 0–1 on the document root, persists it with the other style choices,
+reports it as `getLyraStyle().surfaceOpacity` and in `lr-style-change` (`changed` includes
+`'surfaceOpacity'`), and `lyraThemeBootstrap` restores it before first paint. The default, 60, writes
+nothing and leaves the stylesheet value in place; `null` or a non-finite value restores it, as does
+`resetLyraStyle(['surfaceOpacity'])`. `applyLyraStyleScope(element, { surfaceOpacity })` sets it for one
+subtree. Native `.lr-surface-chrome` wrappers and eligible component chrome consume the same input:
 
 ```js
-function applyGlassOpacity(percent) {
-  if (!Number.isFinite(percent)) return;
-  const opacity = Math.min(100, Math.max(0, percent)) / 100;
-  document.documentElement.style.setProperty('--lr-theme-surface-opacity', String(opacity));
-}
+import { getLyraStyle, resetLyraStyle, setLyraStyle } from '@aceshooting/lyra-ui/theme.js';
 
-applyGlassOpacity(60); // Default and reset value; apply saved app settings before first paint.
+slider.value = getLyraStyle().surfaceOpacity; // 60 until the user picks another value
+slider.addEventListener('input', () => setLyraStyle({ surfaceOpacity: Number(slider.value) }));
+resetButton.addEventListener('click', () => resetLyraStyle(['surfaceOpacity']));
 ```
 
 Scrolling rail, popup, modal-panel and selection-toolbar surfaces keep a stationary decorative blur layer;

@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 17 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `copy-button`: `--lr-terminal-highlight-accent-bg`, `--lr-terminal-toolbar-button-hover-bg`; `download-button`: `--lr-terminal-highlight-accent-bg`, `--lr-terminal-toolbar-button-hover-bg`; `line`: `--lr-terminal-compact-line-padding-inline`; `toolbar`: `--lr-terminal-compact-toolbar-gap`, `--lr-terminal-compact-toolbar-padding`; `viewport`: `--lr-terminal-height`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

@@ -82,6 +82,8 @@ describe('theme pre-paint bootstrap (module functions, called directly)', () => 
       attributes: { 'data-lr-theme': 'dark' }, painted: '#101418' },
     { name: 'system follows prefers-color-scheme', choices: { mode: 'system' },
       attributes: { 'data-lr-mode': 'system', 'data-lr-theme': systemDark() ? 'dark' : 'light' } },
+    { name: 'saved Glass opacity is applied before first paint', choices: { mode: 'light', surfaceOpacity: 35 },
+      attributes: { 'data-lr-surface': 'glass' }, painted: '--lr-theme-surface-opacity: 0.35' },
     { name: 'unset leaves the mode attributes absent', choices: { mode: 'unset' },
       attributes: { 'data-lr-mode': null, 'data-lr-theme': null, 'data-theme': null } },
   ];
@@ -108,7 +110,7 @@ describe('theme pre-paint bootstrap (module functions, called directly)', () => 
     const readers: Array<() => void> = [
       () => localStorage.removeItem(KEY),
       () => localStorage.setItem(KEY, '{not json'),
-      () => localStorage.setItem(KEY, JSON.stringify({ version: 2, mode: 'sepia', density: 9, accent: 'nope', overrides: { '--lr-theme-color-surface-default': 'url(javascript:alert(1))', '--other': 'red' } })),
+      () => localStorage.setItem(KEY, JSON.stringify({ version: 2, mode: 'sepia', density: 9, accent: 'nope', surfaceOpacity: 'opaque', overrides: { '--lr-theme-color-surface-default': 'url(javascript:alert(1))', '--other': 'red' } })),
     ];
     for (const prepare of readers) {
       clearRoot();
@@ -120,6 +122,7 @@ describe('theme pre-paint bootstrap (module functions, called directly)', () => 
       expect(attributes['data-lr-surface']).to.equal('glass');
       expect(attributes['data-lr-accent']).to.equal('emerald');
       expect(style).to.not.include('javascript');
+      expect(style, 'a default or corrupt opacity is not written').to.not.include('surface-opacity');
     }
     clearRoot();
     const original = Storage.prototype.getItem;
@@ -134,7 +137,7 @@ describe('theme pre-paint bootstrap (module functions, called directly)', () => 
 
   it('restore "mode" repaints only the mode and keeps host-owned axes and the app storage key', () => {
     const root = document.documentElement;
-    localStorage.setItem('app-theme', storedRecord({ mode: 'dark', look: 'material', density: 'compact', accent: 'ruby' }));
+    localStorage.setItem('app-theme', storedRecord({ mode: 'dark', look: 'material', density: 'compact', accent: 'ruby', surfaceOpacity: 20 }));
     root.setAttribute('data-lr-look', 'host-look');
     root.setAttribute('data-lr-density', 'host-density');
     applyLyraThemeBootstrapForTesting({ storageKey: 'app-theme', restore: 'mode' });
@@ -143,6 +146,7 @@ describe('theme pre-paint bootstrap (module functions, called directly)', () => 
       expect(root.getAttribute('data-lr-look')).to.equal('host-look');
       expect(root.getAttribute('data-lr-density')).to.equal('host-density');
       expect(root.getAttribute('data-lr-accent')).to.equal(null);
+      expect(root.style.getPropertyValue('--lr-theme-surface-opacity')).to.equal('');
     } finally {
       localStorage.removeItem('app-theme');
     }

@@ -592,6 +592,12 @@ number }`.
 ResolveCssLengthOptions): number | undefined` and `ResolveCssLengthOptions { readonly host?:
 Element; readonly percentBase?: number; readonly viewportBasis?: Window | Readonly<{
 inlineSize: number; blockSize: number }> }`.
+- **`plain-click` → `isPlainPrimaryClick(event)`** — true only for an unhandled primary-button
+  click with no Ctrl, Meta, Shift or Alt key: the clicks a single-page application routes on the
+  client, leaving new-tab, download and already-handled clicks to the browser. Side-effect free; see
+  the client-side routing recipe in the forms and accessibility guide.
+  Its exact signatures are `isPlainPrimaryClick(event: LyraPlainClickInput): boolean` and
+  `LyraPlainClickInput = Pick<MouseEvent, 'button' | 'ctrlKey' | 'metaKey' | 'shiftKey' | 'altKey' | 'defaultPrevented'>`.
 - **`format` → `formatNumber(value, locale?, options?)`, `formatDate(value, locale?, options?)`,
   `formatRelativeTime(value, locale?, options?)`, and `formatBytes(value, locale?, options?)`** —
   pure, string-returning wrappers over the same memoized `Intl` formatter cache and locale

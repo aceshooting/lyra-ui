@@ -195,6 +195,7 @@ export const styles = css`
        reuses this stylesheet. */
     scrollbar-width: var(--lr-theme-scrollbar-width, auto);
     scrollbar-gutter: var(--lr-theme-scrollbar-gutter, auto);
+    scrollbar-color: var(--lr-theme-scrollbar-color, auto);
   }
   [part='body'][hidden] {
     display: none;

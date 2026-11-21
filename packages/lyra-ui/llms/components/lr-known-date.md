@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 16 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `field-input`: `--lr-known-date-field-padding-block`, `--lr-known-date-field-padding-inline`, `--lr-known-date-field-font-size`, `--lr-known-date-field-min-height`, `--lr-known-date-field-height`, `--lr-known-date-invalid-border-color`; `legend`: `--lr-form-control-required-content`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---

@@ -10,6 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 18 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-task-list-bg`; `body`: `--lr-task-list-compact-body-padding`, `--lr-task-list-compact-gap`; `header`: `--lr-task-list-compact-header-font-size`, `--lr-task-list-compact-header-gap`, `--lr-task-list-compact-header-padding`, `--lr-task-list-header-hover-bg`; `item`: `--lr-task-list-item-hover-bg`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
