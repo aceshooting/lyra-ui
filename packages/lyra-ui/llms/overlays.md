@@ -1628,7 +1628,7 @@ If the import fails, leave the native disclosure visible and usable.
   as the canonical list; unlike `<lr-tooltip>`, a list left with no recognized keyword resolves to
   `'click'` rather than to manual, so a typo can never strand a popover's content behind `show()`.
   Both the slotted trigger and a `for=`-resolved external trigger honour every keyword.
-  `hover-card` (popover only, not a tooltip keyword) is a supplementary preview, the hover-card or
+  `hover-card` (popover only: not a tooltip keyword, and `lr-dropdown` treats it as `hover focus`) is a supplementary preview, the hover-card or
   link-preview pattern: it opens like `hover focus` (pointer rest after `showDelay`, or keyboard
   focus) and stays open while the pointer is over the owner or the popup (`hideDelay`,
   `hover-bridge`), but a click on the owner never pins it — the click passes through to the owner
@@ -2192,7 +2192,8 @@ its surface.
   attributes can never disagree. Prefer `positioning-strategy` in new code. `<lr-dropdown>` also
   inherits `<lr-popover>`'s `trigger`/`showDelay`/`hideDelay`/`hoverBridge`, and honors the
   cascading `--lr-positioning-strategy` custom property ahead of this mirrored `absolute` default
-  when neither spelling is authored on the instance.
+  when neither spelling is authored on the instance. The popover-only `hover-card` keyword
+  opens a dropdown like `hover focus`; its trigger keeps the menu `aria-haspopup`/`aria-expanded`.
 - `topLayer: boolean = false` (attribute `top-layer`, reflected) — inherited from `<lr-popover>`:
   always shows the open menu in the browser top layer, placed `fixed` whatever
   `positioning-strategy`/`hoist` say, so a dropdown in a `z-index`ed fixed header opens above a

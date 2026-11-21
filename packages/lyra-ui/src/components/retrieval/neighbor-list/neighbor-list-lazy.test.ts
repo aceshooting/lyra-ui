@@ -39,4 +39,8 @@ it('loads the pager when source navigation first needs it and settles its first 
   expect(pager.isUpdatePending).to.equal(false);
   expect(pager.shadowRoot!.querySelector('[part~="base"]') !== null).to.equal(true);
   expect(pager.page).to.equal(1);
+  let escaped = 0;
+  el.addEventListener('lr-before-page-change', () => escaped++);
+  pager.dispatchEvent(new CustomEvent('lr-before-page-change', { detail: { page: 2 }, bubbles: true, composed: true, cancelable: true }));
+  expect(escaped, 'pager request stays inside').to.equal(0);
 });

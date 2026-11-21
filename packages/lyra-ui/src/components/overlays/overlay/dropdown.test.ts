@@ -1420,3 +1420,22 @@ it('leaves modified, composing, and consumed trigger arrows to their owner', asy
   button.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true, cancelable: true }));
   expect(el.open).to.be.false;
 });
+
+it('keeps menu trigger ARIA under the popover-only hover-card keyword and opens on hover', async () => {
+  const el = (await fixture(html`
+    <lr-dropdown trigger="hover-card">
+      <button slot="trigger">Actions</button>
+      <lr-dropdown-item value="rename">Rename</lr-dropdown-item>
+    </lr-dropdown>
+  `)) as LyraDropdown;
+  await el.updateComplete;
+  const button = trigger(el);
+  expect(button.getAttribute('aria-haspopup')).to.equal('menu');
+  expect(button.getAttribute('aria-expanded')).to.equal('false');
+  const shown = oneEvent(el, 'lr-after-show');
+  await hoverUntilMatched(button, 'trigger hovered');
+  await shown;
+  expect(el.open).to.be.true;
+  expect(button.getAttribute('aria-expanded')).to.equal('true');
+  await resetMouse();
+});

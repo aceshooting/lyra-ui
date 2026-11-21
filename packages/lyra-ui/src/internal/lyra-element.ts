@@ -384,6 +384,8 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   private deferredAfterUpdate?: Map<string, () => void>;
   /** Options of a `focus()` call queued by `deferFocusUntilRendered()`, until the first render. */
   private pendingFocusOptions?: FocusOptions;
+  /** `document.activeElement` when the queued `focus()` was last requested. */
+  private queuedFocusOrigin?: Element | null;
   private replayingFocus = false;
   private stopInheritedContextObservation?: () => void;
   /** `undefined` until the first connect decides it, then true only between that connect and the
@@ -542,7 +544,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
 
   override disconnectedCallback(): void {
     // A focus queued before the first render belongs to this connection only.
-    this.pendingFocusOptions = undefined;
+    this.cancelDeferredFocus();
     if (this.pendingLoadController) this.pendingLoadInterrupted = true;
     this.pendingLoadController?.abort();
     this.pendingLoadController = undefined;
@@ -617,11 +619,17 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     if (this.hasUpdated || !this.isConnected || this.hydratingServerShadow || this.replayingFocus) return false;
     const queued = this.pendingFocusOptions !== undefined;
     this.pendingFocusOptions = options ?? {};
+    this.queuedFocusOrigin = document.activeElement;
     if (!queued) {
-      void this.updateComplete.then(() => {
+      this.interceptBlurWhileFocusPending();
+      const replay = (): void => {
         const pending = this.pendingFocusOptions;
-        this.pendingFocusOptions = undefined;
+        const origin = this.queuedFocusOrigin;
+        this.cancelDeferredFocus();
         if (!pending) return;
+        // Focus that moved elsewhere after the request is a newer intent; never steal it back.
+        const active = document.activeElement;
+        if (active !== origin && active !== null && active !== document.body) return;
         // Replayed once: an update that never renders (`shouldUpdate()` false) must not requeue.
         this.replayingFocus = true;
         try {
@@ -629,10 +637,39 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
         } finally {
           this.replayingFocus = false;
         }
+      };
+      // A failed first update has already reported its own error; drop the queued focus quietly.
+      // A throwing `focus()` override is reported like any task error, never as a stray rejection.
+      this.updateComplete.then(replay, () => this.cancelDeferredFocus()).catch((error: unknown) => {
+        if (typeof globalThis.reportError === 'function') globalThis.reportError(error);
       });
     }
     return true;
   }
+
+  /**
+   * `blur()` overrides forward to an internal element that does not exist before the first render,
+   * so while a focus is queued an instance-level `blur` cancels it first, then runs the class's own
+   * `blur()`. Removed again as soon as the queue settles.
+   */
+  private interceptBlurWhileFocusPending(): void {
+    if (Object.prototype.hasOwnProperty.call(this, 'blur')) return;
+    const cancelThenBlur = function (this: LyraElement): void {
+      this.cancelDeferredFocus();
+      (Object.getPrototypeOf(this) as HTMLElement).blur.call(this);
+    };
+    Object.defineProperty(this, 'blur', { configurable: true, writable: true, value: cancelThenBlur });
+  }
+
+  private cancelDeferredFocus(): void {
+    this.pendingFocusOptions = undefined;
+    this.queuedFocusOrigin = undefined;
+    const own = Object.getOwnPropertyDescriptor(this, 'blur');
+    if (own?.value !== undefined && (own.value as { name?: string }).name === 'cancelThenBlur') {
+      delete (this as { blur?: unknown }).blur;
+    }
+  }
+
 
   /**
    * Every update cycle begins with at least one `requestUpdate()` call, and

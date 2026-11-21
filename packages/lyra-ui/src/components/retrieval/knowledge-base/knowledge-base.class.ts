@@ -945,6 +945,7 @@ export class LyraKnowledgeBase extends LyraElement<LyraKnowledgeBaseEventMap> {
           .unknownTotal=${source && this.sourceTotal === null}
           .hasNext=${false}
           .loading=${source && state.pending && !this.error}
+          @lr-before-page-change=${(event: Event) => { event.stopPropagation(); }}
           @lr-page-change=${(event: CustomEvent<{ page: number }>) => { event.stopPropagation(); if (source && current()) this.sourcePage = event.detail.page - 1; }}
           @lr-sort-request=${(event: CustomEvent<{ sortKey: string; sortDir: 'asc' | 'desc' }>) => {
             if (!source) { event.stopPropagation(); return; }

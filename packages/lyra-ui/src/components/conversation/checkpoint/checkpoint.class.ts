@@ -239,6 +239,18 @@ export class LyraCheckpoint extends LyraElement<LyraCheckpointEventMap> {
     this.renderRoot?.querySelector<HTMLButtonElement>('[part="restore-button"]')?.click();
   }
 
+  /** Focuses the current action: the Confirm button while confirming, otherwise the restore button. */
+  override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
+    const part = this.confirming ? 'confirm-button' : 'restore-button';
+    this.renderRoot.querySelector<HTMLButtonElement>(`[part="${part}"]`)?.focus(options);
+  }
+
+  /** Removes focus from whichever of this checkpoint's buttons holds it. */
+  override blur(): void {
+    (shadowFocusTarget(this) as HTMLElement | null)?.blur();
+  }
+
   override render(): TemplateResult {
     const label = this.computedLabel;
     const authored = this.getAttribute('aria-label');

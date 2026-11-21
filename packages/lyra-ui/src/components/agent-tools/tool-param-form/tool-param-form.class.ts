@@ -1060,6 +1060,7 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
         @lr-hide=${this.stopNestedControlEvent}
         @lr-after-hide=${this.stopNestedControlEvent}
         @lr-option-change=${this.stopNestedControlEvent}
+        @lr-change-request=${this.stopNestedControlEvent}
       >
         ${choices.map((choice) => html`<lr-option value=${choice.value}>${choice.label}</lr-option>`)}
       </lr-select>`;
@@ -1129,6 +1130,7 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
         @lr-hide=${this.stopNestedControlEvent}
         @lr-after-hide=${this.stopNestedControlEvent}
         @lr-option-change=${this.stopNestedControlEvent}
+        @lr-change-request=${this.stopNestedControlEvent}
       >
         <lr-option value="">${this.localize('toolParamBooleanUnset')}</lr-option>
         <lr-option value="true">${this.localize('toolParamBooleanTrue')}</lr-option>

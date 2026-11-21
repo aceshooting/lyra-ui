@@ -214,7 +214,7 @@ const errorMessages: Partial<Record<DocxRefusalCode, string>> = {
   'engine-unavailable': 'docxEditorErrorEngine', destroyed: 'docxEditorDisconnected',
 };
 /** Inner control events stay inside the editor, which documents only its own events. */
-const innerEvents = ['lr-input', 'lr-change', 'lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide'];
+const innerEvents = ['lr-input', 'lr-change', 'lr-change-request', 'lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide'];
 const stopEvent = (event: Event) => event.stopPropagation();
 const chartDatasets = new WeakMap<DocxChartModel, readonly object[]>();
 const datasets = (model: DocxChartModel) => {

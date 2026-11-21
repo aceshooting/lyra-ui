@@ -365,8 +365,9 @@ it('contains every undocumented tag-filter and table event at the composition bo
     'lr-filter',
     'lr-clear',
     'lr-invalid',
+    'lr-change-request',
   ];
-  const tableEvents = ['lr-priority-columns-visibility-change'];
+  const tableEvents = ['lr-priority-columns-visibility-change', 'lr-before-page-change'];
   for (const name of [...comboboxEvents, ...tableEvents]) {
     el.addEventListener(name, () => leaked.push(name));
   }

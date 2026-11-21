@@ -1435,6 +1435,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
                 @lr-activate=${this.stopOwnedEvent}
                 @change=${this.onTagFilterChange}
                 @lr-change=${this.stopOwnedEvent}
+                @lr-change-request=${this.stopOwnedEvent}
                 @lr-show=${this.stopOwnedEvent}
                 @lr-after-show=${this.stopOwnedEvent}
                 @lr-hide=${this.stopOwnedEvent}
@@ -1493,6 +1494,7 @@ export class LyraDocumentLibrary extends LyraElement<LyraDocumentLibraryEventMap
           error-description=${this.errorDescription}
           @lr-sort-request=${this.onTableSortRequest}
           @lr-sort=${this.onTableSortCommit}
+          @lr-before-page-change=${this.stopOwnedEvent}
           @lr-page-change=${this.onSourcePage}
           @lr-priority-columns-visibility-change=${this.stopOwnedEvent}
           @lr-selection-change=${this.onTableSelectionChange}

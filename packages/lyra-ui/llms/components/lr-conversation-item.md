@@ -72,6 +72,8 @@ after composition.
 
 **Methods:** `click()` activates the selectable row like its internal button; while an inline rename
 is active, it forwards to the label input instead and does not re-select the conversation.
+`focus(options?)` and `blur()` target the same element: the rename input while renaming, otherwise
+the selectable row.
 
 **Events:** `lr-select` (`detail: { conversationId }`; fires from the selectable region on click or
 Enter/Space while not renaming), `lr-rename` (`detail: { conversationId, label }`; a controlled

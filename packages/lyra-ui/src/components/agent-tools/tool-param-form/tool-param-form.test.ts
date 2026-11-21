@@ -949,6 +949,8 @@ it('contains nested control aliases and emits the aggregate value-event quartet'
   el.addEventListener('lr-show', () => leaked.lrShow++);
   el.addEventListener('lr-hide', () => leaked.lrHide++);
   el.addEventListener('lr-option-change', () => leaked.lrOptionChange++);
+  let leakedRequests = 0;
+  el.addEventListener('lr-change-request', () => leakedRequests++);
   el.addEventListener('lr-input', event => {
     expect(event.composedPath()[0] === el, 'aggregate input originates on the form').to.equal(true);
     formInputs++;
@@ -972,9 +974,13 @@ it('contains nested control aliases and emits the aggregate value-event quartet'
   booleanSelect.querySelector('lr-option')!.dispatchEvent(
     new CustomEvent('lr-option-change', { bubbles: true, composed: true }),
   );
+  for (const target of [select, booleanSelect]) {
+    target.dispatchEvent(new CustomEvent('lr-change-request', { bubbles: true, composed: true, cancelable: true }));
+  }
   booleanSelect.value = 'true';
   booleanSelect.dispatchEvent(new CustomEvent('lr-change', { bubbles: true, composed: true }));
   await el.updateComplete;
+  expect(leakedRequests, 'select change requests stay inside the form').to.equal(0);
 
   expect(leaked).to.deep.equal({
     input: 0,

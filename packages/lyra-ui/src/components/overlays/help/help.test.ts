@@ -39,6 +39,19 @@ it('names the trigger with the localized default, a registered catalog, or label
   expect(control().getAttribute('aria-label')).to.equal('About monthly users');
 });
 
+it('names the popup with the same resolved name as the trigger', async () => {
+  const el = await mount();
+  const popupName = async (): Promise<string | null> => {
+    const { popover } = parts(el);
+    await el.updateComplete;
+    await popover.updateComplete;
+    return popover.shadowRoot!.querySelector('[part~="popup"]')!.getAttribute('aria-label');
+  };
+  expect(await popupName()).to.equal('Details');
+  el.label = 'About monthly users';
+  expect(await popupName()).to.equal('About monthly users');
+});
+
 it('opens on click, pins until a second click, and is accessible while open', async () => {
   const el = await mount();
   const { popover, control } = parts(el);

@@ -641,7 +641,8 @@ export class LyraNeighborList extends LyraElement<LyraNeighborListEventMap> {
       })}</div>
       ${this.centerKey !== null ? html`<lr-pagination format="compact" with-edges .page=${displayedSourcePage(this.sourcePage)}
         .pageSize=${normalizeSourcePageSize(this.sourcePageSize)} .total=${total ?? -1} .disabled=${failed || state.pending || total === null}
-        .strings=${this.strings} @lr-page-change=${(event: CustomEvent<{ page: number }>) => { event.stopPropagation(); if (valid()) this.sourcePage = event.detail.page - 1; }}></lr-pagination>` : nothing}
+        .strings=${this.strings} @lr-before-page-change=${(event: Event) => { event.stopPropagation(); }}
+        @lr-page-change=${(event: CustomEvent<{ page: number }>) => { event.stopPropagation(); if (valid()) this.sourcePage = event.detail.page - 1; }}></lr-pagination>` : nothing}
     </div>`;
   }
 

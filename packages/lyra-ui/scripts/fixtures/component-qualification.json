@@ -15499,7 +15499,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/conversation-item/conversation-item.class.ts",
-              "line": 431,
+              "line": 443,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

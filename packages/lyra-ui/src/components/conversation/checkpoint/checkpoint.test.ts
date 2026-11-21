@@ -547,3 +547,17 @@ it('keeps the flanking rules visible under forced colors', async () => {
     await setForcedColors('none');
   }
 });
+
+it('forwards host focus() and blur() to the restore button, including before the first render', async () => {
+  const host = await fixture<HTMLDivElement>(html`<div></div>`);
+  const el = document.createElement('lr-checkpoint') as LyraCheckpoint;
+  el.label = 'Draft';
+  host.append(el);
+  el.focus();
+  await el.updateComplete;
+  await Promise.resolve();
+  const restore = el.shadowRoot!.querySelector('[part="restore-button"]');
+  expect(el.shadowRoot!.activeElement === restore, 'restore button focused').to.be.true;
+  el.blur();
+  expect(el.shadowRoot!.activeElement === null, 'blurred').to.be.true;
+});

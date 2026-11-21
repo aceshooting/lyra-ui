@@ -54,16 +54,19 @@ export class LyraHelp extends LyraElement {
   placement: Placement = 'top';
 
   override render(): TemplateResult {
+    // The popup carries the trigger's name, so it never announces as a generic "Popover".
+    const name = this.label || this.localize('details');
     return html`<lr-popover
       part="popover"
       exportparts="popup, content"
       trigger="click focus"
       placement=${this.placement}
+      .accessibleLabel=${name}
       ><lr-icon-button
         slot="trigger"
         part="trigger"
         exportparts="button:trigger-control"
-        aria-label=${this.label || this.localize('details')}
+        aria-label=${name}
         ><span class="glyph" aria-hidden="true">${helpIcon()}</span></lr-icon-button
       ><slot></slot
     ></lr-popover>`;

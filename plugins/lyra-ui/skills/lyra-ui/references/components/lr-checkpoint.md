@@ -45,6 +45,8 @@ this point).
 the inline confirm unless `without-restore-confirmation` is set. Not cancelable.
 
 **Methods:** `click()` forwards to the current Restore action only when restoration is available.
+`focus(options?)` focuses the Confirm button while confirming, otherwise the Restore button (a call
+before the first render is applied once it renders); `blur()` blurs whichever of them holds focus.
 The confirm prompt names both Confirm and Cancel through `aria-describedby`; Escape/cancel restores
 focus transactionally, and a same-turn controlled change that removes confirmation never lets a
 stale focus continuation win.

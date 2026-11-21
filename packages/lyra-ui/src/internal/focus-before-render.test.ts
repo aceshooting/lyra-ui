@@ -132,3 +132,63 @@ for (const name of ['rubric-form', 'swatch-picker', 'radio']) {
     expect(el.hasUpdated).to.be.true;
   });
 }
+
+it('blur() before the first render cancels a queued focus', async () => {
+  const el = document.createElement(tag('button')) as LyraElement;
+  el.textContent = 'Save';
+  (await container()).append(el);
+  el.focus();
+  el.blur();
+  await el.updateComplete;
+  await Promise.resolve();
+  expect(document.activeElement === el).to.be.false;
+  expect(Object.prototype.hasOwnProperty.call(el, 'blur'), 'no instance blur left behind').to.be.false;
+});
+
+it('a queued focus never steals focus that moved elsewhere before the first render', async () => {
+  const host = await container();
+  const other = document.createElement('input');
+  host.append(other);
+  const el = document.createElement(tag('input')) as LyraElement;
+  host.append(el);
+  el.focus();
+  other.focus();
+  await el.updateComplete;
+  await Promise.resolve();
+  expect(document.activeElement === other).to.be.true;
+});
+
+it('a first update that throws drops the queued focus without an extra rejection', async () => {
+  class ThrowsOnRender extends LyraElement {
+    calls = 0;
+    protected override update(changed: Map<PropertyKey, unknown>): void {
+      super.update(changed);
+      throw new Error('render failed');
+    }
+    override focus(options?: FocusOptions): void {
+      if (this.deferFocusUntilRendered(options)) return;
+      this.calls += 1;
+    }
+  }
+  defineElement('focus-throws-probe', ThrowsOnRender);
+  const unhandled: unknown[] = [];
+  const onUnhandled = (event: PromiseRejectionEvent): void => {
+    unhandled.push(event.reason);
+    event.preventDefault();
+  };
+  const onError = (event: ErrorEvent): void => event.preventDefault();
+  window.addEventListener('unhandledrejection', onUnhandled);
+  window.addEventListener('error', onError);
+  try {
+    const el = document.createElement(tag('focus-throws-probe')) as ThrowsOnRender;
+    (await container()).append(el);
+    el.focus();
+    await el.updateComplete.catch(() => undefined);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(el.calls).to.equal(0);
+    expect(unhandled.length, 'unhandled rejections').to.equal(0);
+  } finally {
+    window.removeEventListener('unhandledrejection', onUnhandled);
+    window.removeEventListener('error', onError);
+  }
+});

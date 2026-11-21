@@ -13,6 +13,7 @@ import type { LyraMenu, MenuItemSelectDetail } from '../../layout/menu/menu.clas
 import {
   LyraPopover,
   type LyraPopoverEventMap,
+  type LyraPopoverTrigger,
   type LyraPopupRole,
 } from './popover.class.js';
 import { styles } from './dropdown.styles.js';
@@ -172,6 +173,16 @@ export class LyraDropdown extends LyraPopover<LyraDropdownEventMap> {
 
   protected override get defaultDistance(): number {
     return 0;
+  }
+
+  /** A menu always keeps its trigger ARIA, so the popover-only `hover-card` preview mode does not
+   *  apply: on a dropdown that keyword opens like `hover focus` and keeps the menu semantics. */
+  protected override get isHoverCard(): boolean {
+    return false;
+  }
+  protected override opensOn(keyword: LyraPopoverTrigger): boolean {
+    if (super.isHoverCard) return keyword === 'hover' || keyword === 'focus';
+    return super.opensOn(keyword);
   }
 
   /** Action menus stay in their containing block unless the consumer opts out, which is both this

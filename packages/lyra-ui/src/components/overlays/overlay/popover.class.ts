@@ -131,7 +131,7 @@ const POPUP_ROLE = literalSetConverter<LyraPopupRole>(
  * rest after `showDelay`, or keyboard focus), but a click on the owner never pins it -- the click
  * passes through to the owner and dismisses the preview -- and the owner receives no generated
  * `aria-haspopup`/`aria-expanded`/`aria-controls`. It wins over every keyword beside it except
- * `'manual'`.
+ * `'manual'`. `<lr-dropdown>` treats it as `hover focus` and keeps its menu ARIA.
  */
 export type LyraPopoverTrigger = 'click' | 'hover' | 'focus' | 'manual' | 'hover-card';
 

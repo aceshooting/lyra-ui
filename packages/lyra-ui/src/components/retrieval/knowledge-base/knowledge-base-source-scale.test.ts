@@ -48,7 +48,8 @@ it('keeps legacy table page and sort events inside without touching the source p
   await waitUntil(() => el.shadowRoot?.querySelector<LyraTable<KnowledgeSource>>('lr-table')?.rows.length === 2);
   const grid = el.shadowRoot!.querySelector<LyraTable<KnowledgeSource>>('lr-table')!;
   const escaped: string[] = [];
-  for (const type of ['lr-page-change', 'lr-sort-request', 'lr-sort']) el.addEventListener(type, () => escaped.push(type));
+  for (const type of ['lr-before-page-change', 'lr-page-change', 'lr-sort-request', 'lr-sort']) el.addEventListener(type, () => escaped.push(type));
+  grid.dispatchEvent(new CustomEvent('lr-before-page-change', { detail: { page: 2, pageSize: 100, offset: 100 }, bubbles: true, composed: true, cancelable: true }));
   grid.dispatchEvent(new CustomEvent('lr-page-change', { detail: { page: 2 }, bubbles: true, composed: true }));
   grid.dispatchEvent(new CustomEvent('lr-sort-request', { detail: { sortKey: 'name', sortDir: 'desc' }, bubbles: true, composed: true, cancelable: true }));
   grid.dispatchEvent(new CustomEvent('lr-sort', { detail: { sortKey: 'name', sortDir: 'desc' }, bubbles: true, composed: true }));

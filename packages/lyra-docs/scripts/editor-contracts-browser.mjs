@@ -171,7 +171,7 @@ export async function runEditorContracts(page, check, { createEditor }) {
     await host(id).evaluate(element => {
       window.__escaped = [];
       window.__escapeListener = event => { if (event.composedPath()[0] !== element) window.__escaped.push(event.type); };
-      for (const type of ['lr-input', 'lr-change', 'lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide'])
+      for (const type of ['lr-input', 'lr-change', 'lr-change-request', 'lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide'])
         document.addEventListener(type, window.__escapeListener);
     });
     await host(id).locator('[part="find-toggle"]').click();
@@ -180,9 +180,16 @@ export async function runEditorContracts(page, check, { createEditor }) {
     await page.keyboard.press('ArrowDown');
     await page.waitForFunction(id => document.getElementById(id).shadowRoot.querySelector('[part="font-family"]').open, id);
     await page.keyboard.press('Escape');
+    // Every toolbar picker raises the shared cancelable request name before it commits a pick.
+    await host(id).evaluate(element => {
+      for (const part of ['font-family', 'text-color-swatches', 'highlight-swatches'])
+        element.shadowRoot.querySelector(`[part~="${part}"]`)?.dispatchEvent(new CustomEvent('lr-change-request', {
+          bubbles: true, composed: true, cancelable: true, detail: {}
+        }));
+    });
     await paints(page);
     assert.deepEqual(await page.evaluate(() => {
-      for (const type of ['lr-input', 'lr-change', 'lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide'])
+      for (const type of ['lr-input', 'lr-change', 'lr-change-request', 'lr-show', 'lr-after-show', 'lr-hide', 'lr-after-hide'])
         document.removeEventListener(type, window.__escapeListener);
       return window.__escaped;
     }), []);

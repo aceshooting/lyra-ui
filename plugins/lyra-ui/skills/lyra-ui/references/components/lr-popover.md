@@ -106,7 +106,7 @@ If the import fails, leave the native disclosure visible and usable.
   as the canonical list; unlike `<lr-tooltip>`, a list left with no recognized keyword resolves to
   `'click'` rather than to manual, so a typo can never strand a popover's content behind `show()`.
   Both the slotted trigger and a `for=`-resolved external trigger honour every keyword.
-  `hover-card` (popover only, not a tooltip keyword) is a supplementary preview, the hover-card or
+  `hover-card` (popover only: not a tooltip keyword, and `lr-dropdown` treats it as `hover focus`) is a supplementary preview, the hover-card or
   link-preview pattern: it opens like `hover focus` (pointer rest after `showDelay`, or keyboard
   focus) and stays open while the pointer is over the owner or the popup (`hideDelay`,
   `hover-bridge`), but a click on the owner never pins it — the click passes through to the owner

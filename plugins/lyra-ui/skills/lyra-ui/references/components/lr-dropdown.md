@@ -91,7 +91,8 @@ its surface.
   attributes can never disagree. Prefer `positioning-strategy` in new code. `<lr-dropdown>` also
   inherits `<lr-popover>`'s `trigger`/`showDelay`/`hideDelay`/`hoverBridge`, and honors the
   cascading `--lr-positioning-strategy` custom property ahead of this mirrored `absolute` default
-  when neither spelling is authored on the instance.
+  when neither spelling is authored on the instance. The popover-only `hover-card` keyword
+  opens a dropdown like `hover focus`; its trigger keeps the menu `aria-haspopup`/`aria-expanded`.
 - `topLayer: boolean = false` (attribute `top-layer`, reflected) — inherited from `<lr-popover>`:
   always shows the open menu in the browser top layer, placed `fixed` whatever
   `positioning-strategy`/`hoist` say, so a dropdown in a `z-index`ed fixed header opens above a

@@ -335,6 +335,18 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
       )?.click();
   }
 
+  /** Focuses the rename input while renaming, otherwise the selectable row. */
+  override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
+    if (this.renaming) this.labelInput?.focus(options);
+    else this.renderRoot.querySelector<HTMLElement>('[part="select-button"]')?.focus(options);
+  }
+
+  /** Removes focus from the rename input or the selectable row. */
+  override blur(): void {
+    (shadowFocusTarget(this) as HTMLElement | null)?.blur();
+  }
+
   private startRename(): void {
     if (this.disabled || this.withoutRename || this.renaming) return;
     this.draftLabel = this.label;

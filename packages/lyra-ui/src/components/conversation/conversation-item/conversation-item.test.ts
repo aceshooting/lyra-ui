@@ -2056,3 +2056,17 @@ it('marks the open row and its indicator under forced colors', async () => {
     await setForcedColors('none');
   }
 });
+
+it('forwards host focus() and blur() to the selectable row, including before the first render', async () => {
+  const host = await fixture<HTMLDivElement>(html`<div></div>`);
+  const el = document.createElement('lr-conversation-item') as LyraConversationItem;
+  el.label = 'Trip plan';
+  host.append(el);
+  el.focus();
+  await el.updateComplete;
+  await Promise.resolve();
+  const row = el.shadowRoot!.querySelector('[part="select-button"]');
+  expect(el.shadowRoot!.activeElement === row, 'row focused').to.be.true;
+  el.blur();
+  expect(el.shadowRoot!.activeElement === null, 'blurred').to.be.true;
+});
