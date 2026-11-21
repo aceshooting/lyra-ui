@@ -51445,7 +51445,7 @@
           "evidence": [
             {
               "file": "src/components/forms/slider/slider.class.ts",
-              "line": 856,
+              "line": 860,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

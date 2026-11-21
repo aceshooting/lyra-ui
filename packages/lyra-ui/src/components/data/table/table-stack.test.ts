@@ -1,4 +1,5 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { setViewport } from '@web/test-runner-commands';
 import '../../lr-table.js';
 import type { LyraTable, TableColumn } from '../../lr-table.js';
 import { installTableTestHooks, type Row, rows } from '../../../../test/table.js';
@@ -55,6 +56,25 @@ describe('lr-table stack', () => {
     expect(base(tuned).hasAttribute('data-stacked')).to.equal(false);
     narrow.parentElement!.style.inlineSize = '900px';
     await waitUntil(() => !base(narrow).hasAttribute('data-stacked'), 'growing past the breakpoint unstacks');
+  });
+
+  it('measures its breakpoint without widening a 320px page, in both directions', async () => {
+    const viewport = { width: window.innerWidth, height: window.innerHeight };
+    try {
+      await setViewport({ width: 320, height: 640 });
+      for (const dir of ['ltr', 'rtl'] as const) {
+        document.documentElement.dir = dir;
+        const wrap = await fixture<HTMLElement>(html`<div dir=${dir}>
+          <lr-table aria-label="Accounts" stack="auto" .columns=${columns} .rows=${rows} .rowKey=${(r: Row) => r.id}></lr-table>
+        </div>`);
+        const el = wrap.querySelector<LyraTable<Row>>('lr-table')!;
+        await waitUntil(() => base(el).hasAttribute('data-stacked'), `${dir}: a 320px viewport stacks`);
+        expect(document.documentElement.scrollWidth, `${dir}: no horizontal page scroll`).to.be.at.most(window.innerWidth);
+      }
+    } finally {
+      document.documentElement.removeAttribute('dir');
+      await setViewport(viewport);
+    }
   });
 
   it('keeps the grid by default and normalizes unknown values', async () => {

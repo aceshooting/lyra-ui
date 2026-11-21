@@ -58,6 +58,18 @@ describe('lr-slider marks', () => {
     await waitUntil(() => thinned(el) === 0, 'labels return once there is room');
   });
 
+  it('keeps re-thinning labels on resize after the slider is moved', async () => {
+    const { wrapper, el } = await mount(1600);
+    expect(thinned(el)).to.equal(0);
+    el.remove();
+    wrapper.append(el);
+    await el.updateComplete;
+    wrapper.style.inlineSize = '320px';
+    await waitUntil(() => thinned(el) > 0, 'a reattached slider thins labels when it narrows');
+    wrapper.style.inlineSize = '1600px';
+    await waitUntil(() => thinned(el) === 0, 'and restores them when it widens again');
+  });
+
   it('keeps marks decorative and the handle value text authoritative', async () => {
     const { el } = await mount(800);
     el.valueFormatter = (value) => `${value}:00`;

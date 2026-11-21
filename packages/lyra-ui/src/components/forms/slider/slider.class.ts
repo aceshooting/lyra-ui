@@ -789,7 +789,11 @@ export class LyraSlider extends LyraSliderBase {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    if (this.hasUpdated) this.syncExternalDescription();
+    if (this.hasUpdated) {
+      this.syncExternalDescription();
+      // disconnectedCallback() released the marks observer; a moved slider re-arms it here.
+      this.thinMarkLabels();
+    }
     // Attribute reactions are not ordered consistently across engines while
     // a custom element upgrades. In WebKit the reflected `value` default can
     // be applied before `step`, which would snap `value="0.2"` to the initial
