@@ -57,7 +57,7 @@ describe('icon resource loading', () => {
 
   it('resolves null for a blank body and rejects a non-SVG document', async () => {
     const blank = acquireSanitizedIconResource(target('/g.svg', () => Promise.resolve(new Response('  \n'))));
-    expect(await blank.promise).to.equal(null);
+    expect((await blank.promise) === null).to.equal(true);
     blank.release();
     const html = acquireSanitizedIconResource(target('/h.svg', () => Promise.resolve(new Response('<p>hi</p>'))));
     expect(await reasonOf(html.promise)).to.equal('load');
@@ -71,9 +71,9 @@ describe('icon resource loading', () => {
     const first = acquireSanitizedIconResource(t);
     const second = acquireSanitizedIconResource(t);
     const node = (await first.promise)!;
-    expect(await second.promise).to.equal(node);
+    expect((await second.promise) === node).to.equal(true);
     expect(calls).to.equal(1);
-    expect(node.querySelector('style')).to.equal(null);
+    expect(node.querySelector('style') === null).to.equal(true);
     expect(node.hasAttribute('style')).to.equal(false);
     const uses = [...node.querySelectorAll('use')];
     expect(uses.map(use => use.getAttribute('href'))).to.deep.equal([null, '#local']);
