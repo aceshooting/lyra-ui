@@ -1,6 +1,6 @@
 # Lyra UI roadmap
 
-This roadmap plans the library and its companion packages from 31.3 through 33.0. Version targets
+This roadmap plans the library and its companion packages from 32.0 onwards. Version targets
 express delivery order and scope, not dates; conditional work remains subject to its stated demand
 and qualification. What has shipped is recorded in the changelogs
 ([`packages/lyra-ui/CHANGELOG.md`](../packages/lyra-ui/CHANGELOG.md), older majors in
@@ -10,73 +10,45 @@ The `fixed` release group (`lyra-ui`, `lyra-ide`, `lyra-translations`) shares on
 version independently: lyra-map 2.x, lyra-3d 1.x, lyra-gen 1.x, lyra-docs 0.x (experimental) and
 lyra-flags 2.x.
 
-## Principles for 31.3–33.0
+## Principles
 
 1. **Correct behaviour first.** A correction that changes a documented or test-pinned contract is
    not avoided to keep a release minor; it is staged through the
    [deprecation contract](#deprecation-rename-and-removal).
 2. **Coexist, then remove.** Where the old and the correct behaviour can coexist, the correct one
    ships in a minor and the old one is deprecated with a replacement, a development warning where
-   usage is cheaply observable, and a migration rewrite or review entry. It is removed no earlier
-   than the major after the next one: a deprecation published in 31.x survives all of 32.x and is
-   removed in 33.0.0.
+   usage is cheaply observable, and a migration rewrite or review entry. It is removed in a later
+   major (see [the deprecation contract](#deprecation-rename-and-removal)); a correction that lands
+   directly in a major ships without a deprecation step.
 3. **Change directly only when the two cannot coexist** — when the old behaviour is itself an
    accessibility or correctness defect that no consumer can legitimately rely on. Such a change lands
    in the next major with a migration note, never silently in a minor.
 4. **Corrections before features.** Open correctness, accessibility and security work is scheduled
    ahead of new capability; generative UI then takes priority over new 3D and document features.
-5. **No budget raised to absorb growth.** Size is recovered by consolidation and lazy loading.
+5. **Size is earned.** Growth is first recovered by consolidation and lazy loading; a budget is raised only for
+   a reviewed capability, to its exact measurement.
 
 ## Version plan
 
 | Version | Kind | Scope |
 |---|---|---|
-| **31.3.0** | minor | Library-wide corrections and consolidation (see [below](#3130--corrections-and-consolidation)); first deprecations; core bundle back under budget. |
-| **31.4.0** | minor | Delivery size, source and guide accuracy, test health targets. |
-| **31.5.0** | minor | Additive library support for Lyra Gen interoperability and geospatial scenes P1; viewer consolidation deprecations if lyra-docs qualifies. |
-| **32.0.0** | major | Direct contract corrections that cannot coexist; `lyra-v31` migration profile. |
-| **32.x** | minors | Geospatial scenes P2, lyra-3d visuals and scale, on-demand look, additional catalogs. |
-| **33.0.0** | major | Removal of everything deprecated in 31.x (and in 32.x once its window has passed). |
+| **32.0.0** | major | Library-wide corrections and consolidation, direct contract corrections, removal of every remaining deprecated API, the consumer-study capabilities and the `lyra-v31` migration profile. Ships with **no deprecated API**. |
+| **32.x** | minors | Geospatial scenes P2, lyra-3d visuals and scale, on-demand look, additional catalogs; Lyra Gen interoperability hooks. |
+| **33.0.0** | major | Removal of anything deprecated during 32.x once its window has passed; conditional removal of the lyra-ui document viewers once lyra-docs 1.0.0 has shipped. |
 
-### 31.3.0 — corrections and consolidation
+### 32.0.0 — corrections, consolidation and removals (major)
 
-| Area | Content |
-|---|---|
-| Corrections | Keyboard and focus handling, accessible names and live announcements, event and state lifecycles, stale asynchronous results, numeric guards, RTL and localization gaps, forced-colors support and hover/focus parity across all eleven component families. |
-| Consolidation | Shared internal helpers for list navigation, type-ahead, accessible-name resolution, focus repair, bidirectional text, scroll regions, owned observers, form-control state, validation, formatting, copy actions, pointer capture, remote viewer sources and map handlers replace duplicated per-component copies. No public API is removed. |
-| Additive API | New properties, events and parts where a correction needs a public surface, each with JSDoc, tests, a story, the family guide and regenerated editor data and event types. |
-| Deprecations | Contracts superseded by a correction that can coexist with it; their removal clock starts at publication. |
-| Size | The core registration bundle returns under its existing budget. |
-| Localization | New strings ship translated in every full catalog. |
-| Companions | lyra-map, lyra-3d and lyra-docs patch releases only where a correction reaches them. |
-
-### 31.4.0 — size, accuracy and test health
-
-- Per-component delivery cost ranked by bytes saved: remaining duplicated code, heavy import chains,
-  lazy registration and chunk candidates, each verified by size, budgets, the full suite and the
-  A/B benchmark. Lands in 31.3.0 instead if it is ready without delaying the corrections.
-- Source-comment tidiness (narrative and restated code removed; `dist` already strips comments) and
-  an accuracy pass over the consumer guides and generated references.
-- [Test health](roadmap/test-health.md): the Codecov full-hit goal of 99.80%, CI wall-clock under
-  15 minutes, and the remaining WebKit and Firefox lane hot spots.
-
-### 31.5.0 — enabling the next programs (additive)
-
-- Library hooks required by [Lyra Gen interoperability](roadmap/generative-ui.md#delivery-sequence)
-  (A2UI, MCP Apps, transport adapters, structured streaming) and persistent dashboards; Lyra Gen
-  itself ships independently in 1.x minors.
-- [Geospatial scenes P1](roadmap/geospatial-scenes.md#p1): typed globe and terrain configuration,
-  altitude-aware geometry and models, and a shared simulation clock around `lr-sequence-playback`,
-  with lyra-map 2.x minors where the engine needs them.
-- Conditional: once `@aceshooting/lyra-docs` qualifies its viewer parity, lyra-ui's document viewers
-  are deprecated in favour of the lyra-docs entry points (both keep working throughout 32.x).
-
-### 32.0.0 — direct contract corrections (major)
-
-- Corrections whose old behaviour cannot coexist with the correct one, each with a migration note
-  and, where mechanical, a rewrite in a new `lyra-v31` migration profile; older profiles stay for
-  consumers skipping majors.
-- No 31.x deprecation is removed in 32.0.0.
+- Corrections across all eleven component families (keyboard and focus, accessible names, live
+  announcements, lifecycles, stale asynchronous results, numeric guards, RTL, localization,
+  forced colors, hover and focus parity) and shared internal helpers replacing per-component copies.
+- Direct contract corrections whose old behaviour cannot coexist with the correct one, each with a
+  migration note and, where mechanical, a rewrite in the `lyra-v31` migration profile; older
+  profiles stay for consumers skipping majors.
+- Every deprecated component event, detail field, alias and implicit default is removed; the
+  deprecation inventory in `component-metadata.json` is empty at release. Consumers run
+  `npx lyra-ui-migrate --origin=lyra-v31 --check src` after upgrading.
+- Capabilities and theming hooks found by studying applications built on the library
+  (see [continuous improvement](#continuous-improvement-from-consumer-applications)).
 
 ### 32.x — features (minors, additive)
 
@@ -84,15 +56,21 @@ lyra-flags 2.x.
   tracking, and a network-monitoring showcase.
 - [lyra-3d 1.x](roadmap/lyra-3d.md#later-lyra-3d-1x): curved edges, DAG layouts, a custom node
   renderer and optional glow, then 100k graph nodes behind a performance gate; WebXR only on demand.
+- Library hooks required by [Lyra Gen interoperability](roadmap/generative-ui.md#delivery-sequence)
+  (A2UI, MCP Apps, transport adapters, structured streaming) and persistent dashboards.
+- Conditional: once `@aceshooting/lyra-docs` qualifies its viewer parity, lyra-ui's document viewers
+  are deprecated in favour of the lyra-docs entry points.
 - A restrained Fluent-informed look, only on consumer demand.
 - Additional full catalogs, last: `sk`, `bg`, `lt`, `lv`, `et`, `ca`, `ga`, `mt` and Serbian Cyrillic
   and Latin, about 1,600 messages each; Luxembourgish only when a reviewer and application demand exist.
+- [Test health](roadmap/test-health.md): the Codecov full-hit goal, CI wall-clock under 15 minutes,
+  and the remaining WebKit and Firefox lane hot spots.
 
 ### 33.0.0 — deprecation removals (major)
 
-- Removal of the APIs and behaviours deprecated in 31.x (and any 32.x deprecation whose window has
-  passed). Old usage is run through the migration tool and the migrated fixture compiled and rendered
-  before removal; dead code, types, CSS, manifest and editor entries and docs go in the same change.
+- Removal of the APIs and behaviours deprecated during 32.x whose window has passed. Old usage is run
+  through the migration tool and the migrated fixture compiled and rendered before removal; dead
+  code, types, CSS, manifest and editor entries and docs go in the same change.
 - Conditional: removal of the deprecated lyra-ui document viewers once lyra-docs 1.0.0 has shipped.
 
 ### Independent companion programs
@@ -192,10 +170,18 @@ a base catalog. A numeric macroregion such as `es-419` has no single flag. BCP-4
 the [W3C language-tag guidance](https://www.w3.org/International/articles/language-tags/index.en)
 and plural/inheritance rules follow [Unicode CLDR](https://www.unicode.org/reports/tr35/).
 
+### Continuous improvement from consumer applications
+
+The library is improved continuously from the applications built on it. Before a release, maintained
+applications are studied for workarounds, hand-rolled substitutes and friction around Lyra
+components; each verified library-level gap becomes one tracked request and is fixed in the library,
+and the rollout then removes the application workarounds the release covers.
+
 ### Consumer rollout after a release
 
 After each library release, upgrade the public website and maintained consumers through
-supported APIs only: update ranges and lockfiles together, replace deprecated usage and application
+supported APIs only: update ranges and lockfiles together, run the migration tool's check for the
+matching profile, never adopt a deprecated API, replace deprecated usage and application
 workarounds the library now covers, run each project's own gates, and report reusable gaps through
 the request channel rather than duplicating framework behavior. Website claims (languages,
 performance, capabilities) must match released, measured facts; localized pages must be genuinely
