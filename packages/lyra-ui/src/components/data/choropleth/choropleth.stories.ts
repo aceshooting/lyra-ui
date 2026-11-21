@@ -66,6 +66,16 @@ export const Default: StoryObj = {
   `,
 };
 
+export const CustomHeight: StoryObj = {
+  render: () => html`
+    <lr-choropleth
+      style="--lr-choropleth-height: var(--lr-size-16rem)"
+      label="Infrastructure spending by district"
+      .geography=${REGIONS}
+    ></lr-choropleth>
+  `,
+};
+
 export const DivergingMercator: StoryObj = {
   render: () => html`
     <lr-choropleth

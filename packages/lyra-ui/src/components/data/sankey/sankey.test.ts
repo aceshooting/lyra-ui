@@ -1,5 +1,6 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
+import { sinkTexts } from '../../../../test/announcements.js';
 import { expectLocaleFallback } from '../../../../test/expected-locale-fallbacks.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
@@ -213,6 +214,48 @@ describe('<lr-sankey>', () => {
     await el.updateComplete;
     expect(partText(el, 'error')).to.equal('');
     expect(marks(el, 'link').length).to.equal(3);
+  });
+
+  it('leaves an initial cycle silent and announces a later one', async () => {
+    const cyclic = [...LINKS, { source: 'paid', target: 'direct', value: 1 }];
+    const message = 'Cycle detected';
+    const el = await fixture<LyraSankey>(html`
+      <lr-sankey .nodes=${NODES} .links=${cyclic} .strings=${{ sankeyCycle: message }}></lr-sankey>
+    `);
+    const errors = () => sinkTexts('assertive').filter((entry) => entry === message);
+    expect(partText(el, 'error')).to.equal(message);
+    expect(errors()).to.deep.equal([]);
+    el.links = LINKS;
+    await el.updateComplete;
+    el.links = cyclic;
+    await el.updateComplete;
+    await waitUntil(() => errors().length === 1, 'The cycle was not announced');
+  });
+
+  it('falls back to locale formatting when the value formatter throws and coerces its result', async () => {
+    const formatter = (value: number) => {
+      if (value === 40) throw new Error('formatter failed');
+      return value as unknown as string;
+    };
+    const el = await fixture<LyraSankey>(html`
+      <lr-sankey .nodes=${NODES} .links=${LINKS} .valueFormatter=${formatter}></lr-sankey>
+    `);
+    expect(mark(el, 'link', 'Referred trials').getAttribute('aria-label')).to.equal('Referred trials, edge from Referrals to Trial: 40');
+    const values = [...el.shadowRoot!.querySelectorAll('#chart-data tbody td:last-child')].map((cell) => cell.textContent);
+    expect(values).to.deep.equal(['60', '40', '100']);
+  });
+
+  it('lays out in CSS pixels so labels keep the token size and the height stays bounded', async () => {
+    const el = await fixture<LyraSankey>(html`
+      <lr-sankey style="inline-size: 960px" .nodes=${NODES} .links=${LINKS}></lr-sankey>
+    `);
+    const svg = el.shadowRoot!.querySelector<SVGSVGElement>('svg[part~="plot"]')!;
+    await waitUntil(() => Math.abs(svg.viewBox.baseVal.width - svg.clientWidth) < 1 &&
+      Math.abs(svg.viewBox.baseVal.height - svg.clientHeight) < 1, 'The viewBox did not follow the plot size');
+    expect(svg.clientWidth).to.equal(960);
+    expect(svg.clientHeight).to.be.within(150, 480);
+    expect(svg.getScreenCTM()!.a).to.be.closeTo(1, 0.01);
+    expect(el.shadowRoot!.querySelector('[part~="node-label"]')).to.not.equal(null);
   });
 
   it('lists every node total, including isolated nodes, beside the flow table', async () => {

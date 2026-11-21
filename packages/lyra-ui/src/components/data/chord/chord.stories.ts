@@ -39,6 +39,17 @@ export const Default: StoryObj = {
   `,
 };
 
+export const CustomHeight: StoryObj = {
+  render: () => html`
+    <lr-chord
+      style="--lr-chord-height: var(--lr-size-20rem)"
+      label="Requests shared between teams"
+      .entities=${ENTITIES}
+      .matrix=${MATRIX}
+    ></lr-chord>
+  `,
+};
+
 export const Narrow320: StoryObj = {
   render: () => html`
     <lr-chord

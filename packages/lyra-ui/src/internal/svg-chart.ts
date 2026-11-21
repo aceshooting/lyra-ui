@@ -7,6 +7,8 @@ import { ENGINE_CHART_PALETTE } from './engine-style.js';
 import { isKeyboardFocusEvent, trackInputModality } from './focus-modality.js';
 import { isRovingTargetAvailable, resolveListMove, shouldIgnoreNavigationKey } from './list-navigation.js';
 import { activateNonmodalOverlay, type OverlayHandle } from './nonmodal-overlay-manager.js';
+import { OwnedResizeObserver } from './owned-observer.js';
+import type { AnnouncementSinkController } from './announcer.js';
 
 export function svgChartColor(index: number): string {
   return `var(${ENGINE_CHART_PALETTE[index % ENGINE_CHART_PALETTE.length]})`;
@@ -60,6 +62,22 @@ function dataTable(id: string, visible: boolean, table: SvgChartTable): Template
 
 type ChartHost = HTMLElement & ReactiveControllerHost;
 
+/** A plot box in CSS pixels. */
+export interface SvgChartPlotSize {
+  readonly width: number;
+  readonly height: number;
+}
+
+export interface SvgChartConfig {
+  /**
+   * Measures the rendered plot so a chart can lay out in CSS pixels, starting from this size until
+   * the first measurement. The chart's styles must give the plot a definite block size.
+   */
+  readonly measure?: SvgChartPlotSize;
+  /** Announces a later change into an error state assertively. The initial state stays silent. */
+  readonly announcer?: AnnouncementSinkController;
+}
+
 /** SVG marks share one keyboard stop. The data table remains readable to assistive technology
  * even when its visual disclosure is collapsed. */
 export class SvgChartInteraction implements ReactiveController {
@@ -70,9 +88,32 @@ export class SvgChartInteraction implements ReactiveController {
   private expanded: boolean | null = null;
   private options?: SvgChartOptions;
   private restoreMarkFocus = false;
+  private errorText = '';
+  private size?: SvgChartPlotSize;
+  private observedPlot?: Element;
+  private readonly plotObserver?: OwnedResizeObserver;
 
-  constructor(private readonly host: ChartHost) {
+  constructor(private readonly host: ChartHost, private readonly config: SvgChartConfig = {}) {
     host.addController(this);
+    this.size = config.measure;
+    if (config.measure) {
+      this.plotObserver = new OwnedResizeObserver(host, entries => {
+        for (const entry of entries) {
+          if (entry.target !== this.observedPlot) continue;
+          const { width, height } = entry.contentRect;
+          if (!(width > 0 && height > 0)) continue;
+          const size = this.plotSize;
+          if (Math.abs(width - size.width) < 0.5 && Math.abs(height - size.height) < 0.5) continue;
+          this.size = { width, height };
+          host.requestUpdate();
+        }
+      });
+    }
+  }
+
+  /** The measured plot size, or the configured starting size before the first measurement. */
+  get plotSize(): SvgChartPlotSize {
+    return this.size ?? { width: 0, height: 0 };
   }
 
   get detailId(): string | undefined {
@@ -81,9 +122,22 @@ export class SvgChartInteraction implements ReactiveController {
 
   hostConnected(): void {
     trackInputModality(this.host.ownerDocument);
+    this.observePlot();
+  }
+
+  /** Follows the rendered plot, which is replaced when a status message takes its place. */
+  private observePlot(): void {
+    if (!this.plotObserver) return;
+    const plot = this.host.shadowRoot?.querySelector('svg[part~="plot"]') ?? undefined;
+    if (plot === this.observedPlot) return;
+    this.plotObserver.clear();
+    this.observedPlot = plot;
+    if (plot) this.plotObserver.observe(plot);
   }
 
   hostUpdated(): void {
+    this.observePlot();
+    this.config.announcer?.transition('chart-status', this.errorText ? 'error' : 'ready', this.errorText);
     const panel = () => this.host.shadowRoot?.querySelector<HTMLElement>('[part="tooltip"]') ?? null;
     if (this.detailId && !this.overlay && panel()) {
       this.overlay = activateNonmodalOverlay({
@@ -105,6 +159,8 @@ export class SvgChartInteraction implements ReactiveController {
   }
 
   hostDisconnected(): void {
+    this.plotObserver?.clear();
+    this.observedPlot = undefined;
     this.overlay?.deactivate({ restoreFocus: false });
     this.overlay = undefined;
     this.clearDetails();
@@ -155,10 +211,7 @@ export class SvgChartInteraction implements ReactiveController {
         }
       }}
       @pointerenter=${() => { this.hoverId = mark.id; this.host.requestUpdate(); }}
-      @pointerleave=${(event: PointerEvent) => {
-        if (event.relatedTarget === this.host.shadowRoot?.querySelector('[part="tooltip"]')) return;
-        this.hoverId = undefined; this.host.requestUpdate();
-      }}
+      @pointerleave=${() => { this.hoverId = undefined; this.host.requestUpdate(); }}
       @keydown=${(event: KeyboardEvent) => this.keyDown(event, index)}
       @click=${() => { this.focusedId = mark.id; this.host.requestUpdate(); this.options?.activate(index); }}
     >${mark.shape}</g>`;
@@ -169,6 +222,7 @@ export class SvgChartInteraction implements ReactiveController {
       this.expanded = null;
     }
     this.options = options;
+    this.errorText = options.status?.part === 'error' ? options.status.text : '';
     const marks = options.status ? [] : options.marks;
     if (!marks.some(mark => mark.id === this.focusedId)) {
       this.restoreMarkFocus = this.host.shadowRoot?.activeElement?.matches('g[data-index]') ?? false;
@@ -185,9 +239,7 @@ export class SvgChartInteraction implements ReactiveController {
         <div class="graphic"><svg part="plot" role="group" aria-label=${options.name}
           aria-describedby=${options.description ? 'description' : nothing} viewBox=${options.viewBox}
         >${repeat(marks, mark => mark.id, (mark, index) => this.mark(mark, index))}</svg>
-        ${detail ? html`<div part="tooltip" role="tooltip"
-          @pointerleave=${() => { this.hoverId = undefined; this.host.requestUpdate(); }}
-        >${bdi(detail.label)}</div>` : nothing}</div>
+        ${detail ? html`<div part="tooltip" role="tooltip">${bdi(detail.label)}</div>` : nothing}</div>
         ${options.legend?.length ? html`<ul part="legend" aria-label=${options.legendLabel}>
           ${options.legend.map(entry => html`<li part="legend-item"><span part="legend-swatch" aria-hidden="true"
             style=${styleMap({ backgroundColor: entry.color })}></span><span part="legend-label">${bdi(entry.label)}</span></li>`)}

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -40,7 +40,13 @@ floating-point rounding, and the value above the diagonal is used for both. A po
 makes a self-ribbon and counts once toward its entity's total. Rows containing only zeros
 produce no arcs. Invalid input or more than 32 entities shows an error. Totals that exceed the
 numeric range are reported as `Number.MAX_VALUE`. The chart shows a notice if geometry is too
-small to represent.
+small to represent. A later change into an error is announced assertively. If `valueFormatter`
+throws, the value uses the default formatting.
+
+The plot fills the host's inline size and its coordinates follow the rendered size, so entity
+labels keep their token font size at any width. Set `--lr-chord-height` to change the plot's
+block size; it defaults to `clamp(var(--lr-size-16rem), 100cqi, var(--lr-size-30rem))`. The
+circle fits the smaller plot dimension.
 
 Tab enters the first visible entity. Left, Right, Home, and End move within entities or within
 the current entity's ribbons. Left and Right follow the reading direction. Down enters an
@@ -55,9 +61,11 @@ carries `LyraChordDatum` detail. Entity detail is
 `{ kind: 'entity', id, label, value }`. Ribbon detail is
 `{ kind: 'ribbon', source, target, value }`, where `source` and `target` are entity IDs.
 
-Arc labels appear where space permits, and the full names are available through the tooltip
-and accessible names. The diagram mirrors in right-to-left layouts.
+Arc labels appear where space permits and are omitted when the circle would become too small;
+the full names are available through the tooltip, legend, and accessible names. The diagram
+mirrors in right-to-left layouts.
 The diagram and legend use the shared `--lr-color-chart-1` through `--lr-color-chart-8` palette.
+**CSS custom properties:** `--lr-chord-height`.
 **CSS parts:** `base`, `plot`, `description`, `entity`, `entity-label`, `ribbon`, `tooltip`,
 `legend`, `legend-item`, `legend-swatch`, `legend-label`, `data-table`, `data-table-toggle`,
 `empty`, `loading`, `error`, and `limit`.

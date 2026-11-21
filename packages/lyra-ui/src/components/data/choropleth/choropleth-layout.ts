@@ -18,6 +18,8 @@ export interface ChoroplethLayoutResult {
   regions: ChoroplethMark[];
   /** True when decoded regions exist but no polygon has area or the projected bounds are degenerate. */
   invalid: boolean;
+  /** Decoded regions left out of the plot because none of their polygons has drawable area. */
+  omitted: ChoroplethRegion[];
   domain: readonly [number, number] | null;
   stops: { offset: number; value: number }[];
 }
@@ -146,11 +148,14 @@ export function layoutChoropleth(
   projection: LyraChoroplethProjection = 'equirectangular',
   palette: LyraChoroplethPalette = 'sequential',
 ): ChoroplethLayoutResult {
-  const result: ChoroplethLayoutResult = { regions: [], invalid: false, domain: null, stops: [] };
+  const result: ChoroplethLayoutResult = { regions: [], invalid: false, omitted: [], domain: null, stops: [] };
   if (finiteNumber(width, 0) <= 0 || finiteNumber(height, 0) <= 0) return result;
-  const entries = regions.map(region => ({
-    region, polygons: region.polygons.map(p => project(p, projection === 'mercator')).filter((p): p is Polygon => !!p),
-  })).filter(entry => entry.polygons.length);
+  const entries = [];
+  for (const region of regions) {
+    const polygons = region.polygons.map(p => project(p, projection === 'mercator')).filter((p): p is Polygon => !!p);
+    if (polygons.length) entries.push({ region, polygons });
+    else result.omitted.push(region);
+  }
   if (!entries.length) {
     result.invalid = regions.length > 0;
     return result;

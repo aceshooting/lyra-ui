@@ -28537,7 +28537,14 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-chord-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "clamp(var(--lr-size-16rem), 100cqi, var(--lr-size-30rem))"
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "staticProperties": [],
@@ -28889,6 +28896,10 @@
             "deprecated": null
           },
           {
+            "name": "limit",
+            "deprecated": null
+          },
+          {
             "name": "loading",
             "deprecated": null
           },
@@ -28909,7 +28920,14 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-choropleth-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "clamp(var(--lr-size-12rem), 62.5cqi, var(--lr-size-30rem))"
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "staticProperties": [],
@@ -132306,7 +132324,14 @@
             "deprecated": null
           }
         ],
-        "cssProperties": [],
+        "cssProperties": [
+          {
+            "name": "--lr-sankey-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "clamp(var(--lr-size-12rem), 62.5cqi, var(--lr-size-30rem))"
+          }
+        ],
         "cssStates": [],
         "methods": [],
         "staticProperties": [],

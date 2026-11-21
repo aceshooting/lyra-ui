@@ -3,10 +3,9 @@ import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
-import { formatChartValue } from '../../../internal/chart-number-format.js';
+import { formatCallerChartValue } from '../../../internal/chart-number-format.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { OwnedResizeObserver } from '../../../internal/owned-observer.js';
 import { SvgChartInteraction, svgChartColor } from '../../../internal/svg-chart.js';
 import { svgChartStyles } from '../../../internal/svg-chart.styles.js';
 import { layoutTreemap, type LyraTreemapNode, type TreemapRect } from './treemap-layout.js';
@@ -158,64 +157,11 @@ export class LyraTreemap extends LyraElement<LyraTreemapEventMap> {
   /** Formats numeric values in the table and tile details. Defaults to locale-aware formatting. */
   @property({ attribute: false }) valueFormatter?: (value: number) => string;
 
-  private readonly chart = new SvgChartInteraction(this);
+  private readonly chart = new SvgChartInteraction(this, { measure: { width: FALLBACK_WIDTH, height: FALLBACK_HEIGHT } });
   private memo?: TreemapView;
-  private plotWidth = FALLBACK_WIDTH;
-  private plotHeight = FALLBACK_HEIGHT;
-  private observedPlot?: Element;
-  private readonly plotObserver = new OwnedResizeObserver(this, entries => {
-    for (const entry of entries) {
-      if (entry.target !== this.observedPlot) continue;
-      const { width, height } = entry.contentRect;
-      if (!(width > 0 && height > 0)) continue;
-      if (Math.abs(width - this.plotWidth) < 0.5 && Math.abs(height - this.plotHeight) < 0.5) continue;
-      this.plotWidth = width;
-      this.plotHeight = height;
-      this.requestUpdate();
-    }
-  });
-
-  override connectedCallback(): void {
-    super.connectedCallback();
-    if (this.hasUpdated) this.observePlot();
-  }
-
-  override disconnectedCallback(): void {
-    super.disconnectedCallback();
-    this.plotObserver.clear();
-    this.observedPlot = undefined;
-  }
-
-  protected override updated(changed: Map<PropertyKey, unknown>): void {
-    super.updated(changed);
-    this.observePlot();
-  }
-
-  /** Follows the rendered plot, which is replaced when a status message takes its place. */
-  private observePlot(): void {
-    const plot = this.shadowRoot?.querySelector('svg[part~="plot"]') ?? undefined;
-    if (plot === this.observedPlot) return;
-    this.plotObserver.clear();
-    this.observedPlot = plot;
-    if (plot) this.plotObserver.observe(plot);
-  }
-
-  private formatValue(value: number, locale: string): string {
-    const formatter = this.valueFormatter;
-    if (typeof formatter === 'function') {
-      try {
-        const text: unknown = formatter(value);
-        if (text !== undefined && text !== null) return String(text);
-      } catch {
-        // A failing formatter falls back to the locale-aware default.
-      }
-    }
-    return formatChartValue(value, locale);
-  }
 
   private resolveView(): TreemapView {
-    const width = this.plotWidth;
-    const height = this.plotHeight;
+    const { width, height } = this.chart.plotSize;
     const memo = this.memo;
     if (memo?.nodes === this.nodes && memo.width === width && memo.height === height) return memo;
     let truncated = Boolean(publicCollectionTruncation(this, 'nodes'));
@@ -308,7 +254,7 @@ export class LyraTreemap extends LyraElement<LyraTreemapEventMap> {
     const rows = view?.rows ?? [];
     const rtl = this.effectiveDirection === 'rtl';
     const locale = this.effectiveLocale;
-    const values = rows.map(row => this.formatValue(row.value, locale));
+    const values = rows.map(row => formatCallerChartValue(this.valueFormatter, row.value, locale));
     const separator = this.localize('accessibleLabelSeparator');
     const names = rows.map(({ path }) => path.length > 1
       ? this.localize('treemapTileLabel', undefined, {

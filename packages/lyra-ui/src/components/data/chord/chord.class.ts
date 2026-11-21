@@ -3,11 +3,12 @@ import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
-import { formatChartValue } from '../../../internal/chart-number-format.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { formatCallerChartValue } from '../../../internal/chart-number-format.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { resolveListMove } from '../../../internal/list-navigation.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
-import { SvgChartInteraction, svgChartColor } from '../../../internal/svg-chart.js';
+import { SvgChartInteraction, svgChartColor, type SvgChartPlotSize } from '../../../internal/svg-chart.js';
 import { svgChartStyles } from '../../../internal/svg-chart.styles.js';
 import { layoutChord, type ChordArc, type ChordLayoutResult, type ChordRibbon, type LyraChordEntity } from './chord-layout.js';
 import { styles } from './chord.styles.js';
@@ -29,12 +30,32 @@ export interface LyraChordEventMap {
   'lr-datum-activate': CustomEvent<LyraChordDatum>;
 }
 
-const RADIUS = 88;
-const OUTER_RADIUS = 101;
-const LABEL_RADIUS = 108;
-const BOX = 164;
+/** Plot size in CSS pixels until the rendered plot is measured. */
+const FALLBACK_SIZE = { width: 328, height: 328 } as const;
+const ARC_BAND = 13;
+const LABEL_GAP = 7;
+const EDGE_GAP = 4;
+const MIN_LABELLED_RADIUS = 48;
 const LABEL_HEIGHT = 18;
 const LABEL_WIDTH = 52;
+
+interface ChordRadii {
+  readonly inner: number;
+  readonly outer: number;
+  /** Where entity labels are placed, or null when the plot is too small for them. */
+  readonly label: number | null;
+}
+
+/** Fits the circle into the measured plot, keeping room for entity labels while they fit. */
+function chordRadii({ width, height }: SvgChartPlotSize): ChordRadii {
+  const half = Math.min(width, height) / 2;
+  const labelled = half - ARC_BAND - LABEL_GAP - LABEL_WIDTH - EDGE_GAP;
+  if (labelled >= MIN_LABELLED_RADIUS) {
+    return { inner: labelled, outer: labelled + ARC_BAND, label: labelled + ARC_BAND + LABEL_GAP };
+  }
+  const inner = Math.max(1, half - ARC_BAND - EDGE_GAP);
+  return { inner, outer: inner + ARC_BAND, label: null };
+}
 
 interface LabelBox {
   x: number;
@@ -68,7 +89,12 @@ function ribbonMarkId(source: string, target: string): string {
  * its total weight. Each positive unordered pair contributes one ribbon, including self-pairs.
  * Hovering or focusing an entity emphasizes its ribbons; hovering or focusing a ribbon emphasizes that
  * ribbon. Either way, the other ribbons are muted. Mirrored weights may differ by a relative
- * tolerance of 1e-9 to absorb floating-point rounding.
+ * tolerance of 1e-9 to absorb floating-point rounding. A later change into an error state is
+ * announced.
+ *
+ * The plot fills the host's inline size, and its coordinate system follows the rendered size, so
+ * entity labels keep their token font size at any width. Labels are omitted when the circle would
+ * otherwise become too small; the legend and data table still name every entity.
  *
  * @customElement lr-chord
  * @renderController SvgChartInteraction
@@ -92,6 +118,7 @@ function ribbonMarkId(source: string, target: string): string {
  * @csspart loading - Shown while loading is set.
  * @csspart error - Shown for malformed or over-limit input.
  * @csspart limit - Shown when a positive pair cannot be represented in the plot.
+ * @cssprop [--lr-chord-height=clamp(var(--lr-size-16rem), 100cqi, var(--lr-size-30rem))] - Block size of the plot.
  * @status experimental
  * @since unreleased
  */
@@ -152,7 +179,10 @@ export class LyraChord extends LyraElement<LyraChordEventMap> {
   /** Formats numeric values in the table and details. Defaults to locale-aware formatting. */
   @property({ attribute: false }) valueFormatter?: (value: number) => string;
 
-  private readonly chart = new SvgChartInteraction(this);
+  private readonly chart = new SvgChartInteraction(this, {
+    measure: FALLBACK_SIZE,
+    announcer: new AnnouncementSinkController(this, { eager: ['assertive'] }),
+  });
   private ribbonOwnerId?: string;
   private memo?: {
     entities: readonly LyraChordEntity[];
@@ -204,16 +234,17 @@ export class LyraChord extends LyraElement<LyraChordEventMap> {
     return next === null ? index : ribbons.length + next;
   }
 
-  private arcShape(arc: ChordArc, rtl: boolean, labels: LabelBox[]): TemplateResult {
+  private arcShape(arc: ChordArc, radii: ChordRadii, rtl: boolean, labels: LabelBox[]): TemplateResult {
     const { startAngle, endAngle, label, index } = arc;
-    const path = `M ${pointText(startAngle, OUTER_RADIUS, rtl)}
-      ${arcTo(startAngle, endAngle, OUTER_RADIUS, rtl)} L ${pointText(endAngle, RADIUS, rtl)}
-      ${arcTo(endAngle, startAngle, RADIUS, rtl)} Z`;
-    const [x, y] = point((startAngle + endAngle) / 2, LABEL_RADIUS, rtl);
+    const { inner, outer } = radii;
+    const path = `M ${pointText(startAngle, outer, rtl)}
+      ${arcTo(startAngle, endAngle, outer, rtl)} L ${pointText(endAngle, inner, rtl)}
+      ${arcTo(endAngle, startAngle, inner, rtl)} Z`;
+    const [x, y] = point((startAngle + endAngle) / 2, radii.label ?? outer, rtl);
     const side = x > 22 ? 'after' : x < -22 ? 'before' : 'center';
     const left = x - (side === 'before' ? LABEL_WIDTH : side === 'center' ? LABEL_WIDTH / 2 : 0);
     const top = y - LABEL_HEIGHT / 2;
-    const fits = label && endAngle - startAngle >= 0.15 && !labels.some(box =>
+    const fits = label && radii.label !== null && endAngle - startAngle >= 0.15 && !labels.some(box =>
       Math.abs(box.x - left) < LABEL_WIDTH && Math.abs(box.y - top) < LABEL_HEIGHT
     );
     if (fits) labels.push({ x: left, y: top });
@@ -225,11 +256,11 @@ export class LyraChord extends LyraElement<LyraChordEventMap> {
       : nothing}`;
   }
 
-  private ribbonShape(ribbon: ChordRibbon, rtl: boolean, highlighted: boolean): TemplateResult {
+  private ribbonShape(ribbon: ChordRibbon, radius: number, rtl: boolean, highlighted: boolean): TemplateResult {
     const { sourceStartAngle, sourceEndAngle, targetStartAngle, targetEndAngle } = ribbon;
-    const path = `M ${pointText(sourceStartAngle, RADIUS, rtl)} ${arcTo(sourceStartAngle, sourceEndAngle, RADIUS, rtl)}
-      Q 0 0 ${pointText(targetStartAngle, RADIUS, rtl)} ${arcTo(targetStartAngle, targetEndAngle, RADIUS, rtl)}
-      Q 0 0 ${pointText(sourceStartAngle, RADIUS, rtl)} Z`;
+    const path = `M ${pointText(sourceStartAngle, radius, rtl)} ${arcTo(sourceStartAngle, sourceEndAngle, radius, rtl)}
+      Q 0 0 ${pointText(targetStartAngle, radius, rtl)} ${arcTo(targetStartAngle, targetEndAngle, radius, rtl)}
+      Q 0 0 ${pointText(sourceStartAngle, radius, rtl)} Z`;
     return svg`<path class="ribbon-shape" ?data-highlighted=${highlighted} d=${path} aria-hidden="true"
       style=${styleMap({ '--_lr-chord-mark-color': svgChartColor(ribbon.sourceIndex) })}></path>`;
   }
@@ -240,7 +271,9 @@ export class LyraChord extends LyraElement<LyraChordEventMap> {
     const ribbons = view?.layout.ribbons ?? [];
     const rtl = this.effectiveDirection === 'rtl';
     const locale = this.effectiveLocale;
-    const format = (value: number) => this.valueFormatter?.(value) ?? formatChartValue(value, locale);
+    const format = (value: number) => formatCallerChartValue(this.valueFormatter, value, locale);
+    const size = this.chart.plotSize;
+    const radii = chordRadii(size);
     const labelValue = (label: string, value: string) => this.localize('chartValueLabel', undefined, { label, value });
     const detailId = this.chart.detailId;
     const active = arcs.find(arc => arcMarkId(arc.id) === detailId)?.id;
@@ -260,7 +293,7 @@ export class LyraChord extends LyraElement<LyraChordEventMap> {
           part: 'ribbon',
           label: labelValue(this.localize('chordPairLabel', undefined, { source: sourceLabel, target: targetLabel }), valueText),
           muted: (active ?? activeRibbon) !== undefined && !highlighted,
-          shape: this.ribbonShape(ribbon, rtl, highlighted),
+          shape: this.ribbonShape(ribbon, radii.inner, rtl, highlighted),
         },
         row: [sourceLabel, targetLabel, valueText],
       };
@@ -269,7 +302,7 @@ export class LyraChord extends LyraElement<LyraChordEventMap> {
       id: arcMarkId(arc.id),
       part: 'entity',
       label: labelValue(arc.label, format(arc.value)),
-      shape: this.arcShape(arc, rtl, labelBoxes),
+      shape: this.arcShape(arc, radii, rtl, labelBoxes),
     }));
     const status = view?.layout.status;
     const collectionTruncated = publicCollectionTruncation(this, 'entities') || publicCollectionTruncation(this, 'matrix');
@@ -289,7 +322,7 @@ export class LyraChord extends LyraElement<LyraChordEventMap> {
       notice: view?.layout.truncated && status === 'ready' && !collectionTruncated
         ? this.localize('chartValuesTooSmall')
         : undefined,
-      viewBox: `-${BOX} -${BOX} ${BOX * 2} ${BOX * 2}`,
+      viewBox: `${-size.width / 2} ${-size.height / 2} ${size.width} ${size.height}`,
       initialId: entities[0]?.id,
       marks: [...pairs.map(pair => pair.mark), ...entities],
       legend: arcs.map(({ label, index }) => ({ label, color: svgChartColor(index) })),

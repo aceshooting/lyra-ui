@@ -102,9 +102,9 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-graph-query-builder` · lr-graph-query-builder.js · `stable` since `4.1.0` · ~110 KiB gzip — an editor for a single typed relationship/path filter (`GraphQuery`) over a knowledge graph: start/end entity anchors, relationship-type...
 - `lr-condition-builder` · lr-condition-builder.js · `stable` since `9.0.0` · ~161 KiB gzip — a composable structured-condition builder for tabular/dashboard data: a flat list of field/operator/value condition rows combined with...
 - `lr-treemap` · lr-treemap.js · `experimental` since `unreleased` · ~45 KiB gzip — A peer-free SVG treemap.
-- `lr-sankey` · lr-sankey.js · `experimental` since `unreleased` · ~45 KiB gzip — A peer-free SVG Sankey chart for weighted flows across stages.
-- `lr-chord` · lr-chord.js · `experimental` since `unreleased` · ~44 KiB gzip — A peer-free SVG chord chart for symmetric co-occurrence data.
-- `lr-choropleth` · lr-choropleth.js · `experimental` since `unreleased` · ~45 KiB gzip — A peer-free SVG choropleth for caller-supplied GeoJSON or TopoJSON.
+- `lr-sankey` · lr-sankey.js · `experimental` since `unreleased` · ~48 KiB gzip — A peer-free SVG Sankey chart for weighted flows across stages.
+- `lr-chord` · lr-chord.js · `experimental` since `unreleased` · ~47 KiB gzip — A peer-free SVG chord chart for symmetric co-occurrence data.
+- `lr-choropleth` · lr-choropleth.js · `experimental` since `unreleased` · ~46 KiB gzip — A peer-free SVG choropleth for caller-supplied GeoJSON or TopoJSON.
 
 ## Layout, navigation & structure — `components/layout/` (40)
 

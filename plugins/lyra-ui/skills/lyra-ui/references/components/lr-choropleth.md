@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -45,7 +45,9 @@ latitude first. Each ring needs at least four positions, including its repeated 
 A region that crosses the antimeridian stays contiguous. TopoJSON supports absolute arcs,
 transformed integer-delta arcs, and reversed arc references. Features and collection members with
 null, Point, MultiPoint, LineString, or MultiLineString geometry are skipped; other non-polygon
-types are invalid. Geometry with no drawable area, such as collinear rings, is invalid.
+types are invalid. Geometry with no drawable area, such as collinear rings, is invalid when no
+region can be drawn; otherwise such a region stays in the data table and a `limit` notice says
+so.
 A region uses its feature ID when present. Missing or repeated IDs receive generated IDs. An
 unnamed region uses its ID as its label. Only finite numeric properties count as data, so
 numeric strings and missing values use the no-data style.
@@ -56,7 +58,12 @@ references. It limits each position to 16 ordinates, collection nesting to 32 le
 traversal to a 100,000-entry budget, and supported property keys and TopoJSON object names to
 1,024 UTF-16 code units each. Longer labels are truncated with an ellipsis. A feature whose ID is
 longer is skipped. Skipped features still count toward the region limit. Invalid geometry or an
-exceeded limit shows an error for the input.
+exceeded limit shows an error for the input, and a later change into an error is announced
+assertively. If `valueFormatter` throws, the value uses the default formatting.
+
+The plot fills the host's inline size and its coordinates follow the rendered size, so region
+labels keep their token font size at any width. Set `--lr-choropleth-height` to change the plot's
+block size; it defaults to `clamp(var(--lr-size-12rem), 62.5cqi, var(--lr-size-30rem))`.
 
 The sequential palette spans the observed minimum and maximum, with a midpoint color for a
 constant value. The diverging palette uses a symmetric domain around zero. The legend shows
@@ -74,9 +81,10 @@ available to assistive technology while visually collapsed.
 **Events:** `lr-datum-activate` fires on click, Enter, or Space. It bubbles, is composed, and
 carries `LyraChoroplethDatum` detail `{ id, label, value }`. An absent value is `null`.
 
+**CSS custom properties:** `--lr-choropleth-height`.
 **CSS parts:** `base`, `plot`, `description`, `region`, `region-label`, `tooltip`, `legend`,
 `legend-item`, `legend-swatch`, `legend-label`, `data-table`, `data-table-toggle`, `empty`,
-`loading`, and `error`.
+`loading`, `error`, and `limit`.
 
 ```html
 <lr-choropleth id="coverage" label="Service coverage" data-table-toggle></lr-choropleth>

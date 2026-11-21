@@ -38,3 +38,19 @@ export function formatChartValue(
     ? getNumberFormat(locale, { maximumFractionDigits: digits }).format(value)
     : (format ?? getNumberFormat(locale, base === 3 ? undefined : { maximumFractionDigits: base })).format(value);
 }
+
+/**
+ * The text of a caller's value formatter, or the locale-aware default when the formatter is
+ * absent, throws, or returns nothing. A non-string result is converted to a string.
+ */
+export function formatCallerChartValue(formatter: unknown, value: number, locale: string): string {
+  if (typeof formatter === 'function') {
+    try {
+      const text: unknown = formatter(value);
+      if (text !== undefined && text !== null) return String(text);
+    } catch {
+      // A failing formatter falls back to the locale-aware default.
+    }
+  }
+  return formatChartValue(value, locale);
+}

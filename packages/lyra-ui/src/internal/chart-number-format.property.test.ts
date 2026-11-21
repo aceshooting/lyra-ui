@@ -1,7 +1,7 @@
 import { expect } from '@open-wc/testing';
 import fc from 'fast-check';
 import { propertyRuns } from '../../test/property-options.js';
-import { chartValueFractionDigits, formatChartValue, significantFractionDigits } from './chart-number-format.js';
+import { chartValueFractionDigits, formatCallerChartValue, formatChartValue, significantFractionDigits } from './chart-number-format.js';
 
 const magnitudes = fc.double({ min: 1e-30, max: 1e30, noNaN: true });
 
@@ -73,4 +73,17 @@ describe('chart number format properties', () => {
       expect(Number(formatChartValue(value, 'en').replace(/,/g, '')), 'not rounded to zero').to.not.equal(0);
     }), propertyRuns());
   });
+});
+
+it('returns a caller formatter as text and falls back when it throws or returns nothing', () => {
+  const outcomes = fc.oneof(fc.constant('throw'), fc.constant(null), fc.constant(undefined), fc.string(), fc.double());
+  fc.assert(fc.property(fc.double({ noNaN: true }), outcomes, (value, outcome) => {
+    const formatter = () => {
+      if (outcome === 'throw') throw new Error('formatter failed');
+      return outcome;
+    };
+    const text = formatCallerChartValue(formatter, value, 'en');
+    expect(text).to.equal(outcome === 'throw' || outcome === null || outcome === undefined
+      ? formatChartValue(value, 'en') : String(outcome));
+  }), propertyRuns());
 });

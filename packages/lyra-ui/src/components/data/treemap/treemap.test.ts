@@ -459,6 +459,25 @@ describe('<lr-treemap>', () => {
     }
   });
 
+  it('lets a pointer click pass through the open tooltip to the tile beneath it', async () => {
+    const el = await fixture<LyraTreemap>(html`
+      <lr-treemap style="inline-size: 320px" .nodes=${[{ id: 'only', label: 'Only', value: 1 }]}></lr-treemap>
+    `);
+    await settledPlot(el);
+    try {
+      await hoverUntilMatched(tile(el, 'Only').querySelector('.tile-shape')!, 'The tile did not receive hover');
+      await waitUntil(() => el.shadowRoot!.querySelector('[part~="tooltip"]'), 'The tooltip did not open');
+      const tooltip = el.shadowRoot!.querySelector<HTMLElement>('[part~="tooltip"]')!.getBoundingClientRect();
+      const position: [number, number] = [Math.round(tooltip.x + tooltip.width / 2), Math.round(tooltip.y + tooltip.height / 2)];
+      expect(el.shadowRoot!.elementFromPoint(...position)?.closest('[part~="tile"]')?.getAttribute('aria-label')).to.equal('Only: 1');
+      const activated = oneEvent(el, 'lr-datum-activate');
+      await sendMouse({ type: 'click', position });
+      expect((await activated).detail.id).to.equal('only');
+    } finally {
+      await resetMouse();
+    }
+  });
+
   it('outlines tiles with system colors under forced colors', async function () {
     const el = await fixture<LyraTreemap>(html`<lr-treemap .nodes=${NODES}></lr-treemap>`);
     try {

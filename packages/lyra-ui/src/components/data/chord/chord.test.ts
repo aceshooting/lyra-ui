@@ -1,6 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { svgChartColor } from '../../../internal/svg-chart.js';
+import { sinkTexts } from '../../../../test/announcements.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import type { LyraChord, LyraChordEntity } from './chord.class.js';
@@ -235,6 +236,47 @@ describe('<lr-chord>', () => {
     await el.updateComplete;
     expect(marks(el, 'ribbon').length).to.equal(4);
     expect(partText(el, 'error')).to.equal('');
+  });
+
+  it('leaves initial invalid data silent and announces a later invalid matrix', async () => {
+    const message = 'These pair weights are invalid';
+    const asymmetric = [[1, 5, 0, 0], [4, 0, 2, 0], [0, 2, 0, 4], [0, 0, 4, 0]];
+    const el = await fixture<LyraChord>(html`
+      <lr-chord .entities=${ENTITIES} .matrix=${asymmetric} .strings=${{ valueInvalid: message }}></lr-chord>
+    `);
+    const errors = () => sinkTexts('assertive').filter((entry) => entry === message);
+    expect(errors()).to.deep.equal([]);
+    el.matrix = MATRIX;
+    await el.updateComplete;
+    el.matrix = asymmetric;
+    await el.updateComplete;
+    await waitUntil(() => errors().length === 1, 'The invalid matrix was not announced');
+  });
+
+  it('falls back to locale formatting when the value formatter throws and coerces its result', async () => {
+    const formatter = (value: number) => {
+      if (value === 4) throw new Error('formatter failed');
+      return value as unknown as string;
+    };
+    const el = await fixture<LyraChord>(html`
+      <lr-chord .entities=${ENTITIES} .matrix=${MATRIX} .valueFormatter=${formatter}></lr-chord>
+    `);
+    expect(entity(el, 'Design').getAttribute('aria-label')).to.equal('Design: 4');
+    expect(tableRows(el, 'chart-data')).to.include('Product|Design|4');
+    expect(tableRows(el, 'chart-data-totals')).to.include('Design|4');
+  });
+
+  it('lays out in CSS pixels in a wide allocation and bounds the plot height', async () => {
+    const el = await fixture<LyraChord>(html`
+      <lr-chord style="inline-size: 1200px" .entities=${ENTITIES} .matrix=${MATRIX}></lr-chord>
+    `);
+    const svg = el.shadowRoot!.querySelector<SVGSVGElement>('svg[part~="plot"]')!;
+    await waitUntil(() => Math.abs(svg.viewBox.baseVal.width - svg.clientWidth) < 1 &&
+      Math.abs(svg.viewBox.baseVal.height - svg.clientHeight) < 1, 'The viewBox did not follow the plot size');
+    expect(svg.clientWidth).to.equal(1200);
+    expect(svg.clientHeight).to.be.within(256, 480);
+    expect(svg.getScreenCTM()!.a).to.be.closeTo(1, 0.01);
+    expect(el.shadowRoot!.querySelectorAll('[part~="entity-label"]').length).to.be.greaterThan(0);
   });
 
   it('reports the entity limit without drawing a clipped matrix', async () => {

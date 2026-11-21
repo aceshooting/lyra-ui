@@ -3,7 +3,8 @@ import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
-import { formatChartValue } from '../../../internal/chart-number-format.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { formatCallerChartValue } from '../../../internal/chart-number-format.js';
 import { getListFormat } from '../../../internal/intl-cache.js';
 import { collectionSupport, publicCollectionTruncation } from '../../../internal/collection-snapshot.js';
 import { resolveListMove } from '../../../internal/list-navigation.js';
@@ -37,16 +38,16 @@ export interface LyraSankeyEventMap {
   'lr-datum-activate': CustomEvent<LyraSankeyDatum>;
 }
 
-const PLOT_WIDTH = 320;
-const PLOT_HEIGHT = 200;
+/** Plot size in CSS pixels until the rendered plot is measured. */
+const FALLBACK_SIZE = { width: 320, height: 200 } as const;
 const LABEL_HEIGHT = 18;
 const LABEL_GAP = 3;
 const MIN_LABEL_WIDTH = 28;
 const MAX_LABEL_WIDTH = 96;
 const MAX_CYCLE_NAMES = 5;
 
-function plotX(x: number, width: number, rtl: boolean): number {
-  return rtl ? PLOT_WIDTH - x - width : x;
+function plotX(x: number, width: number, plotWidth: number, rtl: boolean): number {
+  return rtl ? plotWidth - x - width : x;
 }
 
 /**
@@ -55,6 +56,10 @@ function plotX(x: number, width: number, rtl: boolean): number {
  * Invalid or dangling links are omitted, and cycles render a localized notice naming up to five
  * nodes of one cycle. Node order within a stage reduces flow crossings heuristically: the layout
  * keeps whichever relaxation pass, starting from the input order, crosses the fewest flows.
+ * A later change into the cycle state is announced.
+ *
+ * The plot fills the host's inline size, and its coordinate system follows the rendered size, so
+ * labels keep their token font size at any width.
  *
  * @customElement lr-sankey
  * @renderController SvgChartInteraction
@@ -78,6 +83,7 @@ function plotX(x: number, width: number, rtl: boolean): number {
  * @csspart loading - Shown while loading is set.
  * @csspart error - Shown when the flows contain a cycle.
  * @csspart limit - Shown when an input limit is reached.
+ * @cssprop [--lr-sankey-height=clamp(var(--lr-size-12rem), 62.5cqi, var(--lr-size-30rem))] - Block size of the plot.
  * @status experimental
  * @since unreleased
  */
@@ -135,35 +141,45 @@ export class LyraSankey extends LyraElement<LyraSankeyEventMap> {
   /** Formats numeric values in the table and details. Defaults to locale-aware formatting. */
   @property({ attribute: false }) valueFormatter?: (value: number) => string;
 
-  private readonly chart = new SvgChartInteraction(this);
+  private readonly chart = new SvgChartInteraction(this, {
+    measure: FALLBACK_SIZE,
+    announcer: new AnnouncementSinkController(this, { eager: ['assertive'] }),
+  });
   private memo?: {
     nodes: readonly LyraSankeyNode[];
     links: readonly LyraSankeyLink[];
+    width: number;
+    height: number;
     layout: SankeyLayoutResult;
   };
 
   private resolveLayout(): SankeyLayoutResult {
-    if (this.memo?.nodes === this.nodes && this.memo.links === this.links) return this.memo.layout;
-    const layout = layoutSankey(this.nodes, this.links, PLOT_WIDTH, PLOT_HEIGHT);
+    const { width, height } = this.chart.plotSize;
+    const memo = this.memo;
+    if (memo?.nodes === this.nodes && memo.links === this.links && memo.width === width && memo.height === height) {
+      return memo.layout;
+    }
+    const layout = layoutSankey(this.nodes, this.links, width, height);
     layout.nodes.sort((left, right) => left.stage - right.stage || left.y - right.y);
-    this.memo = { nodes: this.nodes, links: this.links, layout };
+    this.memo = { nodes: this.nodes, links: this.links, width, height, layout };
     return layout;
   }
 
   private nodeShape(node: SankeyNodeRect, color: string, stageCount: number, rtl: boolean): TemplateResult {
     const { x, y, width, height, label } = node;
+    const plot = this.chart.plotSize;
     const end = stageCount > 1 && node.stage === stageCount - 1;
-    const labelWidth = Math.min(MAX_LABEL_WIDTH, (PLOT_WIDTH / stageCount - width) * 0.4);
+    const labelWidth = Math.min(MAX_LABEL_WIDTH, (plot.width / stageCount - width) * 0.4);
     const labelX = end ? x - labelWidth - LABEL_GAP : x + width + LABEL_GAP;
     // Labels sit on a physical side of their bar after mirroring, so they align toward it physically.
     const align = end === rtl ? 'left' : 'right';
-    const labelY = Math.max(0, Math.min(PLOT_HEIGHT - LABEL_HEIGHT, y + (height - LABEL_HEIGHT) / 2));
+    const labelY = Math.max(0, Math.min(plot.height - LABEL_HEIGHT, y + (height - LABEL_HEIGHT) / 2));
     return svg`<rect
-      class="node-shape" x=${plotX(x, width, rtl)} y=${y} width=${width} height=${height}
+      class="node-shape" x=${plotX(x, width, plot.width, rtl)} y=${y} width=${width} height=${height}
       style=${styleMap({ '--_lr-sankey-mark-color': color })} aria-hidden="true"
     ></rect>${label && labelWidth >= MIN_LABEL_WIDTH && height >= LABEL_HEIGHT
       ? svg`<foreignObject
-          class="mark-label-box" x=${plotX(labelX, labelWidth, rtl)} y=${labelY}
+          class="mark-label-box" x=${plotX(labelX, labelWidth, plot.width, rtl)} y=${labelY}
           width=${labelWidth} height=${LABEL_HEIGHT} aria-hidden="true"
         ><div part="node-label" data-align=${align}>${label}</div></foreignObject>`
       : nothing}`;
@@ -171,8 +187,9 @@ export class LyraSankey extends LyraElement<LyraSankeyEventMap> {
 
   private linkShape(link: SankeyRibbon, color: string, rtl: boolean): TemplateResult {
     const { x1, y1, x2, y2, thickness } = link;
-    const fromX = plotX(x1, 0, rtl);
-    const toX = plotX(x2, 0, rtl);
+    const plotWidth = this.chart.plotSize.width;
+    const fromX = plotX(x1, 0, plotWidth, rtl);
+    const toX = plotX(x2, 0, plotWidth, rtl);
     const midX = (fromX + toX) / 2;
     const half = thickness / 2;
     const path = `M ${fromX} ${y1 - half} C ${midX} ${y1 - half} ${midX} ${y2 - half} ${toX} ${y2 - half}
@@ -195,7 +212,7 @@ export class LyraSankey extends LyraElement<LyraSankeyEventMap> {
     const links = layout?.links ?? [];
     const rtl = this.effectiveDirection === 'rtl';
     const locale = this.effectiveLocale;
-    const format = (value: number) => this.valueFormatter?.(value) ?? formatChartValue(value, locale);
+    const format = (value: number) => formatCallerChartValue(this.valueFormatter, value, locale);
     const labelValue = (label: string, value: string) => this.localize('chartValueLabel', undefined, { label, value });
     const byId = new Map(nodes.map((node, index) => [node.id, { ...node, color: svgChartColor(index) }] as const));
     const sourceIds = new Set(links.map(link => link.source));
@@ -245,7 +262,7 @@ export class LyraSankey extends LyraElement<LyraSankeyEventMap> {
       notice: layout?.truncated || publicCollectionTruncation(this, 'nodes') || publicCollectionTruncation(this, 'links')
         ? this.localize('chartInputLimit')
         : undefined,
-      viewBox: `0 0 ${PLOT_WIDTH} ${PLOT_HEIGHT}`,
+      viewBox: `0 0 ${this.chart.plotSize.width} ${this.chart.plotSize.height}`,
       initialId: nodeMarks[0]?.id,
       marks,
       legend: [...byId.values()].filter(node => sourceIds.has(node.id)).map(({ label, color }) => ({ label, color })),

@@ -1,6 +1,11 @@
 import { css } from 'lit';
 
 export const styles = css`
+  /* The viewBox follows this rendered box, so one user unit is one CSS pixel. */
+  [part='plot'] {
+    block-size: var(--lr-chord-height, clamp(var(--lr-size-16rem), 100cqi, var(--lr-size-30rem)));
+  }
+
   .arc-shape,
   .ribbon-shape {
     vector-effect: non-scaling-stroke;

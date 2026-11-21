@@ -2903,7 +2903,7 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraChordEventMap;
     eventNames:       | 'lr-datum-activate';
-    cssNames: never;
+    cssNames:       | '--lr-chord-height';
     attributeAliases: {
       'data-table-toggle'?: LyraChord['dataTableToggle'];
       'with-data-table'?: LyraChord['withDataTable'];
@@ -2932,7 +2932,7 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraChoroplethEventMap;
     eventNames:       | 'lr-datum-activate';
-    cssNames: never;
+    cssNames:       | '--lr-choropleth-height';
     attributeAliases: {
       'data-table-toggle'?: LyraChoropleth['dataTableToggle'];
       'label-field'?: LyraChoropleth['labelField'];
@@ -12141,7 +12141,7 @@ export interface LyraComponentTypeMap {
     >;
     events: LyraSankeyEventMap;
     eventNames:       | 'lr-datum-activate';
-    cssNames: never;
+    cssNames:       | '--lr-sankey-height';
     attributeAliases: {
       'data-table-toggle'?: LyraSankey['dataTableToggle'];
       'with-data-table'?: LyraSankey['withDataTable'];

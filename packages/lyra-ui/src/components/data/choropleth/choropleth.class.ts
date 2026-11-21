@@ -1,10 +1,10 @@
-import { nothing, svg, type PropertyValues, type TemplateResult } from 'lit';
+import { nothing, svg, type TemplateResult } from 'lit';
 import { property } from 'lit/decorators.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
-import { formatChartValue } from '../../../internal/chart-number-format.js';
+import { formatCallerChartValue } from '../../../internal/chart-number-format.js';
 import { projectChoroplethNoData } from '../../../internal/choropleth-no-data.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { SvgChartInteraction, svgChartColor, type SvgChartOptions } from '../../../internal/svg-chart.js';
@@ -20,7 +20,7 @@ import {
 import { styles } from './choropleth.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_chartTableName, LYRA_DEFAULT_chartTableValue, LYRA_DEFAULT_choroplethInvalidGeometry } from '../../../internal/default-strings/data.generated.js';
+import { LYRA_DEFAULT_chartTableName, LYRA_DEFAULT_chartTableValue, LYRA_DEFAULT_chartValuesTooSmall, LYRA_DEFAULT_choroplethInvalidGeometry } from '../../../internal/default-strings/data.generated.js';
 import { LYRA_DEFAULT_chartData, LYRA_DEFAULT_chartInputLimit, LYRA_DEFAULT_chartLegend, LYRA_DEFAULT_chartValueLabel, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_noData } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -45,8 +45,8 @@ export interface LyraChoroplethEventMap {
   'lr-datum-activate': CustomEvent<LyraChoroplethDatum>;
 }
 
-const PLOT_WIDTH = 320;
-const PLOT_HEIGHT = 200;
+/** Plot size in CSS pixels until the rendered plot is measured. */
+const FALLBACK_SIZE = { width: 320, height: 200 } as const;
 const LABEL_WIDTH = 56;
 const LABEL_HEIGHT = 18;
 const MISSING_COLOR = 'var(--lr-color-no-data)';
@@ -64,9 +64,13 @@ function regionColor(position: number, palette: LyraChoroplethPalette): string {
  * or diverging color from their numeric properties. Keyboard navigation follows source order.
  * Malformed or over-limit geography displays a localized notice. Coordinates must be longitude
  * and latitude, so projected TopoJSON (for example, meters) is rejected as invalid geometry, as is
- * geometry with no drawable area. Features with null, point, or line geometry, and features whose
- * ID exceeds 1,024 UTF-16 code units, are skipped but still count toward the feature limit.
- * Longer labels are truncated.
+ * geometry with no drawable area. A region whose polygons have no drawable area while others do
+ * stays in the data table, with a notice. Features with null, point, or line geometry, and
+ * features whose ID exceeds 1,024 UTF-16 code units, are skipped but still count toward the
+ * feature limit. Longer labels are truncated. A later change into an error state is announced.
+ *
+ * The plot fills the host's inline size, and its coordinate system follows the rendered size, so
+ * region labels keep their token font size at any width.
  *
  * @customElement lr-choropleth
  * @renderController SvgChartInteraction
@@ -87,6 +91,8 @@ function regionColor(position: number, palette: LyraChoroplethPalette): string {
  * @csspart empty - Shown when the map has no regions.
  * @csspart loading - Shown while loading is set.
  * @csspart error - Shown for malformed or over-limit geography.
+ * @csspart limit - Shown when a region has no drawable area.
+ * @cssprop [--lr-choropleth-height=clamp(var(--lr-size-12rem), 62.5cqi, var(--lr-size-30rem))] - Block size of the plot.
  * @status experimental
  * @since unreleased
  */
@@ -101,6 +107,7 @@ export class LyraChoropleth extends LyraElement<LyraChoroplethEventMap> {
     chartTableName: LYRA_DEFAULT_chartTableName,
     chartTableValue: LYRA_DEFAULT_chartTableValue,
     chartValueLabel: LYRA_DEFAULT_chartValueLabel,
+    chartValuesTooSmall: LYRA_DEFAULT_chartValuesTooSmall,
     choroplethInvalidGeometry: LYRA_DEFAULT_choroplethInvalidGeometry,
     loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
@@ -153,9 +160,10 @@ export class LyraChoropleth extends LyraElement<LyraChoroplethEventMap> {
   /** Formats numeric values in the details, table, and scale key. Defaults to locale-aware formatting. */
   @property({ attribute: false }) valueFormatter?: (value: number) => string;
 
-  private readonly chart = new SvgChartInteraction(this);
-  private readonly announcements = new AnnouncementSinkController(this, { eager: ['assertive'] });
-  private errorText = '';
+  private readonly chart = new SvgChartInteraction(this, {
+    measure: FALLBACK_SIZE,
+    announcer: new AnnouncementSinkController(this, { eager: ['assertive'] }),
+  });
   private decoded?: {
     input: unknown;
     field: string;
@@ -165,6 +173,8 @@ export class LyraChoropleth extends LyraElement<LyraChoroplethEventMap> {
   };
   private projected?: {
     regions: readonly ChoroplethRegion[];
+    width: number;
+    height: number;
     projection: LyraChoroplethProjection;
     palette: LyraChoroplethPalette;
     value: ChoroplethLayoutResult;
@@ -183,10 +193,12 @@ export class LyraChoropleth extends LyraElement<LyraChoroplethEventMap> {
 
   private project(regions: readonly ChoroplethRegion[], palette: LyraChoroplethPalette): ChoroplethLayoutResult {
     const projection = this.projection === 'mercator' ? 'mercator' : 'equirectangular';
+    const { width, height } = this.chart.plotSize;
     const memo = this.projected;
-    if (memo && memo.regions === regions && memo.projection === projection && memo.palette === palette) return memo.value;
-    const value = layoutChoropleth(regions, PLOT_WIDTH, PLOT_HEIGHT, projection, palette);
-    this.projected = { regions, projection, palette, value };
+    if (memo && memo.regions === regions && memo.width === width && memo.height === height &&
+      memo.projection === projection && memo.palette === palette) return memo.value;
+    const value = layoutChoropleth(regions, width, height, projection, palette);
+    this.projected = { regions, width, height, projection, palette, value };
     return value;
   }
 
@@ -205,8 +217,9 @@ export class LyraChoropleth extends LyraElement<LyraChoroplethEventMap> {
     labels: [number, number][],
   ): TemplateResult {
     const { path, label, labelX, labelY } = region;
-    const x = labelX === null ? null : Math.max(0, Math.min(PLOT_WIDTH - LABEL_WIDTH, labelX - LABEL_WIDTH / 2));
-    const y = labelY === null ? null : Math.max(0, Math.min(PLOT_HEIGHT - LABEL_HEIGHT, labelY - LABEL_HEIGHT / 2));
+    const plot = this.chart.plotSize;
+    const x = labelX === null ? null : Math.max(0, Math.min(plot.width - LABEL_WIDTH, labelX - LABEL_WIDTH / 2));
+    const y = labelY === null ? null : Math.max(0, Math.min(plot.height - LABEL_HEIGHT, labelY - LABEL_HEIGHT / 2));
     const fits = label && x !== null && y !== null && !labels.some(([left, top]) =>
       Math.abs(left - x) < LABEL_WIDTH && Math.abs(top - y) < LABEL_HEIGHT
     );
@@ -234,11 +247,6 @@ export class LyraChoropleth extends LyraElement<LyraChoroplethEventMap> {
     return undefined;
   }
 
-  protected override updated(changed: PropertyValues): void {
-    super.updated(changed);
-    this.announcements.transition('geography', this.errorText ? 'error' : 'ready', this.errorText);
-  }
-
   override render(): TemplateResult {
     const decoded = this.decode();
     const palette = this.palette === 'diverging' ? 'diverging' : 'sequential';
@@ -248,7 +256,7 @@ export class LyraChoropleth extends LyraElement<LyraChoroplethEventMap> {
     const missingText = missing?.label ?? this.localize('noData');
     const missingColor = missing?.color ?? MISSING_COLOR;
     const locale = this.effectiveLocale;
-    const format = (value: number) => this.valueFormatter?.(value) ?? formatChartValue(value, locale);
+    const format = (value: number) => formatCallerChartValue(this.valueFormatter, value, locale);
     const labels: [number, number][] = [];
     const plotted = regions.map(region => {
       const formatted = region.value === null ? missingText : format(region.value);
@@ -266,18 +274,29 @@ export class LyraChoropleth extends LyraElement<LyraChoroplethEventMap> {
     const legend = layout?.stops.map(({ offset, value }) => ({ label: format(value), color: regionColor(offset, palette) })) ?? [];
     if (regions.some(region => region.value === null)) legend.push({ label: missingText, color: missingColor });
     const status = this.chartStatus(decoded, layout);
-    this.errorText = status?.part === 'error' ? status.text : '';
+    // Regions without drawable area keep their source-order row in the table.
+    const omitted = new Set(layout?.omitted);
+    const rows: string[][] = [];
+    let next = 0;
+    for (const region of layout ? decoded.regions : []) {
+      if (!omitted.has(region)) rows.push(plotted[next++]!.row);
+      else {
+        const value = region.value !== null && Number.isFinite(region.value) ? format(region.value) : missingText;
+        rows.push([region.label, value]);
+      }
+    }
     return this.chart.render({
       name: hostAriaLabel(this) ?? normalizeLabel(this.label) ?? this.localize('map'),
       description: normalizeLabel(this.description) ?? '',
       status,
-      viewBox: `0 0 ${PLOT_WIDTH} ${PLOT_HEIGHT}`,
+      notice: omitted.size && !status ? this.localize('chartValuesTooSmall') : undefined,
+      viewBox: `0 0 ${this.chart.plotSize.width} ${this.chart.plotSize.height}`,
       marks: plotted.map(region => region.mark),
       legend,
       legendLabel: this.localize('chartLegend'),
       tableLabel: this.localize('chartData'),
       headers: [this.localize('chartTableName'), this.localize('chartTableValue')],
-      rows: plotted.map(region => region.row),
+      rows,
       withDataTable: this.withDataTable,
       dataTableToggle: this.dataTableToggle,
       rtl: this.effectiveDirection === 'rtl',

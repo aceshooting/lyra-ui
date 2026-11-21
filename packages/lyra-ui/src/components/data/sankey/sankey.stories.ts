@@ -45,6 +45,17 @@ export const Default: StoryObj = {
   `,
 };
 
+export const CustomHeight: StoryObj = {
+  render: () => html`
+    <lr-sankey
+      style="--lr-sankey-height: var(--lr-size-16rem)"
+      label="Trial conversions"
+      .nodes=${NODES}
+      .links=${LINKS}
+    ></lr-sankey>
+  `,
+};
+
 export const Narrow320: StoryObj = {
   render: () => html`
     <lr-sankey

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 0 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -43,7 +43,13 @@ link ID (the later entry is skipped), or a ribbon is too small to represent.
 Node order within each stage is a heuristic: relaxation passes pull nodes toward their weighted
 neighbors, and the chart keeps whichever ordering, starting from the input order, crosses the
 fewest flows. It is not guaranteed to be the minimum possible.
-Node totals that exceed the numeric range are reported as `Number.MAX_VALUE`.
+Node totals that exceed the numeric range are reported as `Number.MAX_VALUE`. A later change
+into the cycle error is announced assertively. If `valueFormatter` throws, the value uses the
+default formatting.
+
+The plot fills the host's inline size and its coordinates follow the rendered size, so node and
+link labels keep their token font size at any width. Set `--lr-sankey-height` to change the
+plot's block size; it defaults to `clamp(var(--lr-size-12rem), 62.5cqi, var(--lr-size-30rem))`.
 
 Tab enters the plot at its first node. The arrow keys move through nodes and then links.
 Left and Right follow the reading direction. Home and End move to the first and last mark.
@@ -57,6 +63,7 @@ carries `LyraSankeyDatum` detail. Node detail is `{ kind: 'node', id, label, val
 An unlabelled link uses a localized description of its endpoints for the event label.
 
 Nodes and ribbons use the shared `--lr-color-chart-1` through `--lr-color-chart-8` palette.
+**CSS custom properties:** `--lr-sankey-height`.
 **CSS parts:** `base`, `plot`, `description`, `node`, `node-label`, `link`, `link-label`,
 `tooltip`, `legend`, `legend-item`, `legend-swatch`, `legend-label`, `data-table`,
 `data-table-toggle`, `empty`, `loading`, `error`, and `limit`.

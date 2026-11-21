@@ -1,6 +1,11 @@
 import { css } from 'lit';
 
 export const styles = css`
+  /* The viewBox follows this rendered box, so one user unit is one CSS pixel. */
+  [part='plot'] {
+    block-size: var(--lr-choropleth-height, clamp(var(--lr-size-12rem), 62.5cqi, var(--lr-size-30rem)));
+  }
+
   .region-shape {
     fill: var(--_lr-choropleth-fill);
     stroke: var(--_lr-choropleth-stroke);

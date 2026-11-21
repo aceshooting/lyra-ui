@@ -69,6 +69,14 @@ function partText(el: LyraChoropleth, part: string): string {
   return el.shadowRoot!.querySelector(`[part~="${part}"]`)?.textContent?.trim() ?? '';
 }
 
+/** Waits until the viewBox matches the plot's rendered box, so one user unit is one CSS pixel. */
+async function settledPlot(el: LyraChoropleth): Promise<SVGSVGElement> {
+  const svg = el.shadowRoot!.querySelector<SVGSVGElement>('svg[part~="plot"]')!;
+  await waitUntil(() => Math.abs(svg.viewBox.baseVal.width - svg.clientWidth) < 1 &&
+    Math.abs(svg.viewBox.baseVal.height - svg.clientHeight) < 1, 'The viewBox did not follow the plot size');
+  return svg;
+}
+
 function focusLabel(el: LyraChoropleth): string | null | undefined {
   return el.shadowRoot!.activeElement?.getAttribute('aria-label');
 }
@@ -105,6 +113,7 @@ describe('<lr-choropleth>', () => {
 
   it('decodes quantized and reversed TopoJSON arcs to the same rendered shapes and values as GeoJSON', async () => {
     const el = await fixture<LyraChoropleth>(html`<lr-choropleth .geography=${GEOGRAPHY}></lr-choropleth>`);
+    await settledPlot(el);
     const shapes = () => regions(el).map((mark) => [
       mark.getAttribute('aria-label'),
       mark.querySelector('path')?.getAttribute('d'),
@@ -291,6 +300,42 @@ describe('<lr-choropleth>', () => {
     await el.updateComplete;
     await waitUntil(() => errors().length === 1);
     expect(partText(el, 'error')).to.equal(message);
+  });
+
+  it('keeps a region without drawable area in the data table with a notice', async () => {
+    const flat = { type: 'Feature', id: 'flat', properties: { name: 'Flat', value: 7 },
+      geometry: { type: 'Polygon', coordinates: [[[30, 0], [31, 0], [32, 0], [30, 0]]] } };
+    const el = await fixture<LyraChoropleth>(html`
+      <lr-choropleth .geography=${{ ...GEOGRAPHY, features: [GEOGRAPHY.features[0], flat, ...GEOGRAPHY.features.slice(1)] }}
+        .valueFormatter=${formatValue}></lr-choropleth>
+    `);
+    expect(regions(el).length).to.equal(3);
+    const rows = [...el.shadowRoot!.querySelectorAll('tbody tr')].map((row) =>
+      [...row.children].map((cell) => cell.textContent?.trim()).join('|'));
+    expect(rows).to.deep.equal(['Central|-10 credits', 'Flat|7 credits', 'Islands|20 credits', 'West|No data']);
+    expect(partText(el, 'limit')).to.equal('Some values are too small to draw. The data table lists every value.');
+  });
+
+  it('falls back to locale formatting when the value formatter throws and coerces its result', async () => {
+    const formatter = (value: number) => {
+      if (value === 20) throw new Error('formatter failed');
+      return value as unknown as string;
+    };
+    const el = await fixture<LyraChoropleth>(html`
+      <lr-choropleth .geography=${GEOGRAPHY} .valueFormatter=${formatter}></lr-choropleth>
+    `);
+    expect(region(el, 'Islands').getAttribute('aria-label')).to.equal('Islands: 20');
+    expect(region(el, 'Central').getAttribute('aria-label')).to.equal('Central: -10');
+  });
+
+  it('lays out in CSS pixels so labels keep the token size and the height stays bounded', async () => {
+    const el = await fixture<LyraChoropleth>(html`
+      <lr-choropleth style="inline-size: 960px" .geography=${GEOGRAPHY}></lr-choropleth>
+    `);
+    const svg = await settledPlot(el);
+    expect(svg.clientWidth).to.equal(960);
+    expect(svg.clientHeight).to.be.within(150, 480);
+    expect(svg.getScreenCTM()!.a).to.be.closeTo(1, 0.01);
   });
 
   it('reports the feature limit before drawing any partial geography', async () => {

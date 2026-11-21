@@ -35,6 +35,8 @@ export const svgChartStyles = css`
     background: var(--lr-color-surface);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius);
+    /* Details are read-only, so pointer input reaches the mark beneath them. */
+    pointer-events: none;
   }
   [part='legend'] {
     display: flex;
