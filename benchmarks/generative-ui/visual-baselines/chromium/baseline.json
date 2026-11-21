@@ -28,14 +28,14 @@
     }
   },
   "cases": {
-    "idle": "2f3f98db3e3acdeb5d13cb3a038552b0a958286ac5e08c03c758c40ff0c0cd1e",
-    "complete": "b84e57ed17ba5c011cf8c2cf749d42c6de3228fef1dea97b29525b7266f5663b",
-    "edited-rejected-tail": "0a1a96c6e4f38646ee706ec3f295d661e8f5cd7acbb6cee2ae826acdb2fd7afb",
-    "interrupted": "51ac686aed3feafeafa2632aa7cc8493d01b554fa44fd9ea805f09866d7ab386",
-    "reset": "2f3f98db3e3acdeb5d13cb3a038552b0a958286ac5e08c03c758c40ff0c0cd1e"
+    "idle": "88acaf91c98f86cf4608e337dacfb5f05929332421adda14ee7e72532eb72bde",
+    "complete": "a6ed30531898469c7d45291f03ab75804237d8d703b32c606f8370644506ca5a",
+    "edited-rejected-tail": "9ceef44b28763e521e8705e2919f21624371d2dcedf12d1818f906f68445dd5d",
+    "interrupted": "7277af42a24da50709b5eec7bdfbe799df7f4b64b9e73acee43d73f3ff476c13",
+    "reset": "88acaf91c98f86cf4608e337dacfb5f05929332421adda14ee7e72532eb72bde"
   },
   "review": {
     "kind": "agent-visual-inspection",
-    "scope": "Five authored synthetic fixture states with pinned Arial family resolving to LiberationSans-Bold for semibold chrome, captured with Playwright 1.65.1 and Chromium 159.0.8154.6 in the CI container image. Generated headings and paragraphs now use the themed generated-view typography (large semibold heading, medium paragraph, no user-agent margins), so the complete, edited-rejected-tail and interrupted states are shorter; the completed transcript no longer overflows its scroll anchor, which leaves its leading prose visible. Idle and reset are byte-identical to the previous baseline. Each PNG was inspected against the previous baseline before retention. This is a regression baseline, not a design or accessibility qualification."
+    "scope": "Five authored synthetic fixture states with pinned Arial family resolving to LiberationSans-Bold for semibold chrome, captured with Playwright 1.65.1 and Chromium 159.0.8154.6 in the CI container image. lr-scroller now pads its content's inline ends by the focus-ring room so the first and last items' focus rings stay inside the clipped viewport; the follow-up suggestion chip, rendered inside that scroller, therefore sits 3px further from the row's inline start. That chip box is the only changed region in every state (identical 1421-pixel difference within x 24-156, y 668-708); idle and reset remain byte-identical to each other. Each PNG was inspected against the previous baseline before retention. This is a regression baseline, not a design or accessibility qualification."
   }
 }
