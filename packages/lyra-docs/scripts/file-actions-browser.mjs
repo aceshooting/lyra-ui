@@ -222,7 +222,9 @@ export async function runFileActions(page, check, { createEditor }) {
       });
       assert.equal(await editor.evaluate(element => element.shadowRoot.querySelector('[part="command-palette"]')
         .commands.find(command => command.commandId === 'open').disabled), false);
-      const chooser = await openFileChooser(page, editor.locator('[part="file-input"]'), () => page.keyboard.press('Enter'));
+      // The settling re-render may move focus; activate from the palette's own input.
+      const chooser = await openFileChooser(page, editor.locator('[part="file-input"]'),
+        () => palette.getByRole('combobox').press('Enter'));
       const bytes = await page.evaluate(() => window.__docxTest.fixture('basic-editing'));
       await chooser.setFiles({ name: 'Settled.docx',
         mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from(bytes) });
