@@ -402,6 +402,7 @@ export class LyraToolParamForm extends LyraFormControlElement<LyraToolParamFormE
    *  like a regular focusable control -- see the class doc's "behaves like a regular control" note.
    */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     if (isLiveDisabled(this)) return;
     this.focusFirstControl(options);
   }

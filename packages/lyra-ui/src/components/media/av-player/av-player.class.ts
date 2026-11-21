@@ -737,6 +737,7 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   /** Focus the native `[part="media"]` element — it carries `controls`, so it is this component's
    *  primary focusable affordance. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     this.mediaEl?.focus(options);
   }
 

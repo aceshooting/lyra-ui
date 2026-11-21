@@ -334,6 +334,7 @@ export class LyraNavigationMenuItem extends LyraElement<LyraNavigationMenuItemEv
 
   /** Moves focus to the link or button. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     const base = this.baseElement;
     if (base) base.focus(options);
     else super.focus(options);

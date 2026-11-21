@@ -954,6 +954,7 @@ export class LyraKnownDate extends FormAssociated(LyraKnownDateBase) {
 
   /** Focuses the first field in locale order. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     const target =
       this.fieldOrder.find((field) => this.textFor(field) === '') ??
       this.fieldOrder[0]!;

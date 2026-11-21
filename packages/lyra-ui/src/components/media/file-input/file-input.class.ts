@@ -997,6 +997,7 @@ export class LyraFileInput extends LyraFormControlElement<LyraFileInputEventMap>
 
   /** Focuses the semantic dropzone unless the form control is effectively disabled. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     if (!isLiveDisabled(this)) this.baseEl?.focus(options);
   }
 

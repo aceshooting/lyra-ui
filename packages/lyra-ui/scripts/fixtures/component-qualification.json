@@ -15708,7 +15708,7 @@
           "evidence": [
             {
               "file": "src/components/utility/copy-button/copy-button.class.ts",
-              "line": 534,
+              "line": 535,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -16740,7 +16740,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.class.ts",
-              "line": 2463,
+              "line": 2464,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27095,7 +27095,7 @@
           "evidence": [
             {
               "file": "src/components/data/graph-query-builder/graph-query-builder.class.ts",
-              "line": 960,
+              "line": 961,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -43830,7 +43830,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/prompt-input/prompt-input.class.ts",
-              "line": 628,
+              "line": 629,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -59646,7 +59646,7 @@
           "evidence": [
             {
               "file": "src/components/forms/toggle-group/toggle-group.class.ts",
-              "line": 611,
+              "line": 612,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -65515,7 +65515,7 @@
           "evidence": [
             {
               "file": "src/components/media/zoomable-frame/zoomable-frame.class.ts",
-              "line": 435,
+              "line": 436,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

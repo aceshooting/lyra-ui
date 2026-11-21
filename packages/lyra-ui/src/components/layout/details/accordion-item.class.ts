@@ -259,6 +259,7 @@ export class LyraAccordionItem extends LyraElement {
 
   /** Focus the internal trigger. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     this.button?.focus(options);
   }
 

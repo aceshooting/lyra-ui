@@ -249,8 +249,9 @@ export class LyraImageComparer extends LyraElement<LyraImageComparerEventMap> {
     }
   }
 
-  /** Focus the internal native range handle; a pre-render call is a no-op. */
+  /** Focus the internal native range handle; a call before the first render is applied once it renders. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     this.handleEl?.focus(options);
   }
 

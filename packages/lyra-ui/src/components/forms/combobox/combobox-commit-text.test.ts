@@ -168,6 +168,25 @@ describe('lr-combobox commit="text"', () => {
     expect(inputOf(gated).value).to.equal('abc');
   });
 
+  it('opens once on a first press and does not toggle on a press while open', async () => {
+    const { el } = await mount();
+    let shows = 0;
+    el.addEventListener('lr-show', () => (shows += 1));
+    const press = async () => {
+      const rect = inputOf(el).getBoundingClientRect();
+      await sendMouse({ type: 'click', position: [Math.round(rect.left + 8), Math.round(rect.top + rect.height / 2)] });
+      await resetMouse();
+      await el.updateComplete;
+    };
+    // Unfocused: the press itself does not open; the focus it causes does.
+    await press();
+    expect(el.open).to.be.true;
+    expect(shows).to.equal(1);
+    await press();
+    expect(el.open).to.be.true;
+    expect(shows).to.equal(1);
+  });
+
   it('does not reopen a readonly focused input on press', async () => {
     const { el } = await mount();
     el.readonly = true;

@@ -477,6 +477,7 @@ export class LyraChip extends LyraElement<LyraChipEventMap> {
   }
 
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     this.primaryControl?.focus(options);
   }
 

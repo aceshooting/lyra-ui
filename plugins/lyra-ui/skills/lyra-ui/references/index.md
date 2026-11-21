@@ -143,7 +143,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-breadcrumb` · lr-breadcrumb.js · `stable` since `4.0.0` · ~28 KiB gzip — a responsive navigation trail.
 - `lr-breadcrumb-item` · lr-breadcrumb-item.js · `stable` since `4.0.0` · ~26 KiB gzip — one link, button, or current-page label in a breadcrumb.
 - `lr-dashboard-grid` · lr-dashboard-grid.js · `stable` since `4.1.0` · ~151 KiB gzip — a responsive, keyboard-accessible widget grid: positions `layout` entries (`LyraDashboardCell`: `x`/`y`/`w`/`h` grid units + a widget...
-- `lr-drilldown-panel` · lr-drilldown-panel.js · `stable` since `4.1.0` · ~98 KiB gzip — a controlled navigation and category shell for related evidence, documents, entities, and host-rendered agent runs.
+- `lr-drilldown-panel` · lr-drilldown-panel.js · `stable` since `4.1.0` · ~99 KiB gzip — a controlled navigation and category shell for related evidence, documents, entities, and host-rendered agent runs.
 - `lr-filter-bar` · lr-filter-bar.js · `stable` since `4.1.0` · ~181 KiB gzip — a row of dashboard filters, each declared by the host (`filters`) rather than invented by this component: every filter composes an...
 - `lr-page` · lr-page.js · `stable` since `8.0.0` · ~49 KiB gzip — a semantic application/page shell that derives its mobile or desktop presentation from its own allocated inline size.
 - `lr-navigation-menu` · lr-navigation-menu.js · `experimental` since `21.0.0` · ~65 KiB gzip — a site-header navigation bar following the WAI-ARIA disclosure navigation pattern: a `nav` landmark holding a list of...
@@ -208,8 +208,8 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-drop-zone` · lr-drop-zone.js · `experimental` since `16.0.0` · ~35 KiB gzip — - a drag-and-drop region wrapper with no file input of its own.
 - `lr-file-input` · lr-file-input.js · `stable` since `4.0.0` · ~51 KiB gzip — a drag-drop + click-to-browse file dropzone.
 - `lr-image-comparer` · lr-image-comparer.js · `stable` since `4.0.0` · ~29 KiB gzip — compares two slotted surfaces with a keyboard- accessible range divider.
-- `lr-zoomable-frame` · lr-zoomable-frame.js · `stable` since `4.0.0` · ~35 KiB gzip — a sandboxed iframe preview with discrete zoom controls.
-- `lr-pan-zoom` · lr-pan-zoom.js · `stable` since `8.0.0` · ~33 KiB gzip — a scrollable frame for inspecting slotted or image content at a bounded zoom level.
+- `lr-zoomable-frame` · lr-zoomable-frame.js · `stable` since `4.0.0` · ~36 KiB gzip — a sandboxed iframe preview with discrete zoom controls.
+- `lr-pan-zoom` · lr-pan-zoom.js · `stable` since `8.0.0` · ~34 KiB gzip — a scrollable frame for inspecting slotted or image content at a bounded zoom level.
 - `lr-attachment-chip` · lr-attachment-chip.js · `stable` since `4.0.0` · ~31 KiB gzip — a compact chip representing one file queued for (or already part of) a chat message: a composer's pre-send attachment tray, or a sent...
 - `lr-file-icon` · lr-file-icon.js · `stable` since `4.0.0` · ~28 KiB gzip — Displays a file-format badge from a MIME type: an unlocalized format token or generic glyph, with a localized accessible name.
 - `lr-media-card` · lr-media-card.js · `stable` since `4.0.0` · ~31 KiB gzip — a lightweight inline preview for one already-sent, already-available attachment inside a rendered chat message body (e.g.

@@ -556,6 +556,7 @@ export class LyraAttachmentTrigger extends LyraElement<LyraAttachmentTriggerEven
   }
 
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     this.primaryControl()?.focus(options);
   }
 

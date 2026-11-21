@@ -367,6 +367,7 @@ export class LyraToggleGroup extends LyraElement<LyraToggleGroupEventMap> {
 
   /** Moves focus to the current tab-stop toggle. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     if (this.disabled) return;
     this.currentStop()?.focus(options);
   }

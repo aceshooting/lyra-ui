@@ -712,6 +712,7 @@ export class LyraVideoPlaylist extends LyraElement<LyraVideoPlaylistEventMap> {
   /** Focus the current playlist row. An empty playlist renders no row, so this
    *  is a no-op there. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     this.navigationItem?.focus(options);
   }
 

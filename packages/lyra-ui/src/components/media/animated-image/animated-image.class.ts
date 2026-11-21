@@ -305,6 +305,7 @@ export class LyraAnimatedImage extends LyraElement<LyraAnimatedImageEventMap> {
 
   /** Focus the play/pause control. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     this.playButtonEl?.focus(options);
   }
 

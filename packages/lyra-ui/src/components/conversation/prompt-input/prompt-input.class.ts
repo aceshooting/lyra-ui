@@ -405,6 +405,7 @@ export class LyraPromptInput extends LyraElement<LyraPromptInputEventMap> {
   private suggestionNavigationGeneration = 0;
 
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     this.composer?.focus(options);
   }
 

@@ -285,6 +285,7 @@ export class LyraTag extends LyraBadge<LyraTagEventMap, TagVariant> {
 
   /** Moves focus to the live remove button; a plain tag has no delegated focus target. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     if (!this.withRemove) return;
     this.removeButtonEl?.focus(options);
   }

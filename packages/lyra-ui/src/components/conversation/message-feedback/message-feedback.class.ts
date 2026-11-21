@@ -407,6 +407,7 @@ export class LyraMessageFeedback extends LyraElement<LyraMessageFeedbackEventMap
    *  lets a toolbar embedding this component (e.g. `<lr-message-actions>`) treat it as one
    *  arrow-key stop. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     (this.rating === 'down' ? this.downButtonEl : this.upButtonEl)?.focus(options);
   }
 

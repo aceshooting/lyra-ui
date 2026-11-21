@@ -157,6 +157,7 @@ export class LyraBranchPicker extends LyraElement<LyraBranchPickerEventMap> {
    *  own `focus()`-delegation-to-the-internal-control pattern, so this component composes cleanly
    *  as one stop inside a parent toolbar. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     const target = this.normalizedIndex > 0 ? this.previousButtonEl : this.nextButtonEl;
     (target ?? this.previousButtonEl ?? this.nextButtonEl)?.focus(options);
   }

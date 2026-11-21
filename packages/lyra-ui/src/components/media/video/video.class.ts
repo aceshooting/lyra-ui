@@ -441,6 +441,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   /** Focus the play/pause control. A `controls="none"` player renders none, so this is a no-op
    *  there — the bare host has no focusable area of its own. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     this.playControl?.focus(options);
   }
 

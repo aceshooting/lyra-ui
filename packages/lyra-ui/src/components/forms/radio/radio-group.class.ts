@@ -749,6 +749,7 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
 
   /** Moves focus to the selected enabled option, or the first enabled option when empty. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     if (isLiveDisabled(this)) return;
     const enabled = this.radios().filter((radio) => this.isRadioAvailable(radio));
     (enabled.find((radio) => radio.checked) ?? enabled[0])?.focus(options);

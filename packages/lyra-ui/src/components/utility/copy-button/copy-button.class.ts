@@ -450,6 +450,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
   }
 
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     this.activeTrigger()?.focus(options);
   }
 

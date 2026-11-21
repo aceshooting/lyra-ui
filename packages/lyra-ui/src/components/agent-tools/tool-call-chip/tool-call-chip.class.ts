@@ -366,6 +366,7 @@ export class LyraToolCallChip extends LyraElement<LyraToolCallChipEventMap> {
 
   /** Moves focus to the currently rendered chip button. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     this.baseEl?.focus(options);
   }
 

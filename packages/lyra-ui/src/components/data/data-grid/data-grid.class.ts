@@ -1828,6 +1828,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
 
   /** Moves focus to the grid's current roving stop. */
   override focus(options: FocusOptions = {}): void {
+    if (this.deferFocusUntilRendered(options)) return;
     const selector =
       this.focusedRow < 0
         ? `[role="columnheader"][data-column-position="${this.focusedColumn}"]`

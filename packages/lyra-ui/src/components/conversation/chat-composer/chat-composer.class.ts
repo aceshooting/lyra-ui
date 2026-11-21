@@ -467,6 +467,7 @@ export class LyraChatComposer extends FormAssociated(LyraChatComposerBase) {
   declare selectionDirection: ChatComposerSelectionDirection | null;
 
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     this.textareaEl?.focus(options);
   }
 

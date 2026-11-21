@@ -915,6 +915,7 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
 
   /** Focuses the native trigger button. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     this.triggerEl?.focus(options);
   }
 

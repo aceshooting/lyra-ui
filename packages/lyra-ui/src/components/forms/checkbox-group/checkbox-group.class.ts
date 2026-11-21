@@ -863,6 +863,7 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
 
   /** Moves focus to the first enabled checkbox. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     if (isLiveDisabled(this)) return;
     this.firstEnabledBox()?.focus(options);
   }

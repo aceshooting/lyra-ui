@@ -312,6 +312,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
 
   /** Focus the internal iframe when interaction is enabled and a live frame is connected. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     const frame = this.iframe;
     if (!frame || !this.isConnected || this.withoutInteraction || frame.inert) return;
     const previous = activeElementIn(this.ownerDocument);

@@ -122,6 +122,7 @@ export class LyraBreadcrumbItem extends LyraElement {
   /** Moves focus to the internal link or button, or to the programmatically focusable
    *  current-page label. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     this.renderRoot?.querySelector<HTMLElement>('[part~="base"]')?.focus(options);
   }
 

@@ -209,6 +209,7 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
 
   /** Focus the scrollable viewport — the element that owns this component's keyboard zoom. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     this.viewportEl?.focus(options);
   }
 

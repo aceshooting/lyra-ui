@@ -569,6 +569,7 @@ export class LyraAppRailItem extends LyraElement<LyraAppRailItemEventMap> {
 
   /** Moves focus to the internal link or button. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     this.renderRoot?.querySelector<HTMLElement>('a[part~="base"], button[part~="base"]')?.focus(options);
   }
 

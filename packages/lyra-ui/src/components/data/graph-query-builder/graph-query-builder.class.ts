@@ -800,6 +800,7 @@ export class LyraGraphQueryBuilder extends LyraFormControlElement<LyraGraphQuery
 
   /** Moves focus to the first rendered field while the aggregate control is enabled. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     this.focusFirstControl(options);
   }
 

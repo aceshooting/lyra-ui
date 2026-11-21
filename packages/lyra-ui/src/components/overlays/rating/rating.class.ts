@@ -867,6 +867,7 @@ export class LyraRating extends LyraFormControlElement<LyraRatingEventMap> {
   };
 
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     if (!this.effectiveDisabled) super.focus(options);
   }
 

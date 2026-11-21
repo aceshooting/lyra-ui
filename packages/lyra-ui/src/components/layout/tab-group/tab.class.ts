@@ -11,6 +11,7 @@ import { LYRA_DEFAULT_close } from '../../../internal/default-strings/shared.gen
 
 
 interface TabFocusOwner extends Element {
+  readonly updateComplete: Promise<boolean>;
   focusTabElement(element: Element, options?: FocusOptions): boolean;
   blurTabElement(element: Element): void;
 }
@@ -88,6 +89,14 @@ export class LyraTab extends LyraElement<LyraTabEventMap> {
     if (!this.hasAttribute('slot')) this.slot = 'nav';
   }
 
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
+    this.focusAwaitsOwner = false;
+  }
+
+  /** A `focus()` queued before this descriptor rendered also waits for the group's projection. */
+  private focusAwaitsOwner = false;
+
   private onClosePointerDown = (event: PointerEvent): void => {
     // The descriptor is projected into the group's real tab button. Keep pressing its nested close
     // action from moving focus to or activating that outer selection control.
@@ -112,7 +121,20 @@ export class LyraTab extends LyraElement<LyraTabEventMap> {
    *  as the group's `focusTab(panel)` does (under `activation="auto"` that also selects it). A
    *  disabled or inert tab, or one outside an upgraded group, is not focusable and is left alone. */
   override focus(options?: FocusOptions): void {
-    if (!this.owner?.focusTabElement(this, options)) super.focus(options);
+    if (this.deferFocusUntilRendered(options)) {
+      this.focusAwaitsOwner = true;
+      return;
+    }
+    const owner = this.owner;
+    if (owner && this.focusAwaitsOwner) {
+      // The group projects its real tab buttons only once its own update settles.
+      this.focusAwaitsOwner = false;
+      void owner.updateComplete.then(() => {
+        if (this.owner === owner) owner.focusTabElement(this, options);
+      });
+      return;
+    }
+    if (!owner?.focusTabElement(this, options)) super.focus(options);
   }
 
   /** Removes focus from the owning group's real tab button when it is focused. */

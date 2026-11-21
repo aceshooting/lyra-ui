@@ -3867,6 +3867,13 @@ still opens hover surfaces through the browser's compatibility `mouseenter`. Cal
 scripted reveal; tests should move focus with a real Tab key or call `show()` rather than `.focus()`
 or synthetic focus events.
 
+**Early `focus()` is kept.** On any component whose `focus()` forwards to an internal control, a
+call made right after the element connects, before its first render, is queued and applied once
+it renders. This covers form controls, groups, tabs, chips, pagination, the data grid and media
+players. Awaiting `updateComplete` first is unnecessary. If the host is disabled or removed by
+then, it does not take focus. A target that appears only after loading still needs the load: an
+`lr-animated-image` play control, for example, renders once its image has loaded.
+
 Lyra UI does not make a formal assistive-technology conformance claim or provide a VPAT. For the
 documented accessibility scope and how to report an accessibility issue, see
 <https://github.com/aceshooting/lyra-ui/blob/main/docs/accessibility.md>.

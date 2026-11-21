@@ -362,6 +362,7 @@ export class LyraMediaCard extends LyraElement<LyraMediaCardEventMap> {
    * Unsafe/inert file previews have no action, so this is a no-op for them.
    */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     this.primaryAction?.focus(options);
   }
 

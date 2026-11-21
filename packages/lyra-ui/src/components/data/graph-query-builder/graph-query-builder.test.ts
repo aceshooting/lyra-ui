@@ -89,15 +89,17 @@ describe('lr-graph-query-builder', () => {
     expect(el.shadowRoot!.activeElement === null).to.be.true;
   });
 
-  it('walks the whole fallback focus-target chain without throwing when focus() runs before the first render populates any control', () => {
+  it('walks the whole fallback focus-target chain without throwing before the first render populates any control', () => {
     const el = document.createElement('lr-graph-query-builder') as LyraGraphQueryBuilder;
     document.body.appendChild(el);
     try {
       // The shadow root exists (attached in the constructor) but is still empty -- Lit's first
       // render is scheduled as a microtask, not run synchronously here -- so every `||` fallback in
       // focusFirstControl() (end-input, min-hops, max-hops, direction, save-name-input) is walked
-      // and comes up empty, landing on a safe no-op instead of throwing.
-      expect(() => el.focus()).to.not.throw();
+      // and comes up empty, landing on a safe no-op instead of throwing. Public focus() queues
+      // until that render, so the chain is driven directly.
+      const chain = el as unknown as { focusFirstControl(options?: FocusOptions): void };
+      expect(() => chain.focusFirstControl()).to.not.throw();
       expect(document.activeElement === el).to.be.false;
     } finally {
       el.remove();

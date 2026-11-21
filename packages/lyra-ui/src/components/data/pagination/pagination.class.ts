@@ -465,6 +465,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
 
   /** Focus the current-page button/link, or the editable page-jump input in compact format. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     this.primaryControl?.focus(options);
   }
 

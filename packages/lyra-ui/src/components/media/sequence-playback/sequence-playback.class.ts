@@ -419,6 +419,7 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
 
   /** Focus the primary play/pause control. */
   override focus(options?: FocusOptions): void {
+    if (this.deferFocusUntilRendered(options)) return;
     this.playButton?.focus(options);
   }
 
