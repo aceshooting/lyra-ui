@@ -153,6 +153,15 @@ export interface LyraAppRailEventMap {
  * @cssprop [--lr-app-rail-toggle-color] - Toggle color override.
  * @cssprop [--lr-app-rail-toggle-bg] - Toggle background override.
  * @cssprop [--lr-app-rail-toggle-border] - Toggle border override.
+ * @cssprop [--lr-app-rail-toggle-position=static] - Positioning of the collapsed mobile toggle. Set
+ *   `fixed` to float it over content, placed by the two inset hooks below.
+ * @cssprop --lr-app-rail-toggle-inset-block-start - Block-start offset of a positioned collapsed
+ *   toggle. The device safe-area inset on that edge is added to it.
+ * @cssprop --lr-app-rail-toggle-inset-inline-start - Inline-start offset of a positioned collapsed
+ *   toggle, mirrored under RTL. The device safe-area inset on that logical edge is added to it.
+ * @cssprop [--lr-app-rail-toggle-size=auto] - Square size of the mobile toggle. It never shrinks
+ *   below `--lr-icon-button-size`.
+ * @cssprop [--lr-app-rail-toggle-radius=var(--lr-radius)] - Corner radius of the mobile toggle.
  * @cssprop [--lr-app-rail-pin-color] - Pin color override.
  * @cssprop [--lr-app-rail-pin-pressed-bg] - Pin pressed background override.
  * @cssprop [--lr-app-rail-frame-gap=var(--lr-space-s)] - Margin around a card frame.

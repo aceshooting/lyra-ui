@@ -42,15 +42,15 @@ export const styles = css`
       --lr-menu-item-min-height,
       max(var(--lr-form-control-height), var(--lr-size-24px))
     );
-    padding-block: var(--lr-form-control-padding-block);
-    padding-inline: var(--lr-form-control-padding-inline);
+    padding-block: var(--lr-menu-item-padding-block, var(--lr-form-control-padding-block));
+    padding-inline: var(--lr-menu-item-padding-inline, var(--lr-form-control-padding-inline));
     border-radius: var(--lr-menu-item-radius, var(--lr-form-control-radius));
     cursor: pointer;
     /* A link-item's [part='base'] renders as a real <a>; the plain (non-link) row stays a <span>,
        for which this is a no-op. */
     text-decoration: none;
     font: inherit;
-    font-size: var(--lr-form-control-font-size);
+    font-size: var(--lr-menu-item-font-size, var(--lr-form-control-font-size));
     color: inherit;
     line-height: var(--lr-line-height-snug);
     /* Hover/active/checked below only ever repaint background, so background-color is all this
@@ -138,6 +138,8 @@ export const styles = css`
        de-emphasises or accents the glyph without touching the label beside it, which a
        ::part(icon) rule could only do by re-stating the row's every state. */
     color: var(--lr-menu-item-icon-color, inherit);
+    /* lr-icon and 1em glyphs size from the font size, so unset this is the row's own size. */
+    font-size: var(--lr-menu-item-icon-size, inherit);
     line-height: var(--lr-line-height-none);
   }
   /* [hidden] rather than :empty -- the part always contains a literal <slot> child, so :empty never

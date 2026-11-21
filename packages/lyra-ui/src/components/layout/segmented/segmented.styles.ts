@@ -148,5 +148,31 @@ export const styles = css`
        the shallowest resting chrome the library has. */
     box-shadow: var(--lr-segmented-selected-shadow, var(--lr-shadow-xs));
   }
+  /* Opt-in multi-row layouts. Neither scrolls, so the edge fade (keyed on the scroll observer's
+     attributes) is switched off explicitly rather than trusted to stay unset, and the exact-height
+     hatch yields so added rows can grow the track. */
+  :host([layout='grid']) {
+    display: flex;
+  }
+  :host([layout='wrap']) [part="base"],
+  :host([layout='grid']) [part="base"] {
+    overflow: visible;
+    block-size: auto;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  :host([layout='wrap']) [part="base"] {
+    flex-wrap: wrap;
+  }
+  :host([layout='grid']) [part="base"] {
+    display: grid;
+    grid-template-columns: repeat(var(--lr-segmented-columns, 3), minmax(0, 1fr));
+  }
+  :host([layout='wrap']) [part="segment"],
+  :host([layout='grid']) [part="segment"] {
+    max-inline-size: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
   ${forcedColorsPart('[part="segment"][aria-checked="true"]')}
 `;

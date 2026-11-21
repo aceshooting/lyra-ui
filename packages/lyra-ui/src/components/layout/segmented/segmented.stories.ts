@@ -206,6 +206,31 @@ export const ScrollableOverflow: Story = {
   `,
 };
 
+const CATEGORIES = [
+  { value: 'all', label: 'All conversations' },
+  { value: 'active', label: 'Active conversations' },
+  { value: 'waiting', label: 'Waiting for review' },
+  { value: 'archived', label: 'Archived conversations' },
+  { value: 'assigned', label: 'Assigned to me' },
+  { value: 'mentions', label: 'Mentions and replies' },
+];
+
+export const WrapAndGridLayouts: Story = {
+  name: 'Wrap and grid layouts',
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-m); inline-size: 375px; max-inline-size: 100%;">
+      <lr-segmented layout="wrap" label="Filters" .items=${CATEGORIES} value="active"></lr-segmented>
+      <lr-segmented
+        layout="grid"
+        style="--lr-segmented-columns: 2"
+        label="Filters"
+        .items=${CATEGORIES}
+        value="waiting"
+      ></lr-segmented>
+    </div>
+  `,
+};
+
 export const RightToLeft: Story = {
   name: 'Right-to-left',
   render: () => html`

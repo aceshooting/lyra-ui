@@ -1,6 +1,7 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
+import { setReducedMotion } from '../../../../test/wtr-media.js';
 import '../../lr-card.js';
 import type { LyraCard } from '../../lr-card.js';
 
@@ -103,4 +104,57 @@ it('respects cancellation of the native activation button click', async () => {
   el.addEventListener('click', (event) => event.preventDefault(), { capture: true });
   el.click();
   expect(activations).to.equal(0);
+});
+
+describe('lr-card hover motion and fill-body', () => {
+  afterEach(async () => {
+    await resetMouse();
+    await setReducedMotion('no-preference');
+  });
+
+  const LIFT = '--lr-card-transition: none; --lr-card-interactive-hover-transform: translateY(-3px)';
+
+  for (const [name, markup, selector] of [
+    ['actionable', html`<lr-card actionable style=${LIFT}>Lift</lr-card>`, '[part="base"]'],
+    ['linked', html`<lr-card href="#lift" style=${LIFT}>Lift</lr-card>`, '.linked-content'],
+  ] as const) {
+    it(`lifts the hovered ${name} card and stops under reduced motion`, async () => {
+      const el = await fixture<LyraCard>(markup);
+      const moving = el.shadowRoot!.querySelector<HTMLElement>(selector)!;
+      const hovered = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+      expect(getComputedStyle(moving).transform).to.equal('none');
+      await hoverUntilMatched(name === 'linked' ? moving.parentElement! : hovered, 'the card never registered :hover');
+      await waitUntil(() => getComputedStyle(moving).transform !== 'none', 'hover transform must apply');
+      expect(getComputedStyle(moving).transform).to.equal('matrix(1, 0, 0, 1, 0, -3)');
+      await setReducedMotion('reduce');
+      await waitUntil(() => getComputedStyle(moving).transform === 'none', 'reduced motion drops the transform');
+    });
+  }
+
+  it('keeps hover transform none and the default transition when unset', async () => {
+    const el = await fixture<LyraCard>(html`<lr-card actionable>Plain</lr-card>`);
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    expect(getComputedStyle(base).transitionProperty).to.equal('border-color, box-shadow, transform');
+    await hoverUntilMatched(base, 'the card never registered :hover');
+    expect(getComputedStyle(base).transform).to.equal('none');
+    expect(el.hasAttribute('fill-body')).to.equal(false);
+    expect(getComputedStyle(el.shadowRoot!.querySelector('[part="body"]')!).display).to.equal('block');
+  });
+
+  it('fill-body makes the body a full-height column in an equal-height grid', async () => {
+    const grid = await fixture<HTMLElement>(html`<div style="display: grid; grid-template-columns: 1fr 1fr; inline-size: 400px">
+      <lr-card fill-body style="--lr-card-body-gap: 6px"><span>Short</span><span id="pin" style="margin-block-start: auto">Pinned</span></lr-card>
+      <lr-card><p style="block-size: 200px; margin: 0">Tall</p></lr-card>
+    </div>`);
+    const [card, tall] = [...grid.querySelectorAll('lr-card')] as [LyraCard, LyraCard];
+    await card.updateComplete;
+    expect(card.fillBody).to.equal(true);
+    const body = card.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+    const style = getComputedStyle(body);
+    expect([style.display, style.flexDirection, style.rowGap]).to.deep.equal(['flex', 'column', '6px']);
+    expect(Math.round(card.getBoundingClientRect().height)).to.equal(Math.round(tall.getBoundingClientRect().height));
+    const pin = grid.querySelector<HTMLElement>('#pin')!.getBoundingClientRect();
+    const bodyRect = body.getBoundingClientRect();
+    expect(Math.abs(bodyRect.bottom - parseFloat(style.paddingBlockEnd) - pin.bottom)).to.be.below(1.5);
+  });
 });

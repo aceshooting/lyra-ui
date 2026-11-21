@@ -26,15 +26,28 @@ export const styles = css`
     justify-content: center;
     font: inherit;
     ${iconHitTarget}
+    /* The size hook sets the box; the minimums above keep the pointer-target floor under it. */
+    inline-size: var(--lr-app-rail-toggle-size, auto);
+    block-size: var(--lr-app-rail-toggle-size, auto);
+    box-sizing: border-box;
     border: var(--lr-app-rail-toggle-border, var(--lr-border-width-thin) solid var(--lr-color-border));
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-app-rail-toggle-radius, var(--lr-radius));
     background: var(--lr-app-rail-toggle-bg, var(--lr-color-surface));
     color: var(--lr-app-rail-toggle-color, var(--lr-color-text));
     cursor: pointer;
     transition: var(--lr-transition-interactive);
   }
+  /* Collapsed placement. Static by default, so the insets below are inert until a consumer sets
+     --lr-app-rail-toggle-position (fixed to float over content). Each inset is the authored
+     logical offset plus the shared safe-area token for that logical edge (mirrored under RTL by
+     tokens.styles.ts); an unset inset hook
+     leaves its whole declaration invalid at computed-value time, which is auto. */
   :host([mode="mobile"]) [part="toggle"] {
     display: inline-flex;
+    position: var(--lr-app-rail-toggle-position, static);
+    z-index: var(--lr-layer-dropdown);
+    inset-block-start: calc(var(--lr-app-rail-toggle-inset-block-start) + var(--lr-safe-area-top));
+    inset-inline-start: calc(var(--lr-app-rail-toggle-inset-inline-start) + var(--lr-safe-area-inline-start));
   }
   :host([without-toggle][mode="mobile"]) [part="toggle"] {
     display: none;
@@ -47,6 +60,11 @@ export const styles = css`
      the mobile overlay is open, so the shared focus trap -- scoped to the panel alone -- can reach
      it. A dedicated reserved row ahead of the header slot, never absolutely overlaid on top of it,
      so a wide/slotted header stays fully visible instead of being obscured by the close control. */
+  /* In the open panel the toggle is a row of its own; the collapsed placement does not apply.
+     Qualified like the placement rule so it out-specifies it. */
+  :host([mode="mobile"]) [part="panel"] > [part="toggle"] {
+    inset: auto;
+  }
   [part="panel"] > [part="toggle"] {
     align-self: flex-end;
     flex: 0 0 auto;

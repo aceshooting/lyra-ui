@@ -32,6 +32,10 @@ export interface LyraSegmentedItem {
   disabled?: boolean;
 }
 
+/** How `<lr-segmented>` lays out its segments: one horizontally scrolling row (`scroll`), rows
+ *  that wrap (`wrap`), or a fixed-column grid (`grid`). */
+export type LyraSegmentedLayout = 'scroll' | 'wrap' | 'grid';
+
 /** Detail of `lr-segmented-select-request`. */
 export interface LyraSegmentedSelectRequestDetail {
   /** Value of the segment the user is selecting. */
@@ -150,7 +154,8 @@ function snapshotSegmentedItems(
  * @cssprop [--lr-form-control-label-color=inherit] - Text color of the field label.
  * @csspart form-control-label - The noninteractive field caption, visually hidden by default.
  * @csspart hint - Supporting text referenced by the radiogroup when supplied.
- * @csspart base - The `role="radiogroup"` root and horizontal scroll owner.
+ * @csspart base - The `role="radiogroup"` root; the horizontal scroll owner in the default
+ *   `layout="scroll"`, a wrapping row or a grid otherwise.
  * @csspart segment - A single `role="radio"` button with a 24×24 CSS pixel minimum box at every size tier.
  * @csspart segment-icon - Optional decorative leading visual supplied by the item's `icon` field.
  *   Content may have a natural aspect ratio and is not restricted to a square icon; it is inert and
@@ -198,6 +203,8 @@ function snapshotSegmentedItems(
  * @cssprop [--lr-segmented-font-size=var(--lr-form-control-font-size)] - Each segment's font size,
  *   taken from the `size` tier's shared control font size.
  * @cssprop [--lr-segmented-track-gap=var(--lr-size-0-125rem)] - Gap between segments.
+ * @cssprop [--lr-segmented-columns=3] - Column count of `layout="grid"`. Columns share the track
+ *   width equally.
  * @cssprop [--lr-segmented-track-radius=var(--lr-radius)] - Track corner radius.
  * @cssprop [--lr-segmented-segment-radius=calc(var(--lr-form-control-radius) * 0.7)] - Each
  *   segment's own corner radius, independent of the track's.
@@ -297,6 +304,14 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
    *  Awesome's `small`/`medium`/`large`, so migrating either way is a tag rename. Reflects as the
    *  `size` attribute. */
   @property({ reflect: true }) size: LyraSize = 'm';
+
+  /** Segment layout. `'scroll'` (default) keeps one row that scrolls horizontally with edge fades;
+   *  `'wrap'` breaks segments onto as many rows as the width needs; `'grid'` places them in
+   *  `--lr-segmented-columns` equal columns. `'wrap'` and `'grid'` never scroll, drop the edge
+   *  fade, let long labels wrap, and keep the track's height free to grow. Arrow keys follow
+   *  reading order in every layout: ArrowRight/ArrowLeft step along a row and continue onto the
+   *  next or previous row, mirrored under RTL. Reflects as the `layout` attribute. */
+  @property({ reflect: true }) layout: LyraSegmentedLayout = 'scroll';
 
   @state() private selectedItem?: Readonly<LyraSegmentedItem>;
 

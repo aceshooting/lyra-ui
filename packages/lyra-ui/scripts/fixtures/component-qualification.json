@@ -118,6 +118,12 @@
             },
             {
               "file": "src/components/layout/details/details.test.ts",
+              "test": "gives prose in a size-limited open details a named tab stop only while it overflows",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/details/details.test.ts",
               "test": "lets a nested disclosure reach an outer listener, separated only by event.target",
               "target": "outer",
               "state": "populated"
@@ -238,7 +244,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/details.class.ts",
-              "line": 468,
+              "line": 475,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -334,6 +340,12 @@
               "file": "src/components/layout/details/accordion.test.ts",
               "test": "localizes the fallback label and is accessible in its own populated expanded state",
               "target": "item",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/details/details.test.ts",
+              "test": "gives prose in a size-limited open details a named tab stop only while it overflows",
+              "target": "el",
               "state": "populated"
             },
             {
@@ -447,7 +459,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/details.class.ts",
-              "line": 468,
+              "line": 475,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -2496,6 +2508,7 @@
           "src/components/layout/app-rail/app-rail-resizer-position.test.ts",
           "src/components/layout/app-rail/app-rail-scale.test.ts",
           "src/components/layout/app-rail/app-rail-sidebar.test.ts",
+          "src/components/layout/app-rail/app-rail-toggle-placement.test.ts",
           "src/components/layout/app-rail/app-rail-width-state.test.ts",
           "src/components/layout/app-rail/app-rail.test.ts",
           "src/components/layout/app-rail/positioning-strategy.test.ts"
@@ -2954,6 +2967,7 @@
           "src/components/layout/app-rail/app-rail-resizer-position.test.ts",
           "src/components/layout/app-rail/app-rail-scale.test.ts",
           "src/components/layout/app-rail/app-rail-sidebar.test.ts",
+          "src/components/layout/app-rail/app-rail-toggle-placement.test.ts",
           "src/components/layout/app-rail/app-rail-width-state.test.ts",
           "src/components/layout/app-rail/app-rail.test.ts",
           "src/components/layout/app-rail/positioning-strategy.test.ts"
@@ -17595,7 +17609,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/details.class.ts",
-              "line": 468,
+              "line": 475,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -20745,6 +20759,7 @@
           "src/components/layout/menu/menu-content-contract.test.ts",
           "src/components/layout/menu/menu-coverage-gaps.test.ts",
           "src/components/layout/menu/menu-coverage.test.ts",
+          "src/components/layout/menu/menu-density-tokens.test.ts",
           "src/components/layout/menu/menu-edge-interactions.test.ts",
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
@@ -35076,6 +35091,7 @@
           "src/components/layout/menu/menu-content-contract.test.ts",
           "src/components/layout/menu/menu-coverage-gaps.test.ts",
           "src/components/layout/menu/menu-coverage.test.ts",
+          "src/components/layout/menu/menu-density-tokens.test.ts",
           "src/components/layout/menu/menu-edge-interactions.test.ts",
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
@@ -35333,6 +35349,7 @@
           "src/components/layout/menu/menu-content-contract.test.ts",
           "src/components/layout/menu/menu-coverage-gaps.test.ts",
           "src/components/layout/menu/menu-coverage.test.ts",
+          "src/components/layout/menu/menu-density-tokens.test.ts",
           "src/components/layout/menu/menu-edge-interactions.test.ts",
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
@@ -35534,6 +35551,7 @@
           "src/components/layout/menu/menu-content-contract.test.ts",
           "src/components/layout/menu/menu-coverage-gaps.test.ts",
           "src/components/layout/menu/menu-coverage.test.ts",
+          "src/components/layout/menu/menu-density-tokens.test.ts",
           "src/components/layout/menu/menu-edge-interactions.test.ts",
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
@@ -49759,6 +49777,7 @@
           "src/components/layout/segmented/segmented-checked-contrast.test.ts",
           "src/components/layout/segmented/segmented-field-label.test.ts",
           "src/components/layout/segmented/segmented-items-replacement.test.ts",
+          "src/components/layout/segmented/segmented-layout.test.ts",
           "src/components/layout/segmented/segmented-select-request.test.ts",
           "src/components/layout/segmented/segmented.test.ts"
         ],

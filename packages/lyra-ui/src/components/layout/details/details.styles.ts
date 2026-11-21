@@ -80,8 +80,15 @@ export const styles = css`
     gap: var(--lr-details-gap, var(--lr-space-s));
     /* Yields to a smaller size tier's own control height instead of forcing every tier open to the
        same flat --lr-icon-button-size floor, but never below the 24px WCAG 2.5.8 minimum itself --
-       same shape as lr-input's clear-button floor. */
-    min-block-size: max(var(--lr-size-24px), min(var(--lr-icon-button-size), var(--lr-form-control-height)));
+       same shape as lr-input's clear-button floor. The public hook replaces only the inner term,
+       so no value can take the summary below that minimum. */
+    min-block-size: max(
+      var(--lr-size-24px),
+      var(
+        --lr-details-summary-min-block-size,
+        min(var(--lr-icon-button-size), var(--lr-form-control-height))
+      )
+    );
     padding-block: var(
       --spacing,
       var(
@@ -96,9 +103,10 @@ export const styles = css`
         var(--lr-details-spacing, var(--_lr-details-spacing))
       )
     );
-    color: var(--lr-color-text);
+    color: var(--lr-details-summary-color, var(--lr-color-text));
     cursor: pointer;
-    font-weight: var(--lr-font-weight-semibold);
+    font-size: var(--lr-details-summary-font-size, inherit);
+    font-weight: var(--lr-details-summary-font-weight, var(--lr-font-weight-semibold));
     list-style: none;
     min-inline-size: 0;
     max-inline-size: 100%;

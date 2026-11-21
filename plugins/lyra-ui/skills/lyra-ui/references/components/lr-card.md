@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -134,6 +134,23 @@ mirroring `--lr-button-shadow`'s pattern; set it
 for a raised card without a `::part(base)` rule. `--lr-card-interactive-hover-shadow` styles an
 `actionable`/linked card's shadow while hovered, falling back to `--lr-card-shadow` itself so a
 card given only a resting shadow keeps that exact shadow on hover.
+`--lr-card-interactive-hover-transform` (default `none`) moves an `actionable`/linked card while
+hovered (for example `translateY(-2px)` for a lift) and is suppressed under
+`prefers-reduced-motion: reduce`; `--lr-card-transition` (default `border-color
+var(--lr-transition-fast), box-shadow var(--lr-transition-fast), transform
+var(--lr-transition-fast)`) replaces the hover transition. The `fill-body` attribute
+(`fillBody: boolean = false`, reflected) makes `[part="body"]` a column flex box that fills the
+card's spare height, with `--lr-card-body-gap` (default `0`) between its children, so one child can
+pin itself to the bottom with `margin-block-start: auto` in an equal-height grid.
+
+```html
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--lr-space-m)">
+  <lr-card href="/plans/team" fill-body style="--lr-card-interactive-hover-transform: translateY(-2px)">
+    <p>Team plan</p>
+    <lr-button style="margin-block-start: auto">Choose</lr-button>
+  </lr-card>
+</div>
+```
 
 **Optional peer deps:** none.
 

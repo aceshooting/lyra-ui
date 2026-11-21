@@ -6,7 +6,7 @@ export const styles = css`
   }
   [part='base'] {
     padding: var(--lr-menu-label-padding, var(--lr-space-xs) var(--lr-space-s));
-    font-size: var(--lr-font-size-sm);
+    font-size: var(--lr-menu-label-font-size, var(--lr-font-size-sm));
     font-weight: var(--lr-font-weight-semibold);
     line-height: var(--lr-line-height-snug);
     color: var(--lr-menu-label-color, var(--lr-color-text-quiet));

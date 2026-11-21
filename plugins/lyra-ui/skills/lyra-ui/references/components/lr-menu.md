@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 3 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 3 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-menu-item`, `lr-dropdown-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -97,6 +97,11 @@ no effect there — the dropdown's popup carries it. The header/footer dividing 
 `<hr>` deliberately stay outside the family on the decorative `--lr-color-border-subtle`: they
 separate content rather than draw the surface's edge. Otherwise shared spacing and motion tokens.
 Row chrome is controlled through the menu-item properties listed below.
+
+List density: `--lr-menu-padding` (default `var(--lr-space-xs)`) pads `[part="list"]` and
+`--lr-menu-gap` (default `0`) spaces its rows. Both apply inside `lr-dropdown` too and are read only
+through `var()` fallbacks, so one declaration on the menu or an ancestor retunes the list without a
+`::part(list)` rule.
 
 Width is a pair, applied to the standalone surface and to a submenu's own surface alike:
 `--lr-menu-max-inline-size` (default `var(--lr-size-20rem)`) and `--lr-menu-min-inline-size`
@@ -252,6 +257,18 @@ row while the row is disabled or `variant="danger"` unless you say otherwise; an
 sets the row's minimum block size for a denser or roomier menu, replacing a `::part(base)` rule per
 item. A value below the 24px floor is your call, exactly as it is when overriding the shared ladder
 itself.
+
+Row density hooks, also inline fallbacks: `--lr-menu-item-padding-block` (default
+`var(--lr-form-control-padding-block)`), `--lr-menu-item-padding-inline` (default
+`var(--lr-form-control-padding-inline)`), `--lr-menu-item-font-size` (default
+`var(--lr-form-control-font-size)`) and `--lr-menu-item-icon-size` (default `inherit`), the font
+size of `[part="icon"]`, which sizes a slotted `lr-icon` or any `1em` glyph.
+
+```html
+<lr-menu style="--lr-menu-padding: 2px; --lr-menu-item-padding-block: 2px; --lr-menu-item-font-size: var(--lr-font-size-sm); --lr-menu-item-icon-size: 14px;">
+  <lr-menu-item value="profile"><lr-icon slot="icon" name="user"></lr-icon>Profile</lr-menu-item>
+</lr-menu>
+```
 
 Any element assigned to `details` counts as content, including a shadow-rendered
 `<lr-kbd slot="details" keys="mod+t">` chip or an icon. An intentionally empty placeholder element

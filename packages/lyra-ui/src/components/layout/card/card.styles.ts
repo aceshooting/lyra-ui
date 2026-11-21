@@ -126,10 +126,18 @@ export const styles = css`
      visible boundary (WCAG 2.2 SC 1.4.11) -- so it stays on the control-grade token, not the
      decorative subtle tier a passive card uses. --border-color still wins; the (0,3,0) filled,
      accent and plain rules above still clear it. */
+  [part="base"][data-actionable="true"],
+  .linked-content {
+    transition: var(
+      --lr-card-transition,
+      border-color var(--lr-transition-fast),
+      box-shadow var(--lr-transition-fast),
+      transform var(--lr-transition-fast)
+    );
+  }
   [part="base"][data-actionable="true"] {
     border-color: var(--border-color, var(--lr-color-border));
     cursor: pointer;
-    transition: border-color var(--lr-transition-fast), box-shadow var(--lr-transition-fast);
   }
   [part="base"][data-actionable="true"]:not([data-disabled]):hover,
   .linked-shell:hover > [part="base"][data-actionable="true"]:not([data-disabled]) {
@@ -138,6 +146,18 @@ export const styles = css`
        hovering an actionable card with no shadow theming stays byte-identical; set it to lift an
        actionable/linked card a step further on hover without a ::part(base) rule. */
     box-shadow: var(--lr-card-interactive-hover-shadow, var(--lr-card-shadow, none));
+    transform: var(--lr-card-interactive-hover-transform, none);
+  }
+  /* A linked card's visible content is the stretched anchor's sibling, so it moves with it. */
+  .linked-shell:hover > .linked-content:not([data-disabled]) {
+    transform: var(--lr-card-interactive-hover-transform, none);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [part="base"][data-actionable="true"]:not([data-disabled]):hover,
+    .linked-shell:hover > [part="base"][data-actionable="true"]:not([data-disabled]),
+    .linked-shell:hover > .linked-content:not([data-disabled]) {
+      transform: none;
+    }
   }
   /* Pressed keeps the hover border and tints the whole tile, a step past hover rather than
      another colour of the same step. A background-IMAGE layer, not a background colour: the
@@ -242,6 +262,14 @@ export const styles = css`
     flex: 1 1 auto;
     min-inline-size: 0;
     overflow-wrap: break-word;
+  }
+  /* The body already takes the card's spare height; fill-body makes it a column so slotted
+     children can pin themselves to its end (margin-block-start: auto) in an equal-height grid. */
+  :host([fill-body]) [part="body"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--lr-card-body-gap, 0);
+    min-block-size: 0;
   }
   [part="footer"] {
     display: flex;

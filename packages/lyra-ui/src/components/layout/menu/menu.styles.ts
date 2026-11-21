@@ -145,7 +145,10 @@ export const styles = css`
     );
     overflow-x: hidden;
     overflow-y: auto;
-    padding: var(--lr-space-xs);
+    /* Density hooks read only through var() fallbacks, so a theme wrapper or the menu itself can
+       retune them; unset they are the spacing this list always used. */
+    gap: var(--lr-menu-gap, 0);
+    padding: var(--lr-menu-padding, var(--lr-space-xs));
     outline: none;
   }
   /* A plain <hr> divider between item groups: native <hr> already carries the implicit ARIA role

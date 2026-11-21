@@ -152,6 +152,13 @@ export interface LyraDetailsEventMap {
  *   border color.
  * @cssprop [--lr-details-summary-radius=var(--lr-details-radius,var(--lr-radius-container))] -
  *   Corner radius of the summary row's hover, pressed, and focus treatments.
+ * @cssprop [--lr-details-summary-font-weight=var(--lr-font-weight-semibold)] - Summary font weight.
+ * @cssprop [--lr-details-summary-color=var(--lr-color-text)] - Summary text colour.
+ * @cssprop [--lr-details-summary-font-size=inherit] - Summary text size; unset it follows
+ *   `--lr-details-font-size`.
+ * @cssprop [--lr-details-summary-min-block-size=min(var(--lr-icon-button-size),var(--lr-form-control-height))] -
+ *   Summary minimum block size. The 24px pointer-target minimum still applies, so a smaller value
+ *   is clamped to it.
  * @cssprop [--lr-details-summary-hover-bg=var(--lr-color-brand-quiet)] - Summary hover background.
  * @cssprop [--lr-details-summary-active-bg=color-mix(...)] - Summary pressed background.
  * @cssprop --spacing - Upstream-compatible spacing override for the summary and content.

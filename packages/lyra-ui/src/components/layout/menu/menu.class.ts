@@ -190,6 +190,9 @@ function registerMenuWidthScale(doc: Document): void {
  *   surfaces. Lower it alongside `--lr-menu-max-inline-size` to make a menu narrower than 10rem;
  *   the floor wins over the authored ceiling, so capping alone cannot go below it. The viewport
  *   and available container or positioned width still bound the floor, including at text zoom.
+ * @cssprop [--lr-menu-padding=var(--lr-space-xs)] - Padding of `[part="list"]`, including inside
+ *   `lr-dropdown`. Read only through a `var()` fallback, so a menu or any ancestor can set it.
+ * @cssprop [--lr-menu-gap=0] - Gap between the rows of `[part="list"]`.
  * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-high)] - Shared floating-surface fill,
  *   on the standalone menu surface and on a submenu's own surface. A contained menu (inside
  *   `lr-dropdown`) paints no surface of its own, so it is unaffected.

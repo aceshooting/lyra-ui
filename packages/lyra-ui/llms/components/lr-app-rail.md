@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 51 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 56 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-app-rail-item`, `lr-app-rail-group` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -18,6 +18,18 @@
 ## `lr-app-rail`
 
 The `lr-app-rail` styling hooks include `--lr-app-rail-toggle-color`, `--lr-app-rail-toggle-bg`, `--lr-app-rail-toggle-border`, `--lr-app-rail-pin-color`, `--lr-app-rail-pin-pressed-bg`.
+
+The collapsed mobile toggle can float over content without a `::part(toggle)` rule:
+`--lr-app-rail-toggle-position` (default `static`; set `fixed`) with
+`--lr-app-rail-toggle-inset-block-start` and `--lr-app-rail-toggle-inset-inline-start`, each added to
+the device safe-area inset on that logical edge and mirrored under RTL. `--lr-app-rail-toggle-size`
+(default `auto`) sets its square size, never below `--lr-icon-button-size`, and
+`--lr-app-rail-toggle-radius` (default `var(--lr-radius)`) its corners. The open panel's in-panel
+close row ignores the placement hooks.
+
+```html
+<lr-app-rail style="--lr-app-rail-toggle-position: fixed; --lr-app-rail-toggle-inset-block-start: var(--lr-space-s); --lr-app-rail-toggle-inset-inline-start: var(--lr-space-s); --lr-app-rail-toggle-radius: var(--lr-radius-pill)"></lr-app-rail>
+```
 
 The mobile navigation remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
 

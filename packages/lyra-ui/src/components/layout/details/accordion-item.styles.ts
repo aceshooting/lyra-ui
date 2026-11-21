@@ -46,7 +46,13 @@ export const styles = css`
       var(--lr-accordion-item-spacing, var(--_lr-accordion-item-spacing))
     );
     inline-size: 100%;
-    min-block-size: max(var(--lr-size-24px), min(var(--lr-icon-button-size), var(--lr-form-control-height)));
+    min-block-size: max(
+      var(--lr-size-24px),
+      var(
+        --lr-accordion-item-summary-min-block-size,
+        min(var(--lr-icon-button-size), var(--lr-form-control-height))
+      )
+    );
     box-sizing: border-box;
     padding-block: var(
       --spacing,
@@ -65,9 +71,10 @@ export const styles = css`
     border: none;
     border-radius: 0;
     background: transparent;
-    color: inherit;
+    color: var(--lr-accordion-item-summary-color, inherit);
     font: inherit;
-    font-weight: var(--lr-font-weight-semibold);
+    font-size: var(--lr-accordion-item-summary-font-size, inherit);
+    font-weight: var(--lr-accordion-item-summary-font-weight, var(--lr-font-weight-semibold));
     text-align: start;
     cursor: pointer;
     transition: var(--lr-transition-interactive);

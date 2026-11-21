@@ -365,6 +365,26 @@ export const FixedHeightTileGrid: Story = {
   `,
 };
 
+export const LiftAndFillBody: Story = {
+  name: 'Hover lift and fill-body grid',
+  render: () => html`
+    <div
+      style="display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: var(--lr-space-m); --lr-card-interactive-hover-transform: translateY(var(--lr-size-neg-0-25rem)); --lr-card-interactive-hover-shadow: var(--lr-shadow-m); --lr-card-body-gap: var(--lr-space-s);"
+    >
+      <lr-card href="#starter" fill-body>
+        <strong>Starter</strong>
+        <span>One site.</span>
+        <span style="margin-block-start: auto; color: var(--lr-color-brand)">Choose plan</span>
+      </lr-card>
+      <lr-card href="#team" fill-body>
+        <strong>Team</strong>
+        <span>Shared dashboards, alerts and five sites with daily exports.</span>
+        <span style="margin-block-start: auto; color: var(--lr-color-brand)">Choose plan</span>
+      </lr-card>
+    </div>
+  `,
+};
+
 export const OutlinedBackgroundToken: Story = {
   name: 'Retinting the default appearance',
   parameters: {

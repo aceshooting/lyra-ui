@@ -20,6 +20,7 @@ import { styles } from './menu-label.styles.js';
  * @csspart base - The heading row.
  * @cssprop [--lr-menu-label-color] - Color override.
  * @cssprop [--lr-menu-label-padding] - Padding override.
+ * @cssprop [--lr-menu-label-font-size=var(--lr-font-size-sm)] - Font size of the heading row.
  * @status stable
  * @since 8.0.0
  */

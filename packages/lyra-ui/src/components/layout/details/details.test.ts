@@ -2094,6 +2094,41 @@ it('rounds all summary corners in both disclosure states and supports an indepen
   expect(getComputedStyle(summary).borderRadius).to.equal('16px');
 });
 
+it('applies summary type and height tokens, clamps the height at the pointer-target minimum and keeps defaults unset', async () => {
+  const wrap = await fixture<HTMLElement>(html`
+    <div>
+      <lr-details summary="Plain">Body</lr-details>
+      <lr-details
+        summary="Tuned"
+        style="--lr-details-summary-font-weight: 400; --lr-details-summary-color: rgb(1, 2, 3); --lr-details-summary-font-size: 11px; --lr-details-summary-min-block-size: 50px"
+      >Body</lr-details>
+      <lr-accordion>
+        <lr-accordion-item
+          label="Item"
+          style="--lr-accordion-item-summary-font-weight: 400; --lr-accordion-item-summary-color: rgb(4, 5, 6); --lr-accordion-item-summary-font-size: 12px; --lr-accordion-item-summary-min-block-size: 4px"
+        >Body</lr-accordion-item>
+      </lr-accordion>
+    </div>
+  `);
+  const [plain, tuned] = [...wrap.querySelectorAll('lr-details')] as [LyraDetails, LyraDetails];
+  const item = wrap.querySelector('lr-accordion-item') as LyraAccordionItem;
+  await Promise.all([plain.updateComplete, tuned.updateComplete, item.updateComplete]);
+  const plainStyle = getComputedStyle(summaryOf(plain));
+  const tunedStyle = getComputedStyle(summaryOf(tuned));
+  expect(plainStyle.fontWeight).to.equal('600');
+  expect(plainStyle.fontSize).to.equal(getComputedStyle(plain.shadowRoot!.querySelector('details')!).fontSize);
+  expect(parseFloat(plainStyle.minBlockSize)).to.be.at.least(24);
+  expect([tunedStyle.fontWeight, tunedStyle.color, tunedStyle.fontSize, tunedStyle.minBlockSize]).to.deep.equal(
+    ['400', 'rgb(1, 2, 3)', '11px', '50px'],
+  );
+  tuned.style.setProperty('--lr-details-summary-min-block-size', '4px');
+  expect(getComputedStyle(summaryOf(tuned)).minBlockSize).to.equal('24px');
+  const button = getComputedStyle(item.shadowRoot!.querySelector<HTMLElement>('[part~="button"]')!);
+  expect([button.fontWeight, button.color, button.fontSize, button.minBlockSize]).to.deep.equal(
+    ['400', 'rgb(4, 5, 6)', '12px', '24px'],
+  );
+});
+
 describe("scrollable content", () => {
   it("gives prose in a size-limited open details a named tab stop only while it overflows", async () => {
     const wrap = await fixture<HTMLElement>(html`

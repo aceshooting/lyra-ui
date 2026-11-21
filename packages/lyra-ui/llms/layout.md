@@ -1920,6 +1920,17 @@ string; label: string; icon?: unknown; disabled?: boolean }`; `icon` renders as 
   rewrite. Before 8.0.0 this component carried its own six-tier scale that had drifted from that
   one; `m` is still the default, but the tiers now resolve to the shared control heights, paddings
   and font sizes rather than to this component's former private values.
+- `layout: 'scroll' | 'wrap' | 'grid' = 'scroll'` (reflected; type `LyraSegmentedLayout`) — `scroll`
+  keeps one horizontally scrolling row with edge fades. `wrap` breaks segments onto as many rows as
+  the width needs; `grid` places them in `--lr-segmented-columns` (default `3`) equal columns. Both
+  multi-row layouts never scroll, drop the edge fade, let long labels wrap and let the track grow
+  past `--lr-segmented-track-height`. Arrow keys follow reading order in every layout:
+  ArrowRight/ArrowLeft step along a row and continue onto the next or previous row, mirrored under
+  RTL.
+
+```html
+<lr-segmented layout="grid" style="--lr-segmented-columns: 4" label="Category"></lr-segmented>
+```
 
 **Events:**
 
@@ -2512,6 +2523,18 @@ attributes marking library-owned light-DOM nodes are exported as `VIRTUAL_LIST_R
 ## `lr-app-rail`
 
 The `lr-app-rail` styling hooks include `--lr-app-rail-toggle-color`, `--lr-app-rail-toggle-bg`, `--lr-app-rail-toggle-border`, `--lr-app-rail-pin-color`, `--lr-app-rail-pin-pressed-bg`.
+
+The collapsed mobile toggle can float over content without a `::part(toggle)` rule:
+`--lr-app-rail-toggle-position` (default `static`; set `fixed`) with
+`--lr-app-rail-toggle-inset-block-start` and `--lr-app-rail-toggle-inset-inline-start`, each added to
+the device safe-area inset on that logical edge and mirrored under RTL. `--lr-app-rail-toggle-size`
+(default `auto`) sets its square size, never below `--lr-icon-button-size`, and
+`--lr-app-rail-toggle-radius` (default `var(--lr-radius)`) its corners. The open panel's in-panel
+close row ignores the placement hooks.
+
+```html
+<lr-app-rail style="--lr-app-rail-toggle-position: fixed; --lr-app-rail-toggle-inset-block-start: var(--lr-space-s); --lr-app-rail-toggle-inset-inline-start: var(--lr-space-s); --lr-app-rail-toggle-radius: var(--lr-radius-pill)"></lr-app-rail>
+```
 
 The mobile navigation remains interactive when opened outside an existing native `dialog.showModal()`. An internal native modal surface preserves the authored host and content; Escape, close vetoes, and focus return keep their usual behavior. Ordinary inline rendering is unchanged.
 
@@ -3531,7 +3554,8 @@ window.
 
 ## `lr-menu-label`
 
-The `lr-menu-label` styling hooks include `--lr-menu-label-color`, `--lr-menu-label-padding`.
+The `lr-menu-label` styling hooks include `--lr-menu-label-color`, `--lr-menu-label-padding`, and
+`--lr-menu-label-font-size` (default `var(--lr-font-size-sm)`).
 
 A non-interactive section heading inside `<lr-menu>`'s default slot. Mirrors `sl-menu-label`.
 
@@ -3644,6 +3668,11 @@ no effect there — the dropdown's popup carries it. The header/footer dividing 
 `<hr>` deliberately stay outside the family on the decorative `--lr-color-border-subtle`: they
 separate content rather than draw the surface's edge. Otherwise shared spacing and motion tokens.
 Row chrome is controlled through the menu-item properties listed below.
+
+List density: `--lr-menu-padding` (default `var(--lr-space-xs)`) pads `[part="list"]` and
+`--lr-menu-gap` (default `0`) spaces its rows. Both apply inside `lr-dropdown` too and are read only
+through `var()` fallbacks, so one declaration on the menu or an ancestor retunes the list without a
+`::part(list)` rule.
 
 Width is a pair, applied to the standalone surface and to a submenu's own surface alike:
 `--lr-menu-max-inline-size` (default `var(--lr-size-20rem)`) and `--lr-menu-min-inline-size`
@@ -3799,6 +3828,18 @@ row while the row is disabled or `variant="danger"` unless you say otherwise; an
 sets the row's minimum block size for a denser or roomier menu, replacing a `::part(base)` rule per
 item. A value below the 24px floor is your call, exactly as it is when overriding the shared ladder
 itself.
+
+Row density hooks, also inline fallbacks: `--lr-menu-item-padding-block` (default
+`var(--lr-form-control-padding-block)`), `--lr-menu-item-padding-inline` (default
+`var(--lr-form-control-padding-inline)`), `--lr-menu-item-font-size` (default
+`var(--lr-form-control-font-size)`) and `--lr-menu-item-icon-size` (default `inherit`), the font
+size of `[part="icon"]`, which sizes a slotted `lr-icon` or any `1em` glyph.
+
+```html
+<lr-menu style="--lr-menu-padding: 2px; --lr-menu-item-padding-block: 2px; --lr-menu-item-font-size: var(--lr-font-size-sm); --lr-menu-item-icon-size: 14px;">
+  <lr-menu-item value="profile"><lr-icon slot="icon" name="user"></lr-icon>Profile</lr-menu-item>
+</lr-menu>
+```
 
 Any element assigned to `details` counts as content, including a shadow-rendered
 `<lr-kbd slot="details" keys="mod+t">` chip or an icon. An intentionally empty placeholder element
@@ -4316,6 +4357,23 @@ mirroring `--lr-button-shadow`'s pattern; set it
 for a raised card without a `::part(base)` rule. `--lr-card-interactive-hover-shadow` styles an
 `actionable`/linked card's shadow while hovered, falling back to `--lr-card-shadow` itself so a
 card given only a resting shadow keeps that exact shadow on hover.
+`--lr-card-interactive-hover-transform` (default `none`) moves an `actionable`/linked card while
+hovered (for example `translateY(-2px)` for a lift) and is suppressed under
+`prefers-reduced-motion: reduce`; `--lr-card-transition` (default `border-color
+var(--lr-transition-fast), box-shadow var(--lr-transition-fast), transform
+var(--lr-transition-fast)`) replaces the hover transition. The `fill-body` attribute
+(`fillBody: boolean = false`, reflected) makes `[part="body"]` a column flex box that fills the
+card's spare height, with `--lr-card-body-gap` (default `0`) between its children, so one child can
+pin itself to the bottom with `margin-block-start: auto` in an equal-height grid.
+
+```html
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--lr-space-m)">
+  <lr-card href="/plans/team" fill-body style="--lr-card-interactive-hover-transform: translateY(-2px)">
+    <p>Team plan</p>
+    <lr-button style="margin-block-start: auto">Choose</lr-button>
+  </lr-card>
+</div>
+```
 
 **Optional peer deps:** none.
 
@@ -4851,6 +4909,14 @@ gap, and `--lr-details-radius` (default `var(--lr-radius-container)`) controls t
 `--lr-details-summary-radius` defaults to the surface radius and applies to all four summary
 corners in both open and closed states. These properties inherit from ancestors and remain
 independent of the `size` density ladder.
+Summary type and height: `--lr-details-summary-font-weight` (default
+`var(--lr-font-weight-semibold)`), `--lr-details-summary-color` (default `var(--lr-color-text)`),
+`--lr-details-summary-font-size` (default `inherit`, so it follows `--lr-details-font-size`) and
+`--lr-details-summary-min-block-size` (default `min(var(--lr-icon-button-size),
+var(--lr-form-control-height))`). The 24px pointer-target minimum still wraps the min-block-size
+hook, so a smaller value is clamped to it. `lr-accordion-item` takes the same four as
+`--lr-accordion-item-summary-font-weight`, `--lr-accordion-item-summary-color` (default
+`inherit`), `--lr-accordion-item-summary-font-size` and `--lr-accordion-item-summary-min-block-size`.
 Details surface paint uses `--lr-details-outlined-bg` / `--lr-details-outlined-border-color`,
 `--lr-details-filled-bg` / `--lr-details-filled-border-color`, and
 `--lr-details-filled-outlined-bg` / `--lr-details-filled-outlined-border-color`; their defaults are

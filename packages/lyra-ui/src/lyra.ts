@@ -1333,6 +1333,7 @@ export type {
 } from './components/layout/stepper/stepper.class.js';
 export type {
   LyraSegmentedItem,
+  LyraSegmentedLayout,
   LyraSegmentedSelectRequestDetail,
 } from './components/layout/segmented/segmented.class.js';
 export type {

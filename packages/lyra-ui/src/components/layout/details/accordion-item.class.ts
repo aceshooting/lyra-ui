@@ -80,6 +80,14 @@ export type {
  * @cssprop [--lr-accordion-item-summary-padding-inline=var(--lr-accordion-item-spacing)] - Trigger
  *   button inline padding (start/end), independently tunable from the panel content's own padding.
  *   Same fallback chain as `--lr-accordion-item-summary-padding-block`.
+ * @cssprop [--lr-accordion-item-summary-font-weight=var(--lr-font-weight-semibold)] - Trigger font
+ *   weight.
+ * @cssprop [--lr-accordion-item-summary-color=inherit] - Trigger text colour.
+ * @cssprop [--lr-accordion-item-summary-font-size=inherit] - Trigger text size; unset it follows
+ *   `--lr-accordion-item-font-size`.
+ * @cssprop [--lr-accordion-item-summary-min-block-size=min(var(--lr-icon-button-size),var(--lr-form-control-height))] -
+ *   Trigger minimum block size. The 24px pointer-target minimum still applies, so a smaller value
+ *   is clamped to it.
  * @cssprop [--lr-accordion-item-content-padding-block-end=var(--lr-accordion-item-spacing)] - Panel
  *   content's trailing block padding, independently tunable from the trigger button's own padding.
  *   Same fallback chain as `--lr-accordion-item-summary-padding-block`.

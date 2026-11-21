@@ -217,6 +217,13 @@ export interface LyraMenuItemEventMap {
  * @cssprop [--lr-menu-item-min-height=max(var(--lr-form-control-height),var(--lr-size-24px))] -
  * Minimum block size of the visual row. Unset it is the shared form-control ladder floored at the
  * WCAG 2.2 SC 2.5.8 minimum.
+ * @cssprop [--lr-menu-item-padding-block=var(--lr-form-control-padding-block)] - Block padding of
+ * the visual row. Unset it follows the shared form-control size tier.
+ * @cssprop [--lr-menu-item-padding-inline=var(--lr-form-control-padding-inline)] - Inline padding of
+ * the visual row. Unset it follows the shared form-control size tier.
+ * @cssprop [--lr-menu-item-font-size=var(--lr-form-control-font-size)] - Font size of the visual row.
+ * @cssprop [--lr-menu-item-icon-size=inherit] - Font size of `[part="icon"]`, which sizes a slotted
+ * `lr-icon` or any `1em` glyph. Unset the icon follows the row's font size.
  * @method click - Activates the visual row, including checkbox and submenu behavior; no-op while
  * disabled or loading.
  * @method select - Activates a selectable item; no-op while disabled/loading and opens submenu parents.

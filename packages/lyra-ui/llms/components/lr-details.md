@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-accordion`, `lr-accordion-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -327,6 +327,14 @@ gap, and `--lr-details-radius` (default `var(--lr-radius-container)`) controls t
 `--lr-details-summary-radius` defaults to the surface radius and applies to all four summary
 corners in both open and closed states. These properties inherit from ancestors and remain
 independent of the `size` density ladder.
+Summary type and height: `--lr-details-summary-font-weight` (default
+`var(--lr-font-weight-semibold)`), `--lr-details-summary-color` (default `var(--lr-color-text)`),
+`--lr-details-summary-font-size` (default `inherit`, so it follows `--lr-details-font-size`) and
+`--lr-details-summary-min-block-size` (default `min(var(--lr-icon-button-size),
+var(--lr-form-control-height))`). The 24px pointer-target minimum still wraps the min-block-size
+hook, so a smaller value is clamped to it. `lr-accordion-item` takes the same four as
+`--lr-accordion-item-summary-font-weight`, `--lr-accordion-item-summary-color` (default
+`inherit`), `--lr-accordion-item-summary-font-size` and `--lr-accordion-item-summary-min-block-size`.
 Details surface paint uses `--lr-details-outlined-bg` / `--lr-details-outlined-border-color`,
 `--lr-details-filled-bg` / `--lr-details-filled-border-color`, and
 `--lr-details-filled-outlined-bg` / `--lr-details-filled-outlined-border-color`; their defaults are

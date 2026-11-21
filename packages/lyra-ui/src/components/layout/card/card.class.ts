@@ -114,6 +114,12 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  *   `actionable`/linked card's base while hovered. Falls back to `--lr-card-shadow` itself, so a
  *   card given only a resting shadow keeps that exact shadow on hover; set this independently to
  *   lift an actionable card a further step on hover.
+ * @cssprop [--lr-card-interactive-hover-transform=none] - Transform of an `actionable`/linked
+ *   card while hovered, such as `translateY(-2px)` for a lift. Suppressed under
+ *   `prefers-reduced-motion: reduce`.
+ * @cssprop [--lr-card-transition=border-color var(--lr-transition-fast), box-shadow var(--lr-transition-fast), transform var(--lr-transition-fast)] -
+ *   Transition of an `actionable`/linked card's hover paint.
+ * @cssprop [--lr-card-body-gap=0] - Gap between the body's slotted children while `fill-body` is set.
  * @status stable
  * @since 4.0.0
  */
@@ -162,6 +168,11 @@ export class LyraCard extends LyraElement<LyraCardEventMap> {
    *  and emits `lr-card-activate`. With `href` set the stretched native `<a>` owns navigation and
    *  `lr-card-activate` is never fired. `false` (the default) renders static output: no button, no listeners, no events. */
   @property({ type: Boolean, reflect: true }) actionable = false;
+
+  /** Lays the body out as a column flex box that fills the card's spare height, so its slotted
+   *  children stack with `--lr-card-body-gap` and one can pin itself to the bottom with
+   *  `margin-block-start: auto` in an equal-height card grid. Reflects as `fill-body`. */
+  @property({ type: Boolean, attribute: 'fill-body', reflect: true }) fillBody = false;
 
   /** Turns the card's OWN activation off: the native `activation-button` renders `disabled`, a
    *  linked card's stretched `<a>` loses its `href` (so it genuinely cannot navigate rather than
