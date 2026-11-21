@@ -339,7 +339,7 @@ export class LyraConversationItem extends LyraElement<LyraConversationItemEventM
   override focus(options?: FocusOptions): void {
     if (this.deferFocusUntilRendered(options)) return;
     if (this.renaming) this.labelInput?.focus(options);
-    else this.renderRoot.querySelector<HTMLElement>('[part="select-button"]')?.focus(options);
+    else this.renderRoot?.querySelector<HTMLElement>('[part="select-button"]')?.focus(options);
   }
 
   /** Removes focus from the rename input or the selectable row. */

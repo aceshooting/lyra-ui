@@ -56,7 +56,7 @@ for (const [name, content] of [
     const prefix = `--lr-${name}-viewer-`;
     el.style.setProperty(prefix + 'bg', 'red');
     el.style.setProperty(prefix + 'border', '2px solid green');
-    el.style.setProperty(prefix + 'border-radius', '11px');
+    el.style.setProperty(prefix + 'radius', '11px');
     el.style.setProperty(prefix + 'header-row-bg', 'blue');
     await waitUntil(() => !!el.shadowRoot!.querySelector('[part="header-row"]'));
     const base = getComputedStyle(el.shadowRoot!.querySelector('[part="base"]')!);

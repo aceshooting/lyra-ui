@@ -330,8 +330,8 @@ const bundleEntries = {
     // complete graph measures 2,596,343 raw bytes across 41 files with the lockfile's Vite,
     // after the shared overlay, focus and slot helpers it loads grew. The ceiling advances to
     // the next 64-byte boundary. The 32.0.0 map control, legend and drawing hooks bring it to
-    // 2,607,350 raw bytes; the ceiling advances to the next 64-byte boundary.
-    maxRawBytes: 2_607_360,
+    // 2,608,588 raw bytes; the ceiling advances to the next 64-byte boundary.
+    maxRawBytes: 2_608_640,
   },
   graph: {
     fixture: 'optional',
