@@ -40,7 +40,7 @@ describe('RovingTreeFocus edges', () => {
     roving.onFocusIn({ target: control('outside') } as unknown as FocusEvent);
     roving.onFocusIn({ target: null } as unknown as FocusEvent);
     expect(control('c1').tabIndex).to.equal(0);
-    control('c1').disabled = true;
+    (control('c1') as HTMLButtonElement).disabled = true;
     roving.sync();
     expect(control('a1').tabIndex).to.equal(0);
     tree = null;

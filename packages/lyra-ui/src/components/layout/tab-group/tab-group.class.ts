@@ -12,7 +12,7 @@ import { resolveListMove, isRepeatedActivationKey, shouldIgnoreNavigationKey } f
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { asciiWhitespaceTokens } from '../../../internal/ascii-whitespace.js';
 import { subscribeInheritedAttributes, type InheritedAttributeRelease } from '../../../internal/inherited-attribute-hub.js';
-import { composedAccessibilityText, labelReferenceRecordsMatter } from '../../../internal/accessibility-visibility.js';
+import { composedAccessibilityText, isHostLayoutRendered, labelReferenceRecordsMatter } from '../../../internal/accessibility-visibility.js';
 import { CustomElementUpgradeObserver } from '../../../internal/custom-element-upgrade-observer.js';
 import { isHtmlElement } from '../../../internal/dom-guards.js';
 import { chevronIcon, closeIcon } from '../../../internal/icons.js';
@@ -759,19 +759,10 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       // kept that name once shown. Apply it only while the group itself renders; author exclusion
       // (`hidden`, `aria-hidden`, `inert`, own `display: none`/`content-visibility: hidden`) is
       // pruned by the subtree predicate either way.
-      requireRendered: this.isHostRendered(),
+      requireRendered: isHostLayoutRendered(this),
     })
       .replace(/\s+/g, ' ')
       .trim();
-  }
-
-  /** Whether this group participates in rendered layout, so a descendant's native render check
-   *  reflects its own state rather than an unrendered ancestor outside the group. */
-  private isHostRendered(): boolean {
-    const host = this as HTMLElement & {
-      checkVisibility?: (options?: { contentVisibilityAuto?: boolean }) => boolean;
-    };
-    return typeof host.checkVisibility !== 'function' || host.checkVisibility();
   }
 
   private libraryOwnsSourceInert(element: Element): boolean {

@@ -2,7 +2,7 @@ import { html, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { AccessibleTextController } from '../../../internal/accessible-text-controller.js';
-import { composedAccessibilityText } from '../../../internal/accessibility-visibility.js';
+import { composedAccessibilityText, isHostLayoutRendered } from '../../../internal/accessibility-visibility.js';
 import { isAccessibilitySubtreeExcluded } from '../../../internal/a11y.js';
 import { collectInitialSlotAssignment } from '../../../internal/initial-slot-collection.js';
 import { composedContains, deepActiveElement } from '../../../internal/nonmodal-overlay-manager.js';
@@ -261,7 +261,9 @@ export class LyraMenubarItem extends LyraElement<LyraMenubarItemEventMap> {
     const nodes = slot?.assignedNodes({ flatten: true }) ?? Array.from(this.childNodes).filter(node =>
       node.nodeType !== 1 || !(node as Element).getAttribute('slot'));
     this.label = composedAccessibilityText(nodes, {
-      ancestorBoundary: this, requireRendered, ignoreInheritedVisibility: true,
+      // Only while this item renders: an unrendered ancestor outside it would otherwise empty an
+      // element-wrapped label for good. Author exclusions still prune.
+      ancestorBoundary: this, requireRendered: requireRendered && isHostLayoutRendered(this), ignoreInheritedVisibility: true,
       isSubtreeExcluded: element => {
         if (element.getRootNode() === this.renderRoot && element.matches('[part="label"][aria-hidden="true"][inert]')) return false;
         return isAccessibilitySubtreeExcluded(element);

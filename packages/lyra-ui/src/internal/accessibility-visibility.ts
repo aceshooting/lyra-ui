@@ -110,6 +110,18 @@ export function isAccessibilityVisibilityHidden(element: Element): boolean {
 }
 
 /** Whether an element itself is excluded; use the subtree predicate when recursively extracting. */
+/**
+ * Whether `host` itself takes part in rendered layout. A component computing its own name passes
+ * this as `requireRendered`, so a `display: none` ancestor OUTSIDE the component (a hidden tab
+ * panel, a collapsed section) does not empty every element-wrapped label inside it, while author
+ * exclusions (`hidden`, `aria-hidden`, `inert`, an own `display: none`) still prune either way.
+ * Engines without `checkVisibility()` report rendered.
+ */
+export function isHostLayoutRendered(host: Element): boolean {
+  const candidate = host as Element & { checkVisibility?: () => boolean };
+  return typeof candidate.checkVisibility !== 'function' || candidate.checkVisibility();
+}
+
 export function isAccessibilityExcluded(element: Element): boolean {
   return isAccessibilitySubtreeExcluded(element) || isAccessibilityVisibilityHidden(element);
 }
