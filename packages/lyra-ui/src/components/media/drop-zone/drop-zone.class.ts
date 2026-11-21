@@ -98,7 +98,7 @@ export interface LyraDropZoneEventMap {
  * (`acquireAnnouncementSink()` in `internal/announcer.ts`); this part is a styling/inspection
  * surface only.
  * @csspart rejection - The visible region listing the first 20 rejected files alongside their
- * reason, rendered in addition to the sr-only `status` summary.
+ * reason, rendered in addition to the sr-only `status` summary. `without-rejection-list` omits it.
  * @cssstate dragging - Matches during an active file drag session.
  * @cssstate targeted - Matches while `for`/`target` resolves to an element the zone is attached to.
  * @cssprop [--lr-drop-zone-overlay-z-index=var(--lr-layer-dropdown)] - Stacking order of the overlay while attached to a `for`/`target` element.
@@ -217,6 +217,9 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
   /** An element to attach to directly, taking precedence over `for` while it is connected. Same
    *  behavior as `for`; property only. */
   @property({ attribute: false }) target: Element | null = null;
+  /** Omits the visible `[part="rejection"]` list for an application that renders its own banner
+   *  from the `lr-files` detail. The assertive announcement and the `rejected` detail are kept. */
+  @property({ type: Boolean, reflect: true, attribute: 'without-rejection-list' }) withoutRejectionList = false;
 
   @query('[part="overlay"]') private overlayEl?: HTMLElement;
   /** The element the drag listeners are currently attached to, if any. */
@@ -430,7 +433,7 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
         </div>
       </div>
       <div part="status" class="sr-only" aria-hidden="true">${this.statusText()}</div>
-      ${this.rejectedFiles.length
+      ${this.rejectedFiles.length && !this.withoutRejectionList
         ? html`
             <div part="rejection">
               <ul>

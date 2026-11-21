@@ -1,6 +1,7 @@
 import { fixture, expect, html, oneEvent, waitUntil } from '@open-wc/testing';
 import '../../lr-drop-zone.js';
 import '../../lr-file-input.js';
+import { sinkTexts } from '../../../../test/announcements.js';
 import type { LyraFileInput } from '../../lr-file-input.js';
 import type { LyraDropZone, LyraDropZoneFilesDetail, LyraDropZoneFilesEvent } from '../../lr-drop-zone.js';
 
@@ -136,6 +137,22 @@ it('rejects a file beyond max-files, keeping the rest of the drop', async () => 
   const rejection = el.shadowRoot!.querySelector('[part="rejection"]');
   expect(rejection, 'the visible rejection list renders').to.not.equal(null);
   expect(rejection!.textContent).to.include('c.txt');
+});
+
+it('without-rejection-list omits the visible list but keeps the announcement and the rejected detail', async () => {
+  const el = await fixture<LyraDropZone>(html`<lr-drop-zone without-rejection-list max-files="1" multiple><div>region</div></lr-drop-zone>`);
+  expect(el.withoutRejectionList).to.equal(true);
+  const result = oneEvent(el, 'lr-files');
+  dropWith(base(el), [makeFile('a.txt'), makeFile('skipped.txt')]);
+  const detail = (await result).detail as LyraDropZoneFilesDetail;
+  await el.updateComplete;
+  expect(detail.rejected.map((r) => r.file.name)).to.deep.equal(['skipped.txt']);
+  expect(el.shadowRoot!.querySelectorAll('[part="rejection"]').length).to.equal(0);
+  await waitUntil(() => sinkTexts('assertive').some((text) => text.includes('skipped.txt')), 'the rejection is still announced');
+  el.withoutRejectionList = false;
+  await el.updateComplete;
+  expect(el.hasAttribute('without-rejection-list')).to.equal(false);
+  expect(el.shadowRoot!.querySelectorAll('[part="rejection"]').length).to.equal(1);
 });
 
 it('rejects a file beyond max-total-size', async () => {

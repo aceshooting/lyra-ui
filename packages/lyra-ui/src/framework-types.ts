@@ -5325,7 +5325,8 @@ export interface LyraComponentTypeMap {
       | 'rejectedMessage'
       | 'size'
       | 'strings'
-      | 'target',
+      | 'target'
+      | 'withoutRejectionList',
       {}
     >;
     events: LyraDropZoneEventMap;
@@ -5350,6 +5351,7 @@ export interface LyraComponentTypeMap {
       'max-files'?: LyraDropZone['maxFiles'];
       'max-total-size'?: LyraDropZone['maxTotalSize'];
       'rejected-message'?: LyraDropZone['rejectedMessage'];
+      'without-rejection-list'?: LyraDropZone['withoutRejectionList'];
     };
   };
   'lr-dropdown': {
@@ -8282,6 +8284,7 @@ export interface LyraComponentTypeMap {
     element: LyraMap;
     properties: LyraElementProperties<
       LyraMap,
+      | 'anchorAvoid'
       | 'anchorBoundary'
       | 'anchorClosable'
       | 'anchorLngLat'
@@ -8293,7 +8296,9 @@ export interface LyraComponentTypeMap {
       | 'choroplethLegend'
       | 'controls'
       | 'dataLayers'
+      | 'drawingCompleteBehavior'
       | 'drawingMeasurements'
+      | 'drawingSticky'
       | 'drawMode'
       | 'engine'
       | 'hash'
@@ -8315,6 +8320,7 @@ export interface LyraComponentTypeMap {
       | 'legendGradientTicks'
       | 'legendInteractive'
       | 'legendOpen'
+      | 'legendPlacement'
       | 'legendProjection'
       | 'locale'
       | 'map'
@@ -8376,9 +8382,25 @@ export interface LyraComponentTypeMap {
       | 'lr-map-view-change';
     cssNames:       | '--lr-map-action-active-bg'
       | '--lr-map-action-hover-bg'
+      | '--lr-map-anchor-close-reservation'
+      | '--lr-map-attribution-border'
+      | '--lr-map-attribution-radius'
       | '--lr-map-choropleth-fill-opacity'
+      | '--lr-map-control-active-bg'
+      | '--lr-map-control-bg'
+      | '--lr-map-control-border'
+      | '--lr-map-control-color'
+      | '--lr-map-control-gap'
+      | '--lr-map-control-hover-bg'
       | '--lr-map-control-pressed-bg'
       | '--lr-map-control-pressed-color'
+      | '--lr-map-control-radius'
+      | '--lr-map-control-shadow'
+      | '--lr-map-control-size'
+      | '--lr-map-controls-inset-block-end'
+      | '--lr-map-controls-inset-block-start'
+      | '--lr-map-controls-inset-inline-end'
+      | '--lr-map-controls-inset-inline-start'
       | '--lr-map-drawing-color'
       | '--lr-map-drawing-fill-opacity'
       | '--lr-map-drawing-preview-dash'
@@ -8388,7 +8410,20 @@ export interface LyraComponentTypeMap {
       | '--lr-map-drawing-vertex-radius'
       | '--lr-map-height'
       | '--lr-map-hidden-category-opacity'
+      | '--lr-map-legend-bg'
+      | '--lr-map-legend-color'
+      | '--lr-map-legend-columns'
+      | '--lr-map-legend-font-size'
+      | '--lr-map-legend-gap'
       | '--lr-map-legend-hidden-swatch-opacity'
+      | '--lr-map-legend-inset-block'
+      | '--lr-map-legend-inset-inline'
+      | '--lr-map-legend-max-block-size'
+      | '--lr-map-legend-max-inline-size'
+      | '--lr-map-legend-padding'
+      | '--lr-map-legend-radius'
+      | '--lr-map-legend-shadow'
+      | '--lr-map-legend-swatch-size'
       | '--lr-map-marker-hover-halo-color'
       | '--lr-map-popup-close-button-active-bg'
       | '--lr-map-popup-close-button-active-color'
@@ -8402,7 +8437,9 @@ export interface LyraComponentTypeMap {
       'aria-busy'?: LyraAttributeValue<'true' | 'false'>;
       'choropleth-legend'?: LyraMap['choroplethLegend'];
       'draw-mode'?: LyraMap['drawMode'];
+      'drawing-complete-behavior'?: LyraMap['drawingCompleteBehavior'];
       'drawing-measurements'?: LyraMap['drawingMeasurements'];
+      'drawing-sticky'?: LyraMap['drawingSticky'];
       'hash-format'?: LyraMap['hashFormat'];
       'initialization-delay'?: LyraMap['initializationDelay'];
       'keyboard-activation'?: LyraMap['keyboardActivation'];
@@ -8412,6 +8449,7 @@ export interface LyraComponentTypeMap {
       'legend-gradient-lo-label'?: LyraMap['legendGradientLoLabel'];
       'legend-interactive'?: LyraMap['legendInteractive'];
       'legend-open'?: LyraMap['legendOpen'];
+      'legend-placement'?: LyraMap['legendPlacement'];
       'max-zoom'?: LyraMap['maxZoom'];
       'min-zoom'?: LyraMap['minZoom'];
       'pick-mode'?: LyraMap['pickMode'];
@@ -8434,7 +8472,8 @@ export interface LyraComponentTypeMap {
     events: LyraMapAnchorEventMap;
     eventNames:       | 'lr-map-anchor-dismiss'
       | 'lr-map-anchor-dismiss-request';
-    cssNames:       | '--lr-map-popup-close-button-active-bg'
+    cssNames:       | '--lr-map-anchor-close-reservation'
+      | '--lr-map-popup-close-button-active-bg'
       | '--lr-map-popup-close-button-active-color'
       | '--lr-map-popup-close-button-hover-bg'
       | '--lr-map-popup-close-button-hover-color'

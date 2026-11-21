@@ -62,7 +62,7 @@ describe('lr-map native input failure boundaries', () => {
     peer.beforeGetCenter = undefined;
     peer.center = { lng: 6, lat: 49 };
     await sendKeys({ press: 'Enter' });
-    expect(picked).to.deep.equal([{ lngLat: [6, 49], trigger: 'keyboard' }]);
+    expect(picked.map(detail => { const { lngLat, trigger } = detail as { lngLat: unknown; trigger: unknown }; return { lngLat, trigger }; })).to.deep.equal([{ lngLat: [6, 49], trigger: 'keyboard' }]);
     expect(element.pickMode).to.equal(true);
   });
 
@@ -80,7 +80,7 @@ describe('lr-map native input failure boundaries', () => {
     }
     peer.center = { lng: 8, lat: 50 };
     await sendKeys({ press: 'Enter' });
-    expect(picked).to.deep.equal([{ lngLat: [8, 50], trigger: 'keyboard' }]);
+    expect(picked.map(detail => { const { lngLat, trigger } = detail as { lngLat: unknown; trigger: unknown }; return { lngLat, trigger }; })).to.deep.equal([{ lngLat: [8, 50], trigger: 'keyboard' }]);
   });
 
   it('ignores malformed pointer positions without reading accessors or replacing a queued valid report', async () => {

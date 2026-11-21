@@ -459,7 +459,33 @@ Temporary drawing layers accept unitless `--lr-map-drawing-fill-opacity` (defaul
 `--lr-map-drawing-stroke-width` (2), `--lr-map-drawing-vertex-radius` (5), and
 `--lr-map-drawing-preview-dash` (two positive lengths, default `2 2`).
 `--lr-map-drawing-vertex-hover-bg` and `--lr-map-drawing-vertex-active-bg` theme edit handles.
-Scene, pick and drawing buttons, the native zoom, compass, geolocate and scene controls, and the compact attribution button accept `--lr-map-action-hover-bg` and `--lr-map-action-active-bg`. A pressed or mixed scene control and the open attribution button paint `--lr-map-control-pressed-bg` (default `var(--lr-color-brand-quiet)`), with the scene glyph in `--lr-map-control-pressed-color` (default `var(--lr-color-brand)`); a hovered or pressed interactive marker shows a `--lr-map-marker-hover-halo-color` halo (default `var(--lr-color-brand)`). Under forced colors, pressed controls and the open attribution button take the system highlight.
+Scene, pick and drawing buttons and the anchor close action accept `--lr-map-action-hover-bg` and `--lr-map-action-active-bg`; the native zoom, compass, geolocate and scene controls and the compact attribution button take `--lr-map-control-hover-bg` and `--lr-map-control-active-bg` instead. A pressed or mixed scene control and the open attribution button paint `--lr-map-control-pressed-bg` (default `var(--lr-color-brand-quiet)`), with the scene glyph in `--lr-map-control-pressed-color` (default `var(--lr-color-brand)`); a hovered or pressed interactive marker shows a `--lr-map-marker-hover-halo-color` halo (default `var(--lr-color-brand)`). Under forced colors, pressed controls and the open attribution button take the system highlight.
+
+**Control chrome tokens:** one host token set restyles every native control (zoom, compass,
+geolocate, scene controls, the attribution toggle) and the initialization outlines, with parts kept
+for exceptions. `--lr-map-control-size` sizes each button (unset: content size above the
+`--lr-icon-button-size` floor); `--lr-map-control-radius`, `--lr-map-control-border` (border
+shorthand), `--lr-map-control-shadow`, `--lr-map-control-bg` (resting fill under the shared glass
+treatment) and `--lr-map-control-color` shape control groups and outlines; `--lr-map-control-hover-bg`
+and `--lr-map-control-active-bg` paint pointer states in every state (the action tokens no longer reach native controls);
+`--lr-map-control-gap` is the margin around each control. The attribution control takes
+`--lr-map-attribution-radius` and `--lr-map-attribution-border`.
+
+```css
+lr-map.branded {
+  --lr-map-control-size: 2.75rem;
+  --lr-map-control-radius: var(--lr-radius-pill);
+  --lr-map-control-border: none;
+  --lr-map-control-hover-bg: var(--lr-color-brand-quiet);
+}
+```
+
+**Corner reservations:** when application chrome (a layers button, a sheet handle, a floating
+header) owns part of a map edge, set `--lr-map-controls-inset-block-start`,
+`--lr-map-controls-inset-block-end`, `--lr-map-controls-inset-inline-start` and
+`--lr-map-controls-inset-inline-end` (each default `0px`) instead of measuring it. They push the native and initialization
+control stacks inward on that logical edge (`inline-start` is the right edge under RTL), and the
+legend and the pick, drawing and scene bars clear the same space.
 
 **Large spatial sources:** a catalog of a million logical geospatial records can stay in a
 host-owned spatial service. Supply a hosted vector style URL, or a style object with vector tile
@@ -598,6 +624,23 @@ mapEl.setFeatureState({ origin: 'overlay', source: 'communes', id: 'LU0101' }, {
 ```
 
 ### Composing independent map modules
+
+`setOverlayGroup(key, { sources, layers, images, styleOverrides }, { order })` registers one
+module's contribution without an application-side aggregator; `removeOverlayGroup(key)` removes
+only that module's resources. Groups are appended after `overlays`, `images` and `styleOverrides`
+in ascending `order` (default 0), then in first-registration order, so later groups paint above.
+IDs stay unique across the property and every group. All writes in one task apply in one update,
+and `whenIdle()` resolves after the latest merged state without rejecting for superseded writes.
+Replace a group object to change it; never mutate it.
+
+```ts
+map.setOverlayGroup('roads', { sources: roadSources, layers: roadLayers }, { order: 20 });
+map.setOverlayGroup('alerts', { layers: alertLayers, images: alertIcons }, { order: 60 });
+await map.whenIdle();
+map.removeOverlayGroup('roads');
+```
+
+The hand-written pattern below remains valid when one owner already assembles every module:
 
 Keep one application owner of `overlays`. For example, publish eight module snapshots in this
 explicit bottom-to-top order: districts, parcels, roads, transit, water, sensors, alerts, selection.
@@ -894,6 +937,18 @@ Equal paint produces no repaint; camera movement is not needed to show a metric 
 **Interactions:** opt in with `interactive` and optional `priority` on a data layer, choropleth or
 owned overlay layer; `interactiveBasemapLayers = []` explicitly enrolls basemap layers.
 `lr-map-click`, `lr-map-contextmenu`, `lr-map-feature-enter`, and `lr-map-feature-leave` report routed interaction data;
+every interaction detail, `lr-map-pick` included, carries `point` (container CSS pixels, as `project()`
+reports) and viewport `clientX`/`clientY` (`LyraMapInteractionPosition`); a keyboard activation reports
+the view centre. Open a menu at the pointer without touching the engine:
+
+```ts
+map.addEventListener('lr-map-contextmenu', (event) => {
+  const { clientX, clientY, lngLat } = event.detail;
+  menu.dataset.lngLat = lngLat.join(',');
+  menu.showAt({ x: clientX, y: clientY });
+});
+```
+
 legacy `lr-map-click` and cluster payloads remain available. `pickMode = false` (attribute `pick-mode`) enables a temporary
 coordinate-picking session when set to true; `lr-map-pick` also supports keyboard center selection.
 `keyboardActivation = false` (attribute `keyboard-activation`) opts in to keyboard activation: while
@@ -944,7 +999,13 @@ metrics: length in metres, area in square metres, and a geographic centroid. The
 and simple-geometry, polar and antimeridian validation reject unsupported shapes. Persist the
 completed snapshot in application state: temporary drawing resources are not a durable layer.
 `editDrawing(snapshot)` explicitly starts editing a completed snapshot; completion does not
-implicitly reopen it. Before the drawing runtime has loaded it returns `false` without reading the
+implicitly reopen it unless `drawingCompleteBehavior = 'edit'` (attribute
+`drawing-complete-behavior`, default `'clear'`) is set: then the completed shape stays on the map as
+an edit session, opened synchronously right after `lr-map-draw-complete`, and finishing that edit
+commits and clears it. `drawingSticky = false` (reflected attribute `drawing-sticky`) set to `true`
+keeps `drawMode` armed after a completion or a user cancel (cancel action, Escape,
+`cancelDrawing()`), or re-arms it when the edit opened by `'edit'` ends, so the next shape starts at
+once without listeners re-assigning `drawMode`. Pick mode, disabling and mode changes still disarm. Before the drawing runtime has loaded it returns `false` without reading the
 snapshot and starts the load; await `whenIdle()` and call it again. Keyboard vertex handles and
 pointer edits update the same session. Arrow keys move a focused vertex in screen direction in both
 LTR and RTL, because the map canvas is never mirrored.
@@ -983,7 +1044,25 @@ the panel. `anchorClosable = false` (attribute `anchor-closable`) leaves content
 close button and nonmodal Escape handling. `focusAnchor()` explicitly focuses eligible visible
 content synchronously; `closeAnchor()` closes a currently visible anchor. Both return booleans.
 `lr-map-anchor-close` reports `api`, `close-button`, or `escape`; focus return respects ownership.
-The close button is exposed as `anchor-close`.
+The close button is exposed as `anchor-close`. The panel (`anchor`) is a column: the slotted content
+scrolls inside `anchor-body` (`min-block-size: 0`) and `anchor-close` below it stays visible. A
+consumer that moves `anchor-close` to the header corner through `::part(anchor-close)` sets
+`--lr-map-anchor-close-reservation` to pad that logical edge of `anchor-body`. For a rich card with
+a fixed header and scrolling details, prefer an `lr-map-anchor` child: its close button owns its own
+column at the block-start, inline-end corner, so the header never runs under it, and its `body`
+scrolls.
+
+`anchorAvoid?: readonly Element[]` (property only) keeps anchors clear of application chrome
+without measuring it: the map observes each element's size, page scrolling and the visual
+viewport (once per animation frame), intersects each with the map and reserves the overlap on its
+cheapest logical edge (a full-width header reserves `blockStart`, a full-height side sheet its
+inline edge). The result is folded into `anchorSafeArea` edge by edge, the larger inset winning,
+for the `anchor` slot and every `lr-map-anchor` child without its own `safeArea`. Clearing it,
+removing an element or disconnecting the map releases the observers.
+
+```ts
+map.anchorAvoid = [document.querySelector('header.app-bar')!, document.querySelector('.search')!];
+```
 
 **Multiple anchored panels:** when several panels must be open at once, each opened and closed by
 its own owner, use `lr-map-anchor` children (see its section below) instead of the single `anchor`
@@ -1220,6 +1299,16 @@ omittedCount, truncatedLabelCount, truncated }` result for the latest assignment
   Collapsing hides the gradient bar, the rows, the `legend-limit` summary and the trailing `legend`
   slot; the `legend-start` slot and the disclosure itself stay visible, so a slotted header survives
   the collapse and the control that restores the key is never what the collapse hides.
+- `legendPlacement: LyraMapLegendPlacement = 'bottom-start'` (attribute `legend-placement`) — where
+  the legend panel sits: a logical corner (`bottom-start`, `bottom-end`, `top-start`, `top-end`) or
+  centred on one logical edge (`top`, `bottom`, `start`, `end`); `start` is the right edge under RTL.
+  Every placement clears the native control rows and `--lr-map-controls-inset-*`, also while pick,
+  drawing or scene bars share the map. An unknown value renders the default. Size and type it with
+  `--lr-map-legend-inset-block`, `--lr-map-legend-inset-inline`, `--lr-map-legend-max-inline-size`,
+  `--lr-map-legend-max-block-size`, `--lr-map-legend-columns` (equal row columns, default 1),
+  `--lr-map-legend-font-size`, `--lr-map-legend-gap`, `--lr-map-legend-padding`,
+  `--lr-map-legend-radius`, `--lr-map-legend-bg`, `--lr-map-legend-shadow`, `--lr-map-legend-color`
+  and `--lr-map-legend-swatch-size` — the same suffixes `lr-heatmap` and `lr-chart` use.
 - `legendOpen: boolean = true` (attribute `legend-open`, reflected) — whether a `legendCollapsible`
   panel is expanded. It defaults **open**, so adding only `legendCollapsible` never hides an existing
   key, and it does nothing at all while `legendCollapsible` is unset. Because it is a
@@ -1836,6 +1925,46 @@ mapEl.addEventListener('lr-map-move', () => {
 });
 ```
 
+**Viewport-scoped data without the engine handle.** `lr-map-view-change` fires once per settled
+camera with the visible `bounds` (inside `cameraPadding`), for gestures, fits and camera commands
+alike, so a layer that fetches the visible area needs no `moveend` listener on `.map`. Debounce it
+and abort the superseded request:
+
+```ts
+import type { LyraMap, LyraMapBounds } from '@aceshooting/lyra-ui/components/media/map/map.class.js';
+
+const viewportMap = document.querySelector('lr-map') as LyraMap;
+let pending: AbortController | undefined;
+let timer: ReturnType<typeof setTimeout> | undefined;
+async function loadViewport(bounds: LyraMapBounds, zoom: number, signal: AbortSignal): Promise<void> {
+  const [[west, south], [east, north]] = bounds;
+  const response = await fetch(`/api/sites?bbox=${west},${south},${east},${north}&zoom=${zoom}`, { signal });
+  viewportMap.dataLayers = [{ sourceId: 'sites', geojson: await response.json() }];
+}
+viewportMap.addEventListener('lr-map-view-change', (event) => {
+  const { bounds, zoom } = event.detail;
+  if (!bounds) return;
+  clearTimeout(timer);
+  timer = setTimeout(() => {
+    pending?.abort();
+    pending = new AbortController();
+    loadViewport(bounds, zoom, pending.signal).catch((error: unknown) => {
+      if ((error as { name?: unknown }).name !== 'AbortError') throw error;
+    });
+  }, 250);
+});
+```
+
+| Native handle use | Public `lr-map` API |
+|---|---|
+| `map.on('moveend')` / `map.on('zoomend')` | `lr-map-view-change` (settled camera, any source), or the final `lr-map-move` report |
+| `map.on('move')` | `lr-map-move`, at most once per frame |
+| `map.getBounds()` / `map.getZoom()` / `map.getCenter()` | `event.detail.bounds`/`zoom`/`center`, `getVisibleBounds()`, the `center`/`zoom` properties |
+| `map.project()` / `map.unproject()` | `project()` / `unproject()` |
+| `map.queryRenderedFeatures()` at the view centre | `keyboardActivation` (an `lr-map-click` with `trigger: 'keyboard'`) or the `lr-map-pick` centre action |
+| `map.on('click' / 'contextmenu')` + `project()` + `getBoundingClientRect()` | `lr-map-click` / `lr-map-contextmenu` `point`, `clientX`, `clientY` |
+| `map.fitBounds()` / `flyTo()` / `easeTo()` / `jumpTo()` | the same-named element methods, which write back into `center`/`zoom` |
+
 **Events:** `lr-map-pick-cancel-request` and `lr-map-pick-cancel` carry frozen `{ source: 'control' }`. The cancel button emits the cancelable request before leaving pick mode and the latter event after the change. Assigning `pickMode` stays silent.
 - `lr-map-projection-change-request` and `lr-map-terrain-change-request` are cancelable and share the details of their corresponding change events. A veto or a property assignment from a request listener suppresses the default change.
 - `lr-map-anchor-close-request` carries frozen `{ reason }` when the slotted anchor is dismissed with the close button, Escape or `closeAnchor()`. Vetoing the request preserves placement and focus.
@@ -1904,7 +2033,7 @@ asynchronous preparation are restored; `lr-map-idle` (same detail) fires after s
 whenever the peer and current component work are idle, including after later camera or source
 updates. `generation` increases monotonically across reconnects and style replacements.
 Interactions: `lr-map-feature-enter` and `lr-map-feature-leave` (frozen `LyraMapInteractionDetail
-{ lngLat, hit?, feature? }`) report the pointer entering a different admitted feature and leaving the previous
+{ lngLat, point, clientX, clientY, hit?, feature? }`) report the pointer entering a different admitted feature and leaving the previous
 one; `lr-map-pointer-move` (frozen `LyraMapPointerDetail { lngLat, point }`, at most once per frame) and
 `lr-map-pointer-leave` (detail `null`) report the pointer itself; `lr-map-contextmenu` (same detail) reports a secondary click without preventing the native
 context menu; `lr-map-pick` (frozen `LyraMapPickDetail { lngLat, hit?, trigger }`, `trigger` being
@@ -1961,12 +2090,21 @@ when `legend` and `legendGradient` are both empty. `legend-start` — the same e
 renders after them, so a host-authored panel header is no longer forced to be a footer. Content in
 it alone opens the panel too, and neither slot is ever made interactive by `legendInteractive`,
 which only reaches rows projected from `legend`.
+Several cards slotted into either slot stack in the panel's column, `--lr-map-legend-gap` apart, so a
+second key (a gradient card under a categorical one) needs no measured offset:
+
+```html
+<lr-map legend-placement="top-end" style="--lr-map-legend-gap: var(--lr-space-s)">
+  <section slot="legend">Population density</section>
+  <section slot="legend">Rainfall</section>
+</lr-map>
+```
 
 **CSS parts:** `base`, `container`, `legend`, `legend-disclosure`, `legend-disclosure-icon`,
 `legend-group`, `legend-group-heading`, `legend-swatch`, `legend-toggle`,
 `legend-toggle-hidden`, `legend-gradient`, `legend-lo`,
 `legend-hi`, `legend-ticks`, `legend-tick`, `legend-derived`, `legend-limit`, `anchor`,
-`anchor-close`, `marker`, `popup`, `popup-content`, `popup-close-button`, `attribution`,
+`anchor-body`, `anchor-close`, `marker`, `popup`, `popup-content`, `popup-close-button`, `attribution`,
 `attribution-toggle`, `attribution-content`, `navigation`, `zoom-in`, `zoom-out`, `compass`, `scale`,
 `geolocate`, `geolocate-control`, `controls`, `controls-top`, `controls-bottom`, `controls-top-left`, `controls-top-right`,
 `controls-bottom-left`, `controls-bottom-right`, `zoom-in-icon`, `zoom-out-icon`, `compass-icon`,
@@ -2820,7 +2958,7 @@ in the surrounding page or scene list.
 
 ## `lr-map-anchor`
 
-The popup is sized by the shared positioner through `--lr-positioner-available-block-size` and `--lr-positioner-available-inline-size`. Its built-in close button is themed with `--lr-map-popup-close-button-hover-bg`, `--lr-map-popup-close-button-hover-color`, `--lr-map-popup-close-button-active-bg` and `--lr-map-popup-close-button-active-color`.
+The popup is sized by the shared positioner through `--lr-positioner-available-block-size` and `--lr-positioner-available-inline-size`. It is the recommended container for a rich card with a fixed header and scrolling details: the close button owns its own column at the block-start, inline-end corner, so a slotted header never runs under it, and `body` scrolls. `--lr-map-anchor-close-reservation` (default `0px`) adds inline-end padding to `body` for a close button moved over the content through `::part(close-button)`. Its built-in close button is themed with `--lr-map-popup-close-button-hover-bg`, `--lr-map-popup-close-button-hover-color`, `--lr-map-popup-close-button-active-bg` and `--lr-map-popup-close-button-active-color`.
 
 Experimental. An independent panel of rich, interactive content anchored to a coordinate of its
 `lr-map`. Whoever owns it opens, moves and closes it without touching the map's other anchors or
@@ -3016,6 +3154,9 @@ reimplemented.
   (`display: contents`) and still emits `lr-files` from itself. An id matching nothing binds nothing
   and is re-resolved when elements or ids in the root change, so a region rendered later is picked
   up. The default slot is not a drop target while a target is bound.
+- `withoutRejectionList: boolean = false` (reflected, attribute `without-rejection-list`) — omits
+  the visible `[part="rejection"]` list, for an application that renders its own banner from the
+  `lr-files` detail. The assertive announcement and the `rejected` detail are unchanged.
 - `target: Element | null = null` (property only) — the same, with an element reference; takes
   precedence over `for` while it is connected.
 - `readonly dragging: boolean` — `true` during an active drag session. Assignment is ignored, so a framework binding that spreads every property cannot throw.
@@ -6681,6 +6822,23 @@ particular country. Representative language mappings also include `lb` (Luxembou
     readonly lngLat: readonly [number, number];
     readonly hit?: LyraMapFeatureHit;
     readonly feature?: LyraMapFeature;
+    readonly point: LyraMapPoint;
+    readonly clientX: number;
+    readonly clientY: number;
+  }`
+  `LyraMapInteractionPosition {
+    readonly point: LyraMapPoint;
+    readonly clientX: number;
+    readonly clientY: number;
+  }`
+  `LyraMapOverlayGroup {
+    readonly sources?: readonly LyraMapOverlaySource[];
+    readonly layers?: readonly LyraMapOverlayLayer[];
+    readonly images?: readonly LyraMapImage[];
+    readonly styleOverrides?: readonly LyraMapStyleOverride[];
+  }`
+  `LyraMapOverlayGroupOptions {
+    readonly order?: number;
   }`
   `LyraMapOverlays {
     readonly sources?: readonly LyraMapOverlaySource[];
@@ -6701,6 +6859,9 @@ particular country. Representative language mappings also include `lb` (Luxembou
     readonly lngLat: readonly [number, number];
     readonly hit?: LyraMapFeatureHit;
     readonly feature?: LyraMapFeature;
+    readonly point: LyraMapPoint;
+    readonly clientX: number;
+    readonly clientY: number;
   }`
   `LyraMapReadinessDetail {
     readonly generation: number;

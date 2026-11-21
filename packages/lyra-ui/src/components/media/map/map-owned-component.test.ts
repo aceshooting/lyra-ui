@@ -115,6 +115,50 @@ describe('lr-map declarative owned resources', () => {
     HTMLCanvasElement.prototype.getContext = originalContext;
   });
 
+  it('merges keyed overlay groups in order with the overlays property and removes one group only', async () => {
+    const { element, peer } = await mount(el => {
+      el.overlays = { sources: [{ id: 'base', source: { type: 'geojson', data: POINTS } }], layers: [{ layer: { id: 'base-layer', type: 'circle', source: 'base' } }] };
+    });
+    await load(element, peer);
+    const group = (id: string) => ({ sources: [{ id, source: { type: 'geojson' as const, data: POINTS } }], layers: [{ layer: { id: `${id}-layer`, type: 'circle', source: id } }] });
+    expect(element.setOverlayGroup('', group('x'))).to.equal(false);
+    expect(element.setOverlayGroup('bad', null as never)).to.equal(false);
+    const roads = group('roads');
+    expect(element.setOverlayGroup('roads', roads, { order: 2 })).to.equal(true);
+    expect(element.setOverlayGroup('sensors', group('sensors'))).to.equal(true);
+    expect(element.setOverlayGroup('alerts', group('alerts'), { order: 2 })).to.equal(true);
+    expect(element.setOverlayGroup('roads', roads, { order: 2 }), 'an unchanged group is accepted without an update').to.equal(true);
+    await element.updateComplete;
+    await waitUntil(() => peer.order.length === 4, 'groups were applied');
+    expect(peer.order).to.deep.equal(['base-layer', 'sensors-layer', 'roads-layer', 'alerts-layer']);
+    expect(element.overlays.sources?.length, 'the property keeps its own value').to.equal(1);
+    expect(element.removeOverlayGroup('roads')).to.equal(true);
+    expect(element.removeOverlayGroup('roads')).to.equal(false);
+    await element.updateComplete;
+    await waitUntil(() => !peer.layers.has('roads-layer'), 'removed group layers');
+    expect(peer.order).to.deep.equal(['base-layer', 'sensors-layer', 'alerts-layer']);
+    expect([...peer.sources.keys()].sort()).to.deep.equal(['alerts', 'base', 'sensors']);
+  });
+
+  it('coalesces rapid group writes into one idle without rejecting superseded work', async () => {
+    const { element, peer } = await mount();
+    await load(element, peer);
+    let release!: () => void;
+    OwnedMap.prepare = () => new Promise<void>(resolve => { release = resolve; });
+    for (let index = 0; index < 5; index++) {
+      element.setOverlayGroup('module', { sources: [{ id: `s${index}`, source: { type: 'geojson', data: POINTS } }],
+        layers: [{ layer: { id: `l${index}`, type: 'circle', source: `s${index}` } }] }, { order: Number.NaN });
+      if (index === 2) await element.updateComplete;
+    }
+    const idle = element.whenIdle();
+    await element.updateComplete;
+    OwnedMap.prepare = undefined; release?.();
+    await waitUntil(() => peer.layers.has('l4'), 'latest group applied');
+    peer.idle = true; peer.fire('idle');
+    await idle;
+    expect(peer.order).to.deep.equal(['l4']);
+  });
+
   it('moves only selected basemap layers and restores order when before is omitted', async () => {
     const { element, peer } = await mount();
     for (const id of ['background', 'borders', 'roads', 'labels']) peer.addLayer({ id });

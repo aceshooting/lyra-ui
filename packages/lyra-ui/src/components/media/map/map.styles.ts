@@ -60,7 +60,13 @@ export const styles = css`
   :is([part='scene-toggle'], button[part='scene-item'], [part='scene-pagination'] button):where(:disabled) { ${disabledControl} }
   [part='initialization-placeholder'] { position: absolute; inset: 0; pointer-events: none; }
   .initialization-skeleton { inline-size: 100%; block-size: 100%; }
-  .initialization-controls { position: absolute; inset: 0; display: grid; grid-template-rows: auto 1fr auto; pointer-events: none; }
+  .initialization-controls { position: absolute; inset: 0; box-sizing: border-box; display: grid; grid-template-rows: auto 1fr auto; pointer-events: none; }
+  /* App chrome that owns part of a map edge pushes every corner control stack inward by the same
+     logical inset, before and after construction. */
+  .initialization-controls, .maplibregl-control-container {
+    padding-block: var(--lr-map-controls-inset-block-start, 0px) var(--lr-map-controls-inset-block-end, 0px);
+    padding-inline: var(--lr-map-controls-inset-inline-start, 0px) var(--lr-map-controls-inset-inline-end, 0px);
+  }
   .initialization-row { display: grid; grid-template-columns: minmax(0, max-content) minmax(0, max-content); justify-content: space-between; min-inline-size: 0; }
   .initialization-row-top { grid-row: 1; }
   .initialization-row-bottom { grid-row: 3; }
@@ -89,7 +95,14 @@ export const styles = css`
   [part='initialization-activate']:focus-visible { ${focusRingInset} }
   .activate-label { position: relative; padding: var(--lr-space-xs) var(--lr-space-s); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius-button); background: var(--lr-color-surface); }
   /* The fill comes from the shared control material below, so loading and installed controls match. */
-  [part~='initialization-control'] { position: relative; flex-shrink: 0; margin: var(--lr-space-xs); inline-size: var(--lr-icon-button-size); block-size: var(--lr-icon-button-size); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius-button); }
+  [part~='initialization-control'] {
+    position: relative; flex-shrink: 0; margin: var(--lr-map-control-gap, var(--lr-space-xs));
+    inline-size: var(--lr-map-control-size, var(--lr-icon-button-size)); block-size: var(--lr-map-control-size, var(--lr-icon-button-size));
+    border: var(--lr-map-control-border, var(--lr-border-width-thin) solid var(--lr-color-border));
+    border-radius: var(--lr-map-control-radius, var(--lr-radius-button));
+    box-shadow: var(--lr-map-control-shadow, none);
+    color: var(--lr-map-control-color, var(--lr-color-text));
+  }
   [part='pick-controls'], [part='drawing-controls'] {
     position: relative;
     grid-area: 3 / 1;
@@ -160,8 +173,9 @@ export const styles = css`
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr) fit-content(60%) auto;
     row-gap: var(--lr-space-xs);
-    padding-block: calc(var(--lr-space-s) + var(--_lr-map-controls-top, 0px))
-      calc(var(--lr-space-s) + var(--_lr-map-controls-bottom, 0px));
+    padding-block: calc(var(--lr-space-s) + var(--_lr-map-controls-top, 0px) + var(--lr-map-controls-inset-block-start, 0px))
+      calc(var(--lr-space-s) + var(--_lr-map-controls-bottom, 0px) + var(--lr-map-controls-inset-block-end, 0px));
+    padding-inline: var(--lr-map-controls-inset-inline-start, 0px) var(--lr-map-controls-inset-inline-end, 0px);
   }
   [part='base']:has(> :is([part='pick-controls'], [part='drawing-controls'], [part='scene-panel']))
     > :is([part='legend'], [part='scene-panel']) {
@@ -173,6 +187,10 @@ export const styles = css`
     min-block-size: 0;
     max-block-size: 100%;
   }
+  [part='base']:has(> :is([part='pick-controls'], [part='drawing-controls'], [part='scene-panel'])) > [part='legend']:where([data-placement^='top']) { align-self: start; }
+  [part='base']:has(> :is([part='pick-controls'], [part='drawing-controls'], [part='scene-panel'])) > [part='legend']:where([data-placement='start'], [data-placement='end']) { align-self: center; }
+  [part='base']:has(> :is([part='pick-controls'], [part='drawing-controls'], [part='scene-panel'])) > [part='legend']:where([data-placement$='-end'], [data-placement='end']) { justify-self: end; }
+  [part='base']:has(> :is([part='pick-controls'], [part='drawing-controls'], [part='scene-panel'])) > [part='legend']:where([data-placement='top'], [data-placement='bottom']) { justify-self: center; }
   lr-skeleton {
     --lr-skeleton-w: 100%;
     --lr-skeleton-h: 100%;
@@ -395,47 +413,74 @@ export const styles = css`
      covered by them. Its size never depends on the placement's published available-size variables:
      the placement observes this element, and a size that tracked them would loop. */
   .anchor-boundary { position: absolute; inset: 0; pointer-events: none; }
-  [part='anchor-close'] { display: block; margin-inline-start: auto; margin-block-start: var(--lr-space-xs); }
+  [part='anchor-close'] { display: block; flex: none; margin-inline-start: auto; margin-block-start: var(--lr-space-xs); }
   [part='anchor'] {
     ${mapOverlayPanelLayer}
     ${mapOverlayPanel}
-    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     padding: var(--lr-space-m);
+  }
+  /* The body scrolls inside the panel, so the close action below it never scrolls away. */
+  [part='anchor-body'] {
+    flex: 1 1 auto;
+    min-block-size: 0;
+    min-inline-size: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding-inline-end: var(--lr-map-anchor-close-reservation, 0px);
   }
   /* Placement and close state must survive consumer display rules on the public part. */
   [part='anchor']:where([hidden]) { display: none !important; }
   [part='legend'] {
+    /* Each edge offset folds the panel inset, the measured native control rows and the authored
+       control insets together, so the panel clears the controls in every placement. */
+    --_lr-map-legend-block-start: calc(var(--lr-map-legend-inset-block, var(--lr-space-s)) + var(--_lr-map-controls-top, 0px) + var(--lr-map-controls-inset-block-start, 0px));
+    --_lr-map-legend-block-end: calc(var(--lr-map-legend-inset-block, var(--lr-space-s)) + var(--_lr-map-controls-bottom, 0px) + var(--lr-map-controls-inset-block-end, 0px));
+    --_lr-map-legend-inline-start: calc(var(--lr-map-legend-inset-inline, var(--lr-space-s)) + var(--lr-map-controls-inset-inline-start, 0px));
+    --_lr-map-legend-inline-end: calc(var(--lr-map-legend-inset-inline, var(--lr-space-s)) + var(--lr-map-controls-inset-inline-end, 0px));
     position: absolute;
     grid-row: 1;
     justify-self: start;
-    inset-block-end: calc(var(--lr-space-s) + var(--_lr-map-controls-bottom, calc(var(--lr-space-xs) * 0)));
-    inset-inline-start: var(--lr-space-s);
+    inset-block-end: var(--_lr-map-legend-block-end);
+    inset-inline-start: var(--_lr-map-legend-inline-start);
     z-index: var(--lr-layer-content);
     display: flex;
     flex-direction: column;
     min-inline-size: 0;
-    max-inline-size: calc(100% - var(--lr-space-s) - var(--lr-space-s));
-    max-block-size: calc(100% - var(--lr-space-s) - var(--lr-space-s) - var(--_lr-map-controls-bottom, calc(var(--lr-space-xs) * 0)) - var(--_lr-map-controls-top, calc(var(--lr-space-xs) * 0)));
+    max-inline-size: var(--lr-map-legend-max-inline-size, calc(100% - var(--_lr-map-legend-inline-start) - var(--_lr-map-legend-inline-end)));
+    max-block-size: var(--lr-map-legend-max-block-size, calc(100% - var(--_lr-map-legend-block-start) - var(--_lr-map-legend-block-end)));
     overflow: auto;
     /* Reserve the scrollbar gutter so this scrolling overlay does not punch a transparent
        rectangle into the composited WebGL canvas in Chromium. */
     scrollbar-gutter: stable;
     box-sizing: border-box;
-    gap: var(--lr-space-xs);
-    padding: var(--lr-space-xs) var(--lr-space-s);
-    background: var(--lr-color-surface);
-    color: var(--lr-color-text);
+    gap: var(--lr-map-legend-gap, var(--lr-space-xs));
+    padding: var(--lr-map-legend-padding, var(--lr-space-xs) var(--lr-space-s));
+    background: var(--lr-map-legend-bg, var(--lr-color-surface));
+    color: var(--lr-map-legend-color, var(--lr-color-text));
     border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-map-legend-radius, var(--lr-radius));
     /* The legend is pinned over the tiles, so it reads as a layer above the map, not a panel
        beside it. */
-    box-shadow: var(--lr-shadow-m);
-    font-size: var(--lr-font-size-xs);
+    box-shadow: var(--lr-map-legend-shadow, var(--lr-shadow-m));
+    font-size: var(--lr-map-legend-font-size, var(--lr-font-size-xs));
   }
+  [part='legend']:where([data-placement^='top']) { inset-block-start: var(--_lr-map-legend-block-start); inset-block-end: auto; }
+  [part='legend']:where([data-placement$='-end'], [data-placement='end']) { inset-inline-start: auto; inset-inline-end: var(--_lr-map-legend-inline-end); }
+  [part='legend']:where([data-placement='top'], [data-placement='bottom']) {
+    inset-inline: var(--_lr-map-legend-inline-start) var(--_lr-map-legend-inline-end); margin-inline: auto; inline-size: fit-content;
+  }
+  [part='legend']:where([data-placement='start'], [data-placement='end']) {
+    inset-block: var(--_lr-map-legend-block-start) var(--_lr-map-legend-block-end); margin-block: auto; block-size: fit-content;
+  }
+  /* Further cards slotted into legend-start or legend stack in the panel's own column. */
+  [part='legend'] ::slotted(*) { min-inline-size: 0; max-inline-size: 100%; }
   .legend-list {
-    display: flex;
-    flex-direction: column;
-    gap: var(--lr-space-xs);
+    display: grid;
+    grid-template-columns: repeat(var(--lr-map-legend-columns, 1), minmax(0, 1fr));
+    gap: var(--lr-map-legend-gap, var(--lr-space-xs));
     min-inline-size: 0;
   }
   /* A collapsed panel hides its gradient, rows, limit summary and trailing slot with the plain
@@ -577,7 +622,7 @@ export const styles = css`
   .legend-section-list {
     display: flex;
     flex-direction: column;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-map-legend-gap, var(--lr-space-xs));
     min-inline-size: 0;
   }
   [part='legend-group-heading'] {
@@ -647,8 +692,8 @@ export const styles = css`
   [part='legend-swatch'] {
     position: relative;
     overflow: hidden;
-    inline-size: var(--lr-size-0-75rem);
-    block-size: var(--lr-size-0-75rem);
+    inline-size: var(--lr-map-legend-swatch-size, var(--lr-size-0-75rem));
+    block-size: var(--lr-map-legend-swatch-size, var(--lr-size-0-75rem));
     box-sizing: border-box;
     border: var(--lr-border-width-thin) solid currentColor;
     border-radius: var(--lr-size-2px);
@@ -764,16 +809,17 @@ export const styles = css`
        The floor keeps a control at least as wide as its content when a part changes its margin;
        wrapping controls such as attribution still narrow to the map. */
     min-inline-size: min-content;
-    max-inline-size: calc(100% - 2 * var(--lr-space-xs));
+    max-inline-size: calc(100% - 2 * var(--lr-map-control-gap, var(--lr-space-xs)));
     flex-shrink: 0;
-    margin: var(--lr-space-xs);
+    margin: var(--lr-map-control-gap, var(--lr-space-xs));
     pointer-events: auto;
     transform: translate(0);
   }
   .maplibregl-ctrl-attrib {
     position: relative;
     padding: 0 var(--lr-space-xs);
-    border-radius: var(--lr-radius);
+    border: var(--lr-map-attribution-border, none);
+    border-radius: var(--lr-map-attribution-radius, var(--lr-radius));
     background: var(--lr-color-surface);
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-xs);
@@ -783,16 +829,17 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     inline-size: fit-content;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border);
-    border-radius: var(--lr-radius);
-    background: var(--lr-color-surface);
-    box-shadow: var(--lr-shadow);
-    color: var(--lr-color-text);
+    border: var(--lr-map-control-border, var(--lr-border-width-thin) solid var(--lr-color-border));
+    border-radius: var(--lr-map-control-radius, var(--lr-radius));
+    box-shadow: var(--lr-map-control-shadow, var(--lr-shadow));
+    color: var(--lr-map-control-color, var(--lr-color-text));
   }
   .maplibregl-ctrl-group button {
     display: grid;
     place-items: center;
     ${iconHitTarget}
+    inline-size: var(--lr-map-control-size, auto);
+    block-size: var(--lr-map-control-size, auto);
     padding: var(--lr-space-xs);
     border: 0;
     border-radius: inherit;
@@ -805,14 +852,13 @@ export const styles = css`
   .maplibregl-ctrl-group button:where(:not(:first-child)) {
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
   }
-  /* The native controls share the scene, pick and drawing actions' pointer tokens, keeping their
-     own brand-tinted defaults. */
+  /* The native controls own their pointer tokens; the action tokens style scene, pick and drawing actions only. */
   .maplibregl-ctrl-group button:hover:where(:not(:disabled)) {
-    background: var(--lr-map-action-hover-bg, var(--lr-color-brand-quiet));
+    background: var(--lr-map-control-hover-bg, var(--lr-color-brand-quiet));
     color: var(--lr-color-brand);
   }
   .maplibregl-ctrl-group button:active:where(:not(:disabled)) {
-    background: var(--lr-map-action-active-bg, ${activeFill('var(--lr-map-action-hover-bg, var(--lr-color-brand-quiet))')});
+    background: var(--lr-map-control-active-bg, ${activeFill('var(--lr-map-control-hover-bg, var(--lr-color-brand-quiet))')});
   }
   .maplibregl-ctrl-group button:focus-visible {
     ${focusRingShorthandInward}
@@ -837,10 +883,10 @@ export const styles = css`
     color: var(--lr-map-control-pressed-color, var(--lr-color-brand));
   }
   .maplibregl-ctrl-group button:where([aria-pressed='true'], [aria-pressed='mixed']):hover:where(:not(:disabled)) {
-    background: ${hoverFill('var(--_map-scene-control-fill)')};
+    background: var(--lr-map-control-hover-bg, ${hoverFill('var(--_map-scene-control-fill)')});
   }
   .maplibregl-ctrl-group button:where([aria-pressed='true'], [aria-pressed='mixed']):active:where(:not(:disabled)) {
-    background: ${activeFill('var(--_map-scene-control-fill)')};
+    background: var(--lr-map-control-active-bg, ${activeFill('var(--_map-scene-control-fill)')});
   }
   .maplibregl-ctrl-icon {
     position: relative;
@@ -923,13 +969,13 @@ export const styles = css`
     position: absolute;
     inset-block-start: 0;
     inset-inline-end: 0;
-    inline-size: var(--lr-icon-button-size);
-    block-size: var(--lr-icon-button-size);
+    inline-size: var(--lr-map-control-size, var(--lr-icon-button-size));
+    block-size: var(--lr-map-control-size, var(--lr-icon-button-size));
     padding: 0;
     border: 0;
-    border-radius: var(--lr-radius-pill);
+    border-radius: var(--lr-map-control-radius, var(--lr-radius-pill));
     background: transparent;
-    color: var(--lr-color-text);
+    color: var(--lr-map-control-color, var(--lr-color-text));
     cursor: pointer;
     place-items: center;
     ${interactiveTransition}
@@ -944,8 +990,8 @@ export const styles = css`
   }
   .maplibregl-ctrl-attrib.maplibregl-compact {
     position: relative;
-    min-block-size: var(--lr-icon-button-size);
-    padding-inline-end: var(--lr-icon-button-size);
+    min-block-size: var(--lr-map-control-size, var(--lr-icon-button-size));
+    padding-inline-end: var(--lr-map-control-size, var(--lr-icon-button-size));
   }
   .maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-inner {
     display: none;
@@ -964,10 +1010,10 @@ export const styles = css`
     background: var(--_map-attrib-fill);
   }
   .maplibregl-ctrl-attrib-button:hover {
-    background: var(--lr-map-action-hover-bg, var(--_map-attrib-hover-fill, var(--lr-color-brand-quiet)));
+    background: var(--lr-map-control-hover-bg, var(--_map-attrib-hover-fill, var(--lr-color-brand-quiet)));
   }
   .maplibregl-ctrl-attrib-button:active {
-    background: var(--lr-map-action-active-bg, ${activeFill('var(--_map-attrib-fill, var(--lr-color-brand-quiet))')});
+    background: var(--lr-map-control-active-bg, ${activeFill('var(--_map-attrib-fill, var(--lr-color-brand-quiet))')});
   }
   .maplibregl-ctrl-attrib-button:focus-visible {
     ${focusRingShorthandInward}
@@ -987,7 +1033,11 @@ export const styles = css`
 
   /* One material for chrome and actions: only the action parts set the private action fill, and no
      chrome surface sits inside an action, so the chrome resolves the plain surface fill. */
-  ${glassSurface('.maplibregl-ctrl-group, .maplibregl-ctrl-scale, .maplibregl-ctrl-attrib, [part~="initialization-control"], [part="drawing-summary"], [part="drawing-status"], [part="drawing-measurement"], [part="pick-center"], [part="pick-cancel"], [part="drawing-add"], [part="drawing-undo"], [part="drawing-complete"], [part="drawing-cancel"], [part="anchor-close"], [part="scene-toggle"], button[part="scene-item"], [part="scene-pagination"] button', css`var(--_lr-map-action-fill, var(--lr-color-surface))`)}
+  ${glassSurface('.maplibregl-ctrl-group, .maplibregl-ctrl-scale, .maplibregl-ctrl-attrib, [part~="initialization-control"], [part="drawing-summary"], [part="drawing-status"], [part="drawing-measurement"], [part="pick-center"], [part="pick-cancel"], [part="drawing-add"], [part="drawing-undo"], [part="drawing-complete"], [part="drawing-cancel"], [part="anchor-close"], [part="scene-toggle"], button[part="scene-item"], [part="scene-pagination"] button', css`var(--_lr-map-action-fill, var(--_lr-map-control-fill, var(--lr-color-surface)))`)}
+  /* Only the control chrome reads the public control fill; actions keep the action fill. */
+  .maplibregl-ctrl-group, .maplibregl-ctrl-scale, .maplibregl-ctrl-attrib, [part~='initialization-control'] {
+    --_lr-map-control-fill: var(--lr-map-control-bg, var(--lr-color-surface));
+  }
   [part='anchor-close']:where(:hover) {
     --_lr-map-action-fill: var(--lr-map-popup-close-button-hover-bg, var(--lr-map-action-hover-bg, var(--lr-color-brand-quiet)));
     color: var(--lr-map-popup-close-button-hover-color, var(--lr-color-brand));
@@ -999,9 +1049,9 @@ export const styles = css`
   ${glassScrollLayerStyles}
   [part='legend'] > .glass-scroll-layer {
     /* The zero-size anchor must not add a flex gap before the visible legend content. */
-    margin-block-end: calc(-1 * var(--lr-space-xs));
+    margin-block-end: calc(-1 * var(--lr-map-legend-gap, var(--lr-space-xs)));
   }
-  ${glassSurface('[part="legend"]', css`var(--lr-color-surface)`, css`var(--lr-color-surface)`, true)}
+  ${glassSurface('[part="legend"]', css`var(--lr-map-legend-bg, var(--lr-color-surface))`, css`var(--lr-map-legend-bg, var(--lr-color-surface))`, true)}
 
   @media (forced-colors: active) {
     .maplibregl-ctrl-attrib-button {

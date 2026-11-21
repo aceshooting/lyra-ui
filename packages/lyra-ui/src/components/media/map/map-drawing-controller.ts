@@ -26,6 +26,8 @@ export interface MapDrawingHost {
     readonly pickMode: boolean;
     readonly overlays: unknown;
     readonly drawingMeasurements: boolean;
+    readonly drawingCompleteBehavior: 'clear' | 'edit';
+    readonly drawingSticky: boolean;
     project(lngLat: readonly [number, number]): readonly [number, number] | undefined;
     unproject(point: readonly [number, number]): readonly [number, number] | undefined;
   };
@@ -49,6 +51,10 @@ export interface MapDrawingHost {
   clearError(): void;
   /** Resets `drawMode` to `none` without treating it as an authored mode change. */
   resetMode(): void;
+  /** `overlays` with every overlay group merged in, whose IDs temporary resources must avoid. */
+  overlays(): unknown;
+  /** Re-arms `drawMode` without treating it as an authored mode change. */
+  rearm(mode: 'line' | 'polygon'): void;
   suppressClick(): void;
   syncCursor(): void;
   /** Requests a render of the drawing controls after a rendered drawing value changed. */
@@ -72,6 +78,8 @@ export class MapDrawingController {
   private started = false;
   private snapshotState?: LyraMapDrawingSnapshot;
   private editingState = false;
+  /** The sticky mode an edit opened by `drawingCompleteBehavior = 'edit'` re-arms when it ends. */
+  private resumeMode?: 'line' | 'polygon';
   private handlesState: readonly MapDrawingHandle[] = [];
   private labelsState: readonly MapDrawingLabel[] = [];
   /** The pointer coordinate a rubber-band segment runs to, while drawing. */
@@ -199,13 +207,22 @@ export class MapDrawingController {
   complete(): boolean {
     const session = this.session;
     if (!session || this.dispatchingState || !this.host.actionAllowed()) return false;
-    const result = this.editingState ? { accepted: true, state: session.snapshot(), error: undefined } : session.complete();
+    const editing = this.editingState;
+    const result = editing ? { accepted: true, state: session.snapshot(), error: undefined } : session.complete();
     if (!result.accepted) { this.host.showError(result.error); return false; }
     this.setSnapshot(result.state);
     this.dispatchingState = true; this.completing = session;
     try { this.host.emit('lr-map-draw-complete', result.state); }
     finally { this.dispatchingState = false; this.completing = undefined; }
-    if (this.session === session) this.clear();
+    if (this.session !== session) return true;
+    const element = this.host.element, resume = this.resumeMode, mode = result.state.mode;
+    const edit = !editing && element.drawingCompleteBehavior === 'edit';
+    const sticky = !editing && !edit && element.drawingSticky;
+    this.clear(sticky);
+    if (edit) {
+      if (this.edit(result.state) && element.drawingSticky) this.resumeMode = mode;
+    } else if (sticky) this.sync();
+    else if (resume) this.host.rearm(resume);
     return true;
   }
 
@@ -215,14 +232,18 @@ export class MapDrawingController {
     if (!session && armedMode !== 'line' && armedMode !== 'polygon') { if (this.editAdmission) this.editCancelled = true; return false; }
     const state = session ? session.snapshot().phase !== 'cancelled' ? session.cancel().state : undefined
       : armedMode === 'line' || armedMode === 'polygon' ? new MapDrawing(armedMode).cancel().state : undefined;
-    this.clear(keepMode);
+    const user = reason === 'cancel' || reason === 'escape', resume = this.resumeMode;
+    const sticky = user && this.host.element.drawingSticky && !this.editingState && (armedMode === 'line' || armedMode === 'polygon');
+    this.clear(keepMode || sticky);
     if (state) this.host.emitCancel(Object.freeze({ ...state, reason } satisfies LyraMapDrawingCancelDetail));
+    if (sticky) this.sync();
+    else if (user && resume) this.host.rearm(resume);
     return true;
   }
 
   private clear(keepMode = false): void {
     const host = this.host, pointer = this.pointer, release = this.release, overlay = this.overlay, mode = host.element.drawMode;
-    this.pointer = undefined; this.release = undefined; this.overlay = undefined;
+    this.pointer = undefined; this.release = undefined; this.overlay = undefined; this.resumeMode = undefined;
     this.session = undefined; this.started = false; this.setEditing(false); this.setHandles([]); this.setSnapshot(undefined); host.clearError();
     if (!keepMode && host.element.drawMode === mode) host.resetMode();
     if (pointer?.consumeClick()) host.suppressClick();
@@ -534,7 +555,7 @@ export class MapDrawingController {
       try {
         let id = this.source;
         if (vertices.length && !id) {
-          const reserved = snapshotMapOwnedFeatureInput({ overlays: host.element.overlays, images: [], styleOverrides: [] }).overlays as MapOwnedOverlaySnapshot;
+          const reserved = snapshotMapOwnedFeatureInput({ overlays: host.overlays(), images: [], styleOverrides: [] }).overlays as MapOwnedOverlaySnapshot;
           const used = new Set([...reserved.sources.map(row => row.id), ...reserved.layers.map(row => row.layer.id)]);
           for (let attempt = 0; attempt < 512 && current(); attempt++) {
             const candidate = `lr-drawing-${this.idCounter++}`;

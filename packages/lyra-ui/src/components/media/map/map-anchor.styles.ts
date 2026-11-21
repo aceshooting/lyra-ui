@@ -36,6 +36,7 @@ export const styles = css`
     overflow: auto;
     overscroll-behavior: contain;
     padding: var(--lr-space-m);
+    padding-inline-end: calc(var(--lr-space-m) + var(--lr-map-anchor-close-reservation, 0px));
   }
   /* Its own column at the block-start, inline-end corner, so content never renders under it. */
   [part~='close-button'] {

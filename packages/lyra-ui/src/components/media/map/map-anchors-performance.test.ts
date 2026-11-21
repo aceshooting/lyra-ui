@@ -330,7 +330,7 @@ describe('map anchor bounded document-order admission', () => {
         }),
         container: () => undefined, map: () => undefined, generations: () => [0, 0],
         updateActive: () => false, afterUpdate: callback => { callback(); },
-        interactionBlocked: () => false, direction: () => 'ltr', engineReady: () => false, canvas: () => null,
+        interactionBlocked: () => false, direction: () => 'ltr', mapSafeArea: () => undefined, engineReady: () => false, canvas: () => null,
       };
       const children = new MapAnchorChildren(host, [...anchors].reverse());
       const inspected = children as unknown as {

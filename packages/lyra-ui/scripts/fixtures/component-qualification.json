@@ -33051,8 +33051,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/map/map-anchor-component.test.ts",
-              "test": "maps logical safe areas under RTL at 320px and wraps long slotted content inside allocation",
+              "file": "src/components/media/map/map-anchor-avoid.test.ts",
+              "test": "applies the avoided area to child anchors without their own safe area and stops observing on disconnect",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -33073,8 +33073,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/map/map-anchor-component.test.ts",
-              "line": 21,
+              "file": "src/components/media/map/map-anchor-avoid.test.ts",
+              "line": 12,
               "kind": "320px allocation test signal"
             }
           ]
@@ -33189,6 +33189,8 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/map/map-anchor-avoid.property.test.ts",
+          "src/components/media/map/map-anchor-avoid.test.ts",
           "src/components/media/map/map-anchor-component.test.ts",
           "src/components/media/map/map-anchor-direction.test.ts",
           "src/components/media/map/map-anchor-options.test.ts",
@@ -33278,6 +33280,7 @@
           "src/components/media/map/map-large-source-replacement-scale.test.ts",
           "src/components/media/map/map-layer-order.property.test.ts",
           "src/components/media/map/map-layer-order.test.ts",
+          "src/components/media/map/map-layout-tokens.test.ts",
           "src/components/media/map/map-lazy-runtimes.test.ts",
           "src/components/media/map/map-legend-assignment-order.test.ts",
           "src/components/media/map/map-legend-icon-border.test.ts",
@@ -33431,8 +33434,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/map/map-anchor-component.test.ts",
-              "test": "maps logical safe areas under RTL at 320px and wraps long slotted content inside allocation",
+              "file": "src/components/media/map/map-anchor-avoid.test.ts",
+              "test": "applies the avoided area to child anchors without their own safe area and stops observing on disconnect",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -33453,8 +33456,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/map/map-anchor-component.test.ts",
-              "line": 21,
+              "file": "src/components/media/map/map-anchor-avoid.test.ts",
+              "line": 12,
               "kind": "320px allocation test signal"
             }
           ]
@@ -33552,6 +33555,8 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/map/map-anchor-avoid.property.test.ts",
+          "src/components/media/map/map-anchor-avoid.test.ts",
           "src/components/media/map/map-anchor-component.test.ts",
           "src/components/media/map/map-anchor-direction.test.ts",
           "src/components/media/map/map-anchor-options.test.ts",
@@ -33641,6 +33646,7 @@
           "src/components/media/map/map-large-source-replacement-scale.test.ts",
           "src/components/media/map/map-layer-order.property.test.ts",
           "src/components/media/map/map-layer-order.test.ts",
+          "src/components/media/map/map-layout-tokens.test.ts",
           "src/components/media/map/map-lazy-runtimes.test.ts",
           "src/components/media/map/map-legend-assignment-order.test.ts",
           "src/components/media/map/map-legend-icon-border.test.ts",

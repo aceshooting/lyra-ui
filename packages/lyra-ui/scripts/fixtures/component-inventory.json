@@ -56219,6 +56219,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "m"
+          },
+          {
+            "name": "without-rejection-list",
+            "property": "withoutRejectionList",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "properties": [
@@ -56389,6 +56399,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "withoutRejectionList",
+            "attribute": "without-rejection-list",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "slots": [
@@ -88636,8 +88656,28 @@
             "default": "none"
           },
           {
+            "name": "drawing-complete-behavior",
+            "property": "drawingCompleteBehavior",
+            "type": "LyraMapDrawingCompleteBehavior",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "clear"
+          },
+          {
             "name": "drawing-measurements",
             "property": "drawingMeasurements",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "drawing-sticky",
+            "property": "drawingSticky",
             "type": "boolean",
             "reflects": true,
             "inferred": false,
@@ -88764,6 +88804,16 @@
             "default": true
           },
           {
+            "name": "legend-placement",
+            "property": "legendPlacement",
+            "type": "LyraMapLegendPlacement",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "bottom-start"
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -88822,6 +88872,15 @@
           }
         ],
         "properties": [
+          {
+            "name": "anchorAvoid",
+            "attribute": null,
+            "type": "readonly Element[] | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
           {
             "name": "anchorBoundary",
             "attribute": null,
@@ -88926,8 +88985,28 @@
             "default": "[]"
           },
           {
+            "name": "drawingCompleteBehavior",
+            "attribute": "drawing-complete-behavior",
+            "type": "LyraMapDrawingCompleteBehavior",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "clear"
+          },
+          {
             "name": "drawingMeasurements",
             "attribute": "drawing-measurements",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "drawingSticky",
+            "attribute": "drawing-sticky",
             "type": "boolean",
             "readonly": false,
             "reflects": true,
@@ -89137,6 +89216,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": true
+          },
+          {
+            "name": "legendPlacement",
+            "attribute": "legend-placement",
+            "type": "LyraMapLegendPlacement",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "bottom-start"
           },
           {
             "name": "legendProjection",
@@ -89362,7 +89451,7 @@
           },
           {
             "name": "lr-map-click",
-            "type": "CustomEvent<{ readonly lngLat: readonly [number, number]; readonly feature: Feature | undefined; /** Which layer `feature` was hit on, so a click is attributable when both a choropleth and * `dataLayers` are painted. `'cluster'` marks a hit on a clustered entry's aggregate circle, * whose `point_count`/`cluster_id` properties describe the group rather than one feature. * `undefined` whenever `feature` is. */ readonly origin: LyraMapFeatureOrigin | 'cluster' | undefined; readonly hit?: LyraMapFeatureHit; readonly target?: LyraMapResolvedFeatureStateTarget; /** The authored `dataLayers[].sourceId` the hit belongs to; `undefined` for a choropleth hit * (which has only one possible source) and when nothing was hit. */ readonly sourceId: string | undefined; /** Native vector source layer containing the hit; absent for other source families. */ readonly sourceLayer?: string; /** `true` when the hit is a choropleth feature without a usable value and `choropleth.noData` * is configured; absent otherwise. */ readonly noData?: true; /** `'keyboard'` for a `keyboardActivation` at the view centre; absent for pointer clicks. */ readonly trigger?: 'keyboard'; }>",
+            "type": "CustomEvent<LyraMapInteractionPosition & { readonly lngLat: readonly [number, number]; readonly feature: Feature | undefined; /** Which layer `feature` was hit on, so a click is attributable when both a choropleth and * `dataLayers` are painted. `'cluster'` marks a hit on a clustered entry's aggregate circle, * whose `point_count`/`cluster_id` properties describe the group rather than one feature. * `undefined` whenever `feature` is. */ readonly origin: LyraMapFeatureOrigin | 'cluster' | undefined; readonly hit?: LyraMapFeatureHit; readonly target?: LyraMapResolvedFeatureStateTarget; /** The authored `dataLayers[].sourceId` the hit belongs to; `undefined` for a choropleth hit * (which has only one possible source) and when nothing was hit. */ readonly sourceId: string | undefined; /** Native vector source layer containing the hit; absent for other source families. */ readonly sourceLayer?: string; /** `true` when the hit is a choropleth feature without a usable value and `choropleth.noData` * is configured; absent otherwise. */ readonly noData?: true; /** `'keyboard'` for a `keyboardActivation` at the view centre; absent for pointer clicks. */ readonly trigger?: 'keyboard'; }>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -89557,6 +89646,10 @@
         "parts": [
           {
             "name": "anchor",
+            "deprecated": null
+          },
+          {
+            "name": "anchor-body",
             "deprecated": null
           },
           {
@@ -89936,10 +90029,62 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-map-anchor-close-reservation",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "0px"
+          },
+          {
+            "name": "--lr-map-attribution-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "none"
+          },
+          {
+            "name": "--lr-map-attribution-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
+          },
+          {
             "name": "--lr-map-choropleth-fill-opacity",
             "deprecated": null,
             "hasDefault": true,
             "default": 0.75
+          },
+          {
+            "name": "--lr-map-control-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-map-control-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-map-control-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-border-width-thin) solid var(--lr-color-border)"
+          },
+          {
+            "name": "--lr-map-control-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-map-control-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
+            "name": "--lr-map-control-hover-bg",
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "--lr-map-control-pressed-bg",
@@ -89952,6 +90097,47 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
+          },
+          {
+            "name": "--lr-map-control-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
+          },
+          {
+            "name": "--lr-map-control-shadow",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-shadow)"
+          },
+          {
+            "name": "--lr-map-control-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-map-controls-inset-block-end",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "0px"
+          },
+          {
+            "name": "--lr-map-controls-inset-block-start",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "0px"
+          },
+          {
+            "name": "--lr-map-controls-inset-inline-end",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "0px"
+          },
+          {
+            "name": "--lr-map-controls-inset-inline-start",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "0px"
           },
           {
             "name": "--lr-map-drawing-color",
@@ -90006,10 +90192,86 @@
             "default": 0.15
           },
           {
+            "name": "--lr-map-legend-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-map-legend-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-map-legend-columns",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 1
+          },
+          {
+            "name": "--lr-map-legend-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-xs)"
+          },
+          {
+            "name": "--lr-map-legend-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-map-legend-hidden-swatch-opacity",
             "deprecated": null,
             "hasDefault": true,
             "default": 0.5
+          },
+          {
+            "name": "--lr-map-legend-inset-block",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
+          },
+          {
+            "name": "--lr-map-legend-inset-inline",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-s)"
+          },
+          {
+            "name": "--lr-map-legend-max-block-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-map-legend-max-inline-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-map-legend-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs) var(--lr-space-s)"
+          },
+          {
+            "name": "--lr-map-legend-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius)"
+          },
+          {
+            "name": "--lr-map-legend-shadow",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-shadow-m)"
+          },
+          {
+            "name": "--lr-map-legend-swatch-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-0-75rem)"
           },
           {
             "name": "--lr-map-marker-hover-halo-color",
@@ -90287,6 +90549,22 @@
             ]
           },
           {
+            "name": "removeOverlayGroup",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "key",
+                    "type": "string",
+                    "optional": false,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
             "name": "setFeatureState",
             "overloads": [
               {
@@ -90302,6 +90580,35 @@
                     "type": "LyraMapFeatureState",
                     "optional": false,
                     "hasDefault": false
+                  }
+                ],
+                "returnType": "boolean"
+              }
+            ]
+          },
+          {
+            "name": "setOverlayGroup",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "key",
+                    "type": "string",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "group",
+                    "type": "LyraMapOverlayGroup",
+                    "optional": false,
+                    "hasDefault": false
+                  },
+                  {
+                    "name": "options",
+                    "type": "LyraMapOverlayGroupOptions",
+                    "optional": false,
+                    "hasDefault": true,
+                    "default": "{}"
                   }
                 ],
                 "returnType": "boolean"
@@ -90642,6 +90949,12 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-map-anchor-close-reservation",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "0px"
+          },
           {
             "name": "--lr-map-popup-close-button-active-bg",
             "deprecated": null,

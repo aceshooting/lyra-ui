@@ -203,7 +203,7 @@ and optional peers are excluded, so a second component usually costs much less t
 
 - `lr-flag` · lr-flag.js · `stable` since `4.0.0` · ~33 KiB gzip — a country/language flag.
 - `lr-sequence-playback` · lr-sequence-playback.js · `stable` since `9.0.0` · ~28 KiB gzip — steps a current index through `[0, itemCount)` on a fixed interval (play/pause), the common building block behind ad-hoc play-timers in...
-- `lr-map` · lr-map.js · `stable` since `4.0.0` · ~211 KiB gzip — a modular MapLibre-compatible wrapper with a declarative legend, choropleth GeoJSON layer, markers, and additive `dataLayers` GeoJSON...
+- `lr-map` · lr-map.js · `stable` since `4.0.0` · ~213 KiB gzip — a modular MapLibre-compatible wrapper with a declarative legend, choropleth GeoJSON layer, markers, and additive `dataLayers` GeoJSON...
 - `lr-map-anchor` · lr-map-anchor.js · `experimental` since `30.1.0` · ~26 KiB gzip — rich, interactive content anchored to a coordinate of its `<lr-map>`.
 - `lr-drop-zone` · lr-drop-zone.js · `experimental` since `16.0.0` · ~35 KiB gzip — - a drag-and-drop region wrapper with no file input of its own.
 - `lr-file-input` · lr-file-input.js · `stable` since `4.0.0` · ~50 KiB gzip — a drag-drop + click-to-browse file dropzone.
@@ -264,7 +264,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-notebook-viewer` · lr-notebook-viewer.js · `stable` since `4.0.0` · ~143 KiB gzip — read-only Jupyter notebook (nbformat 4.x) renderer, composing existing components per cell.
 - `lr-xml-viewer` · lr-xml-viewer.js · `stable` since `4.0.0` · ~78 KiB gzip — Property-only treeSource takes display precedence over xml/src without parsing provider records.
 - `lr-document-compare` · lr-document-compare.js · `stable` since `4.1.0` · ~69 KiB gzip — side-by-side or inline comparison of two document versions, composed entirely from two existing primitives rather than reimplementing...
-- `lr-geojson-viewer` · lr-geojson-viewer.js · `stable` since `9.0.0` · ~268 KiB gzip — document-registry bridge rendering a fetched GeoJSON file through `<lr-map>`'s `dataLayers`.
+- `lr-geojson-viewer` · lr-geojson-viewer.js · `stable` since `9.0.0` · ~271 KiB gzip — document-registry bridge rendering a fetched GeoJSON file through `<lr-map>`'s `dataLayers`.
 - `lr-model-viewer` · lr-model-viewer.js · `experimental` since `30.0.0` · ~44 KiB gzip — Bounded static 3D model and point-cloud viewer with a persistent text alternative.
 - `lr-docx-editor` · lr-docx-editor.js · `experimental` since `0.1.0` — Experimental DOCX editing surface.
 

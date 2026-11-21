@@ -94,9 +94,13 @@ export type { LyraMapFeatureOrigin, LyraMapFeatureStateTarget, LyraMapResolvedFe
 import type { MapDrawingError, LyraMapDrawingSnapshot, LyraMapDrawingMode, LyraMapDrawingCancelReason, LyraMapDrawingCancelDetail,
   LyraMapDrawingVertexEndDetail } from './map-drawing.js';
 import type { MapDrawingController, MapDrawingHost } from './map-drawing-controller.js';
+import { MapAnchorAvoidance, mergeSafeAreas } from './map-anchor-avoid.js';
 export type { LyraMapDrawingSnapshot, LyraMapDrawingMetrics, LyraMapDrawingMode, LyraMapDrawingPoint, LyraMapDrawingCancelReason,
   LyraMapDrawingCancelDetail, LyraMapDrawingVertexEndDetail } from './map-drawing.js';
 const DRAW_MODE = literalSetConverter<LyraMapDrawingMode>(['none', 'line', 'polygon'], 'none');
+/** What a completed drawing becomes: cleared (the default) or an edit session of the same shape. */
+export type LyraMapDrawingCompleteBehavior = 'clear' | 'edit';
+const DRAWING_COMPLETE_BEHAVIOR = literalSetConverter<LyraMapDrawingCompleteBehavior>(['clear', 'edit'], 'clear');
 /** URL fragment form that `hash` reads and writes: a `key=` field, or the engine's unnamed token. */
 export type LyraMapHashFormat = 'named' | 'unnamed';
 const HASH_FORMAT = literalSetConverter<LyraMapHashFormat>(['named', 'unnamed'], 'named');
@@ -187,6 +191,17 @@ export interface LyraMapOverlays {
   readonly sources?: readonly LyraMapOverlaySource[];
   readonly layers?: readonly LyraMapOverlayLayer[];
 }
+/** One owner's keyed contribution to the map, merged with `overlays`, `images` and `styleOverrides`. */
+export interface LyraMapOverlayGroup extends LyraMapOverlays {
+  readonly images?: readonly LyraMapImage[];
+  readonly styleOverrides?: readonly LyraMapStyleOverride[];
+}
+/** Placement of an overlay group among the others: lower `order` paints first (below). */
+export interface LyraMapOverlayGroupOptions {
+  readonly order?: number;
+}
+/** Marks a group change as an `overlays` change, so it takes the same update path. */
+const OVERLAY_GROUP_CHANGE = Object.freeze({});
 export type { LyraMapImage } from './map-image-admission.js';
 export type { LyraMapStyleOverride, LyraMapStyleValue } from './map-style-override-admission.js';
 import {
@@ -269,6 +284,10 @@ export type LyraMapLegendPattern = 'solid' | 'diagonal' | 'dots' | 'crosshatch';
  * `legendControlRole` property JSDoc for the full contract.
  */
 export type LyraMapLegendControlRole = 'button' | 'checkbox';
+
+/** Where the legend panel sits over the map: a logical corner, or centred on one logical edge. */
+export type LyraMapLegendPlacement = 'top' | 'bottom' | 'start' | 'end' | 'top-start' | 'top-end' | 'bottom-start' | 'bottom-end';
+const LEGEND_PLACEMENTS: ReadonlySet<string> = new Set(['top', 'bottom', 'start', 'end', 'top-start', 'top-end', 'bottom-start', 'bottom-end']);
 
 const LEGEND_CONTROL_ROLE = literalSetConverter<LyraMapLegendControlRole>(
   ['button', 'checkbox'],
@@ -1878,7 +1897,17 @@ export interface LyraMapFeatureHit {
   readonly properties: { readonly [key: string]: LyraMapFeatureValue };
   readonly target?: LyraMapResolvedFeatureStateTarget;
 }
-export interface LyraMapInteractionDetail {
+/** Where an interaction happened on screen: container pixels plus viewport client coordinates. */
+export interface LyraMapInteractionPosition {
+  /** `[x, y]` CSS pixels in the map's container, as `project()` reports. A keyboard activation
+   *  reports the view centre. */
+  readonly point: LyraMapPoint;
+  /** Viewport x of `point`, ready for `lr-context-menu`'s `showAt({ x: clientX, y: clientY })`. */
+  readonly clientX: number;
+  /** Viewport y of `point`. */
+  readonly clientY: number;
+}
+export interface LyraMapInteractionDetail extends LyraMapInteractionPosition {
   readonly lngLat: readonly [number, number];
   readonly hit?: LyraMapFeatureHit;
   /** The hit as a detached, deeply frozen GeoJSON feature: `id`, `properties` (as in `hit`) and its
@@ -2000,7 +2029,7 @@ export interface LyraMapEventMap {
   'lr-map-legend-panel-toggle-request': CustomEvent<LyraMapLegendPanelToggleDetail>;
   'lr-map-view-change': CustomEvent<LyraMapViewChangeDetail>;
   'lr-map-move': CustomEvent<LyraMapMoveDetail>;
-  'lr-map-click': CustomEvent<{
+  'lr-map-click': CustomEvent<LyraMapInteractionPosition & {
     readonly lngLat: readonly [number, number];
     readonly feature: Feature | undefined;
     /** Which layer `feature` was hit on, so a click is attributable when both a choropleth and
@@ -2161,13 +2190,36 @@ export interface LyraMapEventMap {
  * @csspart drawing-measurements - Decorative layer holding the on-map measurement labels of `drawingMeasurements`.
  * @csspart drawing-measurement - One measurement label; `data-kind` is `segment`, `closing`, `area` or `length`.
  * @csspart drawing-summary - Localized total length (line) or area (polygon) beside the vertex count while `drawingMeasurements` is set.
- * @cssprop [--lr-map-action-hover-bg] - Hover fill for scene, pick and drawing actions, the native
- *   zoom, compass, geolocate and scene controls, and the compact attribution button.
- * @cssprop [--lr-map-action-active-bg] - Pressed fill for the same actions and controls.
+ * @cssprop [--lr-map-action-hover-bg] - Hover fill for scene, pick and drawing actions and the
+ *   anchor close action. Native controls use `--lr-map-control-hover-bg`.
+ * @cssprop [--lr-map-action-active-bg] - Pressed fill for the same actions. Native controls use `--lr-map-control-active-bg`.
  * @cssprop [--lr-map-control-pressed-bg=var(--lr-color-brand-quiet)] - Fill of a pressed or mixed
  *   native scene control and of the open compact attribution button.
  * @cssprop [--lr-map-control-pressed-color=var(--lr-color-brand)] - Glyph color of a pressed or
  *   mixed native scene control.
+ * @cssprop [--lr-map-control-size] - Block and inline size of every native control button
+ *   (zoom, compass, geolocate, scene controls), the compact attribution toggle and each
+ *   initialization outline. Unset, buttons size to their content above the `--lr-icon-button-size` floor.
+ * @cssprop [--lr-map-control-radius=var(--lr-radius)] - Corner radius of native control groups,
+ *   the attribution toggle (default pill) and initialization outlines (default `--lr-radius-button`).
+ * @cssprop [--lr-map-control-border=var(--lr-border-width-thin) solid var(--lr-color-border)] -
+ *   Border shorthand of native control groups and initialization outlines.
+ * @cssprop [--lr-map-control-shadow=var(--lr-shadow)] - Shadow of native control groups; initialization outlines default to none.
+ * @cssprop [--lr-map-control-bg=var(--lr-color-surface)] - Resting fill of control groups, the
+ *   scale, attribution and initialization outlines, under the shared glass treatment.
+ * @cssprop [--lr-map-control-color=var(--lr-color-text)] - Glyph color of control groups, the
+ *   attribution toggle and initialization outlines.
+ * @cssprop [--lr-map-control-hover-bg] - Hover fill of every native control button and the
+ *   attribution toggle in every state.
+ * @cssprop [--lr-map-control-active-bg] - Pressed fill of the same buttons in every state.
+ * @cssprop [--lr-map-control-gap=var(--lr-space-xs)] - Margin around each native control and initialization outline.
+ * @cssprop [--lr-map-attribution-radius=var(--lr-radius)] - Corner radius of the attribution control.
+ * @cssprop [--lr-map-attribution-border=none] - Border shorthand of the attribution control.
+ * @cssprop [--lr-map-controls-inset-block-start=0px] - Extra space kept free above the top
+ *   control rows, for application chrome on that edge; the legend and the pick, drawing and scene bars clear it too.
+ * @cssprop [--lr-map-controls-inset-block-end=0px] - The same reservation below the bottom control rows.
+ * @cssprop [--lr-map-controls-inset-inline-start=0px] - The same reservation at the inline-start edge (the right under RTL).
+ * @cssprop [--lr-map-controls-inset-inline-end=0px] - The same reservation at the inline-end edge.
  * @cssprop [--lr-map-marker-hover-halo-color=var(--lr-color-brand)] - Halo color of a hovered or
  *   pressed interactive marker.
  * @cssprop [--lr-map-drawing-fill-opacity=0.2] - Temporary polygon fill opacity, from zero to one.
@@ -2237,7 +2289,14 @@ export interface LyraMapEventMap {
  *   and kept inside the map, following the point through camera moves and hidden while the point
  *   is off screen. The element only positions it (`part="anchor"` supplies a default surface);
  *   the slotted content owns its semantics, close control and focus.
- * @csspart anchor - The positioned wrapper of the `anchor` slot.
+ * @csspart anchor - The positioned wrapper of the `anchor` slot: a column holding `anchor-body`
+ *   and, when `anchorClosable`, `anchor-close`, which stays visible while the body scrolls.
+ * @csspart anchor-body - The scrolling wrapper of the slotted anchor content (`min-block-size: 0`),
+ *   so a card with a fixed header and long details scrolls inside the panel.
+ * @cssprop [--lr-map-anchor-close-reservation=0px] - Inline-end padding of `anchor-body`, reserving
+ *   room for an `anchor-close` button moved to the header corner through `::part(anchor-close)`.
+ *   Logical, so it pads the left edge under RTL. For rich cards prefer `lr-map-anchor`, whose close
+ *   button already owns its own column.
  * @slot anchors - `lr-map-anchor` children: independently opened and closed panels anchored to
  *   coordinates, each placed like the `anchor` slot. A direct child anchor assigns itself here. An
  *   element assigned here may also wrap anchors; it renders inside the map, so it should hold only anchors.
@@ -2310,6 +2369,20 @@ export interface LyraMapEventMap {
  * @cssprop [--lr-map-hidden-category-opacity=0.15] - Opacity a hidden category's points, point
  *   strokes and point icons are muted to in the rendered MapLibre paint. Read from the resolved
  *   cascade on every paint, because MapLibre draws to a WebGL canvas the CSS cascade never reaches.
+ * @cssprop [--lr-map-legend-inset-block=var(--lr-space-s)] - Block offset of the legend panel from the control rows.
+ * @cssprop [--lr-map-legend-inset-inline=var(--lr-space-s)] - Inline offset of the legend panel from the map edge.
+ * @cssprop [--lr-map-legend-max-inline-size] - Maximum inline size of the legend panel; defaults to the space between the inline insets.
+ * @cssprop [--lr-map-legend-max-block-size] - Maximum block size of the legend panel; defaults to
+ *   the space left between both control rows and their insets.
+ * @cssprop [--lr-map-legend-columns=1] - Number of equal columns the legend rows flow into.
+ * @cssprop [--lr-map-legend-font-size=var(--lr-font-size-xs)] - Legend text size.
+ * @cssprop [--lr-map-legend-gap=var(--lr-space-xs)] - Gap between legend sections, rows and stacked slotted cards.
+ * @cssprop [--lr-map-legend-padding=var(--lr-space-xs) var(--lr-space-s)] - Padding of the legend panel.
+ * @cssprop [--lr-map-legend-radius=var(--lr-radius)] - Corner radius of the legend panel.
+ * @cssprop [--lr-map-legend-bg=var(--lr-color-surface)] - Fill of the legend panel.
+ * @cssprop [--lr-map-legend-shadow=var(--lr-shadow-m)] - Shadow of the legend panel.
+ * @cssprop [--lr-map-legend-color=var(--lr-color-text)] - Text color of the legend panel.
+ * @cssprop [--lr-map-legend-swatch-size=var(--lr-size-0-75rem)] - Size of a color legend swatch.
  * @cssprop [--lr-map-legend-hidden-swatch-opacity=0.5] - Opacity of a hidden interactive legend
  *   row's decorative swatch. Only the `aria-hidden` swatch dims; the label re-colors through the
  *   quiet text token instead, so it keeps AA contrast.
@@ -3216,6 +3289,30 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * allocation and hide the anchor. Caller data is not mutated. Also the default of every
    * `lr-map-anchor` child whose own `safeArea` is `undefined`. */
   @property({ attribute: false }) anchorSafeArea?: LyraMapAnchorSafeArea;
+  /** Application chrome to keep anchors clear of, instead of a hand-measured `anchorSafeArea`: a
+   * floating header, a search bar, a side sheet. The map observes each element's size, page
+   * scrolling and the visual viewport (once per animation frame), intersects each element with the
+   * map and reserves its overlap on the cheapest logical edge: a full-width header reserves
+   * `blockStart`, a full-height side panel its inline edge. The result is folded into
+   * `anchorSafeArea` edge by edge (the larger inset wins) for the `anchor` slot and every
+   * `lr-map-anchor` child without its own `safeArea`. Property only; the array is not retained
+   * beyond its elements, and removing them or disconnecting the map stops every observer. */
+  @property({ attribute: false }) anchorAvoid?: readonly Element[];
+  private anchorAvoidance?: MapAnchorAvoidance;
+  private mergedSafeArea?: { readonly authored: LyraMapAnchorSafeArea | undefined; readonly avoid: LyraMapAnchorSafeArea | undefined; readonly value: LyraMapAnchorSafeArea | undefined };
+  /** `anchorSafeArea` with the observed `anchorAvoid` overlap folded in; stable while neither changes. */
+  private effectiveAnchorSafeArea(): LyraMapAnchorSafeArea | undefined {
+    const authored = this.anchorSafeArea, avoid = this.anchorAvoidance?.area, cached = this.mergedSafeArea;
+    if (cached && cached.authored === authored && cached.avoid === avoid) return cached.value;
+    const value = mergeSafeAreas(authored, avoid);
+    this.mergedSafeArea = { authored, avoid, value };
+    return value;
+  }
+  private syncAnchorAvoidance(): void {
+    if (!this.anchorAvoid?.length && !this.anchorAvoidance) return;
+    this.anchorAvoidance ??= new MapAnchorAvoidance({ element: this, direction: () => this.effectiveDirection, changed: () => { this.scheduleAnchorSync(); } });
+    this.anchorAvoidance.observe(this.isConnected ? this.anchorAvoid : undefined);
+  }
   /** Adds a localized close action and nonmodal Escape ownership. Opening never moves focus. */
   @property({ type: Boolean, attribute: 'anchor-closable' }) anchorClosable = false;
   /** Defers native construction until visible (default), browser idle time (`idle`), immediate
@@ -3506,6 +3603,15 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   legendCollapsible = false;
 
   /**
+   * Where the legend panel sits: a logical corner (`bottom-start`, the default, `bottom-end`,
+   * `top-start`, `top-end`) or centred on one logical edge (`top`, `bottom`, `start`, `end`).
+   * Logical, so `start` is the right edge under RTL. Every placement clears the native control
+   * rows and the `--lr-map-controls-inset-*` reservation. An unknown value renders the default.
+   */
+  @property({ attribute: 'legend-placement' })
+  legendPlacement: LyraMapLegendPlacement = 'bottom-start';
+
+  /**
    * Whether a `legendCollapsible` panel is expanded. Defaults **open**, so adding only
    * `legendCollapsible` never hides an existing key; it does nothing at all while
    * `legendCollapsible` is unset.
@@ -3706,6 +3812,73 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * changes across surviving unowned layers still update the baseline. Missing anchors append with
    * a dev warning; self-anchors and cross-owner cycles reject before mutation. Placement shares the 128-group/4,096-layer budget with owned overlays. */
   @property({ attribute: false }) styleOverrides: readonly LyraMapStyleOverride[] = [];
+
+  private readonly overlayGroups = new Map<string, { readonly order: number; readonly sequence: number; readonly group: LyraMapOverlayGroup }>();
+  private overlayGroupSequence = 0;
+  private overlayGroupRevision = 0;
+  private ownedInputCache?: { readonly key: readonly unknown[]; readonly value: { readonly overlays: LyraMapOverlays; readonly images: readonly LyraMapImage[]; readonly styleOverrides: readonly LyraMapStyleOverride[] } };
+
+  /**
+   * Adds or replaces one owner's keyed contribution, for map applications composed of independent
+   * layer modules that would otherwise share one `overlays` value. Each group's `sources`, `layers`,
+   * `images` and `styleOverrides` are appended after the matching properties, groups in ascending
+   * `order` (default 0) and then in the order their keys were first set, so later groups paint
+   * above. IDs must stay unique across the property and every group, as within `overlays`. Every
+   * change in one task is applied in a single update; `whenIdle()` resolves after the latest merged
+   * state, never rejecting for a superseded write. Returns `false` for an empty key or a non-object
+   * group. The group is used as given: replace it, never mutate it.
+   */
+  setOverlayGroup(key: string, group: LyraMapOverlayGroup, options: LyraMapOverlayGroupOptions = {}): boolean {
+    if (typeof key !== 'string' || !key || group === null || typeof group !== 'object') return false;
+    const order = Number.isFinite(options.order) ? options.order! : 0;
+    const previous = this.overlayGroups.get(key);
+    if (previous?.group === group && previous.order === order) return true;
+    this.overlayGroups.set(key, { order, sequence: previous?.sequence ?? this.overlayGroupSequence++, group });
+    this.overlayGroupsChanged();
+    return true;
+  }
+
+  /** Removes a keyed contribution and only its sources, layers, images and overrides. Returns
+   *  whether the key was present. */
+  removeOverlayGroup(key: string): boolean {
+    if (!this.overlayGroups.delete(key)) return false;
+    this.overlayGroupsChanged();
+    return true;
+  }
+
+  private sameOwnedOverlayInput(overlays: unknown, images: unknown, styleOverrides: unknown): boolean {
+    const current = this.ownedOverlayInput();
+    return current.overlays === overlays && current.images === images && current.styleOverrides === styleOverrides;
+  }
+
+  private ownedFeatureInputRequested(): boolean {
+    const { overlays, images, styleOverrides } = this.ownedOverlayInput();
+    return ownedFeaturesRequested(overlays, images, styleOverrides);
+  }
+
+  private overlayGroupsChanged(): void {
+    this.overlayGroupRevision += 1;
+    this.requestUpdate('overlays', OVERLAY_GROUP_CHANGE);
+  }
+
+  /** `overlays`, `images` and `styleOverrides` with every group merged in; the properties
+   *  themselves while no group is set. Stable until any of them changes. */
+  private ownedOverlayInput(): { readonly overlays: LyraMapOverlays; readonly images: readonly LyraMapImage[]; readonly styleOverrides: readonly LyraMapStyleOverride[] } {
+    const { overlays, images, styleOverrides } = this;
+    if (!this.overlayGroups.size) return { overlays, images, styleOverrides };
+    const key = [overlays, images, styleOverrides, this.overlayGroupRevision];
+    const cached = this.ownedInputCache;
+    if (cached && cached.key.every((value, index) => value === key[index])) return cached.value;
+    const groups = [...this.overlayGroups.values()].sort((a, b) => a.order - b.order || a.sequence - b.sequence).map(entry => entry.group);
+    const list = <T,>(base: readonly T[] | undefined, pick: (group: LyraMapOverlayGroup) => readonly T[] | undefined): readonly T[] =>
+      Object.freeze([...(Array.isArray(base) ? base : []), ...groups.flatMap(group => { const value = pick(group); return Array.isArray(value) ? value : []; })]);
+    const value = Object.freeze({
+      overlays: Object.freeze({ sources: list(overlays.sources, group => group.sources), layers: list(overlays.layers, group => group.layers) }),
+      images: list(images, group => group.images), styleOverrides: list(styleOverrides, group => group.styleOverrides),
+    });
+    this.ownedInputCache = { key, value };
+    return value;
+  }
 
   private _canonicalChoroplethSource: unknown = UNPROJECTED_MAP_VALUE;
   private _canonicalChoropleth: CanonicalMapChoropleth | undefined;
@@ -3993,6 +4166,17 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * assistive technology, beside the vertex count. Default `false`. While the drawing controls are
    * shown, later vertex-count and total changes are announced politely, coalesced while dragging. */
   @property({ type: Boolean, attribute: 'drawing-measurements', reflect: true }) drawingMeasurements = false;
+  /** What completing a new drawing does after `lr-map-draw-complete` has been dispatched. `'clear'`
+   * (default) clears the temporary drawing and resets `drawMode`. `'edit'` keeps the completed shape
+   * on the map as an explicit edit session, exactly as `editDrawing(detail)` would, synchronously
+   * inside the same completion, so no listener needs to re-enter. Finishing that edit commits and
+   * clears it. A completion listener that starts its own drawing or edit wins. */
+  @property({ attribute: 'drawing-complete-behavior', converter: DRAWING_COMPLETE_BEHAVIOR }) drawingCompleteBehavior: LyraMapDrawingCompleteBehavior = 'clear';
+  /** Keeps `drawMode` armed after a drawing completes or is cancelled by the user (cancel action,
+   * Escape or `cancelDrawing()`), so the next shape can start at once. With
+   * `drawingCompleteBehavior = 'edit'`, the mode re-arms when that edit is finished or cancelled.
+   * Pick mode, disabling, a mode change or a style failure still disarm. Default `false`. */
+  @property({ type: Boolean, attribute: 'drawing-sticky', reflect: true }) drawingSticky = false;
   @state() private drawingIssue?: MapDrawingError;
   /** Bumped whenever a rendered value owned by the drawing controller changes. */
   @state() private drawingRevision = 0;
@@ -5095,6 +5279,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       afterUpdate: (callback, key) => { this.scheduleAfterUpdate(callback, key); },
       interactionBlocked: () => this.mapInteractionBlocked(),
       direction: () => this.effectiveDirection,
+      mapSafeArea: () => this.effectiveAnchorSafeArea(),
     };
   }
 
@@ -5109,7 +5294,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       styleLoaded: () => this._styleLoaded,
       request: () => this.anchorLngLat,
       boundary: () => this.anchorBoundary,
-      safeArea: () => this.anchorSafeArea,
+      safeArea: () => this.effectiveAnchorSafeArea(),
       closable: () => this.anchorClosable,
       pending: () => this.isUpdatePending,
       requestClose: detail => !this.emit('lr-map-anchor-close-request', detail, { cancelable: true }).defaultPrevented,
@@ -5431,6 +5616,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (ownerWindow) for (const announcer of this.drawingProgressAnnouncers) announcer.setTimerHost(ownerWindow);
     const generation = ++this._connectGeneration;
     this.observeMapInteractionState();
+    this.syncAnchorAvoidance();
     this.unregisterCameraSession?.();
     this.unregisterCameraSession = registerMapCameraSession(this, { acquire: callbacks => this.acquireCameraSession(callbacks) });
     this.unregisterCustomLayers?.();
@@ -5536,6 +5722,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
 
   /** A genuine disconnect's teardown; a same-task DOM move cancels it. */
   private releaseConnection(): void {
+    this.anchorAvoidance?.disconnect();
     for (const announcer of this.drawingProgressAnnouncers) announcer.cancel();
     this.drawingProgressState = [undefined, undefined];
     this.releaseCanvasAllocation();
@@ -6224,6 +6411,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (changed.has('hash') || changed.has('hashFormat')) { this.syncHash(); this.applyHash(); }
     if (this._map && (this.anchorSyncRequested || ['anchorLngLat', 'anchorBoundary', 'anchorSafeArea', 'anchorClosable', 'dir', 'strings', 'lang', 'locale'].some(name => changed.has(name)))) { this.anchorSyncRequested = false; this.syncAnchor(); }
     if (changed.has('markers') && this._map) this.applyMarkers();
+    if (changed.has('anchorAvoid')) this.syncAnchorAvoidance();
+    else if (changed.has('dir') && this.anchorAvoidance) this.anchorAvoidance.refresh();
     if (this.semanticsStale) {
       this.semanticsStale = false;
       this.syncMapSemantics(this.markerSemanticsStale);
@@ -6305,16 +6494,17 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private paintThemeTokens: string[] = [];
   private syncPaintTheme(): boolean {
     // The ownership runtime is part of the key: override tokens are discovered once it can admit them.
-    const sources = [this.dataLayers, this.choropleth, this.styleOverrides, this.overlays, loadMapOwnedFeatureRuntime.loaded];
+    const owned = this.ownedOverlayInput();
+    const sources = [this.dataLayers, this.choropleth, owned.styleOverrides, owned.overlays, loadMapOwnedFeatureRuntime.loaded];
     if (!this.paintThemeSources || sources.some((source, index) => source !== this.paintThemeSources![index])) {
       this.paintThemeSources = sources;
       const tokens = new Set([...Object.values(TONE_TOKEN), ...Object.values(ON_TONE_TOKEN),
         '--lr-map-choropleth-fill-opacity', '--lr-map-hidden-category-opacity', DRAWING_COLOR_TOKEN, ...Object.values(DRAWING_TOKENS)]);
       const inputs = JSON.stringify([this.canonicalDataLayers.map(({geojson: _geojson, geojsonProjection: _projection, ...paint}) => paint),
         [this.canonicalChoropleth?.stops, this.canonicalChoropleth?.stepBaseColor, this.canonicalChoropleth?.noData],
-        loadMapOwnedFeatureRuntime.loaded?.projectMapStyleOverrides(this.styleOverrides),
+        loadMapOwnedFeatureRuntime.loaded?.projectMapStyleOverrides(owned.styleOverrides),
         this._canonicalExternalLayers.map(({ source: _source, ...paint }) => paint)]);
-      const overlayPaint = loadMapOwnedFeatureRuntime.loaded?.overlayPaintText(this.overlays) ?? '';
+      const overlayPaint = loadMapOwnedFeatureRuntime.loaded?.overlayPaintText(owned.overlays) ?? '';
       for (const match of overlayPaint.matchAll(/var\(\s*(--[\w-]+)/g)) tokens.add(match[1]!);
       for (const match of inputs.matchAll(/var\(\s*(--[\w-]+)/g)) tokens.add(match[1]!);
       this.paintThemeTokens = [...tokens];
@@ -6396,7 +6586,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private pendingDrawingTheme = false;
   private refreshThemePaint(): boolean {
     if (this._canonicalExternalLayers.length || this.externalFeatureWorkStarted || this.optionalFeatureWorkStarted ||
-      ownedFeaturesRequested(this.overlays, this.images, this.styleOverrides)) {
+      this.ownedFeatureInputRequested()) {
       paintColorCache.delete(this);
       this.appliedLayerPaintKeys.clear(); this.appliedChoroplethPaintKey = undefined;
       this.pendingDrawingTheme = true;
@@ -6850,7 +7040,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     // Before the runtime loads, an armed mode has no session, gesture lease or resources to retire.
     if (armedMode !== 'line' && armedMode !== 'polygon') return false;
     this.drawingIssue = undefined;
-    if (!keepMode) this.resetDrawingMode();
+    if (!keepMode && !(reason === 'cancel' && this.drawingSticky)) this.resetDrawingMode();
     this.drawingEpoch++; this.syncMapCursor();
     this.emit('lr-map-draw-cancel', Object.freeze({ mode: armedMode, phase: 'cancelled', vertices: Object.freeze([]), reason } satisfies LyraMapDrawingCancelDetail));
     return true;
@@ -6911,6 +7101,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       showError: error => { this.showDrawingError(error); },
       clearError: () => { this.drawingIssue = undefined; },
       resetMode: () => { this.resetDrawingMode(); },
+      overlays: () => this.ownedOverlayInput().overlays,
+      rearm: mode => {
+        this.drawingResetting = true;
+        try { this.drawMode = mode; } finally { this.drawingResetting = false; }
+      },
       suppressClick: () => { this.suppressDrawingClick = true; },
       syncCursor: () => { this.syncMapCursor(); },
       changed: () => { this.drawingRevision += 1; },
@@ -6960,7 +7155,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (!map || !this.pickMode || !this.mapInteractionAllowed()) return;
     try {
       const lngLat = mapCoordinates(map.getCenter());
-      if (lngLat && this._map === map && generation === this.interactionGeneration && this.mapInteractionAllowed()) this.emit('lr-map-pick', Object.freeze({ lngLat, trigger: 'keyboard' } satisfies LyraMapPickDetail));
+      if (!lngLat || this._map !== map || generation !== this.interactionGeneration || !this.mapInteractionAllowed()) return;
+      const [x, y] = this.project(lngLat) ?? [];
+      this.emit('lr-map-pick', Object.freeze({ lngLat, ...this.interactionPosition({ x, y }), trigger: 'keyboard' } satisfies LyraMapPickDetail));
     } catch { /* An unavailable center does not produce a pick. */ }
   };
 
@@ -6976,6 +7173,17 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       if (!isFiniteCoordinate(x) || !isFiniteCoordinate(y) || this._map !== map) return;
       this.handleMapInteraction('click', { point: { x, y }, lngLat: { lng: lngLat[0], lat: lngLat[1] } }, 'keyboard');
     } catch { /* An unavailable centre does not produce a click. */ }
+  }
+
+  /** Container point and client coordinates of a native interaction point; the container centre
+   *  stands in for a point the engine could not report. */
+  private interactionPosition(point: unknown): LyraMapInteractionPosition {
+    // Interactions only arrive from a constructed engine, which always has its container.
+    const container = this.containerEl!, rect = container.getBoundingClientRect();
+    let x = mapOwnValue(point, 'x'), y = mapOwnValue(point, 'y');
+    if (!isFiniteCoordinate(x) || !isFiniteCoordinate(y)) { x = container.clientWidth / 2; y = container.clientHeight / 2; }
+    const px = x as number, py = y as number;
+    return { point: Object.freeze([px, py] as const), clientX: rect.left + container.clientLeft + px, clientY: rect.top + container.clientTop + py };
   }
 
   private handleMapInteraction(kind: 'click' | 'contextmenu' | 'mousemove', event: { readonly point: unknown; readonly lngLat: unknown },
@@ -7027,7 +7235,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     } finally { this.queryingMap = false; }
     if (!lngLat) return;
     // The detached feature is built only for a detail that is dispatched, never per pointer move.
-    const interaction = (): LyraMapInteractionDetail => Object.freeze({ lngLat, ...(hit ? { hit, feature: detachedMapFeature(raw, hit) } : {}) });
+    const interaction = (): LyraMapInteractionDetail => Object.freeze({ lngLat, ...this.interactionPosition(mapOwnValue(event, 'point')),
+      ...(hit ? { hit, feature: detachedMapFeature(raw, hit) } : {}) });
     if (kind === 'mousemove') {
       const key = hit ? JSON.stringify([hit.origin, hit.source, hit.sourceLayer ?? null, hit.layerId, hit.id === undefined ? ['anonymous', query] : ['id', hit.id]]) : undefined;
       if (key !== this.hovered?.key) {
@@ -7042,7 +7251,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const origin = rule?.cluster ? 'cluster' : rule?.origin;
     const choropleth = this.canonicalChoropleth;
     const noData = origin === 'choropleth' && choropleth?.noData !== undefined && typeof hit?.properties[choropleth.field] !== 'number';
-    this.emit('lr-map-click', { lngLat, feature: raw, origin, sourceId: origin === 'choropleth' ? undefined : rule?.source,
+    this.emit('lr-map-click', { lngLat, ...this.interactionPosition(mapOwnValue(event, 'point')), feature: raw, origin, sourceId: origin === 'choropleth' ? undefined : rule?.source,
       ...(rule?.sourceLayer ? { sourceLayer: rule.sourceLayer } : {}), ...(hit ? { hit, ...(hit.target ? { target: hit.target } : {}) } : {}), ...(noData ? { noData: true } : {}),
       ...(trigger === 'keyboard' ? { trigger } : {}) });
     if (origin === 'cluster' && rule && clickToken === this.clusterZoomToken && current()) this.zoomIntoCluster(rule.source, raw);
@@ -7251,10 +7460,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const style = this.mapStyle;
     const dataLayers = this.dataLayers;
     const choropleth = this.choropleth;
-    const overlays = this.overlays;
-    const images = this.images;
+    const { overlays, images, styleOverrides } = this.ownedOverlayInput();
     const imageProvider = this.imageProvider;
-    const styleOverrides = this.styleOverrides;
     const hiddenCategories = this.hiddenCategories;
     const interactiveBasemapLayers = this.interactiveBasemapLayers;
     const interactionInputs = [map, connection, styleGeneration, style, dataLayers, choropleth, images,
@@ -7280,8 +7487,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       generation === this.featureGeneration && connection === this._connectGeneration &&
       styleGeneration === this._styleGeneration && style === this.mapStyle &&
       dataLayers === this.dataLayers && choropleth === this.choropleth &&
-      overlays === this.overlays && images === this.images && imageProvider === this.imageProvider &&
-      styleOverrides === this.styleOverrides && interactiveBasemapLayers === this.interactiveBasemapLayers &&
+      this.sameOwnedOverlayInput(overlays, images, styleOverrides) && imageProvider === this.imageProvider &&
+      interactiveBasemapLayers === this.interactiveBasemapLayers &&
       ((!externalInput?.sources.length && !this.externalFeatureWorkStarted) || hiddenCategories === this.hiddenCategories);
     const apply = (): void => {
       if (!current() || controller.signal.aborted) return;
@@ -9307,7 +9514,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
             @keydown=${(event: KeyboardEvent) => drawing.vertexKey(event, handle.index)}
             @click=${(event: MouseEvent) => { event.preventDefault(); event.stopPropagation(); }}><span aria-hidden="true"></span></button>`)}</div>` : nothing}
         <div class="anchor-boundary" aria-hidden="true"></div>
-        <div part="anchor" hidden @focusin=${this.onAnchorFocus}><slot name="anchor" @slotchange=${this.onAnchorSlotChange}></slot>${this.anchorClosable
+        <div part="anchor" hidden @focusin=${this.onAnchorFocus}><div part="anchor-body"><slot name="anchor" @slotchange=${this.onAnchorSlotChange}></slot></div>${this.anchorClosable
           ? html`<button type="button" part="anchor-close" @click=${() => { this.anchorController?.close('close-button'); }}>${this.localize('close')}</button>` : nothing}</div>
         ${this.anchorSlotPresence.has('anchors') ? html`<slot name="anchors" @slotchange=${this.onAnchorsSlotChange}></slot>` : nothing}
         ${this.legend.length ||
@@ -9325,6 +9532,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
               aria-label=${this.localize('mapLegend')}
               aria-controls=${this.failure || this.loading ? nothing : 'map-container'}
               data-truncated=${String(this.legendProjection.truncated)}
+              data-placement=${LEGEND_PLACEMENTS.has(this.legendPlacement) ? this.legendPlacement : 'bottom-start'}
             >
               <slot name="legend-start" @slotchange=${this.onLegendSlotChange}></slot>
               <div class="glass-scroll-layer" aria-hidden="true"></div>

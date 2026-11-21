@@ -1651,6 +1651,43 @@ export const DrawingAndExplicitEditing: Story = {
   },
 };
 
+export const ControlAndLegendTokens: Story = {
+  render: () => html`
+    <lr-map label="Branded controls and a top-end legend" legend-placement="top-end" style="block-size: 22rem;
+      --lr-map-control-size: 2.75rem; --lr-map-control-radius: var(--lr-radius-pill); --lr-map-control-hover-bg: var(--lr-color-brand-quiet);
+      --lr-map-controls-inset-inline-start: 4rem; --lr-map-legend-font-size: var(--lr-font-size-sm); --lr-map-legend-columns: 2"
+      .mapStyle=${LYRA_MAP_EMPTY_STYLE} .controls=${{ navigation: true, scale: true }} .legend=${legend()}>
+      <section slot="legend">A second, application-owned key card stacks below.</section>
+    </lr-map>`,
+};
+
+export const StickyDrawingWithEdit: Story = {
+  render: () => html`<lr-map label="Sticky polygon drawing" style="block-size: 22rem" draw-mode="polygon" drawing-sticky
+    drawing-complete-behavior="edit" .mapStyle=${LYRA_MAP_EMPTY_STYLE}></lr-map>
+    <p>Finish a polygon to refine it at once; finishing the edit re-arms polygon drawing.</p>`,
+};
+
+export const OverlayGroupsAndAvoidedChrome: Story = {
+  render: () => {
+    const header = (node?: Element) => node as HTMLElement | undefined;
+    let bar: HTMLElement | undefined;
+    return html`<div style="position: relative">
+      <div ${ref(node => { bar = header(node); })} style="position: absolute; inset-block-start: 0; inset-inline: 0; z-index: 2; padding: 0.75rem;
+        background: var(--lr-color-surface-raised)">Floating application header</div>
+      <lr-map label="Modules and an avoided header" style="block-size: 22rem" .mapStyle=${LYRA_MAP_EMPTY_STYLE}
+        ${ref(node => {
+          const map = node as LyraMap | undefined;
+          if (!map) return;
+          map.anchorAvoid = bar ? [bar] : [];
+          map.setOverlayGroup('points', { sources: [{ id: 'points', source: { type: 'geojson', data: { type: 'FeatureCollection', features: [
+            { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [2.35, 48.85] } }] } } }],
+          layers: [{ layer: { id: 'points-circle', type: 'circle', source: 'points' } }] });
+          map.anchorLngLat = [2.35, 48.85];
+        })}><div slot="anchor">Anchored below the header</div></lr-map>
+    </div>`;
+  },
+};
+
 export const AnchorBoundaryAndFocus: Story = {
   render: () => {
     let map: LyraMap | undefined;

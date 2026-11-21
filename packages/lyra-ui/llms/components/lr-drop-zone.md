@@ -60,6 +60,9 @@ reimplemented.
   (`display: contents`) and still emits `lr-files` from itself. An id matching nothing binds nothing
   and is re-resolved when elements or ids in the root change, so a region rendered later is picked
   up. The default slot is not a drop target while a target is bound.
+- `withoutRejectionList: boolean = false` (reflected, attribute `without-rejection-list`) — omits
+  the visible `[part="rejection"]` list, for an application that renders its own banner from the
+  `lr-files` detail. The assertive announcement and the `rejected` detail are unchanged.
 - `target: Element | null = null` (property only) — the same, with an element reference; takes
   precedence over `for` while it is connected.
 - `readonly dragging: boolean` — `true` during an active drag session. Assignment is ignored, so a framework binding that spreads every property cannot throw.

@@ -407,7 +407,8 @@ describe('lr-map public native control chrome', () => {
 
   it('routes native control hover and pressed paint through public tokens', async () => {
     const { element, root } = await mount();
-    element.style.setProperty('--lr-map-action-hover-bg', 'rgb(1, 2, 3)');
+    element.style.setProperty('--lr-map-action-hover-bg', 'rgb(9, 9, 9)');
+    element.style.setProperty('--lr-map-control-hover-bg', 'rgb(1, 2, 3)');
     element.style.setProperty('--lr-map-control-pressed-bg', 'rgb(4, 5, 6)');
     const [zoomIn, zoomOut] = [query(root, '[part~="zoom-in"]'), query(root, '[part~="zoom-out"]')];
     zoomOut.setAttribute('aria-pressed', 'true');
@@ -415,6 +416,8 @@ describe('lr-map public native control chrome', () => {
     try {
       await hoverUntilMatched(zoomIn, 'zoom-in never hovered');
       await waitUntil(() => getComputedStyle(zoomIn).backgroundColor === 'rgb(1, 2, 3)', 'the hover token paints');
+      element.style.removeProperty('--lr-map-control-hover-bg');
+      expect(getComputedStyle(zoomIn).backgroundColor, 'the action token does not reach native controls').not.to.equal('rgb(9, 9, 9)');
     } finally {
       await resetMouse();
     }

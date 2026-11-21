@@ -576,6 +576,23 @@ describe('lr-map interaction and retained state integration', () => {
     const clicks = capture(element, 'lr-map-click'), leaves = capture(element, 'lr-map-feature-leave'); fire(peer, 'mousemove'); wrapper.inert = true; fire(peer);
     expect(clicks.length).to.equal(0); expect(leaves.length).to.equal(1); expect(peer.canvas.style.cursor).to.equal('');
   });
+  it('reports the container point and client coordinates on click, contextmenu and pick', async () => {
+    const { element, peer } = await mount(el => { el.dataLayers = [row()]; }); peer.hits = [hit(peer)];
+    const clicks = capture(element, 'lr-map-click'), menus = capture(element, 'lr-map-contextmenu');
+    fire(peer); fire(peer, 'contextmenu');
+    const picking = await mount(el => { el.dataLayers = [row()]; el.pickMode = true; }); picking.peer.hits = [hit(picking.peer)];
+    const picks = capture(picking.element, 'lr-map-pick'); fire(picking.peer);
+    expect([clicks.length, menus.length, picks.length]).to.deep.equal([1, 1, 1]);
+    const container = element.shadowRoot!.querySelector<HTMLElement>('[part="container"]')!, box = container.getBoundingClientRect();
+    const expected = { point: [1, 2], clientX: box.left + container.clientLeft + 1, clientY: box.top + container.clientTop + 2 };
+    for (const detail of [clicks[0], menus[0]] as { point: unknown; clientX: number; clientY: number }[]) {
+      expect({ point: detail.point, clientX: detail.clientX, clientY: detail.clientY }).to.deep.equal(expected);
+    }
+    const pickContainer = picking.element.shadowRoot!.querySelector<HTMLElement>('[part="container"]')!, pickBox = pickContainer.getBoundingClientRect();
+    const pick = picks[0] as { point: unknown; clientX: number; clientY: number };
+    expect({ point: pick.point, clientX: pick.clientX, clientY: pick.clientY })
+      .to.deep.equal({ point: [1, 2], clientX: pickBox.left + pickContainer.clientLeft + 1, clientY: pickBox.top + pickContainer.clientTop + 2 });
+  });
   it('picks a pointer location instead of dispatching an ordinary click', async () => {
     const { element, peer } = await mount(el => { el.dataLayers = [row()]; el.pickMode = true; }); peer.hits = [hit(peer)];
     const picks = capture(element, 'lr-map-pick'), clicks = capture(element, 'lr-map-click'); fire(peer);
@@ -587,7 +604,10 @@ describe('lr-map interaction and retained state integration', () => {
     await waitUntil(() => Boolean(element.shadowRoot!.querySelector('[part="pick-center"]')));
     const button = element.shadowRoot!.querySelector<HTMLButtonElement>('[part="pick-center"]')!;
     expect(button.textContent).to.equal('Pick current center'); await focusByKeyboard(button); await sendKeys({ press: 'Enter' });
-    expect(picks).to.deep.equal([{ lngLat: [peer.center.lng, peer.center.lat], trigger: 'keyboard' }]);
+    const container = element.shadowRoot!.querySelector<HTMLElement>('[part="container"]')!, box = container.getBoundingClientRect();
+    const centre = [container.clientWidth / 2, container.clientHeight / 2];
+    expect(picks).to.deep.equal([{ lngLat: [peer.center.lng, peer.center.lat], point: centre, clientX: box.left + container.clientLeft + centre[0]!,
+      clientY: box.top + container.clientTop + centre[1]!, trigger: 'keyboard' }]);
     const cancel = element.shadowRoot!.querySelector<HTMLButtonElement>('[part="pick-cancel"]')!;
     expect(cancel.textContent).to.equal('Stop picking'); await focusByKeyboard(cancel); await sendKeys({ press: 'Enter' }); await element.updateComplete; expect(element.pickMode).to.equal(false);
   });

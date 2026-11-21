@@ -131,6 +131,12 @@ export const MultipleFiles: Story = {
   </lr-drop-zone><output id="multiple-log"></output>`,
 };
 
+export const WithoutRejectionList: Story = {
+  render: () => html`<lr-drop-zone without-rejection-list accept=".csv" @lr-files=${logFiles('without-list-log')}>
+    <p>Drop a non-CSV file: the application renders the rejection from the event detail.</p>
+  </lr-drop-zone><output id="without-list-log"></output>`,
+};
+
 export const NarrowRTL: Story = {
   name: 'Narrow 320px (LTR and RTL)',
   parameters: {

@@ -278,6 +278,51 @@ describe('lr-map drawing integration', () => {
       expect(element.drawMode).to.equal('none'); expect(cancel.length).to.equal(1); expect((cancel[0] as { reason: string }).reason).to.equal('escape');
     } finally { outside.remove(); }
   });
+  it('keeps a completed shape in an edit session with drawing-complete-behavior="edit", and clears by default', async () => {
+    const { element, peer } = await drawing('line', el => { el.setAttribute('drawing-complete-behavior', 'edit'); });
+    expect(element.drawingCompleteBehavior).to.equal('edit');
+    const order: string[] = [];
+    for (const type of ['lr-map-draw-complete', 'lr-map-draw-cancel', 'lr-map-draw-start']) element.addEventListener(type, () => { order.push(type.slice(12)); });
+    await vertex(element, peer, 0, 0); await vertex(element, peer, 1, 0); order.length = 0;
+    expect(element.completeDrawing()).to.equal(true);
+    expect(element.drawMode).to.equal('none'); expect(peer.sources.size).to.equal(1);
+    await settle(element, peer);
+    expect(element.shadowRoot!.querySelector('[part="drawing-controls"]') === null).to.equal(false);
+    expect(element.completeDrawing(), 'finishing the edit commits it').to.equal(true); await settle(element, peer);
+    expect(order).to.deep.equal(['complete', 'complete']);
+    expect(element.completeDrawing(), 'the committed edit is not reopened').to.equal(false); expect(peer.sources.size).to.equal(0);
+    element.drawingCompleteBehavior = 'clear'; element.drawMode = 'line'; await settle(element, peer);
+    await vertex(element, peer, 0, 0); await vertex(element, peer, 1, 0);
+    expect(element.completeDrawing()).to.equal(true); await settle(element, peer);
+    expect([element.drawMode, peer.sources.size, element.completeDrawing()]).to.deep.equal(['none', 0, false]);
+  });
+  it('re-arms the same mode after completion, cancel and Escape with drawing-sticky', async () => {
+    const { element, peer } = await drawing('polygon', el => { el.drawingSticky = true; });
+    const starts = capture(element, 'lr-map-draw-start'), cancels = capture(element, 'lr-map-draw-cancel');
+    for (const [lng, lat] of [[0, 0], [1, 0], [0, 1]]) await vertex(element, peer, lng!, lat!);
+    expect(element.completeDrawing()).to.equal(true); await settle(element, peer);
+    expect(element.drawMode).to.equal('polygon');
+    await vertex(element, peer, 2, 2); expect(starts.length, 'a new session starts at the next vertex').to.equal(2);
+    expect(element.cancelDrawing()).to.equal(true); await settle(element, peer);
+    expect([element.drawMode, cancels.length]).to.deep.equal(['polygon', 1]);
+    await focusByKeyboard(element.shadowRoot!.querySelector<HTMLButtonElement>('[part="drawing-add"]')!); await sendKeys({ press: 'Escape' }); await settle(element, peer);
+    expect([element.drawMode, (cancels.at(-1) as { reason: string }).reason]).to.deep.equal(['polygon', 'escape']);
+    await vertex(element, peer, 3, 3); expect(starts.length).to.equal(3);
+    element.pickMode = true; await settle(element, peer);
+    expect(element.drawMode, 'pick mode still disarms').to.equal('none');
+  });
+  it('re-arms a sticky mode once the edit opened by completion ends', async () => {
+    const { element, peer } = await drawing('line', el => { el.drawingSticky = true; el.drawingCompleteBehavior = 'edit'; });
+    await vertex(element, peer, 0, 0); await vertex(element, peer, 1, 0);
+    expect(element.completeDrawing()).to.equal(true); expect(element.drawMode).to.equal('none');
+    expect(element.completeDrawing()).to.equal(true); await settle(element, peer);
+    expect(element.drawMode).to.equal('line');
+    await vertex(element, peer, 0, 0); await vertex(element, peer, 1, 0);
+    expect(element.completeDrawing()).to.equal(true); expect(element.cancelDrawing()).to.equal(true); await settle(element, peer);
+    expect(element.drawMode, 'cancelling the edit re-arms too').to.equal('line');
+    expect(element.cancelDrawing()).to.equal(true); await settle(element, peer);
+    expect(element.drawMode).to.equal('line');
+  });
   it('keeps ordinary caller-owned sources after drawing completion and cleans only temporary resources', async () => {
     const geojson = { type: 'FeatureCollection' as const, features: [] };
     const { element, peer } = await drawing('line', el => { el.dataLayers = [{ sourceId: 'keep', geojson }]; }); const kept = [...peer.sources.keys()];

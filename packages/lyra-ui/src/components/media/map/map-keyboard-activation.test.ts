@@ -46,7 +46,7 @@ async function mount(configure: (element: LyraMap) => void = () => undefined, wr
   const layer = [...peer.layers].find(([, value]) => (value as { type?: string }).type === 'circle')![0];
   peer.hits = [{ type: 'Feature', id: 0, source: 'points', layer: { id: layer }, properties: { name: 'Centre' }, geometry: { type: 'Point', coordinates: [1, 2] } }];
   const clicks: Record<string, unknown>[] = [], picks: unknown[] = [];
-  element.addEventListener('lr-map-click', event => { clicks.push((event as CustomEvent<Record<string, unknown>>).detail); });
+  element.addEventListener('lr-map-click', event => { clicks.push((event as CustomEvent).detail as Record<string, unknown>); });
   element.addEventListener('lr-map-pick', event => { picks.push((event as CustomEvent).detail); });
   const prevented: boolean[] = [];
   wrapper.addEventListener('keydown', event => { prevented.push(event.defaultPrevented); });

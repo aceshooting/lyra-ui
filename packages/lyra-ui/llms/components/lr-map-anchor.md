@@ -9,15 +9,15 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `close-button`: `--lr-map-popup-close-button-active-bg`, `--lr-map-popup-close-button-active-color`, `--lr-map-popup-close-button-hover-bg`, `--lr-map-popup-close-button-hover-color`
+- **Themeable via** 4 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `body`: `--lr-map-anchor-close-reservation`; `close-button`: `--lr-map-anchor-close-reservation`, `--lr-map-popup-close-button-active-bg`, `--lr-map-popup-close-button-active-color`, `--lr-map-popup-close-button-hover-bg`, `--lr-map-popup-close-button-hover-color`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-map-anchor`
 
-The popup is sized by the shared positioner through `--lr-positioner-available-block-size` and `--lr-positioner-available-inline-size`. Its built-in close button is themed with `--lr-map-popup-close-button-hover-bg`, `--lr-map-popup-close-button-hover-color`, `--lr-map-popup-close-button-active-bg` and `--lr-map-popup-close-button-active-color`.
+The popup is sized by the shared positioner through `--lr-positioner-available-block-size` and `--lr-positioner-available-inline-size`. It is the recommended container for a rich card with a fixed header and scrolling details: the close button owns its own column at the block-start, inline-end corner, so a slotted header never runs under it, and `body` scrolls. `--lr-map-anchor-close-reservation` (default `0px`) adds inline-end padding to `body` for a close button moved over the content through `::part(close-button)`. Its built-in close button is themed with `--lr-map-popup-close-button-hover-bg`, `--lr-map-popup-close-button-hover-color`, `--lr-map-popup-close-button-active-bg` and `--lr-map-popup-close-button-active-color`.
 
 Experimental. An independent panel of rich, interactive content anchored to a coordinate of its
 `lr-map`. Whoever owns it opens, moves and closes it without touching the map's other anchors or

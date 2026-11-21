@@ -10323,7 +10323,7 @@
       "module": "src/components/media/map/map.class.ts",
       "exportName": "LyraMapInteractionDetail",
       "kind": "interface",
-      "fingerprint": "f864ae29cbbda5ab7527",
+      "fingerprint": "3c82f41eab35b638a9e9",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -10491,7 +10491,7 @@
       "module": "src/components/media/map/map.class.ts",
       "exportName": "LyraMapPickDetail",
       "kind": "interface",
-      "fingerprint": "dddc05d81346a01f918e",
+      "fingerprint": "c3c8464f6a5d561d3885",
       "routes": [
         "src/all.ts",
         "src/components/lr-map.ts",
@@ -14302,7 +14302,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "8195a45db4b96d6fb6c7",
+      "fingerprint": "67ab6c91518f2639b451",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15984,7 +15984,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "e016c8cb0010c8ba7ff4",
+      "fingerprint": "111e9b4417e696ac1378",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16000,7 +16000,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "88247d1eefaf7d63aa57",
+      "fingerprint": "fdecd23f1896cea51749",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16016,7 +16016,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "a8065f87cc9448c70191",
+      "fingerprint": "db96e0975d5cc087eb04",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16560,7 +16560,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "3444cdd95c7e32be3cfe",
+      "fingerprint": "3d1c260d1efab0eb3042",
       "routes": [
         "src/vue.ts"
       ],
@@ -16952,7 +16952,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "6c2e5bdc017c0d01f8b2",
+      "fingerprint": "a6a6af8e379c2492342e",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -22782,6 +22782,69 @@
         "kind": "utility",
         "name": "components-overlays-rating-rating-contracts",
         "declaration": "LyraRatingChangeRequestDetail"
+      }
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapInteractionPosition",
+      "kind": "interface",
+      "fingerprint": "ccb418db03d4ab4e2492",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapInteractionPosition"
+      }
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapOverlayGroup",
+      "kind": "interface",
+      "fingerprint": "99d1a546dde96f023f0f",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapOverlayGroup"
+      }
+    },
+    {
+      "module": "src/components/media/map/map.class.ts",
+      "exportName": "LyraMapOverlayGroupOptions",
+      "kind": "interface",
+      "fingerprint": "d837f09e811e8fb713cd",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapOverlayGroupOptions"
       }
     },
     {

@@ -74,11 +74,15 @@ type MapAnchorDetachment = 'map' | 'slot' | 'nested';
  * @event lr-map-anchor-dismiss - Frozen `detail: { reason }` after an accepted close has set `open`
  *   to false. Not fired when the panel merely hides, or for removal or disconnect.
  * @csspart base - The positioned panel surface. A `z-index` set on it replaces automatic ordering.
- * @csspart body - The scrolling content wrapper.
+ * @csspart body - The scrolling content wrapper. The close button owns its
+ *   own column at the block-start, inline-end corner, so a slotted header never runs under it and
+ *   long details scroll here while the close button stays visible.
  * @csspart close-button - The localized icon close button of a `closable` anchor, named
  *   `Close {label}` (`mapCloseWithLabel`) with the anchor's accessible name, else `Close`.
  * @csspart close-icon - The wrapper of the close glyph.
  * @cssstate placed - Matches while the panel is placed and shown.
+ * @cssprop [--lr-map-anchor-close-reservation=0px] - Extra inline-end padding of `body`, for a
+ *   close button moved over the content through `::part(close-button)`. Logical, so it pads the left edge under RTL.
  * @cssprop --lr-map-popup-close-button-active-bg - Pressed background of `close-button`; defaults to a press-mixed `--lr-color-brand-quiet`.
  * @cssprop --lr-map-popup-close-button-active-color - Pressed foreground of `close-button`; defaults to `--lr-color-brand`.
  * @cssprop --lr-map-popup-close-button-hover-bg - Hover background of `close-button`; defaults to `--lr-color-brand-quiet`.

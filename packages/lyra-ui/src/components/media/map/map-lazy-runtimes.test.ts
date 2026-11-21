@@ -180,6 +180,14 @@ describe('lr-map on-demand runtimes', () => {
     expect(starts.length).to.equal(1);
   });
 
+  it('keeps a sticky armed mode across a cancel while its runtime loads', async () => {
+    const gate = hold(loadMapDrawingRuntime, drawingRuntime);
+    const { element, peer } = await mount(el => { el.drawMode = 'line'; el.drawingSticky = true; });
+    await waitUntil(() => gate.imports === 1); const cancels = capture(element, 'lr-map-draw-cancel');
+    expect(element.cancelDrawing()).to.equal(true); expect([element.drawMode, cancels.length]).to.deep.equal(['line', 1]);
+    gate.release(); await settle(element, peer);
+    expect(element.shadowRoot!.querySelector('[part="drawing-controls"]') === null).to.equal(false);
+  });
   it('cancels an armed mode synchronously while its runtime loads, with the same frozen detail and no session afterwards', async () => {
     const gate = hold(loadMapDrawingRuntime, drawingRuntime);
     const { element, peer } = await mount(el => { el.drawMode = 'polygon'; });

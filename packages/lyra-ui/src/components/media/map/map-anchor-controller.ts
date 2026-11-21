@@ -43,6 +43,8 @@ export interface MapAnchorMapHost {
   afterUpdate(callback: () => void, key: string): void;
   interactionBlocked(): boolean;
   direction(): 'ltr' | 'rtl';
+  /** The map's own safe area, with any observed `anchorAvoid` overlap folded in. */
+  mapSafeArea(): LyraMapAnchorSafeArea | undefined;
 }
 
 /** One anchor's request, surface and notifications: the `anchor` slot, or one child anchor element. */
@@ -669,7 +671,7 @@ export class MapAnchorChildren {
       styleLoaded: () => host.engineReady(),
       request: () => anchor.open && entry.admitted && !anchor.hidden ? anchor.lngLat : null,
       boundary: () => anchor.boundary === undefined ? host.element.anchorBoundary : anchor.boundary,
-      safeArea: () => anchor.safeArea === undefined ? host.element.anchorSafeArea : anchor.safeArea,
+      safeArea: () => anchor.safeArea === undefined ? host.mapSafeArea() : anchor.safeArea,
       closable: () => anchor.closable,
       pending: () => anchor.isUpdatePending,
       retire: () => undefined,
