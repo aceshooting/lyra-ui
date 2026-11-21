@@ -54,7 +54,7 @@ for (const [name, content] of [
   it(`themes the ${name} frame and header independently`, async () => {
     const el = await fixture<HTMLElement>(content);
     const prefix = `--lr-${name}-viewer-`;
-    el.style.setProperty(prefix + 'background', 'red');
+    el.style.setProperty(prefix + 'bg', 'red');
     el.style.setProperty(prefix + 'border', '2px solid green');
     el.style.setProperty(prefix + 'border-radius', '11px');
     el.style.setProperty(prefix + 'header-row-bg', 'blue');
