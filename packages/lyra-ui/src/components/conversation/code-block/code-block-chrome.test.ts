@@ -188,8 +188,8 @@ for (const name of ['lr-code-block', 'lr-code-block-core']) {
       const el = await fixture<LyraCodeBlock>(`<${name} collapsible line-numbers activatable-lines code="one"></${name}>`);
       const control = el.shadowRoot!.querySelector(selector)!;
       el.style.setProperty(`--lr-code-block-${token}-bg`, 'red');
-      el.style.setProperty(`--lr-code-block-${token}-bg-hover`, 'green');
-      el.style.setProperty(`--lr-code-block-${token}-bg-active`, 'blue');
+      el.style.setProperty(`--lr-code-block-${token}-hover-bg`, 'green');
+      el.style.setProperty(`--lr-code-block-${token}-active-bg`, 'blue');
       const background = () => getComputedStyle(control).backgroundColor;
       try {
         await resetMouse();

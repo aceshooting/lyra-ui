@@ -14,7 +14,7 @@ export const variant = choice('neutral', 'brand', 'success', 'warning', 'danger'
 export const appearance = choice('accent', 'filled', 'outlined', 'filled-outlined', 'plain');
 export const frame = choice('card', 'plain');
 /** `lr-stat` trend inputs, shared by the `stat` role and the `kpi-row` items that expand into it. */
-export const deltaPercent: LyraGenSchema = number;
+export const deltaPercent: LyraGenSchema = { ...number };
 export const goodDirection: LyraGenSchema = choice('up', 'down');
 export const named = { required: true, properties: ['label', 'accessibleLabel'] } as const;
 export const documentation = (tag: string): string => `https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/components/${tag}.md`;

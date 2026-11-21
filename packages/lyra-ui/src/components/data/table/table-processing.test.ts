@@ -1166,11 +1166,14 @@ describe("lr-table contains the composed lr-pagination's lr-before-page-change",
       '[part~="previous-button"]',
     )!;
     const leaked: string[] = [];
+    // The table re-emits its own cancelable lr-before-page-change from the host; only the composed
+    // child's proposal (originating inside the pagination) counts as a leak.
+    const fromChild = (event: Event): boolean => event.composedPath()[0] !== el;
     const onHost = (event: Event): void => {
-      leaked.push(`host:${event.type}`);
+      if (fromChild(event)) leaked.push(`host:${event.type}`);
     };
     const onDocument = (event: Event): void => {
-      leaked.push(`document:${event.type}`);
+      if (fromChild(event)) leaked.push(`document:${event.type}`);
     };
     const proposals: CustomEvent<{ page: number }>[] = [];
     const pageChanges: number[] = [];
@@ -1219,11 +1222,14 @@ describe("lr-table contains the composed lr-pagination's lr-before-page-change",
     const { el, pagination } = await pagedTable();
     const nextButton = pagination.shadowRoot!.querySelector<HTMLButtonElement>('[part~="next-button"]')!;
     const leaked: string[] = [];
+    // The table re-emits its own cancelable lr-before-page-change from the host; only the composed
+    // child's proposal (originating inside the pagination) counts as a leak.
+    const fromChild = (event: Event): boolean => event.composedPath()[0] !== el;
     const onHost = (event: Event): void => {
-      leaked.push(`host:${event.type}`);
+      if (fromChild(event)) leaked.push(`host:${event.type}`);
     };
     const onDocument = (event: Event): void => {
-      leaked.push(`document:${event.type}`);
+      if (fromChild(event)) leaked.push(`document:${event.type}`);
     };
     const vetoes: boolean[] = [];
     let pageChanges = 0;

@@ -1357,6 +1357,27 @@ export {
   gemstoneGlyph,
 } from './theme/gemstones.js';
 export type { GemstoneAccent, GemstoneKey } from './theme/gemstones.js';
+export type {
+  LyraAccent,
+  LyraAccentBackground,
+  LyraAccentName,
+  LyraDensity,
+  LyraLookEntry,
+  LyraLookId,
+  LyraMode,
+  LyraStyle,
+  LyraStyleAxis,
+  LyraStyleChangeDetail,
+  LyraStyleField,
+  LyraSurface,
+  LyraThemeAccent,
+  LyraThemeAccentValue,
+  LyraThemeSemanticRole,
+  LyraThemeTokenName,
+  LyraThemeTokens,
+  LyraThemeTokenValue,
+} from './theme/theme.js';
+export type { LyraStylePanelAxis, LyraStylePanelEventMap } from './components/utility/style-panel/style-panel.class.js';
 export { computeLineDiff } from './components/utility/diff-view/diff-line-diff.js';
 export type { LyraDiffOp } from './components/utility/diff-view/diff-line-diff.js';
 export type {
