@@ -18811,6 +18811,7 @@
         "tests": [
           "src/components/data/document-library/document-library-boundaries.test.ts",
           "src/components/data/document-library/document-library-collection-boundaries.test.ts",
+          "src/components/data/document-library/document-library-cursor-input.test.ts",
           "src/components/data/document-library/document-library-cursor-lifecycle.test.ts",
           "src/components/data/document-library/document-library-cursor-source.test.ts",
           "src/components/data/document-library/document-library-cursor.property.test.ts",
@@ -23362,7 +23363,8 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/media/file-icon/file-icon-registry-recovery.test.ts",
-          "src/components/media/file-icon/file-icon.test.ts"
+          "src/components/media/file-icon/file-icon.test.ts",
+          "src/components/media/file-icon/mime-type.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"
@@ -27959,6 +27961,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/highlight-layer/highlight-layer-remediation.test.ts",
+          "src/components/viewers/highlight-layer/highlight-layer-timing.test.ts",
           "src/components/viewers/highlight-layer/highlight-layer.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -28632,6 +28635,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/utility/icon/dompurify-loader.test.ts",
+          "src/components/utility/icon/icon-resource.test.ts",
           "src/components/utility/icon/icon-superseded-loads.test.ts",
           "src/components/utility/icon/icon.test.ts"
         ],
@@ -29597,6 +29601,7 @@
           "src/components/retrieval/ingestion-queue/ingestion-queue-custom-stage.test.ts",
           "src/components/retrieval/ingestion-queue/ingestion-queue-item-actions.test.ts",
           "src/components/retrieval/ingestion-queue/ingestion-queue-presentation.property.test.ts",
+          "src/components/retrieval/ingestion-queue/ingestion-queue-presentation.test.ts",
           "src/components/retrieval/ingestion-queue/ingestion-queue-remediation.test.ts",
           "src/components/retrieval/ingestion-queue/ingestion-queue-scale.test.ts",
           "src/components/retrieval/ingestion-queue/ingestion-queue-source-scale.test.ts",
@@ -62470,6 +62475,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/data/treemap/treemap-layout-limits.test.ts",
           "src/components/data/treemap/treemap-layout.property.test.ts",
           "src/components/data/treemap/treemap.test.ts"
         ],

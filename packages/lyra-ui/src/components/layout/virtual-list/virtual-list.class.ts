@@ -1771,6 +1771,8 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     }
     const reuse = !this.identitiesDirty && this.rowIdentities.length === n;
     const identities = reuse || append ? this.rowIdentities : new Array<string>(n);
+    // Without groups a row's slot is its own height, so the common case skips the marker lookup.
+    const grouped = this.normalizedGroupByIndex.size > 0;
     for (let i = start; i < n; i++) {
       if (!reuse) {
         const key = this.keyOf(this.itemAt(i), i);
@@ -1790,9 +1792,9 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
         liveKeys?.add(identity);
         h = this.measuredHeights.get(identity) ?? DEFAULT_ROW_ESTIMATE_PX;
       }
-      heights[i - start] = finiteAdd(this.groupHeightAt(i), h);
+      heights[i - start] = grouped ? finiteAdd(this.groupHeightAt(i), h) : h;
     }
-    if (start === 0) this.offsetIndex.reset(heights);
+    if (start === 0) this.offsetIndex.reset(heights, undefined, true);
     else this.offsetIndex.append(heights);
     this.rowIdentities = identities;
     for (const index of this.dirtyHeightIndices) {

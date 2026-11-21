@@ -1,8 +1,9 @@
-import { expect, html, waitUntil } from '@open-wc/testing';
+import { expect, html, oneEvent } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { columns, rows, dataGrid } from '../../../../test/data-grid.js';
 import type { LyraDropdown } from '../../lr-dropdown.js';
+import { loadAnchoredOverlayRuntime } from '../../../internal/anchored-overlay-runtime.js';
 
 it('retains the valid unique prefix when an untyped key iterable fails mid-stream', async () => {
   const grid = await dataGrid(html`<lr-data-grid label="People" row-key="id" selectable .columns=${columns} .data=${rows}></lr-data-grid>`);
@@ -26,24 +27,27 @@ it('retains the valid unique prefix when an untyped key iterable fails mid-strea
 });
 
 it('settles the columns menu after Escape and reopens it through its trigger', async () => {
+  // The first anchored overlay opened in a page loads the shared positioning runtime. Load it up
+  // front, so the waits below cover this menu's own lifecycle rather than a cold module fetch
+  // whose duration depends on whatever else the test runner is serving.
+  await loadAnchoredOverlayRuntime();
   const grid = await dataGrid(html`<lr-data-grid label="People" with-columns-menu .columns=${columns} .data=${rows}></lr-data-grid>`);
   const dropdown = grid.shadowRoot!.querySelector<LyraDropdown>('[part="columns-menu"]')!;
   const trigger = dropdown.querySelector<HTMLElement>('[slot="trigger"]')!;
-  let shows = 0;
-  let hides = 0;
-  dropdown.addEventListener('lr-after-show', () => { shows++; });
-  dropdown.addEventListener('lr-after-hide', () => { hides++; });
   await focusByKeyboard(trigger);
+  const firstShow = oneEvent(dropdown, 'lr-after-show');
   await sendKeys({ press: 'Enter' });
-  await waitUntil(() => shows === 1, 'the first Enter did not settle an open columns menu');
+  await firstShow;
   expect(dropdown.open).to.equal(true);
+  const hidden = oneEvent(dropdown, 'lr-after-hide');
   await sendKeys({ press: 'Escape' });
-  await waitUntil(() => hides === 1, 'Escape did not settle a closed columns menu');
+  await hidden;
   await grid.updateComplete;
   expect(dropdown.open).to.equal(false);
   expect(grid.shadowRoot!.activeElement === trigger, 'Escape restores trigger focus').to.equal(true);
+  const secondShow = oneEvent(dropdown, 'lr-after-show');
   await sendKeys({ press: 'Enter' });
-  await waitUntil(() => shows === 2, 'the second Enter did not settle an open columns menu');
+  await secondShow;
   expect(dropdown.open).to.equal(true);
   expect(grid.getVisibleRows().length).to.equal(3);
 });

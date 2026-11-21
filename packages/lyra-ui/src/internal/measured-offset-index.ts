@@ -4,6 +4,15 @@ function isExactSum(value: number): boolean {
   return Math.abs(value) <= Number.MAX_SAFE_INTEGER;
 }
 
+/** Turns `tree[1..n]` (one height per node) into Fenwick nodes in place, in linear time. */
+function accumulate(tree: number[]): number[] {
+  for (let index = 1; index < tree.length; index += 1) {
+    const parent = index + (index & -index);
+    if (parent < tree.length) tree[parent] = tree[parent]! + tree[index]!;
+  }
+  return tree;
+}
+
 /** Bounds for {@link MeasuredOffsetIndex} heights and offsets. */
 export interface MeasuredOffsetIndexOptions {
   /** Smallest stored height; `0` keeps collapsed rows. Defaults to `1`. */
@@ -75,12 +84,29 @@ export class MeasuredOffsetIndex {
     if (!exact) this.rebuild(this.heights);
   }
 
-  /** Replaces every height (and the estimate used for later growth). */
-  reset(heights: readonly number[], estimate = this.fallback): void {
+  /** Replaces every height (and the estimate used for later growth). With `owned`, the caller
+   *  hands over a fresh array it never touches again, which is clamped in place instead of copied. */
+  reset(heights: readonly number[], estimate = this.fallback, owned = false): void {
     this.fallback = this.clamp(estimate, Math.max(1, this.minimum));
-    const clamped: number[] = [];
-    for (let index = 0; index < heights.length; index += 1) clamped.push(this.clamp(heights[index]!, this.fallback));
-    this.rebuild(clamped);
+    const n = heights.length;
+    const stored = owned ? (heights as number[]) : new Array<number>(n);
+    const tree = new Array<number>(n + 1).fill(0);
+    const { minimum, maximum } = this;
+    // One pass: every child node precedes its parent, so node `position` is complete when reached.
+    for (let position = 1; position <= n; position += 1) {
+      const height = heights[position - 1]!;
+      // In-range numbers are kept as they are (`+ 0` folds -0 exactly as the clamp would).
+      const value = typeof height === 'number' && height >= minimum && height <= maximum
+        ? height + 0
+        : this.clamp(height, this.fallback);
+      stored[position - 1] = value;
+      const node = tree[position]! + value;
+      tree[position] = node;
+      const parent = position + (position & -position);
+      if (parent <= n) tree[parent] = tree[parent]! + node;
+    }
+    this.heights = stored;
+    this.tree = tree;
   }
 
   /** Height of one item (0 outside the range). */
@@ -147,12 +173,10 @@ export class MeasuredOffsetIndex {
   }
 
   private rebuild(heights: number[]): void {
+    const tree = new Array<number>(heights.length + 1);
+    tree[0] = 0;
+    for (let index = 0; index < heights.length; index += 1) tree[index + 1] = heights[index]!;
     this.heights = heights;
-    const tree = [0, ...heights];
-    for (let index = 1; index < tree.length; index += 1) {
-      const parent = index + (index & -index);
-      if (parent < tree.length) tree[parent] = tree[parent]! + tree[index]!;
-    }
-    this.tree = tree;
+    this.tree = accumulate(tree);
   }
 }

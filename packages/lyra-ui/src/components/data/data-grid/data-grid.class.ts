@@ -3208,7 +3208,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     const signature = this.measurementSignature(items);
     if (!this.measuredItemOffsetsDirty && this.measuredItemOffsetSignature === signature &&
         this.measuredItemOffsetEstimate === estimate) return;
-    this.measuredOffsets.reset(items.map(item => this.measuredItemHeights.get(displayItemKey(item)) ?? estimate), estimate);
+    this.measuredOffsets.reset(items.map(item => this.measuredItemHeights.get(displayItemKey(item)) ?? estimate), estimate, true);
     this.measuredItemOffsetSignature = signature;
     this.measuredItemOffsetEstimate = estimate;
     this.measuredItemOffsetsDirty = false;

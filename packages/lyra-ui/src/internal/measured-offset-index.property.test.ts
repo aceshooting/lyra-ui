@@ -70,6 +70,27 @@ describe('measured offset index properties', () => {
     ), propertyRuns());
   });
 
+  it('resets copied or owned heights to the same clamped offsets as appending them', () => {
+    fc.assert(fc.property(
+      fc.array(fc.oneof(height, fc.integer({ min: -4, max: 6 }).map((half) => half / 2), fc.constant(-0)), { maxLength: 40 }),
+      (heights) => {
+        const input = [...heights];
+        const copied = new MeasuredOffsetIndex(10, 0, { minimumHeight: 0 });
+        copied.reset(input, 10);
+        expect(input).to.deep.equal(heights);
+        const owned = new MeasuredOffsetIndex(10, 0, { minimumHeight: 0 });
+        owned.reset([...heights], 10, true);
+        const appended = new MeasuredOffsetIndex(10, 0, { minimumHeight: 0 });
+        appended.append(heights);
+        for (let i = 0; i <= heights.length; i += 1) {
+          expect(copied.offsetOf(i)).to.equal(appended.offsetOf(i));
+          expect(owned.offsetOf(i)).to.equal(appended.offsetOf(i));
+          expect(Object.is(owned.heightAt(i), appended.heightAt(i))).to.equal(true);
+        }
+      }
+    ), propertyRuns());
+  });
+
   it('keeps subpixel and zero heights with a zero minimum', () => {
     const index = new MeasuredOffsetIndex(10, 0, { minimumHeight: 0 });
     index.append([0.5, 0, 2.25, Number.NaN]);
