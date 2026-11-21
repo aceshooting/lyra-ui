@@ -133,6 +133,7 @@ export const ROOT_BARREL_TAGS = [
   'lr-grounding-summary',
   'lr-handoff-divider',
   'lr-heatmap',
+  'lr-help',
   'lr-highlight-layer',
   'lr-html-viewer',
   'lr-icon',

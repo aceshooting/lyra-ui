@@ -137,6 +137,7 @@ export const scopedDefinitionClosures: Readonly<Record<string, readonly string[]
   'lr-grounding-summary': ['lr-badge', 'lr-citation-badge', 'lr-claim-evidence', 'lr-empty', 'lr-grounding-summary', 'lr-stat'],
   'lr-handoff-divider': ['lr-handoff-divider'],
   'lr-heatmap': ['lr-heatmap'],
+  'lr-help': ['lr-help', 'lr-icon-button', 'lr-popover'],
   'lr-highlight-layer': ['lr-highlight-layer'],
   'lr-histogram': ['lr-chart', 'lr-histogram', 'lr-skeleton'],
   'lr-html-viewer': ['lr-html-viewer'],

@@ -138,6 +138,7 @@ export const AUTOLOADER_TAGS = [
   'lr-grounding-summary',
   'lr-handoff-divider',
   'lr-heatmap',
+  'lr-help',
   'lr-highlight-layer',
   'lr-histogram',
   'lr-html-viewer',

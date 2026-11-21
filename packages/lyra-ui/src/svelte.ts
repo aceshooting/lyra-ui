@@ -312,6 +312,8 @@ export type LyraHandoffDividerSvelteProps = LyraSvelteElementProps<'lr-handoff-d
 
 export type LyraHeatmapSvelteProps = LyraSvelteElementProps<'lr-heatmap'>;
 
+export type LyraHelpSvelteProps = LyraSvelteElementProps<'lr-help'>;
+
 export type LyraHighlightLayerSvelteProps = LyraSvelteElementProps<'lr-highlight-layer'>;
 
 export type LyraHistogramSvelteProps = LyraSvelteElementProps<'lr-histogram'>;
@@ -807,6 +809,7 @@ export interface LyraSvelteElements {
   'lr-grounding-summary': LyraGroundingSummarySvelteProps;
   'lr-handoff-divider': LyraHandoffDividerSvelteProps;
   'lr-heatmap': LyraHeatmapSvelteProps;
+  'lr-help': LyraHelpSvelteProps;
   'lr-highlight-layer': LyraHighlightLayerSvelteProps;
   'lr-histogram': LyraHistogramSvelteProps;
   'lr-html-viewer': LyraHtmlViewerSvelteProps;
@@ -1125,6 +1128,7 @@ export interface LyraElementTagNameMap {
   'lr-grounding-summary': LyraComponentTypeMap['lr-grounding-summary']['element'];
   'lr-handoff-divider': LyraComponentTypeMap['lr-handoff-divider']['element'];
   'lr-heatmap': LyraComponentTypeMap['lr-heatmap']['element'];
+  'lr-help': LyraComponentTypeMap['lr-help']['element'];
   'lr-highlight-layer': LyraComponentTypeMap['lr-highlight-layer']['element'];
   'lr-histogram': LyraComponentTypeMap['lr-histogram']['element'];
   'lr-html-viewer': LyraComponentTypeMap['lr-html-viewer']['element'];

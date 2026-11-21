@@ -947,7 +947,7 @@
       "module": "src/autoloader.ts",
       "exportName": "AutoloaderErrorEventDetail",
       "kind": "interface",
-      "fingerprint": "2aa46ba5c8cbeed10932",
+      "fingerprint": "6ef25511b2b1b7be587f",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -963,7 +963,7 @@
       "module": "src/autoloader.ts",
       "exportName": "AutoloaderEventDetail",
       "kind": "interface",
-      "fingerprint": "998b91413872eef60584",
+      "fingerprint": "6bb9c81baa18d69d1fe5",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -1011,7 +1011,7 @@
       "module": "src/autoloader.ts",
       "exportName": "discover",
       "kind": "function",
-      "fingerprint": "5815a3aa25714e00d570",
+      "fingerprint": "bb4f8908103da5bbdb34",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -1027,7 +1027,7 @@
       "module": "src/autoloader.ts",
       "exportName": "start",
       "kind": "function",
-      "fingerprint": "cce31162f5a26a2f31af",
+      "fingerprint": "74c7cf7a414ddbcef096",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -10974,7 +10974,7 @@
       "module": "src/components/overlays/dialog/confirm.ts",
       "exportName": "confirm",
       "kind": "function",
-      "fingerprint": "1949576c25e7ecb13c4a",
+      "fingerprint": "620dce6de619e47fb59c",
       "routes": [
         "src/all.ts",
         "src/components/overlays/dialog/confirm.ts",
@@ -10993,7 +10993,7 @@
       "module": "src/components/overlays/dialog/confirm.ts",
       "exportName": "ConfirmOptions",
       "kind": "interface",
-      "fingerprint": "a184e8cb9107f27f8cea",
+      "fingerprint": "96da9aef14064853e351",
       "routes": [
         "src/all.ts",
         "src/components/overlays/dialog/confirm.ts",
@@ -14302,7 +14302,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "781e36497306296a1805",
+      "fingerprint": "445a4144f3b621b109d3",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15984,7 +15984,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "2191d3ab0889c5fd3ed6",
+      "fingerprint": "6e2724c26170abdfd6b8",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16000,7 +16000,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "b788d5b1e88a33d1a7db",
+      "fingerprint": "0c409cab1016483cd83a",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16560,7 +16560,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "81700e40437410b8f753",
+      "fingerprint": "76a0916b1b5737b2675d",
       "routes": [
         "src/vue.ts"
       ],
@@ -16952,7 +16952,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "e4e9cec11c0ae2fb0b23",
+      "fingerprint": "25804d9e51fe8ac7cd5a",
       "routes": [
         "src/framework-types.ts"
       ],

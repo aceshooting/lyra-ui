@@ -1,7 +1,9 @@
 {
   "family": "overlays",
   "assignments": {
-    "new-component-experimental": [],
+    "new-component-experimental": [
+      "lr-help"
+    ],
     "published-stable": [
       "lr-badge",
       "lr-callout",

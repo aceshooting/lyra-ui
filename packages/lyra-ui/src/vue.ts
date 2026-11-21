@@ -305,6 +305,8 @@ export type LyraHandoffDividerVueProps = LyraVueCustomElement<'lr-handoff-divide
 
 export type LyraHeatmapVueProps = LyraVueCustomElement<'lr-heatmap'>;
 
+export type LyraHelpVueProps = LyraVueCustomElement<'lr-help'>;
+
 export type LyraHighlightLayerVueProps = LyraVueCustomElement<'lr-highlight-layer'>;
 
 export type LyraHistogramVueProps = LyraVueCustomElement<'lr-histogram'>;
@@ -800,6 +802,7 @@ export interface LyraVueGlobalComponents {
   'lr-grounding-summary': LyraGroundingSummaryVueProps;
   'lr-handoff-divider': LyraHandoffDividerVueProps;
   'lr-heatmap': LyraHeatmapVueProps;
+  'lr-help': LyraHelpVueProps;
   'lr-highlight-layer': LyraHighlightLayerVueProps;
   'lr-histogram': LyraHistogramVueProps;
   'lr-html-viewer': LyraHtmlViewerVueProps;

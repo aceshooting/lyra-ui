@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 26 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 29 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -113,7 +113,11 @@ panel once `--lr-dialog-height` is set (otherwise the panel is content-sized, so
 no-op); a drawer's panel is unconditionally a definite size for every placement, so without this
 override `body` would always stretch and push `footer` to the panel's far edge. `<lr-drawer>`'s own
 `[part="body"]` rule restores the natural content size instead, so `footer` follows immediately
-after a short body. The drawer's own
+after a short body. Set the inherited `fill-body` attribute to opt back in: `body` then grows to the
+panel and becomes a column flex container whose slotted children fill it. The inherited
+`--lr-dialog-heading-font-size`, `--lr-dialog-heading-font-weight` and
+`--lr-dialog-heading-font-family` tokens style the drawer's header title exactly as on
+`<lr-dialog>`. The drawer's own
 size/width/height tokens take precedence
 for its panel, and only the animation _name_ is overridden, so `--lr-dialog-panel-duration` retunes the
 slide too and the reduced-motion flattening of the shared `--lr-duration-*` tokens still reaches it.

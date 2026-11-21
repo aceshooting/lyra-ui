@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -54,6 +54,9 @@ read, and neither is deprecated.
 - `withoutHeader: boolean = false` (attribute `without-header`, reflected) —
   Web Awesome's spelling (`wa-dialog`'s `without-header`) for the same header suppression. Both
   names are current upstream spellings, both are read, and neither is deprecated or removable
+- `fillBody: boolean = false` (attribute `fill-body`, reflected) — makes `[part="body"]` a column
+  flex container whose slotted children share the block space `--lr-dialog-height` (or a drawer
+  panel) leaves it.
 - `withFooter: boolean = false` (attribute `with-footer`, reflected) — keeps the footer wrapper
   rendered as an SSR/hydration presence hint even before assigned slot content is observable
 - `size: LyraSize = 'm'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
@@ -209,7 +212,15 @@ shrink-wraps to content on the block axis; always capped at
 `flex: 1 1 auto` is what actually gives slotted content a definite, fillable block size:
 `[part="header"]` and `[part="footer"]` keep their natural size and only `[part="body"]` grows or
 shrinks into the remaining space, matching `--lr-dialog-width`'s pairing with `--lr-dialog-max-width`
-on the other axis. `--lr-dialog-spacing` (default `var(--lr-space-l)` —
+on the other axis. Add the `fill-body` attribute to make `[part="body"]` a column flex container
+whose slotted children grow into that remaining space (`min-block-size: 0`), so an expanded chart,
+preview or editor fills the dialog without a `::part(body)` rule; light-DOM rules on a slotted child
+still win, so `flex: none` keeps a heading or toolbar at its natural size. On `<lr-drawer>`,
+`fill-body` also restores the body growth the drawer otherwise opts out of.
+`--lr-dialog-heading-font-size` (default `inherit`), `--lr-dialog-heading-font-weight` (default
+`var(--lr-font-weight-semibold)`) and `--lr-dialog-heading-font-family` (default
+`var(--lr-font-heading)`) style the visible header title (`[part~="heading"]`), including
+`confirm()`'s. `--lr-dialog-spacing` (default `var(--lr-space-l)` —
 the padding inside `[part="body"]` and the _inline_ padding of the header and footer rows),
 `--lr-dialog-spacing-block` (default `var(--lr-space-m)` — the _block_ padding of the header and
 footer rows, which are tighter than the body by default), `--lr-dialog-panel-duration` (default
@@ -356,7 +367,7 @@ if (ok) deleteConversation();
 ```
 
 `confirm(options: ConfirmOptions): Promise<boolean>` where
-`ConfirmOptions = { title: string; description?: string; confirmLabel?: string /* = 'Confirm' */; cancelLabel?: string /* = 'Cancel' */; variant?: 'neutral' | 'danger' /* = 'neutral' */ }`.
+`ConfirmOptions = { title: string; description?: string; confirmLabel?: string /* = 'Confirm' */; cancelLabel?: string /* = 'Cancel' */; variant?: 'neutral' | 'danger' /* = 'neutral' */; size?: LyraSize /* = 'm' */; headingLevel?: LyraHeadingLevel /* = '2' */; className?: string }`.
 
 Resolves `true` only when the confirm button is pressed — Escape, a backdrop click, and the cancel
 button all resolve `false`. It sets `lightDismiss = true` on its transient dialog explicitly, so the
@@ -365,18 +376,21 @@ transient `<lr-dialog>` on `document.body` for the duration
 of the call and removes it after its exit animation, rather than reusing a persistent page-level region
 (contrast `lr-toast`'s `toaster.ts`). It remains interactive above an already-open native modal through
 `lr-dialog`'s native modal carrier; accepting or dismissing the confirmation leaves that modal open. Concurrent calls are distinct dialogs in the shared overlay
-stack, each tied to its own returned promise. `title` becomes a direct light-DOM `<h2>`, which per `<lr-dialog>`'s
-own heading-detection also drives the dialog's accessible name; `description`, if provided, becomes
-a direct light-DOM `<p>`. `variant: 'danger'` fills the confirm button with `--lr-color-danger`
-instead of `--lr-color-brand`, for destructive actions. Confirm/cancel actions deliberately use native
-inline-styled `<button>` elements so this helper does not register or import the broader button
-component; every color value is still a `--lr-*` token reference, never a raw literal. They carry the same interaction
-states as every other control in the library: a hover/pressed fill mixed toward
-`--lr-color-mix-partner` by `--lr-color-mix-hover`/`--lr-color-mix-active`, and a
-`--lr-focus-ring-width`/`--lr-focus-ring-color`/`--lr-focus-ring-offset` `:focus-visible` ring. An
-inline `style` attribute cannot express a pseudo-class, so those rules ship in a small `<style>`
-element mounted inside the transient dialog (and removed with it), targeting the buttons through
-their `data-lr-confirm-action` attribute.
+stack, each tied to its own returned promise. `title` becomes the dialog's own header title
+(`label`), rendered in `[part~="heading"]` at `headingLevel` and naming the dialog; `size` sets the
+dialog's width tier and `className` adds classes to the transient `<lr-dialog>`. `description`, if
+provided, becomes a direct light-DOM `<p data-lr-confirm-description>` whose quiet-colour and
+zero-margin defaults have zero specificity, so any application rule wins.
+
+**Styling surface.** Both actions are `<lr-button>` elements in the `footer` slot, so every
+`--lr-button-*` token, look and density applies: cancel is `variant="neutral" appearance="outlined"`,
+confirm is `appearance="accent"` with `variant="brand"`, or `variant="danger"` for
+`variant: 'danger'`. Each carries `data-lr-confirm-action="cancel" | "confirm"`. Scope overrides
+with `className`:
+
+```css
+.app-confirm { --lr-dialog-heading-font-size: var(--lr-font-size-lg); --lr-button-radius: var(--lr-radius-pill); }
+```
 
 **Known gotchas:**
 
@@ -391,8 +405,8 @@ their `data-lr-confirm-action` attribute.
   `--lr-color-<variant>-on-loud`), which in turn reads the matching `--lr-theme-color-*` hook and
   falls back to the shared neutral ramp — so retheming the grid retints the confirm button with no
   `::part()` rule, in light and dark alike.
-- Importing `confirm` is side-effect free and does not register `<lr-dialog>`. Invoking the helper
-  synchronously registers exactly the dialog class it creates before mounting the transient
-  element; consumers do not need a separate registration import for helper-created dialogs.
+- Importing `confirm` is side-effect free and does not register `<lr-dialog>` or `<lr-button>`.
+  Invoking the helper synchronously registers both classes before mounting the transient element;
+  consumers do not need a separate registration import for helper-created dialogs.
 
 ---

@@ -149,7 +149,9 @@ export const styles = css`
     flex: 1 1 auto;
     min-inline-size: 0;
     margin: 0;
-    font-weight: var(--lr-font-weight-semibold);
+    font-family: var(--lr-dialog-heading-font-family, var(--lr-font-heading));
+    font-size: var(--lr-dialog-heading-font-size, inherit);
+    font-weight: var(--lr-dialog-heading-font-weight, var(--lr-font-weight-semibold));
     overflow: hidden;
     overflow-wrap: break-word;
     white-space: normal;
@@ -211,6 +213,20 @@ export const styles = css`
     );
     overflow: auto;
     overflow-wrap: anywhere;
+  }
+  /* fill-body: the body becomes a column flex container, so slotted content can take the block
+     space --lr-dialog-height (or a drawer's definite panel) leaves it. The higher specificity also
+     restores the growth lr-drawer otherwise opts out of. Light-DOM rules on a slotted child still
+     win over the ::slotted() default. */
+  :host([fill-body]) [part="body"] {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-block-size: 0;
+  }
+  :host([fill-body]) [part="body"] ::slotted(*) {
+    flex: 1 1 auto;
+    min-block-size: 0;
   }
   /* The body carries tabindex="-1" so an overflowing dialog scrolls from the keyboard, and a box
      that can hold focus has to say so. Inset offset because the body is flush with the panel edges,

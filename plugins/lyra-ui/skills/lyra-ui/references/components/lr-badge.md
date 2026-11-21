@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-tag` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -53,6 +53,21 @@ other author-supplied role remain authoritative across updates, hydration, and r
   mirroring). Both stop outright — not merely shorten — under `prefers-reduced-motion: reduce`.
   The default does not materialize an attribute; an explicit `attention="none"` is authoritative
   and suppresses the `pulse` shorthand.
+- `wrap: boolean = false` (reflected) — lets a long label wrap onto several lines (`white-space:
+  normal`, `overflow-wrap: anywhere`) instead of truncating with an ellipsis, like `lr-button`'s and
+  `lr-chip`'s `wrap`.
+- `dot: boolean = false` (reflected) — renders a decorative leading status dot (`[part="dot"]`,
+  `aria-hidden`) in the variant's text colour (the on-solid colour for `appearance="accent"`),
+  sized by `--lr-badge-dot-size` (default `var(--lr-size-0-5rem)`) and recoloured by
+  `--lr-badge-dot-color`. `attention="pulse"` pulses the dot instead of the surface, and forced
+  colors paint it `CanvasText`. A dot-only badge (no text) hides `[part="content"]` and must be
+  named: with `aria-label` or `aria-labelledby` the host gets `role="img"` unless the author set a
+  role; without a name a development warning reports that colour would be the only cue.
+
+  ```html
+  <lr-badge dot variant="success">Healthy</lr-badge>
+  <lr-badge dot variant="danger" appearance="plain" aria-label="Down"></lr-badge>
+  ```
 - `pulse: boolean = false` (reflected) — upstream-compatible shorthand for the pulse attention
   treatment while the `attention` attribute is omitted. Any explicit attention value wins. Lyra's
   intentional `variant="neutral"` and `appearance="filled-outlined"` defaults remain unchanged
@@ -102,7 +117,7 @@ while its slot is empty, and is seeded from the light-DOM children before the fi
 declarative content never flashes hidden for a frame.
 
 **CSS parts:** `base` and `badge` are aliases on the same badge/tag surface; `start` and `end` (the slot wrappers, hidden entirely
-while empty), `content` (the wrapper around the default slot — this is the part that truncates with
+while empty), `dot` (the decorative status dot, rendered only while `dot` is set), `content` (the wrapper around the default slot — this is the part that truncates with
 an ellipsis, deliberately not `base`, so the tag's oversized remove hit target can overhang the
 compact surface without being clipped), and `remove-button` (`lr-tag` only, rendered only while
 `withRemove` / `removable`). The button also carries Shoelace's `remove-button__base` alias, so

@@ -5,6 +5,8 @@ import { registerLyraLocale, setLyraLocale } from '../../../internal/localizatio
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
 import '../../lr-dialog.js';
 import type { LyraDialog } from '../../lr-dialog.js';
+import type { LyraButton } from '../../lr-button.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 
 function getMountedDialog(): LyraDialog {
   const dialog = [...document.querySelectorAll<LyraDialog>('lr-dialog')].at(-1);
@@ -24,10 +26,15 @@ async function removed(): Promise<void> {
 
 afterEach(removed);
 
-function footerButtons(dialog: LyraDialog): [HTMLButtonElement, HTMLButtonElement] {
-  // The buttons themselves carry slot="footer" directly (no wrapping
-  // element), so the selector targets that attribute on <button> itself.
-  const buttons = Array.from(dialog.querySelectorAll<HTMLButtonElement>('button[slot="footer"]'));
+/** A host `click()` on lr-button forwards to its rendered control, so wait for the first render. */
+async function press(button: LyraButton): Promise<void> {
+  await button.updateComplete;
+  button.click();
+}
+
+function footerButtons(dialog: LyraDialog): [LyraButton, LyraButton] {
+  // The actions carry slot="footer" directly (no wrapping element).
+  const buttons = Array.from(dialog.querySelectorAll<LyraButton>('lr-button[slot="footer"]'));
   const cancelButton = buttons[0];
   const confirmButton = buttons[1];
   if (!cancelButton || !confirmButton) {
@@ -42,7 +49,7 @@ it('resolves true and removes the dialog when the confirm button is clicked', as
   expect(dialog).to.exist;
   expect(dialog.open).to.be.true;
 
-  footerButtons(dialog)[1].click(); // [cancel, confirm]
+  await press(footerButtons(dialog)[1]); // [cancel, confirm]
 
   expect(await promise).to.be.true;
   await removed();
@@ -52,7 +59,7 @@ it('resolves false and removes the dialog when the cancel button is clicked', as
   const promise = confirm({ title: 'Proceed?' });
   const dialog = getMountedDialog();
 
-  footerButtons(dialog)[0].click();
+  await press(footerButtons(dialog)[0]);
 
   expect(await promise).to.be.false;
   await removed();
@@ -84,7 +91,7 @@ it('plays the exit animation and emits lr-after-hide before removing the dialog'
   const dialog = getMountedDialog();
   await dialog.updateComplete;
   const afterHide = oneEvent(dialog, 'lr-after-hide');
-  footerButtons(dialog)[1].click();
+  await press(footerButtons(dialog)[1]);
   expect(await promise).to.be.true;
   expect(dialog.isConnected, 'still mounted while animating out').to.equal(true);
   await afterHide;
@@ -98,21 +105,26 @@ for (const duration of ['0ms', '1200ms']) {
     dialog.style.setProperty('--hide-duration', duration);
     await dialog.updateComplete;
     const removal = removed();
-    footerButtons(dialog)[1].click();
+    await press(footerButtons(dialog)[1]);
     expect(await result).to.equal(true);
     await removal;
     await removed();
   });
 }
 
-it('renders no header close control, so every action is a registered native button', async () => {
+it('renders no header close control, and both actions are registered lr-button elements', async () => {
   const promise = confirm({ title: 'Proceed?' });
   const dialog = getMountedDialog();
   await dialog.updateComplete;
   const hasCloseControl = dialog.shadowRoot!.querySelector('[part~="close-button"]') !== null;
-  footerButtons(dialog)[0].click();
+  const [cancelButton, confirmButton] = footerButtons(dialog);
+  const upgraded = [cancelButton, confirmButton].map((button) => button instanceof customElements.get('lr-button')!);
+  const actions = [cancelButton.getAttribute('data-lr-confirm-action'), confirmButton.getAttribute('data-lr-confirm-action')];
+  await press(cancelButton);
   expect(await promise).to.be.false;
   expect(hasCloseControl).to.equal(false);
+  expect(upgraded).to.deep.equal([true, true]);
+  expect(actions).to.deep.equal(['cancel', 'confirm']);
 });
 
 it('defaults cancelLabel to "Cancel" and confirmLabel to "Confirm"', async () => {
@@ -122,7 +134,7 @@ it('defaults cancelLabel to "Cancel" and confirmLabel to "Confirm"', async () =>
   expect(cancelButton.textContent).to.equal('Cancel');
   expect(confirmButton.textContent).to.equal('Confirm');
 
-  confirmButton.click();
+  await press(confirmButton);
   await promise;
 });
 
@@ -133,7 +145,7 @@ it('honors custom confirmLabel/cancelLabel', async () => {
   expect(cancelButton.textContent).to.equal('Keep');
   expect(confirmButton.textContent).to.equal('Delete');
 
-  confirmButton.click();
+  await press(confirmButton);
   await promise;
 });
 
@@ -148,6 +160,7 @@ it('falls through to a registered locale catalog for cancel/confirm when no labe
     cancel: 'Annuler',
     close: 'Fermer',
     confirm: 'Confirmer',
+    fieldRequired: 'Requis',
   });
   setLyraLocale('x-test-confirm');
 
@@ -159,7 +172,7 @@ it('falls through to a registered locale catalog for cancel/confirm when no labe
     expect(cancelButton.textContent).to.equal('Annuler');
     expect(confirmButton.textContent).to.equal('Confirmer');
 
-    confirmButton.click();
+    await press(confirmButton);
     await promise;
   } finally {
     setLyraLocale('en');
@@ -169,93 +182,145 @@ it('falls through to a registered locale catalog for cancel/confirm when no labe
 it('renders the description as body text when provided, omits it when not', async () => {
   const withDesc = confirm({ title: 'Proceed?', description: 'Are you sure?' });
   const dialogWithDesc = getMountedDialog();
-  expect(dialogWithDesc.querySelector('p')?.textContent).to.equal('Are you sure?');
-  footerButtons(dialogWithDesc)[0].click();
+  await dialogWithDesc.updateComplete;
+  const description = dialogWithDesc.querySelector('p')!;
+  expect(description.textContent).to.equal('Are you sure?');
+  expect(getComputedStyle(description).marginBlockStart).to.equal('0px');
+
+  await press(footerButtons(dialogWithDesc)[0]);
   await withDesc;
 
   const withoutDesc = confirm({ title: 'Proceed?' });
   const dialogWithoutDesc = getMountedDialog();
   expect((dialogWithoutDesc.querySelector('p')) == null).to.equal(true);
-  footerButtons(dialogWithoutDesc)[0].click();
+  await press(footerButtons(dialogWithoutDesc)[0]);
   await withoutDesc;
 });
 
-it('fills the confirm button with --lr-color-brand by default, --lr-color-danger when variant is "danger"', async () => {
+it('maps variant onto lr-button: brand by default, danger for destructive actions, cancel outlined', async () => {
   const neutral = confirm({ title: 'Proceed?' });
   const neutralDialog = getMountedDialog();
-  const neutralConfirm = footerButtons(neutralDialog)[1];
-  const neutralBackground = neutralConfirm.style.background;
-  const neutralColor = neutralConfirm.style.color;
-  footerButtons(neutralDialog)[0].click();
+  const [neutralCancel, neutralConfirm] = footerButtons(neutralDialog);
+  const neutralState = [neutralCancel.variant, neutralCancel.appearance, neutralConfirm.variant, neutralConfirm.appearance];
+  await press(neutralCancel);
   await neutral;
-  expect(neutralBackground).to.include('--lr-color-brand');
-  expect(neutralColor).to.include('--lr-color-on-brand');
+  expect(neutralState).to.deep.equal(['neutral', 'outlined', 'brand', 'accent']);
 
   const danger = confirm({ title: 'Delete?', variant: 'danger' });
   const dangerDialog = getMountedDialog();
-  const dangerConfirm = footerButtons(dangerDialog)[1];
-  const dangerBackground = dangerConfirm.style.background;
-  const dangerColor = dangerConfirm.style.color;
-  footerButtons(dangerDialog)[0].click();
+  const dangerState = footerButtons(dangerDialog)[1].variant;
+  await press(footerButtons(dangerDialog)[0]);
   await danger;
-  expect(dangerBackground).to.include('--lr-color-danger');
-  expect(dangerColor).to.include('--lr-color-on-danger');
+  expect(dangerState).to.equal('danger');
 });
 
-// 10.0.0 removed the `tone` alias for `variant`. It shipped as a one-major back-compat spelling
-// and `variant` already won whenever both were set, so nothing that reads `variant` changes here
-// -- but a stale `tone` left behind by a 9.x consumer must now be inert rather than quietly
-// styling the confirm button as destructive. Asserting equivalence to a no-options confirm is
-// deliberate: it survives any later retokenizing of the neutral button, which a hard-coded
-// `--lr-color-brand` string would not.
-async function confirmButtonStyle(options: ConfirmOptions): Promise<[string, string]> {
-  const promise = confirm(options);
+it('applies --lr-button-* tokens to its actions', async () => {
+  const promise = confirm({ title: 'Proceed?', className: 'x-themed-confirm' });
   const dialog = getMountedDialog();
-  const confirmButton = footerButtons(dialog)[1]!;
-  const style: [string, string] = [confirmButton.style.background, confirmButton.style.color];
-  footerButtons(dialog)[0]!.click();
-  await promise;
-  return style;
-}
+  const style = document.createElement('style');
+  style.textContent = '.x-themed-confirm { --lr-button-font-weight: 300; }';
+  document.head.append(style);
+  try {
+    const [cancelButton, confirmButton] = footerButtons(dialog);
+    await dialog.updateComplete;
+    await cancelButton.updateComplete;
+    await confirmButton.updateComplete;
+    const weights = [cancelButton, confirmButton].map((button) =>
+      getComputedStyle(button.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!).fontWeight,
+    );
+    expect(weights).to.deep.equal(['300', '300']);
+  } finally {
+    style.remove();
+    await press(footerButtons(dialog)[0]);
+    await promise;
+  }
+});
 
+// 10.0.0 removed the `tone` alias for `variant`; a stale `tone` must stay inert.
 it('no longer honors the removed "tone" spelling, rendering the neutral variant instead', async () => {
-  const stale = { title: 'Delete?', tone: 'danger' } as unknown as ConfirmOptions;
-  const [staleBackground, staleColor] = await confirmButtonStyle(stale);
-  const [neutralBackground, neutralColor] = await confirmButtonStyle({ title: 'Delete?' });
-
-  expect(staleBackground).to.not.include('--lr-color-danger');
-  expect(staleColor).to.not.include('--lr-color-on-danger');
-  expect(staleBackground).to.equal(neutralBackground);
-  expect(staleColor).to.equal(neutralColor);
+  const promise = confirm({ title: 'Delete?', tone: 'danger' } as unknown as ConfirmOptions);
+  const dialog = getMountedDialog();
+  const variant = footerButtons(dialog)[1].variant;
+  await press(footerButtons(dialog)[0]);
+  await promise;
+  expect(variant).to.equal('brand');
 });
 
-it('lets "variant" through untouched when a stale "tone" sits alongside it', async () => {
-  const both = { title: 'Delete?', variant: 'danger', tone: 'neutral' } as unknown as ConfirmOptions;
-  const [background, color] = await confirmButtonStyle(both);
-
-  expect(background).to.include('--lr-color-danger');
-  expect(color).to.include('--lr-color-on-danger');
-});
-
-it('uses the title as the dialog heading, which drives aria-label', async () => {
+it('renders the title as the dialog header title, which names the dialog', async () => {
   const promise = confirm({ title: 'Delete conversation?' });
   const dialog = getMountedDialog();
   await dialog.updateComplete;
 
-  const heading = dialog.querySelector('h2') as HTMLElement;
-  expect(heading.textContent).to.equal('Delete conversation?');
-  const panel = dialog.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
-  expect(panel.getAttribute('aria-label')).to.equal('Delete conversation?');
+  const heading = dialog.shadowRoot!.querySelector<HTMLElement>('[part~="heading"]')!;
+  const panel = dialog.shadowRoot!.querySelector<HTMLElement>('[part~="panel"]')!;
+  const headingText = heading.textContent?.trim();
+  const level = heading.getAttribute('aria-level');
+  const labelledBy = panel.getAttribute('aria-labelledby');
+  const headingId = heading.id;
+  const lightHeadings = dialog.querySelectorAll('h1, h2, h3, h4, h5, h6').length;
 
-  footerButtons(dialog)[0].click();
+  await press(footerButtons(dialog)[0]);
   await promise;
+  expect(headingText).to.equal('Delete conversation?');
+  expect(level).to.equal('2');
+  expect(labelledBy).to.equal(headingId);
+  expect(lightHeadings).to.equal(0);
+});
+
+it('forwards size, headingLevel and className to the dialog', async () => {
+  const promise = confirm({ title: 'Delete?', size: 'l', headingLevel: '4', className: ' first  second ' });
+  const dialog = getMountedDialog();
+  await dialog.updateComplete;
+  const state = {
+    size: dialog.getAttribute('size'),
+    level: dialog.shadowRoot!.querySelector('[part~="heading"]')!.getAttribute('aria-level'),
+    classes: [...dialog.classList],
+  };
+  await press(footerButtons(dialog)[0]);
+  await promise;
+  expect(state).to.deep.equal({ size: 'l', level: '4', classes: ['first', 'second'] });
+});
+
+it('keeps the description defaults below application rules', async () => {
+  const promise = confirm({ title: 'Delete?', description: 'Gone for good.', className: 'x-quiet-confirm' });
+  const dialog = getMountedDialog();
+  const style = document.createElement('style');
+  style.textContent = '.x-quiet-confirm p { color: rgb(1, 2, 3); }';
+  document.head.append(style);
+  try {
+    await dialog.updateComplete;
+    const description = dialog.querySelector('p')!;
+    expect([description.isConnected, dialog.className, getComputedStyle(description).color]).to.deep.equal([true, 'x-quiet-confirm', 'rgb(1, 2, 3)']);
+  } finally {
+    style.remove();
+    await press(footerButtons(dialog)[0]);
+    await promise;
+  }
+});
+
+it('returns focus to the opener after it settles', async () => {
+  const opener = document.createElement('button');
+  opener.textContent = 'Open';
+  document.body.append(opener);
+  try {
+    await focusByKeyboard(opener);
+    const promise = confirm({ title: 'Proceed?' });
+    const dialog = getMountedDialog();
+    await dialog.updateComplete;
+    await press(footerButtons(dialog)[1]);
+    expect(await promise).to.equal(true);
+    await removed();
+    await waitUntil(() => document.activeElement === opener, 'focus returns to the opener');
+  } finally {
+    opener.remove();
+  }
 });
 
 it('mounts exactly one dialog per call and fully cleans it up after resolving', async () => {
   const promise = confirm({ title: 'Proceed?' });
   expect(document.querySelectorAll('lr-dialog').length).to.equal(1);
 
-  footerButtons(getMountedDialog())[1].click();
+  await press(footerButtons(getMountedDialog())[1]);
   await promise;
   await removed();
 });
@@ -269,8 +334,8 @@ it('does not resolve a second time when both buttons are somehow activated', asy
   const dialog = getMountedDialog();
   const [cancelButton, confirmButton] = footerButtons(dialog);
 
-  confirmButton.click();
-  cancelButton.click(); // the dialog (and its buttons) is already removed by this point, but simulate a stray call
+  await press(confirmButton);
+  await press(cancelButton); // the dialog (and its buttons) is already removed by this point, but simulate a stray call
   dialog.close('cancel');
 
   expect(await promise).to.be.true;
@@ -284,7 +349,7 @@ it('waits for capture-phase close vetoes before settling or removing the dialog'
   const veto = (event: Event): void => event.preventDefault();
   document.addEventListener('lr-close-request', veto, { capture: true });
   try {
-    footerButtons(dialog)[1].click();
+    await press(footerButtons(dialog)[1]);
     await new Promise<void>((resolve) => queueMicrotask(resolve));
 
     expect(settled).to.be.false;
@@ -294,7 +359,7 @@ it('waits for capture-phase close vetoes before settling or removing the dialog'
     document.removeEventListener('lr-close-request', veto, { capture: true });
   }
 
-  footerButtons(dialog)[1].click();
+  await press(footerButtons(dialog)[1]);
   expect(await promise).to.be.true;
   await removed();
 });
@@ -309,63 +374,13 @@ it('resolves false instead of hanging when the dialog is removed from the DOM by
   expect(await promise).to.be.false;
 });
 
-it('gives both action buttons the design-system focus ring instead of the raw UA outline', async () => {
-  const promise = confirm({ title: 'Proceed?' });
-  const dialog = getMountedDialog();
-  await dialog.updateComplete;
-  const [cancelButton, confirmButton] = footerButtons(dialog);
-
-  try {
-    const ringColor = getComputedStyle(dialog).getPropertyValue('--lr-focus-ring-color');
-    expect(ringColor.trim(), 'the focus-ring token resolves for a light-DOM child of the dialog').to.not.equal('');
-
-    for (const button of [cancelButton, confirmButton]) {
-      button!.focus();
-      const style = getComputedStyle(button!);
-      expect(style.outlineStyle, 'a tokenized ring, not the browser default').to.equal('solid');
-      expect(Number.parseFloat(style.outlineWidth)).to.be.greaterThan(0);
-    }
-  } finally {
-    cancelButton!.click();
-    await promise;
-  }
-});
-
-it('shifts both action buttons on hover, so the pointer cursor is not the only interactivity signal', async () => {
-  const promise = confirm({ title: 'Proceed?' });
-  const dialog = getMountedDialog();
-  await dialog.updateComplete;
-  const [cancelButton, confirmButton] = footerButtons(dialog);
-
-  try {
-    await resetMouse();
-    for (const button of [cancelButton!, confirmButton!]) {
-      const resting = getComputedStyle(button).backgroundColor;
-      const box = button.getBoundingClientRect();
-      await sendMouse({
-        type: 'move',
-        position: [Math.round(box.left + box.width / 2), Math.round(box.top + box.height / 2)],
-      });
-      expect(
-        getComputedStyle(button).backgroundColor,
-        'hovering must visibly change the fill',
-      ).to.not.equal(resting);
-      await resetMouse();
-    }
-  } finally {
-    await resetMouse();
-    cancelButton!.click();
-    await promise;
-  }
-});
-
 it('is accessible while open', async () => {
   const promise = confirm({ title: 'Delete conversation?', description: 'This cannot be undone.' });
   const dialog = getMountedDialog();
   await dialog.updateComplete;
   await expect(dialog).to.be.accessible();
 
-  footerButtons(dialog)[0].click();
+  await press(footerButtons(dialog)[0]);
   await promise;
 });
 
@@ -424,7 +439,7 @@ it('waits for its own close and exit events when slotted content dismisses', asy
   const result = confirm({ title: 'Continue?' });
   const dialog = getMountedDialog();
   await dialog.updateComplete;
-  const child = dialog.querySelector('h2')!;
+  const child = footerButtons(dialog)[0];
   child.dispatchEvent(new CustomEvent('lr-close', { bubbles: true, detail: { reason: 'cancel' } }));
   child.dispatchEvent(new CustomEvent('lr-after-hide', { bubbles: true }));
   const connected = dialog.isConnected;

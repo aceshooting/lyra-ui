@@ -2,7 +2,7 @@
 
 # Component index
 
-317 custom elements, grouped by the source family they live in.
+318 custom elements, grouped by the source family they live in.
 
 **Reading one component.** Its reference file path is derived from the tag — no search needed:
 `llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`): import path, optional peers,
@@ -146,7 +146,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-navigation-menu` · lr-navigation-menu.js · `experimental` since `21.0.0` — a site-header navigation bar following the WAI-ARIA disclosure navigation pattern: a `nav` landmark holding a list of...
 - `lr-navigation-menu-item` · lr-navigation-menu-item.js · `experimental` since `21.0.0` — one entry of an `<lr-navigation-menu>` bar: a link, a disclosure trigger with a flyout panel, or a plain button.
 
-## Overlays, status & feedback — `components/overlays/` (22)
+## Overlays, status & feedback — `components/overlays/` (23)
 
 - `lr-toast` · lr-toast.js · `stable` since `4.0.0` — one placement-specific stacking toast region.
 - `lr-toast-item` · lr-toast-item.js · `stable` since `4.0.0` — a single toast notification.
@@ -170,6 +170,7 @@ Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.m
 - `lr-alert` · lr-alert.js · `stable` since `8.0.0` — a closed-by-default inline alert that can also move into the shared toast stack.
 - `lr-callout` · lr-callout.js · `stable` since `4.0.0` — an inline message surface for status, warning, and error content.
 - `lr-rating` · lr-rating.js · `stable` since `4.0.0` — a keyboard-accessible star rating control.
+- `lr-help` · lr-help.js · `experimental` since `unreleased` — a compact "?" explanation disclosure: an `<lr-icon-button>` trigger that opens an `<lr-popover>` holding the slotted explanation.
 
 ## Utilities, formatting & observers — `components/utility/` (20)
 

@@ -2,7 +2,9 @@ import { LyraDialog, type DialogCloseReason } from './dialog.class.js';
 import { defineElement, tag } from '../../../internal/prefix.js';
 import { LYRA_DEFAULT_cancel, LYRA_DEFAULT_confirm } from '../../../internal/default-strings/shared.generated.js';
 import { resolveLyraString } from '../../../internal/localization-runtime.js';
-import { activeFill, focusRing, hoverFill } from '../../../internal/interactive-control.styles.js';
+import { LyraButton } from '../../forms/button/button.class.js';
+import type { LyraSize } from '../../../internal/variants.js';
+import type { LyraHeadingLevel } from '../../../internal/heading-level.js';
 
 const CONFIRM_DEFAULT_STRINGS = Object.freeze({
   cancel: LYRA_DEFAULT_cancel,
@@ -10,69 +12,46 @@ const CONFIRM_DEFAULT_STRINGS = Object.freeze({
 });
 
 export interface ConfirmOptions {
-  /** Dialog title -- rendered as a slotted `<h2>`, which also drives the dialog's accessible name (see dialog.class.ts). */
+  /** Dialog title, rendered as the dialog's own header title (`[part~="heading"]`), which also
+   *  names the dialog. */
   title: string;
-  /** Optional supporting text rendered below the title. */
+  /** Optional supporting text rendered in the dialog body. */
   description?: string;
   /** Confirm button label. Defaults to the localized `'confirm'` message (`'Confirm'` in English). */
   confirmLabel?: string;
   /** Cancel button label. Defaults to the localized `'cancel'` message (`'Cancel'` in English). */
   cancelLabel?: string;
-  /** `'danger'` fills the confirm button with `--lr-color-danger` instead of `--lr-color-brand` -- for destructive actions. */
+  /** `'danger'` renders the confirm action as `<lr-button variant="danger">` instead of
+   *  `variant="brand"` -- for destructive actions. */
   variant?: 'neutral' | 'danger';
+  /** Width tier of the dialog, forwarded to `<lr-dialog size>`. Defaults to `'m'`. */
+  size?: LyraSize;
+  /** Semantic level of the header title, forwarded to `<lr-dialog heading-level>`. Defaults to
+   *  `'2'`; `'none'` renders visual-only title text. */
+  headingLevel?: LyraHeadingLevel;
+  /** Space-separated classes added to the transient `<lr-dialog>`, so application styles can
+   *  scope `--lr-dialog-*` and `--lr-button-*` tokens to confirmations. */
+  className?: string;
 }
 
-// Native buttons keep this focused helper leaf independent of the broader button registration.
-// Every value below is still a --lr-* token reference, never a raw literal, same requirement as a
-// component's own styles.ts. Each filled variant uses its matching on-color token so standalone
-// light/dark fallbacks and a consumer's Web Awesome theme stay paired.
-const BUTTON_BASE_STYLE =
-  'font: inherit; font-size: var(--lr-font-size-md-sm); padding: var(--lr-space-xs) var(--lr-space-m); ' +
-  'border-radius: var(--lr-theme-border-radius-button, var(--lr-radius)); ' +
-  'min-block-size: max(var(--lr-size-1-5rem), var(--_lr-density-target-min, 0px)); ' +
-  'cursor: pointer; border: var(--lr-border-width-thin) solid var(--lr-color-border);';
-const CANCEL_STYLE =
-  '--lr-confirm-button-fill: var(--lr-color-surface); ' +
-  'background: var(--lr-confirm-button-state, var(--lr-color-surface)); color: var(--lr-color-text);';
-const CONFIRM_VARIANT_STYLE: Record<'neutral' | 'danger', string> = {
-  neutral:
-    '--lr-confirm-button-fill: var(--lr-color-brand); ' +
-    'background: var(--lr-confirm-button-state, var(--lr-color-brand)); color: var(--lr-color-on-brand); ' +
-    'border-color: var(--lr-color-brand);',
-  danger:
-    '--lr-confirm-button-fill: var(--lr-color-danger); ' +
-    'background: var(--lr-confirm-button-state, var(--lr-color-danger)); color: var(--lr-color-on-danger); ' +
-    'border-color: var(--lr-color-danger);',
-};
+// Zero-specificity defaults, so any application rule (for example through `className`) wins. A
+// `<style>` element mounted inside the transient dialog is torn down with it.
+const DESCRIPTION_ATTRIBUTE = `data-${tag('confirm-description')}`;
+const ACTION_ATTRIBUTE = `data-${tag('confirm-action')}`;
+const DESCRIPTION_STYLE = `:where([${DESCRIPTION_ATTRIBUTE}]) { margin: 0; color: var(--lr-color-text-quiet); }`;
 
-// The two action buttons carry this attribute so a real stylesheet can reach them. An inline style
-// attribute cannot express a pseudo-class at all, which is why these buttons had no hover feedback
-// and no design-system focus ring while every other interactive part in the library has both.
-const CONFIRM_BUTTON_ATTRIBUTE = `data-${tag('confirm-action')}`;
-
-// The base fill stays in the inline style and the state rules shift the value of a custom property
-// that inline declaration reads: an inline declaration outranks any author rule, so a stylesheet
-// that re-declared `background` directly would simply never apply. Pressed pushes the same mix
-// further toward --lr-color-mix-partner (which follows the text colour), so both states darken on a
-// light theme and lighten on a dark one without this file knowing which is in force.
-const BUTTON_STATE_STYLE = `
-  [${CONFIRM_BUTTON_ATTRIBUTE}]:hover {
-    --lr-confirm-button-state: ${hoverFill('var(--lr-confirm-button-fill)').cssText};
-  }
-  [${CONFIRM_BUTTON_ATTRIBUTE}]:active {
-    --lr-confirm-button-state: ${activeFill('var(--lr-confirm-button-fill)').cssText};
-  }
-  [${CONFIRM_BUTTON_ATTRIBUTE}]:focus-visible {
-    ${focusRing.cssText}
-  }
-`;
-
-function createButton(label: string, style: string, onClick: () => void): HTMLButtonElement {
-  const button = document.createElement('button');
-  button.type = 'button';
+function createAction(
+  action: 'cancel' | 'confirm',
+  label: string,
+  variant: 'neutral' | 'brand' | 'danger',
+  onClick: () => void,
+): LyraButton {
+  const button = document.createElement(tag('button')) as LyraButton;
+  button.variant = variant;
+  button.appearance = action === 'cancel' ? 'outlined' : 'accent';
   button.textContent = label;
-  button.setAttribute(CONFIRM_BUTTON_ATTRIBUTE, '');
-  button.style.cssText = `${BUTTON_BASE_STYLE} ${style}`;
+  button.slot = 'footer';
+  button.setAttribute(ACTION_ATTRIBUTE, action);
   button.addEventListener('click', onClick);
   return button;
 }
@@ -94,6 +73,13 @@ function createButton(label: string, style: string, onClick: () => void): HTMLBu
  * is removed after its exit animation. Veto through `lr-hide` or
  * `lr-close-request` to keep the confirmation open.
  *
+ * Styling: the title is the dialog's own header title, so `--lr-dialog-heading-*` and
+ * `::part(heading)` apply. Both actions are `<lr-button>` elements in the `footer` slot (cancel is
+ * `appearance="outlined"`, confirm is `appearance="accent"` with `variant="brand"` or
+ * `variant="danger"`), so every `--lr-button-*` token applies; each carries
+ * `data-lr-confirm-action="cancel" | "confirm"`. The description is a `<p data-lr-confirm-description>`
+ * with zero-specificity defaults. `className` adds classes to the dialog to scope those rules.
+ *
  * @example
  * const ok = await confirm({
  *   title: 'Delete conversation?',
@@ -107,34 +93,28 @@ export function confirm(options: ConfirmOptions): Promise<boolean> {
   // The root re-exports this helper, so registration belongs to invocation rather than module
   // evaluation. This keeps a bare root import pure without making the synchronous API async.
   defineElement('dialog', LyraDialog);
-  const { title, description, confirmLabel, cancelLabel, variant } = options;
-  const resolvedVariant = variant ?? 'neutral';
+  defineElement('button', LyraButton);
+  const { title, description, confirmLabel, cancelLabel, variant, size, headingLevel, className } = options;
 
   return new Promise<boolean>((resolve) => {
     const dialog = document.createElement(tag('dialog')) as LyraDialog;
     // `<lr-dialog>` makes backdrop dismissal opt-in (matching `wa-dialog`), but this helper's
     // documented contract is that Escape, the backdrop and the cancel button all resolve `false`.
     dialog.lightDismiss = true;
-    // Cancel, Escape and the backdrop already dismiss; a header close button would need lr-icon-button.
+    // Cancel, Escape and the backdrop already dismiss, so the header carries only the title.
     dialog.withoutCloseButton = true;
-
-    // Mounted inside the transient dialog so it is torn down with it, leaving nothing behind
-    // between calls -- the same lifetime the rest of this helper's DOM has.
-    const buttonStates = document.createElement('style');
-    buttonStates.textContent = BUTTON_STATE_STYLE;
-    dialog.appendChild(buttonStates);
-
-    const heading = document.createElement('h2');
-    heading.textContent = title;
-    heading.style.cssText =
-      'margin: 0 0 var(--lr-space-s) 0; font-size: var(--lr-size-1-0625rem); font-weight: var(--lr-font-weight-semibold);';
-    dialog.appendChild(heading);
+    dialog.label = title;
+    dialog.headingLevel = headingLevel ?? '2';
+    if (size) dialog.size = size;
+    if (className) dialog.classList.add(...className.split(/\s+/).filter(Boolean));
 
     if (description) {
+      const descriptionStyle = document.createElement('style');
+      descriptionStyle.textContent = DESCRIPTION_STYLE;
       const desc = document.createElement('p');
       desc.textContent = description;
-      desc.style.cssText = 'margin: var(--lr-space-xs) 0 0 0; color: var(--lr-color-text-quiet);';
-      dialog.appendChild(desc);
+      desc.setAttribute(DESCRIPTION_ATTRIBUTE, '');
+      dialog.append(descriptionStyle, desc);
     }
 
     dialog.addEventListener('lr-close', (event) => {
@@ -144,20 +124,20 @@ export function confirm(options: ConfirmOptions): Promise<boolean> {
       if (event.target === dialog) dialog.remove();
     });
 
-    const cancelButton = createButton(
-      resolveLyraString(dialog, 'cancel', undefined, cancelLabel, undefined, CONFIRM_DEFAULT_STRINGS),
-      CANCEL_STYLE,
-      () => void dialog.close('cancel'),
+    dialog.append(
+      createAction(
+        'cancel',
+        resolveLyraString(dialog, 'cancel', undefined, cancelLabel, undefined, CONFIRM_DEFAULT_STRINGS),
+        'neutral',
+        () => void dialog.close('cancel'),
+      ),
+      createAction(
+        'confirm',
+        resolveLyraString(dialog, 'confirm', undefined, confirmLabel, undefined, CONFIRM_DEFAULT_STRINGS),
+        variant === 'danger' ? 'danger' : 'brand',
+        () => void dialog.close('confirm'),
+      ),
     );
-    cancelButton.slot = 'footer';
-    const confirmButton = createButton(
-      resolveLyraString(dialog, 'confirm', undefined, confirmLabel, undefined, CONFIRM_DEFAULT_STRINGS),
-      CONFIRM_VARIANT_STYLE[resolvedVariant],
-      () => void dialog.close('confirm'),
-    );
-    confirmButton.slot = 'footer';
-    dialog.appendChild(cancelButton);
-    dialog.appendChild(confirmButton);
 
     dialog.open = true;
     document.body.appendChild(dialog);

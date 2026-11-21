@@ -53,8 +53,11 @@ export const styles = css`
   [part='heading'] {
     max-inline-size: 100%;
     overflow-wrap: anywhere;
-    font-weight: var(--lr-font-weight-semibold);
-    color: var(--lr-color-text);
+    font-weight: var(--lr-empty-heading-font-weight, var(--lr-font-weight-semibold));
+    /* No fallback: unset, the declaration is invalid at computed-value time and font-size
+       inherits, as it did before this token existed. */
+    font-size: var(--lr-empty-heading-font-size);
+    color: var(--lr-empty-heading-color, var(--lr-color-text));
     margin: 0;
   }
   [part='heading'][hidden] {
@@ -64,16 +67,17 @@ export const styles = css`
   :host([size='xs']) [part='heading'],
   :host([size='s']) [part='heading'],
   :host([size='small']) [part='heading'] {
-    font-weight: var(--lr-font-weight-normal);
-    /* Deliberately no fallback: unset, the declaration is invalid at computed-value time and
-       font-size inherits, as it did before this token existed. A var(--lr-font-size-sm) fallback
+    font-weight: var(--lr-empty-heading-font-weight, var(--lr-font-weight-normal));
+    /* Deliberately no final fallback: unset, the declaration is invalid at computed-value time and
+       font-size inherits, as it did before these tokens existed. A var(--lr-font-size-sm) fallback
        would shrink every compact heading that has not opted in. */
-    font-size: var(--lr-empty-compact-font-size);
+    font-size: var(--lr-empty-compact-font-size, var(--lr-empty-heading-font-size));
   }
   [part='description'] {
     max-inline-size: 100%;
     overflow-wrap: anywhere;
     font-size: var(--lr-font-size-md-sm);
+    color: var(--lr-empty-description-color, var(--lr-color-text-quiet));
     margin: 0;
   }
   [part='description'][hidden] {

@@ -55,6 +55,7 @@
     "new-component-experimental": [
       "lr-chord",
       "lr-choropleth",
+      "lr-help",
       "lr-sankey",
       "lr-treemap"
     ],
@@ -37240,7 +37241,7 @@
     "current": {
       "version": "31.2.1",
       "sourceCommit": null,
-      "manifestSha256": "0352a9f6af366a2382847108cb1273a3421ea68eb35f7727d314fce1607fed69",
+      "manifestSha256": "3196faf2ebee8514b0c8fad69fad264a617f324b8a542210e07c442c3c645119",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",
@@ -37378,6 +37379,7 @@
         "lr-grounding-summary",
         "lr-handoff-divider",
         "lr-heatmap",
+        "lr-help",
         "lr-highlight-layer",
         "lr-histogram",
         "lr-html-viewer",

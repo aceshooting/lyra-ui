@@ -1,5 +1,6 @@
 export * from '../lr-alert.js';
 export * from '../lr-badge.js';
+export * from '../lr-help.js';
 export * from '../lr-tag.js';
 export * from '../lr-callout.js';
 export * from '../lr-chip-group.js';

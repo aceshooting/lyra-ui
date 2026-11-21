@@ -127,6 +127,30 @@ export const styles = css`
   [part='label'][hidden] {
     display: none;
   }
+  /* Transparent to layout until the actions slot is filled, so the label keeps its own place in
+     the stack (or on the horizontal baseline row). */
+  .label-row {
+    display: contents;
+  }
+  .label-row[data-actions] {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--lr-space-xs);
+    min-inline-size: 0;
+  }
+  .label-row[data-actions] [part='label'] {
+    flex: 1 1 auto;
+  }
+  [part='actions'] {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: var(--lr-space-2xs);
+    margin-inline-start: auto;
+  }
+  [part='actions'][hidden] {
+    display: none;
+  }
   [part='value-row'] {
     display: flex;
     flex-wrap: wrap;

@@ -974,3 +974,45 @@ it('shrinks the icon at the compact density and exposes default-density geometry
     style="--lr-empty-compact-icon-size: 11px"><span>*</span></lr-empty>`);
   expect(icon(tunedCompact).fontSize).to.equal('11px');
 });
+
+it('applies heading and description typography tokens at every density, with unset defaults intact', async () => {
+  const el = await fixture<LyraEmpty>(html`<lr-empty heading="Nothing here" description="Try again later."></lr-empty>`);
+  const heading = el.shadowRoot!.querySelector<HTMLElement>('[part="heading"]')!;
+  const description = el.shadowRoot!.querySelector<HTMLElement>('[part="description"]')!;
+  const read = () => [
+    getComputedStyle(heading).fontWeight,
+    getComputedStyle(heading).fontSize,
+    getComputedStyle(heading).color,
+    getComputedStyle(description).color,
+  ];
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  const defaults = read();
+  expect(defaults[1], 'unset heading size inherits').to.equal(getComputedStyle(base).fontSize);
+  expect(defaults[3], 'unset description keeps the quiet text colour').to.equal(getComputedStyle(base).color);
+  el.size = 's';
+  await el.updateComplete;
+  const compactDefaults = read();
+  expect(Number(compactDefaults[0])).to.be.lessThan(Number(defaults[0]));
+
+  el.style.setProperty('--lr-empty-heading-font-weight', '800');
+  el.style.setProperty('--lr-empty-heading-font-size', '23px');
+  el.style.setProperty('--lr-empty-heading-color', 'rgb(1, 2, 3)');
+  el.style.setProperty('--lr-empty-description-color', 'rgb(4, 5, 6)');
+  const themed = ['800', '23px', 'rgb(1, 2, 3)', 'rgb(4, 5, 6)'];
+  expect(read(), 'compact density').to.deep.equal(themed);
+  el.size = 'm';
+  await el.updateComplete;
+  expect(read(), 'default density').to.deep.equal(themed);
+  el.style.setProperty('--lr-empty-compact-font-size', '11px');
+  el.size = 's';
+  await el.updateComplete;
+  expect(read()[1], 'the compact size token still wins at the compact density').to.equal('11px');
+
+  for (const name of ['heading-font-weight', 'heading-font-size', 'heading-color', 'description-color', 'compact-font-size']) {
+    el.style.removeProperty(`--lr-empty-${name}`);
+  }
+  expect(read()).to.deep.equal(compactDefaults);
+  el.size = 'm';
+  await el.updateComplete;
+  expect(read()).to.deep.equal(defaults);
+});

@@ -447,7 +447,12 @@ the existing `flex-start` cross-axis and `start` text alignment, and `center` ce
 `--lr-empty-compact-gap` (default `--lr-space-2xs` — gap between the icon, heading, and description
 at the compact density), `--lr-empty-compact-font-size` (compact density only; unset by default with
 **no fallback value** — the compact heading keeps its ordinary inherited font size until a
-consumer explicitly sets this token), plus shared tokens (`--lr-space-xs/-s/-l`,
+consumer explicitly sets this token; it falls back to `--lr-empty-heading-font-size`),
+`--lr-empty-heading-font-size` (every density; unset with no fallback, so the heading inherits),
+`--lr-empty-heading-font-weight` (every density; unset, semibold at the default density and
+`var(--lr-font-weight-normal)` at the compact density), `--lr-empty-heading-color` (default
+`var(--lr-color-text)`) and `--lr-empty-description-color` (default `var(--lr-color-text-quiet)`),
+all applied at every `size` so a quieter empty state needs no `::part()` rule, plus shared tokens (`--lr-space-xs/-s/-l`,
 `--lr-color-text-quiet/-border/-text`).
 
 **Optional peer deps:** none.
@@ -661,7 +666,11 @@ panel once `--lr-dialog-height` is set (otherwise the panel is content-sized, so
 no-op); a drawer's panel is unconditionally a definite size for every placement, so without this
 override `body` would always stretch and push `footer` to the panel's far edge. `<lr-drawer>`'s own
 `[part="body"]` rule restores the natural content size instead, so `footer` follows immediately
-after a short body. The drawer's own
+after a short body. Set the inherited `fill-body` attribute to opt back in: `body` then grows to the
+panel and becomes a column flex container whose slotted children fill it. The inherited
+`--lr-dialog-heading-font-size`, `--lr-dialog-heading-font-weight` and
+`--lr-dialog-heading-font-family` tokens style the drawer's header title exactly as on
+`<lr-dialog>`. The drawer's own
 size/width/height tokens take precedence
 for its panel, and only the animation _name_ is overridden, so `--lr-dialog-panel-duration` retunes the
 slide too and the reduced-motion flattening of the shared `--lr-duration-*` tokens still reaches it.
@@ -716,6 +725,9 @@ read, and neither is deprecated.
 - `withoutHeader: boolean = false` (attribute `without-header`, reflected) —
   Web Awesome's spelling (`wa-dialog`'s `without-header`) for the same header suppression. Both
   names are current upstream spellings, both are read, and neither is deprecated or removable
+- `fillBody: boolean = false` (attribute `fill-body`, reflected) — makes `[part="body"]` a column
+  flex container whose slotted children share the block space `--lr-dialog-height` (or a drawer
+  panel) leaves it.
 - `withFooter: boolean = false` (attribute `with-footer`, reflected) — keeps the footer wrapper
   rendered as an SSR/hydration presence hint even before assigned slot content is observable
 - `size: LyraSize = 'm'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
@@ -871,7 +883,15 @@ shrink-wraps to content on the block axis; always capped at
 `flex: 1 1 auto` is what actually gives slotted content a definite, fillable block size:
 `[part="header"]` and `[part="footer"]` keep their natural size and only `[part="body"]` grows or
 shrinks into the remaining space, matching `--lr-dialog-width`'s pairing with `--lr-dialog-max-width`
-on the other axis. `--lr-dialog-spacing` (default `var(--lr-space-l)` —
+on the other axis. Add the `fill-body` attribute to make `[part="body"]` a column flex container
+whose slotted children grow into that remaining space (`min-block-size: 0`), so an expanded chart,
+preview or editor fills the dialog without a `::part(body)` rule; light-DOM rules on a slotted child
+still win, so `flex: none` keeps a heading or toolbar at its natural size. On `<lr-drawer>`,
+`fill-body` also restores the body growth the drawer otherwise opts out of.
+`--lr-dialog-heading-font-size` (default `inherit`), `--lr-dialog-heading-font-weight` (default
+`var(--lr-font-weight-semibold)`) and `--lr-dialog-heading-font-family` (default
+`var(--lr-font-heading)`) style the visible header title (`[part~="heading"]`), including
+`confirm()`'s. `--lr-dialog-spacing` (default `var(--lr-space-l)` —
 the padding inside `[part="body"]` and the _inline_ padding of the header and footer rows),
 `--lr-dialog-spacing-block` (default `var(--lr-space-m)` — the _block_ padding of the header and
 footer rows, which are tighter than the body by default), `--lr-dialog-panel-duration` (default
@@ -1018,7 +1038,7 @@ if (ok) deleteConversation();
 ```
 
 `confirm(options: ConfirmOptions): Promise<boolean>` where
-`ConfirmOptions = { title: string; description?: string; confirmLabel?: string /* = 'Confirm' */; cancelLabel?: string /* = 'Cancel' */; variant?: 'neutral' | 'danger' /* = 'neutral' */ }`.
+`ConfirmOptions = { title: string; description?: string; confirmLabel?: string /* = 'Confirm' */; cancelLabel?: string /* = 'Cancel' */; variant?: 'neutral' | 'danger' /* = 'neutral' */; size?: LyraSize /* = 'm' */; headingLevel?: LyraHeadingLevel /* = '2' */; className?: string }`.
 
 Resolves `true` only when the confirm button is pressed — Escape, a backdrop click, and the cancel
 button all resolve `false`. It sets `lightDismiss = true` on its transient dialog explicitly, so the
@@ -1027,18 +1047,21 @@ transient `<lr-dialog>` on `document.body` for the duration
 of the call and removes it after its exit animation, rather than reusing a persistent page-level region
 (contrast `lr-toast`'s `toaster.ts`). It remains interactive above an already-open native modal through
 `lr-dialog`'s native modal carrier; accepting or dismissing the confirmation leaves that modal open. Concurrent calls are distinct dialogs in the shared overlay
-stack, each tied to its own returned promise. `title` becomes a direct light-DOM `<h2>`, which per `<lr-dialog>`'s
-own heading-detection also drives the dialog's accessible name; `description`, if provided, becomes
-a direct light-DOM `<p>`. `variant: 'danger'` fills the confirm button with `--lr-color-danger`
-instead of `--lr-color-brand`, for destructive actions. Confirm/cancel actions deliberately use native
-inline-styled `<button>` elements so this helper does not register or import the broader button
-component; every color value is still a `--lr-*` token reference, never a raw literal. They carry the same interaction
-states as every other control in the library: a hover/pressed fill mixed toward
-`--lr-color-mix-partner` by `--lr-color-mix-hover`/`--lr-color-mix-active`, and a
-`--lr-focus-ring-width`/`--lr-focus-ring-color`/`--lr-focus-ring-offset` `:focus-visible` ring. An
-inline `style` attribute cannot express a pseudo-class, so those rules ship in a small `<style>`
-element mounted inside the transient dialog (and removed with it), targeting the buttons through
-their `data-lr-confirm-action` attribute.
+stack, each tied to its own returned promise. `title` becomes the dialog's own header title
+(`label`), rendered in `[part~="heading"]` at `headingLevel` and naming the dialog; `size` sets the
+dialog's width tier and `className` adds classes to the transient `<lr-dialog>`. `description`, if
+provided, becomes a direct light-DOM `<p data-lr-confirm-description>` whose quiet-colour and
+zero-margin defaults have zero specificity, so any application rule wins.
+
+**Styling surface.** Both actions are `<lr-button>` elements in the `footer` slot, so every
+`--lr-button-*` token, look and density applies: cancel is `variant="neutral" appearance="outlined"`,
+confirm is `appearance="accent"` with `variant="brand"`, or `variant="danger"` for
+`variant: 'danger'`. Each carries `data-lr-confirm-action="cancel" | "confirm"`. Scope overrides
+with `className`:
+
+```css
+.app-confirm { --lr-dialog-heading-font-size: var(--lr-font-size-lg); --lr-button-radius: var(--lr-radius-pill); }
+```
 
 **Known gotchas:**
 
@@ -1053,9 +1076,9 @@ their `data-lr-confirm-action` attribute.
   `--lr-color-<variant>-on-loud`), which in turn reads the matching `--lr-theme-color-*` hook and
   falls back to the shared neutral ramp — so retheming the grid retints the confirm button with no
   `::part()` rule, in light and dark alike.
-- Importing `confirm` is side-effect free and does not register `<lr-dialog>`. Invoking the helper
-  synchronously registers exactly the dialog class it creates before mounting the transient
-  element; consumers do not need a separate registration import for helper-created dialogs.
+- Importing `confirm` is side-effect free and does not register `<lr-dialog>` or `<lr-button>`.
+  Invoking the helper synchronously registers both classes before mounting the transient element;
+  consumers do not need a separate registration import for helper-created dialogs.
 
 ---
 
@@ -2695,6 +2718,21 @@ other author-supplied role remain authoritative across updates, hydration, and r
   mirroring). Both stop outright — not merely shorten — under `prefers-reduced-motion: reduce`.
   The default does not materialize an attribute; an explicit `attention="none"` is authoritative
   and suppresses the `pulse` shorthand.
+- `wrap: boolean = false` (reflected) — lets a long label wrap onto several lines (`white-space:
+  normal`, `overflow-wrap: anywhere`) instead of truncating with an ellipsis, like `lr-button`'s and
+  `lr-chip`'s `wrap`.
+- `dot: boolean = false` (reflected) — renders a decorative leading status dot (`[part="dot"]`,
+  `aria-hidden`) in the variant's text colour (the on-solid colour for `appearance="accent"`),
+  sized by `--lr-badge-dot-size` (default `var(--lr-size-0-5rem)`) and recoloured by
+  `--lr-badge-dot-color`. `attention="pulse"` pulses the dot instead of the surface, and forced
+  colors paint it `CanvasText`. A dot-only badge (no text) hides `[part="content"]` and must be
+  named: with `aria-label` or `aria-labelledby` the host gets `role="img"` unless the author set a
+  role; without a name a development warning reports that colour would be the only cue.
+
+  ```html
+  <lr-badge dot variant="success">Healthy</lr-badge>
+  <lr-badge dot variant="danger" appearance="plain" aria-label="Down"></lr-badge>
+  ```
 - `pulse: boolean = false` (reflected) — upstream-compatible shorthand for the pulse attention
   treatment while the `attention` attribute is omitted. Any explicit attention value wins. Lyra's
   intentional `variant="neutral"` and `appearance="filled-outlined"` defaults remain unchanged
@@ -2744,7 +2782,7 @@ while its slot is empty, and is seeded from the light-DOM children before the fi
 declarative content never flashes hidden for a frame.
 
 **CSS parts:** `base` and `badge` are aliases on the same badge/tag surface; `start` and `end` (the slot wrappers, hidden entirely
-while empty), `content` (the wrapper around the default slot — this is the part that truncates with
+while empty), `dot` (the decorative status dot, rendered only while `dot` is set), `content` (the wrapper around the default slot — this is the part that truncates with
 an ellipsis, deliberately not `base`, so the tag's oversized remove hit target can overhang the
 compact surface without being clipped), and `remove-button` (`lr-tag` only, rendered only while
 `withRemove` / `removable`). The button also carries Shoelace's `remove-button__base` alias, so
@@ -3342,6 +3380,9 @@ These named interfaces and helper signatures are available to typed integrations
     confirmLabel?: string;
     cancelLabel?: string;
     variant?: 'neutral' | 'danger';
+    size?: LyraSize;
+    headingLevel?: LyraHeadingLevel;
+    className?: string;
   }`
 
 - **`components-overlays-dialog-dialog-contracts`** — Supporting data types and helpers for this component family.
@@ -3406,3 +3447,43 @@ These named interfaces and helper signatures are available to typed integrations
     item: Promise<LyraToastItem>;
     dismiss: () => void;
   }`
+
+## `lr-help`
+
+A compact "?" explanation disclosure: an `<lr-icon-button>` trigger that opens an `<lr-popover>`
+holding the slotted explanation. Use it beside headings and table headers, in `<lr-stat>`'s
+`actions` slot, or in `<lr-card>`'s `header-actions` slot, instead of hand-rolling a focus-ring
+button around a popover.
+
+**Properties:**
+
+- `label: string = ''` — accessible name of the trigger. Empty uses the localized `details`
+  message (`'Details'` in English).
+- `placement: Placement = 'top'` (reflected) — preferred side of the explanation; flips when space
+  is short and mirrors under RTL.
+
+**Behavior:** a click or Enter/Space opens the explanation and pins it until a second activation,
+Escape, or a click outside. Keyboard focus alone reveals it without moving focus (tooltip rules);
+pointer focus does not. Escape closes it through the shared overlay manager and keeps focus on the
+trigger.
+
+**Slots:** default — the explanation.
+
+**CSS parts:** `trigger` (the `<lr-icon-button>` host), `trigger-control` (its native button),
+`popover` (the `<lr-popover>` host), `popup` and `content` (forwarded from the popover).
+
+**CSS custom properties:** `--lr-help-icon-size` (default `var(--lr-size-1em)`) and
+`--lr-help-max-inline-size` (default `var(--lr-size-20rem)`); the trigger also reads every
+`--lr-icon-button-*` token.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/lr-help.js';
+</script>
+
+<h3>Monthly active users <lr-help label="About monthly active users">Distinct accounts that signed in during the last 30 days.</lr-help></h3>
+
+<lr-stat label="Uptime" value="99.95" unit="%">
+  <lr-help slot="actions">Share of one-minute probes that succeeded this month.</lr-help>
+</lr-stat>
+```

@@ -5568,6 +5568,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-grounding-summary': LyraGroundingSummaryReactProps;
   'lr-handoff-divider': LyraHandoffDividerReactProps;
   'lr-heatmap': LyraHeatmapReactProps;
+  'lr-help': LyraHelpReactProps;
   'lr-highlight-layer': LyraHighlightLayerReactProps;
   'lr-histogram': LyraHistogramReactProps;
   'lr-html-viewer': LyraHtmlViewerReactProps;
@@ -6014,6 +6015,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-grounding-summary': LyraComponentTypeMap['lr-grounding-summary']['element'];
   'lr-handoff-divider': LyraComponentTypeMap['lr-handoff-divider']['element'];
   'lr-heatmap': LyraComponentTypeMap['lr-heatmap']['element'];
+  'lr-help': LyraComponentTypeMap['lr-help']['element'];
   'lr-highlight-layer': LyraComponentTypeMap['lr-highlight-layer']['element'];
   'lr-histogram': LyraComponentTypeMap['lr-histogram']['element'];
   'lr-html-viewer': LyraComponentTypeMap['lr-html-viewer']['element'];
@@ -6331,6 +6333,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-grounding-summary': LyraGroundingSummarySvelteProps;
   'lr-handoff-divider': LyraHandoffDividerSvelteProps;
   'lr-heatmap': LyraHeatmapSvelteProps;
+  'lr-help': LyraHelpSvelteProps;
   'lr-highlight-layer': LyraHighlightLayerSvelteProps;
   'lr-histogram': LyraHistogramSvelteProps;
   'lr-html-viewer': LyraHtmlViewerSvelteProps;
@@ -6795,6 +6798,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-grounding-summary': LyraGroundingSummaryVueProps;
   'lr-handoff-divider': LyraHandoffDividerVueProps;
   'lr-heatmap': LyraHeatmapVueProps;
+  'lr-help': LyraHelpVueProps;
   'lr-highlight-layer': LyraHighlightLayerVueProps;
   'lr-histogram': LyraHistogramVueProps;
   'lr-html-viewer': LyraHtmlViewerVueProps;

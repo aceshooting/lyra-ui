@@ -257,7 +257,13 @@ export interface LyraDialogEventMap {
  *   always capped at `100%` (the viewport) like
  *   every other panel dimension. With it set, `body`'s own `flex: 1 1 auto` is what actually gives
  *   slotted content a definite, fillable block size -- `header` and `footer` keep their natural
- *   size and only `body` grows or shrinks into the remaining space.
+ *   size and only `body` grows or shrinks into the remaining space. Add `fill-body` to make `body` a
+ *   column flex container whose slotted children fill that space.
+ * @cssprop [--lr-dialog-heading-font-family=var(--lr-font-heading)] - Font family of the visible
+ *   header title.
+ * @cssprop [--lr-dialog-heading-font-size=inherit] - Font size of the visible header title.
+ * @cssprop [--lr-dialog-heading-font-weight=var(--lr-font-weight-semibold)] - Font weight of the
+ *   visible header title.
  * @cssprop [--lr-dialog-spacing=var(--lr-space-l)] - Padding inside the body, and the inline
  *   padding of the header and footer rows.
  * @cssprop [--lr-dialog-spacing-block=var(--lr-space-m)] - Block padding of the header and footer
@@ -348,6 +354,13 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
    *  Web Awesome's `withoutHeader` above so a consumer arriving from either upstream finds their
    *  own attribute working. Neither is deprecated. */
   @property({ type: Boolean, attribute: 'no-header', reflect: true }) noHeader = false;
+
+  /** Makes the `body` part a column flex container whose slotted children grow into the remaining
+   *  block space, so a chart, preview or editor fills a dialog sized with `--lr-dialog-height` (or
+   *  an `lr-drawer` panel) without `::part(body)` overrides. Every default-slot element shares that
+   *  space; wrap several in one element, or set `flex: none` on the ones that should keep their
+   *  natural size. */
+  @property({ type: Boolean, attribute: 'fill-body', reflect: true }) fillBody = false;
 
   /** SSR hint that keeps the footer wrapper rendered before slot assignment is observable. */
   @property({ type: Boolean, attribute: 'with-footer', reflect: true }) withFooter = false;

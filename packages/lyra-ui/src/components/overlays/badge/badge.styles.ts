@@ -1,5 +1,6 @@
 import { css } from 'lit';
 import { blockHost } from '../../../internal/layout-fragments.styles.js';
+import { forcedColorsDivider } from '../../../internal/forced-colors.styles.js';
 
 export const styles = css`
   :host {
@@ -52,6 +53,8 @@ export const styles = css`
     );
     --_lr-badge-pulse-spread: var(--lr-size-0-25rem);
     --_lr-badge-bounce-distance: var(--lr-size-0-1875rem);
+    /* The status dot reads the variant's text colour, so it matches the label beside it. */
+    --_lr-badge-dot-color: var(--lr-badge-ink, var(--_lr-badge-ink));
   }
 
   :host([pill]) {
@@ -114,6 +117,26 @@ export const styles = css`
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  /* Opt-in multi-line label, the same four declarations as lr-button's and lr-chip's wrap. */
+  :host([wrap]) [part='content'] {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  [part='content'][hidden] {
+    display: none;
+  }
+
+  [part='dot'] {
+    flex: none;
+    inline-size: var(--lr-badge-dot-size, var(--lr-size-0-5rem));
+    block-size: var(--lr-badge-dot-size, var(--lr-size-0-5rem));
+    border-radius: var(--lr-radius-pill);
+    /* currentColor is the dot colour, so the shared pulse ring below takes the dot's colour. */
+    color: var(--lr-badge-dot-color, var(--_lr-badge-dot-color));
+    background: currentColor;
+  }
 
   /* --- variant: the palette ----------------------------------------------------------------
      One rule for all four non-neutral variants: the shared variants sheet already re-points
@@ -147,6 +170,7 @@ export const styles = css`
     --_lr-badge-text: var(--lr-badge-ink, var(--_lr-badge-ink));
   }
   :host([appearance='accent']) {
+    --_lr-badge-dot-color: var(--lr-badge-on-solid, var(--_lr-badge-on-solid));
     --_lr-badge-fill: var(--lr-badge-solid, var(--_lr-badge-solid));
     --_lr-badge-stroke: var(--lr-badge-solid, var(--_lr-badge-solid));
     --_lr-badge-text: var(--lr-badge-on-solid, var(--_lr-badge-on-solid));
@@ -190,6 +214,16 @@ export const styles = css`
     animation: var(--_lr-motion-animation, lr-badge-pulse var(--lr-badge-attention-duration, var(--_lr-badge-attention-duration)) var(--lr-badge-attention-easing, var(--_lr-badge-attention-easing))
       infinite);
   }
+  /* A dot badge pulses the dot itself rather than the whole surface. */
+  :host([dot][pulse]:not([attention])) [part~='base'],
+  :host([dot][attention='pulse']) [part~='base'] {
+    animation: none;
+  }
+  :host([dot][pulse]:not([attention])) [part='dot'],
+  :host([dot][attention='pulse']) [part='dot'] {
+    animation: var(--_lr-motion-animation, lr-badge-pulse var(--lr-badge-attention-duration, var(--_lr-badge-attention-duration)) var(--lr-badge-attention-easing, var(--_lr-badge-attention-easing))
+      infinite);
+  }
   :host([attention='bounce']) [part~='base'] {
     animation: var(--_lr-motion-animation, lr-badge-bounce var(--lr-badge-attention-duration, var(--_lr-badge-attention-duration)) var(--lr-badge-attention-easing, var(--_lr-badge-attention-easing))
       infinite);
@@ -225,8 +259,12 @@ export const styles = css`
      shortening. The shared token layer already clamps every animation's duration and iteration
      count under this query; naming animation itself keeps the badge provably still. */
   @media (prefers-reduced-motion: reduce) {
-    [part~='base'] {
+    [part~='base'],
+    [part='dot'] {
       animation: none !important;
     }
   }
+
+  /* Forced colors replace the background the dot is painted with; a system colour keeps it. */
+  ${forcedColorsDivider("[part='dot']")}
 `;

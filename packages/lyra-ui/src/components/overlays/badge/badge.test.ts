@@ -2,6 +2,8 @@ import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import '../../lr-badge.js';
 import '../../lr-tag.js';
 import type { LyraBadge } from '../../lr-badge.js';
+import { setForcedColors, setReducedMotion } from '../../../../test/wtr-media.js';
+import { captureDevWarnings, expectDevWarning, rearmDevWarnings } from '../../../../test/expected-dev-warnings.js';
 
 class BadgeStartTextForwarder extends HTMLElement {
   constructor() {
@@ -661,5 +663,104 @@ it('hides decorative start content from assistive technology while end stays exp
     expect(getComputedStyle(start).display, tag).to.not.equal('none');
     expect(end.hasAttribute('aria-hidden'), tag).to.equal(false);
     expect(end.inert, tag).to.equal(false);
+  }
+});
+
+// -- wrap and status dot ---------------------------------------------------------------------
+
+const LONG_LABEL = 'A capability label long enough to need several lines in a narrow column';
+
+it('wraps a long label onto several lines only while wrap is set', async () => {
+  const wrapper = await fixture<HTMLDivElement>(html`<div style="inline-size: 120px">
+    <lr-badge>${LONG_LABEL}</lr-badge><lr-badge wrap>${LONG_LABEL}</lr-badge>
+  </div>`);
+  const [single, wrapped] = [...wrapper.querySelectorAll<LyraBadge>('lr-badge')];
+  await Promise.all([single!.updateComplete, wrapped!.updateComplete]);
+  const content = (el: LyraBadge) => el.shadowRoot!.querySelector<HTMLElement>('[part="content"]')!;
+  expect(getComputedStyle(content(single!)).textOverflow, 'unset regression').to.equal('ellipsis');
+  expect(getComputedStyle(content(wrapped!)).whiteSpace).to.equal('normal');
+  expect(wrapped!.getBoundingClientRect().height).to.be.greaterThan(single!.getBoundingClientRect().height * 1.5);
+  expect(wrapped!.getBoundingClientRect().width).to.be.at.most(120.5);
+  expect(wrapped!.getAttribute('wrap')).to.equal('');
+});
+
+it('renders a decorative leading dot in the variant text colour only while dot is set', async () => {
+  const el = await fixture<LyraBadge>(html`<lr-badge variant="success">Healthy</lr-badge>`);
+  expect(el.shadowRoot!.querySelector('[part="dot"]') === null, 'unset regression').to.equal(true);
+  el.dot = true;
+  await el.updateComplete;
+  const dot = el.shadowRoot!.querySelector<HTMLElement>('[part="dot"]')!;
+  const paint = getComputedStyle(dot);
+  expect(dot.getAttribute('aria-hidden')).to.equal('true');
+  expect(paint.backgroundColor).to.equal(getComputedStyle(base(el)).color);
+  expect(paint.backgroundColor).to.not.equal(TRANSPARENT);
+  expect(dot.getBoundingClientRect().width).to.be.greaterThan(0);
+  expect(el.hasAttribute('role'), 'a dot beside text needs no role').to.equal(false);
+  el.appearance = 'accent';
+  await el.updateComplete;
+  expect(getComputedStyle(dot).backgroundColor, 'accent dot stays visible on the solid fill')
+    .to.not.equal(getComputedStyle(base(el)).backgroundColor);
+  await expect(el).to.be.accessible();
+});
+
+it('pulses the dot rather than the surface and stops under reduced motion', async () => {
+  const el = await fixture<LyraBadge>(html`<lr-badge dot attention="pulse" variant="danger">Down</lr-badge>`);
+  const dot = el.shadowRoot!.querySelector<HTMLElement>('[part="dot"]')!;
+  expect(getComputedStyle(base(el)).animationName).to.equal('none');
+  const pulsing = getComputedStyle(dot).animationName;
+  await setReducedMotion('reduce');
+  try {
+    expect(getComputedStyle(dot).animationName).to.equal('none');
+  } finally {
+    await setReducedMotion('no-preference');
+  }
+  expect(pulsing).to.not.equal('none');
+});
+
+it('names a dot-only badge through role="img" and warns when it has no name', async () => {
+  rearmDevWarnings('lr-badge:unnamed-dot');
+  let el!: LyraBadge;
+  const warnings = await captureDevWarnings(async () => {
+    el = await fixture<LyraBadge>(html`<lr-badge dot variant="warning"></lr-badge>`);
+  });
+  expect(warnings.filter((message) => message.includes('<lr-badge dot>')).length).to.equal(1);
+  expect(el.shadowRoot!.querySelector<HTMLElement>('[part="content"]')!.hidden).to.equal(true);
+  expect(el.hasAttribute('role')).to.equal(false);
+
+  el.setAttribute('aria-label', 'Degraded');
+  await el.updateComplete;
+  expect(el.getAttribute('role')).to.equal('img');
+  await expect(el).to.be.accessible();
+
+  el.textContent = 'Degraded';
+  await waitUntil(() => !el.hasAttribute('role'), 'text content releases the managed role');
+  el.textContent = '';
+  await waitUntil(() => el.getAttribute('role') === 'img');
+  expectDevWarning('lr-badge:unnamed-dot');
+  el.removeAttribute('aria-label');
+  await el.updateComplete;
+  expect(el.hasAttribute('role')).to.equal(false);
+
+  const authored = await fixture<LyraBadge>(html`<lr-badge dot role="status" aria-label="Online"></lr-badge>`);
+  expect(authored.getAttribute('role'), 'an authored role is preserved').to.equal('status');
+  authored.removeAttribute('aria-label');
+  await authored.updateComplete;
+  expect(authored.getAttribute('role')).to.equal('status');
+});
+
+it('keeps the dot visible under forced colors', async () => {
+  const el = await fixture<LyraBadge>(html`<lr-badge dot variant="success">Up</lr-badge>`);
+  const dot = el.shadowRoot!.querySelector<HTMLElement>('[part="dot"]')!;
+  try {
+    await setForcedColors('active');
+  } catch {
+    return;
+  }
+  try {
+    if (!matchMedia('(forced-colors: active)').matches) return;
+    expect(getComputedStyle(dot).backgroundColor).to.not.equal(TRANSPARENT);
+    expect(getComputedStyle(dot).backgroundColor).to.not.equal(getComputedStyle(base(el)).backgroundColor);
+  } finally {
+    await setForcedColors('none');
   }
 });

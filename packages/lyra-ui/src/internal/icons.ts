@@ -285,6 +285,11 @@ export function searchIcon(): SVGTemplateResult {
   return iconFrame(svg`<path d=${SEARCH_ICON_PATH}></path>`);
 }
 
+/** A question mark in a circle, for a help or explanation disclosure. */
+export function helpIcon(): SVGTemplateResult {
+  return iconFrame(svg`<circle cx="12" cy="12" r="9"></circle><path d="M9.6 9.3a2.5 2.5 0 0 1 4.85.85c0 1.65-2.45 2.2-2.45 3.6"></path><path d="M12 16.9v.01"></path>`);
+}
+
 /** An exclamation mark in a circle: a failure state legible without relying on colour. */
 export function errorCircleIcon(): SVGTemplateResult {
   return iconFrame(svg`<circle cx="12" cy="12" r="9"></circle><path d="M12 7.25v5.5"></path><path d="M12 16.4v.01"></path>`);

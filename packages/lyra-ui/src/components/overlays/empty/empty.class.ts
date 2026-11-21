@@ -60,8 +60,17 @@ import { styles } from './empty.styles.js';
  * @cssprop [--lr-empty-compact-gap=var(--lr-space-2xs)] - Gap between the icon, title, and
  * description at the compact density.
  * @cssprop --lr-empty-compact-font-size - Heading font size used at the compact density. Unset by
- * default (no fallback), so the heading keeps its ordinary inherited font size until a consumer
- * opts in.
+ * default, so it falls back to `--lr-empty-heading-font-size` and then to the ordinary inherited
+ * font size.
+ * @cssprop --lr-empty-heading-font-size - Heading font size at every density. Unset by default (no
+ * fallback), so the heading inherits its font size; `--lr-empty-compact-font-size` wins at the
+ * compact density.
+ * @cssprop [--lr-empty-heading-font-weight=var(--lr-font-weight-semibold)] - Heading font weight at
+ * every density. Unset, the default density is semibold and the compact density (`size="s"` and
+ * below) is `var(--lr-font-weight-normal)`.
+ * @cssprop [--lr-empty-heading-color=var(--lr-color-text)] - Heading colour at every density.
+ * @cssprop [--lr-empty-description-color=var(--lr-color-text-quiet)] - Description colour at every
+ * density.
  * @status stable
  * @since 4.0.0
  */

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -58,7 +58,12 @@ the existing `flex-start` cross-axis and `start` text alignment, and `center` ce
 `--lr-empty-compact-gap` (default `--lr-space-2xs` — gap between the icon, heading, and description
 at the compact density), `--lr-empty-compact-font-size` (compact density only; unset by default with
 **no fallback value** — the compact heading keeps its ordinary inherited font size until a
-consumer explicitly sets this token), plus shared tokens (`--lr-space-xs/-s/-l`,
+consumer explicitly sets this token; it falls back to `--lr-empty-heading-font-size`),
+`--lr-empty-heading-font-size` (every density; unset with no fallback, so the heading inherits),
+`--lr-empty-heading-font-weight` (every density; unset, semibold at the default density and
+`var(--lr-font-weight-normal)` at the compact density), `--lr-empty-heading-color` (default
+`var(--lr-color-text)`) and `--lr-empty-description-color` (default `var(--lr-color-text-quiet)`),
+all applied at every `size` so a quieter empty state needs no `::part()` rule, plus shared tokens (`--lr-space-xs/-s/-l`,
 `--lr-color-text-quiet/-border/-text`).
 
 **Optional peer deps:** none.

@@ -3,6 +3,7 @@ import { fixture, expect, html, nextFrame, oneEvent, waitUntil } from '@open-wc/
 import { sendKeys } from '@web/test-runner-commands';
 import '../../lr-dialog.js';
 import '../../lr-input.js';
+import '../../lr-drawer.js';
 import type { LyraDialog } from '../../lr-dialog.js';
 import { setAnimation } from '../../../utilities/animation-registry.js';
 import { toRgba } from '../../../../test/color-contrast.js';
@@ -2394,4 +2395,71 @@ it('pairs a translucent default panel with a backdrop blur, and paints Solid opa
   expect(toRgba(getComputedStyle(panel).backgroundColor)[3], 'Solid panel is opaque').to.equal(255);
   expect(blurOf(), 'Solid panel has no backdrop blur').to.equal('none');
   el.close('api');
+});
+
+it('styles the header title through the heading typography tokens', async () => {
+  const el = await fixture<LyraDialog>(html`
+    <lr-dialog open label="Title" style="--lr-duration-base: 0ms">Body</lr-dialog>
+  `);
+  try {
+    await el.updateComplete;
+    const heading = el.shadowRoot!.querySelector<HTMLElement>('[part~="heading"]')!;
+    const resting = getComputedStyle(heading);
+    const defaults = [resting.fontWeight, resting.fontSize, resting.fontFamily];
+    expect(defaults[1], 'unset size inherits the host size').to.equal(getComputedStyle(el).fontSize);
+    el.style.setProperty('--lr-dialog-heading-font-weight', '300');
+    el.style.setProperty('--lr-dialog-heading-font-size', '29px');
+    el.style.setProperty('--lr-dialog-heading-font-family', 'serif');
+    const themed = getComputedStyle(heading);
+    expect([themed.fontWeight, themed.fontSize, themed.fontFamily]).to.deep.equal(['300', '29px', 'serif']);
+    for (const name of ['weight', 'size', 'family']) el.style.removeProperty(`--lr-dialog-heading-font-${name}`);
+    const restored = getComputedStyle(heading);
+    expect([restored.fontWeight, restored.fontSize, restored.fontFamily]).to.deep.equal(defaults);
+  } finally {
+    await el.close('api');
+  }
+});
+
+it('fill-body lets a slotted child fill the body left by --lr-dialog-height; the default body stays a block', async () => {
+  const el = await fixture<LyraDialog>(html`
+    <lr-dialog open label="Chart" style="--lr-dialog-height: 400px; --lr-duration-base: 0ms">
+      <div class="fill"></div>
+      <div slot="footer"><button type="button">Close</button></div>
+    </lr-dialog>
+  `);
+  try {
+    await el.updateComplete;
+    const body = el.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
+    const child = el.querySelector<HTMLElement>('.fill')!;
+    expect(getComputedStyle(body).display, 'unset regression').to.equal('block');
+    expect(child.getBoundingClientRect().height).to.equal(0);
+    expect(el.hasAttribute('fill-body')).to.equal(false);
+
+    el.fillBody = true;
+    await el.updateComplete;
+    expect(el.getAttribute('fill-body')).to.equal('');
+    const bodyStyle = getComputedStyle(body);
+    expect([bodyStyle.display, bodyStyle.flexDirection]).to.deep.equal(['flex', 'column']);
+    const contentHeight = body.clientHeight - parseFloat(bodyStyle.paddingTop) - parseFloat(bodyStyle.paddingBottom);
+    expect(contentHeight).to.be.greaterThan(200);
+    expect(child.getBoundingClientRect().height).to.be.closeTo(contentHeight, 1);
+  } finally {
+    await el.close('api');
+  }
+});
+
+it('fill-body restores body growth inside a drawer panel', async () => {
+  const el = await fixture<LyraDialog>(html`
+    <lr-drawer open fill-body label="Preview" style="--lr-duration-base: 0ms">
+      <div class="fill"></div>
+    </lr-drawer>
+  `);
+  try {
+    await el.updateComplete;
+    const panel = el.shadowRoot!.querySelector<HTMLElement>('[part~="panel"]')!;
+    const child = el.querySelector<HTMLElement>('.fill')!;
+    expect(child.getBoundingClientRect().height).to.be.greaterThan(panel.getBoundingClientRect().height / 2);
+  } finally {
+    await el.close('api');
+  }
 });

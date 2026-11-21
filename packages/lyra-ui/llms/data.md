@@ -218,12 +218,13 @@ value: string; readonly exactValue?: string }`; at most the first 10,000 rows ar
 overrides the `caption` attribute when slotted content is provided), `spark` (a sparkline, e.g. `<lr-sparkline
 slot="spark">`, or other compact trend visual — `lr-stat` only reserves the slot and doesn't
 render one itself), `sub` (rich sub-line content — overrides the `sub` attribute when slotted content
-is provided). In a linked stat, an interactive slotted descendant keeps its own focus and action;
+is provided), `actions` (compact controls such as `<lr-help>` or an `<lr-icon-button>`, placed at the
+inline end of the label row in `[part="actions"]`, which collapses while empty). In a linked stat, an interactive slotted descendant keeps its own focus and action;
 clicking non-interactive slotted content still follows the whole-card link.
 
 **CSS parts:** `base` (a `<div>`, or an `<a>` for a safe `href`), `icon`, `label` (carries `hidden`,
 and is collapsed, whenever `label` is empty — a label-less stat leaves no blank line above the
-value), `value-row`, `value`, `unit`, `trend`, `sub`, `spark`,
+value), `actions`, `value-row`, `value`, `unit`, `trend`, `sub`, `spark`,
 `caption`, `rows`, `row`, `row-label`, `row-value` — `[part="value"]` gets `aria-labelledby` pairing
 it with `[part="label"]`'s generated id whenever `label` is non-empty (so tabbing straight to the
 `exactValue`-focusable value still announces e.g. "Revenue $1.2K USD", including the visible unit,

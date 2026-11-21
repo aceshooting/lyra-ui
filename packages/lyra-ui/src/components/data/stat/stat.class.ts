@@ -48,6 +48,9 @@ export interface StatRow {
  * @slot spark - A sparkline (e.g. `<lr-sparkline>`) or other compact trend
  *   visual. `lr-stat` only reserves the slot; it doesn't render one itself.
  * @slot sub - Rich sub-line content (overrides the `sub` attribute).
+ * @slot actions - Compact controls placed at the inline end of the label row, such as an
+ *   `<lr-help>` explanation or an `<lr-icon-button>`. Interactive content stays operable on a
+ *   linked stat because it is never nested inside the link.
  * When linked, every consumer slot remains a sibling of the stretched anchor so an interactive
  * slotted descendant is never nested inside the whole-card link. Passive slotted content forwards
  * pointer modifiers; the platform primary modifier and Shift preserve new-context activation.
@@ -62,6 +65,8 @@ export interface StatRow {
  *   tabbing directly to this value (focusable when `exactValue` is set) still announces which
  *   metric and visible unit it is.
  * @csspart unit - The unit text.
+ * @csspart actions - Container for the `actions` slot, at the inline end of the label row. Hidden
+ *   while empty.
  * @csspart trend - The trend pill.
  * @csspart sub - Container for the `sub` attribute/slot.
  * @csspart spark - Container for the `spark` slot.
@@ -272,6 +277,7 @@ export class LyraStat extends LyraElement {
   @state() private hasCaptionSlot = false;
   @state() private hasSparkSlot = false;
   @state() private hasSubSlot = false;
+  @state() private hasActionsSlot = false;
 
   // Stable id pairing `[part='label']` with `[part='value']` via
   // aria-labelledby, so a keyboard user tabbing straight to the (focusable,
@@ -299,6 +305,7 @@ export class LyraStat extends LyraElement {
       this.hasCaptionSlot = lightChildren.some((el) => el.getAttribute('slot') === 'caption');
       this.hasSparkSlot = lightChildren.some((el) => el.getAttribute('slot') === 'spark');
       this.hasSubSlot = lightChildren.some((el) => el.getAttribute('slot') === 'sub');
+      this.hasActionsSlot = lightChildren.some((el) => el.getAttribute('slot') === 'actions');
     }
     if (changed.has('rows')) {
       this.rowLabelIds = this.rows.map(() => nextId('stat-row-label'));
@@ -327,6 +334,10 @@ export class LyraStat extends LyraElement {
 
   private onSubSlotChange = (): void => {
     this.hasSubSlot = Array.from(this.children ?? []).some((el) => el.getAttribute('slot') === 'sub');
+  };
+
+  private onActionsSlotChange = (): void => {
+    this.hasActionsSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'actions');
   };
 
   private onLinkedContentClick = (event: Event): void => {
@@ -437,7 +448,12 @@ export class LyraStat extends LyraElement {
         ><slot name="start" @slotchange=${this.onIconSlotChange}></slot
         ></span
       >
-      <span part="label" id=${this.labelId} role=${this.label ? 'term' : nothing} ?hidden=${!this.label}>${bdi(this.label)}</span>
+      <div class="label-row" ?data-actions=${this.hasActionsSlot}>
+        <span part="label" id=${this.labelId} role=${this.label ? 'term' : nothing} ?hidden=${!this.label}>${bdi(this.label)}</span>
+        <span part="actions" ?hidden=${!this.hasActionsSlot}
+          ><slot name="actions" @slotchange=${this.onActionsSlotChange}></slot
+        ></span>
+      </div>
       <div part="value-row">
         <span
           part="value"

@@ -140,6 +140,7 @@ export const COMPONENT_LOADERS: Readonly<Record<AutoloadableTagName, () => Promi
   'lr-grounding-summary': () => import('../components/retrieval/grounding-summary/grounding-summary.class.js').then((module) => module.LyraGroundingSummary),
   'lr-handoff-divider': () => import('../components/conversation/handoff-divider/handoff-divider.class.js').then((module) => module.LyraHandoffDivider),
   'lr-heatmap': () => import('../components/data/heatmap/heatmap.class.js').then((module) => module.LyraHeatmap),
+  'lr-help': () => import('../components/overlays/help/help.class.js').then((module) => module.LyraHelp),
   'lr-highlight-layer': () => import('../components/viewers/highlight-layer/highlight-layer.class.js').then((module) => module.LyraHighlightLayer),
   'lr-histogram': () => import('../components/charts/chart/histogram.class.js').then((module) => module.LyraHistogram),
   'lr-html-viewer': () => import('../components/viewers/html-viewer/html-viewer.class.js').then((module) => module.LyraHtmlViewer),

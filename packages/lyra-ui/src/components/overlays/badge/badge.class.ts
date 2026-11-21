@@ -15,6 +15,7 @@ import { effectiveSemanticVariant, type SemanticVariant } from '../../../interna
 import { variants } from '../../../internal/variants.styles.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { renderInertPresentation } from '../../../internal/inert-presentation.js';
+import { devWarnOnce } from '../../../internal/dev-warning.js';
 import { styles } from './badge.styles.js';
 
 /** The library's semantic-tone vocabulary plus Shoelace's spelling for the brand tone. */
@@ -42,6 +43,11 @@ export type BadgeAttention = 'none' | 'pulse' | 'bounce';
  * genuinely changing status text can opt into live-region semantics with `role="status"`; any
  * authored role is preserved. `<lr-tag>` inherits the same visual and author-owned semantic
  * contract.
+ * `wrap` lets a long label break across lines instead of truncating with an ellipsis. `dot` adds a
+ * leading status dot coloured from `variant`; the dot itself is decorative, so the badge's text
+ * still carries the status. A dot-only badge (no text content) must be named with `aria-label` or
+ * `aria-labelledby`, which then gives the host `role="img"` unless the author set a role;
+ * without a name a development warning reports that colour would be the only cue.
  *
  * @customElement lr-badge
  * @slot - Badge content.
@@ -55,7 +61,10 @@ export type BadgeAttention = 'none' | 'pulse' | 'bounce';
  * @csspart base - Compatibility name for the badge surface; use `badge`.
  * @csspart badge - The badge surface. It is the same node as `base`.
  * @csspart start - Inert, aria-hidden wrapper around the `start` slot. Hidden entirely while empty.
- * @csspart content - Wrapper around the default slot; the part that truncates with an ellipsis.
+ * @csspart dot - The leading status dot, rendered only while `dot` is set. Decorative
+ * (`aria-hidden`).
+ * @csspart content - Wrapper around the default slot; the part that truncates with an ellipsis
+ * (wraps instead while `wrap` is set). Hidden for a dot-only badge.
  * @csspart end - Wrapper around the `end` slot. Hidden entirely while empty.
  * @cssprop [--lr-badge-background=var(--lr-badge-fill)] - Explicit override for the badge's
  * background, winning over whatever `variant` and `appearance` resolved. Left unset (the default)
@@ -93,6 +102,9 @@ export type BadgeAttention = 'none' | 'pulse' | 'bounce';
  * the `end` slot.
  * @cssprop [--lr-badge-radius=var(--lr-radius)] - Corner radius of the badge surface. `pill`
  * raises it to `var(--lr-radius-pill)`. Does not vary by `size` tier.
+ * @cssprop [--lr-badge-dot-size=var(--lr-size-0-5rem)] - Diameter of the `dot` status dot.
+ * @cssprop [--lr-badge-dot-color=var(--lr-badge-ink)] - Colour of the `dot` status dot. Its private
+ * default follows the variant's text colour, and the on-solid colour for `appearance="accent"`.
  * @cssprop [--lr-badge-attention-duration=var(--lr-duration-ambient)] - One cycle of the
  * `attention` animation.
  * @cssprop [--lr-badge-attention-easing=var(--lr-easing-emphasized)] - Timing function of the
@@ -133,6 +145,19 @@ export class LyraBadge<
    *  Stops entirely under `prefers-reduced-motion: reduce`. */
   @property({ reflect: true, useDefault: true }) attention: BadgeAttention = 'none';
 
+  /** Lets a long label wrap onto several lines instead of truncating with an ellipsis. */
+  @property({ type: Boolean, reflect: true }) wrap = false;
+
+  /** Renders a leading status dot coloured from `variant`. With no text content, name the badge
+   *  with `aria-label` so colour is never the only cue. `attention="pulse"` pulses the dot. */
+  @property({ type: Boolean, reflect: true }) dot = false;
+
+  @property({ attribute: 'aria-label' }) private hostAriaLabel: string | null = null;
+  @property({ attribute: 'aria-labelledby' }) private hostAriaLabelledBy: string | null = null;
+
+  /** Whether this element, not the author, wrote the host's `role="img"`. */
+  private ownsImageRole = false;
+
   /** Upstream-compatible pulse shorthand. Equivalent to `attention="pulse"` only while the
    *  `attention` attribute is omitted; every explicit attention value takes precedence. */
   @property({ type: Boolean, reflect: true }) pulse = false;
@@ -160,6 +185,28 @@ export class LyraBadge<
     super.willUpdate(changed);
     this.setAttribute('data-effective-variant', this.effectiveVariant);
     this.setAttribute('data-effective-size', this.effectiveSize);
+    this.syncDotSemantics();
+  }
+
+  /** A dot with no text names itself through the host, which needs a role to carry that name. */
+  private syncDotSemantics(): void {
+    const dotOnly = this.dot && !this.slotPresence.has();
+    const named = this.hostAriaLabel !== null || this.hostAriaLabelledBy !== null;
+    if (dotOnly && named) {
+      if (!this.hasAttribute('role')) {
+        this.setAttribute('role', 'img');
+        this.ownsImageRole = true;
+      }
+    } else if (this.ownsImageRole) {
+      if (this.getAttribute('role') === 'img') this.removeAttribute('role');
+      this.ownsImageRole = false;
+    }
+    if (dotOnly && !named) {
+      devWarnOnce(
+        'lr-badge:unnamed-dot',
+        '<lr-badge dot> has no text and no aria-label or aria-labelledby, so its colour is the only cue. Name the status.',
+      );
+    }
   }
 
   /** Extension point for a subclass rendering its own trailing control inside `[part~='base']` --
@@ -169,12 +216,14 @@ export class LyraBadge<
   }
 
   override render(): TemplateResult {
+    const dotOnly = this.dot && !this.slotPresence.has();
     return html`<span part="base badge">
+      ${this.dot ? html`<span part="dot" aria-hidden="true"></span>` : nothing}
       ${renderInertPresentation(html`<slot name="start"></slot>`, {
         part: 'start',
         hidden: !this.slotPresence.has('start'),
       })}
-      <span part="content"><slot></slot></span>
+      <span part="content" ?hidden=${dotOnly}><slot></slot></span>
       <span part="end" ?hidden=${!this.slotPresence.has('end')}>
         <slot name="end"></slot>
       </span>

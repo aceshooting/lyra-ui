@@ -231,6 +231,7 @@ import type { LyraContextMenu, LyraContextMenuEventMap } from './components/over
 import type { LyraDialog, LyraDialogEventMap } from './components/overlays/dialog/dialog.class.js';
 import type { LyraDrawer } from './components/overlays/drawer/drawer.class.js';
 import type { LyraEmpty } from './components/overlays/empty/empty.class.js';
+import type { LyraHelp } from './components/overlays/help/help.class.js';
 import type { LyraKbd } from './components/overlays/kbd/kbd.class.js';
 import type { LyraDropdown, LyraDropdownEventMap } from './components/overlays/overlay/dropdown.class.js';
 import type { LyraPopover, LyraPopoverEventMap } from './components/overlays/overlay/popover.class.js';
@@ -1404,12 +1405,14 @@ export interface LyraComponentTypeMap {
       LyraBadge,
       | 'appearance'
       | 'attention'
+      | 'dot'
       | 'locale'
       | 'pill'
       | 'pulse'
       | 'size'
       | 'strings'
-      | 'variant',
+      | 'variant'
+      | 'wrap',
       {}
     >;
     events: {};
@@ -1420,6 +1423,8 @@ export interface LyraComponentTypeMap {
       | '--lr-badge-border'
       | '--lr-badge-bounce-distance'
       | '--lr-badge-color'
+      | '--lr-badge-dot-color'
+      | '--lr-badge-dot-size'
       | '--lr-badge-edge'
       | '--lr-badge-fill'
       | '--lr-badge-font-size'
@@ -1436,7 +1441,10 @@ export interface LyraComponentTypeMap {
       | '--lr-badge-text'
       | '--lr-badge-tint'
       | '--pulse-color';
-    attributeAliases: {};
+    attributeAliases: {
+      'aria-label'?: LyraAttributeValue<string | null>;
+      'aria-labelledby'?: LyraAttributeValue<string | null>;
+    };
   };
   'lr-bar-chart': {
     element: LyraBarChart;
@@ -4626,6 +4634,7 @@ export interface LyraComponentTypeMap {
     element: LyraDialog;
     properties: LyraElementProperties<
       LyraDialog,
+      | 'fillBody'
       | 'heading'
       | 'headingLevel'
       | 'label'
@@ -4657,6 +4666,9 @@ export interface LyraComponentTypeMap {
       | '--hide-duration'
       | '--lr-dialog-backdrop-duration'
       | '--lr-dialog-backdrop-filter'
+      | '--lr-dialog-heading-font-family'
+      | '--lr-dialog-heading-font-size'
+      | '--lr-dialog-heading-font-weight'
       | '--lr-dialog-height'
       | '--lr-dialog-max-width'
       | '--lr-dialog-overlay-color'
@@ -4673,6 +4685,7 @@ export interface LyraComponentTypeMap {
       | '--width';
     attributeAliases: {
       'aria-label'?: LyraAttributeValue<string | null>;
+      'fill-body'?: LyraDialog['fillBody'];
       'heading-level'?: LyraDialog['headingLevel'];
       'light-dismiss'?: LyraDialog['lightDismiss'];
       'no-header'?: LyraDialog['noHeader'];
@@ -5151,6 +5164,7 @@ export interface LyraComponentTypeMap {
     properties: LyraElementProperties<
       LyraDrawer,
       | 'contained'
+      | 'fillBody'
       | 'heading'
       | 'headingLevel'
       | 'label'
@@ -5183,6 +5197,9 @@ export interface LyraComponentTypeMap {
       | '--hide-duration'
       | '--lr-dialog-backdrop-duration'
       | '--lr-dialog-backdrop-filter'
+      | '--lr-dialog-heading-font-family'
+      | '--lr-dialog-heading-font-size'
+      | '--lr-dialog-heading-font-weight'
       | '--lr-dialog-height'
       | '--lr-dialog-max-width'
       | '--lr-dialog-overlay-color'
@@ -5204,6 +5221,7 @@ export interface LyraComponentTypeMap {
       | '--width';
     attributeAliases: {
       'aria-label'?: LyraAttributeValue<string | null>;
+      'fill-body'?: LyraDrawer['fillBody'];
       'heading-level'?: LyraDrawer['headingLevel'];
       'light-dismiss'?: LyraDrawer['lightDismiss'];
       'no-header'?: LyraDrawer['noHeader'];
@@ -5611,7 +5629,11 @@ export interface LyraComponentTypeMap {
       | '--lr-empty-compact-gap'
       | '--lr-empty-compact-icon-size'
       | '--lr-empty-compact-padding'
+      | '--lr-empty-description-color'
       | '--lr-empty-gap'
+      | '--lr-empty-heading-color'
+      | '--lr-empty-heading-font-size'
+      | '--lr-empty-heading-font-weight'
       | '--lr-empty-icon-size'
       | '--lr-empty-padding';
     attributeAliases: {
@@ -6841,6 +6863,22 @@ export interface LyraComponentTypeMap {
       'value-label'?: LyraHeatmap['valueLabel'];
       'without-legend'?: LyraHeatmap['withoutLegend'];
     };
+  };
+  'lr-help': {
+    element: LyraHelp;
+    properties: LyraElementProperties<
+      LyraHelp,
+      | 'label'
+      | 'locale'
+      | 'placement'
+      | 'strings',
+      {}
+    >;
+    events: {};
+    eventNames: never;
+    cssNames:       | '--lr-help-icon-size'
+      | '--lr-help-max-inline-size';
+    attributeAliases: {};
   };
   'lr-highlight-layer': {
     element: LyraHighlightLayer;
@@ -13505,6 +13543,7 @@ export interface LyraComponentTypeMap {
       | 'appearance'
       | 'attention'
       | 'disabled'
+      | 'dot'
       | 'locale'
       | 'pill'
       | 'pulse'
@@ -13513,7 +13552,8 @@ export interface LyraComponentTypeMap {
       | 'strings'
       | 'value'
       | 'variant'
-      | 'withRemove',
+      | 'withRemove'
+      | 'wrap',
       {}
     >;
     events: LyraTagEventMap;
@@ -13524,6 +13564,8 @@ export interface LyraComponentTypeMap {
       | '--lr-badge-border'
       | '--lr-badge-bounce-distance'
       | '--lr-badge-color'
+      | '--lr-badge-dot-color'
+      | '--lr-badge-dot-size'
       | '--lr-badge-edge'
       | '--lr-badge-fill'
       | '--lr-badge-font-size'
@@ -13543,6 +13585,8 @@ export interface LyraComponentTypeMap {
       | '--lr-tag-remove-radius'
       | '--pulse-color';
     attributeAliases: {
+      'aria-label'?: LyraAttributeValue<string | null>;
+      'aria-labelledby'?: LyraAttributeValue<string | null>;
       'with-remove'?: LyraTag['withRemove'];
     };
   };

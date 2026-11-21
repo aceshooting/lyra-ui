@@ -310,6 +310,8 @@ export type LyraHandoffDividerReactProps = LyraReactElementProps<'lr-handoff-div
 
 export type LyraHeatmapReactProps = LyraReactElementProps<'lr-heatmap'>;
 
+export type LyraHelpReactProps = LyraReactElementProps<'lr-help'>;
+
 export type LyraHighlightLayerReactProps = LyraReactElementProps<'lr-highlight-layer'>;
 
 export type LyraHistogramReactProps = LyraReactElementProps<'lr-histogram'>;
@@ -805,6 +807,7 @@ export interface LyraReactIntrinsicElements {
   'lr-grounding-summary': LyraGroundingSummaryReactProps;
   'lr-handoff-divider': LyraHandoffDividerReactProps;
   'lr-heatmap': LyraHeatmapReactProps;
+  'lr-help': LyraHelpReactProps;
   'lr-highlight-layer': LyraHighlightLayerReactProps;
   'lr-histogram': LyraHistogramReactProps;
   'lr-html-viewer': LyraHtmlViewerReactProps;

@@ -12595,6 +12595,26 @@
             "default": "filled-outlined"
           },
           {
+            "name": "aria-label",
+            "property": "hostAriaLabel",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "aria-labelledby",
+            "property": "hostAriaLabelledBy",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "attention",
             "property": "attention",
             "type": "BadgeAttention",
@@ -12603,6 +12623,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "dot",
+            "property": "dot",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "locale",
@@ -12653,6 +12683,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "neutral"
+          },
+          {
+            "name": "wrap",
+            "property": "wrap",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "properties": [
@@ -12675,6 +12715,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "dot",
+            "attribute": "dot",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "locale",
@@ -12725,6 +12775,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "neutral"
+          },
+          {
+            "name": "wrap",
+            "attribute": "wrap",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "slots": [
@@ -12753,6 +12813,10 @@
           },
           {
             "name": "content",
+            "deprecated": null
+          },
+          {
+            "name": "dot",
             "deprecated": null
           },
           {
@@ -12800,6 +12864,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-badge-text)"
+          },
+          {
+            "name": "--lr-badge-dot-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-badge-ink)"
+          },
+          {
+            "name": "--lr-badge-dot-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-0-5rem)"
           },
           {
             "name": "--lr-badge-edge",
@@ -49446,6 +49522,16 @@
             "default": null
           },
           {
+            "name": "fill-body",
+            "property": "fillBody",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "heading",
             "property": "heading",
             "type": "string | undefined",
@@ -49556,6 +49642,16 @@
           }
         ],
         "properties": [
+          {
+            "name": "fillBody",
+            "attribute": "fill-body",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
           {
             "name": "heading",
             "attribute": "heading",
@@ -49844,6 +49940,24 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-dialog-heading-font-family",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-heading)"
+          },
+          {
+            "name": "--lr-dialog-heading-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-dialog-heading-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
           },
           {
             "name": "--lr-dialog-height",
@@ -54738,6 +54852,16 @@
             "default": false
           },
           {
+            "name": "fill-body",
+            "property": "fillBody",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "heading",
             "property": "heading",
             "type": "string | undefined",
@@ -54861,6 +54985,16 @@
           {
             "name": "contained",
             "attribute": "contained",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "fillBody",
+            "attribute": "fill-body",
             "type": "boolean",
             "readonly": false,
             "reflects": true,
@@ -55167,6 +55301,24 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-dialog-heading-font-family",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-heading)"
+          },
+          {
+            "name": "--lr-dialog-heading-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-dialog-heading-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
           },
           {
             "name": "--lr-dialog-height",
@@ -59866,10 +60018,33 @@
             "default": "var(--lr-space-xs)"
           },
           {
+            "name": "--lr-empty-description-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
+          },
+          {
             "name": "--lr-empty-gap",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-s)"
+          },
+          {
+            "name": "--lr-empty-heading-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-empty-heading-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-empty-heading-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
           },
           {
             "name": "--lr-empty-icon-size",
@@ -73400,6 +73575,165 @@
             ]
           }
         ],
+        "form": {
+          "associated": false,
+          "properties": [],
+          "methods": []
+        },
+        "native": {
+          "forwardedEvents": [],
+          "delegatedMethods": []
+        }
+      }
+    },
+    {
+      "tag": "lr-help",
+      "family": "overlays",
+      "classModule": "src/components/overlays/help/help.class.ts",
+      "registrationModule": "src/components/lr-help.ts",
+      "rootIncluded": true,
+      "rootExclusion": null,
+      "optionalPeers": [],
+      "maturity": {
+        "status": "experimental",
+        "since": "unreleased",
+        "deprecated": null,
+        "profile": "new-component-experimental",
+        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "deprecations": []
+      },
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "accessibility": "automated",
+        "scale": "unmeasured",
+        "ledger": "scripts/fixtures/component-qualification.json"
+      },
+      "dependencies": {
+        "direct": [
+          "lr-icon-button",
+          "lr-popover"
+        ],
+        "transitive": [],
+        "ledger": "scripts/fixtures/component-integration.json"
+      },
+      "counterparts": [],
+      "surface": {
+        "attributes": [
+          {
+            "name": "label",
+            "property": "label",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "placement",
+            "property": "placement",
+            "type": "Placement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
+          }
+        ],
+        "properties": [
+          {
+            "name": "label",
+            "attribute": "label",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "placement",
+            "attribute": "placement",
+            "type": "Placement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "top"
+          }
+        ],
+        "slots": [
+          {
+            "name": "",
+            "deprecated": null
+          }
+        ],
+        "events": [],
+        "parts": [
+          {
+            "name": "content",
+            "deprecated": null
+          },
+          {
+            "name": "popover",
+            "deprecated": null
+          },
+          {
+            "name": "popup",
+            "deprecated": null
+          },
+          {
+            "name": "trigger",
+            "deprecated": null
+          },
+          {
+            "name": "trigger-control",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [
+          {
+            "name": "--lr-help-icon-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-1em)"
+          },
+          {
+            "name": "--lr-help-max-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-20rem)"
+          }
+        ],
+        "cssStates": [],
+        "methods": [],
+        "staticProperties": [],
+        "staticMethods": [],
+        "moduleExports": [],
         "form": {
           "associated": false,
           "properties": [],
@@ -140961,6 +141295,10 @@
         ],
         "slots": [
           {
+            "name": "actions",
+            "deprecated": null
+          },
+          {
             "name": "caption",
             "deprecated": null
           },
@@ -140979,6 +141317,10 @@
         ],
         "events": [],
         "parts": [
+          {
+            "name": "actions",
+            "deprecated": null
+          },
           {
             "name": "base",
             "deprecated": null
@@ -148091,6 +148433,26 @@
             "default": "filled-outlined"
           },
           {
+            "name": "aria-label",
+            "property": "hostAriaLabel",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
+            "name": "aria-labelledby",
+            "property": "hostAriaLabelledBy",
+            "type": "string | null",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "attention",
             "property": "attention",
             "type": "BadgeAttention",
@@ -148103,6 +148465,16 @@
           {
             "name": "disabled",
             "property": "disabled",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "dot",
+            "property": "dot",
             "type": "boolean",
             "reflects": true,
             "inferred": false,
@@ -148188,6 +148560,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "wrap",
+            "property": "wrap",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "properties": [
@@ -148214,6 +148596,16 @@
           {
             "name": "disabled",
             "attribute": "disabled",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "dot",
+            "attribute": "dot",
             "type": "boolean",
             "readonly": false,
             "reflects": true,
@@ -148299,6 +148691,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "wrap",
+            "attribute": "wrap",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "slots": [
@@ -148334,6 +148736,10 @@
           },
           {
             "name": "content",
+            "deprecated": null
+          },
+          {
+            "name": "dot",
             "deprecated": null
           },
           {
@@ -148389,6 +148795,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-badge-text)"
+          },
+          {
+            "name": "--lr-badge-dot-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-badge-ink)"
+          },
+          {
+            "name": "--lr-badge-dot-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-0-5rem)"
           },
           {
             "name": "--lr-badge-edge",

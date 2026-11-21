@@ -131,6 +131,7 @@ import './components/lr-graph-query-builder.js';
 import './components/lr-grounding-summary.js';
 import './components/lr-handoff-divider.js';
 import './components/lr-heatmap.js';
+import './components/lr-help.js';
 import './components/lr-highlight-layer.js';
 import './components/lr-html-viewer.js';
 import './components/lr-icon.js';

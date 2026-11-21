@@ -899,6 +899,10 @@
       "types": "./dist/components/lr-heatmap.d.ts",
       "default": "./dist/components/lr-heatmap.js"
     },
+    "./components/lr-help.js": {
+      "types": "./dist/components/lr-help.d.ts",
+      "default": "./dist/components/lr-help.js"
+    },
     "./components/lr-highlight-layer.js": {
       "types": "./dist/components/lr-highlight-layer.d.ts",
       "default": "./dist/components/lr-highlight-layer.js"
@@ -1657,6 +1661,7 @@
     "./components/overlays/dialog/dialog.class.js": "./dist/components/overlays/dialog/dialog.class.js",
     "./components/overlays/drawer/drawer.class.js": "./dist/components/overlays/drawer/drawer.class.js",
     "./components/overlays/empty/empty.class.js": "./dist/components/overlays/empty/empty.class.js",
+    "./components/overlays/help/help.class.js": "./dist/components/overlays/help/help.class.js",
     "./components/overlays/kbd/kbd.class.js": "./dist/components/overlays/kbd/kbd.class.js",
     "./components/overlays/overlay/dropdown.class.js": "./dist/components/overlays/overlay/dropdown.class.js",
     "./components/overlays/overlay/popover.class.js": "./dist/components/overlays/overlay/popover.class.js",

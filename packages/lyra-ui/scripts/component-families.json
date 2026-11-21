@@ -315,6 +315,7 @@
     "treemap": "data",
     "sankey": "data",
     "chord": "data",
-    "choropleth": "data"
+    "choropleth": "data",
+    "help": "overlays"
   }
 }
