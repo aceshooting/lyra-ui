@@ -186,14 +186,14 @@ export interface LyraChatMessageEventMap {
  * @cssprop [--lr-chat-message-retry-border-color=var(--lr-color-danger)] - Retry border color.
  * @cssprop [--lr-chat-message-retry-hover-bg=var(--lr-color-danger-quiet)] - Retry hover background and base for its pressed tint.
  * @cssprop --lr-icon-button-bg - Resting background of the collapse and expand button.
- * @cssprop --lr-icon-button-bg-active - Pressed background of the collapse and expand button.
- * @cssprop --lr-icon-button-bg-hover - Hover background of the collapse and expand button.
+ * @cssprop --lr-icon-button-active-bg - Pressed background of the collapse and expand button.
+ * @cssprop --lr-icon-button-hover-bg - Hover background of the collapse and expand button.
  * @cssprop --lr-icon-button-border - Resting border of the collapse and expand button.
- * @cssprop --lr-icon-button-border-active - Pressed border of the collapse and expand button.
- * @cssprop --lr-icon-button-border-hover - Hover border of the collapse and expand button.
+ * @cssprop --lr-icon-button-active-border - Pressed border of the collapse and expand button.
+ * @cssprop --lr-icon-button-hover-border - Hover border of the collapse and expand button.
  * @cssprop --lr-icon-button-color - Resting foreground of the collapse and expand button.
- * @cssprop --lr-icon-button-color-active - Pressed foreground of the collapse and expand button.
- * @cssprop --lr-icon-button-color-hover - Hover foreground of the collapse and expand button.
+ * @cssprop --lr-icon-button-active-color - Pressed foreground of the collapse and expand button.
+ * @cssprop --lr-icon-button-hover-color - Hover foreground of the collapse and expand button.
  * @cssprop --lr-icon-button-radius - Corner radius of the collapse and expand button.
  * @status stable
  * @since 4.0.0

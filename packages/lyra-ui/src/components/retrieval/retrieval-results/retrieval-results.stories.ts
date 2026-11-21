@@ -141,13 +141,13 @@ export const ThemedSelectedRow: Story = {
     docs: {
       description: {
         story:
-          '`--lr-retrieval-results-selected-border` recolors the inline-start marker on a selected row without hijacking library-wide `--lr-color-brand`. Set it on the element or any ancestor — it is not declared on `:host`, so an ancestor value is never shadowed. Selection is marked with a border rather than a fill by design, so recoloring it can never push the row’s own text below its contrast floor.',
+          '`--lr-retrieval-results-selected-border-color` recolors the inline-start marker on a selected row without hijacking library-wide `--lr-color-brand`. Set it on the element or any ancestor — it is not declared on `:host`, so an ancestor value is never shadowed. Selection is marked with a border rather than a fill by design, so recoloring it can never push the row’s own text below its contrast floor.',
       },
     },
   },
   render: () => html`
     <lr-retrieval-results
-      style="--lr-retrieval-results-selected-border: ${storyColor('warning')};"
+      style="--lr-retrieval-results-selected-border-color: ${storyColor('warning')};"
       .chunks=${chunks}
       .selectedChunkIds=${['c1']}
     ></lr-retrieval-results>

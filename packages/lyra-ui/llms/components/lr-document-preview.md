@@ -10,7 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 18 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `region-highlight`: `--lr-document-preview-active-border`
+- **Tokens by part** (prefer these over a `::part()` rule) `region-highlight`: `--lr-document-preview-active-border-color`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -151,7 +151,7 @@ reduced motion). `--lr-document-preview-progress`
 (default `0`) — a unitless
 0–100 number the determinate spinner's `conic-gradient` fill reads; written inline on the ring by
 the component itself from the clamped `progress` property, so overriding it only makes sense to
-repaint the fraction. `--lr-document-preview-active-border` (default
+repaint the fraction. `--lr-document-preview-active-border-color` (default
 `var(--lr-color-warning, var(--lr-color-brand))`) — the border color of the `[part='region-highlight']`
 matching `activeHighlightId` (image format only), deliberately distinct from the resting highlight
 border so the active region can be recolored without touching the rest; it also draws a thick offset outline, so the active region stays distinct from a warning-toned one and under forced colors. Like the library's other

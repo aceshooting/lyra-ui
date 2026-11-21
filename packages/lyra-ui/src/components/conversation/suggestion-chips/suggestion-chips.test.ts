@@ -542,7 +542,7 @@ describe('--lr-suggestion-chips-hover-bg / -hover-border', () => {
   it('renders the hover background/border through the per-component cssprops', async () => {
     const el = await fixture<LyraSuggestionChips>(html`
       <lr-suggestion-chips
-        style="--lr-suggestion-chips-hover-bg: rgb(1, 2, 3); --lr-suggestion-chips-hover-border: rgb(4, 5, 6)"
+        style="--lr-suggestion-chips-hover-bg: rgb(1, 2, 3); --lr-suggestion-chips-hover-border-color: rgb(4, 5, 6)"
         .suggestions=${suggestions}
       ></lr-suggestion-chips>
     `);

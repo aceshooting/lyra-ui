@@ -383,7 +383,7 @@ export const styles = css`
      scoped cssprop lets a consumer retint just the invalid state without hijacking the shared
      --lr-color-danger token used everywhere else. */
   [part="page-input"]:where([aria-invalid="true"]) {
-    border-color: var(--lr-pagination-invalid-border, var(--lr-color-danger));
+    border-color: var(--lr-pagination-invalid-border-color, var(--lr-color-danger));
   }
   .page-size-wrapper {
     position: relative;

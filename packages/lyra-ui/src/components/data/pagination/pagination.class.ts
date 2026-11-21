@@ -270,7 +270,7 @@ function paginationItems(
  * @cssprop [--lr-pagination-pages-gap=var(--lr-space-xs)] - Gap between numbered page controls.
  * @cssprop [--lr-pagination-page-field-gap=var(--lr-space-2xs)] - Gap between the compact page
  *   input and the page count (`[part="page-field"]`).
- * @cssprop [--lr-pagination-invalid-border=var(--lr-color-danger)] - Border color of
+ * @cssprop [--lr-pagination-invalid-border-color=var(--lr-color-danger)] - Border color of
  *   `[part="page-input"]` while the typed page is out of range (`aria-invalid="true"`).
  * @status stable
  * @since 4.0.0

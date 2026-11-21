@@ -74,7 +74,7 @@ function ownMetricValue(run: AgentEvaluationDashboardRun, metricId: string): num
  * @csspart limit - Visible notice when the run history exceeds `maxRenderedRuns`.
  * @csspart run-status-message - Optional caller-supplied detail for a run status.
  * @csspart empty - The empty history message.
- * @cssprop [--lr-agent-eval-dashboard-active-border=var(--lr-color-brand)] - Active metric border.
+ * @cssprop [--lr-agent-eval-dashboard-active-border-color=var(--lr-color-brand)] - Active metric border.
  * @cssprop [--lr-agent-eval-dashboard-active-bg=var(--lr-color-brand-quiet)] - Active metric background,
  *   and the base its hover/press mixes from.
  * @status stable

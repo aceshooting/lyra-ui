@@ -206,8 +206,8 @@ export const styles = css`
     color: 'var(--lr-color-text-quiet)',
     hoverBackground: 'var(--lr-color-surface-raised)',
     hoverColor: 'var(--lr-color-text)',
-    activeBackground: activeFill('var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised))').cssText,
-    activeColor: 'var(--lr-icon-button-color-hover, var(--lr-color-text))',
+    activeBackground: activeFill('var(--lr-icon-button-hover-bg, var(--lr-color-surface-raised))').cssText,
+    activeColor: 'var(--lr-icon-button-hover-color, var(--lr-color-text))',
   })}
   [part='rename-button'] {
     --_lr-icon-button-radius-default: var(--lr-radius-xs);

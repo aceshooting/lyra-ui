@@ -2253,9 +2253,9 @@ describe("editable tokens", () => {
         editable
         style="
           --lr-token-input-edit-hover-bg: rgb(1, 2, 3);
-          --lr-token-input-edit-pressed-bg: rgb(4, 5, 6);
+          --lr-token-input-edit-active-bg: rgb(4, 5, 6);
           --lr-token-input-remove-hover-bg: rgb(7, 8, 9);
-          --lr-token-input-remove-pressed-bg: rgb(10, 11, 12);
+          --lr-token-input-remove-active-bg: rgb(10, 11, 12);
         "
         .value=${["alpha"]}
       ></lr-token-input>

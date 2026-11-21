@@ -65,14 +65,14 @@ export interface LyraPanZoomEventMap {
  * @cssprop [--lr-icon-button-bg=var(--lr-color-surface)] - Control background in the resting state.
  * @cssprop [--lr-pan-zoom-control-hover-bg=var(--lr-color-brand-quiet)] - Zoom and reset control
  *   hover background; its active background derives from the same value.
- * @cssprop [--lr-icon-button-bg-active=color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--lr-pan-zoom-control-hover-bg, var(--lr-color-brand-quiet))), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Control background in the pressed state.
- * @cssprop [--lr-icon-button-bg-hover=var(--lr-pan-zoom-control-hover-bg, var(--lr-color-brand-quiet))] - Control background in the hover state.
+ * @cssprop [--lr-icon-button-active-bg=color-mix(in oklab, var(--lr-icon-button-hover-bg, var(--lr-pan-zoom-control-hover-bg, var(--lr-color-brand-quiet))), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Control background in the pressed state.
+ * @cssprop [--lr-icon-button-hover-bg=var(--lr-pan-zoom-control-hover-bg, var(--lr-color-brand-quiet))] - Control background in the hover state.
  * @cssprop [--lr-icon-button-border=var(--lr-border-width-thin) solid var(--lr-color-border)] - Control border in the resting state.
- * @cssprop [--lr-icon-button-border-active=var(--lr-icon-button-border-hover, var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border)))] - Control border in the pressed state.
- * @cssprop [--lr-icon-button-border-hover=var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border))] - Control border in the hover state.
+ * @cssprop [--lr-icon-button-active-border=var(--lr-icon-button-hover-border, var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border)))] - Control border in the pressed state.
+ * @cssprop [--lr-icon-button-hover-border=var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border))] - Control border in the hover state.
  * @cssprop [--lr-icon-button-color=var(--lr-color-text)] - Control foreground color in the resting state.
- * @cssprop [--lr-icon-button-color-active=var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))] - Control foreground color in the pressed state.
- * @cssprop [--lr-icon-button-color-hover=var(--lr-icon-button-color, inherit)] - Control foreground color in the hover state.
+ * @cssprop [--lr-icon-button-active-color=var(--lr-icon-button-hover-color, var(--lr-icon-button-color, inherit))] - Control foreground color in the pressed state.
+ * @cssprop [--lr-icon-button-hover-color=var(--lr-icon-button-color, inherit)] - Control foreground color in the hover state.
  * @cssprop [--lr-icon-button-radius=var(--lr-radius)] - Control corner radius.
  * @status stable
  * @since 8.0.0

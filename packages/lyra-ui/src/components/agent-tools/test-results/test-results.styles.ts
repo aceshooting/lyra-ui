@@ -31,7 +31,7 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
     --_lr-agent-action-hover-base: var(--lr-color-brand-quiet);
     --_lr-agent-action-selected-fill: var(--lr-test-results-filter-active-bg, var(--lr-color-brand-quiet));
-    --_lr-agent-action-selected-border: var(--lr-test-results-filter-active-border, var(--lr-color-brand));
+    --_lr-agent-action-selected-border: var(--lr-test-results-filter-active-border-color, var(--lr-color-brand));
     --_lr-agent-action-selected-color: var(--lr-test-results-filter-active-color, var(--lr-color-brand));
   }
   [part='test-name']:focus-visible {

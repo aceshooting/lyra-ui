@@ -240,23 +240,23 @@ interface PendingMessageFeedbackSubmission {
  *   ancestor; scoped to the pressed state, unlike overriding the shared `--lr-color-success`.
  * @cssprop [--lr-message-feedback-up-active-bg=var(--lr-color-success-quiet)] - Background of the
  *   pressed thumbs-up button.
- * @cssprop [--lr-message-feedback-up-active-border=var(--lr-color-success)] - Border color of the
+ * @cssprop [--lr-message-feedback-up-active-border-color=var(--lr-color-success)] - Border color of the
  *   pressed thumbs-up button.
  * @cssprop [--lr-message-feedback-down-active-color=var(--lr-color-danger)] - Glyph color of the
  *   pressed thumbs-down button.
  * @cssprop [--lr-message-feedback-down-active-bg=var(--lr-color-danger-quiet)] - Background of the
  *   pressed thumbs-down button.
- * @cssprop [--lr-message-feedback-down-active-border=var(--lr-color-danger)] - Border color of the
+ * @cssprop [--lr-message-feedback-down-active-border-color=var(--lr-color-danger)] - Border color of the
  *   pressed thumbs-down button.
  * @cssprop --lr-icon-button-bg - Resting background of the rating buttons when unselected.
- * @cssprop --lr-icon-button-bg-active - Pressed background of the rating buttons.
- * @cssprop --lr-icon-button-bg-hover - Hover background of the rating buttons.
+ * @cssprop --lr-icon-button-active-bg - Pressed background of the rating buttons.
+ * @cssprop --lr-icon-button-hover-bg - Hover background of the rating buttons.
  * @cssprop --lr-icon-button-border - Resting border of the rating buttons when unselected.
- * @cssprop --lr-icon-button-border-active - Pressed border of the rating buttons when unselected.
- * @cssprop --lr-icon-button-border-hover - Hover border of the rating buttons when unselected.
+ * @cssprop --lr-icon-button-active-border - Pressed border of the rating buttons when unselected.
+ * @cssprop --lr-icon-button-hover-border - Hover border of the rating buttons when unselected.
  * @cssprop --lr-icon-button-color - Resting foreground of the rating buttons when unselected.
- * @cssprop --lr-icon-button-color-active - Pressed foreground of the rating buttons when unselected.
- * @cssprop --lr-icon-button-color-hover - Hover foreground of the rating buttons when unselected.
+ * @cssprop --lr-icon-button-active-color - Pressed foreground of the rating buttons when unselected.
+ * @cssprop --lr-icon-button-hover-color - Hover foreground of the rating buttons when unselected.
  * @cssprop --lr-icon-button-radius - Corner radius of the rating buttons.
  * @cssprop [--lr-message-feedback-submit-bg=var(--lr-color-brand)] - Background of
  *   `[part="submit-button"]`.

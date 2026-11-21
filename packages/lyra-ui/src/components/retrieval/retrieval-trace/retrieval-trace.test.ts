@@ -919,9 +919,9 @@ describe("active-evidence cssprop escape hatch", () => {
     return { el, row };
   }
 
-  it("recolors the active evidence-row border from an ancestor via --lr-retrieval-trace-active-border", async () => {
+  it("recolors the active evidence-row border from an ancestor via --lr-retrieval-trace-active-border-color", async () => {
     const { row } = await activeTrace(
-      "--lr-retrieval-trace-active-border: rgb(0, 51, 102)"
+      "--lr-retrieval-trace-active-border-color: rgb(0, 51, 102)"
     );
     expect(getComputedStyle(row).borderTopColor).to.equal("rgb(0, 51, 102)");
   });
@@ -939,7 +939,7 @@ describe("active-evidence cssprop escape hatch", () => {
 
   it("is accessible with the active-evidence prop themed", async () => {
     const { el } = await activeTrace(
-      "--lr-retrieval-trace-active-border: rgb(0, 51, 102)"
+      "--lr-retrieval-trace-active-border-color: rgb(0, 51, 102)"
     );
     await expect(el).to.be.accessible();
   });

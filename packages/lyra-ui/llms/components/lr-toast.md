@@ -78,7 +78,7 @@ inherit into the items slotted inside it: one declaration on `<lr-toast>` retune
 
 ### `lr-toast-item`
 
-The dismiss control is a composed `<lr-icon-button>`, so it is themed through the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`.
+The dismiss control is a composed `<lr-icon-button>`, so it is themed through the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-border`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`, `--lr-icon-button-color`, `--lr-icon-button-hover-color`, `--lr-icon-button-active-color` and `--lr-icon-button-radius`.
 
 A single notification.
 

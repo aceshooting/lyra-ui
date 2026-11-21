@@ -104,7 +104,7 @@ export const InvalidChrome: Story = {
     docs: {
       description: {
         story:
-          'A required switch outlines its track (`--lr-switch-invalid-border`) and exposes `aria-invalid` once the user has toggled it off again or left it unset; `error-text` makes it invalid immediately.',
+          'A required switch outlines its track (`--lr-switch-invalid-border-color`) and exposes `aria-invalid` once the user has toggled it off again or left it unset; `error-text` makes it invalid immediately.',
       },
     },
   },

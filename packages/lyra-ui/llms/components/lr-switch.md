@@ -10,7 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 12 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `label`: `--lr-switch-label-font-size`, `--lr-switch-label-color`, `--lr-switch-checked-label-color`; `track`: `--lr-switch-invalid-border`, `--lr-switch-track-fill`, `--lr-switch-track-border`, `--lr-switch-checked-track-border`
+- **Tokens by part** (prefer these over a `::part()` rule) `label`: `--lr-switch-label-font-size`, `--lr-switch-label-color`, `--lr-switch-checked-label-color`; `track`: `--lr-switch-invalid-border-color`, `--lr-switch-track-fill`, `--lr-switch-track-border`, `--lr-switch-checked-track-border`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -134,7 +134,7 @@ default. Both track dimensions ride the shared `size` ladder, so at the default 
 resolve to `1.125rem` × `2.025rem`.
 WA/Shoelace's `--width`, `--height`, and `--thumb-size` aliases feed those same rendered dimensions.
 `--lr-switch-gap` (default `var(--lr-space-s)`) independently controls the track-to-label gap.
-`--lr-switch-invalid-border` (default `var(--lr-color-danger)`) is the outline `[part='track']`
+`--lr-switch-invalid-border-color` (default `var(--lr-color-danger)`) is the outline `[part='track']`
 paints while the switch matches `:state(user-invalid)`.
 
 `--lr-switch-track-fill` (default `--lr-color-border`) is `[part='track']`'s unchecked resting

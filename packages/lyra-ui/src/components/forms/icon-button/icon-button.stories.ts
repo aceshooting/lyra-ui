@@ -30,11 +30,11 @@ export const BorderedTinted: Story = {
       aria-label="Search"
       style="
         --lr-icon-button-border: var(--lr-border-width-thin) solid var(--lr-color-border);
-        --lr-icon-button-border-hover: var(--lr-border-width-thin) solid var(--lr-color-brand);
+        --lr-icon-button-hover-border: var(--lr-border-width-thin) solid var(--lr-color-brand);
         --lr-icon-button-bg: var(--lr-color-brand-quiet);
-        --lr-icon-button-bg-hover: var(--lr-color-brand);
+        --lr-icon-button-hover-bg: var(--lr-color-brand);
         --lr-icon-button-color: var(--lr-color-brand);
-        --lr-icon-button-color-hover: var(--lr-color-surface);
+        --lr-icon-button-hover-color: var(--lr-color-surface);
       "
     ></lr-icon-button>
   `,

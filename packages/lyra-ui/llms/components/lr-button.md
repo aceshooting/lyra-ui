@@ -238,14 +238,14 @@ for `accent`); the chrome-less tiers paint nothing, so they mix from the page su
 var(--lr-color-mix-partner) var(--lr-color-mix-hover))`) is the hovered background and
 `--lr-button-active-bg` the same mix at the stronger `--lr-color-mix-active` share, so a
 press reads as more than a hover. `appearance="link"` moves its text colour by those two shares
-instead of taking a background. `--lr-button-hover-color` and `--lr-button-hover-border` are the
+instead of taking a background. `--lr-button-hover-color` and `--lr-button-hover-border-color` are the
 text/border counterparts, letting e.g. `appearance="quiet"` (which has its own resting
 `--lr-button-quiet-color`/`-border`) theme its hover state independently. Both are **undeclared by
 default**. `quiet` and chromatic `plain` text move toward body text during hover/press to retain contrast
 against the moving fill; the other appearances keep their resting text colour. The hover colour
 override also applies while pressed, and the border fallback remains the resting border colour.
 `appearance="link"` ignores `--lr-button-hover-color` and renders without a border, so
-`--lr-button-hover-border` has no effect there. Retuning either fill token also retunes its tier's
+`--lr-button-hover-border-color` has no effect there. Retuning either fill token also retunes its tier's
 hover and press. For removed historical tokens, see the [release history archive](https://github.com/aceshooting/lyra-ui/tree/main/docs/changelog).
 
 `--lr-button-width` (default `100%`) is the internal control's inline size, so it follows the host's

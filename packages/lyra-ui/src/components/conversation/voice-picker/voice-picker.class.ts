@@ -210,7 +210,7 @@ export interface LyraVoicePickerEventMap {
  *   and between trigger, combobox, and option children.
  * @cssprop [--lr-voice-picker-radius=var(--lr-form-control-radius)] - Trigger, combobox, listbox,
  *   option, and preview-action corner radius.
- * @cssprop [--lr-voice-picker-preview-active-border=var(--lr-color-brand)] - Active preview border.
+ * @cssprop [--lr-voice-picker-preview-active-border-color=var(--lr-color-brand)] - Active preview border.
  * @cssprop [--lr-voice-picker-preview-active-color=var(--lr-color-brand)] - Active preview icon.
  * @cssprop [--lr-voice-picker-trigger-border-color=var(--lr-color-border)] - Resting trigger/combobox border color, independent of the open-state color below. The adjacent `[part='preview-button']` reads it too.
  * @cssprop [--lr-voice-picker-trigger-fill=var(--lr-color-surface)] - Resting trigger/combobox background, shared by the preview button.
@@ -224,7 +224,7 @@ export interface LyraVoicePickerEventMap {
  * Additive: the focus outline and border cue are the accessibility answer to focus and are never
  * replaced by it.
  * @cssprop [--lr-voice-picker-option-active-bg=var(--lr-color-brand-quiet)] - Active option fill.
- * @cssprop [--lr-voice-picker-option-selected-border=var(--lr-color-brand)] - Selected option border.
+ * @cssprop [--lr-voice-picker-option-selected-border-color=var(--lr-color-brand)] - Selected option border.
  * @cssprop [--lr-voice-picker-option-selected-color=var(--lr-color-brand)] - Selected option text.
  * @cssprop [--lr-voice-picker-option-selected-bg=transparent] - Selected option fill.
  * @cssprop [--lr-voice-picker-option-selected-font-weight=var(--lr-font-weight-semibold)] -

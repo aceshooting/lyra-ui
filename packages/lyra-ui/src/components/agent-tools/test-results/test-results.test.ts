@@ -880,7 +880,7 @@ describe('lr-test-results', () => {
     it('retints the pressed filter toggle background, border, and color via the cssprops', async () => {
       const el = await pressedFixture();
       el.style.setProperty('--lr-test-results-filter-active-bg', 'rgb(10, 20, 30)');
-      el.style.setProperty('--lr-test-results-filter-active-border', 'rgb(40, 50, 60)');
+      el.style.setProperty('--lr-test-results-filter-active-border-color', 'rgb(40, 50, 60)');
       el.style.setProperty('--lr-test-results-filter-active-color', 'rgb(70, 80, 90)');
       const pressed = el.shadowRoot!.querySelector('[part="filter-toggle"][aria-pressed="true"]') as HTMLElement;
       expect(pressed.getAttribute('data-status')).to.equal('passed');
@@ -913,7 +913,7 @@ describe('lr-test-results', () => {
       const border = getComputedStyle(pressed).borderTopColor;
       const color = getComputedStyle(pressed).color;
       el.style.setProperty('--lr-test-results-filter-active-bg', 'var(--lr-color-brand-quiet)');
-      el.style.setProperty('--lr-test-results-filter-active-border', 'var(--lr-color-brand)');
+      el.style.setProperty('--lr-test-results-filter-active-border-color', 'var(--lr-color-brand)');
       el.style.setProperty('--lr-test-results-filter-active-color', 'var(--lr-color-brand)');
       expect(getComputedStyle(pressed).backgroundColor).to.equal(bg);
       expect(getComputedStyle(pressed).borderTopColor).to.equal(border);

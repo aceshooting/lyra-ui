@@ -284,8 +284,8 @@ class AppGemstoneAccentPicker extends LitElement {
       }
       .gemstone-accent-picker lr-icon-button {
         --lr-icon-button-bg: transparent;
-        --lr-icon-button-bg-hover: transparent;
-        --lr-icon-button-bg-active: transparent;
+        --lr-icon-button-hover-bg: transparent;
+        --lr-icon-button-active-bg: transparent;
         --lr-icon-button-border: none;
       }
       .gem {

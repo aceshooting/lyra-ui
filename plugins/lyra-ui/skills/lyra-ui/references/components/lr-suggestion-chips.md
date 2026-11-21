@@ -64,7 +64,7 @@ packing of the chip row. Use `center` to center the chips under centered empty-s
 every line, the wrapped final one included, which styling `::part(base)` as a centered flex container
 cannot do (once the chips wrap, the row fills the available inline size and each line packs to the
 start). `--lr-suggestion-chips-hover-bg` (default `var(--lr-color-brand-quiet)`) — a `chip`'s
-background on hover. `--lr-suggestion-chips-hover-border` (default `var(--lr-color-brand)`) — a
+background on hover. `--lr-suggestion-chips-hover-border-color` (default `var(--lr-color-brand)`) — a
 `chip`'s border color on hover. All three are declared as `var()` fallbacks at the point of use, not
 on `:host`. `--lr-suggestion-chips-disabled-opacity` (default `var(--lr-opacity-disabled)`) — opacity of a chip whose
 suggestion sets `disabled`. `--lr-suggestion-chips-label-lines` (default `1`; `3` when `wrap` is

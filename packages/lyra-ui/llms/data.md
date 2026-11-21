@@ -1649,7 +1649,7 @@ across `--lr-pagination-base-gap` (default `var(--lr-space-m)`) between summary 
 `--lr-pagination-page-field-gap` (default `var(--lr-space-2xs)`) between the compact
 `[part="page-input"]` and its `[part="page-count"]`; each remains
 active in standard, compact, and 320px container layouts —
-`--lr-pagination-invalid-border` (default `var(--lr-color-danger)`) — border color of
+`--lr-pagination-invalid-border-color` (default `var(--lr-color-danger)`) — border color of
 `[part="page-input"]` while the typed page is out of range (`aria-invalid="true"`); a state hook
 declared as an inline `var()` fallback, since `::part(page-input)[aria-invalid='true']` is invalid
 CSS. `--lr-pagination-control-color` independently controls the resting foreground. The applied
@@ -4505,7 +4505,7 @@ page gives it.
 buttons. The buttons accept the shared
 `--lr-icon-button-bg` (default `transparent`), `--lr-icon-button-border` (default `0`),
 `--lr-icon-button-color` (default `var(--lr-color-text)`), and `--lr-icon-button-radius` (default
-`var(--lr-radius)`), and the hover and pressed overrides `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color-hover` and `--lr-icon-button-color-active`
+`var(--lr-radius)`), and the hover and pressed overrides `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`, `--lr-icon-button-hover-color` and `--lr-icon-button-active-color`
 on the built-in controls; plus shared tokens —
 `--lr-icon-button-size` (each button's minimum hit area, unchanged by `frame`), `--lr-shadow-m`,
 `--lr-color-surface`, `--lr-color-border-subtle`, `--lr-radius`, `--lr-space-2xs`,
@@ -5200,7 +5200,7 @@ an entry's value text and buttons), `value` (carries `data-masked`), `reveal-but
 **Themeable custom properties:** `--lr-env-list-button-hover-bg` (default `var(--lr-color-brand-quiet)`)
 and `--lr-env-list-button-active-bg` (reveal/copy button hover and pressed fills),
 `--lr-env-list-reveal-active-bg` (default
-`var(--lr-color-brand-quiet)`) and `--lr-env-list-reveal-active-border` (default
+`var(--lr-color-brand-quiet)`) and `--lr-env-list-reveal-active-border-color` (default
 `var(--lr-color-brand)`) — the background and border color of a revealed entry's reveal button. The background is also the
 base its hover/press mixes from. The button is named by its action ("Reveal {name}" / "Hide {name}")
 and carries no `aria-pressed`, so its name never contradicts a pressed state.
@@ -5529,7 +5529,7 @@ shared `--lr-icon-button-bg` (default `transparent`), `--lr-icon-button-border` 
 `--lr-icon-button-color` (default
 `var(--lr-graph-query-builder-saved-delete-color, var(--lr-color-text-quiet))`), and
 `--lr-icon-button-radius` (default `var(--lr-radius-xs)`), and the hover and pressed overrides
-`--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color-hover` and `--lr-icon-button-color-active`. Unset hooks preserve the current shared
+`--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`, `--lr-icon-button-hover-color` and `--lr-icon-button-active-color`. Unset hooks preserve the current shared
 surface/text/brand/danger colors and hover/active mixes. They are inline `var()` fallbacks at the
 longhand that consumes them, so an override on a parent themes every descendant builder without
 being shadowed by a declaration on the component host.

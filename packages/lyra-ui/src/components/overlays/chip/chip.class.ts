@@ -200,7 +200,7 @@ function isSourceLabelAvailable(node: Node): boolean {
  * @cssprop [--lr-chip-pressed-bg=var(--lr-chip-bg)] - Background while a toggleable chip is
  * selected, independently themeable from its resting background, and the base a selected chip's
  * hover/press wash mixes from.
- * @cssprop [--lr-chip-pressed-border=var(--lr-chip-accent)] - Border color while a toggleable chip
+ * @cssprop [--lr-chip-pressed-border-color=var(--lr-chip-accent)] - Border color while a toggleable chip
  * is selected, independently themeable from the label/icon color.
  * @status stable
  * @since 4.0.0

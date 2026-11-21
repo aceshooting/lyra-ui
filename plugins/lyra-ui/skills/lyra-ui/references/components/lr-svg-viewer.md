@@ -10,7 +10,7 @@
 - **Deprecations** none
 - **Optional peers** `dompurify` — see `llms/peers.md`
 - **Themeable via** 17 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `region-highlight`: `--lr-svg-viewer-active-border`
+- **Tokens by part** (prefer these over a `::part()` rule) `region-highlight`: `--lr-svg-viewer-active-border-color`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -93,7 +93,7 @@ localized loading text alongside its decorative ring, and the ring stops under r
 
 **Themeable custom properties:** `--lr-svg-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
-`--lr-svg-viewer-active-border` (default `var(--lr-color-warning, var(--lr-color-brand))`) — the
+`--lr-svg-viewer-active-border-color` (default `var(--lr-color-warning, var(--lr-color-brand))`) — the
 border and outer-ring color of the `[part='region-highlight']` matching `activeHighlightId`; the
 ring keeps the active region distinct from a warning-tone highlight, and the token recolors the
 active region without touching the rest. It is an

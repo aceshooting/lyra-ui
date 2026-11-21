@@ -24,7 +24,7 @@ export const styles = css`
       var(--lr-color-brand-quiet)
     );
     --lr-checkbox-checked-border-color: var(
-      --lr-source-picker-checked-border,
+      --lr-source-picker-checked-border-color,
       var(--lr-color-brand)
     );
   }
@@ -129,14 +129,14 @@ export const styles = css`
   }
   [part="checkbox"][data-state="true"] {
     background: var(--lr-source-picker-checked-bg, var(--lr-color-brand));
-    border-color: var(--lr-source-picker-checked-border, var(--lr-color-brand));
+    border-color: var(--lr-source-picker-checked-border-color, var(--lr-color-brand));
   }
   [part="checkbox"][data-state="mixed"] {
     background: var(
       --lr-source-picker-mixed-bg,
       color-mix(in srgb, var(--lr-color-brand) 50%, var(--lr-color-surface))
     );
-    border-color: var(--lr-source-picker-checked-border, var(--lr-color-brand));
+    border-color: var(--lr-source-picker-checked-border-color, var(--lr-color-brand));
   }
   [part="label"] {
     min-inline-size: 0;

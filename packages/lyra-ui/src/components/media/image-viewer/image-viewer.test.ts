@@ -1712,9 +1712,9 @@ describe("active-state cssprop escape hatches", () => {
     );
   });
 
-  it("--lr-image-viewer-annotate-active-border recolors the pressed annotate-toggle border", async () => {
+  it("--lr-image-viewer-annotate-active-border-color recolors the pressed annotate-toggle border", async () => {
     const { toggle } = await withAnnotateActive(
-      "--lr-image-viewer-annotate-active-border: rgb(0, 51, 102)"
+      "--lr-image-viewer-annotate-active-border-color: rgb(0, 51, 102)"
     );
     expect(getComputedStyle(toggle).borderTopColor).to.equal("rgb(0, 51, 102)");
   });
@@ -1764,7 +1764,7 @@ describe("active-state cssprop escape hatches", () => {
     expect(chrome.outlineOffset).to.equal("9px");
   });
 
-  it("--lr-image-viewer-highlight-success-border retints one highlight tone without changing global tokens", async () => {
+  it("--lr-image-viewer-highlight-success-border-color retints one highlight tone without changing global tokens", async () => {
     const regions: LyraHighlight[] = [
       {
         id: "success",
@@ -1776,7 +1776,7 @@ describe("active-state cssprop escape hatches", () => {
       },
     ];
     const wrapper = (await fixture(html`<div
-      style="--lr-image-viewer-highlight-success-border: rgb(0, 51, 102)"
+      style="--lr-image-viewer-highlight-success-border-color: rgb(0, 51, 102)"
     >
       <lr-image-viewer
         src=${LOADABLE_PNG}
@@ -1846,7 +1846,7 @@ describe("active-state cssprop escape hatches", () => {
 
   it("is accessible with every active-state prop themed", async () => {
     const { el } = await withActiveHighlight(
-      "--lr-image-viewer-annotate-active-bg: rgb(0, 51, 102); --lr-image-viewer-annotate-active-border: rgb(0, 34, 68); --lr-image-viewer-highlight-active-color: rgb(0, 51, 102)"
+      "--lr-image-viewer-annotate-active-bg: rgb(0, 51, 102); --lr-image-viewer-annotate-active-border-color: rgb(0, 34, 68); --lr-image-viewer-highlight-active-color: rgb(0, 51, 102)"
     );
     await expect(el).to.be.accessible();
   });

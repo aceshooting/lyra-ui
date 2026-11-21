@@ -113,7 +113,7 @@ export const styles = css`
       var(--lr-color-brand-quiet)
     );
     border-color: var(
-      --lr-image-viewer-annotate-active-border,
+      --lr-image-viewer-annotate-active-border-color,
       var(--lr-color-brand)
     );
   }
@@ -209,7 +209,7 @@ export const styles = css`
        region's own percentages, set inline), so the border box stays exactly the region even when
        the region is thinner than two border widths. */
     --_lr-image-viewer-highlight-bw: var(--lr-border-width-medium);
-    border: solid var(--lr-image-viewer-highlight-border, var(--lr-color-brand));
+    border: solid var(--lr-image-viewer-highlight-border-color, var(--lr-color-brand));
     border-width:
       min(
         var(--_lr-image-viewer-highlight-bw),
@@ -246,7 +246,7 @@ export const styles = css`
   [part="highlight"]:where([data-tone="success"]) {
     border-style: double;
     border-color: var(
-      --lr-image-viewer-highlight-success-border,
+      --lr-image-viewer-highlight-success-border-color,
       var(--lr-color-success)
     );
     --_lr-image-viewer-highlight-fill: var(
@@ -257,7 +257,7 @@ export const styles = css`
   [part="highlight"]:where([data-tone="warning"]) {
     border-style: dashed;
     border-color: var(
-      --lr-image-viewer-highlight-warning-border,
+      --lr-image-viewer-highlight-warning-border-color,
       var(--lr-color-warning)
     );
     --_lr-image-viewer-highlight-fill: var(
@@ -268,7 +268,7 @@ export const styles = css`
   [part="highlight"]:where([data-tone="danger"]) {
     border-style: dotted;
     border-color: var(
-      --lr-image-viewer-highlight-danger-border,
+      --lr-image-viewer-highlight-danger-border-color,
       var(--lr-color-danger)
     );
     --_lr-image-viewer-highlight-fill: var(
@@ -279,7 +279,7 @@ export const styles = css`
   [part="highlight"]:where([data-tone="neutral"]) {
     border-style: groove;
     border-color: var(
-      --lr-image-viewer-highlight-neutral-border,
+      --lr-image-viewer-highlight-neutral-border-color,
       var(--lr-color-border)
     );
     --_lr-image-viewer-highlight-fill: var(

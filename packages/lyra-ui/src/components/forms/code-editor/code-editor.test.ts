@@ -19,7 +19,7 @@ expectStaleAttribute('lr-code-editor', 'line-numbers');
 it('lets a consumer retint hover and invalid editor borders independently', async () => {
   const el = (await fixture(html`
     <lr-code-editor
-      style="--lr-code-editor-hover-border: rgb(1, 2, 3); --lr-code-editor-invalid-border: rgb(4, 5, 6)"
+      style="--lr-code-editor-hover-border-color: rgb(1, 2, 3); --lr-code-editor-invalid-border-color: rgb(4, 5, 6)"
     ></lr-code-editor>
   `)) as LyraCodeEditor;
   const editor = el.shadowRoot!.querySelector('[part="editor"]') as HTMLElement;

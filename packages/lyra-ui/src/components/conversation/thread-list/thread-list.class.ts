@@ -254,7 +254,7 @@ const THREADS_AND_SLOTTED_CONTENT_WARNING =
  *   honors the theme-level `--lr-theme-scrollbar-width`, `--lr-theme-scrollbar-gutter` and
  *   `--lr-theme-scrollbar-color` hooks (each defaulting to `auto`), like every internal scroller.
  * @csspart row-action - A built-in pin/archive/delete icon button (data mode, when `rowActions` includes it).
- * @csspart pin-glyph - The small pin indicator shown in a pinned row's `meta` slot (data mode).
+ * @csspart pin-icon - The small pin indicator shown in a pinned row's `meta` slot (data mode).
  * @csspart group-header - A date/custom group header in data mode.
  * @csspart group-sticky - `sticky-groups` only: the pinned copy of the current group's header,
  *   exported from the internal `lr-virtual-list`'s sticky layer. It repeats the `group-header`,
@@ -334,10 +334,10 @@ const THREADS_AND_SLOTTED_CONTENT_WARNING =
  * @cssprop [--lr-thread-list-group-toggle-hover-color=var(--lr-color-text)] - Group-toggle hover foreground.
  * @cssprop [--lr-thread-list-group-toggle-active-bg=color-mix(in oklab, var(--lr-thread-list-group-toggle-hover-bg, var(--lr-color-surface-raised)), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Group-toggle pressed background.
  * @cssprop [--lr-thread-list-group-toggle-active-color=var(--lr-thread-list-group-toggle-hover-color, var(--lr-color-text))] - Group-toggle pressed foreground.
- * @cssprop [--lr-thread-list-row-action-hover-bg=var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised))] - Row-action hover background.
- * @cssprop [--lr-thread-list-row-action-hover-color=var(--lr-icon-button-color-hover, var(--lr-color-text))] - Row-action hover foreground.
- * @cssprop [--lr-thread-list-row-action-active-bg=var(--lr-icon-button-bg-active, color-mix(in oklab, var(--lr-thread-list-row-action-hover-bg, var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised))), var(--lr-color-mix-partner) var(--lr-color-mix-active)))] - Row-action pressed background.
- * @cssprop [--lr-thread-list-row-action-active-color=var(--lr-icon-button-color-active, var(--lr-thread-list-row-action-hover-color, var(--lr-icon-button-color-hover, var(--lr-color-text))))] - Row-action pressed foreground.
+ * @cssprop [--lr-thread-list-row-action-hover-bg=var(--lr-icon-button-hover-bg, var(--lr-color-surface-raised))] - Row-action hover background.
+ * @cssprop [--lr-thread-list-row-action-hover-color=var(--lr-icon-button-hover-color, var(--lr-color-text))] - Row-action hover foreground.
+ * @cssprop [--lr-thread-list-row-action-active-bg=var(--lr-icon-button-active-bg, color-mix(in oklab, var(--lr-thread-list-row-action-hover-bg, var(--lr-icon-button-hover-bg, var(--lr-color-surface-raised))), var(--lr-color-mix-partner) var(--lr-color-mix-active)))] - Row-action pressed background.
+ * @cssprop [--lr-thread-list-row-action-active-color=var(--lr-icon-button-active-color, var(--lr-thread-list-row-action-hover-color, var(--lr-icon-button-hover-color, var(--lr-color-text))))] - Row-action pressed foreground.
  *   Row actions and the search clear button otherwise read the shared `--lr-icon-button-*` tokens.
  * @cssprop [--lr-thread-list-excerpt-highlight-bg=var(--lr-color-warning-quiet)] -
  *   Background of `<mark>` descendants returned by `renderExcerpt`.
@@ -348,14 +348,14 @@ const THREADS_AND_SLOTTED_CONTENT_WARNING =
  * @cssprop [--lr-thread-list-excerpt-highlight-padding=0] - Padding of `<mark>` descendants
  *   returned by `renderExcerpt`.
  * @cssprop --lr-icon-button-bg - Resting background of the search clear button.
- * @cssprop --lr-icon-button-bg-active - Pressed background of the search clear button.
- * @cssprop --lr-icon-button-bg-hover - Hover background of the search clear button.
+ * @cssprop --lr-icon-button-active-bg - Pressed background of the search clear button.
+ * @cssprop --lr-icon-button-hover-bg - Hover background of the search clear button.
  * @cssprop --lr-icon-button-border - Resting border of the search clear button.
- * @cssprop --lr-icon-button-border-active - Pressed border of the search clear button.
- * @cssprop --lr-icon-button-border-hover - Hover border of the search clear button.
+ * @cssprop --lr-icon-button-active-border - Pressed border of the search clear button.
+ * @cssprop --lr-icon-button-hover-border - Hover border of the search clear button.
  * @cssprop --lr-icon-button-color - Resting foreground of the search clear button.
- * @cssprop --lr-icon-button-color-active - Pressed foreground of the search clear button.
- * @cssprop --lr-icon-button-color-hover - Hover foreground of the search clear button.
+ * @cssprop --lr-icon-button-active-color - Pressed foreground of the search clear button.
+ * @cssprop --lr-icon-button-hover-color - Hover foreground of the search clear button.
  * @cssprop --lr-icon-button-radius - Corner radius of the search clear button.
  * @status stable
  * @since 4.0.0
@@ -705,7 +705,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
   /** Forwarded to each data-mode row: turns off its inline rename. */
   @property({ type: Boolean, attribute: 'without-rename', reflect: true }) withoutRename = false;
 
-  /** Data mode: omits the `pin-glyph` indicator from pinned rows. Each pinned row keeps a visually
+  /** Data mode: omits the `pin-icon` indicator from pinned rows. Each pinned row keeps a visually
    *  hidden "Pinned" label in its `meta` slot, so assistive technology still hears the state. */
   @property({ type: Boolean, attribute: 'without-pin-icon', reflect: true }) withoutPinIcon = false;
 
@@ -1603,7 +1603,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
           ? nothing
           : this.withoutPinIcon
           ? html`<span slot="meta" class="sr-only">${this.localize('threadGroupPinned')}</span>`
-          : html`<span slot="meta" part="row-meta pin-glyph"
+          : html`<span slot="meta" part="row-meta pin-icon"
               ><span role="img" aria-label=${this.localize('threadGroupPinned')}>${pinIcon()}</span> </span
             >`}
         ${this.renderMeta
@@ -1826,7 +1826,7 @@ export class LyraThreadList extends LyraElement<LyraThreadListEventMap> {
                 : this.localize('threadListEmpty')}
             </div>`
           : html`<lr-virtual-list
-              exportparts="base:viewport, sticky-group:group-sticky, row:row, row-wrapper:row-wrapper, group-header:group-header, group-toggle:group-toggle, group-label:group-label, group-adornment:group-adornment, group-icon:group-icon, row-start:row-start, row-excerpt:row-excerpt, row-content:row-content, row-meta:row-meta, row-actions:row-actions, row-action:row-action, pin-glyph:pin-glyph, row-item-base:row-item-base, row-item-base-menu-open:row-item-base-menu-open, row-item-active-indicator:row-item-active-indicator, row-item-select-button:row-item-select-button, row-item-start:row-item-start, row-item-content:row-item-content, row-item-label:row-item-label, row-item-label-input:row-item-label-input, row-item-rename-button:row-item-rename-button, row-item-excerpt:row-item-excerpt, row-item-meta:row-item-meta, row-item-timestamp:row-item-timestamp, row-item-actions:row-item-actions"
+              exportparts="base:viewport, sticky-group:group-sticky, row:row, row-wrapper:row-wrapper, group-header:group-header, group-toggle:group-toggle, group-label:group-label, group-adornment:group-adornment, group-icon:group-icon, row-start:row-start, row-excerpt:row-excerpt, row-content:row-content, row-meta:row-meta, row-actions:row-actions, row-action:row-action, pin-icon:pin-icon, row-item-base:row-item-base, row-item-base-menu-open:row-item-base-menu-open, row-item-active-indicator:row-item-active-indicator, row-item-select-button:row-item-select-button, row-item-start:row-item-start, row-item-content:row-item-content, row-item-label:row-item-label, row-item-label-input:row-item-label-input, row-item-rename-button:row-item-rename-button, row-item-excerpt:row-item-excerpt, row-item-meta:row-item-meta, row-item-timestamp:row-item-timestamp, row-item-actions:row-item-actions"
               row-height="auto"
               .items=${guard([items, source], () => source ? [] : items)}
               .source=${source}

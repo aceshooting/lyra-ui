@@ -445,7 +445,7 @@ export type LyraSelectInputEvent<Multiple extends boolean = boolean> =
  * @cssprop [--lr-select-option-selected-bg=transparent] - Background of the currently-selected
  *   option row. Not declared on `:host`; retheme just the selected row without hijacking
  *   `--lr-color-brand`.
- * @cssprop [--lr-select-option-selected-border=var(--lr-color-brand)] - Border color of the
+ * @cssprop [--lr-select-option-selected-border-color=var(--lr-color-brand)] - Border color of the
  *   selected option row.
  * @cssprop [--lr-select-option-selected-color=var(--lr-color-brand)] - Text color of the selected
  *   option row.

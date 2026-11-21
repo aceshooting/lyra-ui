@@ -20,8 +20,8 @@
 For the collapse button, set `--lr-icon-button-radius` for the corners. The fill, border and foreground use these tokens in resting, hover and pressed states respectively.
 
 - `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color`
-- `--lr-icon-button-bg-hover`, `--lr-icon-button-border-hover`, `--lr-icon-button-color-hover`
-- `--lr-icon-button-bg-active`, `--lr-icon-button-border-active`, `--lr-icon-button-color-active`
+- `--lr-icon-button-hover-bg`, `--lr-icon-button-hover-border`, `--lr-icon-button-hover-color`
+- `--lr-icon-button-active-bg`, `--lr-icon-button-active-border`, `--lr-icon-button-active-color`
 
 Customize the appearance with `--lr-chat-message-retry-color`, `--lr-chat-message-retry-border-color` and `--lr-chat-message-retry-hover-bg`.
 

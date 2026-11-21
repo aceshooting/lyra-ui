@@ -69,12 +69,12 @@ function isFlowCanvasLike(element: HTMLElement): element is FlowCanvasLike {
  * @cssprop [--lr-icon-button-border=0] - Control border in the resting state.
  * @cssprop [--lr-icon-button-color=var(--lr-color-text)] - Control foreground color in the resting state.
  * @cssprop [--lr-icon-button-radius=var(--lr-radius)] - Control corner radius.
- * @cssprop --lr-icon-button-bg-hover - Hover background of the built-in controls.
- * @cssprop --lr-icon-button-bg-active - Pressed background of the built-in controls.
- * @cssprop --lr-icon-button-border-hover - Hover border of the built-in controls.
- * @cssprop --lr-icon-button-border-active - Pressed border of the built-in controls.
- * @cssprop --lr-icon-button-color-hover - Hover foreground of the built-in controls.
- * @cssprop --lr-icon-button-color-active - Pressed foreground of the built-in controls.
+ * @cssprop --lr-icon-button-hover-bg - Hover background of the built-in controls.
+ * @cssprop --lr-icon-button-active-bg - Pressed background of the built-in controls.
+ * @cssprop --lr-icon-button-hover-border - Hover border of the built-in controls.
+ * @cssprop --lr-icon-button-active-border - Pressed border of the built-in controls.
+ * @cssprop --lr-icon-button-hover-color - Hover foreground of the built-in controls.
+ * @cssprop --lr-icon-button-active-color - Pressed foreground of the built-in controls.
  * @status stable
  * @since 4.0.0
  */

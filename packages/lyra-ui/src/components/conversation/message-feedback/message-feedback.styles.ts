@@ -19,23 +19,23 @@ export const styles = css`
     color: 'var(--lr-color-text-quiet)',
     hoverBackground: 'var(--lr-color-surface-raised)',
     hoverColor: 'var(--lr-color-text)',
-    activeBackground: activeFill('var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised))').cssText,
-    activeColor: 'var(--lr-icon-button-color-hover, var(--lr-color-text))',
+    activeBackground: activeFill('var(--lr-icon-button-hover-bg, var(--lr-color-surface-raised))').cssText,
+    activeColor: 'var(--lr-icon-button-hover-color, var(--lr-color-text))',
   })}
   :where([part='up-button'], [part='down-button']) {
     --_lr-icon-button-border-default: var(--lr-border-width-thin) solid transparent;
     --_lr-icon-button-border-hover-default: var(--lr-icon-button-border, var(--_lr-icon-button-border-default));
-    --_lr-icon-button-border-active-default: var(--lr-icon-button-border-hover, var(--_lr-icon-button-border-hover-default));
+    --_lr-icon-button-border-active-default: var(--lr-icon-button-hover-border, var(--_lr-icon-button-border-hover-default));
   }
   [part='up-button']:where([aria-pressed='true']) {
     --_lr-thumb-selected-bg: var(--lr-message-feedback-up-active-bg, var(--lr-color-success-quiet));
     --_lr-thumb-selected-color: var(--lr-message-feedback-up-active-color, var(--lr-color-success));
-    --_lr-thumb-selected-border: var(--lr-message-feedback-up-active-border, var(--lr-color-success));
+    --_lr-thumb-selected-border: var(--lr-message-feedback-up-active-border-color, var(--lr-color-success));
   }
   [part='down-button']:where([aria-pressed='true']) {
     --_lr-thumb-selected-bg: var(--lr-message-feedback-down-active-bg, var(--lr-color-danger-quiet));
     --_lr-thumb-selected-color: var(--lr-message-feedback-down-active-color, var(--lr-color-danger));
-    --_lr-thumb-selected-border: var(--lr-message-feedback-down-active-border, var(--lr-color-danger));
+    --_lr-thumb-selected-border: var(--lr-message-feedback-down-active-border-color, var(--lr-color-danger));
   }
   [aria-pressed='true'],
   [aria-pressed='true']:not(:disabled):hover,
@@ -45,10 +45,10 @@ export const styles = css`
     border-color: var(--_lr-thumb-selected-border);
   }
   [aria-pressed='true']:not(:disabled):hover {
-    background: var(--lr-icon-button-bg-hover, ${hoverFill('var(--_lr-thumb-selected-bg)')});
+    background: var(--lr-icon-button-hover-bg, ${hoverFill('var(--_lr-thumb-selected-bg)')});
   }
   [aria-pressed='true']:not(:disabled):active {
-    background: var(--lr-icon-button-bg-active, ${activeFill('var(--_lr-thumb-selected-bg)')});
+    background: var(--lr-icon-button-active-bg, ${activeFill('var(--_lr-thumb-selected-bg)')});
   }
   /* A 0fr/1fr grid row animates the disclosure's block size without measuring content;
      min-block-size: 0 on the inner wrapper plus overflow: hidden here stops collapsed content

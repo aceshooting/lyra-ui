@@ -66,7 +66,7 @@ state), so the selection is announced, not merely painted. Other request rows ex
 
 **Additional API surface:**
 
-- `--lr-approval-queue-selected-border` — Selected request border. Default: `var(--lr-color-brand)`.
+- `--lr-approval-queue-selected-border-color` — Selected request border. Default: `var(--lr-color-brand)`.
 
 **Heading level:** `headingLevel` (attribute `heading-level`, default `'2'`) sets the outline level of the title; `'none'` preserves its text without a heading role.
 

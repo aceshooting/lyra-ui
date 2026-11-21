@@ -303,7 +303,7 @@ describe('lr-agent-eval-dashboard', () => {
     const el = (await fixture(html`
       <lr-agent-eval-dashboard
         metric-id="pass"
-        style="--lr-agent-eval-dashboard-active-border: rgb(1, 2, 3)"
+        style="--lr-agent-eval-dashboard-active-border-color: rgb(1, 2, 3)"
         .metrics=${[{ id: 'pass', label: 'Pass', value: 1 }]}
       ></lr-agent-eval-dashboard>
     `)) as LyraAgentEvalDashboard;

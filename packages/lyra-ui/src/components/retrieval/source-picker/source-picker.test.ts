@@ -527,7 +527,7 @@ it('honors a .strings override for the select-all label and the empty/no-matches
 it('delegates select-all interaction semantics to lr-checkbox and maps the component state tokens', async () => {
   const el = (await fixture(
     html`<lr-source-picker
-      style="--lr-source-picker-mixed-bg: rgb(1, 2, 3); --lr-source-picker-checked-border: rgb(4, 5, 6)"
+      style="--lr-source-picker-mixed-bg: rgb(1, 2, 3); --lr-source-picker-checked-border-color: rgb(4, 5, 6)"
       .sources=${sources}
       .selectedSourceIds=${['doc1']}
     ></lr-source-picker>`
@@ -1114,10 +1114,10 @@ describe('checked-state cssprop escape hatch', () => {
     );
   });
 
-  it('--lr-source-picker-checked-border recolors the checked border', async () => {
+  it('--lr-source-picker-checked-border-color recolors the checked border', async () => {
     const el = await picker(
       ['doc1', 'doc2', 'doc3'],
-      '--lr-source-picker-checked-border: rgb(0, 51, 102)'
+      '--lr-source-picker-checked-border-color: rgb(0, 51, 102)'
     );
     expect(getComputedStyle(selectAllBox(el)).borderTopColor).to.equal(
       'rgb(0, 51, 102)'
@@ -1177,7 +1177,7 @@ describe('checked-state cssprop escape hatch', () => {
   it('is accessible with the checked-state props themed', async () => {
     const el = await picker(
       ['doc1', 'doc2', 'doc3'],
-      '--lr-source-picker-checked-bg: rgb(255, 243, 205); --lr-source-picker-checked-border: rgb(120, 80, 0)'
+      '--lr-source-picker-checked-bg: rgb(255, 243, 205); --lr-source-picker-checked-border-color: rgb(120, 80, 0)'
     );
     await expect(el).to.be.accessible();
   });

@@ -47,7 +47,7 @@ an entry's value text and buttons), `value` (carries `data-masked`), `reveal-but
 **Themeable custom properties:** `--lr-env-list-button-hover-bg` (default `var(--lr-color-brand-quiet)`)
 and `--lr-env-list-button-active-bg` (reveal/copy button hover and pressed fills),
 `--lr-env-list-reveal-active-bg` (default
-`var(--lr-color-brand-quiet)`) and `--lr-env-list-reveal-active-border` (default
+`var(--lr-color-brand-quiet)`) and `--lr-env-list-reveal-active-border-color` (default
 `var(--lr-color-brand)`) — the background and border color of a revealed entry's reveal button. The background is also the
 base its hover/press mixes from. The button is named by its action ("Reveal {name}" / "Hide {name}")
 and carries no `aria-pressed`, so its name never contradicts a pressed state.

@@ -113,11 +113,11 @@ export const styles = css`
   }
   [part="region-highlight"]:where([data-active]) {
     border-color: var(
-      --lr-svg-viewer-active-border,
+      --lr-svg-viewer-active-border-color,
       var(--lr-color-warning, var(--lr-color-brand))
     );
     outline: var(--lr-border-width-thick) solid var(
-      --lr-svg-viewer-active-border,
+      --lr-svg-viewer-active-border-color,
       var(--lr-color-warning, var(--lr-color-brand))
     );
     outline-offset: var(--lr-border-width-thick);

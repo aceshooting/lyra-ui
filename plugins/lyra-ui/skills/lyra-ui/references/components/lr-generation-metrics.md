@@ -19,8 +19,8 @@
 For the stop button, set `--lr-icon-button-radius` for the corners. The fill, border and foreground use these tokens in resting, hover and pressed states respectively.
 
 - `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color`
-- `--lr-icon-button-bg-hover`, `--lr-icon-button-border-hover`, `--lr-icon-button-color-hover`
-- `--lr-icon-button-bg-active`, `--lr-icon-button-border-active`, `--lr-icon-button-color-active`
+- `--lr-icon-button-hover-bg`, `--lr-icon-button-hover-border`, `--lr-icon-button-hover-color`
+- `--lr-icon-button-active-bg`, `--lr-icon-button-active-border`, `--lr-icon-button-active-color`
 
 A compact, ticking status readout shown alongside an in-progress AI response: elapsed time, token
 count, and token-throughput, plus a built-in Stop button. First-party invention (no Web Awesome

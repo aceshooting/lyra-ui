@@ -2720,7 +2720,7 @@ describe("--lr-button-hover-bg / --lr-button-active-bg and their deprecated -bac
   }
 });
 
-describe("--lr-button-hover-color / --lr-button-hover-border", () => {
+describe("--lr-button-hover-color / --lr-button-hover-border-color", () => {
   const appearances = [
     "filled",
     "accent",
@@ -2785,7 +2785,7 @@ describe("--lr-button-hover-color / --lr-button-hover-border", () => {
     const el = (await fixture(
       html`<lr-button data-lr-theme-scope
         appearance="quiet"
-        style="--lr-transition-fast: 0s; --lr-button-hover-color: rgb(1, 2, 3); --lr-button-hover-border: rgb(4, 5, 6);"
+        style="--lr-transition-fast: 0s; --lr-button-hover-color: rgb(1, 2, 3); --lr-button-hover-border-color: rgb(4, 5, 6);"
         >Save</lr-button
       >`
     )) as LyraButton;
@@ -2807,7 +2807,7 @@ describe("--lr-button-hover-color / --lr-button-hover-border", () => {
   it("inherits the hover hooks from an ancestor", async () => {
     const wrapper = await fixture<HTMLElement>(html`
       <div data-lr-theme-scope
-        style="--lr-transition-fast: 0s; --lr-button-hover-color: rgb(7, 8, 9); --lr-button-hover-border: rgb(10, 11, 12);"
+        style="--lr-transition-fast: 0s; --lr-button-hover-color: rgb(7, 8, 9); --lr-button-hover-border-color: rgb(10, 11, 12);"
       >
         <lr-button appearance="outlined">Save</lr-button>
       </div>
@@ -2911,7 +2911,7 @@ describe('quiet button pointer contrast', () => {
         wrapper.style.setProperty('--lr-button-quiet-color', 'rgb(100, 120, 140)');
         await waitUntil(() => getComputedStyle(base).color !== defaultPointer, 'quiet appearance override did not retune the pointer foreground');
         wrapper.style.setProperty('--lr-button-hover-color', 'rgb(10, 20, 30)');
-        wrapper.style.setProperty('--lr-button-hover-border', 'rgb(40, 50, 60)');
+        wrapper.style.setProperty('--lr-button-hover-border-color', 'rgb(40, 50, 60)');
         await waitUntil(() => getComputedStyle(base).color === 'rgb(10, 20, 30)', 'inherited public hover foreground never rendered');
         expect(getComputedStyle(base).borderColor).to.equal('rgb(40, 50, 60)');
         const hoverFill = getComputedStyle(base).backgroundColor;

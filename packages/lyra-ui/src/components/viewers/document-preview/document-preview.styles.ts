@@ -128,11 +128,11 @@ export const styles = css`
      the active region also gets a thick offset outline, as in lr-svg-viewer. */
   [part="region-highlight"]:where([data-active]) {
     border-color: var(
-      --lr-document-preview-active-border,
+      --lr-document-preview-active-border-color,
       var(--lr-color-warning, var(--lr-color-brand))
     );
     outline: var(--lr-border-width-thick) solid var(
-      --lr-document-preview-active-border,
+      --lr-document-preview-active-border-color,
       var(--lr-color-warning, var(--lr-color-brand))
     );
     outline-offset: var(--lr-border-width-thick);

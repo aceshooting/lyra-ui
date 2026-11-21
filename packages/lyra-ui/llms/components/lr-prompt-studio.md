@@ -103,8 +103,8 @@ import "@aceshooting/lyra-ui/components/lr-prompt-studio.js";
 
 **Additional API surface:**
 
-- `--lr-prompt-studio-field-hover-border` — Enabled field hover border. Default: `var(--lr-color-brand)`.
-- `--lr-prompt-studio-version-selected-border` — Selected version border. Default: `var(--lr-color-brand)`.
+- `--lr-prompt-studio-field-hover-border-color` — Enabled field hover border. Default: `var(--lr-color-brand)`.
+- `--lr-prompt-studio-version-selected-border-color` — Selected version border. Default: `var(--lr-color-brand)`.
 - `--lr-prompt-studio-version-selected-bg` — Selected version background. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-prompt-studio-version-selected-color` — Selected version foreground. Default: `var(--lr-color-text)`.
 - `--lr-prompt-studio-version-selected-hover-bg` — Selected version hover background. Unset, mixes from `--lr-prompt-studio-version-selected-bg` (its own default shown). Default: `color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`.

@@ -300,7 +300,7 @@ export type {
   LyraDatePickerDisabledDates,
   LyraDatePickerFirstDayOfWeek,
   LyraDatePickerPageBy,
-  LyraDatePickerSelectRequestDetail,
+  LyraDatePickerChangeRequestDetail,
   LyraDatePickerView,
 } from './components/forms/date-picker/date-picker.class.js';
 export type {
@@ -1343,11 +1343,11 @@ export type {
 export type {
   LyraSegmentedItem,
   LyraSegmentedLayout,
-  LyraSegmentedSelectRequestDetail,
+  LyraSegmentedChangeRequestDetail,
 } from './components/layout/segmented/segmented.class.js';
 export type {
   LyraSwatchPickerMode,
-  LyraSwatchPickerSelectRequestDetail,
+  LyraSwatchPickerChangeRequestDetail,
   SwatchPickerItem,
 } from './components/forms/swatch-picker/swatch-picker.class.js';
 export {
@@ -1412,7 +1412,7 @@ export type {
 } from './components/forms/otp-input/otp-input.class.js';
 export type { LyraOtpInputEventMap } from './components/forms/otp-input/otp-input.class.js';
 export type {
-  LyraRadioGroupSelectRequestDetail,
+  LyraRadioGroupChangeRequestDetail,
   RadioGroupOrientation,
 } from './components/forms/radio/radio-group.class.js';
 export type { LyraSpinnerLabelPlacement } from './components/overlays/spinner/spinner.class.js';

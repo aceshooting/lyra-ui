@@ -8083,6 +8083,27 @@
       "globals": [
         {
           "kind": "css-property",
+          "from": "--lr-agent-eval-dashboard-active-border",
+          "to": "--lr-agent-eval-dashboard-active-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-approval-queue-selected-border",
+          "to": "--lr-approval-queue-selected-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-button-hover-border",
+          "to": "--lr-button-hover-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
           "from": "--lr-callout-border",
           "to": "--lr-callout-border-color",
           "summary": "lr-callout names its border color with the -color suffix, like lr-alert.",
@@ -8132,9 +8153,373 @@
         },
         {
           "kind": "css-property",
+          "from": "--lr-chip-pressed-border",
+          "to": "--lr-chip-pressed-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-code-editor-hover-border",
+          "to": "--lr-code-editor-hover-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-code-editor-invalid-border",
+          "to": "--lr-code-editor-invalid-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-color-picker-selected-border",
+          "to": "--lr-color-picker-selected-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-combobox-option-selected-border",
+          "to": "--lr-combobox-option-selected-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-date-picker-preset-active-bg",
+          "to": "--lr-date-picker-preset-pressed-bg",
+          "summary": "lr-date-picker and lr-time-range name the quick-range press preset-pressed-*; the duplicate name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-date-picker-preset-selected-border",
+          "to": "--lr-date-picker-preset-selected-border-color",
+          "summary": "The selected quick-range border uses the -color suffix; the duplicate name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-document-preview-active-border",
+          "to": "--lr-document-preview-active-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-env-list-reveal-active-border",
+          "to": "--lr-env-list-reveal-active-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-export-button-active-border",
+          "to": "--lr-export-button-active-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-export-button-hover-border",
+          "to": "--lr-export-button-hover-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-icon-button-bg-active",
+          "to": "--lr-icon-button-active-bg",
+          "summary": "lr-icon-button state tokens put the state before the property, like every other component token.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-icon-button-bg-hover",
+          "to": "--lr-icon-button-hover-bg",
+          "summary": "lr-icon-button state tokens put the state before the property, like every other component token.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-icon-button-border-active",
+          "to": "--lr-icon-button-active-border",
+          "summary": "lr-icon-button state tokens put the state before the property, like every other component token.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-icon-button-border-hover",
+          "to": "--lr-icon-button-hover-border",
+          "summary": "lr-icon-button state tokens put the state before the property, like every other component token.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-icon-button-color-active",
+          "to": "--lr-icon-button-active-color",
+          "summary": "lr-icon-button state tokens put the state before the property, like every other component token.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-icon-button-color-hover",
+          "to": "--lr-icon-button-hover-color",
+          "summary": "lr-icon-button state tokens put the state before the property, like every other component token.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-image-viewer-annotate-active-border",
+          "to": "--lr-image-viewer-annotate-active-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-image-viewer-highlight-border",
+          "to": "--lr-image-viewer-highlight-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-image-viewer-highlight-danger-border",
+          "to": "--lr-image-viewer-highlight-danger-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-image-viewer-highlight-neutral-border",
+          "to": "--lr-image-viewer-highlight-neutral-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-image-viewer-highlight-success-border",
+          "to": "--lr-image-viewer-highlight-success-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-image-viewer-highlight-warning-border",
+          "to": "--lr-image-viewer-highlight-warning-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-json-schema-viewer-error-border",
+          "to": "--lr-json-schema-viewer-error-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-json-schema-viewer-info-border",
+          "to": "--lr-json-schema-viewer-info-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-json-schema-viewer-selected-border",
+          "to": "--lr-json-schema-viewer-selected-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-json-schema-viewer-warning-border",
+          "to": "--lr-json-schema-viewer-warning-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-knowledge-base-admin-tab-selected-border",
+          "to": "--lr-knowledge-base-admin-tab-selected-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-message-feedback-down-active-border",
+          "to": "--lr-message-feedback-down-active-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-message-feedback-up-active-border",
+          "to": "--lr-message-feedback-up-active-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-model-select-option-selected-border",
+          "to": "--lr-model-select-option-selected-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-pagination-invalid-border",
+          "to": "--lr-pagination-invalid-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-prompt-studio-field-hover-border",
+          "to": "--lr-prompt-studio-field-hover-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-prompt-studio-version-selected-border",
+          "to": "--lr-prompt-studio-version-selected-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
           "from": "--lr-radio-group-invalid-border",
           "to": "--lr-radio-group-invalid-border-color",
           "summary": "lr-radio-group state tokens use the -color suffix of lr-radio; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-retrieval-compare-selected-border",
+          "to": "--lr-retrieval-compare-selected-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-retrieval-results-selected-border",
+          "to": "--lr-retrieval-results-selected-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-retrieval-trace-active-border",
+          "to": "--lr-retrieval-trace-active-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-select-option-selected-border",
+          "to": "--lr-select-option-selected-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-source-picker-checked-border",
+          "to": "--lr-source-picker-checked-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-subagent-panel-selected-border",
+          "to": "--lr-subagent-panel-selected-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-suggestion-chips-hover-border",
+          "to": "--lr-suggestion-chips-hover-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-svg-viewer-active-border",
+          "to": "--lr-svg-viewer-active-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-switch-invalid-border",
+          "to": "--lr-switch-invalid-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-test-results-filter-active-border",
+          "to": "--lr-test-results-filter-active-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-time-range-handle-pressed-bg",
+          "to": "--lr-time-range-handle-active-bg",
+          "summary": "A pointer-press token ends in -active-bg, like every other :active token.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-time-range-preset-active-bg",
+          "to": "--lr-time-range-preset-selected-bg",
+          "summary": "lr-time-range names its applied preset preset-selected-*, like lr-date-picker; the duplicate name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-time-range-preset-active-border-color",
+          "to": "--lr-time-range-preset-selected-border-color",
+          "summary": "lr-time-range names its applied preset preset-selected-*, like lr-date-picker; the duplicate name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-time-range-preset-active-color",
+          "to": "--lr-time-range-preset-selected-color",
+          "summary": "lr-time-range names its applied preset preset-selected-*, like lr-date-picker; the duplicate name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-token-input-edit-pressed-bg",
+          "to": "--lr-token-input-edit-active-bg",
+          "summary": "A pointer-press token ends in -active-bg, like every other :active token.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-token-input-remove-pressed-bg",
+          "to": "--lr-token-input-remove-active-bg",
+          "summary": "A pointer-press token ends in -active-bg, like every other :active token.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-voice-picker-option-selected-border",
+          "to": "--lr-voice-picker-option-selected-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "css-property",
+          "from": "--lr-voice-picker-preview-active-border",
+          "to": "--lr-voice-picker-preview-active-border-color",
+          "summary": "A color-valued state border token ends in -border-color, like lr-checkbox and lr-radio-group; the old name is no longer read.",
           "since": "32.0.0"
         },
         {
@@ -8466,6 +8851,14 @@
           "from": "xmlViewerExpandNode",
           "to": "xmlViewerToggleNode",
           "summary": "lr-xml-viewer names its node toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies.",
+          "since": "32.0.0"
+        },
+        {
+          "kind": "part",
+          "tag": "lr-thread-list",
+          "from": "pin-glyph",
+          "to": "Style the pin indicator through pin-icon.",
+          "summary": "The pin indicator part is named pin-icon, like the without-pin-icon attribute that hides it.",
           "since": "32.0.0"
         }
       ]

@@ -179,8 +179,8 @@ export const PresetIdentityReadback: Story = {
 };
 
 /** The active preset button's background, border and text color are themeable through
- *  `--lr-time-range-preset-active-bg`, `--lr-time-range-preset-active-border-color` and
- *  `--lr-time-range-preset-active-color`. None is declared on `:host`, so setting them on an
+ *  `--lr-time-range-preset-selected-bg`, `--lr-time-range-preset-selected-border-color` and
+ *  `--lr-time-range-preset-selected-color`. None is declared on `:host`, so setting them on an
  *  ancestor recolors only the active preset — not everything else reading the brand tokens. */
 export const ThemedActivePreset: Story = {
   name: "Themed active preset (cssprops)",
@@ -188,7 +188,7 @@ export const ThemedActivePreset: Story = {
     docs: {
       description: {
         story:
-          "Set `--lr-time-range-preset-active-bg`, `--lr-time-range-preset-active-border-color` and `--lr-time-range-preset-active-color` on the element or any ancestor to recolor the active preset without hijacking the library-wide brand tokens.",
+          "Set `--lr-time-range-preset-selected-bg`, `--lr-time-range-preset-selected-border-color` and `--lr-time-range-preset-selected-color` on the element or any ancestor to recolor the active preset without hijacking the library-wide brand tokens.",
       },
     },
   },
@@ -199,11 +199,11 @@ export const ThemedActivePreset: Story = {
       start="0"
       end="30"
       .presets=${presets}
-      style="--lr-time-range-preset-active-bg: ${storyColor(
+      style="--lr-time-range-preset-selected-bg: ${storyColor(
         "success"
-      )}; --lr-time-range-preset-active-border-color: ${storyColor(
+      )}; --lr-time-range-preset-selected-border-color: ${storyColor(
         "success"
-      )}; --lr-time-range-preset-active-color: ${storyColor("onBrand")};"
+      )}; --lr-time-range-preset-selected-color: ${storyColor("onBrand")};"
     ></lr-time-range>
   `,
   play: async ({ canvasElement }) => {
@@ -244,7 +244,7 @@ export const IndependentPointerStates: Story = {
         --lr-time-range-handle-bg: var(--lr-color-brand);
         --lr-time-range-handle-border-color: var(--lr-color-surface-raised);
         --lr-time-range-handle-hover-bg: var(--lr-color-success);
-        --lr-time-range-handle-pressed-bg: var(--lr-color-warning);
+        --lr-time-range-handle-active-bg: var(--lr-color-warning);
       "
     ></lr-time-range>
   `,

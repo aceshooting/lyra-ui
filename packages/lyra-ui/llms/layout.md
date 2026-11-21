@@ -6473,7 +6473,7 @@ These named interfaces and helper signatures are available to typed integrations
     disabled?: boolean;
   }`
   Import: `@aceshooting/lyra-ui/components/layout/segmented/segmented.class.js`.
-  `LyraSegmentedSelectRequestDetail {
+  `LyraSegmentedChangeRequestDetail {
     readonly value: string;
     readonly previousValue: string;
   }`

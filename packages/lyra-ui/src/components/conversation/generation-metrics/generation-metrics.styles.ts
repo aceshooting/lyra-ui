@@ -47,7 +47,7 @@ export const styles = css`
     hoverBackground: 'var(--lr-icon-button-bg, var(--lr-color-surface))',
     hoverColor: 'var(--lr-color-brand)',
     activeBackground: activeFill('var(--lr-icon-button-bg, var(--lr-color-surface))').cssText,
-    activeColor: 'var(--lr-icon-button-color-hover, var(--lr-color-brand))',
+    activeColor: 'var(--lr-icon-button-hover-color, var(--lr-color-brand))',
     background: 'var(--lr-color-surface)',
   })}
   [part='stop-button'] {

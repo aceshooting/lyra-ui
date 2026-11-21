@@ -2126,7 +2126,7 @@ it("lets a consumer retint selected-swatch border and check paint independently"
       label="A"
       value="#00ff00"
       swatches="#ff0000;#00ff00"
-      style="--lr-color-picker-selected-border: rgb(1, 2, 3); --lr-color-picker-selected-check-color: rgb(4, 5, 6)"
+      style="--lr-color-picker-selected-border-color: rgb(1, 2, 3); --lr-color-picker-selected-check-color: rgb(4, 5, 6)"
     ></lr-color-picker>
   `);
   const selected = parts(el, "swatch")[1]!;

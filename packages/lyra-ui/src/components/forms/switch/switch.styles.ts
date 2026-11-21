@@ -61,7 +61,7 @@ export const styles = css`
     ${disabledControl}
   }
   :host(:state(user-invalid)) [part~="track"] {
-    outline: var(--lr-border-width-thin) solid var(--lr-switch-invalid-border, var(--lr-form-control-invalid-border-color, var(--lr-color-danger)));
+    outline: var(--lr-border-width-thin) solid var(--lr-switch-invalid-border-color, var(--lr-form-control-invalid-border-color, var(--lr-color-danger)));
   }
   /* After the invalid outline and at the same specificity, so keyboard focus always shows the ring. */
   .switch-owner:focus-visible [part~="track"] {

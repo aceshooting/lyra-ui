@@ -72,7 +72,7 @@ import "@aceshooting/lyra-ui/components/lr-subagent-panel.js";
 **Additional API surface:**
 
 - `part="limit"` — Resource-ceiling status shown when additional runs are omitted.
-- `--lr-subagent-panel-selected-border` — Selected run border; under `frame="plain"` it paints the
+- `--lr-subagent-panel-selected-border-color` — Selected run border; under `frame="plain"` it paints the
   selected row's inline-start rule instead. Default: `var(--lr-color-brand)`.
 - `--lr-subagent-panel-progress-track` — Progress track. Default: `var(--lr-color-border)`.
 - `--lr-subagent-panel-progress-fill` — Progress fill. Default: `var(--lr-color-brand)`.
@@ -92,6 +92,6 @@ import "@aceshooting/lyra-ui/components/lr-subagent-panel.js";
   `--lr-color-mix-partner`, so retuning hover carries the press with it.
   Default: `var(--lr-color-surface-raised)`.
 - `--lr-subagent-panel-border-color` — Each run row's border and its action divider. A selected row
-  still uses `--lr-subagent-panel-selected-border`. Default: `var(--lr-color-border)`.
+  still uses `--lr-subagent-panel-selected-border-color`. Default: `var(--lr-color-border)`.
 - `--lr-subagent-panel-radius` — Each run row's corner radius; `frame="plain"` still squares them.
   Default: `var(--lr-radius)`.

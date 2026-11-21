@@ -186,7 +186,7 @@ export interface LyraTestResultsEventMap {
  * @csspart empty - Empty/no-match state, including a populated run hidden entirely by filters.
  * @cssprop [--lr-test-results-filter-active-bg=var(--lr-color-brand-quiet)] - Background of a pressed
  *   (active) status filter toggle, and the base its hover/press mixes from.
- * @cssprop [--lr-test-results-filter-active-border=var(--lr-color-brand)] - Border color of a pressed
+ * @cssprop [--lr-test-results-filter-active-border-color=var(--lr-color-brand)] - Border color of a pressed
  *   (active) status filter toggle.
  * @cssprop [--lr-test-results-filter-active-color=var(--lr-color-brand)] - Text color of a pressed
  *   (active) status filter toggle. Restyling the pressed state otherwise requires overriding the

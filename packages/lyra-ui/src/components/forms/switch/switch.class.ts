@@ -135,7 +135,7 @@ class LyraSwitchBase extends LyraElement<LyraSwitchEventMap> {}
  * @csspart form-control-help-text - Shoelace name for the same hint message.
  * @csspart error - The error message.
  * @cssprop [--lr-switch-gap=var(--lr-space-s)] - Gap between the track and label.
- * @cssprop [--lr-switch-invalid-border=var(--lr-color-danger)] - Outline color of `[part='track']`
+ * @cssprop [--lr-switch-invalid-border-color=var(--lr-color-danger)] - Outline color of `[part='track']`
  *   while the switch matches `:state(user-invalid)`.
  * @cssprop [--lr-switch-track-inline-size=calc(var(--lr-switch-track-block-size) * 1.8)] - Inline
  *   size of the track, and (with the block size) the distance the thumb travels when checked.

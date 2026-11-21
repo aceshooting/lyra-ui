@@ -58,7 +58,7 @@ page gives it.
 buttons. The buttons accept the shared
 `--lr-icon-button-bg` (default `transparent`), `--lr-icon-button-border` (default `0`),
 `--lr-icon-button-color` (default `var(--lr-color-text)`), and `--lr-icon-button-radius` (default
-`var(--lr-radius)`), and the hover and pressed overrides `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color-hover` and `--lr-icon-button-color-active`
+`var(--lr-radius)`), and the hover and pressed overrides `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`, `--lr-icon-button-hover-color` and `--lr-icon-button-active-color`
 on the built-in controls; plus shared tokens —
 `--lr-icon-button-size` (each button's minimum hit area, unchanged by `frame`), `--lr-shadow-m`,
 `--lr-color-surface`, `--lr-color-border-subtle`, `--lr-radius`, `--lr-space-2xs`,

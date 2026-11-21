@@ -156,7 +156,7 @@ export const RetintedActiveFilter: Story = {
   },
   render: () => html`
     <lr-test-results
-      style="max-width:32rem;--lr-test-results-filter-active-bg: var(--lr-color-success-quiet);--lr-test-results-filter-active-border: var(--lr-color-success);--lr-test-results-filter-active-color: var(--lr-color-success)"
+      style="max-width:32rem;--lr-test-results-filter-active-bg: var(--lr-color-success-quiet);--lr-test-results-filter-active-border-color: var(--lr-color-success);--lr-test-results-filter-active-color: var(--lr-color-success)"
       .suites=${mixedSuites}
       .statusFilter=${['passed']}
     ></lr-test-results>

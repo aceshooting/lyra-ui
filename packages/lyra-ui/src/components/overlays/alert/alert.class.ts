@@ -123,14 +123,14 @@ interface AlertAutoHideTimer {
  * @cssprop --lr-alert-radius - Panel corner radius.
  * @cssprop --lr-alert-shadow - Panel shadow.
  * @cssprop --lr-icon-button-bg - Resting background of the icon-only action buttons.
- * @cssprop --lr-icon-button-bg-active - Pressed background of the icon-only action buttons.
- * @cssprop --lr-icon-button-bg-hover - Hover background of the icon-only action buttons.
+ * @cssprop --lr-icon-button-active-bg - Pressed background of the icon-only action buttons.
+ * @cssprop --lr-icon-button-hover-bg - Hover background of the icon-only action buttons.
  * @cssprop --lr-icon-button-border - Resting border of the icon-only action buttons.
- * @cssprop --lr-icon-button-border-active - Pressed border of the icon-only action buttons.
- * @cssprop --lr-icon-button-border-hover - Hover border of the icon-only action buttons.
+ * @cssprop --lr-icon-button-active-border - Pressed border of the icon-only action buttons.
+ * @cssprop --lr-icon-button-hover-border - Hover border of the icon-only action buttons.
  * @cssprop --lr-icon-button-color - Resting foreground of the icon-only action buttons.
- * @cssprop --lr-icon-button-color-active - Pressed foreground of the icon-only action buttons.
- * @cssprop --lr-icon-button-color-hover - Hover foreground of the icon-only action buttons.
+ * @cssprop --lr-icon-button-active-color - Pressed foreground of the icon-only action buttons.
+ * @cssprop --lr-icon-button-hover-color - Hover foreground of the icon-only action buttons.
  * @cssprop --lr-icon-button-radius - Corner radius of the icon-only action buttons.
  * @status stable
  * @since 8.0.0

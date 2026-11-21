@@ -214,7 +214,7 @@ export const ScopedSelectedSwatchTheme: StoryObj = {
         value=${ACCENT}
         swatches=${[ACCENT, SUCCESS, DANGER].join('; ')}
         open
-        style="--lr-color-picker-selected-border: var(--lr-color-danger); --lr-color-picker-selected-check-color: var(--lr-color-on-danger)"
+        style="--lr-color-picker-selected-border-color: var(--lr-color-danger); --lr-color-picker-selected-check-color: var(--lr-color-on-danger)"
       ></lr-color-picker>
     </div>
   `,

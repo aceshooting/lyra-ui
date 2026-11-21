@@ -52,7 +52,7 @@ const SWATCH_PICKER_MODE = literalSetConverter<LyraSwatchPickerMode>(
 );
 
 /** Detail of `lr-change-request`. */
-export interface LyraSwatchPickerSelectRequestDetail {
+export interface LyraSwatchPickerChangeRequestDetail {
   /** The value the activated swatch proposes. */
   readonly value: string;
   /** The value the picker holds while the request dispatches. */
@@ -60,7 +60,7 @@ export interface LyraSwatchPickerSelectRequestDetail {
 }
 
 export interface LyraSwatchPickerEventMap {
-  'lr-change-request': CustomEvent<LyraSwatchPickerSelectRequestDetail>;
+  'lr-change-request': CustomEvent<LyraSwatchPickerChangeRequestDetail>;
   'lr-change': CustomEvent<{ value: string; previousValue?: string | null }>;
   'lr-activate': CustomEvent<{ value: string }>;
 }

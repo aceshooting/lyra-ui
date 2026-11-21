@@ -501,7 +501,7 @@ export const styles = css`
        --lr-color-brand library-wide. */
     background: var(--lr-combobox-option-selected-bg, transparent);
     border-color: var(
-      --lr-combobox-option-selected-border,
+      --lr-combobox-option-selected-border-color,
       var(--lr-color-brand)
     );
     color: var(--lr-combobox-option-selected-color, var(--lr-color-brand));

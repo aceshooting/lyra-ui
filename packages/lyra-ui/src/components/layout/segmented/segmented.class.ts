@@ -39,7 +39,7 @@ export type LyraSegmentedLayout = 'scroll' | 'wrap' | 'grid';
 const SEGMENTED_LAYOUT = literalSetConverter<LyraSegmentedLayout>(['scroll', 'wrap', 'grid'], 'scroll');
 
 /** Detail of `lr-change-request`. */
-export interface LyraSegmentedSelectRequestDetail {
+export interface LyraSegmentedChangeRequestDetail {
   /** Value of the segment the user is selecting. */
   readonly value: string;
   /** The value `value` holds while the request dispatches. */
@@ -47,7 +47,7 @@ export interface LyraSegmentedSelectRequestDetail {
 }
 
 export interface LyraSegmentedEventMap {
-  'lr-change-request': CustomEvent<LyraSegmentedSelectRequestDetail>;
+  'lr-change-request': CustomEvent<LyraSegmentedChangeRequestDetail>;
   'lr-change': CustomEvent<{ value: string }>;
   'lr-activate': CustomEvent<{ value: string }>;
 }

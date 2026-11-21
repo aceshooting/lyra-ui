@@ -357,10 +357,10 @@ it('omits blank and later duplicate set and nested chunk ids before overlap, ren
 
 describe('chunk-selected cssprop escape hatch', () => {
 
-  it('recolors the selected chunk border from --lr-retrieval-compare-selected-border set on the host', async () => {
+  it('recolors the selected chunk border from --lr-retrieval-compare-selected-border-color set on the host', async () => {
     const el = (await fixture(
       html`<lr-retrieval-compare
-        style="--lr-retrieval-compare-selected-border: rgb(0, 51, 102)"
+        style="--lr-retrieval-compare-selected-border-color: rgb(0, 51, 102)"
         .sets=${sets}
         selected-chunk-id="b"
       ></lr-retrieval-compare>`,

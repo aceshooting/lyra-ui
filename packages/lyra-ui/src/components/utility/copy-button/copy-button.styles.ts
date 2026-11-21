@@ -17,7 +17,7 @@ export const styles = css`
     --_lr-copy-button-color: var(--lr-color-text-quiet);
     --_lr-copy-button-color-hover: var(--lr-icon-button-color, var(--lr-color-text));
     --_lr-copy-button-color-active: var(
-      --lr-icon-button-color-hover,
+      --lr-icon-button-hover-color,
       var(--lr-icon-button-color, var(--lr-color-text))
     );
   }
@@ -72,13 +72,13 @@ export const styles = css`
      :hover, and the failure colour must not be repainted away by either. */
   [part~='base'][part~='base-success'] {
     --lr-icon-button-color: var(--success-color, var(--lr-color-success));
-    --lr-icon-button-color-hover: var(--success-color, var(--lr-color-success));
-    --lr-icon-button-color-active: var(--success-color, var(--lr-color-success));
+    --lr-icon-button-hover-color: var(--success-color, var(--lr-color-success));
+    --lr-icon-button-active-color: var(--success-color, var(--lr-color-success));
   }
   [part~='base'][part~='base-error'] {
     --lr-icon-button-color: var(--error-color, var(--lr-color-danger));
-    --lr-icon-button-color-hover: var(--error-color, var(--lr-color-danger));
-    --lr-icon-button-color-active: var(--error-color, var(--lr-color-danger));
+    --lr-icon-button-hover-color: var(--error-color, var(--lr-color-danger));
+    --lr-icon-button-active-color: var(--error-color, var(--lr-color-danger));
   }
   [part~='copy-icon'],
   [part~='success-icon'],

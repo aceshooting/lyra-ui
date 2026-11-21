@@ -220,11 +220,11 @@ const stringArrayConverter = {
  * @cssprop [--lr-token-input-action-hover-bg=var(--lr-color-brand-quiet)] - Edit/remove hover background.
  * @cssprop [--lr-token-input-edit-hover-bg=var(--lr-token-input-action-hover-bg)] - Editable token
  *   label hover background, independently themeable from the remove action.
- * @cssprop --lr-token-input-edit-pressed-bg - Editable token label pressed background; defaults to
+ * @cssprop --lr-token-input-edit-active-bg - Editable token label pressed background; defaults to
  *   an active-state mix of `--lr-token-input-edit-hover-bg`.
  * @cssprop [--lr-token-input-remove-hover-bg=var(--lr-token-input-action-hover-bg)] - Remove action
  *   hover background, independently themeable from the editable label.
- * @cssprop --lr-token-input-remove-pressed-bg - Remove action pressed background; defaults to an
+ * @cssprop --lr-token-input-remove-active-bg - Remove action pressed background; defaults to an
  *   active-state mix of `--lr-token-input-remove-hover-bg`.
  * @cssprop [--lr-token-input-focus-border-color=var(--lr-color-brand)] - Focused row border color.
  * @cssprop [--lr-token-input-invalid-border-color=var(--lr-color-danger)] - Invalid row border color.

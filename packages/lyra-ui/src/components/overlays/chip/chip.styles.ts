@@ -163,9 +163,9 @@ export const styles = css`
     --_lr-chip-toggle-bg: var(--lr-chip-pressed-bg, var(--lr-chip-bg, var(--_lr-chip-bg)));
     background: var(--_lr-chip-toggle-bg);
     /* Falls back to --lr-chip-accent, so an unset consumer -- all four non-neutral variants
-       included -- renders byte-identical. A per-item arbitrary color sets --lr-chip-pressed-border,
+       included -- renders byte-identical. A per-item arbitrary color sets --lr-chip-pressed-border-color,
        leaving --lr-chip-accent, and so the label text color, untouched. */
-    border-color: var(--lr-chip-pressed-border, var(--lr-chip-accent, var(--_lr-chip-accent)));
+    border-color: var(--lr-chip-pressed-border-color, var(--lr-chip-accent, var(--_lr-chip-accent)));
   }
 
   [part='start'] {

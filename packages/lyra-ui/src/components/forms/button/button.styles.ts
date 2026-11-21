@@ -271,7 +271,7 @@ export const styles = css`
        retain their resting foreground. The public hover hook also owns the pressed state.
        Link keeps its own higher-specificity colour-mix rule. */
     color: var(--lr-button-hover-color, var(--_lr-button-hover-color, var(--_lr-button-resolved-color)));
-    border-color: var(--lr-button-hover-border, var(--_lr-button-resolved-border));
+    border-color: var(--lr-button-hover-border-color, var(--_lr-button-resolved-border));
   }
   [part~="base"]:not(:disabled, [aria-disabled="true"]):active {
     background: var(

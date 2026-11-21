@@ -211,9 +211,9 @@ export const IndependentPointerStates: Story = {
       label="Independently themed token actions"
       style="
         --lr-token-input-edit-hover-bg: var(--lr-color-success-quiet);
-        --lr-token-input-edit-pressed-bg: var(--lr-color-success);
+        --lr-token-input-edit-active-bg: var(--lr-color-success);
         --lr-token-input-remove-hover-bg: var(--lr-color-danger-quiet);
-        --lr-token-input-remove-pressed-bg: var(--lr-color-danger);
+        --lr-token-input-remove-active-bg: var(--lr-color-danger);
       "
       .value=${['Editable token']}
     ></lr-token-input>

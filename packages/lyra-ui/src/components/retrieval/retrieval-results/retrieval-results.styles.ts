@@ -65,7 +65,7 @@ export const styles = css`
      selecting within their own tree. */
   [part~='row-body-selected'],
   lr-virtual-list::part(row-body-selected) {
-    border-inline-start-color: var(--lr-retrieval-results-selected-border, var(--lr-color-brand));
+    border-inline-start-color: var(--lr-retrieval-results-selected-border-color, var(--lr-color-brand));
   }
   [part~='metadata'],
   lr-virtual-list::part(metadata) {

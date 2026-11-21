@@ -14302,7 +14302,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "c3d5171fb93810f3dece",
+      "fingerprint": "77bd71184f83045bcda2",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15984,7 +15984,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "0a3cf4de08d87bd6ba60",
+      "fingerprint": "29b8dd15d6125f264ce8",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16000,7 +16000,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "2815ad93e571526698cf",
+      "fingerprint": "ceac869706611f140437",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16016,7 +16016,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "d64df507029fc0d32d16",
+      "fingerprint": "4be21bfc5baeba62093b",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16560,7 +16560,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "9eeb7746949851ae2a46",
+      "fingerprint": "b9d076e5b457e9b6b147",
       "routes": [
         "src/vue.ts"
       ],
@@ -16952,7 +16952,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "849cecdd4375010e5d49",
+      "fingerprint": "58e1d4cf0a295d3db8cc",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -22666,7 +22666,7 @@
     },
     {
       "module": "src/components/forms/date-picker/date-picker.class.ts",
-      "exportName": "LyraDatePickerSelectRequestDetail",
+      "exportName": "LyraDatePickerChangeRequestDetail",
       "kind": "interface",
       "fingerprint": "1a82076ff3ff741b0cac",
       "routes": [
@@ -22682,12 +22682,12 @@
       "locator": {
         "kind": "utility",
         "name": "components-forms-date-picker-date-picker-contracts",
-        "declaration": "LyraDatePickerSelectRequestDetail"
+        "declaration": "LyraDatePickerChangeRequestDetail"
       }
     },
     {
       "module": "src/components/forms/radio/radio-group.class.ts",
-      "exportName": "LyraRadioGroupSelectRequestDetail",
+      "exportName": "LyraRadioGroupChangeRequestDetail",
       "kind": "interface",
       "fingerprint": "15735ca37f99edfbd6e2",
       "routes": [
@@ -22703,12 +22703,12 @@
       "locator": {
         "kind": "utility",
         "name": "components-forms-radio-radio-group-contracts",
-        "declaration": "LyraRadioGroupSelectRequestDetail"
+        "declaration": "LyraRadioGroupChangeRequestDetail"
       }
     },
     {
       "module": "src/components/forms/swatch-picker/swatch-picker.class.ts",
-      "exportName": "LyraSwatchPickerSelectRequestDetail",
+      "exportName": "LyraSwatchPickerChangeRequestDetail",
       "kind": "interface",
       "fingerprint": "84ccae160d9f27c9c33e",
       "routes": [
@@ -22724,12 +22724,12 @@
       "locator": {
         "kind": "utility",
         "name": "components-forms-swatch-picker-swatch-picker-contracts",
-        "declaration": "LyraSwatchPickerSelectRequestDetail"
+        "declaration": "LyraSwatchPickerChangeRequestDetail"
       }
     },
     {
       "module": "src/components/layout/segmented/segmented.class.ts",
-      "exportName": "LyraSegmentedSelectRequestDetail",
+      "exportName": "LyraSegmentedChangeRequestDetail",
       "kind": "interface",
       "fingerprint": "1a82076ff3ff741b0cac",
       "routes": [
@@ -22745,7 +22745,7 @@
       "locator": {
         "kind": "utility",
         "name": "components-layout-segmented-segmented-contracts",
-        "declaration": "LyraSegmentedSelectRequestDetail"
+        "declaration": "LyraSegmentedChangeRequestDetail"
       }
     },
     {

@@ -235,7 +235,7 @@ export const styles = css`
   /* no-pressed-state: the editor frame is a text surface, not a push target -- pointer-down
      places a caret, and the border cue belongs to hover and :focus-visible. */
   :host(:not(:disabled)) [part='editor']:hover {
-    border-color: var(--lr-code-editor-hover-border, var(--lr-color-brand));
+    border-color: var(--lr-code-editor-hover-border-color, var(--lr-color-brand));
   }
   [part='hint'],
   [part='error'] {
@@ -247,7 +247,7 @@ export const styles = css`
   }
   :host(:state(user-invalid)) [part='editor'],
   :host([data-invalid]) [part='editor'] {
-    border-color: var(--lr-code-editor-invalid-border, var(--lr-form-control-invalid-border-color, var(--lr-color-danger)));
+    border-color: var(--lr-code-editor-invalid-border-color, var(--lr-form-control-invalid-border-color, var(--lr-color-danger)));
   }
   /* :host(:disabled), not :host([disabled]): as a form-associated custom element (FormAssociated
      mixin -> static formAssociated = true) the UA computes :disabled like a native control, from

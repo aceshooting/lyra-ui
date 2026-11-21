@@ -297,7 +297,7 @@ export const RangePresets: Story = {
       value="2026-08-13/2026-08-19"
       style="
         --lr-date-picker-preset-selected-bg: var(--lr-color-success);
-        --lr-date-picker-preset-selected-border: var(--lr-color-warning);
+        --lr-date-picker-preset-selected-border-color: var(--lr-color-warning);
         --lr-date-picker-preset-selected-color: var(--lr-color-on-success);
       "
       .presets=${[

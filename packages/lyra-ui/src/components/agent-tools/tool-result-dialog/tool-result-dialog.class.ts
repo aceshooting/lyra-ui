@@ -157,14 +157,14 @@ const TOOL_RESULT_DIALOG_STATUS = literalSetConverter<ToolStatus>(TOOL_CALL_STAT
  * @cssprop [--lr-tool-result-dialog-incomplete-color=var(--lr-color-text-quiet)] - Incomplete status foreground.
  * @cssprop [--lr-tool-result-dialog-incomplete-bg=transparent] - Incomplete status background.
  * @cssprop --lr-icon-button-bg - Resting background of the icon-only action buttons.
- * @cssprop --lr-icon-button-bg-active - Pressed background of the icon-only action buttons.
- * @cssprop --lr-icon-button-bg-hover - Hover background of the icon-only action buttons.
+ * @cssprop --lr-icon-button-active-bg - Pressed background of the icon-only action buttons.
+ * @cssprop --lr-icon-button-hover-bg - Hover background of the icon-only action buttons.
  * @cssprop --lr-icon-button-border - Resting border of the icon-only action buttons.
- * @cssprop --lr-icon-button-border-active - Pressed border of the icon-only action buttons.
- * @cssprop --lr-icon-button-border-hover - Hover border of the icon-only action buttons.
+ * @cssprop --lr-icon-button-active-border - Pressed border of the icon-only action buttons.
+ * @cssprop --lr-icon-button-hover-border - Hover border of the icon-only action buttons.
  * @cssprop --lr-icon-button-color - Resting foreground of the icon-only action buttons.
- * @cssprop --lr-icon-button-color-active - Pressed foreground of the icon-only action buttons.
- * @cssprop --lr-icon-button-color-hover - Hover foreground of the icon-only action buttons.
+ * @cssprop --lr-icon-button-active-color - Pressed foreground of the icon-only action buttons.
+ * @cssprop --lr-icon-button-hover-color - Hover foreground of the icon-only action buttons.
  * @cssprop --lr-icon-button-radius - Corner radius of the icon-only action buttons.
  * @cssprop --lr-overlay-border - Shared floating-surface edge colour of the panel.
  * @cssprop --lr-overlay-radius - Shared floating-surface corner radius of the panel.

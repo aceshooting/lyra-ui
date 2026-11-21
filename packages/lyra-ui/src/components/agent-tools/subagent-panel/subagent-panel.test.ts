@@ -679,7 +679,7 @@ it('allows selected and progress states to be rethemed independently', async () 
   const el = (await fixture(html`
     <lr-subagent-panel
       style="
-        --lr-subagent-panel-selected-border: rgb(1, 2, 3);
+        --lr-subagent-panel-selected-border-color: rgb(1, 2, 3);
         --lr-subagent-panel-progress-fill: rgb(4, 5, 6);
       "
       selected-run-id="research"

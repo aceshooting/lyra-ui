@@ -244,10 +244,10 @@ check('flags a hand-written focus ring and accepts the shared fragments', () => 
 
 check('token names use -bg, -radius and state-first order', () => {
   const doc = (name) => `/**\n * @cssprop [${name}=red] - Background.\n */`;
-  for (const bad of ['--lr-x-action-background', '--lr-x-border-radius', '--lr-x-toggle-bg-hover', '--lr-x-copy-color-active', '--lr-x-row-hover-fill', '--lr-x-row-selected-fill']) {
+  for (const bad of ['--lr-x-action-background', '--lr-x-border-radius', '--lr-x-toggle-bg-hover', '--lr-x-copy-color-active', '--lr-x-row-hover-fill', '--lr-x-row-selected-fill', '--lr-icon-button-bg-hover', '--lr-x-border-active']) {
     assert.equal(tokenNameFindings('src/components/x/x.class.ts', doc(bad)).length, 1, bad);
   }
-  for (const good of ['--lr-x-action-bg', '--lr-x-radius', '--lr-x-toggle-hover-bg', '--lr-x-copy-active-color', '--lr-x-row-hover-bg', '--lr-input-fill', '--lr-badge-background', '--lr-icon-button-bg-hover']) {
+  for (const good of ['--lr-x-action-bg', '--lr-x-radius', '--lr-x-toggle-hover-bg', '--lr-x-copy-active-color', '--lr-x-row-hover-bg', '--lr-input-fill', '--lr-badge-background', '--lr-icon-button-hover-bg']) {
     assert.equal(tokenNameFindings('src/components/x/x.class.ts', doc(good)).length, 0, good);
   }
   assert.match(tokenNameFindings('src/components/x/x.class.ts', `\n\n${doc('--lr-x-bg-hover')}`)[0], /x\.class\.ts:4: /);

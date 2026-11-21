@@ -17,8 +17,8 @@ export const styles = css`
     color: 'inherit',
     hoverBackground: 'var(--lr-color-brand-quiet)',
     hoverColor: 'var(--lr-color-brand)',
-    activeBackground: activeFill('var(--lr-icon-button-bg-hover, var(--lr-color-brand-quiet))').cssText,
-    activeColor: 'var(--lr-icon-button-color-hover, var(--lr-color-brand))',
+    activeBackground: activeFill('var(--lr-icon-button-hover-bg, var(--lr-color-brand-quiet))').cssText,
+    activeColor: 'var(--lr-icon-button-hover-color, var(--lr-color-brand))',
   })}
   :where([part='previous-button'], [part='next-button']) {
     --_lr-icon-button-radius-default: var(--lr-radius-xs);

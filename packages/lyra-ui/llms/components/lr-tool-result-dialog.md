@@ -164,4 +164,4 @@ Backdrop clicks leave the dialog open by default; add `light-dismiss` to opt in,
 
 ---
 
-**Shared tokens:** the close and action buttons read the shared icon-button tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`; the dialog panel paints the shared floating surface through `--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius`.
+**Shared tokens:** the close and action buttons read the shared icon-button tokens `--lr-icon-button-bg`, `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-border`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`, `--lr-icon-button-color`, `--lr-icon-button-hover-color`, `--lr-icon-button-active-color` and `--lr-icon-button-radius`; the dialog panel paints the shared floating surface through `--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius`.

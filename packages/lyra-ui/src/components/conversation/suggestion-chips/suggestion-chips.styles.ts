@@ -64,13 +64,13 @@ export const styles = css`
   }
   [part~='chip']:where(:not(:disabled)):hover {
     background: var(--lr-suggestion-chips-hover-bg, var(--lr-color-brand-quiet));
-    border-color: var(--lr-suggestion-chips-hover-border, var(--lr-color-brand));
+    border-color: var(--lr-suggestion-chips-hover-border-color, var(--lr-color-brand));
   }
   /* Mixes the SAME --lr-suggestion-chips-hover-bg the rule above uses, so a consumer retinting the
      hover fill gets a matching pressed step without a second custom property to keep in sync. */
   [part~='chip']:where(:not(:disabled)):active {
     background: ${activeFill('var(--lr-suggestion-chips-hover-bg, var(--lr-color-brand-quiet))')};
-    border-color: var(--lr-suggestion-chips-hover-border, var(--lr-color-brand));
+    border-color: var(--lr-suggestion-chips-hover-border-color, var(--lr-color-brand));
   }
   /* A disabled suggestion keeps its own label/detail text (still the datum it always was) but
      loses the pointer cursor and every hover/press affordance that promises activation -- the

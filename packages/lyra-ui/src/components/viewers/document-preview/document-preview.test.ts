@@ -1952,9 +1952,9 @@ describe("active-region cssprop escape hatch", () => {
     expect(width).to.be.greaterThan(0);
   });
 
-  it("recolors the active region border from an ancestor via --lr-document-preview-active-border", async () => {
+  it("recolors the active region border from an ancestor via --lr-document-preview-active-border-color", async () => {
     const { region } = await activeRegion(
-      "--lr-document-preview-active-border: rgb(0, 51, 102)"
+      "--lr-document-preview-active-border-color: rgb(0, 51, 102)"
     );
     expect(getComputedStyle(region).borderTopColor).to.equal("rgb(0, 51, 102)");
   });
@@ -1972,7 +1972,7 @@ describe("active-region cssprop escape hatch", () => {
 
   it("is accessible with the active-region prop themed", async () => {
     const { el } = await activeRegion(
-      "--lr-document-preview-active-border: rgb(0, 51, 102)"
+      "--lr-document-preview-active-border-color: rgb(0, 51, 102)"
     );
     await expect(el).to.be.accessible();
   });

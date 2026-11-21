@@ -25,8 +25,8 @@ a focused zoom control.
 
 Toolbar controls accept `--lr-icon-button-border`, `--lr-icon-button-radius`,
 `--lr-icon-button-bg`, and `--lr-icon-button-color`, including the border, fill, and color
-variants `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border-hover`,
-`--lr-icon-button-border-active`, `--lr-icon-button-color-hover` and `--lr-icon-button-color-active`.
+variants `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-hover-border`,
+`--lr-icon-button-active-border`, `--lr-icon-button-hover-color` and `--lr-icon-button-active-color`.
 
 **Properties:**
 

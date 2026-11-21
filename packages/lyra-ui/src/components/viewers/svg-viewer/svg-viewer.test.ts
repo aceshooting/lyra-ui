@@ -1044,8 +1044,8 @@ describe('active-region cssprop escape hatch', () => {
     }
   });
 
-  it('recolors the active region border from an ancestor via --lr-svg-viewer-active-border', async () => {
-    const { region, restore } = await activeRegion('--lr-svg-viewer-active-border: rgb(0, 51, 102)');
+  it('recolors the active region border from an ancestor via --lr-svg-viewer-active-border-color', async () => {
+    const { region, restore } = await activeRegion('--lr-svg-viewer-active-border-color: rgb(0, 51, 102)');
     try {
       expect(getComputedStyle(region).borderTopColor).to.equal('rgb(0, 51, 102)');
     } finally {
@@ -1065,7 +1065,7 @@ describe('active-region cssprop escape hatch', () => {
   });
 
   it('is accessible with the active-region prop themed', async () => {
-    const { el, restore } = await activeRegion('--lr-svg-viewer-active-border: rgb(0, 51, 102)');
+    const { el, restore } = await activeRegion('--lr-svg-viewer-active-border-color: rgb(0, 51, 102)');
     try {
       await expect(el).to.be.accessible();
     } finally {

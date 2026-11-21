@@ -82,7 +82,7 @@ export interface LyraKnowledgeBaseAdminEventMap {
  * @csspart tab - One tab button.
  * @csspart panel - The active panel.
  * @csspart settings - The settings slot wrapper.
- * @cssprop [--lr-knowledge-base-admin-tab-selected-border=var(--lr-color-brand)] - Bottom border
+ * @cssprop [--lr-knowledge-base-admin-tab-selected-border-color=var(--lr-color-brand)] - Bottom border
  *   color of the selected `[part="tab"]`.
  * @cssprop [--lr-knowledge-base-admin-tab-selected-color=var(--lr-color-text)] - Text color of the
  *   selected `[part="tab"]`. `::part(tab)[aria-selected='true']` is invalid CSS, so this pair is

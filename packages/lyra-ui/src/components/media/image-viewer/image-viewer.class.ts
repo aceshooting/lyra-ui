@@ -202,7 +202,7 @@ class LyraImageViewerBase extends LyraElement<LyraImageViewerEventMap> {}
  * @cssprop [--lr-image-viewer-annotate-active-bg=var(--lr-color-brand-quiet)] - Background of
  *   `[part="annotate-toggle"]` while annotation mode is on. The toggle carries its own glyph in
  *   `--lr-color-text`, so keep a 4.5:1 ratio against it.
- * @cssprop [--lr-image-viewer-annotate-active-border=var(--lr-color-brand)] - Border color of
+ * @cssprop [--lr-image-viewer-annotate-active-border-color=var(--lr-color-brand)] - Border color of
  *   `[part="annotate-toggle"]` while annotation mode is on.
  * @cssprop [--lr-image-viewer-highlight-active-color=var(--lr-color-brand)] - Outline color of the
  *   `[part="highlight"]` matching `activeHighlightId`, independent of the per-tone border colors.
@@ -217,15 +217,15 @@ class LyraImageViewerBase extends LyraElement<LyraImageViewerEventMap> {}
  *   of the saved `[part="highlight"]` boxes' own tone colors.
  * @cssprop [--lr-image-viewer-annotation-box-bg=color-mix(in srgb, var(--lr-color-brand) 15%, transparent)] -
  *   Fill of `[part="annotation-box"]`.
- * @cssprop [--lr-image-viewer-highlight-border=var(--lr-color-brand)] - Default highlight border.
+ * @cssprop [--lr-image-viewer-highlight-border-color=var(--lr-color-brand)] - Default highlight border.
  * @cssprop [--lr-image-viewer-highlight-bg=color-mix(in srgb, var(--lr-color-brand) 20%, transparent)] - Default highlight fill.
- * @cssprop --lr-image-viewer-highlight-success-border - Success-tone highlight border.
+ * @cssprop --lr-image-viewer-highlight-success-border-color - Success-tone highlight border.
  * @cssprop --lr-image-viewer-highlight-success-bg - Success-tone highlight fill.
- * @cssprop --lr-image-viewer-highlight-warning-border - Warning-tone highlight border.
+ * @cssprop --lr-image-viewer-highlight-warning-border-color - Warning-tone highlight border.
  * @cssprop --lr-image-viewer-highlight-warning-bg - Warning-tone highlight fill.
- * @cssprop --lr-image-viewer-highlight-danger-border - Danger-tone highlight border.
+ * @cssprop --lr-image-viewer-highlight-danger-border-color - Danger-tone highlight border.
  * @cssprop --lr-image-viewer-highlight-danger-bg - Danger-tone highlight fill.
- * @cssprop --lr-image-viewer-highlight-neutral-border - Neutral-tone highlight border.
+ * @cssprop --lr-image-viewer-highlight-neutral-border-color - Neutral-tone highlight border.
  * @cssprop --lr-image-viewer-highlight-neutral-bg - Neutral-tone highlight fill.
  * @cssprop --lr-image-viewer-highlight-fill - The resting fill a `[part="highlight"]` actually
  *   renders, resolved per tone from the `--lr-image-viewer-highlight-*-bg` knobs above. Its hover
@@ -234,14 +234,14 @@ class LyraImageViewerBase extends LyraElement<LyraImageViewerEventMap> {}
  * @cssprop [--lr-icon-button-bg=var(--lr-color-surface)] - Control background in the resting state.
  * @cssprop [--lr-image-viewer-control-hover-bg=var(--lr-color-brand-quiet)] - Toolbar control hover
  *   background; its active background derives from the same value.
- * @cssprop [--lr-icon-button-bg-active=color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--lr-image-viewer-control-hover-bg, var(--lr-color-brand-quiet))), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Control background in the pressed state.
- * @cssprop [--lr-icon-button-bg-hover=var(--lr-image-viewer-control-hover-bg, var(--lr-color-brand-quiet))] - Control background in the hover state.
+ * @cssprop [--lr-icon-button-active-bg=color-mix(in oklab, var(--lr-icon-button-hover-bg, var(--lr-image-viewer-control-hover-bg, var(--lr-color-brand-quiet))), var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Control background in the pressed state.
+ * @cssprop [--lr-icon-button-hover-bg=var(--lr-image-viewer-control-hover-bg, var(--lr-color-brand-quiet))] - Control background in the hover state.
  * @cssprop [--lr-icon-button-border=var(--lr-border-width-thin) solid var(--lr-color-border)] - Control border in the resting state.
- * @cssprop [--lr-icon-button-border-active=var(--lr-icon-button-border-hover, var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border)))] - Control border in the pressed state.
- * @cssprop [--lr-icon-button-border-hover=var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border))] - Control border in the hover state.
+ * @cssprop [--lr-icon-button-active-border=var(--lr-icon-button-hover-border, var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border)))] - Control border in the pressed state.
+ * @cssprop [--lr-icon-button-hover-border=var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border))] - Control border in the hover state.
  * @cssprop [--lr-icon-button-color=var(--lr-color-text)] - Control foreground color in the resting state.
- * @cssprop [--lr-icon-button-color-active=var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))] - Control foreground color in the pressed state.
- * @cssprop [--lr-icon-button-color-hover=var(--lr-icon-button-color, inherit)] - Control foreground color in the hover state.
+ * @cssprop [--lr-icon-button-active-color=var(--lr-icon-button-hover-color, var(--lr-icon-button-color, inherit))] - Control foreground color in the pressed state.
+ * @cssprop [--lr-icon-button-hover-color=var(--lr-icon-button-color, inherit)] - Control foreground color in the hover state.
  * @cssprop [--lr-icon-button-radius=var(--lr-radius)] - Control corner radius.
  * @status stable
  * @since 4.0.0

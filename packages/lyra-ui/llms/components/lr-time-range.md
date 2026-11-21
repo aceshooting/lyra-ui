@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -145,14 +145,12 @@ dimming, including ancestor-fieldset disablement), plus (for `presets`) `--lr-co
 button's text), `--lr-radius`, `--lr-space-xs/-s`, `--lr-transition-fast`,
 `--lr-focus-ring-*`.
 
-Three component-local properties recolor the **active** preset button independently of the shared
-palette: `--lr-time-range-preset-active-bg` (falls back to `--lr-color-brand`),
-`--lr-time-range-preset-active-border-color` (falls back to `--lr-color-brand`), and
-`--lr-time-range-preset-active-color` (falls back to `--lr-color-on-brand`). Unset, each resolves
-to the fallback token named above.
-`--lr-time-range-preset-selected-bg`, `--lr-time-range-preset-selected-border-color`, and
-`--lr-time-range-preset-selected-color` name the same three paints the way `<lr-date-picker>` does
-and win over the `preset-active-*` names, so one theme can style both controls' applied preset.
+Three component-local properties recolor the **selected** preset button independently of the
+shared palette: `--lr-time-range-preset-selected-bg` (falls back to `--lr-color-brand`),
+`--lr-time-range-preset-selected-border-color` (falls back to `--lr-color-brand`), and
+`--lr-time-range-preset-selected-color` (falls back to `--lr-color-on-brand`). Unset, each resolves
+to the fallback token named above. `<lr-date-picker>` uses the same names, so one theme can style
+both controls' applied preset.
 
 Pointer states and handle chrome are independently themeable too:
 
@@ -161,7 +159,7 @@ Pointer states and handle chrome are independently themeable too:
   preset hover/press paint; `<lr-date-picker>` takes the same `-hover-border-color`,
   `-pressed-border-color` and `-selected-border-color` names, and both rows share one paint sheet.
 - `--lr-time-range-handle-bg`, `--lr-time-range-handle-border-color`,
-  `--lr-time-range-handle-hover-bg`, and `--lr-time-range-handle-pressed-bg` control the handle's
+  `--lr-time-range-handle-hover-bg`, and `--lr-time-range-handle-active-bg` control the handle's
   resting, hovered, and pressed paint.
 
 Every hook falls through to the prior shared brand/surface token or color-mix expression, so old

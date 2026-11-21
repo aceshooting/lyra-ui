@@ -1469,7 +1469,7 @@ describe("pressed-state cssprops", () => {
       <div
         style="--lr-message-feedback-up-active-color: rgb(1, 2, 3);
                --lr-message-feedback-up-active-bg: rgb(4, 5, 6);
-               --lr-message-feedback-up-active-border: rgb(7, 8, 9);"
+               --lr-message-feedback-up-active-border-color: rgb(7, 8, 9);"
       >
         <lr-message-feedback rating="up"></lr-message-feedback>
       </div>

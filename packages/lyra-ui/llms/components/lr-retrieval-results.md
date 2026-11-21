@@ -10,7 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 35 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `row-body`: `--lr-retrieval-results-selected-border`
+- **Tokens by part** (prefer these over a `::part()` rule) `row-body`: `--lr-retrieval-results-selected-border-color`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -249,7 +249,7 @@ a `[part~="…"]` (not `[part="…"]`) selector is the one that matches inside a
 carry their own part names for the same class of reason — `::part()` matches a single element and
 cannot be followed by a descendant combinator, so `::part(metadata-entry) dt` reaches nothing.
 
-**Themeable custom properties:** `--lr-retrieval-results-selected-border` (default
+**Themeable custom properties:** `--lr-retrieval-results-selected-border-color` (default
 `var(--lr-color-brand)`) — the inline-start border color marking a selected row body
 (`::part(row-body-selected)`). `--lr-retrieval-results-selected-width` (default `var(--lr-space-2xs)`)
 sets that stripe's inline size, so a density retune of the spacing scale need not move it. A

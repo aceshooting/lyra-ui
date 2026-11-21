@@ -204,18 +204,18 @@ The rest come in resting/hover/pressed triples, each falling through to the next
 setting only one still behaves:
 
 - `--lr-icon-button-bg` (default `transparent`),
-  `--lr-icon-button-bg-hover` (default `color-mix(in oklab, var(--lr-color-surface),
+  `--lr-icon-button-hover-bg` (default `color-mix(in oklab, var(--lr-color-surface),
 var(--lr-color-mix-partner) var(--lr-color-mix-hover))`) and
-  `--lr-icon-button-bg-active` (the same mix at the stronger `--lr-color-mix-active` share,
+  `--lr-icon-button-active-bg` (the same mix at the stronger `--lr-color-mix-active` share,
   so a press reads as more than a hover) — the `[part='button']` background in each state. The
   hover fallback used to be `--lr-color-surface` itself, i.e. the page background, so hovering an
   icon button on a default page changed nothing at all.
-- `--lr-icon-button-color` (default `inherit`), `--lr-icon-button-color-hover` (default
-  `var(--lr-icon-button-color, inherit)`) and `--lr-icon-button-color-active` (default
-  `var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))`) — the icon/text colour.
-- `--lr-icon-button-border` (default `0`), `--lr-icon-button-border-hover` (default
-  `var(--lr-icon-button-border, 0)`) and `--lr-icon-button-border-active` (default
-  `var(--lr-icon-button-border-hover, var(--lr-icon-button-border, 0))`) — the _complete_ native
+- `--lr-icon-button-color` (default `inherit`), `--lr-icon-button-hover-color` (default
+  `var(--lr-icon-button-color, inherit)`) and `--lr-icon-button-active-color` (default
+  `var(--lr-icon-button-hover-color, var(--lr-icon-button-color, inherit))`) — the icon/text colour.
+- `--lr-icon-button-border` (default `0`), `--lr-icon-button-hover-border` (default
+  `var(--lr-icon-button-border, 0)`) and `--lr-icon-button-active-border` (default
+  `var(--lr-icon-button-hover-border, var(--lr-icon-button-border, 0))`) — the _complete_ native
   border shorthand, replaced wholesale in each state rather than merged.
 
 These are the same per-component indirection `lr-button`'s

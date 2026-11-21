@@ -1411,9 +1411,9 @@ describe("page-input invalid-state specificity (regression)", () => {
     }
   });
 
-  it("lets a consumer retint the invalid page-input border via the scoped --lr-pagination-invalid-border cssprop (regression)", async () => {
+  it("lets a consumer retint the invalid page-input border via the scoped --lr-pagination-invalid-border-color cssprop (regression)", async () => {
     const el = await compactPagination();
-    el.style.setProperty("--lr-pagination-invalid-border", "rgb(1, 2, 3)");
+    el.style.setProperty("--lr-pagination-invalid-border-color", "rgb(1, 2, 3)");
     const input = el.shadowRoot!.querySelector(
       '[part="page-input"]'
     ) as HTMLInputElement;
@@ -2580,7 +2580,7 @@ describe("page-input pointer feedback", () => {
     if (window.matchMedia("(hover: none), (pointer: coarse)").matches)
       this.skip();
     const el = await themed();
-    el.style.setProperty("--lr-pagination-invalid-border", "rgb(7, 8, 9)");
+    el.style.setProperty("--lr-pagination-invalid-border-color", "rgb(7, 8, 9)");
     const input = el.shadowRoot!.querySelector(
       '[part="page-input"]'
     ) as HTMLInputElement;

@@ -32,11 +32,11 @@ export const styles = css`
        dialog's own -background-hover default) so that an ancestor override of just the hover tier
        still shapes the press mix -- a cross-reference to a DIFFERENT public token than the one being
        defined here, so it introduces no loop. */
-    --_lr-dialog-close-background-active: ${activeFill('var( --lr-icon-button-bg-hover, var(--lr-color-brand-quiet) )')};
+    --_lr-dialog-close-background-active: ${activeFill('var( --lr-icon-button-hover-bg, var(--lr-color-brand-quiet) )')};
     --_lr-dialog-close-color: var(--lr-color-text-quiet);
     /* Restated for the press state because keyboard activation raises :active with no :hover. */
     --_lr-dialog-close-color-hover: var(--lr-color-brand);
-    --_lr-dialog-close-color-active: var(--lr-icon-button-color-hover, var(--lr-color-brand));
+    --_lr-dialog-close-color-active: var(--lr-icon-button-hover-color, var(--lr-color-brand));
     --_lr-dialog-close-radius: var(--lr-overlay-radius, var(--lr-radius));
     ${modalHostStyles}
     ${dialogChrome}

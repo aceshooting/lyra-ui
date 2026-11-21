@@ -206,22 +206,22 @@ function namesControl(nodes: Iterable<Node>): boolean {
  *   square glyph. The default keeps an icon-only button at exactly its `--lr-icon-button-size`
  *   floor; padding adds to the content, so a label grows the button and never shrinks the floor.
  * @cssprop [--lr-icon-button-bg=transparent] - Background fill of the native button.
- * @cssprop [--lr-icon-button-bg-hover=color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] -
+ * @cssprop [--lr-icon-button-hover-bg=color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] -
  *   Background fill on hover. Before 8.0.0 this fell back to `var(--lr-color-surface)` — the page
  *   background — so on a default page a hovered icon button painted itself the colour it was
  *   already sitting on and showed no hover at all.
- * @cssprop [--lr-icon-button-bg-active=color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
+ * @cssprop [--lr-icon-button-active-bg=color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))] -
  *   Background fill while pressed: the same mix at the stronger `--lr-color-mix-active` share, so
  *   the pressed state is visibly more than the hover.
  * @cssprop [--lr-icon-button-color=inherit] - Icon/text color of the native button.
- * @cssprop [--lr-icon-button-color-hover=var(--lr-icon-button-color, inherit)] - Icon/text color
+ * @cssprop [--lr-icon-button-hover-color=var(--lr-icon-button-color, inherit)] - Icon/text color
  *   on hover.
- * @cssprop [--lr-icon-button-color-active=var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))] -
+ * @cssprop [--lr-icon-button-active-color=var(--lr-icon-button-hover-color, var(--lr-icon-button-color, inherit))] -
  *   Icon/text color while pressed; falls through to the hover colour when only that is set.
  * @cssprop [--lr-icon-button-border=0] - Complete border shorthand of the native button.
- * @cssprop [--lr-icon-button-border-hover=var(--lr-icon-button-border, 0)] - Complete border
+ * @cssprop [--lr-icon-button-hover-border=var(--lr-icon-button-border, 0)] - Complete border
  *   shorthand on hover.
- * @cssprop [--lr-icon-button-border-active=var(--lr-icon-button-border-hover, var(--lr-icon-button-border, 0))] -
+ * @cssprop [--lr-icon-button-active-border=var(--lr-icon-button-hover-border, var(--lr-icon-button-border, 0))] -
  *   Complete border shorthand while pressed; falls through to the hover border when only that is set.
  * @status stable
  * @since 4.0.0

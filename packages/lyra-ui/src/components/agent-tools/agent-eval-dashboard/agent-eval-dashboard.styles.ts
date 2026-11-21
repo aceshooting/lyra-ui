@@ -27,7 +27,7 @@ export const styles = css`
   }
   [part='metric']:focus-visible { ${focusRing} }
   [part='metric'][aria-pressed='true'] {
-    border-color: var(--lr-agent-eval-dashboard-active-border, var(--lr-color-brand));
+    border-color: var(--lr-agent-eval-dashboard-active-border-color, var(--lr-color-brand));
     background: var(--lr-agent-eval-dashboard-active-bg, var(--lr-color-brand-quiet));
   }
   /* The selected chip's own hover step: plain [part='metric']:hover above is (0,2,0), exactly what

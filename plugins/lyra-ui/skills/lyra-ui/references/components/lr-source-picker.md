@@ -91,7 +91,7 @@ mirrors, never live regions.
 selection control: the `select-all` pill (whose resting default is `var(--lr-color-brand-quiet)`) and
 a fully-selected entry's `[part='checkbox']` (whose resting default is `var(--lr-color-brand)`). The
 two keep their distinct defaults while it is unset; setting it unifies both.
-`--lr-source-picker-checked-border` (default `var(--lr-color-brand)`) — the border color of every
+`--lr-source-picker-checked-border-color` (default `var(--lr-color-brand)`) — the border color of every
 checked _or_ mixed selection control. `--lr-source-picker-mixed-bg` (default
 `color-mix(in srgb, var(--lr-color-brand) 50%, var(--lr-color-surface))`) — the background of a
 partially-selected entry's `[part='checkbox']`, so a tri-state folder reads as distinct from a fully

@@ -1935,7 +1935,7 @@ describe('lazy row source', () => {
 });
 
 // `lr-button` exposes its resting and hover paint as public custom properties
-// (`--lr-button-hover-color`, `--lr-button-hover-border`, ...) layered over private `--_lr-button-*`
+// (`--lr-button-hover-color`, `--lr-button-hover-border-color`, ...) layered over private `--_lr-button-*`
 // defaults. `lr-export-button` resolved the same nine values, but only through private
 // `--_lr-export-button-*` names, so the ONLY way to repaint a trigger was `::part(trigger)` --
 // which two consumers independently ended up doing, one of them to undo `appearance="outlined"`

@@ -13,7 +13,7 @@ export const styles = css`
      controls query the remaining row allocation rather than the unindented panel width. */
   [part~='run'] { margin-inline-start: min(calc(var(--lr-subagent-depth, 0) * var(--lr-space-l)), max(0px, calc(100% - var(--lr-size-12rem)))); container-type: inline-size; contain-intrinsic-inline-size: var(--lr-size-12rem); border: var(--lr-border-width-thin) solid var(--lr-subagent-panel-border-color, var(--lr-color-border)); border-radius: var(--lr-subagent-panel-radius, var(--lr-radius)); overflow: hidden; }
   [part~='run-selected'] {
-    border-color: var(--lr-subagent-panel-selected-border, var(--lr-color-brand));
+    border-color: var(--lr-subagent-panel-selected-border-color, var(--lr-color-brand));
   }
   [part='run-row'] { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
   [part='run-trigger'] {
@@ -81,7 +81,7 @@ export const styles = css`
      selected row keeps an inline-start rule in the same token. Logical, so it mirrors under RTL.
      MUST stay after the plain rule above: both are equal-specificity. */
   :host([frame="plain"]) [part~='run-selected'] {
-    border-inline-start: var(--lr-border-width-thick) solid var(--lr-subagent-panel-selected-border, var(--lr-color-brand));
+    border-inline-start: var(--lr-border-width-thick) solid var(--lr-subagent-panel-selected-border-color, var(--lr-color-brand));
   }
   /* no-hover-state: the run row is a roving-focus treeitem that only takes focus from the keyboard
      or by script; its pointer target is [part='run-trigger'], which carries the hover. Inset so the

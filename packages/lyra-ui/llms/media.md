@@ -3684,8 +3684,8 @@ a focused zoom control.
 
 Toolbar controls accept `--lr-icon-button-border`, `--lr-icon-button-radius`,
 `--lr-icon-button-bg`, and `--lr-icon-button-color`, including the border, fill, and color
-variants `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border-hover`,
-`--lr-icon-button-border-active`, `--lr-icon-button-color-hover` and `--lr-icon-button-color-active`.
+variants `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-hover-border`,
+`--lr-icon-button-active-border`, `--lr-icon-button-hover-color` and `--lr-icon-button-active-color`.
 
 **Properties:**
 
@@ -3789,8 +3789,8 @@ import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe compon
 
 Toolbar controls accept `--lr-icon-button-border`, `--lr-icon-button-radius`,
 `--lr-icon-button-bg`, and `--lr-icon-button-color`, including the border, fill, and color
-variants `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border-hover`,
-`--lr-icon-button-border-active`, `--lr-icon-button-color-hover` and `--lr-icon-button-color-active`.
+variants `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-hover-border`,
+`--lr-icon-button-active-border`, `--lr-icon-button-hover-color` and `--lr-icon-button-active-color`.
 
 **Properties:**
 
@@ -5076,8 +5076,8 @@ later highlight in document order wins. Keyboard navigation between highlights i
 
 Toolbar controls accept `--lr-icon-button-border`, `--lr-icon-button-radius`,
 `--lr-icon-button-bg`, and `--lr-icon-button-color`, including the border, fill, and color
-variants `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border-hover`,
-`--lr-icon-button-border-active`, `--lr-icon-button-color-hover` and `--lr-icon-button-color-active`.
+variants `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-hover-border`,
+`--lr-icon-button-active-border`, `--lr-icon-button-hover-color` and `--lr-icon-button-active-color`.
 
 **Properties:** `src: string = ''`, `name: string = ''`, `alt?: string`,
 `fit: LyraImageFit = 'contain' | 'width' | 'actual'` (reflected; invalid writes normalize to
@@ -5156,7 +5156,7 @@ mode, ArrowLeft/ArrowRight decrease/increase a draft's `x` coordinate and their 
 decrease/increase its width in both text directions; the surrounding toolbar remains logical.
 
 **Themeable custom properties:** `--lr-image-viewer-annotate-active-bg` (default
-`var(--lr-color-brand-quiet)`) and `--lr-image-viewer-annotate-active-border` (default
+`var(--lr-color-brand-quiet)`) and `--lr-image-viewer-annotate-active-border-color` (default
 `var(--lr-color-brand)`) — the background and border of `[part='annotate-toggle']` while annotation
 mode is on. The toggle carries its own glyph in `--lr-color-text`, so keep a 4.5:1 ratio against it
 when overriding the background. `--lr-image-viewer-highlight-active-color` (default
@@ -5168,12 +5168,12 @@ carries. `--lr-image-viewer-highlight-active-border-width` (default
 `--lr-image-viewer-highlight-active-outline-offset` (default `var(--lr-focus-ring-offset)`) control
 its outline geometry. Like the existing active color hook, each is an inline `var()` fallback and
 can be set on the viewer or any ancestor. Highlight tone styling is exposed through
-`--lr-image-viewer-highlight-border`,
+`--lr-image-viewer-highlight-border-color`,
 `--lr-image-viewer-highlight-bg`, and the tone-specific
-`--lr-image-viewer-highlight-success-border`, `--lr-image-viewer-highlight-success-bg`,
-`--lr-image-viewer-highlight-warning-border`, `--lr-image-viewer-highlight-warning-bg`,
-`--lr-image-viewer-highlight-danger-border`, `--lr-image-viewer-highlight-danger-bg`,
-`--lr-image-viewer-highlight-neutral-border`, and `--lr-image-viewer-highlight-neutral-bg`
+`--lr-image-viewer-highlight-success-border-color`, `--lr-image-viewer-highlight-success-bg`,
+`--lr-image-viewer-highlight-warning-border-color`, `--lr-image-viewer-highlight-warning-bg`,
+`--lr-image-viewer-highlight-danger-border-color`, `--lr-image-viewer-highlight-danger-bg`,
+`--lr-image-viewer-highlight-neutral-border-color`, and `--lr-image-viewer-highlight-neutral-bg`
 properties. `--lr-image-viewer-highlight-fill` is the resting fill a `[part='highlight']` actually
 renders, resolved per tone from the `-bg` knobs above; its hover and pressed states are color mixes
 taken from that value, so setting it directly retints all three states of one highlight at once —

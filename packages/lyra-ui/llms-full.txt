@@ -8572,7 +8572,7 @@ a hovered or keyboard-active `[part='option']` row — the same per-component in
 row state without hijacking the shared `--lr-color-brand-quiet` token library-wide.
 
 The currently-**selected** row (`[part='option'][aria-selected='true']`) has its own matching set:
-`--lr-combobox-option-selected-bg` (default `transparent`), `--lr-combobox-option-selected-border`
+`--lr-combobox-option-selected-bg` (default `transparent`), `--lr-combobox-option-selected-border-color`
 and `--lr-combobox-option-selected-color` (both default `var(--lr-color-brand)`), and
 `--lr-combobox-option-selected-font-weight` (default `var(--lr-font-weight-semibold)`) — the same
 four-token indirection `lr-select`/`lr-model-select` already provide for their own selected row.
@@ -9233,7 +9233,7 @@ ancestor is never shadowed — retheme just this row state without hijacking the
 knob `lr-combobox`'s own `--lr-combobox-option-active-bg` provides.
 
 The currently-**selected** row (`[part='option'][aria-selected='true']`) has its own matching set:
-`--lr-select-option-selected-bg` (default `transparent`), `--lr-select-option-selected-border` and
+`--lr-select-option-selected-bg` (default `transparent`), `--lr-select-option-selected-border-color` and
 `--lr-select-option-selected-color` (both default `var(--lr-color-brand)`), and
 `--lr-select-option-selected-font-weight` (default `var(--lr-font-weight-semibold)`). Like the
 active-bg knob these are inline `var()` fallbacks, not declared on `:host`, so a consumer can
@@ -9847,22 +9847,20 @@ and `dateTimeFormat(locale, options)`.
   `::part(previous):hover` still wins without `!important`.
 - `--lr-date-picker-nav-active-bg` — Pressed navigation background; defaults to the hover color
   mixed by `--lr-color-mix-active`.
-- `--lr-date-picker-preset-hover-bg`, `--lr-date-picker-preset-active-bg`, and
-  `--lr-date-picker-preset-selected-bg` (new in 11.0.0) — hover, pressed, and
-  currently-selected paint for a `presets` quick-range button. Defaults are
-  `var(--lr-color-brand-quiet)`, that hover colour mixed by `--lr-color-mix-active`, and
-  `var(--lr-color-brand)` respectively. `--lr-date-picker-preset-pressed-bg` names the pressed
-  paint the way `<lr-time-range>` does and wins over `--lr-date-picker-preset-active-bg`; across
-  both controls, `preset-selected-*` is the applied preset, `preset-pressed-*` the press, and
+- `--lr-date-picker-preset-hover-bg`, `--lr-date-picker-preset-pressed-bg`, and
+  `--lr-date-picker-preset-selected-bg` — hover, pressed, and currently-selected paint for a
+  `presets` quick-range button. Defaults are `var(--lr-color-brand-quiet)`, that hover colour mixed
+  by `--lr-color-mix-active`, and `var(--lr-color-brand)` respectively. Across `<lr-date-picker>`
+  and `<lr-time-range>`, `preset-selected-*` is the applied preset, `preset-pressed-*` the press, and
   `preset-hover-*` the hover.
-- `--lr-date-picker-preset-selected-border` (default `var(--lr-color-brand)`) and
+- `--lr-date-picker-preset-selected-border-color` (default `var(--lr-color-brand)`) and
   `--lr-date-picker-preset-selected-color` (default `var(--lr-color-on-brand)`) independently
   theme a selected preset's border and foreground; the selected background token controls only its
   background.
 - `--lr-date-picker-preset-hover-border-color` (default `var(--lr-color-brand)`),
   `--lr-date-picker-preset-pressed-border-color` (default an active-state mix of
   `var(--lr-color-brand)`) and `--lr-date-picker-preset-selected-border-color` (default
-  `var(--lr-color-brand)`; wins over `--lr-date-picker-preset-selected-border`) — the border color of
+  `var(--lr-color-brand)`) — the border color of
   a hovered, pressed and selected quick-range button.
 - `--lr-date-picker-title-hover-color`, `--lr-date-picker-title-active-color`,
   `--lr-date-picker-title-active-bg`, and `--lr-date-picker-title-active-radius` — Month-title
@@ -10372,14 +10370,14 @@ for `accent`); the chrome-less tiers paint nothing, so they mix from the page su
 var(--lr-color-mix-partner) var(--lr-color-mix-hover))`) is the hovered background and
 `--lr-button-active-bg` the same mix at the stronger `--lr-color-mix-active` share, so a
 press reads as more than a hover. `appearance="link"` moves its text colour by those two shares
-instead of taking a background. `--lr-button-hover-color` and `--lr-button-hover-border` are the
+instead of taking a background. `--lr-button-hover-color` and `--lr-button-hover-border-color` are the
 text/border counterparts, letting e.g. `appearance="quiet"` (which has its own resting
 `--lr-button-quiet-color`/`-border`) theme its hover state independently. Both are **undeclared by
 default**. `quiet` and chromatic `plain` text move toward body text during hover/press to retain contrast
 against the moving fill; the other appearances keep their resting text colour. The hover colour
 override also applies while pressed, and the border fallback remains the resting border colour.
 `appearance="link"` ignores `--lr-button-hover-color` and renders without a border, so
-`--lr-button-hover-border` has no effect there. Retuning either fill token also retunes its tier's
+`--lr-button-hover-border-color` has no effect there. Retuning either fill token also retunes its tier's
 hover and press. For removed historical tokens, see the [release history archive](https://github.com/aceshooting/lyra-ui/tree/main/docs/changelog).
 
 `--lr-button-width` (default `100%`) is the internal control's inline size, so it follows the host's
@@ -10735,18 +10733,18 @@ The rest come in resting/hover/pressed triples, each falling through to the next
 setting only one still behaves:
 
 - `--lr-icon-button-bg` (default `transparent`),
-  `--lr-icon-button-bg-hover` (default `color-mix(in oklab, var(--lr-color-surface),
+  `--lr-icon-button-hover-bg` (default `color-mix(in oklab, var(--lr-color-surface),
 var(--lr-color-mix-partner) var(--lr-color-mix-hover))`) and
-  `--lr-icon-button-bg-active` (the same mix at the stronger `--lr-color-mix-active` share,
+  `--lr-icon-button-active-bg` (the same mix at the stronger `--lr-color-mix-active` share,
   so a press reads as more than a hover) — the `[part='button']` background in each state. The
   hover fallback used to be `--lr-color-surface` itself, i.e. the page background, so hovering an
   icon button on a default page changed nothing at all.
-- `--lr-icon-button-color` (default `inherit`), `--lr-icon-button-color-hover` (default
-  `var(--lr-icon-button-color, inherit)`) and `--lr-icon-button-color-active` (default
-  `var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))`) — the icon/text colour.
-- `--lr-icon-button-border` (default `0`), `--lr-icon-button-border-hover` (default
-  `var(--lr-icon-button-border, 0)`) and `--lr-icon-button-border-active` (default
-  `var(--lr-icon-button-border-hover, var(--lr-icon-button-border, 0))`) — the _complete_ native
+- `--lr-icon-button-color` (default `inherit`), `--lr-icon-button-hover-color` (default
+  `var(--lr-icon-button-color, inherit)`) and `--lr-icon-button-active-color` (default
+  `var(--lr-icon-button-hover-color, var(--lr-icon-button-color, inherit))`) — the icon/text colour.
+- `--lr-icon-button-border` (default `0`), `--lr-icon-button-hover-border` (default
+  `var(--lr-icon-button-border, 0)`) and `--lr-icon-button-active-border` (default
+  `var(--lr-icon-button-hover-border, var(--lr-icon-button-border, 0))`) — the _complete_ native
   border shorthand, replaced wholesale in each state rather than merged.
 
 These are the same per-component indirection `lr-button`'s
@@ -12192,14 +12190,12 @@ dimming, including ancestor-fieldset disablement), plus (for `presets`) `--lr-co
 button's text), `--lr-radius`, `--lr-space-xs/-s`, `--lr-transition-fast`,
 `--lr-focus-ring-*`.
 
-Three component-local properties recolor the **active** preset button independently of the shared
-palette: `--lr-time-range-preset-active-bg` (falls back to `--lr-color-brand`),
-`--lr-time-range-preset-active-border-color` (falls back to `--lr-color-brand`), and
-`--lr-time-range-preset-active-color` (falls back to `--lr-color-on-brand`). Unset, each resolves
-to the fallback token named above.
-`--lr-time-range-preset-selected-bg`, `--lr-time-range-preset-selected-border-color`, and
-`--lr-time-range-preset-selected-color` name the same three paints the way `<lr-date-picker>` does
-and win over the `preset-active-*` names, so one theme can style both controls' applied preset.
+Three component-local properties recolor the **selected** preset button independently of the
+shared palette: `--lr-time-range-preset-selected-bg` (falls back to `--lr-color-brand`),
+`--lr-time-range-preset-selected-border-color` (falls back to `--lr-color-brand`), and
+`--lr-time-range-preset-selected-color` (falls back to `--lr-color-on-brand`). Unset, each resolves
+to the fallback token named above. `<lr-date-picker>` uses the same names, so one theme can style
+both controls' applied preset.
 
 Pointer states and handle chrome are independently themeable too:
 
@@ -12208,7 +12204,7 @@ Pointer states and handle chrome are independently themeable too:
   preset hover/press paint; `<lr-date-picker>` takes the same `-hover-border-color`,
   `-pressed-border-color` and `-selected-border-color` names, and both rows share one paint sheet.
 - `--lr-time-range-handle-bg`, `--lr-time-range-handle-border-color`,
-  `--lr-time-range-handle-hover-bg`, and `--lr-time-range-handle-pressed-bg` control the handle's
+  `--lr-time-range-handle-hover-bg`, and `--lr-time-range-handle-active-bg` control the handle's
   resting, hovered, and pressed paint.
 
 Every hook falls through to the prior shared brand/surface token or color-mix expression, so old
@@ -12570,8 +12566,8 @@ while pressed:
 }
 .gemstone-accent-picker lr-icon-button {
   --lr-icon-button-bg: transparent;
-  --lr-icon-button-bg-hover: transparent;
-  --lr-icon-button-bg-active: transparent;
+  --lr-icon-button-hover-bg: transparent;
+  --lr-icon-button-active-bg: transparent;
   --lr-icon-button-border: none;
 }
 .gem { display: inline-flex; inline-size: 1.15rem; block-size: 1.15rem; }
@@ -12997,7 +12993,7 @@ default. Both track dimensions ride the shared `size` ladder, so at the default 
 resolve to `1.125rem` × `2.025rem`.
 WA/Shoelace's `--width`, `--height`, and `--thumb-size` aliases feed those same rendered dimensions.
 `--lr-switch-gap` (default `var(--lr-space-s)`) independently controls the track-to-label gap.
-`--lr-switch-invalid-border` (default `var(--lr-color-danger)`) is the outline `[part='track']`
+`--lr-switch-invalid-border-color` (default `var(--lr-color-danger)`) is the outline `[part='track']`
 paints while the switch matches `:state(user-invalid)`.
 
 `--lr-switch-track-fill` (default `--lr-color-border`) is `[part='track']`'s unchecked resting
@@ -14318,10 +14314,10 @@ floor that input keeps once tokens have consumed the row), and `--lr-token-input
 - `--lr-token-input-token-radius` — Token chip corner radius. Default: `var(--lr-radius)` (`pill` rounds it fully), the same as the `lr-select` and `lr-combobox` chips.
 - `--lr-token-input-action-hover-bg` — Backwards-compatible aggregate edit/remove hover
   background. Default: `var(--lr-color-brand-quiet)`.
-- `--lr-token-input-edit-hover-bg` / `--lr-token-input-edit-pressed-bg` — Editable token-label
+- `--lr-token-input-edit-hover-bg` / `--lr-token-input-edit-active-bg` — Editable token-label
   hover and pressed backgrounds. The hover hook falls back to
   `--lr-token-input-action-hover-bg`; the pressed hook defaults to its active-state mix.
-- `--lr-token-input-remove-hover-bg` / `--lr-token-input-remove-pressed-bg` — Remove-action hover
+- `--lr-token-input-remove-hover-bg` / `--lr-token-input-remove-active-bg` — Remove-action hover
   and pressed backgrounds, with the same aggregate-hover and active-state fallbacks.
 - `--lr-token-input-focus-border-color` — Focused row border color. Default: `var(--lr-color-brand)`.
 - `--lr-token-input-fill` — Resting input-row background, public since 16.0.0. Default:
@@ -14468,8 +14464,8 @@ colors the line-number gutter during scrolling.
 `--lr-code-editor-gutter-bg` (default: the fill), `--lr-code-editor-gutter-color` (default
 `var(--lr-color-text-quiet)`) and `--lr-code-editor-gutter-border-color` (default
 `var(--lr-color-border)`) retint the gutter alone without a `::part(gutter)` rule.
-`--lr-code-editor-hover-border` (default `var(--lr-color-brand)`) and
-`--lr-code-editor-invalid-border` retint those frame states. The invalid border falls back to
+`--lr-code-editor-hover-border-color` (default `var(--lr-color-brand)`) and
+`--lr-code-editor-invalid-border-color` retint those frame states. The invalid border falls back to
 `--lr-form-control-invalid-border-color`, then `--lr-color-danger`.
 `--lr-code-editor-radius` (default `var(--lr-radius)`) retunes the editor frame's corner radius
 without a `::part(editor)` rule.
@@ -14818,7 +14814,7 @@ of authoring `positioning-strategy`/`hoist` on each instance.
 - `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` on the trigger
   while it is focused. One name for every field-shaped control in the library, so a halo is
   configured once instead of per component; additive to the existing focus outline. Default: `none`.
-- `--lr-color-picker-selected-border` — Selected palette-swatch border. Default:
+- `--lr-color-picker-selected-border-color` — Selected palette-swatch border. Default:
   `var(--lr-color-brand)`.
 - `--lr-color-picker-selected-check-color` — Checkmark on the selected palette swatch. Default:
   `var(--lr-color-surface)`.
@@ -15641,7 +15637,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly id?: string;
   }`
   Import: `@aceshooting/lyra-ui/components/forms/date-picker/date-picker.class.js`.
-  `LyraDatePickerSelectRequestDetail {
+  `LyraDatePickerChangeRequestDetail {
     readonly value: string;
     readonly previousValue: string;
   }`
@@ -15723,7 +15719,7 @@ These named interfaces and helper signatures are available to typed integrations
 
 - **`components-forms-radio-radio-group-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/forms/radio/radio-group.class.js`.
-  `LyraRadioGroupSelectRequestDetail {
+  `LyraRadioGroupChangeRequestDetail {
     readonly value: string;
     readonly previousValue: string;
     readonly option: LyraRadio;
@@ -15792,7 +15788,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly disabled?: boolean;
   }`
   Import: `@aceshooting/lyra-ui/components/forms/swatch-picker/swatch-picker.class.js`.
-  `LyraSwatchPickerSelectRequestDetail {
+  `LyraSwatchPickerChangeRequestDetail {
     readonly value: string;
     readonly previousValue: string | null;
   }`
@@ -18307,7 +18303,7 @@ across `--lr-pagination-base-gap` (default `var(--lr-space-m)`) between summary 
 `--lr-pagination-page-field-gap` (default `var(--lr-space-2xs)`) between the compact
 `[part="page-input"]` and its `[part="page-count"]`; each remains
 active in standard, compact, and 320px container layouts —
-`--lr-pagination-invalid-border` (default `var(--lr-color-danger)`) — border color of
+`--lr-pagination-invalid-border-color` (default `var(--lr-color-danger)`) — border color of
 `[part="page-input"]` while the typed page is out of range (`aria-invalid="true"`); a state hook
 declared as an inline `var()` fallback, since `::part(page-input)[aria-invalid='true']` is invalid
 CSS. `--lr-pagination-control-color` independently controls the resting foreground. The applied
@@ -21163,7 +21159,7 @@ page gives it.
 buttons. The buttons accept the shared
 `--lr-icon-button-bg` (default `transparent`), `--lr-icon-button-border` (default `0`),
 `--lr-icon-button-color` (default `var(--lr-color-text)`), and `--lr-icon-button-radius` (default
-`var(--lr-radius)`), and the hover and pressed overrides `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color-hover` and `--lr-icon-button-color-active`
+`var(--lr-radius)`), and the hover and pressed overrides `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`, `--lr-icon-button-hover-color` and `--lr-icon-button-active-color`
 on the built-in controls; plus shared tokens —
 `--lr-icon-button-size` (each button's minimum hit area, unchanged by `frame`), `--lr-shadow-m`,
 `--lr-color-surface`, `--lr-color-border-subtle`, `--lr-radius`, `--lr-space-2xs`,
@@ -21858,7 +21854,7 @@ an entry's value text and buttons), `value` (carries `data-masked`), `reveal-but
 **Themeable custom properties:** `--lr-env-list-button-hover-bg` (default `var(--lr-color-brand-quiet)`)
 and `--lr-env-list-button-active-bg` (reveal/copy button hover and pressed fills),
 `--lr-env-list-reveal-active-bg` (default
-`var(--lr-color-brand-quiet)`) and `--lr-env-list-reveal-active-border` (default
+`var(--lr-color-brand-quiet)`) and `--lr-env-list-reveal-active-border-color` (default
 `var(--lr-color-brand)`) — the background and border color of a revealed entry's reveal button. The background is also the
 base its hover/press mixes from. The button is named by its action ("Reveal {name}" / "Hide {name}")
 and carries no `aria-pressed`, so its name never contradicts a pressed state.
@@ -22187,7 +22183,7 @@ shared `--lr-icon-button-bg` (default `transparent`), `--lr-icon-button-border` 
 `--lr-icon-button-color` (default
 `var(--lr-graph-query-builder-saved-delete-color, var(--lr-color-text-quiet))`), and
 `--lr-icon-button-radius` (default `var(--lr-radius-xs)`), and the hover and pressed overrides
-`--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color-hover` and `--lr-icon-button-color-active`. Unset hooks preserve the current shared
+`--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`, `--lr-icon-button-hover-color` and `--lr-icon-button-active-color`. Unset hooks preserve the current shared
 surface/text/brand/danger colors and hover/active mixes. They are inline `var()` fallbacks at the
 longhand that consumes them, so an override on a parent themes every descendant builder without
 being shadowed by a declaration on the component host.
@@ -29824,7 +29820,7 @@ These named interfaces and helper signatures are available to typed integrations
     disabled?: boolean;
   }`
   Import: `@aceshooting/lyra-ui/components/layout/segmented/segmented.class.js`.
-  `LyraSegmentedSelectRequestDetail {
+  `LyraSegmentedChangeRequestDetail {
     readonly value: string;
     readonly previousValue: string;
   }`
@@ -30392,7 +30388,7 @@ inherit into the items slotted inside it: one declaration on `<lr-toast>` retune
 
 ### `lr-toast-item`
 
-The dismiss control is a composed `<lr-icon-button>`, so it is themed through the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`.
+The dismiss control is a composed `<lr-icon-button>`, so it is themed through the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-border`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`, `--lr-icon-button-color`, `--lr-icon-button-hover-color`, `--lr-icon-button-active-color` and `--lr-icon-button-radius`.
 
 A single notification.
 
@@ -31351,7 +31347,7 @@ mirrors the same accent/bg/border vocabulary `<lr-tool-call-chip>`/`<lr-attachme
 rule covers all four non-neutral variants, because the shared variants sheet has already re-pointed
 `--lr-color-fill-loud`/`--lr-color-fill-quiet` at the active variant's row of the semantic grid —
 the chip reads those generic slots and never names a variant, and sets its border `transparent`),
-`--lr-chip-pressed-border` (border color while pressed/selected — falls back to
+`--lr-chip-pressed-border-color` (border color while pressed/selected — falls back to
 `--lr-chip-accent`), `--lr-chip-pressed-bg` (background color while pressed/selected — falls
 back to `--lr-chip-bg`; a selected chip's hover/press wash mixes from it, an unselected toggleable
 chip's from `--lr-chip-bg`), the density quintet `--lr-chip-font-size`, `--lr-chip-padding-block`,
@@ -33058,7 +33054,7 @@ the remove button's `:hover` fill).
 
 ## `lr-alert`
 
-The close control is a composed `<lr-icon-button>`, so it is themed through the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`.
+The close control is a composed `<lr-icon-button>`, so it is themed through the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-border`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`, `--lr-icon-button-color`, `--lr-icon-button-hover-color`, `--lr-icon-button-active-color` and `--lr-icon-button-radius`.
 
 The `appearance` property accepts `filled-outlined` (default), `filled`, `outlined`, `plain`, and `accent`. Style the panel with `--lr-alert-bg`, `--lr-alert-border-color`, `--lr-alert-color`, `--lr-alert-radius`, and `--lr-alert-shadow`. After `lr-hide`, the cancelable `lr-close-request` and committed `lr-close` report `detail.reason` as `close-button`, `timeout`, or `programmatic`.
 
@@ -33780,8 +33776,8 @@ attempt regardless of outcome — style with `::part(trigger-error)`), `menu`, `
 **Themeable custom properties:** the trigger's paint is settable per state. At rest,
 `--lr-export-button-bg`, `--lr-export-button-color` and `--lr-export-button-border`; on
 hover, `--lr-export-button-hover-bg`, `--lr-export-button-hover-color` and
-`--lr-export-button-hover-border`; while pressed, `--lr-export-button-active-bg`,
-`--lr-export-button-active-color` and `--lr-export-button-active-border`. Each layers over whatever
+`--lr-export-button-hover-border-color`; while pressed, `--lr-export-button-active-bg`,
+`--lr-export-button-active-color` and `--lr-export-button-active-border-color`. Each layers over whatever
 the current `appearance` resolves to and leaves the other paints alone, so they are also the way to
 keep `appearance="outlined"` chrome while returning its label to neutral text — `outlined` paints
 the label `--lr-color-brand` and, unlike `lr-button`, this component has no `variant` of its own to
@@ -34181,7 +34177,7 @@ observer.
 
 ## `lr-json-viewer`
 
-Its composed icon-button controls read the shared `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color` and `--lr-icon-button-radius` tokens for their resting paint. Their hover and pressed paint follow `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color-hover` and `--lr-icon-button-color-active`.
+Its composed icon-button controls read the shared `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color` and `--lr-icon-button-radius` tokens for their resting paint. Their hover and pressed paint follow `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`, `--lr-icon-button-hover-color` and `--lr-icon-button-active-color`.
 
 Local searches ignore case and accents in keys and values. Navigating a match scrolls the viewer within
 its own bounds. An overflowing tree becomes a keyboard tab stop named by the host’s `aria-label` or the
@@ -34635,7 +34631,7 @@ A parent Lit component would instead hold the reference via `@query('lr-live-reg
 
 ## `lr-poll-status`
 
-Its composed icon-button controls read the shared `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color` and `--lr-icon-button-radius` tokens for their resting paint. Their hover and pressed paint follow `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color-hover` and `--lr-icon-button-color-active`.
+Its composed icon-button controls read the shared `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color` and `--lr-icon-button-radius` tokens for their resting paint. Their hover and pressed paint follow `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`, `--lr-icon-button-hover-color` and `--lr-icon-button-active-color`.
 
 A "next scheduled refresh" countdown with built-in pause and optional manual refresh controls: a ticking
 `M:SS` display counting down to the next scheduled action, a "Refreshing…" state at zero, and a
@@ -39906,8 +39902,8 @@ a focused zoom control.
 
 Toolbar controls accept `--lr-icon-button-border`, `--lr-icon-button-radius`,
 `--lr-icon-button-bg`, and `--lr-icon-button-color`, including the border, fill, and color
-variants `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border-hover`,
-`--lr-icon-button-border-active`, `--lr-icon-button-color-hover` and `--lr-icon-button-color-active`.
+variants `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-hover-border`,
+`--lr-icon-button-active-border`, `--lr-icon-button-hover-color` and `--lr-icon-button-active-color`.
 
 **Properties:**
 
@@ -40011,8 +40007,8 @@ import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe compon
 
 Toolbar controls accept `--lr-icon-button-border`, `--lr-icon-button-radius`,
 `--lr-icon-button-bg`, and `--lr-icon-button-color`, including the border, fill, and color
-variants `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border-hover`,
-`--lr-icon-button-border-active`, `--lr-icon-button-color-hover` and `--lr-icon-button-color-active`.
+variants `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-hover-border`,
+`--lr-icon-button-active-border`, `--lr-icon-button-hover-color` and `--lr-icon-button-active-color`.
 
 **Properties:**
 
@@ -41298,8 +41294,8 @@ later highlight in document order wins. Keyboard navigation between highlights i
 
 Toolbar controls accept `--lr-icon-button-border`, `--lr-icon-button-radius`,
 `--lr-icon-button-bg`, and `--lr-icon-button-color`, including the border, fill, and color
-variants `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border-hover`,
-`--lr-icon-button-border-active`, `--lr-icon-button-color-hover` and `--lr-icon-button-color-active`.
+variants `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-hover-border`,
+`--lr-icon-button-active-border`, `--lr-icon-button-hover-color` and `--lr-icon-button-active-color`.
 
 **Properties:** `src: string = ''`, `name: string = ''`, `alt?: string`,
 `fit: LyraImageFit = 'contain' | 'width' | 'actual'` (reflected; invalid writes normalize to
@@ -41378,7 +41374,7 @@ mode, ArrowLeft/ArrowRight decrease/increase a draft's `x` coordinate and their 
 decrease/increase its width in both text directions; the surrounding toolbar remains logical.
 
 **Themeable custom properties:** `--lr-image-viewer-annotate-active-bg` (default
-`var(--lr-color-brand-quiet)`) and `--lr-image-viewer-annotate-active-border` (default
+`var(--lr-color-brand-quiet)`) and `--lr-image-viewer-annotate-active-border-color` (default
 `var(--lr-color-brand)`) — the background and border of `[part='annotate-toggle']` while annotation
 mode is on. The toggle carries its own glyph in `--lr-color-text`, so keep a 4.5:1 ratio against it
 when overriding the background. `--lr-image-viewer-highlight-active-color` (default
@@ -41390,12 +41386,12 @@ carries. `--lr-image-viewer-highlight-active-border-width` (default
 `--lr-image-viewer-highlight-active-outline-offset` (default `var(--lr-focus-ring-offset)`) control
 its outline geometry. Like the existing active color hook, each is an inline `var()` fallback and
 can be set on the viewer or any ancestor. Highlight tone styling is exposed through
-`--lr-image-viewer-highlight-border`,
+`--lr-image-viewer-highlight-border-color`,
 `--lr-image-viewer-highlight-bg`, and the tone-specific
-`--lr-image-viewer-highlight-success-border`, `--lr-image-viewer-highlight-success-bg`,
-`--lr-image-viewer-highlight-warning-border`, `--lr-image-viewer-highlight-warning-bg`,
-`--lr-image-viewer-highlight-danger-border`, `--lr-image-viewer-highlight-danger-bg`,
-`--lr-image-viewer-highlight-neutral-border`, and `--lr-image-viewer-highlight-neutral-bg`
+`--lr-image-viewer-highlight-success-border-color`, `--lr-image-viewer-highlight-success-bg`,
+`--lr-image-viewer-highlight-warning-border-color`, `--lr-image-viewer-highlight-warning-bg`,
+`--lr-image-viewer-highlight-danger-border-color`, `--lr-image-viewer-highlight-danger-bg`,
+`--lr-image-viewer-highlight-neutral-border-color`, and `--lr-image-viewer-highlight-neutral-bg`
 properties. `--lr-image-viewer-highlight-fill` is the resting fill a `[part='highlight']` actually
 renders, resolved per tone from the `-bg` knobs above; its hover and pressed states are color mixes
 taken from that value, so setting it directly retints all three states of one highlight at once —
@@ -46037,7 +46033,7 @@ reduced motion). `--lr-document-preview-progress`
 (default `0`) — a unitless
 0–100 number the determinate spinner's `conic-gradient` fill reads; written inline on the ring by
 the component itself from the clamped `progress` property, so overriding it only makes sense to
-repaint the fraction. `--lr-document-preview-active-border` (default
+repaint the fraction. `--lr-document-preview-active-border-color` (default
 `var(--lr-color-warning, var(--lr-color-brand))`) — the border color of the `[part='region-highlight']`
 matching `activeHighlightId` (image format only), deliberately distinct from the resting highlight
 border so the active region can be recolored without touching the rest; it also draws a thick offset outline, so the active region stays distinct from a warning-toned one and under forced colors. Like the library's other
@@ -47028,7 +47024,7 @@ localized loading text alongside its decorative ring, and the ring stops under r
 
 **Themeable custom properties:** `--lr-svg-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
-`--lr-svg-viewer-active-border` (default `var(--lr-color-warning, var(--lr-color-brand))`) — the
+`--lr-svg-viewer-active-border-color` (default `var(--lr-color-warning, var(--lr-color-brand))`) — the
 border and outer-ring color of the `[part='region-highlight']` matching `activeHighlightId`; the
 ring keeps the active region distinct from a warning-tone highlight, and the token recolors the
 active region without touching the rest. It is an
@@ -49954,7 +49950,7 @@ can cover the other. Both surfaces use `white-space: pre` and scroll horizontall
 
 ---
 
-**Shared icon-button tokens:** the code-block action buttons read the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius` for their background, border, foreground and corner radius in the resting, hover and pressed states.
+**Shared icon-button tokens:** the code-block action buttons read the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-border`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`, `--lr-icon-button-color`, `--lr-icon-button-hover-color`, `--lr-icon-button-active-color` and `--lr-icon-button-radius` for their background, border, foreground and corner radius in the resting, hover and pressed states.
 
 ## `lr-markdown-core`
 
@@ -50110,15 +50106,15 @@ keeps the box and list gutter aligned. Header hooks are `--lr-markdown-code-head
 (default `var(--lr-color-surface)`) and `--lr-markdown-code-header-color`
 (default `var(--lr-color-text-quiet)`).
 
-**Shared icon-button tokens:** the code-block action buttons read the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`. `--lr-markdown-code-copy-hover-bg` and `--lr-markdown-code-copy-active-bg` set the fenced copy button's hovered and pressed backgrounds. `--lr-markdown-code-copy-hover-color` (default `var(--lr-color-brand)`) and `--lr-markdown-code-copy-active-color` set its glyph color in those states, and `--lr-markdown-code-copy-success-color` / `--lr-markdown-code-copy-error-color` (defaults `var(--lr-color-success)` / `var(--lr-color-danger)`) its copy feedback.
+**Shared icon-button tokens:** the code-block action buttons read the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-border`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`, `--lr-icon-button-color`, `--lr-icon-button-hover-color`, `--lr-icon-button-active-color` and `--lr-icon-button-radius`. `--lr-markdown-code-copy-hover-bg` and `--lr-markdown-code-copy-active-bg` set the fenced copy button's hovered and pressed backgrounds. `--lr-markdown-code-copy-hover-color` (default `var(--lr-color-brand)`) and `--lr-markdown-code-copy-active-color` set its glyph color in those states, and `--lr-markdown-code-copy-success-color` / `--lr-markdown-code-copy-error-color` (defaults `var(--lr-color-success)` / `var(--lr-color-danger)`) its copy feedback.
 
 ## `lr-chat-message`
 
 For the collapse button, set `--lr-icon-button-radius` for the corners. The fill, border and foreground use these tokens in resting, hover and pressed states respectively.
 
 - `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color`
-- `--lr-icon-button-bg-hover`, `--lr-icon-button-border-hover`, `--lr-icon-button-color-hover`
-- `--lr-icon-button-bg-active`, `--lr-icon-button-border-active`, `--lr-icon-button-color-active`
+- `--lr-icon-button-hover-bg`, `--lr-icon-button-hover-border`, `--lr-icon-button-hover-color`
+- `--lr-icon-button-active-bg`, `--lr-icon-button-active-border`, `--lr-icon-button-active-color`
 
 Customize the appearance with `--lr-chat-message-retry-color`, `--lr-chat-message-retry-border-color` and `--lr-chat-message-retry-hover-bg`.
 
@@ -50833,8 +50829,8 @@ instead. The pulse animation is suppressed under `prefers-reduced-motion: reduce
 For the rename button, set `--lr-icon-button-radius` for the corners. The fill, border and foreground use these tokens in resting, hover and pressed states respectively.
 
 - `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color`
-- `--lr-icon-button-bg-hover`, `--lr-icon-button-border-hover`, `--lr-icon-button-color-hover`
-- `--lr-icon-button-bg-active`, `--lr-icon-button-border-active`, `--lr-icon-button-color-active`
+- `--lr-icon-button-hover-bg`, `--lr-icon-button-hover-border`, `--lr-icon-button-hover-color`
+- `--lr-icon-button-active-bg`, `--lr-icon-button-active-border`, `--lr-icon-button-active-color`
 
 Set `disabled` to disable selection and renaming. Disabling a row discards an open rename draft.
 
@@ -51314,7 +51310,7 @@ hovered or keyboard-active `[part="option"]` row; declared as a `var()` fallback
 use, not on `:host`, so it isn't tied to `size`. The selected row
 (`[part="option"][aria-selected="true"]`) has the matching set
 `--lr-model-select-option-selected-bg` (default `transparent`),
-`--lr-model-select-option-selected-border` and `--lr-model-select-option-selected-color` (both
+`--lr-model-select-option-selected-border-color` and `--lr-model-select-option-selected-color` (both
 `var(--lr-color-brand)`), and `--lr-model-select-option-selected-font-weight`
 (`var(--lr-font-weight-semibold)`), all inline `var()` fallbacks so the selected row is rethemeable
 without hijacking `--lr-color-brand`. `--lr-model-select-option-disabled-opacity` (default `var(--lr-opacity-disabled)`)
@@ -51678,8 +51674,8 @@ outcome, bubbling and composed.
 For the stop button, set `--lr-icon-button-radius` for the corners. The fill, border and foreground use these tokens in resting, hover and pressed states respectively.
 
 - `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color`
-- `--lr-icon-button-bg-hover`, `--lr-icon-button-border-hover`, `--lr-icon-button-color-hover`
-- `--lr-icon-button-bg-active`, `--lr-icon-button-border-active`, `--lr-icon-button-color-active`
+- `--lr-icon-button-hover-bg`, `--lr-icon-button-hover-border`, `--lr-icon-button-hover-color`
+- `--lr-icon-button-active-bg`, `--lr-icon-button-active-border`, `--lr-icon-button-active-color`
 
 A compact, ticking status readout shown alongside an in-progress AI response: elapsed time, token
 count, and token-throughput, plus a built-in Stop button. First-party invention (no Web Awesome
@@ -52380,8 +52376,8 @@ to the shared duration, while reduced-motion ambient output remains static.
 For the previous and next buttons, set `--lr-icon-button-radius` for the corners. The fill, border and foreground use these tokens in resting, hover and pressed states respectively.
 
 - `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color`
-- `--lr-icon-button-bg-hover`, `--lr-icon-button-border-hover`, `--lr-icon-button-color-hover`
-- `--lr-icon-button-bg-active`, `--lr-icon-button-border-active`, `--lr-icon-button-color-active`
+- `--lr-icon-button-hover-bg`, `--lr-icon-button-hover-border`, `--lr-icon-button-hover-color`
+- `--lr-icon-button-active-bg`, `--lr-icon-button-active-border`, `--lr-icon-button-active-color`
 
 Set `disabled` to disable both chevrons and their toolbar actions while preserving the current position.
 
@@ -52501,8 +52497,8 @@ override lowered it, so the shrink is safe on a touch device.
 For the feedback buttons, set `--lr-icon-button-radius` for the corners. The fill, border and foreground use these tokens in resting, hover and pressed states respectively.
 
 - `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color`
-- `--lr-icon-button-bg-hover`, `--lr-icon-button-border-hover`, `--lr-icon-button-color-hover`
-- `--lr-icon-button-bg-active`, `--lr-icon-button-border-active`, `--lr-icon-button-color-active`
+- `--lr-icon-button-hover-bg`, `--lr-icon-button-hover-border`, `--lr-icon-button-hover-color`
+- `--lr-icon-button-active-bg`, `--lr-icon-button-active-border`, `--lr-icon-button-active-color`
 
 The feedback control registers `lr-chip` when it first renders reasons. Await `updateComplete` before using a rendered chip. Server renderers can import the chip entry to include its shadow content.
 
@@ -52607,9 +52603,9 @@ their `-hover`/`-active` states), matching the `lr-icon-button` actions beside t
 **Themeable custom properties:** six pressed-state hooks, three per thumb —
 `--lr-message-feedback-up-active-color` (default `var(--lr-color-success)`),
 `--lr-message-feedback-up-active-bg` (default `var(--lr-color-success-quiet)`),
-`--lr-message-feedback-up-active-border` (default `var(--lr-color-success)`), and the thumbs-down
+`--lr-message-feedback-up-active-border-color` (default `var(--lr-color-success)`), and the thumbs-down
 trio `--lr-message-feedback-down-active-color`, `--lr-message-feedback-down-active-bg`,
-`--lr-message-feedback-down-active-border` (defaulting to `var(--lr-color-danger)`,
+`--lr-message-feedback-down-active-border-color` (defaulting to `var(--lr-color-danger)`,
 `var(--lr-color-danger-quiet)`, `var(--lr-color-danger)`). Each styles the glyph, background, and
 border of its thumb only while that thumb is pressed. All six are declared as inline `var()`
 fallbacks at the point of use and never on `:host`, so each can be set on the element _or on any
@@ -53008,7 +53004,7 @@ packing of the chip row. Use `center` to center the chips under centered empty-s
 every line, the wrapped final one included, which styling `::part(base)` as a centered flex container
 cannot do (once the chips wrap, the row fills the available inline size and each line packs to the
 start). `--lr-suggestion-chips-hover-bg` (default `var(--lr-color-brand-quiet)`) — a `chip`'s
-background on hover. `--lr-suggestion-chips-hover-border` (default `var(--lr-color-brand)`) — a
+background on hover. `--lr-suggestion-chips-hover-border-color` (default `var(--lr-color-brand)`) — a
 `chip`'s border color on hover. All three are declared as `var()` fallbacks at the point of use, not
 on `:host`. `--lr-suggestion-chips-disabled-opacity` (default `var(--lr-opacity-disabled)`) — opacity of a chip whose
 suggestion sets `disabled`. `--lr-suggestion-chips-label-lines` (default `1`; `3` when `wrap` is
@@ -53055,8 +53051,8 @@ Vector icons per chip, by name or by slot:
 For the row actions and search clear button, set `--lr-icon-button-radius` for the corners. The fill, border and foreground use these tokens in resting, hover and pressed states respectively.
 
 - `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color`
-- `--lr-icon-button-bg-hover`, `--lr-icon-button-border-hover`, `--lr-icon-button-color-hover`
-- `--lr-icon-button-bg-active`, `--lr-icon-button-border-active`, `--lr-icon-button-color-active`
+- `--lr-icon-button-hover-bg`, `--lr-icon-button-hover-border`, `--lr-icon-button-hover-color`
+- `--lr-icon-button-active-bg`, `--lr-icon-button-active-border`, `--lr-icon-button-active-color`
 
 A blank or unavailable group label falls back to the default group name. When an adornment callback throws, the group still renders its label and rows. The list registers its pagination control when a provider is present and its error control when an error is displayed. For server-rendered markup that needs these child definitions on the server, import their granular entries. Await the list’s `updateComplete` on the client before using either control.
 
@@ -53226,7 +53222,7 @@ Override the `conversationActionWithTitle` string to change how the action and t
 = false` (attribute `with-archived`, reflected) — data mode: include `archived` threads (in their own
 trailing group). `withoutRename: boolean = false` (attribute `without-rename`, reflected) — forwarded to
 each data-mode row, turning its inline rename off. `withoutPinIcon: boolean = false` (attribute
-`without-pin-icon`, reflected) — data mode: omits the `pin-glyph` indicator; each pinned row keeps a
+`without-pin-icon`, reflected) — data mode: omits the `pin-icon` indicator; each pinned row keeps a
 visually hidden "Pinned" label, so its accessible name is unchanged. `withoutGroupIcon: boolean =
 false` (attribute `without-group-icon`, reflected) — data mode: omits the decorative `group-icon`
 chevron from group headers and their sticky copy; the toggle keeps `aria-expanded`. Row density
@@ -53275,7 +53271,7 @@ metadata in the row's meta region.
 `renderRowContent?: (thread: LyraChatThread) => TemplateResult` (attribute: false) — replaces the
 conversation item's label/excerpt/meta content area with custom non-interactive row content.
 Excerpt, meta and row-content output is part of the row's accessible name, so keep it short,
-non-focusable text; a pinned row adds the localized "Pinned" status (the `pin-glyph` part is a
+non-focusable text; a pinned row adds the localized "Pinned" status (the `pin-icon` part is a
 named image) to that name. `renderStart` output stays out of the name.
 `formatDate?: (date: Date) => string` (attribute: false) — overrides month-group date formatting.
 Use `getGroupLabel` for every date/custom group label. When `wrapRow` is set, its
@@ -53338,7 +53334,7 @@ mirroring `<lr-input>`'s own `clearable` contract's part name), `list` (the list
 scroll container, suitable for scrollbar styling; it honors the theme-level
 `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color` hooks, each
 defaulting to `auto`, so one ancestor declaration retunes it with every other internal scroller), `row-action` (a built-in pin/archive/delete icon
-button), `pin-glyph` (the small pin indicator on a pinned row), `group-header`, `group-toggle` (named
+button), `pin-icon` (the small pin indicator on a pinned row), `group-header`, `group-toggle` (named
 by its visible group label while `aria-expanded` reports the state),
 `group-label`, `group-adornment`, `group-icon`, `group-icon-collapsed`, `group-sticky` (`sticky-groups` only: the pinned copy of the current
 group's header, exported from the internal `lr-virtual-list`'s sticky layer — it wraps a full copy of
@@ -53406,13 +53402,13 @@ var(--lr-color-mix-partner) var(--lr-color-mix-active))`), and
 `--lr-thread-list-group-toggle-active-color` (default
 `var(--lr-thread-list-group-toggle-hover-color, var(--lr-color-text))`) style group-toggle hover
 and pressed states. `--lr-thread-list-row-action-hover-bg` (default
-`var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised))`), `--lr-thread-list-row-action-hover-color`
-(default `var(--lr-icon-button-color-hover, var(--lr-color-text))`), `--lr-thread-list-row-action-active-bg`
-(default `var(--lr-icon-button-bg-active, color-mix(in oklab, var(--lr-thread-list-row-action-hover-bg,
-var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised))), var(--lr-color-mix-partner)
+`var(--lr-icon-button-hover-bg, var(--lr-color-surface-raised))`), `--lr-thread-list-row-action-hover-color`
+(default `var(--lr-icon-button-hover-color, var(--lr-color-text))`), `--lr-thread-list-row-action-active-bg`
+(default `var(--lr-icon-button-active-bg, color-mix(in oklab, var(--lr-thread-list-row-action-hover-bg,
+var(--lr-icon-button-hover-bg, var(--lr-color-surface-raised))), var(--lr-color-mix-partner)
 var(--lr-color-mix-active)))`), and `--lr-thread-list-row-action-active-color` (default
-`var(--lr-icon-button-color-active, var(--lr-thread-list-row-action-hover-color,
-var(--lr-icon-button-color-hover, var(--lr-color-text))))`) do the same for row actions. Row actions
+`var(--lr-icon-button-active-color, var(--lr-thread-list-row-action-hover-color,
+var(--lr-icon-button-hover-color, var(--lr-color-text))))`) do the same for row actions. Row actions
 and the search clear button otherwise read the shared `--lr-icon-button-*` tokens (`bg`, `color`,
 `radius` and their `-hover`/`-active` states), so an icon-button theme reaches them too.
 
@@ -54043,7 +54039,7 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
   default when no recognized value is set. `<lr-voice-picker>` has no per-instance
   `positioning-strategy` property; set the token on `:root`, a theme, or an ancestor to retune its
   listbox along with the other floating surfaces.
-- `--lr-voice-picker-preview-active-border` — Active preview border. Default: `var(--lr-color-brand)`.
+- `--lr-voice-picker-preview-active-border-color` — Active preview border. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-preview-active-color` — Active preview icon. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-trigger-border-color` — Resting trigger/combobox border color, independent of
   the open-state color below. Default: `var(--lr-color-border)`.
@@ -54058,7 +54054,7 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
   is configured once instead of per component; additive to the existing focus outline. Default:
   `none`.
 - `--lr-voice-picker-option-active-bg` — Active option fill. Default: `var(--lr-color-brand-quiet)`.
-- `--lr-voice-picker-option-selected-border` — Selected option border. Default: `var(--lr-color-brand)`.
+- `--lr-voice-picker-option-selected-border-color` — Selected option border. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-option-selected-color` — Selected option text. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-option-selected-bg` — Selected option fill. Default: `transparent`.
 - `--lr-voice-picker-option-selected-font-weight` — Selected option label weight. Default: `var(--lr-font-weight-semibold)`.
@@ -55797,7 +55793,7 @@ Backdrop clicks leave the dialog open by default; add `light-dismiss` to opt in,
 
 ---
 
-**Shared tokens:** the close and action buttons read the shared icon-button tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`; the dialog panel paints the shared floating surface through `--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius`.
+**Shared tokens:** the close and action buttons read the shared icon-button tokens `--lr-icon-button-bg`, `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-border`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`, `--lr-icon-button-color`, `--lr-icon-button-hover-color`, `--lr-icon-button-active-color` and `--lr-icon-button-radius`; the dialog panel paints the shared floating surface through `--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius`.
 
 ## `lr-tool-select-dialog`
 
@@ -55998,7 +55994,7 @@ checkboxes for editing.
 
 **Heading level:** `headingLevel` (attribute `heading-level`, default `'2'`) sets the outline level of the title; `'none'` preserves its text without a heading role.
 
-**Shared tokens:** the icon buttons read `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`; the panel reads `--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius`.
+**Shared tokens:** the icon buttons read `--lr-icon-button-bg`, `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-border`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`, `--lr-icon-button-color`, `--lr-icon-button-hover-color`, `--lr-icon-button-active-color` and `--lr-icon-button-radius`; the panel reads `--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius`.
 
 **Pointer-state tokens:** `--lr-tool-select-dialog-search-hover-border-color` (default `var(--lr-color-brand)`).
 
@@ -57952,7 +57948,7 @@ With `dataSource` set, additional CSS parts are `source-status` (provider loadin
 the current failed provider request), and `source-pagination` (provider page controls).
 
 **Themeable custom properties:** `--lr-test-results-filter-active-bg` (default
-`var(--lr-color-brand-quiet)`), `--lr-test-results-filter-active-border` (default
+`var(--lr-color-brand-quiet)`), `--lr-test-results-filter-active-border-color` (default
 `var(--lr-color-brand)`) and `--lr-test-results-filter-active-color` (default
 `var(--lr-color-brand)`) — the background, border color and text color of a pressed (active) status
 filter toggle. The background is also the base its hover/press mixes from. All three follow the state-scoped-property convention described under
@@ -59176,7 +59172,7 @@ At most the first 100 metrics render as cards (plus the active metric's card whe
 
 **Additional API surface:**
 
-- `--lr-agent-eval-dashboard-active-border` — Active metric border. Default: `var(--lr-color-brand)`.
+- `--lr-agent-eval-dashboard-active-border-color` — Active metric border. Default: `var(--lr-color-brand)`.
 - `--lr-agent-eval-dashboard-active-bg` — Active metric background, and the base its hover/press mixes from. Default: `var(--lr-color-brand-quiet)`.
 
 ## `lr-approval-queue`
@@ -59229,7 +59225,7 @@ state), so the selection is announced, not merely painted. Other request rows ex
 
 **Additional API surface:**
 
-- `--lr-approval-queue-selected-border` — Selected request border. Default: `var(--lr-color-brand)`.
+- `--lr-approval-queue-selected-border-color` — Selected request border. Default: `var(--lr-color-brand)`.
 
 **Heading level:** `headingLevel` (attribute `heading-level`, default `'2'`) sets the outline level of the title; `'none'` preserves its text without a heading role.
 
@@ -59504,8 +59500,8 @@ import "@aceshooting/lyra-ui/components/lr-prompt-studio.js";
 
 **Additional API surface:**
 
-- `--lr-prompt-studio-field-hover-border` — Enabled field hover border. Default: `var(--lr-color-brand)`.
-- `--lr-prompt-studio-version-selected-border` — Selected version border. Default: `var(--lr-color-brand)`.
+- `--lr-prompt-studio-field-hover-border-color` — Enabled field hover border. Default: `var(--lr-color-brand)`.
+- `--lr-prompt-studio-version-selected-border-color` — Selected version border. Default: `var(--lr-color-brand)`.
 - `--lr-prompt-studio-version-selected-bg` — Selected version background. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-prompt-studio-version-selected-color` — Selected version foreground. Default: `var(--lr-color-text)`.
 - `--lr-prompt-studio-version-selected-hover-bg` — Selected version hover background. Unset, mixes from `--lr-prompt-studio-version-selected-bg` (its own default shown). Default: `color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`.
@@ -59540,7 +59536,7 @@ issue cap.
 
 Each issue also begins with visually hidden localized severity text (`Error:`, `Warning:`, `Note:`) and a distinct border style, so severity never depends on colour alone. `[part='issue']` carries `data-severity` and each severity has its own styling: `error` reads the
 danger tokens, `warning` the warning tokens, and `info` its own pair —
-`--lr-json-schema-viewer-info-border` (default `var(--lr-color-brand)`) and
+`--lr-json-schema-viewer-info-border-color` (default `var(--lr-color-brand)`) and
 `--lr-json-schema-viewer-info-bg` (default `var(--lr-color-brand-quiet)`). Brand rather than a dedicated info palette because this
 library has no `--lr-color-info-*` token, so an `info` issue stays distinguishable from an `error`. Both are inline `var()` fallbacks at their point of use,
 so either can be set on the element or on any ancestor — `::part(issue)[data-severity='info']` is
@@ -59548,7 +59544,7 @@ invalid CSS, so this is the only way to recolor one severity without touching th
 
 **Themeable custom properties:** `--lr-json-schema-viewer-max-indent` (default
 `var(--lr-size-12rem)`) caps visual nesting indentation while preserving complete JSON Pointer paths;
-`--lr-json-schema-viewer-info-border`, `--lr-json-schema-viewer-info-bg` (see above); otherwise shared
+`--lr-json-schema-viewer-info-border-color`, `--lr-json-schema-viewer-info-bg` (see above); otherwise shared
 tokens only.
 
 Rendering is capped independently at 500 schema nodes and 500 validation issues; `limit` and
@@ -59568,11 +59564,11 @@ import '@aceshooting/lyra-ui/components/lr-json-schema-viewer.js';
 
 - `part="limit"` — Resource-ceiling status shown when additional nodes are omitted.
 - `part="issue-limit"` — Resource-ceiling status shown when additional validation issues are omitted.
-- `--lr-json-schema-viewer-selected-border` — Selected node branch. Default: `var(--lr-color-brand)`.
+- `--lr-json-schema-viewer-selected-border-color` — Selected node branch. Default: `var(--lr-color-brand)`.
 - `--lr-json-schema-viewer-selected-bg` — Selected trigger fill and base color for its hover and press states. Default: `var(--lr-color-brand-quiet)`.
-- `--lr-json-schema-viewer-error-border` — Error issue border. Default: `var(--lr-color-danger)`.
+- `--lr-json-schema-viewer-error-border-color` — Error issue border. Default: `var(--lr-color-danger)`.
 - `--lr-json-schema-viewer-error-bg` — Error issue background. Default: `var(--lr-color-danger-quiet)`.
-- `--lr-json-schema-viewer-warning-border` — Warning issue border. Default: `var(--lr-color-warning)`.
+- `--lr-json-schema-viewer-warning-border-color` — Warning issue border. Default: `var(--lr-color-warning)`.
 - `--lr-json-schema-viewer-warning-bg` — Warning issue background. Default: `var(--lr-color-warning-quiet)`.
 
 ## `lr-subagent-panel`
@@ -59632,7 +59628,7 @@ import "@aceshooting/lyra-ui/components/lr-subagent-panel.js";
 **Additional API surface:**
 
 - `part="limit"` — Resource-ceiling status shown when additional runs are omitted.
-- `--lr-subagent-panel-selected-border` — Selected run border; under `frame="plain"` it paints the
+- `--lr-subagent-panel-selected-border-color` — Selected run border; under `frame="plain"` it paints the
   selected row's inline-start rule instead. Default: `var(--lr-color-brand)`.
 - `--lr-subagent-panel-progress-track` — Progress track. Default: `var(--lr-color-border)`.
 - `--lr-subagent-panel-progress-fill` — Progress fill. Default: `var(--lr-color-brand)`.
@@ -59652,7 +59648,7 @@ import "@aceshooting/lyra-ui/components/lr-subagent-panel.js";
   `--lr-color-mix-partner`, so retuning hover carries the press with it.
   Default: `var(--lr-color-surface-raised)`.
 - `--lr-subagent-panel-border-color` — Each run row's border and its action divider. A selected row
-  still uses `--lr-subagent-panel-selected-border`. Default: `var(--lr-color-border)`.
+  still uses `--lr-subagent-panel-selected-border-color`. Default: `var(--lr-color-border)`.
 - `--lr-subagent-panel-radius` — Each run row's corner radius; `frame="plain"` still squares them.
   Default: `var(--lr-radius)`.
 
@@ -61519,9 +61515,9 @@ honors the shared `--lr-icon-button-*` paint hooks.
 The search field accepts `--lr-input-fill`, `--lr-input-border-color`,
 `--lr-input-focus-border-color`, `--lr-input-placeholder-color`,
 `--lr-input-action-color`, and `--lr-input-action-hover-color`. The clear action accepts
-`--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`,
-`--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`,
-`--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active`, and
+`--lr-icon-button-bg`, `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`,
+`--lr-icon-button-border`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`,
+`--lr-icon-button-color`, `--lr-icon-button-hover-color`, `--lr-icon-button-active-color`, and
 `--lr-icon-button-radius` for its resting, hover, and pressed paint.
 
 **Optional peer deps:** none.
@@ -62267,7 +62263,7 @@ mirrors, never live regions.
 selection control: the `select-all` pill (whose resting default is `var(--lr-color-brand-quiet)`) and
 a fully-selected entry's `[part='checkbox']` (whose resting default is `var(--lr-color-brand)`). The
 two keep their distinct defaults while it is unset; setting it unifies both.
-`--lr-source-picker-checked-border` (default `var(--lr-color-brand)`) — the border color of every
+`--lr-source-picker-checked-border-color` (default `var(--lr-color-brand)`) — the border color of every
 checked _or_ mixed selection control. `--lr-source-picker-mixed-bg` (default
 `color-mix(in srgb, var(--lr-color-brand) 50%, var(--lr-color-surface))`) — the background of a
 partially-selected entry's `[part='checkbox']`, so a tri-state folder reads as distinct from a fully
@@ -63446,9 +63442,9 @@ kebab button: it inherits the row font, has the shared `--lr-icon-button-size` m
 (40px by default), and keeps independent hover, pressed, and focus treatment.
 
 **Themeable custom properties:** the row action trigger accepts
-`--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`,
-`--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`,
-`--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active`, and
+`--lr-icon-button-bg`, `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`,
+`--lr-icon-button-border`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`,
+`--lr-icon-button-color`, `--lr-icon-button-hover-color`, `--lr-icon-button-active-color`, and
 `--lr-icon-button-radius` for its resting, hover, and pressed paint; other styling uses shared
 tokens.
 
@@ -64120,7 +64116,7 @@ a `[part~="…"]` (not `[part="…"]`) selector is the one that matches inside a
 carry their own part names for the same class of reason — `::part()` matches a single element and
 cannot be followed by a descendant combinator, so `::part(metadata-entry) dt` reaches nothing.
 
-**Themeable custom properties:** `--lr-retrieval-results-selected-border` (default
+**Themeable custom properties:** `--lr-retrieval-results-selected-border-color` (default
 `var(--lr-color-brand)`) — the inline-start border color marking a selected row body
 (`::part(row-body-selected)`). `--lr-retrieval-results-selected-width` (default `var(--lr-space-2xs)`)
 sets that stripe's inline size, so a density retune of the spacing scale need not move it. A
@@ -64323,7 +64319,7 @@ the existing `evidence-metadata`, `evidence-metadata-row`, `evidence-metadata-ke
 `evidence-metadata` (a `<dl>`), `evidence-metadata-row` (one key/value pair), `evidence-metadata-key`
 (`<dt>`), `evidence-metadata-value` (`<dd>`), `chunk-inspector` (the stage-owned inspector).
 
-**Themeable custom properties:** `--lr-retrieval-trace-active-border` (default
+**Themeable custom properties:** `--lr-retrieval-trace-active-border-color` (default
 `var(--lr-color-brand)`) — the border color of the `[part='evidence-row']` whose stage matches
 `activeStageId`, leaving every other row on the resting border token. It is an inline `var()`
 fallback at the point of use rather than a `:host` declaration, so it can be set on the element _or
@@ -64646,7 +64642,7 @@ that moves an invalid or newly-hidden tab back to Sources is not a user activati
 
 **CSS parts:** `base`, `heading`, `tabs`, `tab`, `panel`, `settings`, `input-limit`.
 
-**Themeable custom properties:** `--lr-knowledge-base-admin-tab-selected-border` (default
+**Themeable custom properties:** `--lr-knowledge-base-admin-tab-selected-border-color` (default
 `var(--lr-color-brand)`) and `--lr-knowledge-base-admin-tab-selected-color` (default
 `var(--lr-color-text)`) — the bottom-border and text color of the selected `[part="tab"]`. State
 hooks: inline `var()` fallbacks at the point of use rather than `:host` declarations, so either can
@@ -64756,9 +64752,9 @@ button is named by its rank and source title (a blank name shows the localized "
 its text and scores are the button's description.
 **Slots:** none. **Optional peer deps:** none.
 
-**Themeable custom properties:** `--lr-retrieval-compare-selected-border` (default
+**Themeable custom properties:** `--lr-retrieval-compare-selected-border-color` (default
 `var(--lr-color-brand)`) — the border color marking a selected `[part~="chunk-selected"]` row, the
-same escape-hatch pattern as `lr-retrieval-results`'s `--lr-retrieval-results-selected-border`.
+same escape-hatch pattern as `lr-retrieval-results`'s `--lr-retrieval-results-selected-border-color`.
 
 ```ts
 import "@aceshooting/lyra-ui/components/lr-retrieval-compare.js";

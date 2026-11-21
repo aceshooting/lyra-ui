@@ -214,6 +214,6 @@ checkboxes for editing.
 
 **Heading level:** `headingLevel` (attribute `heading-level`, default `'2'`) sets the outline level of the title; `'none'` preserves its text without a heading role.
 
-**Shared tokens:** the icon buttons read `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`; the panel reads `--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius`.
+**Shared tokens:** the icon buttons read `--lr-icon-button-bg`, `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-border`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`, `--lr-icon-button-color`, `--lr-icon-button-hover-color`, `--lr-icon-button-active-color` and `--lr-icon-button-radius`; the panel reads `--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius`.
 
 **Pointer-state tokens:** `--lr-tool-select-dialog-search-hover-border-color` (default `var(--lr-color-brand)`).

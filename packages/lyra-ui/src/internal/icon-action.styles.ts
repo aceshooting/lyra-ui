@@ -18,12 +18,12 @@ export const iconAction = css`
 `;
 
 export const iconActionHover = css`
-  border: var(--lr-icon-button-border-hover, var(--_lr-icon-button-border-hover-default, var(--lr-icon-button-border, 0))); background: var(--lr-icon-button-bg-hover, var(--_lr-icon-button-background-hover-default, ${hoverFill(restingFill)})); color: var(--lr-icon-button-color-hover, var(--_lr-icon-button-color-hover-default, var(--lr-icon-button-color, inherit)));
+  border: var(--lr-icon-button-hover-border, var(--_lr-icon-button-border-hover-default, var(--lr-icon-button-border, 0))); background: var(--lr-icon-button-hover-bg, var(--_lr-icon-button-background-hover-default, ${hoverFill(restingFill)})); color: var(--lr-icon-button-hover-color, var(--_lr-icon-button-color-hover-default, var(--lr-icon-button-color, inherit)));
   @media (forced-colors: active) { background: Highlight; color: HighlightText; }
 `;
 
 export const iconActionActive = css`
-  border: var(--lr-icon-button-border-active, var(--_lr-icon-button-border-active-default, var(--lr-icon-button-border-hover, var(--lr-icon-button-border, 0)))); background: var(--lr-icon-button-bg-active, var(--_lr-icon-button-background-active-default, ${activeFill(restingFill)})); color: var(--lr-icon-button-color-active, var(--_lr-icon-button-color-active-default, var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))));
+  border: var(--lr-icon-button-active-border, var(--_lr-icon-button-border-active-default, var(--lr-icon-button-hover-border, var(--lr-icon-button-border, 0)))); background: var(--lr-icon-button-active-bg, var(--_lr-icon-button-background-active-default, ${activeFill(restingFill)})); color: var(--lr-icon-button-active-color, var(--_lr-icon-button-color-active-default, var(--lr-icon-button-hover-color, var(--lr-icon-button-color, inherit))));
   @media (forced-colors: active) { background: Highlight; color: HighlightText; }
 `;
 
@@ -39,9 +39,9 @@ export function outlinedIconActionDefaults(hoverBackground: string): CSSResult {
     --_lr-icon-button-background-default: var(--lr-color-surface);
     --_lr-icon-button-color-default: var(--lr-color-text);
     --_lr-icon-button-border-hover-default: var(--lr-icon-button-border, var(--_lr-icon-button-border-default));
-    --_lr-icon-button-border-active-default: var(--lr-icon-button-border-hover, var(--_lr-icon-button-border-hover-default));
+    --_lr-icon-button-border-active-default: var(--lr-icon-button-hover-border, var(--_lr-icon-button-border-hover-default));
     --_lr-icon-button-background-hover-default: ${hoverBackground};
-    --_lr-icon-button-background-active-default: ${activeFill('var(--lr-icon-button-bg-hover, var(--_lr-icon-button-background-hover-default))').cssText};`);
+    --_lr-icon-button-background-active-default: ${activeFill('var(--lr-icon-button-hover-bg, var(--_lr-icon-button-background-hover-default))').cssText};`);
 }
 
 /** Per-control fallbacks for {@link iconActionStyles}; each yields to the public

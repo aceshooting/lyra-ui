@@ -233,7 +233,7 @@ function safeScore(score: number): number {
  * @csspart chunk-toggle - The row chunk's "Show more"/"Show less" button.
  * @csspart load-more-row - The wrapper around the non-virtualized-mode pagination footer.
  * @csspart load-more - The "Load more" button itself (non-virtualized mode, `loading` false).
- * @cssprop [--lr-retrieval-results-selected-border=var(--lr-color-brand)] - Inline-start border
+ * @cssprop [--lr-retrieval-results-selected-border-color=var(--lr-color-brand)] - Inline-start border
  *   color marking a selected `[part="row-body"]`. A border rather than a fill by design (see the
  *   styles file), so recoloring it carries no contrast risk for the row's own text.
  * @cssprop [--lr-retrieval-results-selected-width=var(--lr-space-2xs)] - Inline size of that

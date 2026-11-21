@@ -125,9 +125,9 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * @cssprop [--lr-code-editor-gutter-bg=var(--lr-code-editor-fill, var(--lr-color-surface))] - Background of the line-number gutter; follows `--lr-code-editor-fill` until set.
  * @cssprop [--lr-code-editor-gutter-color=var(--lr-color-text-quiet)] - Color of the gutter's line numbers.
  * @cssprop [--lr-code-editor-gutter-border-color=var(--lr-color-border)] - Color of the rule between the gutter and the text.
- * @cssprop [--lr-code-editor-hover-border=var(--lr-color-brand)] - Editor-frame border while the
+ * @cssprop [--lr-code-editor-hover-border-color=var(--lr-color-brand)] - Editor-frame border while the
  * enabled surface is hovered.
- * @cssprop [--lr-code-editor-invalid-border=var(--lr-color-danger)] - Editor-frame border while
+ * @cssprop [--lr-code-editor-invalid-border-color=var(--lr-color-danger)] - Editor-frame border while
  * invalid chrome is visible.
  * @cssprop [--lr-code-editor-radius=var(--lr-radius)] - Corner radius of the editor frame. Retune
  * it without a `::part(editor)` rule.

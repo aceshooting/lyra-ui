@@ -20,8 +20,8 @@
 For the row actions and search clear button, set `--lr-icon-button-radius` for the corners. The fill, border and foreground use these tokens in resting, hover and pressed states respectively.
 
 - `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color`
-- `--lr-icon-button-bg-hover`, `--lr-icon-button-border-hover`, `--lr-icon-button-color-hover`
-- `--lr-icon-button-bg-active`, `--lr-icon-button-border-active`, `--lr-icon-button-color-active`
+- `--lr-icon-button-hover-bg`, `--lr-icon-button-hover-border`, `--lr-icon-button-hover-color`
+- `--lr-icon-button-active-bg`, `--lr-icon-button-active-border`, `--lr-icon-button-active-color`
 
 A blank or unavailable group label falls back to the default group name. When an adornment callback throws, the group still renders its label and rows. The list registers its pagination control when a provider is present and its error control when an error is displayed. For server-rendered markup that needs these child definitions on the server, import their granular entries. Await the list’s `updateComplete` on the client before using either control.
 
@@ -191,7 +191,7 @@ Override the `conversationActionWithTitle` string to change how the action and t
 = false` (attribute `with-archived`, reflected) — data mode: include `archived` threads (in their own
 trailing group). `withoutRename: boolean = false` (attribute `without-rename`, reflected) — forwarded to
 each data-mode row, turning its inline rename off. `withoutPinIcon: boolean = false` (attribute
-`without-pin-icon`, reflected) — data mode: omits the `pin-glyph` indicator; each pinned row keeps a
+`without-pin-icon`, reflected) — data mode: omits the `pin-icon` indicator; each pinned row keeps a
 visually hidden "Pinned" label, so its accessible name is unchanged. `withoutGroupIcon: boolean =
 false` (attribute `without-group-icon`, reflected) — data mode: omits the decorative `group-icon`
 chevron from group headers and their sticky copy; the toggle keeps `aria-expanded`. Row density
@@ -240,7 +240,7 @@ metadata in the row's meta region.
 `renderRowContent?: (thread: LyraChatThread) => TemplateResult` (attribute: false) — replaces the
 conversation item's label/excerpt/meta content area with custom non-interactive row content.
 Excerpt, meta and row-content output is part of the row's accessible name, so keep it short,
-non-focusable text; a pinned row adds the localized "Pinned" status (the `pin-glyph` part is a
+non-focusable text; a pinned row adds the localized "Pinned" status (the `pin-icon` part is a
 named image) to that name. `renderStart` output stays out of the name.
 `formatDate?: (date: Date) => string` (attribute: false) — overrides month-group date formatting.
 Use `getGroupLabel` for every date/custom group label. When `wrapRow` is set, its
@@ -303,7 +303,7 @@ mirroring `<lr-input>`'s own `clearable` contract's part name), `list` (the list
 scroll container, suitable for scrollbar styling; it honors the theme-level
 `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color` hooks, each
 defaulting to `auto`, so one ancestor declaration retunes it with every other internal scroller), `row-action` (a built-in pin/archive/delete icon
-button), `pin-glyph` (the small pin indicator on a pinned row), `group-header`, `group-toggle` (named
+button), `pin-icon` (the small pin indicator on a pinned row), `group-header`, `group-toggle` (named
 by its visible group label while `aria-expanded` reports the state),
 `group-label`, `group-adornment`, `group-icon`, `group-icon-collapsed`, `group-sticky` (`sticky-groups` only: the pinned copy of the current
 group's header, exported from the internal `lr-virtual-list`'s sticky layer — it wraps a full copy of
@@ -371,13 +371,13 @@ var(--lr-color-mix-partner) var(--lr-color-mix-active))`), and
 `--lr-thread-list-group-toggle-active-color` (default
 `var(--lr-thread-list-group-toggle-hover-color, var(--lr-color-text))`) style group-toggle hover
 and pressed states. `--lr-thread-list-row-action-hover-bg` (default
-`var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised))`), `--lr-thread-list-row-action-hover-color`
-(default `var(--lr-icon-button-color-hover, var(--lr-color-text))`), `--lr-thread-list-row-action-active-bg`
-(default `var(--lr-icon-button-bg-active, color-mix(in oklab, var(--lr-thread-list-row-action-hover-bg,
-var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised))), var(--lr-color-mix-partner)
+`var(--lr-icon-button-hover-bg, var(--lr-color-surface-raised))`), `--lr-thread-list-row-action-hover-color`
+(default `var(--lr-icon-button-hover-color, var(--lr-color-text))`), `--lr-thread-list-row-action-active-bg`
+(default `var(--lr-icon-button-active-bg, color-mix(in oklab, var(--lr-thread-list-row-action-hover-bg,
+var(--lr-icon-button-hover-bg, var(--lr-color-surface-raised))), var(--lr-color-mix-partner)
 var(--lr-color-mix-active)))`), and `--lr-thread-list-row-action-active-color` (default
-`var(--lr-icon-button-color-active, var(--lr-thread-list-row-action-hover-color,
-var(--lr-icon-button-color-hover, var(--lr-color-text))))`) do the same for row actions. Row actions
+`var(--lr-icon-button-active-color, var(--lr-thread-list-row-action-hover-color,
+var(--lr-icon-button-hover-color, var(--lr-color-text))))`) do the same for row actions. Row actions
 and the search clear button otherwise read the shared `--lr-icon-button-*` tokens (`bg`, `color`,
 `radius` and their `-hover`/`-active` states), so an icon-button theme reaches them too.
 

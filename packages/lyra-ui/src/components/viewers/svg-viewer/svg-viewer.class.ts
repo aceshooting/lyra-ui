@@ -127,7 +127,7 @@ class LyraSvgViewerBase extends LyraElement<LyraSvgViewerEventMap> {}
  * @cssprop --lr-svg-viewer-action-hover-bg - Hover background of viewer actions.
  * @cssprop --lr-svg-viewer-action-active-bg - Pressed background of viewer actions.
  * @cssprop [--lr-svg-viewer-max-height=none] - Maximum block size of the scrollable body before it scrolls internally. Also settable via the `max-height` property.
- * @cssprop [--lr-svg-viewer-active-border=var(--lr-color-warning, var(--lr-color-brand))] - Border
+ * @cssprop [--lr-svg-viewer-active-border-color=var(--lr-color-warning, var(--lr-color-brand))] - Border
  *   and outer-ring color of the `[part="region-highlight"]` matching `activeHighlightId`. The ring
  *   keeps the active region distinct from a warning-tone highlight.
  * @cssprop [--lr-svg-viewer-highlight-accent-color=var(--lr-color-brand)] - Accent highlight border and hover tint.

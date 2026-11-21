@@ -41,7 +41,7 @@ export const styles = css`
        ancestor override of just the hover tier still shapes the press colour -- a cross-reference
        to a DIFFERENT public token than the one being defined here, so it introduces no loop. */
     --_lr-attachment-trigger-color-active: var(
-      --lr-icon-button-color-hover,
+      --lr-icon-button-hover-color,
       var(--_lr-attachment-trigger-on-fill)
     );
     --_lr-attachment-trigger-border: var(--_lr-attachment-trigger-edge);

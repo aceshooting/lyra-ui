@@ -16,10 +16,10 @@ export const styles = css`
     /* Reads the PUBLIC hover token (not this component's own -bg-hover default) so that an
        ancestor override of just the hover tier still shapes the press mix -- a cross-reference to a
        DIFFERENT public token than the one being defined here, so it introduces no loop. */
-    --_lr-reorder-item-move-bg-active: ${activeFill('var( --lr-icon-button-bg-hover, var(--lr-color-brand-quiet) )')};
+    --_lr-reorder-item-move-bg-active: ${activeFill('var( --lr-icon-button-hover-bg, var(--lr-color-brand-quiet) )')};
     --_lr-reorder-item-move-color: var(--lr-color-text-quiet);
     --_lr-reorder-item-move-color-hover: var(--lr-color-brand);
-    --_lr-reorder-item-move-color-active: var(--lr-icon-button-color-hover, var(--lr-color-brand));
+    --_lr-reorder-item-move-color-active: var(--lr-icon-button-hover-color, var(--lr-color-brand));
     --_lr-reorder-item-move-radius: var(--lr-radius);
   }
   [part='base'] {

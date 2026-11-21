@@ -60,6 +60,72 @@
   },
   {
    "key": {
+    "tag": "lr-icon-button",
+    "kind": "css-property",
+    "name": "--lr-icon-button-bg-active"
+   },
+   "replacement": {
+    "kind": "css-property",
+    "name": "--lr-icon-button-active-bg"
+   }
+  },
+  {
+   "key": {
+    "tag": "lr-icon-button",
+    "kind": "css-property",
+    "name": "--lr-icon-button-bg-hover"
+   },
+   "replacement": {
+    "kind": "css-property",
+    "name": "--lr-icon-button-hover-bg"
+   }
+  },
+  {
+   "key": {
+    "tag": "lr-json-schema-viewer",
+    "kind": "css-property",
+    "name": "--lr-json-schema-viewer-error-border"
+   },
+   "replacement": {
+    "kind": "css-property",
+    "name": "--lr-json-schema-viewer-error-border-color"
+   }
+  },
+  {
+   "key": {
+    "tag": "lr-json-schema-viewer",
+    "kind": "css-property",
+    "name": "--lr-json-schema-viewer-info-border"
+   },
+   "replacement": {
+    "kind": "css-property",
+    "name": "--lr-json-schema-viewer-info-border-color"
+   }
+  },
+  {
+   "key": {
+    "tag": "lr-json-schema-viewer",
+    "kind": "css-property",
+    "name": "--lr-json-schema-viewer-selected-border"
+   },
+   "replacement": {
+    "kind": "css-property",
+    "name": "--lr-json-schema-viewer-selected-border-color"
+   }
+  },
+  {
+   "key": {
+    "tag": "lr-json-schema-viewer",
+    "kind": "css-property",
+    "name": "--lr-json-schema-viewer-warning-border"
+   },
+   "replacement": {
+    "kind": "css-property",
+    "name": "--lr-json-schema-viewer-warning-border-color"
+   }
+  },
+  {
+   "key": {
     "tag": "lr-knowledge-graph-explorer",
     "kind": "event",
     "name": "lr-view-change"

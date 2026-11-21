@@ -74,7 +74,7 @@ export const styles = css`
   }
   [part='reveal-button'][data-revealed] {
     background: var(--lr-env-list-reveal-active-bg, var(--lr-color-brand-quiet));
-    border-color: var(--lr-env-list-reveal-active-border, var(--lr-color-brand));
+    border-color: var(--lr-env-list-reveal-active-border-color, var(--lr-color-brand));
   }
   /* The revealed button needs its own hover step: plain [part='reveal-button']:hover above is
      (0,2,0), exactly what [part='reveal-button'][data-revealed] scores, and the pressed rule

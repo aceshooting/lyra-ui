@@ -656,7 +656,7 @@ export type LyraComboboxSourceErrorEvent =
  *   or keyboard-active option row.
  * @cssprop [--lr-combobox-option-selected-bg=transparent] - Background of the currently-selected
  *   option row. Not declared on `:host`; retheme without hijacking `--lr-color-brand`.
- * @cssprop [--lr-combobox-option-selected-border=var(--lr-color-brand)] - Border color of the
+ * @cssprop [--lr-combobox-option-selected-border-color=var(--lr-color-brand)] - Border color of the
  *   selected option row.
  * @cssprop [--lr-combobox-option-selected-color=var(--lr-color-brand)] - Text color of the
  *   selected option row.

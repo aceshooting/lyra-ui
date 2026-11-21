@@ -127,10 +127,10 @@ describe('lr-copy-button: composed lr-icon-button', () => {
         'the success colour survives hover'
       );
       expect(
-        getComputedStyle(inner).getPropertyValue('--lr-icon-button-color-hover').trim()
+        getComputedStyle(inner).getPropertyValue('--lr-icon-button-hover-color').trim()
       ).to.equal('rgb(1, 120, 45)');
       expect(
-        getComputedStyle(inner).getPropertyValue('--lr-icon-button-color-active').trim()
+        getComputedStyle(inner).getPropertyValue('--lr-icon-button-active-color').trim()
       ).to.equal('rgb(1, 120, 45)');
     } finally {
       await resetMouse();

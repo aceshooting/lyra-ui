@@ -191,10 +191,10 @@ export interface LyraExportButtonEventMap {
  * @cssprop --lr-export-button-border - Trigger edge colour at rest.
  * @cssprop --lr-export-button-hover-bg - Trigger fill on hover.
  * @cssprop --lr-export-button-hover-color - Trigger label and icon colour on hover.
- * @cssprop --lr-export-button-hover-border - Trigger edge colour on hover.
+ * @cssprop --lr-export-button-hover-border-color - Trigger edge colour on hover.
  * @cssprop --lr-export-button-active-bg - Trigger fill while pressed.
  * @cssprop --lr-export-button-active-color - Trigger label and icon colour while pressed.
- * @cssprop --lr-export-button-active-border - Trigger edge colour while pressed.
+ * @cssprop --lr-export-button-active-border-color - Trigger edge colour while pressed.
  * @cssprop [--lr-export-button-gap=var(--lr-space-xs)] - Gap between the trigger's icon and label.
  *   Constant across the `size` ladder's tiers.
  * @cssprop [--lr-export-button-radius=var(--lr-radius)] - Trigger corner radius. Retune it without

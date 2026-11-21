@@ -27,7 +27,7 @@ export const styles = css`
     /* Reads the PUBLIC hover token (not this callout's own -background-hover default) so that an
        ancestor override of just the hover tier still shapes the press mix -- a cross-reference to a
        DIFFERENT public token than the one being defined here, so it introduces no loop. */
-    --_lr-callout-close-background-active: ${activeFill('var( --lr-icon-button-bg-hover, var(--lr-callout-close-hover-bg, var(--_lr-callout-close-hover-bg)) )')};
+    --_lr-callout-close-background-active: ${activeFill('var( --lr-icon-button-hover-bg, var(--lr-callout-close-hover-bg, var(--_lr-callout-close-hover-bg)) )')};
     --_lr-callout-close-radius: var(--lr-radius-pill);
     /* Unset nested callouts inherit the generic semantic and size slots. The second arms are the
        standalone brand/m defaults; explicit attributes re-point the generic slots in the

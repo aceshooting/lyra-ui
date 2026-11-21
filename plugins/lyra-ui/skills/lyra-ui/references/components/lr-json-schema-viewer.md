@@ -44,7 +44,7 @@ issue cap.
 
 Each issue also begins with visually hidden localized severity text (`Error:`, `Warning:`, `Note:`) and a distinct border style, so severity never depends on colour alone. `[part='issue']` carries `data-severity` and each severity has its own styling: `error` reads the
 danger tokens, `warning` the warning tokens, and `info` its own pair —
-`--lr-json-schema-viewer-info-border` (default `var(--lr-color-brand)`) and
+`--lr-json-schema-viewer-info-border-color` (default `var(--lr-color-brand)`) and
 `--lr-json-schema-viewer-info-bg` (default `var(--lr-color-brand-quiet)`). Brand rather than a dedicated info palette because this
 library has no `--lr-color-info-*` token, so an `info` issue stays distinguishable from an `error`. Both are inline `var()` fallbacks at their point of use,
 so either can be set on the element or on any ancestor — `::part(issue)[data-severity='info']` is
@@ -52,7 +52,7 @@ invalid CSS, so this is the only way to recolor one severity without touching th
 
 **Themeable custom properties:** `--lr-json-schema-viewer-max-indent` (default
 `var(--lr-size-12rem)`) caps visual nesting indentation while preserving complete JSON Pointer paths;
-`--lr-json-schema-viewer-info-border`, `--lr-json-schema-viewer-info-bg` (see above); otherwise shared
+`--lr-json-schema-viewer-info-border-color`, `--lr-json-schema-viewer-info-bg` (see above); otherwise shared
 tokens only.
 
 Rendering is capped independently at 500 schema nodes and 500 validation issues; `limit` and
@@ -72,9 +72,9 @@ import '@aceshooting/lyra-ui/components/lr-json-schema-viewer.js';
 
 - `part="limit"` — Resource-ceiling status shown when additional nodes are omitted.
 - `part="issue-limit"` — Resource-ceiling status shown when additional validation issues are omitted.
-- `--lr-json-schema-viewer-selected-border` — Selected node branch. Default: `var(--lr-color-brand)`.
+- `--lr-json-schema-viewer-selected-border-color` — Selected node branch. Default: `var(--lr-color-brand)`.
 - `--lr-json-schema-viewer-selected-bg` — Selected trigger fill and base color for its hover and press states. Default: `var(--lr-color-brand-quiet)`.
-- `--lr-json-schema-viewer-error-border` — Error issue border. Default: `var(--lr-color-danger)`.
+- `--lr-json-schema-viewer-error-border-color` — Error issue border. Default: `var(--lr-color-danger)`.
 - `--lr-json-schema-viewer-error-bg` — Error issue background. Default: `var(--lr-color-danger-quiet)`.
-- `--lr-json-schema-viewer-warning-border` — Warning issue border. Default: `var(--lr-color-warning)`.
+- `--lr-json-schema-viewer-warning-border-color` — Warning issue border. Default: `var(--lr-color-warning)`.
 - `--lr-json-schema-viewer-warning-bg` — Warning issue background. Default: `var(--lr-color-warning-quiet)`.

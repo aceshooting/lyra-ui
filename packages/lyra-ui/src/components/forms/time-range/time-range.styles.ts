@@ -30,12 +30,9 @@ export const styles = css`
     --_lr-preset-hover-border-color: var(--lr-time-range-preset-hover-border-color);
     --_lr-preset-pressed-bg: var(--lr-time-range-preset-pressed-bg);
     --_lr-preset-pressed-border-color: var(--lr-time-range-preset-pressed-border-color);
-    --_lr-preset-selected-bg: var(--lr-time-range-preset-selected-bg, var(--lr-time-range-preset-active-bg));
-    --_lr-preset-selected-border-color: var(
-      --lr-time-range-preset-selected-border-color,
-      var(--lr-time-range-preset-active-border-color)
-    );
-    --_lr-preset-selected-color: var(--lr-time-range-preset-selected-color, var(--lr-time-range-preset-active-color));
+    --_lr-preset-selected-bg: var(--lr-time-range-preset-selected-bg);
+    --_lr-preset-selected-border-color: var(--lr-time-range-preset-selected-border-color);
+    --_lr-preset-selected-color: var(--lr-time-range-preset-selected-color);
     --_lr-time-range-preset-gap: var(--lr-space-xs);
     --_lr-time-range-preset-radius: var(--lr-radius);
     --_lr-time-range-preset-padding: calc(
@@ -231,7 +228,7 @@ export const styles = css`
      colour. */
   :host(:not(:disabled)) [part^="handle"]:active {
     background: var(
-      --lr-time-range-handle-pressed-bg,
+      --lr-time-range-handle-active-bg,
       ${activeFill('var(--lr-time-range-handle-bg, var(--lr-color-brand))')}
     );
     cursor: grabbing;

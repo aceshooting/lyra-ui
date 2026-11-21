@@ -10,7 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 19 parts, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `chunk`: `--lr-retrieval-compare-chunk-hover-bg`, `--lr-retrieval-compare-selected-border`
+- **Tokens by part** (prefer these over a `::part()` rule) `chunk`: `--lr-retrieval-compare-chunk-hover-bg`, `--lr-retrieval-compare-selected-border-color`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -54,9 +54,9 @@ button is named by its rank and source title (a blank name shows the localized "
 its text and scores are the button's description.
 **Slots:** none. **Optional peer deps:** none.
 
-**Themeable custom properties:** `--lr-retrieval-compare-selected-border` (default
+**Themeable custom properties:** `--lr-retrieval-compare-selected-border-color` (default
 `var(--lr-color-brand)`) — the border color marking a selected `[part~="chunk-selected"]` row, the
-same escape-hatch pattern as `lr-retrieval-results`'s `--lr-retrieval-results-selected-border`.
+same escape-hatch pattern as `lr-retrieval-results`'s `--lr-retrieval-results-selected-border-color`.
 
 ```ts
 import "@aceshooting/lyra-ui/components/lr-retrieval-compare.js";

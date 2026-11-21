@@ -117,13 +117,13 @@ export const RetintedRevealToggle: Story = {
     docs: {
       description: {
         story:
-          "Click a secret entry's reveal toggle to see it: `--lr-env-list-reveal-active-bg` and `--lr-env-list-reveal-active-border` retint the pressed (revealed) toggle. `::part(reveal-button)[aria-pressed]` is invalid CSS, so without these props the pressed state could only be restyled by overriding the library-wide brand tokens. Unset, it renders exactly as before.",
+          "Click a secret entry's reveal toggle to see it: `--lr-env-list-reveal-active-bg` and `--lr-env-list-reveal-active-border-color` retint the pressed (revealed) toggle. `::part(reveal-button)[aria-pressed]` is invalid CSS, so without these props the pressed state could only be restyled by overriding the library-wide brand tokens. Unset, it renders exactly as before.",
       },
     },
   },
   render: () =>
     html`<lr-env-list
-      style="max-width:32rem; --lr-env-list-reveal-active-bg: var(--lr-color-success-quiet); --lr-env-list-reveal-active-border: var(--lr-color-success)"
+      style="max-width:32rem; --lr-env-list-reveal-active-bg: var(--lr-color-success-quiet); --lr-env-list-reveal-active-border-color: var(--lr-color-success)"
       .entries=${entries}
     ></lr-env-list>`,
 };

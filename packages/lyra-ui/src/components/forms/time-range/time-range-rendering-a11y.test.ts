@@ -172,7 +172,7 @@ it("themes preset and handle hover/pressed paint through independent component h
         --lr-time-range-preset-pressed-border-color: rgb(4, 5, 6);
         --lr-time-range-preset-pressed-bg: rgb(7, 8, 9);
         --lr-time-range-handle-hover-bg: rgb(10, 11, 12);
-        --lr-time-range-handle-pressed-bg: rgb(13, 14, 15);
+        --lr-time-range-handle-active-bg: rgb(13, 14, 15);
       "
     ></lr-time-range>
   `)) as LyraTimeRange;
@@ -663,9 +663,9 @@ it("is accessible with presets set", async () => {
 describe("active-preset cssprops", () => {
 
   const overrides =
-    "--lr-time-range-preset-active-bg: rgb(0, 51, 102);" +
-    "--lr-time-range-preset-active-border-color: rgb(0, 102, 51);" +
-    "--lr-time-range-preset-active-color: rgb(255, 255, 0);";
+    "--lr-time-range-preset-selected-bg: rgb(0, 51, 102);" +
+    "--lr-time-range-preset-selected-border-color: rgb(0, 102, 51);" +
+    "--lr-time-range-preset-selected-color: rgb(255, 255, 0);";
 
   async function themed(style: string): Promise<LyraTimeRange> {
     const wrapper = (await fixture(html`
@@ -731,21 +731,20 @@ describe("active-preset cssprops", () => {
     );
   });
 
-  it("accepts the shared preset-selected names, which win over the active-preset names", async () => {
+  it("no longer reads the retired preset-active names, so -active- only ever means a press", async () => {
     const el = await themed(
-      overrides +
-        "--lr-time-range-preset-selected-bg: rgb(1, 2, 3);" +
-        "--lr-time-range-preset-selected-border-color: rgb(4, 5, 6);" +
-        "--lr-time-range-preset-selected-color: rgb(7, 8, 9);"
+      "--lr-time-range-preset-active-bg: rgb(1, 2, 3);" +
+        "--lr-time-range-preset-active-border-color: rgb(4, 5, 6);" +
+        "--lr-time-range-preset-active-color: rgb(7, 8, 9);"
     );
     const active = el.shadowRoot!.querySelector(
       '[part="preset-button"][data-active]'
     ) as HTMLElement;
     const rendered = getComputedStyle(active);
     expect([rendered.backgroundColor, rendered.borderTopColor, rendered.color]).to.deep.equal([
-      "rgb(1, 2, 3)",
-      "rgb(4, 5, 6)",
-      "rgb(7, 8, 9)",
+      resolvedInShadow(el, "background: var(--lr-color-brand)", "background-color"),
+      resolvedInShadow(el, "border-color: var(--lr-color-brand)", "border-top-color"),
+      resolvedInShadow(el, "color: var(--lr-color-on-brand)", "color"),
     ]);
   });
 
@@ -928,8 +927,8 @@ describe("active-preset pointer feedback", () => {
       <div data-lr-theme-scope
         style="
           --lr-transition-fast: 0s;
-          --lr-time-range-preset-active-bg: rgb(0, 51, 102);
-          --lr-time-range-preset-active-border-color: rgb(0, 102, 51);
+          --lr-time-range-preset-selected-bg: rgb(0, 51, 102);
+          --lr-time-range-preset-selected-border-color: rgb(0, 102, 51);
         "
       >
         <lr-time-range min="0" max="100" start="0" end="30"></lr-time-range>

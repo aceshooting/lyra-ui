@@ -245,7 +245,7 @@ export const styles = css`
   }
   [part="remove"]:active {
     background: var(
-      --lr-token-input-remove-pressed-bg,
+      --lr-token-input-remove-active-bg,
       ${activeFill('var( --lr-token-input-remove-hover-bg, var(--lr-token-input-action-hover-bg, var(--lr-color-brand-quiet)) )')}
     );
   }
@@ -280,7 +280,7 @@ export const styles = css`
   }
   :host(:where(:not(:disabled))) [part="token-label"]:active {
     background: var(
-      --lr-token-input-edit-pressed-bg,
+      --lr-token-input-edit-active-bg,
       ${activeFill('var( --lr-token-input-edit-hover-bg, var(--lr-token-input-action-hover-bg, var(--lr-color-brand-quiet)) )')}
     );
   }

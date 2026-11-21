@@ -1024,8 +1024,12 @@ export function validateRenameLedger(ledger, { inventory, exportDeprecations = [
       const label = entryLabel(origin, 'globals', entry);
       if (entry.kind === 'part') {
         const component = ownerFor(components, compatibilityContext, entry.tag);
+        // A part renamed outright is gone today; the published capture still records it.
+        const published = compatibilityContext?.sourceComponents?.[entry.tag] ?? null;
         if (!component) findings.push(`${label}: component is not in the inventory`);
-        else if (!surfaceEntry(component, 'part', entry.from)) findings.push(`${label}: the part is not on the public surface`);
+        else if (!surfaceEntry(component, 'part', entry.from) && !surfaceEntry(published, 'part', entry.from)) {
+          findings.push(`${label}: the part is not on the public surface`);
+        }
       } else if (entry.kind === 'locale-key' && entry.tag) {
         if (!ownerFor(components, compatibilityContext, entry.tag)) findings.push(`${label}: component is not in the inventory`);
       } else if (entry.kind === 'css-property') {

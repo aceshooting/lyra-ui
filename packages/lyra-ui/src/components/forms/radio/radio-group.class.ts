@@ -55,7 +55,7 @@ import { LYRA_DEFAULT_radioRequired } from '../../../internal/default-strings/fo
 installFormControlLabelSupport();
 
 /** The selection a user activation proposes, while `value` still holds the current one. */
-export interface LyraRadioGroupSelectRequestDetail {
+export interface LyraRadioGroupChangeRequestDetail {
   /** The value the group would take. */
   readonly value: string;
   /** The value the group holds while the request dispatches. */
@@ -69,7 +69,7 @@ export interface LyraRadioGroupSelectRequestDetail {
 export interface LyraRadioGroupEventMap {
   input: Event;
   change: Event;
-  'lr-change-request': CustomEvent<LyraRadioGroupSelectRequestDetail>;
+  'lr-change-request': CustomEvent<LyraRadioGroupChangeRequestDetail>;
   'lr-input': CustomEvent<{ value: string; option: LyraRadio; radio: LyraRadio }>;
   'lr-change': CustomEvent<{ value: string; previousValue?: string; option: LyraRadio; radio: LyraRadio }>;
   'lr-activate': CustomEvent<{ value: string; option: LyraRadio; radio: LyraRadio }>;

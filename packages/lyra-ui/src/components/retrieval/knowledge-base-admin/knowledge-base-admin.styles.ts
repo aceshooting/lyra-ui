@@ -82,7 +82,7 @@ export const styles = css`
      without hijacking the shared --lr-color-brand and --lr-color-text tokens used everywhere
      else. */
   [part='tab']:where([aria-selected='true']) {
-    border-block-end-color: var(--lr-knowledge-base-admin-tab-selected-border, var(--lr-color-brand));
+    border-block-end-color: var(--lr-knowledge-base-admin-tab-selected-border-color, var(--lr-color-brand));
     color: var(--lr-knowledge-base-admin-tab-selected-color, var(--lr-color-text));
     font-weight: var(--lr-font-weight-semibold);
   }

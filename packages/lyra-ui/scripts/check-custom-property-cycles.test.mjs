@@ -94,11 +94,11 @@ test('does not treat an ordinary CSS property\'s var() usage as a declared node'
 
 test('reads every --other-property referenced in a value, including nested fallbacks', () => {
   const refs = referencedProperties(
-    'var(--lr-icon-button-color-active, var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit)))',
+    'var(--lr-icon-button-active-color, var(--lr-icon-button-hover-color, var(--lr-icon-button-color, inherit)))',
   );
   assert.deepEqual(
     [...refs].sort(),
-    ['--lr-icon-button-color', '--lr-icon-button-color-active', '--lr-icon-button-color-hover'].sort(),
+    ['--lr-icon-button-color', '--lr-icon-button-active-color', '--lr-icon-button-hover-color'].sort(),
   );
 });
 

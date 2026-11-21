@@ -567,7 +567,7 @@ export const styles = css`
        */
     background: var(--lr-select-option-selected-bg, transparent);
     border-color: var(
-      --lr-select-option-selected-border,
+      --lr-select-option-selected-border-color,
       var(--lr-color-brand)
     );
     color: var(--lr-select-option-selected-color, var(--lr-color-brand));

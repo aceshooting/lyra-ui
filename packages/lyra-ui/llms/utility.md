@@ -106,8 +106,8 @@ attempt regardless of outcome — style with `::part(trigger-error)`), `menu`, `
 **Themeable custom properties:** the trigger's paint is settable per state. At rest,
 `--lr-export-button-bg`, `--lr-export-button-color` and `--lr-export-button-border`; on
 hover, `--lr-export-button-hover-bg`, `--lr-export-button-hover-color` and
-`--lr-export-button-hover-border`; while pressed, `--lr-export-button-active-bg`,
-`--lr-export-button-active-color` and `--lr-export-button-active-border`. Each layers over whatever
+`--lr-export-button-hover-border-color`; while pressed, `--lr-export-button-active-bg`,
+`--lr-export-button-active-color` and `--lr-export-button-active-border-color`. Each layers over whatever
 the current `appearance` resolves to and leaves the other paints alone, so they are also the way to
 keep `appearance="outlined"` chrome while returning its label to neutral text — `outlined` paints
 the label `--lr-color-brand` and, unlike `lr-button`, this component has no `variant` of its own to
@@ -508,7 +508,7 @@ observer.
 
 ## `lr-json-viewer`
 
-Its composed icon-button controls read the shared `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color` and `--lr-icon-button-radius` tokens for their resting paint. Their hover and pressed paint follow `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color-hover` and `--lr-icon-button-color-active`.
+Its composed icon-button controls read the shared `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color` and `--lr-icon-button-radius` tokens for their resting paint. Their hover and pressed paint follow `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`, `--lr-icon-button-hover-color` and `--lr-icon-button-active-color`.
 
 Local searches ignore case and accents in keys and values. Navigating a match scrolls the viewer within
 its own bounds. An overflowing tree becomes a keyboard tab stop named by the host’s `aria-label` or the
@@ -962,7 +962,7 @@ A parent Lit component would instead hold the reference via `@query('lr-live-reg
 
 ## `lr-poll-status`
 
-Its composed icon-button controls read the shared `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color` and `--lr-icon-button-radius` tokens for their resting paint. Their hover and pressed paint follow `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color-hover` and `--lr-icon-button-color-active`.
+Its composed icon-button controls read the shared `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color` and `--lr-icon-button-radius` tokens for their resting paint. Their hover and pressed paint follow `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`, `--lr-icon-button-hover-color` and `--lr-icon-button-active-color`.
 
 A "next scheduled refresh" countdown with built-in pause and optional manual refresh controls: a ticking
 `M:SS` display counting down to the next scheduled action, a "Refreshing…" state at zero, and a

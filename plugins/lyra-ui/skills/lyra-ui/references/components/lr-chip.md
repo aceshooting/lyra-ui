@@ -126,7 +126,7 @@ mirrors the same accent/bg/border vocabulary `<lr-tool-call-chip>`/`<lr-attachme
 rule covers all four non-neutral variants, because the shared variants sheet has already re-pointed
 `--lr-color-fill-loud`/`--lr-color-fill-quiet` at the active variant's row of the semantic grid —
 the chip reads those generic slots and never names a variant, and sets its border `transparent`),
-`--lr-chip-pressed-border` (border color while pressed/selected — falls back to
+`--lr-chip-pressed-border-color` (border color while pressed/selected — falls back to
 `--lr-chip-accent`), `--lr-chip-pressed-bg` (background color while pressed/selected — falls
 back to `--lr-chip-bg`; a selected chip's hover/press wash mixes from it, an unselected toggleable
 chip's from `--lr-chip-bg`), the density quintet `--lr-chip-font-size`, `--lr-chip-padding-block`,

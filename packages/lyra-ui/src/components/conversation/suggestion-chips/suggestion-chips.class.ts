@@ -93,7 +93,7 @@ interface PendingSuggestionFocus {
  * @cssprop [--lr-suggestion-chips-justify=flex-start] - Main-axis packing of the chip row. `center`
  *   centers every line, the wrapped final one included — what `::part(base)` alone cannot do.
  * @cssprop [--lr-suggestion-chips-hover-bg=var(--lr-color-brand-quiet)] - Background of a hovered chip.
- * @cssprop [--lr-suggestion-chips-hover-border=var(--lr-color-brand)] - Border color of a hovered chip.
+ * @cssprop [--lr-suggestion-chips-hover-border-color=var(--lr-color-brand)] - Border color of a hovered chip.
  * @cssprop [--lr-suggestion-chips-disabled-opacity=var(--lr-opacity-disabled)] - Opacity of a chip whose suggestion sets `disabled`.
  * @cssprop [--lr-suggestion-chips-label-lines=1] - Maximum lines of each `chip-label` before it is
  *   clamped with an ellipsis. Unset, the scrolling row shows one line and a `wrap` row shows up to

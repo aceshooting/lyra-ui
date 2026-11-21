@@ -78,7 +78,7 @@ export const styles = css`
       var(--_lr-export-button-hover-background)
     );
     color: var(--lr-export-button-hover-color, var(--_lr-export-button-hover-color));
-    border-color: var(--lr-export-button-hover-border, var(--_lr-export-button-hover-border));
+    border-color: var(--lr-export-button-hover-border-color, var(--_lr-export-button-hover-border));
   }
   /* Same :where() shape as the hover rule above, so the two tie at (0,1,0) and source order hands
      this one the press. */
@@ -88,7 +88,7 @@ export const styles = css`
       var(--_lr-export-button-active-background)
     );
     color: var(--lr-export-button-active-color, var(--_lr-export-button-active-color));
-    border-color: var(--lr-export-button-active-border, var(--_lr-export-button-active-border));
+    border-color: var(--lr-export-button-active-border-color, var(--_lr-export-button-active-border));
   }
   :host([size='2xs']) [part~='trigger'],
   :host([size='xs']) [part~='trigger'],

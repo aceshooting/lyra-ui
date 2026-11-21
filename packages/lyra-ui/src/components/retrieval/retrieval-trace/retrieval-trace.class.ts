@@ -173,7 +173,7 @@ export type LyraRetrievalTraceChunkActionDetail =
  * @csspart metadata-value - Shared metadata value part; `evidence-metadata-value` remains an alias.
  * @csspart chunk-inspector - The stage-owned chunk inspector; its generic child actions are
  *   stopped and re-emitted as `lr-stage-chunk-action`.
- * @cssprop [--lr-retrieval-trace-active-border=var(--lr-color-brand)] - Border color of the
+ * @cssprop [--lr-retrieval-trace-active-border-color=var(--lr-color-brand)] - Border color of the
  *   `[part="evidence-row"]` whose stage matches `activeStageId`.
  * @csspart empty - The empty-state container.
  * @status stable

@@ -167,7 +167,7 @@ reduced motion). `--lr-document-preview-progress`
 (default `0`) — a unitless
 0–100 number the determinate spinner's `conic-gradient` fill reads; written inline on the ring by
 the component itself from the clamped `progress` property, so overriding it only makes sense to
-repaint the fraction. `--lr-document-preview-active-border` (default
+repaint the fraction. `--lr-document-preview-active-border-color` (default
 `var(--lr-color-warning, var(--lr-color-brand))`) — the border color of the `[part='region-highlight']`
 matching `activeHighlightId` (image format only), deliberately distinct from the resting highlight
 border so the active region can be recolored without touching the rest; it also draws a thick offset outline, so the active region stays distinct from a warning-toned one and under forced colors. Like the library's other
@@ -1158,7 +1158,7 @@ localized loading text alongside its decorative ring, and the ring stops under r
 
 **Themeable custom properties:** `--lr-svg-viewer-max-height` (default `none`) — maximum block size
 of `[part="body"]`; also settable via the `max-height` property, which writes this token inline.
-`--lr-svg-viewer-active-border` (default `var(--lr-color-warning, var(--lr-color-brand))`) — the
+`--lr-svg-viewer-active-border-color` (default `var(--lr-color-warning, var(--lr-color-brand))`) — the
 border and outer-ring color of the `[part='region-highlight']` matching `activeHighlightId`; the
 ring keeps the active region distinct from a warning-tone highlight, and the token recolors the
 active region without touching the rest. It is an

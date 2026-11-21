@@ -139,13 +139,13 @@ export const ThemedActiveEvidence: Story = {
     docs: {
       description: {
         story:
-          '`--lr-retrieval-trace-active-border` recolors the evidence row whose stage matches `active-stage-id`, leaving every other `--lr-color-brand` surface alone. Set it on the element or any ancestor — it is not declared on `:host`, so an ancestor value is never shadowed.',
+          '`--lr-retrieval-trace-active-border-color` recolors the evidence row whose stage matches `active-stage-id`, leaving every other `--lr-color-brand` surface alone. Set it on the element or any ancestor — it is not declared on `:host`, so an ancestor value is never shadowed.',
       },
     },
   },
   render: () => html`
     <lr-retrieval-trace
-      style="max-width: 40rem; --lr-retrieval-trace-active-border: ${storyColor('warning')};"
+      style="max-width: 40rem; --lr-retrieval-trace-active-border-color: ${storyColor('warning')};"
       .stages=${stages}
       active-stage-id="rewrite"
     ></lr-retrieval-trace>

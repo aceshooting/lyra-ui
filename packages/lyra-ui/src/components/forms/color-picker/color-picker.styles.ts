@@ -624,7 +624,7 @@ export const styles = css`
   /* Ring AND check mark, so selection never rides on colour alone. Encoded in the part name -- an
      attribute selector after ::part() never matches -- so consumers can restyle it. */
   [part~="swatch-selected"] {
-    border-color: var(--lr-color-picker-selected-border, var(--lr-color-brand));
+    border-color: var(--lr-color-picker-selected-border-color, var(--lr-color-brand));
     border-width: var(--lr-border-width-medium);
   }
   [part~="swatch-check"] {

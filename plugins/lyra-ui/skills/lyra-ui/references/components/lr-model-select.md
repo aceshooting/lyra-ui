@@ -293,7 +293,7 @@ hovered or keyboard-active `[part="option"]` row; declared as a `var()` fallback
 use, not on `:host`, so it isn't tied to `size`. The selected row
 (`[part="option"][aria-selected="true"]`) has the matching set
 `--lr-model-select-option-selected-bg` (default `transparent`),
-`--lr-model-select-option-selected-border` and `--lr-model-select-option-selected-color` (both
+`--lr-model-select-option-selected-border-color` and `--lr-model-select-option-selected-color` (both
 `var(--lr-color-brand)`), and `--lr-model-select-option-selected-font-weight`
 (`var(--lr-font-weight-semibold)`), all inline `var()` fallbacks so the selected row is rethemeable
 without hijacking `--lr-color-brand`. `--lr-model-select-option-disabled-opacity` (default `var(--lr-opacity-disabled)`)

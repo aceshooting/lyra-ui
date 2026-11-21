@@ -480,7 +480,7 @@ ancestor is never shadowed — retheme just this row state without hijacking the
 knob `lr-combobox`'s own `--lr-combobox-option-active-bg` provides.
 
 The currently-**selected** row (`[part='option'][aria-selected='true']`) has its own matching set:
-`--lr-select-option-selected-bg` (default `transparent`), `--lr-select-option-selected-border` and
+`--lr-select-option-selected-bg` (default `transparent`), `--lr-select-option-selected-border-color` and
 `--lr-select-option-selected-color` (both default `var(--lr-color-brand)`), and
 `--lr-select-option-selected-font-weight` (default `var(--lr-font-weight-semibold)`). Like the
 active-bg knob these are inline `var()` fallbacks, not declared on `:host`, so a consumer can

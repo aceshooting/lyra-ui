@@ -246,7 +246,7 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
   default when no recognized value is set. `<lr-voice-picker>` has no per-instance
   `positioning-strategy` property; set the token on `:root`, a theme, or an ancestor to retune its
   listbox along with the other floating surfaces.
-- `--lr-voice-picker-preview-active-border` — Active preview border. Default: `var(--lr-color-brand)`.
+- `--lr-voice-picker-preview-active-border-color` — Active preview border. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-preview-active-color` — Active preview icon. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-trigger-border-color` — Resting trigger/combobox border color, independent of
   the open-state color below. Default: `var(--lr-color-border)`.
@@ -261,7 +261,7 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
   is configured once instead of per component; additive to the existing focus outline. Default:
   `none`.
 - `--lr-voice-picker-option-active-bg` — Active option fill. Default: `var(--lr-color-brand-quiet)`.
-- `--lr-voice-picker-option-selected-border` — Selected option border. Default: `var(--lr-color-brand)`.
+- `--lr-voice-picker-option-selected-border-color` — Selected option border. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-option-selected-color` — Selected option text. Default: `var(--lr-color-brand)`.
 - `--lr-voice-picker-option-selected-bg` — Selected option fill. Default: `transparent`.
 - `--lr-voice-picker-option-selected-font-weight` — Selected option label weight. Default: `var(--lr-font-weight-semibold)`.

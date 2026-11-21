@@ -101,13 +101,13 @@ export const ThemedCheckedState: Story = {
     docs: {
       description: {
         story:
-          '`--lr-source-picker-checked-bg`, `--lr-source-picker-checked-border` and `--lr-source-picker-mixed-bg` retint the selection controls without hijacking library-wide `--lr-color-brand`/`--lr-color-brand-quiet`. None is declared on `:host`, so a value set on any ancestor is never shadowed. The select-all pill carries its own label text in `--lr-color-text`, so keep 4.5:1 against whatever background you choose.',
+          '`--lr-source-picker-checked-bg`, `--lr-source-picker-checked-border-color` and `--lr-source-picker-mixed-bg` retint the selection controls without hijacking library-wide `--lr-color-brand`/`--lr-color-brand-quiet`. None is declared on `:host`, so a value set on any ancestor is never shadowed. The select-all pill carries its own label text in `--lr-color-text`, so keep 4.5:1 against whatever background you choose.',
       },
     },
   },
   render: () => html`
     <lr-source-picker
-      style="--lr-source-picker-checked-bg: ${storyColor('warningQuiet')}; --lr-source-picker-checked-border: ${storyColor('warning')}; --lr-source-picker-mixed-bg: ${storyColor('successQuiet')};"
+      style="--lr-source-picker-checked-bg: ${storyColor('warningQuiet')}; --lr-source-picker-checked-border-color: ${storyColor('warning')}; --lr-source-picker-mixed-bg: ${storyColor('successQuiet')};"
       .sources=${sources}
       .selectedSourceIds=${['doc1']}
     ></lr-source-picker>

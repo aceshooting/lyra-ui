@@ -521,7 +521,7 @@ it('paints hover and active feedback on toolbar and direct action buttons', asyn
 it('paints the variable field hover hook over its resting border', async () => {
   const el = await fixture<LyraPromptStudio>(html`
     <lr-prompt-studio
-      style="--lr-prompt-studio-field-hover-border: rgb(1, 2, 3);"
+      style="--lr-prompt-studio-field-hover-border-color: rgb(1, 2, 3);"
       .messages=${messages}
       .variables=${[{ name: 'audience', value: 'developers' }]}
     ></lr-prompt-studio>
@@ -543,7 +543,7 @@ it('paints the variable field hover hook over its resting border', async () => {
 it('renders and exposes a component-scoped theme hook for the selected version', async () => {
   const el = (await fixture(html`
     <lr-prompt-studio
-      style="--lr-prompt-studio-version-selected-border: rgb(1, 2, 3)"
+      style="--lr-prompt-studio-version-selected-border-color: rgb(1, 2, 3)"
       selected-version-id="v1"
       .versions=${versions}
     ></lr-prompt-studio>

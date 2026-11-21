@@ -158,7 +158,7 @@ With `dataSource` set, additional CSS parts are `source-status` (provider loadin
 the current failed provider request), and `source-pagination` (provider page controls).
 
 **Themeable custom properties:** `--lr-test-results-filter-active-bg` (default
-`var(--lr-color-brand-quiet)`), `--lr-test-results-filter-active-border` (default
+`var(--lr-color-brand-quiet)`), `--lr-test-results-filter-active-border-color` (default
 `var(--lr-color-brand)`) and `--lr-test-results-filter-active-color` (default
 `var(--lr-color-brand)`) — the background, border color and text color of a pressed (active) status
 filter toggle. The background is also the base its hover/press mixes from. All three follow the state-scoped-property convention described under

@@ -105,8 +105,8 @@ export const styles = css`
     color: 'var(--lr-color-text-quiet)',
     hoverBackground: 'var(--lr-color-surface-raised)',
     hoverColor: 'var(--lr-color-text)',
-    activeBackground: activeFill('var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised))').cssText,
-    activeColor: 'var(--lr-icon-button-color-hover, var(--lr-color-text))',
+    activeBackground: activeFill('var(--lr-icon-button-hover-bg, var(--lr-color-surface-raised))').cssText,
+    activeColor: 'var(--lr-icon-button-hover-color, var(--lr-color-text))',
   })}
   [part='clear-button'] {
     --_lr-icon-button-radius-default: var(--lr-radius-xs);
@@ -248,33 +248,33 @@ export const styles = css`
   lr-virtual-list::part(row-action):hover {
     background: var(
       --lr-thread-list-row-action-hover-bg,
-      var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised))
+      var(--lr-icon-button-hover-bg, var(--lr-color-surface-raised))
     );
     color: var(
       --lr-thread-list-row-action-hover-color,
-      var(--lr-icon-button-color-hover, var(--lr-color-text))
+      var(--lr-icon-button-hover-color, var(--lr-color-text))
     );
   }
   lr-virtual-list::part(row-action):active {
     background: var(
       --lr-thread-list-row-action-active-bg,
       var(
-        --lr-icon-button-bg-active,
-        ${activeFill('var( --lr-thread-list-row-action-hover-bg, var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised)) )')}
+        --lr-icon-button-active-bg,
+        ${activeFill('var( --lr-thread-list-row-action-hover-bg, var(--lr-icon-button-hover-bg, var(--lr-color-surface-raised)) )')}
       )
     );
     color: var(
       --lr-thread-list-row-action-active-color,
       var(
-        --lr-icon-button-color-active,
-        var(--lr-thread-list-row-action-hover-color, var(--lr-icon-button-color-hover, var(--lr-color-text)))
+        --lr-icon-button-active-color,
+        var(--lr-thread-list-row-action-hover-color, var(--lr-icon-button-hover-color, var(--lr-color-text)))
       )
     );
   }
   lr-virtual-list::part(row-action):focus-visible {
     ${focusRing}
   }
-  lr-virtual-list::part(pin-glyph) {
+  lr-virtual-list::part(pin-icon) {
     display: inline-flex;
     color: var(--lr-color-text-quiet);
     font-size: var(--lr-font-size-2xs);

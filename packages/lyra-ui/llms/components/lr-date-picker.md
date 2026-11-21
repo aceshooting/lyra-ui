@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 38 parts, 36 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 38 parts, 34 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `next`: `--lr-date-picker-nav-hover-bg`; `previous`: `--lr-date-picker-nav-hover-bg`
 - **Documented with** `lr-date-input` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -525,22 +525,20 @@ and `dateTimeFormat(locale, options)`.
   `::part(previous):hover` still wins without `!important`.
 - `--lr-date-picker-nav-active-bg` — Pressed navigation background; defaults to the hover color
   mixed by `--lr-color-mix-active`.
-- `--lr-date-picker-preset-hover-bg`, `--lr-date-picker-preset-active-bg`, and
-  `--lr-date-picker-preset-selected-bg` (new in 11.0.0) — hover, pressed, and
-  currently-selected paint for a `presets` quick-range button. Defaults are
-  `var(--lr-color-brand-quiet)`, that hover colour mixed by `--lr-color-mix-active`, and
-  `var(--lr-color-brand)` respectively. `--lr-date-picker-preset-pressed-bg` names the pressed
-  paint the way `<lr-time-range>` does and wins over `--lr-date-picker-preset-active-bg`; across
-  both controls, `preset-selected-*` is the applied preset, `preset-pressed-*` the press, and
+- `--lr-date-picker-preset-hover-bg`, `--lr-date-picker-preset-pressed-bg`, and
+  `--lr-date-picker-preset-selected-bg` — hover, pressed, and currently-selected paint for a
+  `presets` quick-range button. Defaults are `var(--lr-color-brand-quiet)`, that hover colour mixed
+  by `--lr-color-mix-active`, and `var(--lr-color-brand)` respectively. Across `<lr-date-picker>`
+  and `<lr-time-range>`, `preset-selected-*` is the applied preset, `preset-pressed-*` the press, and
   `preset-hover-*` the hover.
-- `--lr-date-picker-preset-selected-border` (default `var(--lr-color-brand)`) and
+- `--lr-date-picker-preset-selected-border-color` (default `var(--lr-color-brand)`) and
   `--lr-date-picker-preset-selected-color` (default `var(--lr-color-on-brand)`) independently
   theme a selected preset's border and foreground; the selected background token controls only its
   background.
 - `--lr-date-picker-preset-hover-border-color` (default `var(--lr-color-brand)`),
   `--lr-date-picker-preset-pressed-border-color` (default an active-state mix of
   `var(--lr-color-brand)`) and `--lr-date-picker-preset-selected-border-color` (default
-  `var(--lr-color-brand)`; wins over `--lr-date-picker-preset-selected-border`) — the border color of
+  `var(--lr-color-brand)`) — the border color of
   a hovered, pressed and selected quick-range button.
 - `--lr-date-picker-title-hover-color`, `--lr-date-picker-title-active-color`,
   `--lr-date-picker-title-active-bg`, and `--lr-date-picker-title-active-radius` — Month-title

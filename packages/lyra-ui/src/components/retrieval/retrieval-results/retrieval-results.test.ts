@@ -1734,9 +1734,9 @@ describe('selected-row cssprop escape hatch', () => {
     return { el, rowBody };
   }
 
-  it('recolors the selected-row indicator from an ancestor via --lr-retrieval-results-selected-border', async () => {
+  it('recolors the selected-row indicator from an ancestor via --lr-retrieval-results-selected-border-color', async () => {
     const { rowBody } = await selected(
-      '--lr-retrieval-results-selected-border: rgb(0, 51, 102)'
+      '--lr-retrieval-results-selected-border-color: rgb(0, 51, 102)'
     );
     expect(getComputedStyle(rowBody).borderLeftColor).to.equal(
       'rgb(0, 51, 102)'
@@ -1761,7 +1761,7 @@ describe('selected-row cssprop escape hatch', () => {
 
   it('is accessible with the selected-row prop themed', async () => {
     const { el } = await selected(
-      '--lr-retrieval-results-selected-border: rgb(0, 51, 102)'
+      '--lr-retrieval-results-selected-border-color: rgb(0, 51, 102)'
     );
     await expect(el).to.be.accessible();
   });

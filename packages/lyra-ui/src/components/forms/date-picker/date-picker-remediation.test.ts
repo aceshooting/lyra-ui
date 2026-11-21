@@ -489,9 +489,9 @@ for (const target of ['preset', 'month'] as const) {
   });
 }
 
-it('paints a pressed preset from the shared preset-pressed name, which wins over preset-active', async () => {
+it('paints a pressed preset from the shared preset-pressed name', async () => {
   const el = await fixture<LyraDatePicker>(html`<lr-date-picker data-lr-theme-scope
-    style="--lr-transition-fast:0s;--lr-date-picker-preset-active-bg:rgb(1, 1, 1);--lr-date-picker-preset-pressed-bg:rgb(4, 5, 6)"
+    style="--lr-transition-fast:0s;--lr-date-picker-preset-pressed-bg:rgb(4, 5, 6)"
     mode="range"
     value="2026-07-01/2026-07-07"
     .presets=${[{ label: 'First week', start: '2026-07-01', end: '2026-07-07' }, { label: 'Second week', start: '2026-07-08', end: '2026-07-14' }]}

@@ -618,14 +618,14 @@ it('presses to a background stronger than -- and different from -- its hover', a
 });
 
 for (const [name, backgrounds] of [
-  ['canonical', '--lr-icon-button-bg-hover: rgb(1, 2, 3); --lr-icon-button-bg-active: rgb(10, 11, 12);'],
+  ['canonical', '--lr-icon-button-hover-bg: rgb(1, 2, 3); --lr-icon-button-active-bg: rgb(10, 11, 12);'],
   [
     'deprecated',
     '--lr-icon-button-background-hover: rgb(1, 2, 3); --lr-icon-button-background-active: rgb(10, 11, 12);',
   ],
   [
     'canonical over deprecated',
-    '--lr-icon-button-bg-hover: rgb(1, 2, 3); --lr-icon-button-bg-active: rgb(10, 11, 12); --lr-icon-button-background-hover: rgb(9, 9, 9); --lr-icon-button-background-active: rgb(8, 8, 8);',
+    '--lr-icon-button-hover-bg: rgb(1, 2, 3); --lr-icon-button-active-bg: rgb(10, 11, 12); --lr-icon-button-background-hover: rgb(9, 9, 9); --lr-icon-button-background-active: rgb(8, 8, 8);',
   ],
 ] as const) {
   it(`honours the ${name} hover and press override tokens on the rendered button`, async () => {
@@ -633,7 +633,7 @@ for (const [name, backgrounds] of [
       <lr-icon-button data-lr-theme-scope
         icon="close"
         aria-label="Dismiss"
-        style=${`--lr-transition-fast: 0s; ${backgrounds} --lr-icon-button-color-hover: rgb(4, 5, 6); --lr-icon-button-border-hover: 2px solid rgb(7, 8, 9); --lr-icon-button-color-active: rgb(13, 14, 15); --lr-icon-button-border-active: 2px solid rgb(16, 17, 18);`}
+        style=${`--lr-transition-fast: 0s; ${backgrounds} --lr-icon-button-hover-color: rgb(4, 5, 6); --lr-icon-button-hover-border: 2px solid rgb(7, 8, 9); --lr-icon-button-active-color: rgb(13, 14, 15); --lr-icon-button-active-border: 2px solid rgb(16, 17, 18);`}
       ></lr-icon-button>
     `);
     const button = el.shadowRoot!.querySelector('button')!;
@@ -669,7 +669,7 @@ it('falls the press tokens through to the hover ones when only those are set', a
     <lr-icon-button data-lr-theme-scope
       icon="close"
       aria-label="Dismiss"
-      style="--lr-transition-fast: 0s; --lr-icon-button-color-hover: rgb(4, 5, 6); --lr-icon-button-border-hover: 2px solid rgb(7, 8, 9);"
+      style="--lr-transition-fast: 0s; --lr-icon-button-hover-color: rgb(4, 5, 6); --lr-icon-button-hover-border: 2px solid rgb(7, 8, 9);"
     ></lr-icon-button>
   `);
   const button = el.shadowRoot!.querySelector('button')!;

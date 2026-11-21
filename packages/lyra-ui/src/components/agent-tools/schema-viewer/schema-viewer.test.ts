@@ -914,8 +914,8 @@ it('allows selected and issue states to be rethemed independently', async () => 
   const el = (await fixture(html`
     <lr-json-schema-viewer
       style="
-        --lr-json-schema-viewer-selected-border: rgb(1, 2, 3);
-        --lr-json-schema-viewer-error-border: rgb(4, 5, 6);
+        --lr-json-schema-viewer-selected-border-color: rgb(1, 2, 3);
+        --lr-json-schema-viewer-error-border-color: rgb(4, 5, 6);
       "
       selected-path="/properties/query"
       .schema=${schema}
@@ -950,14 +950,15 @@ describe('lr-json-schema-viewer namespaced custom properties and their deprecate
       a: { type: 'object', properties: { b: { type: 'object', properties: { c: { type: 'string' } } } } },
     },
   };
+  // `alias` is the retired --lr-schema-viewer-* spelling; the border colors now end in -border-color.
   const colourCases = [
-    { name: 'selected-border', selector: '[part~="node-selected"]', read: 'borderInlineStartColor' },
-    { name: 'error-border', selector: '[part="issue"][data-severity="error"]', read: 'borderInlineStartColor' },
-    { name: 'error-bg', selector: '[part="issue"][data-severity="error"]', read: 'backgroundColor' },
-    { name: 'warning-border', selector: '[part="issue"][data-severity="warning"]', read: 'borderInlineStartColor' },
-    { name: 'warning-bg', selector: '[part="issue"][data-severity="warning"]', read: 'backgroundColor' },
-    { name: 'info-border', selector: '[part="issue"][data-severity="info"]', read: 'borderInlineStartColor' },
-    { name: 'info-bg', selector: '[part="issue"][data-severity="info"]', read: 'backgroundColor' },
+    { name: 'selected-border-color', alias: 'selected-border', selector: '[part~="node-selected"]', read: 'borderInlineStartColor' },
+    { name: 'error-border-color', alias: 'error-border', selector: '[part="issue"][data-severity="error"]', read: 'borderInlineStartColor' },
+    { name: 'error-bg', alias: 'error-bg', selector: '[part="issue"][data-severity="error"]', read: 'backgroundColor' },
+    { name: 'warning-border-color', alias: 'warning-border', selector: '[part="issue"][data-severity="warning"]', read: 'borderInlineStartColor' },
+    { name: 'warning-bg', alias: 'warning-bg', selector: '[part="issue"][data-severity="warning"]', read: 'backgroundColor' },
+    { name: 'info-border-color', alias: 'info-border', selector: '[part="issue"][data-severity="info"]', read: 'borderInlineStartColor' },
+    { name: 'info-bg', alias: 'info-bg', selector: '[part="issue"][data-severity="info"]', read: 'backgroundColor' },
   ] as const;
   const issues: SchemaValidationIssue[] = [
     { path: '/properties/query', message: 'Error', severity: 'error' },
@@ -976,13 +977,13 @@ describe('lr-json-schema-viewer namespaced custom properties and their deprecate
     `);
   }
 
-  for (const { name, selector, read } of colourCases) {
-    it(`reads --lr-json-schema-viewer-${name}, falls back to --lr-schema-viewer-${name}, and lets the canonical name win`, async () => {
+  for (const { name, alias: retired, selector, read } of colourCases) {
+    it(`reads --lr-json-schema-viewer-${name}, ignores the retired --lr-schema-viewer-${retired}, and lets the canonical name win`, async () => {
       const value = (el: LyraJsonSchemaViewer): string =>
         getComputedStyle(el.shadowRoot!.querySelector(selector) as HTMLElement)[read];
       const canonical = await paint(`--lr-json-schema-viewer-${name}: rgb(1, 2, 3)`);
-      const alias = await paint(`--lr-schema-viewer-${name}: rgb(1, 2, 3)`);
-      const both = await paint(`--lr-json-schema-viewer-${name}: rgb(4, 5, 6); --lr-schema-viewer-${name}: rgb(1, 2, 3)`);
+      const alias = await paint(`--lr-schema-viewer-${retired}: rgb(1, 2, 3)`);
+      const both = await paint(`--lr-json-schema-viewer-${name}: rgb(4, 5, 6); --lr-schema-viewer-${retired}: rgb(1, 2, 3)`);
       expect(value(canonical)).to.equal('rgb(1, 2, 3)');
       expect(value(alias)).to.not.equal('rgb(1, 2, 3)');
       expect(value(both)).to.equal('rgb(4, 5, 6)');

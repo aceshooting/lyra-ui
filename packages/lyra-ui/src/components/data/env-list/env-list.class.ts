@@ -64,7 +64,7 @@ export interface LyraEnvListEventMap {
  *   counting both retained entries past that render cap and input beyond the 10,000-entry ceiling.
  * @cssprop [--lr-env-list-reveal-active-bg=var(--lr-color-brand-quiet)] - Background of a revealed
  *   entry's reveal button, and the base its hover/press mixes from.
- * @cssprop [--lr-env-list-reveal-active-border=var(--lr-color-brand)] - Border color of a revealed
+ * @cssprop [--lr-env-list-reveal-active-border-color=var(--lr-color-brand)] - Border color of a revealed
  *   entry's reveal button. Restyling that state otherwise requires overriding the library-wide
  *   brand tokens, since an attribute selector cannot follow `::part()`.
  * @cssprop [--lr-env-list-button-hover-bg=var(--lr-color-brand-quiet)] - Reveal/copy button fill while

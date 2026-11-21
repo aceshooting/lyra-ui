@@ -226,7 +226,7 @@ export function catalogPickerStyles(
     }
     [part='option'][aria-selected="true"] {
       background: var(${hook}option-selected-bg, transparent);
-      border-color: var(${hook}option-selected-border, var(--lr-color-brand));
+      border-color: var(${hook}option-selected-border-color, var(--lr-color-brand));
       color: var(${hook}option-selected-color, var(--lr-color-brand));
       font-weight: var(${hook}option-selected-font-weight, var(--lr-font-weight-semibold));
     }

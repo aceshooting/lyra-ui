@@ -1182,9 +1182,9 @@ describe('pressed-border override', () => {
     expect(style.borderColor).to.equal(style.color);
   });
 
-  it('uses --lr-chip-pressed-border when set, independent of --lr-chip-accent (label color)', async () => {
+  it('uses --lr-chip-pressed-border-color when set, independent of --lr-chip-accent (label color)', async () => {
     const el = (await fixture(
-      html`<lr-chip toggleable selected style="--lr-chip-pressed-border: rgb(1, 2, 3);">Tag</lr-chip>`,
+      html`<lr-chip toggleable selected style="--lr-chip-pressed-border-color: rgb(1, 2, 3);">Tag</lr-chip>`,
     )) as LyraChip;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     const style = getComputedStyle(base);
@@ -1194,7 +1194,7 @@ describe('pressed-border override', () => {
 
   it('does not affect the resting (unpressed) border of a non-selected chip', async () => {
     const el = (await fixture(
-      html`<lr-chip style="--lr-chip-pressed-border: rgb(1, 2, 3);">Tag</lr-chip>`,
+      html`<lr-chip style="--lr-chip-pressed-border-color: rgb(1, 2, 3);">Tag</lr-chip>`,
     )) as LyraChip;
     const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
     expect(getComputedStyle(base).borderColor).to.not.equal('rgb(1, 2, 3)');

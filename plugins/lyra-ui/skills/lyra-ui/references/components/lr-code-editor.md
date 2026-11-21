@@ -149,8 +149,8 @@ colors the line-number gutter during scrolling.
 `--lr-code-editor-gutter-bg` (default: the fill), `--lr-code-editor-gutter-color` (default
 `var(--lr-color-text-quiet)`) and `--lr-code-editor-gutter-border-color` (default
 `var(--lr-color-border)`) retint the gutter alone without a `::part(gutter)` rule.
-`--lr-code-editor-hover-border` (default `var(--lr-color-brand)`) and
-`--lr-code-editor-invalid-border` retint those frame states. The invalid border falls back to
+`--lr-code-editor-hover-border-color` (default `var(--lr-color-brand)`) and
+`--lr-code-editor-invalid-border-color` retint those frame states. The invalid border falls back to
 `--lr-form-control-invalid-border-color`, then `--lr-color-danger`.
 `--lr-code-editor-radius` (default `var(--lr-radius)`) retunes the editor frame's corner radius
 without a `::part(editor)` rule.

@@ -4,7 +4,7 @@ import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import '../../lr-radio.js';
 import '../../lr-radio-group.js';
 import type { LyraRadio } from '../../lr-radio.js';
-import type { LyraRadioGroup, LyraRadioGroupSelectRequestDetail } from '../../lr-radio-group.js';
+import type { LyraRadioGroup, LyraRadioGroupChangeRequestDetail } from '../../lr-radio-group.js';
 
 const radiosOf = (group: LyraRadioGroup): LyraRadio[] => Array.from(group.querySelectorAll('lr-radio'));
 
@@ -15,7 +15,7 @@ describe('radio selection request', () => {
     </lr-radio-group>`);
     const [free, pro, team] = radiosOf(group);
     const log: string[] = [];
-    const requests: Array<Omit<LyraRadioGroupSelectRequestDetail, 'option' | 'radio'> & { same: boolean }> = [];
+    const requests: Array<Omit<LyraRadioGroupChangeRequestDetail, 'option' | 'radio'> & { same: boolean }> = [];
     let mode: 'veto' | 'resolve' | 'allow' = 'veto';
     group.addEventListener('lr-change-request', (event) => {
       const { value, previousValue, option, radio } = event.detail;

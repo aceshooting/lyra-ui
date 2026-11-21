@@ -20,8 +20,8 @@
 For the feedback buttons, set `--lr-icon-button-radius` for the corners. The fill, border and foreground use these tokens in resting, hover and pressed states respectively.
 
 - `--lr-icon-button-bg`, `--lr-icon-button-border`, `--lr-icon-button-color`
-- `--lr-icon-button-bg-hover`, `--lr-icon-button-border-hover`, `--lr-icon-button-color-hover`
-- `--lr-icon-button-bg-active`, `--lr-icon-button-border-active`, `--lr-icon-button-color-active`
+- `--lr-icon-button-hover-bg`, `--lr-icon-button-hover-border`, `--lr-icon-button-hover-color`
+- `--lr-icon-button-active-bg`, `--lr-icon-button-active-border`, `--lr-icon-button-active-color`
 
 The feedback control registers `lr-chip` when it first renders reasons. Await `updateComplete` before using a rendered chip. Server renderers can import the chip entry to include its shadow content.
 
@@ -126,9 +126,9 @@ their `-hover`/`-active` states), matching the `lr-icon-button` actions beside t
 **Themeable custom properties:** six pressed-state hooks, three per thumb —
 `--lr-message-feedback-up-active-color` (default `var(--lr-color-success)`),
 `--lr-message-feedback-up-active-bg` (default `var(--lr-color-success-quiet)`),
-`--lr-message-feedback-up-active-border` (default `var(--lr-color-success)`), and the thumbs-down
+`--lr-message-feedback-up-active-border-color` (default `var(--lr-color-success)`), and the thumbs-down
 trio `--lr-message-feedback-down-active-color`, `--lr-message-feedback-down-active-bg`,
-`--lr-message-feedback-down-active-border` (defaulting to `var(--lr-color-danger)`,
+`--lr-message-feedback-down-active-border-color` (defaulting to `var(--lr-color-danger)`,
 `var(--lr-color-danger-quiet)`, `var(--lr-color-danger)`). Each styles the glyph, background, and
 border of its thumb only while that thumb is pressed. All six are declared as inline `var()`
 fallbacks at the point of use and never on `:host`, so each can be set on the element _or on any

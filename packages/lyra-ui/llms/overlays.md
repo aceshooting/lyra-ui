@@ -233,7 +233,7 @@ inherit into the items slotted inside it: one declaration on `<lr-toast>` retune
 
 ### `lr-toast-item`
 
-The dismiss control is a composed `<lr-icon-button>`, so it is themed through the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`.
+The dismiss control is a composed `<lr-icon-button>`, so it is themed through the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-border`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`, `--lr-icon-button-color`, `--lr-icon-button-hover-color`, `--lr-icon-button-active-color` and `--lr-icon-button-radius`.
 
 A single notification.
 
@@ -1192,7 +1192,7 @@ mirrors the same accent/bg/border vocabulary `<lr-tool-call-chip>`/`<lr-attachme
 rule covers all four non-neutral variants, because the shared variants sheet has already re-pointed
 `--lr-color-fill-loud`/`--lr-color-fill-quiet` at the active variant's row of the semantic grid —
 the chip reads those generic slots and never names a variant, and sets its border `transparent`),
-`--lr-chip-pressed-border` (border color while pressed/selected — falls back to
+`--lr-chip-pressed-border-color` (border color while pressed/selected — falls back to
 `--lr-chip-accent`), `--lr-chip-pressed-bg` (background color while pressed/selected — falls
 back to `--lr-chip-bg`; a selected chip's hover/press wash mixes from it, an unselected toggleable
 chip's from `--lr-chip-bg`), the density quintet `--lr-chip-font-size`, `--lr-chip-padding-block`,
@@ -2899,7 +2899,7 @@ the remove button's `:hover` fill).
 
 ## `lr-alert`
 
-The close control is a composed `<lr-icon-button>`, so it is themed through the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`.
+The close control is a composed `<lr-icon-button>`, so it is themed through the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-border`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`, `--lr-icon-button-color`, `--lr-icon-button-hover-color`, `--lr-icon-button-active-color` and `--lr-icon-button-radius`.
 
 The `appearance` property accepts `filled-outlined` (default), `filled`, `outlined`, `plain`, and `accent`. Style the panel with `--lr-alert-bg`, `--lr-alert-border-color`, `--lr-alert-color`, `--lr-alert-radius`, and `--lr-alert-shadow`. After `lr-hide`, the cancelable `lr-close-request` and committed `lr-close` report `detail.reason` as `close-button`, `timeout`, or `programmatic`.
 

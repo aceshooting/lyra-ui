@@ -133,8 +133,8 @@ const WORKSPACE_SIZE_NOTICE_THRESHOLD = 500;
  * @csspart preview - Resolved read-only preview.
  * @csspart save - The save action.
  * @csspart run - The run action.
- * @cssprop [--lr-prompt-studio-field-hover-border=var(--lr-color-brand)] - Enabled field hover border.
- * @cssprop [--lr-prompt-studio-version-selected-border=var(--lr-color-brand)] - Selected version border.
+ * @cssprop [--lr-prompt-studio-field-hover-border-color=var(--lr-color-brand)] - Enabled field hover border.
+ * @cssprop [--lr-prompt-studio-version-selected-border-color=var(--lr-color-brand)] - Selected version border.
  * @cssprop [--lr-prompt-studio-version-selected-bg=var(--lr-color-brand-quiet)] - Selected version background.
  * @cssprop [--lr-prompt-studio-version-selected-color=var(--lr-color-text)] - Selected version foreground.
  * @cssprop [--lr-prompt-studio-version-selected-hover-bg=color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover))] - Selected version hover background. Unset, mixes from `--lr-prompt-studio-version-selected-bg` (its own default shown).

@@ -2,7 +2,7 @@ import { expect, fixture, html } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import '../../lr-segmented.js';
-import type { LyraSegmented, LyraSegmentedSelectRequestDetail } from '../../lr-segmented.js';
+import type { LyraSegmented, LyraSegmentedChangeRequestDetail } from '../../lr-segmented.js';
 
 const items = [
   { value: 'a', label: 'A' },
@@ -16,7 +16,7 @@ describe('segmented select request', () => {
   it('lets a listener veto or resolve a user selection before anything commits', async () => {
     const el = await fixture<LyraSegmented>(html`<lr-segmented label="Plan" value="a" .items=${items}></lr-segmented>`);
     const log: string[] = [];
-    const requests: LyraSegmentedSelectRequestDetail[] = [];
+    const requests: LyraSegmentedChangeRequestDetail[] = [];
     let mode: 'veto' | 'resolve' | 'allow' = 'veto';
     el.addEventListener('lr-change-request', (event) => {
       requests.push({ ...event.detail });

@@ -1125,7 +1125,7 @@ it('keeps the selected preset background independent from its border and foregro
       value="2026-08-13/2026-08-19"
       style="
         --lr-date-picker-preset-selected-bg: rgb(1, 2, 3);
-        --lr-date-picker-preset-selected-border: rgb(4, 5, 6);
+        --lr-date-picker-preset-selected-border-color: rgb(4, 5, 6);
         --lr-date-picker-preset-selected-color: rgb(7, 8, 9);
       "
     ></lr-date-picker>

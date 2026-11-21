@@ -681,9 +681,9 @@ honors the shared `--lr-icon-button-*` paint hooks.
 The search field accepts `--lr-input-fill`, `--lr-input-border-color`,
 `--lr-input-focus-border-color`, `--lr-input-placeholder-color`,
 `--lr-input-action-color`, and `--lr-input-action-hover-color`. The clear action accepts
-`--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`,
-`--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`,
-`--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active`, and
+`--lr-icon-button-bg`, `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`,
+`--lr-icon-button-border`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`,
+`--lr-icon-button-color`, `--lr-icon-button-hover-color`, `--lr-icon-button-active-color`, and
 `--lr-icon-button-radius` for its resting, hover, and pressed paint.
 
 **Optional peer deps:** none.
@@ -1429,7 +1429,7 @@ mirrors, never live regions.
 selection control: the `select-all` pill (whose resting default is `var(--lr-color-brand-quiet)`) and
 a fully-selected entry's `[part='checkbox']` (whose resting default is `var(--lr-color-brand)`). The
 two keep their distinct defaults while it is unset; setting it unifies both.
-`--lr-source-picker-checked-border` (default `var(--lr-color-brand)`) — the border color of every
+`--lr-source-picker-checked-border-color` (default `var(--lr-color-brand)`) — the border color of every
 checked _or_ mixed selection control. `--lr-source-picker-mixed-bg` (default
 `color-mix(in srgb, var(--lr-color-brand) 50%, var(--lr-color-surface))`) — the background of a
 partially-selected entry's `[part='checkbox']`, so a tri-state folder reads as distinct from a fully
@@ -2608,9 +2608,9 @@ kebab button: it inherits the row font, has the shared `--lr-icon-button-size` m
 (40px by default), and keeps independent hover, pressed, and focus treatment.
 
 **Themeable custom properties:** the row action trigger accepts
-`--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`,
-`--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`,
-`--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active`, and
+`--lr-icon-button-bg`, `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`,
+`--lr-icon-button-border`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`,
+`--lr-icon-button-color`, `--lr-icon-button-hover-color`, `--lr-icon-button-active-color`, and
 `--lr-icon-button-radius` for its resting, hover, and pressed paint; other styling uses shared
 tokens.
 
@@ -3282,7 +3282,7 @@ a `[part~="…"]` (not `[part="…"]`) selector is the one that matches inside a
 carry their own part names for the same class of reason — `::part()` matches a single element and
 cannot be followed by a descendant combinator, so `::part(metadata-entry) dt` reaches nothing.
 
-**Themeable custom properties:** `--lr-retrieval-results-selected-border` (default
+**Themeable custom properties:** `--lr-retrieval-results-selected-border-color` (default
 `var(--lr-color-brand)`) — the inline-start border color marking a selected row body
 (`::part(row-body-selected)`). `--lr-retrieval-results-selected-width` (default `var(--lr-space-2xs)`)
 sets that stripe's inline size, so a density retune of the spacing scale need not move it. A
@@ -3485,7 +3485,7 @@ the existing `evidence-metadata`, `evidence-metadata-row`, `evidence-metadata-ke
 `evidence-metadata` (a `<dl>`), `evidence-metadata-row` (one key/value pair), `evidence-metadata-key`
 (`<dt>`), `evidence-metadata-value` (`<dd>`), `chunk-inspector` (the stage-owned inspector).
 
-**Themeable custom properties:** `--lr-retrieval-trace-active-border` (default
+**Themeable custom properties:** `--lr-retrieval-trace-active-border-color` (default
 `var(--lr-color-brand)`) — the border color of the `[part='evidence-row']` whose stage matches
 `activeStageId`, leaving every other row on the resting border token. It is an inline `var()`
 fallback at the point of use rather than a `:host` declaration, so it can be set on the element _or
@@ -3808,7 +3808,7 @@ that moves an invalid or newly-hidden tab back to Sources is not a user activati
 
 **CSS parts:** `base`, `heading`, `tabs`, `tab`, `panel`, `settings`, `input-limit`.
 
-**Themeable custom properties:** `--lr-knowledge-base-admin-tab-selected-border` (default
+**Themeable custom properties:** `--lr-knowledge-base-admin-tab-selected-border-color` (default
 `var(--lr-color-brand)`) and `--lr-knowledge-base-admin-tab-selected-color` (default
 `var(--lr-color-text)`) — the bottom-border and text color of the selected `[part="tab"]`. State
 hooks: inline `var()` fallbacks at the point of use rather than `:host` declarations, so either can
@@ -3918,9 +3918,9 @@ button is named by its rank and source title (a blank name shows the localized "
 its text and scores are the button's description.
 **Slots:** none. **Optional peer deps:** none.
 
-**Themeable custom properties:** `--lr-retrieval-compare-selected-border` (default
+**Themeable custom properties:** `--lr-retrieval-compare-selected-border-color` (default
 `var(--lr-color-brand)`) — the border color marking a selected `[part~="chunk-selected"]` row, the
-same escape-hatch pattern as `lr-retrieval-results`'s `--lr-retrieval-results-selected-border`.
+same escape-hatch pattern as `lr-retrieval-results`'s `--lr-retrieval-results-selected-border-color`.
 
 ```ts
 import "@aceshooting/lyra-ui/components/lr-retrieval-compare.js";

@@ -10,7 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 7 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `tab`: `--lr-knowledge-base-admin-tab-selected-border`, `--lr-knowledge-base-admin-tab-selected-color`
+- **Tokens by part** (prefer these over a `::part()` rule) `tab`: `--lr-knowledge-base-admin-tab-selected-border-color`, `--lr-knowledge-base-admin-tab-selected-color`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -112,7 +112,7 @@ that moves an invalid or newly-hidden tab back to Sources is not a user activati
 
 **CSS parts:** `base`, `heading`, `tabs`, `tab`, `panel`, `settings`, `input-limit`.
 
-**Themeable custom properties:** `--lr-knowledge-base-admin-tab-selected-border` (default
+**Themeable custom properties:** `--lr-knowledge-base-admin-tab-selected-border-color` (default
 `var(--lr-color-brand)`) and `--lr-knowledge-base-admin-tab-selected-color` (default
 `var(--lr-color-text)`) — the bottom-border and text color of the selected `[part="tab"]`. State
 hooks: inline `var()` fallbacks at the point of use rather than `:host` declarations, so either can

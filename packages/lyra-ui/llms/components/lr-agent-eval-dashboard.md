@@ -54,5 +54,5 @@ At most the first 100 metrics render as cards (plus the active metric's card whe
 
 **Additional API surface:**
 
-- `--lr-agent-eval-dashboard-active-border` — Active metric border. Default: `var(--lr-color-brand)`.
+- `--lr-agent-eval-dashboard-active-border-color` — Active metric border. Default: `var(--lr-color-brand)`.
 - `--lr-agent-eval-dashboard-active-bg` — Active metric background, and the base its hover/press mixes from. Default: `var(--lr-color-brand-quiet)`.

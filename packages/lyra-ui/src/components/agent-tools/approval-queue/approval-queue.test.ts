@@ -750,7 +750,7 @@ describe('lr-approval-queue', () => {
   it('allows the selected request border to be rethemed independently', async () => {
     const el = (await fixture(html`
       <lr-approval-queue
-        style="--lr-approval-queue-selected-border: rgb(1, 2, 3)"
+        style="--lr-approval-queue-selected-border-color: rgb(1, 2, 3)"
         selected-invocation-id="call-1"
         .requests=${requests}
       ></lr-approval-queue>

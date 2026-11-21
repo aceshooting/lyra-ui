@@ -14,10 +14,10 @@ export const styles = css`
     /* Reads the PUBLIC hover token (not this component's own -bg-hover default) so that an
        ancestor override of just the hover tier still shapes the press mix -- a cross-reference to a
        DIFFERENT public token than the one being defined here, so it introduces no loop. */
-    --_lr-code-block-copy-bg-active: ${activeFill('var(--lr-icon-button-bg-hover, var(--lr-icon-button-background-hover, var(--lr-color-brand-quiet)))')};
+    --_lr-code-block-copy-bg-active: ${activeFill('var(--lr-icon-button-hover-bg, var(--lr-color-brand-quiet))')};
     --_lr-code-block-copy-color: var(--lr-color-text-quiet);
     --_lr-code-block-copy-color-hover: var(--lr-color-brand);
-    --_lr-code-block-copy-color-active: var(--lr-icon-button-color-hover, var(--lr-color-brand));
+    --_lr-code-block-copy-color-active: var(--lr-icon-button-hover-color, var(--lr-color-brand));
     --_lr-code-block-copy-radius: var(--lr-radius);
     display: block;
     /* Unsized, the host follows its content even inside a stretched grid/flex item; an explicit

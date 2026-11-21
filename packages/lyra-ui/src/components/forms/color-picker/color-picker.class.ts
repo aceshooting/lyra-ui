@@ -394,7 +394,7 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * `box-shadow` on the trigger while it is focused. One name for every field-shaped control in the
  * library, so a halo is configured once rather than per component. Additive: the focus outline is
  * the accessibility answer to focus and is never replaced by it.
- * @cssprop [--lr-color-picker-selected-border=var(--lr-color-brand)] - Border of the selected
+ * @cssprop [--lr-color-picker-selected-border-color=var(--lr-color-brand)] - Border of the selected
  * palette swatch.
  * @cssprop [--lr-color-picker-selected-check-color=var(--lr-color-surface)] - Checkmark color on
  * the selected palette swatch.

@@ -516,7 +516,7 @@ Backdrop clicks leave the dialog open by default; add `light-dismiss` to opt in,
 
 ---
 
-**Shared tokens:** the close and action buttons read the shared icon-button tokens `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`; the dialog panel paints the shared floating surface through `--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius`.
+**Shared tokens:** the close and action buttons read the shared icon-button tokens `--lr-icon-button-bg`, `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-border`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`, `--lr-icon-button-color`, `--lr-icon-button-hover-color`, `--lr-icon-button-active-color` and `--lr-icon-button-radius`; the dialog panel paints the shared floating surface through `--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius`.
 
 ## `lr-tool-select-dialog`
 
@@ -717,7 +717,7 @@ checkboxes for editing.
 
 **Heading level:** `headingLevel` (attribute `heading-level`, default `'2'`) sets the outline level of the title; `'none'` preserves its text without a heading role.
 
-**Shared tokens:** the icon buttons read `--lr-icon-button-bg`, `--lr-icon-button-bg-hover`, `--lr-icon-button-bg-active`, `--lr-icon-button-border`, `--lr-icon-button-border-hover`, `--lr-icon-button-border-active`, `--lr-icon-button-color`, `--lr-icon-button-color-hover`, `--lr-icon-button-color-active` and `--lr-icon-button-radius`; the panel reads `--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius`.
+**Shared tokens:** the icon buttons read `--lr-icon-button-bg`, `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-border`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`, `--lr-icon-button-color`, `--lr-icon-button-hover-color`, `--lr-icon-button-active-color` and `--lr-icon-button-radius`; the panel reads `--lr-overlay-surface`, `--lr-overlay-border` and `--lr-overlay-radius`.
 
 **Pointer-state tokens:** `--lr-tool-select-dialog-search-hover-border-color` (default `var(--lr-color-brand)`).
 
@@ -2673,7 +2673,7 @@ With `dataSource` set, additional CSS parts are `source-status` (provider loadin
 the current failed provider request), and `source-pagination` (provider page controls).
 
 **Themeable custom properties:** `--lr-test-results-filter-active-bg` (default
-`var(--lr-color-brand-quiet)`), `--lr-test-results-filter-active-border` (default
+`var(--lr-color-brand-quiet)`), `--lr-test-results-filter-active-border-color` (default
 `var(--lr-color-brand)`) and `--lr-test-results-filter-active-color` (default
 `var(--lr-color-brand)`) — the background, border color and text color of a pressed (active) status
 filter toggle. The background is also the base its hover/press mixes from. All three follow the state-scoped-property convention described under
@@ -3900,7 +3900,7 @@ At most the first 100 metrics render as cards (plus the active metric's card whe
 
 **Additional API surface:**
 
-- `--lr-agent-eval-dashboard-active-border` — Active metric border. Default: `var(--lr-color-brand)`.
+- `--lr-agent-eval-dashboard-active-border-color` — Active metric border. Default: `var(--lr-color-brand)`.
 - `--lr-agent-eval-dashboard-active-bg` — Active metric background, and the base its hover/press mixes from. Default: `var(--lr-color-brand-quiet)`.
 
 ## `lr-approval-queue`
@@ -3954,7 +3954,7 @@ state), so the selection is announced, not merely painted. Other request rows ex
 
 **Additional API surface:**
 
-- `--lr-approval-queue-selected-border` — Selected request border. Default: `var(--lr-color-brand)`.
+- `--lr-approval-queue-selected-border-color` — Selected request border. Default: `var(--lr-color-brand)`.
 
 **Heading level:** `headingLevel` (attribute `heading-level`, default `'2'`) sets the outline level of the title; `'none'` preserves its text without a heading role.
 
@@ -4229,8 +4229,8 @@ import "@aceshooting/lyra-ui/components/lr-prompt-studio.js";
 
 **Additional API surface:**
 
-- `--lr-prompt-studio-field-hover-border` — Enabled field hover border. Default: `var(--lr-color-brand)`.
-- `--lr-prompt-studio-version-selected-border` — Selected version border. Default: `var(--lr-color-brand)`.
+- `--lr-prompt-studio-field-hover-border-color` — Enabled field hover border. Default: `var(--lr-color-brand)`.
+- `--lr-prompt-studio-version-selected-border-color` — Selected version border. Default: `var(--lr-color-brand)`.
 - `--lr-prompt-studio-version-selected-bg` — Selected version background. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-prompt-studio-version-selected-color` — Selected version foreground. Default: `var(--lr-color-text)`.
 - `--lr-prompt-studio-version-selected-hover-bg` — Selected version hover background. Unset, mixes from `--lr-prompt-studio-version-selected-bg` (its own default shown). Default: `color-mix(in oklab, var(--lr-color-brand-quiet), var(--lr-color-mix-partner) var(--lr-color-mix-hover))`.
@@ -4265,7 +4265,7 @@ issue cap.
 
 Each issue also begins with visually hidden localized severity text (`Error:`, `Warning:`, `Note:`) and a distinct border style, so severity never depends on colour alone. `[part='issue']` carries `data-severity` and each severity has its own styling: `error` reads the
 danger tokens, `warning` the warning tokens, and `info` its own pair —
-`--lr-json-schema-viewer-info-border` (default `var(--lr-color-brand)`) and
+`--lr-json-schema-viewer-info-border-color` (default `var(--lr-color-brand)`) and
 `--lr-json-schema-viewer-info-bg` (default `var(--lr-color-brand-quiet)`). Brand rather than a dedicated info palette because this
 library has no `--lr-color-info-*` token, so an `info` issue stays distinguishable from an `error`. Both are inline `var()` fallbacks at their point of use,
 so either can be set on the element or on any ancestor — `::part(issue)[data-severity='info']` is
@@ -4273,7 +4273,7 @@ invalid CSS, so this is the only way to recolor one severity without touching th
 
 **Themeable custom properties:** `--lr-json-schema-viewer-max-indent` (default
 `var(--lr-size-12rem)`) caps visual nesting indentation while preserving complete JSON Pointer paths;
-`--lr-json-schema-viewer-info-border`, `--lr-json-schema-viewer-info-bg` (see above); otherwise shared
+`--lr-json-schema-viewer-info-border-color`, `--lr-json-schema-viewer-info-bg` (see above); otherwise shared
 tokens only.
 
 Rendering is capped independently at 500 schema nodes and 500 validation issues; `limit` and
@@ -4293,11 +4293,11 @@ import '@aceshooting/lyra-ui/components/lr-json-schema-viewer.js';
 
 - `part="limit"` — Resource-ceiling status shown when additional nodes are omitted.
 - `part="issue-limit"` — Resource-ceiling status shown when additional validation issues are omitted.
-- `--lr-json-schema-viewer-selected-border` — Selected node branch. Default: `var(--lr-color-brand)`.
+- `--lr-json-schema-viewer-selected-border-color` — Selected node branch. Default: `var(--lr-color-brand)`.
 - `--lr-json-schema-viewer-selected-bg` — Selected trigger fill and base color for its hover and press states. Default: `var(--lr-color-brand-quiet)`.
-- `--lr-json-schema-viewer-error-border` — Error issue border. Default: `var(--lr-color-danger)`.
+- `--lr-json-schema-viewer-error-border-color` — Error issue border. Default: `var(--lr-color-danger)`.
 - `--lr-json-schema-viewer-error-bg` — Error issue background. Default: `var(--lr-color-danger-quiet)`.
-- `--lr-json-schema-viewer-warning-border` — Warning issue border. Default: `var(--lr-color-warning)`.
+- `--lr-json-schema-viewer-warning-border-color` — Warning issue border. Default: `var(--lr-color-warning)`.
 - `--lr-json-schema-viewer-warning-bg` — Warning issue background. Default: `var(--lr-color-warning-quiet)`.
 
 ## `lr-subagent-panel`
@@ -4357,7 +4357,7 @@ import "@aceshooting/lyra-ui/components/lr-subagent-panel.js";
 **Additional API surface:**
 
 - `part="limit"` — Resource-ceiling status shown when additional runs are omitted.
-- `--lr-subagent-panel-selected-border` — Selected run border; under `frame="plain"` it paints the
+- `--lr-subagent-panel-selected-border-color` — Selected run border; under `frame="plain"` it paints the
   selected row's inline-start rule instead. Default: `var(--lr-color-brand)`.
 - `--lr-subagent-panel-progress-track` — Progress track. Default: `var(--lr-color-border)`.
 - `--lr-subagent-panel-progress-fill` — Progress fill. Default: `var(--lr-color-brand)`.
@@ -4377,7 +4377,7 @@ import "@aceshooting/lyra-ui/components/lr-subagent-panel.js";
   `--lr-color-mix-partner`, so retuning hover carries the press with it.
   Default: `var(--lr-color-surface-raised)`.
 - `--lr-subagent-panel-border-color` — Each run row's border and its action divider. A selected row
-  still uses `--lr-subagent-panel-selected-border`. Default: `var(--lr-color-border)`.
+  still uses `--lr-subagent-panel-selected-border-color`. Default: `var(--lr-color-border)`.
 - `--lr-subagent-panel-radius` — Each run row's corner radius; `frame="plain"` still squares them.
   Default: `var(--lr-radius)`.
 

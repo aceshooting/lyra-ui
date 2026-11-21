@@ -663,7 +663,7 @@ a hovered or keyboard-active `[part='option']` row — the same per-component in
 row state without hijacking the shared `--lr-color-brand-quiet` token library-wide.
 
 The currently-**selected** row (`[part='option'][aria-selected='true']`) has its own matching set:
-`--lr-combobox-option-selected-bg` (default `transparent`), `--lr-combobox-option-selected-border`
+`--lr-combobox-option-selected-bg` (default `transparent`), `--lr-combobox-option-selected-border-color`
 and `--lr-combobox-option-selected-color` (both default `var(--lr-color-brand)`), and
 `--lr-combobox-option-selected-font-weight` (default `var(--lr-font-weight-semibold)`) — the same
 four-token indirection `lr-select`/`lr-model-select` already provide for their own selected row.

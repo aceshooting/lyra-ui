@@ -10,7 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 24 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `page-field`: `--lr-pagination-page-field-gap`; `page-input`: `--lr-pagination-invalid-border`
+- **Tokens by part** (prefer these over a `::part()` rule) `page-field`: `--lr-pagination-page-field-gap`; `page-input`: `--lr-pagination-invalid-border-color`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -252,7 +252,7 @@ across `--lr-pagination-base-gap` (default `var(--lr-space-m)`) between summary 
 `--lr-pagination-page-field-gap` (default `var(--lr-space-2xs)`) between the compact
 `[part="page-input"]` and its `[part="page-count"]`; each remains
 active in standard, compact, and 320px container layouts —
-`--lr-pagination-invalid-border` (default `var(--lr-color-danger)`) — border color of
+`--lr-pagination-invalid-border-color` (default `var(--lr-color-danger)`) — border color of
 `[part="page-input"]` while the typed page is out of range (`aria-invalid="true"`); a state hook
 declared as an inline `var()` fallback, since `::part(page-input)[aria-invalid='true']` is invalid
 CSS. `--lr-pagination-control-color` independently controls the resting foreground. The applied

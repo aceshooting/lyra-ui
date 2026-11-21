@@ -211,10 +211,10 @@ floor that input keeps once tokens have consumed the row), and `--lr-token-input
 - `--lr-token-input-token-radius` — Token chip corner radius. Default: `var(--lr-radius)` (`pill` rounds it fully), the same as the `lr-select` and `lr-combobox` chips.
 - `--lr-token-input-action-hover-bg` — Backwards-compatible aggregate edit/remove hover
   background. Default: `var(--lr-color-brand-quiet)`.
-- `--lr-token-input-edit-hover-bg` / `--lr-token-input-edit-pressed-bg` — Editable token-label
+- `--lr-token-input-edit-hover-bg` / `--lr-token-input-edit-active-bg` — Editable token-label
   hover and pressed backgrounds. The hover hook falls back to
   `--lr-token-input-action-hover-bg`; the pressed hook defaults to its active-state mix.
-- `--lr-token-input-remove-hover-bg` / `--lr-token-input-remove-pressed-bg` — Remove-action hover
+- `--lr-token-input-remove-hover-bg` / `--lr-token-input-remove-active-bg` — Remove-action hover
   and pressed backgrounds, with the same aggregate-hover and active-state fallbacks.
 - `--lr-token-input-focus-border-color` — Focused row border color. Default: `var(--lr-color-brand)`.
 - `--lr-token-input-fill` — Resting input-row background, public since 16.0.0. Default:

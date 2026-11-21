@@ -3017,7 +3017,7 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
-            "name": "--lr-agent-eval-dashboard-active-border",
+            "name": "--lr-agent-eval-dashboard-active-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -5446,17 +5446,22 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-icon-button-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-icon-button-bg",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-hover",
             "deprecated": null,
             "hasDefault": false
           },
@@ -5466,27 +5471,22 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-border-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-border-hover",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-icon-button-color",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-active",
+            "name": "--lr-icon-button-hover-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-hover",
+            "name": "--lr-icon-button-hover-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-hover-color",
             "deprecated": null,
             "hasDefault": false
           },
@@ -8752,7 +8752,7 @@
             "default": "var(--lr-color-surface-raised)"
           },
           {
-            "name": "--lr-approval-queue-selected-border",
+            "name": "--lr-approval-queue-selected-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -15120,17 +15120,22 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-icon-button-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-icon-button-bg",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-hover",
             "deprecated": null,
             "hasDefault": false
           },
@@ -15140,27 +15145,22 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-border-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-border-hover",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-icon-button-color",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-active",
+            "name": "--lr-icon-button-hover-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-hover",
+            "name": "--lr-icon-button-hover-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-hover-color",
             "deprecated": null,
             "hasDefault": false
           },
@@ -18417,7 +18417,7 @@
             "default": "color-mix(in oklab, var(--lr-button-hover-base), var(--lr-color-mix-partner) var(--lr-color-mix-hover))"
           },
           {
-            "name": "--lr-button-hover-border",
+            "name": "--lr-button-hover-border-color",
             "deprecated": null,
             "hasDefault": false
           },
@@ -25215,17 +25215,22 @@
             "default": "auto"
           },
           {
+            "name": "--lr-icon-button-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-icon-button-bg",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-hover",
             "deprecated": null,
             "hasDefault": false
           },
@@ -25235,27 +25240,22 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-border-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-border-hover",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-icon-button-color",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-active",
+            "name": "--lr-icon-button-hover-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-hover",
+            "name": "--lr-icon-button-hover-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-hover-color",
             "deprecated": null,
             "hasDefault": false
           },
@@ -28031,7 +28031,7 @@
             "default": "var(--lr-chip-bg)"
           },
           {
-            "name": "--lr-chip-pressed-border",
+            "name": "--lr-chip-pressed-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-chip-accent)"
@@ -32037,13 +32037,13 @@
             "default": "var(--lr-color-text-quiet)"
           },
           {
-            "name": "--lr-code-editor-hover-border",
+            "name": "--lr-code-editor-hover-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
           },
           {
-            "name": "--lr-code-editor-invalid-border",
+            "name": "--lr-code-editor-invalid-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-danger)"
@@ -33434,7 +33434,7 @@
             "default": "var(--lr-radius)"
           },
           {
-            "name": "--lr-color-picker-selected-border",
+            "name": "--lr-color-picker-selected-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -35382,7 +35382,7 @@
             "default": "transparent"
           },
           {
-            "name": "--lr-combobox-option-selected-border",
+            "name": "--lr-combobox-option-selected-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -40292,17 +40292,22 @@
             "default": "color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))"
           },
           {
+            "name": "--lr-icon-button-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-icon-button-bg",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-hover",
             "deprecated": null,
             "hasDefault": false
           },
@@ -40312,27 +40317,22 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-border-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-border-hover",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-icon-button-color",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-active",
+            "name": "--lr-icon-button-hover-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-hover",
+            "name": "--lr-icon-button-hover-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-hover-color",
             "deprecated": null,
             "hasDefault": false
           },
@@ -48931,7 +48931,7 @@
           },
           {
             "name": "lr-change-request",
-            "type": "CustomEvent<LyraDatePickerSelectRequestDetail>",
+            "type": "CustomEvent<LyraDatePickerChangeRequestDetail>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           },
@@ -49176,11 +49176,6 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
-            "name": "--lr-date-picker-preset-active-bg",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-date-picker-preset-hover-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -49204,12 +49199,6 @@
           },
           {
             "name": "--lr-date-picker-preset-selected-bg",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-color-brand)"
-          },
-          {
-            "name": "--lr-date-picker-preset-selected-border",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -53212,7 +53201,7 @@
             "default": "var(--lr-color-surface-raised)"
           },
           {
-            "name": "--lr-document-preview-active-border",
+            "name": "--lr-document-preview-active-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-warning, var(--lr-color-brand))"
@@ -61838,7 +61827,7 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
-            "name": "--lr-env-list-reveal-active-border",
+            "name": "--lr-env-list-reveal-active-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -63454,7 +63443,7 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-export-button-active-border",
+            "name": "--lr-export-button-active-border-color",
             "deprecated": null,
             "hasDefault": false
           },
@@ -63490,7 +63479,7 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-export-button-hover-border",
+            "name": "--lr-export-button-hover-border-color",
             "deprecated": null,
             "hasDefault": false
           },
@@ -67269,20 +67258,25 @@
             "default": "var(--lr-color-brand)"
           },
           {
+            "name": "--lr-icon-button-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-icon-button-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "transparent"
-          },
-          {
-            "name": "--lr-icon-button-bg-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-hover",
-            "deprecated": null,
-            "hasDefault": false
           },
           {
             "name": "--lr-icon-button-border",
@@ -67291,28 +67285,23 @@
             "default": 0
           },
           {
-            "name": "--lr-icon-button-border-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-border-hover",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-icon-button-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text)"
           },
           {
-            "name": "--lr-icon-button-color-active",
+            "name": "--lr-icon-button-hover-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-hover",
+            "name": "--lr-icon-button-hover-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-hover-color",
             "deprecated": null,
             "hasDefault": false
           },
@@ -69932,17 +69921,22 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-icon-button-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-icon-button-bg",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-hover",
             "deprecated": null,
             "hasDefault": false
           },
@@ -69952,27 +69946,22 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-border-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-border-hover",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-icon-button-color",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-active",
+            "name": "--lr-icon-button-hover-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-hover",
+            "name": "--lr-icon-button-hover-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-hover-color",
             "deprecated": null,
             "hasDefault": false
           },
@@ -72319,20 +72308,25 @@
             "default": "var(--lr-color-text)"
           },
           {
+            "name": "--lr-icon-button-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-icon-button-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "transparent"
-          },
-          {
-            "name": "--lr-icon-button-bg-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-hover",
-            "deprecated": null,
-            "hasDefault": false
           },
           {
             "name": "--lr-icon-button-border",
@@ -72341,28 +72335,23 @@
             "default": 0
           },
           {
-            "name": "--lr-icon-button-border-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-border-hover",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-icon-button-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-graph-query-builder-saved-delete-color, var(--lr-color-text-quiet))"
           },
           {
-            "name": "--lr-icon-button-color-active",
+            "name": "--lr-icon-button-hover-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-hover",
+            "name": "--lr-icon-button-hover-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-hover-color",
             "deprecated": null,
             "hasDefault": false
           },
@@ -77320,22 +77309,28 @@
         ],
         "cssProperties": [
           {
-            "name": "--lr-icon-button-bg",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "transparent"
-          },
-          {
-            "name": "--lr-icon-button-bg-active",
+            "name": "--lr-icon-button-active-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
           },
           {
-            "name": "--lr-icon-button-bg-hover",
+            "name": "--lr-icon-button-active-border",
             "deprecated": null,
             "hasDefault": true,
-            "default": "color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))"
+            "default": "var(--lr-icon-button-hover-border, var(--lr-icon-button-border, 0))"
+          },
+          {
+            "name": "--lr-icon-button-active-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-hover-color, var(--lr-icon-button-color, inherit))"
+          },
+          {
+            "name": "--lr-icon-button-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "transparent"
           },
           {
             "name": "--lr-icon-button-border",
@@ -77344,31 +77339,25 @@
             "default": 0
           },
           {
-            "name": "--lr-icon-button-border-active",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-icon-button-border-hover, var(--lr-icon-button-border, 0))"
-          },
-          {
-            "name": "--lr-icon-button-border-hover",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-icon-button-border, 0)"
-          },
-          {
             "name": "--lr-icon-button-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "inherit"
           },
           {
-            "name": "--lr-icon-button-color-active",
+            "name": "--lr-icon-button-hover-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))"
+            "default": "color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))"
           },
           {
-            "name": "--lr-icon-button-color-hover",
+            "name": "--lr-icon-button-hover-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-border, 0)"
+          },
+          {
+            "name": "--lr-icon-button-hover-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-icon-button-color, inherit)"
@@ -78392,22 +78381,28 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-icon-button-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-icon-button-hover-bg, var(--lr-image-viewer-control-hover-bg, var(--lr-color-brand-quiet))), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-icon-button-active-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-hover-border, var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border)))"
+          },
+          {
+            "name": "--lr-icon-button-active-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-hover-color, var(--lr-icon-button-color, inherit))"
+          },
+          {
             "name": "--lr-icon-button-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-surface)"
-          },
-          {
-            "name": "--lr-icon-button-bg-active",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--lr-image-viewer-control-hover-bg, var(--lr-color-brand-quiet))), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
-          },
-          {
-            "name": "--lr-icon-button-bg-hover",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-image-viewer-control-hover-bg, var(--lr-color-brand-quiet))"
           },
           {
             "name": "--lr-icon-button-border",
@@ -78416,31 +78411,25 @@
             "default": "var(--lr-border-width-thin) solid var(--lr-color-border)"
           },
           {
-            "name": "--lr-icon-button-border-active",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-icon-button-border-hover, var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border)))"
-          },
-          {
-            "name": "--lr-icon-button-border-hover",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border))"
-          },
-          {
             "name": "--lr-icon-button-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text)"
           },
           {
-            "name": "--lr-icon-button-color-active",
+            "name": "--lr-icon-button-hover-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))"
+            "default": "var(--lr-image-viewer-control-hover-bg, var(--lr-color-brand-quiet))"
           },
           {
-            "name": "--lr-icon-button-color-hover",
+            "name": "--lr-icon-button-hover-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border))"
+          },
+          {
+            "name": "--lr-icon-button-hover-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-icon-button-color, inherit)"
@@ -78458,7 +78447,7 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
-            "name": "--lr-image-viewer-annotate-active-border",
+            "name": "--lr-image-viewer-annotate-active-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -78512,7 +78501,7 @@
             "default": "color-mix(in srgb, var(--lr-color-brand) 20%, transparent)"
           },
           {
-            "name": "--lr-image-viewer-highlight-border",
+            "name": "--lr-image-viewer-highlight-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -78523,7 +78512,7 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-image-viewer-highlight-danger-border",
+            "name": "--lr-image-viewer-highlight-danger-border-color",
             "deprecated": null,
             "hasDefault": false
           },
@@ -78538,7 +78527,7 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-image-viewer-highlight-neutral-border",
+            "name": "--lr-image-viewer-highlight-neutral-border-color",
             "deprecated": null,
             "hasDefault": false
           },
@@ -78548,7 +78537,7 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-image-viewer-highlight-success-border",
+            "name": "--lr-image-viewer-highlight-success-border-color",
             "deprecated": null,
             "hasDefault": false
           },
@@ -78558,7 +78547,7 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-image-viewer-highlight-warning-border",
+            "name": "--lr-image-viewer-highlight-warning-border-color",
             "deprecated": null,
             "hasDefault": false
           }
@@ -81453,7 +81442,7 @@
             "default": "var(--lr-color-danger-quiet)"
           },
           {
-            "name": "--lr-json-schema-viewer-error-border",
+            "name": "--lr-json-schema-viewer-error-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-danger)"
@@ -81465,7 +81454,7 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
-            "name": "--lr-json-schema-viewer-info-border",
+            "name": "--lr-json-schema-viewer-info-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -81483,7 +81472,7 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
-            "name": "--lr-json-schema-viewer-selected-border",
+            "name": "--lr-json-schema-viewer-selected-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -81495,7 +81484,7 @@
             "default": "var(--lr-color-warning-quiet)"
           },
           {
-            "name": "--lr-json-schema-viewer-warning-border",
+            "name": "--lr-json-schema-viewer-warning-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-warning)"
@@ -81814,17 +81803,22 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-icon-button-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-icon-button-bg",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-hover",
             "deprecated": null,
             "hasDefault": false
           },
@@ -81834,27 +81828,22 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-border-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-border-hover",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-icon-button-color",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-active",
+            "name": "--lr-icon-button-hover-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-hover",
+            "name": "--lr-icon-button-hover-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-hover-color",
             "deprecated": null,
             "hasDefault": false
           },
@@ -82697,22 +82686,28 @@
         ],
         "cssProperties": [
           {
-            "name": "--lr-icon-button-bg",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "transparent"
-          },
-          {
-            "name": "--lr-icon-button-bg-active",
+            "name": "--lr-icon-button-active-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
           },
           {
-            "name": "--lr-icon-button-bg-hover",
+            "name": "--lr-icon-button-active-border",
             "deprecated": null,
             "hasDefault": true,
-            "default": "color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))"
+            "default": "var(--lr-icon-button-hover-border, var(--lr-icon-button-border, 0))"
+          },
+          {
+            "name": "--lr-icon-button-active-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-hover-color, var(--lr-icon-button-color, inherit))"
+          },
+          {
+            "name": "--lr-icon-button-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "transparent"
           },
           {
             "name": "--lr-icon-button-border",
@@ -82721,31 +82716,25 @@
             "default": 0
           },
           {
-            "name": "--lr-icon-button-border-active",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-icon-button-border-hover, var(--lr-icon-button-border, 0))"
-          },
-          {
-            "name": "--lr-icon-button-border-hover",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-icon-button-border, 0)"
-          },
-          {
             "name": "--lr-icon-button-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text-quiet)"
           },
           {
-            "name": "--lr-icon-button-color-active",
+            "name": "--lr-icon-button-hover-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))"
+            "default": "color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))"
           },
           {
-            "name": "--lr-icon-button-color-hover",
+            "name": "--lr-icon-button-hover-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-border, 0)"
+          },
+          {
+            "name": "--lr-icon-button-hover-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text)"
@@ -83053,7 +83042,7 @@
         ],
         "cssProperties": [
           {
-            "name": "--lr-knowledge-base-admin-tab-selected-border",
+            "name": "--lr-knowledge-base-admin-tab-selected-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -92111,17 +92100,22 @@
             "default": 2
           },
           {
+            "name": "--lr-icon-button-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-icon-button-bg",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-hover",
             "deprecated": null,
             "hasDefault": false
           },
@@ -92131,27 +92125,22 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-border-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-border-hover",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-icon-button-color",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-active",
+            "name": "--lr-icon-button-hover-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-hover",
+            "name": "--lr-icon-button-hover-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-hover-color",
             "deprecated": null,
             "hasDefault": false
           },
@@ -93072,17 +93061,22 @@
             "default": 2
           },
           {
+            "name": "--lr-icon-button-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-icon-button-bg",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-hover",
             "deprecated": null,
             "hasDefault": false
           },
@@ -93092,27 +93086,22 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-border-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-border-hover",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-icon-button-color",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-active",
+            "name": "--lr-icon-button-hover-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-hover",
+            "name": "--lr-icon-button-hover-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-hover-color",
             "deprecated": null,
             "hasDefault": false
           },
@@ -96985,17 +96974,22 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-icon-button-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-icon-button-bg",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-hover",
             "deprecated": null,
             "hasDefault": false
           },
@@ -97005,27 +96999,22 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-border-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-border-hover",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-icon-button-color",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-active",
+            "name": "--lr-icon-button-hover-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-hover",
+            "name": "--lr-icon-button-hover-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-hover-color",
             "deprecated": null,
             "hasDefault": false
           },
@@ -97047,7 +97036,7 @@
             "default": "var(--lr-color-danger-quiet)"
           },
           {
-            "name": "--lr-message-feedback-down-active-border",
+            "name": "--lr-message-feedback-down-active-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-danger)"
@@ -97093,7 +97082,7 @@
             "default": "var(--lr-color-success-quiet)"
           },
           {
-            "name": "--lr-message-feedback-up-active-border",
+            "name": "--lr-message-feedback-up-active-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-success)"
@@ -99021,7 +99010,7 @@
             "default": "transparent"
           },
           {
-            "name": "--lr-model-select-option-selected-border",
+            "name": "--lr-model-select-option-selected-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -104224,22 +104213,28 @@
         ],
         "cssProperties": [
           {
-            "name": "--lr-icon-button-bg",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "transparent"
-          },
-          {
-            "name": "--lr-icon-button-bg-active",
+            "name": "--lr-icon-button-active-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
           },
           {
-            "name": "--lr-icon-button-bg-hover",
+            "name": "--lr-icon-button-active-border",
             "deprecated": null,
             "hasDefault": true,
-            "default": "color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))"
+            "default": "var(--lr-icon-button-hover-border, var(--lr-icon-button-border, 0))"
+          },
+          {
+            "name": "--lr-icon-button-active-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-hover-color, var(--lr-icon-button-color, inherit))"
+          },
+          {
+            "name": "--lr-icon-button-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "transparent"
           },
           {
             "name": "--lr-icon-button-border",
@@ -104248,31 +104243,25 @@
             "default": 0
           },
           {
-            "name": "--lr-icon-button-border-active",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-icon-button-border-hover, var(--lr-icon-button-border, 0))"
-          },
-          {
-            "name": "--lr-icon-button-border-hover",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-icon-button-border, 0)"
-          },
-          {
             "name": "--lr-icon-button-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-input-action-color, var(--lr-color-text-quiet))"
           },
           {
-            "name": "--lr-icon-button-color-active",
+            "name": "--lr-icon-button-hover-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))"
+            "default": "color-mix(in oklab, var(--lr-color-surface), var(--lr-color-mix-partner) var(--lr-color-mix-hover))"
           },
           {
-            "name": "--lr-icon-button-color-hover",
+            "name": "--lr-icon-button-hover-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-border, 0)"
+          },
+          {
+            "name": "--lr-icon-button-hover-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-input-action-hover-color, var(--lr-color-text))"
@@ -110134,7 +110123,7 @@
             "default": "var(--lr-color-brand)"
           },
           {
-            "name": "--lr-pagination-invalid-border",
+            "name": "--lr-pagination-invalid-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-danger)"
@@ -110506,22 +110495,28 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-icon-button-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-icon-button-hover-bg, var(--lr-pan-zoom-control-hover-bg, var(--lr-color-brand-quiet))), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-icon-button-active-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-hover-border, var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border)))"
+          },
+          {
+            "name": "--lr-icon-button-active-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-hover-color, var(--lr-icon-button-color, inherit))"
+          },
+          {
             "name": "--lr-icon-button-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-surface)"
-          },
-          {
-            "name": "--lr-icon-button-bg-active",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--lr-pan-zoom-control-hover-bg, var(--lr-color-brand-quiet))), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
-          },
-          {
-            "name": "--lr-icon-button-bg-hover",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-pan-zoom-control-hover-bg, var(--lr-color-brand-quiet))"
           },
           {
             "name": "--lr-icon-button-border",
@@ -110530,31 +110525,25 @@
             "default": "var(--lr-border-width-thin) solid var(--lr-color-border)"
           },
           {
-            "name": "--lr-icon-button-border-active",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-icon-button-border-hover, var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border)))"
-          },
-          {
-            "name": "--lr-icon-button-border-hover",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border))"
-          },
-          {
             "name": "--lr-icon-button-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text)"
           },
           {
-            "name": "--lr-icon-button-color-active",
+            "name": "--lr-icon-button-hover-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))"
+            "default": "var(--lr-pan-zoom-control-hover-bg, var(--lr-color-brand-quiet))"
           },
           {
-            "name": "--lr-icon-button-color-hover",
+            "name": "--lr-icon-button-hover-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border))"
+          },
+          {
+            "name": "--lr-icon-button-hover-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-icon-button-color, inherit)"
@@ -116209,17 +116198,22 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-icon-button-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-icon-button-bg",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-hover",
             "deprecated": null,
             "hasDefault": false
           },
@@ -116229,27 +116223,22 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-border-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-border-hover",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-icon-button-color",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-active",
+            "name": "--lr-icon-button-hover-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-hover",
+            "name": "--lr-icon-button-hover-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-hover-color",
             "deprecated": null,
             "hasDefault": false
           },
@@ -120668,7 +120657,7 @@
         ],
         "cssProperties": [
           {
-            "name": "--lr-prompt-studio-field-hover-border",
+            "name": "--lr-prompt-studio-field-hover-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -120680,7 +120669,7 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
-            "name": "--lr-prompt-studio-version-selected-border",
+            "name": "--lr-prompt-studio-version-selected-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -125297,7 +125286,7 @@
           },
           {
             "name": "lr-change-request",
-            "type": "CustomEvent<LyraRadioGroupSelectRequestDetail>",
+            "type": "CustomEvent<LyraRadioGroupChangeRequestDetail>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           },
@@ -130008,7 +129997,7 @@
             "default": "var(--lr-color-surface-raised)"
           },
           {
-            "name": "--lr-retrieval-compare-selected-border",
+            "name": "--lr-retrieval-compare-selected-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -130612,7 +130601,7 @@
         ],
         "cssProperties": [
           {
-            "name": "--lr-retrieval-results-selected-border",
+            "name": "--lr-retrieval-results-selected-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -131261,7 +131250,7 @@
         ],
         "cssProperties": [
           {
-            "name": "--lr-retrieval-trace-active-border",
+            "name": "--lr-retrieval-trace-active-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -134225,7 +134214,7 @@
           },
           {
             "name": "lr-change-request",
-            "type": "CustomEvent<LyraSegmentedSelectRequestDetail>",
+            "type": "CustomEvent<LyraSegmentedChangeRequestDetail>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           }
@@ -135755,7 +135744,7 @@
             "default": "transparent"
           },
           {
-            "name": "--lr-select-option-selected-border",
+            "name": "--lr-select-option-selected-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -140361,7 +140350,7 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-source-picker-checked-border",
+            "name": "--lr-source-picker-checked-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -145773,7 +145762,7 @@
             "default": "var(--lr-radius)"
           },
           {
-            "name": "--lr-subagent-panel-selected-border",
+            "name": "--lr-subagent-panel-selected-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -146019,7 +146008,7 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
-            "name": "--lr-suggestion-chips-hover-border",
+            "name": "--lr-suggestion-chips-hover-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -146362,7 +146351,7 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-svg-viewer-active-border",
+            "name": "--lr-svg-viewer-active-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-warning, var(--lr-color-brand))"
@@ -146623,7 +146612,7 @@
           },
           {
             "name": "lr-change-request",
-            "type": "CustomEvent<LyraSwatchPickerSelectRequestDetail>",
+            "type": "CustomEvent<LyraSwatchPickerChangeRequestDetail>",
             "cancelable": "always",
             "constructor": "CustomEvent"
           }
@@ -147311,7 +147300,7 @@
             "default": "var(--lr-space-s)"
           },
           {
-            "name": "--lr-switch-invalid-border",
+            "name": "--lr-switch-invalid-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-danger)"
@@ -152466,7 +152455,7 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
-            "name": "--lr-test-results-filter-active-border",
+            "name": "--lr-test-results-filter-active-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -155023,7 +155012,7 @@
             "deprecated": null
           },
           {
-            "name": "pin-glyph",
+            "name": "pin-icon",
             "deprecated": null
           },
           {
@@ -155137,17 +155126,22 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-icon-button-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-icon-button-bg",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-hover",
             "deprecated": null,
             "hasDefault": false
           },
@@ -155157,27 +155151,22 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-border-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-border-hover",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-icon-button-color",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-active",
+            "name": "--lr-icon-button-hover-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-hover",
+            "name": "--lr-icon-button-hover-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-hover-color",
             "deprecated": null,
             "hasDefault": false
           },
@@ -155274,25 +155263,25 @@
             "name": "--lr-thread-list-row-action-active-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-icon-button-bg-active, color-mix(in oklab, var(--lr-thread-list-row-action-hover-bg, var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised))), var(--lr-color-mix-partner) var(--lr-color-mix-active)))"
+            "default": "var(--lr-icon-button-active-bg, color-mix(in oklab, var(--lr-thread-list-row-action-hover-bg, var(--lr-icon-button-hover-bg, var(--lr-color-surface-raised))), var(--lr-color-mix-partner) var(--lr-color-mix-active)))"
           },
           {
             "name": "--lr-thread-list-row-action-active-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-icon-button-color-active, var(--lr-thread-list-row-action-hover-color, var(--lr-icon-button-color-hover, var(--lr-color-text))))"
+            "default": "var(--lr-icon-button-active-color, var(--lr-thread-list-row-action-hover-color, var(--lr-icon-button-hover-color, var(--lr-color-text))))"
           },
           {
             "name": "--lr-thread-list-row-action-hover-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-icon-button-bg-hover, var(--lr-color-surface-raised))"
+            "default": "var(--lr-icon-button-hover-bg, var(--lr-color-surface-raised))"
           },
           {
             "name": "--lr-thread-list-row-action-hover-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-icon-button-color-hover, var(--lr-color-text))"
+            "default": "var(--lr-icon-button-hover-color, var(--lr-color-text))"
           },
           {
             "name": "--lr-thread-list-search-clear-size",
@@ -157196,6 +157185,11 @@
             "default": "1.5rem*scale"
           },
           {
+            "name": "--lr-time-range-handle-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-time-range-handle-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -157213,11 +157207,6 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-time-range-handle-pressed-bg",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-time-range-handle-size",
             "deprecated": null,
             "hasDefault": true,
@@ -157228,24 +157217,6 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "max(24px,28px*scale)"
-          },
-          {
-            "name": "--lr-time-range-preset-active-bg",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-color-brand)"
-          },
-          {
-            "name": "--lr-time-range-preset-active-border-color",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-color-brand)"
-          },
-          {
-            "name": "--lr-time-range-preset-active-color",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-color-on-brand)"
           },
           {
             "name": "--lr-time-range-preset-font-size",
@@ -157294,17 +157265,20 @@
           {
             "name": "--lr-time-range-preset-selected-bg",
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
           },
           {
             "name": "--lr-time-range-preset-selected-border-color",
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
           },
           {
             "name": "--lr-time-range-preset-selected-color",
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": "var(--lr-color-on-brand)"
           },
           {
             "name": "--lr-time-range-range-bg",
@@ -159564,17 +159538,22 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-icon-button-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-icon-button-bg",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-hover",
             "deprecated": null,
             "hasDefault": false
           },
@@ -159584,27 +159563,22 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-border-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-border-hover",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-icon-button-color",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-active",
+            "name": "--lr-icon-button-hover-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-hover",
+            "name": "--lr-icon-button-hover-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-hover-color",
             "deprecated": null,
             "hasDefault": false
           },
@@ -161340,15 +161314,15 @@
             "default": "var(--lr-form-control-height)"
           },
           {
+            "name": "--lr-token-input-edit-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-token-input-edit-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-token-input-action-hover-bg)"
-          },
-          {
-            "name": "--lr-token-input-edit-pressed-bg",
-            "deprecated": null,
-            "hasDefault": false
           },
           {
             "name": "--lr-token-input-editor-inline-size",
@@ -161415,15 +161389,15 @@
             "default": "var(--lr-radius)"
           },
           {
+            "name": "--lr-token-input-remove-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-token-input-remove-hover-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-token-input-action-hover-bg)"
-          },
-          {
-            "name": "--lr-token-input-remove-pressed-bg",
-            "deprecated": null,
-            "hasDefault": false
           },
           {
             "name": "--lr-token-input-token-bg",
@@ -164026,17 +164000,22 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-icon-button-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-icon-button-bg",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-hover",
             "deprecated": null,
             "hasDefault": false
           },
@@ -164046,27 +164025,22 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-border-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-border-hover",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-icon-button-color",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-active",
+            "name": "--lr-icon-button-hover-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-hover",
+            "name": "--lr-icon-button-hover-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-hover-color",
             "deprecated": null,
             "hasDefault": false
           },
@@ -164961,17 +164935,22 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-icon-button-active-bg",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-active-color",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "--lr-icon-button-bg",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-bg-hover",
             "deprecated": null,
             "hasDefault": false
           },
@@ -164981,27 +164960,22 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-border-active",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
-            "name": "--lr-icon-button-border-hover",
-            "deprecated": null,
-            "hasDefault": false
-          },
-          {
             "name": "--lr-icon-button-color",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-active",
+            "name": "--lr-icon-button-hover-bg",
             "deprecated": null,
             "hasDefault": false
           },
           {
-            "name": "--lr-icon-button-color-hover",
+            "name": "--lr-icon-button-hover-border",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-icon-button-hover-color",
             "deprecated": null,
             "hasDefault": false
           },
@@ -173404,7 +173378,7 @@
             "default": "transparent"
           },
           {
-            "name": "--lr-voice-picker-option-selected-border",
+            "name": "--lr-voice-picker-option-selected-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -173440,7 +173414,7 @@
             "default": "italic"
           },
           {
-            "name": "--lr-voice-picker-preview-active-border",
+            "name": "--lr-voice-picker-preview-active-border-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand)"
@@ -175992,22 +175966,28 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-icon-button-active-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in oklab, var(--lr-icon-button-hover-bg, var(--lr-zoomable-frame-control-hover-bg, var(--lr-color-brand-quiet))), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
+          },
+          {
+            "name": "--lr-icon-button-active-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-hover-border, var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border)))"
+          },
+          {
+            "name": "--lr-icon-button-active-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-hover-color, var(--lr-icon-button-color, inherit))"
+          },
+          {
             "name": "--lr-icon-button-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-surface)"
-          },
-          {
-            "name": "--lr-icon-button-bg-active",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "color-mix(in oklab, var(--lr-icon-button-bg-hover, var(--lr-zoomable-frame-control-hover-bg, var(--lr-color-brand-quiet))), var(--lr-color-mix-partner) var(--lr-color-mix-active))"
-          },
-          {
-            "name": "--lr-icon-button-bg-hover",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-zoomable-frame-control-hover-bg, var(--lr-color-brand-quiet))"
           },
           {
             "name": "--lr-icon-button-border",
@@ -176016,31 +175996,25 @@
             "default": "var(--lr-border-width-thin) solid var(--lr-color-border)"
           },
           {
-            "name": "--lr-icon-button-border-active",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-icon-button-border-hover, var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border)))"
-          },
-          {
-            "name": "--lr-icon-button-border-hover",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border))"
-          },
-          {
             "name": "--lr-icon-button-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-text)"
           },
           {
-            "name": "--lr-icon-button-color-active",
+            "name": "--lr-icon-button-hover-bg",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-icon-button-color-hover, var(--lr-icon-button-color, inherit))"
+            "default": "var(--lr-zoomable-frame-control-hover-bg, var(--lr-color-brand-quiet))"
           },
           {
-            "name": "--lr-icon-button-color-hover",
+            "name": "--lr-icon-button-hover-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-border, var(--lr-border-width-thin) solid var(--lr-color-border))"
+          },
+          {
+            "name": "--lr-icon-button-hover-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-icon-button-color, inherit)"

@@ -174,14 +174,14 @@ export interface LyraConversationItemEventMap {
  * @cssprop [--lr-conversation-item-hover-bg=color-mix(in srgb, var(--lr-color-text) 6%, transparent)] - Row background on hover or while an actions menu is open.
  * @cssprop [--lr-conversation-item-pressed-bg=color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-active))] - Row background while an inactive row is pressed. The open session's own press deepens `--lr-conversation-item-active-bg` instead.
  * @cssprop --lr-icon-button-bg - Resting background of the rename button.
- * @cssprop --lr-icon-button-bg-active - Pressed background of the rename button.
- * @cssprop --lr-icon-button-bg-hover - Hover background of the rename button.
+ * @cssprop --lr-icon-button-active-bg - Pressed background of the rename button.
+ * @cssprop --lr-icon-button-hover-bg - Hover background of the rename button.
  * @cssprop --lr-icon-button-border - Resting border of the rename button.
- * @cssprop --lr-icon-button-border-active - Pressed border of the rename button.
- * @cssprop --lr-icon-button-border-hover - Hover border of the rename button.
+ * @cssprop --lr-icon-button-active-border - Pressed border of the rename button.
+ * @cssprop --lr-icon-button-hover-border - Hover border of the rename button.
  * @cssprop --lr-icon-button-color - Resting foreground of the rename button.
- * @cssprop --lr-icon-button-color-active - Pressed foreground of the rename button.
- * @cssprop --lr-icon-button-color-hover - Hover foreground of the rename button.
+ * @cssprop --lr-icon-button-active-color - Pressed foreground of the rename button.
+ * @cssprop --lr-icon-button-hover-color - Hover foreground of the rename button.
  * @cssprop --lr-icon-button-radius - Corner radius of the rename button.
  * @status stable
  * @since 4.0.0

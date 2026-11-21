@@ -196,7 +196,7 @@ export interface LyraButtonEventMap {
  * and press to retain contrast against the moving fill; other appearances keep their resting
  * foreground. An explicit override takes precedence in both pointer states.
  * `appearance="link"` ignores it: its own hover rule sets a higher-specificity colour mix instead.
- * @cssprop --lr-button-hover-border - Border color of a non-disabled button while hovered.
+ * @cssprop --lr-button-hover-border-color - Border color of a non-disabled button while hovered.
  * **Undeclared by default**, so it falls back to whatever border colour the active `appearance`
  * already paints at rest — every appearance's current hover border is unchanged until this is set.
  * `appearance="link"` renders with no border (`border: 0`) at every state, so this has no visible

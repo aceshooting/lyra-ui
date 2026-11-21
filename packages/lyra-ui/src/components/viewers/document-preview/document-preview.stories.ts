@@ -297,13 +297,13 @@ export const ThemedActiveRegion: Story = {
     docs: {
       description: {
         story:
-          '`--lr-document-preview-active-border` recolors the region matching `active-highlight-id`. Select a region on the image, or narrow the preview until overlapping hit areas move to a separate action list.',
+          '`--lr-document-preview-active-border-color` recolors the region matching `active-highlight-id`. Select a region on the image, or narrow the preview until overlapping hit areas move to a separate action list.',
       },
     },
   },
   render: () => html`
     <lr-document-preview
-      style="--lr-document-preview-active-border: ${storyColor('success')};"
+      style="--lr-document-preview-active-border-color: ${storyColor('success')};"
       mime-type="image/png"
       src="https://picsum.photos/id/1015/900/600"
       filename="river.png"

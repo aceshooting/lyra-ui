@@ -2203,6 +2203,10 @@ test('globals of every kind and the former property name are shape- and surface-
   assertFinding(inventoryFindings([part('lr-ghost', 'a')], []), /component is not in the inventory/);
   assertFinding(inventoryFindings([part('lr-sample-panel', 'no-such-part')], []), /the part is not on the public surface/);
   assert.deepEqual(inventoryFindings([part('lr-sample-panel', 'body')], []).filter((finding) => /global part/.test(finding)), []);
+  const publishedOnly = syntheticLedger();
+  Object.assign(publishedOnly.profiles.find((entry) => entry.origin === 'lyra-v26'), { globals: [part('lr-sample-panel', 'retired-part')], propertyChanges: [] });
+  const context = { sourceComponents: { 'lr-sample-panel': { tag: 'lr-sample-panel', surface: { parts: [{ name: 'retired-part' }] } } } };
+  assert.deepEqual(validateRenameLedger(publishedOnly, { inventory, compatibilityContext: context }).filter((finding) => /global part/.test(finding)), []);
   assertFinding(inventoryFindings([], [{ tag: 'lr-details', property: 'open', former: 'open', summary: 'x' }]), /former must differ|still on the public surface/);
 });
 
@@ -2312,13 +2316,18 @@ test('lyra-v31 reports every name removed in 32.0.0 and accepts the resolved, ty
   }
 });
 
-test('lyra-v31 rewrites every renamed published CSS custom property to its -color name', () => {
+test('lyra-v31 rewrites every renamed published CSS custom property, once', () => {
   const profile = readRenameLedger().profiles.find(entry => entry.origin === 'lyra-v31');
   const tokens = profile.globals.filter(entry => entry.kind === 'css-property');
-  assert.deepEqual(tokens.map(entry => entry.from).sort(), [
-    '--lr-callout-border', '--lr-checkbox-active-border', '--lr-checkbox-active-ring', '--lr-checkbox-checked-border',
-    '--lr-checkbox-group-invalid-border', '--lr-checkbox-hover-border', '--lr-checkbox-invalid-border', '--lr-radio-group-invalid-border',
-  ]);
+  const from = new Set(tokens.map(entry => entry.from));
+  for (const name of [
+    '--lr-callout-border', '--lr-checkbox-invalid-border', '--lr-radio-group-invalid-border', '--lr-icon-button-bg-hover',
+    '--lr-icon-button-border-active', '--lr-token-input-remove-pressed-bg', '--lr-time-range-handle-pressed-bg',
+    '--lr-date-picker-preset-active-bg', '--lr-time-range-preset-active-color', '--lr-switch-invalid-border',
+    '--lr-code-editor-invalid-border', '--lr-pagination-invalid-border', '--lr-select-option-selected-border',
+  ]) assert.ok(from.has(name), name);
+  assert.equal(tokens.length, 63);
+  assert.deepEqual(tokens.filter(entry => from.has(entry.to)), [], 'no target is itself renamed, so a rerun is stable');
   const current = buildMigrationContract(checkedInventory, {
     renameLedger: readRenameLedger(), exportDeprecations: readExportDeprecations(), compatibilityContext: checkedCompatibilityContext,
   });
@@ -2330,6 +2339,14 @@ test('lyra-v31 rewrites every renamed published CSS custom property to its -colo
     const rerun = migrateText(result.content, current, { file: 'theme.css', origin: 'lyra-v31' });
     assert.deepEqual(rerun.changes, [], `${entry.to} is stable`);
   }
+});
+
+test('lyra-v31 reports a styled lr-thread-list pin-glyph part', () => {
+  const current = buildMigrationContract(checkedInventory, {
+    renameLedger: readRenameLedger(), exportDeprecations: readExportDeprecations(), compatibilityContext: checkedCompatibilityContext,
+  });
+  const result = migrateText('lr-thread-list::part(pin-glyph) { color: red; }\nlr-thread-list::part(pin-icon) { color: red; }\n', current, { file: 'a.css', origin: 'lyra-v31' });
+  assert.deepEqual(result.warnings.map(warning => [warning.line, warning.warningCode]), [[1, 'GLOBAL_REVIEW']]);
 });
 
 test('lyra-v31 re-binds the removed viewers-barrel subclass to the canonical class and reports other routes', () => {

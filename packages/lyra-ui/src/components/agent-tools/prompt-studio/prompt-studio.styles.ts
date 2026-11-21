@@ -51,7 +51,7 @@ export const styles = css`
      :focus-visible carries the affordance in all three cases. */
   :where([part='message-role'], [part='message-content']):hover:where(:not(:disabled)),
   :where([part='variable']) input:hover:where(:not(:disabled)) {
-    border-color: var(--lr-prompt-studio-field-hover-border, var(--lr-color-brand));
+    border-color: var(--lr-prompt-studio-field-hover-border-color, var(--lr-color-brand));
   }
   [part='variables'], [part='versions'] { display: flex; flex-direction: column; gap: var(--lr-space-xs); }
   [part='variables'] .subheading, [part='preview'] .subheading { margin: 0; font-size: var(--lr-font-size-m); }
@@ -81,7 +81,7 @@ export const styles = css`
   [part='move-message-up'] { transform: rotate(-90deg); }
   [part='move-message-down'] { transform: rotate(90deg); }
   [part='version']:where([aria-pressed='true']) {
-    border-color: var(--lr-prompt-studio-version-selected-border, var(--lr-color-brand));
+    border-color: var(--lr-prompt-studio-version-selected-border-color, var(--lr-color-brand));
     background: var(--lr-prompt-studio-version-selected-bg, var(--lr-color-brand-quiet));
     color: var(--lr-prompt-studio-version-selected-color, var(--lr-color-text));
   }

@@ -55,7 +55,7 @@ export const styles = css`
     ${disabledControl}
   }
   [part='preview-button'][data-playing] {
-    border-color: var(--lr-voice-picker-preview-active-border, var(--lr-color-brand));
+    border-color: var(--lr-voice-picker-preview-active-border-color, var(--lr-color-brand));
     color: var(--lr-voice-picker-preview-active-color, var(--lr-color-brand));
   }
 

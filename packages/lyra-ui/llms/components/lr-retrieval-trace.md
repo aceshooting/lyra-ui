@@ -10,7 +10,7 @@
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 18 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `evidence-row`: `--lr-retrieval-trace-active-border`
+- **Tokens by part** (prefer these over a `::part()` rule) `evidence-row`: `--lr-retrieval-trace-active-border-color`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -84,7 +84,7 @@ the existing `evidence-metadata`, `evidence-metadata-row`, `evidence-metadata-ke
 `evidence-metadata` (a `<dl>`), `evidence-metadata-row` (one key/value pair), `evidence-metadata-key`
 (`<dt>`), `evidence-metadata-value` (`<dd>`), `chunk-inspector` (the stage-owned inspector).
 
-**Themeable custom properties:** `--lr-retrieval-trace-active-border` (default
+**Themeable custom properties:** `--lr-retrieval-trace-active-border-color` (default
 `var(--lr-color-brand)`) — the border color of the `[part='evidence-row']` whose stage matches
 `activeStageId`, leaving every other row on the resting border token. It is an inline `var()`
 fallback at the point of use rather than a `:host` declaration, so it can be set on the element _or

@@ -132,7 +132,7 @@ const viewConverter: ComplexAttributeConverter<LyraDatePickerView> = {
 };
 
 /** Detail of `lr-change-request`. */
-export interface LyraDatePickerSelectRequestDetail {
+export interface LyraDatePickerChangeRequestDetail {
   /** The ISO value the pick proposes (`YYYY-MM-DD`, or `YYYY-MM-DD/YYYY-MM-DD` for a range). */
   readonly value: string;
   /** The ISO value the picker holds while the request dispatches. */
@@ -140,7 +140,7 @@ export interface LyraDatePickerSelectRequestDetail {
 }
 
 export interface LyraDatePickerEventMap {
-  'lr-change-request': CustomEvent<LyraDatePickerSelectRequestDetail>;
+  'lr-change-request': CustomEvent<LyraDatePickerChangeRequestDetail>;
   'lr-input': CustomEvent<{ value: string; previousValue?: string }>;
   'lr-change': CustomEvent<{ value: string; previousValue?: string }>;
   input: InputEvent;
@@ -320,15 +320,12 @@ function canonicalDateRangePresets(
  * @cssprop --lr-date-picker-preset-pressed-border-color - Pressed border color of a quick-range
  *   button; defaults to an active-state mix of `--lr-color-brand`.
  * @cssprop [--lr-date-picker-preset-selected-border-color=var(--lr-color-brand)] - Border color of
- *   the selected quick-range button; wins over `--lr-date-picker-preset-selected-border`.
- * @cssprop --lr-date-picker-preset-active-bg - Pressed background of a quick-range button;
- *   defaults to a mix of the hover background with the shared active mix partner.
- * @cssprop --lr-date-picker-preset-pressed-bg - Pressed background of a quick-range button; wins
- *   over `--lr-date-picker-preset-active-bg`.
+ *   the selected quick-range button.
+ * @cssprop --lr-date-picker-preset-pressed-bg - Pressed background of a quick-range button, named
+ *   like `lr-time-range`'s; defaults to a mix of the hover background with the shared active mix
+ *   partner.
  * @cssprop [--lr-date-picker-preset-selected-bg=var(--lr-color-brand)] - Background of the
  *   quick-range button whose range is currently selected.
- * @cssprop [--lr-date-picker-preset-selected-border=var(--lr-color-brand)] - Border color of the
- *   selected quick-range button.
  * @cssprop [--lr-date-picker-preset-selected-color=var(--lr-color-on-brand)] - Foreground color
  *   of the selected quick-range button.
  * @csspart weeknumbers - The week-number column.

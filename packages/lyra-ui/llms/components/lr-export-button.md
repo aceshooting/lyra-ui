@@ -123,8 +123,8 @@ attempt regardless of outcome — style with `::part(trigger-error)`), `menu`, `
 **Themeable custom properties:** the trigger's paint is settable per state. At rest,
 `--lr-export-button-bg`, `--lr-export-button-color` and `--lr-export-button-border`; on
 hover, `--lr-export-button-hover-bg`, `--lr-export-button-hover-color` and
-`--lr-export-button-hover-border`; while pressed, `--lr-export-button-active-bg`,
-`--lr-export-button-active-color` and `--lr-export-button-active-border`. Each layers over whatever
+`--lr-export-button-hover-border-color`; while pressed, `--lr-export-button-active-bg`,
+`--lr-export-button-active-color` and `--lr-export-button-active-border-color`. Each layers over whatever
 the current `appearance` resolves to and leaves the other paints alone, so they are also the way to
 keep `appearance="outlined"` chrome while returning its label to neutral text — `outlined` paints
 the label `--lr-color-brand` and, unlike `lr-button`, this component has no `variant` of its own to

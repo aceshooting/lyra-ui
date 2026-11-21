@@ -6,20 +6,14 @@ export const styles = css`
   :host {
     --_lr-preset-hover-bg: var(--lr-date-picker-preset-hover-bg);
     --_lr-preset-hover-border-color: var(--lr-date-picker-preset-hover-border-color);
-    --_lr-preset-pressed-bg: var(--lr-date-picker-preset-pressed-bg, var(--lr-date-picker-preset-active-bg));
+    --_lr-preset-pressed-bg: var(--lr-date-picker-preset-pressed-bg);
     --_lr-preset-pressed-border-color: var(--lr-date-picker-preset-pressed-border-color);
     --_lr-preset-selected-bg: var(--lr-date-picker-preset-selected-bg);
-    --_lr-preset-selected-border-color: var(
-      --lr-date-picker-preset-selected-border-color,
-      var(--lr-date-picker-preset-selected-border)
-    );
+    --_lr-preset-selected-border-color: var(--lr-date-picker-preset-selected-border-color);
     --_lr-preset-selected-color: var(--lr-date-picker-preset-selected-color);
     --_lr-preset-selected-pressed-bg: var(
       --lr-date-picker-preset-pressed-bg,
-      var(
-        --lr-date-picker-preset-active-bg,
-        var(--lr-date-picker-preset-hover-bg, var(--lr-date-picker-preset-selected-bg, var(--lr-color-brand)))
-      )
+      var(--lr-date-picker-preset-hover-bg, var(--lr-date-picker-preset-selected-bg, var(--lr-color-brand)))
     );
     --_lr-preset-selected-pressed-image: linear-gradient(
       ${activeFill('transparent')},
@@ -27,7 +21,7 @@ export const styles = css`
     );
     --_lr-preset-selected-pressed-border-color: var(
       --lr-date-picker-preset-selected-border-color,
-      var(--lr-date-picker-preset-selected-border, var(--lr-color-brand))
+      var(--lr-color-brand)
     );
     display: inline-block;
     --_lr-cell-size: var(--lr-size-2-25rem);

@@ -334,7 +334,7 @@ of authoring `positioning-strategy`/`hoist` on each instance.
 - `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` on the trigger
   while it is focused. One name for every field-shaped control in the library, so a halo is
   configured once instead of per component; additive to the existing focus outline. Default: `none`.
-- `--lr-color-picker-selected-border` — Selected palette-swatch border. Default:
+- `--lr-color-picker-selected-border-color` — Selected palette-swatch border. Default:
   `var(--lr-color-brand)`.
 - `--lr-color-picker-selected-check-color` — Checkmark on the selected palette swatch. Default:
   `var(--lr-color-surface)`.

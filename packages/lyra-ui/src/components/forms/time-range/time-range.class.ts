@@ -166,21 +166,15 @@ export interface LyraTimeRangeEventMap {
  *   is unaffected, since a `setCustomValidity()` error survives a reset.
  * @cssprop [--lr-time-range-track-bg=var(--lr-color-border)] - Unselected track color.
  * @cssprop [--lr-time-range-range-bg=var(--lr-color-brand)] - Selected-range fill.
- * @cssprop [--lr-time-range-preset-active-bg=var(--lr-color-brand)] - Background of the active
+ * @cssprop [--lr-time-range-preset-selected-bg=var(--lr-color-brand)] - Background of the selected
  *   preset button (`[data-active]`, i.e. the preset whose button produced the current range).
  *   Declared as an inline `var()` fallback (never on `:host`), so setting it on the element or an
- *   ancestor recolors only the active preset without hijacking the library-wide
+ *   ancestor recolors only the selected preset without hijacking the library-wide
  *   `--lr-color-brand` token.
- * @cssprop [--lr-time-range-preset-active-border-color=var(--lr-color-brand)] - Border color of the
- *   active preset button.
- * @cssprop [--lr-time-range-preset-active-color=var(--lr-color-on-brand)] - Text color of the active
- *   preset button.
- * @cssprop --lr-time-range-preset-selected-bg - Background of the active preset button; wins over
- *   `--lr-time-range-preset-active-bg`.
- * @cssprop --lr-time-range-preset-selected-border-color - Border color of the active preset button;
- *   wins over `--lr-time-range-preset-active-border-color`.
- * @cssprop --lr-time-range-preset-selected-color - Text color of the active preset button; wins
- *   over `--lr-time-range-preset-active-color`.
+ * @cssprop [--lr-time-range-preset-selected-border-color=var(--lr-color-brand)] - Border color of
+ *   the selected preset button.
+ * @cssprop [--lr-time-range-preset-selected-color=var(--lr-color-on-brand)] - Text color of the
+ *   selected preset button.
  * @cssprop [--lr-time-range-preset-hover-bg=var(--lr-color-brand-quiet)] - Background of a hovered
  *   preset button.
  * @cssprop [--lr-time-range-preset-hover-border-color=var(--lr-color-brand)] - Border color of a
@@ -193,7 +187,7 @@ export interface LyraTimeRangeEventMap {
  * @cssprop [--lr-time-range-handle-border-color=var(--lr-color-surface)] - Resting handle border.
  * @cssprop --lr-time-range-handle-hover-bg - Hovered handle background; defaults to a hover-state
  *   mix of `--lr-time-range-handle-bg`.
- * @cssprop --lr-time-range-handle-pressed-bg - Pressed handle background; defaults to an
+ * @cssprop --lr-time-range-handle-active-bg - Pressed handle background; defaults to an
  *   active-state mix of `--lr-time-range-handle-bg`.
  * @cssprop [--lr-time-range-size-scale=1] - Unitless multiplier applied proportionally to the handle,
  *   track, and preset-button dimensions based on the current `size` tier; the drag hit-area is floored
