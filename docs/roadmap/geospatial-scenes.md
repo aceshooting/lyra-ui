@@ -1,16 +1,8 @@
 # Geospatial scenes and synchronized playback
 
-Status: planned and unstarted, after 30.1.0. None of this work was a 30.1.0 release requirement.
-P1 and P2 indicate priority, not a promised release version or date. Public API names, package
-ownership and implementation scope require a separate specification before implementation.
-
-The published 30.1.0 release adds experimental independently owned map anchors and maintenance
-corrections; it does not implement any P1 or P2 item below. Their specification, ownership and
-qualification remain separate work.
-
-The published [30.2 maintenance delivery](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.2.0) improves existing map preparation
-and anchor placement. It does not implement the scene, altitude, playback or shared-clock work
-below; all six P1/P2 items retain their separate specification and qualification requirements.
+Status: planned and unstarted. P1 and P2 indicate priority, not a promised release version or date.
+Public API names, package ownership and implementation scope require a separate specification
+before implementation.
 
 ## Existing foundation
 

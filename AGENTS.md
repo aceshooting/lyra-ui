@@ -206,7 +206,7 @@ vocabulary. Full rules: **[docs/agents/upstream-parity.md](docs/agents/upstream-
 - Never invert polarity (gated by `check-migration-coverage.mjs`) or change a default (ungated).
 - README `Mirrors` cells are executable rewrite rules (`buildMirrorMap`), gated by
   `check-migration-coverage.mjs`.
-- A Lyra-only deprecation record removed in 23.0.0 lands with its
+- A Lyra-only deprecation record removed in a migration profile's `aliasRemovalMajor` lands with its
   `scripts/fixtures/lyra-renames.json` entry — `renames` only for an exact alias whose rewrite
   keeps a site's reach, otherwise `reviews` (`slotContent` for slot content) — or
   `check-migration-coverage.mjs` fails `pnpm lint` ([RFC 0003](docs/rfcs/0003-lyra-v21-migration-profile.md)).

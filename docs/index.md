@@ -71,4 +71,4 @@ digests and links.
 
 `docs/` holds this index, public policy/RFC material, and `docs/agents/` — the detailed contributor
 reference behind [AGENTS.md](../AGENTS.md); it does not duplicate the Storybook site or the package
-README.
+README. [`archive/`](archive/) keeps superseded history that no longer guides current work.

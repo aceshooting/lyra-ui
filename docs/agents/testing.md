@@ -101,12 +101,10 @@ button tracking. Keyboard commands such as `sendKeys` continue using that packag
   twice in a row. Flaky tests get fixed, or explicitly quarantined with a tracked reason — never
   re-run until green and shrugged at. The retry also hides a test that only passes on its second
   attempt; `WTR_RETRIES=0` switches it off (default 1), and the flake hunt
-  (`scripts/flake-hunt.mjs`, [Quality tools](ci-and-gates.md#quality-tools-quality-toolsyml)) runs
-  the 40 most expensive files that way three times: a test failing its first attempt in two or more
-  runs is broken and fails the release-qualifying job, one failing once is flaky and warns. Reproduce a
+  (`scripts/flake-hunt.mjs`, [Quality tools](ci-and-gates.md#quality-tools-quality-toolsyml)) is the
+  only lane that sets it. Reproduce a
   candidate with `WTR_RETRIES=0 pnpm exec wtr --files <file>`, repeatedly and under CPU pressure
-  (`taskset`, below). The test lanes of `ci.yml`, `full-engine.yml` and `test-all-browsers.yml` never
-  set it (a policy test enforces that); only the flake hunt does.
+  (`taskset`, below).
 - **Reproducing a CI-only timing flake:** `taskset -c 0,1 <command>` (or similar CPU-count
   pinning) approximates GitHub Actions' constrained runners on a full-core dev machine — useful
   when two subsystems only race under CPU pressure. Separately, if a fix's own CI run fails on a
@@ -246,7 +244,7 @@ button tracking. Keyboard commands such as `sendKeys` continue using that packag
 
   Reproduce with `WTR_STRICT_CONSOLE=1 WTR_BROWSER=<engine> pnpm exec wtr --files <file>`; a green
   plain local run proves nothing about these lanes.
-- **Only the merged coverage summary is the library-wide headline.** `pnpm test:coverage` runs four
+- **Only the merged coverage summary is the library-wide headline.** `pnpm test:coverage` runs eight
   sequential shards, and Web Test Runner prints a `Code coverage: X %` line for each partial shard.
   Each such line is the arithmetic mean of that shard's statements/branches/functions/lines, not
   the complete suite. After the runner merges the shards, compute the release-wide mean from
@@ -277,7 +275,7 @@ button tracking. Keyboard commands such as `sendKeys` continue using that packag
 ## Property tests (fast-check)
 
 Pure validators, parsers, normalizers and numeric helpers get a colocated `<name>.property.test.ts`
-beside their example tests (`ansi`, `numbers`, `step-value` and `color-core` today). A property states
+beside their example tests. A property states
 what must hold for every input ("splitting the stream anywhere never changes the output", "a clamped
 value stays on its step grid", "an unterminated string cannot swallow later output") and fast-check
 searches for the input that breaks it, which is how it finds the classes of input a hand-written table

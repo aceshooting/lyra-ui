@@ -39,7 +39,7 @@ while doing something else. The vocabulary rules apply to every component, mirro
   mapping carries a `parts`/`attributes` rewrite to its replacement, so a dropped name is
   migrated rather than silently dead. A component-named alias is kept only where an upstream publishes one: when neither
   pinned upstream exposes a wrapper part at all, `base` alone is the supported spelling, and a
-  Lyra-only component-named token is deprecated rather than kept (`lr-split-panel`'s
+  Lyra-only component-named token is deprecated rather than kept (`lr-split-panel`'s former
   `split-panel`, since `wa-split-panel`/`sl-split-panel` publish only `start`, `end`, `panel` and
   `divider`). If an upstream later publishes the wrapper part, the alias stays for as long as it
   ships. Never resolve the collision by deleting lyra's own spelling — that breaks shipped
@@ -84,9 +84,10 @@ while doing something else. The vocabulary rules apply to every component, mirro
   in the same change as the table edit.
 
 - **Lyra-only renames are ledger data too.** A `component-metadata.json#deprecations` record that
-  retires a Lyra-only name in 23.0.0 lands with its `scripts/fixtures/lyra-renames.json` entry in
-  the same change, or `check-migration-coverage.mjs` fails `pnpm lint`; the entry drives
-  `lyra-ui-migrate --origin=lyra-v21` and the generated `llms/migration.md` section. Author the
+  retires a Lyra-only name in a migration profile's alias-removal major lands with its
+  `scripts/fixtures/lyra-renames.json` entry in the same change, or `check-migration-coverage.mjs`
+  fails `pnpm lint`; the entry drives `lyra-ui-migrate --origin=<profile>` and the generated
+  `llms/migration.md` section. Author the
   notice per [a11y-responsive-motion.md](a11y-responsive-motion.md#public-api-documentation--one-change-one-synchronized-surface).
   Use `renames`
   only for an exact alias of the same member with the same type and behavior; for an event, part

@@ -528,5 +528,4 @@ with a `null` default: `null` falls back to `label` and then the localized name,
 string suppresses the name.
 This applies to `lr-table`'s grid and `lr-sequence-strip`'s list as well.
 
-Name components with the host `aria-label` / `ariaLabel`. The former `accessible-label` attribute and
-`accessibleLabel` property no longer exist (see the generated migration reference).
+Name components with the host `aria-label` / `ariaLabel`.

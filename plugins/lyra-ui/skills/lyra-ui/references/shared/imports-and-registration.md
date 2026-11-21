@@ -15,20 +15,6 @@ Deprecation is explicit metadata, independent of status: it records a replacemen
 rationale and earliest removal version. An API deprecated in major M remains available throughout
 M+1 and cannot be removed before M+2, for stable and experimental APIs alike.
 
-**9.0.0 took a one-time exception to that policy, and says so rather than quietly breaking it.**
-Three members whose recorded removal window had genuinely opened were removed normally
-(`lr-tool-call-chip`/`lr-message-parts`' `lr-tool-chip-select`, and `lr-flow-canvas`'
-`--lr-flow-canvas-node-current-outline-color`). Alongside them, a small set of members that had
-_never_ been deprecated were renamed and their old spellings removed in the same release, without the
-customary M+1 warning period — `lr-usage-badge`'s `compact`, `lr-chart`'s `horizontal`,
-`lr-rag-answer`/`lr-retrieval-results`' `error`, `lr-ingestion-queue`'s
-`virtualizeThreshold` → `virtualizeAt`,
-`lr-knowledge-base`'s `lr-kb-*` events, `lr-data-grid`'s `columns`/`filename` option fields, and
-`lr-test-results`' two legacy detail-slot spellings, plus the component-specific
-`LyraModelCatalog`/`LyraVoiceCatalog` aliases in favor of the shared `LyraCatalog<T>`. Every one has
-a mechanical migration listed in the 9.0.0 changelog entry and in `migration.md`. From 9.0.0 onward
-the M+2 rule applies as written; treat the above as a documented exception, not a precedent.
-
 Deprecation also covers **slot content** inside a supported slot, such as non-item menu content;
 the slot description identifies it. Deprecated **package entry points**, **stylesheets**,
 **exported types/functions/constants**, and **global events/root attributes** appear under
@@ -45,8 +31,7 @@ owner/API. Observable usages include setting a deprecated property/attribute, co
 vetoing through an alias event or calling a function. Deprecated forms keep working; adopting the
 replacement removes the warning. Production never emits these deprecation warnings.
 
-Warnings require cheap, exact observation. Many deprecations never warn, including slot content
-(`lr-stat`'s default-slot icon and `lr-menu`'s non-item default-slot content) and unobservable CSS
+Warnings require cheap, exact observation. Many deprecations never warn, including slot content and unobservable CSS
 parts, custom properties and custom states. A silent console does not prove absence of deprecated
 usage. Tests deliberately exercising it can pre-seed Lit's development-mode
 `globalThis.litIssuedWarnings` set before rendering with

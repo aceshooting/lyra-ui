@@ -11,20 +11,9 @@ The [implementation and qualification record](document-editing-feasibility.md) r
 browser behavior, the bounded admission policy, asset measurements, and remaining qualification.
 Passing browser checks establish only the specific behaviors and corpus cases they exercise.
 
-The published lyra-ui 30.1.0 release does not advance these editor phases. The editor was then at
-0.6.3, with corpus, interoperability, IME, assistive-technology and retained-memory work open as
-listed below; viewer regression tests do not establish editor fidelity.
-
-The [published 0.6.4 maintenance work](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-ui%4030.2.0) adds a query-local
-relationship index for multi-drawing image navigation and keeps a direct scan for a single drawing.
-The revised path passes focused/full unit, lint and package checks. Deterministic paired fixtures
-retain exact archive/semantic hashes and targets, recovering the single-drawing regression while
-retaining higher sampled allocation for large multi-drawing relationship sets. The main editor
-browser campaign passes 236 cases per engine (708 total), plus three locked-source regressions per
-engine; source checks retain their narrower artifact scope. [lyra-docs 0.6.4](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-docs%400.6.4) was published on
-2026-10-25 after exact-commit release qualification. This optimization does not complete any broader
-editor phase or change the experimental status. See the
-[qualification record](test-health.md#current-302-maintenance-qualification).
+[lyra-docs 0.6.4](https://github.com/aceshooting/lyra-ui/releases/tag/lyra-docs%400.6.4), published on 2026-10-25,
+adds image-navigation maintenance recorded in the [qualification record](document-editing-feasibility.md);
+it does not complete any broader editor phase or change the experimental status.
 
 ## Current state (lyra-docs 0.6.4)
 

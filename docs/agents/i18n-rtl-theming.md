@@ -169,8 +169,7 @@ locale manifest and the translation companion archive during release budget prep
 - Keyboard navigation treating `ArrowLeft`/`ArrowRight` as "previous"/"next" (day-grids,
   roving-tabindex column nav, carousel-style controls) must consult `this.effectiveDirection` and
   swap which arrow means which under RTL — a plain `ArrowLeft === previous` hardcode is an RTL
-  bug, not just an LTR-only shortcut. The single most common RTL miss in this library's own
-  standardization pass (graph, heatmap, word-cloud roving-focus nav).
+  bug, not just an LTR-only shortcut.
   For list-like controls, use `resolveListMove()` from `internal/list-navigation.ts` with the
   host's `effectiveDirection`; each component still owns its focus and selection side effects.
   Shared typeahead uses `TypeAheadBuffer`, including its composition guard and circular matcher.
@@ -187,7 +186,7 @@ translations and mirrored RTL layouts reflow without component-specific override
 
 ### The document token layer — one route into dark mode, resolved at theme scopes
 
-Since 28.0.0 (RFC 0002) components do not declare the shared `--lr-*` outputs on their own `:host`.
+Components (RFC 0002) do not declare the shared `--lr-*` outputs on their own `:host`.
 `src/internal/document-tokens.generated.ts` (generated from `tokens/canonical-tokens.json` by
 `scripts/generate-design-tokens.mjs`, the same text as `src/styles/tokens-root.css` and the tail of
 `src/theme.css`) declares them once per document on `:root` and re-derives them at the closed list of theme scopes. Mode reaches
@@ -195,8 +194,7 @@ every scope through two inherited private switches (`--_lr-dark-on` / `--_lr-lig
 mode-dependent output is one declaration whose differing part is `var(--_lr-dark-on,<light>)var(--_lr-light-on,<dark>)`
 (the generator's `pairModes()` writes the shared wrappers, such as the `--lr-theme-*` input, once
 and pairs only the innermost run of tokens that differs), so there is exactly one route into dark mode and it behaves identically in Chromium, Firefox and
-WebKit. The former three per-host routes (`:host([data-lr-theme='dark'])`, `:host-context()`, the
-OS media rule) and their cross-engine trap are gone.
+WebKit.
 
 Rules when you touch tokens:
 

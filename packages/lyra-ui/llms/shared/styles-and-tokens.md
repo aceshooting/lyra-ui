@@ -61,7 +61,7 @@ Three layers, and **which one you set decides how far the override reaches**:
 3. **`--lr-<component>-*`** — per-component properties, for one element at a time. Listed in each
    component's own section.
 
-**Layer 2 (`--lr-*`) is declared once per document, not on each component** (since 28.0.0). The
+**Layer 2 (`--lr-*`) is declared once per document, not on each component**. The
 _document token layer_ declares every shared output on `:root` and re-derives it only at
 [theme scopes](#theme-scopes). `theme.css` carries it, so a page that imports `theme.css` has it from
 first paint; on a page without `theme.css`, registering the first `lr-*` element adopts the same text
@@ -268,7 +268,7 @@ design launcher. Keep these layout rules shared across application headers and a
 
 ### Reading the resolved tokens from your own components — `tokens-root.css`
 
-Since 28.0.0 the resolved layer lives in the document, so your own elements read it like any
+The resolved layer lives in the document, so your own elements read it like any
 component does: `var(--lr-color-border)` inside **your** component resolves wherever the layer
 applies. `theme.css` carries the layer, so importing `theme.css` is enough, including for
 server-rendered pages and for application elements that paint before any Lyra element exists.
@@ -808,7 +808,7 @@ compatibility aliases above.
 
 **Shared computed `--lr-*` outputs are resolved at theme scopes and inherited everywhere else.** That
 includes palette, spacing, radius, typography and motion outputs such as `--lr-color-brand`,
-`--lr-space-m` and `--lr-radius`. No component re-declares them on its host (since 28.0.0), so:
+`--lr-space-m` and `--lr-radius`. No component re-declares them on its host, so:
 
 - **A `--lr-theme-*` input** retunes everything below it **when it is set on a theme scope**. Set on a
   plain wrapper, a component's inline style, or an application component's own `:host` rule, it no
@@ -1132,10 +1132,6 @@ startLyraStyle(); // adopts the saved style, follows the OS while mode is System
 the whole profile in it. A page whose bootstrap uses `data-lr-theme-restore="mode"` or an
 application-owned storage key does not pair with it: the start would apply axes or a record the
 bootstrap deliberately ignored. Such pages call `setLyraStyle()` with the policy they want.
-
-**Migrating the retired theme facade.** New code uses setLyraStyle() and getLyraStyle(). Map old auto mode to system, an old surface reference color to accentBackground, and an old token map to overrides; review custom CSS colors that share a gemstone name before choosing a named accent. Replace preset definitions with a LyraLook plus explicit style choices. Replace selectors for data-lr-theme-preset with the actual axis they need, such as data-lr-look="shadcn". Import theme.css in place of the removed fixed themes/shadcn.css facade and select the look with setLyraStyle({ look: "shadcn" }) or a scoped data-lr-look attribute. Listen for lr-style-change and read event.detail.style and event.detail.changed; the old theme and preset events are no longer emitted. For the complete project-by-project sequence, see [Upgrading from v23 to v24](v23-to-v24-migration.md).
-
-Historical v1 stored records remain readable by the runtime and bootstrap. The removed JavaScript functions, preset subpaths, preset event, root marker, and fixed stylesheet are not available in the current API.
 
 ### Invalidating canvas theme values
 

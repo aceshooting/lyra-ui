@@ -118,7 +118,7 @@ snapshot for the current boundaries; the original gaps below are not all still o
 | Dashboards | Layout and data components | Persistent documents, live bindings, sharing, application integration and collaborative revision semantics |
 | Website | Existing component and feature pages | Live generation service, qualified demo surfaces and reproducible comparative evidence |
 
-The structural adapter now supplies `bindingState` while retaining its legacy `state` alias.
+The structural adapter now supplies `bindingState`.
 `lr-message-parts` now forwards widget registry/state and memoizes unchanged widget documents;
 the provider-neutral reducer has an incremental text-delta path. These changes have dedicated
 regression fixtures. Structured generated properties live in the separately validated companion;

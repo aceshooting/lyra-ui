@@ -36,7 +36,7 @@
   through `finiteNumber`/`finiteRange`/`finiteInteger`/`finiteCount`/`finiteDuration`
   (`src/internal/numbers.ts`) — never a bare `isNaN()` check (`isNaN(Infinity)` is `false`),
   never the raw property. An attribute or untyped JS caller can hand any string through
-  regardless of the declared TypeScript type, and this bug class has shipped twice.
+  regardless of the declared TypeScript type.
   `pnpm run check:numeric-guards` finds them; a genuine exception takes a
   `// numeric-guard-exempt: <reason>` comment.
 - An attribute-backed numeric property declares `converter: blankNumberConverter(<declared default>)`
@@ -92,14 +92,6 @@
   the `resolvedRel` getters in `button`, `icon-button`, `breadcrumb-item`, `card` and `menu-item`
   all delegate to it (it also strips `opener` in any letter case and de-duplicates tokens), so a new
   author-`rel` anchor calls it instead of re-typing the merge.
-
-  This replaces the earlier, stricter rule ("never expose `rel` independently of `target`", still
-  the shape `app-rail-item.class.ts` uses). That rule was over-broad in both directions: it refused
-  a same-tab link, which opens no new browsing context and needs no guard at all, and it silently
-  discarded every `nofollow`/`me`/`license`/`external` written by a consumer migrating from
-  `wa-*`/`sl-*` — where `rel` is a documented settable property. Because `migrate-wa.mjs` warns at
-  tag granularity rather than member granularity, that divergence also refused **every**
-  `<wa-button>`/`<sl-button>` in a migrating app, including ones with no `href` at all.
   `app-rail-item.class.ts` still uses the simpler derive-only shape, which remains correct for a
   control with no author `rel`. Never let `target` alone produce an anchor with no guard.
 - **Resolve CSS colors before assigning `ctx.fillStyle`/`strokeStyle`.** Canvas 2D's setter is a
@@ -126,8 +118,7 @@
   `@container` at the CSS level — `@media` resolves `rem` against the browser's *initial* font
   size and ignores `html { font-size }` entirely, while `@container` follows the root's
   *computed* size. Any feature offering a "viewport" vs. "container" breakpoint basis must pick
-  its `rem`-resolution path to match — this shipped backwards in three places before being
-  corrected before release.
+  its `rem`-resolution path to match.
 - **A `var()` fallback chain is not a live formula across a shadow boundary.** CSS inheritance
   passes a descendant's `:host`-level custom property the ancestor's already-*resolved* value,
   not a formula it re-evaluates per instance — so a per-element override meant to win only when
@@ -208,13 +199,12 @@
   `TS1005: ',' expected` pointing at some innocent line dozens of lines further down — usually at
   whatever punctuation in the following prose first fails to parse — so the reported location is
   never the real one. `${` in a comment is the same trap with a different shape: it opens an
-  interpolation hole and the comment text after it becomes an expression. This broke the tree twice
-  in one day. Write token and helper names in comments unquoted, or with single quotes; if a
+  interpolation hole and the comment text after it becomes an expression. Write token and helper names in comments unquoted, or with single quotes; if a
   backtick is genuinely unavoidable, escape it with a preceding backslash. When a parse error
   appears in a `*.styles.ts`, grep the file for backticks first: a healthy one has exactly two
   hits, the opening and closing delimiter.
 - **`*/` inside comment prose closes the comment early**, reinterpreting the rest of the
-  sentence as CSS. Found while compressing style comments: `--lr-button-padding-*/--lr-button-font-size`
+  sentence as CSS: `--lr-button-padding-*/--lr-button-font-size`
   in a sentence is enough. It is quieter than the backtick and `${` traps because it does NOT
   change the file's backtick count, so the usual "confirm 2 backticks" check passes. Only a
   rendered result or a parsed-CSS comparison against the pre-edit file catches it.
@@ -335,8 +325,7 @@
   Lyra*` — if a
   `*EventMap` interface or a `FormAssociated`-style `*Base` class intervenes, `cem`'s analyzer
   silently misattributes or drops the whole block, emptying that component's manifest entry
-  (`cssParts`, `events`, description all go missing) with no build error. This has already hit 42
-  of 86 classes library-wide, including a repeat in newly-shipped components — check the
+  (`cssParts`, `events`, description all go missing) with no build error. Check the
   generated `custom-elements.json` entry actually has content after adding a component; don't
   just trust that `tsc`/`pnpm manifest` stayed green. A related, separate trap: **`@internal` on
   a class's own JSDoc, alongside `@customElement`, also silently empties its manifest

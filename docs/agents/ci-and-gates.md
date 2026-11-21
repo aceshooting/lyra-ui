@@ -353,7 +353,7 @@ workflow's flag list must equal `codecov.yml`'s (`scripts/ci-workflow-policy.tes
 A badge can therefore repeat an earlier figure: it is never evidence for a particular commit.
 
 A release commit's complete Codecov `lyra-ui` flag result must be at least the previous release
-commit's (30.0.0 shipped at 98.98%, 520,554 of 525,881 lines), independently of the repository-wide
+commit's, independently of the repository-wide
 combined percentage; each release aims to add about 0.1 percentage point, and 99.74%, then 99.80%,
 remain the long-term targets. The existing local UI line and statement floors remain stronger. Check
 the complete merged report and the same commit's flagged Codecov result before claiming that
