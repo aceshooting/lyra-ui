@@ -195,7 +195,8 @@ export async function runFileActions(page, check, { createEditor }) {
       const palette = editor.locator('[part="command-palette"]');
       await palette.getByRole('dialog').waitFor({ state: 'visible' });
       await palette.getByRole('combobox').fill('Open');
-      const chooser = await openFileChooser(page, editor.locator('[part="file-input"]'), () => page.keyboard.press('Enter'));
+      const chooser = await openFileChooser(page, editor.locator('[part="file-input"]'),
+        () => palette.getByRole('combobox').press('Enter'));
       await chooser.setFiles({ name: 'Palette.docx',
         mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from(bytes) });
       await page.waitForFunction(id => document.getElementById(id).shadowRoot.querySelector('[part="filename"]').textContent === 'Palette.docx', id);

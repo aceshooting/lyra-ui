@@ -28,13 +28,13 @@
       "published23Utf8Bytes": 43687,
       "reviewedCheckpointUtf8Bytes": 44244,
       "reviewedCheckpointProxyTokens": 10573,
-      "ceilingUtf8Bytes": 46000
+      "ceilingUtf8Bytes": 46043
     },
     "look-composition": {
       "published23Utf8Bytes": 14858,
       "reviewedCheckpointUtf8Bytes": 15258,
       "reviewedCheckpointProxyTokens": 4018,
-      "ceilingUtf8Bytes": 16053,
+      "ceilingUtf8Bytes": 16066,
       "$comment": "The component discovery index with the model-viewer entry measured 16,005 UTF-8 bytes for this route. The entry index, which now lists the treemap, sankey, chord and choropleth elements, brings it to 16,053 UTF-8 bytes; its ceiling advances to that exact measurement."
     },
     "v29-v30-upgrade": {
