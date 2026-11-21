@@ -17285,6 +17285,7 @@
       "routes": [
         "src/all.ts",
         "src/lyra.ts",
+        "src/ssr/all.ts",
         "src/theme/theme.ts"
       ],
       "document": "llms/shared.md",
@@ -17303,6 +17304,7 @@
       "routes": [
         "src/all.ts",
         "src/lyra.ts",
+        "src/ssr/all.ts",
         "src/theme/theme.ts"
       ],
       "document": "llms/shared.md",
@@ -22859,6 +22861,7 @@
       "routes": [
         "src/all.ts",
         "src/lyra.ts",
+        "src/ssr/all.ts",
         "src/theme/theme.ts"
       ],
       "document": "llms/shared.md",
