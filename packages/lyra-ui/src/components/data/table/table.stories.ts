@@ -1078,3 +1078,26 @@ export const ReviewBeforePaging: Story = {
       }}
     ></lr-table>`,
 };
+
+const linkedColumns: TableColumn<DemoRow>[] = [
+  { key: 'name', label: 'Name', href: (r) => `#/accounts/${r.id}`, cell: (r) => r.name },
+  { key: 'score', label: 'Score', align: 'end', cell: (r) => r.score },
+];
+
+/** `columns[].href(row)` renders each name as a real link; the header and rule tokens quiet the chrome. */
+export const RowLinksAndQuietHeader: Story = {
+  render: () => html`<lr-table
+    aria-label="Accounts"
+    style="--lr-table-header-font-weight: var(--lr-font-weight-normal); --lr-table-header-color: var(--lr-color-text-quiet); --lr-table-cell-border-color: var(--lr-color-border)"
+    .columns=${linkedColumns}
+    .rows=${rows}
+    .rowKey=${(r: DemoRow) => r.id}
+  ></lr-table>`,
+};
+
+/** `stack="auto"` turns each row into a card of label/value pairs in a narrow allocation. */
+export const StackedOnNarrowAllocations: Story = {
+  render: () => html`<div style="inline-size: 320px">
+    <lr-table aria-label="Accounts" stack="auto" .columns=${columns} .rows=${rows} .rowKey=${(r: DemoRow) => r.id}></lr-table>
+  </div>`,
+};

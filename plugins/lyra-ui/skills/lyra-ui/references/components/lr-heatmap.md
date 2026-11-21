@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 23 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 25 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -359,6 +359,32 @@ weekdayLabelWidth?: number|'auto'; weekdayLabelText?: (jsWeekday:number)=>string
   and for nothing else, is not written while the legend is hidden, and is removed again if it had
   been. Cells, tooltips, keyboard interaction, selection and the generated accessible summary are
   unaffected — the summary already names the value label independently of the legend.
+- `legendPlacement: 'top' | 'bottom' = 'bottom'` (attribute `legend-placement`, reflected) — where
+  the legend row renders. `'top'` puts it before the grid in DOM order (not just visually), so a
+  tall or scrolling matrix keeps its key in view and reading order matches the layout; unsupported
+  values normalize to `'bottom'`. These are the block-axis members of the placement vocabulary the
+  chart and map legends share; side placements are not offered because the fitted matrix is
+  measured against the full host width.
+- `axisSelection: 'none' | 'rows' | 'cols' | 'both' = 'none'` (attribute `axis-selection`,
+  reflected) — in matrix mode with `multiple` set, lays one native toggle `<button>` over each
+  painted row label (`[part="row-label"]`) and/or column label (`[part="col-label"]`). Activating one
+  proposes toggling that whole row or column through the existing `lr-selection-change` (source
+  `'row'`/`'column'`), like `toggleRowSelection()`/`toggleColumnSelection()`, so day-by-hour pickers
+  need no external header buttons. `aria-pressed` renders `"true"` while every interactive cell of
+  the axis is selected (the button also gains `row-label-pressed`/`col-label-pressed` and a
+  `--lr-heatmap-axis-pressed-color` edge) and `"false"` otherwise. Each axis is one tab stop;
+  ArrowUp/ArrowDown (rows) or ArrowLeft/ArrowRight (columns, physical like the grid, also under
+  `dir="rtl"`) and Home/End rove between labels. Buttons are named by the label text, falling back
+  to the localized default row/column name; `--lr-heatmap-axis-hover-bg` sets their hover fill.
+  Frozen `stickyLabels` bands keep their buttons. `'none'`, calendar mode and single selection keep
+  the canvas-only labels
+- `fill: boolean = false` (reflected) — fills a parent with a definite block size (a dialog body,
+  a sized flex column, an expand view). The host and `[part="base"]` take `block-size: 100%` and, in
+  matrix mode, the grid renders inside the `[part="grid"]` scrollport even without `stickyLabels`;
+  that scrollport takes the block size the legend leaves and becomes the single scroller, so frozen
+  label bands keep working instead of an outer container scrolling the whole component. Percentage
+  trap: without `fill`, `--lr-heatmap-grid-max-block-size: 100%` resolves to `none`, because the
+  base is auto-height; and `fill` itself needs a definite parent height, like any percentage.
 - `scale: 'linear' | 'sqrt' = 'linear'` — governs both modes: in matrix mode, `'sqrt'` compresses the
   color ramp via `sqrtStep()` instead of mapping linearly; in calendar mode, the default `'linear'`
   still buckets by quartile (`quartileBucket()`, unchanged), while `'sqrt'` instead compresses via the
@@ -610,7 +636,9 @@ bar between them, while `legendStops` is supplied), `legend-stop` (one per `lege
 `legend-swatch` (that stop's color chip, not rendered at all for a caption-only stop),
 `legend-stop-label` (that stop's text), `legend-value-label` (the trailing `valueLabel` caption that
 closes the legend row, present in both the gradient and the `legendStops` branch),
-`legend-annotation` (one per labeled `annotations` entry), and `description` (the screen-reader-only
+`legend-annotation` (one per labeled `annotations` entry), `row-label` and `col-label` (the
+`axisSelection` toggle buttons, also carrying `row-label-pressed`/`col-label-pressed` while their whole
+axis is selected), and `description` (the screen-reader-only
 chart description: `description`, or the generated summary while `label` names the chart; absent
 when neither applies)
 
@@ -655,7 +683,16 @@ directly, no `getComputedStyle` bridging needed. `--lr-heatmap-sticky-label-bg` 
 `getComputedStyle` like the other canvas-drawn tokens; it must stay **opaque**, since it covers the
 same labels the scrolling canvas painted underneath it) and `--lr-heatmap-grid-max-block-size`
 (default `none` — the block-size ceiling of the `[part="grid"]` scrollport, consumed directly by
-that real DOM element; set it to give a frozen column band vertical scrolling to stay behind). Also consumes `--lr-color-text-quiet` (axis label
+that real DOM element; set it to give a frozen column band vertical scrolling to stay behind).
+The legend row reads `--lr-heatmap-legend-font-size` (default `var(--lr-font-size-xs)`),
+`--lr-heatmap-legend-color` (default `var(--lr-color-text-quiet)`), `--lr-heatmap-legend-gap`
+(default `var(--lr-space-xs)`), `--lr-heatmap-legend-padding` (default `0`),
+`--lr-heatmap-legend-bg` (default `transparent`), `--lr-heatmap-legend-radius` (default `0`) and
+`--lr-heatmap-legend-swatch-size` (default `var(--lr-size-0-6rem)`, stop swatches and annotation
+rings); the continuous ramp reads `--lr-heatmap-legend-ramp-inline-size` (default
+`var(--lr-size-6rem)`), `--lr-heatmap-legend-ramp-block-size` (default `var(--lr-size-0-5rem)`)
+and `--lr-heatmap-legend-ramp-radius` (default `var(--lr-size-2px)`). The suffixes match the chart
+and map legend tokens. Also consumes `--lr-color-text-quiet` (axis label
 color), `--lr-space-xs`, `--lr-radius`/`--lr-shadow` (tooltip box), and `--lr-focus-ring-width`/
 `--lr-focus-ring-offset` (the real `[part="canvas"]:focus-visible` DOM outline, stroked in the
 same color as `--lr-heatmap-focus-ring-color`).

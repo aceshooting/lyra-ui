@@ -6744,6 +6744,7 @@ export interface LyraComponentTypeMap {
       LyraHeatmap,
       | 'accessibleCells'
       | 'annotations'
+      | 'axisSelection'
       | 'bucketCount'
       | 'calendarGeometry'
       | 'cellColor'
@@ -6760,8 +6761,10 @@ export interface LyraComponentTypeMap {
       | 'data'
       | 'description'
       | 'domain'
+      | 'fill'
       | 'fitToWidth'
       | 'label'
+      | 'legendPlacement'
       | 'legendStops'
       | 'locale'
       | 'matrixGeometry'
@@ -6791,11 +6794,23 @@ export interface LyraComponentTypeMap {
       | 'lr-matrix-range-select'
       | 'lr-selection-change';
     cssNames:       | '--lr-heatmap-annotation-color'
+      | '--lr-heatmap-axis-hover-bg'
+      | '--lr-heatmap-axis-pressed-color'
       | '--lr-heatmap-color-steps-gradient'
       | '--lr-heatmap-focus-ring-color'
       | '--lr-heatmap-grid-max-block-size'
       | '--lr-heatmap-hover-ring-color'
       | '--lr-heatmap-label-font'
+      | '--lr-heatmap-legend-bg'
+      | '--lr-heatmap-legend-color'
+      | '--lr-heatmap-legend-font-size'
+      | '--lr-heatmap-legend-gap'
+      | '--lr-heatmap-legend-padding'
+      | '--lr-heatmap-legend-radius'
+      | '--lr-heatmap-legend-ramp-block-size'
+      | '--lr-heatmap-legend-ramp-inline-size'
+      | '--lr-heatmap-legend-ramp-radius'
+      | '--lr-heatmap-legend-swatch-size'
       | '--lr-heatmap-no-data-fill'
       | '--lr-heatmap-scale-hi'
       | '--lr-heatmap-scale-lo'
@@ -6805,6 +6820,7 @@ export interface LyraComponentTypeMap {
       | '--lr-heatmap-tooltip-color';
     attributeAliases: {
       'accessible-cells'?: LyraHeatmap['accessibleCells'];
+      'axis-selection'?: LyraHeatmap['axisSelection'];
       'bucket-count'?: LyraHeatmap['bucketCount'];
       'cell-gap-x'?: LyraHeatmap['cellGapX'];
       'cell-gap-y'?: LyraHeatmap['cellGapY'];
@@ -6814,6 +6830,7 @@ export interface LyraComponentTypeMap {
       'col-label-interval'?: LyraHeatmap['colLabelInterval'];
       'col-label-rotation'?: LyraHeatmap['colLabelRotation'];
       'fit-to-width'?: LyraHeatmap['fitToWidth'];
+      'legend-placement'?: LyraHeatmap['legendPlacement'];
       'matrix-reducer'?: LyraHeatmap['matrixReducer'];
       'max-cell-size'?: LyraHeatmap['maxCellSize'];
       'max-cells'?: LyraHeatmap['maxCells'];
@@ -9895,6 +9912,7 @@ export interface LyraComponentTypeMap {
       | 'loading'
       | 'locale'
       | 'nextLabel'
+      | 'offset'
       | 'page'
       | 'pageLabel'
       | 'pageSize'
@@ -12802,6 +12820,7 @@ export interface LyraComponentTypeMap {
       | 'deltaPercent'
       | 'emphasis'
       | 'exactValue'
+      | 'fill'
       | 'frame'
       | 'goodDirection'
       | 'href'
@@ -12823,9 +12842,21 @@ export interface LyraComponentTypeMap {
     events: {};
     eventNames: never;
     cssNames:       | '--lr-stat-bg'
+      | '--lr-stat-caption-color'
+      | '--lr-stat-caption-font-size'
       | '--lr-stat-emphasis-border-color'
       | '--lr-stat-emphasis-value-color'
       | '--lr-stat-gap'
+      | '--lr-stat-icon-bg'
+      | '--lr-stat-icon-color'
+      | '--lr-stat-icon-padding'
+      | '--lr-stat-icon-radius'
+      | '--lr-stat-icon-size'
+      | '--lr-stat-label-color'
+      | '--lr-stat-label-font-size'
+      | '--lr-stat-label-font-weight'
+      | '--lr-stat-label-letter-spacing'
+      | '--lr-stat-label-text-transform'
       | '--lr-stat-link-active-bg'
       | '--lr-stat-link-active-border-color'
       | '--lr-stat-link-active-shadow'
@@ -12836,9 +12867,13 @@ export interface LyraComponentTypeMap {
       | '--lr-stat-trend-bad-color'
       | '--lr-stat-trend-good-bg'
       | '--lr-stat-trend-good-color'
+      | '--lr-stat-unit-color'
+      | '--lr-stat-unit-font-size'
       | '--lr-stat-value-brand-color'
       | '--lr-stat-value-danger-color'
       | '--lr-stat-value-font-family'
+      | '--lr-stat-value-font-size'
+      | '--lr-stat-value-font-weight'
       | '--lr-stat-value-hover-color'
       | '--lr-stat-value-success-color'
       | '--lr-stat-value-warning-color';
@@ -13356,6 +13391,7 @@ export interface LyraComponentTypeMap {
       | 'sortKey'
       | 'sortMode'
       | 'spellcheck'
+      | 'stack'
       | 'storageKey'
       | 'strings'
       | 'totalItems'
@@ -13380,7 +13416,8 @@ export interface LyraComponentTypeMap {
       | 'lr-selection-change'
       | 'lr-sort'
       | 'lr-sort-request';
-    cssNames:       | '--lr-table-cell-color'
+    cssNames:       | '--lr-table-cell-border-color'
+      | '--lr-table-cell-color'
       | '--lr-table-cell-link-color'
       | '--lr-table-cell-link-hover-color'
       | '--lr-table-cell-padding'
@@ -13388,6 +13425,9 @@ export interface LyraComponentTypeMap {
       | '--lr-table-control-active-bg'
       | '--lr-table-control-hover-bg'
       | '--lr-table-font-size'
+      | '--lr-table-header-color'
+      | '--lr-table-header-font-size'
+      | '--lr-table-header-font-weight'
       | '--lr-table-header-sorted-bg'
       | '--lr-table-header-sorted-color'
       | '--lr-table-heat-t'
@@ -13409,6 +13449,8 @@ export interface LyraComponentTypeMap {
       | '--lr-table-row-stripe-bg'
       | '--lr-table-sortable-header-active-bg'
       | '--lr-table-sortable-header-hover-bg'
+      | '--lr-table-stack-breakpoint'
+      | '--lr-table-stack-label-size'
       | '--lr-table-sticky-offset'
       | '--lr-table-surface'
       | '--lr-theme-scrollbar-gutter'
@@ -14181,7 +14223,8 @@ export interface LyraComponentTypeMap {
       | '--lr-timeline-marker-warning-color'
       | '--lr-timeline-ordered-marker-size'
       | '--lr-timeline-rail-color'
-      | '--lr-timeline-rail-width';
+      | '--lr-timeline-rail-width'
+      | '--lr-timeline-title-font-weight';
     attributeAliases: {};
   };
   'lr-toast': {

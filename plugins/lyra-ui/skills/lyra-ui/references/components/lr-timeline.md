@@ -161,6 +161,7 @@ scrolling. On the item: `--lr-timeline-marker-size`
 (default `var(--lr-size-1-25rem)`, both dimensions so the dot stays circular),
 `--lr-timeline-ordered-marker-size` (falls back to `--lr-timeline-marker-size`, then
 `var(--lr-size-1-5rem)`),
+`--lr-timeline-title-font-weight` (default `var(--lr-font-weight-semibold)`, the item title),
 `--lr-timeline-rail-width` (default `var(--lr-border-width-medium)`), `--lr-timeline-rail-color`
 (default `var(--lr-color-border-subtle)`), `--lr-timeline-marker-color` (default
 `var(--lr-color-text-quiet)` for neutral markers), `--lr-timeline-marker-neutral-color`,

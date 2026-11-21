@@ -72257,6 +72257,16 @@
             "default": false
           },
           {
+            "name": "axis-selection",
+            "property": "axisSelection",
+            "type": "LyraHeatmapAxisSelection",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "none"
+          },
+          {
             "name": "bucket-count",
             "property": "bucketCount",
             "type": "number",
@@ -72345,6 +72355,16 @@
             "default": null
           },
           {
+            "name": "fill",
+            "property": "fill",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "fit-to-width",
             "property": "fitToWidth",
             "type": "boolean",
@@ -72363,6 +72383,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "legend-placement",
+            "property": "legendPlacement",
+            "type": "LyraHeatmapLegendPlacement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "bottom"
           },
           {
             "name": "locale",
@@ -72509,6 +72539,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
+          },
+          {
+            "name": "axisSelection",
+            "attribute": "axis-selection",
+            "type": "LyraHeatmapAxisSelection",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "none"
           },
           {
             "name": "bucketCount",
@@ -72663,6 +72703,16 @@
             "hasDefault": false
           },
           {
+            "name": "fill",
+            "attribute": "fill",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "fitToWidth",
             "attribute": "fit-to-width",
             "type": "boolean",
@@ -72681,6 +72731,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": null
+          },
+          {
+            "name": "legendPlacement",
+            "attribute": "legend-placement",
+            "type": "LyraHeatmapLegendPlacement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "bottom"
           },
           {
             "name": "legendStops",
@@ -72921,6 +72981,10 @@
             "deprecated": null
           },
           {
+            "name": "col-label",
+            "deprecated": null
+          },
+          {
             "name": "col-labels",
             "deprecated": null
           },
@@ -72973,6 +73037,10 @@
             "deprecated": null
           },
           {
+            "name": "row-label",
+            "deprecated": null
+          },
+          {
             "name": "row-labels",
             "deprecated": null
           },
@@ -73005,6 +73073,18 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-heatmap-axis-hover-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "color-mix(in srgb, var(--lr-color-brand) 12%, transparent)"
+          },
+          {
+            "name": "--lr-heatmap-axis-pressed-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand)"
+          },
+          {
             "name": "--lr-heatmap-color-steps-gradient",
             "deprecated": null,
             "hasDefault": true,
@@ -73032,6 +73112,66 @@
             "name": "--lr-heatmap-label-font",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-heatmap-legend-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "transparent"
+          },
+          {
+            "name": "--lr-heatmap-legend-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-heatmap-legend-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-xs)"
+          },
+          {
+            "name": "--lr-heatmap-legend-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
+            "name": "--lr-heatmap-legend-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "--lr-heatmap-legend-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "--lr-heatmap-legend-ramp-block-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-0-5rem)"
+          },
+          {
+            "name": "--lr-heatmap-legend-ramp-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-6rem)"
+          },
+          {
+            "name": "--lr-heatmap-legend-ramp-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-2px)"
+          },
+          {
+            "name": "--lr-heatmap-legend-swatch-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-0-6rem)"
           },
           {
             "name": "--lr-heatmap-no-data-fill",
@@ -107650,6 +107790,15 @@
             "hasDefault": false
           },
           {
+            "name": "offset",
+            "property": "offset",
+            "type": "number | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "page",
             "property": "page",
             "type": "number",
@@ -107899,6 +108048,15 @@
             "name": "nextLabel",
             "attribute": "next-label",
             "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "offset",
+            "attribute": "offset",
+            "type": "number | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -140447,6 +140605,16 @@
             "default": ""
           },
           {
+            "name": "fill",
+            "property": "fill",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "frame",
             "property": "frame",
             "type": "LyraFrame",
@@ -140633,6 +140801,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "fill",
+            "attribute": "fill",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "frame",
@@ -140870,6 +141048,18 @@
             "default": "var(--lr-color-surface)"
           },
           {
+            "name": "--lr-stat-caption-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-stat-caption-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-sm)"
+          },
+          {
             "name": "--lr-stat-emphasis-border-color",
             "deprecated": null,
             "hasDefault": true,
@@ -140886,6 +141076,66 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-xs)"
+          },
+          {
+            "name": "--lr-stat-icon-bg",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "transparent"
+          },
+          {
+            "name": "--lr-stat-icon-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-stat-icon-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "--lr-stat-icon-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "--lr-stat-icon-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-stat-label-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-stat-label-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-xs)"
+          },
+          {
+            "name": "--lr-stat-label-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
+          },
+          {
+            "name": "--lr-stat-label-letter-spacing",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-0-04em)"
+          },
+          {
+            "name": "--lr-stat-label-text-transform",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "uppercase"
           },
           {
             "name": "--lr-stat-link-active-bg",
@@ -140948,6 +141198,18 @@
             "default": "var(--lr-color-success)"
           },
           {
+            "name": "--lr-stat-unit-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-stat-unit-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-md-sm)"
+          },
+          {
             "name": "--lr-stat-value-brand-color",
             "deprecated": null,
             "hasDefault": true,
@@ -140964,6 +141226,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "inherit"
+          },
+          {
+            "name": "--lr-stat-value-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-size-2xl)"
+          },
+          {
+            "name": "--lr-stat-value-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-bold)"
           },
           {
             "name": "--lr-stat-value-hover-color",
@@ -146390,6 +146664,16 @@
             "default": true
           },
           {
+            "name": "stack",
+            "property": "stack",
+            "type": "TableStackMode",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "never"
+          },
+          {
             "name": "storage-key",
             "property": "storageKey",
             "type": "string | undefined",
@@ -147023,6 +147307,16 @@
             "default": true
           },
           {
+            "name": "stack",
+            "attribute": "stack",
+            "type": "TableStackMode",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "never"
+          },
+          {
             "name": "storageKey",
             "attribute": "storage-key",
             "type": "string | undefined",
@@ -147196,6 +147490,14 @@
           },
           {
             "name": "cell-editor",
+            "deprecated": null
+          },
+          {
+            "name": "cell-label",
+            "deprecated": null
+          },
+          {
+            "name": "cell-link",
             "deprecated": null
           },
           {
@@ -147409,6 +147711,12 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-table-cell-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border-subtle)"
+          },
+          {
             "name": "--lr-table-cell-color",
             "deprecated": null,
             "hasDefault": true,
@@ -147456,6 +147764,24 @@
             "default": "inherit"
           },
           {
+            "name": "--lr-table-header-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-table-header-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-table-header-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
+          },
+          {
             "name": "--lr-table-header-sorted-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -147465,7 +147791,7 @@
             "name": "--lr-table-header-sorted-color",
             "deprecated": null,
             "hasDefault": true,
-            "default": "inherit"
+            "default": "var(--lr-table-header-color, inherit)"
           },
           {
             "name": "--lr-table-heat-t",
@@ -147573,6 +147899,18 @@
             "name": "--lr-table-sortable-header-hover-bg",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-table-stack-breakpoint",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-36rem)"
+          },
+          {
+            "name": "--lr-table-stack-label-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "40%"
           },
           {
             "name": "--lr-table-sticky-offset",
@@ -156150,6 +156488,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-border-width-medium)"
+          },
+          {
+            "name": "--lr-timeline-title-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
           }
         ],
         "cssStates": [],

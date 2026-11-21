@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 57 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 59 parts, 39 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -55,6 +55,7 @@ priority?: 'medium'|'low',
 sticky?: 'start'|'end', editTrigger?: 'double-click'|'always', editValue?, editLabel?: (row) => string,
 editType?: 'text'|'number'|'select',
 editOptions?: { value: string; label: string }[], footer?, cellStyle?, cellPart?, heatValue?,
+href?: (row) => string | undefined, target?: string, rel?: string,
 cell: (row) => unknown }` — `cell` is required for every `editTrigger` except `'always'`, whose
   persistent editor renders unconditionally so the table's render path never falls back to it.
   **`cell()` output renders inside the table's shadow root**, so class rules from the page or from
@@ -74,6 +75,25 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   // in the owner's stylesheet
   // lr-table::part(cell-archived) { opacity: 0.7; }
   // lr-table::part(cell-secondary) { display: block; color: var(--lr-color-text-quiet); }
+  ```
+  —
+  `href(row) => string | undefined` makes that column's resting content a real link: a safe URL
+  wraps it in `<a part="cell-link">`, so row navigation keeps middle-click, open-in-new-tab, the
+  link context menu and a link announcement instead of a whole-row click target with no link
+  semantics. Unsafe schemes, a non-string or empty result and a throwing callback render the plain
+  content. `target` is forwarded and always adds `noopener noreferrer`; `rel` tokens merge with that
+  guard and `opener` is dropped. Activating the link (click or Enter) navigates natively and does
+  not emit `lr-row-activate`; clicks elsewhere in the row still do. The link takes the existing
+  `--lr-table-cell-link-color`/`--lr-table-cell-link-hover-color` paint. For client-side routing,
+  intercept only a plain primary click:
+
+  ```ts
+  table.addEventListener('click', (event) => {
+    const link = event.composedPath().find((node) => node instanceof HTMLAnchorElement && node.part.contains('cell-link'));
+    if (!(link instanceof HTMLAnchorElement) || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    router.navigate(link.href);
+  });
   ```
   —
   `ariaLabel` overrides that column header's accessible name (applied as the `<th>`'s `aria-label`
@@ -195,6 +215,16 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   or expansion events. Reassign controlled key collections after raising it to restore excluded keys.
   At the key cap, existing keys retain priority over a newly toggled key; selection and expansion
   events report the actual retained state.
+- `stack: 'never'|'auto'|'always' = 'never'` (reflected) — responsive card layout for phones.
+  `'always'` renders every body row as a stacked block whose cells each show their column label as a
+  visible `[part="cell-label"]` caption (`aria-hidden`, since the column header already names the
+  cell) before the value; `'auto'` stacks only while `[part="base"]` is narrower than
+  `--lr-table-stack-breakpoint` (default `var(--lr-size-36rem)`, resolved live, so `em`/`rem`/`px`
+  all work — a custom property cannot drive a `@container` query, so the component measures it).
+  The grid/row/gridcell roles, sortable headers (wrapped into a strip above the cards), selection,
+  activation, editing, expansion and `href` links keep working; `sticky` columns stop pinning while
+  stacked. `--lr-table-stack-label-size` (default `40%`) sets the caption's inline size. Unsupported
+  values normalize to `'never'`, which renders exactly the previous markup
 - `layout: 'auto'|'fixed' = 'auto'` (reflected) — a **floor** on the `<table>`'s `table-layout`, not
   an override. `'fixed'` forces the fixed algorithm even when no column declares a `width`, so every
   column shares the available width evenly and long cell content is clipped/wrapped instead of
@@ -538,7 +568,9 @@ only while it has a value), `loading` (visible spinner wrapper in spinner mode; 
 `pagination-controls`, `pagination-pages`, `pagination-page`, `pagination-page-current`,
 `pagination-page-field`, `pagination-page-input`, `pagination-page-count`, `pagination-button`), `cell-editor`,
 `cell-content` (the block wrapper around a body cell's resting content, rendered only for a column
-defining `cellPart(row)`, which also carries every name that callback returns), `group-row`, `group-cell`, and `resize-handle` (the focusable column
+defining `cellPart(row)`, which also carries every name that callback returns), `cell-link` (the
+real anchor around a body cell's resting content while the column's `href(row)` returns a safe URL), `cell-label` (the
+visible column caption before a stacked cell's value while `stack` stacks rows), `group-row`, `group-cell`, and `resize-handle` (the focusable column
 separator with an explicit finite ARIA maximum even without a CSS `maxWidth`). The built-in
 `empty` `<lr-empty>` host exports `empty-base`, `empty-icon`, `empty-heading`, `empty-description`,
 and `empty-actions`. The no-columns and no-rows branches place it directly in the shadow root;
@@ -603,9 +635,15 @@ component marks the alternating rows itself; this does not affect group, expande
 row's hover and pressed fills reach its `sticky` column cell the same way, through an internal
 custom property rather than a themeable token, since neither state has a public hook today.
 `--lr-table-header-sorted-bg` (default `var(--lr-color-surface)`) and `--lr-table-header-sorted-color` (default
-`inherit`) restyle the **currently-sorted** column's header cell (`[aria-sort]` other than `none`),
+`var(--lr-table-header-color, inherit)`) restyle the **currently-sorted** column's header cell (`[aria-sort]` other than `none`),
 including a `sticky` column's own header cell. The opaque surface default prevents body rows from
 showing through the sticky header while it scrolls.
+Every header cell at rest reads `--lr-table-header-color` (default `inherit`),
+`--lr-table-header-font-size` (default `inherit`) and `--lr-table-header-font-weight` (default
+`var(--lr-font-weight-semibold)`). `--lr-table-cell-border-color` (default
+`var(--lr-color-border-subtle)`) colors the rules between rows: the header cell's bottom rule, every
+body, group, total, expansion and footer cell rule, and the seam beside a `sticky` column; the outer
+frame keeps its own edge.
 The `sort-icon` part styles only the indicator; these tokens style the header cell. Use `::part(sort-icon-inactive)` and
 `::part(sort-icon-active)` to style the two indicator states without private selectors.
 `--lr-table-sticky-offset` (default `0`) is measured and written inline per column by the component

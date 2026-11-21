@@ -110,6 +110,23 @@ export interface StatRow {
  * @cssprop [--lr-stat-value-hover-color=var(--lr-color-brand)] - Exact-value hover color for neutral values.
  * @cssprop [--lr-stat-value-font-family=inherit] - Font of the headline, row and exact values. Digits are
  *   tabular, so numbers align without a monospace face that lacks non-Latin glyphs.
+ * @cssprop [--lr-stat-value-font-size=var(--lr-font-size-2xl)] - Headline value size. `prose` keeps its own smaller size.
+ * @cssprop [--lr-stat-value-font-weight=var(--lr-font-weight-bold)] - Headline value weight. `prose` keeps its own weight.
+ * @cssprop [--lr-stat-label-font-size=var(--lr-font-size-xs)] - Metric label size.
+ * @cssprop [--lr-stat-label-font-weight=var(--lr-font-weight-semibold)] - Metric label weight.
+ * @cssprop [--lr-stat-label-color=var(--lr-color-text-quiet)] - Metric label color.
+ * @cssprop [--lr-stat-label-letter-spacing=var(--lr-size-0-04em)] - Metric label letter spacing.
+ * @cssprop [--lr-stat-label-text-transform=uppercase] - Metric label case; `none` keeps the authored case.
+ * @cssprop [--lr-stat-unit-font-size=var(--lr-font-size-md-sm)] - Unit size.
+ * @cssprop [--lr-stat-unit-color=var(--lr-color-text-quiet)] - Unit color.
+ * @cssprop [--lr-stat-caption-font-size=var(--lr-font-size-sm)] - Caption size.
+ * @cssprop [--lr-stat-caption-color=var(--lr-color-text-quiet)] - Caption color.
+ * @cssprop [--lr-stat-icon-size=inherit] - Font size of the icon container; `lr-icon` and
+ *   `1em`-sized glyphs in the `start` slot follow it.
+ * @cssprop [--lr-stat-icon-padding=0] - Inset of the icon chip around its glyph.
+ * @cssprop [--lr-stat-icon-radius=0] - Corner radius of the icon chip.
+ * @cssprop [--lr-stat-icon-bg=transparent] - Background of the icon chip.
+ * @cssprop [--lr-stat-icon-color=var(--lr-color-text-quiet)] - Color of the icon chip's glyph.
  * @cssprop [--lr-stat-link-hover-border-color=var(--lr-color-brand)] - Linked-card border on hover.
  * @cssprop [--lr-stat-link-hover-shadow=var(--lr-shadow-s)] - Linked-card shadow on hover.
  * @cssprop [--lr-stat-link-active-border-color=var(--lr-stat-link-hover-border-color,var(--lr-color-brand))] - Linked-card border while pressed.
@@ -242,6 +259,11 @@ export class LyraStat extends LyraElement {
    *  baseline row; `[part='spark']` and `[part='rows']` have no sensible place on a text baseline
    *  and stay stacked on their own full-width line beneath that row. */
   @property({ reflect: true }) orientation: StatOrientation = 'vertical';
+  /** Fills the parent's block size: the host and `[part='base']` take `block-size: 100%` and, in
+   *  the vertical orientation, the caption (with the breakdown rows after it) is pushed to the
+   *  block end, so tiles in a grid row share one height and one caption baseline. Also stretches a
+   *  `frame='plain'` stat. */
+  @property({ type: Boolean, reflect: true }) fill = false;
 
   // Same fix `lr-empty` already established: `[part]:empty` never matches
   // because the part always contains a literal `<slot>` child. Track real

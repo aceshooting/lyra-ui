@@ -428,7 +428,7 @@ it("paginates client rows, clamps navigation, and reports page-size changes", as
       '[part~="previous-button"]'
     ) as HTMLButtonElement
   ).click();
-  expect((await previousEvent).detail).to.deep.equal({ page: 0, pageSize: 2 });
+  expect((await previousEvent).detail).to.deep.equal({ page: 0, pageSize: 2, offset: 0 });
   expect(element.getVisibleRows().map((row) => row.id)).to.deep.equal([1, 2]);
 
   const size = element.shadowRoot!.querySelector(
@@ -437,7 +437,7 @@ it("paginates client rows, clamps navigation, and reports page-size changes", as
   size.value = "1";
   const sizeEvent = oneEvent(element, "lr-page-change");
   size.dispatchEvent(new Event("change", { bubbles: true, composed: true }));
-  expect((await sizeEvent).detail).to.deep.equal({ page: 0, pageSize: 1 });
+  expect((await sizeEvent).detail).to.deep.equal({ page: 0, pageSize: 1, offset: 0 });
   expect(element.pageCount).to.equal(3);
 });
 

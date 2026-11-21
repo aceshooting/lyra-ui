@@ -66,7 +66,7 @@ import {
 import type {} from '../../overlays/overlay/dropdown.class.js';
 import type {} from '../../layout/menu/dropdown-item.class.js';
 import { styles } from './data-grid.styles.js';
-import type { DataGridAppearance, DataGridCellContextMenuDetail, DataGridColumn, DataGridCopyOptions, DataGridCsvOptions, DataGridExportOptions, DataGridFacets, DataGridFilter, DataGridKey, DataGridPinSide, DataGridRequest, DataGridResponse, DataGridScrollOptions, DataGridSelectable, DataGridSize, DataGridSortingState, DataGridState, LyraDataGridEventMap, SortingState } from './data-grid-types.js';
+import type { DataGridAppearance, DataGridCellContextMenuDetail, DataGridColumn, DataGridCopyOptions, DataGridCsvOptions, DataGridExportOptions, DataGridFacets, DataGridFilter, DataGridKey, DataGridPageDetail, DataGridPinSide, DataGridRequest, DataGridResponse, DataGridScrollOptions, DataGridSelectable, DataGridSize, DataGridSortingState, DataGridState, LyraDataGridEventMap, SortingState } from './data-grid-types.js';
 import type { LyraPaginationFormat } from '../pagination/pagination.class.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { isHandledOrComposingKey, isRepeatedActivationKey, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
@@ -85,6 +85,10 @@ const DATA_GRID_CHILDREN = {
   button: () => import('../../lr-button.js'),
 };
 
+/** Frozen page-event detail; `offset` is the zero-based index of the page's first row. */
+function pageDetail(page: number, pageSize: number): DataGridPageDetail {
+  return Object.freeze({ page, pageSize, offset: page * pageSize });
+}
 
 /**
  * `<lr-data-grid>` — a virtualized data grid for client or server data, with sorting, filtering,
@@ -173,7 +177,8 @@ const DATA_GRID_CHILDREN = {
  * @event lr-group-expand - Fired after a user expands a client-side group. Frozen detail:
  *   `{ key, columnId, value, rows }`.
  * @event lr-activate - Accepted pager activation, including the current page, with zero-based `{ value }`.
- * @event lr-before-page-change - Cancelable pager proposal with zero-based `{ page, pageSize }`.
+ * @event lr-before-page-change - Cancelable pager proposal with zero-based `{ page, pageSize, offset }`;
+ *   `offset` is `page * pageSize`, the first row's zero-based index.
  * @event lr-selection-request - Cancelable user selection proposal with readonly `{ selectedRowKeys }`.
  * @event lr-selection-change - Selection committed, with readonly `{ selectedRowKeys, selectedKeys, selectedRows }`.
  * @event lr-row-expand-request - Cancelable row expansion proposal with `{ row, rowKey, expanded }`.
@@ -182,7 +187,8 @@ const DATA_GRID_CHILDREN = {
  * @csspart page-summary - The localized range for the current page.
  * @csspart page-input - The compact pager's page-jump input.
  * @event lr-page-change - Fired after a user changes the zero-based page or page size, and after a
- *   user sort, filter or search resets a later page to the first. Frozen detail: `{ page, pageSize }`.
+ *   user sort, filter or search resets a later page to the first. Frozen detail:
+ *   `{ page, pageSize, offset }`, where `offset` is `page * pageSize`.
  * @event lr-row-collapse - Fired after a user collapses a tree row or row detail with canonical
  *   `rowKey` plus the mirrored `key` compatibility alias.
  * @event lr-row-expand - Fired after a user expands a tree row or row detail with canonical
@@ -1999,14 +2005,14 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     this.page = next;
     this.emit(
       'lr-page-change',
-      Object.freeze({ page: next, pageSize: this.safePageSize })
+      pageDetail(next, this.safePageSize)
     );
   }
 
   private onPagerRequest(event: CustomEvent<{ page: number }>): void {
     event.stopPropagation();
     const { page, pageSize, paginate, hasNext, indeterminatePage, pageCount } = this;
-    const detail = Object.freeze({ page: event.detail.page - 1, pageSize: this.safePageSize });
+    const detail = pageDetail(event.detail.page - 1, this.safePageSize);
     if (this.emit('lr-before-page-change', detail, { cancelable: true }).defaultPrevented ||
       !this.isConnected || this.page !== page || this.pageSize !== pageSize || this.pageCount !== pageCount ||
       this.paginate !== paginate || this.hasNext !== hasNext || this.indeterminatePage !== indeterminatePage) event.preventDefault();
@@ -2451,6 +2457,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
       search: this.searchTerm,
       page: this.safePage,
       pageSize: this.safePageSize,
+      offset: this.safePage * this.safePageSize,
       signal: this.requestController?.signal,
     });
     const current = (): boolean => generation === this.requestGeneration
@@ -3846,7 +3853,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
    *  the reset caused so a server-driven consumer does not keep requesting the old page. */
   private emitPageReset(previousPage: number): void {
     if (previousPage === 0 || this.page !== 0 || !this.isConnected) return;
-    this.emit('lr-page-change', Object.freeze({ page: 0, pageSize: this.safePageSize }));
+    this.emit('lr-page-change', pageDetail(0, this.safePageSize));
   }
 
   private onHeaderClick(event: MouseEvent, id: string): void {
@@ -4502,7 +4509,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     if (!control) return;
     const { page, pageSize, paginate } = this;
     const requestedSize = finiteCount(Number(control.value));
-    const detail = Object.freeze({ page: 0, pageSize: requestedSize });
+    const detail = pageDetail(0, requestedSize);
     if (this.emit('lr-before-page-change', detail, { cancelable: true }).defaultPrevented ||
       !this.isConnected || this.page !== page || this.pageSize !== pageSize || this.paginate !== paginate) {
       control.value = String(this.safePageSize);
@@ -4512,7 +4519,7 @@ export class LyraDataGrid<Row = Record<string, unknown>> extends LyraElement<
     this.page = 0;
     this.emit(
       'lr-page-change',
-      Object.freeze({ page: 0, pageSize: this.safePageSize })
+      pageDetail(0, this.safePageSize)
     );
   }
 

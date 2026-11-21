@@ -431,6 +431,7 @@ export type {
   TableSortIndicators,
   TableSortMode,
   TableSortRequestDetail,
+  TableStackMode,
 } from './components/data/table/table.class.js';
 export type {
   DataGridAggregation,
@@ -540,6 +541,8 @@ export type {
   HeatmapMode,
   HeatmapScale,
   LyraHeatmapStickyLabels,
+  LyraHeatmapLegendPlacement,
+  LyraHeatmapAxisSelection,
   MatrixCellPos,
   CalendarCellPos,
   HeatmapAnnotation,

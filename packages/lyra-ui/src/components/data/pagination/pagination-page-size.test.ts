@@ -50,7 +50,7 @@ describe('lr-pagination page-size selector', () => {
     choose(sizeSelect(open)!, '20');
     const { detail } = (await request) as CustomEvent<LyraPaginationChangeDetail>;
     // No total to clamp against: page 3 at 10 begins at item 21, which is page 2 at 20.
-    expect({ ...detail }).to.deep.equal({ page: 2, pageSize: 20 });
+    expect({ ...detail }).to.deep.equal({ page: 2, pageSize: 20, offset: 20 });
   });
 
   it('ignores a change to the applied size or while disabled, and restores the display', async () => {
@@ -78,7 +78,7 @@ describe('lr-pagination page-size selector', () => {
     choose(sizeSelect(el)!, '25');
     const proposal = (await before) as CustomEvent<LyraPaginationChangeDetail>;
     expect(proposal.cancelable).to.equal(true);
-    expect({ ...proposal.detail }).to.deep.equal({ page: 2, pageSize: 25 });
+    expect({ ...proposal.detail }).to.deep.equal({ page: 2, pageSize: 25, offset: 25 });
     await el.updateComplete;
     expect(seen).to.deep.equal([]);
     expect([el.page, el.pageSize]).to.deep.equal([4, 10]);
@@ -94,7 +94,7 @@ describe('lr-pagination page-size selector', () => {
     choose(sizeSelect(el)!, '50');
     const { detail } = (await accepted) as CustomEvent<LyraPaginationChangeDetail>;
     // Page 10 at 10 begins at item 91; at 50 per page that is page 2 of 2.
-    expect({ ...detail }).to.deep.equal({ page: 2, pageSize: 50 });
+    expect({ ...detail }).to.deep.equal({ page: 2, pageSize: 50, offset: 50 });
     expect(order).to.deep.equal(['before', 'change']);
     await el.updateComplete;
     // Controlled: nothing applied yet, so the selector shows the size still in effect.

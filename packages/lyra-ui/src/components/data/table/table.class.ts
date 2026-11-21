@@ -1,6 +1,8 @@
 import { readOwnArrayLength } from '../../../internal/data-descriptors.js';
 import { loadLazyChildren } from '../../../internal/lazy-children.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
+import { resolveGuardedRel } from '../../../internal/link-rel.js';
+import { safeLinkHref } from '../../../internal/safe-url.js';
 import { foldSearchText, prepareNeedle } from '../../../internal/search-haystack.js';
 import { compareNullable } from '../../../internal/sort-compare.js';
 import { createInputMemo } from '../../../internal/input-memo.js';
@@ -42,14 +44,14 @@ import { requestThenCommit } from '../../../internal/request-commit.js';
 import { ColumnResizePointerSession, columnResizeAriaValues, columnResizeKeyboardWidth, columnResizePointerWidth, columnResizeWidth } from '../../../internal/column-resize.js';
 import { isRepeatedActivationKey, isRovingTargetAvailable, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { renderDataState } from '../../../internal/data-state-renderer.js';
-import { DEFAULT_SKELETON_ROWS, TABLE_OVERRIDE_MESSAGE_KEYS, MAX_SKELETON_ROWS, MAX_PAGE_SIZE, MAX_TABLE_COLLECTION_ENTRIES, MAX_TABLE_ROWS, TABLE_SCROLL_OVERFLOW_TOLERANCE_PX, DEFAULT_RESIZE_MIN_WIDTH_PX, MISSING_CELL_RENDERER_WARNING, MISSING_ACCESSIBLE_NAME_WARNING, INERT_PRIORITY_COLUMN_CONFIG_WARNING, frozenArray, keySet, storedKeySetFacade, isCompactEmptySize, TABLE_LAYOUT, TABLE_PAGINATION_FORMAT, cellContentPartNames, stickyDirection, sanitizeCellStyle, normalizedEditTrigger, encodeKey, isImmutableSearchRow, createFilterStringifier, eventInteractiveTarget, type TableLoadingAppearance, type OwnedAnimationFrame, type TableResizeState, type TableRovingFocusSnapshot, type TableRowEntry, type TableSelectionMode, type TableExpansionMode, type TableSortMode, type TableSortIndicators, type TableScrollMode, type TableSortDirection, type TableColumn, type LyraTableEventMap } from './table-support.js';
+import { DEFAULT_SKELETON_ROWS, TABLE_OVERRIDE_MESSAGE_KEYS, MAX_SKELETON_ROWS, MAX_PAGE_SIZE, MAX_TABLE_COLLECTION_ENTRIES, MAX_TABLE_ROWS, TABLE_SCROLL_OVERFLOW_TOLERANCE_PX, DEFAULT_RESIZE_MIN_WIDTH_PX, MISSING_CELL_RENDERER_WARNING, MISSING_ACCESSIBLE_NAME_WARNING, INERT_PRIORITY_COLUMN_CONFIG_WARNING, frozenArray, keySet, storedKeySetFacade, isCompactEmptySize, TABLE_LAYOUT, TABLE_STACK, TABLE_PAGINATION_FORMAT, cellContentPartNames, stickyDirection, sanitizeCellStyle, normalizedEditTrigger, encodeKey, isImmutableSearchRow, createFilterStringifier, eventInteractiveTarget, type TableLoadingAppearance, type OwnedAnimationFrame, type TableResizeState, type TableRovingFocusSnapshot, type TableRowEntry, type TableSelectionMode, type TableExpansionMode, type TableSortMode, type TableSortIndicators, type TableScrollMode, type TableSortDirection, type TableStackMode, type TableColumn, type LyraTableEventMap } from './table-support.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_dataGridToggleRow, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableAdditionalColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableEditCellInRow, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoading, LYRA_DEFAULT_tableLoadingMore, LYRA_DEFAULT_tableRowLimit, LYRA_DEFAULT_tableRowTotal } from '../../../internal/default-strings/data.generated.js';
 import { LYRA_DEFAULT_clear, LYRA_DEFAULT_details, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_viewerSearchMatchCount } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-export type { TableLoadingAppearance, TableEdgeAlign, TableColumnEditTrigger, TableColumnEditOption, TableSelectionMode, TableExpansionMode, TableSortMode, TableSortIndicators, TableScrollMode, TableSortDirection, TableSortRequestDetail, TableSortCommitDetail, TableSortDetail, TableColumn, LyraTableEventMap } from './table-support.js';
+export type { TableLoadingAppearance, TableEdgeAlign, TableColumnEditTrigger, TableColumnEditOption, TableSelectionMode, TableExpansionMode, TableSortMode, TableSortIndicators, TableScrollMode, TableSortDirection, TableStackMode, TableSortRequestDetail, TableSortCommitDetail, TableSortDetail, TableColumn, LyraTableEventMap } from './table-support.js';
 /** Bounded client projection used by a bare table. Pagination keeps every row reachable while
  * avoiding an unbounded row-by-column DOM allocation. */
 const DEFAULT_PAGE_SIZE = 100;
@@ -125,6 +127,13 @@ const DEFAULT_PAGE_SIZE = 100;
  * @csspart cell - Each body `<td>`. An `editTrigger: 'double-click'` column's resting (not
  *   currently editing) cell additionally carries `[data-editable]` and its own `tabindex="-1"`
  *   roving-focus stop -- see the keyboard paragraph above.
+ * @csspart cell-label - The visible column caption a stacked body cell shows before its value
+ *   (`stack` is `always`, or `auto` below the breakpoint); hidden from assistive technology, which
+ *   already reads the column header.
+ * @cssprop [--lr-table-stack-breakpoint=var(--lr-size-36rem)] - Allocation below which `stack="auto"` stacks rows.
+ * @cssprop [--lr-table-stack-label-size=40%] - Inline size of a stacked cell's caption; the value flows after it.
+ * @csspart cell-link - The real anchor wrapping a body cell's resting content while the column's
+ *   `href(row)` returns a safe URL. It carries the column's `target` and a guarded `rel`.
  * @csspart cell-content - The `display: block` wrapper around a body cell's resting content,
  *   rendered only for a column that defines `cellPart(row)`; it also carries every part name that
  *   callback returns, for per-row styling of `cell()` output from outside the shadow root.
@@ -284,8 +293,14 @@ const DEFAULT_PAGE_SIZE = 100;
  *   Same rationale as `--lr-table-row-selected-bg`: `::part(header-cell)[aria-sort]` is invalid CSS,
  *   so this token is the supported way to recolor the sorted header without hijacking a
  *   library-wide token.
- * @cssprop [--lr-table-header-sorted-color=inherit] - Text color of the currently-sorted column's
- *   header cell.
+ * @cssprop [--lr-table-header-sorted-color=var(--lr-table-header-color, inherit)] - Text color of the
+ *   currently-sorted column's header cell; falls back to the resting header color.
+ * @cssprop [--lr-table-header-color=inherit] - Text color of every header cell at rest.
+ * @cssprop [--lr-table-header-font-size=inherit] - Font size of every header cell.
+ * @cssprop [--lr-table-header-font-weight=var(--lr-font-weight-semibold)] - Font weight of every header cell.
+ * @cssprop [--lr-table-cell-border-color=var(--lr-color-border-subtle)] - Color of the rules between
+ *   rows: the header cell's bottom rule, every body, group, total, expansion and footer cell rule,
+ *   and the seam beside a `sticky` column. The outer frame keeps its own edge.
  * @cssprop [--lr-table-sticky-offset=0] - Distance a `sticky` column pins from the inline edge.
  *   Measured and set inline per column by the component so multiple sticky columns stack instead
  *   of overlapping; falls back to `0` for the first one, or before the first measurement pass.
@@ -469,6 +484,30 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     if (old === normalized) return;
     this._layout = normalized;
     this.requestUpdate('layout', old);
+  }
+  private _stack: TableStackMode = 'never';
+  /** Responsive card layout. `'never'` (the default) keeps the grid. `'always'` renders every body
+   *  row as a stacked block whose cells each show their column label as a visible caption beside
+   *  the value; `'auto'` does so only while `[part='base']` is narrower than
+   *  `--lr-table-stack-breakpoint` (default `36rem`, resolved live, so `em`/`rem`/`px` all work).
+   *  The grid, row and cell roles, the sortable header buttons, selection, activation, editing,
+   *  expansion and links keep working; only the layout changes. Unsupported values normalize to
+   *  `'never'`. */
+  @property({ reflect: true, converter: TABLE_STACK })
+  get stack(): TableStackMode {
+    return this._stack;
+  }
+  set stack(next: TableStackMode) {
+    const normalized = TABLE_STACK.normalizeReflected(this, 'stack', next);
+    const old = this._stack;
+    if (old === normalized) return;
+    this._stack = normalized;
+    this.requestUpdate('stack', old);
+  }
+  /** Whether `stack='auto'` currently measures below its breakpoint. */
+  @state() private autoStacked = false;
+  private get stacked(): boolean {
+    return this._stack === 'always' || (this._stack === 'auto' && this.autoStacked);
   }
   /** Column key identifying the active sort. */
   @property({ attribute: 'sort-key' }) sortKey = '';
@@ -1288,7 +1327,18 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     this.applyStickyOffsets(writes);
     this.syncResizeHandleValues(writes);
     this.recomputeHiddenPriorityColumns(writes);
+    this.syncAutoStack();
     for (const apply of writes) apply();
+  }
+
+  /** Compares the base's allocation with the probe that resolves `--lr-table-stack-breakpoint`. */
+  private syncAutoStack(): void {
+    if (this._stack !== 'auto') return;
+    const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
+    const probe = this.renderRoot.querySelector<HTMLElement>('.stack-probe');
+    if (!base || !probe || base.clientWidth <= 0) return;
+    const stacked = base.clientWidth < probe.offsetWidth;
+    if (stacked !== this.autoStacked) this.autoStacked = stacked;
   }
 
   private scheduleLayoutSync = (): void => {
@@ -2295,6 +2345,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     if (base) this.observeBase(base);
     this.observeTable(this.renderRoot.querySelector('[part="table"]') ?? undefined);
     if (geometryChanged) this.observeHeaders();
+    if (changed.has('stack') && this._stack === 'auto') this.scheduleLayoutSync();
     this.restoreRovingFocus();
     if (this.hasAlwaysOnEditors) this.restoreAlwaysOnEditorFocus();
     // Scoped to the cell that actually opened: an unqualified `[part="cell-editor"]` lookup would
@@ -2971,9 +3022,26 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  `cellPart` -- see that member's doc. Without `cellPart` the output is unchanged. */
   private renderCellContent(col: TableColumn<T>, row: T): unknown {
     const value = this.renderCellValue(col, row);
-    if (typeof col.cellPart !== 'function') return value;
-    const extraParts = cellContentPartNames(col.cellPart(row));
-    return html`<div part="cell-content ${extraParts}">${value}</div>`;
+    const content = typeof col.cellPart === 'function'
+      ? html`<div part="cell-content ${cellContentPartNames(col.cellPart(row))}">${value}</div>`
+      : value;
+    return this.renderCellLink(col, row, content);
+  }
+
+  /** Wraps resting content in the guarded `[part='cell-link']` anchor while the column's `href`
+   *  resolves to a safe URL for this row; anything else leaves the content as it was. */
+  private renderCellLink(col: TableColumn<T>, row: T, content: unknown): unknown {
+    if (typeof col.href !== 'function') return content;
+    let href: string | null = null;
+    try {
+      href = safeLinkHref(col.href(row));
+    } catch {
+      // A throwing consumer callback degrades to the plain cell, like a missing URL.
+    }
+    if (!href) return content;
+    const target = typeof col.target === 'string' && col.target ? col.target : undefined;
+    const rel = resolveGuardedRel(typeof col.rel === 'string' ? col.rel : undefined, target);
+    return html`<a part="cell-link" href=${href} target=${target ?? nothing} rel=${rel ?? nothing}>${content}</a>`;
   }
 
   private renderCellValue(col: TableColumn<T>, row: T): unknown {
@@ -3234,6 +3302,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     // column (the same way hasExpand/hasRowTotal were each added) only has to be added here once.
     const spanningColspan = this.columns.length + (hasExpand ? 1 : 0) + (hasRowTotal ? 1 : 0);
     const renderedEntries = this.renderedEntries();
+    const stacked = this.stacked;
     const renderedGroupKeys = this.groupBy ? renderedEntries.map((entry) => this.groupBy!(entry.row)) : [];
     const renderedGroupRows = new Map<string | number, T[]>();
     if (this.groupLabel) {
@@ -3424,7 +3493,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
                               title=${cellTitle || nothing}
                               style=${tintedStyle && Object.keys(tintedStyle).length ? styleMap(tintedStyle) : nothing}
                             >
-                              ${editing ? this.renderCellEditor(row, col, token, alwaysOn, renderedEntries.length > 1 ? rowName : undefined) : this.renderCellContent(col, row)}
+                              ${stacked ? html`<span part="cell-label" aria-hidden="true">${col.label}</span>` : nothing}${editing ? this.renderCellEditor(row, col, token, alwaysOn, renderedEntries.length > 1 ? rowName : undefined) : this.renderCellContent(col, row)}
                             </td>`;
                           })}
                           ${hasRowTotal ? html`<td part="row-total-cell">${this.rowTotal?.(row)}</td>` : nothing}
@@ -3460,7 +3529,8 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
           </table>`;
 
     return html`
-      <div part="base" ?data-force-visible=${this.priorityColumnsVisible} aria-busy=${skeletonLoading ? 'true' : 'false'}>
+      ${this._stack === 'auto' ? html`<div class="stack-probe" aria-hidden="true"></div>` : nothing}
+      <div part="base" ?data-force-visible=${this.priorityColumnsVisible} ?data-stacked=${this.stacked} aria-busy=${skeletonLoading ? 'true' : 'false'}>
         ${skeletonLoading
           ? html`<div part="loading" class="sr-only" aria-hidden="true">${this.loadingText()}</div>`
           : nothing}

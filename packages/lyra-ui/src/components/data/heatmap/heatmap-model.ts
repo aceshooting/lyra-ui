@@ -14,6 +14,20 @@ import type { LyraHeatmapMatrixRangeSelectDetail } from './heatmap-matrix-source
  */
 export type LyraHeatmapStickyLabels = 'none' | 'rows' | 'cols' | 'both';
 
+/**
+ * Where the legend row sits relative to the grid: `bottom` (after it) or `top` (before it). The
+ * choice changes DOM order, not only visual order, so reading order always matches what is seen.
+ * These are the block-axis members of the placement vocabulary chart and map legends share; side
+ * placements are not offered because the fitted matrix is measured against the full host width.
+ */
+export type LyraHeatmapLegendPlacement = 'top' | 'bottom';
+
+/**
+ * Which matrix axis labels become toggle buttons for whole-row or whole-column selection. Same
+ * `rows`/`cols` spelling as `LyraHeatmapStickyLabels`.
+ */
+export type LyraHeatmapAxisSelection = 'none' | 'rows' | 'cols' | 'both';
+
 export interface OwnedAnimationFrame {
   owner: Window;
   handle: number;

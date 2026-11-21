@@ -99,8 +99,16 @@ export const styles = css`
   [part='base'][href]:focus-visible {
     ${focusRing}
   }
+  /* The icon chip paints nothing by default; its tokens let a themed tile give the leading glyph a
+     sized, tinted, rounded backdrop. flex-start keeps a painted chip hugging the glyph instead of
+     stretching across the column. */
   [part='icon'] {
-    color: var(--lr-color-text-quiet);
+    align-self: flex-start;
+    font-size: var(--lr-stat-icon-size, inherit);
+    padding: var(--lr-stat-icon-padding, 0);
+    border-radius: var(--lr-stat-icon-radius, 0);
+    background: var(--lr-stat-icon-bg, transparent);
+    color: var(--lr-stat-icon-color, var(--lr-color-text-quiet));
   }
   [part='icon'][hidden] {
     display: none;
@@ -108,11 +116,11 @@ export const styles = css`
   [part='label'] {
     min-inline-size: 0;
     overflow-wrap: anywhere;
-    font-size: var(--lr-font-size-xs);
-    font-weight: var(--lr-font-weight-semibold);
-    text-transform: uppercase;
-    letter-spacing: var(--lr-size-0-04em);
-    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-stat-label-font-size, var(--lr-font-size-xs));
+    font-weight: var(--lr-stat-label-font-weight, var(--lr-font-weight-semibold));
+    text-transform: var(--lr-stat-label-text-transform, uppercase);
+    letter-spacing: var(--lr-stat-label-letter-spacing, var(--lr-size-0-04em));
+    color: var(--lr-stat-label-color, var(--lr-color-text-quiet));
   }
   /* An empty label part still takes [part='base']'s gap, leaving a blank line above the value --
      collapse it the way icon/sub/spark/caption/rows do. */
@@ -136,8 +144,8 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;
-    font-size: var(--lr-font-size-2xl);
-    font-weight: var(--lr-font-weight-bold);
+    font-size: var(--lr-stat-value-font-size, var(--lr-font-size-2xl));
+    font-weight: var(--lr-stat-value-font-weight, var(--lr-font-weight-bold));
     font-family: var(--lr-stat-value-font-family, inherit);
     font-variant-numeric: tabular-nums;
   }
@@ -183,8 +191,8 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     overflow-wrap: anywhere;
-    font-size: var(--lr-font-size-md-sm);
-    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-stat-unit-font-size, var(--lr-font-size-md-sm));
+    color: var(--lr-stat-unit-color, var(--lr-color-text-quiet));
   }
   [part='trend'] {
     display: inline-flex;
@@ -247,8 +255,8 @@ export const styles = css`
   [part='caption'] {
     min-inline-size: 0;
     overflow-wrap: anywhere;
-    font-size: var(--lr-font-size-sm);
-    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-stat-caption-font-size, var(--lr-font-size-sm));
+    color: var(--lr-stat-caption-color, var(--lr-color-text-quiet));
   }
   [part='caption'][hidden] {
     display: none;
@@ -364,6 +372,20 @@ export const styles = css`
     text-decoration: underline;
     text-decoration-thickness: var(--lr-border-width-medium);
   }
+  /* fill: the host takes its parent's block size (a grid track, a flex item, a sized cell) and the
+     caption, with anything after it, drops to the block end, so a row of tiles lines up both edges.
+     After frame='plain' on purpose: an explicit fill also stretches a chrome-less stat. */
+  :host([fill]) {
+    block-size: 100%;
+  }
+  :host([fill]) [part='base'],
+  :host([fill]) .linked-shell,
+  :host([fill]) .linked-content {
+    block-size: 100%;
+  }
+  :host([fill]:not([orientation='horizontal'])) [part='caption'] {
+    margin-block-start: auto;
+  }
   :host([orientation='horizontal']) [part='base'] {
     flex-direction: row;
     flex-wrap: wrap;
@@ -378,7 +400,8 @@ export const styles = css`
   }
   /* The trend pill opts out of baseline alignment when stacked; on a single baseline row it has to
      sit on that baseline like everything else. */
-  :host([orientation='horizontal']) [part='trend'] {
+  :host([orientation='horizontal']) [part='trend'],
+  :host([orientation='horizontal']) [part='icon'] {
     align-self: baseline;
   }
   /* A breakdown list and a sparkline have no place on a text baseline, so they claim a full line

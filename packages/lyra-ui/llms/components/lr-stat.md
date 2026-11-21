@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 36 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -102,6 +102,10 @@ value: string; readonly exactValue?: string }`; at most the first 10,000 rows ar
   label, value, trend, sub and caption. `'horizontal'` lays label, value+unit, trend, sub and caption
   out on a single wrapping baseline row; `[part="spark"]` and `[part="rows"]` have no sensible place
   on a text baseline and stay stacked on their own full-width line beneath that row
+- `fill: boolean = false` (reflected) — the host and `[part="base"]` take `block-size: 100%` of the
+  parent (a grid track, flex item or sized cell) and, in the vertical orientation, the caption and
+  anything after it are pushed to the block end, so a row of KPI tiles shares one height and one
+  caption line. It also stretches a `frame="plain"` stat
 
 **Events:** none.
 
@@ -154,6 +158,18 @@ Linked-card interaction paint is independently themeable through
 `--lr-stat-link-active-border-color`/`--lr-stat-link-active-shadow` (defaulting to their hover
 counterparts), and `--lr-stat-link-active-bg` (defaulting to the existing active color mix). These
 are point-of-use fallbacks, so values inherit from a theme ancestor and a value on `lr-stat` wins.
+Typography follows the application type scale through `--lr-stat-value-font-size` (default
+`var(--lr-font-size-2xl)`), `--lr-stat-value-font-weight` (default `var(--lr-font-weight-bold)`),
+`--lr-stat-label-font-size` (default `var(--lr-font-size-xs)`), `--lr-stat-label-font-weight`
+(default `var(--lr-font-weight-semibold)`), `--lr-stat-label-color` (default
+`var(--lr-color-text-quiet)`), `--lr-stat-label-letter-spacing` (default `var(--lr-size-0-04em)`),
+`--lr-stat-label-text-transform` (default `uppercase`), `--lr-stat-unit-font-size` (default
+`var(--lr-font-size-md-sm)`), `--lr-stat-unit-color` (default `var(--lr-color-text-quiet)`),
+`--lr-stat-caption-font-size` (default `var(--lr-font-size-sm)`) and `--lr-stat-caption-color`
+(default `var(--lr-color-text-quiet)`); `prose` keeps its own smaller value style. The `start` icon
+container becomes a chip through `--lr-stat-icon-size` (default `inherit`, its font size),
+`--lr-stat-icon-padding` (default `0`), `--lr-stat-icon-radius` (default `0`), `--lr-stat-icon-bg`
+(default `transparent`) and `--lr-stat-icon-color` (default `var(--lr-color-text-quiet)`).
 
 **Optional peer deps:** none.
 

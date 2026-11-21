@@ -246,7 +246,7 @@ row expand/collapse details use canonical `rowKey` plus mirrored `key`. Cancelab
 and suppresses `lr-sort-change`.
 Use `lr-sort` for the accepted primary sort. Its frozen detail carries `phase: 'commit'`, `sortKey`, `sortDir`, and the ordered `sort` array. Clearing uses an empty key and a null direction.
 `lr-selection-request` proposes frozen `{ selectedRowKeys }`; `lr-selection-change` reports the accepted keys and selected rows. `lr-row-expand-request` proposes `{ row, rowKey, key, expanded }`; `lr-row-expand-toggle` reports the accepted change. Existing `lr-sort-change`, `lr-row-select`, `lr-row-expand` and `lr-row-collapse` listeners continue to work.
-`lr-before-page-change` proposes zero-based `{ page, pageSize }` for page navigation and page-size changes. An accepted pager activation also emits `lr-activate` with zero-based `{ value }`, including activation of the current page.
+`lr-before-page-change` proposes zero-based `{ page, pageSize, offset }` for page navigation and page-size changes; `offset` is `page * pageSize`, and `lr-page-change` and each `dataSource` request carry the same `offset`. An accepted pager activation also emits `lr-activate` with zero-based `{ value }`, including activation of the current page.
 `lr-copy` (`{ ok: true, text }` on fulfillment); `lr-copy-error` (`{ ok: false, text, reason, error }` on failure); `lr-error` is a compatibility notice without raw
 platform text. `lr-retry-request` (`detail: null`, cancelable) means the built-in retry
 button was activated while `error` is set; its default clears `error`, and veto leaves it set.

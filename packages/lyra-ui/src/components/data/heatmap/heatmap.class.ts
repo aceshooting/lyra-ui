@@ -73,16 +73,16 @@ import { csvRow } from '../../../internal/csv.js';
 import {
   AnnouncementSinkController,
 } from '../../../internal/announcer.js';
-import { PAD_LEFT, PAD_TOP, ROW_LABEL_INSET, MAX_ROW_LABEL_FRACTION, MAX_COL_LABEL_HEIGHT, COL_LABEL_INSET, labelExtentConverter, STICKY_LABELS, FALLBACK_NO_DATA_FILL, FALLBACK_STICKY_LABEL_BG, RAMP_STEPS, FALLBACK_SCALE_LO, FALLBACK_SCALE_HI, FALLBACK_LABEL_FONT, CAL_PAD_LEFT, CAL_WEEKDAY_LABEL_INSET, CAL_LABEL_H, CAL_CELL, CAL_GAP, DEFAULT_MATRIX_CELL_SIZE, MAX_MATRIX_ROW_HEIGHT, DEFAULT_ACCESSIBLE_TARGET_SIZE_PX, FIT_MIN_CELL, RING_LINE_WIDTH, FALLBACK_FOCUS_RING_COLOR, FALLBACK_ANNOTATION_COLOR, FALLBACK_SELECTED_COLOR, SCOPED_COLOR, MAX_CANVAS_DIMENSION, MAX_CANVAS_PIXELS, ARROW_KEYS, ignoresGridKey, GRID_KEYS, MS_PER_DAY, CAL_MONTH_LABEL_GAP, optionalCellSizeConverter, DEFAULT_MATRIX_DATA, normalizeCellSizeClamp, bucketCountConverter, mixRgb, type CalendarSpacingProperty, CALENDAR_SPACING_PROPERTIES } from './heatmap-config.js';
+import { PAD_LEFT, PAD_TOP, ROW_LABEL_INSET, MAX_ROW_LABEL_FRACTION, MAX_COL_LABEL_HEIGHT, COL_LABEL_INSET, labelExtentConverter, STICKY_LABELS, LEGEND_PLACEMENT, AXIS_SELECTION, FALLBACK_NO_DATA_FILL, FALLBACK_STICKY_LABEL_BG, RAMP_STEPS, FALLBACK_SCALE_LO, FALLBACK_SCALE_HI, FALLBACK_LABEL_FONT, CAL_PAD_LEFT, CAL_WEEKDAY_LABEL_INSET, CAL_LABEL_H, CAL_CELL, CAL_GAP, DEFAULT_MATRIX_CELL_SIZE, MAX_MATRIX_ROW_HEIGHT, DEFAULT_ACCESSIBLE_TARGET_SIZE_PX, FIT_MIN_CELL, RING_LINE_WIDTH, FALLBACK_FOCUS_RING_COLOR, FALLBACK_ANNOTATION_COLOR, FALLBACK_SELECTED_COLOR, SCOPED_COLOR, MAX_CANVAS_DIMENSION, MAX_CANVAS_PIXELS, ARROW_KEYS, ignoresGridKey, GRID_KEYS, MS_PER_DAY, CAL_MONTH_LABEL_GAP, optionalCellSizeConverter, DEFAULT_MATRIX_DATA, normalizeCellSizeClamp, bucketCountConverter, mixRgb, type CalendarSpacingProperty, CALENDAR_SPACING_PROPERTIES } from './heatmap-config.js';
 import { legendStopsChanged } from './heatmap-model.js';
-import type { LyraHeatmapStickyLabels, OwnedAnimationFrame, HeatmapMode, HeatmapScale, HeatmapCalendarData, HeatmapData, MatrixCellPos, CalendarCellPos, CellPos, HeatmapAnnotation, HeatmapLegendStop, HeatmapSelectedCell, HeatmapSelectionSource, LyraHeatmapCellClickDetail, LyraHeatmapMatrixGeometryChangeDetail, LyraHeatmapCalendarGeometry, LyraHeatmapEventMap, LyraHeatmapExportFormat } from './heatmap-model.js';
+import type { LyraHeatmapAxisSelection, LyraHeatmapLegendPlacement, LyraHeatmapStickyLabels, OwnedAnimationFrame, HeatmapMode, HeatmapScale, HeatmapCalendarData, HeatmapData, MatrixCellPos, CalendarCellPos, CellPos, HeatmapAnnotation, HeatmapLegendStop, HeatmapSelectedCell, HeatmapSelectionSource, LyraHeatmapCellClickDetail, LyraHeatmapMatrixGeometryChangeDetail, LyraHeatmapCalendarGeometry, LyraHeatmapEventMap, LyraHeatmapExportFormat } from './heatmap-model.js';
 import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_heatmapCalendarCellLabel, LYRA_DEFAULT_heatmapCalendarLabel, LYRA_DEFAULT_heatmapDecorationLimit, LYRA_DEFAULT_heatmapDefaultColLabel, LYRA_DEFAULT_heatmapDefaultRowLabel, LYRA_DEFAULT_heatmapInputLimit, LYRA_DEFAULT_heatmapMatrixCellLabel, LYRA_DEFAULT_heatmapMatrixLabel, LYRA_DEFAULT_heatmapNoDataValue, LYRA_DEFAULT_heatmapProjectionLimit, LYRA_DEFAULT_heatmapSelectedCellLabel, LYRA_DEFAULT_heatmapSelectedCount, LYRA_DEFAULT_heatmapSourceError, LYRA_DEFAULT_heatmapSourceExactWindow, LYRA_DEFAULT_heatmapSourceKeyboardHelp, LYRA_DEFAULT_heatmapSourceMax, LYRA_DEFAULT_heatmapSourceMean, LYRA_DEFAULT_heatmapSourceMin, LYRA_DEFAULT_heatmapSourceRangeLabel, LYRA_DEFAULT_heatmapSourceSummary, LYRA_DEFAULT_heatmapValueLabel } from '../../../internal/default-strings/data.generated.js';
 import { LYRA_DEFAULT_loading, LYRA_DEFAULT_noData } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
-export type { CalendarCellPos, HeatmapAnnotation, HeatmapCalendarData, HeatmapData, HeatmapLegendStop, HeatmapMatrixData, HeatmapMode, HeatmapScale, HeatmapSelectedCell, HeatmapSelectionChangeDetail, HeatmapSelectionSource, LyraHeatmapCalendarGeometry, LyraHeatmapCellClickDetail, LyraHeatmapEventMap, LyraHeatmapExportFormat, LyraHeatmapMatrixGeometryChangeDetail, LyraHeatmapStickyLabels, MatrixCellPos } from './heatmap-model.js';
+export type { CalendarCellPos, HeatmapAnnotation, HeatmapCalendarData, HeatmapData, HeatmapLegendStop, HeatmapMatrixData, HeatmapMode, HeatmapScale, HeatmapSelectedCell, HeatmapSelectionChangeDetail, HeatmapSelectionSource, LyraHeatmapCalendarGeometry, LyraHeatmapCellClickDetail, LyraHeatmapEventMap, LyraHeatmapExportFormat, LyraHeatmapMatrixGeometryChangeDetail, LyraHeatmapAxisSelection, LyraHeatmapLegendPlacement, LyraHeatmapStickyLabels, MatrixCellPos } from './heatmap-model.js';
 
 
 /**
@@ -246,10 +246,17 @@ export type { CalendarCellPos, HeatmapAnnotation, HeatmapCalendarData, HeatmapDa
  *   rendered, and the slot itself is absent, while `withoutLegend` is set.
  * @csspart base - The heatmap wrapper.
  * @csspart canvas - The heatmap canvas.
- * @csspart grid - The scrollport wrapping the canvas while `stickyLabels` freezes an axis; absent otherwise.
+ * @csspart grid - The scrollport wrapping the canvas while `stickyLabels` freezes an axis or a
+ *   matrix-mode `fill` heatmap scrolls inside its parent; absent otherwise.
  * @csspart row-labels - The frozen row-label gutter, rendered while `stickyLabels` is `rows` or `both`.
  * @csspart col-labels - The frozen column-label band, rendered while `stickyLabels` is `cols` or `both`.
  * @csspart cells - The opt-in per-cell accessibility overlay.
+ * @csspart row-label - A row-label toggle button laid over the painted label while `axisSelection`
+ *   is `rows` or `both` in `multiple` matrix mode; also `row-label-pressed` while the whole row is selected.
+ * @csspart col-label - A column-label toggle button laid over the painted label while
+ *   `axisSelection` is `cols` or `both`; also `col-label-pressed` while the whole column is selected.
+ * @cssprop [--lr-heatmap-axis-hover-bg=color-mix(in srgb, var(--lr-color-brand) 12%, transparent)] - Hover fill of an `axisSelection` label button.
+ * @cssprop [--lr-heatmap-axis-pressed-color=var(--lr-color-brand)] - Edge marking a fully selected row or column label.
  * @csspart cell - An opt-in native button for one matrix or calendar cell.
  * @csspart tooltip - The hover tooltip, positioned over the hovered cell. It renders inside
  *   `[part="grid"]` while `stickyLabels` freezes an axis (so it scrolls with the cells) and as a
@@ -279,7 +286,17 @@ export type { CalendarCellPos, HeatmapAnnotation, HeatmapCalendarData, HeatmapDa
  * @cssprop [--lr-heatmap-annotation-color=var(--lr-color-danger)] - Border color for an annotated cell.
  * @cssprop [--lr-heatmap-selected-color=var(--lr-color-success)] - Border color for the selected cell.
  * @cssprop [--lr-heatmap-sticky-label-bg=var(--lr-color-surface)] - Backdrop painted under a frozen `stickyLabels` band. Must be opaque: it covers the same labels the scrolling canvas painted underneath it.
- * @cssprop [--lr-heatmap-grid-max-block-size=none] - Block-size ceiling of the `stickyLabels` scrollport. A frozen column band only stays behind once the grid actually scrolls vertically.
+ * @cssprop [--lr-heatmap-grid-max-block-size=none] - Block-size ceiling of the `stickyLabels` scrollport. A frozen column band only stays behind once the grid actually scrolls vertically. A percentage only resolves against a definite block size; set `fill` to let the grid take what its parent leaves.
+ * @cssprop [--lr-heatmap-legend-font-size=var(--lr-font-size-xs)] - Legend text size.
+ * @cssprop [--lr-heatmap-legend-color=var(--lr-color-text-quiet)] - Legend text color.
+ * @cssprop [--lr-heatmap-legend-gap=var(--lr-space-xs)] - Gap between legend entries.
+ * @cssprop [--lr-heatmap-legend-padding=0] - Padding of the legend row.
+ * @cssprop [--lr-heatmap-legend-bg=transparent] - Background of the legend row.
+ * @cssprop [--lr-heatmap-legend-radius=0] - Corner radius of the legend row.
+ * @cssprop [--lr-heatmap-legend-swatch-size=var(--lr-size-0-6rem)] - Size of a `legendStops` swatch and an annotation ring.
+ * @cssprop [--lr-heatmap-legend-ramp-inline-size=var(--lr-size-6rem)] - Length of the continuous legend ramp.
+ * @cssprop [--lr-heatmap-legend-ramp-block-size=var(--lr-size-0-5rem)] - Thickness of the continuous legend ramp.
+ * @cssprop [--lr-heatmap-legend-ramp-radius=var(--lr-size-2px)] - Corner radius of the continuous legend ramp.
  * @cssprop [--lr-heatmap-color-steps-gradient=linear-gradient(to right, var(--lr-heatmap-scale-lo), var(--lr-heatmap-scale-hi))] - Gradient painted on the continuous legend bar. Set on the host by the component itself while `colorSteps` is supplied AND the legend is rendered, and removed again when either stops being true -- `withoutLegend` takes the whole legend row out of the DOM, and the legend bar is this property's only reader; the fallback is the two-endpoint scale ramp.
  * Matrix sources own aggregation and storage. Tiles partition a half-open viewport; source
  * geometry is proportional and matrixGeometry is undefined. Exact keyboard activation uses
@@ -921,6 +938,64 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * summary already names the value label independently of the legend.
    */
   @property({ type: Boolean, attribute: 'without-legend', reflect: true }) withoutLegend = false;
+
+  private _legendPlacement: LyraHeatmapLegendPlacement = 'bottom';
+  /**
+   * Where the legend row renders: `'bottom'` (the default, after the grid) or `'top'` (before it,
+   * so a tall or scrolling matrix keeps its key in view). The row moves in DOM order, not only
+   * visually, so reading and tab order match the layout in both directions. Unsupported values
+   * normalize to `'bottom'`.
+   */
+  @property({ converter: LEGEND_PLACEMENT, attribute: 'legend-placement', reflect: true })
+  get legendPlacement(): LyraHeatmapLegendPlacement {
+    return this._legendPlacement;
+  }
+  set legendPlacement(next: LyraHeatmapLegendPlacement) {
+    const normalized = LEGEND_PLACEMENT.normalizeReflected(this, 'legend-placement', next);
+    const old = this._legendPlacement;
+    if (old === normalized) return;
+    this._legendPlacement = normalized;
+    this.requestUpdate('legendPlacement', old);
+  }
+
+  /**
+   * Fills a parent with a definite block size (a dialog body, a sized flex column, an expand
+   * view): the host and `[part="base"]` take `block-size: 100%`, and in matrix mode the grid
+   * renders inside the `[part="grid"]` scrollport -- even without `stickyLabels` -- which takes the
+   * block size the legend leaves and becomes the single scroller. Without it the grid grows to its
+   * full content height and an outer container scrolls instead. Needs a definite parent height:
+   * like any percentage, `block-size: 100%` resolves to `auto` against an auto-height parent.
+   */
+  @property({ type: Boolean, reflect: true }) fill = false;
+
+  private _axisSelection: LyraHeatmapAxisSelection = 'none';
+  /**
+   * Turns the painted matrix axis labels into toggle buttons: `'rows'`, `'cols'` or `'both'`
+   * render one native `<button>` per label (`[part="row-label"]`/`[part="col-label"]`) over the
+   * painted text. Activating one proposes toggling the whole row or column through the existing
+   * `lr-selection-change` event (source `'row'`/`'column'`), exactly like `toggleRowSelection()`/
+   * `toggleColumnSelection()`; `aria-pressed` renders `"true"` while every interactive cell of that
+   * axis is selected and `"false"` otherwise. Each axis is one tab stop: ArrowUp/ArrowDown (rows) or
+   * ArrowLeft/ArrowRight (columns, physical like the grid) and Home/End move between labels. The
+   * buttons are named by the label text, falling back to the localized default row/column name.
+   * Applies only in matrix mode with `multiple` set; `'none'` (the default) keeps the canvas labels
+   * as they were. Frozen `stickyLabels` bands keep their buttons with them. Unsupported values
+   * normalize to `'none'`.
+   */
+  @property({ converter: AXIS_SELECTION, attribute: 'axis-selection', reflect: true })
+  get axisSelection(): LyraHeatmapAxisSelection {
+    return this._axisSelection;
+  }
+  set axisSelection(next: LyraHeatmapAxisSelection) {
+    const normalized = AXIS_SELECTION.normalizeReflected(this, 'axis-selection', next);
+    const old = this._axisSelection;
+    if (old === normalized) return;
+    this._axisSelection = normalized;
+    this.requestUpdate('axisSelection', old);
+  }
+
+  /** Roving tab stop of each axis-label group. */
+  @state() private axisFocus = { row: 0, col: 0 };
   /**
    * `"linear"` (default) maps values linearly to the color ramp in matrix
    * mode, and buckets calendar-mode values via `quartileBucket()`.
@@ -2140,6 +2215,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         // Toggling this replaces the canvas element (the frozen modes wrap it in a scrollport), so
         // the new, blank canvas needs a full repaint -- and the bands need their first one.
         'stickyLabels',
+        // Same for a matrix-mode fill, which wraps the canvas in the scrollport too.
+        'fill',
       ].some((name) => changed.has(name)) || localeChanged
     ) {
       const focusOnly =
@@ -3484,7 +3561,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     // renderAccessibleCells() deliberately used the previous frozen geometry while this draw was
     // pending, so the DOM overlay never jumped ahead of the old bitmap. Move it to this new
     // snapshot in a coalesced post-update microtask, still before the browser paints the frame.
-    if (geometryChanged && this.accessibleCells) {
+    if (geometryChanged && (this.accessibleCells || this.effectiveAxisSelection !== 'none')) {
       this.scheduleAfterUpdate(
         () => this.requestUpdate(),
         'heatmap-matrix-accessible-geometry'
@@ -4303,7 +4380,13 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
       consumeSuppressedClick(event, this.selectionClickKey);
   }
 
-  /** The `stickyLabels` scrollport, or `null` in the default unfrozen render, which has none. */
+  /** Whether render wraps the grid in the `[part="grid"]` scrollport: a frozen `stickyLabels` axis
+   *  needs one to stick to, and a matrix-mode `fill` heatmap scrolls inside it. */
+  private get gridScrollportRendered(): boolean {
+    return this.effectiveStickyLabels !== 'none' || (this.fill && this.effectiveMode === 'matrix');
+  }
+
+  /** The `stickyLabels` or `fill` scrollport, or `null` in the default render, which has none. */
   private get gridScrollport(): HTMLElement | null {
     return this.shadowRoot?.querySelector<HTMLElement>('[part="grid"]') ?? null;
   }
@@ -4862,7 +4945,6 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * scroll with the canvas they overlay.
    */
   private renderGridSurface(projectionDescription: string): TemplateResult {
-    const sticky = this.effectiveStickyLabels;
     const accessibleStart = this.accessibleWindowStart();
     const surface = html`
       <canvas
@@ -4890,6 +4972,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         @blur=${this.onCanvasFocusChange}
       ></canvas>
       ${guard([this.overlayRevision, accessibleStart], () => this.renderAccessibleCells(accessibleStart))}
+      ${this.renderAxisTargets()}
       ${this.freezesRowLabels
         ? html`<canvas part="row-labels" aria-hidden="true"></canvas>`
         : nothing}
@@ -4897,7 +4980,13 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         ? html`<canvas part="col-labels" aria-hidden="true"></canvas>`
         : nothing}
     `;
-    if (sticky === 'none') return surface;
+    // A top legend precedes the surface inside the base, so the overlay, axis buttons and tooltip,
+    // which are placed in canvas-local coordinates, need a frame that starts at the canvas origin.
+    if (!this.gridScrollportRendered) {
+      return this.legendPlacement === 'top' && !this.withoutLegend
+        ? html`<div class="surface-frame">${surface}${this.renderTooltip()}</div>`
+        : surface;
+    }
     // The tooltip joins the stack rather than staying a `[part="base"]` sibling: it is positioned
     // in the canvas-local coordinates `cellRect()` returns, and `[part="base"]` does not scroll, so
     // outside the scrollport it drifted from its own cell by exactly the scroll offset. Inside the
@@ -4946,6 +5035,103 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     }
   }
 
+  /** `axisSelection` restricted to where it applies: matrix mode with `multiple` selection. */
+  private get effectiveAxisSelection(): LyraHeatmapAxisSelection {
+    return this.multiple && this.effectiveMode === 'matrix' && !this.matrixSource ? this._axisSelection : 'none';
+  }
+
+  /** Selected and interactive cell counts per row and column, for the label buttons' pressed state. */
+  private axisSelectionCounts(): { rowTotal: number[]; rowSelected: number[]; colTotal: number[]; colSelected: number[] } {
+    const counts = { rowTotal: [] as number[], rowSelected: [] as number[], colTotal: [] as number[], colSelected: [] as number[] };
+    const selected = this.currentSelectedPositions;
+    for (const pos of this.accessibleCellPositions()) {
+      const { row, col } = this.selectionCoordinates(pos);
+      const on = selected.has(this.accessibleCellKey(pos)) ? 1 : 0;
+      counts.rowTotal[row] = (counts.rowTotal[row] ?? 0) + 1;
+      counts.colTotal[col] = (counts.colTotal[col] ?? 0) + 1;
+      counts.rowSelected[row] = (counts.rowSelected[row] ?? 0) + on;
+      counts.colSelected[col] = (counts.colSelected[col] ?? 0) + on;
+    }
+    return counts;
+  }
+
+  /** The `axisSelection` label buttons, placed over the labels the last draw painted. */
+  private renderAxisTargets(): TemplateResult | typeof nothing {
+    const mode = this.effectiveAxisSelection;
+    const geometry = this.lastPaintedMatrixGeometry;
+    if (mode === 'none' || !geometry) return nothing;
+    const { padLeft, padTop, cellSize } = geometry;
+    const rowHeight = geometry.rowHeight ?? cellSize;
+    const rowCount = Math.min(this.matrixRowLabels.length, MAX_ACCESSIBLE_HEATMAP_CELLS);
+    const colCount = Math.min(this.matrixColLabels.length, MAX_ACCESSIBLE_HEATMAP_CELLS);
+    const counts = this.axisSelectionCounts();
+    const button = (axis: 'row' | 'col', index: number, style: Record<string, string>) => {
+      const total = (axis === 'row' ? counts.rowTotal : counts.colTotal)[index] ?? 0;
+      const pressed = total > 0 && (axis === 'row' ? counts.rowSelected : counts.colSelected)[index] === total;
+      const label = (axis === 'row' ? this.matrixRowLabels : this.matrixColLabels)[index] ||
+        this.localize(axis === 'row' ? 'heatmapDefaultRowLabel' : 'heatmapDefaultColLabel', undefined, { n: this.formatLocaleNumber(index + 1) });
+      return html`<button
+        part=${pressed ? `${axis}-label ${axis}-label-pressed` : `${axis}-label`}
+        class="axis-target"
+        type="button"
+        data-axis=${axis}
+        data-axis-index=${index}
+        aria-label=${label}
+        aria-pressed=${pressed ? 'true' : 'false'}
+        ?disabled=${total === 0}
+        tabindex=${this.axisFocus[axis] === index ? '0' : '-1'}
+        style=${styleMap(style)}
+        @click=${this.onAxisTargetClick}
+        @keydown=${this.onAxisTargetKeyDown}
+      ></button>`;
+    };
+    const rows = mode === 'rows' || mode === 'both';
+    const cols = mode === 'cols' || mode === 'both';
+    return html`${rows
+      ? html`<div class="axis-targets" ?data-frozen-rows=${this.freezesRowLabels}
+          style=${styleMap({ inlineSize: `${padLeft}px`, blockSize: `${padTop + rowCount * rowHeight}px` })}
+          >${Array.from({ length: rowCount }, (_v, i) => button('row', i, {
+            insetInlineStart: '0px', insetBlockStart: `${padTop + i * rowHeight}px`, inlineSize: `${padLeft}px`, blockSize: `${rowHeight}px`,
+          }))}</div>`
+      : nothing}${cols
+      ? html`<div class="axis-targets" ?data-frozen-cols=${this.freezesColLabels}
+          style=${styleMap({ inlineSize: `${padLeft + colCount * cellSize}px`, blockSize: `${padTop}px` })}
+          >${Array.from({ length: colCount }, (_v, i) => button('col', i, {
+            insetInlineStart: `${padLeft + i * cellSize}px`, insetBlockStart: '0px', inlineSize: `${cellSize}px`, blockSize: `${padTop}px`,
+          }))}</div>`
+      : nothing}`;
+  }
+
+  private onAxisTargetClick = (event: MouseEvent): void => {
+    const target = event.currentTarget as HTMLElement;
+    const index = Number(target.dataset['axisIndex']);
+    const axis = target.dataset['axis'] === 'row' ? 'row' : 'col';
+    this.axisFocus = { ...this.axisFocus, [axis]: index };
+    if (axis === 'row') this.toggleRowSelection(index);
+    else this.toggleColumnSelection(index);
+  };
+
+  private onAxisTargetKeyDown = (event: KeyboardEvent): void => {
+    if (shouldIgnoreNavigationKey(event)) return;
+    const target = event.currentTarget as HTMLElement;
+    const axis = target.dataset['axis'] === 'row' ? 'row' : 'col';
+    const index = Number(target.dataset['axisIndex']);
+    const buttons = Array.from(target.parentElement?.querySelectorAll<HTMLButtonElement>('.axis-target:not([disabled])') ?? []);
+    const position = buttons.indexOf(target as HTMLButtonElement);
+    const back = axis === 'row' ? 'ArrowUp' : 'ArrowLeft';
+    const forward = axis === 'row' ? 'ArrowDown' : 'ArrowRight';
+    const nextPosition = event.key === back ? position - 1 : event.key === forward ? position + 1
+      : event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : undefined;
+    if (nextPosition === undefined) return;
+    event.preventDefault();
+    const next = buttons[Math.max(0, Math.min(buttons.length - 1, nextPosition))];
+    if (!next || next === target) return;
+    target.setAttribute('tabindex', '-1');
+    next.setAttribute('tabindex', '0');
+    next.focus();
+    this.axisFocus = { ...this.axisFocus, [axis]: Number(next.dataset['axisIndex'] ?? index) };
+  };
+
   private renderTooltip(): TemplateResult {
     const pos = this.hoverCell;
     const anchor = pos ? this.tooltipAnchor(pos) : null;
@@ -4986,6 +5172,8 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     if (this.matrixSource) return this.matrixController ? renderSource(this as unknown as HeatmapSourceHost) : html`<div part="source-status">${this.localize('loading')}</div>`;
     const range = this.cachedValueRange;
     const projectionDescription = this.projectionDescription();
+    const legend = this.withoutLegend ? nothing : guard([this.cachedAnnotations, this.cachedLegendStops, range, this.valueLabel, this.effectiveLocale, this.strings, lyraLocaleCatalogVersion(this.effectiveLocale)], () => this.renderLegend(range));
+    const legendFirst = this.legendPlacement === 'top';
     return html`
       <div
         part="base"
@@ -4997,6 +5185,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         @lostpointercapture=${this.onSelectionPointerCancel}
         data-projection-truncated=${this.projectionTruncated ? 'true' : 'false'}
       >
+        ${legendFirst ? legend : nothing}
         ${this.renderGridSurface(projectionDescription)}
         ${this.accessibleDescription
           ? html`<p id="description" part="description" class="sr-only">${this.accessibleDescription}</p>`
@@ -5009,7 +5198,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
               >${projectionDescription}</span
             >`
           : nothing}
-        ${this.effectiveStickyLabels === 'none' ? this.renderTooltip() : nothing}
+        ${this.gridScrollportRendered || (legendFirst && !this.withoutLegend) ? nothing : this.renderTooltip()}
         <div
           id="live-region"
           part="live-region"
@@ -5017,7 +5206,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
           aria-hidden="true"
           >${this.liveText}</div
         >
-        ${this.withoutLegend ? nothing : guard([this.cachedAnnotations, this.cachedLegendStops, range, this.valueLabel, this.effectiveLocale, this.strings, lyraLocaleCatalogVersion(this.effectiveLocale)], () => this.renderLegend(range))}
+        ${legendFirst ? nothing : legend}
       </div>
     `;
   }

@@ -349,3 +349,28 @@ export const RestingBackgroundToken: Story = {
     </div>
   `,
 };
+
+/** Typography and icon-chip tokens restyle a tile without part selectors; `fill` lines tiles up. */
+export const ThemedEqualHeightTiles: Story = {
+  name: 'Themed tiles of equal height',
+  render: () => html`
+    <div
+      style="display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: var(--lr-space-m);
+        --lr-stat-label-text-transform: none; --lr-stat-label-letter-spacing: normal;
+        --lr-stat-label-font-size: var(--lr-font-size-sm); --lr-stat-value-font-size: var(--lr-font-size-xl);
+        --lr-stat-value-font-weight: var(--lr-font-weight-semibold); --lr-stat-caption-font-size: var(--lr-font-size-xs);
+        --lr-stat-icon-bg: var(--lr-color-brand-quiet); --lr-stat-icon-color: var(--lr-color-brand);
+        --lr-stat-icon-padding: var(--lr-space-xs); --lr-stat-icon-radius: var(--lr-radius)"
+    >
+      <lr-stat fill label="Revenue" value="12.4" unit="k€" delta-percent="3.2" caption="Last 30 days">
+        <svg slot="start" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M3 17l6-6 4 4 8-8" />
+        </svg>
+      </lr-stat>
+      <lr-stat fill label="Sessions" value="9,204" caption="Compared with the previous period"
+        .rows=${[{ label: 'Web', value: '6,120' }, { label: 'Mobile', value: '3,084' }]}
+      ></lr-stat>
+      <lr-stat fill label="Uptime" value="99.98" unit="%" caption="Rolling window"></lr-stat>
+    </div>
+  `,
+};

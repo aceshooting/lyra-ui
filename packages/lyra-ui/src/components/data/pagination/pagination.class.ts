@@ -18,7 +18,7 @@ import { safeLinkHref } from '../../../internal/safe-url.js';
 import { sizes } from '../../../internal/sizes.styles.js';
 import type { LyraAppearance, LyraSize } from '../../../internal/variants.js';
 import { repairControlFocusOnUpdate } from '../../../internal/control-focus-repair.js';
-import { pageSizeChoices, remapPageForSize } from '../../../internal/page-size.js';
+import { pageForOffset, pageOffset, pageSizeChoices, remapPageForSize } from '../../../internal/page-size.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_paginationAppliedUnknownTotal, LYRA_DEFAULT_paginationEmptySummary, LYRA_DEFAULT_paginationInvalidPage, LYRA_DEFAULT_paginationInvalidPageUnknownTotal, LYRA_DEFAULT_paginationJumpToPage, LYRA_DEFAULT_paginationPage, LYRA_DEFAULT_paginationPageSize, LYRA_DEFAULT_paginationPageSizeOption } from '../../../internal/default-strings/data.generated.js';
@@ -33,6 +33,13 @@ const PAGINATION_FORMAT = literalSetConverter<LyraPaginationFormat>(['standard',
 export interface LyraPaginationChangeDetail {
   readonly page: number;
   readonly pageSize: number;
+  /** Zero-based index of the page's first item, `(page - 1) * pageSize`, for offset/limit back ends. */
+  readonly offset: number;
+}
+
+/** Frozen change detail; `offset` is derived so callers never convert page numbers by hand. */
+function changeDetail(page: number, pageSize: number): LyraPaginationChangeDetail {
+  return Object.freeze({ page, pageSize, offset: pageOffset(page, pageSize) });
 }
 
 export interface LyraPaginationEventMap {
@@ -166,10 +173,11 @@ function paginationItems(
  *
  * @customElement lr-pagination
  * @event lr-before-page-change - Fired before a valid button or compact-field page request.
- *   `detail: { page, pageSize }`. Cancelable; vetoing it suppresses `lr-page-change`. Link-mode
+ *   `detail: { page, pageSize, offset }`, where `offset` is `(page - 1) * pageSize`. Cancelable;
+ *   vetoing it suppresses `lr-page-change`. Link-mode
  *   anchors navigate without emitting.
  * @event lr-page-change - Fired when a button or compact field requests a valid page.
- *   `detail: { page, pageSize }`. The component remains controlled and never mutates `page`
+ *   `detail: { page, pageSize, offset }`. The component remains controlled and never mutates `page`
  *   itself; link-mode anchors navigate without emitting.
  * @event lr-activate - Fired on every accepted page request, whether or not the page actually
  *   moved. `detail: { value }` carries the requested page number. Bubbling and composed, so a host
@@ -182,11 +190,11 @@ function paginationItems(
  *   `lr-before-page-change` and `lr-page-change` are emitted first. Link-mode anchors navigate
  *   without emitting.
  * @event lr-before-page-size-change - Fired before a page-size selector request (rendered only
- *   when `pageSizeOptions` is non-empty). `detail: { page, pageSize }` carries the proposed size
+ *   when `pageSizeOptions` is non-empty). `detail: { page, pageSize, offset }` carries the proposed size
  *   and the page that keeps the current first item in view. Cancelable; vetoing it suppresses
  *   `lr-page-size-change` and restores the selector to the applied size.
  * @event lr-page-size-change - Fired when the page-size selector requests a different size.
- *   `detail: { page, pageSize }`, where `page` is `floor(((page - 1) * oldSize) / pageSize) + 1`,
+ *   `detail: { page, pageSize, offset }`, where `page` is `floor(((page - 1) * oldSize) / pageSize) + 1`,
  *   clamped to the new page count when the total is known. The component remains controlled: it
  *   mutates neither `pageSize` nor `page`, and the selector keeps showing the applied size until
  *   the consumer sets both.
@@ -297,6 +305,21 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   @property({ converter: blankNumberConverter(1), reflect: true }) page = 1;
   /** Number of items represented by one page. Non-positive values produce no pages. */
   @property({ converter: blankNumberConverter(10), attribute: 'page-size' }) pageSize = 10;
+  private _offset?: number;
+  /** Zero-based index of the first item on the applied page, for offset/limit back ends. While
+   *  set to a finite non-negative number it derives `page` as `floor(offset / pageSize) + 1` (a
+   *  non-multiple floors to the page containing it) whenever it or `pageSize` changes; `page`
+   *  wins when both are set in the same update. Negative and non-finite values normalize to
+   *  `undefined`, which leaves `page` alone. Change events report the matching `offset`. */
+  @property({ converter: blankNumberConverter(undefined) })
+  get offset(): number | undefined {
+    return this._offset;
+  }
+  set offset(value: number | undefined) {
+    const old = this._offset;
+    this._offset = typeof value === 'number' && Number.isFinite(value) && value >= 0 ? finiteCount(value) : undefined;
+    this.requestUpdate('offset', old);
+  }
   /** Total item count. `-1` enables indeterminate mode. Other non-positive values render the empty state. */
   @property({ converter: blankNumberConverter(0) }) total = 0;
   /** Whether at least one more page exists past the current one. Consulted only in indeterminate
@@ -570,6 +593,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    this.applyOffset(changed);
     setCustomState(this.internals, 'disabled', this.disabled);
     if (changed.has('page') || changed.has('pageSize') || changed.has('total')) {
       this.draftPage = this.hasPages ? String(this.currentPage) : '';
@@ -596,6 +620,17 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
       this.sink.announcePolite(this.liveText);
     }
     this.initialized = true;
+  }
+
+  /** Derives `page` from `offset` before anything reads it. On the first update `page` is in the
+   *  change set with its default, so only an authored `page` attribute or a non-default value
+   *  there counts as "page set in the same update". */
+  private applyOffset(changed: PropertyValues): void {
+    const offset = this._offset;
+    if (offset === undefined || !(changed.has('offset') || changed.has('pageSize'))) return;
+    const pageSet = changed.has('page') && (this.hasUpdated || this.hasAttribute('page') || this.page !== 1);
+    if (pageSet || this.normalizedPageSize === 0) return;
+    this.page = pageForOffset(offset, this.normalizedPageSize);
   }
 
   protected override updated(changed: PropertyValues): void {
@@ -637,7 +672,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
       const previousPage = this.page;
       const focusOrigin = deepActiveElementIn(this.ownerDocument);
       const pageSize = this.normalizedPageSize;
-      const detail = (): LyraPaginationChangeDetail => Object.freeze({ page, pageSize });
+      const detail = (): LyraPaginationChangeDetail => changeDetail(page, pageSize);
       const vetoed = this.emit('lr-before-page-change', detail(), { cancelable: true }).defaultPrevented;
       // A listener may also have disabled or detached the control; the accepted request no longer
       // applies. (A listener may still change `pageSize`: the request reports what was proposed.)
@@ -710,7 +745,7 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
       pageSize,
       this.indeterminate ? 0 : this.normalizedTotalItems,
     );
-    const detail = (): LyraPaginationChangeDetail => Object.freeze({ page, pageSize });
+    const detail = (): LyraPaginationChangeDetail => changeDetail(page, pageSize);
     const vetoed = this.emit('lr-before-page-size-change', detail(), { cancelable: true }).defaultPrevented;
     if (vetoed || !this.isConnected || this.controlsDisabled || this.page !== previousPage || this.pageSize !== previousSize) {
       restore();

@@ -4,7 +4,7 @@ import { literalSetConverter } from '../../../internal/converters.js';
 import { isHandledOrComposingKey, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { formatRgb } from './heatmap-colors.js';
 import { DEFAULT_BUCKET_COUNT, normalizeBucketCount } from './heatmap-limits.js';
-import type { HeatmapMatrixData, LyraHeatmapStickyLabels } from './heatmap-model.js';
+import type { HeatmapMatrixData, LyraHeatmapAxisSelection, LyraHeatmapLegendPlacement, LyraHeatmapStickyLabels } from './heatmap-model.js';
 
 /** Floor for the matrix row-label gutter, and the width it had when it was a fixed constant.
  *  Auto-sizing only ever grows past this, so a chart with short labels keeps its old layout. */
@@ -41,6 +41,10 @@ export const STICKY_LABELS = literalSetConverter<LyraHeatmapStickyLabels>(
   ['none', 'rows', 'cols', 'both'],
   'none',
 );
+
+export const LEGEND_PLACEMENT = literalSetConverter<LyraHeatmapLegendPlacement>(['top', 'bottom'], 'bottom');
+
+export const AXIS_SELECTION = literalSetConverter<LyraHeatmapAxisSelection>(['none', 'rows', 'cols', 'both'], 'none');
 
 export const FALLBACK_NO_DATA_FILL = 'rgba(128,128,128,0.25)';
 /** Last-resort frozen-band backdrop for the case where the token resolves to an empty string (no

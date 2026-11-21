@@ -136,7 +136,7 @@ export const styles = css`
     max-inline-size: 100%;
     overflow-wrap: anywhere;
     color: var(--lr-color-text);
-    font-weight: var(--lr-font-weight-semibold);
+    font-weight: var(--lr-timeline-title-font-weight, var(--lr-font-weight-semibold));
     line-height: var(--lr-line-height-snug);
   }
 

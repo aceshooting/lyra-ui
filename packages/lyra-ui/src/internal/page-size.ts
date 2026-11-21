@@ -39,3 +39,15 @@ export function remapPageForSize(
   if (total === 0) return remapped;
   return Math.min(remapped, Math.max(1, Math.ceil(total / size)));
 }
+
+/** Zero-based index of the first item on 1-based `page`: `(page - 1) * pageSize`, never negative. */
+export function pageOffset(page: number, pageSize: number): number {
+  return Math.max(0, finiteCount(page, 1) - 1) * finiteCount(pageSize);
+}
+
+/** The 1-based page containing zero-based item `offset`: `floor(offset / pageSize) + 1`. A
+ *  non-multiple floors to the page that holds it; an unusable size yields page 1. */
+export function pageForOffset(offset: number, pageSize: number): number {
+  const size = finiteCount(pageSize);
+  return size === 0 ? 1 : Math.floor(finiteCount(offset) / size) + 1;
+}

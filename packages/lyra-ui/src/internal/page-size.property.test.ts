@@ -1,7 +1,7 @@
 import { expect } from '@open-wc/testing';
 import fc from 'fast-check';
 import { propertyRuns } from '../../test/property-options.js';
-import { pageSizeChoices, remapPageForSize } from './page-size.js';
+import { pageForOffset, pageOffset, pageSizeChoices, remapPageForSize } from './page-size.js';
 
 const sizeLike = fc.oneof(fc.integer({ min: -5, max: 500 }), fc.double(), fc.constant(Number.NaN), fc.string());
 
@@ -41,4 +41,26 @@ it('falls back to page 1 for an unusable size and skips the clamp without a know
   expect(remapPageForSize(4, 10, 20)).to.equal(2);
   expect(remapPageForSize(4, 10, 20, 0)).to.equal(2);
   expect(remapPageForSize(9, 10, 50, 95)).to.equal(2);
+});
+
+it('round-trips a page through its offset and floors an offset into its page', () => {
+  fc.assert(fc.property(
+    fc.integer({ min: 1, max: 100000 }),
+    fc.integer({ min: 1, max: 500 }),
+    fc.integer({ min: 0, max: 499 }),
+    (page, size, within) => {
+      const offset = pageOffset(page, size);
+      expect(offset).to.equal((page - 1) * size);
+      expect(pageForOffset(offset, size)).to.equal(page);
+      expect(pageForOffset(offset + (within % size), size)).to.equal(page);
+    },
+  ), propertyRuns());
+});
+
+it('keeps offsets and pages in range for unusable inputs', () => {
+  expect(pageOffset(0, 10)).to.equal(0);
+  expect(pageOffset(Number.NaN, 10)).to.equal(0);
+  expect(pageOffset(3, -4)).to.equal(0);
+  expect(pageForOffset(40, 0)).to.equal(1);
+  expect(pageForOffset(-5, 20)).to.equal(1);
 });

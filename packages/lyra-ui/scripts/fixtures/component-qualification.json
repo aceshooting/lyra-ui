@@ -16725,7 +16725,7 @@
           "evidence": [
             {
               "file": "src/components/data/data-grid/data-grid.class.ts",
-              "line": 2456,
+              "line": 2463,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -27479,6 +27479,7 @@
         "reviewer": null,
         "reviewedAt": null,
         "evidenceGaps": [
+          "reducedMotion",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -27520,8 +27521,26 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/data/heatmap/heatmap-axis-selection.test.ts",
+              "test": "renders named toggle buttons over the painted labels and toggles a whole column",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/data/heatmap/heatmap-calendar-spacing.test.ts",
               "test": "maps date selection and semantic cells through explicit gaps",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/heatmap/heatmap-legend-placement-fill.test.ts",
+              "test": "keeps the legend after the grid by default and moves it first in DOM order for top",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/heatmap/heatmap-legend-placement-fill.test.ts",
+              "test": "places a top legend above the grid under dir=rtl and inside a frozen scrollport layout",
               "target": "el",
               "state": "populated"
             },
@@ -27623,8 +27642,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/heatmap/heatmap-canvas-selection.test.ts",
-              "test": "uses calendar date identity for a canvas drag crossing excluded and missing days",
+              "file": "src/components/data/heatmap/heatmap-axis-selection.test.ts",
+              "test": "roves one tab stop per axis and activates with Enter, also under dir=rtl",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -27641,10 +27660,10 @@
           ]
         },
         "reducedMotion": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
+          "applicability": "applicable",
+          "status": "not-recorded",
           "evidence": [],
-          "limitation": "No component-owned motion declaration or programmatic animation was detected."
+          "limitation": "Component-owned motion is present without a recorded two-branch reduced-motion test signal."
         },
         "narrowAllocation": {
           "applicability": "applicable",
@@ -27750,7 +27769,7 @@
       },
       "knownLimitations": [
         "Recorded budgets cover the named scenarios; current pass/fail evidence comes from the Chromium scale gate.",
-        "No component-owned motion declaration or programmatic animation was detected.",
+        "Component-owned motion is present without a recorded two-branch reduced-motion test signal.",
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
@@ -27765,6 +27784,7 @@
           "src/components/data/heatmap/calendar-grid.property.test.ts",
           "src/components/data/heatmap/calendar-grid.test.ts",
           "src/components/data/heatmap/heatmap-allocation-interaction.test.ts",
+          "src/components/data/heatmap/heatmap-axis-selection.test.ts",
           "src/components/data/heatmap/heatmap-calendar-spacing.test.ts",
           "src/components/data/heatmap/heatmap-canvas-selection.test.ts",
           "src/components/data/heatmap/heatmap-coverage-boundaries.test.ts",
@@ -27779,6 +27799,7 @@
           "src/components/data/heatmap/heatmap-input-edges.test.ts",
           "src/components/data/heatmap/heatmap-label-cache.test.ts",
           "src/components/data/heatmap/heatmap-label-cost.test.ts",
+          "src/components/data/heatmap/heatmap-legend-placement-fill.test.ts",
           "src/components/data/heatmap/heatmap-legend-visibility.test.ts",
           "src/components/data/heatmap/heatmap-matrix-controller-boundaries.test.ts",
           "src/components/data/heatmap/heatmap-matrix-controller-races.test.ts",
@@ -40367,6 +40388,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/data/pagination/pagination-blank-labels.test.ts",
+          "src/components/data/pagination/pagination-offset.test.ts",
           "src/components/data/pagination/pagination-page-jump.test.ts",
           "src/components/data/pagination/pagination-page-size.test.ts",
           "src/components/data/pagination/pagination-remediation-b08.test.ts",
@@ -55761,6 +55783,12 @@
               "state": "populated"
             },
             {
+              "file": "src/components/data/table/table-cell-link.test.ts",
+              "test": "renders a real anchor per row with the content inside and no rel for a same-tab link",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/data/table/table-editing.test.ts",
               "test": "is accessible with a column of persistent editors rendered",
               "target": "el",
@@ -55823,6 +55851,12 @@
             {
               "file": "src/components/data/table/table-selection.test.ts",
               "test": "is accessible with expandedContent and an open row",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/table/table-stack.test.ts",
+              "test": "always stacks rows as blocks with visible column captions and unchanged roles",
               "target": "el",
               "state": "populated"
             },
@@ -55995,6 +56029,7 @@
           "src/components/data/table/table-admission.test.ts",
           "src/components/data/table/table-boundaries.test.ts",
           "src/components/data/table/table-cell-content.test.ts",
+          "src/components/data/table/table-cell-link.test.ts",
           "src/components/data/table/table-editing.test.ts",
           "src/components/data/table/table-expansion.test.ts",
           "src/components/data/table/table-filter-work.test.ts",
@@ -56014,7 +56049,9 @@
           "src/components/data/table/table-resize.test.ts",
           "src/components/data/table/table-scale.test.ts",
           "src/components/data/table/table-selection.test.ts",
+          "src/components/data/table/table-stack.test.ts",
           "src/components/data/table/table-sticky-overlay.test.ts",
+          "src/components/data/table/table-theme-tokens.test.ts",
           "src/components/data/table/table.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",

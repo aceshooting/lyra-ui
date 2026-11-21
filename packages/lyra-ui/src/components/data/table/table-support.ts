@@ -201,6 +201,10 @@ export type TableSortIndicators = 'active' | 'all';
 export type TableScrollMode = 'self' | 'page' | 'auto';
 
 export const TABLE_LAYOUT = literalSetConverter<'auto' | 'fixed'>(['auto', 'fixed'], 'auto');
+/** `never` keeps the grid, `always` stacks every row as a card, `auto` stacks below the
+ *  `--lr-table-stack-breakpoint` allocation. */
+export type TableStackMode = 'never' | 'auto' | 'always';
+export const TABLE_STACK = literalSetConverter<TableStackMode>(['never', 'auto', 'always'], 'never');
 export const TABLE_PAGINATION_FORMAT = literalSetConverter<LyraPaginationFormat>(['standard', 'compact'], 'compact');
 
 /** Canonical table sort direction. */
@@ -324,6 +328,19 @@ interface TableColumnCommon<T> {
    *  Not applied to an open inline editor. A `part` attribute written directly inside a `cell()`
    *  template is equally a part of this table. */
   cellPart?(row: T): string | undefined;
+  /** Makes this column's resting cell content a real link: return a URL and the content renders
+   *  inside `<a part="cell-link">`, so the row keeps middle-click, open-in-new-tab, the browser's
+   *  link context menu and a link announcement. Unsafe schemes, a non-string, an empty result or a
+   *  throwing callback render the plain content. Activating the link navigates natively and does
+   *  not emit `lr-row-activate`; clicking elsewhere in the row still does. For client-side routing,
+   *  listen for `click` on the table, read the event's composed path for the `cell-link` anchor,
+   *  and `preventDefault()` only a plain primary click (no modifier keys, `button === 0`). */
+  href?(row: T): string | undefined;
+  /** Native `target` for the `href` link. Any target adds `noopener noreferrer` to its `rel`. */
+  target?: string;
+  /** Link relationship tokens for the `href` link; `opener` is dropped and a `target` always adds
+   *  `noopener noreferrer`. */
+  rel?: string;
   /** Numeric accessor backing the heat-tint background. A column that omits this is excluded from
    *  tinting (e.g. a label column) — its presence on any column is the opt-in signal for heat-tint
    *  mode as a whole, mirroring how `expandedContent` alone signals expand-mode (no separate

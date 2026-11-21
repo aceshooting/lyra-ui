@@ -134,6 +134,8 @@ export interface DataGridRequest {
   readonly search: string;
   readonly page: number;
   readonly pageSize: number;
+  /** Zero-based index of the page's first row, `page * pageSize`, for offset/limit back ends. */
+  readonly offset: number;
   readonly signal: AbortSignal | undefined;
 }
 
@@ -240,6 +242,8 @@ export interface DataGridDataErrorDetail {
 export interface DataGridPageDetail {
   readonly page: number;
   readonly pageSize: number;
+  /** Zero-based index of the page's first row, `page * pageSize`, for offset/limit back ends. */
+  readonly offset: number;
 }
 
 export interface DataGridRowDetail<Row = Record<string, unknown>> {

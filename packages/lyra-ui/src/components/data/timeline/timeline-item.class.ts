@@ -135,6 +135,7 @@ const VARIANT_NAME_KEYS: Partial<Record<LyraVariant, LyraMessageKey>> = {
  *   line. A component-scoped property (not just inlining `var(--lr-color-border-subtle)` at every
  *   use site) so a consumer can retint just the rail without touching the library-wide border color
  *   elsewhere. Inherits from theme ancestors.
+ * @cssprop [--lr-timeline-title-font-weight=var(--lr-font-weight-semibold)] - Font weight of the item title.
  * @cssprop [--lr-timeline-marker-color=var(--lr-color-text-quiet)] - Marker fill/accent color.
  *   Its private default changes per `variant` (see the class doc's variant table); a consumer can
  *   override it on an ancestor for a themed group or directly on one item, with the direct value

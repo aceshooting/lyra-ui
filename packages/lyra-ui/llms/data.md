@@ -207,6 +207,10 @@ value: string; readonly exactValue?: string }`; at most the first 10,000 rows ar
   label, value, trend, sub and caption. `'horizontal'` lays label, value+unit, trend, sub and caption
   out on a single wrapping baseline row; `[part="spark"]` and `[part="rows"]` have no sensible place
   on a text baseline and stay stacked on their own full-width line beneath that row
+- `fill: boolean = false` (reflected) — the host and `[part="base"]` take `block-size: 100%` of the
+  parent (a grid track, flex item or sized cell) and, in the vertical orientation, the caption and
+  anything after it are pushed to the block end, so a row of KPI tiles shares one height and one
+  caption line. It also stretches a `frame="plain"` stat
 
 **Events:** none.
 
@@ -259,6 +263,18 @@ Linked-card interaction paint is independently themeable through
 `--lr-stat-link-active-border-color`/`--lr-stat-link-active-shadow` (defaulting to their hover
 counterparts), and `--lr-stat-link-active-bg` (defaulting to the existing active color mix). These
 are point-of-use fallbacks, so values inherit from a theme ancestor and a value on `lr-stat` wins.
+Typography follows the application type scale through `--lr-stat-value-font-size` (default
+`var(--lr-font-size-2xl)`), `--lr-stat-value-font-weight` (default `var(--lr-font-weight-bold)`),
+`--lr-stat-label-font-size` (default `var(--lr-font-size-xs)`), `--lr-stat-label-font-weight`
+(default `var(--lr-font-weight-semibold)`), `--lr-stat-label-color` (default
+`var(--lr-color-text-quiet)`), `--lr-stat-label-letter-spacing` (default `var(--lr-size-0-04em)`),
+`--lr-stat-label-text-transform` (default `uppercase`), `--lr-stat-unit-font-size` (default
+`var(--lr-font-size-md-sm)`), `--lr-stat-unit-color` (default `var(--lr-color-text-quiet)`),
+`--lr-stat-caption-font-size` (default `var(--lr-font-size-sm)`) and `--lr-stat-caption-color`
+(default `var(--lr-color-text-quiet)`); `prose` keeps its own smaller value style. The `start` icon
+container becomes a chip through `--lr-stat-icon-size` (default `inherit`, its font size),
+`--lr-stat-icon-padding` (default `0`), `--lr-stat-icon-radius` (default `0`), `--lr-stat-icon-bg`
+(default `transparent`) and `--lr-stat-icon-color` (default `var(--lr-color-text-quiet)`).
 
 **Optional peer deps:** none.
 
@@ -528,7 +544,7 @@ row expand/collapse details use canonical `rowKey` plus mirrored `key`. Cancelab
 and suppresses `lr-sort-change`.
 Use `lr-sort` for the accepted primary sort. Its frozen detail carries `phase: 'commit'`, `sortKey`, `sortDir`, and the ordered `sort` array. Clearing uses an empty key and a null direction.
 `lr-selection-request` proposes frozen `{ selectedRowKeys }`; `lr-selection-change` reports the accepted keys and selected rows. `lr-row-expand-request` proposes `{ row, rowKey, key, expanded }`; `lr-row-expand-toggle` reports the accepted change. Existing `lr-sort-change`, `lr-row-select`, `lr-row-expand` and `lr-row-collapse` listeners continue to work.
-`lr-before-page-change` proposes zero-based `{ page, pageSize }` for page navigation and page-size changes. An accepted pager activation also emits `lr-activate` with zero-based `{ value }`, including activation of the current page.
+`lr-before-page-change` proposes zero-based `{ page, pageSize, offset }` for page navigation and page-size changes; `offset` is `page * pageSize`, and `lr-page-change` and each `dataSource` request carry the same `offset`. An accepted pager activation also emits `lr-activate` with zero-based `{ value }`, including activation of the current page.
 `lr-copy` (`{ ok: true, text }` on fulfillment); `lr-copy-error` (`{ ok: false, text, reason, error }` on failure); `lr-error` is a compatibility notice without raw
 platform text. `lr-retry-request` (`detail: null`, cancelable) means the built-in retry
 button was activated while `error` is set; its default clears `error`, and veto leaves it set.
@@ -704,6 +720,7 @@ priority?: 'medium'|'low',
 sticky?: 'start'|'end', editTrigger?: 'double-click'|'always', editValue?, editLabel?: (row) => string,
 editType?: 'text'|'number'|'select',
 editOptions?: { value: string; label: string }[], footer?, cellStyle?, cellPart?, heatValue?,
+href?: (row) => string | undefined, target?: string, rel?: string,
 cell: (row) => unknown }` — `cell` is required for every `editTrigger` except `'always'`, whose
   persistent editor renders unconditionally so the table's render path never falls back to it.
   **`cell()` output renders inside the table's shadow root**, so class rules from the page or from
@@ -723,6 +740,25 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   // in the owner's stylesheet
   // lr-table::part(cell-archived) { opacity: 0.7; }
   // lr-table::part(cell-secondary) { display: block; color: var(--lr-color-text-quiet); }
+  ```
+  —
+  `href(row) => string | undefined` makes that column's resting content a real link: a safe URL
+  wraps it in `<a part="cell-link">`, so row navigation keeps middle-click, open-in-new-tab, the
+  link context menu and a link announcement instead of a whole-row click target with no link
+  semantics. Unsafe schemes, a non-string or empty result and a throwing callback render the plain
+  content. `target` is forwarded and always adds `noopener noreferrer`; `rel` tokens merge with that
+  guard and `opener` is dropped. Activating the link (click or Enter) navigates natively and does
+  not emit `lr-row-activate`; clicks elsewhere in the row still do. The link takes the existing
+  `--lr-table-cell-link-color`/`--lr-table-cell-link-hover-color` paint. For client-side routing,
+  intercept only a plain primary click:
+
+  ```ts
+  table.addEventListener('click', (event) => {
+    const link = event.composedPath().find((node) => node instanceof HTMLAnchorElement && node.part.contains('cell-link'));
+    if (!(link instanceof HTMLAnchorElement) || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    router.navigate(link.href);
+  });
   ```
   —
   `ariaLabel` overrides that column header's accessible name (applied as the `<th>`'s `aria-label`
@@ -844,6 +880,16 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   or expansion events. Reassign controlled key collections after raising it to restore excluded keys.
   At the key cap, existing keys retain priority over a newly toggled key; selection and expansion
   events report the actual retained state.
+- `stack: 'never'|'auto'|'always' = 'never'` (reflected) — responsive card layout for phones.
+  `'always'` renders every body row as a stacked block whose cells each show their column label as a
+  visible `[part="cell-label"]` caption (`aria-hidden`, since the column header already names the
+  cell) before the value; `'auto'` stacks only while `[part="base"]` is narrower than
+  `--lr-table-stack-breakpoint` (default `var(--lr-size-36rem)`, resolved live, so `em`/`rem`/`px`
+  all work — a custom property cannot drive a `@container` query, so the component measures it).
+  The grid/row/gridcell roles, sortable headers (wrapped into a strip above the cards), selection,
+  activation, editing, expansion and `href` links keep working; `sticky` columns stop pinning while
+  stacked. `--lr-table-stack-label-size` (default `40%`) sets the caption's inline size. Unsupported
+  values normalize to `'never'`, which renders exactly the previous markup
 - `layout: 'auto'|'fixed' = 'auto'` (reflected) — a **floor** on the `<table>`'s `table-layout`, not
   an override. `'fixed'` forces the fixed algorithm even when no column declares a `width`, so every
   column shares the available width evenly and long cell content is clipped/wrapped instead of
@@ -1187,7 +1233,9 @@ only while it has a value), `loading` (visible spinner wrapper in spinner mode; 
 `pagination-controls`, `pagination-pages`, `pagination-page`, `pagination-page-current`,
 `pagination-page-field`, `pagination-page-input`, `pagination-page-count`, `pagination-button`), `cell-editor`,
 `cell-content` (the block wrapper around a body cell's resting content, rendered only for a column
-defining `cellPart(row)`, which also carries every name that callback returns), `group-row`, `group-cell`, and `resize-handle` (the focusable column
+defining `cellPart(row)`, which also carries every name that callback returns), `cell-link` (the
+real anchor around a body cell's resting content while the column's `href(row)` returns a safe URL), `cell-label` (the
+visible column caption before a stacked cell's value while `stack` stacks rows), `group-row`, `group-cell`, and `resize-handle` (the focusable column
 separator with an explicit finite ARIA maximum even without a CSS `maxWidth`). The built-in
 `empty` `<lr-empty>` host exports `empty-base`, `empty-icon`, `empty-heading`, `empty-description`,
 and `empty-actions`. The no-columns and no-rows branches place it directly in the shadow root;
@@ -1252,9 +1300,15 @@ component marks the alternating rows itself; this does not affect group, expande
 row's hover and pressed fills reach its `sticky` column cell the same way, through an internal
 custom property rather than a themeable token, since neither state has a public hook today.
 `--lr-table-header-sorted-bg` (default `var(--lr-color-surface)`) and `--lr-table-header-sorted-color` (default
-`inherit`) restyle the **currently-sorted** column's header cell (`[aria-sort]` other than `none`),
+`var(--lr-table-header-color, inherit)`) restyle the **currently-sorted** column's header cell (`[aria-sort]` other than `none`),
 including a `sticky` column's own header cell. The opaque surface default prevents body rows from
 showing through the sticky header while it scrolls.
+Every header cell at rest reads `--lr-table-header-color` (default `inherit`),
+`--lr-table-header-font-size` (default `inherit`) and `--lr-table-header-font-weight` (default
+`var(--lr-font-weight-semibold)`). `--lr-table-cell-border-color` (default
+`var(--lr-color-border-subtle)`) colors the rules between rows: the header cell's bottom rule, every
+body, group, total, expansion and footer cell rule, and the seam beside a `sticky` column; the outer
+frame keeps its own edge.
 The `sort-icon` part styles only the indicator; these tokens style the header cell. Use `::part(sort-icon-inactive)` and
 `::part(sort-icon-active)` to style the two indicator states without private selectors.
 `--lr-table-sticky-offset` (default `0`) is measured and written inline per column by the component
@@ -1400,6 +1454,18 @@ The pager revalidates the requested page after `lr-before-page-change` returns. 
   rewritten by the component
 - `pageSize: number = 10` (attribute `page-size`) — items per page; finite values are truncated to
   a non-negative integer for the derived calculations, and zero produces no pages
+- `offset?: number` (attribute `offset`) — for offset/limit back ends: while set to a finite
+  non-negative number it derives `page` as `floor(offset / pageSize) + 1` whenever it or `pageSize`
+  changes (a non-multiple floors to the page that contains it); `page` wins when both are set in the
+  same update, and negative or non-finite values normalize to unset, leaving `page` alone. Pair it
+  with `detail.offset` on the change events and no call site converts page numbers by hand:
+
+  ```js
+  pager.addEventListener('lr-page-change', async ({ detail }) => {
+    await load({ offset: detail.offset, limit: detail.pageSize });
+    pager.offset = detail.offset;
+  });
+  ```
 - `total: number = 0` (attribute `total`) — total item count; finite values are truncated
   to a non-negative integer for display and page-count calculations, except for the exact sentinel
   `-1`, which enters indeterminate mode (see below) instead of clamping to the ordinary empty state.
@@ -1481,7 +1547,8 @@ non-blank supplied string is an explicit per-instance override and renders verba
 built-in English wording under a non-English `.strings` catalog. An empty or whitespace-only string
 is treated as unset: these controls have no visible text, so they always keep an accessible name.
 
-**Events:** `lr-before-page-change` (frozen readonly `detail: { page: number, pageSize: number }`, bubbles and
+**Events:** `lr-before-page-change` (frozen readonly `detail: { page: number, pageSize: number, offset: number }`,
+where `offset` is `(page - 1) * pageSize`, the zero-based index of the page's first item; bubbles and
 composes, cancelable) fires first for any valid, different requested page. Preventing it suppresses
 the request and restores the compact field to the controlled page. If accepted,
 `lr-page-change` follows with the same frozen detail (bubbles and composes, non-cancelable), from a numbered
@@ -1501,7 +1568,7 @@ intent, and it is otherwise unobservable, because the page buttons and the jump 
 shadow root, so a retargeted `click` names no page and pressing Enter on the jump field produces no
 click at all. When a request _does_ move the page, `lr-before-page-change` and `lr-page-change` are
 emitted first. Link-mode anchors navigate without emitting it.
-`lr-before-page-size-change` (frozen `detail: { page: number, pageSize: number }`, bubbles and
+`lr-before-page-size-change` (frozen `detail: { page: number, pageSize: number, offset: number }`, bubbles and
 composes, cancelable) fires when the page-size selector picks a different size; `pageSize` is the
 proposed size and `page` is `floor(((page - 1) * oldSize) / pageSize) + 1`, the page that keeps the
 current first item in view, clamped to the new page count when the total is known. Preventing it,
@@ -2563,6 +2630,32 @@ weekdayLabelWidth?: number|'auto'; weekdayLabelText?: (jsWeekday:number)=>string
   and for nothing else, is not written while the legend is hidden, and is removed again if it had
   been. Cells, tooltips, keyboard interaction, selection and the generated accessible summary are
   unaffected — the summary already names the value label independently of the legend.
+- `legendPlacement: 'top' | 'bottom' = 'bottom'` (attribute `legend-placement`, reflected) — where
+  the legend row renders. `'top'` puts it before the grid in DOM order (not just visually), so a
+  tall or scrolling matrix keeps its key in view and reading order matches the layout; unsupported
+  values normalize to `'bottom'`. These are the block-axis members of the placement vocabulary the
+  chart and map legends share; side placements are not offered because the fitted matrix is
+  measured against the full host width.
+- `axisSelection: 'none' | 'rows' | 'cols' | 'both' = 'none'` (attribute `axis-selection`,
+  reflected) — in matrix mode with `multiple` set, lays one native toggle `<button>` over each
+  painted row label (`[part="row-label"]`) and/or column label (`[part="col-label"]`). Activating one
+  proposes toggling that whole row or column through the existing `lr-selection-change` (source
+  `'row'`/`'column'`), like `toggleRowSelection()`/`toggleColumnSelection()`, so day-by-hour pickers
+  need no external header buttons. `aria-pressed` renders `"true"` while every interactive cell of
+  the axis is selected (the button also gains `row-label-pressed`/`col-label-pressed` and a
+  `--lr-heatmap-axis-pressed-color` edge) and `"false"` otherwise. Each axis is one tab stop;
+  ArrowUp/ArrowDown (rows) or ArrowLeft/ArrowRight (columns, physical like the grid, also under
+  `dir="rtl"`) and Home/End rove between labels. Buttons are named by the label text, falling back
+  to the localized default row/column name; `--lr-heatmap-axis-hover-bg` sets their hover fill.
+  Frozen `stickyLabels` bands keep their buttons. `'none'`, calendar mode and single selection keep
+  the canvas-only labels
+- `fill: boolean = false` (reflected) — fills a parent with a definite block size (a dialog body,
+  a sized flex column, an expand view). The host and `[part="base"]` take `block-size: 100%` and, in
+  matrix mode, the grid renders inside the `[part="grid"]` scrollport even without `stickyLabels`;
+  that scrollport takes the block size the legend leaves and becomes the single scroller, so frozen
+  label bands keep working instead of an outer container scrolling the whole component. Percentage
+  trap: without `fill`, `--lr-heatmap-grid-max-block-size: 100%` resolves to `none`, because the
+  base is auto-height; and `fill` itself needs a definite parent height, like any percentage.
 - `scale: 'linear' | 'sqrt' = 'linear'` — governs both modes: in matrix mode, `'sqrt'` compresses the
   color ramp via `sqrtStep()` instead of mapping linearly; in calendar mode, the default `'linear'`
   still buckets by quartile (`quartileBucket()`, unchanged), while `'sqrt'` instead compresses via the
@@ -2814,7 +2907,9 @@ bar between them, while `legendStops` is supplied), `legend-stop` (one per `lege
 `legend-swatch` (that stop's color chip, not rendered at all for a caption-only stop),
 `legend-stop-label` (that stop's text), `legend-value-label` (the trailing `valueLabel` caption that
 closes the legend row, present in both the gradient and the `legendStops` branch),
-`legend-annotation` (one per labeled `annotations` entry), and `description` (the screen-reader-only
+`legend-annotation` (one per labeled `annotations` entry), `row-label` and `col-label` (the
+`axisSelection` toggle buttons, also carrying `row-label-pressed`/`col-label-pressed` while their whole
+axis is selected), and `description` (the screen-reader-only
 chart description: `description`, or the generated summary while `label` names the chart; absent
 when neither applies)
 
@@ -2859,7 +2954,16 @@ directly, no `getComputedStyle` bridging needed. `--lr-heatmap-sticky-label-bg` 
 `getComputedStyle` like the other canvas-drawn tokens; it must stay **opaque**, since it covers the
 same labels the scrolling canvas painted underneath it) and `--lr-heatmap-grid-max-block-size`
 (default `none` — the block-size ceiling of the `[part="grid"]` scrollport, consumed directly by
-that real DOM element; set it to give a frozen column band vertical scrolling to stay behind). Also consumes `--lr-color-text-quiet` (axis label
+that real DOM element; set it to give a frozen column band vertical scrolling to stay behind).
+The legend row reads `--lr-heatmap-legend-font-size` (default `var(--lr-font-size-xs)`),
+`--lr-heatmap-legend-color` (default `var(--lr-color-text-quiet)`), `--lr-heatmap-legend-gap`
+(default `var(--lr-space-xs)`), `--lr-heatmap-legend-padding` (default `0`),
+`--lr-heatmap-legend-bg` (default `transparent`), `--lr-heatmap-legend-radius` (default `0`) and
+`--lr-heatmap-legend-swatch-size` (default `var(--lr-size-0-6rem)`, stop swatches and annotation
+rings); the continuous ramp reads `--lr-heatmap-legend-ramp-inline-size` (default
+`var(--lr-size-6rem)`), `--lr-heatmap-legend-ramp-block-size` (default `var(--lr-size-0-5rem)`)
+and `--lr-heatmap-legend-ramp-radius` (default `var(--lr-size-2px)`). The suffixes match the chart
+and map legend tokens. Also consumes `--lr-color-text-quiet` (axis label
 color), `--lr-space-xs`, `--lr-radius`/`--lr-shadow` (tooltip box), and `--lr-focus-ring-width`/
 `--lr-focus-ring-offset` (the real `[part="canvas"]:focus-visible` DOM outline, stroked in the
 same color as `--lr-heatmap-focus-ring-color`).
@@ -4934,6 +5038,7 @@ scrolling. On the item: `--lr-timeline-marker-size`
 (default `var(--lr-size-1-25rem)`, both dimensions so the dot stays circular),
 `--lr-timeline-ordered-marker-size` (falls back to `--lr-timeline-marker-size`, then
 `var(--lr-size-1-5rem)`),
+`--lr-timeline-title-font-weight` (default `var(--lr-font-weight-semibold)`, the item title),
 `--lr-timeline-rail-width` (default `var(--lr-border-width-medium)`), `--lr-timeline-rail-color`
 (default `var(--lr-color-border-subtle)`), `--lr-timeline-marker-color` (default
 `var(--lr-color-text-quiet)` for neutral markers), `--lr-timeline-marker-neutral-color`,
@@ -5724,6 +5829,7 @@ These named interfaces and helper signatures are available to typed integrations
   `DataGridPageDetail {
     readonly page: number;
     readonly pageSize: number;
+    readonly offset: number;
   }`
   Import: `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`.
   `DataGridRequest {
@@ -5732,6 +5838,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly search: string;
     readonly page: number;
     readonly pageSize: number;
+    readonly offset: number;
     readonly signal: AbortSignal | undefined;
   }`
   Import: `@aceshooting/lyra-ui/components/data/data-grid/data-grid.class.js`.
@@ -6066,6 +6173,7 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraPaginationChangeDetail {
     readonly page: number;
     readonly pageSize: number;
+    readonly offset: number;
   }`
 
 - **`components-data-sequence-strip-sequence-strip-contracts`** — Supporting data types and helpers for this component family.
@@ -6118,6 +6226,9 @@ These named interfaces and helper signatures are available to typed integrations
     cellStyle?(row: T): Record<string, string> | undefined;
     cellTitle?(row: T): string | undefined;
     cellPart?(row: T): string | undefined;
+    href?(row: T): string | undefined;
+    target?: string;
+    rel?: string;
     heatValue?(row: T): number | null | undefined;
     editTrigger?: TableColumnEditTrigger;
     editValue?: (row: T) => string | number;

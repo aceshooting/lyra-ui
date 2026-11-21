@@ -406,3 +406,16 @@ export const RetintedControlStates: Story = {
     </div>
   `,
 };
+
+/** Offset/limit back ends: bind `offset` and read `detail.offset`; nothing converts page numbers. */
+export const OffsetDriven: Story = {
+  render: () => html`<lr-pagination
+    total="240"
+    page-size="20"
+    offset="40"
+    with-summary
+    @lr-page-change=${(event: CustomEvent<{ offset: number }>) => {
+      (event.currentTarget as LyraPagination).offset = event.detail.offset;
+    }}
+  ></lr-pagination>`,
+};

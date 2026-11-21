@@ -782,3 +782,43 @@ export const IndexedMatrixSource: Story = {
     </section>`;
   },
 };
+
+/** A tall matrix filling a sized panel: the key sits above the grid and only the grid scrolls. */
+export const FillWithLegendOnTop: Story = {
+  render: () => {
+    const rowLabels = Array.from({ length: 60 }, (_value, index) => `Sensor ${index + 1}`);
+    const colLabels = Array.from({ length: 24 }, (_value, index) => `${index}h`);
+    const values = rowLabels.map((_row, r) => colLabels.map((_col, c) => (r * 7 + c * 3) % 11));
+    return html`
+      <div style="display: flex; flex-direction: column; block-size: 320px; border: 1px solid var(--lr-color-border-subtle)">
+        <lr-heatmap
+          fill
+          legend-placement="top"
+          sticky-labels="cols"
+          value-label="readings"
+          style="--lr-heatmap-legend-font-size: var(--lr-font-size-sm); --lr-heatmap-legend-ramp-inline-size: 10rem; --lr-heatmap-legend-padding: var(--lr-space-xs)"
+          .data=${{ kind: 'matrix', rowLabels, colLabels, values }}
+        ></lr-heatmap>
+      </div>
+    `;
+  },
+};
+
+/** Day-by-hour picker: clicking a weekday or an hour label toggles that whole row or column. */
+export const AxisLabelSelection: Story = {
+  render: () => {
+    const rowLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+    const colLabels = Array.from({ length: 12 }, (_value, index) => `${index + 8}h`);
+    const values = rowLabels.map((_row, r) => colLabels.map((_col, c) => (r + c) % 5));
+    return html`<lr-heatmap
+      multiple
+      axis-selection="both"
+      cell-size="28"
+      label="Availability"
+      .data=${{ kind: 'matrix', rowLabels, colLabels, values }}
+      @lr-selection-change=${(event: CustomEvent<{ selectedCells: readonly unknown[] }>) => {
+        (event.currentTarget as HTMLElement & { selectedCells: readonly unknown[] }).selectedCells = event.detail.selectedCells;
+      }}
+    ></lr-heatmap>`;
+  },
+};

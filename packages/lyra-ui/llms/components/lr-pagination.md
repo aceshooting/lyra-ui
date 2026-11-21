@@ -61,6 +61,18 @@ The pager revalidates the requested page after `lr-before-page-change` returns. 
   rewritten by the component
 - `pageSize: number = 10` (attribute `page-size`) — items per page; finite values are truncated to
   a non-negative integer for the derived calculations, and zero produces no pages
+- `offset?: number` (attribute `offset`) — for offset/limit back ends: while set to a finite
+  non-negative number it derives `page` as `floor(offset / pageSize) + 1` whenever it or `pageSize`
+  changes (a non-multiple floors to the page that contains it); `page` wins when both are set in the
+  same update, and negative or non-finite values normalize to unset, leaving `page` alone. Pair it
+  with `detail.offset` on the change events and no call site converts page numbers by hand:
+
+  ```js
+  pager.addEventListener('lr-page-change', async ({ detail }) => {
+    await load({ offset: detail.offset, limit: detail.pageSize });
+    pager.offset = detail.offset;
+  });
+  ```
 - `total: number = 0` (attribute `total`) — total item count; finite values are truncated
   to a non-negative integer for display and page-count calculations, except for the exact sentinel
   `-1`, which enters indeterminate mode (see below) instead of clamping to the ordinary empty state.
@@ -142,7 +154,8 @@ non-blank supplied string is an explicit per-instance override and renders verba
 built-in English wording under a non-English `.strings` catalog. An empty or whitespace-only string
 is treated as unset: these controls have no visible text, so they always keep an accessible name.
 
-**Events:** `lr-before-page-change` (frozen readonly `detail: { page: number, pageSize: number }`, bubbles and
+**Events:** `lr-before-page-change` (frozen readonly `detail: { page: number, pageSize: number, offset: number }`,
+where `offset` is `(page - 1) * pageSize`, the zero-based index of the page's first item; bubbles and
 composes, cancelable) fires first for any valid, different requested page. Preventing it suppresses
 the request and restores the compact field to the controlled page. If accepted,
 `lr-page-change` follows with the same frozen detail (bubbles and composes, non-cancelable), from a numbered
@@ -162,7 +175,7 @@ intent, and it is otherwise unobservable, because the page buttons and the jump 
 shadow root, so a retargeted `click` names no page and pressing Enter on the jump field produces no
 click at all. When a request _does_ move the page, `lr-before-page-change` and `lr-page-change` are
 emitted first. Link-mode anchors navigate without emitting it.
-`lr-before-page-size-change` (frozen `detail: { page: number, pageSize: number }`, bubbles and
+`lr-before-page-size-change` (frozen `detail: { page: number, pageSize: number, offset: number }`, bubbles and
 composes, cancelable) fires when the page-size selector picks a different size; `pageSize` is the
 proposed size and `page` is `floor(((page - 1) * oldSize) / pageSize) + 1`, the page that keeps the
 current first item in view, clamped to the new page count when the total is known. Preventing it,

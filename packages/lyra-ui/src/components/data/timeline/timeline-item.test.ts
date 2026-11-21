@@ -412,3 +412,15 @@ it('re-reflects a valid variant over a different authored attribute immediately'
   el.variant = 'neutral';
   expect(el.hasAttribute('variant')).to.equal(false);
 });
+
+it('reads --lr-timeline-title-font-weight for the title and keeps semibold when unset', async () => {
+  const wrap = await fixture<HTMLElement>(html`<div>
+    <lr-timeline-item>Default</lr-timeline-item>
+    <lr-timeline-item style="--lr-timeline-title-font-weight: 400">Themed</lr-timeline-item>
+  </div>`);
+  const [plain, themed] = Array.from(wrap.querySelectorAll<LyraTimelineItem>('lr-timeline-item')) as [LyraTimelineItem, LyraTimelineItem];
+  await themed.updateComplete;
+  const weight = (el: LyraTimelineItem) => getComputedStyle(el.shadowRoot!.querySelector('[part="title"]')!).fontWeight;
+  expect(weight(themed)).to.equal('400');
+  expect(weight(plain)).to.equal('600');
+});

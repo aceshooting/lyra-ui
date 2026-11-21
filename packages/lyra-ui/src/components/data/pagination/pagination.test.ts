@@ -159,7 +159,7 @@ it("is controlled and emits the requested page without mutating page itself", as
   next.click();
   const event = await eventPromise;
 
-  expect(event.detail).to.deep.equal({ page: 2, pageSize: 10 });
+  expect(event.detail).to.deep.equal({ page: 2, pageSize: 10, offset: 10 });
   expect(el.page).to.equal(1);
 });
 
@@ -372,7 +372,7 @@ it("commits a valid numeric page jump on Enter", async () => {
   const event = await eventPromise;
   await el.updateComplete;
 
-  expect(event.detail).to.deep.equal({ page: 7, pageSize: 10 });
+  expect(event.detail).to.deep.equal({ page: 7, pageSize: 10, offset: 60 });
   expect(input.value).to.equal("1");
 });
 
@@ -1549,7 +1549,7 @@ describe("numbered page list", () => {
     }
     const request = oneEvent(el, "lr-page-change");
     gaps[1]!.click();
-    expect((await request).detail).to.deep.equal({ page: 14, pageSize: 10 });
+    expect((await request).detail).to.deep.equal({ page: 14, pageSize: 10, offset: 130 });
     expect(el.page, "the stronger Lyra API remains controlled").to.equal(10);
   });
 
@@ -1592,7 +1592,7 @@ describe("numbered page list", () => {
     target.click();
     const event = await eventPromise;
 
-    expect(event.detail).to.deep.equal({ page: 4, pageSize: 10 });
+    expect(event.detail).to.deep.equal({ page: 4, pageSize: 10, offset: 30 });
     expect(Object.isFrozen(event.detail)).to.equal(true);
     expect(el.page).to.equal(1);
   });
@@ -1630,13 +1630,14 @@ describe("numbered page list", () => {
 
     const lastRequest = oneEvent(el, "lr-page-change");
     last.click();
-    expect((await lastRequest).detail).to.deep.equal({ page: 5, pageSize: 10 });
+    expect((await lastRequest).detail).to.deep.equal({ page: 5, pageSize: 10, offset: 40 });
 
     const firstRequest = oneEvent(el, "lr-page-change");
     first.click();
     expect((await firstRequest).detail).to.deep.equal({
       page: 1,
       pageSize: 10,
+      offset: 0,
     });
 
     el.page = 1;
@@ -2355,7 +2356,7 @@ describe("Web Awesome navigation surface", () => {
     const event = await before;
     await el.updateComplete;
     expect(event.cancelable).to.be.true;
-    expect(event.detail).to.deep.equal({ page: 2, pageSize: 10 });
+    expect(event.detail).to.deep.equal({ page: 2, pageSize: 10, offset: 10 });
     expect(Object.isFrozen(event.detail)).to.equal(true);
     expect(changed).to.equal(0);
     expect(el.page).to.equal(1);
@@ -2379,8 +2380,8 @@ describe("Web Awesome navigation surface", () => {
     ).click();
 
     expect(details).to.have.length(2);
-    expect(details[0]).to.deep.equal({ page: 2, pageSize: 10 });
-    expect(details[1]).to.deep.equal({ page: 2, pageSize: 10 });
+    expect(details[0]).to.deep.equal({ page: 2, pageSize: 10, offset: 10 });
+    expect(details[1]).to.deep.equal({ page: 2, pageSize: 10, offset: 10 });
     expect(details[0] === details[1]).to.equal(false);
     expect(details.every(Object.isFrozen)).to.equal(true);
   });

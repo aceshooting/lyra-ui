@@ -189,9 +189,11 @@ export const styles = css`
        the sticky-header rule further below is the one that wins the cascade for 'background'. */
     background: var(--_lr-table-header-bg, var(--lr-table-surface, var(--lr-color-surface)));
     text-align: start;
-    font-weight: var(--lr-font-weight-semibold);
+    font-size: var(--lr-table-header-font-size, inherit);
+    font-weight: var(--lr-table-header-font-weight, var(--lr-font-weight-semibold));
+    color: var(--lr-table-header-color, inherit);
     padding: var(--lr-table-cell-padding, var(--lr-space-s));
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-table-cell-border-color, var(--lr-color-border-subtle));
     cursor: default;
     white-space: nowrap;
   }
@@ -262,7 +264,7 @@ export const styles = css`
        sticky-column rules below keep it for the same reason. */
     --_lr-table-header-bg: var(--lr-table-header-sorted-bg, var(--lr-table-surface, var(--lr-color-surface)));
     background: var(--_lr-table-header-bg);
-    color: var(--lr-table-header-sorted-color, inherit);
+    color: var(--lr-table-header-sorted-color, var(--lr-table-header-color, inherit));
   }
   /* Both attribute selectors stay unwrapped at (0,3,0): they must out-rank the
      [part='header-cell'][data-sticky] rule below ((0,2,0)), which necessarily declares an opaque
@@ -365,7 +367,7 @@ export const styles = css`
        shorthand's two-value (block/inline) shape today, and a single flattened hook would either
        lose that distinction or force every ordinary cell to adopt the tighter block spacing. */
     padding: var(--lr-table-cell-padding-compact, var(--lr-space-xs) var(--lr-space-s));
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-table-cell-border-color, var(--lr-color-border-subtle));
     background: var(--lr-color-surface-raised);
     color: var(--lr-color-text-quiet);
     font-weight: var(--lr-font-weight-semibold);
@@ -376,7 +378,7 @@ export const styles = css`
   }
   [part='cell'] {
     padding: var(--lr-table-cell-padding, var(--lr-space-s));
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-table-cell-border-color, var(--lr-color-border-subtle));
     color: var(--lr-table-cell-color, inherit);
   }
   /* Rendered only for a column defining cellPart(row): a block box, so a consumer's line clamp,
@@ -511,7 +513,7 @@ export const styles = css`
   }
   [part='row-total-cell'] {
     padding: var(--lr-table-cell-padding, var(--lr-space-s));
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-table-cell-border-color, var(--lr-color-border-subtle));
     font-weight: var(--lr-font-weight-semibold);
     text-align: end;
   }
@@ -525,7 +527,7 @@ export const styles = css`
   }
   [part='expand-toggle-cell'] {
     padding: var(--lr-space-s);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-table-cell-border-color, var(--lr-color-border-subtle));
     text-align: center;
   }
   [part='row-expand-toggle'] {
@@ -572,7 +574,7 @@ export const styles = css`
   }
   [part='expanded-row'] [part='expanded-cell'] {
     padding: var(--lr-space-s);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-table-cell-border-color, var(--lr-color-border-subtle));
     background: var(--lr-table-surface, var(--lr-color-surface));
   }
   /* columns[].sticky pins a column's header/cells to the inline-start edge during horizontal scroll
@@ -588,7 +590,7 @@ export const styles = css`
        to 0 for the first sticky column, and before the first measurement pass. */
     inset-inline-start: var(--lr-table-sticky-offset, 0);
     z-index: var(--lr-layer-content);
-    box-shadow: var(--lr-size-1px) 0 0 0 var(--lr-color-border-subtle);
+    box-shadow: var(--lr-size-1px) 0 0 0 var(--lr-table-cell-border-color, var(--lr-color-border-subtle));
   }
   /* Reads --_lr-table-row-bg, written by the [part='row'] stripe/selected/hover/active rules above,
      so a sticky body cell shows the same fill as the rest of its row instead of painting a flat
@@ -611,18 +613,18 @@ export const styles = css`
        opposite physical side since content now scrolls underneath from the other direction. */
     inset-inline-start: auto;
     inset-inline-end: var(--lr-table-sticky-offset, 0);
-    box-shadow: calc(-1 * var(--lr-size-1px)) 0 0 0 var(--lr-color-border-subtle);
+    box-shadow: calc(-1 * var(--lr-size-1px)) 0 0 0 var(--lr-table-cell-border-color, var(--lr-color-border-subtle));
   }
   /* box-shadow's X offset is physical, not logical, so it must flip explicitly under RTL: a
      'start'-pinned column sits on the right edge with content scrolling under from the left, so its
      seam belongs on the left (negative X). */
   :host(:dir(rtl)) [part='header-cell'][data-sticky],
   :host(:dir(rtl)) [part='cell'][data-sticky] {
-    box-shadow: calc(-1 * var(--lr-size-1px)) 0 0 0 var(--lr-color-border-subtle);
+    box-shadow: calc(-1 * var(--lr-size-1px)) 0 0 0 var(--lr-table-cell-border-color, var(--lr-color-border-subtle));
   }
   :host(:dir(rtl)) [part='header-cell'][data-sticky='end'],
   :host(:dir(rtl)) [part='cell'][data-sticky='end'] {
-    box-shadow: var(--lr-size-1px) 0 0 0 var(--lr-color-border-subtle);
+    box-shadow: var(--lr-size-1px) 0 0 0 var(--lr-table-cell-border-color, var(--lr-color-border-subtle));
   }
   /* Every sticky cell is its own stacking context (position + z-index), so an anchored overlay in
      one -- a per-row actions menu -- is confined to it, and the next row's sticky cell, painted
@@ -638,7 +640,7 @@ export const styles = css`
   [part='footer-cell'] {
     /* Same tighter hook as [part='group-cell'] -- see the comment there. */
     padding: var(--lr-table-cell-padding-compact, var(--lr-space-xs) var(--lr-space-s));
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border-block-start: var(--lr-border-width-thin) solid var(--lr-table-cell-border-color, var(--lr-color-border-subtle));
     font-weight: var(--lr-font-weight-semibold);
     text-align: start;
   }
@@ -674,6 +676,78 @@ export const styles = css`
   }
   [part='more-button']:where([aria-disabled='true']) {
     cursor: progress;
+  }
+  /* stack: resolves --lr-table-stack-breakpoint live (em/rem/px) for table.class.ts to compare
+     against [part='base']'s allocation; never painted. */
+  .stack-probe {
+    position: absolute;
+    visibility: hidden;
+    pointer-events: none;
+    inline-size: var(--lr-table-stack-breakpoint, var(--lr-size-36rem));
+    block-size: 0;
+  }
+  [part='cell-label'] {
+    color: var(--lr-color-text-quiet);
+    font-weight: var(--lr-font-weight-semibold);
+    overflow-wrap: anywhere;
+  }
+  /* Stacked rows keep their explicit grid/row/gridcell roles; only the boxes change, so each row
+     reads as a card of label/value pairs and the header row wraps into a strip of sort controls. */
+  [part='base'][data-stacked] [part='table'],
+  [part='base'][data-stacked] [part='table'] > tbody,
+  [part='base'][data-stacked] [part='table'] > tfoot,
+  [part='base'][data-stacked] [part='row'],
+  [part='base'][data-stacked] [part='footer-row'],
+  [part='base'][data-stacked] [part='expanded-row'],
+  [part='base'][data-stacked] [part='group-row'] {
+    display: block;
+    block-size: auto;
+  }
+  [part='base'][data-stacked] [part='table'] > colgroup {
+    display: none;
+  }
+  [part='base'][data-stacked] [part='head'] {
+    display: block;
+  }
+  [part='base'][data-stacked] [part='head'] > tr {
+    display: flex;
+    flex-wrap: wrap;
+    block-size: auto;
+  }
+  [part='base'][data-stacked] [part='header-cell'] {
+    border-block-end: 0;
+    white-space: normal;
+  }
+  [part='base'][data-stacked] [part='head'] > tr {
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-table-cell-border-color, var(--lr-color-border-subtle));
+  }
+  [part='base'][data-stacked] [part='row'] {
+    padding-block: var(--lr-space-xs);
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-table-cell-border-color, var(--lr-color-border-subtle));
+  }
+  [part='base'][data-stacked] [part='cell'],
+  [part='base'][data-stacked] [part='row-total-cell'],
+  [part='base'][data-stacked] [part='expand-toggle-cell'],
+  [part='base'][data-stacked] [part='footer-cell'],
+  [part='base'][data-stacked] [part='expanded-cell'],
+  [part='base'][data-stacked] [part='group-cell'] {
+    display: block;
+    padding-block: var(--lr-space-2xs);
+    border-block-end: 0;
+    text-align: start;
+  }
+  /* The caption takes a fixed share of the line and the value flows after it, so text and
+     element content of any mix stay on one logical line. */
+  [part='base'][data-stacked] [part='cell-label'] {
+    display: inline-block;
+    box-sizing: border-box;
+    inline-size: var(--lr-table-stack-label-size, 40%);
+    padding-inline-end: var(--lr-space-s);
+    vertical-align: top;
+  }
+  [part='base'][data-stacked] [data-sticky] {
+    position: static;
+    box-shadow: none;
   }
   ${dataStateSurfaceStyles('error')}
   ${dataStateRetryStyles}

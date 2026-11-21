@@ -1,4 +1,4 @@
-import { focusRingOffset, focusRingOutline, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { activeFill, focusRingOffset, focusRingOutline, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { blockHost } from '../../../internal/layout-fragments.styles.js';
 
@@ -58,6 +58,20 @@ export const styles = css`
   }
   /* A suspended fitted bitmap can outlive its previous allocation. Keep that stale frame and
      its cell projection contained until the next visible draw restores their shared geometry. */
+  /* fill: the host and base take a definite parent's block size, and the scrollport takes what the
+     legend leaves, so the grid -- not an outer container -- scrolls, keeping frozen bands working. */
+  :host([fill]) {
+    block-size: 100%;
+    min-block-size: 0;
+  }
+  :host([fill]) [part="base"] {
+    block-size: 100%;
+    box-sizing: border-box;
+  }
+  :host([fill]) [part="grid"] {
+    flex: 1 1 auto;
+    min-block-size: 0;
+  }
   [part="base"]:where([data-fit-frame-contained]) {
     overflow: clip;
   }
@@ -149,6 +163,68 @@ export const styles = css`
   .cell-row {
     display: contents;
   }
+  /* A top legend precedes the surface; this frame restores the canvas origin for the overlays. */
+  .surface-frame {
+    position: relative;
+  }
+  /* axisSelection label buttons: transparent targets laid over the painted labels, physical LTR
+     like the grid they describe. Inside the stickyLabels stack a frozen axis keeps its buttons. */
+  .axis-targets {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    direction: ltr;
+    pointer-events: none;
+    z-index: var(--lr-layer-content);
+  }
+  .grid-stack > .axis-targets {
+    position: relative;
+  }
+  .grid-stack > .axis-targets[data-frozen-rows] {
+    position: sticky;
+    inset-inline-start: 0;
+  }
+  .grid-stack > .axis-targets[data-frozen-cols] {
+    position: sticky;
+    inset-block-start: 0;
+  }
+  [part~="row-label"],
+  [part~="col-label"] {
+    position: absolute;
+    box-sizing: border-box;
+    padding: 0;
+    border: 0;
+    border-radius: var(--lr-radius-xs);
+    background: transparent;
+    color: transparent;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: var(--lr-transition-interactive);
+    ${iconHitTarget}
+  }
+  [part~="row-label"]:disabled,
+  [part~="col-label"]:disabled {
+    cursor: default;
+  }
+  [part~="row-label-pressed"] {
+    box-shadow: inset var(--lr-border-width-thick) 0 0 0 var(--lr-heatmap-axis-pressed-color, var(--lr-color-brand));
+  }
+  [part~="col-label-pressed"] {
+    box-shadow: inset 0 calc(-1 * var(--lr-border-width-thick)) 0 0 var(--lr-heatmap-axis-pressed-color, var(--lr-color-brand));
+  }
+  [part~="row-label"]:enabled:hover,
+  [part~="col-label"]:enabled:hover {
+    background: var(--lr-heatmap-axis-hover-bg, color-mix(in srgb, var(--lr-color-brand) 12%, transparent));
+  }
+  [part~="row-label"]:enabled:active,
+  [part~="col-label"]:enabled:active {
+    background: ${activeFill('var(--lr-heatmap-axis-hover-bg, color-mix(in srgb, var(--lr-color-brand) 12%, transparent))')};
+  }
+  [part~="row-label"]:focus-visible,
+  [part~="col-label"]:focus-visible {
+    ${focusRingOutline('var(--lr-heatmap-focus-ring-color, var(--_lr-heatmap-focus-ring-color))')}
+    ${focusRingOffset}
+  }
   [part="cell"] {
     position: absolute;
     display: block;
@@ -218,21 +294,26 @@ export const styles = css`
   }
   [part="legend"] {
     display: flex;
+    flex: none;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--lr-space-xs);
+    gap: var(--lr-heatmap-legend-gap, var(--lr-space-xs));
     min-inline-size: 0;
     max-inline-size: 100%;
-    font-size: var(--lr-font-size-xs);
-    color: var(--lr-color-text-quiet);
+    box-sizing: border-box;
+    padding: var(--lr-heatmap-legend-padding, 0);
+    border-radius: var(--lr-heatmap-legend-radius, 0);
+    background: var(--lr-heatmap-legend-bg, transparent);
+    font-size: var(--lr-heatmap-legend-font-size, var(--lr-font-size-xs));
+    color: var(--lr-heatmap-legend-color, var(--lr-color-text-quiet));
     overflow-wrap: anywhere;
   }
   [part="legend"] .bar {
-    flex: 0 1 var(--lr-size-6rem);
+    flex: 0 1 var(--lr-heatmap-legend-ramp-inline-size, var(--lr-size-6rem));
     min-inline-size: 0;
-    inline-size: var(--lr-size-6rem);
-    block-size: var(--lr-size-0-5rem);
-    border-radius: var(--lr-size-2px);
+    inline-size: var(--lr-heatmap-legend-ramp-inline-size, var(--lr-size-6rem));
+    block-size: var(--lr-heatmap-legend-ramp-block-size, var(--lr-size-0-5rem));
+    border-radius: var(--lr-heatmap-legend-ramp-radius, var(--lr-size-2px));
     background: var(
       --lr-heatmap-color-steps-gradient,
       linear-gradient(
@@ -262,8 +343,8 @@ export const styles = css`
      it's data, not a themeable design value, so it can't live here. */
   [part="legend-swatch"] {
     flex: 0 0 auto;
-    inline-size: var(--lr-size-0-6rem);
-    block-size: var(--lr-size-0-6rem);
+    inline-size: var(--lr-heatmap-legend-swatch-size, var(--lr-size-0-6rem));
+    block-size: var(--lr-heatmap-legend-swatch-size, var(--lr-size-0-6rem));
     border-radius: var(--lr-radius-xs);
   }
   [part="legend-stop-label"] {
@@ -289,8 +370,8 @@ export const styles = css`
   }
   [part="legend-annotation"] .ring-swatch {
     flex: 0 0 auto;
-    inline-size: var(--lr-size-0-6rem);
-    block-size: var(--lr-size-0-6rem);
+    inline-size: var(--lr-heatmap-legend-swatch-size, var(--lr-size-0-6rem));
+    block-size: var(--lr-heatmap-legend-swatch-size, var(--lr-size-0-6rem));
     border-radius: 50%;
     border: var(--lr-border-width-medium) solid
       var(--lr-heatmap-annotation-color, var(--_lr-heatmap-annotation-color));
