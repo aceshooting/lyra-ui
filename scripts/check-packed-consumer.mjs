@@ -334,11 +334,12 @@ const bundleEntries = {
   },
   graph: {
     fixture: 'optional',
-    // The complete graph bundle measures 472,405 raw bytes across 13 files. Consolidation moved
-    // lr-graph onto the shared focus-repair and search helpers, and the shared overlay, roving
-    // focus and slot helpers it loads grew since; graph's own code shrank. Reviewed exception for
-    // 32.0.0; the ceiling is the next 64-byte boundary.
-    maxRawBytes: 472_448,
+    // The complete graph bundle measures 476,805 raw bytes across 13 files. Consolidation moved
+    // lr-graph onto the shared focus-repair and search helpers, the shared overlay, roving focus
+    // and slot helpers it loads grew since, and its pager now carries the page-size selector;
+    // graph's own code shrank. Reviewed exception for 32.0.0; the ceiling is the next 64-byte
+    // boundary.
+    maxRawBytes: 476_864,
   },
 };
 
