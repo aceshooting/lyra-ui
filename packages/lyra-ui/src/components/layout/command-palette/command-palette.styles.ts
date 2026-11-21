@@ -1,5 +1,6 @@
 import { activeFill, disabledControl, focusRing, focusRingInset, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { formControlTouchFontFloor } from '../../../internal/form-control/touch-font-floor.styles.js';
 import { overlaySurface } from '../../../internal/overlay-surface.styles.js';
 export const styles = css`
   :host {
@@ -259,4 +260,5 @@ export const styles = css`
     font-size: var(--lr-font-size-sm);
     overflow-wrap: anywhere;
   }
+  ${formControlTouchFontFloor(css`[part="input"]`, css`var(--lr-command-palette-search-font-size, 100%)`)}
 `;

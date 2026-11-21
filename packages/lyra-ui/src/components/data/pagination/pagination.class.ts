@@ -306,10 +306,13 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
   /** Number of items represented by one page. Non-positive values produce no pages. */
   @property({ converter: blankNumberConverter(10), attribute: 'page-size' }) pageSize = 10;
   private _offset?: number;
+  /** Whether `offset` is the last value that positioned the page (see `applyOffset`). */
+  private offsetDrivesPage = false;
   /** Zero-based index of the first item on the applied page, for offset/limit back ends. While
    *  set to a finite non-negative number it derives `page` as `floor(offset / pageSize) + 1` (a
-   *  non-multiple floors to the page containing it) whenever it or `pageSize` changes; `page`
-   *  wins when both are set in the same update. Negative and non-finite values normalize to
+   *  non-multiple floors to the page containing it) whenever it changes, and again on a `pageSize`
+   *  change until `page` is written on its own; `page` wins when both are set in the same update,
+   *  and a `page` written without `offset` leaves the stale offset inert. Negative and non-finite values normalize to
    *  `undefined`, which leaves `page` alone. Change events report the matching `offset`. */
   @property({ converter: blankNumberConverter(undefined) })
   get offset(): number | undefined {
@@ -628,9 +631,13 @@ export class LyraPagination extends LyraElement<LyraPaginationEventMap> {
    *  there counts as "page set in the same update". */
   private applyOffset(changed: PropertyValues): void {
     const offset = this._offset;
-    if (offset === undefined || !(changed.has('offset') || changed.has('pageSize'))) return;
     const pageSet = changed.has('page') && (this.hasUpdated || this.hasAttribute('page') || this.page !== 1);
-    if (pageSet || this.normalizedPageSize === 0) return;
+    // A `page` written on its own (or winning over `offset`) leaves `offset` stale, so a later
+    // `pageSize`-only change must not rederive the page from it.
+    if (changed.has('offset')) this.offsetDrivesPage = offset !== undefined && !pageSet;
+    else if (pageSet) this.offsetDrivesPage = false;
+    if (offset === undefined || !this.offsetDrivesPage || !(changed.has('offset') || changed.has('pageSize'))) return;
+    if (this.normalizedPageSize === 0) return;
     this.page = pageForOffset(offset, this.normalizedPageSize);
   }
 

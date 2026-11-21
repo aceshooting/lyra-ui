@@ -188,12 +188,14 @@ describe('lr-map layout tokens', () => {
         element.legendPlacement = placement;
         await element.updateComplete;
         expect(legend.dataset['placement']).to.equal(placement);
+        expect(element.getAttribute('legend-placement'), 'reflects').to.equal(placement);
         const o = offsets();
         check({ start: Math.round(o.start), end: Math.round(o.end), top: Math.round(o.top), bottom: Math.round(o.bottom) });
       }
       element.legendPlacement = 'middle' as LyraMapLegendPlacement;
       await element.updateComplete;
       expect(legend.dataset['placement']).to.equal('bottom-start');
+      expect([element.legendPlacement, element.getAttribute('legend-placement')]).to.deep.equal(['bottom-start', 'bottom-start']);
     });
   }
 

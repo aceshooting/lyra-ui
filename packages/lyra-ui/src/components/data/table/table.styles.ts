@@ -1,6 +1,7 @@
 import { forcedColorsDivider } from '../../../internal/forced-colors.styles.js';
 import { activeFill, focusRing, focusRingInset, focusRingInsetOffset, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { formControlTouchFontFloor } from '../../../internal/form-control/touch-font-floor.styles.js';
 import { raiseWhileOverlayOpen } from '../../../internal/open-overlay-raise.styles.js';
 import { dataStateRetryStyles, dataStateSurfaceStyles } from '../../../internal/data-state-renderer.styles.js';
 
@@ -753,4 +754,5 @@ export const styles = css`
   ${dataStateSurfaceStyles('error')}
   ${dataStateRetryStyles}
   ${forcedColorsDivider('', "[part='resize-handle']:is(:hover, :focus-visible, :active, [data-resizing])")}
+  ${formControlTouchFontFloor(css`[part='filter'], [part='cell-editor']`)}
 `;

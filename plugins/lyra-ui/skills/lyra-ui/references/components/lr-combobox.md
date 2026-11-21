@@ -166,7 +166,7 @@ zoom on focus; see "Touch font floor".
 - `allowCustomValue: boolean = false` (attribute `allow-custom-value`) — single-select only;
   commits arbitrary text on Enter without creating an option. A pick still commits the option's
   `value`; for a free-text field use `commit="text"`
-- `commit: 'value' | 'text' = 'value'` (attribute `commit`, reflected) — single-select only. `text`
+- `commit: 'value' | 'text' = 'value'` (attribute `commit`, reflected; an unsupported value normalizes to `value`) — single-select only. `text`
   makes a free-text field with suggestions: picking an option writes its **label** into `value` (so
   the form value is the text) and reports the option's `data` in the `lr-change` /
   `lr-change-request` detail; typed text commits on Enter (consumed while the list is open,

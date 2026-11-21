@@ -1,6 +1,7 @@
 import { visuallyHidden } from '../../../internal/a11y.js';
 import { activeFill, disabledControl, focusRing } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { formControlTouchFontFloor } from '../../../internal/form-control/touch-font-floor.styles.js';
 import { forcedColorsPart } from '../../../internal/forced-colors.styles.js';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
@@ -482,4 +483,5 @@ export const styles = css`
     [part~="page-current"] { forced-color-adjust: none; transition: none; }
   }
   ${forcedColorsPart('[part~="page-current"]')}
+  ${formControlTouchFontFloor(css`[part="page-input"], [part="page-size"]`)}
 `;

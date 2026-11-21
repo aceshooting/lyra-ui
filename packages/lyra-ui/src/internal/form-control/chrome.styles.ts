@@ -12,6 +12,11 @@ import { formControlLabelDisplay, formControlLabelTypography, formControlSupport
  * scaled far past any real size is either negative (wide: clamp to the column) or huge (narrow:
  * clamp to the full row). Logical properties keep it correct under RTL.
  *
+ * The label aligns to the top of the field, centred on its first form-control-height line, so it
+ * sits level with a single-line field and with the first line of a tall one (a textarea, a code
+ * editor, a signature pad). A hidden or absent label leaves the hint and error unindented, under
+ * the field that then spans the row.
+ *
  * The wrapper's direct children are the label, the field, and full-width rows: `hint`, `error`
  * and any other status row a control renders beside them, marked `data-form-control-row` so it
  * wraps under the field like the hint instead of taking a column of its own.
@@ -27,7 +32,7 @@ export const formControlLabelPlacement = css`
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
-    align-items: center;
+    align-items: flex-start;
     column-gap: var(--_lr-label-gap);
   }
   :host([label-placement='start']) [part~='form-control'] > :not([part~='form-control-label']) {
@@ -38,10 +43,19 @@ export const formControlLabelPlacement = css`
     flex: 0 0 clamp(var(--_lr-label-column), (var(--_lr-label-collapse) - 100%) * 9999, 100%);
     box-sizing: border-box;
     margin-block-end: clamp(0px, (var(--_lr-label-collapse) - 100%) * 9999, var(--lr-space-xs));
+    padding-block-start: clamp(
+      0px,
+      (100% - var(--_lr-label-collapse)) * 9999,
+      max(0px, (var(--lr-form-control-height, var(--lr-size-2-5rem)) - 1lh) / 2)
+    );
   }
   :host([label-placement='start']) [part~='form-control'] > :is([part~='hint'], [part~='error'], [data-form-control-row]) {
     flex: 0 0 100%;
     box-sizing: border-box;
+  }
+  :host([label-placement='start']:not([label-display='hidden']))
+    [part~='form-control']:has(> [part~='form-control-label']:not([hidden]))
+    > :is([part~='hint'], [part~='error'], [data-form-control-row]) {
     padding-inline-start: clamp(
       0px,
       (100% - var(--_lr-label-collapse)) * 9999,

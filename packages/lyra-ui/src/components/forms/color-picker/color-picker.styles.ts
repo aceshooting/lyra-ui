@@ -79,6 +79,11 @@ export const styles = css`
        field-shaped control in the library. */
     --_lr-form-control-focus-shadow: var(--lr-form-control-focus-shadow, none);
   }
+  /* A start-placed label needs the row: the shrink-to-fit inline box would size the label column
+     from the swatch and hint instead of the allocation. */
+  :host([label-placement="start"]) {
+    display: block;
+  }
   [part~="form-control"] {
     display: inline-flex;
     position: relative;

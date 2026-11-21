@@ -1,6 +1,7 @@
 import { forcedColorsDivider } from '../../../internal/forced-colors.styles.js';
 import { activeTint, disabledControl, focusRingInset, focusRingOffset, focusRingOffsetInsetOffset, hoverTint, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { formControlTouchFontFloor } from '../../../internal/form-control/touch-font-floor.styles.js';
 import { raiseWhileOverlayOpen } from '../../../internal/open-overlay-raise.styles.js';
 import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { dataStateRetryStyles, dataStateSurfaceStyles } from '../../../internal/data-state-renderer.styles.js';
@@ -777,4 +778,5 @@ export const styles = css`
     }
   }
   ${forcedColorsDivider('', "[part='resize-handle']:is(:hover, :focus-visible, :active, [data-resizing])")}
+  ${formControlTouchFontFloor(css`[part="search"], [part="filter-panel"] input[type="search"], [part="page-size"]`)}
 `;

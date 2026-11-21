@@ -83,6 +83,15 @@ describe('lr-table stack', () => {
     }
   });
 
+  it('keeps its breakpoint probe out of a positioned scrolling ancestor at 320px', async () => {
+    const wrap = await fixture<HTMLElement>(html`<div style="position: relative; overflow: auto; inline-size: 320px">
+      <lr-table aria-label="Accounts" stack="auto" .columns=${columns} .rows=${rows} .rowKey=${(r: Row) => r.id}></lr-table>
+    </div>`);
+    const el = wrap.querySelector<LyraTable<Row>>('lr-table')!;
+    await waitUntil(() => base(el).hasAttribute('data-stacked'), 'a 320px allocation stacks');
+    expect(wrap.scrollWidth, 'no horizontal overflow from the probe').to.be.at.most(wrap.clientWidth);
+  });
+
   it('keeps the grid by default and normalizes unknown values', async () => {
     const el = await table('320px', 'never');
     expect(el.shadowRoot!.querySelector('.stack-probe') === null).to.equal(true);

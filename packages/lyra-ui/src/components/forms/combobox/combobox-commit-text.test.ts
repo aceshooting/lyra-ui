@@ -198,4 +198,36 @@ describe('lr-combobox commit="text"', () => {
     await el.updateComplete;
     expect(el.open).to.be.false;
   });
+  it('does not commit the pre-reset text on the blur after a programmatic form reset', async () => {
+    const form = await fixture<HTMLFormElement>(html`
+      <form>
+        <lr-combobox label="Description" name="description" commit="text" .defaultValue=${'Steel bolt'}>
+          <lr-option value="art-1">Steel bracket</lr-option>
+        </lr-combobox>
+        <button type="button">After</button>
+      </form>
+    `);
+    const el = form.querySelector('lr-combobox') as LyraCombobox;
+    await el.updateComplete;
+    await focusByKeyboard(inputOf(el));
+    await typeText(el, 'Custom part');
+    form.reset();
+    await el.updateComplete;
+    expect(el.value).to.equal('Steel bolt');
+    const changes: unknown[] = [];
+    el.addEventListener('lr-change', (event) => changes.push((event as CustomEvent).detail));
+    await focusByKeyboard(form.querySelector('button')!);
+    await el.updateComplete;
+    expect(el.value, 'the reset default survives the blur').to.equal('Steel bolt');
+    expect(changes.length).to.equal(0);
+  });
+  it('normalizes an unsupported commit mode on the property and the attribute', async () => {
+    const { el } = await mount();
+    el.commit = 'label' as 'text';
+    await el.updateComplete;
+    expect([el.commit, el.getAttribute('commit')]).to.deep.equal(['value', 'value']);
+    el.setAttribute('commit', 'Text');
+    await el.updateComplete;
+    expect([el.commit, el.getAttribute('commit')]).to.deep.equal(['value', 'value']);
+  });
 });

@@ -63,7 +63,7 @@ string; label: string; icon?: unknown; disabled?: boolean }`; `icon` renders as 
   rewrite. Before 8.0.0 this component carried its own six-tier scale that had drifted from that
   one; `m` is still the default, but the tiers now resolve to the shared control heights, paddings
   and font sizes rather than to this component's former private values.
-- `layout: 'scroll' | 'wrap' | 'grid' = 'scroll'` (reflected; type `LyraSegmentedLayout`) — `scroll`
+- `layout: 'scroll' | 'wrap' | 'grid' = 'scroll'` (reflected; type `LyraSegmentedLayout`; an unsupported value normalizes to `scroll`) — `scroll`
   keeps one horizontally scrolling row with edge fades. `wrap` breaks segments onto as many rows as
   the width needs; `grid` places them in `--lr-segmented-columns` (default `3`) equal columns. Both
   multi-row layouts never scroll, drop the edge fade, let long labels wrap and let the track grow

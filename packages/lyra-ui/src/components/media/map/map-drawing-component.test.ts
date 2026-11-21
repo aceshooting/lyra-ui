@@ -291,7 +291,9 @@ describe('lr-map drawing integration', () => {
     expect(element.completeDrawing(), 'finishing the edit commits it').to.equal(true); await settle(element, peer);
     expect(order).to.deep.equal(['complete', 'complete']);
     expect(element.completeDrawing(), 'the committed edit is not reopened').to.equal(false); expect(peer.sources.size).to.equal(0);
-    element.drawingCompleteBehavior = 'clear'; element.drawMode = 'line'; await settle(element, peer);
+    element.drawingCompleteBehavior = 'bogus' as 'clear'; await element.updateComplete;
+    expect([element.drawingCompleteBehavior, element.getAttribute('drawing-complete-behavior')], 'normalizes and reflects').to.deep.equal(['clear', 'clear']);
+    element.drawMode = 'line'; await settle(element, peer);
     await vertex(element, peer, 0, 0); await vertex(element, peer, 1, 0);
     expect(element.completeDrawing()).to.equal(true); await settle(element, peer);
     expect([element.drawMode, peer.sources.size, element.completeDrawing()]).to.deep.equal(['none', 0, false]);

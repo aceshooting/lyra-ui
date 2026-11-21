@@ -37,6 +37,12 @@ describe('lr-segmented layout', () => {
     expect(getComputedStyle(base(el)).overflowX).to.equal('auto');
     expect(rows(el)).to.equal(1);
     expect(getComputedStyle(base(el)).flexWrap).to.equal('nowrap');
+    el.layout = 'columns' as 'grid';
+    await el.updateComplete;
+    expect([el.layout, el.getAttribute('layout')], 'an unsupported layout normalizes').to.deep.equal(['scroll', 'scroll']);
+    el.setAttribute('layout', 'masonry');
+    await el.updateComplete;
+    expect([el.layout, el.getAttribute('layout')]).to.deep.equal(['scroll', 'scroll']);
   });
 
   it('wraps onto several rows at 320px with no horizontal overflow, fade or clipped labels', async () => {

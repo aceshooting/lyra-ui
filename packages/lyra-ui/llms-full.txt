@@ -7820,6 +7820,9 @@ controls whose label is a legend over several choices (`lr-checkbox-group`, `lr-
 `lr-segmented`) and `lr-slider`, whose label row can carry the value readout, keep the label
 above. The label sits in an inline-start column of `--lr-form-control-label-inline-size` (default `30%`), `--lr-form-control-label-gap`
 (default `var(--lr-space-m)`) from the field, and the hint and error stay aligned under the field.
+The label is top-aligned, level with the first line of the field, so it stays beside the first line
+of a tall field (`lr-textarea`, `lr-code-editor`, `lr-signature-pad`) instead of centring on it. With
+`label-display="hidden"` or no label the field spans the row and the hint and error start under it.
 When the control is narrower than `--lr-form-control-label-collapse-inline-size` (default
 `var(--lr-size-20rem)`) the label returns above the field, so a phone layout needs no media query.
 The switch reads the control's own width, so the breakpoint is a themeable token and the host needs
@@ -7838,7 +7841,10 @@ Mobile Safari zooms the page when focus enters a text field whose computed font 
 16px, and the form-control scale sits below that up to `size="m"`. Under a coarse or hover-less
 pointer every text-entry surface — `lr-input`, `lr-number-input`, `lr-textarea`, `lr-select`,
 `lr-combobox`, `lr-date-input`, `lr-phone-input`, `lr-token-input`, `lr-otp-input`, and the text
-fields of `lr-color-picker`, `lr-emoji-picker` and `lr-locale-picker` — is floored at
+fields of `lr-color-picker`, `lr-emoji-picker` and `lr-locale-picker`, plus the editable
+fields of the data views (`lr-pagination` page jump and page-size select, `lr-data-grid` search,
+column filter and page-size select, `lr-table` filter and cell editor, `lr-command-palette`
+search) — is floored at
 `--lr-form-control-touch-font-size-min` (default `16px`, the platform threshold). A larger
 authored size is kept and fine pointers are untouched; set the token to `0px` to opt out. No
 `::part()` rule is needed.
@@ -8069,7 +8075,7 @@ zoom on focus; see "Touch font floor".
 - `allowCustomValue: boolean = false` (attribute `allow-custom-value`) — single-select only;
   commits arbitrary text on Enter without creating an option. A pick still commits the option's
   `value`; for a free-text field use `commit="text"`
-- `commit: 'value' | 'text' = 'value'` (attribute `commit`, reflected) — single-select only. `text`
+- `commit: 'value' | 'text' = 'value'` (attribute `commit`, reflected; an unsupported value normalizes to `value`) — single-select only. `text`
   makes a free-text field with suggestions: picking an option writes its **label** into `value` (so
   the form value is the text) and reports the option's `data` in the `lr-change` /
   `lr-change-request` detail; typed text commits on Enter (consumed while the list is open,
@@ -18112,9 +18118,10 @@ The pager revalidates the requested page after `lr-before-page-change` returns. 
 - `pageSize: number = 10` (attribute `page-size`) — items per page; finite values are truncated to
   a non-negative integer for the derived calculations, and zero produces no pages
 - `offset?: number` (attribute `offset`) — for offset/limit back ends: while set to a finite
-  non-negative number it derives `page` as `floor(offset / pageSize) + 1` whenever it or `pageSize`
-  changes (a non-multiple floors to the page that contains it); `page` wins when both are set in the
-  same update, and negative or non-finite values normalize to unset, leaving `page` alone. Pair it
+  non-negative number it derives `page` as `floor(offset / pageSize) + 1` whenever it changes, and
+  again on a `pageSize` change (a non-multiple floors to the page that contains it); `page` wins when
+  both are set in the same update, a `page` written on its own leaves the stale `offset` inert until
+  `offset` is written again, and negative or non-finite values normalize to unset. Pair it
   with `detail.offset` on the change events and no call site converts page numbers by hand:
 
   ```js
@@ -25269,7 +25276,7 @@ string; label: string; icon?: unknown; disabled?: boolean }`; `icon` renders as 
   rewrite. Before 8.0.0 this component carried its own six-tier scale that had drifted from that
   one; `m` is still the default, but the tiers now resolve to the shared control heights, paddings
   and font sizes rather than to this component's former private values.
-- `layout: 'scroll' | 'wrap' | 'grid' = 'scroll'` (reflected; type `LyraSegmentedLayout`) — `scroll`
+- `layout: 'scroll' | 'wrap' | 'grid' = 'scroll'` (reflected; type `LyraSegmentedLayout`; an unsupported value normalizes to `scroll`) — `scroll`
   keeps one horizontally scrolling row with edge fades. `wrap` breaks segments onto as many rows as
   the width needs; `grid` places them in `--lr-segmented-columns` (default `3`) equal columns. Both
   multi-row layouts never scroll, drop the edge fade, let long labels wrap and let the track grow
@@ -37215,7 +37222,8 @@ and simple-geometry, polar and antimeridian validation reject unsupported shapes
 completed snapshot in application state: temporary drawing resources are not a durable layer.
 `editDrawing(snapshot)` explicitly starts editing a completed snapshot; completion does not
 implicitly reopen it unless `drawingCompleteBehavior = 'edit'` (attribute
-`drawing-complete-behavior`, default `'clear'`) is set: then the completed shape stays on the map as
+`drawing-complete-behavior`, reflected, default `'clear'`; an unsupported value normalizes to
+`'clear'`) is set: then the completed shape stays on the map as
 an edit session, opened synchronously right after `lr-map-draw-complete`, and finishing that edit
 commits and clears it. `drawingSticky = false` (reflected attribute `drawing-sticky`) set to `true`
 keeps `drawMode` armed after a completion or a user cancel (cancel action, Escape,
@@ -37514,11 +37522,11 @@ omittedCount, truncatedLabelCount, truncated }` result for the latest assignment
   Collapsing hides the gradient bar, the rows, the `legend-limit` summary and the trailing `legend`
   slot; the `legend-start` slot and the disclosure itself stay visible, so a slotted header survives
   the collapse and the control that restores the key is never what the collapse hides.
-- `legendPlacement: LyraMapLegendPlacement = 'bottom-start'` (attribute `legend-placement`) — where
+- `legendPlacement: LyraMapLegendPlacement = 'bottom-start'` (attribute `legend-placement`, reflected) — where
   the legend panel sits: a logical corner (`bottom-start`, `bottom-end`, `top-start`, `top-end`) or
   centred on one logical edge (`top`, `bottom`, `start`, `end`); `start` is the right edge under RTL.
   Every placement clears the native control rows and `--lr-map-controls-inset-*`, also while pick,
-  drawing or scene bars share the map. An unknown value renders the default. Size and type it with
+  drawing or scene bars share the map. An unsupported value normalizes to `'bottom-start'`. Size and type it with
   `--lr-map-legend-inset-block`, `--lr-map-legend-inset-inline`, `--lr-map-legend-max-inline-size`,
   `--lr-map-legend-max-block-size`, `--lr-map-legend-columns` (equal row columns, default 1),
   `--lr-map-legend-font-size`, `--lr-map-legend-gap`, `--lr-map-legend-padding`,

@@ -287,7 +287,7 @@ export type LyraMapLegendControlRole = 'button' | 'checkbox';
 
 /** Where the legend panel sits over the map: a logical corner, or centred on one logical edge. */
 export type LyraMapLegendPlacement = 'top' | 'bottom' | 'start' | 'end' | 'top-start' | 'top-end' | 'bottom-start' | 'bottom-end';
-const LEGEND_PLACEMENTS: ReadonlySet<string> = new Set(['top', 'bottom', 'start', 'end', 'top-start', 'top-end', 'bottom-start', 'bottom-end']);
+const LEGEND_PLACEMENT = literalSetConverter<LyraMapLegendPlacement>(['top', 'bottom', 'start', 'end', 'top-start', 'top-end', 'bottom-start', 'bottom-end'], 'bottom-start');
 
 const LEGEND_CONTROL_ROLE = literalSetConverter<LyraMapLegendControlRole>(
   ['button', 'checkbox'],
@@ -3606,10 +3606,21 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * Where the legend panel sits: a logical corner (`bottom-start`, the default, `bottom-end`,
    * `top-start`, `top-end`) or centred on one logical edge (`top`, `bottom`, `start`, `end`).
    * Logical, so `start` is the right edge under RTL. Every placement clears the native control
-   * rows and the `--lr-map-controls-inset-*` reservation. An unknown value renders the default.
+   * rows and the `--lr-map-controls-inset-*` reservation. Unsupported values normalize to
+   * `'bottom-start'`. Reflects as the `legend-placement` attribute.
    */
-  @property({ attribute: 'legend-placement' })
-  legendPlacement: LyraMapLegendPlacement = 'bottom-start';
+  @property({ converter: LEGEND_PLACEMENT, attribute: 'legend-placement', reflect: true })
+  get legendPlacement(): LyraMapLegendPlacement {
+    return this._legendPlacement;
+  }
+  set legendPlacement(next: LyraMapLegendPlacement) {
+    const normalized = LEGEND_PLACEMENT.normalizeReflected(this, 'legend-placement', next);
+    const old = this._legendPlacement;
+    if (old === normalized) return;
+    this._legendPlacement = normalized;
+    this.requestUpdate('legendPlacement', old);
+  }
+  private _legendPlacement: LyraMapLegendPlacement = 'bottom-start';
 
   /**
    * Whether a `legendCollapsible` panel is expanded. Defaults **open**, so adding only
@@ -4170,8 +4181,20 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * (default) clears the temporary drawing and resets `drawMode`. `'edit'` keeps the completed shape
    * on the map as an explicit edit session, exactly as `editDrawing(detail)` would, synchronously
    * inside the same completion, so no listener needs to re-enter. Finishing that edit commits and
-   * clears it. A completion listener that starts its own drawing or edit wins. */
-  @property({ attribute: 'drawing-complete-behavior', converter: DRAWING_COMPLETE_BEHAVIOR }) drawingCompleteBehavior: LyraMapDrawingCompleteBehavior = 'clear';
+   * clears it. A completion listener that starts its own drawing or edit wins. Unsupported values
+   * normalize to `'clear'`. Reflects as the `drawing-complete-behavior` attribute. */
+  @property({ attribute: 'drawing-complete-behavior', converter: DRAWING_COMPLETE_BEHAVIOR, reflect: true })
+  get drawingCompleteBehavior(): LyraMapDrawingCompleteBehavior {
+    return this._drawingCompleteBehavior;
+  }
+  set drawingCompleteBehavior(next: LyraMapDrawingCompleteBehavior) {
+    const normalized = DRAWING_COMPLETE_BEHAVIOR.normalizeReflected(this, 'drawing-complete-behavior', next);
+    const old = this._drawingCompleteBehavior;
+    if (old === normalized) return;
+    this._drawingCompleteBehavior = normalized;
+    this.requestUpdate('drawingCompleteBehavior', old);
+  }
+  private _drawingCompleteBehavior: LyraMapDrawingCompleteBehavior = 'clear';
   /** Keeps `drawMode` armed after a drawing completes or is cancelled by the user (cancel action,
    * Escape or `cancelDrawing()`), so the next shape can start at once. With
    * `drawingCompleteBehavior = 'edit'`, the mode re-arms when that edit is finished or cancelled.
@@ -9532,7 +9555,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
               aria-label=${this.localize('mapLegend')}
               aria-controls=${this.failure || this.loading ? nothing : 'map-container'}
               data-truncated=${String(this.legendProjection.truncated)}
-              data-placement=${LEGEND_PLACEMENTS.has(this.legendPlacement) ? this.legendPlacement : 'bottom-start'}
+              data-placement=${this.legendPlacement}
             >
               <slot name="legend-start" @slotchange=${this.onLegendSlotChange}></slot>
               <div class="glass-scroll-layer" aria-hidden="true"></div>

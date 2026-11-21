@@ -60,6 +60,18 @@ describe('lr-pagination offset', () => {
     expect(el.page).to.equal(2);
   });
 
+  it('keeps a page written on its own when only pageSize changes afterwards', async () => {
+    const el = await fixture<LyraPagination>(html`<lr-pagination total="200" page-size="20" offset="0"></lr-pagination>`);
+    el.page = 4;
+    await el.updateComplete;
+    el.pageSize = 25;
+    await el.updateComplete;
+    expect(el.page, 'the stale offset no longer drives the page').to.equal(4);
+    el.offset = 100;
+    await el.updateComplete;
+    expect(el.page).to.equal(5);
+  });
+
   it('leaves page alone while offset is unset', async () => {
     const el = await fixture<LyraPagination>(html`<lr-pagination total="200" page-size="20" page="4"></lr-pagination>`);
     el.pageSize = 50;

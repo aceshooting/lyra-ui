@@ -120,6 +120,9 @@ controls whose label is a legend over several choices (`lr-checkbox-group`, `lr-
 `lr-segmented`) and `lr-slider`, whose label row can carry the value readout, keep the label
 above. The label sits in an inline-start column of `--lr-form-control-label-inline-size` (default `30%`), `--lr-form-control-label-gap`
 (default `var(--lr-space-m)`) from the field, and the hint and error stay aligned under the field.
+The label is top-aligned, level with the first line of the field, so it stays beside the first line
+of a tall field (`lr-textarea`, `lr-code-editor`, `lr-signature-pad`) instead of centring on it. With
+`label-display="hidden"` or no label the field spans the row and the hint and error start under it.
 When the control is narrower than `--lr-form-control-label-collapse-inline-size` (default
 `var(--lr-size-20rem)`) the label returns above the field, so a phone layout needs no media query.
 The switch reads the control's own width, so the breakpoint is a themeable token and the host needs
@@ -138,7 +141,10 @@ Mobile Safari zooms the page when focus enters a text field whose computed font 
 16px, and the form-control scale sits below that up to `size="m"`. Under a coarse or hover-less
 pointer every text-entry surface — `lr-input`, `lr-number-input`, `lr-textarea`, `lr-select`,
 `lr-combobox`, `lr-date-input`, `lr-phone-input`, `lr-token-input`, `lr-otp-input`, and the text
-fields of `lr-color-picker`, `lr-emoji-picker` and `lr-locale-picker` — is floored at
+fields of `lr-color-picker`, `lr-emoji-picker` and `lr-locale-picker`, plus the editable
+fields of the data views (`lr-pagination` page jump and page-size select, `lr-data-grid` search,
+column filter and page-size select, `lr-table` filter and cell editor, `lr-command-palette`
+search) — is floored at
 `--lr-form-control-touch-font-size-min` (default `16px`, the platform threshold). A larger
 authored size is kept and fine pointers are untouched; set the token to `0px` to opt out. No
 `::part()` rule is needed.
@@ -369,7 +375,7 @@ zoom on focus; see "Touch font floor".
 - `allowCustomValue: boolean = false` (attribute `allow-custom-value`) — single-select only;
   commits arbitrary text on Enter without creating an option. A pick still commits the option's
   `value`; for a free-text field use `commit="text"`
-- `commit: 'value' | 'text' = 'value'` (attribute `commit`, reflected) — single-select only. `text`
+- `commit: 'value' | 'text' = 'value'` (attribute `commit`, reflected; an unsupported value normalizes to `value`) — single-select only. `text`
   makes a free-text field with suggestions: picking an option writes its **label** into `value` (so
   the form value is the text) and reports the option's `data` in the `lr-change` /
   `lr-change-request` detail; typed text commits on Enter (consumed while the list is open,

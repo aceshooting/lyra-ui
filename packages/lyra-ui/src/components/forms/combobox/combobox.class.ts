@@ -112,6 +112,7 @@ export type OptionFilter = (option: LyraOption, query: string) => boolean;
 export type LyraComboboxPlacement = 'top' | 'bottom';
 /** What a single-select `lr-combobox` pick commits: the option's `value`, or its label as free text. */
 export type LyraComboboxCommit = 'value' | 'text';
+const COMBOBOX_COMMIT = literalSetConverter<LyraComboboxCommit>(['value', 'text'], 'value');
 
 /** The full shared `LyraAppearance` vocabulary, matching `<lr-select>`'s trigger. A value outside
  *  this set -- a typo, or any other unsupported string -- clamps to the documented `'outlined'`
@@ -841,10 +842,22 @@ export class LyraCombobox<
    * option's label into `value` (so the form value is the text) and reports the option's `data` in
    * the `lr-change` detail, typed text is committed on Enter or when focus leaves, and the text is
    * kept after blur and is editable in place when the list reopens. `'text'` already accepts any
-   * text, so it needs no `allow-custom-value`. Ignored while `multiple` is set.
+   * text, so it needs no `allow-custom-value`. Ignored while `multiple` is set. Unsupported values
+   * normalize to `'value'`.
    * @default 'value'
    */
-  @property({ reflect: true }) commit: LyraComboboxCommit = 'value';
+  @property({ converter: COMBOBOX_COMMIT, reflect: true })
+  get commit(): LyraComboboxCommit {
+    return this._commit;
+  }
+  set commit(next: LyraComboboxCommit) {
+    const normalized = COMBOBOX_COMMIT.normalizeReflected(this, 'commit', next);
+    const old = this._commit;
+    if (old === normalized) return;
+    this._commit = normalized;
+    this.requestUpdate('commit', old);
+  }
+  private _commit: LyraComboboxCommit = 'value';
   /**
    * Appends every committed value that no option or async row claims to the end of the listbox as
    * a synthetic, re-selectable row badged with the localized `notInCatalog` text -- the policy
@@ -1259,6 +1272,8 @@ export class LyraCombobox<
 
   constructor() {
     super();
+    // The accessor-backed default still reflects, as it did as a plain reflected field.
+    this.requestUpdate('commit', undefined);
     this.validityController = new FormControlController(this, {
       invalid: (init) => this.emit('lr-invalid', null, init),
       interacted: this.markInteracted,
@@ -2029,6 +2044,7 @@ export class LyraCombobox<
     }
     this.query = '';
     this.explicitInputValue = false;
+    this.textEdited = false;
   }
   formStateRestoreCallback(
     state: string | File | FormData | null,

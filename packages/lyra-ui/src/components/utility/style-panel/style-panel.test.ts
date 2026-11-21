@@ -230,4 +230,27 @@ describe('<lr-style-panel>', () => {
     // Disabled controls are exempt from the text-contrast minimum.
     await expect(el).to.be.accessible({ ignoredRules: ['color-contrast'] });
   });
+  it('fits a 320px allocation with long localized labels, in LTR and RTL', async () => {
+    const strings = {
+      stylePanelMode: 'Farbmodus der Benutzeroberfläche',
+      stylePanelModeLight: 'Heller Darstellungsmodus', stylePanelModeDark: 'Dunkler Darstellungsmodus',
+      stylePanelModeSystem: 'Systemeinstellung übernehmen',
+      stylePanelDensity: 'Informationsdichte',
+      stylePanelDensityCompact: 'Kompaktdarstellung', stylePanelDensityComfortable: 'Komfortabler Abstand',
+      stylePanelDensityTouch: 'Berührungsoptimiert',
+      stylePanelReset: 'Alle Darstellungseinstellungen zurücksetzen',
+    };
+    for (const dir of ['ltr', 'rtl'] as const) {
+      const wrapper = await fixture<HTMLElement>(html`<div dir=${dir} style="inline-size: 320px"><lr-style-panel
+        .strings=${strings}></lr-style-panel></div>`);
+      const el = wrapper.querySelector('lr-style-panel') as LyraStylePanel;
+      await settled(el);
+      const box = wrapper.getBoundingClientRect();
+      expect(el.scrollWidth, `${dir}: no panel overflow`).to.be.at.most(el.clientWidth);
+      for (const name of ['mode', 'look', 'surface', 'density', 'accent-picker', 'reset']) {
+        const rect = part<HTMLElement>(el, name).getBoundingClientRect();
+        expect(rect.left >= box.left - 1 && rect.right <= box.right + 1, `${dir}: ${name} inside 320px`).to.equal(true);
+      }
+    }
+  });
 });

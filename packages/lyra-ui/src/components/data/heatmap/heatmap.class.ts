@@ -5065,6 +5065,15 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
     const rowCount = Math.min(this.matrixRowLabels.length, MAX_ACCESSIBLE_HEATMAP_CELLS);
     const colCount = Math.min(this.matrixColLabels.length, MAX_ACCESSIBLE_HEATMAP_CELLS);
     const counts = this.axisSelectionCounts();
+    // The roving tab stop: the last focused label while it is still enabled, else the first enabled
+    // label, so a disabled leading label or a data shrink never leaves an axis with no tab stop.
+    const tabStop = (axis: 'row' | 'col', count: number): number => {
+      const totals = axis === 'row' ? counts.rowTotal : counts.colTotal;
+      const focused = this.axisFocus[axis];
+      if (focused < count && (totals[focused] ?? 0) > 0) return focused;
+      return Array.from({ length: count }, (_v, index) => index).find((index) => (totals[index] ?? 0) > 0) ?? -1;
+    };
+    const stops = { row: tabStop('row', rowCount), col: tabStop('col', colCount) };
     const button = (axis: 'row' | 'col', index: number, style: Record<string, string>) => {
       const total = (axis === 'row' ? counts.rowTotal : counts.colTotal)[index] ?? 0;
       const pressed = total > 0 && (axis === 'row' ? counts.rowSelected : counts.colSelected)[index] === total;
@@ -5079,7 +5088,7 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         aria-label=${label}
         aria-pressed=${pressed ? 'true' : 'false'}
         ?disabled=${total === 0}
-        tabindex=${this.axisFocus[axis] === index ? '0' : '-1'}
+        tabindex=${stops[axis] === index ? '0' : '-1'}
         style=${styleMap(style)}
         @click=${this.onAxisTargetClick}
         @keydown=${this.onAxisTargetKeyDown}

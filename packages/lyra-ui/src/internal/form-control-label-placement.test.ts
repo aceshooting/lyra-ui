@@ -55,7 +55,6 @@ async function mount(name: string, width: number, dir: 'ltr' | 'rtl' = 'ltr', pl
   el.setAttribute('hint', 'As printed on the label');
   if (placement) el.setAttribute('label-placement', placement);
   for (const [attribute, value] of Object.entries(EXTRA_ATTRIBUTES[name] ?? {})) el.setAttribute(attribute, value);
-  el.style.display = 'block';
   setup?.(el);
   wrapper.append(el);
   await el.updateComplete;
@@ -97,6 +96,37 @@ for (const name of NAMES) {
     }
   });
 }
+
+it('every control keeps the hint under the field when the start label is hidden or absent', async () => {
+  for (const name of NAMES) {
+    for (const hide of ['label-display', 'no-label'] as const) {
+      // lr-color-picker has no label-display member.
+      if (hide === 'label-display' && name === 'color-picker') continue;
+      const { field, hintStart } = await mount(name, 640, 'ltr', 'start', (el) => {
+        if (hide === 'label-display') el.setAttribute('label-display', 'hidden');
+        else el.removeAttribute('label');
+      });
+      expect(Math.abs(hintStart - field.left), `${name} ${hide}: hint starts with the field`).to.be.below(1);
+    }
+  }
+});
+
+it('aligns a start label with the first line of a tall field instead of centring it', async () => {
+  /** Block centre of the label's text line, past its top padding. */
+  const textMiddle = (root: ShadowRoot, label: DOMRect) => {
+    const top = label.top + parseFloat(getComputedStyle(root.querySelector('[part~="form-control-label"]')!).paddingBlockStart);
+    return (top + label.bottom) / 2;
+  };
+  for (const name of ['textarea', 'code-editor', 'signature-pad'] as const) {
+    const { root, label, field } = await mount(name, 640, 'ltr', 'start', (el) => {
+      if (name === 'textarea') el.setAttribute('rows', '8');
+    });
+    expect(field.height, `${name} is tall`).to.be.above(label.height * 3);
+    expect(textMiddle(root, label) - field.top, `${name} label near the top`).to.be.below(field.height / 4);
+  }
+  const { root, label, field } = await mount('input', 640);
+  expect(Math.abs(textMiddle(root, label) - (field.top + field.bottom) / 2), 'single-line field stays level').to.be.below(1.5);
+});
 
 /** A status row (`data-form-control-row`) spans the wrapper and starts its text under the field. */
 function expectFullRowUnderField(row: HTMLElement, control: HTMLElement, field: DOMRect): void {

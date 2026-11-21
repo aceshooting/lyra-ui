@@ -1,4 +1,5 @@
 import { finiteCount } from '../../../internal/numbers.js';
+import { literalSetConverter } from '../../../internal/converters.js';
 import { layoutScale } from '../../../internal/layout-scale.js';
 import { formControlSupportingState } from '../../../internal/form-control-template.js';
 import { SnapshotProperty } from '../../../internal/collection-source-tracker.js';
@@ -35,6 +36,7 @@ export interface LyraSegmentedItem {
 /** How `<lr-segmented>` lays out its segments: one horizontally scrolling row (`scroll`), rows
  *  that wrap (`wrap`), or a fixed-column grid (`grid`). */
 export type LyraSegmentedLayout = 'scroll' | 'wrap' | 'grid';
+const SEGMENTED_LAYOUT = literalSetConverter<LyraSegmentedLayout>(['scroll', 'wrap', 'grid'], 'scroll');
 
 /** Detail of `lr-change-request`. */
 export interface LyraSegmentedSelectRequestDetail {
@@ -310,8 +312,26 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
    *  `--lr-segmented-columns` equal columns. `'wrap'` and `'grid'` never scroll, drop the edge
    *  fade, let long labels wrap, and keep the track's height free to grow. Arrow keys follow
    *  reading order in every layout: ArrowRight/ArrowLeft step along a row and continue onto the
-   *  next or previous row, mirrored under RTL. Reflects as the `layout` attribute. */
-  @property({ reflect: true }) layout: LyraSegmentedLayout = 'scroll';
+   *  next or previous row, mirrored under RTL. Unsupported values normalize to `'scroll'`.
+   *  Reflects as the `layout` attribute. */
+  @property({ converter: SEGMENTED_LAYOUT, reflect: true })
+  get layout(): LyraSegmentedLayout {
+    return this._layout;
+  }
+  set layout(next: LyraSegmentedLayout) {
+    const normalized = SEGMENTED_LAYOUT.normalizeReflected(this, 'layout', next);
+    const old = this._layout;
+    if (old === normalized) return;
+    this._layout = normalized;
+    this.requestUpdate('layout', old);
+  }
+  private _layout: LyraSegmentedLayout = 'scroll';
+
+  constructor() {
+    super();
+    // The accessor-backed default still reflects, as it did as a plain reflected field.
+    this.requestUpdate('layout', undefined);
+  }
 
   @state() private selectedItem?: Readonly<LyraSegmentedItem>;
 

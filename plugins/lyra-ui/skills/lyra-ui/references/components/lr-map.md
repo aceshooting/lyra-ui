@@ -584,7 +584,8 @@ and simple-geometry, polar and antimeridian validation reject unsupported shapes
 completed snapshot in application state: temporary drawing resources are not a durable layer.
 `editDrawing(snapshot)` explicitly starts editing a completed snapshot; completion does not
 implicitly reopen it unless `drawingCompleteBehavior = 'edit'` (attribute
-`drawing-complete-behavior`, default `'clear'`) is set: then the completed shape stays on the map as
+`drawing-complete-behavior`, reflected, default `'clear'`; an unsupported value normalizes to
+`'clear'`) is set: then the completed shape stays on the map as
 an edit session, opened synchronously right after `lr-map-draw-complete`, and finishing that edit
 commits and clears it. `drawingSticky = false` (reflected attribute `drawing-sticky`) set to `true`
 keeps `drawMode` armed after a completion or a user cancel (cancel action, Escape,
@@ -883,11 +884,11 @@ omittedCount, truncatedLabelCount, truncated }` result for the latest assignment
   Collapsing hides the gradient bar, the rows, the `legend-limit` summary and the trailing `legend`
   slot; the `legend-start` slot and the disclosure itself stay visible, so a slotted header survives
   the collapse and the control that restores the key is never what the collapse hides.
-- `legendPlacement: LyraMapLegendPlacement = 'bottom-start'` (attribute `legend-placement`) — where
+- `legendPlacement: LyraMapLegendPlacement = 'bottom-start'` (attribute `legend-placement`, reflected) — where
   the legend panel sits: a logical corner (`bottom-start`, `bottom-end`, `top-start`, `top-end`) or
   centred on one logical edge (`top`, `bottom`, `start`, `end`); `start` is the right edge under RTL.
   Every placement clears the native control rows and `--lr-map-controls-inset-*`, also while pick,
-  drawing or scene bars share the map. An unknown value renders the default. Size and type it with
+  drawing or scene bars share the map. An unsupported value normalizes to `'bottom-start'`. Size and type it with
   `--lr-map-legend-inset-block`, `--lr-map-legend-inset-inline`, `--lr-map-legend-max-inline-size`,
   `--lr-map-legend-max-block-size`, `--lr-map-legend-columns` (equal row columns, default 1),
   `--lr-map-legend-font-size`, `--lr-map-legend-gap`, `--lr-map-legend-padding`,

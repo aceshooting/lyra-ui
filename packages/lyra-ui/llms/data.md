@@ -1460,9 +1460,10 @@ The pager revalidates the requested page after `lr-before-page-change` returns. 
 - `pageSize: number = 10` (attribute `page-size`) — items per page; finite values are truncated to
   a non-negative integer for the derived calculations, and zero produces no pages
 - `offset?: number` (attribute `offset`) — for offset/limit back ends: while set to a finite
-  non-negative number it derives `page` as `floor(offset / pageSize) + 1` whenever it or `pageSize`
-  changes (a non-multiple floors to the page that contains it); `page` wins when both are set in the
-  same update, and negative or non-finite values normalize to unset, leaving `page` alone. Pair it
+  non-negative number it derives `page` as `floor(offset / pageSize) + 1` whenever it changes, and
+  again on a `pageSize` change (a non-multiple floors to the page that contains it); `page` wins when
+  both are set in the same update, a `page` written on its own leaves the stale `offset` inert until
+  `offset` is written again, and negative or non-finite values normalize to unset. Pair it
   with `detail.offset` on the change events and no call site converts page numbers by hand:
 
   ```js

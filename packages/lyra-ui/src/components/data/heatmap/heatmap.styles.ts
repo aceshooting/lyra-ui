@@ -384,5 +384,15 @@ export const styles = css`
       forced-color-adjust: none;
       outline: var(--lr-border-width-thin) solid CanvasText;
     }
+    /* Forced colors drop the inset pressed bar and the hover tint, so a system-colour border
+       carries both states. */
+    [part~="row-label"]:enabled:hover,
+    [part~="col-label"]:enabled:hover {
+      border: var(--lr-border-width-thin) solid ButtonText;
+    }
+    [part~="row-label-pressed"],
+    [part~="col-label-pressed"] {
+      border: var(--lr-border-width-thick) solid Highlight;
+    }
   }
 `;

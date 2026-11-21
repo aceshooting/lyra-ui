@@ -4,6 +4,7 @@ import '../../lr-heatmap.js';
 import type { LyraHeatmap } from '../../lr-heatmap.js';
 import type { HeatmapMatrixData, HeatmapSelectionChangeDetail } from './heatmap-model.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { setForcedColors } from '../../../../test/wtr-media.js';
 
 const data: HeatmapMatrixData = {
   kind: 'matrix',
@@ -76,6 +77,37 @@ describe('lr-heatmap axisSelection', () => {
     expect(el.shadowRoot!.activeElement?.getAttribute('aria-label')).to.equal('Morning');
     await sendKeys({ press: 'x' });
     expect(el.shadowRoot!.activeElement?.getAttribute('aria-label')).to.equal('Morning');
+  });
+
+  it('keeps one enabled tab stop per axis when the leading label is disabled or the data shrinks', async () => {
+    const { el } = await heatmap();
+    el.cellInteractive = (pos) => !('row' in pos) || (pos.row !== 0 && pos.col !== 0);
+    await waitUntil(() => targets(el, 'row-label')[0]!.disabled, 'the empty leading row disables its button');
+    const tabStops = (part: string) => targets(el, part).map((b) => (b.disabled ? 'x' : b.tabIndex));
+    expect(tabStops('row-label')).to.deep.equal(['x', 0, -1]);
+    expect(tabStops('col-label')).to.deep.equal(['x', 0, -1]);
+    el.cellInteractive = undefined;
+    await focusByKeyboard(targets(el, 'row-label')[2]!);
+    await waitUntil(() => targets(el, 'row-label').length === 3 && !targets(el, 'row-label')[0]!.disabled);
+    targets(el, 'row-label')[2]!.click();
+    el.data = { ...data, rowLabels: ['Monday', 'Tuesday'], values: [[1, 2, 3], [4, 5, 6]] };
+    await waitUntil(() => targets(el, 'row-label').length === 2, 'the shrink re-renders the buttons');
+    expect(tabStops('row-label')).to.deep.equal([0, -1]);
+  });
+
+  it('draws the pressed label state with a border in forced colors', async () => {
+    await setForcedColors('active');
+    try {
+      const { el } = await heatmap();
+      targets(el, 'col-label')[1]!.click();
+      await waitUntil(() => targets(el, 'col-label-pressed').length === 1);
+      const pressed = getComputedStyle(targets(el, 'col-label-pressed')[0]!);
+      expect(pressed.borderTopStyle).to.equal('solid');
+      expect(parseFloat(pressed.borderTopWidth)).to.be.greaterThan(0);
+      expect(parseFloat(getComputedStyle(targets(el, 'col-label')[0]!).borderTopWidth)).to.equal(0);
+    } finally {
+      await setForcedColors('none');
+    }
   });
 
   it('offers only the requested axis, keeps frozen labels with their buttons, and stays off by default', async () => {
