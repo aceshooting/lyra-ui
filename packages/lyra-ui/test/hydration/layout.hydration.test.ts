@@ -40,6 +40,7 @@ describe('hydrated layout', () => {
     expect(native.open).to.equal(true);
     details.shadowRoot!.querySelector<HTMLElement>('[part="summary"]')!.click();
     await details.updateComplete;
+    // wait-reason: the collapse runs after the hide animation, which a hydrated fixture cannot shorten
     await new Promise((resolve) => setTimeout(resolve, 400));
     expect(details.open).to.equal(false);
   });
