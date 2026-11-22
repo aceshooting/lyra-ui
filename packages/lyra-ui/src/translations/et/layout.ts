@@ -63,6 +63,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'Viga',
   stepperStatePending: 'Alustamata',
   stepperStateLocked: 'Lukustatud',
+  stepperStateLoading: 'Laadimine',
+  stepperStateDisabled: 'Pole saadaval',
+  stepperSteps: 'Sammud',
+  stepperStepPosition: 'Samm {current} / {total}',
   commandPaletteInputLimit: 'Osa käske jäeti välja, kuna sisendi piirang sai täis.',
 };
 

@@ -158,7 +158,10 @@ describe("mapped presentation surface", () => {
       el.shadowRoot!.querySelectorAll('[part~="tooltip__tooltip"]').length
     ).to.equal(1);
     expect(
-      el.shadowRoot!.querySelectorAll('[part="tooltip__content"]').length
+      el.shadowRoot!.querySelectorAll('[part~="tooltip__content"]').length
+    ).to.equal(1);
+    expect(
+      el.shadowRoot!.querySelectorAll('[part~="tooltip__content"][part~="tooltip__body"]').length
     ).to.equal(1);
     expect(
       el.shadowRoot!.querySelectorAll('[part="tooltip__arrow"]').length
@@ -1255,7 +1258,7 @@ it('keeps number-first formatted readout, tooltip and range ends in reading orde
   expect(paintsHeadFirst(value, '2 MiB/s', 1)).to.equal(true);
   await focusByKeyboard(slider.shadowRoot!.querySelector<HTMLElement>('[role="slider"]')!);
   await slider.updateComplete;
-  const tip = slider.shadowRoot!.querySelector('[part="tooltip__content"]');
+  const tip = slider.shadowRoot!.querySelector('[part~="tooltip__content"]');
   expect(tip).to.not.equal(null);
   expect(paintsHeadFirst(tip!, '2 MiB/s', 1)).to.equal(true);
   slider.range = true;

@@ -41,6 +41,14 @@ Pairs with `lr-icon-button` (see `llms/components/lr-icon-button.md`).
 - `family: string = ''` and `variant: string = ''` (reflected once set) — forwarded with `name` to
   a registered library resolver. Their vocabulary belongs to that library; for example, an icon
   host might distinguish `classic`/`sharp` families and `regular`/`solid` variants.
+  While `family`/`variant` is empty the values from `setDefaultIconFamily(family, variant?)` are
+  forwarded instead (`getDefaultIconFamily()`/`getDefaultIconVariant()` read them; both are `''`
+  until set). Changing the defaults re-resolves every rendered icon, and an omitted `variant` keeps
+  the current default variant.
+- Sprite sheets: `registerIconLibrary(name, { resolver, spriteSheet: true })` makes the resolver
+  return a same-origin `sheet.svg#symbol-id` URL, rendered as `<svg part="svg"><use part="use"
+  href>`. Nothing is fetched or sanitized, so cross-origin, `data:`, `blob:` and fragment-less
+  results fail with `lr-error` (the library `mutator` does not run).
 - `src: string = ''` — URL of a single SVG document to fetch. It applies only when no registered
   library owns the icon: no `library` set, an unregistered one, or an empty `name`. Once a
   registered library does own the name it decides alone — a resolver that returns `''` or throws

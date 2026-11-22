@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 1 part, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -21,15 +21,24 @@ Unsupported orientation values normalize to `horizontal`. The boolean `vertical`
 A semantic separator: renders `<hr part="base" role="separator" aria-orientation="…">`. A host
 `aria-label` is forwarded to that inner semantic owner.
 
-**Properties:** `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) and
-`vertical: boolean = false` (reflected Shoelace-compatible shorthand).
+**Properties:** `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected),
+`vertical: boolean = false` (reflected Shoelace-compatible shorthand),
+`labelPlacement: 'start' | 'center' | 'end' = 'center'` (`label-placement`, reflected) and
+`withLabel: boolean = false` (`with-label`, reflected).
 
-**Events:** none. **Slots:** none. **CSS parts:** `base`.
+**Label:** slotted content in the default slot is drawn on the line; the base then becomes a
+`div role="separator"` with `line` / `line-start` / `line-end` and `label` parts, and the label text
+names the separator unless the host sets `aria-label`. `with-label` follows the real slot content in
+the browser; set it on server-rendered markup so the labeled layout exists before hydration.
+
+**Events:** none. **Slots:** default (label). **CSS parts:** `base`, `line`, `line-start`,
+`line-end`, `label`.
 
 **Themeable custom properties:** `--color` (falls back to `--lr-color-border-subtle`, the
 decorative-edge token, which itself resolves to `--lr-color-border` unless a theme sets a subtle
 border), `--width` (falls back to `--lr-border-width-thin`), and `--spacing` (default `0`, applied
-on the cross axis).
+on the cross axis), `--label-spacing` (label padding, default `--lr-space-s`) and `--label-offset`
+(short line length for a `start`/`end` label, default `2em`).
 
 The host is `display: block` when horizontal and `display: inline-block; block-size: 100%` when
 vertical, so a vertical divider fills its flex/grid row's height with no extra CSS — but it needs a

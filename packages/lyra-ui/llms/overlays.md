@@ -593,7 +593,7 @@ the slide animation are its own.
 - `floating: boolean = false` (attribute `floating`, reflected) — an inset, floating sheet: the
   panel keeps a `--lr-drawer-inset` gap (default `var(--lr-space-s)`) from every viewport edge
   (from the containing block's edges with `contained`; the safe-area insets still win where
-  larger) and rounds its corners with `--lr-overlay-radius` (default `var(--lr-radius-container)`).
+  larger) and rounds its corners with `--lr-overlay-radius` (default `var(--lr-radius)`).
   Off by default, so the drawer stays square and edge-flush.
 - `heading?: string`, `label: string`,
   `withoutCloseButton: boolean = false` (attribute `without-close-button`, reflected),
@@ -642,7 +642,7 @@ lifecycle.
 controls, rendered before the built-in close button), `footer` — all inherited from `lr-dialog`.
 
 **CSS parts:** `base`; `backdrop overlay`; `panel dialog`; `header`; `heading title label`;
-`header-actions`; `close-button close-button__base`; `close-button-control`; `body`; `footer`.
+`header-actions`; `close-button close-button__base`; `close-button-control` (also `close-button__button`, the same native control); `body`; `footer`.
 Names grouped together are aliases on the same functional node; `close-button-control` is the
 composed `<lr-icon-button>`'s own native `<button>`, inherited from `lr-dialog` as of 16.0.0.
 
@@ -650,7 +650,7 @@ composed `<lr-icon-button>`'s own native `<button>`, inherited from `lr-dialog` 
 the inherited `--width` and `--lr-dialog-width` remain compatibility fallbacks when neither
 `--size` nor `--lr-drawer-width` is set, and `--lr-dialog-max-width` remains an effective cap,
 falling back to the `size` property's own tier value (see Properties above) when unset.
-The other mapped/inherited aliases are `--backdrop-filter`, `--spacing`, `--header-spacing`, `--body-spacing`,
+The other mapped/inherited aliases are `--backdrop-filter`, `--backdrop-color` (alias of `--lr-dialog-overlay-color`, which wins when both are set), `--spacing`, `--header-spacing`, `--body-spacing`,
 `--footer-spacing`, `--show-duration`, and `--hide-duration`. Lyra compatibility tokens remain:
 `--lr-drawer-width` (default `--lr-size-24rem`; used by
 `placement="start"|"end"`, capped at `100%`), `--lr-drawer-height` (default `--lr-size-24rem`;
@@ -728,6 +728,9 @@ read, and neither is deprecated.
   the property, the reflected attribute and the two methods can never disagree. `el.open = false`
   therefore emits the full close lifecycle and can be vetoed. Markup that renders open from the start (`<lr-dialog open>`) emits nothing.
 - `label: string = ''` — mapped visible title. The richer `label` slot wins over it.
+- `withLabel: boolean = false` (attribute `with-label`) — server-rendering hint that a `label` slot
+  child is provided, so the titled header is present before hydration; in the browser the real slot
+  content decides. Also on `lr-drawer`.
 - `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — `1`–`6` expose
   the generated visible title (string property or rich `label` slot) at that semantic level;
   invalid untyped values retain level 3, while `none` keeps visual title text without heading
@@ -883,7 +886,7 @@ border simply has no default to relay, which is different from border theming be
 remains the one exception that does not cross this way: use `--lr-theme-icon-button-size`, never
 `--lr-icon-button-size`, as noted above.
 
-**Themeable custom properties:** mapped aliases are `--backdrop-filter`, `--width`, `--spacing`,
+**Themeable custom properties:** mapped aliases are `--backdrop-filter`, `--backdrop-color` (alias of `--lr-dialog-overlay-color`, which wins when both are set), `--width`, `--spacing`,
 `--header-spacing`, `--body-spacing`, `--footer-spacing`, `--show-duration`, and
 `--hide-duration`. The individual region properties override `--spacing`; mapped properties in
 turn fall back to the retained Lyra tokens: `--lr-dialog-overlay-color` (default
@@ -2099,8 +2102,8 @@ attribute documented above. Shoelace uses the default slot for the trigger and `
 without one, an explicit content source (`slot="content"` or the `content` property) makes the
 default slot unambiguously the trigger, matching Shoelace.
 
-**CSS parts:** `popup base tooltip base__popup` are aliases on the same wrapper; `trigger`; `body`;
-and `arrow base__arrow` (rendered unless suppressed). The arrow also carries the resolved side —
+**CSS parts:** `popup base tooltip base__popup tooltip__popup` are aliases on the same wrapper; `trigger`; `body`;
+and `arrow base__arrow tooltip__arrow` (rendered unless suppressed). The arrow also carries the resolved side —
 `arrow-top`, `arrow-bottom`, `arrow-left`, or `arrow-right`.
 
 **Themeable custom properties:** mapped `--max-width`, `--show-delay`, `--hide-delay`, and

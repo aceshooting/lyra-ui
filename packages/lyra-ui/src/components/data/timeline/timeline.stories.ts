@@ -231,3 +231,23 @@ export const HorizontalTimeContentHeight: Story = {
     </lr-timeline>
   </div>`,
 };
+
+export const AlternatingWithOpposite: Story = {
+  render: () => html`
+    <lr-timeline marker-placement="alternate" label="Order history">
+      <lr-timeline-item variant="success"><span slot="opposite">Mon 9:00</span>Order placed</lr-timeline-item>
+      <lr-timeline-item variant="brand"><span slot="opposite">Tue 14:30</span>Packed</lr-timeline-item>
+      <lr-timeline-item><span slot="opposite">Wed 8:10</span>Shipped</lr-timeline-item>
+    </lr-timeline>
+  `,
+};
+
+export const CenteredMarkersAndAutoOrientation: Story = {
+  render: () => html`
+    <lr-timeline orientation="auto" marker-alignment="center" label="Release steps">
+      <lr-timeline-item><span slot="icon">1</span>Plan</lr-timeline-item>
+      <lr-timeline-item><span slot="icon">2</span>Build</lr-timeline-item>
+      <lr-timeline-item><span slot="icon">3</span>Ship</lr-timeline-item>
+    </lr-timeline>
+  `,
+};

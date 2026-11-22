@@ -9,7 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 20 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 27 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Documented with** `lr-lightbox-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -163,3 +164,47 @@ photo content.
   still observable through the before/after events and methods above.
 
 Set `--lr-lightbox-control-hover-bg` and `--lr-lightbox-control-hover-color` for hovered controls. Set `--lr-lightbox-control-active-bg` and `--lr-lightbox-control-active-color` for pressed controls.
+
+### `lr-lightbox` slotted items (`lr-lightbox-item`)
+
+`<lr-lightbox>` also accepts `<lr-lightbox-item>` children (any depth, no nested lightbox), mirroring
+`wa-lightbox`/`wa-lightbox-item`. `images`/`imageSource` keep working unchanged and take precedence
+when set. With items the host stays inline and the viewer opens over the page.
+
+```html
+<lr-lightbox label="Trip" with-thumbnails>
+  <lr-lightbox-item src="/photos/a-full.jpg" alt="Harbour" width="1600" height="900">
+    <img src="/photos/a-thumb.jpg" alt="Harbour" />
+    <span slot="caption">Harbour at dawn</span>
+  </lr-lightbox-item>
+  <lr-lightbox-item type="video" src="/clips/b.mp4" thumbnail="/clips/b.jpg" alt="Boat"></lr-lightbox-item>
+</lr-lightbox>
+```
+
+**`lr-lightbox-item`** — `type: 'image' | 'video' = 'image'` (reflected; video shows a play button),
+`src` (the link target, so the gallery works without JavaScript and opens in a new tab; a modified
+click is left to the browser), `srcset`/`sizes` (the lightbox loads the smallest candidate covering
+the viewport or a single `px`/`vw` `sizes` length, else the largest), `alt` (defaults to the slotted
+`img` alt), `caption`, `thumbnail` (strip image and the item's own image when nothing is slotted),
+`width`/`height` (reserve space). Slots: default thumbnail, `caption` (text shown in the viewer),
+`play-icon`. Parts: `trigger`, `thumbnail-image`, `play-button`. The `data-active` attribute marks the
+current item while open. URLs are validated: `src` for the link with `safeLinkHref()` and all media
+with `safeMediaSrc()`; a rejected `src` leaves a button-style trigger and the item out of the viewer.
+An item with no `src` is activated with Enter/Space.
+
+**Lightbox additions** — `with-thumbnails` (thumbnail strip, not with `imageSource`), `without-navigation`
+(hides previous/next; arrow keys and swipe stay), `without-zoom` (no zoom button/controls), `label`
+(names the dialog; a host `aria-label` wins), `items` and `currentItem` getters, `zoomIn()`/`zoomOut()`.
+`lr-item-change` fires with every `lr-index-change` and adds `{ index, previousIndex, item, previousItem }`
+(items are `null` in data mode). Touch and pen swipes (not mouse) navigate, reversed under RTL, and are
+off while zoomed; `pointercancel` abandons a swipe. A `type="video"` item plays in a native `<video>`
+that pauses on slide change and close; zoom is unavailable for video. Slots `close-icon`,
+`previous-icon`, `next-icon`, `zoom-in-icon`, `zoom-out-icon`. Added part aliases: `dialog` (panel),
+`scroll-container` (stage), `navigation-button`/`navigation-button-previous`/`navigation-button-next`,
+plus `surface`, `slide`, `video`, `zoom-button`, `thumbnails`, `thumbnail`, `thumbnail-active`.
+Match them with `[part~="…"]` when querying.
+Motion: `--show-duration`/`--hide-duration` (or `--lr-lightbox-panel-duration`, default
+`--lr-duration-base`) drive the open/close and slide animations, which are flattened under
+`prefers-reduced-motion`; `lr-after-show`/`lr-after-hide` fire once the animation finishes.
+`--slide-gap` (`--lr-lightbox-slide-gap`), `--thumbnail-size` (`--lr-lightbox-thumbnail-size`) and
+`--media-border-radius` (`--lr-lightbox-media-radius`) style slides and the strip.

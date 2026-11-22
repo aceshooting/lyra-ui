@@ -62,6 +62,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'Ralat',
   stepperStatePending: 'Belum bermula',
   stepperStateLocked: 'Dikunci',
+  stepperStateLoading: 'Memuatkan',
+  stepperStateDisabled: 'Tidak tersedia',
+  stepperSteps: 'Langkah',
+  stepperStepPosition: 'Langkah {current} daripada {total}',
   commandPaletteInputLimit: 'Sebahagian perintah telah digugurkan kerana had input dicapai.',
 };
 

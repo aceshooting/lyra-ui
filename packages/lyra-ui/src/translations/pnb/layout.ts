@@ -63,6 +63,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'خرابی',
   stepperStatePending: 'شروع نہیں ہویا',
   stepperStateLocked: 'تالا لگیا',
+  stepperStateLoading: 'لوڈ ہو رہیا اے',
+  stepperStateDisabled: 'دستیاب نہیں',
+  stepperSteps: 'مرحلے',
+  stepperStepPosition: 'مرحلہ {current} وچوں {total}',
   commandPaletteInputLimit: 'اِن پُٹ دی حد پوری ہون کارن کجھ کمانڈ چھڈ دتیاں گئیاں نیں۔',
 };
 

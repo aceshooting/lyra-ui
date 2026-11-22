@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 35 parts, 56 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 36 parts, 56 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `form-control-label`: `--lr-form-control-required-content`; `listbox`: `--lr-theme-scrollbar-color`, `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-width`; `option-badge`: `--lr-select-option-badge-bg`; `tag__remove-button`: `--lr-select-tag-remove-hover-bg`; `unknown-value`: `--lr-select-unknown-value-border-style`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -368,7 +368,7 @@ text are part of the focused control's accessible description.
 **CSS parts:** `form-control`, `form-control-label`, `label`, `form-control-input`, `combobox`,
 `trigger`, `display-input`, `start`, `prefix`, `end`, `suffix`, `tags` (the legal sibling
 `multiple`-mode chip row), `tag`/`tag__base` (one selected-value chip), `tag-label`/`tag__content`,
-`tag__remove-button`/`tag__remove-button__base`, and `tag-overflow` (the "+N" chip standing in for the selections past
+`tag__remove-button`/`tag__remove-button__base`/`tag__remove-button__button` (all on the same button), and `tag-overflow` (the "+N" chip standing in for the selections past
 `max-options-visible` — it carries **both** `tag` and `tag-overflow`, so `::part(tag)` styles every
 chip while `::part(tag-overflow)` reaches only that one; state after `::part()` never matches, so it
 is encoded in the part name instead), `unknown-value` (the dashed/italic badge shown next to the

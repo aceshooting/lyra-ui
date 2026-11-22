@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Da fatan zaɓi wannan akwatin don ci gaba.',
   checkboxGroupRequired: 'Zaɓi aƙalla zaɓi guda ɗaya.',
   tokenInputRequired: 'Shigar da aƙalla ƙima guda ɗaya.',
+  tokenInputTooFew: {
+    one: 'Shigar da aƙalla ƙima {count}.',
+    other: 'Shigar da aƙalla ƙima {count}.',
+  },
+  tokenInputTooMany: {
+    one: 'Kada ka shigar da fiye da ƙima {count}.',
+    other: 'Kada ka shigar da fiye da ƙima {count}.',
+  },
   tokenInputEditWithContext: 'Gyara {label}',
   tokenInputLabel: 'Token',
   iconButtonLabel: 'Maɓalli',

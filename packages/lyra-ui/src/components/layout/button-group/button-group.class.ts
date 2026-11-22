@@ -17,6 +17,7 @@ import { styles } from './button-group.styles.js';
  * @customElement lr-button-group
  * @slot - Buttons or other action controls.
  * @csspart base - The group wrapper.
+ * @csspart button-group - Web Awesome-named alias on the same wrapper as `base`.
  * @cssprop [--lr-button-group-gap=var(--lr-space-2xs)] - Gap between grouped controls.
  * @status stable
  * @since 4.0.0
@@ -41,7 +42,7 @@ export class LyraButtonGroup extends LyraElement {
   }
 
   override render(): TemplateResult {
-    return renderLabeledGroup(this);
+    return renderLabeledGroup(this, 'button-group');
   }
 }
 

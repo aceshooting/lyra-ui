@@ -13,6 +13,16 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Bifează această casetă pentru a continua.',
   checkboxGroupRequired: 'Selectează cel puțin o opțiune.',
   tokenInputRequired: 'Introdu cel puțin o valoare.',
+  tokenInputTooFew: {
+    one: 'Introduceți cel puțin {count} valoare.',
+    few: 'Introduceți cel puțin {count} valori.',
+    other: 'Introduceți cel puțin {count} de valori.',
+  },
+  tokenInputTooMany: {
+    one: 'Nu introduceți mai mult de {count} valoare.',
+    few: 'Nu introduceți mai mult de {count} valori.',
+    other: 'Nu introduceți mai mult de {count} de valori.',
+  },
   tokenInputEditWithContext: 'Editează {label}',
   tokenInputLabel: 'Tokenuri',
   iconButtonLabel: 'Buton',

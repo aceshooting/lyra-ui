@@ -92,6 +92,16 @@ const strings: LyraLocaleStrings = {
   attachmentTriggerCamera: 'Usar a câmara',
   attachmentMenuFiles: 'Enviar ficheiros',
   tokenInputRequired: 'Introduza pelo menos um valor.',
+  tokenInputTooFew: {
+    one: 'Introduza pelo menos {count} valor.',
+    many: 'Introduza pelo menos {count} valores.',
+    other: 'Introduza pelo menos {count} valores.',
+  },
+  tokenInputTooMany: {
+    one: 'Introduza no máximo {count} valor.',
+    many: 'Introduza no máximo {count} valores.',
+    other: 'Introduza no máximo {count} valores.',
+  },
   documentPreviewUrlNotAllowed: 'O URL do documento não é permitido.',
   documentPreviewGenericError: 'Algo correu mal.',
   ebookViewerMissingLibrary: 'A visualização do EPUB não está disponível porque o epubjs não está instalado.',
@@ -371,6 +381,9 @@ const strings: LyraLocaleStrings = {
   graphEdgeLimit: 'Mostrando {shown} de {total} ligações.',
   streamStatusConnecting: 'A ligar',
   streamStatusStalled: 'A ligação bloqueou',
+  stepperStateLoading: 'A carregar',
+  stepperSteps: 'Passos',
+  stepperStepPosition: 'Passo {current} de {total}',
   retrievalResultsSelectionLimit: {
     many: 'Pode selecionar no máximo {count} de resultados.',
     one: 'Pode selecionar no máximo {count} resultado.',

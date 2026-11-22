@@ -174,7 +174,8 @@ class LyraSliderBase extends LyraFormControlElement<LyraSliderEventMap> {}
  * @csspart base - Compatibility name on the interactive track row; use `slider`.
  * @csspart slider - Interactive track row. It is the same node as `base`.
  * @csspart form-control - Shoelace-compatible name on the same interactive row.
- * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-size=inherit] - Font size of the field label. Set it to
+ *   `var(--lr-font-size-md-sm)` to match the `lr-input` and `lr-select` label size.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
@@ -211,6 +212,7 @@ class LyraSliderBase extends LyraFormControlElement<LyraSliderEventMap> {}
  * @csspart tooltip - The live value bubble rendered per handle when `with-tooltip` is set.
  * @csspart tooltip__tooltip - Upstream alias on the tooltip bubble.
  * @csspart tooltip__content - Tooltip text wrapper.
+ * @csspart tooltip__body - Web Awesome-named alias on the same node as `tooltip__content`.
  * @csspart tooltip__arrow - Decorative tooltip arrow.
  * @csspart tooltip-visible - Added to `tooltip` while that handle is focused or being dragged.
  * @csspart value - The visible readout, rendered when `with-value` is true.
@@ -1661,7 +1663,7 @@ export class LyraSlider extends LyraSliderBase {
             aria-hidden="true"
             style=${tooltipStyle}
           >
-            <span part="tooltip__content">${valueText ?? numeric}</span>
+            <span part="tooltip__content tooltip__body">${valueText ?? numeric}</span>
             <span part="tooltip__arrow"></span>
           </span>`
         : nothing}

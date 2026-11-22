@@ -65,6 +65,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'Klaida',
   stepperStatePending: 'Nepradėta',
   stepperStateLocked: 'Užrakinta',
+  stepperStateLoading: 'Įkeliama',
+  stepperStateDisabled: 'Nepasiekiama',
+  stepperSteps: 'Žingsniai',
+  stepperStepPosition: '{current} žingsnis iš {total}',
   commandPaletteInputLimit: 'Kai kurios komandos praleistos, nes pasiekta įvesties riba.',
 };
 

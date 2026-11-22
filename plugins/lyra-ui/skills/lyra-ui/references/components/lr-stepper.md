@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `step`: `--lr-stepper-current-font-weight`; `step-check`: `--lr-stepper-check-color`; `step-index`: `--lr-stepper-current-index-bg`, `--lr-stepper-index-bg`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -23,10 +23,53 @@ The host `aria-label`, the `accessibleLabel` property, and the `label` fallback 
 
 Ordered multi-step wizard/form navigation: an index/label per step, independent
 `pending`/`current`/`completed`/`error` progress plus disabled availability, and click-to-jump.
-First-party invention (no `wa-*`/`sl-*` counterpart). Fully
-data-driven and controlled, like `lr-table`'s `columns`/`rows` — it never mutates `steps` itself; a
-click, or Enter/Space on a non-disabled step, fires a non-cancelable `lr-step-select`, and the host
-decides whether/how `steps` changes in response.
+Mirrors `wa-stepper` (its `wa-step` children are `<lr-step>`) and has two authoring modes.
+
+**Data-driven mode** (the original contract): fully data-driven and controlled, like `lr-table`'s
+`columns`/`rows` — it never mutates `steps` itself; a click, or Enter/Space on a non-disabled step,
+fires a non-cancelable `lr-step-select`, and the host decides whether/how `steps` changes in response.
+
+**Child mode**: with an empty `steps` array and `<lr-step>` children, the stepper owns the current
+step. A non-empty `steps` array always wins.
+
+```html
+<button data-stepper="previous flow">Back</button>
+<button data-stepper="next flow">Next</button>
+<lr-stepper id="flow" label="Checkout" active="shipping" linear clickable orientation="auto">
+  <lr-step name="cart" completed>Cart</lr-step>
+  <lr-step name="shipping">Shipping<span slot="description">Where should it go?</span></lr-step>
+  <lr-step name="pay">Payment</lr-step>
+</lr-stepper>
+<script type="module">
+  const flow = document.querySelector("#flow");
+  flow.addEventListener("lr-before-step-change", (e) => {
+    if (!formIsValid()) e.preventDefault();          // vetoes the move
+  });
+  flow.addEventListener("lr-step-change", (e) => console.log(e.detail.name, e.detail.previousName));
+</script>
+```
+
+- `active: string = ''` (reflected) — `name` of the current step; the first step when unset or unmatched.
+- `linear: boolean = false` (reflected) — a step cannot be reached until every step before it is
+  `completed`; later steps render locked (`next()`, `goTo()`, invokers and clicks all respect it).
+- `clickable: boolean = false` (reflected) — steps become buttons (one roving tab stop; Left/Right swap
+  under RTL, Up/Down while stacked, Home/End) and a click or Enter/Space jumps to the step. The wrapper is
+  then a `<nav>` landmark; otherwise a labelled `role="group"`.
+- `orientation: 'horizontal' | 'vertical' | 'auto' = 'horizontal'` — `'auto'` rows the steps and stacks
+  them when the stepper's measured inline size cannot give each step about 6em; it also works with
+  `steps`. The live axis is `effectiveOrientation` / `data-effective-orientation`.
+- `label` names the group (localized "Steps" when unset); the host `aria-label` wins.
+- Methods `goTo(name)`, `next()`, `previous()` ask first and no-op for an unknown, `disabled` or (while
+  `linear`) unreachable step. `data-stepper="next <id>"`, `"previous <id>"` and `"goto <id> <step name>"` on
+  any element click-drive the stepper with that `id`; inside a stepper the `<id>` may be omitted.
+- Events: `lr-before-step-change` (cancelable) and `lr-step-change`, both
+  `detail: { name, previousName, step, previousStep }`. The new position ("Step 2 of 3") is announced politely.
+- Slot: default (`<lr-step>` elements). Extra parts: `stepper`, `summary` (visually hidden "Step X of Y").
+- Custom properties for child mode: `--lr-stepper-marker-size`, `--lr-stepper-connector-color`,
+  `--lr-stepper-connector-color-active`, `--lr-stepper-connector-width`, `--lr-stepper-connector-gap`,
+  `--lr-stepper-step-gap`.
+- New string keys: `stepperSteps`, `stepperStepPosition` (`{current}`/`{total}`), `stepperStateLoading`,
+  `stepperStateDisabled` (plus the existing completed/pending/locked keys for status text).
 
 **Properties:**
 
@@ -114,7 +157,7 @@ component takes no default action to veto: it never mutates `steps`. `lr-stepper
 (`detail: { orientation }`) — fired only when an enabled `orientationBreakpoint` actually changes
 `effectiveOrientation`.
 
-**Slots:** none.
+**Slots:** none in data-driven mode; the default slot takes `<lr-step>` children in child mode.
 
 **CSS parts:** `base` (root wrapper, `role="list"`), `step-item` (the `role="listitem"` wrapper for
 one step), `step` (a single native button — or a non-interactive `<div>` carrying the same part

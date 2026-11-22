@@ -14,6 +14,7 @@ import { formatLocaleNumber } from './locale-number.js';
 import { claimDocumentRuntime } from './runtime-diagnostics.js';
 import { DEV_DIAGNOSTICS, devWarnOnce, warnThemeScopeUsage, warnUnknownAttributes } from './dev-mode-attribute-warning.js';
 import type { LyraDeprecatedAliases } from './deprecated-alias-types.js';
+import { createLyraEvent } from './lyra-event.js';
 
 type DeprecatedAliasSyncHook = (host: LyraElement<any>, name: PropertyKey | undefined, oldValue: unknown) => void;
 type DeprecatedAliasAttributeHook = (host: LyraElement<any>, attribute: string) => (() => void) | undefined;
@@ -1050,13 +1051,12 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     }
     CustomEventCtor ??= globalThis.CustomEvent;
     const support = collectionSupportFor(this);
-    const event = new CustomEventCtor(name, {
-      detail: detail === undefined ? null :
-        support ? support.snapshotEvent(this, name, detail) : detail,
-      bubbles: true,
-      composed: true,
-      cancelable: options?.cancelable ?? false,
-    });
+    const event = createLyraEvent(
+      CustomEventCtor,
+      name,
+      detail === undefined ? null : support ? support.snapshotEvent(this, name, detail) : detail,
+      options,
+    );
     this.dispatchEvent(event);
     return event as LyraEmittedEvent<Events, K>;
   }

@@ -372,7 +372,9 @@ export type {
   LyraLightboxHideDetail,
   LyraLightboxEventMap,
   LyraLightboxCloseDetail,
+  LyraLightboxItemChangeDetail,
 } from './components/media/lightbox/lightbox.class.js';
+export type { LyraLightboxItemType } from './components/media/lightbox/lightbox-item.class.js';
 export type { LyraQrCodeErrorCorrection } from './components/media/qr-code/qr-code.class.js';
 export type {
   LyraRandomContentAnimation,
@@ -381,6 +383,9 @@ export type {
 } from './components/utility/random-content/random-content.class.js';
 export type {
   LyraTimelineScale,
+  LyraTimelineOrientation,
+  LyraTimelineMarkerPlacement,
+  LyraTimelineMarkerAlignment,
   LyraTimelineCollision,
   LyraTimelineClusterActivateDetail,
   LyraTimelineEventMap,
@@ -907,8 +912,6 @@ export type {
 } from './components/overlays/dialog/dialog.class.js';
 export { confirm } from './components/overlays/dialog/confirm.js';
 export type { ConfirmOptions } from './components/overlays/dialog/confirm.js';
-export { prompt } from './components/overlays/dialog/prompt.js';
-export type { PromptOptions } from './components/overlays/dialog/prompt.js';
 export type {
   LyraTabGroupPlacement,
   LyraTabGroupActivation,
@@ -1504,6 +1507,9 @@ export {
   registerIconLibrary,
   unregisterIconLibrary,
   getIconLibrary,
+  setDefaultIconFamily,
+  getDefaultIconFamily,
+  getDefaultIconVariant,
 } from './components/utility/icon/icon-library.js';
 export type {
   LyraIconAnimation,

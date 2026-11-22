@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'اگے ودھن لئی ایہہ خانہ چیک کرو۔',
   checkboxGroupRequired: 'گھٹ توں گھٹ اک اختیار چنو۔',
   tokenInputRequired: 'گھٹ توں گھٹ اک قدر درج کرو۔',
+  tokenInputTooFew: {
+    one: 'گھٹ توں گھٹ {count} قدر درج کرو۔',
+    other: 'گھٹ توں گھٹ {count} قدراں درج کرو۔',
+  },
+  tokenInputTooMany: {
+    one: '{count} توں ودھ قدر درج نہ کرو۔',
+    other: '{count} توں ودھ قدراں درج نہ کرو۔',
+  },
   tokenInputEditWithContext: '{label} وچ ترمیم کرو',
   tokenInputLabel: 'ٹوکن',
   iconButtonLabel: 'بٹن',

@@ -192,6 +192,8 @@ export type LyraConversationItemSvelteProps = LyraSvelteElementProps<'lr-convers
 
 export type LyraCopyButtonSvelteProps = LyraSvelteElementProps<'lr-copy-button'>;
 
+export type LyraCounterSvelteProps = LyraSvelteElementProps<'lr-counter'>;
+
 export type LyraCountryPickerSvelteProps = LyraSvelteElementProps<'lr-country-picker'>;
 
 export type LyraCsvViewerSvelteProps = LyraSvelteElementProps<'lr-csv-viewer'>;
@@ -352,6 +354,8 @@ export type LyraKnownDateSvelteProps = LyraSvelteElementProps<'lr-known-date'>;
 
 export type LyraLightboxSvelteProps = LyraSvelteElementProps<'lr-lightbox'>;
 
+export type LyraLightboxItemSvelteProps = LyraSvelteElementProps<'lr-lightbox-item'>;
+
 export type LyraLineChartSvelteProps = LyraSvelteElementProps<'lr-line-chart'>;
 
 export type LyraLiteChartSvelteProps = LyraSvelteElementProps<'lr-lite-chart'>;
@@ -417,6 +421,8 @@ export type LyraNodePaletteSvelteProps = LyraSvelteElementProps<'lr-node-palette
 export type LyraNotebookViewerSvelteProps = LyraSvelteElementProps<'lr-notebook-viewer'>;
 
 export type LyraNumberInputSvelteProps = LyraSvelteElementProps<'lr-number-input'>;
+
+export type LyraNumberTickerSvelteProps = LyraSvelteElementProps<'lr-number-ticker'>;
 
 export type LyraOptionSvelteProps = LyraSvelteElementProps<'lr-option'>;
 
@@ -555,6 +561,8 @@ export type LyraSpreadsheetViewerSvelteProps = LyraSvelteElementProps<'lr-spread
 export type LyraStackTraceSvelteProps = LyraSvelteElementProps<'lr-stack-trace'>;
 
 export type LyraStatSvelteProps = LyraSvelteElementProps<'lr-stat'>;
+
+export type LyraStepSvelteProps = LyraSvelteElementProps<'lr-step'>;
 
 export type LyraStepperSvelteProps = LyraSvelteElementProps<'lr-stepper'>;
 
@@ -751,6 +759,7 @@ export interface LyraSvelteElements {
   'lr-control-group': LyraControlGroupSvelteProps;
   'lr-conversation-item': LyraConversationItemSvelteProps;
   'lr-copy-button': LyraCopyButtonSvelteProps;
+  'lr-counter': LyraCounterSvelteProps;
   'lr-country-picker': LyraCountryPickerSvelteProps;
   'lr-csv-viewer': LyraCsvViewerSvelteProps;
   'lr-currency-picker': LyraCurrencyPickerSvelteProps;
@@ -831,6 +840,7 @@ export interface LyraSvelteElements {
   'lr-knowledge-graph-explorer': LyraKnowledgeGraphExplorerSvelteProps;
   'lr-known-date': LyraKnownDateSvelteProps;
   'lr-lightbox': LyraLightboxSvelteProps;
+  'lr-lightbox-item': LyraLightboxItemSvelteProps;
   'lr-line-chart': LyraLineChartSvelteProps;
   'lr-lite-chart': LyraLiteChartSvelteProps;
   'lr-live-region': LyraLiveRegionSvelteProps;
@@ -864,6 +874,7 @@ export interface LyraSvelteElements {
   'lr-node-palette': LyraNodePaletteSvelteProps;
   'lr-notebook-viewer': LyraNotebookViewerSvelteProps;
   'lr-number-input': LyraNumberInputSvelteProps;
+  'lr-number-ticker': LyraNumberTickerSvelteProps;
   'lr-option': LyraOptionSvelteProps;
   'lr-otp-input': LyraOtpInputSvelteProps;
   'lr-page': LyraPageSvelteProps;
@@ -933,6 +944,7 @@ export interface LyraSvelteElements {
   'lr-spreadsheet-viewer': LyraSpreadsheetViewerSvelteProps;
   'lr-stack-trace': LyraStackTraceSvelteProps;
   'lr-stat': LyraStatSvelteProps;
+  'lr-step': LyraStepSvelteProps;
   'lr-stepper': LyraStepperSvelteProps;
   'lr-stream-status': LyraStreamStatusSvelteProps;
   'lr-streaming-text': LyraStreamingTextSvelteProps;
@@ -1071,6 +1083,7 @@ export interface LyraElementTagNameMap {
   'lr-control-group': LyraComponentTypeMap['lr-control-group']['element'];
   'lr-conversation-item': LyraComponentTypeMap['lr-conversation-item']['element'];
   'lr-copy-button': LyraComponentTypeMap['lr-copy-button']['element'];
+  'lr-counter': LyraComponentTypeMap['lr-counter']['element'];
   'lr-country-picker': LyraComponentTypeMap['lr-country-picker']['element'];
   'lr-csv-viewer': LyraComponentTypeMap['lr-csv-viewer']['element'];
   'lr-currency-picker': LyraComponentTypeMap['lr-currency-picker']['element'];
@@ -1151,6 +1164,7 @@ export interface LyraElementTagNameMap {
   'lr-knowledge-graph-explorer': LyraComponentTypeMap['lr-knowledge-graph-explorer']['element'];
   'lr-known-date': LyraComponentTypeMap['lr-known-date']['element'];
   'lr-lightbox': LyraComponentTypeMap['lr-lightbox']['element'];
+  'lr-lightbox-item': LyraComponentTypeMap['lr-lightbox-item']['element'];
   'lr-line-chart': LyraComponentTypeMap['lr-line-chart']['element'];
   'lr-lite-chart': LyraComponentTypeMap['lr-lite-chart']['element'];
   'lr-live-region': LyraComponentTypeMap['lr-live-region']['element'];
@@ -1184,6 +1198,7 @@ export interface LyraElementTagNameMap {
   'lr-node-palette': LyraComponentTypeMap['lr-node-palette']['element'];
   'lr-notebook-viewer': LyraComponentTypeMap['lr-notebook-viewer']['element'];
   'lr-number-input': LyraComponentTypeMap['lr-number-input']['element'];
+  'lr-number-ticker': LyraComponentTypeMap['lr-number-ticker']['element'];
   'lr-option': LyraComponentTypeMap['lr-option']['element'];
   'lr-otp-input': LyraComponentTypeMap['lr-otp-input']['element'];
   'lr-page': LyraComponentTypeMap['lr-page']['element'];
@@ -1253,6 +1268,7 @@ export interface LyraElementTagNameMap {
   'lr-spreadsheet-viewer': LyraComponentTypeMap['lr-spreadsheet-viewer']['element'];
   'lr-stack-trace': LyraComponentTypeMap['lr-stack-trace']['element'];
   'lr-stat': LyraComponentTypeMap['lr-stat']['element'];
+  'lr-step': LyraComponentTypeMap['lr-step']['element'];
   'lr-stepper': LyraComponentTypeMap['lr-stepper']['element'];
   'lr-stream-status': LyraComponentTypeMap['lr-stream-status']['element'];
   'lr-streaming-text': LyraComponentTypeMap['lr-streaming-text']['element'];

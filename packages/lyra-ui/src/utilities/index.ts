@@ -102,7 +102,8 @@ export type {
   LyraResolvedElementAnimation,
 } from './animation-registry.js';
 export { allDefined } from './defined.js';
-export type { AllDefinedOptions, LyraDefinitionRoot } from './defined.js';
+export type { AllDefinedOptions, AllDefinedWaitOptions, LyraDefinitionRoot } from './defined.js';
+export { serialize, serializeFormData } from './form.js';
 export { resolveCssLength } from './css-length.js';
 export { isPlainPrimaryClick } from './plain-click.js';
 export type { LyraPlainClickInput } from './plain-click.js';

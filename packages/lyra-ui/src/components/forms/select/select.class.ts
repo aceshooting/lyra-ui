@@ -379,6 +379,7 @@ export type LyraSelectInputEvent<Multiple extends boolean = boolean> =
  * @csspart tag__content - Compatibility name around a built-in chip's visible label.
  * @csspart tag__remove-button - A built-in chip's remove button.
  * @csspart tag__remove-button__base - Compatibility name on the same remove button.
+ * @csspart tag__remove-button__button - Web Awesome-named alias on the same remove button.
  * @csspart tag-overflow - The "+N" chip standing in for the selections past `max-options-visible`.
  * @csspart clear-button - The `with-clear` button.
  * @csspart listbox - The managed nonmodal options popover; its stack depth comes from
@@ -2671,7 +2672,7 @@ export class LyraSelect<
           : ''}</span
       >
       <button
-        part="tag__remove-button tag__remove-button__base"
+        part="tag__remove-button tag__remove-button__base tag__remove-button__button"
         type="button"
         ?disabled=${this.effectiveDisabled}
         aria-label=${this.localize('removeWithContext', undefined, { label })}

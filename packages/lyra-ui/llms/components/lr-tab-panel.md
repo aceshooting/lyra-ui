@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 1 part, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 2 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -25,7 +25,7 @@ announced twice. Show/hide is the group's job too — this element is always pre
 
 **Properties:** `name: string = ''` (reflected) — matches the `panel` of the `<lr-tab>` that reveals
 it; `active: boolean = false` (reflected) — SSR visibility hint, synchronized by the owning group
-after hydration. **Events:** none. **Slots:** default (the panel's content). **CSS parts:** `base`
+after hydration. **Events:** none. **Slots:** default (the panel's content). **CSS parts:** `base`, also named `tab-panel`
 (the content wrapper); the owning group also exposes its outer `panel` wrapper. **Themeable custom
 properties:** `--padding` (default `0`) — inner padding on the panel's own `base` wrapper.
 

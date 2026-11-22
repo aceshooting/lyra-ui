@@ -100,6 +100,11 @@ export default {
       project: ['scripts/**/*.mjs'],
       ignoreDependencies: ['@aceshooting/lyra-ui'],
     },
+    // Bundles lyra-ui's dist; the workspace dependency is read by path, never imported by name.
+    'packages/lyra-cdn': {
+      project: ['scripts/**/*.mjs'],
+      ignoreDependencies: ['@aceshooting/lyra-ui'],
+    },
     'packages/lyra-translations': {
       project: ['scripts/**/*.mjs'],
       ignoreDependencies: ['@aceshooting/lyra-ui'],

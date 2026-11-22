@@ -112,6 +112,7 @@ const SHIPPED_STYLESHEETS = [
   'src/surfaces/glass.css',
   'src/styles/design-tokens.css',
   'src/styles/native.css',
+  'src/styles/palette.css',
   'src/styles/reservations.css',
   'src/styles/utilities.css',
   ...readdirSync(path.join(packageDir, 'src', 'looks')).filter((file) => file.endsWith('.css')).map((file) => `src/looks/${file}`),

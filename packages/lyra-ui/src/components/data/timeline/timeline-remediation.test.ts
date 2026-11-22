@@ -13,7 +13,7 @@ for (const collision of ['overlap', 'stack'] as const) {
         <lr-timeline-item .timestamp=${new Date('2000-01-01T00:00:00Z')}><div id="grow" style="block-size: 24px">Third</div></lr-timeline-item>
         <lr-timeline-item .timestamp=${new Date('2100-01-01T00:00:00Z')}><div style="block-size: 24px">Last</div></lr-timeline-item>
       </lr-timeline>`);
-      const base = element.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+      const base = element.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
       const items = [...element.querySelectorAll<HTMLElement>('lr-timeline-item')];
       const requiredHeight = () => Math.max(...items.filter((item) => item.isConnected).map((item) => item.offsetTop + item.offsetHeight));
       await waitUntil(

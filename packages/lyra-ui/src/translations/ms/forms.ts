@@ -13,6 +13,8 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Tandakan kotak ini untuk meneruskan.',
   checkboxGroupRequired: 'Pilih sekurang-kurangnya satu pilihan.',
   tokenInputRequired: 'Masukkan sekurang-kurangnya satu nilai.',
+  tokenInputTooFew: { other: 'Masukkan sekurang-kurangnya {count} nilai.' },
+  tokenInputTooMany: { other: 'Jangan masukkan lebih daripada {count} nilai.' },
   tokenInputEditWithContext: 'Sunting {label}',
   tokenInputLabel: 'Token',
   iconButtonLabel: 'Butang',

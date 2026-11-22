@@ -427,7 +427,7 @@ export const styles = css`
     overflow-wrap: break-word;
   }
   [part~="label"] {
-    ${formControlLabelTypography({ color: css`var(--lr-color-text)` })}
+    ${formControlLabelTypography({ size: css`inherit`, color: css`var(--lr-color-text)` })}
   }
   [part="references"] {
     font-size: var(--lr-font-size-sm);
@@ -443,7 +443,7 @@ export const styles = css`
   ${formControlRequiredMarker}
   /* Each formatted value is its own first-strong bidi run, so a number-first string such as
      2.4 MiB/s or -3 keeps its order under an RTL base direction; range ends isolate separately. */
-  [part='tooltip__content'],
+  [part~='tooltip__content'],
   [part='value'] [data-readout-end] {
     unicode-bidi: plaintext;
   }

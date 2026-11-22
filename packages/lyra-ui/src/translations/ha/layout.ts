@@ -63,6 +63,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'Kuskure',
   stepperStatePending: 'Ba a fara ba',
   stepperStateLocked: 'A kulle',
+  stepperStateLoading: 'Ana lodawa',
+  stepperStateDisabled: 'Babu',
+  stepperSteps: 'Matakai',
+  stepperStepPosition: 'Mataki na {current} cikin {total}',
   commandPaletteInputLimit: 'An tsallake wasu umarni saboda an kai iyakar shigarwa.',
 };
 

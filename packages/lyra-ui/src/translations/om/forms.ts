@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Itti fufuuf sanduuqa kana mallatteessi.',
   checkboxGroupRequired: 'Filannoo tokko yoo xiqqaate filadhu.',
   tokenInputRequired: 'Gatii tokko yoo xiqqaate galchi.',
+  tokenInputTooFew: {
+    one: 'Yoo xiqqaate gatii {count} galchi.',
+    other: 'Yoo xiqqaate gatii {count} galchi.',
+  },
+  tokenInputTooMany: {
+    one: 'Gatii {count} ol hin galchin.',
+    other: 'Gatii {count} ol hin galchin.',
+  },
   tokenInputEditWithContext: '{label} gulaali',
   tokenInputLabel: 'Tokeniiwwan',
   iconButtonLabel: 'Qabduu',

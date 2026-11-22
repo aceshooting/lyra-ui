@@ -7,6 +7,9 @@ export const styles = css`
      spacing and size-ladder radius this row used before. */
   :host {
     display: block;
+    /* The resting foreground lives on the host as well as the row, so a checked row's inherit
+       default (--lr-menu-item-checked-color) follows --lr-menu-item-color without changing it. */
+    color: var(--lr-menu-item-color, inherit);
     /* place() gives every floating panel a 4px main-axis gap; Shoelace's public --submenu-offset is
        the *final* signed distance instead, its -2px default overlapping the parent menu by 2px.
        Keep that exact compatibility default, both literals resolved through design tokens, before
@@ -74,7 +77,7 @@ export const styles = css`
      a checked row keeps normal pointer feedback. */
   :host(:where([checked])) [part='base'] {
     background: var(--lr-menu-item-checked-bg, transparent);
-    color: var(--lr-menu-item-checked-color, var(--lr-menu-item-color, inherit));
+    color: var(--lr-menu-item-checked-color, inherit);
     font-weight: var(--lr-menu-item-checked-font-weight, inherit);
   }
   /* The row's own hover fill, an inline var() fallback like every other row-chrome hook here, so

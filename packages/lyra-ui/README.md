@@ -102,6 +102,18 @@ approval" notice is safe: `pnpm approve @aceshooting/lyra-ui`.
 npm install @aceshooting/lyra-ui
 ```
 
+No build step? The companion `@aceshooting/lyra-cdn` loads Lyra from one script tag with its dependencies bundled, no import map needed. Only the
+components the page uses are fetched:
+
+```html
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@aceshooting/lyra-cdn@VERSION/dist/theme.css">
+<script type="module" src="https://cdn.jsdelivr.net/npm/@aceshooting/lyra-cdn@VERSION/dist/lyra-ui.loader.js"></script>
+<lr-button variant="primary">Save</lr-button>
+```
+
+Options and the opt-out attribute:
+[`imports-and-registration.md`](./llms/shared/imports-and-registration.md#single-script-tag-no-build-step-no-import-map).
+
 Lit and Floating UI install transitively; everything else is an optional peer, installed only for the components that need it (full map: [`llms/peers.md`](./llms/peers.md)): `@aceshooting/lyra-flags`
 (`<lr-flag>`), `@aceshooting/lyra-translations` (non-English locales, `loadLyraLocale()`), `libphonenumber-js`
 (`<lr-phone-input>` adapter; E.164 input works without it), `d3-force`/`d3-drag`/`d3-zoom`/`d3-selection`
@@ -328,6 +340,7 @@ and the [live docs](https://aceshooting.github.io/lyra-ui/).
 | `<lr-select>` | `wa-select` / `sl-select` | Closed-list single-select, button trigger (not a text input, no filtering); form-associated, shares `<lr-option>` with `lr-combobox` |
 | `<lr-date-picker>` | `wa-date-picker` | Inline calendar, single + range |
 | `<lr-date-input>` | `wa-date-input` | Date field + calendar popover, form-associated |
+| `<lr-lightbox>` + `<lr-lightbox-item>` | `wa-lightbox` / `wa-lightbox-item` | Full-screen image and video viewer: slot `<lr-lightbox-item>` links (work without JavaScript) or drive it with `images`/`imageSource`; thumbnails, swipe, zoom, `lr-item-change` |
 | `<lr-toast>` + `<lr-toast-item>` + `toast()` | `wa-toast` / `wa-toast-item` | Stacking notifications |
 | `<lr-sparkline>` | `wa-sparkline` | Zero-dependency inline SVG |
 | `<lr-textarea>` | `wa-textarea` / `sl-textarea` | Form-associated multiline field with label/hint/error chrome, auto-resize, native editing passthrough, and caret APIs |
@@ -393,10 +406,12 @@ and the [live docs](https://aceshooting.github.io/lyra-ui/).
 | `<lr-details>` + `<lr-accordion>` + `<lr-accordion-item>` | `wa-details` / `wa-accordion` / `wa-accordion-item` / `sl-details` | Native disclosure and coordinated accordion panels |
 | `<lr-breadcrumb>` + `<lr-breadcrumb-item>` | `wa-breadcrumb` / `wa-breadcrumb-item` / `sl-breadcrumb` / `sl-breadcrumb-item` | Responsive navigation trail |
 | `<lr-format-number>` + `<lr-format-date>` + `<lr-format-bytes>` + `<lr-relative-time>` | `wa-format-*` / `wa-relative-time` / `sl-format-*` / `sl-relative-time` | Locale-aware formatting primitives |
+| `<lr-counter>` | `wa-counter` | Countdown and count-up clock with locale-aware unit labels, per-unit slots and a `finished` slot |
+| `<lr-number-ticker>` | `wa-number-ticker` | Number that counts to its value when scrolled into view, formatted with `Intl.NumberFormat` |
 
 **Original components, by area:**
 - **Form controls, toasts, sparkline, and flags:** `<lr-currency-picker>`, `<lr-country-picker>`, `<lr-time-zone-picker>`, `<lr-unit-picker>`, `<lr-signature-pad>`, `<lr-phone-input>`, `<lr-native-time-input>`, `<lr-token-input>`, `<lr-toggle>`, `<lr-toggle-group>`, `<lr-flag>`, `<lr-locale-picker>`.
-- **Additional media and interaction primitives:** `<lr-avatar-group>`, `<lr-lightbox>`, `<lr-timeline>`, `<lr-timeline-item>`, `<lr-tour>`, `<lr-help>`.
+- **Additional media and interaction primitives:** `<lr-avatar-group>`, `<lr-lightbox>`, `<lr-lightbox-item>`, `<lr-timeline>`, `<lr-timeline-item>`, `<lr-tour>`, `<lr-help>`.
 - **Dashboard atoms:** `<lr-empty>`, `<lr-stat>`, `<lr-table>`, `<lr-gauge>`, `<lr-export-button>`, `<lr-multi-split>`, `<lr-widget>`, `<lr-word-cloud>`.
 - **Part-to-whole, flow, and geographic charts:** `<lr-treemap>`, `<lr-sankey>`, `<lr-chord>`, `<lr-choropleth>`.
 - **Temporal & graph:** `<lr-time-range>`, `<lr-sequence-playback>`, `<lr-heatmap>`, `<lr-funnel>`, `<lr-sequence-strip>`, `<lr-graph>`.

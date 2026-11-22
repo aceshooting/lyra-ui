@@ -63,6 +63,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'Грешка',
   stepperStatePending: 'Не е започнато',
   stepperStateLocked: 'Заключено',
+  stepperStateLoading: 'Зареждане',
+  stepperStateDisabled: 'Недостъпно',
+  stepperSteps: 'Стъпки',
+  stepperStepPosition: 'Стъпка {current} от {total}',
   commandPaletteInputLimit: 'Някои команди са пропуснати, защото е достигнато ограничение за входните данни.',
 };
 

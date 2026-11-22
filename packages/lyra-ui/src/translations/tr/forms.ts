@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Devam etmek için bu kutuyu işaretleyin.',
   checkboxGroupRequired: 'En az bir seçenek belirleyin.',
   tokenInputRequired: 'En az bir değer girin.',
+  tokenInputTooFew: {
+    one: 'En az {count} değer girin.',
+    other: 'En az {count} değer girin.',
+  },
+  tokenInputTooMany: {
+    one: 'En fazla {count} değer girin.',
+    other: 'En fazla {count} değer girin.',
+  },
   tokenInputEditWithContext: '{label} öğesini düzenle',
   tokenInputLabel: 'Belirteçler',
   iconButtonLabel: 'Düğme',

@@ -114,6 +114,16 @@ while doing something else. The vocabulary rules apply to every component, mirro
   fails to resolve.
   Reaching for `internal/` is the signal that a `src/utilities/` re-export is missing.
 
+- **Drift is watched, not gated.** `.github/workflows/upstream-watch.yml` runs weekly and runs
+  `scripts/check-upstream-drift.mjs` (`pnpm check:upstream-drift`, `--json` for data). It asks the npm
+  registry for each pinned package's newest stable release, verifies that tarball against the
+  integrity the registry publishes, and diffs its `dist/custom-elements.json` against the pinned one
+  (tags, then attributes, properties, methods, slots, parts, CSS custom properties, events and newly
+  deprecated members). When the surface changed it opens or refreshes one `Upstream drift: <pkg>
+  <pinned> -> <latest>` issue. Drift exits 0 and is never part of `contract-policy` or CI; only
+  `test:upstream-drift` (offline, injected fetch) is a gate. Acting on an issue means the pin bump
+  procedure below.
+
 - **Re-verify against upstream without vendoring it.** `scripts/fixtures/upstream-tags.json` is a
   names-only, version-pinned inventory. The blocking `check:pinned-upstream-manifests` gate resolves
   the exact `@awesome.me/webawesome` and `@shoelace-style/shoelace` versions in

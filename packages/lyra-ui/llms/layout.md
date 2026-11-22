@@ -982,7 +982,7 @@ on the item itself.
 The host `aria-label`, the `accessibleLabel` property, and the `label` fallback name the inner role in that order.
 
 Responsive semantic grouping primitive for related action controls. It preserves the slotted
-controls and exposes `role="group"` on its internal wrapper.
+controls and exposes `role="group"` on its internal wrapper (parts `base`, also named `button-group`).
 It holds no state and handles no keys; for a row of toggles with pressed state behind one tab stop,
 use `lr-toggle-group`.
 
@@ -1369,10 +1369,53 @@ The host `aria-label`, the `accessibleLabel` property, and the `label` fallback 
 
 Ordered multi-step wizard/form navigation: an index/label per step, independent
 `pending`/`current`/`completed`/`error` progress plus disabled availability, and click-to-jump.
-First-party invention (no `wa-*`/`sl-*` counterpart). Fully
-data-driven and controlled, like `lr-table`'s `columns`/`rows` — it never mutates `steps` itself; a
-click, or Enter/Space on a non-disabled step, fires a non-cancelable `lr-step-select`, and the host
-decides whether/how `steps` changes in response.
+Mirrors `wa-stepper` (its `wa-step` children are `<lr-step>`) and has two authoring modes.
+
+**Data-driven mode** (the original contract): fully data-driven and controlled, like `lr-table`'s
+`columns`/`rows` — it never mutates `steps` itself; a click, or Enter/Space on a non-disabled step,
+fires a non-cancelable `lr-step-select`, and the host decides whether/how `steps` changes in response.
+
+**Child mode**: with an empty `steps` array and `<lr-step>` children, the stepper owns the current
+step. A non-empty `steps` array always wins.
+
+```html
+<button data-stepper="previous flow">Back</button>
+<button data-stepper="next flow">Next</button>
+<lr-stepper id="flow" label="Checkout" active="shipping" linear clickable orientation="auto">
+  <lr-step name="cart" completed>Cart</lr-step>
+  <lr-step name="shipping">Shipping<span slot="description">Where should it go?</span></lr-step>
+  <lr-step name="pay">Payment</lr-step>
+</lr-stepper>
+<script type="module">
+  const flow = document.querySelector("#flow");
+  flow.addEventListener("lr-before-step-change", (e) => {
+    if (!formIsValid()) e.preventDefault();          // vetoes the move
+  });
+  flow.addEventListener("lr-step-change", (e) => console.log(e.detail.name, e.detail.previousName));
+</script>
+```
+
+- `active: string = ''` (reflected) — `name` of the current step; the first step when unset or unmatched.
+- `linear: boolean = false` (reflected) — a step cannot be reached until every step before it is
+  `completed`; later steps render locked (`next()`, `goTo()`, invokers and clicks all respect it).
+- `clickable: boolean = false` (reflected) — steps become buttons (one roving tab stop; Left/Right swap
+  under RTL, Up/Down while stacked, Home/End) and a click or Enter/Space jumps to the step. The wrapper is
+  then a `<nav>` landmark; otherwise a labelled `role="group"`.
+- `orientation: 'horizontal' | 'vertical' | 'auto' = 'horizontal'` — `'auto'` rows the steps and stacks
+  them when the stepper's measured inline size cannot give each step about 6em; it also works with
+  `steps`. The live axis is `effectiveOrientation` / `data-effective-orientation`.
+- `label` names the group (localized "Steps" when unset); the host `aria-label` wins.
+- Methods `goTo(name)`, `next()`, `previous()` ask first and no-op for an unknown, `disabled` or (while
+  `linear`) unreachable step. `data-stepper="next <id>"`, `"previous <id>"` and `"goto <id> <step name>"` on
+  any element click-drive the stepper with that `id`; inside a stepper the `<id>` may be omitted.
+- Events: `lr-before-step-change` (cancelable) and `lr-step-change`, both
+  `detail: { name, previousName, step, previousStep }`. The new position ("Step 2 of 3") is announced politely.
+- Slot: default (`<lr-step>` elements). Extra parts: `stepper`, `summary` (visually hidden "Step X of Y").
+- Custom properties for child mode: `--lr-stepper-marker-size`, `--lr-stepper-connector-color`,
+  `--lr-stepper-connector-color-active`, `--lr-stepper-connector-width`, `--lr-stepper-connector-gap`,
+  `--lr-stepper-step-gap`.
+- New string keys: `stepperSteps`, `stepperStepPosition` (`{current}`/`{total}`), `stepperStateLoading`,
+  `stepperStateDisabled` (plus the existing completed/pending/locked keys for status text).
 
 **Properties:**
 
@@ -1460,7 +1503,7 @@ component takes no default action to veto: it never mutates `steps`. `lr-stepper
 (`detail: { orientation }`) — fired only when an enabled `orientationBreakpoint` actually changes
 `effectiveOrientation`.
 
-**Slots:** none.
+**Slots:** none in data-driven mode; the default slot takes `<lr-step>` children in child mode.
 
 **CSS parts:** `base` (root wrapper, `role="list"`), `step-item` (the `role="listitem"` wrapper for
 one step), `step` (a single native button — or a non-interactive `<div>` carrying the same part
@@ -1648,6 +1691,34 @@ group.addEventListener("lr-close", (event) => {
 
 ---
 
+## `lr-step`
+
+One stage inside a child-driven `<lr-stepper>`: marker (number, check mark, spinner or `icon` slot),
+label, optional description and status text. Mirrors `wa-step`. Granular import:
+`@aceshooting/lyra-ui/components/lr-step.js`.
+
+**Properties:** `name: string = ''` (reflected; matched by the stepper's `active`, `goTo()` and events);
+`completed`, `loading` (spinner, `aria-busy`), `disabled` (unreachable; a disabled button while the
+stepper is `clickable`) — booleans, reflected; `variant: 'neutral' | 'brand' | 'success' | 'warning' |
+'danger' = 'brand'` (cosmetic marker color; an upcoming `brand` step keeps a neutral outline);
+`attention: 'none' | 'pulse' | 'bounce' = 'none'` (marker animation, off under
+`prefers-reduced-motion`); `active` (reflected; the stepper keeps it in sync); `with-description`
+(server rendering hint). The stepper sets the step's number, `locked` state (a `linear` stepper) and
+`clickable`; nothing else needs setting by hand.
+
+**Slots:** default (label), `description`, `icon` (replaces number/check/spinner).
+**CSS parts:** `step`, `connector` (both half lines), `button` (only while the stepper is `clickable`),
+`marker`, `spinner`, `content`, `label`, `status` (visually hidden: Completed, Loading, Unavailable,
+Locked or Not started), `description`. **Custom property:** `--lr-step-pulse-color`; layout hooks are the
+stepper's `--lr-stepper-*` properties. **Accessibility:** host `role="listitem"`; `aria-current="step"`
+sits on the focused element (the inner button while clickable, the host otherwise).
+
+```html
+<lr-stepper><lr-step name="a" completed>Account</lr-step><lr-step name="b" attention="pulse">Billing</lr-step></lr-stepper>
+```
+
+---
+
 ## `lr-tab-panel`
 
 The content revealed by the `<lr-tab>` whose `panel` matches this element's `name`. Mirrors
@@ -1659,7 +1730,7 @@ announced twice. Show/hide is the group's job too — this element is always pre
 
 **Properties:** `name: string = ''` (reflected) — matches the `panel` of the `<lr-tab>` that reveals
 it; `active: boolean = false` (reflected) — SSR visibility hint, synchronized by the owning group
-after hydration. **Events:** none. **Slots:** default (the panel's content). **CSS parts:** `base`
+after hydration. **Events:** none. **Slots:** default (the panel's content). **CSS parts:** `base`, also named `tab-panel`
 (the content wrapper); the owning group also exposes its outer `panel` wrapper. **Themeable custom
 properties:** `--padding` (default `0`) — inner padding on the panel's own `base` wrapper.
 
@@ -3831,7 +3902,7 @@ expanding the popup.
 `--lr-menu-item-danger-color`, `--lr-menu-item-danger-hover-bg`,
 `--lr-menu-item-danger-active-bg`, `--lr-menu-item-checked-bg` (default `transparent`),
 `--lr-menu-item-color` (default `inherit`; a resting row's text, which danger, disabled and checked
-rows override), `--lr-menu-item-checked-color` (default `var(--lr-menu-item-color)`),
+rows override), `--lr-menu-item-checked-color` (default `inherit`, which follows `--lr-menu-item-color`),
 `--lr-menu-item-checked-font-weight` (default
 `inherit`), and `--submenu-offset`, plus shared size/focus/color/spacing tokens. The checked hooks
 apply to a `type="checkbox" checked` or `type="radio" checked` row's `[part="base"]`, matching the

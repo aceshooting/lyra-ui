@@ -233,10 +233,12 @@ export interface LyraTooltipEventMap {
  * @csspart tooltip - The tooltip popup wrapper. It is the same node as `base`.
  * @csspart popup - The tooltip popup. It is the same node as `base` and `tooltip`.
  * @csspart base__popup - Shoelace exported popup alias on the same node.
+ * @csspart tooltip__popup - Web Awesome-named alias on the same popup node.
  * @csspart body - Tooltip content wrapper.
  * @csspart arrow - The arrow element, rendered unless `without-arrow` is set. Its part name also
  *   carries the resolved side (`arrow-top`, `arrow-bottom`, `arrow-left`, `arrow-right`).
  * @csspart base__arrow - Shoelace exported alias on the arrow.
+ * @csspart tooltip__arrow - Web Awesome-named alias on the arrow.
  * @cssprop [--max-width=var(--lr-tooltip-max-inline-size,var(--lr-size-20rem))] - Maximum inline
  * size of the tooltip.
  * @cssprop --lr-tooltip-max-inline-size - Retained Lyra fallback for `--max-width`.
@@ -1543,7 +1545,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
           : html`<slot @slotchange=${this.onTriggerSlotChange}></slot>`}
       </span>
       <slot name="__lr-tooltip-description" hidden></slot>
-      <div id=${this.tooltipId} part="popup base tooltip base__popup" role=${this.interactiveContent ? 'dialog' : 'tooltip'}
+      <div id=${this.tooltipId} part="popup base tooltip base__popup tooltip__popup" role=${this.interactiveContent ? 'dialog' : 'tooltip'}
         aria-label=${popupLabel}
         ?hidden=${this.popupHidden}
         ?data-hidden=${!this.open || !this.anchorPositioned}
@@ -1556,7 +1558,7 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
             : html`<slot name="content" @slotchange=${this.onContentSlotChange}>${this.content}</slot>`}${this.blankContentAssignment ? this.content : nothing}
         </span>
         ${this.rendersArrow
-          ? html`<span part="arrow base__arrow arrow-${this.resolvedSide}"></span>`
+          ? html`<span part="arrow base__arrow tooltip__arrow arrow-${this.resolvedSide}"></span>`
           : nothing}
       </div>
     `;

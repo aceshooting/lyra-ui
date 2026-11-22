@@ -13,6 +13,16 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'אנא סמן את התיבה הזו אם ברצונך להמשיך.',
   checkboxGroupRequired: 'בחר באפשרות אחת לפחות.',
   tokenInputRequired: 'הזן לפחות ערך אחד.',
+  tokenInputTooFew: {
+    one: 'הזינו לפחות {count} ערך.',
+    two: 'הזינו לפחות {count} ערכים.',
+    other: 'הזינו לפחות {count} ערכים.',
+  },
+  tokenInputTooMany: {
+    one: 'אל תזינו יותר מ-{count} ערך.',
+    two: 'אל תזינו יותר מ-{count} ערכים.',
+    other: 'אל תזינו יותר מ-{count} ערכים.',
+  },
   tokenInputEditWithContext: 'ערוך את {label}',
   tokenInputLabel: 'אסימונים',
   iconButtonLabel: 'לחצן',

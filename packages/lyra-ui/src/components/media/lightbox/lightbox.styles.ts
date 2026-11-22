@@ -17,6 +17,36 @@ export const styles = css`
     ${dialogChrome}
   }
   ${dialogOpenHost}
+  :host([data-closing]) {
+    display: flex;
+    pointer-events: none;
+  }
+  [part="surface"] {
+    display: contents;
+  }
+  /* Slotted items keep the host inline on the page; only the viewer layer is a viewport overlay. */
+  :host([data-items]),
+  :host([data-items][open]),
+  :host([data-items][data-closing]) {
+    display: contents;
+    position: static;
+    padding: 0;
+  }
+  :host([data-items]) [part="surface"] {
+    display: none;
+  }
+  :host([data-items][open]) [part="surface"],
+  :host([data-items][data-closing]) [part="surface"] {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    z-index: var(--lr-overlay-stack-index, var(--lr-layer-modal));
+    ${inlineSizeContainer}
+    ${dialogChrome}
+  }
+  :host([data-items][data-closing]:not([open])) [part="surface"] {
+    pointer-events: none;
+  }
   [part="backdrop"] {
     position: absolute;
     inset: 0;
@@ -25,7 +55,7 @@ export const styles = css`
       var(--_lr-lightbox-overlay-color)
     );
   }
-  [part="panel"] {
+  [part~="panel"] {
     position: relative;
     display: flex;
     flex-direction: column;
@@ -77,9 +107,10 @@ export const styles = css`
     display: none;
   }
   [part="source-retry"],
+  [part="zoom-button"],
   [part="close-button"],
-  [part="previous-button"],
-  [part="next-button"] {
+  [part~="previous-button"],
+  [part~="next-button"] {
     font: inherit;
     flex: 0 0 auto;
     display: inline-flex;
@@ -99,16 +130,18 @@ export const styles = css`
     margin-inline-start: var(--lr-space-xs);
   }
   :where([part="source-retry"]):hover,
+  :where([part="zoom-button"]):hover,
   :where([part="close-button"]):hover,
-  :where([part="previous-button"]):hover:where(:not(:disabled)),
-  :where([part="next-button"]):hover:where(:not(:disabled)) {
+  :where([part~="previous-button"]):hover:where(:not(:disabled)),
+  :where([part~="next-button"]):hover:where(:not(:disabled)) {
     background: var(--_lr-lightbox-control-hover-bg);
     color: var(--_lr-lightbox-control-hover-color);
   }
   :where([part="source-retry"]):active,
+  :where([part="zoom-button"]):active,
   :where([part="close-button"]):active,
-  :where([part="previous-button"]):active:where(:not(:disabled)),
-  :where([part="next-button"]):active:where(:not(:disabled)) {
+  :where([part~="previous-button"]):active:where(:not(:disabled)),
+  :where([part~="next-button"]):active:where(:not(:disabled)) {
     background: var(
       --lr-lightbox-control-active-bg,
       ${activeFill('var(--_lr-lightbox-control-hover-bg)')}
@@ -116,16 +149,18 @@ export const styles = css`
     color: var(--lr-lightbox-control-active-color, var(--_lr-lightbox-control-hover-color));
   }
   [part="source-retry"]:focus-visible,
+  [part="zoom-button"]:focus-visible,
   [part="close-button"]:focus-visible,
-  [part="previous-button"]:focus-visible,
-  [part="next-button"]:focus-visible {
+  [part~="previous-button"]:focus-visible,
+  [part~="next-button"]:focus-visible {
     ${focusRingShorthand}
   }
-  [part="previous-button"]:disabled,
-  [part="next-button"]:disabled {
+  [part~="previous-button"]:disabled,
+  [part~="next-button"]:disabled {
     ${disabledControl}
   }
   [part="close-button"] svg,
+  [part="zoom-button"] svg,
   [part="previous-glyph"],
   [part="next-glyph"] {
     display: block;
@@ -143,16 +178,83 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
   [part="source-retry"] { padding-inline: var(--lr-space-s); }
-  [part="stage"] {
+  [part~="stage"] {
     position: relative;
+    touch-action: pan-y pinch-zoom;
     flex: 1 1 auto;
     min-inline-size: 0;
     min-block-size: 0;
+  }
+  [part="slide"] {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    min-inline-size: 0;
+    min-block-size: 0;
+    border-radius: var(--media-border-radius, var(--lr-lightbox-media-radius, 0));
+    overflow: hidden;
   }
   lr-pan-zoom[part="frame"] {
     display: block;
     inline-size: 100%;
     block-size: 100%;
+  }
+  lr-pan-zoom[part="frame"][hidden] {
+    display: none;
+  }
+  :host([without-zoom]) lr-pan-zoom[part="frame"]::part(controls) {
+    display: none;
+  }
+  [part="video"] {
+    display: block;
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: contain;
+    background: var(--lr-lightbox-overlay-color, var(--_lr-lightbox-overlay-color));
+  }
+  [part~="thumbnails"] {
+    display: flex;
+    flex: 0 0 auto;
+    gap: var(--lr-space-xs);
+    justify-content: center;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-block: var(--lr-space-xs);
+  }
+  [part~="thumbnail"] {
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--thumbnail-size, var(--lr-lightbox-thumbnail-size, var(--lr-size-3-5rem)));
+    block-size: var(--thumbnail-size, var(--lr-lightbox-thumbnail-size, var(--lr-size-3-5rem)));
+    min-inline-size: var(--lr-icon-button-size);
+    min-block-size: var(--lr-icon-button-size);
+    padding: 0;
+    overflow: hidden;
+    border: var(--lr-border-width-thin) solid transparent;
+    border-radius: var(--lr-radius);
+    background: var(--lr-lightbox-control-bg, var(--_lr-lightbox-control-bg));
+    color: var(--lr-lightbox-control-color, var(--_lr-lightbox-control-color));
+    cursor: pointer;
+    opacity: 0.7;
+    transition: var(--lr-transition-interactive);
+  }
+  [part~="thumbnail"] img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+  [part~="thumbnail"]:hover {
+    opacity: 1;
+  }
+  [part~="thumbnail"]:focus-visible {
+    ${focusRingShorthand}
+  }
+  [part~="thumbnail-active"] {
+    opacity: 1;
+    border-color: var(--lr-lightbox-control-color, var(--_lr-lightbox-control-color));
   }
   lr-pan-zoom[part="frame"]::part(base) {
     block-size: 100%;
@@ -160,17 +262,17 @@ export const styles = css`
   lr-pan-zoom[part="frame"]::part(viewport) {
     block-size: 100%;
   }
-  [part="previous-button"],
-  [part="next-button"] {
+  [part~="previous-button"],
+  [part~="next-button"] {
     position: absolute;
     inset-block-start: 50%;
     transform: translateY(-50%);
     z-index: var(--lr-layer-content);
   }
-  [part="previous-button"] {
+  [part~="previous-button"] {
     inset-inline-start: var(--lr-space-s);
   }
-  [part="next-button"] {
+  [part~="next-button"] {
     inset-inline-end: var(--lr-space-s);
   }
   /* Rotate the wrapping part element, not the icon -- rotate(180deg) matches

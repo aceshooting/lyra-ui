@@ -445,3 +445,12 @@ export const HighlightLimit: Story = {
 export const LazyGrammar: Story = {
   render: () => html`<lr-code-block language="json" .languageLoaders=${{ json: () => import('shiki/langs/json.mjs') }} .code=${'{"lazy":true}'}></lr-code-block>`,
 };
+
+export const WrappedLightDomSource: Story = {
+  render: () =>
+    html`<lr-code-block language="typescript" wrap label="Greeting helper" style="max-width: 24rem;">
+      export function greet(name: string): string {
+        return name.trim().length > 0 ? 'Hello, ' + name.trim() + ', welcome back to the dashboard!' : 'Hello!';
+      }
+    </lr-code-block>`,
+};

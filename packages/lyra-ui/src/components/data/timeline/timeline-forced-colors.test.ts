@@ -27,7 +27,7 @@ describe('forced colors', () => {
     await twoFrames();
     expect(matchMedia('(forced-colors: active)').matches).to.equal(true);
     const marker = getComputedStyle(item.shadowRoot!.querySelector('[part="marker"]')!);
-    const rail = getComputedStyle(item.shadowRoot!.querySelector('[part="rail"]')!);
+    const rail = getComputedStyle(item.shadowRoot!.querySelector('[part~="rail"]')!);
     const probe = document.createElement('div');
     probe.style.backgroundColor = 'Canvas';
     el.append(probe);
@@ -67,7 +67,7 @@ describe('focus and active rings inside overflow containers', () => {
     `);
     const item = el.querySelector('lr-timeline-item') as LyraTimelineItem;
     await item.updateComplete;
-    const base = el.shadowRoot!.querySelector('[part="base"]')!.getBoundingClientRect();
+    const base = el.shadowRoot!.querySelector('[part~="base"]')!.getBoundingClientRect();
     const marker = item.shadowRoot!.querySelector('[part="marker"]') as HTMLElement;
     const ring = parseFloat(getComputedStyle(marker).outlineOffset) + parseFloat(getComputedStyle(marker).outlineWidth);
     const box = marker.getBoundingClientRect();

@@ -1012,7 +1012,7 @@ test('requires the exhaustive packed ATTW matrix in the stable release gate', ()
   let previousPack = companionsJob.indexOf('(cd packages/lyra-flags && pnpm pack --pack-destination');
   for (const [name, preparation] of [
     ['lyra-map', ['build']], ['lyra-3d', ['build']], ['lyra-gen', ['build']], ['lyra-docs', ['build']],
-    ['lyra-translations', ['assemble', 'lint']], ['lyra-ide', ['sync']],
+    ['lyra-translations', ['assemble', 'lint']], ['lyra-ide', ['sync']], ['lyra-cdn', ['build']],
   ]) {
     for (const command of preparation) {
       const prepare = `pnpm --filter @aceshooting/${name} ${command}`;
@@ -1026,7 +1026,7 @@ test('requires the exhaustive packed ATTW matrix in the stable release gate', ()
     assert.ok(companionsJob.indexOf(pack) > previousPack, `${name}: pack consumes its prepared artifacts`);
     previousPack = companionsJob.indexOf(pack);
   }
-  assert.equal([...companionsJob.matchAll(/pnpm --config\.ignore-scripts=true pack /gu)].length, 6);
+  assert.equal([...companionsJob.matchAll(/pnpm --config\.ignore-scripts=true pack /gu)].length, 7);
   assert.doesNotMatch(companionsJob, /pnpm pack[^\n]*--ignore-scripts/u);
   assert.match(companionsJob, /git diff --exit-code/u);
   assert.match(companionsJob, /sha256sum "\$\{tarballs\[@\]\}" > SHA256SUMS/u);

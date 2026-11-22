@@ -68,6 +68,7 @@ const RELEASE_PACKAGES = Object.freeze({
   'lyra-3d': '@aceshooting/lyra-3d',
   'lyra-ide': '@aceshooting/lyra-ide',
   'lyra-translations': '@aceshooting/lyra-translations',
+  'lyra-cdn': '@aceshooting/lyra-cdn',
 });
 
 // Release automation intentionally accepts only stable core versions. Changesets prerelease

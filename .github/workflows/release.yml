@@ -32,8 +32,9 @@ on:
           - lyra-map
           - lyra-3d
           - lyra-gen
+          - lyra-cdn
       first_package_bootstrap:
-        description: 'Use the protected npm token for the first publication of lyra-docs, lyra-ide, lyra-translations, lyra-map, lyra-3d or lyra-gen only'
+        description: 'Use the protected npm token for the first publication of lyra-docs, lyra-ide, lyra-translations, lyra-map, lyra-3d, lyra-gen or lyra-cdn only'
         required: false
         type: boolean
         default: false
@@ -52,6 +53,7 @@ on:
           - lyra-map
           - lyra-3d
           - lyra-gen
+          - lyra-cdn
 
 permissions:
   contents: read
@@ -109,8 +111,8 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "$BOOTSTRAP" != true ]]; then exit 0; fi
-          if [[ ! "$PACKAGE" =~ ^lyra-(docs|ide|translations|map|3d|gen)$ || ! "$TAGS" =~ ^lyra-(docs|ide|translations|map|3d|gen)@(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ || "${TAGS%@*}" != "$PACKAGE" ]]; then
-            echo '::error::First-package bootstrap requires a single, named stable lyra-docs, lyra-ide, lyra-translations, lyra-map, lyra-3d or lyra-gen release.'
+          if [[ ! "$PACKAGE" =~ ^lyra-(docs|ide|translations|map|3d|gen|cdn)$ || ! "$TAGS" =~ ^lyra-(docs|ide|translations|map|3d|gen|cdn)@(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ || "${TAGS%@*}" != "$PACKAGE" ]]; then
+            echo '::error::First-package bootstrap requires a single, named stable lyra-docs, lyra-ide, lyra-translations, lyra-map, lyra-3d, lyra-gen or lyra-cdn release.'
             exit 1
           fi
           status="$(curl --silent --show-error --proto '=https' --tlsv1.2 \
@@ -131,9 +133,9 @@ jobs:
           set -euo pipefail
           if [[ -z "$TOKEN_AUTH_PACKAGE" || "$TOKEN_AUTH_PACKAGE" == none ]]; then exit 0; fi
           if [[ "$GITHUB_EVENT_NAME" != workflow_dispatch || "$BOOTSTRAP" == true ||
-                ! "$TOKEN_AUTH_PACKAGE" =~ ^lyra-(ui|flags|docs|ide|translations|map|3d|gen)$ ||
+                ! "$TOKEN_AUTH_PACKAGE" =~ ^lyra-(ui|flags|docs|ide|translations|map|3d|gen|cdn)$ ||
                 "$PACKAGE" != "$TOKEN_AUTH_PACKAGE" ||
-                ! "$TAGS" =~ ^lyra-(ui|flags|docs|ide|translations|map|3d|gen)@(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ||
+                ! "$TAGS" =~ ^lyra-(ui|flags|docs|ide|translations|map|3d|gen|cdn)@(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ||
                 "${TAGS%@*}" != "$TOKEN_AUTH_PACKAGE" ]]; then
             echo '::error::Token authentication requires one matching named stable release and cannot use first-package bootstrap.'
             exit 1
@@ -299,8 +301,8 @@ jobs:
           set -euo pipefail
           if [[ -n "$TOKEN_AUTH_PACKAGE" && "$TOKEN_AUTH_PACKAGE" != none ]]; then
             if [[ "$BOOTSTRAP" == true ||
-                  ! "$TOKEN_AUTH_PACKAGE" =~ ^lyra-(ui|flags|docs|ide|translations|map|3d|gen)$ ||
-                  ! "$TAGS" =~ ^lyra-(ui|flags|docs|ide|translations|map|3d|gen)@(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ||
+                  ! "$TOKEN_AUTH_PACKAGE" =~ ^lyra-(ui|flags|docs|ide|translations|map|3d|gen|cdn)$ ||
+                  ! "$TAGS" =~ ^lyra-(ui|flags|docs|ide|translations|map|3d|gen|cdn)@(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ||
                   "${TAGS%@*}" != "$TOKEN_AUTH_PACKAGE" ]]; then
               echo '::error::Token authentication dispatch requires exactly one matching package tag.'
               exit 1

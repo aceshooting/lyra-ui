@@ -132,6 +132,7 @@ describe('lr-copy-button', () => {
     expect(tip.placement).to.equal('top');
     expect(tip.hoist).to.be.false;
     expect(tip.open).to.be.false;
+    expect(tip.part.contains('copy-button')).to.equal(true);
     expect(tip.getAttribute('exportparts')).to.equal(
       'base:tooltip__base, base__popup:tooltip__base__popup, base__arrow:tooltip__base__arrow, body:tooltip__body',
     );

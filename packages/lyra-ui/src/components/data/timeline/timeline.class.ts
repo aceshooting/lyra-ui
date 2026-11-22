@@ -38,7 +38,20 @@ import { LYRA_DEFAULT_timeline, LYRA_DEFAULT_timelineClusterCount } from '../../
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-const TIMELINE_ORIENTATION = literalSetConverter<LyraOrientation>(['vertical', 'horizontal'], 'vertical');
+/** Layout direction of a timeline. `auto` runs a row when the allocation has room and a column otherwise. */
+export type LyraTimelineOrientation = LyraOrientation | 'auto';
+
+const TIMELINE_ORIENTATION = literalSetConverter<LyraTimelineOrientation>(['vertical', 'horizontal', 'auto'], 'vertical');
+
+/** Which side of its content an item's marker sits on; `alternate` swaps sides on every other item. */
+export type LyraTimelineMarkerPlacement = 'start' | 'end' | 'alternate';
+
+const TIMELINE_MARKER_PLACEMENT = literalSetConverter<LyraTimelineMarkerPlacement>(['start', 'end', 'alternate'], 'start');
+
+/** Where a marker sits along its item's block extent. */
+export type LyraTimelineMarkerAlignment = 'start' | 'center';
+
+const TIMELINE_MARKER_ALIGNMENT = literalSetConverter<LyraTimelineMarkerAlignment>(['start', 'center'], 'start');
 
 /** A genuine candidate can still become detached between the guard and native containment. */
 function safelyContainsActive(container: Element, candidate: unknown): boolean {
@@ -114,8 +127,9 @@ function itemEpochMs(element: Element): number | null {
 /**
  * `<lr-timeline>` — an ordered, connected sequence of past-event rows (an audit trail, an agent
  * action history, a changelog) composed from `<lr-timeline-item>` light-DOM children, joined by a
- * continuous connecting rail. First-party invention: no Web Awesome/Shoelace counterpart exists, so
- * this follows the library's own established conventions rather than mirroring an upstream API.
+ * continuous connecting rail. Mirrors `wa-timeline`: `orientation="auto"`, `marker-placement`,
+ * `marker-alignment`, `label`, the `timeline` part and the gap/marker/connector custom properties
+ * are accepted next to this library's own `scale`, `collision`, `ordered` and range model.
  *
  * A read-only declarative display by default — same zero-interaction shape as `<lr-badge>`/
  * `<lr-avatar>`/`<lr-skeleton>`. The opt-in `scale="time" collision="cluster"` presentation is the
@@ -126,7 +140,7 @@ function itemEpochMs(element: Element): number | null {
  * No roving-tabindex or per-event selection model is introduced. Timeline items remain passive;
  * each cluster marker is an independent native `<button>` in the normal Tab sequence, so pointer,
  * Enter, and Space activation require no custom keyboard model. The one tab stop the timeline
- * itself owns is `[part='base']` while a `horizontal` strip genuinely overflows — passive items
+ * itself owns is `[part~='base']` while a `horizontal` strip genuinely overflows — passive items
  * leave nothing tabbable inside a scroll container, so without it the events scrolled off the edge
  * are pointer-only content. Not a form-associated control — no value to submit, no
  * label/hint/error chrome.
@@ -145,6 +159,7 @@ function itemEpochMs(element: Element): number | null {
  *   Enter, or Space. `detail: { items }` contains a fresh frozen snapshot of the member
  *   `<lr-timeline-item>` elements in document order. Non-cancelable notification; the timeline has
  *   no built-in expansion or selection action to veto.
+ * @csspart timeline - Alias of `base`: the list that lays out the items.
  * @csspart base - The root wrapper. `role="list"` lives here directly (a timeline isn't a navigation
  *   landmark, so it doesn't need a two-layer `base`+`list` split). Flex container: `flex-direction:
  *   column` in `vertical` orientation (the default), `flex-direction: row` (with `overflow-x: auto`,
@@ -157,6 +172,17 @@ function itemEpochMs(element: Element): number | null {
  *   timeline's main axis; also the length each item's own rail visually bridges to reach the next
  *   item's marker. Declared here but actually consumed inside each `<lr-timeline-item>`'s own
  *   stylesheet, via ordinary CSS custom-property inheritance across the slot boundary.
+ * @cssprop [--lr-timeline-marker-size=var(--lr-size-1-25rem)] - Size of a marker with no icon.
+ *   Set on the timeline so every item matches.
+ * @cssprop [--lr-timeline-icon-marker-size=var(--lr-timeline-marker-size)] - Size of a marker whose
+ *   item has `icon`/`marker-icon` content. Set on the timeline so every item matches.
+ * @cssprop [--lr-timeline-connector-color=var(--lr-timeline-rail-color)] - Color of the connector
+ *   line (alias of `--lr-timeline-rail-color`).
+ * @cssprop [--lr-timeline-connector-width=var(--lr-timeline-rail-width)] - Thickness of the
+ *   connector line (alias of `--lr-timeline-rail-width`).
+ * @cssprop [--lr-timeline-connector-gap=0px] - Gap between a marker's edge and the connector line.
+ * @cssprop [--lr-timeline-opposite-size=30%] - Width of the `opposite` column while the timeline
+ *   runs as a column with `marker-placement` of `start` or `end`.
  * @cssprop [--lr-timeline-collision-offset=var(--lr-space-l)] - Cross-axis step between items
  *   stacked by `collision="stack"`. Each collision lane is indented one step further, so a wider
  *   marker can claim more room without the lanes overlapping again. Ignored unless both
@@ -199,22 +225,66 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
 
   static override styles = [LyraElement.styles, scrollOverflowFadeStyles, styles];
 
-  private _orientation: LyraOrientation = 'vertical';
+  private _orientation: LyraTimelineOrientation = 'vertical';
   /** `'vertical'` (the default) lays items out in a column, the primary/most-common use case — an
    *  audit trail or agent history reads top-to-bottom. `'horizontal'` lays them out in a row.
+   *  `'auto'` is allocation-driven: a column until the timeline is at least 40em wide, a row from
+   *  there (a container query, so it follows the timeline's own width, not the viewport's). `auto`
+   *  applies to `scale="flow"`; with `scale="time"` it behaves as `vertical`.
    *  Deliberately differs from `<lr-stepper>`'s `'horizontal'` default — don't copy that default by
    *  habit. */
   @property({ reflect: true, converter: TIMELINE_ORIENTATION })
-  get orientation(): LyraOrientation {
+  get orientation(): LyraTimelineOrientation {
     return this._orientation;
   }
-  set orientation(value: LyraOrientation) {
+  set orientation(value: LyraTimelineOrientation) {
     const normalized = TIMELINE_ORIENTATION.normalizeReflected(this, 'orientation', value);
     const previous = this._orientation;
     if (previous === normalized) return;
     this._orientation = normalized;
     this.requestUpdate('orientation', previous);
   }
+
+  private _markerPlacement: LyraTimelineMarkerPlacement = 'start';
+  /** Which side of its content each item's marker sits on while the timeline runs as a column.
+   *  `'start'` (the default) puts the marker before the content, `'end'` after it, and `'alternate'`
+   *  switches sides on every other item so the rail runs down the middle, with an item's
+   *  `opposite` content on the far side. Sides follow the inline direction, so they mirror under
+   *  RTL. An alternating timeline narrower than 30em lays every item out like `start`. Ignored
+   *  while the timeline runs as a row. */
+  @property({ attribute: 'marker-placement', reflect: true, converter: TIMELINE_MARKER_PLACEMENT })
+  get markerPlacement(): LyraTimelineMarkerPlacement {
+    return this._markerPlacement;
+  }
+  set markerPlacement(value: LyraTimelineMarkerPlacement) {
+    const normalized = TIMELINE_MARKER_PLACEMENT.normalizeReflected(this, 'marker-placement', value);
+    const previous = this._markerPlacement;
+    if (previous === normalized) return;
+    this._markerPlacement = normalized;
+    this.requestUpdate('markerPlacement', previous);
+  }
+
+  private _markerAlignment: LyraTimelineMarkerAlignment = 'start';
+  /** Where the marker sits along its item while the timeline runs as a column. `'start'` (the
+   *  default) pins it to the item's first line; `'center'` centers it on the item's full height and
+   *  runs the rail through it as one line, which suits cards. Ignored while the timeline runs as a
+   *  row. */
+  @property({ attribute: 'marker-alignment', reflect: true, converter: TIMELINE_MARKER_ALIGNMENT })
+  get markerAlignment(): LyraTimelineMarkerAlignment {
+    return this._markerAlignment;
+  }
+  set markerAlignment(value: LyraTimelineMarkerAlignment) {
+    const normalized = TIMELINE_MARKER_ALIGNMENT.normalizeReflected(this, 'marker-alignment', value);
+    const previous = this._markerAlignment;
+    if (previous === normalized) return;
+    this._markerAlignment = normalized;
+    this.requestUpdate('markerAlignment', previous);
+  }
+
+  /** The timeline's accessible name, for assistive technology. Especially useful when more than one
+   *  timeline is on the page. A host `aria-label` wins over it; both win over the localized
+   *  default `"Timeline"`. */
+  @property() label = '';
 
   private _scale: LyraTimelineScale = 'flow';
   /**
@@ -273,7 +343,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
   }
 
   /**
-   * Presents the items as an ordered sequence of steps. `[part='base']` becomes a native `<ol>`
+   * Presents the items as an ordered sequence of steps. `[part~='base']` becomes a native `<ol>`
    * (with an explicit `role="list"`, which WebKit otherwise drops from an unstyled list), and each
    * item's marker shows its step number as real, readable text instead of the decorative dot,
    * formatted for the item's effective locale. In this mode the number replaces the
@@ -326,16 +396,16 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
   private readonly geometryObservedItems = new Set<Element>();
   private readonly itemGeometry = new Map<Element, { bottom: number; extent: number }>();
 
-  /** Gates the horizontal [part='base'] edge fade on the strip genuinely overflowing, with
+  /** Gates the horizontal [part~='base'] edge fade on the strip genuinely overflowing, with
    *  one-sided/RTL-aware logical-edge state -- see --lr-scroll-fade-size and timeline.styles.ts.
    *  Harmless in the vertical default, where the strip never scrolls inline and the attribute
    *  simply stays off. Stored (rather than a bare statement-expression call) so `updated()` can
    *  register each timeline item on the controller's own `ResizeObserver` via `observeExtra()`
    *  below -- an item's own intrinsic content (a longer title, an icon loading in) can grow
-   *  scrollWidth without [part='base']'s own border box changing at all. */
+   *  scrollWidth without [part~='base']'s own border box changing at all. */
   private scrollOverflow = observeScrollOverflow(
     this,
-    () => this.renderRoot.querySelector('[part="base"]'),
+    () => this.renderRoot.querySelector('[part~="base"]'),
     () => {
       this.scheduleTimeExtentMeasurement();
       if (this.scale === 'time' && this.collision === 'cluster') {
@@ -442,13 +512,13 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
    *  `<lr-stepper readonly>` hit in the same shape and fixes the same way.
    *
    *  Gated on real overflow so a strip that fits (and the `vertical` default, whose rules never
-   *  give `[part='base']` a scrolling axis at all) still costs a keyboard user nothing -- and
+   *  give `[part~='base']` a scrolling axis at all) still costs a keyboard user nothing -- and
    *  returns to the `tabindex="-1"` the template renders rather than dropping the attribute, so a
    *  consumer's own script-focus target survives. Written as an attribute rather than through the
    *  template because overflow is measured, not rendered; the static `tabindex` in `render()` is
    *  cloned once and never re-committed, so an imperative write here is stable. */
   private syncScrollTabStop(): void {
-    const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
+    const base = this.renderRoot.querySelector<HTMLElement>('[part~="base"]');
     if (!base) return;
     const reachableOnlyByScrolling =
       this.orientation === 'horizontal' &&
@@ -755,7 +825,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
    * more of the allocated axis to avoid overlapping hit targets. Re-evaluated after every cluster
    * render and by the existing owner-realm ResizeObserver attached to the base and actions. */
   private clusterCollisionThreshold(): number {
-    const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
+    const base = this.renderRoot.querySelector<HTMLElement>('[part~="base"]');
     if (!base) return TIMELINE_COLLISION_THRESHOLD;
     const axisExtent =
       this.orientation === 'horizontal' ? base.clientWidth : base.clientHeight;
@@ -788,7 +858,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
   private scheduleTimeExtentMeasurement(): void {
     if (this.timeExtentFrame.pending) return;
     this.timeExtentFrame.schedule(() => {
-      const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
+      const base = this.renderRoot.querySelector<HTMLElement>('[part~="base"]');
       if (!base) return;
       // The latest vertical item sits at 100%, below the axis: reserve its overhang after the base.
       let overhang = 0;
@@ -861,7 +931,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
 
   private syncTimeGeometryObserver(): void {
     const view = this.ownerDocument?.defaultView;
-    const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
+    const base = this.renderRoot.querySelector<HTMLElement>('[part~="base"]');
     if (this.scale !== 'time' || !this.isConnected || !view || !base) {
       this.stopTimeGeometryObserver();
       return;
@@ -987,7 +1057,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
     ) {
       return undefined;
     }
-    const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
+    const base = this.renderRoot.querySelector<HTMLElement>('[part~="base"]');
     let snapshot: ComposedFocusRepairSnapshot | null;
     try {
       snapshot = captureComposedFocusRepair(focusedItem, base);
@@ -1015,7 +1085,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
     if (!repair) return;
     void repair.item.updateComplete.then(() => {
       if (generation !== this.focusRepairGeneration || !this.isConnected) return;
-      const base = this.renderRoot.querySelector<HTMLElement>('[part="base"]');
+      const base = this.renderRoot.querySelector<HTMLElement>('[part~="base"]');
       const target =
         repair.mode === 'cluster'
           ? repair.item.shadowRoot?.querySelector<HTMLElement>(
@@ -1146,18 +1216,27 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
   }
 
   override render(): TemplateResult {
-    const label = this.accessibleLabel == null ? this.localize('timeline') : this.accessibleLabel;
+    const label =
+      this.accessibleLabel != null
+        ? this.accessibleLabel
+        : this.label
+          ? this.label
+          : this.localize('timeline');
     // A native <ol> carries ordered-list semantics; the explicit role keeps WebKit from dropping
     // list semantics from a list whose markers are styled away.
     return this.ordered
       ? html`
-          <ol part="base" role="list" tabindex="-1" aria-label=${label}>
-            <slot @slotchange=${this.onSlotChange}></slot>
-          </ol>
+          <div class="frame">
+            <ol part="base timeline" role="list" tabindex="-1" aria-label=${label}>
+              <slot @slotchange=${this.onSlotChange}></slot>
+            </ol>
+          </div>
         `
       : html`
-          <div part="base" role="list" tabindex="-1" aria-label=${label}>
-            <slot @slotchange=${this.onSlotChange}></slot>
+          <div class="frame">
+            <div part="base timeline" role="list" tabindex="-1" aria-label=${label}>
+              <slot @slotchange=${this.onSlotChange}></slot>
+            </div>
           </div>
         `;
   }

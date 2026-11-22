@@ -64,6 +64,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'Greška',
   stepperStatePending: 'Nije započeto',
   stepperStateLocked: 'Zaključano',
+  stepperStateLoading: 'Učitavanje',
+  stepperStateDisabled: 'Nedostupno',
+  stepperSteps: 'Koraci',
+  stepperStepPosition: 'Korak {current} od {total}',
   commandPaletteInputLimit: 'Neke komande su izostavljene jer je dostignuto ograničenje unosa.',
 };
 

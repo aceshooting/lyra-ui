@@ -3206,7 +3206,8 @@ describe('mapped popover and tooltip compatibility', () => {
     expect(popoverParts).to.include.members(['popup', 'dialog', 'popup__popup']);
     expect(popover.shadowRoot!.querySelector('[part~="body"]')).to.exist;
     expect(popover.shadowRoot!.querySelector('[part~="popup__arrow"]')).to.exist;
-    expect(tooltipParts).to.include.members(['popup', 'base', 'tooltip', 'base__popup']);
+    expect(tooltipParts).to.include.members(['popup', 'base', 'tooltip', 'base__popup', 'tooltip__popup']);
+    expect(tooltip.shadowRoot!.querySelector('[part~="tooltip__arrow"]')).to.exist;
     expect(tooltip.shadowRoot!.querySelector('[part~="body"]')).to.exist;
     expect(tooltip.shadowRoot!.querySelector('[part~="base__arrow"]')).to.exist;
   });

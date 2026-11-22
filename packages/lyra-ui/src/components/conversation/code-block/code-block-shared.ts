@@ -244,7 +244,7 @@ export function codeBlockPreSuppliedGrammar<T>(
 /** The LitElement surface `scrollCodeBlockToAnchor()` reads -- everything it touches is public on
  *  both components, so neither needs to widen a private field to route through this. */
 interface CodeBlockAnchorHost {
-  readonly code: string;
+  readonly sourceCode: string;
   readonly highlights: readonly LyraHighlight[];
   readonly renderRoot: HTMLElement | DocumentFragment;
   readonly updateComplete: Promise<boolean>;
@@ -262,7 +262,7 @@ export async function scrollCodeBlockToAnchor(
       ? lineRangeAnchorById(host.highlights, target)
       : target;
   if (!anchor || anchor.kind !== 'line-range') return false;
-  if (anchor.start < 1 || anchor.start > codeBlockLineCount(host.code ?? ''))
+  if (anchor.start < 1 || anchor.start > codeBlockLineCount(host.sourceCode ?? ''))
     return false;
   await host.updateComplete;
   const body = host.renderRoot.querySelector(
@@ -355,6 +355,7 @@ function codeBlockNeedsHighlightResync(
 ): boolean {
   return (
     changed.has('code') ||
+    changed.has('slottedCode') ||
     changed.has('language') ||
     changed.has('languages') ||
     changed.has('languageLoaders') ||
@@ -804,7 +805,7 @@ export function renderCodeBlockShell(
 interface CodeBlockInteractionHost extends HTMLElement {
   readonly renderRoot: HTMLElement | DocumentFragment;
   readonly updateComplete: Promise<boolean>;
-  readonly code: string;
+  readonly sourceCode: string;
 }
 
 /** Reactive writes and typed events supplied by the code-block host. */
@@ -840,13 +841,13 @@ export class CodeBlockInteractionController {
   private readonly feedback: RecordCopyFeedback;
 
   constructor(private readonly options: CodeBlockInteractionOptions) {
-    this.feedback = new RecordCopyFeedback(options.host, () => options.host.code ?? '', options.reportCopy, status => {
+    this.feedback = new RecordCopyFeedback(options.host, () => options.host.sourceCode ?? '', options.reportCopy, status => {
       options.setJustCopied(status === 'success');
       options.setCopyFailed(status === 'error');
     });
   }
 
-  copy = (): Promise<void> => this.feedback.write(this.options.host.code ?? '');
+  copy = (): Promise<void> => this.feedback.write(this.options.host.sourceCode ?? '');
 
   cancelCopyTimer(): void {
     this.feedback.cancelTimer();
@@ -879,7 +880,7 @@ export class CodeBlockInteractionController {
     this.lineSource = source;
     this.lineButtons.clear();
     this.focusedLine = focusedLine;
-    this.countedCode = this.options.host.code;
+    this.countedCode = this.options.host.sourceCode;
     this.countedLines = codeBlockLineCount(this.countedCode ?? '');
     for (const button of source?.querySelectorAll<HTMLElement>('[part~="line-button"][data-line]') ?? []) {
       const line = Number(button.dataset['line']);
@@ -902,9 +903,9 @@ export class CodeBlockInteractionController {
       return;
     }
     const { host } = this.options;
-    if (host.code !== this.countedCode) {
-      this.countedCode = host.code;
-      this.countedLines = codeBlockLineCount(host.code ?? '');
+    if (host.sourceCode !== this.countedCode) {
+      this.countedCode = host.sourceCode;
+      this.countedLines = codeBlockLineCount(host.sourceCode ?? '');
     }
     const action = codeBlockLineKeyAction(
       e.key,

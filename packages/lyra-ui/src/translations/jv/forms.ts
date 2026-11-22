@@ -13,6 +13,8 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Centhang kothak iki supaya bisa nerusake.',
   checkboxGroupRequired: 'Pilih paling ora siji pilihan.',
   tokenInputRequired: 'Lebokake paling ora siji nilai.',
+  tokenInputTooFew: { other: 'Lebokna paling ora {count} nilai.' },
+  tokenInputTooMany: { other: 'Aja lebokna luwih saka {count} nilai.' },
   tokenInputEditWithContext: 'Sunting {label}',
   tokenInputLabel: 'Token',
   iconButtonLabel: 'Tombol',

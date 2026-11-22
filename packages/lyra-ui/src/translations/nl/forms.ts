@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Vink dit vakje aan om door te gaan.',
   checkboxGroupRequired: 'Selecteer ten minste één optie.',
   tokenInputRequired: 'Voer ten minste één waarde in.',
+  tokenInputTooFew: {
+    one: 'Voer ten minste {count} waarde in.',
+    other: 'Voer ten minste {count} waarden in.',
+  },
+  tokenInputTooMany: {
+    one: 'Voer niet meer dan {count} waarde in.',
+    other: 'Voer niet meer dan {count} waarden in.',
+  },
   tokenInputEditWithContext: '{label} bewerken',
   tokenInputLabel: 'Tokens',
   iconButtonLabel: 'Knop',

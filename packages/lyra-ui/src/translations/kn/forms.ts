@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'ಮುಂದುವರಿಯಲು ಈ ಚೆಕ್‌ಬಾಕ್ಸ್ ಆಯ್ಕೆಮಾಡಿ.',
   checkboxGroupRequired: 'ಕನಿಷ್ಠ ಒಂದು ಆಯ್ಕೆಯನ್ನು ಆರಿಸಿ.',
   tokenInputRequired: 'ಕನಿಷ್ಠ ಒಂದು ಮೌಲ್ಯ ನಮೂದಿಸಿ.',
+  tokenInputTooFew: {
+    one: 'ಕನಿಷ್ಠ {count} ಮೌಲ್ಯವನ್ನು ನಮೂದಿಸಿ.',
+    other: 'ಕನಿಷ್ಠ {count} ಮೌಲ್ಯವನ್ನು ನಮೂದಿಸಿ.',
+  },
+  tokenInputTooMany: {
+    one: '{count} ಮೌಲ್ಯಕ್ಕಿಂತ ಹೆಚ್ಚು ನಮೂದಿಸಬೇಡಿ.',
+    other: '{count} ಮೌಲ್ಯಕ್ಕಿಂತ ಹೆಚ್ಚು ನಮೂದಿಸಬೇಡಿ.',
+  },
   tokenInputEditWithContext: '{label} ಸಂಪಾದಿಸಿ',
   tokenInputLabel: 'ಟೋಕನ್‌ಗಳು',
   iconButtonLabel: 'ಬಟನ್',

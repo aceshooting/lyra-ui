@@ -63,6 +63,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'Σφάλμα',
   stepperStatePending: 'Δεν έχει ξεκινήσει',
   stepperStateLocked: 'Κλειδωμένο',
+  stepperStateLoading: 'Φόρτωση',
+  stepperStateDisabled: 'Μη διαθέσιμο',
+  stepperSteps: 'Βήματα',
+  stepperStepPosition: 'Βήμα {current} από {total}',
   commandPaletteInputLimit: 'Λόγω ορίου εισόδου παραλείφθηκαν ορισμένα στοιχεία: εντολές.',
 };
 

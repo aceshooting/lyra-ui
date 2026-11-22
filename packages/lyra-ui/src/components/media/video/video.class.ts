@@ -155,6 +155,8 @@ function unsupportedPromise(host: Element, message: string): Promise<never> {
  * @event {FocusEvent} blur - Relayed once from the internal play/pause control as a bubbling,
  *   composed native event.
  * @csspart base - Alias on the same root node as `video-wrapper`.
+ * @csspart player - Alias on the same root node as `base`: the whole player surface.
+ * @csspart body - Alias on the same node as `video`: the media body.
  * @csspart caption - Active native caption text.
  * @csspart caption-overlay - Caption positioning layer.
  * @csspart controls - Custom control bar.
@@ -172,6 +174,8 @@ function unsupportedPromise(host: Element, message: string): Promise<never> {
  * @csspart video - Native `<video>` element.
  * @csspart video-title-overlay - Title positioning layer.
  * @csspart video-wrapper - Alias on the same root node as `base`.
+ * @cssprop [--aspect-ratio=16 / 9] - Aspect ratio of the player surface (the media area when the
+ *   toolbar is placed below it).
  * @cssprop [--controls-background=var(--lr-color-overlay-strong)] - Controls, captions, and title
  *   overlay background.
  * @cssprop [--controls-color=var(--lr-color-on-strong-overlay)] - Custom-control foreground color.
@@ -1338,10 +1342,10 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     const posterActive = Boolean(safePoster && this.posterVisible);
     return html`
       ${this.panorama.renderNotice()}
-      <div part="base video-wrapper">
+      <div part="base video-wrapper player">
         <video
           ${ref(this.mediaRef)}
-          part="video"
+          part="video body"
           ?data-panorama=${this.panorama.ready}
           aria-hidden=${this.panorama.ready ? 'true' : nothing}
           @loadeddata=${this.onPanoramaMediaReady}

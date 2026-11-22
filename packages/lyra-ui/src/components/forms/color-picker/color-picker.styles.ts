@@ -132,7 +132,7 @@ export const styles = css`
     forced-color-adjust: none;
   }
 
-  [part="trigger-container"] {
+  [part~="trigger-container"] {
     display: flex;
     align-items: center;
   }

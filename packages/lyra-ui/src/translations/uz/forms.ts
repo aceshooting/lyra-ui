@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Davom etish uchun ushbu katakchani belgilang.',
   checkboxGroupRequired: 'Kamida bitta variantni tanlang.',
   tokenInputRequired: 'Kamida bitta qiymat kiriting.',
+  tokenInputTooFew: {
+    one: 'Kamida {count} ta qiymat kiriting.',
+    other: 'Kamida {count} ta qiymat kiriting.',
+  },
+  tokenInputTooMany: {
+    one: '{count} tadan ortiq qiymat kiritmang.',
+    other: '{count} tadan ortiq qiymat kiritmang.',
+  },
   tokenInputEditWithContext: '{label}ni tahrirlash',
   tokenInputLabel: 'Tokenlar',
   iconButtonLabel: 'Tugma',

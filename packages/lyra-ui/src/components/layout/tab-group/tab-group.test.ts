@@ -2971,7 +2971,7 @@ describe("upstream tab surface", () => {
     );
     expect(panel.active).to.be.true;
     const panelBase = panel.shadowRoot!.querySelector(
-      '[part="base"]'
+      '[part~="tab-panel"]'
     ) as HTMLElement;
     expect(getComputedStyle(panelBase).paddingInlineStart).to.equal("9px");
   });
@@ -3206,7 +3206,7 @@ for (const placement of ['top', 'bottom', 'start', 'end'] as const) {
     const body = group.shadowRoot!.querySelector<HTMLElement>('[part="body"]')!;
     const [list, summary] = group.querySelectorAll<LyraTabPanel>('lr-tab-panel');
     const [listPanel, summaryPanel] = panels(group);
-    const base = list!.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const base = list!.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
     const scroll = list!.querySelector<HTMLElement>('.scroll')!;
     const content = list!.querySelector<HTMLElement>('.content')!;
 

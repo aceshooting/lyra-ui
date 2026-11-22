@@ -1,10 +1,11 @@
-import { expect, fixture, html } from "@open-wc/testing";
+import { expect, fixture, html, waitUntil } from "@open-wc/testing";
+import { hoverUntilMatched, resetMouse } from "../../test/wtr-mouse.js";
 
 const loadedLinks: HTMLLinkElement[] = [];
 let fouceTagId = 0;
 
 async function loadStylesheet(
-  name: "native.css" | "reservations.css" | "utilities.css"
+  name: "native.css" | "palette.css" | "reservations.css" | "utilities.css"
 ): Promise<HTMLLinkElement> {
   const link = document.createElement("link");
   link.rel = "stylesheet";
@@ -26,6 +27,7 @@ async function loadStylesheet(
 before(async () => {
   await loadStylesheet("native.css");
   await loadStylesheet("utilities.css");
+  await loadStylesheet("palette.css");
 });
 
 after(() => {
@@ -554,4 +556,306 @@ it("spans the static 12-column grid and collapses it to 6 and 1 columns by conta
   grid.style.inlineSize = "320px";
   expect(widths(), "single column").to.deep.equal([320, 320, 320]);
   expect(getComputedStyle(a).gridRowEnd).to.equal("auto");
+});
+
+describe('spacing and type scale utilities', () => {
+  it('maps every gap class to its spacing token, including the 2xs and xl to 4xl steps', async () => {
+    const el = await fixture(html`
+      <div data-lr-theme-scope style="--lr-space-2xs: 1px; --lr-space-xl: 2px; --lr-space-2xl: 3px; --lr-space-3xl: 4px; --lr-space-4xl: 5px">
+        <div id="a" class="lr-flex lr-gap-2xs"></div>
+        <div id="b" class="lr-flex lr-gap-xl"></div>
+        <div id="c" class="lr-flex lr-gap-2xl"></div>
+        <div id="d" class="lr-flex lr-gap-3xl"></div>
+        <div id="e" class="lr-flex lr-gap-4xl"></div>
+      </div>
+    `);
+    const gap = (id: string) => getComputedStyle(el.querySelector(`#${id}`)!).columnGap;
+    expect(['a', 'b', 'c', 'd', 'e'].map(gap)).to.deep.equal(['1px', '2px', '3px', '4px', '5px']);
+  });
+
+  it('falls back to rem steps when no token layer is present', async () => {
+    const el = await fixture(html`<div><div id="x" class="lr-flex lr-gap-xl"></div><div id="y" class="lr-flex lr-gap-4xl"></div></div>`);
+    const root = parseFloat(getComputedStyle(document.documentElement).fontSize);
+    expect(parseFloat(getComputedStyle(el.querySelector('#x')!).columnGap)).to.be.closeTo(1.5 * root, 0.5);
+    expect(parseFloat(getComputedStyle(el.querySelector('#y')!).columnGap)).to.be.closeTo(4 * root, 0.5);
+  });
+
+  it('sizes the display text classes and the heading 5 and 6 roles from the font-size tokens', async () => {
+    const el = await fixture(html`
+      <div data-lr-theme-scope style="--lr-font-size-4xl: 41px; --lr-font-size-5xl: 52px; --lr-font-size-m: 17px; --lr-font-size-sm: 13px">
+        <p id="a" class="lr-text-4xl">a</p><p id="b" class="lr-text-5xl">b</p>
+        <p id="c" class="lr-heading-5">c</p><p id="d" class="lr-heading-6">d</p>
+        <div class="lr-typography"><h2 id="e" class="lr-heading-5">e</h2></div>
+      </div>
+    `);
+    const size = (id: string) => getComputedStyle(el.querySelector(`#${id}`)!).fontSize;
+    expect(['a', 'b', 'c', 'd', 'e'].map(size)).to.deep.equal(['41px', '52px', '17px', '13px', '17px']);
+    expect(getComputedStyle(el.querySelector('#c')!).fontWeight).to.equal('600');
+  });
+});
+
+describe('layout compositions', () => {
+  it('wraps a flank and keeps the flank child at its own width', async () => {
+    const el = await fixture(html`
+      <div class="lr-flank" style="--lr-layout-gap: 0px; inline-size: 400px; --lr-flank-content-min-inline-size: 300px">
+        <div id="side" style="inline-size: 100px">side</div><div id="main">main</div>
+      </div>
+    `);
+    const side = el.querySelector<HTMLElement>('#side')!;
+    const main = el.querySelector<HTMLElement>('#main')!;
+    expect(side.getBoundingClientRect().width).to.equal(100);
+    expect(main.getBoundingClientRect().width).to.equal(300);
+    el.style.inlineSize = '399px';
+    expect(Math.round(main.getBoundingClientRect().width), 'content wraps to its own row').to.equal(399);
+  });
+
+  it('puts the flank at the end for lr-flank-end', async () => {
+    const el = await fixture(html`
+      <div class="lr-flank-end" style="--lr-layout-gap: 0px; inline-size: 400px"><div id="main">main</div><div id="side" style="inline-size: 100px">side</div></div>
+    `);
+    expect(el.querySelector('#side')!.getBoundingClientRect().width).to.equal(100);
+    expect(el.querySelector('#main')!.getBoundingClientRect().width).to.equal(300);
+  });
+
+  it('splits to both ends and mirrors under RTL', async () => {
+    const el = await fixture(html`
+      <div>
+        <div id="ltr" class="lr-split" dir="ltr" style="inline-size: 300px"><i id="l1">a</i><i id="l2">b</i></div>
+        <div id="rtl" class="lr-split" dir="rtl" style="inline-size: 300px"><i id="r1">a</i><i id="r2">b</i></div>
+        <div id="col" class="lr-split-column" style="block-size: 200px"><i id="c1">a</i><i id="c2">b</i></div>
+      </div>
+    `);
+    const rect = (id: string) => el.querySelector(`#${id}`)!.getBoundingClientRect();
+    expect(rect('l1').left).to.be.lessThan(rect('l2').left);
+    expect(rect('r1').left).to.be.greaterThan(rect('r2').left);
+    expect(rect('c2').bottom - rect('c1').top).to.be.closeTo(200, 1);
+  });
+
+  it('frames content to square, landscape and portrait ratios and crops replaced content', async () => {
+    const el = await fixture(html`
+      <div>
+        <div id="sq" class="lr-frame-square" style="inline-size: 120px"><img id="img" alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" /></div>
+        <div id="ls" class="lr-frame-landscape" style="inline-size: 160px"></div>
+        <div id="pt" class="lr-frame-portrait" style="inline-size: 120px"></div>
+        <div id="custom" class="lr-frame" style="inline-size: 100px; --lr-frame-ratio: 2 / 1"></div>
+      </div>
+    `);
+    const box = (id: string) => el.querySelector<HTMLElement>(`#${id}`)!.getBoundingClientRect();
+    expect(box('sq').height).to.equal(120);
+    expect(box('ls').height).to.equal(90);
+    expect(box('pt').height).to.equal(160);
+    expect(box('custom').height).to.equal(50);
+    expect(getComputedStyle(el.querySelector('#img')!).objectFit).to.equal('cover');
+  });
+
+  it('lets lr-span-grid take the whole row at every container width', async () => {
+    const el = await fixture(html`
+      <div id="g" class="lr-grid-12" style="inline-size: 1200px; --lr-layout-gap: 0px"><div id="all" class="lr-span-grid">all</div><div class="lr-span-3">x</div></div>
+    `);
+    const all = el.querySelector<HTMLElement>('#all')!;
+    expect(all.getBoundingClientRect().width).to.equal(1200);
+    el.style.inlineSize = '320px';
+    expect(all.getBoundingClientRect().width).to.equal(320);
+    el.style.inlineSize = '600px';
+    expect(all.getBoundingClientRect().width).to.equal(600);
+  });
+
+  it('makes lr-container an inline-size query container', async () => {
+    const el = await fixture(html`<div class="lr-container"></div>`);
+    expect(getComputedStyle(el).containerType).to.equal('inline-size');
+  });
+});
+
+describe('small utilities', () => {
+  it('strips list chrome and link decoration', async () => {
+    const el = await fixture(html`
+      <div>
+        <ul id="ul" class="lr-list-plain"><li>a</li></ul>
+        <a id="a" class="lr-link-plain" href="#x" style="color: rgb(1, 2, 3)">link</a>
+      </div>
+    `);
+    const ul = getComputedStyle(el.querySelector('#ul')!);
+    expect(ul.listStyleType).to.equal('none');
+    expect(ul.paddingInlineStart).to.equal('0px');
+    const a = getComputedStyle(el.querySelector('#a')!);
+    expect(a.textDecorationLine).to.equal('none');
+  });
+
+  it('underlines a plain link on hover', async () => {
+    const el = await fixture(html`<a id="a" class="lr-link-plain" href="#x">link</a>`);
+    await hoverUntilMatched(el, 'plain link hovered');
+    expect(getComputedStyle(el).textDecorationLine).to.equal('underline');
+  });
+
+  it('applies the radius ladder and text transforms', async () => {
+    const el = await fixture(html`
+      <div data-lr-theme-scope style="--lr-radius-xs: 3px; --lr-radius: 7px; --lr-radius-pill: 99px; --lr-radius-container: 11px">
+        <i id="r0" class="lr-radius-none"></i><i id="r1" class="lr-radius-xs"></i><i id="r2" class="lr-radius-m"></i>
+        <i id="r3" class="lr-radius-container"></i><i id="r4" class="lr-radius-pill"></i><i id="r5" class="lr-radius-circle"></i>
+        <b id="t1" class="lr-uppercase">a</b><b id="t2" class="lr-lowercase">A</b><b id="t3" class="lr-capitalize">a</b>
+        <b id="t4" class="lr-uppercase lr-normal-case">a</b>
+      </div>
+    `);
+    const radius = (id: string) => getComputedStyle(el.querySelector(`#${id}`)!).borderTopLeftRadius;
+    expect(['r0', 'r1', 'r2', 'r3', 'r4', 'r5'].map(radius)).to.deep.equal(['0px', '3px', '7px', '11px', '99px', '50%']);
+    const transform = (id: string) => getComputedStyle(el.querySelector(`#${id}`)!).textTransform;
+    expect(['t1', 't2', 't3', 't4'].map(transform)).to.deep.equal(['uppercase', 'lowercase', 'capitalize', 'none']);
+  });
+
+  it('paints a placeholder from the neutral fill token', async () => {
+    const el = await fixture(html`<div data-lr-theme-scope id="p" class="lr-placeholder" style="--lr-color-neutral-fill-normal: rgb(9, 8, 7)"></div>`);
+    expect(getComputedStyle(el).backgroundColor).to.equal('rgb(9, 8, 7)');
+    expect(getComputedStyle(el).display).to.equal('block');
+  });
+
+  it('tints plain elements by variant and scales them by size', async () => {
+    const el = await fixture(html`
+      <div data-lr-theme-scope style="--lr-color-brand-fill-loud: rgb(1, 2, 3); --lr-color-danger-fill-loud: rgb(4, 5, 6); --lr-font-size-lg: 22px; --lr-font-size-xs: 11px">
+        <p id="b" class="lr-brand">b</p><p id="d" class="lr-danger">d</p>
+        <p id="l" class="lr-size-l">l</p><p id="x" class="lr-size-xs">x</p>
+        <div class="lr-native"><button id="btn" class="lr-size-l" type="button">go</button><button id="btn2" class="lr-size-xs" type="button">go</button></div>
+      </div>
+    `);
+    expect(getComputedStyle(el.querySelector('#b')!).color).to.equal('rgb(1, 2, 3)');
+    expect(getComputedStyle(el.querySelector('#d')!).color).to.equal('rgb(4, 5, 6)');
+    expect(getComputedStyle(el.querySelector('#l')!).fontSize).to.equal('22px');
+    expect(getComputedStyle(el.querySelector('#x')!).fontSize).to.equal('11px');
+    const tall = el.querySelector<HTMLElement>('#btn')!.getBoundingClientRect().height;
+    const short = el.querySelector<HTMLElement>('#btn2')!.getBoundingClientRect().height;
+    expect(tall).to.be.greaterThan(short);
+  });
+
+  it('locks scroll with a pure-CSS class', async () => {
+    const el = await fixture(html`<div class="lr-scroll-lock"></div>`);
+    expect(getComputedStyle(el).overflowY).to.equal('hidden');
+  });
+});
+
+describe('lr-cloak', () => {
+  it('hides a root while a custom element beneath it is undefined, then reveals it once defined', async () => {
+    const name = `lr-cloak-probe-${Math.random().toString(36).slice(2, 8)}`;
+    const el = await fixture(html`<div class="lr-cloak" style="--lr-cloak-timeout: 5s">${document.createElement(name)}</div>`);
+    expect(getComputedStyle(el).visibility).to.equal('hidden');
+    customElements.define(name, class extends HTMLElement {});
+    expect(getComputedStyle(el).visibility).to.equal('visible');
+  });
+
+  it('fails open after the timeout when a custom element never upgrades', async () => {
+    const el = await fixture(html`<div class="lr-cloak" style="--lr-cloak-timeout: 80ms"><never-defined-lr-probe></never-defined-lr-probe></div>`);
+    expect(getComputedStyle(el).visibility).to.equal('hidden');
+    await waitUntil(() => getComputedStyle(el).visibility === 'visible', 'cloak fails open', { timeout: 3000 });
+  });
+
+  it('leaves a root without undefined elements visible', async () => {
+    const el = await fixture(html`<div class="lr-cloak"><p>text</p></div>`);
+    expect(getComputedStyle(el).visibility).to.equal('visible');
+  });
+});
+
+describe('hue palette', () => {
+  it('declares every hue step on the root and on a theme scope', async () => {
+    const el = await fixture(html`<div data-lr-theme-scope id="s"></div>`);
+    const style = getComputedStyle(el);
+    for (const hue of ['gray', 'red', 'orange', 'yellow', 'green', 'cyan', 'blue', 'purple', 'pink']) {
+      for (const step of ['05', '10', '20', '30', '40', '50', '60', '70', '80', '90', '95']) {
+        expect(style.getPropertyValue(`--lr-color-${hue}-${step}`).trim(), `${hue}-${step}`).to.match(/^#[0-9a-f]{6}$/);
+      }
+    }
+    expect(style.getPropertyValue('--lr-color-red-50').trim()).to.equal('#bb0320');
+  });
+});
+
+describe('native control extensions', () => {
+  async function scope(inner: ReturnType<typeof html>, style = '') {
+    return fixture<HTMLElement>(html`<div class="lr-native" data-lr-theme-scope style=${style}>${inner}</div>`);
+  }
+
+  it('tints checkbox, radio and range from the brand token and shifts them on hover', async () => {
+    await resetMouse();
+    const el = await scope(
+      html`<input id="c" type="checkbox" /><input id="r" type="radio" /><input id="g" type="range" /><input id="d" type="checkbox" disabled />`,
+      '--lr-color-brand: rgb(1, 2, 3); --lr-color-brand-border-loud: rgb(7, 8, 9)'
+    );
+    for (const id of ['c', 'r', 'g']) {
+      expect(getComputedStyle(el.querySelector(`#${id}`)!).accentColor, id).to.equal('rgb(1, 2, 3)');
+      expect(getComputedStyle(el.querySelector(`#${id}`)!).cursor, id).to.equal('pointer');
+    }
+    expect(getComputedStyle(el.querySelector('#d')!).cursor).to.equal('not-allowed');
+    await hoverUntilMatched(el.querySelector('#c')!, 'checkbox hovered');
+    expect(getComputedStyle(el.querySelector('#c')!).accentColor).to.equal('rgb(7, 8, 9)');
+  });
+
+  it('sizes the checkbox and range inline-size logically', async () => {
+    const el = await scope(html`<input id="c" type="checkbox" /><input id="g" type="range" />`, '--lr-native-check-size: 20px');
+    expect(el.querySelector('#c')!.getBoundingClientRect().width).to.equal(20);
+    expect(getComputedStyle(el.querySelector('#g')!).boxSizing).to.equal('border-box');
+  });
+
+  it('gives the colour well and the file selector button control chrome and a pointer cursor', async () => {
+    await resetMouse();
+    const el = await scope(
+      html`<input id="col" type="color" /><input id="f" type="file" />`,
+      '--lr-color-border: rgb(10, 11, 12); --lr-radius: 9px'
+    );
+    const color = getComputedStyle(el.querySelector('#col')!);
+    expect(color.borderTopColor).to.equal('rgb(10, 11, 12)');
+    expect(color.borderTopLeftRadius).to.equal('9px');
+    expect(color.cursor).to.equal('pointer');
+    const button = getComputedStyle(el.querySelector('#f')!, '::file-selector-button');
+    expect(button.borderTopColor).to.equal('rgb(10, 11, 12)');
+    expect(button.cursor).to.equal('pointer');
+  });
+
+  it('draws progress and meter as a pill track with the token height', async () => {
+    const el = await scope(
+      html`<progress id="p" value="30" max="100"></progress><meter id="m" value="0.5"></meter>`,
+      '--lr-native-meter-block-size: 11px; --lr-radius-pill: 40px'
+    );
+    for (const id of ['p', 'm']) {
+      const style = getComputedStyle(el.querySelector(`#${id}`)!);
+      expect(style.blockSize, id).to.equal('11px');
+      expect(style.borderTopLeftRadius, id).to.equal('40px');
+    }
+  });
+
+  it('bounds details with a subtle edge and marks text with the warning tone', async () => {
+    const el = await scope(
+      html`<details id="d" open><summary>s</summary><p>body</p></details><mark id="mk">hit</mark>`,
+      '--lr-color-border-subtle: rgb(1, 1, 1); --lr-color-warning-fill-quiet: rgb(2, 2, 2); --lr-color-warning-on-quiet: rgb(3, 3, 3)'
+    );
+    const d = getComputedStyle(el.querySelector('#d')!);
+    expect(d.borderTopColor).to.equal('rgb(1, 1, 1)');
+    const mark = getComputedStyle(el.querySelector('#mk')!);
+    expect(mark.backgroundColor).to.equal('rgb(2, 2, 2)');
+    expect(mark.color).to.equal('rgb(3, 3, 3)');
+  });
+
+  it('styles a native dialog from the overlay surface and the container radius', async () => {
+    const el = await scope(
+      html`<dialog id="dlg"><p>hi</p></dialog>`,
+      '--lr-color-surface-overlay: rgb(5, 5, 5); --lr-radius-container: 13px'
+    );
+    const dlg = el.querySelector<HTMLDialogElement>('#dlg')!;
+    dlg.show();
+    const style = getComputedStyle(dlg);
+    expect(style.backgroundColor).to.equal('rgb(5, 5, 5)');
+    expect(style.borderTopLeftRadius).to.equal('13px');
+    dlg.close();
+  });
+
+  it('indents lists with a logical start inset that mirrors under RTL', async () => {
+    const el = await scope(
+      html`<ul id="l" dir="ltr"><li>a</li></ul><ul id="r" dir="rtl"><li>a</li></ul>`,
+      '--lr-native-list-indent: 17px'
+    );
+    expect(getComputedStyle(el.querySelector('#l')!).paddingLeft).to.equal('17px');
+    expect(getComputedStyle(el.querySelector('#r')!).paddingRight).to.equal('17px');
+    expect(getComputedStyle(el.querySelector('#r')!).paddingLeft).to.equal('0px');
+  });
+
+  it('stays inert outside an .lr-native scope', async () => {
+    const el = await fixture(html`<div><input id="c" type="checkbox" /><mark id="m">x</mark></div>`);
+    expect(getComputedStyle(el.querySelector('#c')!).cursor).to.not.equal('pointer');
+    expect(getComputedStyle(el.querySelector('#m')!).borderRadius).to.equal('0px');
+  });
 });

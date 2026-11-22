@@ -88,7 +88,10 @@ export const styles = css`
   [part~="backdrop"] {
     position: absolute;
     inset: 0;
-    background: var(--lr-dialog-overlay-color, var(--_lr-dialog-overlay-color));
+    background: var(
+      --lr-dialog-overlay-color,
+      var(--backdrop-color, var(--_lr-dialog-overlay-color))
+    );
     backdrop-filter: var(
       --backdrop-filter,
       var(--lr-dialog-backdrop-filter, none)

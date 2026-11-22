@@ -27,7 +27,7 @@ test('named token authentication is explicit while default OIDC stays credential
   for (const source of [publish, release]) {
     assert.match(source, /token_auth_package:\n\s+description: [^\n]+\n\s+required: false\n\s+type: choice\n\s+default: none/u);
     const choices = source.match(/token_auth_package:[\s\S]*?options:\n((?:          - [^\n]+\n)+)/u)[1].trim().split('\n').map(line => line.trim().slice(2));
-    assert.deepEqual(choices, ['none', 'lyra-ui', 'lyra-flags', 'lyra-docs', 'lyra-ide', 'lyra-translations', 'lyra-map', 'lyra-3d', 'lyra-gen']);
+    assert.deepEqual(choices, ['none', 'lyra-ui', 'lyra-flags', 'lyra-docs', 'lyra-ide', 'lyra-translations', 'lyra-map', 'lyra-3d', 'lyra-gen', 'lyra-cdn']);
   }
   const normal = workflowStep(publish, 'Publish to npm'), token = workflowStep(publish, 'Publish with protected npm token and provenance');
   const runIf = (step, inputs) => Boolean(new Function('inputs', `return ${step.match(/if: \$\{\{ (.*) \}\}/u)[1]};`)(inputs));
@@ -311,11 +311,11 @@ test('first publication of a companion package uses a protected, provenance-bear
 
   assert.match(release, /first_package_bootstrap:\n\s+description: [^\n]+\n\s+required: false\n\s+type: boolean\n\s+default: false/u);
   assert.match(publish, /first_package_bootstrap:\n\s+description: [^\n]+\n\s+required: false\n\s+type: boolean\n\s+default: false/u);
-  assert.match(plan, /"\$PACKAGE" =~ \^lyra-\(docs\|ide\|translations\|map\|3d\|gen\)\$[\s\S]*"\$TAGS" =~ \^lyra-\(docs\|ide\|translations\|map\|3d\|gen\)@/u);
+  assert.match(plan, /"\$PACKAGE" =~ \^lyra-\(docs\|ide\|translations\|map\|3d\|gen\|cdn\)\$[\s\S]*"\$TAGS" =~ \^lyra-\(docs\|ide\|translations\|map\|3d\|gen\|cdn\)@/u);
   assert.match(plan, /"\$status" != 404/u);
   assert.match(dispatch, /-f first_package_bootstrap=true/u);
   assert.match(eligibility, /"\$GITHUB_EVENT_NAME" != workflow_dispatch \|\| "\$DRY_RUN" == true/u);
-  assert.match(eligibility, /! "\$TAG" =~ \^lyra-\(docs\|ide\|translations\|map\|3d\|gen\)@/u);
+  assert.match(eligibility, /! "\$TAG" =~ \^lyra-\(docs\|ide\|translations\|map\|3d\|gen\|cdn\)@/u);
   assert.match(eligibility, /"\$status" != 404/u);
   assert.match(normalPublish, /if: \$\{\{ inputs\.first_package_bootstrap != true && \(!inputs\.token_auth_package \|\| inputs\.token_auth_package == 'none'\) \}\}/u);
   assert.doesNotMatch(normalPublish, /NODE_AUTH_TOKEN|NPM_BOOTSTRAP_TOKEN|--provenance/u);
@@ -386,7 +386,7 @@ test('both bootstrap eligibility checks fail closed on registry and package ambi
     assert.equal(run(publish, { TAG: 'lyra-map@1.0.0', GITHUB_EVENT_NAME: 'release' }).status, 1);
     assert.equal(run(plan, { TAGS: 'lyra-docs@0.1.1 lyra-ui@25.6.2' }).status, 1);
     assert.equal(run(publish, { TAG: 'lyra-ui@25.6.2' }).status, 1);
-    for (const [name, version] of [['lyra-ide', '27.0.0'], ['lyra-translations', '27.0.0'], ['lyra-map', '1.0.0'], ['lyra-3d', '1.0.0'], ['lyra-gen', '0.1.0']]) {
+    for (const [name, version] of [['lyra-ide', '27.0.0'], ['lyra-translations', '27.0.0'], ['lyra-map', '1.0.0'], ['lyra-3d', '1.0.0'], ['lyra-gen', '0.1.0'], ['lyra-cdn', '1.0.0']]) {
       const vars = { PACKAGE: name, TAG: `${name}@${version}`, TAGS: `${name}@${version}` };
       assert.equal(run(plan, vars).status, 0);
       assert.equal(run(publish, vars).status, 0);

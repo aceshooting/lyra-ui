@@ -63,6 +63,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'Iphutha',
   stepperStatePending: 'Akuqalwa',
   stepperStateLocked: 'Kukhiyiwe',
+  stepperStateLoading: 'Iyalayisha',
+  stepperStateDisabled: 'Ayitholakali',
+  stepperSteps: 'Izinyathelo',
+  stepperStepPosition: 'Isinyathelo {current} kwezingu-{total}',
   commandPaletteInputLimit: 'Eminye imiyalo ishiyiwe ngoba kufinyelelwe emkhawulweni wokufaka.',
 };
 

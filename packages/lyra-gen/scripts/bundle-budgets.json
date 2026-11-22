@@ -8,7 +8,7 @@
     "javascriptHeadroomPercent": 2,
     "cssHeadroomPercent": 4,
     "assetHeadroomPercent": 0,
-    "basis": "Initial companion ceilings use measured production bytes with floor(1.02 × JS) and floor(1.04 × CSS), following repository review limits; assets have no allowance. Gzip is summed per independently transferred file. Segmented field labels, hints and forwarded-slot naming, together with the chart no-glyph fallback and its accessible-name cleanup, bring chat-composition lazy JavaScript to 1,035,535 raw and 293,712 gzip bytes. Only these two exceeded ceilings advance to the next 64-byte boundary; eager-loading limits, all other passing metrics and external dependency inventories remain unchanged. The select consumed-key fix and shared tree size styles add 31 raw lazy bytes to the preceding prepared build. The current chat-composition lazy JavaScript measures 1,035,590 bytes, so only its raw ceiling advances to 1,035,648, the next 64-byte boundary; the gzip ceiling and every other limit stay unchanged. The shared component helpers and repairs in the library bring chat-composition lazy JavaScript to 1,041,533 raw and 295,748 gzip bytes; only these two exceeded ceilings advance to the next 64-byte boundary, and every other limit stays unchanged. Library-wide accessibility, lifecycle and localization repairs bring gen-view eager JavaScript to 185,520 raw bytes, gen-view lazy JavaScript to 856,852 raw and 249,123 gzip bytes, and chat-composition eager JavaScript to 517,232 raw and 162,850 gzip bytes; these five exceeded ceilings advance to the 2% review limit above their measurements. The lyra-gen additional-property maps and host properties, with the library repairs they pull in, bring runtime eager JavaScript to 30,202 raw and 10,265 gzip bytes, chat eager JavaScript to 45,582 raw and 14,450 gzip bytes, chat-composition eager JavaScript to 170,189 gzip bytes and chat-composition lazy JavaScript to 299,245 gzip bytes; these six exceeded ceilings advance to the 2% review limit above their measurements. The 32.0.0 chart announcements and guarded formatters bring gen-view lazy JavaScript to 256,643 gzip bytes; only that exceeded ceiling advances to the next 64-byte boundary."
+    "basis": "Initial companion ceilings use measured production bytes with floor(1.02 × JS) and floor(1.04 × CSS), following repository review limits; assets have no allowance. Gzip is summed per independently transferred file. Segmented field labels, hints and forwarded-slot naming, together with the chart no-glyph fallback and its accessible-name cleanup, bring chat-composition lazy JavaScript to 1,035,535 raw and 293,712 gzip bytes. Only these two exceeded ceilings advance to the next 64-byte boundary; eager-loading limits, all other passing metrics and external dependency inventories remain unchanged. The select consumed-key fix and shared tree size styles add 31 raw lazy bytes to the preceding prepared build. The current chat-composition lazy JavaScript measures 1,035,590 bytes, so only its raw ceiling advances to 1,035,648, the next 64-byte boundary; the gzip ceiling and every other limit stay unchanged. The shared component helpers and repairs in the library bring chat-composition lazy JavaScript to 1,041,533 raw and 295,748 gzip bytes; only these two exceeded ceilings advance to the next 64-byte boundary, and every other limit stays unchanged. Library-wide accessibility, lifecycle and localization repairs bring gen-view eager JavaScript to 185,520 raw bytes, gen-view lazy JavaScript to 856,852 raw and 249,123 gzip bytes, and chat-composition eager JavaScript to 517,232 raw and 162,850 gzip bytes; these five exceeded ceilings advance to the 2% review limit above their measurements. The lyra-gen additional-property maps and host properties, with the library repairs they pull in, bring runtime eager JavaScript to 30,202 raw and 10,265 gzip bytes, chat eager JavaScript to 45,582 raw and 14,450 gzip bytes, chat-composition eager JavaScript to 170,189 gzip bytes and chat-composition lazy JavaScript to 299,245 gzip bytes; these six exceeded ceilings advance to the 2% review limit above their measurements. The 32.0.0 chart announcements and guarded formatters bring gen-view lazy JavaScript to 256,643 gzip bytes; only that exceeded ceiling advances to the next 64-byte boundary. The lyra-ui consumer-gap tokens and options change how gen-view's lazy chunks split: lazy raw JavaScript grows only 362 bytes while the per-file gzip sum reaches 257,942 bytes, so only that exceeded ceiling advances to the next 64-byte boundary, 257,984; every other limit stays unchanged. The same lyra-ui additions bring chat-composition lazy JavaScript to 1,044,304 raw and 305,790 gzip bytes; only these two exceeded ceilings advance to the next 64-byte boundary, 1,044,352 and 305,792. Real runtime event classes add a shared LyraEvent base to every emitted event; the exceeded gen-view and chat-composition JavaScript metrics record their measured bytes and advance to the next 64-byte boundary."
   },
   "profiles": {
     "parser": {
@@ -89,9 +89,9 @@
     "gen-view": {
       "measured": {
         "eagerJsBytes": 185520,
-        "eagerJsGzipBytes": 56842,
+        "eagerJsGzipBytes": 56965,
         "lazyJsBytes": 856852,
-        "lazyJsGzipBytes": 256643,
+        "lazyJsGzipBytes": 257993,
         "eagerCssBytes": 0,
         "eagerCssGzipBytes": 0,
         "lazyCssBytes": 0,
@@ -100,9 +100,9 @@
       },
       "ceilings": {
         "eagerJsBytes": 189230,
-        "eagerJsGzipBytes": 56896,
+        "eagerJsGzipBytes": 57024,
         "lazyJsBytes": 873989,
-        "lazyJsGzipBytes": 256704,
+        "lazyJsGzipBytes": 258048,
         "eagerCssBytes": 0,
         "eagerCssGzipBytes": 0,
         "lazyCssBytes": 0,
@@ -115,8 +115,8 @@
       "measured": {
         "eagerJsBytes": 517232,
         "eagerJsGzipBytes": 170189,
-        "lazyJsBytes": 1041533,
-        "lazyJsGzipBytes": 299245,
+        "lazyJsBytes": 1044400,
+        "lazyJsGzipBytes": 305797,
         "eagerCssBytes": 103994,
         "eagerCssGzipBytes": 13457,
         "lazyCssBytes": 0,
@@ -126,8 +126,8 @@
       "ceilings": {
         "eagerJsBytes": 527576,
         "eagerJsGzipBytes": 173592,
-        "lazyJsBytes": 1041536,
-        "lazyJsGzipBytes": 305229,
+        "lazyJsBytes": 1044416,
+        "lazyJsGzipBytes": 305856,
         "eagerCssBytes": 108153,
         "eagerCssGzipBytes": 13995,
         "lazyCssBytes": 0,

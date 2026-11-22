@@ -18,12 +18,13 @@ export function labeledGroupDescription(host: LabeledGroupHost): HostDescription
 
 /** The group wrapper: a non-empty host `aria-label` names it first; an explicitly empty host
  *  `aria-label`, or an empty `accessibleLabel` without a host label, leaves the group unnamed;
- *  otherwise a non-blank `label` names it. */
-export function renderLabeledGroup(host: LabeledGroupHost): TemplateResult {
+ *  otherwise a non-blank `label` names it. `aliasPart` adds a second part token on the same node. */
+export function renderLabeledGroup(host: LabeledGroupHost, aliasPart = ''): TemplateResult {
   const authored = hostAriaLabel(host);
   const name =
     authored === '' || (authored === null && host.accessibleLabel === '')
       ? ''
       : resolveAccessibleName(host, host.label) ?? nothing;
-  return html`<div part="base" role="group" aria-label=${name}><slot></slot></div>`;
+  const part = aliasPart ? `base ${aliasPart}` : 'base';
+  return html`<div part=${part} role="group" aria-label=${name}><slot></slot></div>`;
 }

@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'ଆଗକୁ ବଢ଼ିବାକୁ ଏହି ବାକ୍ସ ଚୟନ କରନ୍ତୁ।',
   checkboxGroupRequired: 'ଅତି କମରେ ଗୋଟିଏ ବିକଳ୍ପ ଚୟନ କରନ୍ତୁ।',
   tokenInputRequired: 'ଅତି କମରେ ଗୋଟିଏ ମୂଲ୍ୟ ଦିଅନ୍ତୁ।',
+  tokenInputTooFew: {
+    one: 'ଅତିକମରେ {count}ଟି ମୂଲ୍ୟ ଦିଅନ୍ତୁ।',
+    other: 'ଅତିକମରେ {count}ଟି ମୂଲ୍ୟ ଦିଅନ୍ତୁ।',
+  },
+  tokenInputTooMany: {
+    one: '{count}ଟିରୁ ଅଧିକ ମୂଲ୍ୟ ଦିଅନ୍ତୁ ନାହିଁ।',
+    other: '{count}ଟିରୁ ଅଧିକ ମୂଲ୍ୟ ଦିଅନ୍ତୁ ନାହିଁ।',
+  },
   tokenInputEditWithContext: '{label} ସମ୍ପାଦନ କରନ୍ତୁ',
   tokenInputLabel: 'ଟୋକେନ୍',
   iconButtonLabel: 'ବଟନ୍',

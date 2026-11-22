@@ -1,0 +1,119 @@
+/* Optional static hue ramps. Importing this file only declares custom properties, on :root and
+   inside any [data-lr-theme-scope] boundary; it never styles an element. Each step is a fixed
+   colour that does not change with light/dark mode, so use it for data tagging, charts, avatars
+   and illustrations. UI chrome reads the semantic --lr-color-<variant>-* grid instead, which
+   resolves per mode. Steps 05 to 95 run from near-black to near-white. */
+
+@layer lr-base, lr-theme, lr-theme-preset, lr-utilities, lr-overrides;
+
+@layer lr-base {
+  :where(:root, [data-lr-theme-scope]) {
+    --lr-color-gray-05: #000001;
+    --lr-color-gray-10: #030304;
+    --lr-color-gray-20: #151619;
+    --lr-color-gray-30: #2c2e31;
+    --lr-color-gray-40: #46484c;
+    --lr-color-gray-50: #616368;
+    --lr-color-gray-60: #7e8085;
+    --lr-color-gray-70: #9c9ea3;
+    --lr-color-gray-80: #bcbec1;
+    --lr-color-gray-90: #dcdee1;
+    --lr-color-gray-95: #edeef1;
+
+    --lr-color-red-05: #020000;
+    --lr-color-red-10: #0d0000;
+    --lr-color-red-20: #320003;
+    --lr-color-red-30: #5c010a;
+    --lr-color-red-40: #890415;
+    --lr-color-red-50: #bb0320;
+    --lr-color-red-60: #dc3e41;
+    --lr-color-red-70: #f86b66;
+    --lr-color-red-80: #ffa099;
+    --lr-color-red-90: #ffd2cd;
+    --lr-color-red-95: #ffe9e6;
+
+    --lr-color-orange-05: #010000;
+    --lr-color-orange-10: #060300;
+    --lr-color-orange-20: #211300;
+    --lr-color-orange-30: #402801;
+    --lr-color-orange-40: #624001;
+    --lr-color-orange-50: #855905;
+    --lr-color-orange-60: #a77526;
+    --lr-color-orange-70: #c39554;
+    --lr-color-orange-80: #ddb781;
+    --lr-color-orange-90: #f7d9b0;
+    --lr-color-orange-95: #ffebd2;
+
+    --lr-color-yellow-05: #000000;
+    --lr-color-yellow-10: #050300;
+    --lr-color-yellow-20: #1c1500;
+    --lr-color-yellow-30: #382d01;
+    --lr-color-yellow-40: #564704;
+    --lr-color-yellow-50: #766204;
+    --lr-color-yellow-60: #977e0b;
+    --lr-color-yellow-70: #ba9c05;
+    --lr-color-yellow-80: #d2bd71;
+    --lr-color-yellow-90: #e8deba;
+    --lr-color-yellow-95: #f2efdd;
+
+    --lr-color-green-05: #000100;
+    --lr-color-green-10: #000501;
+    --lr-color-green-20: #001d06;
+    --lr-color-green-30: #013912;
+    --lr-color-green-40: #00571f;
+    --lr-color-green-50: #0c7830;
+    --lr-color-green-60: #3e9550;
+    --lr-color-green-70: #67b374;
+    --lr-color-green-80: #91d09a;
+    --lr-color-green-90: #bdecc2;
+    --lr-color-green-95: #d3fbd8;
+
+    --lr-color-cyan-05: #000001;
+    --lr-color-cyan-10: #000406;
+    --lr-color-cyan-20: #001a20;
+    --lr-color-cyan-30: #02343e;
+    --lr-color-cyan-40: #005160;
+    --lr-color-cyan-50: #096f82;
+    --lr-color-cyan-60: #038fa7;
+    --lr-color-cyan-70: #11b1ce;
+    --lr-color-cyan-80: #69cee6;
+    --lr-color-cyan-90: #bae7f2;
+    --lr-color-cyan-95: #ddf3f9;
+
+    --lr-color-blue-05: #000002;
+    --lr-color-blue-10: #00030f;
+    --lr-color-blue-20: #001436;
+    --lr-color-blue-30: #002b62;
+    --lr-color-blue-40: #034492;
+    --lr-color-blue-50: #035ec6;
+    --lr-color-blue-60: #2d7de9;
+    --lr-color-blue-70: #5b9eff;
+    --lr-color-blue-80: #95c0fe;
+    --lr-color-blue-90: #cae0ff;
+    --lr-color-blue-95: #e5efff;
+
+    --lr-color-purple-05: #010001;
+    --lr-color-purple-10: #06010c;
+    --lr-color-purple-20: #1e0a30;
+    --lr-color-purple-30: #3b1a58;
+    --lr-color-purple-40: #5a2c84;
+    --lr-color-purple-50: #7c3fb3;
+    --lr-color-purple-60: #9a5dd5;
+    --lr-color-purple-70: #b682ec;
+    --lr-color-purple-80: #cdaef2;
+    --lr-color-purple-90: #e5d7f9;
+    --lr-color-purple-95: #f2eafb;
+
+    --lr-color-pink-05: #010000;
+    --lr-color-pink-10: #0b0004;
+    --lr-color-pink-20: #2d0317;
+    --lr-color-pink-30: #530c31;
+    --lr-color-pink-40: #7d194c;
+    --lr-color-pink-50: #aa2468;
+    --lr-color-pink-60: #cd4686;
+    --lr-color-pink-70: #e86fa3;
+    --lr-color-pink-80: #f2a3c1;
+    --lr-color-pink-90: #fad1e0;
+    --lr-color-pink-95: #fde8ee;
+  }
+}

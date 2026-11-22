@@ -225,6 +225,8 @@ const FULLSCREEN_NARROW_QUERY = '(max-width: 40rem)';
  * @csspart close-button - The built-in close button, rendered inside `header`
  *   unless `without-close-button` is set.
  * @csspart close-button__base - Exported mapped alias on the close button, on the same node.
+ * @csspart close-button__button - Web Awesome-named alias of `close-button-control`: the close button's
+ *   own native control.
  * @csspart close-button-control - The composed `<lr-icon-button>`'s own native control, forwarded
  *   because the painted surface now sits one shadow boundary deeper than `close-button`. As of
  *   16.0.0 the close button IS an `<lr-icon-button>`, so its background, radius, hover/press mixes,
@@ -237,6 +239,8 @@ const FULLSCREEN_NARROW_QUERY = '(max-width: 40rem)';
  * @csspart body - The wrapper around the default slot.
  * @csspart footer - The wrapper around the `footer` slot.
  * @cssprop [--lr-dialog-overlay-color=var(--lr-color-overlay)] - Backdrop scrim color.
+ * @cssprop [--backdrop-color=var(--lr-color-overlay)] - Mapped alias of `--lr-dialog-overlay-color`; the
+ *   `--lr-*` name wins when both are set.
  * @cssprop [--lr-dialog-backdrop-filter=none] - `backdrop-filter` applied to the scrim, for a
  *   frosted-glass treatment over the page behind it.
  * @cssprop [--backdrop-filter=var(--lr-dialog-backdrop-filter,none)] - Mapped backdrop-filter
@@ -412,6 +416,11 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
 
   /** Releases the `fullscreen-narrow` breakpoint listener; set only while one is attached. */
   private releaseFullscreenQuery?: () => void;
+
+  /** Server-rendering hint: set it when a `label` slot child is provided so the server markup
+   * already carries the titled header before hydration. In the browser the real slot content
+   * decides; a `with-label` dialog with no label text still renders an (empty) heading. */
+  @property({ type: Boolean, attribute: 'with-label' }) withLabel = false;
 
   @state() private hasFooterSlot = false;
   @state() private hasLabelSlot = false;
@@ -1063,7 +1072,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     // shadow-owned visible title. Only the final case uses aria-labelledby.
     const suppressHeader = this.withoutHeader || this.noHeader;
     const renderHeading =
-      !suppressHeader && !this.headingText && (this.hasLabelSlot || (this.label ?? '').length > 0 || !!this.heading);
+      !suppressHeader && !this.headingText && (this.hasLabelSlot || this.withLabel || (this.label ?? '').length > 0 || !!this.heading);
     const hasHostName = this.hostAriaLabel !== null;
     const explicitName = hasHostName ? this.hostAriaLabel : this.headingText;
     const hasExplicitName = hasHostName || Boolean(explicitName);
@@ -1101,7 +1110,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
                     ? html`
                         <lr-icon-button
                           part="close-button close-button__base"
-                          exportparts="button:close-button-control"
+                          exportparts="button:close-button-control, button:close-button__button"
                           aria-label=${this.localize('close')}
                           @click=${this.onCloseButtonClick}
                         >

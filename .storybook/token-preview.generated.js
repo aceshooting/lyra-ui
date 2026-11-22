@@ -4973,6 +4973,22 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         }
       },
       {
+        "name": "--lr-space-3xl",
+        "type": "dimension",
+        "scope": "shared",
+        "values": {
+          "light": "calc(var(--lr-theme-space-2xl, 2rem) * 1.5)"
+        }
+      },
+      {
+        "name": "--lr-space-4xl",
+        "type": "dimension",
+        "scope": "shared",
+        "values": {
+          "light": "calc(var(--lr-theme-space-2xl, 2rem) * 2)"
+        }
+      },
+      {
         "name": "--lr-space-l",
         "type": "dimension",
         "scope": "shared",
@@ -4994,6 +5010,14 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "scope": "shared",
         "values": {
           "light": "var(--lr-theme-space-s, 0.5rem)"
+        }
+      },
+      {
+        "name": "--lr-space-xl",
+        "type": "dimension",
+        "scope": "shared",
+        "values": {
+          "light": "calc((var(--lr-theme-space-l, 1rem) + var(--lr-theme-space-2xl, 2rem)) / 2)"
         }
       },
       {
@@ -5111,6 +5135,22 @@ export const LYRA_TOKEN_PREVIEW_GROUPS = Object.freeze([
         "scope": "shared",
         "values": {
           "light": "var(--lr-theme-font-size-3xs, 0.5rem)"
+        }
+      },
+      {
+        "name": "--lr-font-size-4xl",
+        "type": "dimension",
+        "scope": "shared",
+        "values": {
+          "light": "calc(var(--lr-theme-font-size-3xl, 2rem) * 1.25)"
+        }
+      },
+      {
+        "name": "--lr-font-size-5xl",
+        "type": "dimension",
+        "scope": "shared",
+        "values": {
+          "light": "calc(var(--lr-theme-font-size-3xl, 2rem) * 1.5)"
         }
       },
       {

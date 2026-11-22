@@ -208,6 +208,7 @@ const layeredAssets = [
   path.join('src', 'theme.css'),
   path.join('src', 'preferences.css'),
   path.join('src', 'styles', 'native.css'),
+  path.join('src', 'styles', 'palette.css'),
   path.join('src', 'styles', 'utilities.css'),
   path.join('src', 'styles', 'tokens-root.css'),
   path.join('src', 'styles', 'design-tokens.css'),

@@ -278,6 +278,37 @@ exports `normalizeLyraSpanKind` and `normalizeLyraSpanStatus`; the widget regist
 only `DEFAULT_WIDGET_TYPE_REGISTRY`. Import a component registration entry separately when the page
 also renders that component.
 
+### Single script tag (no build step, no import map)
+
+`@aceshooting/lyra-cdn` is a companion package with a pre-bundled build of the same components: lit,
+tslib and Floating UI are inlined into relative, code-split chunks, so one tag is the whole install.
+Only the components the page renders are fetched (the autoloader's lazy loaders become chunks).
+
+```html
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@aceshooting/lyra-cdn@VERSION/dist/theme.css">
+<script type="module" src="https://cdn.jsdelivr.net/npm/@aceshooting/lyra-cdn@VERSION/dist/lyra-ui.loader.js"></script>
+
+<lr-button variant="primary">Save</lr-button>
+```
+
+It versions together with `@aceshooting/lyra-ui`; pin an exact version in production. Also published
+beside the loader: `theme.css`, `theme-core.css`, `density.css`, `accents.css`, `design-tokens.css`,
+`native.css` and `utilities.css`.
+
+- The loader starts the autoloader on `DOMContentLoaded` (immediately when the document is already
+  parsed) and keeps watching insertions. It injects no styles or inline script.
+- Script attributes: `data-lyra-optional-peers="dompurify,postal-mime"` (or `all`),
+  `data-lyra-autoload-events`, the opt-out `data-lyra-autoload="false"` (alias
+  `data-lyra-no-autoload`), which loads the module without starting it (it re-exports `start`,
+  `stop` and `discover`), and `data-lyra-cloak-timeout` (milliseconds, default `2000`).
+- Cloaking: elements carrying class or attribute `lr-cloak` are revealed when the first scan
+  settles, or when the cloak timeout elapses, whichever comes first. Pair it with `.lr-fouce-hidden`
+  from `utilities.css` to hide not-yet-defined tags.
+- Optional peers and the non-English catalogs of `@aceshooting/lyra-translations` are not bundled.
+  A component that needs one takes its usual localized fallback until the dependency resolves, for
+  example through an import map to a CDN URL.
+- Bundler users keep importing `@aceshooting/lyra-ui` itself; the CDN build ships no source maps.
+
 ### Optional autoloader
 
 `@aceshooting/lyra-ui/autoloader.js` exports `discover(root?, options?)`, `start(root?, options?)`
@@ -331,6 +362,34 @@ when `document` exists and reads `data-lyra-optional-peers="peer-a,peer-b"` plus
 `data-lyra-autoload-events` from its own `<script>`. Add `data-lyra-autoloader` to that script when
 an ESM CDN executes the package entry behind a wrapper URL. Neither entry imports the root barrel,
 and both are safe to import in plain Node.
+
+### Loading from a CDN with no build step
+
+An import map lets plain HTML use the same bare specifiers as an application. The ESM CDN rewrites
+each package's own dependencies, so map only the entries you import:
+
+```html
+<script type="importmap">
+  {
+    "imports": {
+      "@aceshooting/lyra-ui/": "https://esm.sh/@aceshooting/lyra-ui@30/",
+      "lit": "https://esm.sh/lit@3",
+      "lit/": "https://esm.sh/lit@3/"
+    }
+  }
+</script>
+<script type="module">
+  import '@aceshooting/lyra-ui/autoloader-cdn.js'; // defines each lr-* tag when it first appears
+  import { allDefined } from '@aceshooting/lyra-ui/utilities/defined.js';
+  await allDefined({ timeout: 5000 }); // resolves after the page's lr-* tags are defined
+</script>
+<lr-button>Hello</lr-button>
+```
+
+Pin an exact version for production, and import `components/lr-<tag>.js` instead of the autoloader
+when the page uses only a few tags. Add `data-lyra-autoloader` to the autoloader `<script>` if the
+CDN serves the entry behind a wrapper URL. Without an import map, use the full CDN URL in each
+`import`. `startLoader`/`stopLoader` are accepted aliases of the autoloader's `start`/`stop`.
 
 ## Optional native scoped registries
 
@@ -483,6 +542,24 @@ Those nested detail fields are separate from deprecated event names and are not 
   type graph, so add it once (a root `main.ts`, or a `.d.ts` in the project's `include`). A direct
   element reference never needs it — `LyraElement` overrides `addEventListener`, so
   `table.addEventListener('lr-sort', …)` resolves through `LyraTableEventMap` first either way.
+- **`instanceof` narrowing: `@aceshooting/lyra-ui/event-classes`.** Every event a component dispatches
+  is a `LyraEvent` (a bubbling, composed `CustomEvent`), and this subpath exports one class per event
+  name — `lr-step-change` → `LyraStepChangeEvent` — whose `instanceof` is true for exactly those events
+  and narrows `detail`:
+
+  ```ts
+  import { LyraChangeEvent } from "@aceshooting/lyra-ui/event-classes";
+
+  document.addEventListener("lr-change", (event) => {
+    if (event instanceof LyraChangeEvent) event.detail; // typed
+  });
+  ```
+
+  A class is also constructible (`new LyraChangeEvent(detail, { cancelable })`) for tests or for
+  re-dispatching. The classes are side-effect free and tree-shakable, components never import them, and
+  the names match the type aliases in `@aceshooting/lyra-ui/events` (import from one subpath per
+  file). Events created for an element adopted into another window keep that window's `CustomEvent`
+  constructor but still match.
   `LyraGlobalEventMap` is exported as well, for writing your own typed helper over it.
 
 - **The surface is per-event type aliases, not runtime event classes.** `LyraSortEvent` and its
@@ -1366,10 +1443,10 @@ needs to sit inside a Lyra UI without looking foreign, and the file's header lis
 | Ambient colour        | `--lr-color-surface`, `--lr-color-surface-raised`, `--lr-color-surface-overlay`, `--lr-color-overlay`, `--lr-color-text`, `--lr-color-text-quiet`, `--lr-color-border`, `--lr-color-border-strong`, `--lr-color-border-subtle` |
 | The semantic grid     | all 45 `--lr-color-{brand,success,warning,danger,neutral}-{fill,border,on}-{quiet,normal,loud}` slots                                                                                                                       |
 | Flat colour aliases   | `--lr-color-{brand,success,warning,danger,neutral}`, `--lr-color-{brand,success,warning,danger}-quiet`, `--lr-color-on-{brand,success,warning,danger,neutral}`                                                              |
-| Spacing               | `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-space-m`, `--lr-space-l`, `--lr-space-2xl`                                                                                                                        |
+| Spacing               | `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-space-m`, `--lr-space-l`, `--lr-space-xl`, `--lr-space-2xl`, `--lr-space-3xl`, `--lr-space-4xl` (`xl`, `3xl`, `4xl` derive from the `l`/`2xl` theme inputs, so density and re-theming carry through) |
 | Geometry              | `--lr-radius-xs`, `--lr-radius`, `--lr-radius-pill`, `--lr-border-width-thin`, `--lr-border-width-medium`, `--lr-border-width-thick`                                                                                       |
 | Elevation             | `--lr-shadow-color`, `--lr-shadow-xs`, `--lr-shadow-s`, `--lr-shadow-m`, `--lr-shadow-l`, `--lr-shadow-xl`, `--lr-shadow`                                                                                                  |
-| Typography            | `--lr-font`, `--lr-font-mono`, the ten `--lr-font-size-*` steps, the four `--lr-font-weight-*` steps                                                                                                                        |
+| Typography            | `--lr-font`, `--lr-font-mono`, the twelve `--lr-font-size-*` steps (`--lr-font-size-4xl` and `-5xl` derive from the `3xl` theme input at 1.25x and 1.5x), the four `--lr-font-weight-*` steps                                                                                                                        |
 | State and motion      | `--lr-focus-ring`, `--lr-focus-ring-color`, `--lr-focus-ring-width`, `--lr-focus-ring-offset`, `--lr-opacity-disabled`, `--lr-opacity-muted`, `--lr-duration-fast`, `--lr-duration-base`, `--lr-easing-standard`, `--lr-easing-emphasized`, `--lr-transition-fast`, `--lr-transition-base`, `--lr-transition-interactive` |
 
 The grid is stable as a whole because its [contrast contract](#semantic-colour-contrast-contract)
@@ -2365,13 +2442,17 @@ the first connected Lyra element would otherwise adopt, available before any com
 | Flex direction and wrapping | `lr-row`, `lr-column`, `lr-wrap`, `lr-nowrap`, `lr-grow`, `lr-grow-0`, `lr-shrink`, `lr-shrink-0`                                                                 |
 | Item alignment              | `lr-items-start`, `lr-items-center`, `lr-items-end`, `lr-items-stretch`, `lr-items-baseline`, `lr-self-start`, `lr-self-center`, `lr-self-end`, `lr-self-stretch` |
 | Distribution                | `lr-justify-start`, `lr-justify-center`, `lr-justify-end`, `lr-justify-between`, `lr-justify-around`                                                              |
-| Gaps                        | `lr-gap-0`, `lr-gap-xs`, `lr-gap-s`, `lr-gap-m`, `lr-gap-l`, `lr-gap-2xl`                                                                                         |
+| Gaps                        | `lr-gap-0`, `lr-gap-2xs`, `lr-gap-xs`, `lr-gap-s`, `lr-gap-m`, `lr-gap-l`, `lr-gap-xl`, `lr-gap-2xl`, `lr-gap-3xl`, `lr-gap-4xl`                                  |
+| Compositions                | `lr-flank`, `lr-flank-end`, `lr-split`, `lr-split-column`, `lr-frame`, `lr-frame-square`, `lr-frame-landscape`, `lr-frame-portrait`, `lr-span-grid`, `lr-container` |
+| Plain-element helpers       | `lr-link-plain`, `lr-list-plain`, `lr-placeholder`, `lr-scroll-lock`, `lr-cloak`                                                                                  |
+| Radius and case             | `lr-radius-none`, `lr-radius-xs`, `lr-radius-m`, `lr-radius-container`, `lr-radius-pill`, `lr-radius-circle`, `lr-uppercase`, `lr-lowercase`, `lr-capitalize`, `lr-normal-case` |
+| Variant and size            | `lr-neutral`, `lr-brand`, `lr-success`, `lr-warning`, `lr-danger`; `lr-size-2xs`, `lr-size-xs`, `lr-size-s`, `lr-size-m`, `lr-size-l`, `lr-size-xl` (`lr-size-full` stays the 100% box) |
 | Logical sizing              | `lr-inline-full`, `lr-block-full`, `lr-size-full`, `lr-min-inline-0`, `lr-min-block-0`, `lr-max-inline-full`, `lr-max-inline-prose`, `lr-center`                  |
 | Overflow                    | `lr-overflow-auto`, `lr-overflow-hidden`                                                                                                                          |
-| Text alignment and size     | `lr-text-start`, `lr-text-center`, `lr-text-end`, `lr-text-xs`, `lr-text-sm`, `lr-text-base`, `lr-text-lg`, `lr-text-xl`, `lr-text-quiet`                         |
+| Text alignment and size     | `lr-text-start`, `lr-text-center`, `lr-text-end`, `lr-text-xs`, `lr-text-sm`, `lr-text-base`, `lr-text-lg`, `lr-text-xl`, `lr-text-2xl` – `lr-text-5xl`, `lr-text-quiet`                         |
 | Font                        | `lr-font-normal`, `lr-font-medium`, `lr-font-semibold`, `lr-font-bold`, `lr-font-mono`                                                                            |
 | Text flow                   | `lr-text-break`, `lr-text-nowrap`, `lr-truncate`, `lr-text-balance`, `lr-text-pretty`, `lr-prose`                                                                 |
-| Typography                  | `lr-typography`, `lr-not-typography`, `lr-heading-1`, `lr-heading-2`, `lr-heading-3`, `lr-heading-4`, `lr-inline-code`                                           |
+| Typography                  | `lr-typography`, `lr-not-typography`, `lr-heading-1`, `lr-heading-2`, `lr-heading-3`, `lr-heading-4`, `lr-heading-5`, `lr-heading-6`, `lr-inline-code`                                           |
 | Visibility and focus        | `lr-visually-hidden`, `lr-visually-hidden-focusable`, `lr-fouce-hidden`, `lr-hidden`                                                                              |
 | Page allocation             | `lr-page-mobile-only`, `lr-page-desktop-only`                                                                                                                     |
 
@@ -2391,6 +2472,43 @@ properties, so these two widths are fixed. Source order is reading order at ever
   <lr-card class="lr-span-12">Recent activity</lr-card>
 </section>
 ```
+
+### Compositions and small utilities
+
+All spacing here reads `--lr-layout-gap` (default `--lr-space-m`).
+
+- **`lr-flank` / `lr-flank-end`** — a flex row where the first (or, for `-end`, the last) child keeps
+  its own width (`--lr-flank-inline-size`, default `auto`) and the other fills the rest. The filling
+  child wraps onto its own row below `--lr-flank-content-min-inline-size` (default `50%`).
+- **`lr-split` / `lr-split-column`** — items pushed to the two ends of a wrapping row, or of a
+  column. Logical, so the ends swap under `dir="rtl"`.
+- **`lr-frame`, `lr-frame-square` (1/1), `lr-frame-landscape` (16/9), `lr-frame-portrait` (3/4)** —
+  a clipped aspect-ratio box; a direct `img`, `picture`, `video`, `canvas`, `svg` or `iframe` child
+  fills it with `object-fit: cover`. A bare `lr-frame` reads `--lr-frame-ratio` (default `1 / 1`).
+- **`lr-span-grid`** — takes the whole row of its grid parent, including inside `lr-grid-12` at every
+  container width. **`lr-container`** makes an element an inline-size query container.
+- **`lr-link-plain`** — inherited colour, no underline until hover. **`lr-list-plain`** — no
+  marker, no indent, no margin (an `ul`/`ol` that keeps `role="list"` stays announced as a list).
+- **`lr-placeholder`** — a quiet neutral block (`--lr-placeholder-block-size`, default `1em`) that
+  pulses only when `prefers-reduced-motion: no-preference`.
+- **`lr-radius-*`** read the radius tokens; `lr-radius-circle` is `50%`. **`lr-uppercase`,
+  `lr-lowercase`, `lr-capitalize`, `lr-normal-case`** set `text-transform`.
+- **Variants** `lr-neutral|brand|success|warning|danger` (the `variant` vocabulary) colour the
+  element's text and native-control accent with that tone's loud fill and publish
+  `--lr-variant-fill-quiet`, `--lr-variant-fill-loud`, `--lr-variant-on-quiet` and
+  `--lr-variant-border` for your own rules. **Sizes** `lr-size-2xs … lr-size-xl` (the `size` ladder;
+  `small`/`medium`/`large` spellings are not classes) set the type size and scale the native control
+  block size and padding that `.lr-native` reads.
+- **`lr-scroll-lock`** is pure CSS (`overflow: hidden`, `overscroll-behavior: contain`, plus a stable
+  scrollbar gutter on `html`). Put it on `html`, `body` or a scroll container. It is independent of
+  the lock a modal component takes: both can be active, and the component's lock sees the stable
+  gutter and adds no padding.
+- **`lr-cloak`** on `html`/`body` (or any root) hides the root with `visibility: hidden` while any
+  custom element beneath it still matches `:not(:defined)`, then reveals it as soon as they are
+  all defined. It fails open: after `--lr-cloak-timeout` (default `3s`) the root becomes visible
+  regardless, so a script that never loads cannot leave a blank page. The fail-open is a
+  visibility switch, not motion, so it needs no reduced-motion branch. Only light-DOM descendants
+  are seen; for a single element use `lr-fouce-hidden`.
 
 `lr-fouce-hidden` hides only an opted-in custom element while it matches `:not(:defined)`, then
 reveals it automatically after registration. `lr-visually-hidden-focusable` becomes visible on
@@ -2702,6 +2820,33 @@ the surface layer and disables Glass in the same way as an unlayered rule. Keep 
 `background` rules off `.lr-surface-chrome` elements, or exclude them with
 `:not(.lr-surface-chrome)`. See [Cascade layers](./shared/styles-and-tokens.md#cascade-layers) for the full
 order.
+
+### Native control extensions
+
+Inside `.lr-native`, `native.css` also styles: **checkbox, radio and range** (`accent-color` from the
+brand token, a `--lr-native-check-size` box, hover shifts to the loud border tone); **colour and file
+inputs** (control border and radius, a styled `::file-selector-button`, pointer cursor with hover);
+**`progress` and `meter`** (a pill track of `--lr-native-meter-block-size`, brand bar, semantic
+optimum/sub-optimum/even-less-good meter colours); **`details`/`summary`** (subtle bounded block, open
+rule under the summary); **`dialog`** (overlay surface, container radius, `--lr-color-overlay` scrim);
+**`mark`** (quiet warning fill and its paired foreground); and **lists** (`--lr-native-list-indent`
+logical start inset, quiet markers). Disabled controls use `not-allowed`, every control shows the
+shared focus ring, and `forced-colors: active` maps accents and bars to system colours. Dark mode
+follows the tokens.
+
+### Hue palette
+
+```css
+@import "@aceshooting/lyra-ui/palette.css";
+```
+
+Declares static `--lr-color-<hue>-<step>` ramps on `:root` and every `[data-lr-theme-scope]`, for
+hues `gray`, `red`, `orange`, `yellow`, `green`, `cyan`, `blue`, `purple` and `pink` and steps `05 10
+20 30 40 50 60 70 80 90 95` (near-black to near-white). `gray`, `red`, `orange`, `green` and `blue`
+are the neutral, danger, warning, success and brand tooling ramps; the others are the brand ramp
+rotated in hue at the same lightness. The values do not change with light/dark mode: use them for
+tags, charts, avatars and illustrations, and keep UI chrome on the semantic grid. To recolour the
+semantic roles themselves, use `setLyraStyle({ accent: { success, warning, danger, neutral } })`.
 
 ## Localization: `locale`, `strings`, and the locale runtime
 
@@ -4137,7 +4282,18 @@ boolean; set defaultChecked(next: boolean) }`.
   `RecencyBucket<T> { label; items }`.
   The callable signature is `groupByRecency<T>(items: T[], options?:
 GroupByRecencyOptions<T>): RecencyBucket<T>[]`.
-- **`defined` → `allDefined(root?, options?): Promise<void>`** — iteratively waits for every
+- **`allDefined({ match?, additionalElements?, root?, timeout? })`** — options form of the helper
+  below. Without `match` it waits like the root form; with `match` it waits for every undefined
+  element under `root` (default `document`) whose lowercase tag the function accepts.
+  `additionalElements` (a tag or tags) names elements that may not be on the page yet. After
+  `timeout` ms (default `2000`, `Infinity` disables it) it logs a console warning listing the tags
+  still undefined and resolves anyway. A negative or `NaN` timeout throws `RangeError`. The
+  `(root, options)` form never times out.
+- **`form` → `serialize(form): Record<string, FormDataEntryValue | FormDataEntryValue[]>`** — a
+  form's successful controls as a plain object; a name that occurs more than once becomes an array
+  in document order (`serializeFormData(formData)` is the same fold over any `FormData`). The result
+  has a `null` prototype, so a field named `__proto__` is just a key.
+- **`defined` → `allDefined(root?, options?): Promise<void>`** —- **`defined` → `allDefined(root?, options?): Promise<void>`** — iteratively waits for every
   currently rendered, inventory-known Lyra tag below a `Document`, `DocumentFragment`/open
   `ShadowRoot`, or `Element` to be defined in its owning/scoped registry. It also waits for each
   available `updateComplete`, then repeats so tags created by that first render are included. Open

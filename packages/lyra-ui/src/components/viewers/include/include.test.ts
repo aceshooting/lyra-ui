@@ -787,6 +787,39 @@ describe('lr-include', () => {
     }
   });
 
+  it('includes the whole sanitized document with without-fragment, ignoring a remote hash', async () => {
+    const original = window.fetch;
+    window.fetch = (() =>
+      Promise.resolve(response('<p id="wanted">Wanted</p><p>Other</p><script>window.__x = 1</script>'))) as typeof window.fetch;
+    try {
+      const whole = await fixture<LyraInclude>(html`
+        <lr-include without-fragment src="https://example.test/whole.html#wanted"></lr-include>
+      `);
+      await waitUntil(() => whole.querySelector('p') !== null);
+      expect(whole.querySelectorAll('p').length).to.equal(2);
+      expect(whole.querySelector('script') === null).to.equal(true);
+      const missing = await fixture<LyraInclude>(html`
+        <lr-include without-fragment src="https://example.test/whole.html#absent"></lr-include>
+      `);
+      await waitUntil(() => missing.querySelector('p') !== null);
+      expect(missing.querySelectorAll('p').length).to.equal(2);
+      whole.withoutFragment = false;
+      await whole.updateComplete;
+      await waitUntil(() => whole.textContent === 'Wanted');
+      expect(whole.textContent).to.equal('Wanted');
+    } finally {
+      window.fetch = original;
+    }
+  });
+
+  it('does not affect a same-page #id source', async () => {
+    const host = await fixture<HTMLDivElement>(html`
+      <div><p id="local-source">Local</p><lr-include without-fragment src="#local-source"></lr-include></div>
+    `);
+    const el = host.querySelector('lr-include') as LyraInclude;
+    await waitUntil(() => el.textContent === 'Local');
+  });
+
   it('deduplicates sanitized requests and keeps shared work alive for a connected subscriber', async () => {
     const original = window.fetch;
     let calls = 0;

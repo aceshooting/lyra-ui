@@ -150,6 +150,43 @@ function safeZoomableFrameSandbox(value: unknown): string {
   return tokens.join(' ');
 }
 
+/** Permissions Policy features a preview may opt into through `allow`. Powerful or privacy
+ * sensitive features (camera, microphone, geolocation, payment, ...) are never forwarded. */
+const ALLOWED_PERMISSION_FEATURES: ReadonlySet<string> = new Set([
+  'accelerometer',
+  'autoplay',
+  'clipboard-write',
+  'encrypted-media',
+  'fullscreen',
+  'gyroscope',
+  'magnetometer',
+  'picture-in-picture',
+  'web-share',
+]);
+
+/** Narrows an `allow` Permissions Policy list to the safe feature set, each restricted to the
+ * `'self'`/`'src'`/`'none'` allowlist keywords (no `*`, no foreign origins). `allow` never touches
+ * the sandbox policy; the sandbox attribute stays the sole authority over scripts, forms, popups,
+ * downloads and navigation. Returns `null` when nothing survives. */
+function safeZoomableFrameAllow(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const directives: string[] = [];
+  for (const raw of value.split(';')) {
+    const [feature, ...rest] = raw.trim().toLowerCase().split(/\s+/);
+    if (!feature || !ALLOWED_PERMISSION_FEATURES.has(feature)) continue;
+    const allowlist = rest.filter(token => token === "'self'" || token === "'src'" || token === "'none'");
+    directives.push([feature, ...new Set(allowlist)].join(' '));
+  }
+  return directives.length > 0 ? directives.join('; ') : null;
+}
+
+/** A browsing-context name, or `null` for blank or reserved (`_`-prefixed) keywords. */
+function safeFrameName(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const name = value.trim();
+  return name === '' || name.startsWith('_') ? null : name;
+}
+
 function safeLoading(value: unknown): LyraZoomableFrameLoading {
   return value === 'lazy' ? 'lazy' : 'eager';
 }
@@ -215,6 +252,10 @@ export interface LyraZoomableFrameEventMap {
  * context boundary. Zoom-control focus does not enter that browsing context; transitions between
  * a zoom control and the iframe retain one balanced native focus/blur relay pair.
  *
+ * `allow` is filtered to a short list of low-risk Permissions Policy features and never alters the
+ * sandbox policy; `name` makes the frame a link/form target; `label` names the frame (a host
+ * `aria-label` still wins).
+ *
  * @customElement lr-zoomable-frame
  * @slot zoom-in-icon - Override for the decorative zoom-in glyph. Its flattened subtree is inert
  *   and hidden from assistive technology; the native zoom-in button remains the sole action.
@@ -275,6 +316,17 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
   @property() srcdoc = '';
   /** Forwards the native fullscreen opt-in to the iframe. */
   @property({ type: Boolean }) allowfullscreen = false;
+  /** Permissions Policy for the framed document. Filtered: only `accelerometer`, `autoplay`,
+   * `clipboard-write`, `encrypted-media`, `fullscreen`, `gyroscope`, `magnetometer`,
+   * `picture-in-picture` and `web-share` survive, each limited to the `'self'`, `'src'` and `'none'`
+   * keywords. It never alters the sandbox policy. */
+  @property() allow = '';
+  /** Browsing-context name, so links and forms can target the frame with `target="<name>"`.
+   * Blank values and reserved `_`-prefixed keywords are ignored. */
+  @property() name = '';
+  /** Accessible name (iframe title). A host `aria-label` wins; blank falls back to the localized
+   * default. */
+  @property() label = '';
   /** Controls native iframe loading behavior. Invalid runtime values fall back to `eager`. */
   @property() loading: LyraZoomableFrameLoading = 'eager';
   /** Native iframe referrer policy. Invalid non-empty values fail closed to `no-referrer`. */
@@ -525,7 +577,8 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
     super.willUpdate(changed);
     if (
       changed.has('src') || changed.has('srcdoc') || changed.has('allowfullscreen') ||
-      changed.has('loading') || changed.has('referrerpolicy') || changed.has('sandbox')
+      changed.has('loading') || changed.has('referrerpolicy') || changed.has('sandbox') ||
+      changed.has('allow')
     ) {
       const frame = this.iframe;
       const wasFocused = this.frameIsActive(frame);
@@ -611,6 +664,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
       safeLoading(this.loading),
       safeReferrerPolicy(this.referrerpolicy),
       safeZoomableFrameSandbox(this.sandbox),
+      safeZoomableFrameAllow(this.allow),
     ]);
   }
 
@@ -867,7 +921,7 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
     const inline = this.hasInlineDocument;
     const src = inline ? null : safeZoomableFrameSrc(this.src);
     const referrerPolicy = safeReferrerPolicy(this.referrerpolicy);
-    const label = resolveAccessibleName(this, this.localize('zoomableFrameLabel'))!;
+    const label = resolveAccessibleName(this, this.label, this.localize('zoomableFrameLabel'))!;
     const zoom = this.safeZoom;
     const frame = html`<iframe
       part="iframe"
@@ -875,6 +929,8 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
       src=${src ?? nothing}
       .srcdoc=${inline ? this.srcdoc : nothing}
       ?allowfullscreen=${this.allowfullscreen}
+      allow=${safeZoomableFrameAllow(this.allow) ?? nothing}
+      name=${safeFrameName(this.name) ?? nothing}
       loading=${safeLoading(this.loading)}
       referrerpolicy=${referrerPolicy ?? nothing}
       sandbox=${safeZoomableFrameSandbox(this.sandbox)}

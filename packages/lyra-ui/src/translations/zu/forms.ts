@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Thikha leli bhokisi ukuze uqhubeke.',
   checkboxGroupRequired: 'Khetha okungenani inketho eyodwa.',
   tokenInputRequired: 'Faka okungenani inani elilodwa.',
+  tokenInputTooFew: {
+    one: 'Faka okungenani inani elingu-{count}.',
+    other: 'Faka okungenani amanani angu-{count}.',
+  },
+  tokenInputTooMany: {
+    one: 'Ungafaki inani elingaphezu kuka-{count}.',
+    other: 'Ungafaki amanani angaphezu kuka-{count}.',
+  },
   tokenInputEditWithContext: 'Hlela u-{label}',
   tokenInputLabel: 'Amathokheni',
   iconButtonLabel: 'Inkinobho',

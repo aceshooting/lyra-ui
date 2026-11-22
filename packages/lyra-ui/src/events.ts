@@ -221,6 +221,7 @@ import type { LyraSourceCardEventMap } from './components/retrieval/source-card/
 import type { LyraSourceListEventMap } from './components/retrieval/source-list/source-list.class.js';
 import type { LyraSourcePickerEventMap } from './components/retrieval/source-picker/source-picker.class.js';
 import type { LyraCopyButtonEventMap } from './components/utility/copy-button/copy-button.class.js';
+import type { LyraCounterEventMap } from './components/utility/counter/counter.class.js';
 import type { LyraDiffViewEventMap } from './components/utility/diff-view/diff-view.class.js';
 import type { LyraExportButtonEventMap } from './components/utility/export-button/export-button.class.js';
 import type { LyraIconEventMap } from './components/utility/icon/icon.class.js';
@@ -229,6 +230,7 @@ import type { LyraJsonViewerEventMap } from './components/utility/json-viewer/js
 import type { LyraKnownDateEventMap } from './components/utility/known-date/known-date.class.js';
 import type { LyraMentionPopoverEventMap } from './components/utility/mention-popover/mention-popover.class.js';
 import type { LyraMutationObserverEventMap } from './components/utility/mutation-observer/mutation-observer.class.js';
+import type { LyraNumberTickerEventMap } from './components/utility/number-ticker/number-ticker.class.js';
 import type { LyraPollStatusEventMap } from './components/utility/poll-status/poll-status.class.js';
 import type { LyraRandomContentEventMap } from './components/utility/random-content/random-content.class.js';
 import type { LyraResizeObserverEventMap } from './components/utility/resize-observer/resize-observer.class.js';
@@ -534,6 +536,12 @@ export type LyraBeforePageChangeEvent =
 export type LyraBeforePageSizeChangeEvent = LyraPaginationEventMap['lr-before-page-size-change'];
 
 /**
+ * `lr-before-step-change` — dispatched by `<lr-stepper>`; detail
+ * `LyraStepperEventMap['lr-before-step-change']`.
+ */
+export type LyraBeforeStepChangeEvent = LyraStepperEventMap['lr-before-step-change'];
+
+/**
  * `lr-branch-change` — dispatched by `<lr-branch-picker>`; detail
  * `LyraBranchPickerEventMap['lr-branch-change']`.
  */
@@ -798,11 +806,11 @@ export type LyraClaimSelectEvent =
   | LyraRagAnswerEventMap['lr-claim-select'];
 
 /**
- * `lr-clear` — dispatched by 14 components: `<lr-combobox>`, `<lr-country-picker>`,
+ * `lr-clear` — dispatched by 15 components: `<lr-combobox>`, `<lr-country-picker>`,
  * `<lr-currency-picker>`, `<lr-date-input>`, `<lr-date-picker>`, `<lr-input>`,
  * `<lr-native-time-input>`, `<lr-number-input>`, `<lr-otp-input>`, `<lr-select>`,
- * `<lr-signature-pad>`, `<lr-time-input>`, `<lr-time-zone-picker>`, `<lr-unit-picker>`; detail
- * union of 8, e.g. `LyraComboboxEventMap['lr-clear']`.
+ * `<lr-signature-pad>`, `<lr-time-input>`, `<lr-time-zone-picker>`, `<lr-token-input>`,
+ * `<lr-unit-picker>`; detail union of 9, e.g. `LyraComboboxEventMap['lr-clear']`.
  */
 export type LyraClearEvent =
   | LyraComboboxEventMap['lr-clear']
@@ -812,7 +820,8 @@ export type LyraClearEvent =
   | LyraOtpInputEventMap['lr-clear']
   | LyraSelectEventMap['lr-clear']
   | LyraSignaturePadEventMap['lr-clear']
-  | LyraTimeInputEventMap['lr-clear'];
+  | LyraTimeInputEventMap['lr-clear']
+  | LyraTokenInputEventMap['lr-clear'];
 
 /**
  * `lr-close` — dispatched by 13 components: `<lr-alert>`, `<lr-callout>`, `<lr-command-palette>`,
@@ -1004,9 +1013,12 @@ export type LyraCopyErrorEvent =
   | LyraXmlViewerEventMap['lr-copy-error'];
 
 /**
- * `lr-create` — dispatched by `<lr-combobox>`; detail `LyraComboboxEventMap['lr-create']`.
+ * `lr-create` — dispatched by 2 components: `<lr-combobox>`, `<lr-token-input>`; detail union of
+ * 2, e.g. `LyraComboboxEventMap['lr-create']`.
  */
-export type LyraCreateEvent = LyraComboboxEventMap['lr-create'];
+export type LyraCreateEvent =
+  | LyraComboboxEventMap['lr-create']
+  | LyraTokenInputEventMap['lr-create'];
 
 /**
  * `lr-cue-change` — dispatched by `<lr-av-player>`; detail
@@ -1421,9 +1433,13 @@ export type LyraFilterRequestEvent = LyraTestResultsEventMap['lr-filter-request'
 export type LyraFiltersChangeEvent = LyraRetrievalSearchEventMap['lr-filters-change'];
 
 /**
- * `lr-finish` — dispatched by `<lr-animation>`; detail `LyraAnimationEventMap['lr-finish']`.
+ * `lr-finish` — dispatched by 3 components: `<lr-animation>`, `<lr-counter>`,
+ * `<lr-number-ticker>`; detail union of 3, e.g. `LyraAnimationEventMap['lr-finish']`.
  */
-export type LyraFinishEvent = LyraAnimationEventMap['lr-finish'];
+export type LyraFinishEvent =
+  | LyraAnimationEventMap['lr-finish']
+  | LyraCounterEventMap['lr-finish']
+  | LyraNumberTickerEventMap['lr-finish'];
 
 /**
  * `lr-fit-change` — dispatched by `<lr-image-viewer>`; detail
@@ -1749,6 +1765,12 @@ export type LyraItemActionEvent = LyraIngestionQueueEventMap['lr-item-action'];
  * `LyraSequenceStripEventMap['lr-item-activate']`.
  */
 export type LyraItemActivateEvent = LyraSequenceStripEventMap['lr-item-activate'];
+
+/**
+ * `lr-item-change` — dispatched by `<lr-lightbox>`; detail
+ * `LyraLightboxEventMap['lr-item-change']`.
+ */
+export type LyraItemChangeEvent = LyraLightboxEventMap['lr-item-change'];
 
 /**
  * `lr-layout-change` — dispatched by 2 components: `<lr-dashboard-grid>`, `<lr-flow-canvas>`;
@@ -2375,6 +2397,18 @@ export type LyraOpenEvent =
  * `LyraOptionEventMap['lr-option-change']`.
  */
 export type LyraOptionChangeEvent = LyraOptionEventMap['lr-option-change'];
+
+/**
+ * `lr-options-error` — dispatched by `<lr-combobox>`; detail
+ * `LyraComboboxEventMap['lr-options-error']`.
+ */
+export type LyraOptionsErrorEvent = LyraComboboxEventMap['lr-options-error'];
+
+/**
+ * `lr-options-request` — dispatched by `<lr-combobox>`; detail
+ * `LyraComboboxEventMap['lr-options-request']`.
+ */
+export type LyraOptionsRequestEvent = LyraComboboxEventMap['lr-options-request'];
 
 /**
  * `lr-overflow` — dispatched by `<lr-terminal>`; detail `LyraTerminalEventMap['lr-overflow']`.
@@ -3442,6 +3476,11 @@ export type LyraStartEvent = LyraAnimationEventMap['lr-start'];
 export type LyraStatusChangeEvent = LyraToolResultViewEventMap['lr-status-change'];
 
 /**
+ * `lr-step-change` — dispatched by `<lr-stepper>`; detail `LyraStepperEventMap['lr-step-change']`.
+ */
+export type LyraStepChangeEvent = LyraStepperEventMap['lr-step-change'];
+
+/**
  * `lr-step-select` — dispatched by `<lr-stepper>`; detail `LyraStepperEventMap['lr-step-select']`.
  */
 export type LyraStepSelectEvent = LyraStepperEventMap['lr-step-select'];
@@ -3979,6 +4018,7 @@ export interface LyraGlobalEventMap {
   'lr-autoload-traversal-error': LyraAutoloadTraversalErrorEvent;
   'lr-before-page-change': LyraBeforePageChangeEvent;
   'lr-before-page-size-change': LyraBeforePageSizeChangeEvent;
+  'lr-before-step-change': LyraBeforeStepChangeEvent;
   'lr-branch-change': LyraBranchChangeEvent;
   'lr-bulk-toggle': LyraBulkToggleEvent;
   'lr-calendar-geometry-change': LyraCalendarGeometryChangeEvent;
@@ -4113,6 +4153,7 @@ export interface LyraGlobalEventMap {
   'lr-invalid': LyraInvalidEvent;
   'lr-item-action': LyraItemActionEvent;
   'lr-item-activate': LyraItemActivateEvent;
+  'lr-item-change': LyraItemChangeEvent;
   'lr-layout-change': LyraLayoutChangeEvent;
   'lr-lazy-change': LyraLazyChangeEvent;
   'lr-lazy-load': LyraLazyLoadEvent;
@@ -4207,6 +4248,8 @@ export interface LyraGlobalEventMap {
   'lr-node-toggle': LyraNodeToggleEvent;
   'lr-open': LyraOpenEvent;
   'lr-option-change': LyraOptionChangeEvent;
+  'lr-options-error': LyraOptionsErrorEvent;
+  'lr-options-request': LyraOptionsRequestEvent;
   'lr-overflow': LyraOverflowEvent;
   'lr-overflow-activate': LyraOverflowActivateEvent;
   'lr-overflow-toggle': LyraOverflowToggleEvent;
@@ -4342,6 +4385,7 @@ export interface LyraGlobalEventMap {
   'lr-stall': LyraStallEvent;
   'lr-start': LyraStartEvent;
   'lr-status-change': LyraStatusChangeEvent;
+  'lr-step-change': LyraStepChangeEvent;
   'lr-step-select': LyraStepSelectEvent;
   'lr-stepper-orientation-change': LyraStepperOrientationChangeEvent;
   'lr-stop': LyraStopEvent;

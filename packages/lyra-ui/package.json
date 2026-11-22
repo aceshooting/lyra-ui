@@ -349,6 +349,7 @@
     "./components/layout/scroller/scroller.class.js": "./dist/components/layout/scroller/scroller.class.js",
     "./components/layout/segmented/segmented.class.js": "./dist/components/layout/segmented/segmented.class.js",
     "./components/layout/split-panel/split-panel.class.js": "./dist/components/layout/split-panel/split-panel.class.js",
+    "./components/layout/stepper/step.class.js": "./dist/components/layout/stepper/step.class.js",
     "./components/layout/stepper/stepper.class.js": "./dist/components/layout/stepper/stepper.class.js",
     "./components/layout/tab-group/tab-group.class.js": "./dist/components/layout/tab-group/tab-group.class.js",
     "./components/layout/tab-group/tab-panel.class.js": "./dist/components/layout/tab-group/tab-panel.class.js",
@@ -658,6 +659,10 @@
     "./components/lr-copy-button.js": {
       "types": "./dist/components/lr-copy-button.d.ts",
       "default": "./dist/components/lr-copy-button.js"
+    },
+    "./components/lr-counter.js": {
+      "types": "./dist/components/lr-counter.d.ts",
+      "default": "./dist/components/lr-counter.js"
     },
     "./components/lr-country-picker.js": {
       "types": "./dist/components/lr-country-picker.d.ts",
@@ -975,6 +980,10 @@
       "types": "./dist/components/lr-known-date.d.ts",
       "default": "./dist/components/lr-known-date.js"
     },
+    "./components/lr-lightbox-item.js": {
+      "types": "./dist/components/lr-lightbox-item.d.ts",
+      "default": "./dist/components/lr-lightbox-item.js"
+    },
     "./components/lr-lightbox.js": {
       "types": "./dist/components/lr-lightbox.d.ts",
       "default": "./dist/components/lr-lightbox.js"
@@ -1110,6 +1119,10 @@
     "./components/lr-number-input.js": {
       "types": "./dist/components/lr-number-input.d.ts",
       "default": "./dist/components/lr-number-input.js"
+    },
+    "./components/lr-number-ticker.js": {
+      "types": "./dist/components/lr-number-ticker.d.ts",
+      "default": "./dist/components/lr-number-ticker.js"
     },
     "./components/lr-option.js": {
       "types": "./dist/components/lr-option.d.ts",
@@ -1387,6 +1400,10 @@
       "types": "./dist/components/lr-stat.d.ts",
       "default": "./dist/components/lr-stat.js"
     },
+    "./components/lr-step.js": {
+      "types": "./dist/components/lr-step.d.ts",
+      "default": "./dist/components/lr-step.js"
+    },
     "./components/lr-stepper.js": {
       "types": "./dist/components/lr-stepper.d.ts",
       "default": "./dist/components/lr-stepper.js"
@@ -1642,6 +1659,7 @@
     "./components/media/flag/language-map.js": "./dist/components/media/flag/language-map.js",
     "./components/media/image-comparer/image-comparer.class.js": "./dist/components/media/image-comparer/image-comparer.class.js",
     "./components/media/image-viewer/image-viewer.class.js": "./dist/components/media/image-viewer/image-viewer.class.js",
+    "./components/media/lightbox/lightbox-item.class.js": "./dist/components/media/lightbox/lightbox-item.class.js",
     "./components/media/lightbox/lightbox.class.js": "./dist/components/media/lightbox/lightbox.class.js",
     "./components/media/map/map-anchor.class.js": "./dist/components/media/map/map-anchor.class.js",
     "./components/media/map/map-loader.js": "./dist/components/media/map/map-loader.js",
@@ -1715,6 +1733,7 @@
     "./components/retrieval/source-picker/source-picker.class.js": "./dist/components/retrieval/source-picker/source-picker.class.js",
     "./components/utility": "./dist/components/utility/index.js",
     "./components/utility/copy-button/copy-button.class.js": "./dist/components/utility/copy-button/copy-button.class.js",
+    "./components/utility/counter/counter.class.js": "./dist/components/utility/counter/counter.class.js",
     "./components/utility/diff-view/diff-view.class.js": "./dist/components/utility/diff-view/diff-view.class.js",
     "./components/utility/divider/divider.class.js": "./dist/components/utility/divider/divider.class.js",
     "./components/utility/export-button/csv.js": "./dist/components/utility/export-button/csv.js",
@@ -1731,6 +1750,7 @@
     "./components/utility/live-region/live-region.class.js": "./dist/components/utility/live-region/live-region.class.js",
     "./components/utility/mention-popover/mention-popover.class.js": "./dist/components/utility/mention-popover/mention-popover.class.js",
     "./components/utility/mutation-observer/mutation-observer.class.js": "./dist/components/utility/mutation-observer/mutation-observer.class.js",
+    "./components/utility/number-ticker/number-ticker.class.js": "./dist/components/utility/number-ticker/number-ticker.class.js",
     "./components/utility/poll-status/poll-status.class.js": "./dist/components/utility/poll-status/poll-status.class.js",
     "./components/utility/random-content/random-content.class.js": "./dist/components/utility/random-content/random-content.class.js",
     "./components/utility/resize-observer/resize-observer.class.js": "./dist/components/utility/resize-observer/resize-observer.class.js",
@@ -1785,6 +1805,7 @@
     "./translations/pseudo/en-XA.js": "./dist/translations/pseudo/en-XA.js",
     "./localization.js": "./dist/localization.js",
     "./events": "./dist/events.js",
+    "./event-classes": "./dist/event-classes.js",
     "./utilities": "./dist/utilities/index.js",
     "./utilities/*": null,
     "./utilities/a11y.js": "./dist/utilities/a11y.js",
@@ -1798,6 +1819,7 @@
     "./utilities/defined.js": "./dist/utilities/defined.js",
     "./utilities/deprecated-aliases.js": "./dist/utilities/deprecated-aliases.js",
     "./utilities/form-associated.js": "./dist/utilities/form-associated.js",
+    "./utilities/form.js": "./dist/utilities/form.js",
     "./utilities/format.js": "./dist/utilities/format.js",
     "./utilities/group-by-recency.js": "./dist/utilities/group-by-recency.js",
     "./utilities/icons.js": "./dist/utilities/icons.js",
@@ -1850,6 +1872,7 @@
     "./reservations.css": "./dist/styles/reservations.css",
     "./reservations.styles.js": "./dist/styles/reservations.styles.js",
     "./utilities.css": "./dist/styles/utilities.css",
+    "./palette.css": "./dist/styles/palette.css",
     "./testing": {
       "types": "./dist/testing/index.d.ts",
       "default": "./dist/testing/index.js"
@@ -1982,6 +2005,7 @@
     "./dist/ssr/all.js",
     "./dist/styles/design-tokens.css",
     "./dist/styles/native.css",
+    "./dist/styles/palette.css",
     "./dist/styles/reservations.css",
     "./dist/styles/tokens-root.css",
     "./dist/styles/utilities.css",
@@ -2050,6 +2074,7 @@
     "./src/ssr/all.ts",
     "./src/styles/design-tokens.css",
     "./src/styles/native.css",
+    "./src/styles/palette.css",
     "./src/styles/reservations.css",
     "./src/styles/tokens-root.css",
     "./src/styles/utilities.css",
@@ -2093,6 +2118,8 @@
     "test:component-inventory": "node --test scripts/component-inventory.test.mjs && node --test scripts/accessor-write-types.test.mjs && node --test scripts/pro-public-reviews.test.mjs",
     "check:pinned-upstream-manifests": "node scripts/check-pinned-upstream-manifests.mjs",
     "test:pinned-upstream-manifests": "node --test scripts/check-pinned-upstream-manifests.test.mjs",
+    "check:upstream-drift": "node scripts/check-upstream-drift.mjs",
+    "test:upstream-drift": "node --test scripts/check-upstream-drift.test.mjs",
     "autoloader-manifest": "node scripts/generate-autoloader-manifest.mjs",
     "check:autoloader-manifest": "node scripts/generate-autoloader-manifest.mjs --check",
     "test:autoloader-manifest": "node scripts/generate-autoloader-manifest.test.mjs",
@@ -2202,7 +2229,7 @@
     "test:host-token-declarations": "node --test scripts/check-host-token-declarations.test.mjs scripts/css-declarations.test.mjs scripts/document-token-layer.test.mjs",
     "generate-reservation-styles": "node scripts/generate-reservation-styles.mjs",
     "check:reservation-styles": "node scripts/generate-reservation-styles.mjs --check",
-    "test:design-tokens": "node scripts/design-tokens.test.mjs && node scripts/design-token-editor.test.mjs && node scripts/pseudo-locales-package.test.mjs",
+    "test:design-tokens": "node scripts/hue-palette.test.mjs && node scripts/design-tokens.test.mjs && node scripts/design-token-editor.test.mjs && node scripts/pseudo-locales-package.test.mjs",
     "generate-editor-data": "node scripts/generate-editor-data.mjs",
     "llms": "node scripts/build-llms.mjs",
     "check:llms-defaults": "node scripts/check-llms-defaults.mjs",
@@ -2213,7 +2240,7 @@
     "test:migrate-wa": "node scripts/migrate-wa.test.mjs && node --test scripts/lyra-rename-ledger.test.mjs",
     "check:regen-coverage": "node scripts/check-regen-coverage.mjs",
     "test:regen-coverage": "node --test scripts/check-regen-coverage.test.mjs",
-    "contract-policy": "pnpm run check:changelog-archive && pnpm run check:script-paths && pnpm run test:script-paths && pnpm run test:docs-pins && pnpm run check:package-exports && pnpm run test:package-exports && pnpm run check:doc-specifiers && pnpm run test:doc-specifiers && pnpm run check:doc-version-references && pnpm run test:doc-version-references && pnpm run check:package-metadata && pnpm run test:package-metadata && pnpm run test:public-api && pnpm run style-policy && pnpm run check:source-policy && pnpm run check:lifecycle-super && pnpm run test:lifecycle-super && pnpm run check:persisted-restore && pnpm run test:persisted-restore && pnpm run check:test-assertions && pnpm run check:part-reachability && pnpm run test:part-reachability && pnpm run provenance-policy && pnpm run test:provenance && pnpm run contract-checklist && node scripts/check-component-coverage.mjs && pnpm run check:published-compatibility && pnpm run test:published-compatibility && node scripts/check-migration-coverage.mjs && node scripts/check-token-references.mjs && node scripts/check-contrast.mjs && pnpm run manifest:check && pnpm run manifest:coverage && pnpm run check:manifest-companions && pnpm run check:framework-types && pnpm run test:framework-types && pnpm run llms-freshness && pnpm run llms:check && pnpm run check:llms-defaults && pnpm run test:llms-defaults && pnpm run check:component-inventory && pnpm run test:component-inventory && pnpm run test:pinned-upstream-manifests && pnpm run check:component-metadata && pnpm run test:component-metadata && pnpm run check:autoloader-manifest && pnpm run test:autoloader-manifest && pnpm run check:tag-aliases && pnpm run test:tag-aliases && pnpm run test:registrations && pnpm run test:architecture && pnpm run check:development-conditions && pnpm run check-side-effects && pnpm run test:side-effects && pnpm run check:form-associated && pnpm run test:form-associated && pnpm run check:component-dependencies && pnpm run test:component-dependencies && pnpm run check:registration-graph && pnpm run test:registration-graph && pnpm run check:scoped-definitions && pnpm run test:scoped-definitions && pnpm run check:testing-event-registry && pnpm run check:composed-child-contracts && pnpm run test:composed-child-contracts && pnpm run check:visual-manifest && pnpm run test:visual-manifest-source && pnpm run check:component-quality && pnpm run test:package-size && pnpm run check:qualification && pnpm run test:qualification && pnpm run check:event-barrel && pnpm run check:event-contracts && pnpm run test:event-contracts && pnpm run check:event-types && pnpm run check:collection-event-ownership && pnpm run check:cycles && pnpm run check:architecture && pnpm run check:oxlint && pnpm run check:lit-bases && pnpm run test:lit-lint && pnpm run check:interaction-states && pnpm run test:interaction-states && pnpm run check:veto-write-guard && pnpm run test:veto-write-guard && pnpm run check:value-named-tokens && pnpm run check:style-axes && pnpm run check:option-presets && pnpm run check:design-tokens && pnpm run check:host-token-declarations && pnpm run test:host-token-declarations && pnpm run check:theme-scopes && pnpm run check:reservation-styles && pnpm run test:design-tokens && pnpm run check:hit-area && pnpm run test:hit-area && pnpm run check:border-subtle && pnpm run test:border-subtle && pnpm run check:custom-property-cycles && pnpm run test:custom-property-cycles && pnpm run check:visually-hidden && pnpm run test:visually-hidden && pnpm run check:numeric-guards && pnpm run test:numeric-guards && pnpm run check:blank-numeric-attributes && pnpm run test:blank-numeric-attributes && pnpm run check:palette-freshness && pnpm run check:localization-catalogs && pnpm run test:default-string-slices && pnpm run test:cldr-plural-categories && pnpm run check:translation-review-fixture && pnpm run test:translation-review-source && pnpm run check:locale-manifest && pnpm run test:locale-manifest && pnpm run test:translation-slices && pnpm run check:default-strings && pnpm run test:translation-catalog-size && pnpm run test:translation-reviews && pnpm run check:style-vocabulary && pnpm run test:style-vocabulary && pnpm run test:default-strings && pnpm run test:tooling && pnpm run check:duplication && pnpm run test:duplication && pnpm run check:llms-root-barrel && pnpm run test:llms-root-barrel && pnpm run test:llms-gaps && pnpm run check:regen-coverage && pnpm run test:regen-coverage",
+    "contract-policy": "pnpm run check:changelog-archive && pnpm run check:script-paths && pnpm run test:script-paths && pnpm run test:docs-pins && pnpm run check:package-exports && pnpm run test:package-exports && pnpm run check:doc-specifiers && pnpm run test:doc-specifiers && pnpm run check:doc-version-references && pnpm run test:doc-version-references && pnpm run check:package-metadata && pnpm run test:package-metadata && pnpm run test:public-api && pnpm run style-policy && pnpm run check:source-policy && pnpm run check:lifecycle-super && pnpm run test:lifecycle-super && pnpm run check:persisted-restore && pnpm run test:persisted-restore && pnpm run check:test-assertions && pnpm run check:part-reachability && pnpm run test:part-reachability && pnpm run provenance-policy && pnpm run test:provenance && pnpm run contract-checklist && node scripts/check-component-coverage.mjs && pnpm run check:published-compatibility && pnpm run test:published-compatibility && node scripts/check-migration-coverage.mjs && node scripts/check-token-references.mjs && node scripts/check-contrast.mjs && pnpm run manifest:check && pnpm run manifest:coverage && pnpm run check:manifest-companions && pnpm run check:framework-types && pnpm run test:framework-types && pnpm run llms-freshness && pnpm run llms:check && pnpm run check:llms-defaults && pnpm run test:llms-defaults && pnpm run check:component-inventory && pnpm run test:component-inventory && pnpm run test:pinned-upstream-manifests && pnpm run test:upstream-drift && pnpm run check:component-metadata && pnpm run test:component-metadata && pnpm run check:autoloader-manifest && pnpm run test:autoloader-manifest && pnpm run check:tag-aliases && pnpm run test:tag-aliases && pnpm run test:registrations && pnpm run test:architecture && pnpm run check:development-conditions && pnpm run check-side-effects && pnpm run test:side-effects && pnpm run check:form-associated && pnpm run test:form-associated && pnpm run check:component-dependencies && pnpm run test:component-dependencies && pnpm run check:registration-graph && pnpm run test:registration-graph && pnpm run check:scoped-definitions && pnpm run test:scoped-definitions && pnpm run check:testing-event-registry && pnpm run check:composed-child-contracts && pnpm run test:composed-child-contracts && pnpm run check:visual-manifest && pnpm run test:visual-manifest-source && pnpm run check:component-quality && pnpm run test:package-size && pnpm run check:qualification && pnpm run test:qualification && pnpm run check:event-barrel && pnpm run check:event-contracts && pnpm run test:event-contracts && pnpm run check:event-types && pnpm run check:collection-event-ownership && pnpm run check:cycles && pnpm run check:architecture && pnpm run check:oxlint && pnpm run check:lit-bases && pnpm run test:lit-lint && pnpm run check:interaction-states && pnpm run test:interaction-states && pnpm run check:veto-write-guard && pnpm run test:veto-write-guard && pnpm run check:value-named-tokens && pnpm run check:style-axes && pnpm run check:option-presets && pnpm run check:design-tokens && pnpm run check:host-token-declarations && pnpm run test:host-token-declarations && pnpm run check:theme-scopes && pnpm run check:reservation-styles && pnpm run test:design-tokens && pnpm run check:hit-area && pnpm run test:hit-area && pnpm run check:border-subtle && pnpm run test:border-subtle && pnpm run check:custom-property-cycles && pnpm run test:custom-property-cycles && pnpm run check:visually-hidden && pnpm run test:visually-hidden && pnpm run check:numeric-guards && pnpm run test:numeric-guards && pnpm run check:blank-numeric-attributes && pnpm run test:blank-numeric-attributes && pnpm run check:palette-freshness && pnpm run check:localization-catalogs && pnpm run test:default-string-slices && pnpm run test:cldr-plural-categories && pnpm run check:translation-review-fixture && pnpm run test:translation-review-source && pnpm run check:locale-manifest && pnpm run test:locale-manifest && pnpm run test:translation-slices && pnpm run check:default-strings && pnpm run test:translation-catalog-size && pnpm run test:translation-reviews && pnpm run check:style-vocabulary && pnpm run test:style-vocabulary && pnpm run test:default-strings && pnpm run test:tooling && pnpm run check:duplication && pnpm run test:duplication && pnpm run check:llms-root-barrel && pnpm run test:llms-root-barrel && pnpm run test:llms-gaps && pnpm run check:regen-coverage && pnpm run test:regen-coverage",
     "lint:ci-shard": "node scripts/lint-ci-shard.mjs",
     "lint": "pnpm run contract-policy && tsc --noEmit -p tsconfig.json && pnpm run test:types && pnpm run check:test-types",
     "archive-changelog": "node scripts/archive-changelog.mjs --write",

@@ -405,6 +405,10 @@ export interface LyraComboboxEventMap<Multiple extends boolean = boolean> {
   'lr-change-request': LyraComboboxEventMap<Multiple>['lr-change'];
   'lr-activate': CustomEvent<{ value: string }>;
   'lr-source-error': CustomEvent<{ error: unknown; query: string }>;
+  /** A `source` call is about to be made; `signal` aborts when the request is superseded. */
+  'lr-options-request': CustomEvent<{ query: string; signal: AbortSignal }>;
+  /** A `source` call rejected; same moment as `lr-source-error`, in the upstream detail shape. */
+  'lr-options-error': CustomEvent<{ error: unknown; request: { query: string } }>;
   'lr-retry-request': CustomEvent<null>;
   input: Event;
   change: Event;
@@ -519,10 +523,17 @@ export type LyraComboboxSourceErrorEvent =
  *   query, not necessarily `this.query`/`inputValue`, which may have moved on (or been cleared by
  *   closing the listbox) by the time the rejection settles. Not cancelable — the failure has
  *   already happened and the error row is already what rendered, so there is nothing to veto.
+ * @event lr-options-request - A `source` call is about to be made, once per call and after the
+ *   debounce. `detail: { query, signal }`; `signal` is the same `AbortSignal` the source receives and
+ *   aborts when a newer request supersedes this one, when `source` is reassigned, or when the control
+ *   is disconnected or adopted. Not cancelable. Emitted only while the call is still current.
+ * @event lr-options-error - An async `source` call rejected; fires with `lr-source-error`.
+ *   `detail: { error, request: { query } }`. Not cancelable.
  * @event lr-retry-request - Cancelable retry proposal before the default retry action. `detail: null`.
  *   The failed-load state's `[part='retry-button']` was activated. Cancelable —
  *   the built-in action calls `refresh()`, and `preventDefault()` leaves the failure on screen for
  *   a host that owns its own retry timing.
+ * @method reload - `reload(): void` -- alias of `refresh()`.
  * @method refresh - `refresh(): void` — re-runs the current `source` query without changing the
  *   source's identity, its debounce controller, or its delay. Queues for the next open when the
  *   listbox is closed; does not call a source while the query is below `minQueryLength`, and
@@ -792,6 +803,7 @@ export class LyraCombobox<
     },
     maxRender: { converter: blankNumberConverter(200), attribute: 'max-render', noAccessor: true },
     sourceDelay: { converter: blankNumberConverter(200), attribute: 'source-delay', noAccessor: true },
+    filterDebounce: { converter: blankNumberConverter(200), attribute: 'filter-debounce', noAccessor: true },
     minQueryLength: { converter: blankNumberConverter(0), attribute: 'min-query-length', noAccessor: true },
   };
 
@@ -1043,6 +1055,14 @@ export class LyraCombobox<
   /** Optional bounded async row source. Receives `{ signal, limit: 2000 }`; may return a legacy
    * readonly row array or `{ rows, total? }`. Results are clone-normalized under row/text ceilings. */
   @property({ attribute: false }) source: ComboboxSource | null = null;
+  /** Alias of {@link source}; assigning either replaces the other. */
+  @property({ attribute: false })
+  get dataSource(): ComboboxSource | null {
+    return this.source;
+  }
+  set dataSource(next: ComboboxSource | null) {
+    this.source = next;
+  }
 
   /** Web Awesome's boolean `autocorrect` IDL; its HTML attribute uses `on`/`off`. */
   @property({ converter: autocorrectConverter })
@@ -1751,6 +1771,14 @@ export class LyraCombobox<
     const old = this._sourceDelay;
     this._sourceDelay = finiteDuration(next, 200);
     this.requestUpdate('sourceDelay', old);
+  }
+
+  /** Alias of {@link sourceDelay} (attribute `filter-debounce`). */
+  get filterDebounce(): number {
+    return this.sourceDelay;
+  }
+  set filterDebounce(next: number) {
+    this.sourceDelay = next;
   }
 
   /** Minimum Unicode code points in the trimmed query before suggestions or source calls are
@@ -3215,6 +3243,11 @@ export class LyraCombobox<
     this.runSource(this.query, { immediate: true });
   }
 
+  /** Alias of {@link refresh}. */
+  reload(): void {
+    this.refresh();
+  }
+
   private runSource(query: string, options?: { immediate?: boolean }): void {
     const source = this.source;
     if (!source) return;
@@ -3271,6 +3304,8 @@ export class LyraCombobox<
     Promise.resolve()
       .then(() => {
         if (!isCurrent()) return undefined;
+        this.emit('lr-options-request', { query, signal: controller.signal });
+        if (!isCurrent()) return undefined;
         return source(query, { signal: controller.signal, limit: MAX_SOURCE_ROWS });
       })
       .then((result) => {
@@ -3308,6 +3343,7 @@ export class LyraCombobox<
         // rejection so a host can log or report it -- the rendered copy stays localized and never
         // leaks the message.
         this.emit('lr-source-error', { error: err, query });
+        this.emit('lr-options-error', { error: err, request: { query } });
         if (DEV_DIAGNOSTICS) devWarnOnce('lr-combobox-source-rejected', '<lr-combobox> source() rejected:', err);
       })
       .finally(() => {

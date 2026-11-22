@@ -63,6 +63,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'Fout',
   stepperStatePending: 'Niet gestart',
   stepperStateLocked: 'Vergrendeld',
+  stepperStateLoading: 'Laden',
+  stepperStateDisabled: 'Niet beschikbaar',
+  stepperSteps: 'Stappen',
+  stepperStepPosition: 'Stap {current} van {total}',
   commandPaletteInputLimit: 'Sommige opdrachten zijn weggelaten omdat de invoerlimiet is bereikt.',
 };
 

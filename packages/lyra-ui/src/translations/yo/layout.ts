@@ -62,6 +62,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'Àṣìṣe',
   stepperStatePending: 'Kò tíì bẹ̀rẹ̀',
   stepperStateLocked: 'Títì',
+  stepperStateLoading: 'Ń gbéwọlé',
+  stepperStateDisabled: 'Kò sí',
+  stepperSteps: 'Àwọn ìgbésẹ̀',
+  stepperStepPosition: 'Ìgbésẹ̀ {current} nínú {total}',
   commandPaletteInputLimit: 'A yọ àwọn àṣẹ kan kúrò nítorí a ti dé ààlà ìwọlé.',
 };
 

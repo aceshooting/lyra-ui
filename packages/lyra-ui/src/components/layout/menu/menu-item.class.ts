@@ -206,7 +206,7 @@ export interface LyraMenuItemEventMap {
  * checked` or `type="radio" checked`) row.
  * @cssprop [--lr-menu-item-color=inherit] - Foreground of a resting row; danger, disabled and
  *   checked rows keep their own colors.
- * @cssprop [--lr-menu-item-checked-color=var(--lr-menu-item-color)] - Foreground of a checked row.
+ * @cssprop [--lr-menu-item-checked-color=inherit] - Foreground of a checked row.
  * @cssprop [--lr-menu-item-checked-font-weight=inherit] - Font weight of a checked row.
  * @cssprop [--lr-menu-item-hover-bg=var(--lr-color-brand-quiet)] - Background of an enabled row
  * under the pointer. The pressed state mixes from this same value, so a retuned hover fill keeps

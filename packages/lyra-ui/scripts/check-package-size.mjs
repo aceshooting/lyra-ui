@@ -31,6 +31,7 @@ const COMPANIONS = Object.freeze({
   '@aceshooting/lyra-translations': { directory: 'lyra-translations', required: ['dist/side-effect-only.d.ts', 'dist/fr.js', 'dist/fr/forms.js'] },
   '@aceshooting/lyra-ide': { directory: 'lyra-ide', required: ['custom-elements.json', 'web-types.json', 'vscode-html-data.json', 'vscode-css-data.json'] },
   '@aceshooting/lyra-map': { directory: 'lyra-map', required: ['dist/index.mjs', 'dist/index.d.ts', 'dist/worker.mjs', 'dist/vite.mjs', 'dist/map.css', 'dist/provenance.json', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'UPSTREAM.json'] },
+  '@aceshooting/lyra-cdn': { directory: 'lyra-cdn', required: ['dist/lyra-ui.loader.js', 'dist/theme.css', 'dist/utilities.css', 'README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md'] },
   '@aceshooting/lyra-3d': { directory: 'lyra-3d', required: [
     'dist/core/index.js', 'dist/core/index.d.ts',
     'dist/graph/index.js', 'dist/graph/index.d.ts',

@@ -13,6 +13,16 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Означите ово поље ако желите да наставите.',
   checkboxGroupRequired: 'Изаберите бар једну опцију.',
   tokenInputRequired: 'Унесите бар једну вредност.',
+  tokenInputTooFew: {
+    one: 'Унесите најмање {count} вредност.',
+    few: 'Унесите најмање {count} вредности.',
+    other: 'Унесите најмање {count} вредности.',
+  },
+  tokenInputTooMany: {
+    one: 'Не уносите више од {count} вредност.',
+    few: 'Не уносите више од {count} вредности.',
+    other: 'Не уносите више од {count} вредности.',
+  },
   tokenInputEditWithContext: 'Измени {label}',
   tokenInputLabel: 'Токени',
   iconButtonLabel: 'Дугме',

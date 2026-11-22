@@ -13,6 +13,8 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: '如需繼續，請勾選此項。',
   checkboxGroupRequired: '請至少選擇一個選項。',
   tokenInputRequired: '請至少輸入一個值。',
+  tokenInputTooFew: { other: '請至少輸入 {count} 個值。' },
+  tokenInputTooMany: { other: '最多只能輸入 {count} 個值。' },
   tokenInputEditWithContext: '編輯{label}',
   tokenInputLabel: '標籤',
   iconButtonLabel: '按鈕',

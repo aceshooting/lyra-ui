@@ -63,6 +63,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'Қате',
   stepperStatePending: 'Басталмаған',
   stepperStateLocked: 'Құлыпталған',
+  stepperStateLoading: 'Жүктелуде',
+  stepperStateDisabled: 'Қолжетімсіз',
+  stepperSteps: 'Қадамдар',
+  stepperStepPosition: '{current}-қадам, барлығы {total}',
   commandPaletteInputLimit: 'Енгізу шегіне жеткендіктен, кейбір пәрмендер алынып тасталды.',
 };
 

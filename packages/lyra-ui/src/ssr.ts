@@ -494,6 +494,7 @@ export const LYRA_SSR_AUDITED_STATIC_SAFE_TAGS = Object.freeze([
   'lr-split-panel',
   'lr-stack-trace',
   'lr-stat',
+  'lr-step',
   'lr-stepper',
   'lr-stream-status',
   'lr-streaming-text',

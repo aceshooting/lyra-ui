@@ -13,6 +13,8 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Cék kotak ieu pikeun neruskeun.',
   checkboxGroupRequired: 'Pilih sahenteuna hiji pilihan.',
   tokenInputRequired: 'Asupkeun sahenteuna hiji nilai.',
+  tokenInputTooFew: { other: 'Lebetkeun sahenteuna {count} nilai.' },
+  tokenInputTooMany: { other: 'Ulah ngalebetkeun langkung ti {count} nilai.' },
   tokenInputEditWithContext: 'Édit {label}',
   tokenInputLabel: 'Token',
   iconButtonLabel: 'Tombol',

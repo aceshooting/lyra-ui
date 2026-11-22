@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 37 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 22 parts, 37 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `form-control-label`: `--lr-form-control-required-content`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -168,14 +168,42 @@ remove button from the tab order, never blocks `focus()`, and never excludes the
 `FormData` on submit — only `disabled` does that. Turning it on while a draft is half-typed or an
 inline editor is open discards that uncommitted state without moving focus.
 
-**`delimiter` is nullable, and only a single character acts as a commit key.** It does two separate
-jobs: it splits a committed draft into several tokens, and — _only when it is exactly one
-character_ — it is the keystroke that commits the draft. A multi-character delimiter still splits a
-pasted or committed draft, but no keystroke can ever match it, so nothing commits on typing.
-Setting it to `null` disables both, so a token may contain the delimiter verbatim. **`delimiter="null"`
-does not work** — that is the four-character string `null`. Use `delimiter="none"`, `delimiter=""`
-(both of which the attribute converter maps to `null`), or a property binding
-(`.delimiter=${null}`). Removing the attribute restores the `,` default.
+**`delimiter` is a set of characters and is nullable.** Every character of the string is its own
+delimiter: typing any of them commits the draft, and a commit or a real paste splits on all of them
+(`delimiter=";,"` accepts both). A paste that contains a delimiter character commits immediately; a
+paste without one is left to the browser. Setting it to `null` disables both splitting and the
+keystroke (Enter, Tab and blur still commit), so a token may contain the delimiter verbatim.
+`delimiter=""` already meant exactly this Enter-only mode and still does. **`delimiter="null"` does
+not work** — that is the four-character string `null`. Use `delimiter="none"`, `delimiter=""` (both of
+which the attribute converter maps to `null`), or a property binding (`.delimiter=${null}`). Removing
+the attribute restores the `,` default.
+
+**`max-tags` / `min-tags`** (`maxTags`/`minTags`, both `null` by default, so unset changes nothing).
+At the maximum, typed or pasted text cannot commit and stays in the field (a paste commits what fits and
+leaves the rest); removal, inline editing and clearing keep working. A programmatic `value` longer than
+`max-tags` reports `rangeOverflow`; a list shorter than `min-tags` reports `rangeUnderflow`, enforced only
+once at least one token exists (use `required` for the empty case). Messages are localized
+(`tokenInputTooFew`, `tokenInputTooMany`); disabled or readonly controls report neither.
+
+**`with-clear` / `clearable`** show a `clear-button` (icon via the `clear-icon` slot) while there are tokens
+and the control is neither disabled nor readonly. It proposes each removal through the cancelable
+`lr-token-remove-request` (a vetoed token stays), then emits `input`/`change`/`lr-input`/`lr-change` and
+`lr-clear`, and returns focus to the draft input.
+
+**`value` and `inputValue`.** The array stays canonical, but assigning a string to `value` (or
+`defaultValue`) splits it on the `delimiter` characters (comma when none) into trimmed, non-empty tokens;
+the reflected `value` attribute remains a JSON array. `inputValue` reads and writes the uncommitted draft
+without committing it.
+
+**`lr-create`** is a cancelable per-token proposal (`detail: { inputValue }`) emitted for every typed or pasted
+candidate before the batch-level `lr-token-add-request`; `preventDefault()` drops that one token, and the
+draft stays when every candidate is rejected.
+
+**Part aliases and states.** `tag-input` (= `input-wrapper`), `tags` (display-contents wrapper around the
+tokens), `tag` (= `token`), `tag__content` (the token text), `tag__remove-button` and
+`tag__remove-button__button` (= `remove`) sit beside the existing parts. Because a part can now carry
+several names, match parts with `[part~="token"]` rather than `[part="token"]`. `:state(blank)` matches
+while there are no tokens and `:state(readonly)` while `readonly` is set.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"

@@ -330,7 +330,13 @@ AbortSignal; limit: number }) => Promise<readonly ComboboxSourceRow[] | { rows, 
   including an identical retry, while raw caught error text stays out of the UI.)
 - `sourceDelay: number = 200` (attribute `source-delay` — debounce in ms between the last keystroke
   and the `source` call; `0` fires on every keystroke. Sanitized to a finite non-negative duration,
-  falling back to `200` for a non-finite value)
+  falling back to `200` for a non-finite value). `filterDebounce` (attribute `filter-debounce`) is the
+  same setting under its upstream name.
+- `dataSource` is an alias of `source`: reading or assigning either one reads or assigns the same
+  provider. Rows stay plain data (`value`, `label`, optional `description`/`badge`/`data`); a source
+  cannot return option HTML, because rendering remote markup would need an optional sanitizer inside the
+  combobox's hot path and a fail-closed fallback for it. `source` is always query-driven (the provider
+  filters), which is what the upstream `server` flag opts into, so there is no `server` attribute.
 - `maxRender: number = 200` (attribute `max-render`) — ordinary suggestion-prefix size, retaining
   active and selected options within an absolute 1,000-row ceiling. The active option has priority;
   selections remain committed even when every selected row cannot mount. Zero omits the ordinary
@@ -399,7 +405,7 @@ minimum at zero when empty-query label lookup or immediate catalog browsing is r
 **Methods:** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and `setRangeText()`
 forward to the internal input. `setRangeText()` synchronizes the filter query and visible options.
 `show(): Promise<void>` and `hide(): Promise<void>` settle after `lr-after-show` and
-`lr-after-hide`, respectively. `refresh(): void` re-runs the current `source` query without changing
+`lr-after-hide`, respectively. `reload(): void` is an alias of `refresh()`. `refresh(): void` re-runs the current `source` query without changing
 the source's identity, its debounce controller, or its delay. Reassigning `source` is a provider
 change and clears the fetched rows and pending-selection cache; `refresh()` does not. It queues for
 the next open while the listbox is closed, and is a no-op without a `source`. `resetValidity()`
@@ -504,6 +510,11 @@ never shows the raw error. A current request that rejects with `AbortError` (one
 not abort itself) is a failure like any other rejection; the previous query's results are not kept
 as its answer.
 Rejections from superseded or disconnected requests are ignored.
+`lr-options-request` fires before each `source` call (after the debounce, only while the call is still
+current): `detail: { query, signal }`, where `signal` is the `AbortSignal` the source receives, aborted
+when a newer request supersedes it, `source` is reassigned, or the control disconnects. It is bubbling,
+composed and not cancelable. `lr-options-error` fires with `lr-source-error` for the same rejection with
+`detail: { error, request: { query } }`; both events stay.
 `lr-retry-request` is cancelable; the built-in failed-load action calls `refresh()`, and `preventDefault()`
 leaves the failure on screen. While the failure state is the only popup content, the popup swaps
 `role="listbox"` for `role="dialog"` (the input gains the matching `aria-haspopup="dialog"` and

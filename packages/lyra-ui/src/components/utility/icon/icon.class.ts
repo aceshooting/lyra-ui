@@ -10,7 +10,14 @@ import { safeFetchUrl } from '../../../internal/safe-url.js';
 import { isUnsafeSvgCloneAttribute, isUnsafeSvgCloneElement } from '../../../internal/safe-svg.js';
 import { resolveOwnerFetchTarget } from '../../../internal/resource-loader.js';
 import type { ResourceCacheLease } from '../../../internal/safe-resource-cache.js';
-import { getIconLibrary, subscribeIconLibrary } from './icon-library.js';
+import {
+  getDefaultIconFamily,
+  getDefaultIconVariant,
+  getIconLibrary,
+  ICON_DEFAULTS_CHANGED,
+  subscribeIconLibrary,
+} from './icon-library.js';
+import { resolveSpriteSheetHref } from './icon-sprite.js';
 import { acquireSanitizedIconResource, IconResourceError } from './icon-resource.js';
 import { styles } from './icon.styles.js';
 import { blankNumberConverter } from '../../../internal/converters.js';
@@ -42,6 +49,7 @@ type IconFetchState =
   | { kind: 'idle' }
   | { kind: 'loading' }
   | { kind: 'loaded'; node: SVGSVGElement }
+  | { kind: 'sprite'; href: string }
   | { kind: 'empty' }
   | { kind: 'error'; reason: IconErrorReason };
 
@@ -181,9 +189,11 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
   /** Name of a registered icon library. `default` means the built-in glyph set; an
    *  unregistered name also falls back to it, so registration can happen after first render. */
   @property({ reflect: true }) library = 'default';
-  /** Family forwarded to a registered library resolver. Its vocabulary belongs to the library. */
+  /** Family forwarded to a registered library resolver. Its vocabulary belongs to the library.
+   *  While empty, the family from `setDefaultIconFamily()` is used. */
   @property({ reflect: true, useDefault: true }) family = '';
-  /** Variant forwarded to a registered library resolver. Its vocabulary belongs to the library. */
+  /** Variant forwarded to a registered library resolver. Its vocabulary belongs to the library.
+   *  While empty, the variant from `setDefaultIconFamily()` is used. */
   @property({ reflect: true, useDefault: true }) variant = '';
   private _src = '';
   /** URL of a single SVG document to fetch, used when no registered library resolves `name`.
@@ -224,7 +234,7 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     this.stopLibrarySubscription ??= subscribeIconLibrary((name) => {
-      if (name === this.library) void this.load();
+      if (name === this.library || name === ICON_DEFAULTS_CHANGED) void this.load();
     });
     if (this.hasUpdated) {
       queueMicrotask(() => {
@@ -370,7 +380,11 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
     let source = this.src;
     try {
       if (library) {
-        source = await library.resolver(this.name, this.family, this.variant);
+        source = await library.resolver(
+          this.name,
+          this.family || getDefaultIconFamily(),
+          this.variant || getDefaultIconVariant(),
+        );
         if (!this.isConnected || generation !== this.generation) return;
         if (typeof source !== 'string') throw new TypeError('icon resolver did not return a URL');
       }
@@ -380,6 +394,19 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
     }
     if (!source) {
       if (this.isConnected && generation === this.generation) this.fetchState = { kind: 'idle' };
+      return;
+    }
+
+    if (library?.spriteSheet) {
+      const href = resolveSpriteSheetHref(source, this.ownerDocument.baseURI);
+      if (!href) {
+        await this.fail('load', generation, source, new Error('icon sprite URL is not allowed'));
+        return;
+      }
+      this.fetchState = { kind: 'sprite', href };
+      await this.updateComplete;
+      if (!this.isConnected || generation !== this.generation) return;
+      this.emit('lr-load', { src: href });
       return;
     }
 
@@ -495,6 +522,9 @@ export class LyraIcon extends LyraElement<LyraIconEventMap> {
     switch (state.kind) {
       case 'loaded':
         content = html`${state.node}`;
+        break;
+      case 'sprite':
+        content = html`<svg part="svg" aria-hidden="true" focusable="false"><use part="use" href=${state.href}></use></svg>`;
         break;
       case 'error':
         content = html`<span part="error" class="sr-only" aria-hidden="true">${this.errorMessage(state.reason)}</span>`;

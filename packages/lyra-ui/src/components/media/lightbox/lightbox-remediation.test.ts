@@ -38,7 +38,7 @@ for (const mode of ['light', 'dark']) {
     await waitUntil(() => failingEl.shadowRoot!.querySelector('[part="source-error"]') !== null);
     await waitUntil(() => pendingEl.shadowRoot!.querySelector('[part="source-loading"]') !== null);
     for (const [el, part] of [[failingEl, 'source-error'], [pendingEl, 'source-loading']] as const) {
-      const color = getComputedStyle(el.shadowRoot!.querySelector(`[part="${part}"]`)!).color;
+      const color = getComputedStyle(el.shadowRoot!.querySelector(`[part~="${part}"]`)!).color;
       expect(contrastRatio(color, getComputedStyle(el.shadowRoot!.querySelector('[part="backdrop"]')!).backgroundColor) >= 4.5).to.equal(true, `${part} contrast in ${mode}`);
     }
   });
@@ -46,7 +46,7 @@ for (const mode of ['light', 'dark']) {
 
 it('ignores Alt-modified and composing arrow keys instead of navigating', async () => {
   const el = await fixture<LyraLightbox>(html`<lr-lightbox open .images=${[{ src: pixel, alt: 'a' }, { src: pixel, alt: 'b' }]}></lr-lightbox>`);
-  const panel = el.shadowRoot!.querySelector<HTMLElement>('[part="panel"]')!;
+  const panel = el.shadowRoot!.querySelector<HTMLElement>('[part~="panel"]')!;
   const fire = (init: KeyboardEventInit): KeyboardEvent => {
     const event = new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true, cancelable: true, ...init });
     panel.dispatchEvent(event);

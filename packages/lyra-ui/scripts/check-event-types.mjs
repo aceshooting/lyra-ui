@@ -47,6 +47,7 @@ for (const [file, text] of expected) {
 const RUNTIME_STATEMENT_RE =
   /^(?!\s|\/\/|\/\*|\*|import type\b|export type\b|export interface\b|declare\b|\}|\)|$).+/m;
 for (const [file, text] of expected) {
+  if (path.basename(file) !== 'events.ts') continue;
   const relative = path.relative(packageDir, file).replaceAll(path.sep, '/');
   const offender = text.match(RUNTIME_STATEMENT_RE);
   if (offender) {

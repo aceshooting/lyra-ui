@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `@aceshooting/lyra-3d`, `dompurify` — see `llms/peers.md`
-- **Themeable via** 23 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 25 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -123,10 +123,10 @@ is preserved exactly as an empty native-video name. Caption/subtitle tracks
 selected for Lyra's custom overlay use native `mode="hidden"`, keeping cue activity available
 without asking the browser to paint a duplicate native caption layer.
 
-**CSS parts:** `base` and `video-wrapper` (aliases on the same root node), `caption`,
+**CSS parts:** `base`, `video-wrapper` and `player` (aliases on the same root node), `caption`,
 `caption-overlay`, `controls`, `controls-overlay`, `error`, `poster-overlay`, `poster-play-button`,
 `progress`, `thumbnail`, `timeline`, `timeline-indicator`, `timeline-thumb`, `timeline-track`,
-`video`, and `video-title-overlay`.
+`video` (also `body`, an alias on the same media element), and `video-title-overlay`.
 Panorama parts (with `projection="equirectangular"`): `panorama` (the keyboard-operable spherical
 viewport), `panorama-engine` (the optional renderer container), `panorama-notice` (localized
 renderer loading or fallback feedback), `panorama-hotspots` (the paginated hotspot alternative)
@@ -140,7 +140,8 @@ than a raw number of seconds; `aria-describedby` points to the same text. The vo
 remains in the DOM as a disabled `0..0` control with its value text and description intact,
 avoiding a disappearing/reappearing semantic target.
 
-**Themeable custom properties:** `--controls-background` (default
+**Themeable custom properties:** `--aspect-ratio` (default `16 / 9`, the player surface ratio),
+`--controls-background` (default
 `var(--lr-color-overlay-strong)`), `--controls-color` (default
 `var(--lr-color-on-strong-overlay)`), and
 `--poster-play-button-background` (default `var(--lr-color-surface-overlay)`). These exact names are

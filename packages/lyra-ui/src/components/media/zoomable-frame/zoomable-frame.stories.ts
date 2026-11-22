@@ -114,3 +114,15 @@ export const NonInteractive: Story = {
     without-controls
   ></lr-zoomable-frame>`,
 };
+
+export const NamedLabelledFrame: StoryObj = {
+  render: () => html`
+    <lr-zoomable-frame
+      src="about:blank"
+      name="preview"
+      label="Document preview"
+      allow="fullscreen; clipboard-write"
+      allowfullscreen
+    ></lr-zoomable-frame>
+  `,
+};

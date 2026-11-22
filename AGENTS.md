@@ -56,6 +56,7 @@ packages/lyra-gen/                experimental catalog, generated-view and saved
 packages/lyra-map/                optional modular map renderer and shared module worker; generated from pinned source
 packages/lyra-3d/                 optional WebGL engines (three.js) behind opted-in 3D views; loaded lazily
 packages/lyra-ide/                editor data (custom-elements/web-types/vscode-*-data json), copied from lyra-ui at prepack
+packages/lyra-cdn/                single-script-tag build (lit/tslib/floating-ui bundled, no import map); bundled from lyra-ui's dist; `pnpm --filter @aceshooting/lyra-cdn test` is its Playwright smoke test
 packages/lyra-translations/       the 80 locale catalogs, assembled from lyra-ui's dist/translations (pseudo stay in lyra-ui)
 docs/agents/                      detail behind this file's digests
 .storybook/ | .agents/            Storybook docs site | Codex skill links + marketplace metadata
@@ -114,8 +115,8 @@ Qualification ledger and evidence rules: **[docs/agents/component-qualification.
   the Quality tools run must include the A/B benchmark). Push CI, all Test All Browsers aggregates,
   all full-engine shards and all four Quality tools jobs must pass on that exact commit; then
   `gh workflow run release.yml --ref main` requires all of them, tags, releases and dispatches
-  `publish.yml` (approve `npm-publish` per package; lyra-ui, lyra-ide and lyra-translations version
-  together, so each lyra-ui release publishes all three). Nothing is tagged or published locally
+  `publish.yml` (approve `npm-publish` per package; lyra-ui, lyra-ide, lyra-translations and lyra-cdn version
+  together, so each lyra-ui release publishes all four). Nothing is tagged or published locally
   ([release integrity](docs/agents/ci-and-gates.md#release-integrity)).
 - `./scripts/test.sh` sizes engine and coverage shards to every core but two; pin
   `TEST_SH_ENGINE_SHARDS` (a count) so a failing CI shard reproduces as the same-numbered local

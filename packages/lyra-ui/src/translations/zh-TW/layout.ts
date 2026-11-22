@@ -62,6 +62,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: '錯誤',
   stepperStatePending: '未開始',
   stepperStateLocked: '已鎖定',
+  stepperStateLoading: '載入中',
+  stepperStateDisabled: '無法使用',
+  stepperSteps: '步驟',
+  stepperStepPosition: '第 {current} 步，共 {total} 步',
   commandPaletteInputLimit: '由於達到輸入限制，部分命令已被省略。',
 };
 

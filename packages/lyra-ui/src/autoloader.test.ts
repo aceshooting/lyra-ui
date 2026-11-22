@@ -1635,3 +1635,11 @@ it('makes default discovery safe in a document-less worker', async () => {
     URL.revokeObjectURL(workerUrl);
   }
 });
+
+describe('autoloader aliases', () => {
+  it('startLoader and stopLoader are the start and stop functions themselves', async () => {
+    const mod = await import('./autoloader.js');
+    expect(mod.startLoader).to.equal(mod.start);
+    expect(mod.stopLoader).to.equal(mod.stop);
+  });
+});

@@ -129,6 +129,9 @@ const baseTokens = css`
     --lr-space-l: var(--lr-theme-space-l, 1rem);
     --lr-space-2xs: var(--lr-theme-space-2xs, 0.125rem);
     --lr-space-2xl: var(--lr-theme-space-2xl, 2rem);
+    --lr-space-xl: calc((var(--lr-theme-space-l, 1rem) + var(--lr-theme-space-2xl, 2rem)) / 2);
+    --lr-space-3xl: calc(var(--lr-theme-space-2xl, 2rem) * 1.5);
+    --lr-space-4xl: calc(var(--lr-theme-space-2xl, 2rem) * 2);
     --lr-font-size-3xs: var(--lr-theme-font-size-3xs, 0.5rem);
     --lr-font-size-2xs: var(--lr-theme-font-size-2xs, 0.625rem);
     --lr-font-size-xs: var(--lr-theme-font-size-xs, 0.75rem);
@@ -139,6 +142,8 @@ const baseTokens = css`
     --lr-font-size-xl: var(--lr-theme-font-size-xl, 1.25rem);
     --lr-font-size-2xl: var(--lr-theme-font-size-2xl, 1.75rem);
     --lr-font-size-3xl: var(--lr-theme-font-size-3xl, 2rem);
+    --lr-font-size-4xl: calc(var(--lr-theme-font-size-3xl, 2rem) * 1.25);
+    --lr-font-size-5xl: calc(var(--lr-theme-font-size-3xl, 2rem) * 1.5);
     --lr-font-weight-normal: var(--lr-theme-font-weight-normal, 400);
     --lr-font-weight-medium: var(--lr-theme-font-weight-medium, 500);
     --lr-font-weight-semibold: var(--lr-theme-font-weight-semibold, 600);

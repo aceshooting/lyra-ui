@@ -1,11 +1,15 @@
 import { finiteCount } from '../../../internal/numbers.js';
 import { declaredDefaultConverter } from '../../../internal/converters.js';
 import { checkIcon } from '../../../internal/icons.js';
-import { OwnedResizeObserver, readInlineSize } from '../../../internal/owned-observer.js';
+import { HostChildrenObserver, OwnedResizeObserver, readInlineSize } from '../../../internal/owned-observer.js';
+import { AnnouncementSinkController } from '../../../internal/announcer.js';
+import { tag } from '../../../internal/prefix.js';
+import type { LyraVariant } from '../../../internal/variants.js';
+import type { LyraStep } from './step.class.js';
 import { OwnedFrame } from '../../../internal/owned-timer.js';
 import { SnapshotProperty } from '../../../internal/collection-source-tracker.js';
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
-import { property, query } from 'lit/decorators.js';
+import { property, query, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { resolveAccessibleName } from '../../../internal/accessible-name.js';
@@ -28,7 +32,7 @@ import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_stepperStateCompleted, LYRA_DEFAULT_stepperStateError, LYRA_DEFAULT_stepperStateLocked, LYRA_DEFAULT_stepperStatePending } from '../../../internal/default-strings/layout.generated.js';
+import { LYRA_DEFAULT_stepperStateCompleted, LYRA_DEFAULT_stepperStateError, LYRA_DEFAULT_stepperStateLocked, LYRA_DEFAULT_stepperStatePending, LYRA_DEFAULT_stepperStepPosition, LYRA_DEFAULT_stepperSteps } from '../../../internal/default-strings/layout.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
@@ -61,8 +65,22 @@ export interface LyraStepItem {
   icon?: unknown;
 }
 
+/** Layout axis of a stepper. `auto` lays the steps in a row and stacks them when the stepper is too
+ *  narrow to give each step room. */
+export type LyraStepperOrientation = LyraOrientation | 'auto';
+
+/** Payload of `lr-before-step-change` and `lr-step-change` in child-driven mode. */
+export interface LyraStepChangeDetail {
+  name: string;
+  previousName: string | null;
+  step: LyraStep;
+  previousStep: LyraStep | null;
+}
+
 export interface LyraStepperEventMap {
   'lr-step-select': CustomEvent<{ stepId: string; index: number }>;
+  'lr-before-step-change': CustomEvent<LyraStepChangeDetail>;
+  'lr-step-change': CustomEvent<LyraStepChangeDetail>;
   'lr-stepper-orientation-change': CustomEvent<LyraStepperOrientationChangeDetail>;
 }
 
@@ -73,6 +91,54 @@ const STEP_STATES = new Set<LyraStepState>([
   'error',
 ]);
 const MAX_STEPS = 256;
+
+interface StepperInvokerRecord {
+  count: number;
+  handler: (event: Event) => void;
+}
+const invokerRecords = new WeakMap<Document, StepperInvokerRecord>();
+const INVOKER_COMMANDS = new Set(['next', 'previous', 'goto']);
+
+/** One shared document listener per document resolves `data-stepper="<command> [id] [args]"`
+ *  invokers, which may sit anywhere on the page, inside a shadow root or inside the stepper itself.
+ *  Registered while at least one stepper is connected, so importing the module has no side effect. */
+function handleInvokerClick(event: Event): void {
+  const invoker = event
+    .composedPath()
+    .find((node): node is Element => node instanceof Element && node.hasAttribute('data-stepper'));
+  if (!invoker) return;
+  const [rawCommand, ...rest] = (invoker.getAttribute('data-stepper') ?? '').trim().split(/\s+/);
+  const command = (rawCommand ?? '').toLowerCase();
+  if (!INVOKER_COMMANDS.has(command)) return;
+  const root = invoker.getRootNode() as Partial<Document | ShadowRoot>;
+  const named = rest[0] ? root.getElementById?.(rest[0]) ?? null : null;
+  const byId = named?.localName === tag('stepper');
+  const target = (byId ? named : invoker.closest(tag('stepper'))) as LyraStepper | null;
+  if (!target) return;
+  const args = byId ? rest.slice(1) : rest;
+  if (command === 'next') target.next();
+  else if (command === 'previous') target.previous();
+  else if (args.length > 0) target.goTo(args.join(' '));
+}
+
+function acquireInvokers(doc: Document): void {
+  const existing = invokerRecords.get(doc);
+  if (existing) {
+    existing.count += 1;
+    return;
+  }
+  doc.addEventListener('click', handleInvokerClick);
+  invokerRecords.set(doc, { count: 1, handler: handleInvokerClick });
+}
+
+function releaseInvokers(doc: Document): void {
+  const record = invokerRecords.get(doc);
+  if (!record) return;
+  record.count -= 1;
+  if (record.count > 0) return;
+  doc.removeEventListener('click', record.handler);
+  invokerRecords.delete(doc);
+}
 
 /** Creates the bounded, realm-neutral snapshot used by rendering, focus, and event correlation.
  * Duplicate step IDs remain valid occurrences because `lr-step-select` also publishes their
@@ -136,10 +202,28 @@ function snapshotSteps(value: unknown, reportOmitted: (count: number) => void): 
 
 /**
  * `<lr-stepper>` — ordered multi-step wizard/form navigation: label + index per step,
- * current/completed/locked/error state, click-to-jump. First-party invention (no Web Awesome
- * equivalent). Fully data-driven and controlled, like `lr-table`'s `columns`/`rows` -- it never
- * mutates `steps` itself; a click or Enter/Space on a non-disabled step fires a non-cancelable
- * `lr-step-select`, and the host decides whether/how `steps` changes in response.
+ * current/completed/locked/error state, click-to-jump. Mirrors `wa-stepper`, whose `wa-step`
+ * children are `<lr-step>`; the stepper has two authoring modes.
+ *
+ * Data-driven mode (the original contract): fully controlled, like `lr-table`'s `columns`/`rows` --
+ * it never mutates `steps` itself; a click or Enter/Space on a non-disabled step fires a
+ * non-cancelable `lr-step-select`, and the host decides whether/how `steps` changes in response.
+ *
+ * Child mode: with an empty `steps` array and `<lr-step>` children, the stepper owns the current
+ * step. `active` names it (the first step when unset or unmatched), `goTo(name)`, `next()` and
+ * `previous()` move it, and each move first emits a cancelable `lr-before-step-change` (a
+ * `preventDefault()` veto keeps the current step) and then `lr-step-change`, and announces the new
+ * position politely. `linear` stops a step being reached until every step before it is
+ * `completed`; later steps render locked. `clickable` makes each step a button (one roving tab stop,
+ * Left/Right swapped under RTL, Up/Down while stacked, Home/End) so a click or Enter/Space jumps to
+ * it; unset, only the methods and invokers move the step, and the stepper is a labelled group
+ * instead of a navigation landmark. Any element on the page, inside the stepper or not, with
+ * `data-stepper="next <id>"`, `"previous <id>"` or `"goto <id> <step-name>"` drives the stepper
+ * whose `id` it names when clicked. `label` names the group. The array mode is unchanged and wins
+ * while `steps` is non-empty.
+ *
+ * `orientation="auto"` lays the steps in a row and stacks them whenever the stepper's own measured
+ * width cannot give every step about 6em, so a phone-width container stacks without any breakpoint.
  *
  * An opt-in `orientationBreakpoint` (unset by default -- no behavior change) makes the effective
  * layout/navigation axis respond to a measured inline size instead of only the authored
@@ -171,7 +255,15 @@ function snapshotSteps(value: unknown, reportOmitted: (count: number) => void): 
  *   `lr-table`'s `columns`/`rows` contract) and takes no default action of its own on selection
  *   (it never mutates `steps`), so there is no real veto point for `preventDefault()` to gate.
  * @event lr-stepper-orientation-change - `detail: { orientation }`, fired when an enabled
- *   `orientationBreakpoint` changes the effective layout/navigation axis.
+ *   `orientationBreakpoint`, or `orientation="auto"`, changes the effective layout/navigation axis.
+ * @event lr-before-step-change - Child mode. Cancelable; `detail: { name, previousName, step,
+ *   previousStep }`, fired before `active` changes. `preventDefault()` keeps the current step.
+ * @event lr-step-change - Child mode. `detail` as `lr-before-step-change`; fired after `active`
+ *   changed and the steps re-rendered.
+ * @slot - Child mode: one or more `<lr-step>` elements.
+ * @csspart stepper - Child mode: the outer wrapper, a `<nav>` landmark while `clickable`, otherwise
+ *   a labelled `role="group"`.
+ * @csspart summary - Child mode: visually hidden "Step X of Y" text for assistive technology.
  * @csspart base - The root wrapper, and the horizontally scrolling track. Takes `tabindex="0"`
  *   only while `readonly` and genuinely overflowing, so an otherwise keyboard-unreachable
  *   read-only strip can still be scrolled; style that state with `::part(base):focus-visible`.
@@ -184,6 +276,15 @@ function snapshotSteps(value: unknown, reportOmitted: (count: number) => void): 
  * @csspart step-index - The numbered index chip, shown for `pending`/`current`/`error` steps.
  * @csspart step-check - The completed-checkmark glyph, shown for `completed` steps instead of `step-index`.
  * @csspart step-label - The step's label text.
+ * @cssprop [--lr-stepper-marker-size=var(--lr-size-2rem)] - Child mode: diameter of each step's marker.
+ * @cssprop [--lr-stepper-connector-color=var(--lr-color-neutral-fill-normal)] - Child mode: color of the
+ *   line after a step that is not completed.
+ * @cssprop [--lr-stepper-connector-color-active] - Child mode: color of the line after a completed
+ *   step; unset, it follows that step's variant.
+ * @cssprop [--lr-stepper-connector-width=var(--lr-border-width-medium)] - Child mode: line thickness.
+ * @cssprop [--lr-stepper-connector-gap=var(--lr-size-0-35em)] - Child mode: gap between a marker and
+ *   the line on both sides.
+ * @cssprop [--lr-stepper-step-gap=var(--lr-space-m)] - Child mode: space between steps while stacked.
  * @cssprop [--lr-scroll-fade-size=2rem] - Width of each decorative horizontal overflow fade.
  * Pointer-state hooks use inline `var()` fallbacks rather than a `:host` declaration, so they
  * inherit from the stepper or any ancestor without retheming another state.
@@ -231,6 +332,8 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     stepperStateError: LYRA_DEFAULT_stepperStateError,
     stepperStateLocked: LYRA_DEFAULT_stepperStateLocked,
     stepperStatePending: LYRA_DEFAULT_stepperStatePending,
+    stepperStepPosition: LYRA_DEFAULT_stepperStepPosition,
+    stepperSteps: LYRA_DEFAULT_stepperSteps,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -261,10 +364,13 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   }
 
   /** `'horizontal'` (the default) lays steps out in a row (Left/Right, RTL-aware, to navigate);
-   *  `'vertical'` stacks them (Up/Down navigate instead, no RTL swap needed). The *authored* axis
+   *  `'vertical'` stacks them (Up/Down navigate instead, no RTL swap needed); `'auto'` lays them in
+   *  a row and stacks them whenever the stepper's measured inline size cannot give each step about
+   *  6em (plus the gaps), so a narrow container or a phone stacks with no breakpoint to author.
+   *  `'auto'` measures the stepper, so a server-rendered one starts as a row. The *authored* axis
    *  used at/above `orientationBreakpoint` (or always, when that's unset) -- see
    *  `effectiveOrientation` for the live axis actually in effect. */
-  @property({ reflect: true, converter: declaredDefaultConverter<LyraOrientation>('horizontal') }) orientation: LyraOrientation = 'horizontal';
+  @property({ reflect: true, converter: declaredDefaultConverter<LyraStepperOrientation>('horizontal') }) orientation: LyraStepperOrientation = 'horizontal';
 
   /** Opt-in inline-size breakpoint, measured on `[part="base"]`. Below it, `narrowOrientation`
    *  becomes effective instead of `orientation`. Unset (the default): no behavior change, the
@@ -337,8 +443,49 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
    *  default name). */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
-  /** Accessible name when no aria-label is supplied. */
+  /** Accessible name when no aria-label is supplied. In child mode it names the stepper's group or
+   *  navigation landmark (a localized "Steps" when unset). */
   @property() label?: string;
+
+  /** Child mode: the `name` of the current `<lr-step>`. Falls back to the first step when unset or
+   *  when it matches no step. Changing it from script moves the step without the veto event;
+   *  `goTo()`, `next()` and `previous()` ask first. */
+  @property({ reflect: true }) active = '';
+
+  /** Child mode: steps must be completed in order. `next()`, `goTo()`, an invoker and a click
+   *  cannot reach a step until every step before it is `completed`; later steps render locked. */
+  @property({ type: Boolean, reflect: true }) linear = false;
+
+  /** Child mode: each step becomes a button, so a click (or Enter/Space on a focused step) jumps to
+   *  it. Unset, only the methods and `data-stepper` invokers move the step. */
+  @property({ type: Boolean, reflect: true }) clickable = false;
+
+  private childSteps: LyraStep[] = [];
+  @state() private childCount = 0;
+  private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
+
+  /** True while child mode is in effect: `<lr-step>` children and an empty `steps` array. */
+  private get childMode(): boolean {
+    return this.childCount > 0 && this.steps.length === 0;
+  }
+
+  constructor() {
+    super();
+    this.addEventListener('click', this.onChildClick);
+    this.addEventListener('keydown', this.onChildKeyDown);
+    // Keeps the child list current; the controller registers itself with the host.
+    new HostChildrenObserver(this, {
+      subtree: true,
+      attributeFilter: ['name', 'completed', 'loading', 'disabled', 'variant'],
+      onChange: (records) => {
+        const own = records.some((record) => {
+          const target = record.target as Element;
+          return target === this || target.closest?.(tag('stepper')) === this;
+        });
+        if (own) this.syncChildSteps();
+      },
+    });
+  }
 
   private _effectiveOrientation: LyraOrientation = 'horizontal';
   private readonly resizeFrame = new OwnedFrame(this);
@@ -382,6 +529,11 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     () => this.syncScrollTabStop()
   );
 
+  /** Whether a container-measuring observer is needed: an armed breakpoint or `orientation="auto"`. */
+  private get observesContainer(): boolean {
+    return this.orientationBreakpoints.containerObservationEnabled || this.orientation === 'auto';
+  }
+
   /** The live layout/navigation axis after applying `orientationBreakpoint` -- identical to
    *  `orientation` whenever that's unset. See the class doc. */
   get effectiveOrientation(): LyraOrientation {
@@ -390,10 +542,27 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
-    if (this.hasUpdated && this.orientationBreakpoints.containerObservationEnabled)
+    if (this.hasUpdated && this.observesContainer)
       this.seedInlineSize();
-    if (this.orientationBreakpoints.containerObservationEnabled)
+    if (this.observesContainer)
       this.armResizeObserver();
+    this.registerInvokers();
+    this.syncChildSteps();
+  }
+
+  private invokerDocument?: Document;
+
+  private registerInvokers(): void {
+    const doc = this.ownerDocument;
+    if (this.invokerDocument === doc) return;
+    this.unregisterInvokers();
+    this.invokerDocument = doc;
+    acquireInvokers(doc);
+  }
+
+  private unregisterInvokers(): void {
+    if (this.invokerDocument) releaseInvokers(this.invokerDocument);
+    this.invokerDocument = undefined;
   }
 
   private seedInlineSize(): void {
@@ -402,7 +571,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   }
 
   private orientationInlineSize(): number {
-    return this.orientationBreakpoints.containerObservationEnabled
+    return this.observesContainer
       ? this.baseEl?.clientWidth ?? this.measuredInlineSize
       : this.measuredInlineSize;
   }
@@ -410,16 +579,18 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   override disconnectedCallback(): void {
     super.disconnectedCallback();
     this.resetResizeObserver();
+    this.unregisterInvokers();
   }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
     this.resetResizeObserver();
+    this.unregisterInvokers();
   }
 
   protected override firstUpdated(changed: PropertyValues): void {
     super.firstUpdated(changed);
-    if (this.orientationBreakpoints.containerObservationEnabled)
+    if (this.observesContainer)
       this.armResizeObserver();
   }
 
@@ -429,6 +600,15 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
       // Switching to a read-only strip swaps the focused <button part=step> for a plain <div>, so
       // the focused node is removed; remember that focus was inside so it can be repaired.
       this.readonlyFocusLost = shadowFocusTarget(this)?.getAttribute('part') === 'step';
+    }
+    if (
+      changed.has('active') ||
+      changed.has('linear') ||
+      changed.has('clickable') ||
+      changed.has('steps') ||
+      !this.hasUpdated
+    ) {
+      this.applyChildState();
     }
     if (changed.has('steps')) {
       const focusedStep = shadowFocusTarget(this) as HTMLElement | null;
@@ -450,10 +630,11 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     }
     // Property bindings can be committed after connection in the same turn. Resolve them before
     // taking the first container measurement so the initial layout uses the authored breakpoint.
-    if (!this.hasUpdated && this.isConnected && this.orientationBreakpoints.containerObservationEnabled)
+    if (!this.hasUpdated && this.isConnected && this.observesContainer)
       this.seedInlineSize();
     if (
       changed.has('orientation') ||
+      (changed.has('steps') && this.orientation === 'auto') ||
       changed.has('narrowOrientation') ||
       changed.has('orientationBreakpoint') ||
       changed.has('orientationBreakpointBasis')
@@ -478,6 +659,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.registerInvokers();
     // ARIA idrefs do not cross a shadow boundary -- a host-authored `aria-describedby` never
     // reaches `[part="base"]`'s own `role="list"` (which owns the accessible description) unless
     // it is explicitly reflected there. Mirrors lr-checkbox's/lr-flow-minimap's identical
@@ -530,14 +712,10 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
         )
       )?.focus();
     }
-    if (
-      changed.has('orientationBreakpoint') ||
-      changed.has('orientationBreakpointBasis')
-    ) {
-      if (this.orientationBreakpoints.containerObservationEnabled)
-        this.armResizeObserver();
-      else this.resetResizeObserver();
-    }
+    // Re-armed on every update: switching between the array and child templates replaces
+    // [part="base"], and `orientation="auto"` needs the observer without any breakpoint.
+    if (this.observesContainer) this.armResizeObserver();
+    else this.resetResizeObserver();
   }
 
   /** Gives the horizontally scrolling `[part="base"]` its own tab stop while, and only while, it
@@ -587,32 +765,213 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   ): void {
     const next: LyraOrientation = this.orientationBreakpoints.isBelow(width)
       ? this.narrowOrientation
+      : this.orientation === 'auto'
+      ? this.autoStacks(width)
+        ? 'vertical'
+        : 'horizontal'
       : this.orientation;
     // Gated on `active` (not `resolvedOrientationBreakpoint`) so a viewport-basis breakpoint still
     // publishes this marker even though `resolved` is meaningless there -- see
     // OrientationBreakpointController's class doc.
-    if (this.orientationBreakpoints.active) {
+    if (this.orientationBreakpoints.active || this.orientation === 'auto') {
       this.setAttribute('data-effective-orientation', next);
     } else {
       this.removeAttribute('data-effective-orientation');
     }
     if (next === this._effectiveOrientation) return;
     this._effectiveOrientation = next;
+    for (const step of this.childSteps) step.vertical = next === 'vertical';
     this.requestUpdate();
     if (emitOnChange) {
       this.emit('lr-stepper-orientation-change', { orientation: next });
     }
   }
 
+  /** Whether an `orientation="auto"` stepper stacks at this inline size: each step needs about
+   *  6em to keep a short label on one line, plus the gaps between them. An unmeasured (infinite
+   *  or zero) width never stacks, so the first paint is a row. */
+  private autoStacks(width: number): boolean {
+    if (!Number.isFinite(width) || width <= 0) return false;
+    const count = this.childMode ? this.childSteps.length : this.steps.length;
+    if (count < 2) return false;
+    const fontSize = Number.parseFloat(getComputedStyle(this).fontSize) || 16;
+    const gap = this.baseEl ? Number.parseFloat(getComputedStyle(this.baseEl).columnGap) || 0 : 0;
+    return width < count * fontSize * 6 + (count - 1) * gap;
+  }
+
   /** Creates (idempotently) and (re-)observes `[part="base"]` -- a no-op until `baseEl` exists (see
    *  `firstUpdated()`/`connectedCallback()`). */
+  private observedBase?: HTMLElement;
+
   private armResizeObserver(): void {
-    if (this.baseEl && !this.resizeObserver.active) this.resizeObserver.observe(this.baseEl);
+    const base = this.baseEl;
+    if (!base) return;
+    if (this.observedBase === base && this.resizeObserver.active) return;
+    this.resizeObserver.clear();
+    this.resizeObserver.observe(base);
+    this.observedBase = base;
   }
 
   private resetResizeObserver(): void {
     this.resizeFrame.cancel();
     this.resizeObserver.clear();
+    this.observedBase = undefined;
+  }
+
+  // ---- Child mode (`<lr-step>` children) -------------------------------------------------------
+
+  /** Re-reads the direct `<lr-step>` children and pushes the derived state down to them. */
+  private syncChildSteps(): void {
+    const steps = Array.from(this.children).filter(
+      (child): child is LyraStep => child.localName === tag('step')
+    );
+    const countChanged = steps.length !== this.childSteps.length;
+    this.childSteps = steps;
+    this.childCount = steps.length;
+    this.applyChildState();
+    // The step count feeds `orientation="auto"`, so a changed count re-derives the axis too.
+    if (countChanged && this.orientation === 'auto')
+      this.updateEffectiveOrientation(this.orientationInlineSize(), true);
+  }
+
+  /** The step `active` resolves to: the one it names, else the first. */
+  private resolveActiveStep(steps: readonly LyraStep[]): LyraStep | undefined {
+    return steps.find((step) => step.name === this.active) ?? steps[0];
+  }
+
+  /** In `linear` mode the 0-based index of the last step that may be reached. */
+  private linearBoundary(steps: readonly LyraStep[]): number {
+    const firstIncomplete = steps.findIndex((step) => !step.completed);
+    return firstIncomplete === -1 ? steps.length - 1 : firstIncomplete;
+  }
+
+  private isReachable(step: LyraStep, steps: readonly LyraStep[] = this.childSteps): boolean {
+    if (step.disabled) return false;
+    if (!this.linear) return true;
+    return steps.indexOf(step) <= this.linearBoundary(steps);
+  }
+
+  private applyChildState(): void {
+    const steps = this.childSteps;
+    if (steps.length === 0 || this.steps.length > 0) return;
+    const activeStep = this.resolveActiveStep(steps);
+    const boundary = this.linearBoundary(steps);
+    this.activeIndex = activeStep ? steps.indexOf(activeStep) : 0;
+    const stop =
+      activeStep && this.isReachable(activeStep, steps)
+        ? activeStep
+        : steps.find((step) => this.isReachable(step, steps));
+    const vertical = this.effectiveOrientation === 'vertical';
+    steps.forEach((step, index) => {
+      step.position = index + 1;
+      step.active = step === activeStep;
+      step.locked = this.linear && index > boundary;
+      step.clickable = this.clickable;
+      step.vertical = vertical;
+      step.first = index === 0;
+      step.last = index === steps.length - 1;
+      step.tabStop = step === stop;
+      const previous = steps[index - 1];
+      step.connectorStartVariant = previous?.completed ? (previous.variant as LyraVariant) : undefined;
+    });
+  }
+
+  @state() private activeIndex = 0;
+
+  /** Child mode: requests a change to the named step. Emits a cancelable `lr-before-step-change`;
+   *  unless vetoed, updates `active`, emits `lr-step-change` and announces the new position. Does
+   *  nothing when the step does not exist, is `disabled`, or (while `linear`) cannot be reached yet. */
+  goTo(name: string): void {
+    if (!this.childMode) return;
+    const steps = this.childSteps;
+    const target = steps.find((step) => step.name === name);
+    if (!target || !this.isReachable(target, steps)) return;
+    const previousStep = this.resolveActiveStep(steps) ?? null;
+    if (target === previousStep) return;
+    const detail: LyraStepChangeDetail = {
+      name: target.name,
+      previousName: previousStep?.name ?? null,
+      step: target,
+      previousStep,
+    };
+    if (this.emit('lr-before-step-change', detail, { cancelable: true }).defaultPrevented) return;
+    this.active = target.name;
+    void this.updateComplete.then(() => {
+      this.emit('lr-step-change', detail);
+      const format = getNumberFormat(this.effectiveLocale);
+      this.announcements.announcePolite(
+        this.localize('stepperStepPosition', undefined, {
+          current: format.format(this.activeIndex + 1),
+          total: format.format(this.childSteps.length),
+        })
+      );
+    });
+  }
+
+  /** Child mode: goes to the step after the current one, if any. */
+  next(): void {
+    const steps = this.childSteps;
+    const index = steps.findIndex((step) => step === this.resolveActiveStep(steps));
+    const target = steps[index + 1];
+    if (index >= 0 && target) this.goTo(target.name);
+  }
+
+  /** Child mode: goes back to the step before the current one, if any. */
+  previous(): void {
+    const steps = this.childSteps;
+    const index = steps.findIndex((step) => step === this.resolveActiveStep(steps));
+    const target = index > 0 ? steps[index - 1] : undefined;
+    if (target) this.goTo(target.name);
+  }
+
+  private ownStepOf(event: Event): LyraStep | undefined {
+    const origin = event.target;
+    if (!(origin instanceof Element)) return undefined;
+    const step = origin.closest(tag('step')) as LyraStep | null;
+    return step && step.parentNode === this ? step : undefined;
+  }
+
+  private readonly onChildClick = (event: MouseEvent): void => {
+    if (!this.childMode || !this.clickable) return;
+    const step = this.ownStepOf(event);
+    if (step) this.goTo(step.name);
+  };
+
+  private readonly onChildKeyDown = (event: KeyboardEvent): void => {
+    if (!this.childMode || !this.clickable || event.defaultPrevented || shouldIgnoreNavigationKey(event)) return;
+    const current = this.ownStepOf(event);
+    if (!current) return;
+    const navigable = this.childSteps.filter((step) => this.isReachable(step));
+    const target = resolveListMove(event, {
+      count: navigable.length,
+      current: navigable.indexOf(current),
+      orientation: this.effectiveOrientation === 'vertical' ? 'vertical' : 'horizontal',
+      direction: this.effectiveDirection,
+      wrap: false,
+      clamp: true,
+      backwardFromMissing: 'first',
+    });
+    if (target === null) return;
+    event.preventDefault();
+    navigable[target]?.focus();
+  };
+
+  private renderChildren(): TemplateResult {
+    const format = getNumberFormat(this.effectiveLocale);
+    const name = this.accessibleLabel || this.label || this.localize('stepperSteps');
+    const body = html`
+      <span part="summary" class="visually-hidden"
+        >${this.localize('stepperStepPosition', undefined, {
+          current: format.format(this.activeIndex + 1),
+          total: format.format(this.childCount),
+        })}</span
+      >
+      <div part="base" class="child-steps" role="list"><slot></slot></div>
+    `;
+    // A landmark earns its keep only when its steps are buttons to navigate between.
+    return this.clickable
+      ? html`<nav part="stepper" aria-label=${name}>${body}</nav>`
+      : html`<div part="stepper" role="group" aria-label=${name}>${body}</div>`;
   }
 
   private selectStep(step: LyraStepItem, index: number): void {
@@ -675,6 +1034,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   };
 
   override render(): TemplateResult {
+    if (this.childMode) return this.renderChildren();
     // Roving tabindex needs exactly one stop in the tab order at all times -- the `current` step
     // when there is one, otherwise the first step a keyboard user could actually land on. Without
     // this fallback, an all-`completed`/all-`pending`/no-`current` `steps` array would leave every

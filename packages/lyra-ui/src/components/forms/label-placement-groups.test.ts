@@ -78,11 +78,15 @@ it('checkbox-group keeps its accessible name in the label-beside layout', async 
   expect(fieldset.hasAttribute('aria-labelledby'), 'a host aria-label still wins').to.be.false;
 });
 
-it('slider label follows the form-control label size ladder, and a token still overrides it', async () => {
+it('slider label inherits the surrounding size by default and opts into the form-control label size', async () => {
   const input = await fixture<LitElement>(html`<lr-input label="L"></lr-input>`);
-  const slider = await fixture<LitElement>(html`<lr-slider label="L"></lr-slider>`);
+  const slider = await fixture<LitElement>(html`<lr-slider label="L" style="font-size: 23px"></lr-slider>`);
   const size = (el: LitElement, part: string) => getComputedStyle(el.shadowRoot!.querySelector(part)!).fontSize;
-  expect(size(slider, '[part~="label"]')).to.equal(size(input, '[part~="form-control-label"]'));
+  expect(size(slider, '[part~="label"]')).to.equal('23px');
+  const matched = await fixture<LitElement>(
+    html`<lr-slider label="L" style="--lr-form-control-label-font-size: var(--lr-font-size-md-sm)"></lr-slider>`,
+  );
+  expect(size(matched, '[part~="label"]')).to.equal(size(input, '[part~="form-control-label"]'));
   const themed = await fixture<LitElement>(html`<lr-slider label="L" style="--lr-form-control-label-font-size: 20px"></lr-slider>`);
   expect(size(themed, '[part~="label"]')).to.equal('20px');
 });

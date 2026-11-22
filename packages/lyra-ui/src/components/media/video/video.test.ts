@@ -956,7 +956,7 @@ describe('lr-video public contract', () => {
       <lr-video src=${VIDEO_SRC} poster="https://example.test/poster.jpg" title="Demo"></lr-video>
     `);
     const wrapper = el.shadowRoot!.querySelector('[part~="base"]');
-    expect(wrapper?.getAttribute('part')).to.equal('base video-wrapper');
+    expect(wrapper?.getAttribute('part')).to.equal('base video-wrapper player');
     for (const part of [
       'video', 'poster-overlay', 'poster-play-button', 'controls', 'controls-overlay',
       'progress', 'timeline', 'timeline-indicator', 'timeline-thumb', 'timeline-track',
@@ -2028,7 +2028,7 @@ describe('lr-video public contract', () => {
         await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 
         const caption = el.shadowRoot!.querySelector<HTMLElement>('[part="caption"]')!;
-        const video = el.shadowRoot!.querySelector<HTMLElement>('[part="video"]')!;
+        const video = el.shadowRoot!.querySelector<HTMLElement>('[part~="video"]')!;
         const captionRect = caption.getBoundingClientRect();
         const videoRect = video.getBoundingClientRect();
         const controls = [...el.shadowRoot!.querySelectorAll<HTMLElement>(
@@ -3157,4 +3157,25 @@ it('paints control-bar hover from --lr-video-controls-hover-bg', async () => {
   } finally {
     await resetMouse();
   }
+});
+
+describe('lr-video aspect ratio and structural parts', () => {
+  it('keeps 16 / 9 by default and follows --aspect-ratio', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video controls="none" style="inline-size: 320px"></lr-video>`);
+    const player = el.shadowRoot!.querySelector<HTMLElement>('[part~="player"]')!;
+    expect(Math.round(player.getBoundingClientRect().height)).to.equal(180);
+    el.style.setProperty('--aspect-ratio', '2 / 1');
+    await el.updateComplete;
+    expect(Math.round(player.getBoundingClientRect().height)).to.equal(160);
+    expect(getComputedStyle(player).aspectRatio).to.equal('2 / 1');
+  });
+
+  it('exposes player on the root and body on the media element, keeping the existing names', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video></lr-video>`);
+    const player = el.shadowRoot!.querySelector<HTMLElement>('[part~="player"]')!;
+    expect(player.getAttribute('part')!.split(' ')).to.include.members(['base', 'video-wrapper', 'player']);
+    const body = el.shadowRoot!.querySelector<HTMLElement>('[part~="body"]')!;
+    expect(body.localName).to.equal('video');
+    expect(body.getAttribute('part')!.split(' ')).to.include.members(['video', 'body']);
+  });
 });

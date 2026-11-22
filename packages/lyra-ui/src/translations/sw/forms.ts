@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Tia alama kwenye kisanduku hiki ili kuendelea.',
   checkboxGroupRequired: 'Chagua angalau chaguo moja.',
   tokenInputRequired: 'Weka angalau thamani moja.',
+  tokenInputTooFew: {
+    one: 'Weka angalau thamani {count}.',
+    other: 'Weka angalau thamani {count}.',
+  },
+  tokenInputTooMany: {
+    one: 'Usiweke zaidi ya thamani {count}.',
+    other: 'Usiweke zaidi ya thamani {count}.',
+  },
   tokenInputEditWithContext: 'Hariri {label}',
   tokenInputLabel: 'Tokeni',
   iconButtonLabel: 'Kitufe',

@@ -937,3 +937,25 @@ export const CommitText: Story = {
     </lr-combobox>
   `,
 };
+
+export const DataSourceOptionsEvents: Story = {
+  name: 'dataSource with options events and reload()',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'dataSource is an alias of source. lr-options-request announces each call with its query and AbortSignal, lr-options-error reports a rejection, and reload() asks the provider again for the current query.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-combobox
+      label="City"
+      .dataSource=${async (query: string) =>
+        ['Lisbon', 'Lyon', 'Lima'].filter(city => city.toLowerCase().includes(query.toLowerCase())).map(city => ({ value: city, label: city }))}
+      @lr-options-request=${(event: CustomEvent<{ query: string }>) => console.log('lr-options-request', event.detail.query)}
+      @lr-options-error=${(event: CustomEvent<{ error: unknown }>) => console.log('lr-options-error', event.detail.error)}
+    ></lr-combobox>
+    <button type="button" @click=${(event: Event) => (event.currentTarget as HTMLElement).previousElementSibling && (((event.currentTarget as HTMLElement).previousElementSibling) as unknown as { reload(): void }).reload()}>Reload</button>
+  `,
+};

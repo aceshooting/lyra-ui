@@ -113,4 +113,12 @@ export const LYRA_DEFAULT_timeZonePickerLabel: LyraMessage = 'Time zone';
 export const LYRA_DEFAULT_tokenInputEditWithContext: LyraMessage = 'Edit {label}';
 export const LYRA_DEFAULT_tokenInputLabel: LyraMessage = 'Tokens';
 export const LYRA_DEFAULT_tokenInputRequired: LyraMessage = 'Enter at least one value.';
+export const LYRA_DEFAULT_tokenInputTooFew: LyraMessage = {
+    one: 'Enter at least {count} value.',
+    other: 'Enter at least {count} values.',
+  };
+export const LYRA_DEFAULT_tokenInputTooMany: LyraMessage = {
+    one: 'Enter no more than {count} value.',
+    other: 'Enter no more than {count} values.',
+  };
 export const LYRA_DEFAULT_unitPickerLabel: LyraMessage = 'Unit';

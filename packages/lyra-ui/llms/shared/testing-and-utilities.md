@@ -571,7 +571,18 @@ boolean; set defaultChecked(next: boolean) }`.
   `RecencyBucket<T> { label; items }`.
   The callable signature is `groupByRecency<T>(items: T[], options?:
 GroupByRecencyOptions<T>): RecencyBucket<T>[]`.
-- **`defined` → `allDefined(root?, options?): Promise<void>`** — iteratively waits for every
+- **`allDefined({ match?, additionalElements?, root?, timeout? })`** — options form of the helper
+  below. Without `match` it waits like the root form; with `match` it waits for every undefined
+  element under `root` (default `document`) whose lowercase tag the function accepts.
+  `additionalElements` (a tag or tags) names elements that may not be on the page yet. After
+  `timeout` ms (default `2000`, `Infinity` disables it) it logs a console warning listing the tags
+  still undefined and resolves anyway. A negative or `NaN` timeout throws `RangeError`. The
+  `(root, options)` form never times out.
+- **`form` → `serialize(form): Record<string, FormDataEntryValue | FormDataEntryValue[]>`** — a
+  form's successful controls as a plain object; a name that occurs more than once becomes an array
+  in document order (`serializeFormData(formData)` is the same fold over any `FormData`). The result
+  has a `null` prototype, so a field named `__proto__` is just a key.
+- **`defined` → `allDefined(root?, options?): Promise<void>`** —- **`defined` → `allDefined(root?, options?): Promise<void>`** — iteratively waits for every
   currently rendered, inventory-known Lyra tag below a `Document`, `DocumentFragment`/open
   `ShadowRoot`, or `Element` to be defined in its owning/scoped registry. It also waits for each
   available `updateComplete`, then repeats so tags created by that first render are included. Open

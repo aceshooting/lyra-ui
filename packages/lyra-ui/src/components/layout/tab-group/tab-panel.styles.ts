@@ -9,7 +9,7 @@ export const styles = css`
   :host(:not([active])) {
     display: none;
   }
-  [part='base'] {
+  [part~='base'] {
     padding: var(--padding, 0);
     block-size: var(--_lr-tab-panel-block-size, auto);
     box-sizing: border-box;

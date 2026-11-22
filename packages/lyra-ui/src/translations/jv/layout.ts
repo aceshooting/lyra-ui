@@ -62,6 +62,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'Kasalahan',
   stepperStatePending: 'Durung diwiwiti',
   stepperStateLocked: 'Dikunci',
+  stepperStateLoading: 'Lagi dimuat',
+  stepperStateDisabled: 'Ora kasedhiya',
+  stepperSteps: 'Langkah',
+  stepperStepPosition: 'Langkah {current} saka {total}',
   commandPaletteInputLimit: 'Sawetara prentah ora dilebokake amarga wates input wis tekan.',
 };
 

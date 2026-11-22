@@ -185,6 +185,8 @@ export type LyraConversationItemVueProps = LyraVueCustomElement<'lr-conversation
 
 export type LyraCopyButtonVueProps = LyraVueCustomElement<'lr-copy-button'>;
 
+export type LyraCounterVueProps = LyraVueCustomElement<'lr-counter'>;
+
 export type LyraCountryPickerVueProps = LyraVueCustomElement<'lr-country-picker'>;
 
 export type LyraCsvViewerVueProps = LyraVueCustomElement<'lr-csv-viewer'>;
@@ -345,6 +347,8 @@ export type LyraKnownDateVueProps = LyraVueCustomElement<'lr-known-date'>;
 
 export type LyraLightboxVueProps = LyraVueCustomElement<'lr-lightbox'>;
 
+export type LyraLightboxItemVueProps = LyraVueCustomElement<'lr-lightbox-item'>;
+
 export type LyraLineChartVueProps = LyraVueCustomElement<'lr-line-chart'>;
 
 export type LyraLiteChartVueProps = LyraVueCustomElement<'lr-lite-chart'>;
@@ -410,6 +414,8 @@ export type LyraNodePaletteVueProps = LyraVueCustomElement<'lr-node-palette'>;
 export type LyraNotebookViewerVueProps = LyraVueCustomElement<'lr-notebook-viewer'>;
 
 export type LyraNumberInputVueProps = LyraVueCustomElement<'lr-number-input'>;
+
+export type LyraNumberTickerVueProps = LyraVueCustomElement<'lr-number-ticker'>;
 
 export type LyraOptionVueProps = LyraVueCustomElement<'lr-option'>;
 
@@ -548,6 +554,8 @@ export type LyraSpreadsheetViewerVueProps = LyraVueCustomElement<'lr-spreadsheet
 export type LyraStackTraceVueProps = LyraVueCustomElement<'lr-stack-trace'>;
 
 export type LyraStatVueProps = LyraVueCustomElement<'lr-stat'>;
+
+export type LyraStepVueProps = LyraVueCustomElement<'lr-step'>;
 
 export type LyraStepperVueProps = LyraVueCustomElement<'lr-stepper'>;
 
@@ -744,6 +752,7 @@ export interface LyraVueGlobalComponents {
   'lr-control-group': LyraControlGroupVueProps;
   'lr-conversation-item': LyraConversationItemVueProps;
   'lr-copy-button': LyraCopyButtonVueProps;
+  'lr-counter': LyraCounterVueProps;
   'lr-country-picker': LyraCountryPickerVueProps;
   'lr-csv-viewer': LyraCsvViewerVueProps;
   'lr-currency-picker': LyraCurrencyPickerVueProps;
@@ -824,6 +833,7 @@ export interface LyraVueGlobalComponents {
   'lr-knowledge-graph-explorer': LyraKnowledgeGraphExplorerVueProps;
   'lr-known-date': LyraKnownDateVueProps;
   'lr-lightbox': LyraLightboxVueProps;
+  'lr-lightbox-item': LyraLightboxItemVueProps;
   'lr-line-chart': LyraLineChartVueProps;
   'lr-lite-chart': LyraLiteChartVueProps;
   'lr-live-region': LyraLiveRegionVueProps;
@@ -857,6 +867,7 @@ export interface LyraVueGlobalComponents {
   'lr-node-palette': LyraNodePaletteVueProps;
   'lr-notebook-viewer': LyraNotebookViewerVueProps;
   'lr-number-input': LyraNumberInputVueProps;
+  'lr-number-ticker': LyraNumberTickerVueProps;
   'lr-option': LyraOptionVueProps;
   'lr-otp-input': LyraOtpInputVueProps;
   'lr-page': LyraPageVueProps;
@@ -926,6 +937,7 @@ export interface LyraVueGlobalComponents {
   'lr-spreadsheet-viewer': LyraSpreadsheetViewerVueProps;
   'lr-stack-trace': LyraStackTraceVueProps;
   'lr-stat': LyraStatVueProps;
+  'lr-step': LyraStepVueProps;
   'lr-stepper': LyraStepperVueProps;
   'lr-stream-status': LyraStreamStatusVueProps;
   'lr-streaming-text': LyraStreamingTextVueProps;

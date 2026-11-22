@@ -379,4 +379,47 @@ describe('allDefined', () => {
       expect(error instanceof RangeError).to.equal(true);
     }
   });
+
+  describe('options form', () => {
+    it('waits for matched undefined elements and additionalElements', async () => {
+      const host = await fixture<HTMLElement>(html`<div><dx-late-a></dx-late-a></div>`);
+      let resolved = false;
+      const pending = allDefined({
+        root: host.getRootNode() as Document,
+        match: (tag) => tag.startsWith('dx-late-'),
+        additionalElements: 'dx-late-b',
+      }).then(() => {
+        resolved = true;
+      });
+      customElements.define('dx-late-a', class extends HTMLElement {});
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(resolved).to.equal(false);
+      customElements.define('dx-late-b', class extends HTMLElement {});
+      await pending;
+      expect(resolved).to.equal(true);
+    });
+
+    it('warns with the pending tags and resolves when the timeout expires', async () => {
+      const warnings: string[] = [];
+      const original = console.warn;
+      console.warn = (...args: unknown[]) => void warnings.push(args.join(' '));
+      try {
+        await allDefined({ additionalElements: ['dx-never-defined'], timeout: 10 });
+      } finally {
+        console.warn = original;
+      }
+      expect(warnings.some((message) => message.includes('dx-never-defined'))).to.equal(true);
+    });
+
+    it('rejects a negative timeout and leaves the root form without a timeout', async () => {
+      let thrown: unknown;
+      try {
+        await allDefined({ timeout: -5 });
+      } catch (error) {
+        thrown = error;
+      }
+      expect(thrown).to.be.instanceOf(RangeError);
+      await allDefined(document);
+    });
+  });
 });

@@ -7,8 +7,8 @@ export const styles = css`
     min-inline-size: 0;
     /* Private properties carry orientation into every slotted <lr-timeline-item>'s own stylesheet
        by custom-property inheritance across the slot boundary -- no JS coordination.
-       --_lr-timeline-item-direction drives an item's [part='base'] flex-direction; the other three
-       are companions, so [part='track'] (always the *opposite* axis from [part='base']) and
+       --_lr-timeline-item-direction drives an item's [part~='base'] flex-direction; the other three
+       are companions, so [part='track'] (always the *opposite* axis from [part~='base']) and
        [part='content'] (which logical padding side reaches into the inter-item gap) follow with no
        conditional logic -- consumed by timeline-item.styles.ts. flex-direction: row is inherently
        the CSS *inline* axis and column the *block* axis, so no RTL override is needed: a row flex
@@ -23,9 +23,93 @@ export const styles = css`
     --_lr-timeline-item-track-direction: row;
     --_lr-timeline-item-gap-block-end: 0;
     --_lr-timeline-item-gap-inline-end: var(--lr-timeline-gap, var(--lr-space-l));
+    --_lr-timeline-item-opposite-basis: auto; /* the opposite content sits above the marker */
+    --_lr-timeline-item-opposite-align: start;
+    --_lr-timeline-item-rail-gap-block: 0px;
+    --_lr-timeline-item-rail-gap-inline: var(--lr-timeline-connector-gap, 0px);
   }
 
-  [part='base'] {
+  /* The frame is the container the allocation-driven layouts query. It only becomes one when a
+     layout needs it, because inline-size containment would collapse a shrink-to-fit host. */
+  .frame {
+    display: block;
+    min-inline-size: 0;
+  }
+  :host([orientation='auto']) .frame,
+  :host([marker-placement='alternate']) .frame {
+    container-type: inline-size;
+  }
+
+  /* marker-placement="end": the marker follows the content. row-reverse is inline-logical, so the
+     sides swap again under RTL without an override. */
+  :host([marker-placement='end']:not([orientation='horizontal'])) [part~='base'] {
+    --_lr-timeline-item-direction: row-reverse;
+    --_lr-timeline-item-content-align: end;
+    --_lr-timeline-item-opposite-align: start;
+  }
+
+  /* marker-alignment="center": the marker centers on the item's full height and the rail halves
+     run above and below it as one line. */
+  :host([marker-alignment='center']:not([orientation='horizontal'])) [part~='base'] {
+    --_lr-timeline-item-track-justify: center;
+    --_lr-timeline-item-rail-position: absolute;
+    --_lr-timeline-item-rail-inline: 100%;
+    --_lr-timeline-item-rail-block: auto;
+    --_lr-timeline-item-rail-gap-block: 0px;
+    --_lr-timeline-item-rail-bg: transparent;
+    --_lr-timeline-item-rail-halves: '';
+    --_lr-timeline-item-rail-visibility-center: visible;
+    --_lr-timeline-item-track-pad: var(--_lr-timeline-item-gap-block-end);
+  }
+
+  /* marker-placement="alternate": three equal columns, rail in the middle, content on alternating
+     sides. Narrower than 30em every item falls back to the start layout. The even-numbered items
+     read the flip values through their own :host(:nth-of-type(even)) rule. */
+  @container (min-width: 30em) {
+    :host([marker-placement='alternate']:not([orientation='horizontal'])) [part~='base'] {
+      --_lr-timeline-item-base-display: grid;
+      --_lr-timeline-item-track-col: 2;
+      --_lr-timeline-alt-content-col: 3;
+      --_lr-timeline-alt-opposite-col: 1;
+      --_lr-timeline-alt-flip-content-col: 1;
+      --_lr-timeline-alt-flip-opposite-col: 3;
+      --_lr-timeline-alt-flip-content-align: end;
+      --_lr-timeline-alt-flip-opposite-align: start;
+    }
+  }
+
+  /* orientation="auto": a column until the timeline has room for a row. */
+  @container (min-width: 40em) {
+    :host([orientation='auto']:not([scale='time'])) [part~='base'] {
+      flex-direction: row;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: calc(var(--lr-space-2xs) + var(--lr-border-width-medium));
+      --_lr-timeline-item-direction: column;
+      --_lr-timeline-item-track-direction: row;
+      --_lr-timeline-item-gap-block-end: 0;
+      --_lr-timeline-item-gap-inline-end: var(--lr-timeline-gap, var(--lr-space-l));
+      --_lr-timeline-item-opposite-basis: auto;
+      --_lr-timeline-item-opposite-align: start;
+      --_lr-timeline-item-content-align: initial;
+      --_lr-timeline-item-rail-gap-block: 0px;
+      --_lr-timeline-item-rail-gap-inline: var(--lr-timeline-connector-gap, 0px);
+      --_lr-timeline-item-base-display: initial;
+      --_lr-timeline-item-track-col: initial;
+      --_lr-timeline-item-track-justify: initial;
+      --_lr-timeline-item-track-pad: initial;
+      --_lr-timeline-item-rail-position: initial;
+      --_lr-timeline-item-rail-inline: initial;
+      --_lr-timeline-item-rail-block: initial;
+      --_lr-timeline-item-rail-bg: initial;
+      --_lr-timeline-item-rail-halves: initial;
+      --_lr-timeline-item-rail-visibility-center: initial;
+      --_lr-timeline-alt-content-col: initial;
+      --_lr-timeline-alt-opposite-col: initial;
+    }
+  }
+
+  [part~='base'] {
     display: flex;
     flex-direction: column;
     min-inline-size: 0;
@@ -38,13 +122,13 @@ export const styles = css`
      auto-sized track resolve to zero -- hence tokenized --lr-timeline-time-extent, not content
      height. collision controls whether nearby markers overlap, fan into lanes, or collapse into
      count actions. */
-  :host([scale='time']) [part='base'] {
+  :host([scale='time']) [part~='base'] {
     position: relative;
     display: block;
     block-size: var(--lr-timeline-time-extent, var(--lr-size-20rem));
     margin-block-end: var(--_lr-timeline-trailing-extent, 0);
   }
-  :host([scale='time'][orientation='horizontal']) [part='base'] {
+  :host([scale='time'][orientation='horizontal']) [part~='base'] {
     block-size: var(--_lr-timeline-content-height, auto);
     inline-size: var(--lr-timeline-time-extent, var(--lr-size-20rem));
   }
@@ -95,14 +179,14 @@ export const styles = css`
   }
 
   :host([scale='time'][collision='cluster'][orientation='horizontal'])
-    [part='base'] {
+    [part~='base'] {
     min-block-size: max(
       var(--lr-icon-button-size),
       var(--lr-timeline-cluster-size, var(--lr-size-2rem))
     );
   }
 
-  :host([orientation='horizontal']) [part='base'] {
+  :host([orientation='horizontal']) [part~='base'] {
     flex-direction: row;
     /* Mirrors <lr-tab-group>: a horizontal timeline becomes a horizontally-scrollable strip rather
        than breaking layout. overflow-y is pinned explicitly because the overflow spec forces an
@@ -119,11 +203,11 @@ export const styles = css`
      no-hover-state: a scroll container is not a pointer target -- it has no cursor: pointer and
      nothing of its own to paint, and tinting the whole strip under the pointer would suggest a
      selection a timeline cannot make. */
-  [part='base']:focus-visible {
+  [part~='base']:focus-visible {
     ${focusRing}
   }
   /* The shared edge fade is for the horizontal strip only; a vertical base never scrolls sideways. */
-  :host(:not([orientation='horizontal'])) [part='base'] {
+  :host(:not([orientation='horizontal'])) [part~='base'] {
     -webkit-mask-image: none;
     mask-image: none;
   }
@@ -131,7 +215,7 @@ export const styles = css`
   /* Matches by role, not tag name (<lr-timeline-item> sets role="listitem" in connectedCallback),
      so the selector survives any registered tag prefix -- <lr-breadcrumb>'s ::slotted
      structural-position technique. Suppresses the last item's trailing rail (nothing left to
-     connect to) with no JS coordination; consumed by <lr-timeline-item>'s [part='rail'] rule. */
+     connect to) with no JS coordination; consumed by <lr-timeline-item>'s [part~='rail'] rule. */
   ::slotted([role='listitem']:last-child) {
     --_lr-timeline-item-rail-visibility: hidden;
   }

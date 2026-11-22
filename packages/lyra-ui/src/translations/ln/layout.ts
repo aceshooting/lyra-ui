@@ -63,6 +63,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'Libunga',
   stepperStatePending: 'Ebandaki naino te',
   stepperStateLocked: 'Ekangami',
+  stepperStateLoading: 'Ezali kozwa',
+  stepperStateDisabled: 'Ezali te',
+  stepperSteps: 'Matambya',
+  stepperStepPosition: 'Likambo {current} na {total}',
   commandPaletteInputLimit: 'Balongoli ndambo ya mitindo mpo motango ya kokɔtisa ekómi na ndelo.',
 };
 

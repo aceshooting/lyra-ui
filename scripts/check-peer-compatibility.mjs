@@ -3046,7 +3046,7 @@ export function inspectPeerTarballArchive(compressed, { expectedPackage, limits:
   }
   if (!isRecord(expectedPackage)) throw new TypeError('Expected tarball package identity is required.');
   stableVersion(expectedPackage.version, 'expected tarball package version');
-  if (!['@aceshooting/lyra-ui', '@aceshooting/lyra-ide', '@aceshooting/lyra-translations', '@aceshooting/lyra-map', '@aceshooting/lyra-3d', '@aceshooting/lyra-gen'].includes(expectedPackage.name) && !(expectedPackage.name === 'xlsx' && expectedPackage.version === '0.20.3')) {
+  if (!['@aceshooting/lyra-ui', '@aceshooting/lyra-ide', '@aceshooting/lyra-translations', '@aceshooting/lyra-map', '@aceshooting/lyra-3d', '@aceshooting/lyra-gen', '@aceshooting/lyra-cdn'].includes(expectedPackage.name) && !(expectedPackage.name === 'xlsx' && expectedPackage.version === '0.20.3')) {
     throw new Error('Expected tarball package name must be a reviewed Lyra package or the vendored xlsx package.');
   }
   const limits = resolvedTarballLimits(overrides);

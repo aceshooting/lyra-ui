@@ -13,6 +13,8 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Tẹ àpótí yìí bí o bá fẹ́ tẹ̀síwájú.',
   checkboxGroupRequired: 'Yan ó kéré tán àṣàyàn kan.',
   tokenInputRequired: 'Tẹ ó kéré tán iye kan sí i.',
+  tokenInputTooFew: { other: 'Tẹ iye {count} o kere tán.' },
+  tokenInputTooMany: { other: 'Má ṣe tẹ iye ju {count} lọ.' },
   tokenInputEditWithContext: 'Ṣàtúnṣe {label}',
   tokenInputLabel: 'Àwọn àmì',
   iconButtonLabel: 'Bọ́tìnì',

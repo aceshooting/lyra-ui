@@ -83,7 +83,7 @@ for (const asset of ['theme.css', 'theme-core.css', 'density.css', 'accents.css'
 const stylesDir = join(packageDir, 'dist', 'styles');
 await mkdir(stylesDir, { recursive: true });
 await Promise.all(
-  ['design-tokens.css', 'native.css', 'reservations.css', 'tokens-root.css', 'utilities.css'].map((name) =>
+  ['design-tokens.css', 'native.css', 'palette.css', 'reservations.css', 'tokens-root.css', 'utilities.css'].map((name) =>
     cp(join(packageDir, 'src', 'styles', name), join(stylesDir, name)),
   ),
 );

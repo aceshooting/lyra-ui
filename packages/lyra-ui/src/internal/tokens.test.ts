@@ -1014,6 +1014,24 @@ it('leaves every bridged token at its built-in value when theme.css is imported'
   });
 });
 
+it('derives the extended spacing and display type steps from their theme inputs', async () => {
+  await withThemeCss(async () => {
+    const probe = await nestedProbe();
+    const rem = remPx(1);
+    expect(resolvedPx(probe, '--lr-space-xl')).to.be.closeTo(rem * 1.5, 0.01);
+    expect(resolvedPx(probe, '--lr-space-3xl')).to.be.closeTo(rem * 3, 0.01);
+    expect(resolvedPx(probe, '--lr-space-4xl')).to.be.closeTo(rem * 4, 0.01);
+    expect(resolvedPx(probe, '--lr-font-size-4xl')).to.be.closeTo(rem * 2.5, 0.01);
+    expect(resolvedPx(probe, '--lr-font-size-5xl')).to.be.closeTo(rem * 3, 0.01);
+  });
+});
+
+it('follows a re-themed space 2xl input when deriving the larger steps', async () => {
+  const probe = await nestedProbe('--lr-theme-space-2xl: 40px');
+  expect(resolvedPx(probe, '--lr-space-3xl')).to.equal(60);
+  expect(resolvedPx(probe, '--lr-space-4xl')).to.equal(80);
+});
+
 it('mirrors every dark-mode fallback value in theme.css .lr-dark', async () => {
   await withThemeCss(async () => {
     // .lr-dark must not disagree with the prefers-color-scheme: dark fallback blocks in the base

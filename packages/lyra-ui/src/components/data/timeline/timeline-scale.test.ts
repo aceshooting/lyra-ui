@@ -57,7 +57,7 @@ it('measures only the invalidated time item after a stable extent pass', async (
 it('recomputes horizontal content height when an item and the allocation grow', async () => {
   const el = await fixture<LyraTimeline>(html`<lr-timeline scale="time" orientation="horizontal"><lr-timeline-item style="height:40px"></lr-timeline-item><lr-timeline-item style="height:60px"></lr-timeline-item></lr-timeline>`);
   await twoFrames(); await aTimeout(60);
-  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
   const before = Number.parseFloat(base.style.getPropertyValue('--_lr-timeline-content-height'));
   (el.children[0] as HTMLElement).style.height = '180px';
   await twoFrames(); await aTimeout(60);
@@ -96,7 +96,7 @@ it('bounds geometry reads to one changed entry in a 10000-item time projection',
 it('updates horizontal overflow and tab reachability after width-only item growth and shrink', async () => {
   const el = await fixture<LyraTimeline>(html`<lr-timeline scale="time" orientation="horizontal" style="--lr-timeline-time-extent:320px;height:100px"><lr-timeline-item style="width:80px;height:40px"></lr-timeline-item></lr-timeline>`);
   await twoFrames(); await aTimeout(60);
-  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
   base.style.height = '100px';
   await twoFrames(); await aTimeout(60);
   const item = el.children[0] as HTMLElement;
@@ -117,7 +117,7 @@ it('tracks item growth after a horizontal timeline reconnects', async () => {
   const el = await fixture<LyraTimeline>(html`<lr-timeline orientation="horizontal" style="width:260px">
     <lr-timeline-item>Start</lr-timeline-item><lr-timeline-item>End</lr-timeline-item>
   </lr-timeline>`);
-  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
   base.style.scrollbarWidth = 'none';
   await twoFrames();
   const parent = el.parentElement!;
@@ -133,7 +133,7 @@ it('remeasures a time item that grows after its timeline moves', async () => {
   const el = await fixture<LyraTimeline>(html`<lr-timeline scale="time" orientation="horizontal">
     <lr-timeline-item style="height:40px"></lr-timeline-item><lr-timeline-item style="height:60px"></lr-timeline-item>
   </lr-timeline>`);
-  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
   const height = () => Number.parseFloat(base.style.getPropertyValue('--_lr-timeline-content-height'));
   await waitUntil(() => height() >= 60);
   const parent = el.parentElement!;

@@ -13,6 +13,18 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Установите этот флажок, чтобы продолжить.',
   checkboxGroupRequired: 'Выберите хотя бы один вариант.',
   tokenInputRequired: 'Введите хотя бы одно значение.',
+  tokenInputTooFew: {
+    one: 'Введите не менее {count} значения.',
+    few: 'Введите не менее {count} значений.',
+    many: 'Введите не менее {count} значений.',
+    other: 'Введите не менее {count} значения.',
+  },
+  tokenInputTooMany: {
+    one: 'Введите не более {count} значения.',
+    few: 'Введите не более {count} значений.',
+    many: 'Введите не более {count} значений.',
+    other: 'Введите не более {count} значения.',
+  },
   tokenInputEditWithContext: 'Изменить {label}',
   tokenInputLabel: 'Токены',
   iconButtonLabel: 'Кнопка',

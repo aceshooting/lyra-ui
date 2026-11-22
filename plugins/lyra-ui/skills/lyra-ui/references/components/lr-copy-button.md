@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 14 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -113,6 +113,7 @@ the built-in button. Exactly one named icon is rendered at a time.
   not reliably announced (JAWS with Firefox ignores one outright). Assert against that
   document-level region rather than `::part(feedback)`; the part is a styling and inspection
   surface, and still tells you what the button last announced.
+- `copy-button` — the Web Awesome-named outer wrapper (the nested tooltip element holding the trigger).
 - `tooltip__base`, `tooltip__base__popup`, `tooltip__base__arrow`, `tooltip__body` — exported nested
   tooltip parts.
 

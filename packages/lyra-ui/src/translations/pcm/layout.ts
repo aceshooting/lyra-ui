@@ -63,6 +63,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'Wahala',
   stepperStatePending: 'E never start',
   stepperStateLocked: 'Dem don lock am',
+  stepperStateLoading: 'E dey load',
+  stepperStateDisabled: 'E no dey available',
+  stepperSteps: 'Di steps dem',
+  stepperStepPosition: 'Step {current} for {total}',
   commandPaletteInputLimit: 'Dem leave some command because input don reach im limit.',
 };
 

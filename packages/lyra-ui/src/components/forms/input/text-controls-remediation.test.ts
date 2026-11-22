@@ -135,7 +135,7 @@ describe('shared field rendering', () => {
   }
 
   for (const [tag, selector] of [
-    ['lr-token-input', '[part="input-wrapper"]'],
+    ['lr-token-input', '[part~="input-wrapper"]'],
     ['lr-code-editor', '[part="editor"]'],
     ['lr-phone-input', '[part="input-wrapper"]'],
     ['lr-signature-pad', '[part="surface"]'],
@@ -274,7 +274,7 @@ describe('shared field rendering', () => {
     const tokens = Array.from({ length: 600 }, (_, index) => `token ${index}`);
     const el = await fixture<LyraTokenInput>(html`<lr-token-input max-tokens-visible="200" .value=${tokens}></lr-token-input>`);
     expect(el.value).to.have.length(600);
-    expect(el.shadowRoot!.querySelectorAll('[part="token"]').length).to.equal(200);
+    expect(el.shadowRoot!.querySelectorAll('[part~="token"]').length).to.equal(200);
     expect(part(el, '[part="token-overflow"]').textContent).to.contain('400');
   });
 });
@@ -316,7 +316,7 @@ describe('live fieldset disablement', () => {
     }
     el.readonly = true;
     draft.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-    el.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove"]')!.click();
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="remove"]')!.click();
     await el.updateComplete;
     expect(el.value).to.deep.equal(['saved']);
     expect(draft.value).to.equal('');
@@ -356,7 +356,7 @@ describe('text control native and theme options', () => {
       <lr-token-input editable autocomplete="off" inputmode="email" enterkeyhint="done"
         .value=${['alpha']}></lr-token-input>
     `);
-    const token = part(el, '[part="token-label"]');
+    const token = part(el, '[part~="token-label"]');
     token.dispatchEvent(new KeyboardEvent('keydown', { key: 'F2', bubbles: true, cancelable: true }));
     await el.updateComplete;
     const fields = [part(el, '[part="input"]'), part(el, '[part="token-editor"]')];
@@ -393,7 +393,7 @@ describe('text control native and theme options', () => {
 
 describe('field theme overrides', () => {
   for (const [tag, selector] of [
-    ['lr-token-input', '[part="input-wrapper"]'], ['lr-phone-input', '[part="input-wrapper"]'],
+    ['lr-token-input', '[part~="input-wrapper"]'], ['lr-phone-input', '[part="input-wrapper"]'],
     ['lr-code-editor', '[part="editor"]'], ['lr-otp-input', '[part~="segment"]'],
     ['lr-signature-pad', '[part="surface"]'],
   ] as const) {

@@ -1,0 +1,56 @@
+# Informational: opens or refreshes one issue per upstream package (Web Awesome, Shoelace) when a
+# newer stable npm release than the reviewed pin changes the published custom-elements surface.
+# It never gates a build and never edits the pin.
+name: Upstream watch
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: upstream-watch
+  cancel-in-progress: false
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - name: Compare the newest upstream releases with the pins
+        env:
+          ISSUE_DIR: ${{ runner.temp }}/upstream-issues
+        run: |
+          set -euo pipefail
+          node packages/lyra-ui/scripts/check-upstream-drift.mjs --issue-dir "$ISSUE_DIR" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Open or refresh the drift issues
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ISSUE_DIR: ${{ runner.temp }}/upstream-issues
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for title_file in "$ISSUE_DIR"/*.title; do
+            body_file="${title_file%.title}.md"
+            title="$(cat "$title_file")"
+            existing="$(gh issue list --state open --search "Upstream drift in:title" --limit 100 --json number,title \
+              --jq "map(select(.title == \"$title\")) | .[0].number // empty")"
+            if [[ -n "$existing" ]]; then
+              gh issue edit "$existing" --body-file "$body_file"
+              echo "Updated issue #$existing: $title"
+            else
+              gh issue create --title "$title" --body-file "$body_file"
+            fi
+          done

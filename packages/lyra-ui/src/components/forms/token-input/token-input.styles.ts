@@ -99,7 +99,7 @@ export const styles = css`
      inline one: with it and the zeroed input padding below, content is <= lr-input's at every tier
      (per-tier font-size never exceeds the ladder's), so this row's floor wins wherever lr-input's
      does and the two align in a toolbar. Widen past the ladder and the font decides the height. */
-  [part='input-wrapper'] {
+  [part~='input-wrapper'] {
     display: flex;
     flex-wrap: wrap;
     min-inline-size: 0;
@@ -128,7 +128,7 @@ export const styles = css`
     border-radius: var(--lr-token-input-radius, var(--_lr-token-input-radius));
     background: var(--lr-token-input-fill, var(--_lr-form-control-fill));
   }
-  [part="input-wrapper"]:focus-within {
+  [part~="input-wrapper"]:focus-within {
     border-color: var(
       --lr-token-input-focus-border-color,
       var(--lr-color-brand)
@@ -170,7 +170,38 @@ export const styles = css`
   [part="end"][hidden] {
     display: none;
   }
-  [part="token"] {
+  /* The tokens stay direct flex items of the row; a consumer may override display to box them. */
+  [part="tags"] {
+    display: contents;
+  }
+  [part="clear-button"] {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    ${iconHitTarget}
+    padding: var(--lr-space-2xs);
+    border: 0;
+    border-radius: var(--lr-token-input-radius, var(--_lr-token-input-radius));
+    background: transparent;
+    color: var(--lr-color-text-quiet);
+    font: inherit;
+    line-height: var(--lr-line-height-none);
+    cursor: pointer;
+    ${interactiveTransition}
+  }
+  [part="clear-button"]:hover {
+    color: var(--lr-color-text);
+  }
+  [part="clear-button"]:active {
+    color: var(--lr-color-text);
+    background: ${activeFill('var(--lr-color-surface)')};
+  }
+  [part="clear-button"]:focus-visible {
+    ${focusRing}
+  }
+  [part~="token"] {
     display: inline-flex;
     min-inline-size: 0;
     max-inline-size: 100%;
@@ -187,13 +218,13 @@ export const styles = css`
     background: var(--lr-token-input-token-bg, var(--lr-color-brand-quiet));
     color: var(--lr-token-input-token-color, var(--lr-color-text));
   }
-  [part="token"] > span:first-child {
+  [part~="token"] > span:first-child {
     min-inline-size: 0;
   }
   /* Same reachability rule as lr-combobox's [part='tag-label']: the ellipsis needs a
      non-wrapping line to fire, and overflow-wrap: anywhere would break the token mid-word. */
-  [part="token"] > span:first-child,
-  [part="token-label"] {
+  [part~="token"] > span:first-child,
+  [part~="token-label"] {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -221,7 +252,7 @@ export const styles = css`
     cursor: default;
     opacity: var(--lr-opacity-disabled);
   }
-  [part="remove"] {
+  [part~="remove"] {
     display: inline-flex;
     flex: 0 0 auto;
     align-items: center;
@@ -237,33 +268,33 @@ export const styles = css`
        button's fill snaps while lr-button/lr-icon-button ease. */
     ${interactiveTransition}
   }
-  [part="remove"]:hover {
+  [part~="remove"]:hover {
     background: var(
       --lr-token-input-remove-hover-bg,
       var(--lr-token-input-action-hover-bg, var(--lr-color-brand-quiet))
     );
   }
-  [part="remove"]:active {
+  [part~="remove"]:active {
     background: var(
       --lr-token-input-remove-active-bg,
       ${activeFill('var( --lr-token-input-remove-hover-bg, var(--lr-token-input-action-hover-bg, var(--lr-color-brand-quiet)) )')}
     );
   }
   /* The token clips its overflow for the ellipsis, so its actions draw their rings inside. */
-  [part="remove"]:focus-visible {
+  [part~="remove"]:focus-visible {
     ${focusRingInsetOffset}
   }
-  [part="remove"][aria-disabled="true"] {
+  [part~="remove"][aria-disabled="true"] {
     cursor: default;
     opacity: var(--lr-opacity-disabled);
   }
-  [part="remove"][aria-disabled="true"]:hover,
-  [part="remove"][aria-disabled="true"]:active {
+  [part~="remove"][aria-disabled="true"]:hover,
+  [part~="remove"][aria-disabled="true"]:active {
     background: transparent;
   }
   /* Only rendered while [editable] is set, so a non-editable token row keeps its plain,
      non-focusable text span and its current metrics. */
-  [part="token-label"] {
+  [part~="token-label"] {
     align-content: center;
     ${iconHitTarget}
     border-radius: var(--lr-token-input-radius, var(--_lr-token-input-radius));
@@ -272,22 +303,22 @@ export const styles = css`
        token's fill snaps while lr-button/lr-icon-button ease. */
     ${interactiveTransition}
   }
-  :host(:where(:not(:disabled))) [part="token-label"]:hover {
+  :host(:where(:not(:disabled))) [part~="token-label"]:hover {
     background: var(
       --lr-token-input-edit-hover-bg,
       var(--lr-token-input-action-hover-bg, var(--lr-color-brand-quiet))
     );
   }
-  :host(:where(:not(:disabled))) [part="token-label"]:active {
+  :host(:where(:not(:disabled))) [part~="token-label"]:active {
     background: var(
       --lr-token-input-edit-active-bg,
       ${activeFill('var( --lr-token-input-edit-hover-bg, var(--lr-token-input-action-hover-bg, var(--lr-color-brand-quiet)) )')}
     );
   }
-  [part="token-label"]:focus-visible {
+  [part~="token-label"]:focus-visible {
     ${focusRingInsetOffset}
   }
-  :host(:disabled) [part="token-label"] {
+  :host(:disabled) [part~="token-label"] {
     cursor: default;
   }
   [part="token-editor"] {
@@ -315,7 +346,7 @@ export const styles = css`
   [part="error"] {
     ${formControlTextWrap}
   }
-  ${formControlInvalidBorder(css`[part="input-wrapper"]`, css`--lr-token-input-invalid-border-color`)}
+  ${formControlInvalidBorder(css`[part~="input-wrapper"]`, css`--lr-token-input-invalid-border-color`)}
   ${formControlTouchFontFloor(css`[part="input"]`)}
   ${formControlLabelPlacement}
 `;

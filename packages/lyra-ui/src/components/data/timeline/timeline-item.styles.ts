@@ -6,6 +6,8 @@ export const styles = css`
     display: block;
     min-inline-size: 0;
     --_lr-timeline-marker-color-default: var(--lr-timeline-marker-neutral-color, var(--lr-color-text-quiet));
+    --_lr-timeline-rail-width: var(--lr-timeline-connector-width, var(--lr-timeline-rail-width, var(--lr-border-width-medium)));
+    --_lr-timeline-rail-color: var(--lr-timeline-connector-color, var(--lr-timeline-rail-color, var(--lr-color-border-subtle)));
   }
   :host([variant='brand']) {
     --_lr-timeline-marker-color-default: var(--lr-timeline-marker-brand-color, var(--lr-color-brand));
@@ -20,23 +22,36 @@ export const styles = css`
     --_lr-timeline-marker-color-default: var(--lr-timeline-marker-danger-color, var(--lr-color-danger));
   }
 
-  [part='base'] {
-    display: flex;
+  [part~='base'] {
+    /* flex normally; an alternating parent timeline switches it to three grid columns with the
+       rail in the middle one. */
+    display: var(--_lr-timeline-item-base-display, flex);
+    grid-template-columns: 1fr auto 1fr;
     min-inline-size: 0;
     flex-direction: var(--_lr-timeline-item-direction, row);
     gap: var(--lr-space-s);
   }
 
   [part='track'] {
+    position: relative;
     display: flex;
     flex-direction: var(--_lr-timeline-item-track-direction, column);
+    justify-content: var(--_lr-timeline-item-track-justify, flex-start);
     align-items: center;
     flex: 0 0 auto;
+    grid-column: var(--_lr-timeline-item-track-col, auto);
+    grid-row: 1;
+    /* The marker's resting size, which the rail halves of a centered marker measure around. */
+    --_lr-timeline-marker-extent: var(--lr-timeline-marker-size, var(--lr-size-1-25rem));
+    padding-block-end: var(--_lr-timeline-item-track-pad, 0);
+  }
+  [part='track'][data-has-icon] {
+    --_lr-timeline-marker-extent: var(--lr-timeline-icon-marker-size, var(--lr-timeline-marker-size, var(--lr-size-1-25rem)));
   }
 
   [part='marker'] {
-    inline-size: var(--lr-timeline-marker-size, var(--lr-size-1-25rem));
-    block-size: var(--lr-timeline-marker-size, var(--lr-size-1-25rem));
+    inline-size: var(--_lr-timeline-marker-extent, var(--lr-timeline-marker-size, var(--lr-size-1-25rem)));
+    block-size: var(--_lr-timeline-marker-extent, var(--lr-timeline-marker-size, var(--lr-size-1-25rem)));
     border-radius: 50%;
     flex: 0 0 auto;
     background: var(--lr-timeline-marker-color, var(--_lr-timeline-marker-color-default));
@@ -98,18 +113,56 @@ export const styles = css`
     }
   }
 
-  [part='rail'] {
+  [part~='rail'] {
     flex: 1 1 auto;
-    inline-size: var(--lr-timeline-rail-width, var(--lr-border-width-medium));
-    block-size: var(--lr-timeline-rail-width, var(--lr-border-width-medium));
-    background: var(--lr-timeline-rail-color, var(--lr-color-border-subtle));
+    position: var(--_lr-timeline-item-rail-position, static);
+    inset: 0;
+    inline-size: var(--_lr-timeline-item-rail-inline, var(--_lr-timeline-rail-width));
+    block-size: var(--_lr-timeline-item-rail-block, var(--_lr-timeline-rail-width));
+    margin-block: var(--_lr-timeline-item-rail-gap-block, var(--lr-timeline-connector-gap, 0px));
+    margin-inline: var(--_lr-timeline-item-rail-gap-inline, 0px);
+    background: var(--_lr-timeline-item-rail-bg, var(--_lr-timeline-rail-color));
     /* Suppressed for the last item by <lr-timeline>'s own ::slotted(:last-child) rule; visibility,
        not display, keeps the layout box every other item's track has, so marker alignment stays
        consistent down the list. */
-    visibility: var(--_lr-timeline-item-rail-visibility, visible);
+    visibility: var(--_lr-timeline-item-rail-visibility-center, var(--_lr-timeline-item-rail-visibility, visible));
+  }
+
+  /* A centered marker splits its rail into the half above and the half below, each stopping one
+     connector gap short of the marker. The first item has nothing above it and the last nothing
+     below; the empty content value keeps both halves out of every other layout. */
+  [part~='rail']::before,
+  [part~='rail']::after {
+    content: var(--_lr-timeline-item-rail-halves, none);
+    position: absolute;
+    inset-inline: 0;
+    margin-inline: auto;
+    inline-size: var(--_lr-timeline-rail-width);
+    background: var(--_lr-timeline-rail-color);
+  }
+  [part~='rail']::before {
+    inset-block-start: 0;
+    block-size: calc(
+      (100% - var(--_lr-timeline-item-gap-block-end, 0px)) / 2 - var(--_lr-timeline-marker-extent) / 2 -
+        var(--lr-timeline-connector-gap, 0px)
+    );
+  }
+  [part~='rail']::after {
+    inset-block-end: 0;
+    block-size: calc(
+      (100% + var(--_lr-timeline-item-gap-block-end, 0px)) / 2 - var(--_lr-timeline-marker-extent) / 2 -
+        var(--lr-timeline-connector-gap, 0px)
+    );
+  }
+  :host(:first-child) [part~='rail']::before,
+  :host(:last-child) [part~='rail']::after {
+    display: none;
   }
 
   [part='content'] {
+    grid-column: var(--_lr-timeline-alt-content-col, auto);
+    grid-row: 1;
+    text-align: var(--_lr-timeline-item-content-align, start);
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
@@ -121,6 +174,33 @@ export const styles = css`
        :host / :host([orientation='horizontal']) rules; both default to 0 standalone. */
     padding-block-end: var(--_lr-timeline-item-gap-block-end, 0);
     padding-inline-end: var(--_lr-timeline-item-gap-inline-end, 0);
+  }
+
+  /* The opposite column: a fixed share beside the rail so every item's rail lines up, or the other
+     grid column of an alternating timeline. */
+  [part='opposite'] {
+    grid-column: var(--_lr-timeline-alt-opposite-col, auto);
+    grid-row: 1;
+    flex: 0 0 var(--_lr-timeline-item-opposite-basis, var(--lr-timeline-opposite-size, 30%));
+    min-inline-size: 0;
+    color: var(--lr-color-text-quiet);
+    font-size: var(--lr-font-size-xs);
+    line-height: var(--lr-line-height-snug);
+    overflow-wrap: anywhere;
+    text-align: var(--_lr-timeline-item-opposite-align, end);
+  }
+  [part='opposite'][hidden] {
+    display: none;
+  }
+
+  /* Every other item of an alternating timeline switches sides. */
+  :host(:nth-of-type(even)) [part='content'] {
+    grid-column: var(--_lr-timeline-alt-flip-content-col, var(--_lr-timeline-alt-content-col, auto));
+    text-align: var(--_lr-timeline-alt-flip-content-align, var(--_lr-timeline-item-content-align, start));
+  }
+  :host(:nth-of-type(even)) [part='opposite'] {
+    grid-column: var(--_lr-timeline-alt-flip-opposite-col, var(--_lr-timeline-alt-opposite-col, auto));
+    text-align: var(--_lr-timeline-alt-flip-opposite-align, var(--_lr-timeline-item-opposite-align, end));
   }
 
   [part='header'] {
@@ -212,7 +292,9 @@ export const styles = css`
     :host([active]) [part='marker'] {
       outline-color: Highlight;
     }
-    [part='rail'] {
+    [part~='rail'],
+    [part~='rail']::before,
+    [part~='rail']::after {
       background: CanvasText;
     }
     [part='cluster-count'] {

@@ -246,7 +246,7 @@ expanding the popup.
 `--lr-menu-item-danger-color`, `--lr-menu-item-danger-hover-bg`,
 `--lr-menu-item-danger-active-bg`, `--lr-menu-item-checked-bg` (default `transparent`),
 `--lr-menu-item-color` (default `inherit`; a resting row's text, which danger, disabled and checked
-rows override), `--lr-menu-item-checked-color` (default `var(--lr-menu-item-color)`),
+rows override), `--lr-menu-item-checked-color` (default `inherit`, which follows `--lr-menu-item-color`),
 `--lr-menu-item-checked-font-weight` (default
 `inherit`), and `--submenu-offset`, plus shared size/focus/color/spacing tokens. The checked hooks
 apply to a `type="checkbox" checked` or `type="radio" checked` row's `[part="base"]`, matching the

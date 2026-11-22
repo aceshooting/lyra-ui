@@ -376,6 +376,17 @@ remain the long-term targets. The existing local UI line and statement floors re
 the complete merged report and the same commit's flagged Codecov result before claiming that
 metric.
 
+## Scheduled upstream drift watch
+
+`.github/workflows/upstream-watch.yml` is one short Ubuntu job (no install, no matrix; Node from
+`.nvmrc`) that runs weekly and on `workflow_dispatch`. It runs `scripts/check-upstream-drift.mjs`,
+which compares the newest stable `@awesome.me/webawesome` and `@shoelace-style/shoelace` releases with
+the reviewed `upstream-package-pins.json` and, per drifting package, opens or edits one open issue
+titled `Upstream drift: <pkg> <pinned> -> <latest>` (`issues: write` and `contents: read` only). It is
+informational: it never fails on drift, is not in `contract-policy`, and never edits the pin. Its
+offline unit test, `test:upstream-drift`, is a `contract-policy` member. Details:
+[upstream-parity](upstream-parity.md).
+
 ## Scheduled full Firefox/WebKit suite
 
 `.github/workflows/full-engine.yml` runs the complete non-coverage `src/**/*.test.ts` suite in
@@ -583,10 +594,10 @@ tag is never rewritten.
 verify packed exports and dependencies against the versions actually on npm; workspace source at a
 matching version is no evidence a registry dependency works. npm needs a package to exist before its
 trusted publisher can be configured, so for the first publication of `@aceshooting/lyra-docs`,
-`@aceshooting/lyra-gen`, `@aceshooting/lyra-ide`, `@aceshooting/lyra-translations`, `@aceshooting/lyra-map` or `@aceshooting/lyra-3d`, provide a short-lived granular npm token
+`@aceshooting/lyra-gen`, `@aceshooting/lyra-ide`, `@aceshooting/lyra-translations`, `@aceshooting/lyra-map`, `@aceshooting/lyra-3d` or `@aceshooting/lyra-cdn`, provide a short-lived granular npm token
 (`@aceshooting` read/write direct publish, Bypass 2FA) as the `NPM_BOOTSTRAP_TOKEN` secret in the
 protected `npm-publish` environment and dispatch
-`gh workflow run release.yml --ref main -f package=<lyra-docs|lyra-gen|lyra-ide|lyra-translations|lyra-map|lyra-3d> -f first_package_bootstrap=true`.
+`gh workflow run release.yml --ref main -f package=<lyra-docs|lyra-gen|lyra-ide|lyra-translations|lyra-map|lyra-3d|lyra-cdn> -f first_package_bootstrap=true`.
 Both workflows reject the flag for other packages, for a package already on the registry, and on an
 ambiguous registry response. After environment approval the protected job uses the token only for the
 verified tarball and publishes with provenance. Then configure the trusted publisher for
@@ -832,7 +843,7 @@ package-manager compression can differ.
   no percentage-reduction target for packed size.
 - The unpacked ceiling must satisfy the 25% reduction from the historical baseline recorded in the
   budget file (informational for packed size). Editor data (`@aceshooting/lyra-ide`) and locale
-  catalogs (`@aceshooting/lyra-translations`) ship in companion packages, so no measured exception
+  catalogs (`@aceshooting/lyra-translations`) and the single-script-tag bundle (`@aceshooting/lyra-cdn`, own budget, smoke test `pnpm --filter @aceshooting/lyra-cdn test` needs Playwright Chromium) ship in companion packages, so no measured exception
   applies; each companion has hard ceilings under `companions` (check with
   `check-package-size.mjs --package <name> --tarball <archive>`).
 - The file ceiling is derived exactly: base artifacts, one emitted JavaScript file per stable

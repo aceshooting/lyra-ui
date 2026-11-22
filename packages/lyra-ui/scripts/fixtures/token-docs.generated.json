@@ -1255,6 +1255,24 @@
       "themeInput": "--lr-theme-font-size-3xs"
     },
     {
+      "name": "--lr-font-size-4xl",
+      "type": "dimension",
+      "group": "typography",
+      "scope": "shared",
+      "values": {
+        "light": "calc(var(--lr-theme-font-size-3xl, 2rem) * 1.25)"
+      }
+    },
+    {
+      "name": "--lr-font-size-5xl",
+      "type": "dimension",
+      "group": "typography",
+      "scope": "shared",
+      "values": {
+        "light": "calc(var(--lr-theme-font-size-3xl, 2rem) * 1.5)"
+      }
+    },
+    {
       "name": "--lr-font-size-lg",
       "type": "dimension",
       "group": "typography",
@@ -4519,6 +4537,24 @@
       "themeInput": "--lr-theme-space-2xs"
     },
     {
+      "name": "--lr-space-3xl",
+      "type": "dimension",
+      "group": "spacing",
+      "scope": "shared",
+      "values": {
+        "light": "calc(var(--lr-theme-space-2xl, 2rem) * 1.5)"
+      }
+    },
+    {
+      "name": "--lr-space-4xl",
+      "type": "dimension",
+      "group": "spacing",
+      "scope": "shared",
+      "values": {
+        "light": "calc(var(--lr-theme-space-2xl, 2rem) * 2)"
+      }
+    },
+    {
       "name": "--lr-space-l",
       "type": "dimension",
       "group": "spacing",
@@ -4547,6 +4583,15 @@
         "light": "var(--lr-theme-space-s, 0.5rem)"
       },
       "themeInput": "--lr-theme-space-s"
+    },
+    {
+      "name": "--lr-space-xl",
+      "type": "dimension",
+      "group": "spacing",
+      "scope": "shared",
+      "values": {
+        "light": "calc((var(--lr-theme-space-l, 1rem) + var(--lr-theme-space-2xl, 2rem)) / 2)"
+      }
     },
     {
       "name": "--lr-space-xs",

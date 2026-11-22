@@ -62,6 +62,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'အမှား',
   stepperStatePending: 'မစသေးပါ',
   stepperStateLocked: 'သော့ခတ်ထားသည်',
+  stepperStateLoading: 'တင်နေသည်',
+  stepperStateDisabled: 'မရနိုင်ပါ',
+  stepperSteps: 'အဆင့်များ',
+  stepperStepPosition: 'အဆင့် {current} / {total}',
   commandPaletteInputLimit: 'ထည့်သွင်းမှုကန့်သတ်ချက်သို့ ရောက်ရှိသွားသောကြောင့် အမိန့်များ အချို့ကို ချန်လှပ်ထားသည်။',
 };
 

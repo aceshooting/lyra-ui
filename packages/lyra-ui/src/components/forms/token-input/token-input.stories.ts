@@ -325,3 +325,26 @@ export const LabelPlacementStart: StoryObj = {
     </div>
   `,
 };
+
+export const LimitsAndClear: Story = {
+  name: 'Limits, clear button and delimiter characters',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'max-tags blocks further commits (the draft stays, removal still works), min-tags reports rangeUnderflow, with-clear / clearable adds a clear button, and every character of delimiter commits and splits a paste.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-token-input
+      label="Up to four labels"
+      hint="Type a label and press Enter, comma or semicolon. Paste a;b,c to split on both."
+      delimiter=",;"
+      max-tags="4"
+      min-tags="2"
+      with-clear
+      .value=${['alpha', 'beta']}
+    ></lr-token-input>
+  `,
+};

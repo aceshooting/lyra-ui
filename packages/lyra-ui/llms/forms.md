@@ -539,7 +539,13 @@ AbortSignal; limit: number }) => Promise<readonly ComboboxSourceRow[] | { rows, 
   including an identical retry, while raw caught error text stays out of the UI.)
 - `sourceDelay: number = 200` (attribute `source-delay` — debounce in ms between the last keystroke
   and the `source` call; `0` fires on every keystroke. Sanitized to a finite non-negative duration,
-  falling back to `200` for a non-finite value)
+  falling back to `200` for a non-finite value). `filterDebounce` (attribute `filter-debounce`) is the
+  same setting under its upstream name.
+- `dataSource` is an alias of `source`: reading or assigning either one reads or assigns the same
+  provider. Rows stay plain data (`value`, `label`, optional `description`/`badge`/`data`); a source
+  cannot return option HTML, because rendering remote markup would need an optional sanitizer inside the
+  combobox's hot path and a fail-closed fallback for it. `source` is always query-driven (the provider
+  filters), which is what the upstream `server` flag opts into, so there is no `server` attribute.
 - `maxRender: number = 200` (attribute `max-render`) — ordinary suggestion-prefix size, retaining
   active and selected options within an absolute 1,000-row ceiling. The active option has priority;
   selections remain committed even when every selected row cannot mount. Zero omits the ordinary
@@ -608,7 +614,7 @@ minimum at zero when empty-query label lookup or immediate catalog browsing is r
 **Methods:** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and `setRangeText()`
 forward to the internal input. `setRangeText()` synchronizes the filter query and visible options.
 `show(): Promise<void>` and `hide(): Promise<void>` settle after `lr-after-show` and
-`lr-after-hide`, respectively. `refresh(): void` re-runs the current `source` query without changing
+`lr-after-hide`, respectively. `reload(): void` is an alias of `refresh()`. `refresh(): void` re-runs the current `source` query without changing
 the source's identity, its debounce controller, or its delay. Reassigning `source` is a provider
 change and clears the fetched rows and pending-selection cache; `refresh()` does not. It queues for
 the next open while the listbox is closed, and is a no-op without a `source`. `resetValidity()`
@@ -713,6 +719,11 @@ never shows the raw error. A current request that rejects with `AbortError` (one
 not abort itself) is a failure like any other rejection; the previous query's results are not kept
 as its answer.
 Rejections from superseded or disconnected requests are ignored.
+`lr-options-request` fires before each `source` call (after the debounce, only while the call is still
+current): `detail: { query, signal }`, where `signal` is the `AbortSignal` the source receives, aborted
+when a newer request supersedes it, `source` is reassigned, or the control disconnects. It is bubbling,
+composed and not cancelable. `lr-options-error` fires with `lr-source-error` for the same rejection with
+`detail: { error, request: { query } }`; both events stay.
 `lr-retry-request` is cancelable; the built-in failed-load action calls `refresh()`, and `preventDefault()`
 leaves the failure on screen. While the failure state is the only popup content, the popup swaps
 `role="listbox"` for `role="dialog"` (the input gains the matching `aria-haspopup="dialog"` and
@@ -1427,7 +1438,7 @@ text are part of the focused control's accessible description.
 **CSS parts:** `form-control`, `form-control-label`, `label`, `form-control-input`, `combobox`,
 `trigger`, `display-input`, `start`, `prefix`, `end`, `suffix`, `tags` (the legal sibling
 `multiple`-mode chip row), `tag`/`tag__base` (one selected-value chip), `tag-label`/`tag__content`,
-`tag__remove-button`/`tag__remove-button__base`, and `tag-overflow` (the "+N" chip standing in for the selections past
+`tag__remove-button`/`tag__remove-button__base`/`tag__remove-button__button` (all on the same button), and `tag-overflow` (the "+N" chip standing in for the selections past
 `max-options-visible` — it carries **both** `tag` and `tag-overflow`, so `::part(tag)` styles every
 chip while `::part(tag-overflow)` reaches only that one; state after `::part()` never matches, so it
 is encoded in the part name instead), `unknown-value` (the dashed/italic badge shown next to the
@@ -5398,7 +5409,7 @@ checkbox and does not emit `lr-change`.
 
 ## `lr-slider`
 
-**Label and readout.** The label defaults to the shared form-control label size (`--lr-font-size-md-sm`, like `lr-input`/`lr-select`), no longer `inherit`; `--lr-form-control-label-font-size` still retunes it. `label-placement="start"` (see "Label beside the field") puts the label in a column beside a horizontal track. `with-value` shows the **localized number** by default, even when a `valueFormatter` is set and even with `value-placement="label"`; the formatter feeds `aria-valuetext` and the tooltip only. Set `value-display="formatted"` to show the formatter's text in the readout. This is deliberate: a formatter written for assistive text (`"40 percent"`) would otherwise change the visible readout of every existing slider.
+**Label and readout.** The label inherits the surrounding font size by default; set `--lr-form-control-label-font-size: var(--lr-font-size-md-sm)` on the slider or a containing form to match the `lr-input`/`lr-select` label size. `label-placement="start"` (see "Label beside the field") puts the label in a column beside a horizontal track. `with-value` shows the **localized number** by default, even when a `valueFormatter` is set and even with `value-placement="label"`; the formatter feeds `aria-valuetext` and the tooltip only. Set `value-display="formatted"` to show the formatter's text in the readout. This is deliberate: a formatter written for assistive text (`"40 percent"`) would otherwise change the visible readout of every existing slider.
 
 Labelled `marks` render in the `marks` part: one `mark` per tick, a `mark-label` per label, and
 `mark-label-thinned` on a label hidden for overlapping its neighbour.
@@ -5588,7 +5599,7 @@ well, so `::part(thumb)` styles both while `::part(thumb-min)` reaches only one)
 live value bubble per handle, present only with `with-tooltip`), `tooltip-visible` (added _to the
 `tooltip` element's part list_ while that handle is focused or dragged — visibility is encoded in
 the part name because `::part(tooltip)[data-visible]` is invalid CSS and never matches; write
-`::part(tooltip-visible)`). The tooltip also exposes `tooltip__tooltip`, `tooltip__content`, and
+`::part(tooltip-visible)`). The tooltip also exposes `tooltip__tooltip`, `tooltip__content` (also `tooltip__body`), and
 `tooltip__arrow`. `value` is the opt-in readout; `label-row` contains the separate label and value
 nodes when `withValue` and `valuePlacement="label"` are enabled. `marks` is the container for
 `marks` (present only while at least one mark is in range), `mark` one tick, `mark-label` one
@@ -6620,14 +6631,42 @@ remove button from the tab order, never blocks `focus()`, and never excludes the
 `FormData` on submit — only `disabled` does that. Turning it on while a draft is half-typed or an
 inline editor is open discards that uncommitted state without moving focus.
 
-**`delimiter` is nullable, and only a single character acts as a commit key.** It does two separate
-jobs: it splits a committed draft into several tokens, and — _only when it is exactly one
-character_ — it is the keystroke that commits the draft. A multi-character delimiter still splits a
-pasted or committed draft, but no keystroke can ever match it, so nothing commits on typing.
-Setting it to `null` disables both, so a token may contain the delimiter verbatim. **`delimiter="null"`
-does not work** — that is the four-character string `null`. Use `delimiter="none"`, `delimiter=""`
-(both of which the attribute converter maps to `null`), or a property binding
-(`.delimiter=${null}`). Removing the attribute restores the `,` default.
+**`delimiter` is a set of characters and is nullable.** Every character of the string is its own
+delimiter: typing any of them commits the draft, and a commit or a real paste splits on all of them
+(`delimiter=";,"` accepts both). A paste that contains a delimiter character commits immediately; a
+paste without one is left to the browser. Setting it to `null` disables both splitting and the
+keystroke (Enter, Tab and blur still commit), so a token may contain the delimiter verbatim.
+`delimiter=""` already meant exactly this Enter-only mode and still does. **`delimiter="null"` does
+not work** — that is the four-character string `null`. Use `delimiter="none"`, `delimiter=""` (both of
+which the attribute converter maps to `null`), or a property binding (`.delimiter=${null}`). Removing
+the attribute restores the `,` default.
+
+**`max-tags` / `min-tags`** (`maxTags`/`minTags`, both `null` by default, so unset changes nothing).
+At the maximum, typed or pasted text cannot commit and stays in the field (a paste commits what fits and
+leaves the rest); removal, inline editing and clearing keep working. A programmatic `value` longer than
+`max-tags` reports `rangeOverflow`; a list shorter than `min-tags` reports `rangeUnderflow`, enforced only
+once at least one token exists (use `required` for the empty case). Messages are localized
+(`tokenInputTooFew`, `tokenInputTooMany`); disabled or readonly controls report neither.
+
+**`with-clear` / `clearable`** show a `clear-button` (icon via the `clear-icon` slot) while there are tokens
+and the control is neither disabled nor readonly. It proposes each removal through the cancelable
+`lr-token-remove-request` (a vetoed token stays), then emits `input`/`change`/`lr-input`/`lr-change` and
+`lr-clear`, and returns focus to the draft input.
+
+**`value` and `inputValue`.** The array stays canonical, but assigning a string to `value` (or
+`defaultValue`) splits it on the `delimiter` characters (comma when none) into trimmed, non-empty tokens;
+the reflected `value` attribute remains a JSON array. `inputValue` reads and writes the uncommitted draft
+without committing it.
+
+**`lr-create`** is a cancelable per-token proposal (`detail: { inputValue }`) emitted for every typed or pasted
+candidate before the batch-level `lr-token-add-request`; `preventDefault()` drops that one token, and the
+draft stays when every candidate is rejected.
+
+**Part aliases and states.** `tag-input` (= `input-wrapper`), `tags` (display-contents wrapper around the
+tokens), `tag` (= `token`), `tag__content` (the token text), `tag__remove-button` and
+`tag__remove-button__button` (= `remove`) sit beside the existing parts. Because a part can now carry
+several names, match parts with `[part~="token"]` rather than `[part="token"]`. `:state(blank)` matches
+while there are no tokens and `:state(readonly)` while `readonly` is set.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"
@@ -7064,7 +7103,7 @@ layer closes.
 **CSS parts:** `base` (permanent compatibility name on the same field wrapper as `color-picker`),
 `color-picker` (the field wrapper; it is the same node as `base` and `form-control`),
 `form-control` (the field wrapper; it is the same node as `base` and `color-picker`),
-`form-control-label` (the label; `label` is its permanent compatibility name), `trigger-container`
+`form-control-label` (the label; `label` is its permanent compatibility name), `trigger-container` (also `form-control-input`)
 (the row wrapping the trigger), `trigger` (the swatch button that
 opens the panel), `panel` (the positioned `role="dialog"` surface), `grid` (the
 saturation/brightness square) and `grid-handle` (its draggable, keyboard-operable handle),
@@ -7073,11 +7112,11 @@ saturation/brightness square) and `grid-handle` (its draggable, keyboard-operabl
 token, so `::part(slider)` styles both ramps while `::part(hue-slider)` reaches only one; the
 opacity pair renders only with `opacity` set), `preview` (the current-colour dot beside the ramps),
 `input` (the text field holding the serialized value), `format-button` (the format-cycling button,
-absent with either format-toggle suppression property), plus `format-button__base`,
+absent with either format-toggle suppression property), plus `format-button__base` and `format-button__button` (same node),
 `format-button__start`/`format-button__prefix`, `format-button__label`,
 `format-button__end`/`format-button__suffix`, and `format-button__caret`;
 `eyedropper-button` / `eye-dropper-button` (rendered only where the browser exposes the EyeDropper
-API), with the corresponding `eyedropper-button__base|start|label|end|caret` and Shoelace
+API), with the corresponding `eyedropper-button__base|button|start|label|end|caret` and Shoelace
 `eye-dropper-button__base|prefix|label|suffix|caret` aliases; `swatches` (the palette container, rendered only when the normalized `swatches`
 list is non-empty), `swatch` (one palette entry), `swatch-icon` (a swatch entry's optional
 decorative icon, inert and `aria-hidden`), `swatch-selected` (a token **added to** the

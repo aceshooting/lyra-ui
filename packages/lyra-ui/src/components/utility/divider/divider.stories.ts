@@ -17,3 +17,11 @@ export const VerticalAliasAndThemeHooks: StoryObj = {
     </div>
   `,
 };
+
+export const WithLabel: StoryObj = {
+  render: () => html`
+    <lr-divider>Or</lr-divider>
+    <lr-divider label-placement="start" style="--label-offset:var(--lr-space-xl)">Start</lr-divider>
+    <lr-divider label-placement="end">End</lr-divider>
+  `,
+};

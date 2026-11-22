@@ -62,6 +62,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'Lỗi',
   stepperStatePending: 'Chưa bắt đầu',
   stepperStateLocked: 'Đã khóa',
+  stepperStateLoading: 'Đang tải',
+  stepperStateDisabled: 'Không khả dụng',
+  stepperSteps: 'Các bước',
+  stepperStepPosition: 'Bước {current}/{total}',
   commandPaletteInputLimit: 'Một số lệnh đã bị bỏ qua vì đã đạt giới hạn đầu vào.',
 };
 

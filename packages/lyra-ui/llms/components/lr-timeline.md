@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 1 part, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 2 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-timeline-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -25,6 +25,23 @@ Items have no keyboard navigation or selection model: a passive record display, 
 item's `title`/`description` routinely hold focusable content, so wrapping the row in `role="button"`
 would trip `nested-interactive`). The opt-in clustered time scale adds only native count-marker
 buttons; it does not make the individual rows interactive.
+
+**`wa-timeline` / `wa-timeline-item` parity.** `lr-timeline` accepts `orientation="auto"` (a column
+until the timeline is 40em wide, a row from there, by container query; flow scale only, `scale="time"`
+treats it as `vertical`), `marker-placement: 'start' | 'end' | 'alternate' = 'start'` (`alternate` swaps
+sides on every other item around a central rail and falls back to `start` under 30em; sides follow the
+inline direction, so RTL mirrors), `marker-alignment: 'start' | 'center' = 'start'` (`center` centers the
+marker on the item's height with the rail running above and below it), and `label` (accessible name; a
+host `aria-label` wins, then `label`, then the localized default). `[part='base']` also carries the
+`timeline` part. `lr-timeline-item` adds the `opposite` slot and part (a fixed share beside the rail,
+`--lr-timeline-opposite-size`, default `30%`; above the marker when horizontal; the far column when
+alternating), `with-opposite`, the `icon` slot (alias of `marker-icon`) and `with-icon` (server-render
+hints that also force the column or icon marker), and the `connector` and `timeline-item` part aliases of
+`rail` and `base`. Custom properties: `--lr-timeline-icon-marker-size` (defaults to the marker size),
+`--lr-timeline-connector-color` / `--lr-timeline-connector-width` (aliases that win over the
+`--lr-timeline-rail-*` pair) and `--lr-timeline-connector-gap` (default `0px`).
+Migration: `wa-timeline`'s `--gap`, `--marker-size`, `--icon-marker-size`, `--connector-color`,
+`--connector-width` and `--connector-gap` become the `--lr-timeline-*` names above.
 
 A non-neutral `variant` adds a localized, visually hidden state to the item title. In forced colours, the marker and rail use system colours.
 

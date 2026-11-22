@@ -1,3 +1,7 @@
+import {
+  normalizeAllDefinedArguments,
+  type AllDefinedWaitOptions,
+} from '../internal/all-defined-arguments.js';
 import { AUTOLOADER_TAG_SET } from '../internal/autoloader-tags.js';
 import { registryForRoot, type LyraDefinitionRoot } from '../internal/definition-registry.js';
 import {
@@ -9,6 +13,7 @@ import {
 } from '../internal/rendered-tree-traversal.js';
 
 export type { LyraDefinitionRoot } from '../internal/definition-registry.js';
+export type { AllDefinedWaitOptions } from '../internal/all-defined-arguments.js';
 
 interface UpdateCompleteElement extends Element {
   readonly updateComplete?: Promise<unknown>;
@@ -71,9 +76,65 @@ function updateCompleteFor(element: Element): Promise<unknown> | undefined {
  * rather than returning a partial readiness result. A consumer-owned element whose registry or
  * update-completion accessors throw is treated as unavailable without blocking valid siblings.
  */
+export function allDefined(
+  root?: LyraDefinitionRoot,
+  options?: AllDefinedOptions,
+): Promise<void>;
+/**
+ * Options form: `allDefined({ match, additionalElements, root, timeout })`. Without `match` it
+ * waits for the rendered known `lr-*` tags exactly like the root form; with `match` it waits for
+ * every currently undefined element under `root` whose lowercase tag name the function accepts.
+ * `additionalElements` names tags that may not be on the page yet. After `timeout` milliseconds
+ * (default 2000, `Infinity` to disable) a console warning lists the tags still undefined and the
+ * promise resolves anyway. The root form never times out.
+ */
+export function allDefined(options: AllDefinedWaitOptions): Promise<void>;
 export async function allDefined(
-  root: LyraDefinitionRoot | undefined = defaultRoot(),
-  options: AllDefinedOptions = {},
+  first?: LyraDefinitionRoot | AllDefinedWaitOptions,
+  second?: AllDefinedOptions,
+): Promise<void> {
+  const normalized = normalizeAllDefinedArguments(first, second, defaultRoot);
+  if (normalized.mode === 'options') return allDefinedWithOptions(normalized);
+  return allDefinedRoot(normalized.root, (normalized.options ?? {}) as AllDefinedOptions);
+}
+
+async function allDefinedWithOptions(
+  opts: Extract<ReturnType<typeof normalizeAllDefinedArguments>, { mode: 'options' }>,
+): Promise<void> {
+  const root = opts.root;
+  const registry = (root && registryForRoot(root)) ?? (typeof customElements === 'undefined' ? undefined : customElements);
+  const tags = new Set<string>(opts.additionalElements);
+  const known = (tag: string): boolean => (registry ? isDefined(registry, tag) : true);
+  if (root && opts.match) {
+    const match = opts.match;
+    for (const element of root.querySelectorAll(':not(:defined)')) {
+      const tag = nativeElementLocalName(element);
+      if (tag && tag.includes('-') && match(tag)) tags.add(tag);
+    }
+  }
+  const work = (async () => {
+    if (!opts.match) await allDefinedRoot(root, {});
+    if (registry) await Promise.all([...tags].map((tag) => whenDefined(registry, tag)));
+  })();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timedOut = new Promise<void>((resolve) => {
+    if (opts.timeout === Infinity) return;
+    timer = setTimeout(() => {
+      const pending = [...tags].filter((tag) => !known(tag));
+      console.warn(`allDefined() timed out after ${opts.timeout}ms waiting for: ${pending.join(', ')}`);
+      resolve();
+    }, opts.timeout);
+  });
+  try {
+    await Promise.race([work, timedOut]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function allDefinedRoot(
+  root: LyraDefinitionRoot | undefined,
+  options: AllDefinedOptions,
 ): Promise<void> {
   const limits = renderedTreeTraversalLimits(options, 'allDefined()');
   const passLimit = maxPasses(options.maxPasses);

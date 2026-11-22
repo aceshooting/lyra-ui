@@ -263,6 +263,7 @@
     "image-comparer": "media",
     "image-viewer": "media",
     "lightbox": "media",
+    "lightbox-item": "media",
     "map": "media",
     "media-card": "media",
     "pan-zoom": "media",
@@ -317,6 +318,8 @@
     "chord": "data",
     "choropleth": "data",
     "help": "overlays",
-    "style-panel": "utility"
+    "style-panel": "utility",
+    "counter": "utility",
+    "number-ticker": "utility"
   }
 }

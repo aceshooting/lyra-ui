@@ -28,6 +28,11 @@ export type LyraIconLibraryMutator = (svg: SVGElement) => void;
 export interface LyraIconLibraryOptions {
   resolver: LyraIconLibraryResolver;
   mutator?: LyraIconLibraryMutator;
+  /** When `true`, the resolver returns a same-origin `sheet.svg#symbol-id` URL and the icon renders
+   *  `<svg><use href="…"></use></svg>` instead of fetching and sanitizing a document. Cross-origin,
+   *  `data:`, `blob:` and fragment-less results fail like any other unloadable icon. The mutator
+   *  is not applied, because no fetched node exists. Default `false`. */
+  spriteSheet?: boolean;
 }
 
 export interface LyraIconLibrary extends LyraIconLibraryOptions {
@@ -48,13 +53,42 @@ function notify(name: string): void {
   }
 }
 
+/** Notification name sent to subscribers when the default family or variant changes.
+ *  @internal */
+export const ICON_DEFAULTS_CHANGED = '\u0000defaults';
+
+let defaultFamily = '';
+let defaultVariant = '';
+
+/** Sets the family and, when given, the variant that icons use while their own `family` or
+ *  `variant` is unset. They are forwarded to registered library resolvers; every rendered icon
+ *  re-resolves immediately. An omitted `variant` keeps the current default variant. */
+export function setDefaultIconFamily(family: string, variant?: string): void {
+  defaultFamily = family;
+  if (variant !== undefined) defaultVariant = variant;
+  notify(ICON_DEFAULTS_CHANGED);
+}
+
+/** The default icon family, or an empty string when none was set. */
+export function getDefaultIconFamily(): string {
+  return defaultFamily;
+}
+
+/** The default icon variant, or an empty string when none was set. */
+export function getDefaultIconVariant(): string {
+  return defaultVariant;
+}
+
 /** Registers an icon library, replacing one already registered under the same name. Every
  *  currently rendered `<lr-icon>` using that library re-resolves immediately, so registration can
  *  happen after the icons are on the page. */
 export function registerIconLibrary(name: string, options: LyraIconLibraryOptions): void {
-  const library: LyraIconLibrary = options.mutator
-    ? { name, resolver: options.resolver, mutator: options.mutator }
-    : { name, resolver: options.resolver };
+  const library: LyraIconLibrary = {
+    name,
+    resolver: options.resolver,
+    ...(options.mutator ? { mutator: options.mutator } : {}),
+    ...(options.spriteSheet ? { spriteSheet: true } : {}),
+  };
   libraries.set(name, library);
   notify(name);
 }

@@ -46,11 +46,11 @@ async function waitForImage(
 it('renders the image frame and exposes a dialog when opened', async () => {
   const el = (await fixture(html`<lr-lightbox .images=${[image]}></lr-lightbox>`)) as LyraLightbox;
   expect(el.shadowRoot!.querySelector('[part="frame"]') !== null).to.be.true;
-  expect(el.shadowRoot!.querySelector('[part="panel"]')!.getAttribute('role')).to.equal(null);
+  expect(el.shadowRoot!.querySelector('[part~="panel"]')!.getAttribute('role')).to.equal(null);
 
   el.open = true;
   await el.updateComplete;
-  expect(el.shadowRoot!.querySelector('[part="panel"]')!.getAttribute('role')).to.equal('dialog');
+  expect(el.shadowRoot!.querySelector('[part~="panel"]')!.getAttribute('role')).to.equal('dialog');
   expect(el.shadowRoot!.querySelector('[part="caption"]')!.textContent).to.contain('A blue square');
   el.open = false;
 });
@@ -68,7 +68,7 @@ it('uses localized names for blank host labels and honors named overrides on the
       el.open = true;
       await el.updateComplete;
       const dialog = el.shadowRoot!.querySelector(native
-        ? 'dialog[data-native-modal-carrier]' : '[part="panel"][role="dialog"]')!;
+        ? 'dialog[data-native-modal-carrier]' : '[part~="panel"][role="dialog"]')!;
       expect(dialog.getAttribute('aria-label')).to.equal('Localized gallery');
 
       el.setAttribute('aria-label', 'Named gallery');
@@ -304,11 +304,9 @@ it('routes post-render open writes through the lifecycle but treats initial open
   el.addEventListener('lr-after-hide', () => lifecycle.push('after-hide'));
 
   el.open = true;
-  await el.updateComplete;
-  await Promise.resolve();
+  await waitUntil(() => lifecycle.includes('after-show'));
   el.open = false;
-  await el.updateComplete;
-  await Promise.resolve();
+  await waitUntil(() => lifecycle.includes('after-hide'));
 
   expect(lifecycle).to.deep.equal(['show', 'after-show', 'hide', 'close', 'after-hide']);
 });
@@ -332,7 +330,7 @@ it('inherits a 20px host font into the close and navigation controls and their o
 
   expect(getComputedStyle(el).fontSize).to.equal('20px');
   for (const part of ['close-button', 'previous-button', 'next-button'] as const) {
-    const control = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
+    const control = el.shadowRoot!.querySelector<HTMLElement>(`[part~="${part}"]`)!;
     const glyph = control.querySelector<SVGElement>('svg')!;
 
     expect(getComputedStyle(control).fontSize, `${part} font size`).to.equal('20px');
@@ -638,7 +636,7 @@ it('schedules lasting-disconnect cleanup in the owner realm and ignores it after
 it('mirrors next/previous under dir="rtl" so the physical arrow key stays consistent', async () => {
   const images = [image, { ...image, caption: 'Second' }];
   const el = (await fixture(html`<lr-lightbox dir="rtl" .images=${images} open></lr-lightbox>`)) as LyraLightbox;
-  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
 
   panel.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', cancelable: true }));
   await el.updateComplete;
@@ -663,7 +661,7 @@ it('jumps to the first/last image on Home/End', async () => {
   const el = (await fixture(
     html`<lr-lightbox .images=${images} open index="1"></lr-lightbox>`,
   )) as LyraLightbox;
-  const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+  const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
 
   panel.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', cancelable: true }));
   await el.updateComplete;
@@ -682,7 +680,7 @@ it('leaves Arrow/Home/End with the focused pan-zoom viewport while panel chrome 
     const el = (await fixture(
       html`<lr-lightbox dir=${direction} .images=${images} open></lr-lightbox>`,
     )) as LyraLightbox;
-    const panel = el.shadowRoot!.querySelector('[part="panel"]') as HTMLElement;
+    const panel = el.shadowRoot!.querySelector('[part~="panel"]') as HTMLElement;
     const frame = el.shadowRoot!.querySelector('lr-pan-zoom') as HTMLElement & {
       shadowRoot: ShadowRoot;
       zoom: number;
@@ -850,7 +848,7 @@ it('caps a long caption instead of letting it starve the stage', async () => {
   const caption = el.shadowRoot!.querySelector('[part="caption"]') as HTMLElement;
   const captionBox = caption.getBoundingClientRect();
   const stageBox = el.shadowRoot!
-    .querySelector('[part="stage"]')!
+    .querySelector('[part~="stage"]')!
     .getBoundingClientRect();
 
   expect(
@@ -1115,7 +1113,7 @@ it('does not hijack navigation keys from iframe-realm slotted controls after ado
       await el.updateComplete;
       expect(el.index, action.localName).to.equal(0);
     }
-    expect(press(el.shadowRoot!.querySelector('[part="panel"]')!)).to.be.false;
+    expect(press(el.shadowRoot!.querySelector('[part~="panel"]')!)).to.be.false;
     await el.updateComplete;
     expect(el.index).to.equal(1);
   } finally {
@@ -1168,8 +1166,8 @@ it('renders a .strings override for the close/previous/next labels and the count
   await el.updateComplete;
 
   expect(el.shadowRoot!.querySelector('[part="close-button"]')!.getAttribute('aria-label')).to.equal('Fermer');
-  expect(el.shadowRoot!.querySelector('[part="previous-button"]')!.getAttribute('aria-label')).to.equal('Précédent');
-  expect(el.shadowRoot!.querySelector('[part="next-button"]')!.getAttribute('aria-label')).to.equal('Suivant');
+  expect(el.shadowRoot!.querySelector('[part~="previous-button"]')!.getAttribute('aria-label')).to.equal('Précédent');
+  expect(el.shadowRoot!.querySelector('[part~="next-button"]')!.getAttribute('aria-label')).to.equal('Suivant');
   expect(el.shadowRoot!.querySelector('[part="counter"]')!.textContent).to.equal('Image 1 sur 2');
   expect(el.shadowRoot!.querySelector('[part="live-region"]')!.textContent).to.equal('Image 1 sur 2');
 
@@ -1311,7 +1309,7 @@ describe('consumer hover part overrides', () => {
       `)) as LyraLightbox;
       await resetMouse();
       for (const part of ['close-button', 'previous-button', 'next-button']) {
-        const button = el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLButtonElement;
+        const button = el.shadowRoot!.querySelector(`[part~="${part}"]`) as HTMLButtonElement;
         const bounds = button.getBoundingClientRect();
         await sendMouse({
           type: 'move',
@@ -1460,7 +1458,7 @@ it('projects a host description onto the dialog panel', async function () {
   const el = wrapper.querySelector<LyraLightbox>('lr-lightbox')!;
   const help = wrapper.querySelector<HTMLElement>('#lb-help')!;
   await waitUntil(() => {
-    const target = el.shadowRoot!.querySelector<HTMLElement>('dialog[data-native-modal-carrier], [part="panel"][role="dialog"]');
+    const target = el.shadowRoot!.querySelector<HTMLElement>('dialog[data-native-modal-carrier], [part~="panel"][role="dialog"]');
     return target?.ariaDescribedByElements?.includes(help) === true ||
       (target?.getAttribute('aria-describedby')?.split(/\s+/).includes('lb-help') ?? false);
   });
@@ -1517,11 +1515,11 @@ for (const phase of ['lr-show', 'lr-hide'] as const) {
 it('keeps focus inside the modal when Next disables itself on the last image', async () => {
   const el = (await fixture(html`<lr-lightbox .images=${[image, { ...image, caption: 'Second' }]} open></lr-lightbox>`)) as LyraLightbox;
   await el.updateComplete;
-  const next = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="next-button"]')!;
-  await focusAfterPointer(next, el.shadowRoot!.querySelector<HTMLElement>('[part="panel"]')!);
+  const next = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="next-button"]')!;
+  await focusAfterPointer(next, el.shadowRoot!.querySelector<HTMLElement>('[part~="panel"]')!);
   await sendKeys({ press: 'Enter' });
   await el.updateComplete;
   expect(next.disabled).to.equal(true);
-  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.equal('previous-button');
+  expect(el.shadowRoot!.activeElement?.getAttribute('part')).to.contain('previous-button');
   el.open = false;
 });

@@ -13,6 +13,16 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Veuillez cocher cette case pour continuer.',
   checkboxGroupRequired: 'Sélectionnez au moins une option.',
   tokenInputRequired: 'Saisissez au moins une valeur.',
+  tokenInputTooFew: {
+    one: 'Saisissez au moins {count} valeur.',
+    many: 'Saisissez au moins {count} valeurs.',
+    other: 'Saisissez au moins {count} valeurs.',
+  },
+  tokenInputTooMany: {
+    one: 'Saisissez au plus {count} valeur.',
+    many: 'Saisissez au plus {count} valeurs.',
+    other: 'Saisissez au plus {count} valeurs.',
+  },
   tokenInputEditWithContext: 'Modifier {label}',
   tokenInputLabel: 'Jetons',
   iconButtonLabel: 'Bouton',

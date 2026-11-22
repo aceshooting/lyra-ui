@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 44 parts, 44 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 47 parts, 44 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -231,7 +231,7 @@ layer closes.
 **CSS parts:** `base` (permanent compatibility name on the same field wrapper as `color-picker`),
 `color-picker` (the field wrapper; it is the same node as `base` and `form-control`),
 `form-control` (the field wrapper; it is the same node as `base` and `color-picker`),
-`form-control-label` (the label; `label` is its permanent compatibility name), `trigger-container`
+`form-control-label` (the label; `label` is its permanent compatibility name), `trigger-container` (also `form-control-input`)
 (the row wrapping the trigger), `trigger` (the swatch button that
 opens the panel), `panel` (the positioned `role="dialog"` surface), `grid` (the
 saturation/brightness square) and `grid-handle` (its draggable, keyboard-operable handle),
@@ -240,11 +240,11 @@ saturation/brightness square) and `grid-handle` (its draggable, keyboard-operabl
 token, so `::part(slider)` styles both ramps while `::part(hue-slider)` reaches only one; the
 opacity pair renders only with `opacity` set), `preview` (the current-colour dot beside the ramps),
 `input` (the text field holding the serialized value), `format-button` (the format-cycling button,
-absent with either format-toggle suppression property), plus `format-button__base`,
+absent with either format-toggle suppression property), plus `format-button__base` and `format-button__button` (same node),
 `format-button__start`/`format-button__prefix`, `format-button__label`,
 `format-button__end`/`format-button__suffix`, and `format-button__caret`;
 `eyedropper-button` / `eye-dropper-button` (rendered only where the browser exposes the EyeDropper
-API), with the corresponding `eyedropper-button__base|start|label|end|caret` and Shoelace
+API), with the corresponding `eyedropper-button__base|button|start|label|end|caret` and Shoelace
 `eye-dropper-button__base|prefix|label|suffix|caret` aliases; `swatches` (the palette container, rendered only when the normalized `swatches`
 list is non-empty), `swatch` (one palette entry), `swatch-icon` (a swatch entry's optional
 decorative icon, inert and `aria-hidden`), `swatch-selected` (a token **added to** the

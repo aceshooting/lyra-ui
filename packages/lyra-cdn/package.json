@@ -1,0 +1,64 @@
+{
+  "name": "@aceshooting/lyra-cdn",
+  "version": "32.0.0",
+  "description": "Single-script-tag build of @aceshooting/lyra-ui: lit, tslib and Floating UI bundled into lazy chunks, no build step and no import map.",
+  "keywords": [
+    "lyra-ui",
+    "cdn",
+    "jsdelivr",
+    "unpkg",
+    "web-components",
+    "lit"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "author": {
+    "name": "Aceshooting",
+    "email": "info@aceshooting.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aceshooting/lyra-ui.git",
+    "directory": "packages/lyra-cdn"
+  },
+  "homepage": "https://www.lyra-ui.com/",
+  "bugs": {
+    "url": "https://github.com/aceshooting/lyra-ui/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@12.21.0",
+  "sideEffects": true,
+  "jsdelivr": "./dist/lyra-ui.loader.js",
+  "unpkg": "./dist/lyra-ui.loader.js",
+  "exports": {
+    "./lyra-ui.loader.js": "./dist/lyra-ui.loader.js",
+    "./theme.css": "./dist/theme.css",
+    "./theme-core.css": "./dist/theme-core.css",
+    "./density.css": "./dist/density.css",
+    "./accents.css": "./dist/accents.css",
+    "./design-tokens.css": "./dist/design-tokens.css",
+    "./native.css": "./dist/native.css",
+    "./utilities.css": "./dist/utilities.css",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "prepack": "pnpm --filter @aceshooting/lyra-ui build && node scripts/build.mjs",
+    "test": "node scripts/smoke.mjs"
+  },
+  "devDependencies": {
+    "@aceshooting/lyra-ui": "workspace:*",
+    "playwright": "^1.65.1"
+  }
+}

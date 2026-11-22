@@ -2073,6 +2073,9 @@ the source is loading and being sanitized. Build error UI from `lr-include-error
   cross-origin fetching is opt-in; an invalid value is normalized back to `same-origin` rather than
   letting `fetch()` throw. `no-cors` is accepted for enum completeness but always yields an opaque
   response (`status` `0`, unreadable body) — a Fetch API limitation, not a bug here.
+- `withoutFragment: boolean = false` (attribute `without-fragment`) — includes the whole sanitized
+  remote document and ignores the hash in `src`; no effect on a same-page `#id` source. Sanitization
+  is unchanged.
 - `withoutCache: boolean = false` (attribute `without-cache`, not reflected) — by default an
   include shares matching in-flight work and retains successful sanitized remote documents in a
   bounded cache; `without-cache` opts this instance out of both deduplication and retention.

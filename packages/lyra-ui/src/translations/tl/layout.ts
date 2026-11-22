@@ -63,6 +63,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'Error',
   stepperStatePending: 'Hindi pa nasimulan',
   stepperStateLocked: 'Naka-lock',
+  stepperStateLoading: 'Naglo-load',
+  stepperStateDisabled: 'Hindi available',
+  stepperSteps: 'Mga hakbang',
+  stepperStepPosition: 'Hakbang {current} sa {total}',
   commandPaletteInputLimit: 'May ilang command na hindi isinama dahil naabot ang limitasyon sa input.',
 };
 

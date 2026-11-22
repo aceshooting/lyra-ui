@@ -42,13 +42,17 @@ the first connected Lyra element would otherwise adopt, available before any com
 | Flex direction and wrapping | `lr-row`, `lr-column`, `lr-wrap`, `lr-nowrap`, `lr-grow`, `lr-grow-0`, `lr-shrink`, `lr-shrink-0`                                                                 |
 | Item alignment              | `lr-items-start`, `lr-items-center`, `lr-items-end`, `lr-items-stretch`, `lr-items-baseline`, `lr-self-start`, `lr-self-center`, `lr-self-end`, `lr-self-stretch` |
 | Distribution                | `lr-justify-start`, `lr-justify-center`, `lr-justify-end`, `lr-justify-between`, `lr-justify-around`                                                              |
-| Gaps                        | `lr-gap-0`, `lr-gap-xs`, `lr-gap-s`, `lr-gap-m`, `lr-gap-l`, `lr-gap-2xl`                                                                                         |
+| Gaps                        | `lr-gap-0`, `lr-gap-2xs`, `lr-gap-xs`, `lr-gap-s`, `lr-gap-m`, `lr-gap-l`, `lr-gap-xl`, `lr-gap-2xl`, `lr-gap-3xl`, `lr-gap-4xl`                                  |
+| Compositions                | `lr-flank`, `lr-flank-end`, `lr-split`, `lr-split-column`, `lr-frame`, `lr-frame-square`, `lr-frame-landscape`, `lr-frame-portrait`, `lr-span-grid`, `lr-container` |
+| Plain-element helpers       | `lr-link-plain`, `lr-list-plain`, `lr-placeholder`, `lr-scroll-lock`, `lr-cloak`                                                                                  |
+| Radius and case             | `lr-radius-none`, `lr-radius-xs`, `lr-radius-m`, `lr-radius-container`, `lr-radius-pill`, `lr-radius-circle`, `lr-uppercase`, `lr-lowercase`, `lr-capitalize`, `lr-normal-case` |
+| Variant and size            | `lr-neutral`, `lr-brand`, `lr-success`, `lr-warning`, `lr-danger`; `lr-size-2xs`, `lr-size-xs`, `lr-size-s`, `lr-size-m`, `lr-size-l`, `lr-size-xl` (`lr-size-full` stays the 100% box) |
 | Logical sizing              | `lr-inline-full`, `lr-block-full`, `lr-size-full`, `lr-min-inline-0`, `lr-min-block-0`, `lr-max-inline-full`, `lr-max-inline-prose`, `lr-center`                  |
 | Overflow                    | `lr-overflow-auto`, `lr-overflow-hidden`                                                                                                                          |
-| Text alignment and size     | `lr-text-start`, `lr-text-center`, `lr-text-end`, `lr-text-xs`, `lr-text-sm`, `lr-text-base`, `lr-text-lg`, `lr-text-xl`, `lr-text-quiet`                         |
+| Text alignment and size     | `lr-text-start`, `lr-text-center`, `lr-text-end`, `lr-text-xs`, `lr-text-sm`, `lr-text-base`, `lr-text-lg`, `lr-text-xl`, `lr-text-2xl` – `lr-text-5xl`, `lr-text-quiet`                         |
 | Font                        | `lr-font-normal`, `lr-font-medium`, `lr-font-semibold`, `lr-font-bold`, `lr-font-mono`                                                                            |
 | Text flow                   | `lr-text-break`, `lr-text-nowrap`, `lr-truncate`, `lr-text-balance`, `lr-text-pretty`, `lr-prose`                                                                 |
-| Typography                  | `lr-typography`, `lr-not-typography`, `lr-heading-1`, `lr-heading-2`, `lr-heading-3`, `lr-heading-4`, `lr-inline-code`                                           |
+| Typography                  | `lr-typography`, `lr-not-typography`, `lr-heading-1`, `lr-heading-2`, `lr-heading-3`, `lr-heading-4`, `lr-heading-5`, `lr-heading-6`, `lr-inline-code`                                           |
 | Visibility and focus        | `lr-visually-hidden`, `lr-visually-hidden-focusable`, `lr-fouce-hidden`, `lr-hidden`                                                                              |
 | Page allocation             | `lr-page-mobile-only`, `lr-page-desktop-only`                                                                                                                     |
 
@@ -68,6 +72,43 @@ properties, so these two widths are fixed. Source order is reading order at ever
   <lr-card class="lr-span-12">Recent activity</lr-card>
 </section>
 ```
+
+### Compositions and small utilities
+
+All spacing here reads `--lr-layout-gap` (default `--lr-space-m`).
+
+- **`lr-flank` / `lr-flank-end`** — a flex row where the first (or, for `-end`, the last) child keeps
+  its own width (`--lr-flank-inline-size`, default `auto`) and the other fills the rest. The filling
+  child wraps onto its own row below `--lr-flank-content-min-inline-size` (default `50%`).
+- **`lr-split` / `lr-split-column`** — items pushed to the two ends of a wrapping row, or of a
+  column. Logical, so the ends swap under `dir="rtl"`.
+- **`lr-frame`, `lr-frame-square` (1/1), `lr-frame-landscape` (16/9), `lr-frame-portrait` (3/4)** —
+  a clipped aspect-ratio box; a direct `img`, `picture`, `video`, `canvas`, `svg` or `iframe` child
+  fills it with `object-fit: cover`. A bare `lr-frame` reads `--lr-frame-ratio` (default `1 / 1`).
+- **`lr-span-grid`** — takes the whole row of its grid parent, including inside `lr-grid-12` at every
+  container width. **`lr-container`** makes an element an inline-size query container.
+- **`lr-link-plain`** — inherited colour, no underline until hover. **`lr-list-plain`** — no
+  marker, no indent, no margin (an `ul`/`ol` that keeps `role="list"` stays announced as a list).
+- **`lr-placeholder`** — a quiet neutral block (`--lr-placeholder-block-size`, default `1em`) that
+  pulses only when `prefers-reduced-motion: no-preference`.
+- **`lr-radius-*`** read the radius tokens; `lr-radius-circle` is `50%`. **`lr-uppercase`,
+  `lr-lowercase`, `lr-capitalize`, `lr-normal-case`** set `text-transform`.
+- **Variants** `lr-neutral|brand|success|warning|danger` (the `variant` vocabulary) colour the
+  element's text and native-control accent with that tone's loud fill and publish
+  `--lr-variant-fill-quiet`, `--lr-variant-fill-loud`, `--lr-variant-on-quiet` and
+  `--lr-variant-border` for your own rules. **Sizes** `lr-size-2xs … lr-size-xl` (the `size` ladder;
+  `small`/`medium`/`large` spellings are not classes) set the type size and scale the native control
+  block size and padding that `.lr-native` reads.
+- **`lr-scroll-lock`** is pure CSS (`overflow: hidden`, `overscroll-behavior: contain`, plus a stable
+  scrollbar gutter on `html`). Put it on `html`, `body` or a scroll container. It is independent of
+  the lock a modal component takes: both can be active, and the component's lock sees the stable
+  gutter and adds no padding.
+- **`lr-cloak`** on `html`/`body` (or any root) hides the root with `visibility: hidden` while any
+  custom element beneath it still matches `:not(:defined)`, then reveals it as soon as they are
+  all defined. It fails open: after `--lr-cloak-timeout` (default `3s`) the root becomes visible
+  regardless, so a script that never loads cannot leave a blank page. The fail-open is a
+  visibility switch, not motion, so it needs no reduced-motion branch. Only light-DOM descendants
+  are seen; for a single element use `lr-fouce-hidden`.
 
 `lr-fouce-hidden` hides only an opted-in custom element while it matches `:not(:defined)`, then
 reveals it automatically after registration. `lr-visually-hidden-focusable` becomes visible on
@@ -380,3 +421,31 @@ the surface layer and disables Glass in the same way as an unlayered rule. Keep 
 `background` rules off `.lr-surface-chrome` elements, or exclude them with
 `:not(.lr-surface-chrome)`. See [Cascade layers](styles-and-tokens.md#cascade-layers) for the full
 order.
+
+
+### Native control extensions
+
+Inside `.lr-native`, `native.css` also styles: **checkbox, radio and range** (`accent-color` from the
+brand token, a `--lr-native-check-size` box, hover shifts to the loud border tone); **colour and file
+inputs** (control border and radius, a styled `::file-selector-button`, pointer cursor with hover);
+**`progress` and `meter`** (a pill track of `--lr-native-meter-block-size`, brand bar, semantic
+optimum/sub-optimum/even-less-good meter colours); **`details`/`summary`** (subtle bounded block, open
+rule under the summary); **`dialog`** (overlay surface, container radius, `--lr-color-overlay` scrim);
+**`mark`** (quiet warning fill and its paired foreground); and **lists** (`--lr-native-list-indent`
+logical start inset, quiet markers). Disabled controls use `not-allowed`, every control shows the
+shared focus ring, and `forced-colors: active` maps accents and bars to system colours. Dark mode
+follows the tokens.
+
+### Hue palette
+
+```css
+@import "@aceshooting/lyra-ui/palette.css";
+```
+
+Declares static `--lr-color-<hue>-<step>` ramps on `:root` and every `[data-lr-theme-scope]`, for
+hues `gray`, `red`, `orange`, `yellow`, `green`, `cyan`, `blue`, `purple` and `pink` and steps `05 10
+20 30 40 50 60 70 80 90 95` (near-black to near-white). `gray`, `red`, `orange`, `green` and `blue`
+are the neutral, danger, warning, success and brand tooling ramps; the others are the brand ramp
+rotated in hue at the same lightness. The values do not change with light/dark mode: use them for
+tags, charts, avatars and illustrations, and keep UI chrome on the semantic grid. To recolour the
+semantic roles themselves, use `setLyraStyle({ accent: { success, warning, danger, neutral } })`.

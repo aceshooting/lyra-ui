@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Жалғастыру үшін осы құсбелгіні қойыңыз.',
   checkboxGroupRequired: 'Кемінде бір нұсқаны таңдаңыз.',
   tokenInputRequired: 'Кемінде бір мән енгізіңіз.',
+  tokenInputTooFew: {
+    one: 'Кемінде {count} мән енгізіңіз.',
+    other: 'Кемінде {count} мән енгізіңіз.',
+  },
+  tokenInputTooMany: {
+    one: '{count} мәннен артық енгізбеңіз.',
+    other: '{count} мәннен артық енгізбеңіз.',
+  },
   tokenInputEditWithContext: 'Өңдеу: {label}',
   tokenInputLabel: 'Токендер',
   iconButtonLabel: 'Түйме',

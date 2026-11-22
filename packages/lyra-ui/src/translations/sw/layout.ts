@@ -63,6 +63,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'Hitilafu',
   stepperStatePending: 'Haijaanza',
   stepperStateLocked: 'Imefungwa',
+  stepperStateLoading: 'Inapakia',
+  stepperStateDisabled: 'Haipatikani',
+  stepperSteps: 'Hatua',
+  stepperStepPosition: 'Hatua ya {current} kati ya {total}',
   commandPaletteInputLimit: 'Baadhi ya amri zimeachwa kwa sababu kikomo cha ingizo kimefikiwa.',
 };
 

@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Επιλέξτε αυτό το πλαίσιο για να συνεχίσετε.',
   checkboxGroupRequired: 'Επιλέξτε τουλάχιστον μία επιλογή.',
   tokenInputRequired: 'Εισαγάγετε τουλάχιστον μία τιμή.',
+  tokenInputTooFew: {
+    one: 'Εισαγάγετε τουλάχιστον {count} τιμή.',
+    other: 'Εισαγάγετε τουλάχιστον {count} τιμές.',
+  },
+  tokenInputTooMany: {
+    one: 'Εισαγάγετε το πολύ {count} τιμή.',
+    other: 'Εισαγάγετε το πολύ {count} τιμές.',
+  },
   tokenInputEditWithContext: 'Επεξεργασία του {label}',
   tokenInputLabel: 'Διακριτικά',
   iconButtonLabel: 'Κουμπί',

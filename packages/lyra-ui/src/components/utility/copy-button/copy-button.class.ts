@@ -145,6 +145,8 @@ export interface LyraCopyButtonEventMap {
  * @csspart feedback - Visually hidden, `aria-hidden` mirror of the outcome text. The announcement
  * uses the shared light-DOM polite region because live regions inside shadow roots are not reliable;
  * style the composed tooltip through its `tooltip__*` parts.
+ * @csspart copy-button - Web Awesome-named outer wrapper: the nested tooltip element that
+ *   contains the trigger.
  * @csspart tooltip__base - The nested tooltip's base wrapper.
  * @csspart tooltip__base__popup - The nested tooltip's popup wrapper.
  * @csspart tooltip__base__arrow - The nested tooltip's arrow.
@@ -650,6 +652,7 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     const buttonLabel = this.accessibleLabel?.trim() ? this.accessibleLabel : statusLabel;
     return html`
       <lr-tooltip
+        part="copy-button"
         .trigger=${this.tooltip === 'full' ? 'hover focus' : 'manual'}
         .placement=${this.tooltipPlacement}
         .hoist=${this.hoist}

@@ -177,3 +177,7 @@ export const Panorama: Story = {
     { id: 'back', yaw: Math.PI, pitch: 0, label: 'Back' },
   ]}></lr-video>`,
 };
+
+export const CustomAspectRatio: StoryObj = {
+  render: () => html`<lr-video style="--aspect-ratio: 4 / 3; max-inline-size: 28rem"></lr-video>`,
+};

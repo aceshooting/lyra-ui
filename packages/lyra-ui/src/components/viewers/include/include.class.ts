@@ -271,6 +271,10 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
    *  retained values and no in-flight deduplication. By default they are shared. */
   @property({ type: Boolean, attribute: 'without-cache' }) withoutCache = false;
 
+  /** Includes the whole sanitized remote document and ignores the hash in `src`. No effect on a
+   *  same-page `#id` source. The fetched markup is sanitized exactly as for a fragment. */
+  @property({ type: Boolean, attribute: 'without-fragment' }) withoutFragment = false;
+
   private generation = 0;
   private resourceLease?: ResourceCacheLease<string>;
   private readonly clonePrefix = `include-fragment-${++nextClonePrefix}`;
@@ -281,7 +285,8 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('src') || changed.has('mode') || changed.has('withoutCache')) {
+    if (changed.has('src') || changed.has('mode') || changed.has('withoutCache') ||
+      changed.has('withoutFragment')) {
       this.scheduleAfterUpdate(() => { void this.load(); });
     }
   }
@@ -334,7 +339,7 @@ export class LyraInclude extends TextViewerTarget(LyraIncludeBase) {
     if (!target) return null;
     try {
       const parsed = new target.view.URL(target.url);
-      const fragment = decodedFragment(parsed.hash);
+      const fragment = this.withoutFragment ? '' : decodedFragment(parsed.hash);
       parsed.hash = '';
       return { kind: 'remote', url: parsed.href, fragment, owner: target.view };
     } catch {

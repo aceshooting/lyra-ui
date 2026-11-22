@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -138,8 +138,8 @@ attribute documented above. Shoelace uses the default slot for the trigger and `
 without one, an explicit content source (`slot="content"` or the `content` property) makes the
 default slot unambiguously the trigger, matching Shoelace.
 
-**CSS parts:** `popup base tooltip base__popup` are aliases on the same wrapper; `trigger`; `body`;
-and `arrow base__arrow` (rendered unless suppressed). The arrow also carries the resolved side —
+**CSS parts:** `popup base tooltip base__popup tooltip__popup` are aliases on the same wrapper; `trigger`; `body`;
+and `arrow base__arrow tooltip__arrow` (rendered unless suppressed). The arrow also carries the resolved side —
 `arrow-top`, `arrow-bottom`, `arrow-left`, or `arrow-right`.
 
 **Themeable custom properties:** mapped `--max-width`, `--show-delay`, `--hide-delay`, and

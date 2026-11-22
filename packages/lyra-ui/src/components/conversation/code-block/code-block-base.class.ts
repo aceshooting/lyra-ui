@@ -6,6 +6,7 @@ import type { PropertyValues, TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { nextId } from '../../../internal/a11y.js';
+import { dedent, stripLeadingNewline } from '../../../internal/dedent.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
@@ -105,6 +106,76 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
     markVetoGuardWrite(this.collapseWrites);
   }
 
+  /** Source text read from the light DOM (`code` wins while it is non-empty). */
+  @state() protected slottedCode = '';
+  private slottedObserver?: MutationObserver;
+  private withoutDedentValue = false;
+  private labelValue = '';
+
+  /** Wraps long lines instead of scrolling horizontally. Unset keeps the horizontal scrollport.
+   *  @default false */
+  @property({ type: Boolean, reflect: true }) wrap = false;
+
+  /** Keeps code given as light-DOM content exactly as written, ignoring only the newline right
+   *  after the opening tag. By default that content is dedented. The `code` property is never
+   *  dedented either way.
+   *  @default false */
+  @property({ type: Boolean, attribute: 'without-dedent', reflect: true })
+  get withoutDedent(): boolean { return this.withoutDedentValue; }
+  set withoutDedent(value: boolean) {
+    const previous = this.withoutDedentValue;
+    this.withoutDedentValue = value;
+    this.requestUpdate('withoutDedent', previous);
+    this.syncSlottedCode();
+  }
+
+  /** Accessible name of the code region, as an alias of the host `aria-label`, which wins when
+   *  both are set. */
+  @property()
+  get label(): string { return this.labelValue; }
+  set label(value: string) {
+    const previous = this.labelValue;
+    this.labelValue = value ?? '';
+    this.requestUpdate('label', previous);
+  }
+
+  /** Alias of `withoutCopyButton`, accepted as the `without-copy` attribute. Reads and writes
+   *  that same state. */
+  @property({ type: Boolean, attribute: 'without-copy' })
+  get withoutCopy(): boolean { return this.withoutCopyButton; }
+  set withoutCopy(value: boolean) { this.withoutCopyButton = value; }
+
+  /** The text every rendering and copy action works from: `code` while it is non-empty, otherwise
+   *  the light-DOM content (dedented unless `without-dedent`). @internal */
+  get sourceCode(): string {
+    const code = this.code ?? '';
+    return code === '' ? this.slottedCode : code;
+  }
+
+  private readSlottedCode(): string {
+    let text = '';
+    for (const node of this.childNodes) {
+      if (node.nodeType === 3) {
+        text += node.nodeValue ?? '';
+      } else if (node.nodeType === 1) {
+        const element = node as Element;
+        if (element.hasAttribute('slot')) continue;
+        if (element.localName === 'template') {
+          text += (element as HTMLTemplateElement).content.textContent ?? '';
+        } else {
+          text += element.textContent ?? '';
+        }
+      }
+    }
+    return this.withoutDedentValue ? stripLeadingNewline(text) : dedent(text);
+  }
+
+  private syncSlottedCode(): void {
+    if (!this.isConnected) return;
+    const next = this.readSlottedCode();
+    if (next !== this.slottedCode) this.slottedCode = next;
+  }
+
   @state() protected hasHeaderActions = false;
   protected focusedLine = 1;
   @state() protected highlightedHtml: string | null = null;
@@ -126,7 +197,7 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
   private previousActive = new Set<number>();
 
   protected get highlightLimited(): boolean {
-    return (this.code ?? '').length > SHIKI_SOURCE_MAX_CODE_UNITS;
+    return (this.sourceCode).length > SHIKI_SOURCE_MAX_CODE_UNITS;
   }
   protected readonly bodyId = nextId('code-block-body');
 
@@ -144,7 +215,7 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
     reportCopy: outcome => reportCopyOutcome({
       emit: (name, detail) => this.emit(name, detail ?? null),
       announce: ok => this.announcements.announcePolite(ok ? this.localize('copiedToClipboard') : this.localize('copyFailed')),
-    }, outcome, () => this.isConnected && (this.code ?? '') === outcome.text),
+    }, outcome, () => this.isConnected && (this.sourceCode) === outcome.text),
     emitTextSelect: (selection) => this.emit('lr-text-select', selection),
   });
 
@@ -162,6 +233,12 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
     super.connectedCallback();
     if (this.hasUpdated) this.refreshTheme();
     this.headerActions.observe();
+    const Observer = this.ownerDocument.defaultView?.MutationObserver;
+    if (Observer && !this.slottedObserver) {
+      this.slottedObserver = new Observer(() => this.syncSlottedCode());
+      this.slottedObserver.observe(this, { childList: true, characterData: true, subtree: true });
+    }
+    this.syncSlottedCode();
     this.resumedMove = this.teardown.cancel();
   }
 
@@ -170,6 +247,8 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
     this.teardown.schedule();
     this.headerActions.disconnect();
     this.interactions.disconnect();
+    this.slottedObserver?.disconnect();
+    this.slottedObserver = undefined;
   }
 
   protected releaseHighlight(): void {
@@ -217,7 +296,7 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
     this.seedFirstRenderState(() => this.refreshTheme());
     this.headerActions.sync();
     this.restoreFocusedLineAfterUpdate = codeBlockLineHasFocus(this);
-    if (changed.has('code')) {
+    if (changed.has('code') || changed.has('slottedCode')) {
       this.plainTemplate = undefined;
       this.plainKey = [];
       this.focusedLine = clampCodeBlockFocusedLine(this.focusedLine, this.lineCount());
@@ -263,7 +342,7 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
   }
 
   protected lineCount(): number {
-    const code = this.code ?? '';
+    const code = this.sourceCode;
     if (code !== this.countedCode) {
       this.countedCode = code;
       this.countedLines = codeBlockLineCount(code);
@@ -274,7 +353,7 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
   protected tokenize(hl: ShikiHighlighter, lang: string): string | null {
     if (this.highlightLimited) return null;
     return tokenizeCodeBlock(hl, {
-      code: this.code ?? '',
+      code: this.sourceCode,
       lang,
       lineNumbers: this.lineNumbers,
       activatableLines: this.activatableLines,
@@ -290,7 +369,7 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
 
   protected renderPlainCode(): TemplateResult {
     return renderCodeBlockPlainCode({
-      code: this.code ?? '',
+      code: this.sourceCode,
       lineNumbers: this.lineNumbers,
       activatableLines: this.activatableLines,
       focusedLine: this.focusedLine,
@@ -346,7 +425,7 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
   }
 
   private cachedPlainCode(): TemplateResult {
-    const key = [this.code, this.lineNumbers, this.activatableLines, this.effectiveLocale, this.localize('codeBlockLineLabel')];
+    const key = [this.sourceCode, this.lineNumbers, this.activatableLines, this.effectiveLocale, this.localize('codeBlockLineLabel')];
     if (!this.plainTemplate || key.some((value, index) => value !== this.plainKey[index])) {
       this.plainDomChanged = true;
       this.plainKey = key;
@@ -367,7 +446,7 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
       justCopied: this.justCopied,
       copyFailed: this.copyFailed,
       bodyId: this.bodyId,
-      accessibleLabel: this.accessibleLabel,
+      accessibleLabel: this.accessibleLabel ?? (this.label || null),
       maxHeight: this.maxHeight,
       isDarkTheme: this.isDarkTheme,
       showSkeleton: !this.highlightLimited && this.showsSkeleton(),

@@ -63,6 +63,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'ስህተት',
   stepperStatePending: 'አልተጀመረም',
   stepperStateLocked: 'ተቆልፏል',
+  stepperStateLoading: 'በመጫን ላይ',
+  stepperStateDisabled: 'አይገኝም',
+  stepperSteps: 'ደረጃዎች',
+  stepperStepPosition: 'ደረጃ {current} ከ{total}',
   commandPaletteInputLimit: 'የግቤት ገደብ ስለተደረሰ አንዳንድ ትዕዛዞች ተወግደዋል።',
 };
 

@@ -10,7 +10,7 @@ export async function verifyNpmPublication({ tag, tarball, expectedSha256, timeo
   class InvalidPublication extends Error { code = 'npm.publication'; }
   class TransientResponse extends Error {}
   const fail = message => { throw new InvalidPublication(message); };
-  const match = /^lyra-(ui|flags|docs|ide|translations|map|3d|gen)@((?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*))$/u.exec(tag);
+  const match = /^lyra-(ui|flags|docs|ide|translations|map|3d|gen|cdn)@((?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*))$/u.exec(tag);
   if (!match || typeof tarball !== 'string' || !tarball || !/^[a-f0-9]{64}$/u.test(expectedSha256)) fail('A verified stable release tag, tarball and SHA-256 are required.');
   if (![timeoutMs, retryMs, requestTimeoutMs].every(value => Number.isSafeInteger(value) && value > 0)
     || timeoutMs > 1200000 || requestTimeoutMs > 30000 || typeof request !== 'function') fail('Invalid publication verification limits.');

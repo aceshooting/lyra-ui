@@ -1182,3 +1182,49 @@ it('keeps the iframe title named when the host aria-label is empty or blank', as
     expect(el.shadowRoot!.querySelector('iframe')!.getAttribute('title')).to.equal('Zoomable content');
   }
 });
+
+describe('allow, name and label', () => {
+  it('forwards a filtered allow list and leaves the sandbox untouched', async () => {
+    const el = await fixture<LyraZoomableFrame>(html`
+      <lr-zoomable-frame
+        src="about:blank"
+        allow="camera *; fullscreen *; clipboard-write 'self' https://evil.example; autoplay 'src'"
+      ></lr-zoomable-frame>
+    `);
+    expect(frameOf(el).getAttribute('allow')).to.equal("fullscreen; clipboard-write 'self'; autoplay 'src'");
+    expect(frameOf(el).getAttribute('sandbox')).to.equal('allow-same-origin');
+  });
+
+  it('omits allow when nothing survives, and cannot widen the sandbox through it', async () => {
+    const el = await fixture<LyraZoomableFrame>(html`
+      <lr-zoomable-frame src="about:blank" allow="geolocation; microphone *" sandbox="allow-scripts allow-same-origin"></lr-zoomable-frame>
+    `);
+    expect(frameOf(el).hasAttribute('allow')).to.be.false;
+    expect(frameOf(el).getAttribute('sandbox')).to.equal('allow-scripts');
+    el.allow = 'picture-in-picture';
+    await el.updateComplete;
+    expect(frameOf(el).getAttribute('allow')).to.equal('picture-in-picture');
+  });
+
+  it('names the frame and ignores blank or reserved names', async () => {
+    const el = await fixture<LyraZoomableFrame>(html`<lr-zoomable-frame src="about:blank" name="preview"></lr-zoomable-frame>`);
+    expect(frameOf(el).getAttribute('name')).to.equal('preview');
+    expect(frameOf(el).name).to.equal('preview');
+    el.name = '_top';
+    await el.updateComplete;
+    expect(frameOf(el).hasAttribute('name')).to.be.false;
+  });
+
+  it('uses label as the iframe title, with host aria-label winning', async () => {
+    const el = await fixture<LyraZoomableFrame>(html`<lr-zoomable-frame src="about:blank" label="Invoice preview"></lr-zoomable-frame>`);
+    expect(frameOf(el).title).to.equal('Invoice preview');
+    el.setAttribute('aria-label', 'Host name');
+    await el.updateComplete;
+    expect(frameOf(el).title).to.equal('Host name');
+    el.removeAttribute('aria-label');
+    el.label = '  ';
+    await el.updateComplete;
+    expect(frameOf(el).title).to.not.equal('');
+    expect(frameOf(el).title).to.not.equal('Invoice preview');
+  });
+});

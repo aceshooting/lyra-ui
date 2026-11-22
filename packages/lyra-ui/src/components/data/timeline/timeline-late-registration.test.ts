@@ -85,7 +85,7 @@ it('numbers genuinely late-defined timeline items before any parent property cha
     expect(items.map(item => item.getAttribute('role'))).to.deep.equal(['listitem', 'listitem', 'listitem']);
     expect(items.map(item => item.shadowRoot!.querySelector<HTMLElement>('[part="marker-number"]')!
       .getBoundingClientRect().height > 0)).to.deep.equal([true, true, true]);
-    expect(timeline.shadowRoot!.querySelector('[part="base"]')?.localName).to.equal('ol');
+    expect(timeline.shadowRoot!.querySelector('[part~="base"]')?.localName).to.equal('ol');
 
     timeline.start = 9;
     await timeline.updateComplete;

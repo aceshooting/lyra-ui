@@ -210,5 +210,23 @@ export const styles = css`
       mask-image: none;
     }
   }
+  /* Child mode (<lr-step> elements in the default slot): the steps share the row evenly, draw their
+     own connectors across the former gap, and are never clipped, so a focus ring, a pulse or a bounce
+     can paint past the strip. Declared last so it outranks the array-mode axis rules above. */
+  :host [part="base"].child-steps {
+    gap: 0;
+    padding-inline: 0;
+    overflow-x: visible;
+    overflow-y: visible;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  :host([orientation="vertical"]) ::slotted(*),
+  :host([data-effective-orientation="vertical"]) ::slotted(*) {
+    flex: 0 0 auto;
+  }
+  :host([data-effective-orientation="horizontal"]) ::slotted(*) {
+    flex: 1 1 0;
+  }
   ${forcedColorsPart('[part="step"][aria-current="step"]')}
 `;

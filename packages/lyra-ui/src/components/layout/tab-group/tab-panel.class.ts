@@ -14,6 +14,7 @@ import { styles } from './tab-panel.styles.js';
  * @customElement lr-tab-panel
  * @slot - The panel's content.
  * @csspart base - The panel content wrapper.
+ * @csspart tab-panel - Web Awesome-named alias on the same wrapper as `base`.
  * @cssprop [--padding=0] - Inner panel padding.
  * @status stable
  * @since 8.0.0
@@ -29,7 +30,7 @@ export class LyraTabPanel extends LyraElement {
   @property({ type: Boolean, reflect: true }) active = false;
 
   override render(): TemplateResult {
-    return html`<div part="base"><slot></slot></div>`;
+    return html`<div part="base tab-panel"><slot></slot></div>`;
   }
 }
 

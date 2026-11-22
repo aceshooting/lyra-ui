@@ -23,7 +23,7 @@ for (const available of [false, true]) {
     second.timestamp = 500;
     await waitUntil(() => first.shadowRoot!.querySelector('[part="cluster"]') === null);
     const target = available ? first.querySelector<HTMLButtonElement>('#available')!
-      : element.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+      : element.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
     await waitUntil(() => available ? document.activeElement === target : element.shadowRoot!.activeElement === target,
       'focus repairs to an available target after the cluster dissolves');
     expect(target.matches(':focus-visible')).to.equal(true);

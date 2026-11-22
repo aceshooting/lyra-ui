@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Abeg tick dis box if you wan continue.',
   checkboxGroupRequired: 'Select one option at least.',
   tokenInputRequired: 'Enter one value at least.',
+  tokenInputTooFew: {
+    one: 'Put at least {count} value.',
+    other: 'Put at least {count} values.',
+  },
+  tokenInputTooMany: {
+    one: 'No put pass {count} value.',
+    other: 'No put pass {count} values.',
+  },
   tokenInputEditWithContext: 'Change {label}',
   tokenInputLabel: 'Tokens',
   iconButtonLabel: 'Button',

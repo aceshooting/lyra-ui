@@ -190,6 +190,8 @@ export type LyraConversationItemReactProps = LyraReactElementProps<'lr-conversat
 
 export type LyraCopyButtonReactProps = LyraReactElementProps<'lr-copy-button'>;
 
+export type LyraCounterReactProps = LyraReactElementProps<'lr-counter'>;
+
 export type LyraCountryPickerReactProps = LyraReactElementProps<'lr-country-picker'>;
 
 export type LyraCsvViewerReactProps = LyraReactElementProps<'lr-csv-viewer'>;
@@ -350,6 +352,8 @@ export type LyraKnownDateReactProps = LyraReactElementProps<'lr-known-date'>;
 
 export type LyraLightboxReactProps = LyraReactElementProps<'lr-lightbox'>;
 
+export type LyraLightboxItemReactProps = LyraReactElementProps<'lr-lightbox-item'>;
+
 export type LyraLineChartReactProps = LyraReactElementProps<'lr-line-chart'>;
 
 export type LyraLiteChartReactProps = LyraReactElementProps<'lr-lite-chart'>;
@@ -415,6 +419,8 @@ export type LyraNodePaletteReactProps = LyraReactElementProps<'lr-node-palette'>
 export type LyraNotebookViewerReactProps = LyraReactElementProps<'lr-notebook-viewer'>;
 
 export type LyraNumberInputReactProps = LyraReactElementProps<'lr-number-input'>;
+
+export type LyraNumberTickerReactProps = LyraReactElementProps<'lr-number-ticker'>;
 
 export type LyraOptionReactProps = LyraReactElementProps<'lr-option'>;
 
@@ -553,6 +559,8 @@ export type LyraSpreadsheetViewerReactProps = LyraReactElementProps<'lr-spreadsh
 export type LyraStackTraceReactProps = LyraReactElementProps<'lr-stack-trace'>;
 
 export type LyraStatReactProps = LyraReactElementProps<'lr-stat'>;
+
+export type LyraStepReactProps = LyraReactElementProps<'lr-step'>;
 
 export type LyraStepperReactProps = LyraReactElementProps<'lr-stepper'>;
 
@@ -749,6 +757,7 @@ export interface LyraReactIntrinsicElements {
   'lr-control-group': LyraControlGroupReactProps;
   'lr-conversation-item': LyraConversationItemReactProps;
   'lr-copy-button': LyraCopyButtonReactProps;
+  'lr-counter': LyraCounterReactProps;
   'lr-country-picker': LyraCountryPickerReactProps;
   'lr-csv-viewer': LyraCsvViewerReactProps;
   'lr-currency-picker': LyraCurrencyPickerReactProps;
@@ -829,6 +838,7 @@ export interface LyraReactIntrinsicElements {
   'lr-knowledge-graph-explorer': LyraKnowledgeGraphExplorerReactProps;
   'lr-known-date': LyraKnownDateReactProps;
   'lr-lightbox': LyraLightboxReactProps;
+  'lr-lightbox-item': LyraLightboxItemReactProps;
   'lr-line-chart': LyraLineChartReactProps;
   'lr-lite-chart': LyraLiteChartReactProps;
   'lr-live-region': LyraLiveRegionReactProps;
@@ -862,6 +872,7 @@ export interface LyraReactIntrinsicElements {
   'lr-node-palette': LyraNodePaletteReactProps;
   'lr-notebook-viewer': LyraNotebookViewerReactProps;
   'lr-number-input': LyraNumberInputReactProps;
+  'lr-number-ticker': LyraNumberTickerReactProps;
   'lr-option': LyraOptionReactProps;
   'lr-otp-input': LyraOtpInputReactProps;
   'lr-page': LyraPageReactProps;
@@ -931,6 +942,7 @@ export interface LyraReactIntrinsicElements {
   'lr-spreadsheet-viewer': LyraSpreadsheetViewerReactProps;
   'lr-stack-trace': LyraStackTraceReactProps;
   'lr-stat': LyraStatReactProps;
+  'lr-step': LyraStepReactProps;
   'lr-stepper': LyraStepperReactProps;
   'lr-stream-status': LyraStreamStatusReactProps;
   'lr-streaming-text': LyraStreamingTextReactProps;

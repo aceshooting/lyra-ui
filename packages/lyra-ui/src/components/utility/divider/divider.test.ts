@@ -1,4 +1,4 @@
-import { fixture, expect, html } from '@open-wc/testing';
+import { fixture, expect, html, waitUntil } from '@open-wc/testing';
 import { toRgba } from '../../../../test/color-contrast.js';
 import '../../lr-divider.js';
 import type { LyraDivider } from '../../lr-divider.js';
@@ -109,4 +109,66 @@ it('normalizes the reflected orientation while the vertical shorthand takes prec
   el.vertical = false;
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('hr')!.getAttribute('aria-orientation')).to.equal('horizontal');
+});
+
+describe('label', () => {
+  it('stays an unlabeled hr without slotted content', async () => {
+    const el = await fixture<LyraDivider>(html`<lr-divider>  </lr-divider>`);
+    expect(el.withLabel).to.be.false;
+    expect(el.hasAttribute('with-label')).to.be.false;
+    expect(el.shadowRoot!.querySelector('hr')).to.exist;
+  });
+
+  it('renders the label between two lines, reflects with-label and names the separator', async () => {
+    const el = await fixture<LyraDivider>(html`<lr-divider>Or</lr-divider>`);
+    expect(el.withLabel).to.be.true;
+    expect(el.hasAttribute('with-label')).to.be.true;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    expect(base.getAttribute('role')).to.equal('separator');
+    expect(base.getAttribute('aria-label')).to.equal('Or');
+    const [start, end] = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="line"]')];
+    const label = el.shadowRoot!.querySelector<HTMLElement>('[part="label"]')!;
+    expect(label.querySelector('slot')).to.exist;
+    expect(Math.abs(start.getBoundingClientRect().width - end.getBoundingClientRect().width)).to.be.lessThan(1.5);
+    expect(getComputedStyle(start).borderTopWidth).to.not.equal('0px');
+  });
+
+  it('lets the host aria-label win and reacts to label removal', async () => {
+    const el = await fixture<LyraDivider>(html`<lr-divider aria-label="Section">Or</lr-divider>`);
+    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Section');
+    el.textContent = '';
+    await waitUntil(() => !el.withLabel);
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('hr')).to.exist;
+  });
+
+  it('places the label at the start or end with a --label-offset line, and applies --label-spacing', async () => {
+    const el = await fixture<LyraDivider>(
+      html`<lr-divider label-placement="start" style="--label-offset: 40px; --label-spacing: 9px">Or</lr-divider>`,
+    );
+    const [start, end] = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="line"]')];
+    expect(start.getBoundingClientRect().width).to.be.closeTo(40, 1);
+    expect(end.getBoundingClientRect().width).to.be.greaterThan(40);
+    expect(getComputedStyle(el.shadowRoot!.querySelector('[part="label"]')!).paddingLeft).to.equal('9px');
+    el.labelPlacement = 'end';
+    await el.updateComplete;
+    expect(end.getBoundingClientRect().width).to.be.closeTo(40, 1);
+    expect(start.getBoundingClientRect().width).to.be.greaterThan(40);
+  });
+
+  it('normalizes an unsupported label-placement to center', async () => {
+    const el = await fixture<LyraDivider>(html`<lr-divider label-placement="nope">Or</lr-divider>`);
+    expect(el.labelPlacement).to.equal('center');
+  });
+
+  it('lays a vertical labeled divider out as a column', async () => {
+    const el = await fixture<LyraDivider>(
+      html`<div style="block-size:200px;display:flex"><lr-divider vertical>Or</lr-divider></div>`,
+    );
+    const divider = el.querySelector('lr-divider')!;
+    const base = divider.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    expect(getComputedStyle(base).flexDirection).to.equal('column');
+    const line = divider.shadowRoot!.querySelector<HTMLElement>('[part~="line"]')!;
+    expect(getComputedStyle(line).borderLeftWidth).to.not.equal('0px');
+  });
 });

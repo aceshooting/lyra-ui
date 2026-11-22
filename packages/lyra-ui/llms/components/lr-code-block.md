@@ -63,6 +63,15 @@ through an activatable gutter reuses the source lines and updates the previous a
 - `collapsible: boolean = false` (reflected) — shows the collapse/expand chevron button
 - `collapsed: boolean = false` (reflected) — only has a visible effect while `collapsible` is also
   true
+- `wrap: boolean = false` (reflected) — wraps long lines instead of scrolling horizontally, in plain
+  and highlighted rendering alike.
+- Light-DOM source: with an empty `code`, the element's own text (text nodes, `<script
+  type="text/plain">` or `<template>`; children with a `slot` attribute are skipped) is the source,
+  dedented, and edits are followed. `withoutDedent: boolean = false` (attribute `without-dedent`,
+  reflected) keeps it as written except the newline right after the opening tag. A non-empty `code`
+  wins and is never dedented.
+- Aliases: `label` (accessible name; host `aria-label` wins) and `without-copy`
+  (= `without-copy-button`).
 - `withoutCopyButton: boolean = false` (attribute `without-copy-button`, reflected) — hides the
   copy-to-clipboard button, which is shown by default.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the

@@ -63,6 +63,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'غلطي',
   stepperStatePending: 'شروع نه ٿيو',
   stepperStateLocked: 'بند ڪيل',
+  stepperStateLoading: 'لوڊ ٿي رهيو آهي',
+  stepperStateDisabled: 'دستياب ناهي',
+  stepperSteps: 'مرحلا',
+  stepperStepPosition: 'مرحلو {current} مان {total}',
   commandPaletteInputLimit: 'ان پٽ جي حد پوري ٿيڻ سبب ڪجهه حڪم ڇڏيا ويا آهن.',
 };
 

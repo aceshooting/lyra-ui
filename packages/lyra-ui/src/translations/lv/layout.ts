@@ -64,6 +64,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'Kļūda',
   stepperStatePending: 'Nav sākts',
   stepperStateLocked: 'Bloķēts',
+  stepperStateLoading: 'Notiek ielāde',
+  stepperStateDisabled: 'Nav pieejams',
+  stepperSteps: 'Soļi',
+  stepperStepPosition: '{current}. solis no {total}',
   commandPaletteInputLimit: 'Dažas komandas tika izlaistas, jo tika sasniegts ievades ierobežojums.',
 };
 

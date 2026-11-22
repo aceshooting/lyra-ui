@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 37 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 38 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `body`: `--lr-dialog-height`; `footer`: `--lr-dialog-height`; `header`: `--lr-dialog-height`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -36,7 +36,7 @@ the slide animation are its own.
 - `floating: boolean = false` (attribute `floating`, reflected) — an inset, floating sheet: the
   panel keeps a `--lr-drawer-inset` gap (default `var(--lr-space-s)`) from every viewport edge
   (from the containing block's edges with `contained`; the safe-area insets still win where
-  larger) and rounds its corners with `--lr-overlay-radius` (default `var(--lr-radius-container)`).
+  larger) and rounds its corners with `--lr-overlay-radius` (default `var(--lr-radius)`).
   Off by default, so the drawer stays square and edge-flush.
 - `heading?: string`, `label: string`,
   `withoutCloseButton: boolean = false` (attribute `without-close-button`, reflected),
@@ -85,7 +85,7 @@ lifecycle.
 controls, rendered before the built-in close button), `footer` — all inherited from `lr-dialog`.
 
 **CSS parts:** `base`; `backdrop overlay`; `panel dialog`; `header`; `heading title label`;
-`header-actions`; `close-button close-button__base`; `close-button-control`; `body`; `footer`.
+`header-actions`; `close-button close-button__base`; `close-button-control` (also `close-button__button`, the same native control); `body`; `footer`.
 Names grouped together are aliases on the same functional node; `close-button-control` is the
 composed `<lr-icon-button>`'s own native `<button>`, inherited from `lr-dialog` as of 16.0.0.
 
@@ -93,7 +93,7 @@ composed `<lr-icon-button>`'s own native `<button>`, inherited from `lr-dialog` 
 the inherited `--width` and `--lr-dialog-width` remain compatibility fallbacks when neither
 `--size` nor `--lr-drawer-width` is set, and `--lr-dialog-max-width` remains an effective cap,
 falling back to the `size` property's own tier value (see Properties above) when unset.
-The other mapped/inherited aliases are `--backdrop-filter`, `--spacing`, `--header-spacing`, `--body-spacing`,
+The other mapped/inherited aliases are `--backdrop-filter`, `--backdrop-color` (alias of `--lr-dialog-overlay-color`, which wins when both are set), `--spacing`, `--header-spacing`, `--body-spacing`,
 `--footer-spacing`, `--show-duration`, and `--hide-duration`. Lyra compatibility tokens remain:
 `--lr-drawer-width` (default `--lr-size-24rem`; used by
 `placement="start"|"end"`, capped at `100%`), `--lr-drawer-height` (default `--lr-size-24rem`;

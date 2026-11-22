@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'اڳتي وڌڻ لاءِ هن خاني تي نشان لڳايو.',
   checkboxGroupRequired: 'گهٽ ۾ گهٽ هڪ اختيار چونڊيو.',
   tokenInputRequired: 'گهٽ ۾ گهٽ هڪ قدر داخل ڪريو.',
+  tokenInputTooFew: {
+    one: 'گهٽ ۾ گهٽ {count} قدر داخل ڪريو.',
+    other: 'گهٽ ۾ گهٽ {count} قدر داخل ڪريو.',
+  },
+  tokenInputTooMany: {
+    one: '{count} قدر کان وڌيڪ داخل نه ڪريو.',
+    other: '{count} قدر کان وڌيڪ داخل نه ڪريو.',
+  },
   tokenInputEditWithContext: '{label} ۾ ترميم ڪريو',
   tokenInputLabel: 'ٽوڪن',
   iconButtonLabel: 'بٽڻ',

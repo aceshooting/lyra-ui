@@ -432,4 +432,308 @@
         )
       );
   }
+
+  /* Checkbox, radio and range paint with the platform control, tinted from the brand tokens. The
+     hover shift is the loud border tone so a pointer user sees the control is live. */
+  :where(.lr-native) :where(input[type="checkbox"], input[type="radio"], input[type="range"]) {
+    accent-color: var(--lr-color-brand, var(--lr-theme-color-brand-fill-loud, AccentColor));
+  }
+
+  :where(.lr-native) :where(input[type="checkbox"], input[type="radio"]) {
+    box-sizing: border-box;
+    inline-size: var(--lr-native-check-size, 1.125em);
+    block-size: var(--lr-native-check-size, 1.125em);
+    margin-block: 0;
+    margin-inline: 0 var(--lr-space-xs, var(--lr-theme-space-xs, 0.25rem));
+    vertical-align: middle;
+  }
+
+  :where(.lr-native) :where(input[type="range"]) {
+    box-sizing: border-box;
+    inline-size: 100%;
+    min-block-size: var(--lr-native-range-min-block-size, 1.5rem);
+    margin-block: 0;
+  }
+
+  :where(.lr-native) :where(input[type="checkbox"], input[type="radio"], input[type="range"], input[type="color"], input[type="file"]):where(:not(:disabled)) {
+    cursor: pointer;
+  }
+
+  :where(.lr-native) :where(input[type="checkbox"], input[type="radio"], input[type="range"]):where(:hover:not(:disabled)) {
+    accent-color: var(--lr-color-brand-border-loud, var(--lr-theme-color-brand-border-loud, AccentColor));
+  }
+
+  :where(.lr-native) :where(label):where(:has(> input[type="checkbox"], > input[type="radio"])) {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--lr-space-xs, var(--lr-theme-space-xs, 0.25rem));
+  }
+
+  :where(.lr-native) :where(label):where(:has(> input[type="checkbox"], > input[type="radio"])) > :where(input) {
+    margin-inline-end: 0;
+  }
+
+  /* Colour well: the swatch fills the control and takes the control radius. */
+  :where(.lr-native) :where(input[type="color"]) {
+    box-sizing: border-box;
+    inline-size: var(--lr-native-color-inline-size, 3rem);
+    min-block-size: var(
+      --lr-native-control-min-block-size,
+      var(--lr-icon-button-size, var(--lr-theme-icon-button-size, 2.5rem))
+    );
+    padding: var(--lr-space-2xs, var(--lr-theme-space-2xs, 0.125rem));
+    border: var(--lr-border-width-thin, var(--lr-theme-border-width-thin, 1px)) solid
+      var(--lr-color-border, var(--lr-theme-color-surface-border, GrayText));
+    border-radius: var(--lr-radius, var(--lr-theme-border-radius-m, 0.375rem));
+    background: var(--lr-color-surface, var(--lr-theme-color-surface-default, Canvas));
+  }
+
+  :where(.lr-native) :where(input[type="color"]):where(:hover:not(:disabled)) {
+    border-color: var(--lr-color-brand, var(--lr-theme-color-brand-border-loud, LinkText));
+  }
+
+  :where(.lr-native) :where(input[type="color"])::-webkit-color-swatch-wrapper {
+    padding: 0;
+  }
+
+  :where(.lr-native) :where(input[type="color"])::-webkit-color-swatch {
+    border: 0;
+    border-radius: var(--lr-radius-xs, var(--lr-theme-border-radius-xs, 2px));
+  }
+
+  :where(.lr-native) :where(input[type="color"])::-moz-color-swatch {
+    border: 0;
+    border-radius: var(--lr-radius-xs, var(--lr-theme-border-radius-xs, 2px));
+  }
+
+  /* File input: the selector button reads as a native button of the same family. */
+  :where(.lr-native) :where(input[type="file"]) {
+    max-inline-size: 100%;
+    color: inherit;
+    font: inherit;
+  }
+
+  :where(.lr-native) :where(input[type="file"])::file-selector-button {
+    box-sizing: border-box;
+    min-block-size: var(
+      --lr-native-control-min-block-size,
+      var(--lr-icon-button-size, var(--lr-theme-icon-button-size, 2.5rem))
+    );
+    margin-inline-end: var(--lr-space-m, var(--lr-theme-space-m, 0.75rem));
+    padding-block: var(--lr-native-control-padding-block, var(--lr-space-s, var(--lr-theme-space-s, 0.5rem)));
+    padding-inline: var(--lr-native-control-padding-inline, var(--lr-space-m, var(--lr-theme-space-m, 0.75rem)));
+    border: var(--lr-border-width-thin, var(--lr-theme-border-width-thin, 1px)) solid
+      var(--lr-color-border, var(--lr-theme-color-surface-border, GrayText));
+    border-radius: var(
+      --lr-theme-border-radius-button,
+      var(--lr-radius, var(--lr-theme-border-radius-m, 0.375rem))
+    );
+    background: var(--lr-color-surface, var(--lr-theme-color-surface-default, Canvas));
+    color: var(--lr-color-text, var(--lr-theme-color-text-normal, CanvasText));
+    font: inherit;
+    cursor: pointer;
+  }
+
+  :where(.lr-native) :where(input[type="file"]):where(:not(:disabled))::file-selector-button:hover {
+    border-color: var(--lr-color-brand, var(--lr-theme-color-brand-border-loud, LinkText));
+  }
+
+  :where(.lr-native) :where(input[type="file"]):where(:disabled)::file-selector-button {
+    cursor: not-allowed;
+  }
+
+  /* Progress and meter: a quiet track with a brand (progress) or semantic (meter) bar. */
+  :where(.lr-native) :where(progress, meter) {
+    box-sizing: border-box;
+    inline-size: 100%;
+    block-size: var(--lr-native-meter-block-size, 0.5rem);
+    overflow: hidden;
+    border: 0;
+    border-radius: var(--lr-radius-pill, var(--lr-theme-border-radius-pill, 9999px));
+    background: var(--lr-color-neutral-fill-normal, var(--lr-theme-color-neutral-fill-normal, ButtonFace));
+    accent-color: var(--lr-color-brand, var(--lr-theme-color-brand-fill-loud, Highlight));
+    appearance: none;
+  }
+
+  :where(.lr-native) :where(progress)::-webkit-progress-bar {
+    background: var(--lr-color-neutral-fill-normal, var(--lr-theme-color-neutral-fill-normal, ButtonFace));
+  }
+
+  :where(.lr-native) :where(progress)::-webkit-progress-value {
+    border-radius: var(--lr-radius-pill, var(--lr-theme-border-radius-pill, 9999px));
+    background: var(--lr-color-brand, var(--lr-theme-color-brand-fill-loud, Highlight));
+  }
+
+  :where(.lr-native) :where(progress)::-moz-progress-bar {
+    border-radius: var(--lr-radius-pill, var(--lr-theme-border-radius-pill, 9999px));
+    background: var(--lr-color-brand, var(--lr-theme-color-brand-fill-loud, Highlight));
+  }
+
+  :where(.lr-native) :where(meter)::-webkit-meter-bar {
+    border: 0;
+    background: var(--lr-color-neutral-fill-normal, var(--lr-theme-color-neutral-fill-normal, ButtonFace));
+  }
+
+  :where(.lr-native) :where(meter)::-webkit-meter-optimum-value {
+    background: var(--lr-color-success, var(--lr-theme-color-success-fill-loud, Highlight));
+  }
+
+  :where(.lr-native) :where(meter)::-webkit-meter-suboptimum-value {
+    background: var(--lr-color-warning, var(--lr-theme-color-warning-fill-loud, Highlight));
+  }
+
+  :where(.lr-native) :where(meter)::-webkit-meter-even-less-good-value {
+    background: var(--lr-color-danger, var(--lr-theme-color-danger-fill-loud, Highlight));
+  }
+
+  :where(.lr-native) :where(meter)::-moz-meter-bar {
+    background: var(--lr-color-brand, var(--lr-theme-color-brand-fill-loud, Highlight));
+  }
+
+  :where(.lr-native) :where(meter):where(:-moz-meter-optimum)::-moz-meter-bar {
+    background: var(--lr-color-success, var(--lr-theme-color-success-fill-loud, Highlight));
+  }
+
+  :where(.lr-native) :where(meter):where(:-moz-meter-sub-optimum)::-moz-meter-bar {
+    background: var(--lr-color-warning, var(--lr-theme-color-warning-fill-loud, Highlight));
+  }
+
+  :where(.lr-native) :where(meter):where(:-moz-meter-sub-sub-optimum)::-moz-meter-bar {
+    background: var(--lr-color-danger, var(--lr-theme-color-danger-fill-loud, Highlight));
+  }
+
+  /* Disclosure: a bounded block whose summary row is the hit target. */
+  :where(.lr-native) :where(details) {
+    padding-inline: var(--lr-native-details-padding-inline, var(--lr-space-m, var(--lr-theme-space-m, 0.75rem)));
+    border: var(--lr-border-width-thin, var(--lr-theme-border-width-thin, 1px)) solid
+      var(
+        --lr-color-border-subtle,
+        var(
+          --lr-theme-color-surface-border-subtle,
+          var(--lr-color-border, var(--lr-theme-color-surface-border, GrayText))
+        )
+      );
+    border-radius: var(--lr-radius, var(--lr-theme-border-radius-m, 0.375rem));
+  }
+
+  :where(.lr-native) :where(details) > :where(summary) {
+    font-weight: var(--lr-font-weight-medium, var(--lr-theme-font-weight-medium, 500));
+  }
+
+  :where(.lr-native) :where(details) > :where(summary)::marker {
+    color: var(--lr-color-text-quiet, var(--lr-theme-color-text-quiet, GrayText));
+  }
+
+  :where(.lr-native) :where(details[open]) > :where(summary) {
+    border-block-end: var(--lr-border-width-thin, var(--lr-theme-border-width-thin, 1px)) solid
+      var(
+        --lr-color-border-subtle,
+        var(
+          --lr-theme-color-surface-border-subtle,
+          var(--lr-color-border, var(--lr-theme-color-surface-border, GrayText))
+        )
+      );
+  }
+
+  :where(.lr-native) :where(details[open]) {
+    padding-block-end: var(--lr-space-m, var(--lr-theme-space-m, 0.75rem));
+  }
+
+  :where(.lr-native) :where(details[open]) > :where(summary + *) {
+    margin-block-start: var(--lr-space-m, var(--lr-theme-space-m, 0.75rem));
+  }
+
+  /* Native modal dialog on the overlay surface; the scrim reads the overlay token. */
+  :where(.lr-native) :where(dialog) {
+    box-sizing: border-box;
+    max-inline-size: min(100% - 2 * var(--lr-space-l, var(--lr-theme-space-l, 1rem)), var(--lr-native-dialog-max-inline-size, 40rem));
+    padding: var(--lr-native-dialog-padding, var(--lr-space-l, var(--lr-theme-space-l, 1rem)));
+    border: var(--lr-border-width-thin, var(--lr-theme-border-width-thin, 1px)) solid
+      var(
+        --lr-color-border-subtle,
+        var(
+          --lr-theme-color-surface-border-subtle,
+          var(--lr-color-border, var(--lr-theme-color-surface-border, GrayText))
+        )
+      );
+    border-radius: var(--lr-radius-container, var(--lr-radius, var(--lr-theme-border-radius-m, 0.375rem)));
+    background: var(--lr-color-surface-overlay, var(--lr-theme-color-surface-overlay, Canvas));
+    color: var(--lr-color-text, var(--lr-theme-color-text-normal, CanvasText));
+    box-shadow: var(--lr-shadow-l, none);
+  }
+
+  :where(.lr-native) :where(dialog)::backdrop {
+    background: var(--lr-color-overlay, rgb(0 0 0 / 0.5));
+  }
+
+  /* Highlighted text: the quiet warning tone, with its paired foreground. */
+  :where(.lr-native) :where(mark) {
+    padding-inline: var(--lr-space-2xs, var(--lr-theme-space-2xs, 0.125rem));
+    border-radius: var(--lr-radius-xs, var(--lr-theme-border-radius-xs, 2px));
+    background: var(--lr-color-warning-fill-quiet, var(--lr-theme-color-warning-fill-quiet, Mark));
+    color: var(--lr-color-warning-on-quiet, var(--lr-theme-color-warning-on-quiet, MarkText));
+  }
+
+  /* Lists: a token indent and a quiet marker; a list that sets its own list-style keeps it. */
+  :where(.lr-native) :where(ul, ol, menu) {
+    margin-block: var(--lr-native-list-margin-block, 0 var(--lr-space-m, var(--lr-theme-space-m, 0.75rem)));
+    padding-inline-start: var(--lr-native-list-indent, var(--lr-space-xl, 1.5rem));
+  }
+
+  :where(.lr-native) :where(ul, ol, menu) :where(ul, ol, menu) {
+    margin-block: var(--lr-space-xs, var(--lr-theme-space-xs, 0.25rem)) 0;
+  }
+
+  :where(.lr-native) :where(li)::marker {
+    color: var(--lr-color-text-quiet, var(--lr-theme-color-text-quiet, GrayText));
+  }
+
+  :where(.lr-native) :where(li) + :where(li) {
+    margin-block-start: var(--lr-space-2xs, var(--lr-theme-space-2xs, 0.125rem));
+  }
+
+  @media (forced-colors: active) {
+    :where(.lr-native) :where(input[type="checkbox"], input[type="radio"], input[type="range"], progress, meter) {
+      accent-color: Highlight;
+    }
+
+    :where(.lr-native) :where(input[type="checkbox"], input[type="radio"], input[type="range"]):where(:hover:not(:disabled)) {
+      accent-color: Highlight;
+    }
+
+    :where(.lr-native) :where(input[type="color"], progress, meter, details, dialog) {
+      border: 1px solid CanvasText;
+    }
+
+    :where(.lr-native) :where(input[type="color"]):where(:hover:not(:disabled)),
+    :where(.lr-native) :where(input[type="file"]):where(:not(:disabled))::file-selector-button:hover {
+      border-color: Highlight;
+    }
+
+    :where(.lr-native) :where(input[type="file"])::file-selector-button {
+      border: 1px solid ButtonText;
+      background: ButtonFace;
+      color: ButtonText;
+    }
+
+    :where(.lr-native) :where(progress)::-webkit-progress-value,
+    :where(.lr-native) :where(meter)::-webkit-meter-optimum-value {
+      background: Highlight;
+    }
+
+    :where(.lr-native) :where(progress)::-moz-progress-bar,
+    :where(.lr-native) :where(meter)::-moz-meter-bar {
+      background: Highlight;
+    }
+
+    :where(.lr-native) :where(mark) {
+      background: Mark;
+      color: MarkText;
+    }
+
+    :where(.lr-native) :where(dialog)::backdrop {
+      background: Canvas;
+      opacity: 0.8;
+    }
+  }
 }

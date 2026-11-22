@@ -13,6 +13,18 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Chcete-li pokračovat, zaškrtněte toto políčko.',
   checkboxGroupRequired: 'Vyberte alespoň jednu možnost.',
   tokenInputRequired: 'Zadejte alespoň jednu hodnotu.',
+  tokenInputTooFew: {
+    one: 'Zadejte alespoň {count} hodnotu.',
+    few: 'Zadejte alespoň {count} hodnoty.',
+    many: 'Zadejte alespoň {count} hodnoty.',
+    other: 'Zadejte alespoň {count} hodnot.',
+  },
+  tokenInputTooMany: {
+    one: 'Nezadávejte více než {count} hodnotu.',
+    few: 'Nezadávejte více než {count} hodnoty.',
+    many: 'Nezadávejte více než {count} hodnoty.',
+    other: 'Nezadávejte více než {count} hodnot.',
+  },
   tokenInputEditWithContext: 'Upravit {label}',
   tokenInputLabel: 'Tokeny',
   iconButtonLabel: 'Tlačítko',

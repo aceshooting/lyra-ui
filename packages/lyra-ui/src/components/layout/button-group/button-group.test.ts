@@ -11,7 +11,7 @@ describe('<lr-button-group>', () => {
         <lr-button>Save</lr-button>
       </lr-button-group>
     `);
-    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    const base = el.shadowRoot!.querySelector('[part~="base"]')!;
     expect(base.getAttribute('role')).to.equal('group');
     expect(base.getAttribute('aria-label')).to.equal('View actions');
   });
@@ -22,7 +22,7 @@ describe('<lr-button-group>', () => {
         <lr-button>Open</lr-button>
       </lr-button-group>
     `);
-    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    const base = el.shadowRoot!.querySelector('[part~="base"]')!;
     expect(base.getAttribute('aria-label')).to.equal('Author actions');
   });
 
@@ -32,7 +32,7 @@ describe('<lr-button-group>', () => {
         <lr-button>Open</lr-button>
       </lr-button-group>
     `);
-    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    const base = el.shadowRoot!.querySelector('[part~="base"]')!;
 
     expect(base.getAttribute('aria-label')).to.equal('');
 
@@ -52,7 +52,7 @@ describe('<lr-button-group>', () => {
     el.accessibleLabel = '';
     await el.updateComplete;
     expect(el.getAttribute('aria-label')).to.equal('Author actions');
-    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Author actions');
+    expect(el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label')).to.equal('Author actions');
   });
 
   it('is accessible', async () => {
@@ -67,7 +67,7 @@ describe('<lr-button-group>', () => {
         <lr-button>Save</lr-button>
       </lr-button-group>
     `);
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     expect(getComputedStyle(base).gap).to.equal('24px');
   });
 
@@ -78,7 +78,7 @@ describe('<lr-button-group>', () => {
         <lr-button>Save</lr-button>
       </lr-button-group>
     `);
-    const narrowBase = narrow.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const narrowBase = narrow.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     const narrowHostWidth = narrow.getBoundingClientRect().width;
     const narrowBaseWidth = narrowBase.getBoundingClientRect().width;
     expect(narrowBaseWidth).to.be.closeTo(narrowHostWidth, 2);
@@ -89,7 +89,7 @@ describe('<lr-button-group>', () => {
         <lr-button>Save</lr-button>
       </lr-button-group>
     `);
-    const wideBase = wide.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const wideBase = wide.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     const wideHostWidth = wide.getBoundingClientRect().width;
     const wideBaseWidth = wideBase.getBoundingClientRect().width;
     // Under the old viewport media query this would also have gone full-width
@@ -129,7 +129,7 @@ describe('<lr-button-group>', () => {
     `);
     const el = wrap.querySelector('lr-button-group') as LyraButtonGroup;
     await el.updateComplete;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     expect(el.getBoundingClientRect().width).to.be.greaterThan(100);
     expect(base.scrollWidth).to.be.at.most(el.clientWidth);
   });
@@ -146,7 +146,7 @@ describe('<lr-button-group>', () => {
     `);
     const el = wrapper.querySelector('lr-button-group') as LyraButtonGroup;
     await el.updateComplete;
-    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
 
     expect(el.scrollWidth).to.be.at.most(el.clientWidth);
     expect(base.scrollWidth).to.be.at.most(base.clientWidth);
@@ -165,9 +165,18 @@ it("restores the declared orientation default when the attribute is removed", as
 
 it('keeps narrow allocated groups compact unless the base is explicitly filled', async () => {
   const el = await fixture<LyraButtonGroup>(html`<lr-button-group style="inline-size:300px"><lr-button>Go</lr-button></lr-button-group>`);
-  const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+  const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
   expect(el.getBoundingClientRect().width).to.equal(300);
   expect(base.getBoundingClientRect().width).to.be.lessThan(250);
   base.style.inlineSize = '100%';
   expect(base.getBoundingClientRect().width).to.equal(300);
+});
+
+describe('button-group part alias', () => {
+  it('carries the Web Awesome button-group part on the same wrapper as base', async () => {
+    const el = await fixture<LyraButtonGroup>(html`<lr-button-group aria-label="A"><lr-button>x</lr-button></lr-button-group>`);
+    const base = el.shadowRoot!.querySelector('[part~="base"]')!;
+    expect(base.part.contains('button-group')).to.equal(true);
+    expect(el.shadowRoot!.querySelector('[part~="button-group"]') === base).to.equal(true);
+  });
 });

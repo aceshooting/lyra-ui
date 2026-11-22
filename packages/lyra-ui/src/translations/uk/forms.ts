@@ -13,6 +13,18 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Поставте прапорець, щоб продовжити.',
   checkboxGroupRequired: 'Виберіть принаймні один варіант.',
   tokenInputRequired: 'Введіть принаймні одне значення.',
+  tokenInputTooFew: {
+    one: 'Введіть щонайменше {count} значення.',
+    few: 'Введіть щонайменше {count} значення.',
+    many: 'Введіть щонайменше {count} значень.',
+    other: 'Введіть щонайменше {count} значення.',
+  },
+  tokenInputTooMany: {
+    one: 'Введіть не більше ніж {count} значення.',
+    few: 'Введіть не більше ніж {count} значення.',
+    many: 'Введіть не більше ніж {count} значень.',
+    other: 'Введіть не більше ніж {count} значення.',
+  },
   tokenInputEditWithContext: 'Редагувати {label}',
   tokenInputLabel: 'Токени',
   iconButtonLabel: 'Кнопка',

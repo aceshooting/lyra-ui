@@ -232,6 +232,7 @@ import type { LyraSourceCardEventMap } from '../components/retrieval/source-card
 import type { LyraSourceListEventMap } from '../components/retrieval/source-list/source-list.class.js';
 import type { LyraSourcePickerEventMap } from '../components/retrieval/source-picker/source-picker.class.js';
 import type { LyraCopyButtonEventMap } from '../components/utility/copy-button/copy-button.class.js';
+import type { LyraCounterEventMap } from '../components/utility/counter/counter.class.js';
 import type { LyraDiffViewEventMap } from '../components/utility/diff-view/diff-view.class.js';
 import type { LyraExportButtonEventMap } from '../components/utility/export-button/export-button.class.js';
 import type { LyraIconEventMap } from '../components/utility/icon/icon.class.js';
@@ -240,6 +241,7 @@ import type { LyraJsonViewerEventMap } from '../components/utility/json-viewer/j
 import type { LyraKnownDateEventMap } from '../components/utility/known-date/known-date.class.js';
 import type { LyraMentionPopoverEventMap } from '../components/utility/mention-popover/mention-popover.class.js';
 import type { LyraMutationObserverEventMap } from '../components/utility/mutation-observer/mutation-observer.class.js';
+import type { LyraNumberTickerEventMap } from '../components/utility/number-ticker/number-ticker.class.js';
 import type { LyraPollStatusEventMap } from '../components/utility/poll-status/poll-status.class.js';
 import type { LyraRandomContentEventMap } from '../components/utility/random-content/random-content.class.js';
 import type { LyraResizeObserverEventMap } from '../components/utility/resize-observer/resize-observer.class.js';
@@ -341,6 +343,7 @@ export interface LyraTagEventTypes {
   'lr-context-meter': LyraContextMeterEventMap;
   'lr-conversation-item': LyraConversationItemEventMap;
   'lr-copy-button': LyraCopyButtonEventMap;
+  'lr-counter': LyraCounterEventMap;
   'lr-country-picker': LyraCountryPickerEventMap;
   'lr-csv-viewer': LyraCsvViewerEventMap;
   'lr-currency-picker': LyraCurrencyPickerEventMap;
@@ -436,6 +439,7 @@ export interface LyraTagEventTypes {
   'lr-node-palette': LyraNodePaletteEventMap;
   'lr-notebook-viewer': LyraNotebookViewerEventMap;
   'lr-number-input': LyraNumberInputEventMap;
+  'lr-number-ticker': LyraNumberTickerEventMap;
   'lr-option': LyraOptionEventMap;
   'lr-otp-input': LyraOtpInputEventMap;
   'lr-page': LyraPageEventMap;
@@ -655,6 +659,7 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-slider': { 'lr-invalid': true },
   'lr-source-picker': { 'lr-selection-change-request': true },
   'lr-split-panel': { 'lr-reposition-request': true, 'lr-resize-request': true },
+  'lr-stepper': { 'lr-before-step-change': true },
   'lr-swatch-picker': { 'lr-change-request': true },
   'lr-switch': { 'lr-invalid': true, 'lr-switch-toggle-request': true },
   'lr-tab-group': { 'lr-tab-group-select-request': true },
@@ -671,7 +676,7 @@ export const LYRA_EVENT_CANCELABLE: {
   'lr-toast-item': { 'lr-close-request': true, 'lr-hide': true, 'lr-show': true },
   'lr-toggle': { 'lr-toggle-toggle-request': true },
   'lr-toggle-group': { 'lr-toggle-group-toggle-request': true },
-  'lr-token-input': { 'lr-invalid': true, 'lr-token-add-request': true, 'lr-token-edit-request': true, 'lr-token-remove-request': true },
+  'lr-token-input': { 'lr-create': true, 'lr-invalid': true, 'lr-token-add-request': true, 'lr-token-edit-request': true, 'lr-token-remove-request': true },
   'lr-tool-approval-dialog': { 'lr-approve-request': true, 'lr-deny-request': true, 'lr-request-close': true },
   'lr-tool-call-block': { 'lr-toggle-request': true },
   'lr-tool-param-form': { 'lr-invalid': true },

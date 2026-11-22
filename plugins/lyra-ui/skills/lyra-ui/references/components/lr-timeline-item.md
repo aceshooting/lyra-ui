@@ -9,6 +9,6 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 16 custom properties — see `lr-timeline.md`
+- **Themeable via** 15 parts, 20 custom properties — see `lr-timeline.md`
 - **Documented with** `lr-timeline`: see [lr-timeline.md](./lr-timeline.md).
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

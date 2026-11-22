@@ -3362,3 +3362,11 @@ describe('lr-color-picker lr-change-request', () => {
     }
   });
 });
+
+it("carries the Web Awesome component-named part aliases on the existing nodes", async () => {
+  const el = await opened();
+  expect(part(el, "format-button") === part(el, "format-button__button")).to.equal(true);
+  expect(part(el, "trigger-container") === part(el, "form-control-input")).to.equal(true);
+  const dropper = el.shadowRoot!.querySelector('[part~="eyedropper-button"]');
+  if (dropper) expect(dropper.part.contains("eyedropper-button__button")).to.equal(true);
+});

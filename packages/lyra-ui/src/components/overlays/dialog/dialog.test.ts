@@ -2463,3 +2463,46 @@ it('fill-body restores body growth inside a drawer panel', async () => {
     await el.close('api');
   }
 });
+
+describe('--backdrop-color alias and with-label', () => {
+  for (const tag of ['lr-dialog', 'lr-drawer'] as const) {
+    it(`${tag}: --backdrop-color paints the scrim and --lr-dialog-overlay-color wins`, async () => {
+      const el = (await fixture(
+        tag === 'lr-dialog'
+          ? html`<lr-dialog label="T" open style="--backdrop-color: rgb(1, 2, 3)">b</lr-dialog>`
+          : html`<lr-drawer label="T" open style="--backdrop-color: rgb(1, 2, 3)">b</lr-drawer>`,
+      )) as LyraDialog;
+      await el.updateComplete;
+      const backdrop = el.shadowRoot!.querySelector('[part~="backdrop"]') as HTMLElement;
+      expect(getComputedStyle(backdrop).backgroundColor).to.equal('rgb(1, 2, 3)');
+      el.style.setProperty('--lr-dialog-overlay-color', 'rgb(4, 5, 6)');
+      expect(getComputedStyle(backdrop).backgroundColor).to.equal('rgb(4, 5, 6)');
+    });
+  }
+
+  it('with-label renders the titled header before any label content is observed', async () => {
+    const el = (await fixture(html`<lr-dialog with-label open>body</lr-dialog>`)) as LyraDialog;
+    expect(el.withLabel).to.be.true;
+    expect(el.shadowRoot!.querySelector('[part~="header"]')).to.exist;
+    const plain = (await fixture(html`<lr-dialog open aria-label="Named">body</lr-dialog>`)) as LyraDialog;
+    expect(plain.withLabel).to.be.false;
+    expect(plain.shadowRoot!.querySelector('[part~="heading"]') === null).to.equal(true);
+  });
+});
+
+describe('close-button__button part alias', () => {
+  for (const tag of ['lr-dialog', 'lr-drawer'] as const) {
+    it(`${tag}: ::part(close-button__button) styles the close control`, async () => {
+      const wrapper = await fixture(
+        tag === 'lr-dialog'
+          ? html`<div><style>lr-dialog::part(close-button__button) { background-color: rgb(7, 8, 9); }</style><lr-dialog open label="A">Body</lr-dialog></div>`
+          : html`<div><style>lr-drawer::part(close-button__button) { background-color: rgb(7, 8, 9); }</style><lr-drawer open label="A">Body</lr-drawer></div>`,
+      );
+      const el = wrapper.querySelector(tag) as LyraDialog;
+      await el.updateComplete;
+      const control = el.shadowRoot!.querySelector('[part~="close-button"]')!.shadowRoot!.querySelector<HTMLElement>('[part~="button"]')!;
+      expect(getComputedStyle(control).backgroundColor).to.equal('rgb(7, 8, 9)');
+    });
+  }
+});
+

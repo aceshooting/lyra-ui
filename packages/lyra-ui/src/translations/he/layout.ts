@@ -64,6 +64,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'שגיאה',
   stepperStatePending: 'לא התחיל',
   stepperStateLocked: 'נעול',
+  stepperStateLoading: 'בטעינה',
+  stepperStateDisabled: 'לא זמין',
+  stepperSteps: 'שלבים',
+  stepperStepPosition: 'שלב {current} מתוך {total}',
   commandPaletteInputLimit: 'חלק מהפקודות הושמטו משום שהקלט הגיע למגבלה.',
 };
 

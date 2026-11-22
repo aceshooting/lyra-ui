@@ -63,6 +63,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'Dogoggora',
   stepperStatePending: 'Hin jalqabamne',
   stepperStateLocked: 'Cufameera',
+  stepperStateLoading: 'Fe\'aa jira',
+  stepperStateDisabled: 'Hin argamu',
+  stepperSteps: 'Tarkaanfiilee',
+  stepperStepPosition: 'Tarkaanfii {current} kan {total}',
   commandPaletteInputLimit: 'Ajajoonni tokko tokko daangaan galchaa waan ga\'eef dhiifamaniiru.',
 };
 

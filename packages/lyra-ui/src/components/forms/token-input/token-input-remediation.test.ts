@@ -82,7 +82,7 @@ describe('token input composing keyboard ownership', () => {
     for (const key of ['Enter', 'Escape']) {
       it(`leaves inline editor ${key} with ${mode} open and unconsumed`, async () => {
         const field = await fixture<LyraTokenInput>(html`<lr-token-input editable .value=${['Original']}></lr-token-input>`);
-        const label = field.shadowRoot!.querySelector<HTMLElement>('[part="token-label"]')!;
+        const label = field.shadowRoot!.querySelector<HTMLElement>('[part~="token-label"]')!;
         label.click();
         await field.updateComplete;
         const input = editInput(field)!;
@@ -174,8 +174,8 @@ describe('editable token alignment', () => {
     for (const size of ['s', 'm', 'l']) {
       it(`centers short token text at size ${size} in ${direction}`, async () => {
         const field = await fixture<LyraTokenInput>(html`<lr-token-input editable dir=${direction} size=${size} .value=${['Label']} style="inline-size: 320px"></lr-token-input>`);
-        const label = field.shadowRoot!.querySelector<HTMLElement>('[part="token-label"]')!;
-        const remove = field.shadowRoot!.querySelector<HTMLElement>('[part="remove"]')!;
+        const label = field.shadowRoot!.querySelector<HTMLElement>('[part~="token-label"]')!;
+        const remove = field.shadowRoot!.querySelector<HTMLElement>('[part~="remove"]')!;
         const range = document.createRange();
         range.selectNodeContents(label);
         const textRect = range.getBoundingClientRect();
@@ -193,20 +193,20 @@ describe('editable token alignment', () => {
   it('retains narrow ellipsis, wrapping, and the noneditable default', async () => {
     const wrapper = await fixture<HTMLDivElement>(html`<div style="inline-size: 320px"><lr-token-input editable .value=${['LongUnbrokenToken'.repeat(12), 'Second', 'Third']}></lr-token-input><lr-token-input .value=${['Plain']}></lr-token-input></div>`);
     const field = wrapper.querySelector('lr-token-input')!;
-    const label = field.shadowRoot!.querySelector<HTMLElement>('[part="token-label"]')!;
+    const label = field.shadowRoot!.querySelector<HTMLElement>('[part~="token-label"]')!;
     expect(getComputedStyle(label).textOverflow).to.equal('ellipsis');
     expect(label.scrollWidth).to.be.greaterThan(label.clientWidth);
     expect(wrapper.scrollWidth).to.be.at.most(wrapper.clientWidth);
     const plain = wrapper.querySelectorAll('lr-token-input')[1]!;
     expect(plain.editable).to.equal(false);
-    expect(plain.shadowRoot!.querySelectorAll('[part="token-label"]').length).to.equal(0);
+    expect(plain.shadowRoot!.querySelectorAll('[part~="token-label"]').length).to.equal(0);
   });
 });
 
 for (const editable of [false, true]) {
   it(`token input marks ${editable ? 'editable ' : ''}remove buttons aria-disabled while readonly but keeps them focusable`, async () => {
     const field = await fixture<LyraTokenInput>(html`<lr-token-input readonly ?editable=${editable} .value=${['alpha']}></lr-token-input>`);
-    const remove = () => field.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove"]')!;
+    const remove = () => field.shadowRoot!.querySelector<HTMLButtonElement>('[part~="remove"]')!;
     expect(remove().getAttribute('aria-disabled')).to.equal('true');
     expect(remove().disabled).to.equal(false);
     remove().click();

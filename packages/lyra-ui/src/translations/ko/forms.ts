@@ -13,6 +13,8 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: '계속하려면 이 확인란을 선택하세요.',
   checkboxGroupRequired: '하나 이상의 옵션을 선택하십시오.',
   tokenInputRequired: '하나 이상의 값을 입력하십시오.',
+  tokenInputTooFew: { other: '값을 {count}개 이상 입력하세요.' },
+  tokenInputTooMany: { other: '값을 {count}개 이하로 입력하세요.' },
   tokenInputEditWithContext: '{label} 편집',
   tokenInputLabel: '토큰',
   iconButtonLabel: '버튼',

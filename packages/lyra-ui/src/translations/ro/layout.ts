@@ -64,6 +64,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'Eroare',
   stepperStatePending: 'Neînceput',
   stepperStateLocked: 'Blocat',
+  stepperStateLoading: 'Se încarcă',
+  stepperStateDisabled: 'Indisponibil',
+  stepperSteps: 'Pași',
+  stepperStepPosition: 'Pasul {current} din {total}',
   commandPaletteInputLimit: 'Unele comenzi au fost omise deoarece a fost atinsă limita de intrare.',
 };
 

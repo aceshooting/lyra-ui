@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Jätkamiseks märkige see ruut.',
   checkboxGroupRequired: 'Valige vähemalt üks valik.',
   tokenInputRequired: 'Sisestage vähemalt üks väärtus.',
+  tokenInputTooFew: {
+    one: 'Sisesta vähemalt {count} väärtus.',
+    other: 'Sisesta vähemalt {count} väärtust.',
+  },
+  tokenInputTooMany: {
+    one: 'Sisesta kuni {count} väärtus.',
+    other: 'Sisesta kuni {count} väärtust.',
+  },
   tokenInputEditWithContext: 'Muuda {label}',
   tokenInputLabel: 'Tokenid',
   iconButtonLabel: 'Nupp',

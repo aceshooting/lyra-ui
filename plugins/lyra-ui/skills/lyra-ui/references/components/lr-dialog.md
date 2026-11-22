@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 29 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `body`: `--lr-dialog-height`; `footer`: `--lr-dialog-height`; `header`: `--lr-dialog-height`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -42,6 +42,9 @@ read, and neither is deprecated.
   the property, the reflected attribute and the two methods can never disagree. `el.open = false`
   therefore emits the full close lifecycle and can be vetoed. Markup that renders open from the start (`<lr-dialog open>`) emits nothing.
 - `label: string = ''` — mapped visible title. The richer `label` slot wins over it.
+- `withLabel: boolean = false` (attribute `with-label`) — server-rendering hint that a `label` slot
+  child is provided, so the titled header is present before hydration; in the browser the real slot
+  content decides. Also on `lr-drawer`.
 - `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — `1`–`6` expose
   the generated visible title (string property or rich `label` slot) at that semantic level;
   invalid untyped values retain level 3, while `none` keeps visual title text without heading
@@ -197,7 +200,7 @@ border simply has no default to relay, which is different from border theming be
 remains the one exception that does not cross this way: use `--lr-theme-icon-button-size`, never
 `--lr-icon-button-size`, as noted above.
 
-**Themeable custom properties:** mapped aliases are `--backdrop-filter`, `--width`, `--spacing`,
+**Themeable custom properties:** mapped aliases are `--backdrop-filter`, `--backdrop-color` (alias of `--lr-dialog-overlay-color`, which wins when both are set), `--width`, `--spacing`,
 `--header-spacing`, `--body-spacing`, `--footer-spacing`, `--show-duration`, and
 `--hide-duration`. The individual region properties override `--spacing`; mapped properties in
 turn fall back to the retained Lyra tokens: `--lr-dialog-overlay-color` (default

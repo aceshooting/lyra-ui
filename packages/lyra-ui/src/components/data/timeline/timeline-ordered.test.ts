@@ -40,7 +40,7 @@ describe('lr-timeline ordered', () => {
   it('renders an ordered list with numbered, readable markers', async () => {
     const el = await ordered();
     expect(el.ordered).to.equal(true);
-    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
     expect(base.localName).to.equal('ol');
     expect(base.getAttribute('role')).to.equal('list');
     expect(base.getAttribute('aria-label')).to.equal('Application steps');
@@ -55,7 +55,7 @@ describe('lr-timeline ordered', () => {
 
   it('stays an unordered role="list" with decorative dots by default', async () => {
     const el = await ordered('');
-    const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
+    const base = el.shadowRoot!.querySelector<HTMLElement>('[part~="base"]')!;
     expect(base.localName).to.equal('div');
     expect(numbers(el)).to.deep.equal(['', '', '']);
     const first = el.querySelector<LyraTimelineItem>('lr-timeline-item')!;
@@ -101,7 +101,7 @@ describe('lr-timeline ordered', () => {
     const el = await ordered();
     el.ordered = false;
     await settle(el);
-    expect(el.shadowRoot!.querySelector('[part="base"]')!.localName).to.equal('div');
+    expect(el.shadowRoot!.querySelector('[part~="base"]')!.localName).to.equal('div');
     expect(numbers(el)).to.deep.equal(['', '', '']);
     const first = el.querySelector<LyraTimelineItem>('lr-timeline-item')!;
     expect(marker(first).getAttribute('aria-hidden')).to.equal('true');

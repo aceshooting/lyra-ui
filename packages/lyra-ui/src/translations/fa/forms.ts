@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'اگر می‌خواهید ادامه دهید، لطفاً این کادر را علامت بزنید.',
   checkboxGroupRequired: 'حداقل یک گزینه را انتخاب کنید.',
   tokenInputRequired: 'حداقل یک مقدار وارد کنید.',
+  tokenInputTooFew: {
+    one: 'حداقل {count} مقدار وارد کنید.',
+    other: 'حداقل {count} مقدار وارد کنید.',
+  },
+  tokenInputTooMany: {
+    one: 'بیش از {count} مقدار وارد نکنید.',
+    other: 'بیش از {count} مقدار وارد نکنید.',
+  },
   tokenInputEditWithContext: 'ویرایش {label}',
   tokenInputLabel: 'توکن‌ها',
   iconButtonLabel: 'دکمه',

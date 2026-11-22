@@ -1,7 +1,9 @@
 {
   "family": "layout",
   "assignments": {
-    "new-component-experimental": [],
+    "new-component-experimental": [
+      "lr-step"
+    ],
     "published-stable": [
       "lr-accordion",
       "lr-accordion-item",

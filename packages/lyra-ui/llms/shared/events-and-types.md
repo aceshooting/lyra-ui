@@ -78,6 +78,24 @@ Those nested detail fields are separate from deprecated event names and are not 
   type graph, so add it once (a root `main.ts`, or a `.d.ts` in the project's `include`). A direct
   element reference never needs it — `LyraElement` overrides `addEventListener`, so
   `table.addEventListener('lr-sort', …)` resolves through `LyraTableEventMap` first either way.
+- **`instanceof` narrowing: `@aceshooting/lyra-ui/event-classes`.** Every event a component dispatches
+  is a `LyraEvent` (a bubbling, composed `CustomEvent`), and this subpath exports one class per event
+  name — `lr-step-change` → `LyraStepChangeEvent` — whose `instanceof` is true for exactly those events
+  and narrows `detail`:
+
+  ```ts
+  import { LyraChangeEvent } from "@aceshooting/lyra-ui/event-classes";
+
+  document.addEventListener("lr-change", (event) => {
+    if (event instanceof LyraChangeEvent) event.detail; // typed
+  });
+  ```
+
+  A class is also constructible (`new LyraChangeEvent(detail, { cancelable })`) for tests or for
+  re-dispatching. The classes are side-effect free and tree-shakable, components never import them, and
+  the names match the type aliases in `@aceshooting/lyra-ui/events` (import from one subpath per
+  file). Events created for an element adopted into another window keep that window's `CustomEvent`
+  constructor but still match.
   `LyraGlobalEventMap` is exported as well, for writing your own typed helper over it.
 
 - **The surface is per-event type aliases, not runtime event classes.** `LyraSortEvent` and its

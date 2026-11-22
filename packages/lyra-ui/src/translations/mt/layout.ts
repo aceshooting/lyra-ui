@@ -66,6 +66,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'Żball',
   stepperStatePending: 'Għadu ma nbediex',
   stepperStateLocked: 'Imsakkar',
+  stepperStateLoading: 'Qed jitgħabba',
+  stepperStateDisabled: 'Mhux disponibbli',
+  stepperSteps: 'Passi',
+  stepperStepPosition: 'Pass {current} minn {total}',
   commandPaletteInputLimit: 'Xi kmandi tħallew barra għax intlaħaq limitu tal-input.',
 };
 

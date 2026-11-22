@@ -63,6 +63,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'Hiba',
   stepperStatePending: 'Nincs elkezdve',
   stepperStateLocked: 'Zárolva',
+  stepperStateLoading: 'Betöltés',
+  stepperStateDisabled: 'Nem érhető el',
+  stepperSteps: 'Lépések',
+  stepperStepPosition: '{current}. lépés / {total}',
   commandPaletteInputLimit: 'A bemeneti korlát elérése miatt egyes parancsok kimaradtak.',
 };
 

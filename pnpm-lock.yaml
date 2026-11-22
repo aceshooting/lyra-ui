@@ -364,6 +364,15 @@ importers:
         specifier: ^8.3.8
         version: 8.3.8(@types/node@22.20.5)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
 
+  packages/lyra-cdn:
+    devDependencies:
+      '@aceshooting/lyra-ui':
+        specifier: workspace:*
+        version: link:../lyra-ui
+      playwright:
+        specifier: ^1.65.1
+        version: 1.65.1
+
   packages/lyra-docs:
     dependencies:
       fflate:

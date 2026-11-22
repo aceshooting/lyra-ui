@@ -65,7 +65,7 @@ it('preserves modal focus, RTL navigation and legacy close behavior across sourc
     await waitUntil(() => frame.shadowRoot!.activeElement === viewport, 'keyboard reached the image viewport');
     viewport.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, composed: true }));
     expect(el.index).to.equal(0);
-    el.shadowRoot!.querySelector('[part="panel"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', cancelable: true }));
+    el.shadowRoot!.querySelector('[part~="panel"]')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', cancelable: true }));
     await ready(el, 'Image 1');
     expect(frame.shadowRoot!.activeElement === viewport).to.equal(true);
     el.index = 999_999; await ready(el, 'Image 999999');

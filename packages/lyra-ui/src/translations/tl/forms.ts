@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Lagyan ng tsek ang kahong ito kung nais magpatuloy.',
   checkboxGroupRequired: 'Pumili ng kahit isang opsyon.',
   tokenInputRequired: 'Maglagay ng kahit isang value.',
+  tokenInputTooFew: {
+    one: 'Maglagay ng hindi bababa sa {count} value.',
+    other: 'Maglagay ng hindi bababa sa {count} value.',
+  },
+  tokenInputTooMany: {
+    one: 'Huwag maglagay ng higit sa {count} value.',
+    other: 'Huwag maglagay ng higit sa {count} value.',
+  },
   tokenInputEditWithContext: 'I-edit ang {label}',
   tokenInputLabel: 'Mga token',
   iconButtonLabel: 'Pindutan',

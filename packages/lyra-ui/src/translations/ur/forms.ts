@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'جاری رکھنے کے لیے اس خانے کو منتخب کریں۔',
   checkboxGroupRequired: 'کم از کم ایک اختیار منتخب کریں۔',
   tokenInputRequired: 'کم از کم ایک قدر درج کریں۔',
+  tokenInputTooFew: {
+    one: 'کم از کم {count} قدر درج کریں۔',
+    other: 'کم از کم {count} قدر درج کریں۔',
+  },
+  tokenInputTooMany: {
+    one: '{count} سے زیادہ قدریں درج نہ کریں۔',
+    other: '{count} سے زیادہ قدریں درج نہ کریں۔',
+  },
   tokenInputEditWithContext: '{label} میں ترمیم کریں',
   tokenInputLabel: 'ٹوکن',
   iconButtonLabel: 'بٹن',

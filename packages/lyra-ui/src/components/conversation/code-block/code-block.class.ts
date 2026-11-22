@@ -77,6 +77,13 @@ export interface LyraCodeBlockEventMap extends LyraCodeBlockBaseEventMap {}
  * from `languages` still falls back to the ordinary dynamic-import path
  * unchanged, so this is a partial opt-in, not a replacement for it.
  *
+ * Source can also be given as the element's light-DOM text (text nodes, a `<script type="text/plain">`
+ * or a `<template>`; children with a `slot` attribute are excluded). It is dedented, and
+ * `without-dedent` keeps it as written apart from the newline right after the opening tag. A
+ * non-empty `code` property wins and is never dedented. `wrap` wraps long lines instead of
+ * scrolling; both plain and highlighted rendering honor it. `label` aliases the host `aria-label`
+ * and `without-copy` aliases `without-copy-button`.
+ *
  * Adopts the `line-range` slice of this library's shared anchor-target contract:
  * `highlights`/`activeHighlightId` paint (and `highlight-lines` additionally marks) per-line
  * emphasis in both the shiki and plain-text-fallback rendering paths identically, and
@@ -338,7 +345,7 @@ export class LyraCodeBlock extends LyraCodeBlockBase {
   }
 
   protected override beforeHighlightUpdate(changed: PropertyValues): void {
-    if (changed.has('code') || changed.has('language') || changed.has('languages') || changed.has('languageLoaders')) {
+    if (changed.has('code') || changed.has('slottedCode') || changed.has('language') || changed.has('languages') || changed.has('languageLoaders')) {
       this.ensureDefaultHighlighter();
     }
   }

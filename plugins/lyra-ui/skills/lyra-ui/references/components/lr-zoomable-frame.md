@@ -34,6 +34,14 @@ variants `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-b
   values are accepted; active `data:`/`javascript:` and non-embeddable schemes are omitted.
 - `srcdoc: string = ''` — inline iframe document. A present `srcdoc` wins over `src`, including an
   explicitly empty `srcdoc` attribute.
+- `allow: string = ''` — Permissions Policy, filtered: only `accelerometer`, `autoplay`,
+  `clipboard-write`, `encrypted-media`, `fullscreen`, `gyroscope`, `magnetometer`,
+  `picture-in-picture` and `web-share` survive, each limited to the `'self'`/`'src'`/`'none'`
+  keywords (no `*`, no origins). It never alters `sandbox`.
+- `name: string = ''` — browsing-context name for `target="<name>"` links and forms; blank and
+  reserved `_`-prefixed values are ignored.
+- `label: string = ''` — accessible name (iframe title); a host `aria-label` wins, blank uses the
+  localized default.
 - `allowfullscreen: boolean = false`, `loading: LyraZoomableFrameLoading = 'eager'`
   (`'eager' | 'lazy'`),
   `referrerpolicy: string = ''`, and `sandbox: string = 'allow-same-origin'` forward the native

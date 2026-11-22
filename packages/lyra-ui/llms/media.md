@@ -3795,6 +3795,14 @@ variants `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-b
   values are accepted; active `data:`/`javascript:` and non-embeddable schemes are omitted.
 - `srcdoc: string = ''` — inline iframe document. A present `srcdoc` wins over `src`, including an
   explicitly empty `srcdoc` attribute.
+- `allow: string = ''` — Permissions Policy, filtered: only `accelerometer`, `autoplay`,
+  `clipboard-write`, `encrypted-media`, `fullscreen`, `gyroscope`, `magnetometer`,
+  `picture-in-picture` and `web-share` survive, each limited to the `'self'`/`'src'`/`'none'`
+  keywords (no `*`, no origins). It never alters `sandbox`.
+- `name: string = ''` — browsing-context name for `target="<name>"` links and forms; blank and
+  reserved `_`-prefixed values are ignored.
+- `label: string = ''` — accessible name (iframe title); a host `aria-label` wins, blank uses the
+  localized default.
 - `allowfullscreen: boolean = false`, `loading: LyraZoomableFrameLoading = 'eager'`
   (`'eager' | 'lazy'`),
   `referrerpolicy: string = ''`, and `sandbox: string = 'allow-same-origin'` forward the native
@@ -5085,6 +5093,50 @@ photo content.
 
 Set `--lr-lightbox-control-hover-bg` and `--lr-lightbox-control-hover-color` for hovered controls. Set `--lr-lightbox-control-active-bg` and `--lr-lightbox-control-active-color` for pressed controls.
 
+### `lr-lightbox` slotted items (`lr-lightbox-item`)
+
+`<lr-lightbox>` also accepts `<lr-lightbox-item>` children (any depth, no nested lightbox), mirroring
+`wa-lightbox`/`wa-lightbox-item`. `images`/`imageSource` keep working unchanged and take precedence
+when set. With items the host stays inline and the viewer opens over the page.
+
+```html
+<lr-lightbox label="Trip" with-thumbnails>
+  <lr-lightbox-item src="/photos/a-full.jpg" alt="Harbour" width="1600" height="900">
+    <img src="/photos/a-thumb.jpg" alt="Harbour" />
+    <span slot="caption">Harbour at dawn</span>
+  </lr-lightbox-item>
+  <lr-lightbox-item type="video" src="/clips/b.mp4" thumbnail="/clips/b.jpg" alt="Boat"></lr-lightbox-item>
+</lr-lightbox>
+```
+
+**`lr-lightbox-item`** — `type: 'image' | 'video' = 'image'` (reflected; video shows a play button),
+`src` (the link target, so the gallery works without JavaScript and opens in a new tab; a modified
+click is left to the browser), `srcset`/`sizes` (the lightbox loads the smallest candidate covering
+the viewport or a single `px`/`vw` `sizes` length, else the largest), `alt` (defaults to the slotted
+`img` alt), `caption`, `thumbnail` (strip image and the item's own image when nothing is slotted),
+`width`/`height` (reserve space). Slots: default thumbnail, `caption` (text shown in the viewer),
+`play-icon`. Parts: `trigger`, `thumbnail-image`, `play-button`. The `data-active` attribute marks the
+current item while open. URLs are validated: `src` for the link with `safeLinkHref()` and all media
+with `safeMediaSrc()`; a rejected `src` leaves a button-style trigger and the item out of the viewer.
+An item with no `src` is activated with Enter/Space.
+
+**Lightbox additions** — `with-thumbnails` (thumbnail strip, not with `imageSource`), `without-navigation`
+(hides previous/next; arrow keys and swipe stay), `without-zoom` (no zoom button/controls), `label`
+(names the dialog; a host `aria-label` wins), `items` and `currentItem` getters, `zoomIn()`/`zoomOut()`.
+`lr-item-change` fires with every `lr-index-change` and adds `{ index, previousIndex, item, previousItem }`
+(items are `null` in data mode). Touch and pen swipes (not mouse) navigate, reversed under RTL, and are
+off while zoomed; `pointercancel` abandons a swipe. A `type="video"` item plays in a native `<video>`
+that pauses on slide change and close; zoom is unavailable for video. Slots `close-icon`,
+`previous-icon`, `next-icon`, `zoom-in-icon`, `zoom-out-icon`. Added part aliases: `dialog` (panel),
+`scroll-container` (stage), `navigation-button`/`navigation-button-previous`/`navigation-button-next`,
+plus `surface`, `slide`, `video`, `zoom-button`, `thumbnails`, `thumbnail`, `thumbnail-active`.
+Match them with `[part~="…"]` when querying.
+Motion: `--show-duration`/`--hide-duration` (or `--lr-lightbox-panel-duration`, default
+`--lr-duration-base`) drive the open/close and slide animations, which are flattened under
+`prefers-reduced-motion`; `lr-after-show`/`lr-after-hide` fire once the animation finishes.
+`--slide-gap` (`--lr-lightbox-slide-gap`), `--thumbnail-size` (`--lr-lightbox-thumbnail-size`) and
+`--media-border-radius` (`--lr-lightbox-media-radius`) style slides and the strip.
+
 ## `lr-qr-code`
 
 Renders `value` as a QR code using the optional `qrcode` peer dependency. **Properties:** `value`,
@@ -5758,10 +5810,10 @@ is preserved exactly as an empty native-video name. Caption/subtitle tracks
 selected for Lyra's custom overlay use native `mode="hidden"`, keeping cue activity available
 without asking the browser to paint a duplicate native caption layer.
 
-**CSS parts:** `base` and `video-wrapper` (aliases on the same root node), `caption`,
+**CSS parts:** `base`, `video-wrapper` and `player` (aliases on the same root node), `caption`,
 `caption-overlay`, `controls`, `controls-overlay`, `error`, `poster-overlay`, `poster-play-button`,
 `progress`, `thumbnail`, `timeline`, `timeline-indicator`, `timeline-thumb`, `timeline-track`,
-`video`, and `video-title-overlay`.
+`video` (also `body`, an alias on the same media element), and `video-title-overlay`.
 Panorama parts (with `projection="equirectangular"`): `panorama` (the keyboard-operable spherical
 viewport), `panorama-engine` (the optional renderer container), `panorama-notice` (localized
 renderer loading or fallback feedback), `panorama-hotspots` (the paginated hotspot alternative)
@@ -5775,7 +5827,8 @@ than a raw number of seconds; `aria-describedby` points to the same text. The vo
 remains in the DOM as a disabled `0..0` control with its value text and description intact,
 avoiding a disappearing/reappearing semantic target.
 
-**Themeable custom properties:** `--controls-background` (default
+**Themeable custom properties:** `--aspect-ratio` (default `16 / 9`, the player surface ratio),
+`--controls-background` (default
 `var(--lr-color-overlay-strong)`), `--controls-color` (default
 `var(--lr-color-on-strong-overlay)`), and
 `--poster-play-button-background` (default `var(--lr-color-surface-overlay)`). These exact names are

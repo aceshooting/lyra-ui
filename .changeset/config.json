@@ -6,7 +6,8 @@
     [
       "@aceshooting/lyra-ui",
       "@aceshooting/lyra-ide",
-      "@aceshooting/lyra-translations"
+      "@aceshooting/lyra-translations",
+      "@aceshooting/lyra-cdn"
     ]
   ],
   "linked": [],

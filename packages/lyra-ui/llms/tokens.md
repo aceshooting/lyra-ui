@@ -343,7 +343,7 @@ These work on any element, theme scope or not. Every other `--lr-theme-*` input 
 | `--lr-transition-fast` | `--lr-theme-transition-fast` | `120ms ease-out` | reducedMotion: `0.001ms linear` |
 | `--lr-word-break` | `--lr-theme-word-break` | `inherit` | — |
 
-## Derived and fixed tokens (77)
+## Derived and fixed tokens (82)
 
 These do not directly read a `--lr-theme-*` input. Aliases and computed values still follow
 the tokens or environment values they reference; fixed contract constants are intentionally
@@ -368,6 +368,8 @@ not CSS custom properties declared by component hosts. Use the semantic `--lr-co
 | `--lr-color-warning` | `var(--lr-color-warning-fill-loud)` | forcedColors: `CanvasText` |
 | `--lr-color-warning-quiet` | `var(--lr-color-warning-fill-quiet)` | forcedColors: `Canvas` |
 | `--lr-focus-ring` | `var(--lr-focus-ring-width) solid var(--lr-focus-ring-color)` | — |
+| `--lr-font-size-4xl` | `calc(var(--lr-theme-font-size-3xl, 2rem) * 1.25)` | — |
+| `--lr-font-size-5xl` | `calc(var(--lr-theme-font-size-3xl, 2rem) * 1.5)` | — |
 | `--lr-mask-opaque` | `#000` | — |
 | `--lr-ramp-brand-05` | `#000002` | — |
 | `--lr-ramp-brand-10` | `#00030f` | — |
@@ -429,4 +431,7 @@ not CSS custom properties declared by component hosts. Use the semantic `--lr-co
 | `--lr-safe-area-inline-start` | `env(safe-area-inset-left, 0px)` | — |
 | `--lr-safe-area-top` | `env(safe-area-inset-top, 0px)` | — |
 | `--lr-shadow` | `var(--lr-shadow-m)` | — |
+| `--lr-space-3xl` | `calc(var(--lr-theme-space-2xl, 2rem) * 1.5)` | — |
+| `--lr-space-4xl` | `calc(var(--lr-theme-space-2xl, 2rem) * 2)` | — |
+| `--lr-space-xl` | `calc((var(--lr-theme-space-l, 1rem) + var(--lr-theme-space-2xl, 2rem)) / 2)` | — |
 | `--lr-transition-interactive` | `background-color var(--lr-transition-fast), color var(--lr-transition-fast), border-color var(--lr-transition-fast)` | — |

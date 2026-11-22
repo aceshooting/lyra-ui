@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Markér dette felt, hvis du vil fortsætte.',
   checkboxGroupRequired: 'Vælg mindst én mulighed.',
   tokenInputRequired: 'Angiv mindst én værdi.',
+  tokenInputTooFew: {
+    one: 'Angiv mindst {count} værdi.',
+    other: 'Angiv mindst {count} værdier.',
+  },
+  tokenInputTooMany: {
+    one: 'Angiv højst {count} værdi.',
+    other: 'Angiv højst {count} værdier.',
+  },
   tokenInputEditWithContext: 'Rediger {label}',
   tokenInputLabel: 'Tokens',
   iconButtonLabel: 'Knap',

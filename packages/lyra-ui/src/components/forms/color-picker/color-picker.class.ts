@@ -340,6 +340,7 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * @csspart form-control-label - The label. It also carries the `label` compatibility name.
  * @csspart label - Permanent compatibility name on the same label as `form-control-label`.
  * @csspart trigger-container - The row wrapping the trigger.
+ * @csspart form-control-input - Web Awesome-named alias on the same row as `trigger-container`.
  * @csspart trigger - The swatch button that opens the panel.
  * @csspart panel - The positioned popover surface.
  * @csspart grid - The saturation/brightness grid.
@@ -356,6 +357,7 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * @csspart input - The text field holding the serialized value.
  * @csspart format-button - The format-cycling button.
  * @csspart format-button__base - Alias for the format button's interactive base.
+ * @csspart format-button__button - Web Awesome-named alias on the same node as `format-button`.
  * @csspart format-button__start - Web Awesome start-adornment container.
  * @csspart format-button__prefix - Shoelace alias for `format-button__start`.
  * @csspart format-button__label - The visible format abbreviation.
@@ -367,6 +369,7 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * @csspart eye-dropper-button - Shoelace alias for `eyedropper-button`.
  * @csspart eyedropper-button__base - Web Awesome alias for the eyedropper button's base.
  * @csspart eye-dropper-button__base - Shoelace alias for the eyedropper button's base.
+ * @csspart eyedropper-button__button - Web Awesome-named alias on the same node as `eyedropper-button`.
  * @csspart eyedropper-button__start - Web Awesome start-adornment container.
  * @csspart eye-dropper-button__prefix - Shoelace alias for `eyedropper-button__start`.
  * @csspart eyedropper-button__label - The localized, visually hidden button label.
@@ -1642,7 +1645,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
           ? nothing
           : html`<button
               type="button"
-              part="format-button format-button__base"
+              part="format-button format-button__base format-button__button"
               aria-description=${this.localize('colorPickerToggleFormat')}
               ?disabled=${this.effectiveDisabled}
               @click=${this.onFormatClick}
@@ -1653,7 +1656,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
         ${this.hasEyeDropper
           ? html`<button
               type="button"
-              part="eyedropper-button eye-dropper-button eyedropper-button__base eye-dropper-button__base"
+              part="eyedropper-button eye-dropper-button eyedropper-button__base eye-dropper-button__base eyedropper-button__button"
               aria-label=${this.localize('colorPickerEyeDropper')}
               ?disabled=${this.effectiveDisabled}
               @click=${this.onEyeDropperClick}
@@ -1697,7 +1700,7 @@ export class LyraColorPicker extends FormAssociated(ColorPickerBase) {
       <label id=${this.labelId} part="label form-control-label" for=${this.inline ? nothing : this.triggerId} ?hidden=${!hasLabel}
         >${this.slotPresence.has('label') ? nothing : this.label}<slot name="label"></slot
       ></label>
-      ${this.inline ? nothing : html`<div part="trigger-container">
+      ${this.inline ? nothing : html`<div part="trigger-container form-control-input">
         <button
           id=${this.triggerId}
           type="button"

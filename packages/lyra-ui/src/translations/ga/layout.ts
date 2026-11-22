@@ -66,6 +66,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'Earráid',
   stepperStatePending: 'Gan tosú',
   stepperStateLocked: 'Faoi ghlas',
+  stepperStateLoading: 'Ag luchtú',
+  stepperStateDisabled: 'Ní bhfuil ar fáil',
+  stepperSteps: 'Céimeanna',
+  stepperStepPosition: 'Céim {current} de {total}',
   commandPaletteInputLimit: 'Fágadh roinnt orduithe ar lár mar gur sroicheadh teorainn ionchuir.',
 };
 

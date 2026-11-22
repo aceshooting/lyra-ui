@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Kryss av i denne boksen om du vil halde fram.',
   checkboxGroupRequired: 'Vel minst eitt alternativ.',
   tokenInputRequired: 'Skriv inn minst éin verdi.',
+  tokenInputTooFew: {
+    one: 'Skriv inn minst {count} verdi.',
+    other: 'Skriv inn minst {count} verdiar.',
+  },
+  tokenInputTooMany: {
+    one: 'Skriv inn maks {count} verdi.',
+    other: 'Skriv inn maks {count} verdiar.',
+  },
   tokenInputEditWithContext: 'Rediger {label}',
   tokenInputLabel: 'Token',
   iconButtonLabel: 'Knapp',

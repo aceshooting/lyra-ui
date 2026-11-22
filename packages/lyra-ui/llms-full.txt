@@ -38,10 +38,10 @@ whole catalog. `llms/index.md` maps every tag to its family and entry point.
 - **Foundation** — base class, form association, events, i18n, theming, TypeScript, frameworks, SSR, packaging (`llms/shared.md`)
 - **Form controls & inputs** — 36 tags in `components/forms/`
 - **Data display, dashboards & flow canvas** — 30 tags in `components/data/`
-- **Layout, navigation & structure** — 40 tags in `components/layout/`
+- **Layout, navigation & structure** — 41 tags in `components/layout/`
 - **Overlays, status & feedback** — 23 tags in `components/overlays/`
-- **Utilities, formatting & observers** — 21 tags in `components/utility/`
-- **Media, files & maps** — 23 tags in `components/media/`
+- **Utilities, formatting & observers** — 23 tags in `components/utility/`
+- **Media, files & maps** — 24 tags in `components/media/`
 - **Charts** — 13 tags in `components/charts/`
 - **Document & file viewers** — 24 tags in `components/viewers/`
 - **Conversation & chat UI** — 34 tags in `components/conversation/`
@@ -332,6 +332,37 @@ exports `normalizeLyraSpanKind` and `normalizeLyraSpanStatus`; the widget regist
 only `DEFAULT_WIDGET_TYPE_REGISTRY`. Import a component registration entry separately when the page
 also renders that component.
 
+### Single script tag (no build step, no import map)
+
+`@aceshooting/lyra-cdn` is a companion package with a pre-bundled build of the same components: lit,
+tslib and Floating UI are inlined into relative, code-split chunks, so one tag is the whole install.
+Only the components the page renders are fetched (the autoloader's lazy loaders become chunks).
+
+```html
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@aceshooting/lyra-cdn@VERSION/dist/theme.css">
+<script type="module" src="https://cdn.jsdelivr.net/npm/@aceshooting/lyra-cdn@VERSION/dist/lyra-ui.loader.js"></script>
+
+<lr-button variant="primary">Save</lr-button>
+```
+
+It versions together with `@aceshooting/lyra-ui`; pin an exact version in production. Also published
+beside the loader: `theme.css`, `theme-core.css`, `density.css`, `accents.css`, `design-tokens.css`,
+`native.css` and `utilities.css`.
+
+- The loader starts the autoloader on `DOMContentLoaded` (immediately when the document is already
+  parsed) and keeps watching insertions. It injects no styles or inline script.
+- Script attributes: `data-lyra-optional-peers="dompurify,postal-mime"` (or `all`),
+  `data-lyra-autoload-events`, the opt-out `data-lyra-autoload="false"` (alias
+  `data-lyra-no-autoload`), which loads the module without starting it (it re-exports `start`,
+  `stop` and `discover`), and `data-lyra-cloak-timeout` (milliseconds, default `2000`).
+- Cloaking: elements carrying class or attribute `lr-cloak` are revealed when the first scan
+  settles, or when the cloak timeout elapses, whichever comes first. Pair it with `.lr-fouce-hidden`
+  from `utilities.css` to hide not-yet-defined tags.
+- Optional peers and the non-English catalogs of `@aceshooting/lyra-translations` are not bundled.
+  A component that needs one takes its usual localized fallback until the dependency resolves, for
+  example through an import map to a CDN URL.
+- Bundler users keep importing `@aceshooting/lyra-ui` itself; the CDN build ships no source maps.
+
 ### Optional autoloader
 
 `@aceshooting/lyra-ui/autoloader.js` exports `discover(root?, options?)`, `start(root?, options?)`
@@ -385,6 +416,34 @@ when `document` exists and reads `data-lyra-optional-peers="peer-a,peer-b"` plus
 `data-lyra-autoload-events` from its own `<script>`. Add `data-lyra-autoloader` to that script when
 an ESM CDN executes the package entry behind a wrapper URL. Neither entry imports the root barrel,
 and both are safe to import in plain Node.
+
+### Loading from a CDN with no build step
+
+An import map lets plain HTML use the same bare specifiers as an application. The ESM CDN rewrites
+each package's own dependencies, so map only the entries you import:
+
+```html
+<script type="importmap">
+  {
+    "imports": {
+      "@aceshooting/lyra-ui/": "https://esm.sh/@aceshooting/lyra-ui@30/",
+      "lit": "https://esm.sh/lit@3",
+      "lit/": "https://esm.sh/lit@3/"
+    }
+  }
+</script>
+<script type="module">
+  import '@aceshooting/lyra-ui/autoloader-cdn.js'; // defines each lr-* tag when it first appears
+  import { allDefined } from '@aceshooting/lyra-ui/utilities/defined.js';
+  await allDefined({ timeout: 5000 }); // resolves after the page's lr-* tags are defined
+</script>
+<lr-button>Hello</lr-button>
+```
+
+Pin an exact version for production, and import `components/lr-<tag>.js` instead of the autoloader
+when the page uses only a few tags. Add `data-lyra-autoloader` to the autoloader `<script>` if the
+CDN serves the entry behind a wrapper URL. Without an import map, use the full CDN URL in each
+`import`. `startLoader`/`stopLoader` are accepted aliases of the autoloader's `start`/`stop`.
 
 ## Optional native scoped registries
 
@@ -537,6 +596,24 @@ Those nested detail fields are separate from deprecated event names and are not 
   type graph, so add it once (a root `main.ts`, or a `.d.ts` in the project's `include`). A direct
   element reference never needs it — `LyraElement` overrides `addEventListener`, so
   `table.addEventListener('lr-sort', …)` resolves through `LyraTableEventMap` first either way.
+- **`instanceof` narrowing: `@aceshooting/lyra-ui/event-classes`.** Every event a component dispatches
+  is a `LyraEvent` (a bubbling, composed `CustomEvent`), and this subpath exports one class per event
+  name — `lr-step-change` → `LyraStepChangeEvent` — whose `instanceof` is true for exactly those events
+  and narrows `detail`:
+
+  ```ts
+  import { LyraChangeEvent } from "@aceshooting/lyra-ui/event-classes";
+
+  document.addEventListener("lr-change", (event) => {
+    if (event instanceof LyraChangeEvent) event.detail; // typed
+  });
+  ```
+
+  A class is also constructible (`new LyraChangeEvent(detail, { cancelable })`) for tests or for
+  re-dispatching. The classes are side-effect free and tree-shakable, components never import them, and
+  the names match the type aliases in `@aceshooting/lyra-ui/events` (import from one subpath per
+  file). Events created for an element adopted into another window keep that window's `CustomEvent`
+  constructor but still match.
   `LyraGlobalEventMap` is exported as well, for writing your own typed helper over it.
 
 - **The surface is per-event type aliases, not runtime event classes.** `LyraSortEvent` and its
@@ -1420,10 +1497,10 @@ needs to sit inside a Lyra UI without looking foreign, and the file's header lis
 | Ambient colour        | `--lr-color-surface`, `--lr-color-surface-raised`, `--lr-color-surface-overlay`, `--lr-color-overlay`, `--lr-color-text`, `--lr-color-text-quiet`, `--lr-color-border`, `--lr-color-border-strong`, `--lr-color-border-subtle` |
 | The semantic grid     | all 45 `--lr-color-{brand,success,warning,danger,neutral}-{fill,border,on}-{quiet,normal,loud}` slots                                                                                                                       |
 | Flat colour aliases   | `--lr-color-{brand,success,warning,danger,neutral}`, `--lr-color-{brand,success,warning,danger}-quiet`, `--lr-color-on-{brand,success,warning,danger,neutral}`                                                              |
-| Spacing               | `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-space-m`, `--lr-space-l`, `--lr-space-2xl`                                                                                                                        |
+| Spacing               | `--lr-space-2xs`, `--lr-space-xs`, `--lr-space-s`, `--lr-space-m`, `--lr-space-l`, `--lr-space-xl`, `--lr-space-2xl`, `--lr-space-3xl`, `--lr-space-4xl` (`xl`, `3xl`, `4xl` derive from the `l`/`2xl` theme inputs, so density and re-theming carry through) |
 | Geometry              | `--lr-radius-xs`, `--lr-radius`, `--lr-radius-pill`, `--lr-border-width-thin`, `--lr-border-width-medium`, `--lr-border-width-thick`                                                                                       |
 | Elevation             | `--lr-shadow-color`, `--lr-shadow-xs`, `--lr-shadow-s`, `--lr-shadow-m`, `--lr-shadow-l`, `--lr-shadow-xl`, `--lr-shadow`                                                                                                  |
-| Typography            | `--lr-font`, `--lr-font-mono`, the ten `--lr-font-size-*` steps, the four `--lr-font-weight-*` steps                                                                                                                        |
+| Typography            | `--lr-font`, `--lr-font-mono`, the twelve `--lr-font-size-*` steps (`--lr-font-size-4xl` and `-5xl` derive from the `3xl` theme input at 1.25x and 1.5x), the four `--lr-font-weight-*` steps                                                                                                                        |
 | State and motion      | `--lr-focus-ring`, `--lr-focus-ring-color`, `--lr-focus-ring-width`, `--lr-focus-ring-offset`, `--lr-opacity-disabled`, `--lr-opacity-muted`, `--lr-duration-fast`, `--lr-duration-base`, `--lr-easing-standard`, `--lr-easing-emphasized`, `--lr-transition-fast`, `--lr-transition-base`, `--lr-transition-interactive` |
 
 The grid is stable as a whole because its [contrast contract](#semantic-colour-contrast-contract)
@@ -2419,13 +2496,17 @@ the first connected Lyra element would otherwise adopt, available before any com
 | Flex direction and wrapping | `lr-row`, `lr-column`, `lr-wrap`, `lr-nowrap`, `lr-grow`, `lr-grow-0`, `lr-shrink`, `lr-shrink-0`                                                                 |
 | Item alignment              | `lr-items-start`, `lr-items-center`, `lr-items-end`, `lr-items-stretch`, `lr-items-baseline`, `lr-self-start`, `lr-self-center`, `lr-self-end`, `lr-self-stretch` |
 | Distribution                | `lr-justify-start`, `lr-justify-center`, `lr-justify-end`, `lr-justify-between`, `lr-justify-around`                                                              |
-| Gaps                        | `lr-gap-0`, `lr-gap-xs`, `lr-gap-s`, `lr-gap-m`, `lr-gap-l`, `lr-gap-2xl`                                                                                         |
+| Gaps                        | `lr-gap-0`, `lr-gap-2xs`, `lr-gap-xs`, `lr-gap-s`, `lr-gap-m`, `lr-gap-l`, `lr-gap-xl`, `lr-gap-2xl`, `lr-gap-3xl`, `lr-gap-4xl`                                  |
+| Compositions                | `lr-flank`, `lr-flank-end`, `lr-split`, `lr-split-column`, `lr-frame`, `lr-frame-square`, `lr-frame-landscape`, `lr-frame-portrait`, `lr-span-grid`, `lr-container` |
+| Plain-element helpers       | `lr-link-plain`, `lr-list-plain`, `lr-placeholder`, `lr-scroll-lock`, `lr-cloak`                                                                                  |
+| Radius and case             | `lr-radius-none`, `lr-radius-xs`, `lr-radius-m`, `lr-radius-container`, `lr-radius-pill`, `lr-radius-circle`, `lr-uppercase`, `lr-lowercase`, `lr-capitalize`, `lr-normal-case` |
+| Variant and size            | `lr-neutral`, `lr-brand`, `lr-success`, `lr-warning`, `lr-danger`; `lr-size-2xs`, `lr-size-xs`, `lr-size-s`, `lr-size-m`, `lr-size-l`, `lr-size-xl` (`lr-size-full` stays the 100% box) |
 | Logical sizing              | `lr-inline-full`, `lr-block-full`, `lr-size-full`, `lr-min-inline-0`, `lr-min-block-0`, `lr-max-inline-full`, `lr-max-inline-prose`, `lr-center`                  |
 | Overflow                    | `lr-overflow-auto`, `lr-overflow-hidden`                                                                                                                          |
-| Text alignment and size     | `lr-text-start`, `lr-text-center`, `lr-text-end`, `lr-text-xs`, `lr-text-sm`, `lr-text-base`, `lr-text-lg`, `lr-text-xl`, `lr-text-quiet`                         |
+| Text alignment and size     | `lr-text-start`, `lr-text-center`, `lr-text-end`, `lr-text-xs`, `lr-text-sm`, `lr-text-base`, `lr-text-lg`, `lr-text-xl`, `lr-text-2xl` – `lr-text-5xl`, `lr-text-quiet`                         |
 | Font                        | `lr-font-normal`, `lr-font-medium`, `lr-font-semibold`, `lr-font-bold`, `lr-font-mono`                                                                            |
 | Text flow                   | `lr-text-break`, `lr-text-nowrap`, `lr-truncate`, `lr-text-balance`, `lr-text-pretty`, `lr-prose`                                                                 |
-| Typography                  | `lr-typography`, `lr-not-typography`, `lr-heading-1`, `lr-heading-2`, `lr-heading-3`, `lr-heading-4`, `lr-inline-code`                                           |
+| Typography                  | `lr-typography`, `lr-not-typography`, `lr-heading-1`, `lr-heading-2`, `lr-heading-3`, `lr-heading-4`, `lr-heading-5`, `lr-heading-6`, `lr-inline-code`                                           |
 | Visibility and focus        | `lr-visually-hidden`, `lr-visually-hidden-focusable`, `lr-fouce-hidden`, `lr-hidden`                                                                              |
 | Page allocation             | `lr-page-mobile-only`, `lr-page-desktop-only`                                                                                                                     |
 
@@ -2445,6 +2526,43 @@ properties, so these two widths are fixed. Source order is reading order at ever
   <lr-card class="lr-span-12">Recent activity</lr-card>
 </section>
 ```
+
+### Compositions and small utilities
+
+All spacing here reads `--lr-layout-gap` (default `--lr-space-m`).
+
+- **`lr-flank` / `lr-flank-end`** — a flex row where the first (or, for `-end`, the last) child keeps
+  its own width (`--lr-flank-inline-size`, default `auto`) and the other fills the rest. The filling
+  child wraps onto its own row below `--lr-flank-content-min-inline-size` (default `50%`).
+- **`lr-split` / `lr-split-column`** — items pushed to the two ends of a wrapping row, or of a
+  column. Logical, so the ends swap under `dir="rtl"`.
+- **`lr-frame`, `lr-frame-square` (1/1), `lr-frame-landscape` (16/9), `lr-frame-portrait` (3/4)** —
+  a clipped aspect-ratio box; a direct `img`, `picture`, `video`, `canvas`, `svg` or `iframe` child
+  fills it with `object-fit: cover`. A bare `lr-frame` reads `--lr-frame-ratio` (default `1 / 1`).
+- **`lr-span-grid`** — takes the whole row of its grid parent, including inside `lr-grid-12` at every
+  container width. **`lr-container`** makes an element an inline-size query container.
+- **`lr-link-plain`** — inherited colour, no underline until hover. **`lr-list-plain`** — no
+  marker, no indent, no margin (an `ul`/`ol` that keeps `role="list"` stays announced as a list).
+- **`lr-placeholder`** — a quiet neutral block (`--lr-placeholder-block-size`, default `1em`) that
+  pulses only when `prefers-reduced-motion: no-preference`.
+- **`lr-radius-*`** read the radius tokens; `lr-radius-circle` is `50%`. **`lr-uppercase`,
+  `lr-lowercase`, `lr-capitalize`, `lr-normal-case`** set `text-transform`.
+- **Variants** `lr-neutral|brand|success|warning|danger` (the `variant` vocabulary) colour the
+  element's text and native-control accent with that tone's loud fill and publish
+  `--lr-variant-fill-quiet`, `--lr-variant-fill-loud`, `--lr-variant-on-quiet` and
+  `--lr-variant-border` for your own rules. **Sizes** `lr-size-2xs … lr-size-xl` (the `size` ladder;
+  `small`/`medium`/`large` spellings are not classes) set the type size and scale the native control
+  block size and padding that `.lr-native` reads.
+- **`lr-scroll-lock`** is pure CSS (`overflow: hidden`, `overscroll-behavior: contain`, plus a stable
+  scrollbar gutter on `html`). Put it on `html`, `body` or a scroll container. It is independent of
+  the lock a modal component takes: both can be active, and the component's lock sees the stable
+  gutter and adds no padding.
+- **`lr-cloak`** on `html`/`body` (or any root) hides the root with `visibility: hidden` while any
+  custom element beneath it still matches `:not(:defined)`, then reveals it as soon as they are
+  all defined. It fails open: after `--lr-cloak-timeout` (default `3s`) the root becomes visible
+  regardless, so a script that never loads cannot leave a blank page. The fail-open is a
+  visibility switch, not motion, so it needs no reduced-motion branch. Only light-DOM descendants
+  are seen; for a single element use `lr-fouce-hidden`.
 
 `lr-fouce-hidden` hides only an opted-in custom element while it matches `:not(:defined)`, then
 reveals it automatically after registration. `lr-visually-hidden-focusable` becomes visible on
@@ -2756,6 +2874,33 @@ the surface layer and disables Glass in the same way as an unlayered rule. Keep 
 `background` rules off `.lr-surface-chrome` elements, or exclude them with
 `:not(.lr-surface-chrome)`. See [Cascade layers](./llms/shared/styles-and-tokens.md#cascade-layers) for the full
 order.
+
+### Native control extensions
+
+Inside `.lr-native`, `native.css` also styles: **checkbox, radio and range** (`accent-color` from the
+brand token, a `--lr-native-check-size` box, hover shifts to the loud border tone); **colour and file
+inputs** (control border and radius, a styled `::file-selector-button`, pointer cursor with hover);
+**`progress` and `meter`** (a pill track of `--lr-native-meter-block-size`, brand bar, semantic
+optimum/sub-optimum/even-less-good meter colours); **`details`/`summary`** (subtle bounded block, open
+rule under the summary); **`dialog`** (overlay surface, container radius, `--lr-color-overlay` scrim);
+**`mark`** (quiet warning fill and its paired foreground); and **lists** (`--lr-native-list-indent`
+logical start inset, quiet markers). Disabled controls use `not-allowed`, every control shows the
+shared focus ring, and `forced-colors: active` maps accents and bars to system colours. Dark mode
+follows the tokens.
+
+### Hue palette
+
+```css
+@import "@aceshooting/lyra-ui/palette.css";
+```
+
+Declares static `--lr-color-<hue>-<step>` ramps on `:root` and every `[data-lr-theme-scope]`, for
+hues `gray`, `red`, `orange`, `yellow`, `green`, `cyan`, `blue`, `purple` and `pink` and steps `05 10
+20 30 40 50 60 70 80 90 95` (near-black to near-white). `gray`, `red`, `orange`, `green` and `blue`
+are the neutral, danger, warning, success and brand tooling ramps; the others are the brand ramp
+rotated in hue at the same lightness. The values do not change with light/dark mode: use them for
+tags, charts, avatars and illustrations, and keep UI chrome on the semantic grid. To recolour the
+semantic roles themselves, use `setLyraStyle({ accent: { success, warning, danger, neutral } })`.
 
 ## Localization: `locale`, `strings`, and the locale runtime
 
@@ -4191,7 +4336,18 @@ boolean; set defaultChecked(next: boolean) }`.
   `RecencyBucket<T> { label; items }`.
   The callable signature is `groupByRecency<T>(items: T[], options?:
 GroupByRecencyOptions<T>): RecencyBucket<T>[]`.
-- **`defined` → `allDefined(root?, options?): Promise<void>`** — iteratively waits for every
+- **`allDefined({ match?, additionalElements?, root?, timeout? })`** — options form of the helper
+  below. Without `match` it waits like the root form; with `match` it waits for every undefined
+  element under `root` (default `document`) whose lowercase tag the function accepts.
+  `additionalElements` (a tag or tags) names elements that may not be on the page yet. After
+  `timeout` ms (default `2000`, `Infinity` disables it) it logs a console warning listing the tags
+  still undefined and resolves anyway. A negative or `NaN` timeout throws `RangeError`. The
+  `(root, options)` form never times out.
+- **`form` → `serialize(form): Record<string, FormDataEntryValue | FormDataEntryValue[]>`** — a
+  form's successful controls as a plain object; a name that occurs more than once becomes an array
+  in document order (`serializeFormData(formData)` is the same fold over any `FormData`). The result
+  has a `null` prototype, so a field named `__proto__` is just a key.
+- **`defined` → `allDefined(root?, options?): Promise<void>`** —- **`defined` → `allDefined(root?, options?): Promise<void>`** — iteratively waits for every
   currently rendered, inventory-known Lyra tag below a `Document`, `DocumentFragment`/open
   `ShadowRoot`, or `Element` to be defined in its owning/scoped registry. It also waits for each
   available `updateComplete`, then repeats so tags created by that first render are included. Open
@@ -8246,7 +8402,13 @@ AbortSignal; limit: number }) => Promise<readonly ComboboxSourceRow[] | { rows, 
   including an identical retry, while raw caught error text stays out of the UI.)
 - `sourceDelay: number = 200` (attribute `source-delay` — debounce in ms between the last keystroke
   and the `source` call; `0` fires on every keystroke. Sanitized to a finite non-negative duration,
-  falling back to `200` for a non-finite value)
+  falling back to `200` for a non-finite value). `filterDebounce` (attribute `filter-debounce`) is the
+  same setting under its upstream name.
+- `dataSource` is an alias of `source`: reading or assigning either one reads or assigns the same
+  provider. Rows stay plain data (`value`, `label`, optional `description`/`badge`/`data`); a source
+  cannot return option HTML, because rendering remote markup would need an optional sanitizer inside the
+  combobox's hot path and a fail-closed fallback for it. `source` is always query-driven (the provider
+  filters), which is what the upstream `server` flag opts into, so there is no `server` attribute.
 - `maxRender: number = 200` (attribute `max-render`) — ordinary suggestion-prefix size, retaining
   active and selected options within an absolute 1,000-row ceiling. The active option has priority;
   selections remain committed even when every selected row cannot mount. Zero omits the ordinary
@@ -8315,7 +8477,7 @@ minimum at zero when empty-query label lookup or immediate catalog browsing is r
 **Methods:** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and `setRangeText()`
 forward to the internal input. `setRangeText()` synchronizes the filter query and visible options.
 `show(): Promise<void>` and `hide(): Promise<void>` settle after `lr-after-show` and
-`lr-after-hide`, respectively. `refresh(): void` re-runs the current `source` query without changing
+`lr-after-hide`, respectively. `reload(): void` is an alias of `refresh()`. `refresh(): void` re-runs the current `source` query without changing
 the source's identity, its debounce controller, or its delay. Reassigning `source` is a provider
 change and clears the fetched rows and pending-selection cache; `refresh()` does not. It queues for
 the next open while the listbox is closed, and is a no-op without a `source`. `resetValidity()`
@@ -8420,6 +8582,11 @@ never shows the raw error. A current request that rejects with `AbortError` (one
 not abort itself) is a failure like any other rejection; the previous query's results are not kept
 as its answer.
 Rejections from superseded or disconnected requests are ignored.
+`lr-options-request` fires before each `source` call (after the debounce, only while the call is still
+current): `detail: { query, signal }`, where `signal` is the `AbortSignal` the source receives, aborted
+when a newer request supersedes it, `source` is reassigned, or the control disconnects. It is bubbling,
+composed and not cancelable. `lr-options-error` fires with `lr-source-error` for the same rejection with
+`detail: { error, request: { query } }`; both events stay.
 `lr-retry-request` is cancelable; the built-in failed-load action calls `refresh()`, and `preventDefault()`
 leaves the failure on screen. While the failure state is the only popup content, the popup swaps
 `role="listbox"` for `role="dialog"` (the input gains the matching `aria-haspopup="dialog"` and
@@ -9134,7 +9301,7 @@ text are part of the focused control's accessible description.
 **CSS parts:** `form-control`, `form-control-label`, `label`, `form-control-input`, `combobox`,
 `trigger`, `display-input`, `start`, `prefix`, `end`, `suffix`, `tags` (the legal sibling
 `multiple`-mode chip row), `tag`/`tag__base` (one selected-value chip), `tag-label`/`tag__content`,
-`tag__remove-button`/`tag__remove-button__base`, and `tag-overflow` (the "+N" chip standing in for the selections past
+`tag__remove-button`/`tag__remove-button__base`/`tag__remove-button__button` (all on the same button), and `tag-overflow` (the "+N" chip standing in for the selections past
 `max-options-visible` — it carries **both** `tag` and `tag-overflow`, so `::part(tag)` styles every
 chip while `::part(tag-overflow)` reaches only that one; state after `::part()` never matches, so it
 is encoded in the part name instead), `unknown-value` (the dashed/italic badge shown next to the
@@ -13105,7 +13272,7 @@ checkbox and does not emit `lr-change`.
 
 ## `lr-slider`
 
-**Label and readout.** The label defaults to the shared form-control label size (`--lr-font-size-md-sm`, like `lr-input`/`lr-select`), no longer `inherit`; `--lr-form-control-label-font-size` still retunes it. `label-placement="start"` (see "Label beside the field") puts the label in a column beside a horizontal track. `with-value` shows the **localized number** by default, even when a `valueFormatter` is set and even with `value-placement="label"`; the formatter feeds `aria-valuetext` and the tooltip only. Set `value-display="formatted"` to show the formatter's text in the readout. This is deliberate: a formatter written for assistive text (`"40 percent"`) would otherwise change the visible readout of every existing slider.
+**Label and readout.** The label inherits the surrounding font size by default; set `--lr-form-control-label-font-size: var(--lr-font-size-md-sm)` on the slider or a containing form to match the `lr-input`/`lr-select` label size. `label-placement="start"` (see "Label beside the field") puts the label in a column beside a horizontal track. `with-value` shows the **localized number** by default, even when a `valueFormatter` is set and even with `value-placement="label"`; the formatter feeds `aria-valuetext` and the tooltip only. Set `value-display="formatted"` to show the formatter's text in the readout. This is deliberate: a formatter written for assistive text (`"40 percent"`) would otherwise change the visible readout of every existing slider.
 
 Labelled `marks` render in the `marks` part: one `mark` per tick, a `mark-label` per label, and
 `mark-label-thinned` on a label hidden for overlapping its neighbour.
@@ -13295,7 +13462,7 @@ well, so `::part(thumb)` styles both while `::part(thumb-min)` reaches only one)
 live value bubble per handle, present only with `with-tooltip`), `tooltip-visible` (added _to the
 `tooltip` element's part list_ while that handle is focused or dragged — visibility is encoded in
 the part name because `::part(tooltip)[data-visible]` is invalid CSS and never matches; write
-`::part(tooltip-visible)`). The tooltip also exposes `tooltip__tooltip`, `tooltip__content`, and
+`::part(tooltip-visible)`). The tooltip also exposes `tooltip__tooltip`, `tooltip__content` (also `tooltip__body`), and
 `tooltip__arrow`. `value` is the opt-in readout; `label-row` contains the separate label and value
 nodes when `withValue` and `valuePlacement="label"` are enabled. `marks` is the container for
 `marks` (present only while at least one mark is in range), `mark` one tick, `mark-label` one
@@ -14327,14 +14494,42 @@ remove button from the tab order, never blocks `focus()`, and never excludes the
 `FormData` on submit — only `disabled` does that. Turning it on while a draft is half-typed or an
 inline editor is open discards that uncommitted state without moving focus.
 
-**`delimiter` is nullable, and only a single character acts as a commit key.** It does two separate
-jobs: it splits a committed draft into several tokens, and — _only when it is exactly one
-character_ — it is the keystroke that commits the draft. A multi-character delimiter still splits a
-pasted or committed draft, but no keystroke can ever match it, so nothing commits on typing.
-Setting it to `null` disables both, so a token may contain the delimiter verbatim. **`delimiter="null"`
-does not work** — that is the four-character string `null`. Use `delimiter="none"`, `delimiter=""`
-(both of which the attribute converter maps to `null`), or a property binding
-(`.delimiter=${null}`). Removing the attribute restores the `,` default.
+**`delimiter` is a set of characters and is nullable.** Every character of the string is its own
+delimiter: typing any of them commits the draft, and a commit or a real paste splits on all of them
+(`delimiter=";,"` accepts both). A paste that contains a delimiter character commits immediately; a
+paste without one is left to the browser. Setting it to `null` disables both splitting and the
+keystroke (Enter, Tab and blur still commit), so a token may contain the delimiter verbatim.
+`delimiter=""` already meant exactly this Enter-only mode and still does. **`delimiter="null"` does
+not work** — that is the four-character string `null`. Use `delimiter="none"`, `delimiter=""` (both of
+which the attribute converter maps to `null`), or a property binding (`.delimiter=${null}`). Removing
+the attribute restores the `,` default.
+
+**`max-tags` / `min-tags`** (`maxTags`/`minTags`, both `null` by default, so unset changes nothing).
+At the maximum, typed or pasted text cannot commit and stays in the field (a paste commits what fits and
+leaves the rest); removal, inline editing and clearing keep working. A programmatic `value` longer than
+`max-tags` reports `rangeOverflow`; a list shorter than `min-tags` reports `rangeUnderflow`, enforced only
+once at least one token exists (use `required` for the empty case). Messages are localized
+(`tokenInputTooFew`, `tokenInputTooMany`); disabled or readonly controls report neither.
+
+**`with-clear` / `clearable`** show a `clear-button` (icon via the `clear-icon` slot) while there are tokens
+and the control is neither disabled nor readonly. It proposes each removal through the cancelable
+`lr-token-remove-request` (a vetoed token stays), then emits `input`/`change`/`lr-input`/`lr-change` and
+`lr-clear`, and returns focus to the draft input.
+
+**`value` and `inputValue`.** The array stays canonical, but assigning a string to `value` (or
+`defaultValue`) splits it on the `delimiter` characters (comma when none) into trimmed, non-empty tokens;
+the reflected `value` attribute remains a JSON array. `inputValue` reads and writes the uncommitted draft
+without committing it.
+
+**`lr-create`** is a cancelable per-token proposal (`detail: { inputValue }`) emitted for every typed or pasted
+candidate before the batch-level `lr-token-add-request`; `preventDefault()` drops that one token, and the
+draft stays when every candidate is rejected.
+
+**Part aliases and states.** `tag-input` (= `input-wrapper`), `tags` (display-contents wrapper around the
+tokens), `tag` (= `token`), `tag__content` (the token text), `tag__remove-button` and
+`tag__remove-button__button` (= `remove`) sit beside the existing parts. Because a part can now carry
+several names, match parts with `[part~="token"]` rather than `[part="token"]`. `:state(blank)` matches
+while there are no tokens and `:state(readonly)` while `readonly` is set.
 
 **The required marker.** `required` with a non-empty `label` paints the library's shared marker on
 `[part="form-control-label"]` — the one `::after` rule described under "The required-field marker"
@@ -14771,7 +14966,7 @@ layer closes.
 **CSS parts:** `base` (permanent compatibility name on the same field wrapper as `color-picker`),
 `color-picker` (the field wrapper; it is the same node as `base` and `form-control`),
 `form-control` (the field wrapper; it is the same node as `base` and `color-picker`),
-`form-control-label` (the label; `label` is its permanent compatibility name), `trigger-container`
+`form-control-label` (the label; `label` is its permanent compatibility name), `trigger-container` (also `form-control-input`)
 (the row wrapping the trigger), `trigger` (the swatch button that
 opens the panel), `panel` (the positioned `role="dialog"` surface), `grid` (the
 saturation/brightness square) and `grid-handle` (its draggable, keyboard-operable handle),
@@ -14780,11 +14975,11 @@ saturation/brightness square) and `grid-handle` (its draggable, keyboard-operabl
 token, so `::part(slider)` styles both ramps while `::part(hue-slider)` reaches only one; the
 opacity pair renders only with `opacity` set), `preview` (the current-colour dot beside the ramps),
 `input` (the text field holding the serialized value), `format-button` (the format-cycling button,
-absent with either format-toggle suppression property), plus `format-button__base`,
+absent with either format-toggle suppression property), plus `format-button__base` and `format-button__button` (same node),
 `format-button__start`/`format-button__prefix`, `format-button__label`,
 `format-button__end`/`format-button__suffix`, and `format-button__caret`;
 `eyedropper-button` / `eye-dropper-button` (rendered only where the browser exposes the EyeDropper
-API), with the corresponding `eyedropper-button__base|start|label|end|caret` and Shoelace
+API), with the corresponding `eyedropper-button__base|button|start|label|end|caret` and Shoelace
 `eye-dropper-button__base|prefix|label|suffix|caret` aliases; `swatches` (the palette container, rendered only when the normalized `swatches`
 list is non-empty), `swatch` (one palette entry), `swatch-icon` (a swatch entry's optional
 decorative icon, inert and `aria-hidden`), `swatch-selected` (a token **added to** the
@@ -21691,6 +21886,23 @@ item's `title`/`description` routinely hold focusable content, so wrapping the r
 would trip `nested-interactive`). The opt-in clustered time scale adds only native count-marker
 buttons; it does not make the individual rows interactive.
 
+**`wa-timeline` / `wa-timeline-item` parity.** `lr-timeline` accepts `orientation="auto"` (a column
+until the timeline is 40em wide, a row from there, by container query; flow scale only, `scale="time"`
+treats it as `vertical`), `marker-placement: 'start' | 'end' | 'alternate' = 'start'` (`alternate` swaps
+sides on every other item around a central rail and falls back to `start` under 30em; sides follow the
+inline direction, so RTL mirrors), `marker-alignment: 'start' | 'center' = 'start'` (`center` centers the
+marker on the item's height with the rail running above and below it), and `label` (accessible name; a
+host `aria-label` wins, then `label`, then the localized default). `[part='base']` also carries the
+`timeline` part. `lr-timeline-item` adds the `opposite` slot and part (a fixed share beside the rail,
+`--lr-timeline-opposite-size`, default `30%`; above the marker when horizontal; the far column when
+alternating), `with-opposite`, the `icon` slot (alias of `marker-icon`) and `with-icon` (server-render
+hints that also force the column or icon marker), and the `connector` and `timeline-item` part aliases of
+`rail` and `base`. Custom properties: `--lr-timeline-icon-marker-size` (defaults to the marker size),
+`--lr-timeline-connector-color` / `--lr-timeline-connector-width` (aliases that win over the
+`--lr-timeline-rail-*` pair) and `--lr-timeline-connector-gap` (default `0px`).
+Migration: `wa-timeline`'s `--gap`, `--marker-size`, `--icon-marker-size`, `--connector-color`,
+`--connector-width` and `--connector-gap` become the `--lr-timeline-*` names above.
+
 A non-neutral `variant` adds a localized, visually hidden state to the item title. In forced colours, the marker and rail use system colours.
 
 Every assigned item remains mounted; the timeline does not window large collections. Flow mode
@@ -24458,7 +24670,7 @@ on the item itself.
 The host `aria-label`, the `accessibleLabel` property, and the `label` fallback name the inner role in that order.
 
 Responsive semantic grouping primitive for related action controls. It preserves the slotted
-controls and exposes `role="group"` on its internal wrapper.
+controls and exposes `role="group"` on its internal wrapper (parts `base`, also named `button-group`).
 It holds no state and handles no keys; for a row of toggles with pressed state behind one tab stop,
 use `lr-toggle-group`.
 
@@ -24845,10 +25057,53 @@ The host `aria-label`, the `accessibleLabel` property, and the `label` fallback 
 
 Ordered multi-step wizard/form navigation: an index/label per step, independent
 `pending`/`current`/`completed`/`error` progress plus disabled availability, and click-to-jump.
-First-party invention (no `wa-*`/`sl-*` counterpart). Fully
-data-driven and controlled, like `lr-table`'s `columns`/`rows` — it never mutates `steps` itself; a
-click, or Enter/Space on a non-disabled step, fires a non-cancelable `lr-step-select`, and the host
-decides whether/how `steps` changes in response.
+Mirrors `wa-stepper` (its `wa-step` children are `<lr-step>`) and has two authoring modes.
+
+**Data-driven mode** (the original contract): fully data-driven and controlled, like `lr-table`'s
+`columns`/`rows` — it never mutates `steps` itself; a click, or Enter/Space on a non-disabled step,
+fires a non-cancelable `lr-step-select`, and the host decides whether/how `steps` changes in response.
+
+**Child mode**: with an empty `steps` array and `<lr-step>` children, the stepper owns the current
+step. A non-empty `steps` array always wins.
+
+```html
+<button data-stepper="previous flow">Back</button>
+<button data-stepper="next flow">Next</button>
+<lr-stepper id="flow" label="Checkout" active="shipping" linear clickable orientation="auto">
+  <lr-step name="cart" completed>Cart</lr-step>
+  <lr-step name="shipping">Shipping<span slot="description">Where should it go?</span></lr-step>
+  <lr-step name="pay">Payment</lr-step>
+</lr-stepper>
+<script type="module">
+  const flow = document.querySelector("#flow");
+  flow.addEventListener("lr-before-step-change", (e) => {
+    if (!formIsValid()) e.preventDefault();          // vetoes the move
+  });
+  flow.addEventListener("lr-step-change", (e) => console.log(e.detail.name, e.detail.previousName));
+</script>
+```
+
+- `active: string = ''` (reflected) — `name` of the current step; the first step when unset or unmatched.
+- `linear: boolean = false` (reflected) — a step cannot be reached until every step before it is
+  `completed`; later steps render locked (`next()`, `goTo()`, invokers and clicks all respect it).
+- `clickable: boolean = false` (reflected) — steps become buttons (one roving tab stop; Left/Right swap
+  under RTL, Up/Down while stacked, Home/End) and a click or Enter/Space jumps to the step. The wrapper is
+  then a `<nav>` landmark; otherwise a labelled `role="group"`.
+- `orientation: 'horizontal' | 'vertical' | 'auto' = 'horizontal'` — `'auto'` rows the steps and stacks
+  them when the stepper's measured inline size cannot give each step about 6em; it also works with
+  `steps`. The live axis is `effectiveOrientation` / `data-effective-orientation`.
+- `label` names the group (localized "Steps" when unset); the host `aria-label` wins.
+- Methods `goTo(name)`, `next()`, `previous()` ask first and no-op for an unknown, `disabled` or (while
+  `linear`) unreachable step. `data-stepper="next <id>"`, `"previous <id>"` and `"goto <id> <step name>"` on
+  any element click-drive the stepper with that `id`; inside a stepper the `<id>` may be omitted.
+- Events: `lr-before-step-change` (cancelable) and `lr-step-change`, both
+  `detail: { name, previousName, step, previousStep }`. The new position ("Step 2 of 3") is announced politely.
+- Slot: default (`<lr-step>` elements). Extra parts: `stepper`, `summary` (visually hidden "Step X of Y").
+- Custom properties for child mode: `--lr-stepper-marker-size`, `--lr-stepper-connector-color`,
+  `--lr-stepper-connector-color-active`, `--lr-stepper-connector-width`, `--lr-stepper-connector-gap`,
+  `--lr-stepper-step-gap`.
+- New string keys: `stepperSteps`, `stepperStepPosition` (`{current}`/`{total}`), `stepperStateLoading`,
+  `stepperStateDisabled` (plus the existing completed/pending/locked keys for status text).
 
 **Properties:**
 
@@ -24936,7 +25191,7 @@ component takes no default action to veto: it never mutates `steps`. `lr-stepper
 (`detail: { orientation }`) — fired only when an enabled `orientationBreakpoint` actually changes
 `effectiveOrientation`.
 
-**Slots:** none.
+**Slots:** none in data-driven mode; the default slot takes `<lr-step>` children in child mode.
 
 **CSS parts:** `base` (root wrapper, `role="list"`), `step-item` (the `role="listitem"` wrapper for
 one step), `step` (a single native button — or a non-interactive `<div>` carrying the same part
@@ -25124,6 +25379,34 @@ group.addEventListener("lr-close", (event) => {
 
 ---
 
+## `lr-step`
+
+One stage inside a child-driven `<lr-stepper>`: marker (number, check mark, spinner or `icon` slot),
+label, optional description and status text. Mirrors `wa-step`. Granular import:
+`@aceshooting/lyra-ui/components/lr-step.js`.
+
+**Properties:** `name: string = ''` (reflected; matched by the stepper's `active`, `goTo()` and events);
+`completed`, `loading` (spinner, `aria-busy`), `disabled` (unreachable; a disabled button while the
+stepper is `clickable`) — booleans, reflected; `variant: 'neutral' | 'brand' | 'success' | 'warning' |
+'danger' = 'brand'` (cosmetic marker color; an upcoming `brand` step keeps a neutral outline);
+`attention: 'none' | 'pulse' | 'bounce' = 'none'` (marker animation, off under
+`prefers-reduced-motion`); `active` (reflected; the stepper keeps it in sync); `with-description`
+(server rendering hint). The stepper sets the step's number, `locked` state (a `linear` stepper) and
+`clickable`; nothing else needs setting by hand.
+
+**Slots:** default (label), `description`, `icon` (replaces number/check/spinner).
+**CSS parts:** `step`, `connector` (both half lines), `button` (only while the stepper is `clickable`),
+`marker`, `spinner`, `content`, `label`, `status` (visually hidden: Completed, Loading, Unavailable,
+Locked or Not started), `description`. **Custom property:** `--lr-step-pulse-color`; layout hooks are the
+stepper's `--lr-stepper-*` properties. **Accessibility:** host `role="listitem"`; `aria-current="step"`
+sits on the focused element (the inner button while clickable, the host otherwise).
+
+```html
+<lr-stepper><lr-step name="a" completed>Account</lr-step><lr-step name="b" attention="pulse">Billing</lr-step></lr-stepper>
+```
+
+---
+
 ## `lr-tab-panel`
 
 The content revealed by the `<lr-tab>` whose `panel` matches this element's `name`. Mirrors
@@ -25135,7 +25418,7 @@ announced twice. Show/hide is the group's job too — this element is always pre
 
 **Properties:** `name: string = ''` (reflected) — matches the `panel` of the `<lr-tab>` that reveals
 it; `active: boolean = false` (reflected) — SSR visibility hint, synchronized by the owning group
-after hydration. **Events:** none. **Slots:** default (the panel's content). **CSS parts:** `base`
+after hydration. **Events:** none. **Slots:** default (the panel's content). **CSS parts:** `base`, also named `tab-panel`
 (the content wrapper); the owning group also exposes its outer `panel` wrapper. **Themeable custom
 properties:** `--padding` (default `0`) — inner padding on the panel's own `base` wrapper.
 
@@ -27306,7 +27589,7 @@ expanding the popup.
 `--lr-menu-item-danger-color`, `--lr-menu-item-danger-hover-bg`,
 `--lr-menu-item-danger-active-bg`, `--lr-menu-item-checked-bg` (default `transparent`),
 `--lr-menu-item-color` (default `inherit`; a resting row's text, which danger, disabled and checked
-rows override), `--lr-menu-item-checked-color` (default `var(--lr-menu-item-color)`),
+rows override), `--lr-menu-item-checked-color` (default `inherit`, which follows `--lr-menu-item-color`),
 `--lr-menu-item-checked-font-weight` (default
 `inherit`), and `--submenu-offset`, plus shared size/focus/color/spacing tokens. The checked hooks
 apply to a `type="checkbox" checked` or `type="radio" checked` row's `[part="base"]`, matching the
@@ -30908,7 +31191,7 @@ the slide animation are its own.
 - `floating: boolean = false` (attribute `floating`, reflected) — an inset, floating sheet: the
   panel keeps a `--lr-drawer-inset` gap (default `var(--lr-space-s)`) from every viewport edge
   (from the containing block's edges with `contained`; the safe-area insets still win where
-  larger) and rounds its corners with `--lr-overlay-radius` (default `var(--lr-radius-container)`).
+  larger) and rounds its corners with `--lr-overlay-radius` (default `var(--lr-radius)`).
   Off by default, so the drawer stays square and edge-flush.
 - `heading?: string`, `label: string`,
   `withoutCloseButton: boolean = false` (attribute `without-close-button`, reflected),
@@ -30957,7 +31240,7 @@ lifecycle.
 controls, rendered before the built-in close button), `footer` — all inherited from `lr-dialog`.
 
 **CSS parts:** `base`; `backdrop overlay`; `panel dialog`; `header`; `heading title label`;
-`header-actions`; `close-button close-button__base`; `close-button-control`; `body`; `footer`.
+`header-actions`; `close-button close-button__base`; `close-button-control` (also `close-button__button`, the same native control); `body`; `footer`.
 Names grouped together are aliases on the same functional node; `close-button-control` is the
 composed `<lr-icon-button>`'s own native `<button>`, inherited from `lr-dialog` as of 16.0.0.
 
@@ -30965,7 +31248,7 @@ composed `<lr-icon-button>`'s own native `<button>`, inherited from `lr-dialog` 
 the inherited `--width` and `--lr-dialog-width` remain compatibility fallbacks when neither
 `--size` nor `--lr-drawer-width` is set, and `--lr-dialog-max-width` remains an effective cap,
 falling back to the `size` property's own tier value (see Properties above) when unset.
-The other mapped/inherited aliases are `--backdrop-filter`, `--spacing`, `--header-spacing`, `--body-spacing`,
+The other mapped/inherited aliases are `--backdrop-filter`, `--backdrop-color` (alias of `--lr-dialog-overlay-color`, which wins when both are set), `--spacing`, `--header-spacing`, `--body-spacing`,
 `--footer-spacing`, `--show-duration`, and `--hide-duration`. Lyra compatibility tokens remain:
 `--lr-drawer-width` (default `--lr-size-24rem`; used by
 `placement="start"|"end"`, capped at `100%`), `--lr-drawer-height` (default `--lr-size-24rem`;
@@ -31043,6 +31326,9 @@ read, and neither is deprecated.
   the property, the reflected attribute and the two methods can never disagree. `el.open = false`
   therefore emits the full close lifecycle and can be vetoed. Markup that renders open from the start (`<lr-dialog open>`) emits nothing.
 - `label: string = ''` — mapped visible title. The richer `label` slot wins over it.
+- `withLabel: boolean = false` (attribute `with-label`) — server-rendering hint that a `label` slot
+  child is provided, so the titled header is present before hydration; in the browser the real slot
+  content decides. Also on `lr-drawer`.
 - `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — `1`–`6` expose
   the generated visible title (string property or rich `label` slot) at that semantic level;
   invalid untyped values retain level 3, while `none` keeps visual title text without heading
@@ -31198,7 +31484,7 @@ border simply has no default to relay, which is different from border theming be
 remains the one exception that does not cross this way: use `--lr-theme-icon-button-size`, never
 `--lr-icon-button-size`, as noted above.
 
-**Themeable custom properties:** mapped aliases are `--backdrop-filter`, `--width`, `--spacing`,
+**Themeable custom properties:** mapped aliases are `--backdrop-filter`, `--backdrop-color` (alias of `--lr-dialog-overlay-color`, which wins when both are set), `--width`, `--spacing`,
 `--header-spacing`, `--body-spacing`, `--footer-spacing`, `--show-duration`, and
 `--hide-duration`. The individual region properties override `--spacing`; mapped properties in
 turn fall back to the retained Lyra tokens: `--lr-dialog-overlay-color` (default
@@ -31662,7 +31948,9 @@ no `.items` array prop).
 **Events:** `lr-overflow-toggle` (`detail: { expanded }` — the overflow indicator was activated,
 revealing or re-collapsing the excess children; fires only from that click, i.e. only when
 `max-visible` is actually causing an overflow state — never as a side effect of `max-visible`/
-children changing on their own)
+children changing on their own), `lr-change` (`detail: { value }` — a user press changed the
+selection while `selection` is `single` or `multiple`; a `string` in `single`, a `string[]` in
+`multiple`; assigning `value` never fires it)
 
 When collapse, `max-visible`, or controlled child removal hides the focused chip action, focus moves
 to the nearest enabled visible chip control, then the overflow disclosure, then the stable group
@@ -32412,8 +32700,8 @@ attribute documented above. Shoelace uses the default slot for the trigger and `
 without one, an explicit content source (`slot="content"` or the `content` property) makes the
 default slot unambiguously the trigger, matching Shoelace.
 
-**CSS parts:** `popup base tooltip base__popup` are aliases on the same wrapper; `trigger`; `body`;
-and `arrow base__arrow` (rendered unless suppressed). The arrow also carries the resolved side —
+**CSS parts:** `popup base tooltip base__popup tooltip__popup` are aliases on the same wrapper; `trigger`; `body`;
+and `arrow base__arrow tooltip__arrow` (rendered unless suppressed). The arrow also carries the resolved side —
 `arrow-top`, `arrow-bottom`, `arrow-left`, or `arrow-right`.
 
 **Themeable custom properties:** mapped `--max-width`, `--show-delay`, `--hide-delay`, and
@@ -34266,6 +34554,7 @@ the built-in button. Exactly one named icon is rendered at a time.
   not reliably announced (JAWS with Firefox ignores one outright). Assert against that
   document-level region rather than `::part(feedback)`; the part is a styling and inspection
   surface, and still tells you what the button last announced.
+- `copy-button` — the Web Awesome-named outer wrapper (the nested tooltip element holding the trigger).
 - `tooltip__base`, `tooltip__base__popup`, `tooltip__base__arrow`, `tooltip__body` — exported nested
   tooltip parts.
 
@@ -35495,6 +35784,14 @@ Pairs with `lr-icon-button` (see `llms/components/lr-icon-button.md`).
 - `family: string = ''` and `variant: string = ''` (reflected once set) — forwarded with `name` to
   a registered library resolver. Their vocabulary belongs to that library; for example, an icon
   host might distinguish `classic`/`sharp` families and `regular`/`solid` variants.
+  While `family`/`variant` is empty the values from `setDefaultIconFamily(family, variant?)` are
+  forwarded instead (`getDefaultIconFamily()`/`getDefaultIconVariant()` read them; both are `''`
+  until set). Changing the defaults re-resolves every rendered icon, and an omitted `variant` keeps
+  the current default variant.
+- Sprite sheets: `registerIconLibrary(name, { resolver, spriteSheet: true })` makes the resolver
+  return a same-origin `sheet.svg#symbol-id` URL, rendered as `<svg part="svg"><use part="use"
+  href>`. Nothing is fetched or sanitized, so cross-origin, `data:`, `blob:` and fragment-less
+  results fail with `lr-error` (the library `mutator` does not run).
 - `src: string = ''` — URL of a single SVG document to fetch. It applies only when no registered
   library owns the icon: no `library` set, an unregistered one, or an empty `name`. Once a
   registered library does own the name it decides alone — a resolver that returns `''` or throws
@@ -35692,15 +35989,24 @@ Unsupported orientation values normalize to `horizontal`. The boolean `vertical`
 A semantic separator: renders `<hr part="base" role="separator" aria-orientation="…">`. A host
 `aria-label` is forwarded to that inner semantic owner.
 
-**Properties:** `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) and
-`vertical: boolean = false` (reflected Shoelace-compatible shorthand).
+**Properties:** `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected),
+`vertical: boolean = false` (reflected Shoelace-compatible shorthand),
+`labelPlacement: 'start' | 'center' | 'end' = 'center'` (`label-placement`, reflected) and
+`withLabel: boolean = false` (`with-label`, reflected).
 
-**Events:** none. **Slots:** none. **CSS parts:** `base`.
+**Label:** slotted content in the default slot is drawn on the line; the base then becomes a
+`div role="separator"` with `line` / `line-start` / `line-end` and `label` parts, and the label text
+names the separator unless the host sets `aria-label`. `with-label` follows the real slot content in
+the browser; set it on server-rendered markup so the labeled layout exists before hydration.
+
+**Events:** none. **Slots:** default (label). **CSS parts:** `base`, `line`, `line-start`,
+`line-end`, `label`.
 
 **Themeable custom properties:** `--color` (falls back to `--lr-color-border-subtle`, the
 decorative-edge token, which itself resolves to `--lr-color-border` unless a theme sets a subtle
 border), `--width` (falls back to `--lr-border-width-thin`), and `--spacing` (default `0`, applied
-on the cross axis).
+on the cross axis), `--label-spacing` (label padding, default `--lr-space-s`) and `--label-offset`
+(short line length for a `start`/`end` label, default `2em`).
 
 The host is `display: block` when horizontal and `display: inline-block; block-size: 100%` when
 vertical, so a vertical divider fills its flex/grid row's height with no extra CSS — but it needs a
@@ -36488,6 +36794,91 @@ and the look names `styleLookShadcn` … `styleLookHighContrast`.
 
 <lr-style-panel></lr-style-panel>
 <lr-style-panel axes="mode accent" without-reset></lr-style-panel>
+```
+
+## `lr-counter`
+
+Countdown or count-up clock. Counts down to `date` (or for `duration` ms from connect) and up from
+`date` with `direction="up"`, ticking through years, months, days, hours, minutes and seconds. Years
+and months follow the local calendar; days and smaller are exact elapsed time. Unit labels and the
+spoken phrase come from `Intl.NumberFormat` units in the effective locale, so the element has no
+library strings to translate.
+
+**Properties:**
+
+- `date?: Date | string | number` — use ISO 8601 strings; a number is epoch ms. Invalid shows zeros
+- `duration?: number` — ms to count down from once connected; changing it restarts. Ignored when `date` is set or `direction="up"`
+- `direction: 'down' | 'up' = 'down'` (reflected)
+- `label: string = ''` — accessible name of the timer
+- `largestUnit` / `smallestUnit: 'years' | 'months' | 'days' | 'hours' | 'minutes' | 'seconds' = 'days' | 'seconds'` (`largest-unit`, `smallest-unit`); larger time rolls into the largest unit, smaller is dropped; an invalid or inverted pair falls back to days through seconds
+- `format: 'long' | 'short' | 'narrow' = 'long'` — label style
+- `withoutLabels: boolean = false` (`without-labels`, reflected) — clock style: hides labels, keeps every unit and stays left to right under `dir="rtl"`
+- `delimiter: string = ''` — text between units, e.g. `:`
+- `paused: boolean = false` (reflected) — clearing it continues from the time shown
+- `valueFormatter?: (value: number, unit) => string` — property only; the spoken phrase keeps the raw value
+
+**Slots:** `years`, `months`, `days`, `hours`, `minutes`, `seconds` — replace one unit's label;
+`finished` — shown instead of the units when a countdown is at zero (including a date already past).
+
+**CSS parts:** `base`, `unit`, `value`, `label`, `delimiter`, `finished`.
+**CSS custom property:** `--lr-counter-gap` (default `0.5em`). **CSS state:** `:state(finished)`.
+
+**Events:** `lr-finish` (`null` detail) — a running countdown reached zero; fires once and not for a
+date that was already past when the counter started.
+
+**Accessibility:** the base part is a `role="timer"` named by `label`, with the current time as
+visually hidden text and the visual units `aria-hidden`. `role="timer"` is not live, so nothing is
+announced each second. The timer stops on disconnect and resumes on reconnect; it renders zeros during
+SSR and starts on the client.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/lr-counter.js';
+</script>
+
+<lr-counter label="Sale ends" date="2031-01-01T00:00:00Z"></lr-counter>
+<lr-counter label="Doors open" date="2031-01-01T00:00:00Z" without-labels delimiter=":"></lr-counter>
+<lr-counter label="Launch" duration="60000"><strong slot="finished">We are live</strong></lr-counter>
+```
+
+## `lr-number-ticker`
+
+Counts to `value` when at least half of it scrolls into view (or at once with `eager`), formatting
+every frame with `Intl.NumberFormat` in the effective locale. It renders `startValue` before the
+count and during SSR.
+
+**Properties:**
+
+- `value: number = 0`; `startValue: number = 0` (`start-value`) — first run and `restart()` begin here
+- `duration: number = 2000` ms (`0` skips the animation); `delay: number = 0` ms (first run only);
+  `easing: string` — any CSS easing, an invalid one falls back to the default
+- `eager: boolean = false`
+- `type: 'decimal' | 'currency' | 'percent' = 'decimal'`; `currency: string = 'USD'`;
+  `currencyDisplay: 'symbol' | 'narrowSymbol' | 'code' | 'name' = 'symbol'` (`currency-display`)
+- `withoutGrouping: boolean = false` (`without-grouping`)
+- `minimumIntegerDigits`, `minimumFractionDigits`, `maximumFractionDigits`, `minimumSignificantDigits`,
+  `maximumSignificantDigits` (kebab-case attributes) — unset by default and clamped to Intl ranges;
+  one fraction option alone applies to both bounds; plain decimals keep a steady number of places
+- `valueFormatter?: (value: number) => string` — property only; replaces Intl formatting
+
+**Methods:** `restart()` — count again from `startValue`.
+**Events:** `lr-finish` (`null` detail) — the ticker settled, including the instant paths. A later
+`value` change counts on from the number shown.
+**CSS parts:** `base`, `value`. **CSS state:** `:state(counting)`.
+
+**Accessibility and motion:** the counting text is `aria-hidden` and the final value is visually
+hidden text from the first paint; once settled the number renders once. A `value` change after the
+first count is announced politely through the shared light-DOM live region. Under
+`prefers-reduced-motion: reduce` (or `data-lr-motion="reduce"`) or `duration="0"` it jumps to the final
+value and still emits `lr-finish`.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/lr-number-ticker.js';
+</script>
+
+<lr-number-ticker value="12840"></lr-number-ticker>
+<lr-number-ticker type="currency" currency="EUR" value="98765.43" eager></lr-number-ticker>
 ```
 
 # Media, files & maps (`components/media/`)
@@ -40288,6 +40679,14 @@ variants `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-b
   values are accepted; active `data:`/`javascript:` and non-embeddable schemes are omitted.
 - `srcdoc: string = ''` — inline iframe document. A present `srcdoc` wins over `src`, including an
   explicitly empty `srcdoc` attribute.
+- `allow: string = ''` — Permissions Policy, filtered: only `accelerometer`, `autoplay`,
+  `clipboard-write`, `encrypted-media`, `fullscreen`, `gyroscope`, `magnetometer`,
+  `picture-in-picture` and `web-share` survive, each limited to the `'self'`/`'src'`/`'none'`
+  keywords (no `*`, no origins). It never alters `sandbox`.
+- `name: string = ''` — browsing-context name for `target="<name>"` links and forms; blank and
+  reserved `_`-prefixed values are ignored.
+- `label: string = ''` — accessible name (iframe title); a host `aria-label` wins, blank uses the
+  localized default.
 - `allowfullscreen: boolean = false`, `loading: LyraZoomableFrameLoading = 'eager'`
   (`'eager' | 'lazy'`),
   `referrerpolicy: string = ''`, and `sandbox: string = 'allow-same-origin'` forward the native
@@ -41578,6 +41977,50 @@ photo content.
 
 Set `--lr-lightbox-control-hover-bg` and `--lr-lightbox-control-hover-color` for hovered controls. Set `--lr-lightbox-control-active-bg` and `--lr-lightbox-control-active-color` for pressed controls.
 
+### `lr-lightbox` slotted items (`lr-lightbox-item`)
+
+`<lr-lightbox>` also accepts `<lr-lightbox-item>` children (any depth, no nested lightbox), mirroring
+`wa-lightbox`/`wa-lightbox-item`. `images`/`imageSource` keep working unchanged and take precedence
+when set. With items the host stays inline and the viewer opens over the page.
+
+```html
+<lr-lightbox label="Trip" with-thumbnails>
+  <lr-lightbox-item src="/photos/a-full.jpg" alt="Harbour" width="1600" height="900">
+    <img src="/photos/a-thumb.jpg" alt="Harbour" />
+    <span slot="caption">Harbour at dawn</span>
+  </lr-lightbox-item>
+  <lr-lightbox-item type="video" src="/clips/b.mp4" thumbnail="/clips/b.jpg" alt="Boat"></lr-lightbox-item>
+</lr-lightbox>
+```
+
+**`lr-lightbox-item`** — `type: 'image' | 'video' = 'image'` (reflected; video shows a play button),
+`src` (the link target, so the gallery works without JavaScript and opens in a new tab; a modified
+click is left to the browser), `srcset`/`sizes` (the lightbox loads the smallest candidate covering
+the viewport or a single `px`/`vw` `sizes` length, else the largest), `alt` (defaults to the slotted
+`img` alt), `caption`, `thumbnail` (strip image and the item's own image when nothing is slotted),
+`width`/`height` (reserve space). Slots: default thumbnail, `caption` (text shown in the viewer),
+`play-icon`. Parts: `trigger`, `thumbnail-image`, `play-button`. The `data-active` attribute marks the
+current item while open. URLs are validated: `src` for the link with `safeLinkHref()` and all media
+with `safeMediaSrc()`; a rejected `src` leaves a button-style trigger and the item out of the viewer.
+An item with no `src` is activated with Enter/Space.
+
+**Lightbox additions** — `with-thumbnails` (thumbnail strip, not with `imageSource`), `without-navigation`
+(hides previous/next; arrow keys and swipe stay), `without-zoom` (no zoom button/controls), `label`
+(names the dialog; a host `aria-label` wins), `items` and `currentItem` getters, `zoomIn()`/`zoomOut()`.
+`lr-item-change` fires with every `lr-index-change` and adds `{ index, previousIndex, item, previousItem }`
+(items are `null` in data mode). Touch and pen swipes (not mouse) navigate, reversed under RTL, and are
+off while zoomed; `pointercancel` abandons a swipe. A `type="video"` item plays in a native `<video>`
+that pauses on slide change and close; zoom is unavailable for video. Slots `close-icon`,
+`previous-icon`, `next-icon`, `zoom-in-icon`, `zoom-out-icon`. Added part aliases: `dialog` (panel),
+`scroll-container` (stage), `navigation-button`/`navigation-button-previous`/`navigation-button-next`,
+plus `surface`, `slide`, `video`, `zoom-button`, `thumbnails`, `thumbnail`, `thumbnail-active`.
+Match them with `[part~="…"]` when querying.
+Motion: `--show-duration`/`--hide-duration` (or `--lr-lightbox-panel-duration`, default
+`--lr-duration-base`) drive the open/close and slide animations, which are flattened under
+`prefers-reduced-motion`; `lr-after-show`/`lr-after-hide` fire once the animation finishes.
+`--slide-gap` (`--lr-lightbox-slide-gap`), `--thumbnail-size` (`--lr-lightbox-thumbnail-size`) and
+`--media-border-radius` (`--lr-lightbox-media-radius`) style slides and the strip.
+
 ## `lr-qr-code`
 
 Renders `value` as a QR code using the optional `qrcode` peer dependency. **Properties:** `value`,
@@ -42251,10 +42694,10 @@ is preserved exactly as an empty native-video name. Caption/subtitle tracks
 selected for Lyra's custom overlay use native `mode="hidden"`, keeping cue activity available
 without asking the browser to paint a duplicate native caption layer.
 
-**CSS parts:** `base` and `video-wrapper` (aliases on the same root node), `caption`,
+**CSS parts:** `base`, `video-wrapper` and `player` (aliases on the same root node), `caption`,
 `caption-overlay`, `controls`, `controls-overlay`, `error`, `poster-overlay`, `poster-play-button`,
 `progress`, `thumbnail`, `timeline`, `timeline-indicator`, `timeline-thumb`, `timeline-track`,
-`video`, and `video-title-overlay`.
+`video` (also `body`, an alias on the same media element), and `video-title-overlay`.
 Panorama parts (with `projection="equirectangular"`): `panorama` (the keyboard-operable spherical
 viewport), `panorama-engine` (the optional renderer container), `panorama-notice` (localized
 renderer loading or fallback feedback), `panorama-hotspots` (the paginated hotspot alternative)
@@ -42268,7 +42711,8 @@ than a raw number of seconds; `aria-describedby` points to the same text. The vo
 remains in the DOM as a disabled `0..0` control with its value text and description intact,
 avoiding a disappearing/reappearing semantic target.
 
-**Themeable custom properties:** `--controls-background` (default
+**Themeable custom properties:** `--aspect-ratio` (default `16 / 9`, the player surface ratio),
+`--controls-background` (default
 `var(--lr-color-overlay-strong)`), `--controls-color` (default
 `var(--lr-color-on-strong-overlay)`), and
 `--poster-play-button-background` (default `var(--lr-color-surface-overlay)`). These exact names are
@@ -48328,6 +48772,9 @@ the source is loading and being sanitized. Build error UI from `lr-include-error
   cross-origin fetching is opt-in; an invalid value is normalized back to `same-origin` rather than
   letting `fetch()` throw. `no-cors` is accepted for enum completeness but always yields an opaque
   response (`status` `0`, unreadable body) — a Fetch API limitation, not a bug here.
+- `withoutFragment: boolean = false` (attribute `without-fragment`) — includes the whole sanitized
+  remote document and ignores the hash in `src`; no effect on a same-page `#id` source. Sanitization
+  is unchanged.
 - `withoutCache: boolean = false` (attribute `without-cache`, not reflected) — by default an
   include shares matching in-flight work and retains successful sanitized remote documents in a
   bounded cache; `without-cache` opts this instance out of both deduplication and retention.
@@ -52232,6 +52679,15 @@ through an activatable gutter reuses the source lines and updates the previous a
 - `collapsible: boolean = false` (reflected) — shows the collapse/expand chevron button
 - `collapsed: boolean = false` (reflected) — only has a visible effect while `collapsible` is also
   true
+- `wrap: boolean = false` (reflected) — wraps long lines instead of scrolling horizontally, in plain
+  and highlighted rendering alike.
+- Light-DOM source: with an empty `code`, the element's own text (text nodes, `<script
+  type="text/plain">` or `<template>`; children with a `slot` attribute are skipped) is the source,
+  dedented, and edits are followed. `withoutDedent: boolean = false` (attribute `without-dedent`,
+  reflected) keeps it as written except the newline right after the opening tag. A non-empty `code`
+  wins and is never dedented.
+- Aliases: `label` (accessible name; host `aria-label` wins) and `without-copy`
+  (= `without-copy-button`).
 - `withoutCopyButton: boolean = false` (attribute `without-copy-button`, reflected) — hides the
   copy-to-clipboard button, which is shown by default.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the

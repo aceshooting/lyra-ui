@@ -63,6 +63,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'Xato',
   stepperStatePending: 'Boshlanmagan',
   stepperStateLocked: 'Qulflangan',
+  stepperStateLoading: 'Yuklanmoqda',
+  stepperStateDisabled: 'Mavjud emas',
+  stepperSteps: 'Qadamlar',
+  stepperStepPosition: '{total} tadan {current}-qadam',
   commandPaletteInputLimit: 'Kiritish chegarasiga yetilgani sababli ayrim buyruqlar tushirib qoldirildi.',
 };
 

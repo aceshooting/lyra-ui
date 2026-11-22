@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'که دوام ورکول غواړئ، دا بکس نښه کړئ.',
   checkboxGroupRequired: 'لږ تر لږه یو انتخاب وکړئ.',
   tokenInputRequired: 'لږ تر لږه یو ارزښت دننه کړئ.',
+  tokenInputTooFew: {
+    one: 'لږ تر لږه {count} ارزښت دننه کړئ.',
+    other: 'لږ تر لږه {count} ارزښت دننه کړئ.',
+  },
+  tokenInputTooMany: {
+    one: 'له {count} ارزښت څخه زيات مه دننه کوئ.',
+    other: 'له {count} ارزښت څخه زيات مه دننه کوئ.',
+  },
   tokenInputEditWithContext: '{label} سمول',
   tokenInputLabel: 'ټوکنونه',
   iconButtonLabel: 'تڼۍ',

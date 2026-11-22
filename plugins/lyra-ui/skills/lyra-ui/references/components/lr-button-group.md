@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 1 part, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 2 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -19,7 +19,7 @@
 The host `aria-label`, the `accessibleLabel` property, and the `label` fallback name the inner role in that order.
 
 Responsive semantic grouping primitive for related action controls. It preserves the slotted
-controls and exposes `role="group"` on its internal wrapper.
+controls and exposes `role="group"` on its internal wrapper (parts `base`, also named `button-group`).
 It holds no state and handles no keys; for a row of toggles with pressed state behind one tab stop,
 use `lr-toggle-group`.
 

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 30 parts, 38 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 31 parts, 38 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `form-control-label`: `--lr-form-control-required-content`; `marks`: `--lr-slider-mark-bg`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -17,7 +17,7 @@
 
 ## `lr-slider`
 
-**Label and readout.** The label defaults to the shared form-control label size (`--lr-font-size-md-sm`, like `lr-input`/`lr-select`), no longer `inherit`; `--lr-form-control-label-font-size` still retunes it. `label-placement="start"` (see "Label beside the field") puts the label in a column beside a horizontal track. `with-value` shows the **localized number** by default, even when a `valueFormatter` is set and even with `value-placement="label"`; the formatter feeds `aria-valuetext` and the tooltip only. Set `value-display="formatted"` to show the formatter's text in the readout. This is deliberate: a formatter written for assistive text (`"40 percent"`) would otherwise change the visible readout of every existing slider.
+**Label and readout.** The label inherits the surrounding font size by default; set `--lr-form-control-label-font-size: var(--lr-font-size-md-sm)` on the slider or a containing form to match the `lr-input`/`lr-select` label size. `label-placement="start"` (see "Label beside the field") puts the label in a column beside a horizontal track. `with-value` shows the **localized number** by default, even when a `valueFormatter` is set and even with `value-placement="label"`; the formatter feeds `aria-valuetext` and the tooltip only. Set `value-display="formatted"` to show the formatter's text in the readout. This is deliberate: a formatter written for assistive text (`"40 percent"`) would otherwise change the visible readout of every existing slider.
 
 Labelled `marks` render in the `marks` part: one `mark` per tick, a `mark-label` per label, and
 `mark-label-thinned` on a label hidden for overlapping its neighbour.
@@ -207,7 +207,7 @@ well, so `::part(thumb)` styles both while `::part(thumb-min)` reaches only one)
 live value bubble per handle, present only with `with-tooltip`), `tooltip-visible` (added _to the
 `tooltip` element's part list_ while that handle is focused or dragged — visibility is encoded in
 the part name because `::part(tooltip)[data-visible]` is invalid CSS and never matches; write
-`::part(tooltip-visible)`). The tooltip also exposes `tooltip__tooltip`, `tooltip__content`, and
+`::part(tooltip-visible)`). The tooltip also exposes `tooltip__tooltip`, `tooltip__content` (also `tooltip__body`), and
 `tooltip__arrow`. `value` is the opt-in readout; `label-row` contains the separate label and value
 nodes when `withValue` and `valuePlacement="label"` are enabled. `marks` is the container for
 `marks` (present only while at least one mark is in range), `mark` one tick, `mark-label` one

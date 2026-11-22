@@ -8,7 +8,7 @@ export const styles = css`
     vertical-align: middle;
   }
 
-  [part='base'] {
+  [part~='base'] {
     display: inline-flex;
     flex-wrap: wrap;
     align-items: stretch;
@@ -16,7 +16,7 @@ export const styles = css`
     max-inline-size: 100%;
   }
 
-  :host([orientation='vertical']) [part='base'] {
+  :host([orientation='vertical']) [part~='base'] {
     flex-direction: column;
     align-items: stretch;
   }

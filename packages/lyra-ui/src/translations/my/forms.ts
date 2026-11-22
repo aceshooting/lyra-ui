@@ -13,6 +13,8 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'ဆက်လက်လုပ်ဆောင်ရန် ဤအကွက်ကို အမှန်ခြစ်ပါ။',
   checkboxGroupRequired: 'အနည်းဆုံး ရွေးချယ်စရာတစ်ခုကို ရွေးပါ။',
   tokenInputRequired: 'အနည်းဆုံး တန်ဖိုးတစ်ခု ထည့်ပါ။',
+  tokenInputTooFew: { other: 'တန်ဖိုး {count} ခုထက် မနည်းရိုက်ထည့်ပါ။' },
+  tokenInputTooMany: { other: 'တန်ဖိုး {count} ခုထက် မပိုရိုက်ထည့်ပါ။' },
   tokenInputEditWithContext: '{label} ကို တည်းဖြတ်ရန်',
   tokenInputLabel: 'တိုကင်များ',
   iconButtonLabel: 'ခလုတ်',

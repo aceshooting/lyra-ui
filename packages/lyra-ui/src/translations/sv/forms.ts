@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Markera den här rutan om du vill fortsätta.',
   checkboxGroupRequired: 'Välj minst ett alternativ.',
   tokenInputRequired: 'Ange minst ett värde.',
+  tokenInputTooFew: {
+    one: 'Ange minst {count} värde.',
+    other: 'Ange minst {count} värden.',
+  },
+  tokenInputTooMany: {
+    one: 'Ange högst {count} värde.',
+    other: 'Ange högst {count} värden.',
+  },
   tokenInputEditWithContext: 'Redigera {label}',
   tokenInputLabel: 'Token',
   iconButtonLabel: 'Knapp',

@@ -13,6 +13,8 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Centang kotak ini jika Anda ingin melanjutkan.',
   checkboxGroupRequired: 'Pilih setidaknya satu opsi.',
   tokenInputRequired: 'Masukkan setidaknya satu nilai.',
+  tokenInputTooFew: { other: 'Masukkan setidaknya {count} nilai.' },
+  tokenInputTooMany: { other: 'Masukkan tidak lebih dari {count} nilai.' },
   tokenInputEditWithContext: 'Ubah {label}',
   tokenInputLabel: 'Token',
   iconButtonLabel: 'Tombol',

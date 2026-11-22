@@ -771,10 +771,12 @@ jobs:
           (cd packages/lyra-translations && pnpm --config.ignore-scripts=true pack --pack-destination ../../artifacts/packed-companions)
           pnpm --filter @aceshooting/lyra-ide sync
           (cd packages/lyra-ide && pnpm --config.ignore-scripts=true pack --pack-destination ../../artifacts/packed-companions)
+          pnpm --filter @aceshooting/lyra-cdn build
+          (cd packages/lyra-cdn && pnpm --config.ignore-scripts=true pack --pack-destination ../../artifacts/packed-companions)
           git diff --exit-code
           cd artifacts/packed-companions
           tarballs=(*.tgz)
-          test "${#tarballs[@]}" -eq 7
+          test "${#tarballs[@]}" -eq 8
           sha256sum "${tarballs[@]}" > SHA256SUMS
           cd ../..
           node packages/lyra-ui/scripts/check-package-size.mjs --package @aceshooting/lyra-translations --tarball artifacts/packed-companions/aceshooting-lyra-translations-*.tgz
@@ -782,6 +784,7 @@ jobs:
           node packages/lyra-ui/scripts/check-package-size.mjs --package @aceshooting/lyra-map --tarball artifacts/packed-companions/aceshooting-lyra-map-*.tgz
           node packages/lyra-ui/scripts/check-package-size.mjs --package @aceshooting/lyra-3d --tarball artifacts/packed-companions/aceshooting-lyra-3d-*.tgz
           node packages/lyra-ui/scripts/check-package-size.mjs --package @aceshooting/lyra-gen --tarball artifacts/packed-companions/aceshooting-lyra-gen-*.tgz
+          node packages/lyra-ui/scripts/check-package-size.mjs --package @aceshooting/lyra-cdn --tarball artifacts/packed-companions/aceshooting-lyra-cdn-*.tgz
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: packed-companion-tarballs

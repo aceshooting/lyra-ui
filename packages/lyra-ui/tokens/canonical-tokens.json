@@ -1274,6 +1274,24 @@
       },
       "themeInput": "--lr-theme-font-size-3xs"
     },
+    "--lr-font-size-4xl": {
+      "type": "dimension",
+      "group": "typography",
+      "scope": "shared",
+      "description": "Derived shared display font size one and a quarter times font size 3xl; reads the same theme input, so a theme-scaled type ramp carries through.",
+      "values": {
+        "light": "calc(var(--lr-theme-font-size-3xl, 2rem) * 1.25)"
+      }
+    },
+    "--lr-font-size-5xl": {
+      "type": "dimension",
+      "group": "typography",
+      "scope": "shared",
+      "description": "Derived shared display font size one and a half times font size 3xl; reads the same theme input, so a theme-scaled type ramp carries through.",
+      "values": {
+        "light": "calc(var(--lr-theme-font-size-3xl, 2rem) * 1.5)"
+      }
+    },
     "--lr-font-size-lg": {
       "type": "dimension",
       "group": "typography",
@@ -4538,6 +4556,24 @@
       },
       "themeInput": "--lr-theme-space-2xs"
     },
+    "--lr-space-3xl": {
+      "type": "dimension",
+      "group": "spacing",
+      "scope": "shared",
+      "description": "Derived shared spacing step one and a half times space 2xl; reads the same theme input, so density scaling carries through.",
+      "values": {
+        "light": "calc(var(--lr-theme-space-2xl, 2rem) * 1.5)"
+      }
+    },
+    "--lr-space-4xl": {
+      "type": "dimension",
+      "group": "spacing",
+      "scope": "shared",
+      "description": "Derived shared spacing step twice space 2xl; reads the same theme input, so density scaling carries through.",
+      "values": {
+        "light": "calc(var(--lr-theme-space-2xl, 2rem) * 2)"
+      }
+    },
     "--lr-space-l": {
       "type": "dimension",
       "group": "spacing",
@@ -4567,6 +4603,15 @@
         "light": "var(--lr-theme-space-s, 0.5rem)"
       },
       "themeInput": "--lr-theme-space-s"
+    },
+    "--lr-space-xl": {
+      "type": "dimension",
+      "group": "spacing",
+      "scope": "shared",
+      "description": "Derived shared spacing step between space l and space 2xl; reads the same theme inputs, so density scaling carries through.",
+      "values": {
+        "light": "calc((var(--lr-theme-space-l, 1rem) + var(--lr-theme-space-2xl, 2rem)) / 2)"
+      }
     },
     "--lr-space-xs": {
       "type": "dimension",

@@ -13,6 +13,16 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Lai turpinātu, atzīmējiet šo izvēles rūtiņu.',
   checkboxGroupRequired: 'Atlasiet vismaz vienu opciju.',
   tokenInputRequired: 'Ievadiet vismaz vienu vērtību.',
+  tokenInputTooFew: {
+    zero: 'Ievadiet vismaz {count} vērtību.',
+    one: 'Ievadiet vismaz {count} vērtību.',
+    other: 'Ievadiet vismaz {count} vērtības.',
+  },
+  tokenInputTooMany: {
+    zero: 'Neievadiet vairāk par {count} vērtību.',
+    one: 'Neievadiet vairāk par {count} vērtību.',
+    other: 'Neievadiet vairāk par {count} vērtības.',
+  },
   tokenInputEditWithContext: 'Rediģēt {label}',
   tokenInputLabel: 'Marķieri',
   iconButtonLabel: 'Poga',

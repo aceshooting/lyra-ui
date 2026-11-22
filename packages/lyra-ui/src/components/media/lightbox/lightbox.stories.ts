@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
 import '../../lr-lightbox.js';
+import '../../lr-lightbox-item.js';
 import type { LyraLightbox } from '../../lr-lightbox.js';
 
 const meta: Meta = {
@@ -210,4 +211,17 @@ export const MillionImageSource: Story = {
         <button slot="actions" @click=${(event: Event) => ((event.currentTarget as HTMLElement).parentElement as LyraLightbox).goTo(999_999)}>Last</button>
       </lr-lightbox>`;
   },
+};
+
+export const SlottedItems: Story = {
+  render: () => html`
+    <lr-lightbox label="Illustrations" with-thumbnails loop>
+      ${images.map((image, index) => html`
+        <lr-lightbox-item src=${image.src} alt=${image.alt} width="640" height="360">
+          <img src=${image.src} alt=${image.alt} width="160" height="90" />
+          <span slot="caption">${image.caption}</span>
+        </lr-lightbox-item>
+        ${index === 1 ? html`<lr-lightbox-item type="video" src="data:video/mp4;base64,AAAA" thumbnail=${image.src} alt="Clip"></lr-lightbox-item>` : ''}
+      `)}
+    </lr-lightbox>`,
 };

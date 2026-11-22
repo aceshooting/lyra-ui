@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'തുടരണമെങ്കിൽ ഈ ബോക്സ് ചെക്ക് ചെയ്യുക.',
   checkboxGroupRequired: 'കുറഞ്ഞത് ഒരു ഓപ്ഷനെങ്കിലും തിരഞ്ഞെടുക്കുക.',
   tokenInputRequired: 'കുറഞ്ഞത് ഒരു മൂല്യമെങ്കിലും നൽകുക.',
+  tokenInputTooFew: {
+    one: 'കുറഞ്ഞത് {count} മൂല്യം നൽകുക.',
+    other: 'കുറഞ്ഞത് {count} മൂല്യം നൽകുക.',
+  },
+  tokenInputTooMany: {
+    one: '{count} മൂല്യത്തിൽ കൂടുതൽ നൽകരുത്.',
+    other: '{count} മൂല്യത്തിൽ കൂടുതൽ നൽകരുത്.',
+  },
   tokenInputEditWithContext: '{label} തിരുത്തുക',
   tokenInputLabel: 'ടോക്കണുകൾ',
   iconButtonLabel: 'ബട്ടൺ',

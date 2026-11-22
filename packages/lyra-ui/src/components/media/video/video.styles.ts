@@ -6,7 +6,7 @@ import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.j
 export const styles = css`
   [part='panorama-engine'] { inline-size: 100%; block-size: 100%; }
   [part='panorama'] { position: absolute; inset: 0; min-block-size: 0; }
-  [part='video']:where([data-panorama]) { opacity: 0; }
+  [part~='video']:where([data-panorama]) { opacity: 0; }
 
   :host {
     display: block;
@@ -23,12 +23,12 @@ export const styles = css`
     isolation: isolate;
     overflow: hidden;
     inline-size: 100%;
-    aspect-ratio: 16 / 9;
+    aspect-ratio: var(--aspect-ratio, 16 / 9);
     border-radius: var(--lr-radius);
     background: var(--lr-color-overlay-strong);
   }
 
-  [part='video'] {
+  [part~='video'] {
     display: block;
     inline-size: 100%;
     block-size: 100%;
@@ -381,10 +381,10 @@ export const styles = css`
         'controls';
     }
 
-    :host(:not([controls='none'])) [part='video'] {
+    :host(:not([controls='none'])) [part~='video'] {
       grid-area: media;
       block-size: auto;
-      aspect-ratio: 16 / 9;
+      aspect-ratio: var(--aspect-ratio, 16 / 9);
     }
 
     :host(:not([controls='none'])) :is([part='poster-overlay'], [part='panorama']) {

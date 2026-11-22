@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Tyá elembo na kati ya boîte oyo mpo okoba.',
   checkboxGroupRequired: 'Pona ata option moko.',
   tokenInputRequired: 'Koma ata valeur moko.',
+  tokenInputTooFew: {
+    one: 'Tiya motuya {count} soko moke.',
+    other: 'Tiya motuya {count} soko moke.',
+  },
+  tokenInputTooMany: {
+    one: 'Tiya motuya koleka {count} te.',
+    other: 'Tiya motuya koleka {count} te.',
+  },
   tokenInputEditWithContext: 'Bongisa {label}',
   tokenInputLabel: 'Ba token',
   iconButtonLabel: 'Litoyi ya elembo',

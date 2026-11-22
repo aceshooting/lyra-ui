@@ -174,6 +174,7 @@ export const CURATED_UTILITY_MODULES = Object.freeze([
   'src/utilities/deprecated-aliases.ts',
   'src/utilities/defined.ts',
   'src/utilities/form-associated.ts',
+  'src/utilities/form.ts',
   'src/utilities/format.ts',
   'src/utilities/group-by-recency.ts',
   'src/utilities/icons.ts',

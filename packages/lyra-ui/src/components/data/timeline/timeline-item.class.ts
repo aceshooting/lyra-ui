@@ -51,15 +51,15 @@ const VARIANT_NAME_KEYS: Partial<Record<LyraVariant, LyraMessageKey>> = {
 /**
  * `<lr-timeline-item>` — one marker + title + optional timestamp + optional description row inside
  * `<lr-timeline>`'s default slot. See that component's class doc for the overall shape; this class
- * doc covers the rail-connecting mechanism this item's own `[part="track"]`/`[part="rail"]`
+ * doc covers the rail-connecting mechanism this item's own `[part="track"]`/`[part~="rail"]`
  * implement.
  *
  * Each item owns and renders *its own trailing rail segment*, not the whole connecting line — think
  * of it as a linked list of line segments, one per item, each reaching toward the next item's marker.
- * `[part="track"]` (marker then rail) is a flex sibling of `[part="content"]` inside `[part="base"]`,
- * with `[part="base"]`'s default `align-items: stretch` left alone — so `[part="track"]`'s
+ * `[part="track"]` (marker then rail) is a flex sibling of `[part="content"]` inside `[part~="base"]`,
+ * with `[part~="base"]`'s default `align-items: stretch` left alone — so `[part="track"]`'s
  * cross-axis size automatically equals `[part="content"]`'s own size, including any content-driven
- * height from a long slotted description. `[part="rail"]` is `flex: 1 1 auto` inside `[part="track"]`,
+ * height from a long slotted description. `[part~="rail"]` is `flex: 1 1 auto` inside `[part="track"]`,
  * so once the marker (fixed size) takes its share, the rail fills the rest — no JS measurement, no
  * `ResizeObserver`, no absolute positioning. `[part="content"]` carries a trailing logical padding
  * (block-end in vertical mode, inline-end in horizontal mode) equal to `<lr-timeline>`'s
@@ -86,6 +86,11 @@ const VARIANT_NAME_KEYS: Partial<Record<LyraVariant, LyraMessageKey>> = {
  * @customElement lr-timeline-item
  * @slot - The item's primary heading/title content. Rich content allowed (inline code, a badge, a
  *   link) — nothing renders when this slot is empty, a valid if unusual usage.
+ * @slot opposite - Content on the far side of the rail from the main content, usually a date or
+ *   time. Takes a fixed share beside the rail (`--lr-timeline-opposite-size`) so every item's rail
+ *   lines up; in a horizontal timeline it sits above the marker, and in a
+ *   `marker-placement="alternate"` timeline it fills the column opposite the content.
+ * @slot icon - Alias of `marker-icon`. Both may be used; their content renders in that order.
  * @slot marker-icon - Marker/glyph override (e.g. a `<lr-icon>`, an emoji, a small avatar-like
  *   element). When empty, the marker falls back to a plain color-coded dot driven by `variant`.
  * @slot timestamp - Full override of the timestamp presentation (e.g.
@@ -96,11 +101,15 @@ const VARIANT_NAME_KEYS: Partial<Record<LyraVariant, LyraMessageKey>> = {
  *   (`[part="timestamp"]` hidden) when neither the slot nor a valid `timestamp` is present.
  * @slot description - Secondary/body content below the title (explanatory text, a diff snippet, a
  *   "view details" affordance). `[part="description"]` is hidden entirely when this slot is empty.
+ * @csspart timeline-item - Alias of `base`.
+ * @csspart opposite - Wrapper around the `opposite` slot. Hidden when the slot is empty and
+ *   `with-opposite` is unset.
+ * @csspart connector - Alias of `rail`.
  * @csspart base - The root wrapper. Flex container; `flex-direction` is driven by the
  *   parent timeline's private cross-shadow orientation state -- `row` in vertical-timeline mode
  *   (marker beside content), `column` in horizontal-timeline mode (marker above content).
  * @csspart track - Wrapper around the marker and rail (the "spine"). Always the opposite axis from
- *   `[part="base"]` -- see the class doc's rail-mechanism note.
+ *   `[part~="base"]` -- see the class doc's rail-mechanism note.
  * @csspart marker - The dot/icon circle. `aria-hidden="true"` -- purely decorative, the item's
  *   accessible content is its title/timestamp/description text -- except inside an `ordered`
  *   `<lr-timeline>`, where it is a ring (`--lr-timeline-marker-color` border, transparent fill)
@@ -125,6 +134,13 @@ const VARIANT_NAME_KEYS: Partial<Record<LyraVariant, LyraMessageKey>> = {
  * @cssprop [--lr-timeline-marker-size=var(--lr-size-1-25rem)] - Diameter of the marker circle
  *   (both inline-size and block-size, so the default dot stays circular). Inherits from theme
  *   ancestors.
+ * @cssprop [--lr-timeline-icon-marker-size=var(--lr-timeline-marker-size)] - Diameter of the marker
+ *   when the item has `icon`/`marker-icon` content (or `with-icon`).
+ * @cssprop [--lr-timeline-connector-color=var(--lr-timeline-rail-color)] - Alias of
+ *   `--lr-timeline-rail-color`; wins when both are set.
+ * @cssprop [--lr-timeline-connector-width=var(--lr-timeline-rail-width)] - Alias of
+ *   `--lr-timeline-rail-width`; wins when both are set.
+ * @cssprop [--lr-timeline-connector-gap=0px] - Gap between the marker and the connector line.
  * @cssprop --lr-timeline-ordered-marker-size - Minimum width and height for ordered markers. Falls back to
  *   `--lr-timeline-marker-size`, then `var(--lr-size-1-5rem)`.
  * @cssprop [--lr-timeline-marker-number-color=var(--lr-color-text)] - Step-number colour inside an
@@ -206,6 +222,14 @@ export class LyraTimelineItem extends LyraElement {
     this._variant = normalized;
     this.requestUpdate('variant', previous);
   }
+
+  /** Server-render hint: set it when `icon`/`marker-icon` content is slotted so the marker renders
+   *  as an icon marker before the element hydrates. Also forces the icon marker presentation. */
+  @property({ type: Boolean, attribute: 'with-icon' }) withIcon = false;
+
+  /** Server-render hint: set it when `opposite` content is slotted so the opposite column renders
+   *  before the element hydrates. Also keeps the column even when the slot is empty. */
+  @property({ type: Boolean, attribute: 'with-opposite' }) withOpposite = false;
 
   /** Marks this as the current/in-progress item (e.g. "the agent is executing this step right now"),
    *  as opposed to a resolved past entry. Drives a pulsing marker (disabled under
@@ -322,10 +346,16 @@ export class LyraTimelineItem extends LyraElement {
         }).format(ts)
       : '';
 
+    const hasIcon =
+      this.slotPresence.has('marker-icon') || this.slotPresence.has('icon') || this.withIcon;
+    const hasOpposite = this.slotPresence.has('opposite') || this.withOpposite;
     const variantKey = VARIANT_NAME_KEYS[this._variant];
     return html`
-      <div part="base">
-        <div part="track">
+      <div part="base timeline-item">
+        <span part="opposite" ?hidden=${!hasOpposite}>
+          <slot name="opposite"></slot>
+        </span>
+        <div part="track" ?data-has-icon=${hasIcon && this.ordinal === undefined}>
           ${this.ordinal !== undefined
             ? html`<span part="marker" data-ordered
                 ><span part="marker-number"
@@ -335,13 +365,14 @@ export class LyraTimelineItem extends LyraElement {
             : html`<span
                 part="marker"
                 aria-hidden="true"
-                ?data-has-icon=${this.slotPresence.has('marker-icon')}
+                ?data-has-icon=${hasIcon}
               >
                 <slot
                   name="marker-icon"
                 ></slot>
+                <slot name="icon"></slot>
               </span>`}
-          <span part="rail"></span>
+          <span part="rail connector"></span>
         </div>
         <div part="content">
           <div part="header">

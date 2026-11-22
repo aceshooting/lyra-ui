@@ -63,6 +63,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'Erro',
   stepperStatePending: 'Não iniciado',
   stepperStateLocked: 'Bloqueado',
+  stepperStateLoading: 'A carregar',
+  stepperStateDisabled: 'Indisponível',
+  stepperSteps: 'Passos',
+  stepperStepPosition: 'Passo {current} de {total}',
   commandPaletteInputLimit: 'Alguns comandos foram omitidos por ter sido atingido um limite de entrada.',
 };
 

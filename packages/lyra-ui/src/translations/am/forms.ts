@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'ለመቀጠል ከፈለጉ ይህን ሳጥን ይምረጡ።',
   checkboxGroupRequired: 'ቢያንስ አንድ አማራጭ ይምረጡ።',
   tokenInputRequired: 'ቢያንስ አንድ ዋጋ ያስገቡ።',
+  tokenInputTooFew: {
+    one: 'ቢያንስ {count} እሴት ያስገቡ።',
+    other: 'ቢያንስ {count} እሴት ያስገቡ።',
+  },
+  tokenInputTooMany: {
+    one: 'ከ{count} እሴት በላይ አያስገቡ።',
+    other: 'ከ{count} እሴት በላይ አያስገቡ።',
+  },
   tokenInputEditWithContext: '{label}ን አርትዕ',
   tokenInputLabel: 'ቶከኖች',
   iconButtonLabel: 'አዝራር',

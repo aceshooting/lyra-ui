@@ -42,6 +42,7 @@ export * from '../lr-scroller.js';
 export * from '../lr-segmented.js';
 export * from '../lr-split-panel.js';
 export * from '../lr-multi-split.js';
+export * from '../lr-step.js';
 export * from '../lr-stepper.js';
 export * from '../lr-tab-group.js';
 export * from '../lr-tab-panel.js';

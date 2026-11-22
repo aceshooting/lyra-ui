@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/web-components-vite";
 import { html } from "lit";
 import "../../lr-stepper.js";
+import "../../lr-step.js";
 import type { LyraStepItem } from "../../lr-stepper.js";
 import { storyColor } from "../../../../../../.storybook/theme-contract.js";
 
@@ -316,4 +317,40 @@ export const ReadOnlyOverflowing: Story = {
       },
     },
   },
+};
+
+export const ChildSteps: Story = {
+  name: "Child steps with invokers",
+  render: () => html`<div style="display: grid; gap: var(--lr-space-m);">
+    <lr-stepper id="story-flow" label="Checkout" active="shipping" linear clickable orientation="auto">
+      <lr-step name="cart" completed variant="success">Cart</lr-step>
+      <lr-step name="shipping" attention="pulse">
+        Shipping
+        <span slot="description">Where should it go?</span>
+      </lr-step>
+      <lr-step name="pay">Payment</lr-step>
+      <lr-step name="done" disabled>Done</lr-step>
+    </lr-stepper>
+    <div style="display: flex; gap: var(--lr-space-s);">
+      <button type="button" data-stepper="previous story-flow">Back</button>
+      <button type="button" data-stepper="next story-flow">Next</button>
+    </div>
+  </div>`,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "With `<lr-step>` children the stepper owns the current step: `active` names it, `linear` keeps later steps locked until the earlier ones are `completed`, `clickable` turns the steps into buttons, and `orientation=\"auto\"` stacks them when the container is too narrow. `data-stepper=\"next|previous <id>\"` buttons, `goTo()`, `next()` and `previous()` move the step through a cancelable `lr-before-step-change` and a following `lr-step-change`. `lr-step` takes `completed`, `loading`, `disabled`, `variant` and `attention` (`pulse` or `bounce`, still under reduced motion).",
+      },
+    },
+  },
+};
+
+export const ChildStepsVertical: Story = {
+  name: "Child steps, vertical with descriptions",
+  render: () => html`<lr-stepper orientation="vertical" label="Setup" active="b">
+    <lr-step name="a" completed>Account<span slot="description">Created</span></lr-step>
+    <lr-step name="b" loading>Billing<span slot="description">Verifying the card</span></lr-step>
+    <lr-step name="c" variant="danger">Review<span slot="description">Needs attention</span></lr-step>
+  </lr-stepper>`,
 };

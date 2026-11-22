@@ -63,6 +63,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'Virhe',
   stepperStatePending: 'Ei aloitettu',
   stepperStateLocked: 'Lukittu',
+  stepperStateLoading: 'Ladataan',
+  stepperStateDisabled: 'Ei käytettävissä',
+  stepperSteps: 'Vaiheet',
+  stepperStepPosition: 'Vaihe {current}/{total}',
   commandPaletteInputLimit: 'Osa komennoista jätettiin pois syöterajan täyttymisen vuoksi.',
 };
 

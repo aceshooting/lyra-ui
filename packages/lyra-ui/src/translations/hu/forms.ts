@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'A folytatáshoz jelölje be ezt a négyzetet.',
   checkboxGroupRequired: 'Válasszon legalább egy lehetőséget.',
   tokenInputRequired: 'Adjon meg legalább egy értéket.',
+  tokenInputTooFew: {
+    one: 'Adjon meg legalább {count} értéket.',
+    other: 'Adjon meg legalább {count} értéket.',
+  },
+  tokenInputTooMany: {
+    one: 'Legfeljebb {count} értéket adjon meg.',
+    other: 'Legfeljebb {count} értéket adjon meg.',
+  },
   tokenInputEditWithContext: 'Szerkesztés: {label}',
   tokenInputLabel: 'Tokenek',
   iconButtonLabel: 'Gomb',

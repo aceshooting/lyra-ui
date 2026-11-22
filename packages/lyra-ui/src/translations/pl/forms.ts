@@ -13,6 +13,18 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Zaznacz to pole, aby kontynuować.',
   checkboxGroupRequired: 'Wybierz co najmniej jedną opcję.',
   tokenInputRequired: 'Wprowadź co najmniej jedną wartość.',
+  tokenInputTooFew: {
+    one: 'Wprowadź co najmniej {count} wartość.',
+    few: 'Wprowadź co najmniej {count} wartości.',
+    many: 'Wprowadź co najmniej {count} wartości.',
+    other: 'Wprowadź co najmniej {count} wartości.',
+  },
+  tokenInputTooMany: {
+    one: 'Nie wprowadzaj więcej niż {count} wartość.',
+    few: 'Nie wprowadzaj więcej niż {count} wartości.',
+    many: 'Nie wprowadzaj więcej niż {count} wartości.',
+    other: 'Nie wprowadzaj więcej niż {count} wartości.',
+  },
   tokenInputEditWithContext: 'Edytuj {label}',
   tokenInputLabel: 'Tokeny',
   iconButtonLabel: 'Przycisk',

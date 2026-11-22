@@ -78,7 +78,7 @@ it('shows only the slotted marker icon once populated, at parse time and via a l
   expect(bareSlot.assignedElements({ flatten: true })).to.have.length(1);
 });
 
-it('does not expose or render the removed legacy icon slot', async () => {
+it('renders both marker-icon and its icon alias slot', async () => {
   const el = (await fixture(html`
     <lr-timeline-item>
       <span id="legacy-marker" slot="icon">legacy</span>
@@ -93,18 +93,23 @@ it('does not expose or render the removed legacy icon slot', async () => {
   const legacyMarker = el.querySelector('#legacy-marker') as HTMLElement;
 
   expect(canonicalSlot?.localName).to.equal('slot');
-  expect(legacySlot === null).to.be.true;
+  expect(legacySlot?.localName).to.equal('slot');
+  expect(legacySlot?.assignedElements().map((assigned) => assigned.id)).to.deep.equal(['legacy-marker']);
   expect(canonicalSlot?.assignedElements().map((assigned) => assigned.id)).to.deep.equal(['canonical-marker']);
   expect(marker.hasAttribute('data-has-icon')).to.be.true;
   expect(canonicalMarker.getClientRects().length > 0).to.be.true;
-  expect(legacyMarker.getClientRects().length).to.equal(0);
+  expect(legacyMarker.getClientRects().length > 0).to.be.true;
 
   const changed = oneEvent(canonicalSlot!, 'slotchange');
   canonicalMarker.remove();
   await changed;
   await el.updateComplete;
+  expect(marker.hasAttribute('data-has-icon')).to.be.true;
+  const aliasChanged = oneEvent(legacySlot!, 'slotchange');
+  legacyMarker.remove();
+  await aliasChanged;
+  await el.updateComplete;
   expect(marker.hasAttribute('data-has-icon')).to.be.false;
-  expect(legacyMarker.getClientRects().length).to.equal(0);
 });
 
 it('renders the internal <lr-relative-time> fallback, wrapped in a <time> with the correct datetime/title, when timestamp is set and the slot is empty', async () => {
@@ -235,7 +240,7 @@ it('inherits marker and rail theme hooks from an ancestor while direct item over
   const el = wrapper.querySelector('lr-timeline-item') as LyraTimelineItem;
   await el.updateComplete;
   const marker = el.shadowRoot!.querySelector('[part="marker"]') as HTMLElement;
-  const rail = el.shadowRoot!.querySelector('[part="rail"]') as HTMLElement;
+  const rail = el.shadowRoot!.querySelector('[part~="rail"]') as HTMLElement;
   expect(getComputedStyle(marker).inlineSize).to.equal('31px');
   expect(getComputedStyle(marker).backgroundColor).to.equal('rgb(1, 2, 3)');
   expect(getComputedStyle(rail).inlineSize).to.equal('7px');
@@ -252,7 +257,7 @@ it('defaults the connecting rail to the decorative --lr-color-border-subtle toke
     >Event</lr-timeline-item>
   `)) as LyraTimelineItem;
   await el.updateComplete;
-  const rail = el.shadowRoot!.querySelector('[part="rail"]') as HTMLElement;
+  const rail = el.shadowRoot!.querySelector('[part~="rail"]') as HTMLElement;
   expect(getComputedStyle(rail).backgroundColor).to.equal('rgb(1, 2, 3)');
 });
 

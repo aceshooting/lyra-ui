@@ -2,6 +2,8 @@
   "family": "utility",
   "assignments": {
     "new-component-experimental": [
+      "lr-counter",
+      "lr-number-ticker",
       "lr-style-panel"
     ],
     "published-stable": [

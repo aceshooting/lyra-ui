@@ -65,6 +65,10 @@ const strings: LyraLocaleStrings = {
   stepperStateError: 'Chyba',
   stepperStatePending: 'Nezačaté',
   stepperStateLocked: 'Uzamknuté',
+  stepperStateLoading: 'Načítava sa',
+  stepperStateDisabled: 'Nedostupné',
+  stepperSteps: 'Kroky',
+  stepperStepPosition: 'Krok {current} z {total}',
   commandPaletteInputLimit: 'Niektoré príkazy boli vynechané, pretože sa dosiahol limit vstupu.',
 };
 

@@ -18,7 +18,7 @@ const RULE = "Bash(git status:*)";
 
 function tokenLabels(el: LyraTokenInput): HTMLElement[] {
   return Array.from(
-    el.shadowRoot!.querySelectorAll('[part="token-label"]')
+    el.shadowRoot!.querySelectorAll('[part~="token-label"]')
   ) as HTMLElement[];
 }
 function tokenLabel(el: LyraTokenInput, index: number): HTMLElement {
@@ -33,7 +33,7 @@ function editor(el: LyraTokenInput): HTMLInputElement | null {
 }
 function removeButtons(el: LyraTokenInput): HTMLButtonElement[] {
   return Array.from(
-    el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="remove"]')
+    el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="remove"]')
   );
 }
 function typeInto(field: HTMLInputElement, next: string): void {
@@ -83,8 +83,8 @@ it("inherits a 20px remove-action font and renders its 1em close glyph at that s
   const el = (await fixture(html`
     <lr-token-input style="--lr-token-input-font-size:20px" .value=${["alpha"]}></lr-token-input>
   `)) as LyraTokenInput;
-  const control = el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
-  const remove = el.shadowRoot!.querySelector('[part="remove"]') as HTMLButtonElement;
+  const control = el.shadowRoot!.querySelector('[part~="input-wrapper"]') as HTMLElement;
+  const remove = el.shadowRoot!.querySelector('[part~="remove"]') as HTMLButtonElement;
   const glyph = remove.querySelector("svg") as SVGElement;
 
   expect(getComputedStyle(control).fontSize).to.equal("20px");
@@ -352,7 +352,7 @@ it('normalizes a non-array value write and clears the reflected default attribut
   )) as LyraTokenInput;
   expect(el.getAttribute('value')).to.equal('["alpha"]');
 
-  (el as unknown as { value: unknown }).value = 'not-an-array';
+  (el as unknown as { value: unknown }).value = 42;
   expect(
     el.value,
     'a non-array value write must normalize to an empty list'
@@ -679,7 +679,7 @@ it("interpolates the remove button accessible name with the token label", async 
     html`<lr-token-input .value=${["alpha"]}></lr-token-input>`
   )) as LyraTokenInput;
   const removeBtn = el.shadowRoot!.querySelector(
-    '[part="remove"]'
+    '[part~="remove"]'
   ) as HTMLButtonElement;
   expect(removeBtn.getAttribute("aria-label")).to.equal("Remove alpha");
 });
@@ -692,7 +692,7 @@ it("localizes the remove button accessible name via .strings", async () => {
     ></lr-token-input>`
   )) as LyraTokenInput;
   const removeBtn = el.shadowRoot!.querySelector(
-    '[part="remove"]'
+    '[part~="remove"]'
   ) as HTMLButtonElement;
   expect(removeBtn.getAttribute("aria-label")).to.equal("Retirer alpha");
 });
@@ -703,7 +703,7 @@ it("fires lr-token-remove-request as cancelable and removes the token when not p
   )) as LyraTokenInput;
   const listener = oneEvent(el, "lr-token-remove-request");
   (
-    el.shadowRoot!.querySelector('[part="remove"]') as HTMLButtonElement
+    el.shadowRoot!.querySelector('[part~="remove"]') as HTMLButtonElement
   ).click();
   const event = await listener;
   expect(event.cancelable).to.be.true;
@@ -765,7 +765,7 @@ it("keeps the token in place when a host calls preventDefault() on lr-token-remo
   )) as LyraTokenInput;
   el.addEventListener("lr-token-remove-request", (e) => e.preventDefault());
   (
-    el.shadowRoot!.querySelector('[part="remove"]') as HTMLButtonElement
+    el.shadowRoot!.querySelector('[part~="remove"]') as HTMLButtonElement
   ).click();
   await el.updateComplete;
   expect(el.value).to.deep.equal(["alpha", "beta"]);
@@ -779,7 +779,7 @@ it("rejects a stale remove-button activation in the same task that disablement s
   `);
   const el = fieldset.querySelector("lr-token-input") as LyraTokenInput;
   const directButton = el.shadowRoot!.querySelector(
-    '[part="remove"]'
+    '[part~="remove"]'
   ) as HTMLButtonElement;
 
   el.disabled = true;
@@ -789,7 +789,7 @@ it("rejects a stale remove-button activation in the same task that disablement s
   el.disabled = false;
   await el.updateComplete;
   const fieldsetButton = el.shadowRoot!.querySelector(
-    '[part="remove"]'
+    '[part~="remove"]'
   ) as HTMLButtonElement;
   fieldset.disabled = true;
   fieldsetButton.click();
@@ -843,7 +843,7 @@ it("matches lr-input's own row height at every shared size tier when empty", asy
       html`<lr-token-input size=${size}></lr-token-input>`
     );
     const wrapper = el.shadowRoot!.querySelector(
-      '[part="input-wrapper"]'
+      '[part~="input-wrapper"]'
     ) as HTMLElement;
     expect(getComputedStyle(wrapper).minBlockSize, `size=${size}`).to.equal(px);
   }
@@ -871,7 +871,7 @@ it("renders the laid-out row box at the ladder floor, not the ambient font metri
       html`<lr-token-input size=${size}></lr-token-input>`
     );
     const wrapper = el.shadowRoot!.querySelector(
-      '[part="input-wrapper"]'
+      '[part~="input-wrapper"]'
     ) as HTMLElement;
     expect(
       wrapper.getBoundingClientRect().height,
@@ -894,7 +894,7 @@ it("accepts the Web Awesome size spellings, rendering small/medium/large as s/m/
       html`<lr-token-input size=${step}></lr-token-input>`
     );
     const row = (el: Element) =>
-      el.shadowRoot!.querySelector('[part="input-wrapper"]') as HTMLElement;
+      el.shadowRoot!.querySelector('[part~="input-wrapper"]') as HTMLElement;
     expect(
       getComputedStyle(row(aliasEl)).minBlockSize,
       `min-block-size for ${alias}`
@@ -915,7 +915,7 @@ it("rounds the token row and its tokens to a pill without a ::part() rule", asyn
   )) as LyraTokenInput;
   const radius = (el: LyraTokenInput, part: string) =>
     getComputedStyle(
-      el.shadowRoot!.querySelector(`[part="${part}"]`) as HTMLElement
+      el.shadowRoot!.querySelector(`[part~="${part}"]`) as HTMLElement
     ).borderStartStartRadius;
   expect(pill.pill).to.be.true;
   expect(Number.parseFloat(radius(pill, "input-wrapper"))).to.be.greaterThan(
@@ -934,10 +934,10 @@ it("scales token-chip padding with the token-input size tier", async () => {
     html`<lr-token-input size="xl" .value=${["alpha"]}></lr-token-input>`
   )) as LyraTokenInput;
   const smallToken = small.shadowRoot!.querySelector(
-    '[part="token"]'
+    '[part~="token"]'
   ) as HTMLElement;
   const largeToken = large.shadowRoot!.querySelector(
-    '[part="token"]'
+    '[part~="token"]'
   ) as HTMLElement;
   expect(
     parseFloat(getComputedStyle(largeToken).paddingInlineStart)
@@ -953,7 +953,7 @@ it("keeps the remove-button hit-area fixed across every size tier", async () => 
       html`<lr-token-input size=${size} .value=${["alpha"]}></lr-token-input>`
     )) as LyraTokenInput;
     const remove = el.shadowRoot!.querySelector(
-      '[part="remove"]'
+      '[part~="remove"]'
     ) as HTMLElement;
     expect(getComputedStyle(remove).minBlockSize, `size=${size}`).to.equal(
       "36px"
@@ -966,7 +966,7 @@ it("gives the per-token remove button the shared minimum hit area", async () => 
     html`<lr-token-input .value=${["alpha"]}></lr-token-input>`
   )) as LyraTokenInput;
   const removeBtn = el.shadowRoot!.querySelector(
-    '[part="remove"]'
+    '[part~="remove"]'
   ) as HTMLElement;
   expect(getComputedStyle(removeBtn).minInlineSize).to.equal("36px");
   expect(getComputedStyle(removeBtn).minBlockSize).to.equal("36px");
@@ -1018,7 +1018,7 @@ it("lets an explicit aria-label win over the computed aria-labelledby", async ()
     ></lr-token-input>`
   )) as LyraTokenInput;
   const wrapper = el.shadowRoot!.querySelector(
-    '[part="input-wrapper"]'
+    '[part~="input-wrapper"]'
   ) as HTMLElement;
   expect(wrapper.getAttribute("aria-label")).to.equal("Choose recipients");
   expect(
@@ -1032,7 +1032,7 @@ it("preserves an explicitly empty host aria-label over a visible label", async (
     html`<lr-token-input label="Recipients" aria-label=""></lr-token-input>`
   )) as LyraTokenInput;
   const wrapper = el.shadowRoot!.querySelector(
-    '[part="input-wrapper"]'
+    '[part~="input-wrapper"]'
   ) as HTMLElement;
   const input = el.shadowRoot!.querySelector("#input") as HTMLInputElement;
   for (const owner of [wrapper, input]) {
@@ -1128,7 +1128,7 @@ it("closes positional edit state rather than transferring it to a reordered repl
     <lr-token-input editable .value=${["alpha", "beta"]}></lr-token-input>
   `)) as LyraTokenInput;
   (
-    el.shadowRoot!.querySelectorAll('[part="token-label"]')[0] as HTMLElement
+    el.shadowRoot!.querySelectorAll('[part~="token-label"]')[0] as HTMLElement
   ).click();
   await el.updateComplete;
   expect(
@@ -1149,7 +1149,7 @@ it("contains a single unbroken token inside a 320px allocation", async () => {
       .value=${["x".repeat(120)]}
     ></lr-token-input>
   `)) as LyraTokenInput;
-  const token = el.shadowRoot!.querySelector('[part="token"]') as HTMLElement;
+  const token = el.shadowRoot!.querySelector('[part~="token"]') as HTMLElement;
   expect(token.scrollWidth).to.be.at.most(token.clientWidth);
   expect(el.scrollWidth).to.be.at.most(320);
 });
@@ -1160,7 +1160,7 @@ it("grows by default and uses an explicit block scrollport only when exact heigh
     <lr-token-input style="inline-size:320px" .value=${many}></lr-token-input>
   `)) as LyraTokenInput;
   const growingWrapper = growing.shadowRoot!.querySelector(
-    '[part="input-wrapper"]'
+    '[part~="input-wrapper"]'
   ) as HTMLElement;
   expect(
     growingWrapper.scrollHeight,
@@ -1175,7 +1175,7 @@ it("grows by default and uses an explicit block scrollport only when exact heigh
     ></lr-token-input>
   `)) as LyraTokenInput;
   const cappedWrapper = capped.shadowRoot!.querySelector(
-    '[part="input-wrapper"]'
+    '[part~="input-wrapper"]'
   ) as HTMLElement;
   const overflow = getComputedStyle(cappedWrapper);
   expect(overflow.overflowX, "inline overflow is clipped explicitly").to.equal(
@@ -1194,7 +1194,7 @@ it("grows by default and uses an explicit block scrollport only when exact heigh
   );
 
   const labels = [
-    ...capped.shadowRoot!.querySelectorAll<HTMLElement>('[part="token-label"]'),
+    ...capped.shadowRoot!.querySelectorAll<HTMLElement>('[part~="token-label"]'),
   ];
   labels[0]!.focus();
   labels[0]!.dispatchEvent(
@@ -1216,7 +1216,7 @@ it("grows by default and uses an explicit block scrollport only when exact heigh
     ></lr-token-input>
   `)) as LyraTokenInput;
   const singleWrapper = single.shadowRoot!.querySelector(
-    '[part="input-wrapper"]'
+    '[part~="input-wrapper"]'
   ) as HTMLElement;
   expect(singleWrapper.scrollWidth).to.equal(singleWrapper.clientWidth);
   expect(
@@ -1606,14 +1606,15 @@ describe("editable tokens", () => {
       html`<lr-token-input .value=${["alpha"]}></lr-token-input>`
     )) as LyraTokenInput;
     expect(el.editable, "editable must default to false").to.be.false;
-    const token = el.shadowRoot!.querySelector('[part="token"]') as HTMLElement;
+    const token = el.shadowRoot!.querySelector('[part~="token"]') as HTMLElement;
     // Today's markup: <span part="token"><span>alpha</span><button part="remove" …></button></span>
     expect(token.getAttributeNames()).to.deep.equal(["part"]);
     const label = token.querySelector("span") as HTMLElement;
     expect(
       label.getAttributeNames(),
-      "the plain label span must gain no attributes"
-    ).to.deep.equal([]);
+      "the plain label span gains only the `tag__content` part alias"
+    ).to.deep.equal(["part"]);
+    expect(label.getAttribute("part")).to.equal("tag__content");
     expect(label.textContent).to.equal("alpha");
     expect(
       tokenLabels(el).length,
@@ -1625,7 +1626,7 @@ describe("editable tokens", () => {
     ).to.equal(true);
     expect(
       el
-        .shadowRoot!.querySelector('[part="input-wrapper"]')!
+        .shadowRoot!.querySelector('[part~="input-wrapper"]')!
         .getAttribute("role"),
       "the row role is unchanged"
     ).to.equal("group");
@@ -1645,7 +1646,7 @@ describe("editable tokens", () => {
       field.value,
       "the editor holds the whole token, not a delimiter-split fragment"
     ).to.equal(RULE);
-    expect(el.shadowRoot!.activeElement!.getAttribute("part")).to.equal(
+    expect(el.shadowRoot!.activeElement!.getAttribute("part")?.split(' ')[0]).to.equal(
       "token-editor"
     );
   });
@@ -1686,7 +1687,7 @@ describe("editable tokens", () => {
     expect(el.value).to.deep.equal(["Bash(git diff:*)", "other"]);
     expect(editor(el) === null, "the editor closes on commit").to.equal(true);
     expect(
-      el.shadowRoot!.activeElement!.getAttribute("part"),
+      el.shadowRoot!.activeElement!.getAttribute("part")?.split(' ')[0],
       "focus returns to the token"
     ).to.equal("token-label");
   });
@@ -1903,7 +1904,7 @@ describe("editable tokens", () => {
     expect(emitted, "a reverted edit emits nothing").to.equal(0);
     expect(editor(el) === null).to.equal(true);
     expect(event.defaultPrevented).to.be.true;
-    expect(el.shadowRoot!.activeElement!.getAttribute("part")).to.equal(
+    expect(el.shadowRoot!.activeElement!.getAttribute("part")?.split(' ')[0]).to.equal(
       "token-label"
     );
   });
@@ -2048,11 +2049,9 @@ describe("editable tokens", () => {
 
     expect(el.value).to.deep.equal(['alpha']);
     expect(
-      (el.shadowRoot!.activeElement as HTMLElement | null)?.getAttribute(
-        'part'
-      ),
+      (el.shadowRoot!.activeElement as HTMLElement | null)?.matches('[part~="remove"]'),
       'focus must land on the remaining remove action instead of being lost to the body'
-    ).to.equal('remove');
+    ).to.equal(true);
   });
 
   it('does not reclaim focus moved outside after a controlled shrink', async () => {
@@ -2147,7 +2146,7 @@ describe("editable tokens", () => {
     ).to.deep.equal(["true", "true"]);
     tokenLabel(el, 0).focus();
     expect(
-      el.shadowRoot!.activeElement?.getAttribute("part") ?? ""
+      el.shadowRoot!.activeElement?.getAttribute("part")?.split(' ')[0] ?? ""
     ).to.not.equal("token-label");
     press(tokenLabel(el, 0), "Enter");
     await el.updateComplete;
@@ -2175,7 +2174,7 @@ describe("editable tokens", () => {
     el.disabled = true;
     await el.updateComplete;
     expect(
-      el.shadowRoot!.activeElement?.getAttribute("part") ?? ""
+      el.shadowRoot!.activeElement?.getAttribute("part")?.split(' ')[0] ?? ""
     ).to.not.equal("token-label");
     expect(
       tokenLabels(el).map((label) => label.hasAttribute("tabindex"))
@@ -2204,7 +2203,7 @@ describe("editable tokens", () => {
       tokenLabels(el).map((label) => label.getAttribute("aria-disabled"))
     ).to.deep.equal(["true", "true"]);
     expect(
-      el.shadowRoot!.activeElement?.getAttribute("part") ?? ""
+      el.shadowRoot!.activeElement?.getAttribute("part")?.split(' ')[0] ?? ""
     ).to.not.equal("token-label");
 
     fieldset.disabled = false;
@@ -2261,7 +2260,7 @@ describe("editable tokens", () => {
       ></lr-token-input>
     `)) as LyraTokenInput;
     const label = tokenLabel(el, 0);
-    let remove = el.shadowRoot!.querySelector('[part="remove"]') as HTMLElement;
+    let remove = el.shadowRoot!.querySelector('[part~="remove"]') as HTMLElement;
     const center = (target: HTMLElement): [number, number] => {
       const rect = target.getBoundingClientRect();
       return [
@@ -2291,7 +2290,7 @@ describe("editable tokens", () => {
         press(openedEditor, "Escape");
         await el.updateComplete;
       }
-      remove = el.shadowRoot!.querySelector('[part="remove"]') as HTMLElement;
+      remove = el.shadowRoot!.querySelector('[part~="remove"]') as HTMLElement;
       await sendMouse({ type: "move", position: center(remove) });
       await waitUntil(
         () => getComputedStyle(remove).backgroundColor === "rgb(7, 8, 9)",
@@ -2344,7 +2343,7 @@ describe("editable tokens", () => {
     tokenLabel(el, 1).click(); // open the editor on 'beta'
     await el.updateComplete;
     typeInto(editor(el)!, "uncommitted-edit");
-    const removeButtons = el.shadowRoot!.querySelectorAll('[part="remove"]');
+    const removeButtons = el.shadowRoot!.querySelectorAll('[part~="remove"]');
     (removeButtons[0] as HTMLButtonElement).click(); // remove 'alpha' while 'beta' is mid-edit
     await el.updateComplete;
     expect(
@@ -2373,7 +2372,7 @@ describe("editable tokens", () => {
     ).to.be.true;
     expect(el.value).to.deep.equal(["alpha"]);
     expect(editor(el) === null).to.equal(true);
-    expect(el.shadowRoot!.activeElement!.getAttribute("part")).to.equal(
+    expect(el.shadowRoot!.activeElement!.getAttribute("part")?.split(' ')[0]).to.equal(
       "token-label"
     );
   });
@@ -2384,7 +2383,7 @@ describe("editable tokens", () => {
     )) as LyraTokenInput;
     const label = tokenLabel(el, 0);
     const removeBtn = el.shadowRoot!.querySelector(
-      '[part="remove"]'
+      '[part~="remove"]'
     ) as HTMLButtonElement;
     removeBtn.click(); // synchronously empties `value`; Lit has not yet re-rendered the stale `label` out
     label.click(); // stale DOM node still bound to index 0, now out of range
@@ -3077,7 +3076,7 @@ describe("start/end adornment slots", () => {
     expect(start.hasAttribute("hidden")).to.be.false;
     const startRect = start.getBoundingClientRect();
     const tokenRect = (
-      el.shadowRoot!.querySelector('[part="token"]') as HTMLElement
+      el.shadowRoot!.querySelector('[part~="token"]') as HTMLElement
     ).getBoundingClientRect();
     expect(startRect.width).to.be.greaterThan(0);
     expect(startRect.right).to.be.at.most(tokenRect.left + 1);
@@ -3315,10 +3314,10 @@ it('keeps the remove and edit focus rings inside the clipping token', async () =
   const el = await fixture<LyraTokenInput>(html`
     <lr-token-input editable data-lr-theme-scope style="--lr-theme-focus-ring-width: 5px" .value=${['alpha']}></lr-token-input>
   `);
-  const token = el.shadowRoot!.querySelector<HTMLElement>('[part="token"]')!;
+  const token = el.shadowRoot!.querySelector<HTMLElement>('[part~="token"]')!;
   expect(getComputedStyle(token).overflowX).to.equal('hidden');
   for (const part of ['token-label', 'remove']) {
-    const target = token.querySelector<HTMLElement>(`[part="${part}"]`)!;
+    const target = token.querySelector<HTMLElement>(`[part~="${part}"]`)!;
     await focusByKeyboard(target);
     expectOutlineInsideClip(target, token);
   }

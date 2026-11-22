@@ -13,6 +13,8 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Vui lòng đánh dấu ô này để tiếp tục.',
   checkboxGroupRequired: 'Vui lòng chọn ít nhất một tùy chọn.',
   tokenInputRequired: 'Nhập ít nhất một giá trị.',
+  tokenInputTooFew: { other: 'Nhập ít nhất {count} giá trị.' },
+  tokenInputTooMany: { other: 'Nhập tối đa {count} giá trị.' },
   tokenInputEditWithContext: 'Chỉnh sửa {label}',
   tokenInputLabel: 'Thẻ',
   iconButtonLabel: 'Nút',

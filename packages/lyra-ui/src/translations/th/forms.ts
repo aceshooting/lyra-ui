@@ -13,6 +13,8 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'โปรดเลือกช่องนี้หากต้องการดำเนินการต่อ',
   checkboxGroupRequired: 'เลือกอย่างน้อยหนึ่งตัวเลือก',
   tokenInputRequired: 'ป้อนค่าอย่างน้อยหนึ่งค่า',
+  tokenInputTooFew: { other: 'ป้อนอย่างน้อย {count} ค่า' },
+  tokenInputTooMany: { other: 'ป้อนไม่เกิน {count} ค่า' },
   tokenInputEditWithContext: 'แก้ไข {label}',
   tokenInputLabel: 'โทเคน',
   iconButtonLabel: 'ปุ่ม',

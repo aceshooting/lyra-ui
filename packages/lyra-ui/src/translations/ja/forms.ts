@@ -13,6 +13,8 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: '続行するにはこのチェックボックスをオンにしてください。',
   checkboxGroupRequired: '1 つ以上選択してください。',
   tokenInputRequired: '1 つ以上の値を入力してください。',
+  tokenInputTooFew: { other: '{count} 個以上の値を入力してください。' },
+  tokenInputTooMany: { other: '値は {count} 個以内で入力してください。' },
   tokenInputEditWithContext: '{label} を編集',
   tokenInputLabel: 'トークン',
   iconButtonLabel: 'ボタン',

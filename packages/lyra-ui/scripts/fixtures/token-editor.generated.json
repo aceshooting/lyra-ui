@@ -777,6 +777,16 @@
       ]
     },
     {
+      "name": "--lr-font-size-4xl",
+      "description": "Derived shared display font size one and a quarter times font size 3xl; reads the same theme input, so a theme-scaled type ramp carries through.",
+      "references": []
+    },
+    {
+      "name": "--lr-font-size-5xl",
+      "description": "Derived shared display font size one and a half times font size 3xl; reads the same theme input, so a theme-scaled type ramp carries through.",
+      "references": []
+    },
+    {
       "name": "--lr-font-size-lg",
       "description": "Canonical shared component token for font size lg.",
       "references": [
@@ -2104,6 +2114,16 @@
       ]
     },
     {
+      "name": "--lr-space-3xl",
+      "description": "Derived shared spacing step one and a half times space 2xl; reads the same theme input, so density scaling carries through.",
+      "references": []
+    },
+    {
+      "name": "--lr-space-4xl",
+      "description": "Derived shared spacing step twice space 2xl; reads the same theme input, so density scaling carries through.",
+      "references": []
+    },
+    {
       "name": "--lr-space-l",
       "description": "Canonical shared component token for space l.",
       "references": [
@@ -2123,6 +2143,11 @@
       "references": [
         "--lr-theme-space-s"
       ]
+    },
+    {
+      "name": "--lr-space-xl",
+      "description": "Derived shared spacing step between space l and space 2xl; reads the same theme inputs, so density scaling carries through.",
+      "references": []
     },
     {
       "name": "--lr-space-xs",

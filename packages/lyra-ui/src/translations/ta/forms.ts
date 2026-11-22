@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'தொடர விரும்பினால் இந்தப் பெட்டியைத் தேர்வுசெய்யவும்.',
   checkboxGroupRequired: 'குறைந்தது ஒரு விருப்பத்தையாவது தேர்ந்தெடுக்கவும்.',
   tokenInputRequired: 'குறைந்தது ஒரு மதிப்பையாவது உள்ளிடவும்.',
+  tokenInputTooFew: {
+    one: 'குறைந்தது {count} மதிப்பை உள்ளிடவும்.',
+    other: 'குறைந்தது {count} மதிப்பை உள்ளிடவும்.',
+  },
+  tokenInputTooMany: {
+    one: '{count} மதிப்புகளுக்கு மேல் உள்ளிட வேண்டாம்.',
+    other: '{count} மதிப்புகளுக்கு மேல் உள்ளிட வேண்டாம்.',
+  },
   tokenInputEditWithContext: '{label}-ஐத் திருத்து',
   tokenInputLabel: 'டோக்கன்கள்',
   iconButtonLabel: 'பொத்தான்',

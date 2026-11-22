@@ -27,6 +27,7 @@ import { walk } from './lib/fs-walk.mjs';
 const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const sourceDir = path.join(packageDir, 'src');
 const outputFile = path.join(sourceDir, 'events.ts');
+const classesFile = path.join(sourceDir, 'event-classes.ts');
 const manifestFile = path.join(packageDir, 'custom-elements.json');
 const prefixFile = path.join(sourceDir, 'internal', 'prefix.ts');
 
@@ -43,6 +44,7 @@ const byLocale = (a, b) => a.localeCompare(b);
 // output into the next one and grow the file on every regeneration (i.e. destroy determinism).
 const isShippedSource = (file) =>
   file !== outputFile &&
+  file !== classesFile &&
   file.endsWith('.ts') &&
   !file.endsWith('.test.ts') &&
   !file.endsWith('.stories.ts') &&
@@ -85,7 +87,7 @@ function moduleSpecifier(file) {
  * resolution (`extends` / `Omit` / `Pick`) that `check-event-contracts.mjs` owns.
  */
 export function collectEventMaps({ excludeFiles = [] } = {}) {
-  const excludedFiles = new Set([outputFile, ...excludeFiles].map((file) => path.resolve(file)));
+  const excludedFiles = new Set([outputFile, classesFile, ...excludeFiles].map((file) => path.resolve(file)));
   const maps = [];
   for (const file of walk(sourceDir)
     .filter(
@@ -359,13 +361,64 @@ export function generateEventTypeSource({ prefix, maps, manifest }) {
   return `${lines.join('\n').replace(/\n+$/, '')}\n`;
 }
 
+/**
+ * `src/event-classes.ts` — one class per event name, so `event instanceof LyraChangeEvent` works.
+ * The classes never reach the components: `emit()` dispatches the shared `LyraEvent` base and each
+ * class recognises its events by name (`LyraEvent[Symbol.hasInstance]`), which keeps the module
+ * side-effect free and fully tree-shakable.
+ */
+export function generateEventClassSource({ prefix, maps }) {
+  if (typeof prefix !== 'string' || prefix.length === 0) {
+    throw new TypeError('event class generation requires a non-empty tag prefix');
+  }
+  const eventPrefix = `${prefix}-`;
+  const names = [
+    ...new Set(maps.flatMap((map) => map.events).filter((event) => event.startsWith(eventPrefix))),
+  ].sort(byLocale);
+  const lines = [
+    '// GENERATED FILE — do not edit by hand. Per-event classes for `instanceof` narrowing.',
+    '// Regenerate with `pnpm --filter @aceshooting/lyra-ui run events`',
+    '// (`node scripts/generate-event-types.mjs`); `scripts/check-event-types.mjs` gates freshness.',
+    '// Side-effect free: components dispatch the shared `LyraEvent`, never these classes.',
+    '',
+    "import { LyraEvent } from './internal/lyra-event.js';",
+    "import type { LyraEventDetailOf, LyraEventOptions } from './internal/lyra-event.js';",
+    "import type { LyraGlobalEventMap } from './events.js';",
+    '',
+    "export { LyraEvent } from './internal/lyra-event.js';",
+    "export type { LyraEventDetailOf, LyraEventOptions } from './internal/lyra-event.js';",
+    '',
+  ];
+  for (const event of names) {
+    const alias = aliasTypeName(event, prefix);
+    const className = alias;
+    lines.push(
+      ...docComment([
+        `Class of every \`${event}\` event; \`event instanceof ${className}\` is true for the events ` +
+          'components dispatch and narrows `detail`.',
+      ]),
+      `export class ${className} extends LyraEvent<LyraEventDetailOf<LyraGlobalEventMap['${event}']>> {`,
+      `  static override readonly eventName = '${event}';`,
+      `  constructor(detail: LyraEventDetailOf<LyraGlobalEventMap['${event}']>, options?: LyraEventOptions) {`,
+      `    super('${event}', detail, options);`,
+      '  }',
+      '}',
+      '',
+    );
+  }
+  return `${lines.join('\n').replace(/\n+$/, '')}\n`;
+}
+
 export function generate({ write = true } = {}) {
   const text = generateEventTypeSource({
     prefix: readTagPrefix(),
     maps: collectEventMaps(),
     manifest: readManifest(),
   });
-  const output = new Map([[outputFile, text]]);
+  const output = new Map([
+    [outputFile, text],
+    [classesFile, generateEventClassSource({ prefix: readTagPrefix(), maps: collectEventMaps() })],
+  ]);
   if (write) {
     for (const [file, contents] of output) writeFileSync(file, contents);
   }
@@ -375,6 +428,7 @@ export function generate({ write = true } = {}) {
 function main() {
   const output = generate({ write: true });
   const [[file, text]] = [...output];
+  console.log(`Wrote ${path.relative(packageDir, classesFile)}.`);
   const eventCount = text.match(/^  '/gm)?.length ?? 0;
   console.log(
     `Wrote ${path.relative(packageDir, file)} (${eventCount} events, ${text.split('\n').length} lines).`,

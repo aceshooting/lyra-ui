@@ -16,6 +16,7 @@
       "lr-image-comparer",
       "lr-image-viewer",
       "lr-lightbox",
+      "lr-lightbox-item",
       "lr-map",
       "lr-media-card",
       "lr-qr-code",

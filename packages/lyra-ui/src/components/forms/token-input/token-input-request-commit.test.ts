@@ -30,7 +30,7 @@ describe('lr-token-input request listeners', () => {
     el.addEventListener('lr-token-remove-request', () => {
       el.value = ['x', 'a', 'b', 'c'];
     });
-    el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="remove"]')[1]!.click();
+    el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="remove"]')[1]!.click();
     await el.updateComplete;
     expect(el.value).to.deep.equal(['x', 'a', 'c']);
   });

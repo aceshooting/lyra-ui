@@ -278,6 +278,37 @@ exports `normalizeLyraSpanKind` and `normalizeLyraSpanStatus`; the widget regist
 only `DEFAULT_WIDGET_TYPE_REGISTRY`. Import a component registration entry separately when the page
 also renders that component.
 
+### Single script tag (no build step, no import map)
+
+`@aceshooting/lyra-cdn` is a companion package with a pre-bundled build of the same components: lit,
+tslib and Floating UI are inlined into relative, code-split chunks, so one tag is the whole install.
+Only the components the page renders are fetched (the autoloader's lazy loaders become chunks).
+
+```html
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@aceshooting/lyra-cdn@VERSION/dist/theme.css">
+<script type="module" src="https://cdn.jsdelivr.net/npm/@aceshooting/lyra-cdn@VERSION/dist/lyra-ui.loader.js"></script>
+
+<lr-button variant="primary">Save</lr-button>
+```
+
+It versions together with `@aceshooting/lyra-ui`; pin an exact version in production. Also published
+beside the loader: `theme.css`, `theme-core.css`, `density.css`, `accents.css`, `design-tokens.css`,
+`native.css` and `utilities.css`.
+
+- The loader starts the autoloader on `DOMContentLoaded` (immediately when the document is already
+  parsed) and keeps watching insertions. It injects no styles or inline script.
+- Script attributes: `data-lyra-optional-peers="dompurify,postal-mime"` (or `all`),
+  `data-lyra-autoload-events`, the opt-out `data-lyra-autoload="false"` (alias
+  `data-lyra-no-autoload`), which loads the module without starting it (it re-exports `start`,
+  `stop` and `discover`), and `data-lyra-cloak-timeout` (milliseconds, default `2000`).
+- Cloaking: elements carrying class or attribute `lr-cloak` are revealed when the first scan
+  settles, or when the cloak timeout elapses, whichever comes first. Pair it with `.lr-fouce-hidden`
+  from `utilities.css` to hide not-yet-defined tags.
+- Optional peers and the non-English catalogs of `@aceshooting/lyra-translations` are not bundled.
+  A component that needs one takes its usual localized fallback until the dependency resolves, for
+  example through an import map to a CDN URL.
+- Bundler users keep importing `@aceshooting/lyra-ui` itself; the CDN build ships no source maps.
+
 ### Optional autoloader
 
 `@aceshooting/lyra-ui/autoloader.js` exports `discover(root?, options?)`, `start(root?, options?)`
@@ -331,6 +362,34 @@ when `document` exists and reads `data-lyra-optional-peers="peer-a,peer-b"` plus
 `data-lyra-autoload-events` from its own `<script>`. Add `data-lyra-autoloader` to that script when
 an ESM CDN executes the package entry behind a wrapper URL. Neither entry imports the root barrel,
 and both are safe to import in plain Node.
+
+### Loading from a CDN with no build step
+
+An import map lets plain HTML use the same bare specifiers as an application. The ESM CDN rewrites
+each package's own dependencies, so map only the entries you import:
+
+```html
+<script type="importmap">
+  {
+    "imports": {
+      "@aceshooting/lyra-ui/": "https://esm.sh/@aceshooting/lyra-ui@30/",
+      "lit": "https://esm.sh/lit@3",
+      "lit/": "https://esm.sh/lit@3/"
+    }
+  }
+</script>
+<script type="module">
+  import '@aceshooting/lyra-ui/autoloader-cdn.js'; // defines each lr-* tag when it first appears
+  import { allDefined } from '@aceshooting/lyra-ui/utilities/defined.js';
+  await allDefined({ timeout: 5000 }); // resolves after the page's lr-* tags are defined
+</script>
+<lr-button>Hello</lr-button>
+```
+
+Pin an exact version for production, and import `components/lr-<tag>.js` instead of the autoloader
+when the page uses only a few tags. Add `data-lyra-autoloader` to the autoloader `<script>` if the
+CDN serves the entry behind a wrapper URL. Without an import map, use the full CDN URL in each
+`import`. `startLoader`/`stopLoader` are accepted aliases of the autoloader's `start`/`stop`.
 
 ## Optional native scoped registries
 

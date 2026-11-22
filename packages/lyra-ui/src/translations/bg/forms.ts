@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Моля, отметнете това поле, ако искате да продължите.',
   checkboxGroupRequired: 'Изберете поне една опция.',
   tokenInputRequired: 'Въведете поне една стойност.',
+  tokenInputTooFew: {
+    one: 'Въведете поне {count} стойност.',
+    other: 'Въведете поне {count} стойности.',
+  },
+  tokenInputTooMany: {
+    one: 'Въведете не повече от {count} стойност.',
+    other: 'Въведете не повече от {count} стойности.',
+  },
   tokenInputEditWithContext: 'Редактирай {label}',
   tokenInputLabel: 'Токени',
   iconButtonLabel: 'Бутон',

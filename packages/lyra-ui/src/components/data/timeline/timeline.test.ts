@@ -16,11 +16,11 @@ import { setForcedColors } from '../../../../test/wtr-media.js';
 
 expectLocaleFallback('ar-u-nu-arab', ['timeline']);
 
-it('renders with default orientation="vertical" and role="list" on [part="base"]', async () => {
+it('renders with default orientation="vertical" and role="list" on [part~="base"]', async () => {
   const el = (await fixture(html`<lr-timeline></lr-timeline>`)) as LyraTimeline;
   expect(el.orientation).to.equal('vertical');
   expect(el.getAttribute('orientation')).to.equal('vertical');
-  const base = el.shadowRoot!.querySelector('[part="base"]')!;
+  const base = el.shadowRoot!.querySelector('[part~="base"]')!;
   expect(base.getAttribute('role')).to.equal('list');
 });
 
@@ -137,7 +137,7 @@ it('reflects orientation and item variant when assigned as properties so CSS sta
 
   expect(el.getAttribute('orientation')).to.equal('horizontal');
   expect(item.getAttribute('variant')).to.equal('danger');
-  expect(getComputedStyle(item.shadowRoot!.querySelector('[part="base"]') as HTMLElement).flexDirection).to.equal(
+  expect(getComputedStyle(item.shadowRoot!.querySelector('[part~="base"]') as HTMLElement).flexDirection).to.equal(
     'column',
   );
 });
@@ -162,25 +162,25 @@ it('orientation="horizontal" actually reorients a slotted item -- marker above c
     html`<lr-timeline><lr-timeline-item>Only</lr-timeline-item></lr-timeline>`,
   )) as LyraTimeline;
   const verticalItem = vertical.querySelector('lr-timeline-item')!;
-  const verticalBase = verticalItem.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const verticalBase = verticalItem.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(getComputedStyle(verticalBase).flexDirection).to.equal('row');
 
   const horizontal = (await fixture(
     html`<lr-timeline orientation="horizontal"><lr-timeline-item>Only</lr-timeline-item></lr-timeline>`,
   )) as LyraTimeline;
   const horizontalItem = horizontal.querySelector('lr-timeline-item')!;
-  const horizontalBase = horizontalItem.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const horizontalBase = horizontalItem.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(getComputedStyle(horizontalBase).flexDirection).to.equal('column');
 });
 
 it('never scrolls vertically in horizontal orientation -- overflow-x:auto alone lets the y axis compute to auto too, which can show a phantom scrollbar', async () => {
   const el = (await fixture(html`<lr-timeline orientation="horizontal"></lr-timeline>`)) as LyraTimeline;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   expect(getComputedStyle(base).overflowY).to.equal('hidden');
 });
 
 it('adds a themeable edge fade to the horizontal scroll strip once it actually overflows', async () => {
-  // Reads the real computed mask off the rendered [part="base"] instead of substring-matching
+  // Reads the real computed mask off the rendered [part~="base"] instead of substring-matching
   // the exported stylesheet source, which would still pass even if the rule's selector never
   // actually matched (e.g. only applies once orientation="horizontal" is set).
   const el = (await fixture(html`
@@ -190,7 +190,7 @@ it('adds a themeable edge fade to the horizontal scroll strip once it actually o
       <lr-timeline-item style="flex: 0 0 200px">Opened INC-3311</lr-timeline-item>
     </lr-timeline>
   `)) as LyraTimeline;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   await nextFrames();
   expect(base.scrollWidth).to.be.greaterThan(base.clientWidth);
   expect(getComputedStyle(el).getPropertyValue('--lr-scroll-fade-size').trim()).to.equal('2rem');
@@ -215,7 +215,7 @@ it('removes forced-colors masks while every scroll position remains visibly reac
           <lr-timeline-item style="flex: 0 0 200px">End</lr-timeline-item>
         </lr-timeline>
       `)) as LyraTimeline;
-      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
       const items = Array.from(el.querySelectorAll<HTMLElement>('lr-timeline-item'));
       await nextFrames();
 
@@ -260,7 +260,7 @@ describe('horizontal scroll tab stop', () => {
 
   it('gives an overflowing horizontal strip a real tab stop, because nothing inside it is tabbable', async () => {
     const el = (await fixture(overflowingStrip())) as LyraTimeline;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     await nextFrames();
 
     expect(base.scrollWidth, 'sanity: the strip must genuinely overflow').to.be.greaterThan(
@@ -276,7 +276,7 @@ describe('horizontal scroll tab stop', () => {
     const el = (await fixture(
       html`<lr-timeline orientation="horizontal"><lr-timeline-item>Only</lr-timeline-item></lr-timeline>`,
     )) as LyraTimeline;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     await nextFrames();
 
     expect(base.scrollWidth - base.clientWidth, 'sanity: the strip must fit').to.be.at.most(1);
@@ -291,7 +291,7 @@ describe('horizontal scroll tab stop', () => {
         <lr-timeline-item style="flex: 0 0 200px">Rolled back to 4820</lr-timeline-item>
       </lr-timeline>
     `)) as LyraTimeline;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     await nextFrames();
 
     expect(getComputedStyle(base).overflowX, 'sanity: the vertical axis never scrolls').to.equal(
@@ -302,7 +302,7 @@ describe('horizontal scroll tab stop', () => {
 
   it('adds and drops the stop as the same strip starts and stops overflowing, with no host update in between', async () => {
     const el = (await fixture(overflowingStrip())) as LyraTimeline;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     await nextFrames();
     expect(base.getAttribute('tabindex'), 'starts overflowing').to.equal('0');
 
@@ -337,7 +337,7 @@ describe('horizontal scroll tab stop', () => {
     `);
     const el = wrapper.querySelector('lr-timeline') as LyraTimeline;
     await el.updateComplete;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     await nextFrames();
     expect(base.getAttribute('tabindex'), 'sanity: the stop exists').to.equal('0');
 
@@ -362,7 +362,7 @@ it('leaves a horizontal strip that fits completely unmasked', async () => {
   const el = (await fixture(
     html`<lr-timeline orientation="horizontal"><lr-timeline-item>Only</lr-timeline-item></lr-timeline>`,
   )) as LyraTimeline;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   await nextFrames();
   expect(base.scrollWidth - base.clientWidth).to.be.at.most(1);
   expect(getComputedStyle(base).maskImage).to.equal('none');
@@ -370,9 +370,9 @@ it('leaves a horizontal strip that fits completely unmasked', async () => {
 
 it("flips the edge fade on once a slotted item's own content grows, without any host update or [part=\"base\"] resize/scroll", async () => {
   // The gap this guards: ScrollOverflowController's plain ResizeObserver only watches
-  // [part="base"]'s own border box. A slotted <lr-timeline-item>'s content (a longer title, a web
+  // [part~="base"]'s own border box. A slotted <lr-timeline-item>'s content (a longer title, a web
   // font finishing its swap, an icon loading) can grow scrollWidth without base's own box
-  // changing at all -- [part="base"] is a block-level flex container with no width of its own
+  // changing at all -- [part~="base"] is a block-level flex container with no width of its own
   // (see timeline.styles.ts), so `max-inline-size` genuinely pins its own border box regardless
   // of content, unlike a shrink-to-fit box that would just grow along with it. `scrollbar-width:
   // none` additionally removes the classic scrollbar's own reserved block-axis space, so the fits
@@ -391,7 +391,7 @@ it("flips the edge fade on once a slotted item's own content grows, without any 
       <lr-timeline-item>B</lr-timeline-item>
     </lr-timeline>`,
   )) as LyraTimeline;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   base.style.scrollbarWidth = 'none';
   await nextFrames();
   expect(
@@ -434,7 +434,7 @@ it('fades only the reachable logical edge, RTL-aware, instead of dimming an edge
         <lr-timeline-item style="flex: 0 0 200px">Opened INC-3311</lr-timeline-item>
       </lr-timeline>`,
     )) as LyraTimeline;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     await nextFrames();
     expect(base.scrollWidth, `${direction} sanity: must overflow`).to.be.greaterThan(
       base.clientWidth,
@@ -470,7 +470,7 @@ it('actually renders no mask under forced colors, in both LTR and RTL, while onl
           <lr-timeline-item style="flex: 0 0 200px">End</lr-timeline-item>
         </lr-timeline>`,
       )) as LyraTimeline;
-      const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
       await nextFrames();
       expect(base.hasAttribute('data-scroll-overflow'), `${direction} sanity: overflowing`).to.be
         .true;
@@ -499,7 +499,7 @@ it('keeps the edge fade opaque when a consumer themes the shadow color transluce
       <lr-timeline-item style="flex: 0 0 200px">Opened INC-3311</lr-timeline-item>
     </lr-timeline>
   `)) as LyraTimeline;
-  const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+  const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
   await nextFrames();
   const mask = getComputedStyle(base).maskImage;
   expect(mask).to.contain('linear-gradient');
@@ -508,24 +508,24 @@ it('keeps the edge fade opaque when a consumer themes the shadow color transluce
 
 it('resolves the accessible name to the localized "Timeline" by default', async () => {
   const el = (await fixture(html`<lr-timeline></lr-timeline>`)) as LyraTimeline;
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Timeline');
+  expect(el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label')).to.equal('Timeline');
 });
 
 it('a host aria-label overrides the localized default', async () => {
   const el = (await fixture(html`<lr-timeline aria-label="Deployment history"></lr-timeline>`)) as LyraTimeline;
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Deployment history');
+  expect(el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label')).to.equal('Deployment history');
 });
 
 it('treats an explicitly empty aria-label as a real override, distinct from an omitted one', async () => {
   const el = (await fixture(html`<lr-timeline aria-label=""></lr-timeline>`)) as LyraTimeline;
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('');
+  expect(el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label')).to.equal('');
 });
 
 it('honors a .strings override for the timeline key', async () => {
   const el = (await fixture(
     html`<lr-timeline .strings=${{ timeline: 'Chronologie' }}></lr-timeline>`,
   )) as LyraTimeline;
-  expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label')).to.equal('Chronologie');
+  expect(el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('aria-label')).to.equal('Chronologie');
 });
 
 it('exposes a live itemCount reflecting the slotted children, including on later add/remove', async () => {
@@ -585,7 +585,7 @@ it('suppresses the trailing rail on the last item only, reacting to DOM changes 
     </lr-timeline>`,
   )) as LyraTimeline;
   const items = Array.from(el.querySelectorAll('lr-timeline-item'));
-  const rails = items.map((item) => item.shadowRoot!.querySelector('[part="rail"]') as HTMLElement);
+  const rails = items.map((item) => item.shadowRoot!.querySelector('[part~="rail"]') as HTMLElement);
 
   expect(getComputedStyle(rails[0]!).visibility).to.equal('visible');
   expect(getComputedStyle(rails[1]!).visibility).to.equal('visible');
@@ -593,7 +593,7 @@ it('suppresses the trailing rail on the last item only, reacting to DOM changes 
 
   el.removeChild(items[2]!);
   await el.updateComplete;
-  const newLastRail = items[1]!.shadowRoot!.querySelector('[part="rail"]') as HTMLElement;
+  const newLastRail = items[1]!.shadowRoot!.querySelector('[part~="rail"]') as HTMLElement;
   expect(getComputedStyle(newLastRail).visibility).to.equal('hidden');
 });
 
@@ -1420,7 +1420,7 @@ describe('slotted item allocation in scale="time"', () => {
       </lr-timeline>
     `)) as LyraTimeline;
     await el.updateComplete;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     const item = el.querySelector<HTMLElement>('#raw-item')!;
 
     expect(
@@ -1442,7 +1442,7 @@ describe('slotted item allocation in scale="time"', () => {
       </lr-timeline>
     `)) as LyraTimeline;
     await el.updateComplete;
-    const base = el.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+    const base = el.shadowRoot!.querySelector('[part~="base"]') as HTMLElement;
     const item = el.querySelector<HTMLElement>('#stacked-item')!;
     const rect = item.getBoundingClientRect();
 

@@ -772,3 +772,9 @@ export function stop(): void {
   context.observedRoots.clear();
   clearAllPending(context);
 }
+
+/** Alias of {@link start}, for code migrating from another library's `startLoader()`. */
+export const startLoader: typeof start = start;
+
+/** Alias of {@link stop}, for code migrating from another library's `stopLoader()`. */
+export const stopLoader: typeof stop = stop;

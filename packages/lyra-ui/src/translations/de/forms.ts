@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Bitte aktivieren Sie dieses Kontrollkästchen, um fortzufahren.',
   checkboxGroupRequired: 'Bitte wählen Sie mindestens eine Option aus.',
   tokenInputRequired: 'Bitte geben Sie mindestens einen Wert ein.',
+  tokenInputTooFew: {
+    one: 'Geben Sie mindestens {count} Wert ein.',
+    other: 'Geben Sie mindestens {count} Werte ein.',
+  },
+  tokenInputTooMany: {
+    one: 'Geben Sie höchstens {count} Wert ein.',
+    other: 'Geben Sie höchstens {count} Werte ein.',
+  },
   tokenInputEditWithContext: '{label} bearbeiten',
   tokenInputLabel: 'Tokens',
   iconButtonLabel: 'Schaltfläche',

@@ -1890,6 +1890,7 @@ describe("lr-select mapped Select parity surface", () => {
     ) as HTMLButtonElement;
     expect(remove != null).to.equal(true);
     expect(remove.closest('button[part~="trigger"]') === null).to.equal(true);
+    expect(remove.part.contains("tag__remove-button__button")).to.equal(true);
     expect(el.shadowRoot!.querySelector('[part~="tag__base"]')).to.exist;
     expect(el.shadowRoot!.querySelector('[part~="tag__content"]')).to.exist;
     remove.click();

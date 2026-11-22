@@ -37,7 +37,7 @@ for (const [includeUi, rejected] of [
     const ui = ['lyra-ui'];
     const companions = [
       ['lyra-translations', 'assemble'], ['lyra-ide', 'sync'], ['lyra-map', 'build'],
-      ['lyra-3d', 'build'], ['lyra-gen', 'build'],
+      ['lyra-3d', 'build'], ['lyra-gen', 'build'], ['lyra-cdn', 'build'],
     ];
     try {
       mkdirSync(bin);

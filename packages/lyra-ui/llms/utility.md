@@ -321,6 +321,7 @@ the built-in button. Exactly one named icon is rendered at a time.
   not reliably announced (JAWS with Firefox ignores one outright). Assert against that
   document-level region rather than `::part(feedback)`; the part is a styling and inspection
   surface, and still tells you what the button last announced.
+- `copy-button` — the Web Awesome-named outer wrapper (the nested tooltip element holding the trigger).
 - `tooltip__base`, `tooltip__base__popup`, `tooltip__base__arrow`, `tooltip__body` — exported nested
   tooltip parts.
 
@@ -1551,6 +1552,14 @@ Pairs with `lr-icon-button` (see `llms/components/lr-icon-button.md`).
 - `family: string = ''` and `variant: string = ''` (reflected once set) — forwarded with `name` to
   a registered library resolver. Their vocabulary belongs to that library; for example, an icon
   host might distinguish `classic`/`sharp` families and `regular`/`solid` variants.
+  While `family`/`variant` is empty the values from `setDefaultIconFamily(family, variant?)` are
+  forwarded instead (`getDefaultIconFamily()`/`getDefaultIconVariant()` read them; both are `''`
+  until set). Changing the defaults re-resolves every rendered icon, and an omitted `variant` keeps
+  the current default variant.
+- Sprite sheets: `registerIconLibrary(name, { resolver, spriteSheet: true })` makes the resolver
+  return a same-origin `sheet.svg#symbol-id` URL, rendered as `<svg part="svg"><use part="use"
+  href>`. Nothing is fetched or sanitized, so cross-origin, `data:`, `blob:` and fragment-less
+  results fail with `lr-error` (the library `mutator` does not run).
 - `src: string = ''` — URL of a single SVG document to fetch. It applies only when no registered
   library owns the icon: no `library` set, an unregistered one, or an empty `name`. Once a
   registered library does own the name it decides alone — a resolver that returns `''` or throws
@@ -1748,15 +1757,24 @@ Unsupported orientation values normalize to `horizontal`. The boolean `vertical`
 A semantic separator: renders `<hr part="base" role="separator" aria-orientation="…">`. A host
 `aria-label` is forwarded to that inner semantic owner.
 
-**Properties:** `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected) and
-`vertical: boolean = false` (reflected Shoelace-compatible shorthand).
+**Properties:** `orientation: 'horizontal' | 'vertical' = 'horizontal'` (reflected),
+`vertical: boolean = false` (reflected Shoelace-compatible shorthand),
+`labelPlacement: 'start' | 'center' | 'end' = 'center'` (`label-placement`, reflected) and
+`withLabel: boolean = false` (`with-label`, reflected).
 
-**Events:** none. **Slots:** none. **CSS parts:** `base`.
+**Label:** slotted content in the default slot is drawn on the line; the base then becomes a
+`div role="separator"` with `line` / `line-start` / `line-end` and `label` parts, and the label text
+names the separator unless the host sets `aria-label`. `with-label` follows the real slot content in
+the browser; set it on server-rendered markup so the labeled layout exists before hydration.
+
+**Events:** none. **Slots:** default (label). **CSS parts:** `base`, `line`, `line-start`,
+`line-end`, `label`.
 
 **Themeable custom properties:** `--color` (falls back to `--lr-color-border-subtle`, the
 decorative-edge token, which itself resolves to `--lr-color-border` unless a theme sets a subtle
 border), `--width` (falls back to `--lr-border-width-thin`), and `--spacing` (default `0`, applied
-on the cross axis).
+on the cross axis), `--label-spacing` (label padding, default `--lr-space-s`) and `--label-offset`
+(short line length for a `start`/`end` label, default `2em`).
 
 The host is `display: block` when horizontal and `display: inline-block; block-size: 100%` when
 vertical, so a vertical divider fills its flex/grid row's height with no extra CSS — but it needs a
@@ -2544,4 +2562,89 @@ and the look names `styleLookShadcn` … `styleLookHighContrast`.
 
 <lr-style-panel></lr-style-panel>
 <lr-style-panel axes="mode accent" without-reset></lr-style-panel>
+```
+
+## `lr-counter`
+
+Countdown or count-up clock. Counts down to `date` (or for `duration` ms from connect) and up from
+`date` with `direction="up"`, ticking through years, months, days, hours, minutes and seconds. Years
+and months follow the local calendar; days and smaller are exact elapsed time. Unit labels and the
+spoken phrase come from `Intl.NumberFormat` units in the effective locale, so the element has no
+library strings to translate.
+
+**Properties:**
+
+- `date?: Date | string | number` — use ISO 8601 strings; a number is epoch ms. Invalid shows zeros
+- `duration?: number` — ms to count down from once connected; changing it restarts. Ignored when `date` is set or `direction="up"`
+- `direction: 'down' | 'up' = 'down'` (reflected)
+- `label: string = ''` — accessible name of the timer
+- `largestUnit` / `smallestUnit: 'years' | 'months' | 'days' | 'hours' | 'minutes' | 'seconds' = 'days' | 'seconds'` (`largest-unit`, `smallest-unit`); larger time rolls into the largest unit, smaller is dropped; an invalid or inverted pair falls back to days through seconds
+- `format: 'long' | 'short' | 'narrow' = 'long'` — label style
+- `withoutLabels: boolean = false` (`without-labels`, reflected) — clock style: hides labels, keeps every unit and stays left to right under `dir="rtl"`
+- `delimiter: string = ''` — text between units, e.g. `:`
+- `paused: boolean = false` (reflected) — clearing it continues from the time shown
+- `valueFormatter?: (value: number, unit) => string` — property only; the spoken phrase keeps the raw value
+
+**Slots:** `years`, `months`, `days`, `hours`, `minutes`, `seconds` — replace one unit's label;
+`finished` — shown instead of the units when a countdown is at zero (including a date already past).
+
+**CSS parts:** `base`, `unit`, `value`, `label`, `delimiter`, `finished`.
+**CSS custom property:** `--lr-counter-gap` (default `0.5em`). **CSS state:** `:state(finished)`.
+
+**Events:** `lr-finish` (`null` detail) — a running countdown reached zero; fires once and not for a
+date that was already past when the counter started.
+
+**Accessibility:** the base part is a `role="timer"` named by `label`, with the current time as
+visually hidden text and the visual units `aria-hidden`. `role="timer"` is not live, so nothing is
+announced each second. The timer stops on disconnect and resumes on reconnect; it renders zeros during
+SSR and starts on the client.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/lr-counter.js';
+</script>
+
+<lr-counter label="Sale ends" date="2031-01-01T00:00:00Z"></lr-counter>
+<lr-counter label="Doors open" date="2031-01-01T00:00:00Z" without-labels delimiter=":"></lr-counter>
+<lr-counter label="Launch" duration="60000"><strong slot="finished">We are live</strong></lr-counter>
+```
+
+## `lr-number-ticker`
+
+Counts to `value` when at least half of it scrolls into view (or at once with `eager`), formatting
+every frame with `Intl.NumberFormat` in the effective locale. It renders `startValue` before the
+count and during SSR.
+
+**Properties:**
+
+- `value: number = 0`; `startValue: number = 0` (`start-value`) — first run and `restart()` begin here
+- `duration: number = 2000` ms (`0` skips the animation); `delay: number = 0` ms (first run only);
+  `easing: string` — any CSS easing, an invalid one falls back to the default
+- `eager: boolean = false`
+- `type: 'decimal' | 'currency' | 'percent' = 'decimal'`; `currency: string = 'USD'`;
+  `currencyDisplay: 'symbol' | 'narrowSymbol' | 'code' | 'name' = 'symbol'` (`currency-display`)
+- `withoutGrouping: boolean = false` (`without-grouping`)
+- `minimumIntegerDigits`, `minimumFractionDigits`, `maximumFractionDigits`, `minimumSignificantDigits`,
+  `maximumSignificantDigits` (kebab-case attributes) — unset by default and clamped to Intl ranges;
+  one fraction option alone applies to both bounds; plain decimals keep a steady number of places
+- `valueFormatter?: (value: number) => string` — property only; replaces Intl formatting
+
+**Methods:** `restart()` — count again from `startValue`.
+**Events:** `lr-finish` (`null` detail) — the ticker settled, including the instant paths. A later
+`value` change counts on from the number shown.
+**CSS parts:** `base`, `value`. **CSS state:** `:state(counting)`.
+
+**Accessibility and motion:** the counting text is `aria-hidden` and the final value is visually
+hidden text from the first paint; once settled the number renders once. A `value` change after the
+first count is announced politely through the shared light-DOM live region. Under
+`prefers-reduced-motion: reduce` (or `data-lr-motion="reduce"`) or `duration="0"` it jumps to the final
+value and still emits `lr-finish`.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/lr-number-ticker.js';
+</script>
+
+<lr-number-ticker value="12840"></lr-number-ticker>
+<lr-number-ticker type="currency" currency="EUR" value="98765.43" eager></lr-number-ticker>
 ```

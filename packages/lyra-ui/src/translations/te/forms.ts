@@ -13,6 +13,14 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'కొనసాగించాలంటే ఈ పెట్టెను ఎంచుకోండి.',
   checkboxGroupRequired: 'కనీసం ఒక ఎంపికను ఎంచుకోండి.',
   tokenInputRequired: 'కనీసం ఒక విలువను నమోదు చేయండి.',
+  tokenInputTooFew: {
+    one: 'కనీసం {count} విలువను నమోదు చేయండి.',
+    other: 'కనీసం {count} విలువను నమోదు చేయండి.',
+  },
+  tokenInputTooMany: {
+    one: '{count} విలువల కంటే ఎక్కువ నమోదు చేయవద్దు.',
+    other: '{count} విలువల కంటే ఎక్కువ నమోదు చేయవద్దు.',
+  },
   tokenInputEditWithContext: '{label}ను సవరించండి',
   tokenInputLabel: 'టోకెన్‌లు',
   iconButtonLabel: 'బటన్',

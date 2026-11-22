@@ -13,6 +13,18 @@ const strings: LyraLocaleStrings = {
   checkboxRequired: 'Norėdami tęsti, pažymėkite šį langelį.',
   checkboxGroupRequired: 'Pasirinkite bent vieną parinktį.',
   tokenInputRequired: 'Įveskite bent vieną reikšmę.',
+  tokenInputTooFew: {
+    one: 'Įveskite bent {count} reikšmę.',
+    few: 'Įveskite bent {count} reikšmes.',
+    many: 'Įveskite bent {count} reikšmės.',
+    other: 'Įveskite bent {count} reikšmių.',
+  },
+  tokenInputTooMany: {
+    one: 'Neįveskite daugiau nei {count} reikšmės.',
+    few: 'Neįveskite daugiau nei {count} reikšmių.',
+    many: 'Neįveskite daugiau nei {count} reikšmės.',
+    other: 'Neįveskite daugiau nei {count} reikšmių.',
+  },
   tokenInputEditWithContext: 'Redaguoti {label}',
   tokenInputLabel: 'Žetonai',
   iconButtonLabel: 'Mygtukas',

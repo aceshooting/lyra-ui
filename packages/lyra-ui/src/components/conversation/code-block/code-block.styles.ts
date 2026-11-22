@@ -246,6 +246,12 @@ export const styles = css`
        style attribute on the <pre>, which a host override cannot beat. */
     tab-size: var(--lr-code-block-tab-size, 2);
   }
+  /* Opt-in wrapping: the <pre> stops growing to its longest line and breaks inside long tokens. */
+  :host([wrap]) [part='pre'] {
+    inline-size: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
   /* One grid row per line, in BOTH line-numbers modes. A line must be a full-width row or the
      highlight background below paints behind the glyphs only -- a one-character highlighted line
      becomes an 8px swatch; this was once scoped to .line-numbers, so the default code block never
