@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
   applyReviewedExceptions, diffPublicApi, evaluateSemverGate, normalizePublicApi,
-  parseChangesetText, parseNpmPackOutput, runCli, validateTarEntries,
+  ownPackageManifest, parseChangesetText, parseNpmPackOutput, runCli, validateTarEntries,
   validateTarEntryTypes, versionBump,
 } from './public-api-diff.mjs';
 
@@ -192,4 +192,17 @@ test('validates npm pack output and rejects unsafe published-package archives', 
     () => validateTarEntryTypes(['lrwxrwxrwx 0/0 0 2026-08-02 00:00 package/link -> /tmp']),
     /link or special-file/,
   );
+});
+
+test('compares a published IDE manifest without the companion packages\' modules', () => {
+  const manifest = {
+    schemaVersion: '1.0.0',
+    modules: [
+      { kind: 'javascript-module', path: 'src/ui.ts', declarations: [] },
+      { kind: 'javascript-module', path: 'lyra-docs/src/docx/docx-editor.class.ts', declarations: [] },
+      { kind: 'javascript-module', path: 'lyra-gen/src/lyra-gen.ts', declarations: [] },
+    ],
+  };
+  assert.deepEqual(ownPackageManifest(manifest).modules.map((module) => module.path), ['src/ui.ts']);
+  assert.equal(ownPackageManifest(manifest).schemaVersion, '1.0.0');
 });

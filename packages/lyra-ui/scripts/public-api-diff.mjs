@@ -3,7 +3,7 @@ import { isMainModule } from './is-main-module.mjs';
 
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -4137,6 +4137,15 @@ export function validateTarEntryTypes(verboseEntries) {
   }
 }
 
+/**
+ * The IDE manifest also carries the companion packages' elements (module paths under
+ * `lyra-docs/`, `lyra-gen/`, ...); lyra-ui's own checkout manifest lists only its `src/` modules.
+ * Comparing the two unfiltered reports every companion element as a lyra-ui removal.
+ */
+export function ownPackageManifest(manifest) {
+  return { ...manifest, modules: (manifest.modules ?? []).filter((module) => module.path?.startsWith('src/')) };
+}
+
 export function acquirePublishedBaseline(
   packageName,
   { run = execFileSync, temporaryDirectory = tmpdir() } = {},
@@ -4196,7 +4205,8 @@ export function acquirePublishedBaseline(
       validateTarEntries(execute('tar', ['-tzf', ideTarball]).split(/\r?\n/).filter(Boolean));
       validateTarEntryTypes(execute('tar', ['-tvzf', ideTarball, '--numeric-owner']).split(/\r?\n/).filter(Boolean));
       execute('tar', ['-xzf', ideTarball, '-C', ideDirectory, '--no-same-owner', '--no-same-permissions', 'package/custom-elements.json']);
-      copyFileSync(path.join(ideDirectory, 'package', 'custom-elements.json'), path.join(root, 'custom-elements.json'));
+      const ideManifest = readJson(path.join(ideDirectory, 'package', 'custom-elements.json'));
+      writeFileSync(path.join(root, 'custom-elements.json'), JSON.stringify(ownPackageManifest(ideManifest)));
     }
     return {
       root,
