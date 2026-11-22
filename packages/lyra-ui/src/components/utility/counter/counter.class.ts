@@ -66,7 +66,7 @@ function toMilliseconds(source: LyraCounterDateSource | undefined | null): numbe
  * @cssstate finished - Applied while a countdown is at zero, including one whose date already passed.
  * @event lr-finish - A running countdown reached zero. Not emitted when the date had already passed.
  * @status experimental
- * @since unreleased
+ * @since 32.1.0
  */
 export class LyraCounter extends LyraElement<LyraCounterEventMap> {
   static override styles = [LyraElement.styles, styles];

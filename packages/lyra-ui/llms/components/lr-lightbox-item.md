@@ -5,7 +5,7 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-lightbox-item.js';` (stable tag alias; registers the tag)
 - **Class** `LyraLightboxItem`, also available unregistered from `@aceshooting/lyra-ui/components/media/lightbox/lightbox-item.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `unreleased` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `32.1.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none

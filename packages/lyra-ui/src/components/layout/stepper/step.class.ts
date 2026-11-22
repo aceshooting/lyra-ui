@@ -75,7 +75,7 @@ export type LyraStepAttention = 'none' | 'pulse' | 'bounce';
  * @cssprop [--lr-stepper-hover-bg] - Background of a hovered, enabled clickable step.
  * @cssprop [--lr-stepper-active-bg] - Background of a pressed, enabled clickable step.
  * @status experimental
- * @since unreleased
+ * @since 32.1.0
  */
 export class LyraStep extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: START

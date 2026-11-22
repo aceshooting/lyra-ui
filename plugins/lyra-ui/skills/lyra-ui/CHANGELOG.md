@@ -1,5 +1,208 @@
 # Changelog
 
+## 32.1.0
+
+### Minor Changes
+
+- 5a820c9: The optional `chartjs-plugin-zoom` peer now accepts `^2.0.0 || ^3.0.0`. Charts with `zoomable` work
+  with the 3.x line, which recognizes pan and pinch gestures from native pointer events and no longer
+  installs `hammerjs`; existing 2.x installations keep working unchanged.
+- cd597ad: Add `<lr-counter>`, a countdown and count-up clock with locale-aware unit labels, per-unit and
+  `finished` slots, `paused`, `delimiter`, `largest-unit`/`smallest-unit` and an `lr-finish` event, and
+  `<lr-number-ticker>`, a number that counts to its value when scrolled into view with `Intl.NumberFormat`
+  options, `eager`, `restart()` and an `lr-finish` event. Both honor reduced motion and keep the animated
+  text out of the accessibility tree.
+- cd597ad: Spacing and type scales grow: `--lr-space-xl`, `--lr-space-3xl`, `--lr-space-4xl`, `--lr-font-size-4xl`
+  and `--lr-font-size-5xl` (derived from the existing theme inputs, so density and re-theming carry
+  through). `utilities.css` adds `lr-gap-2xs`, `lr-gap-xl` to `lr-gap-4xl`, `lr-text-2xl` to
+  `lr-text-5xl`, `lr-heading-5`/`lr-heading-6`, the `lr-flank`, `lr-split`, `lr-frame-*`, `lr-span-grid`
+  and `lr-container` compositions, `lr-link-plain`, `lr-list-plain`, `lr-placeholder`, `lr-scroll-lock`,
+  a fail-open `lr-cloak`, radius and text-transform utilities, and variant (`lr-brand`, `lr-danger`, ...)
+  and size (`lr-size-2xs` to `lr-size-xl`) classes for plain elements. `native.css` now styles
+  checkbox, radio, range, colour and file inputs, `progress`, `meter`, `details`, `dialog`, `mark` and
+  lists inside `.lr-native`. The new opt-in `palette.css` declares static hue ramps
+  (`--lr-color-<hue>-<step>`).
+- cd597ad: Developer-experience additions. `allDefined()` also accepts an options object (`match`,
+  `additionalElements`, `root`, `timeout`) that warns and resolves once the timeout expires; the
+  `(root, options)` form is unchanged. `setDefaultIconFamily()`, `getDefaultIconFamily()` and
+  `getDefaultIconVariant()` give `<lr-icon>` a default family and variant, and an icon library can set
+  `spriteSheet: true` to render a same-origin `<use>` reference. The autoloader exports `startLoader`
+  and `stopLoader` aliases, and `@aceshooting/lyra-ui/utilities/form.js` adds `serialize(form)`.
+  `<lr-code-block>` and `<lr-code-block-core>` take their source from light-DOM text (dedented, or kept
+  as written with `without-dedent`), wrap long lines with `wrap`, and accept `label` and `without-copy`
+  aliases. The CDN recipe is in the imports guide.
+- cd597ad: New `@aceshooting/lyra-ui/event-classes` subpath exports one class per event (`LyraChangeEvent`,
+  `LyraStepChangeEvent`, ...) plus the `LyraEvent` base, so `event instanceof LyraChangeEvent` narrows
+  `detail` and the instances components dispatch really are those classes. Components now dispatch a
+  `LyraEvent` (still a bubbling, composed `CustomEvent`; cancelable semantics and detail unchanged) and
+  never import the per-event classes, so the module is side-effect free and tree-shakable.
+- cd597ad: `lr-lightbox` now mirrors `wa-lightbox`, and the new `lr-lightbox-item` mirrors `wa-lightbox-item`.
+
+  - Slot `<lr-lightbox-item>` children (links that work without JavaScript, `type="image|video"`, `srcset`/`sizes`, `width`/`height`, `thumbnail`, `alt`, a `caption` slot); the existing `images`/`imageSource` data mode is unchanged and still takes precedence.
+  - New lightbox members: `with-thumbnails`, `without-navigation`, `without-zoom`, `label`, `items`, `currentItem`, `zoomIn()`, `zoomOut()`, the `lr-item-change` event (alongside `lr-index-change`), icon slots (`close-icon`, `previous-icon`, `next-icon`, `zoom-in-icon`, `zoom-out-icon`), and the parts `dialog`, `scroll-container`, `navigation-button(-previous|-next)`, `image`, `slide`, `video`, `zoom-button`, `thumbnails`, `thumbnail` and `thumbnail-active`.
+  - Touch/pen swipe between items, video playback that pauses on slide change, and open/close/slide animation driven by `--show-duration`, `--hide-duration` and `--slide-gap` (plus `--thumbnail-size`, `--media-border-radius` and `--lr-lightbox-*` forms), stopped under reduced motion. `lr-after-show` and `lr-after-hide` keep their existing timing (after the open or closed render); the motion runs on after them. The toolbar zoom button is rendered for slotted items only, so `images`/`imageSource` galleries keep their existing chrome. `lr-item-change`, like `lr-index-change`, reports navigation and is not fired when `index` is written directly.
+  - Upstream-named styling hooks: the `--backdrop-color`, `--backdrop-filter`, `--controls-background`, `--controls-color` and `--spacing` properties (each `--lr-lightbox-*` token still wins, and the defaults keep the current look), the `open` and `zoomed` custom states on `lr-lightbox`, and the `active`, `empty` and `morphing` custom states on `lr-lightbox-item`. `label` and `without-counter` now reflect to their attributes. The inner frame's part is now `frame image`, so match it with `[part~="frame"]`.
+- 110e2cd: `lyra-ui-migrate` now rewrites Web Awesome and Shoelace utility and theme classes (`wa-stack`, `wa-gap-*`, `wa-align-items-*`, `wa-dark`, `sl-theme-dark`, ...) in `class`, `className`, class bindings and `classList` calls, and maps theme, native and utility stylesheet imports and the autoloader entry to Lyra's `theme.css`, `native.css`, `utilities.css` and `autoloader-cdn.js`. Approximate matches rewrite with a review warning; classes and files with no Lyra counterpart (`wa-heading-*`, hue-pinned variants, `setBasePath`, `layers.css`) are reported and left unchanged.
+- cd597ad: `lr-stepper` now mirrors the Web Awesome stepper alongside its data-driven `steps` mode, which is
+  unchanged. The new `lr-step` element (`name`, `completed`, `loading`, `disabled`, `variant`,
+  `attention`, `description` and `icon` slots, connector/marker/spinner/status parts, and the `active`, `completed`, `loading`, `disabled`, `locked` and `clickable` custom states) can be used as
+  children: the stepper then owns the current step through `active`, `linear`, `clickable` and
+  `label`, the `goTo()`, `next()` and `previous()` methods, `data-stepper="next|previous|goto <id>"`
+  invokers, and the cancelable `lr-before-step-change` plus `lr-step-change` events, with a roving
+  keyboard stop (RTL-aware), a localized status text and polite position announcements. `orientation`
+  also accepts `auto`, which stacks the steps when the stepper is too narrow, in both modes. New
+  strings: `stepperSteps`, `stepperStepPosition`, `stepperStateLoading` and `stepperStateDisabled`.
+
+  The stepper also exposes the `completed`, `loading` and `stacked` custom states and a `steps` part on
+  the step list (beside `base`), and both elements read the unprefixed `--marker-size`,
+  `--connector-color`, `--connector-color-active`, `--connector-width`, `--connector-gap`, `--gap` and
+  `--pulse-color` custom properties as aliases of their `--lr-stepper-*`/`--lr-step-*` counterparts.
+- cd597ad: `<lr-timeline>` gains `orientation="auto"` (row when the timeline has room, column otherwise),
+  `marker-placement` (`start`, `end`, `alternate`), `marker-alignment` (`start`, `center`), a `label`
+  property and the `timeline` part. `<lr-timeline-item>` gains the `opposite` slot and part with
+  `with-opposite`, the `icon` slot (alias of `marker-icon`) with `with-icon`, and the `connector` and
+  `timeline-item` part aliases. New custom properties: `--lr-timeline-icon-marker-size`,
+  `--lr-timeline-connector-color`, `--lr-timeline-connector-width`, `--lr-timeline-connector-gap` and
+  `--lr-timeline-opposite-size`.
+- 1a802da: New theming tokens, each defaulting to the current rendering:
+
+  - `lr-menu-item` and `lr-dropdown-item`: `--lr-menu-item-color` (resting text), `--lr-menu-item-font-weight`, `--lr-menu-item-letter-spacing`, `--lr-menu-item-details-font-size` and `--lr-menu-item-details-color`.
+  - `lr-menu-label`: `--lr-menu-label-font-weight` and `--lr-menu-label-letter-spacing`.
+  - `lr-stat`: `--lr-stat-value-color` (neutral headline), `--lr-stat-value-line-height`, `--lr-stat-value-margin` and `--lr-stat-value-row-align`.
+  - `lr-details`: `--lr-details-summary-hover-color`.
+  - `lr-thread-list`: `--lr-thread-list-search-bg`, `--lr-thread-list-search-border-color` and `--lr-thread-list-search-color`.
+  - `lr-suggestion-chips`: `--lr-suggestion-chips-hover-color`.
+  - `lr-dialog`: `--lr-dialog-heading-letter-spacing`.
+  - `lr-switch`: `--lr-switch-checked-label-font-weight`.
+  - `lr-code-block` and `lr-code-block-core`: `--lr-code-block-border`, `--lr-code-block-bg`, `--lr-code-block-header-padding` and `--lr-code-block-header-border`.
+  - `lr-app-rail`: `--lr-app-rail-frame-border` for the card frame; `--lr-app-rail-edge-border` still owns the inline-end edge.
+- 1a802da: `@aceshooting/lyra-ui/testing` adds `installHappyDomResponseBytesShim()`, and `installHappyDomShims()` now calls it: it supplies `Response.prototype.bytes()` where Happy DOM lacks it. Shiki's inlined Oniguruma engine, which `lr-code-block` loads on demand, calls `bytes()` as it imports, so Happy DOM suites no longer see an unhandled rejection per highlighter load.
+- 1a802da: `lr-map` adds `drawingFinishBehavior` (`'clear'` default, or `'keep'` to commit on Finish and keep the edit on the map, so a sticky mode re-arms only after cancel or Escape), `legendClearance` (`'row'` default, `'corner'` to clear only the control corners in the legend's own column, or `'none'` to place the legend from the map edge with its insets alone), `anchorFill` (the `anchor-body` stops scrolling and shrinks the slotted card to the panel, leaving `--lr-map-anchor-close-reservation` to the card's header), the control-group tokens `--lr-map-control-group-radius`, `--lr-map-control-group-border`, `--lr-map-control-button-radius` and `--lr-map-control-divider`, the scale tokens `--lr-map-scale-bg`, `--lr-map-scale-radius`, `--lr-map-scale-border`, `--lr-map-scale-padding-block`, `--lr-map-scale-padding-inline`, `--lr-map-scale-font-size` and `--lr-map-scale-color`, and the legend tokens `--lr-map-legend-row-gap`, `--lr-map-legend-group-columns`, `--lr-map-legend-border`, `--lr-map-legend-toggle-padding` and `--lr-map-legend-disclosure-padding`. Defaults are unchanged.
+- 1a802da: `lr-markdown` and `lr-markdown-core` add `--lr-markdown-heading-margin-block-start` (the space before a heading; `--lr-markdown-block-gap` stays the space after every block) and `--lr-markdown-code-block-font-size` / `--lr-markdown-code-block-line-height` for fenced code. Each defaults to the current value.
+- 1a802da: `lr-pdf-viewer` adds a reflected `fill` boolean, like `lr-heatmap`'s: inside a parent with a definite block size (a dialog body, a sized flex column) the viewer takes the parent's height, the toolbar keeps its row, and the page list takes the rest and becomes the single scroller. Without it the page list keeps its fixed `--lr-pdf-viewer-height`.
+- 1a802da: `lr-stat` adds three layout and typography tokens, each defaulting to today's rendering:
+
+  - `--lr-stat-icon-box-size` sizes the icon chip box (inline and block size, padding included) with the glyph centred in it; `--lr-stat-icon-size` keeps sizing the glyph.
+  - `--lr-stat-value-letter-spacing` sets the headline value's letter spacing, alongside the existing label token.
+  - `--lr-stat-rows-gap` spaces the breakdown rows; the space between sections stays `--lr-stat-gap`.
+- 1a802da: Additive theming hooks, all falling back to today's rendering when unset. `lr-table`: `--lr-table-filter-height` (honours `--lr-input-control-min-height`), `--lr-table-filter-font-size`, `--lr-table-filter-wrap` and `--lr-table-filter-basis` (stack the built-in filter under its label at narrow widths), `--lr-table-caption-*` (font size, weight, colour, text alignment, padding), `--lr-table-reveal-columns-min-size`, and `--lr-table-cell-link-font-weight`, `-text-decoration` plus hover variants. `lr-segmented`: `--lr-segmented-segment-min-size`. `lr-sequence-playback`: `--lr-sequence-playback-value-*` for the readout. `lr-card`: `--lr-card-border-color` colours the outer border only. `lr-stat`: `--lr-stat-radius`. `lr-badge`: `--lr-badge-font-weight`, `--lr-badge-line-height`. `lr-button`: inherited `--lr-button-label-wrap`. `lr-table`'s `lr-page-change` detail now also carries `pageSize` and `offset`, matching `lr-pagination`.
+
+  Further additive hooks. `lr-table`: `--lr-table-header-bg`, `--lr-table-header-border-color`, `--lr-table-group-bg`, `--lr-table-more-button-bg`, `--lr-table-reveal-columns-bg`. `lr-card`: `--lr-card-body-padding`. `lr-budget-meter`: `--lr-budget-meter-value-color`. `lr-stepper`: `--lr-stepper-index-border` with current/error variants. `lr-widget`: `--lr-widget-header-divider`. Form controls: `--lr-form-control-transition` (input, textarea, combobox, select), `--lr-form-control-focus-outline` and `--lr-select-open-shadow` (select).
+- 1a802da: `lr-chip-group` gains an opt-in selection model: `selection="single|multiple"`, a `value` (string, or an array in `multiple`), an `lr-change` event, and `all-value` to name an "all" chip that clears the selection and cannot be un-pressed. With `selection` unset nothing changes.
+- 1a802da: Form controls: `lr-slider`, `lr-radio-group` and `lr-checkbox-group` take `label-placement="start"` like the other fields, sharing the existing label-column layout and tokens. `lr-checkbox-group` adds `--lr-checkbox-group-option-row-gap` and `--lr-checkbox-group-option-column-gap` for wrapped options, `lr-input` (and `lr-number-input`) adds `--lr-input-font-variant-numeric`, every form-control label reads `--lr-form-control-label-line-height`, and `lr-locale-picker` adds `--lr-locale-picker-trigger-radius` for the trigger alone. Each token defaults to the current rendering.
+- 1a802da: `lr-slider`: the label keeps inheriting the surrounding font size by default. To match the `lr-input` and `lr-select` label size, opt in with `--lr-form-control-label-font-size: var(--lr-font-size-md-sm)` on the slider or a containing form. The visible readout continues to show the localized number unless `value-display="formatted"` is set; this is now documented.
+- 1a802da: `lr-chart` and its line and area family accept a custom dash pattern on `LyraChartSeries.dash` (`true` keeps the default `[4, 4]` dash; an array is a canvas `setLineDash()` pattern, an empty array draws solid) and a per-band `bandOpacity` on `type: 'band'` series, which overrides `--lr-chart-band-opacity` for that band's fill and legend swatch. Defaults are unchanged.
+- 1a802da: `lr-heatmap` adds `fitBlock` (attribute `fit-block`: fits within the element's own `max-block-size` without a definite parent height, with the matrix grid as the single scroller) and the legend tokens `--lr-heatmap-legend-font-family` and `--lr-heatmap-legend-divider`. Defaults are unchanged.
+- 1a802da: `lr-map` adds `anchorAvoidGap` (attribute `anchor-avoid-gap`: extra room kept beyond each edge an `anchorAvoid` obstacle reserves), `controlsAvoid` (observed application chrome whose overlap is added to `--lr-map-controls-inset-*`, so the control corners, legend and bars clear it), the single-corner insets `--lr-map-controls-<corner>-inset-block` and `--lr-map-controls-<corner>-inset-inline` for `top-left`, `top-right`, `bottom-left` and `bottom-right`, the attribution tokens `--lr-map-attribution-padding`, `--lr-map-attribution-link-padding`, `--lr-map-attribution-max-inline-size`, `--lr-map-attribution-font-family`, `--lr-map-attribution-font-size`, `--lr-map-attribution-line-height`, `--lr-map-attribution-toggle-size`, `--lr-map-attribution-toggle-radius` and `--lr-map-attribution-toggle-icon-size`, and the deferred-initialization tokens `--lr-map-initialization-placeholder-bg`, `--lr-map-initialization-skeleton-display` and `--lr-map-initialization-activate-label-display`. Defaults are unchanged.
+- 1a802da: `lr-dialog` and `lr-drawer` sizing and panel hooks, each off or defaulting to the current rendering:
+
+  - `lr-dialog`: a `fullscreen-narrow` attribute that fills the viewport while it is at most `40rem` wide (followed live); `--lr-dialog-max-height` (panel block-size cap, viewport-capped); `--lr-dialog-viewport-inset` (gap between the viewport and the panel, default `var(--lr-space-l)`); `--lr-dialog-panel-bg` (fill of the panel only, so popups opened inside keep `--lr-overlay-surface`); and `--lr-dialog-divider-color` (header and footer rules, default the `--lr-overlay-border` chain).
+  - `lr-drawer`: `--lr-drawer-panel-bg` (panel-only fill, ahead of `--lr-dialog-panel-bg`); a `floating` attribute for an inset sheet with a `--lr-drawer-inset` gap (default `var(--lr-space-s)`) and corners rounded with `--lr-overlay-radius`; and `--lr-drawer-radius`. The default drawer stays square and edge-flush.
+- 1a802da: `lr-menu`: `--lr-menu-max-block-size` sets the `[part="list"]` block-size ceiling (and a submenu surface's), default `var(--lr-size-20rem)` as before. Inside `lr-dropdown` the positioned available space still caps it.
+- 1a802da: Anchored popup sizing hooks, each defaulting to the current rendering:
+
+  - `lr-popover` and `lr-dropdown`: `--lr-overlay-inline-size` (assertive popup width; the maximum falls back to it when no maximum is set) and `--lr-overlay-min-inline-size` (popup floor, capped by the available space), and a `full-width-trigger` attribute that stretches the host, the `trigger` part and the slotted trigger to the container width.
+  - `lr-popover`: `--lr-overlay-content-padding` for the `content` part (default `var(--lr-space-m)`).
+  - `lr-context-menu`: `--lr-context-menu-min-inline-size`, which wins over the shared `--lr-overlay-min-inline-size`.
+- 1a802da: New `prompt()` helper next to `confirm()`, at `@aceshooting/lyra-ui/components/overlays/dialog/prompt.js` (a granular subpath, so the root barrel does not carry `lr-input`). It opens a transient `lr-dialog` with one labelled `lr-input` (initial `value`, optional `placeholder` and `description`), focuses the field, submits on the confirm button or Enter, keeps the dialog open with an optional `validate()` message, and resolves `Promise<string | null>` (`null` on cancel, Escape, backdrop or removal). Default action labels use the localized `confirm`/`cancel` messages.
+- 1a802da: `lr-tab-group`: `--lr-tab-group-tab-padding`, `--lr-tab-group-tab-font-size` and `--lr-tab-group-tab-min-block-size` for the tab buttons, and `--lr-tab-group-track-width` for the strip rule (behind the upstream `--track-width` alias). All default to the current rendering.
+- 1a802da: `lr-toast`: `--lr-toast-inset-block` and `--lr-toast-inset-inline` set a region's distance from the viewport edges (both default `var(--lr-space-l)`, safe-area insets still win). Each placement is its own region, so a placement selector scopes them per region.
+- 67cef2a: `lr-table` gains opt-in structure controls. `stack-header` (`stackHeader: 'visible' | 'sortable' | 'hidden'`, default `'visible'`) chooses what the column header strip shows while rows are stacked: `'sortable'` keeps only the sortable headers as a compact sort strip and `'hidden'` keeps none. Headers left out stay in the accessibility tree and are shown while focused. A column's `rowHeader: true` renders its body cells as `<th scope="row" role="rowheader">`, styled like the row and tunable through `--lr-table-row-header-font-weight`. `without-header-row` (`withoutHeaderRow`) omits the `<thead>` for a header-less table named by its `caption` or `aria-label`. `rowAttributes(row, index)` adds `data-*` attributes and `aria-label`/`aria-description`/`aria-current`/`aria-rowindex` to each body row, and drops event handlers, `style` and every other name. A development build now warns when a `cellPart` result reuses one of the table's own part names, such as `cell-label`. A column's `wrap: 'wrap' | 'nowrap'` sets line wrapping for its body and footer cells (unset keeps today's wrapping; a `'nowrap'` column wraps while stacked). New tokens, each defaulting to today's rendering: `--lr-table-border` (the frame border shorthand), `--lr-table-cell-line-height` (body cells) and `--lr-table-sort-icon-vertical-align` (`middle`). New exported types: `TableStackHeader`, `TableRowAttributes`, `TableRowAttributeValue` and `TableColumnWrap`.
+- 67cef2a: `lr-chart`, its typed aliases, `lr-box-plot` and `lr-lite-chart` add `--lr-chart-legend-justify` and `--lr-chart-legend-item-line-height`. Every default is unchanged, including `lr-lite-chart`'s centred legend.
+- 67cef2a: `lr-markdown` and `lr-markdown-core` add `--lr-markdown-font-size`, `--lr-markdown-line-height`, `--lr-markdown-color`, `--lr-markdown-paragraph-gap` and `--lr-markdown-list-gap` (both gaps default to `--lr-markdown-block-gap`). Every default is unchanged.
+- 67cef2a: `lr-stat` adds the `truncate` attribute (one ellipsized value line), `--lr-stat-align`, `--lr-stat-border-color` and `--lr-stat-label-line-height`; `lr-heatmap` adds `--lr-heatmap-legend-justify`, `--lr-heatmap-legend-offset` and `--lr-heatmap-legend-swatch-radius`. Every default is unchanged.
+- 67cef2a: Form labels take `--lr-form-control-label-text-align`, `--lr-form-control-label-text-transform` and `--lr-form-control-label-block-gap` (the gap between a label above its field and the field, also in a collapsed `label-placement="start"` row). `lr-input` adds `--lr-input-line-height` and `--lr-input-number-direction` for numeric content; `lr-date-input` adds `--lr-date-input-action-color` for the resting clear and calendar actions; `lr-slider` adds `--lr-slider-thumb-border-width`, `--lr-slider-thumb-shadow`, `--lr-slider-value-color` and `--lr-slider-value-font-family`; `lr-locale-picker` adds `--lr-locale-picker-listbox-min-inline-size`; `lr-button` adds `--lr-button-line-height`, `--lr-button-link-text-decoration`, `--lr-button-link-hover-text-decoration` and `--lr-button-link-min-height`. Every default is unchanged.
+- 67cef2a: `lr-segmented` adds `icon-placement="end"` (`LyraSegmentedIconPlacement`) and `full-width`. `lr-button-group` adds `--lr-button-group-justify`; `lr-filter-bar` adds `--lr-filter-bar-control-height` and `--lr-filter-bar-control-font-size` for every filter type and the reset button; `lr-menu-label` adds `--lr-menu-label-line-height`, `--lr-menu-label-font-family` and `--lr-menu-label-text-transform`; `lr-card` adds `--lr-card-min-block-size`, `--lr-card-body-justify` and `--lr-card-body-align`; `lr-details` adds `--lr-details-icon-color` and `--lr-details-icon-size`. Every default is unchanged.
+- 67cef2a: `lr-map` adds `legend-flow="column"` (`LyraMapLegendFlow`) to fill legend columns top to bottom under spanning group headings, plus `--lr-map-legend-toggle-min-height`, `--lr-map-legend-disclosure-min-height`, `--lr-map-legend-toggle-font-weight`, `--lr-map-legend-disclosure-font-weight`, `--lr-map-legend-group-heading-color`, `--lr-map-legend-group-heading-padding` and `--lr-map-attribution-margin`. `lr-sequence-playback` adds `full-width`. Every default is unchanged.
+- 67cef2a: `lr-dialog` adds `--lr-dialog-heading-line-height`, `--lr-dialog-header-border` and `--lr-dialog-body-overflow`; `lr-empty` adds `--lr-empty-icon-color`. Every default is unchanged.
+- 67cef2a: `lr-export-button` adds `--lr-export-button-font-size`, `--lr-export-button-font-weight` and `--lr-export-button-padding-inline` for the trigger, with or without a `size` tier; the menu rows keep their own. Every default is unchanged.
+- cd597ad: Additive Web Awesome 3.15 parity:
+
+  - `lr-divider`: a default-slot label with `label-placement` (`start`, `center`, `end`) and `with-label`, parts `line`, `line-start`, `line-end` and `label`, and `--label-spacing` / `--label-offset`.
+  - `lr-zoomable-frame`: `allow` (filtered to a short list of low-risk Permissions Policy features; it never alters the sandbox), `name` and `label` (a host `aria-label` still wins).
+  - `lr-video`: `--aspect-ratio` (default `16 / 9`) and the `player` and `body` parts.
+  - `lr-include`: `without-fragment` includes the whole sanitized remote document and ignores the hash.
+  - `lr-dialog` / `lr-drawer`: `--backdrop-color` alias of `--lr-dialog-overlay-color` and the `with-label` server-rendering hint.
+  - Component-named part aliases next to the existing names: `close-button__button` (dialog, drawer), `tooltip__popup` and `tooltip__arrow` (tooltip), `tooltip__body` (slider), `tab-panel` (tab panel), `format-button__button`, `eyedropper-button__button` and `form-control-input` (color picker), `tag__remove-button__button` (select), `button-group` (button group) and `copy-button` (copy button).
+- cd597ad: `<lr-token-input>` gains `max-tags`/`min-tags` (localized `rangeOverflow`/`rangeUnderflow` validity), the
+  `with-clear`/`clearable` button (`clear-button` part, `clear-icon` slot, `lr-clear` event), the `blank` and
+  `readonly` custom states, an `inputValue` property, string assignment to `value`, the cancelable per-token
+  `lr-create` event, and the `tag-input`, `tags`, `tag`, `tag__content` and `tag__remove-button` part aliases.
+  `delimiter` keeps its existing meaning: a multi-character delimiter is matched as one literal
+  sequence and pasting does not commit by itself. Because a token part now carries several names,
+  shadow-root queries should match `[part~="token"]`; `::part(token)` selectors are unaffected. `<lr-combobox>` gains `dataSource` (a
+  single-argument `{ query, signal }` provider that may return option objects, option elements or option
+  markup, read as text only; `source` keeps its own call shape), `reload()` (alias of `refresh()`),
+  `filter-debounce` (alias of `source-delay`, keeping its 200ms default), the `lr-options-request` and
+  `lr-options-error` events, a `server` mode that announces requests and skips client-side filtering,
+  `currentOption`, the `empty`, `no-results` and `loading` slots with matching `status` parts, an in-field
+  `spinner` part shown while options load, the `loading` and `showing-loading-row` custom states, and the
+  `tag__remove-button__button` part alias. Match `[part~="tag__remove-button"]` in shadow-root queries.
+
+  `<lr-token-input>` also gains `with-label`/`with-hint`, `resetValidity()`, a static `validators`
+  catalog, the lowercase `inputmode`/`enterkeyhint` property aliases, a reflected `allow-duplicates`,
+  a `name` setter that accepts `null`, and a `value` attribute that accepts delimiter-separated text
+  beside the JSON array form (text that is not a JSON array now becomes tokens instead of an empty
+  list). The `value` property still reads a frozen `readonly string[]`.
+- 110e2cd: `lr-popover` and `lr-dropdown` gain a property-only `virtualElement` that positions the popup against
+  a virtual element, any object with `getBoundingClientRect()` and an optional `contextElement` (new
+  `LyraPopoverVirtualElement` type), ahead of `anchor`; `anchor` and element anchors behave as before.
+  `lr-dropdown-item` exposes the `active`, `checked`, `disabled`, `has-submenu`, `link` and
+  `submenu-open` custom states. `lr-page` gains a reflected `disableSticky` property for the existing
+  `disable-sticky` attribute, and accepts and reflects `nonce` for migrated markup.
+
+  `lr-code-block` and `lr-code-block-core` expose the `loading`, `error` and `highlighted` custom
+  states and a new `lr-load` event (`detail: { highlighted }`, new `LyraCodeBlockLoadDetail` type):
+  `true` when highlighted output is produced, `false` when no grammar exists for `language` and the
+  code renders as plain text. `lr-error` keeps firing only when clipboard writing fails. Thirteen syntax colour properties (`--comment-color`,
+  `--keyword-color`, `--operator-color`, `--string-color`, `--constant-color`, `--function-color`,
+  `--type-color`, `--variable-color`, `--property-color`, `--tag-color`, `--selector-color`,
+  `--inserted-color`, `--deleted-color`) recolour highlighted tokens, and unset keeps the theme
+  colour. The copy button exposes the `copy-button__button`, `copy-button__copy-icon`,
+  `copy-button__success-icon`, `copy-button__error-icon` and `copy-button__feedback` parts, and
+  `without-copy` now reflects.
+- 110e2cd: Part-name parity with the current upstream manifest, added alongside the existing names:
+  `lr-tag` exposes `remove-button__button`, `lr-tab-group` exposes `scroll-button__button`,
+  `lr-toast-item` exposes `progress-ring__progress-ring`, and `lr-tree-item` exposes
+  `checkbox__checkbox` and `spinner__spinner`. Each is a second token on the node that already
+  carried the corresponding `__base` part, so existing selectors keep matching.
+
+### Patch Changes
+
+- 1a802da: `lr-combobox` with `commit="text"`: assigning `value = ''` now means no value, as clearing the text already did, so the placeholder shows again and `required` reports `valueMissing`. The default `commit="value"` keeps `''` as a selectable option value.
+- 1a802da: `lr-icon-button` keeps its exact `--lr-icon-button-size` square when the slotted glyph sits inside an inline wrapper (a `<span>` around an `<svg>`): the native button now sets `line-height: 1`, so a large root font size or a tall inherited line-height no longer grows the box past the token.
+- 1a802da: `lr-map` reads `drawingSticky` when a completion edit ends rather than when it opened: an edit opened by `drawingCompleteBehavior = 'edit'` while `drawingSticky` was set no longer re-arms the previous `drawMode` after Finish, cancel, Escape or `cancelDrawing()` once `drawingSticky` has been cleared, so `drawMode` stays `'none'` as documented.
+- cd597ad: Size ceilings follow reviewed measurements after the consumer-gap theming tokens and options. These are the form, overlay, map, chart, table and layout hooks, plus dialog `fullscreen-narrow` and panel tokens, drawer `floating`, popover sizing, toast insets, chip-group selection, label placement, and the shared form-control transition and focus-outline hooks. Measured gzip bytes:
+
+  - 1,815,368 for `dist/autoloader-cdn.js` and 1,815,250 for `dist/autoloader.js`
+  - 487,533 for the data barrel, 296,640 for forms, 401,656 for media, 160,986 for overlays and 248,451 for utility
+  - 152,747 for `dist/lyra.js`; `prompt()` stays on its granular subpath, so the root entry does not carry `lr-input`
+  - 95,916 for the standalone combobox and 153,922 for the component p95
+  - 39,447 initial marginal bytes for combobox and 16,827 for tooltip
+
+  In `@aceshooting/lyra-gen`, the same additions change how gen-view's lazy chunks split. Lazy raw JavaScript grows by only 362 bytes, but the per-file gzip sum reaches 257,942 bytes. Chat-composition lazy JavaScript measures 1,044,304 raw and 305,790 gzip bytes.
+
+  Each exceeded ceiling advances only to the next 64-byte boundary above its measurement. Passing ceilings, the headroom policy and optional-peer exclusions are unchanged.
+- 67cef2a: Size ceilings follow reviewed measurements after the `lr-table` structure options (stacked headers, header-less rows, row headers, row attributes, cell wrapping and the `--lr-table-*` tokens) and the consumer theming tokens and options across forms, layout, overlays, utility, data, media, charts and conversation. Measured gzip bytes:
+
+  - 1,835,181 for `dist/autoloader-cdn.js`, 1,835,012 for `dist/autoloader.js`, 1,595,774 for `dist/all.js` and 1,859,275 for `dist/ssr/all.js`
+  - 491,093 for the data barrel, 298,510 for forms, 415,697 for layout, 407,286 for media and 253,095 for utility
+  - 153,301 for `dist/lyra.js`
+  - 39,626 initial marginal bytes for combobox
+
+  With their documented styling hooks, the lyra-ui package measures 24,321,454 unpacked bytes (npm estimate) and the generated IDE data 1,946,895 packed archive bytes.
+
+  In `@aceshooting/lyra-gen`, gen-view lazy JavaScript measures 259,887 gzip bytes and chat-composition lazy JavaScript 1,051,747 raw and 307,678 gzip bytes.
+
+  Each exceeded ceiling advances only to the next 64-byte boundary above its measurement. Passing ceilings, the headroom policy and optional-peer exclusions are unchanged.
+- 67cef2a: `lr-table` in stacked mode: the `caption` now spans the cards instead of wrapping into a narrow column, and a `cellStyle` that preserves white space (`pre`, `pre-wrap`) no longer opens a blank line before a cell's `cell-label` caption. Body cell content is now bound flush to the cell, so the same style no longer adds blank lines in grid mode either.
+- 16386bb: Fix the label of a server-rendered `lr-checkbox` staying hidden after hydration. The shared label-presence check now waits until the hydrating first render has reproduced the server markup, then reveals the slotted label on the next render.
+- 16386bb: Fix a server-rendered `lr-copy-button` losing its `role="group"` markup fallback during hydration. Development builds also no longer warn about Lit SSR's `defer-hydration` and `hydrate-internals-*` attributes as unknown attributes.
+- 16386bb: Fix server-rendered `Intl` text staying in the server's locale after hydration under an ancestor `lang` (`lr-format-number`, `lr-format-date`, `lr-format-bytes`, `lr-relative-time` and every other component that formats through the effective locale). The hydrating first render now formats in the locale the server resolved, and the next render commits the inherited locale.
+- 16386bb: Fix `lr-tab-group` dropping its server-selected `active` tab during hydration and falling back to the first tab. Neither the server render nor the hydrating first update can see the tabs yet, so neither of them now repairs `active`.
+- 110e2cd: The migration inventory now targets Web Awesome 3.15.0. It records `lr-stepper`/`lr-step`, `lr-token-input` and `lr-code-block` as the counterparts of `wa-stepper`/`wa-step`, `wa-tag-input` and `wa-code-highlighter`, and `lyra-ui-migrate` rewrites the exported parts that Web Awesome 3.15 deprecated to their replacements: `wa-tooltip` `base`/`base__popup`/`base__arrow`, `wa-button-group` and `wa-tab-panel` `base`, `wa-color-picker` `base`/`eyedropper-button__base`/`format-button__base`, `wa-dialog`/`wa-drawer` `close-button__base`, `wa-select` `label`/`tag__remove-button__base` and `wa-slider` `tooltip__base`. The reviewed Web Awesome Pro snapshots now record the 3.15 combobox async-options surface, the exported parts of `wa-date-input` and `wa-file-input`, and the stable status of date input, date picker, data grid, video and video playlist.
+- 57b8822: `lr-zoomable-frame` no longer sets the native `allowfullscreen` attribute when its `allow` value already carries a `fullscreen` directive, so the browser stops warning that one overrides the other.
+
 ## 32.0.0
 
 ### Major Changes

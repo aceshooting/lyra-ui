@@ -53,7 +53,7 @@ function dimension(value: unknown): number | undefined {
  * @cssstate morphing - Present while the lightbox runs its open or close motion for this item.
  * @csspart play-glyph - The default play glyph inside the `play-icon` slot.
  * @status stable
- * @since unreleased
+ * @since 32.1.0
  */
 export class LyraLightboxItem extends LyraElement {
   static override styles = [LyraElement.styles, styles];

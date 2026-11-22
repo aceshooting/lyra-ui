@@ -1,7 +1,0 @@
----
-'@aceshooting/lyra-ui': minor
----
-
-Additive theming hooks, all falling back to today's rendering when unset. `lr-table`: `--lr-table-filter-height` (honours `--lr-input-control-min-height`), `--lr-table-filter-font-size`, `--lr-table-filter-wrap` and `--lr-table-filter-basis` (stack the built-in filter under its label at narrow widths), `--lr-table-caption-*` (font size, weight, colour, text alignment, padding), `--lr-table-reveal-columns-min-size`, and `--lr-table-cell-link-font-weight`, `-text-decoration` plus hover variants. `lr-segmented`: `--lr-segmented-segment-min-size`. `lr-sequence-playback`: `--lr-sequence-playback-value-*` for the readout. `lr-card`: `--lr-card-border-color` colours the outer border only. `lr-stat`: `--lr-stat-radius`. `lr-badge`: `--lr-badge-font-weight`, `--lr-badge-line-height`. `lr-button`: inherited `--lr-button-label-wrap`. `lr-table`'s `lr-page-change` detail now also carries `pageSize` and `offset`, matching `lr-pagination`.
-
-Further additive hooks. `lr-table`: `--lr-table-header-bg`, `--lr-table-header-border-color`, `--lr-table-group-bg`, `--lr-table-more-button-bg`, `--lr-table-reveal-columns-bg`. `lr-card`: `--lr-card-body-padding`. `lr-budget-meter`: `--lr-budget-meter-value-color`. `lr-stepper`: `--lr-stepper-index-border` with current/error variants. `lr-widget`: `--lr-widget-header-divider`. Form controls: `--lr-form-control-transition` (input, textarea, combobox, select), `--lr-form-control-focus-outline` and `--lr-select-open-shadow` (select).

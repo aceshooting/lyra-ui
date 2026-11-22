@@ -2,7 +2,7 @@
   "$comment": "Authoritative component, public-surface, and upstream mapping inventory. Refresh with generate-component-inventory.mjs using the pinned published manifests and artifact-bound black-box evidence; do not infer upstream behavior from implementation source.",
   "schemaVersion": 1,
   "pins": {
-    "lyraVersion": "32.0.0",
+    "lyraVersion": "32.1.0",
     "webawesome": {
       "version": "3.15.0",
       "commit": "9166643c4f340cd3a4771cb25d41c645c58bc3c6"
@@ -42225,7 +42225,7 @@
       "optionalPeers": [],
       "maturity": {
         "status": "experimental",
-        "since": "unreleased",
+        "since": "32.1.0",
         "deprecated": null,
         "profile": "new-component-experimental",
         "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
@@ -88215,7 +88215,7 @@
       "optionalPeers": [],
       "maturity": {
         "status": "stable",
-        "since": "unreleased",
+        "since": "32.1.0",
         "deprecated": null,
         "profile": "published-stable",
         "rationale": "This exact lr-* tag appears in a published Lyra release manifest and remains a supported public contract under semver.",
@@ -110472,7 +110472,7 @@
       "optionalPeers": [],
       "maturity": {
         "status": "experimental",
-        "since": "unreleased",
+        "since": "32.1.0",
         "deprecated": null,
         "profile": "new-component-experimental",
         "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
@@ -148330,7 +148330,7 @@
       "optionalPeers": [],
       "maturity": {
         "status": "experimental",
-        "since": "unreleased",
+        "since": "32.1.0",
         "deprecated": null,
         "profile": "new-component-experimental",
         "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",

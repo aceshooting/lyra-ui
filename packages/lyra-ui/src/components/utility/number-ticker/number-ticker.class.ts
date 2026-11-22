@@ -49,7 +49,7 @@ function decimalPlaces(n: number): number {
  * @cssstate counting - Applied while the number is counting.
  * @event lr-finish - The ticker settled on its value, including the instant reduced-motion and zero-duration paths.
  * @status experimental
- * @since unreleased
+ * @since 32.1.0
  */
 export class LyraNumberTicker extends LyraElement<LyraNumberTickerEventMap> {
   static override styles = [LyraElement.styles, styles];
