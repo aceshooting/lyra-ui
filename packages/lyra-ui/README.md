@@ -62,6 +62,7 @@ has the full rules, and `--check` lists what's left without changing any files.
 
 | To | What breaks | Migration help |
 | --- | --- | --- |
+| **v33** | `lr-table` `lr-page-change` always types `pageSize`/`offset`; `lr-token-input` treats a multi-character `delimiter` as a set; `lr-lightbox` after-events wait for the animation; form labels: `--lr-form-control-label-gap` also applies on top and the start column sizes to its content; `lr-slider` label follows the form-control size; `lr-copy-button` `feedback-duration` defaults to 1000; `lr-timeline` accepts `orientation="auto"` | `--origin=lyra-v32`, [v32→v33 guide](./llms/migration.md#migrating-from-lyra-32-to-lyra-33---originlyra-v32) |
 | **v32** | Deprecated component events, detail fields and implicit defaults are removed; view events get component-specific names; composites register some optional children on first use; data collections are frozen snapshots | `--origin=lyra-v31`, [v31→v32 guide](./llms/migration.md#migrating-from-lyra-31-to-lyra-32---originlyra-v31) |
 | **v31** | `lr-files` `capability` adds `'camera'`; `lr-json-viewer` defaults to `layout="auto"`; chat viewport message margins no longer collapse | [notes](../../docs/changelog/v31.md#3100) |
 | **v30** | Item-identity collections (feeds, queues, traces, task lists, virtual lists) ignore a same-array assignment: assign a new array to update | `--rule=immutable-collections`, [v29→v30 guide](./llms/shared/v29-to-v30-migration.md) |
