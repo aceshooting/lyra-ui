@@ -30,6 +30,7 @@ function cssExportPaths(packageExports) {
       subpath === './native.css' ||
       subpath === './density.css' ||
       subpath === './accents.css' ||
+      subpath === './accent-roles.css' ||
       subpath.startsWith('./looks/') && subpath.endsWith('.css') ||
       subpath.startsWith('./surfaces/') && subpath.endsWith('.css'),
     )

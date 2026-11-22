@@ -108,6 +108,7 @@ const SHIPPED_STYLESHEETS = [
   'src/theme-core.css',
   'src/density.css',
   'src/accents.css',
+  'src/accent-roles.css',
   'src/preferences.css',
   'src/surfaces/glass.css',
   'src/styles/design-tokens.css',

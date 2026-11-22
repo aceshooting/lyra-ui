@@ -1,7 +1,8 @@
 {
-  "$comment": "CSS-only delivery canaries cover standalone theme assets and representative compositions through the existing esbuild minification and gzip path. The 60% Glass default and contrast-preserving dark fill and the public dark-share input raise the standalone glass measurement to 1,650 bytes; its 1,716-byte ceiling follows the shared 4% headroom policy, rounded down to whole bytes. Other canaries remain unchanged. The v28 document token layer moves the resolved token outputs into theme.css, so theme.css and every composition containing it record their new measured bytes as reviewed; the ceilings follow the shared derivation from those reviewed bytes. The lean theme-core.css entry records its own measured bytes under the same derivation. Standalone look, surface, density, accent and native sheets are unchanged. The native element palette and the native utility rules raise native.css to 2,602 reviewed bytes, and the theme-plus-native and full compositions to 15,804 and 21,827 bytes; their ceilings follow the shared 4% headroom derivation.",
+  "$comment": "CSS-only delivery canaries cover standalone theme assets and representative compositions through the existing esbuild minification and gzip path. The 60% Glass default and contrast-preserving dark fill and the public dark-share input raise the standalone glass measurement to 1,650 bytes; its 1,716-byte ceiling follows the shared 4% headroom policy, rounded down to whole bytes. The opt-in per-role accent sheet accent-roles.css records its own measured 2,848 bytes; its 2,961-byte ceiling follows the shared 4% headroom derivation. Other canaries remain unchanged. The v28 document token layer moves the resolved token outputs into theme.css, so theme.css and every composition containing it record their new measured bytes as reviewed; the ceilings follow the shared derivation from those reviewed bytes. The lean theme-core.css entry records its own measured bytes under the same derivation. Standalone look, surface, density, accent and native sheets are unchanged. The native element palette and the native utility rules raise native.css to 2,602 reviewed bytes, and the theme-plus-native and full compositions to 15,804 and 21,827 bytes; their ceilings follow the shared 4% headroom derivation.",
   "$maximumHeadroomPercent": 4,
   "$reviewedGzipBytes": {
+    "accent-roles": 2848,
     "accents": 1130,
     "composition-theme-look-data": 14727,
     "composition-theme-look-high-contrast": 14664,
@@ -22,6 +23,7 @@
     "theme-core": 10668
   },
   "$maximumAllowedGzipKb": {
+    "accent-roles": 2.8916015625,
     "accents": 1.1474609375,
     "composition-theme-look-data": 14.95703125,
     "composition-theme-look-high-contrast": 14.892578125,
@@ -47,6 +49,7 @@
     { "id": "native-styles", "kind": "standalone", "imports": ["dist/styles/native.css"] },
     { "id": "density", "kind": "standalone", "imports": ["dist/density.css"] },
     { "id": "accents", "kind": "standalone", "imports": ["dist/accents.css"] },
+    { "id": "accent-roles", "kind": "standalone", "imports": ["dist/accent-roles.css"] },
     { "id": "look-shadcn", "kind": "standalone", "imports": ["dist/looks/shadcn.css"] },
     { "id": "look-material", "kind": "standalone", "imports": ["dist/looks/material.css"] },
     { "id": "look-data", "kind": "standalone", "imports": ["dist/looks/data.css"] },

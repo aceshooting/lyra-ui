@@ -143,6 +143,7 @@ test('CSS budget config covers every shipped look and surface stylesheet without
       subpath === './native.css' ||
       subpath === './density.css' ||
       subpath === './accents.css' ||
+      subpath === './accent-roles.css' ||
       subpath.startsWith('./looks/') && subpath.endsWith('.css') ||
       subpath.startsWith('./surfaces/') && subpath.endsWith('.css'),
     )

@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { renderThemeCoreCss, renderThemeCss } from './theme-document-layer.mjs';
-import { readStyleModel, renderLook, renderDensity, renderGlass, renderAccents, renderRuntimeLook, referenceSurfaces, contrastSurfaces, modeResolverDeclarations, defaultStyleInputs, replaceStyleFallbacks, replaceStyleModelBlock, quote, STYLE_VERSION } from './style-axes-model.mjs';
+import { readStyleModel, renderLook, renderDensity, renderGlass, renderAccents, renderAccentRoles, renderRuntimeLook, referenceSurfaces, contrastSurfaces, modeResolverDeclarations, defaultStyleInputs, replaceStyleFallbacks, replaceStyleModelBlock, quote, STYLE_VERSION } from './style-axes-model.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const model = readStyleModel(packageDir);
@@ -45,6 +45,7 @@ for (const look of model.looks) {
 const gemstoneSource = readFileSync(join(packageDir, 'src/theme/gemstones-data.ts'), 'utf8');
 const gemstones = Object.fromEntries([...gemstoneSource.matchAll(/(\w+): \{ key: '\w+', fill: '([^']+)'/g)].map(match => [match[1], match[2]]));
 outputs.set('src/accents.css', renderAccents(model, gemstones));
+outputs.set('src/accent-roles.css', renderAccentRoles(model, gemstones));
 if (Object.keys(gemstones).length !== 9) throw new Error('Gemstone data shape changed; update the style model reader');
 const references = referenceSurfaces(model, true);
 const contrastReferences = contrastSurfaces(model);

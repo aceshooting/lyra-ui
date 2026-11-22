@@ -359,7 +359,9 @@ properties only — notably not `color-scheme` — so importing it paints nothin
 A **theme scope** is an element that re-derives the whole token layer from the `--lr-theme-*` inputs
 and the mode it sees. The list is closed: `:root`; the mode scopes `.lr-light`, `.lr-dark` and
 `[data-lr-theme]` (any value); the style-axis boundaries `[data-lr-mode]`, `[data-lr-look]`,
-`[data-lr-accent]`, `[data-lr-density]`, `[data-lr-contrast]`, `[data-lr-motion]`; a look's scoped
+`[data-lr-accent]`, the per-role `[data-lr-accent-neutral]`, `[data-lr-accent-success]`,
+`[data-lr-accent-warning]`, `[data-lr-accent-danger]`, `[data-lr-density]`, `[data-lr-contrast]`,
+`[data-lr-motion]`; a look's scoped
 `.light` / `.dark` aliases; the design-token fixture scopes `.lr-token-light`, `.lr-token-dark`,
 `[data-lr-design-token-mode]`; and the mode-neutral marker **`data-lr-theme-scope`**.
 
@@ -664,6 +666,7 @@ Each sheet is the one that style needs under `theme-core.css`:
 | `look: 'shadcn'`, `'material'`, `'data'`, `'terminal'`, `'high-contrast'` | `looks/<look>.css` |
 | `surface: 'glass'`, or the `.lr-surface-chrome` class | `surfaces/glass.css` |
 | a named `accent` such as `'emerald'` | `accents.css` |
+| a per-role `data-lr-accent-<role>` remap | `accent-roles.css` |
 | `density: 'compact'` or `'touch'` | `density.css` |
 
 An application that keeps the whole built-in profile should stay on `theme.css`, which is smaller
@@ -684,6 +687,53 @@ axes on `<html>` and restore only the mode, as in
   </head>
 </html>
 ```
+
+### Per-role accents — accent-roles.css
+
+`data-lr-accent` names the brand palette. To recolor another semantic role declaratively, import
+`accent-roles.css` and name a gemstone on the role's own attribute: `data-lr-accent-neutral`,
+`data-lr-accent-success`, `data-lr-accent-warning` or `data-lr-accent-danger`. The values are the
+nine gemstones that `data-lr-accent` accepts (`emerald`, `peridot`, `topaz`, `ruby`, `tourmaline`,
+`amethyst`, `aquamarine`, `sapphire`, `hematite`), plus `none`.
+
+```css
+@import "@aceshooting/lyra-ui/theme.css";
+@import "@aceshooting/lyra-ui/accent-roles.css";
+```
+
+```html
+<html data-lr-accent-success="aquamarine" data-lr-accent-danger="tourmaline">
+  …
+  <section data-lr-accent-success="sapphire">…</section>   <!-- this region only -->
+  <aside data-lr-accent-success="none">…</aside>           <!-- the look's own success colours -->
+</html>
+```
+
+- **Same ramp as brand.** A remapped role gets exactly the quiet, normal and loud fill, border and
+  `on` ramp that `data-lr-accent="<gemstone>"` gives brand, in both light and dark mode, qualified
+  by the same rules: every `on` colour meets 4.5:1 on its fill, the loud fill meets 4.5:1 as text on
+  the quiet fill and on every built-in reference surface (each look's page and raised surfaces),
+  and normal and loud borders meet 3:1 against those surfaces. Every component that reads `--lr-color-<role>-*` follows, including
+  `variant="success"` and friends.
+- **Defaults are unchanged.** Without a role attribute, or without `accent-roles.css`, each role
+  keeps the look's colours. Brand and the focus ring belong to `data-lr-accent`; a role attribute
+  never moves them, and remapping one role leaves the others alone.
+- **Scoping.** Each attribute is a theme scope, so it works on any element and nests: a closer
+  attribute wins, `none` restores the look's colours for that role below it, and an unknown value
+  changes nothing. A `data-lr-accent` element starts a fresh accent scope for every role, so set the
+  role attributes on that element (or inside it) as well when you nest a brand accent. Both
+  attributes compose on one element.
+- **Mode, contrast and forced colours.** The role follows the mode of its nearest scope
+  (`data-lr-mode`, `.lr-dark`, System). `prefers-contrast: more` and `data-lr-contrast="more"` still
+  strengthen control borders and focus rings exactly as they do with a brand accent. Under `forced-colors: active` the role aliases resolve to system colours, so
+  a remap never overrides the user's palette.
+- **Runtime precedence.** `setLyraStyle({ accent: { success: '#0d9488' } })` and
+  `applyLyraStyleScope()` write inline per-role ramps, which win over the attribute on the same
+  element; use them for arbitrary colours, and the attributes for the built-in palette with no
+  JavaScript and no first-paint flash.
+- **Cost.** `theme.css` and `theme-core.css` carry only the four scope selectors;
+  `accent-roles.css` (under 3 KB gzipped) holds the palettes, so pages that never remap a role pay
+  nothing.
 
 ### Cascade layers
 

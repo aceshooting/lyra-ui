@@ -1892,6 +1892,7 @@
     "./theme/looks/terminal.js": "./dist/theme/looks/terminal.js",
     "./theme/looks/high-contrast.js": "./dist/theme/looks/high-contrast.js",
     "./accents.css": "./dist/accents.css",
+    "./accent-roles.css": "./dist/accent-roles.css",
     "./framework-types": {
       "types": "./dist/framework-types.d.ts",
       "default": "./dist/framework-types.js"
@@ -1945,6 +1946,7 @@
     "./theme/presets/shadcn.js": null
   },
   "sideEffects": [
+    "./dist/accent-roles.css",
     "./dist/accents.css",
     "./dist/all.js",
     "./dist/autoloader-cdn.js",
@@ -2014,6 +2016,7 @@
     "./dist/theme.css",
     "./dist/translations/pseudo/ar-XB.js",
     "./dist/translations/pseudo/en-XA.js",
+    "./src/accent-roles.css",
     "./src/accents.css",
     "./src/all.ts",
     "./src/autoloader-cdn.ts",

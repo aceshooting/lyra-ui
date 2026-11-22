@@ -76,7 +76,7 @@ console.log(`Published declaration entries consolidated: ${consolidatedDeclarati
 const prunedDeclarations = pruneUnreachableBuildDeclarations(packageDir);
 console.log(`Published unreachable declaration modules removed: ${prunedDeclarations.removedPaths.length}.`);
 
-for (const asset of ['theme.css', 'theme-core.css', 'density.css', 'accents.css', 'preferences.css', 'looks', 'surfaces']) {
+for (const asset of ['theme.css', 'theme-core.css', 'density.css', 'accents.css', 'accent-roles.css', 'preferences.css', 'looks', 'surfaces']) {
   await cp(join(packageDir, 'src', asset), join(packageDir, 'dist', asset), { recursive: true });
 }
 

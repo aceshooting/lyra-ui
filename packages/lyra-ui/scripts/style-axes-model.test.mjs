@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { readStyleModel, renderRuntimeLook, renderLook, renderDensity, renderTheme, concreteThemeCss, referenceSurfaces, renderAccents, contrastSurfaces, validateLook, renderGlass, defaultStyleInputs, replaceStyleFallbacks, replaceStyleModelBlock, renderNativeChrome } from './style-axes-model.mjs';
+import { readStyleModel, renderRuntimeLook, renderLook, renderDensity, renderTheme, concreteThemeCss, referenceSurfaces, renderAccents, renderAccentRoles, ACCENT_ROLES, contrastSurfaces, validateLook, renderGlass, defaultStyleInputs, replaceStyleFallbacks, replaceStyleModelBlock, renderNativeChrome } from './style-axes-model.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 
@@ -17,6 +17,7 @@ test('aggregate theme declares layer order once while standalone assets retain t
   const standalone = [
     ...model.looks.map(look => renderLook(model, look)),
     renderAccents(model, { emerald: '#34d399' }),
+    renderAccentRoles(model, { emerald: '#34d399' }),
     renderGlass(glass),
     renderDensity(density),
   ];
@@ -165,6 +166,30 @@ test('emerald retains its seed while loud text is readable on light, dark and qu
     assert.ok(contrast(input(mode, 'on-loud'), loud) >= 4.5, `${mode}: foreground on corrected fill`);
   }
   assert.notDeepEqual(input('light', 'fill-loud'), [52, 211, 153]);
+});
+
+test('per-role accents reuse the brand ramp, leave focus to brand and ship only in their opt-in sheet', () => {
+  const model = readStyleModel(packageDir);
+  const gemstones = { emerald: '#34d399', ruby: '#e0115f' };
+  const brand = renderAccents(model, gemstones);
+  const roles = renderAccentRoles(model, gemstones);
+  assert.deepEqual(ACCENT_ROLES, ['neutral', 'success', 'warning', 'danger']);
+  const body = (css, selector) => css.match(new RegExp(`${selector.replace(/[[\]]/g, '\\$&')} \\{([^}]+)\\}`))?.[1] ?? '';
+  for (const id of Object.keys(gemstones)) {
+    const brandBody = body(brand, `[data-lr-accent='${id}']`);
+    for (const role of ACCENT_ROLES) {
+      const roleBody = body(roles, `[data-lr-accent-${role}='${id}']`);
+      assert.equal(roleBody.match(/--_lr-a[ld]-color-[a-z]+-[a-z-]+:/g)?.length, 18, `${role}=${id} paints every channel in both modes`);
+      assert.equal(roleBody.replaceAll(`-color-${role}-`, '-color-brand-'), brandBody.replace(/\n    --(?:_lr-accent-installed|lr-theme-accent|_lr-a[ld]-color-focus): [^;]+;/g, ''), `${role}=${id} shares the brand ramp`);
+      assert.doesNotMatch(roleBody, /color-focus|--lr-theme-accent|accent-installed/);
+    }
+  }
+  for (const role of ACCENT_ROLES) assert.match(body(roles, `[data-lr-accent-${role}='none']`), new RegExp(`--_lr-al-color-${role}-fill-loud: initial;`));
+  const theme = renderTheme(model);
+  for (const role of ACCENT_ROLES) {
+    assert.ok(theme.includes(`[data-lr-accent-${role}], `), `theme.css re-resolves inputs at data-lr-accent-${role}`);
+    assert.ok(!theme.includes(`[data-lr-accent-${role}=`), 'theme.css carries no per-role palette');
+  }
 });
 
 test('sparse runtime look branches retain null without fabricating string values', () => {

@@ -7,6 +7,7 @@ import '../packages/lyra-ui/src/looks/terminal.css';
 import '../packages/lyra-ui/src/looks/high-contrast.css';
 import '../packages/lyra-ui/src/density.css';
 import '../packages/lyra-ui/src/accents.css';
+import '../packages/lyra-ui/src/accent-roles.css';
 import '../packages/lyra-ui/src/surfaces/glass.css';
 import { applyLyraStyleScope } from '../packages/lyra-ui/src/theme/theme.js';
 import '../packages/lyra-ui/src/components/lr-button.js';
@@ -14,6 +15,7 @@ import '../packages/lyra-ui/src/components/lr-input.js';
 import '../packages/lyra-ui/src/components/lr-card.js';
 import '../packages/lyra-ui/src/components/lr-menu.js';
 import '../packages/lyra-ui/src/components/lr-menu-item.js';
+import '../packages/lyra-ui/src/components/lr-badge.js';
 
 export default {
   title: 'Theming/Composable styles',
@@ -96,5 +98,33 @@ export const LookGallery = {
       <h2 style="margin:0">${look} / ${mode}</h2>
       ${sample()}
     </section>`))}
+  </div>`,
+};
+
+const roleVariants = ['neutral', 'success', 'warning', 'danger'];
+
+function roleSample() {
+  return html`<div style=${rowStyle}>
+    ${roleVariants.map(variant => html`<lr-button variant=${variant}>${variant}</lr-button>`)}
+    ${roleVariants.map(variant => html`<lr-badge variant=${variant} appearance="accent">${variant}</lr-badge>`)}
+  </div>`;
+}
+
+export const RoleAccents = {
+  name: 'Per-role accents',
+  parameters: { docs: { description: { story: 'accent-roles.css remaps neutral, success, warning and danger to a gemstone with data-lr-accent-<role>, in light and dark, with no JavaScript. The first row keeps the look defaults; a nested none restores them.' } } },
+  render: () => html`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,22rem),1fr));gap:1rem;padding:1rem">
+    ${['light', 'dark'].map(mode => html`<section data-lr-mode=${mode} data-lr-look="lyra" data-lr-surface="solid" data-lr-accent="none" style=${panelStyle}>
+      <h2 style="margin:0">Defaults / ${mode}</h2>
+      ${roleSample()}
+      <div data-lr-accent-neutral="hematite" data-lr-accent-success="aquamarine" data-lr-accent-warning="topaz" data-lr-accent-danger="tourmaline" style="display:grid;gap:var(--lr-theme-space-s,0.5rem)">
+        <strong>neutral=hematite, success=aquamarine, warning=topaz, danger=tourmaline</strong>
+        ${roleSample()}
+        <div data-lr-accent-success="none" data-lr-accent-danger="ruby" style="display:grid;gap:var(--lr-theme-space-s,0.5rem)">
+          <strong>Nested: success=none, danger=ruby</strong>
+          ${roleSample()}
+        </div>
+      </div>
+    </section>`)}
   </div>`,
 };
