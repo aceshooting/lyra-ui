@@ -16,7 +16,8 @@ import {
   runCoverageShard,
   validateCoverageShardManifests,
 } from './coverage-shard-runner.mjs';
-import { shardTestFiles } from './full-engine-shard.mjs';
+import { readCosts } from './ci-costs.mjs';
+import { discoverTestFiles, shardTestFiles } from './full-engine-shard.mjs';
 import { normalizeLcov } from '../../../scripts/prepare-codecov-lcov.mjs';
 
 const inventory = Array.from({ length: 12 }, (_value, index) =>
@@ -231,6 +232,25 @@ test('runs exactly the deterministic shard selection and writes its manifest bef
   } finally {
     await rm(fixture, { recursive: true, force: true });
   }
+});
+
+test('cost-balances the live coverage matrix from the measured coverage timings', async () => {
+  // test-file-costs.json is measured from these coverage shards (the merge job's
+  // lyra-ui-test-timing artifact), so the coverage matrix is balanced by its own timings.
+  const { costs, fallback } = readCosts('tests');
+  const files = await discoverTestFiles();
+  const shards = Array.from({ length: COVERAGE_SHARD_TOTAL }, (_value, index) =>
+    shardTestFiles(files, index + 1, COVERAGE_SHARD_TOTAL));
+  assert.deepEqual(shards.flat().sort(), [...files].sort());
+  assert.equal(new Set(shards.flat()).size, files.length);
+  const loads = shards.map((shard) => shard.reduce((sum, file) => sum + (costs.get(file) ?? fallback), 0));
+  assert.ok(Math.max(...loads) / Math.min(...loads) < 1.02, loads.map(Math.round).join('/'));
+  // A file-count split would not be balanced: the cost partition must differ from round-robin
+  // whenever the measured costs are uneven, which they are (a 60 s file next to sub-second ones).
+  const roundRobin = Array.from({ length: COVERAGE_SHARD_TOTAL }, (_value, index) =>
+    [...files].sort().filter((_file, position) => position % COVERAGE_SHARD_TOTAL === index));
+  const roundRobinLoads = roundRobin.map((shard) => shard.reduce((sum, file) => sum + (costs.get(file) ?? fallback), 0));
+  assert.ok(Math.max(...loads) < Math.max(...roundRobinLoads));
 });
 
 test('runs and propagates the owner native verification outside coverage', async () => {

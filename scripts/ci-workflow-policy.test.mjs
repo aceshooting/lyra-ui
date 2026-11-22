@@ -525,8 +525,8 @@ test('the complete DOCX group runs once per engine on the assigned platform runn
 test('the existing docs runners exhaustively share Show Code and retain all three theme engines', () => {
   const workflow = read('.github/workflows/ci.yml');
   const allocations = [
-    ['docs_theme_builder', 'docs-and-storybook / theme builder', '1', ['firefox', 'webkit']],
-    ['docs_show_code', 'docs-and-storybook / show-code', '2', ['chromium']],
+    ['docs_theme_builder', 'docs-and-storybook / theme builder', '1', ['firefox']],
+    ['docs_show_code', 'docs-and-storybook / show-code', '2', ['chromium', 'webkit']],
   ];
   const allEngines = [];
   for (const [id, name, shard, engines] of allocations) {

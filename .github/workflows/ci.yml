@@ -789,9 +789,17 @@ jobs:
       # Retain the dry-run estimate and source inventory check alongside the actual archive gate.
       - run: pnpm --filter @aceshooting/lyra-ui check:package-size
 
+  # Two parallel lanes over the same sha-verified tarballs: `contract` runs the packed install,
+  # runtime, migration, singleton, declaration and bundle contracts (check-packed-consumer.mjs);
+  # `peers-and-frameworks` runs the packed tooling tests, the framework type/recipe checks and the
+  # four peer-compatibility profiles. Sequentially they measured ~7 minutes on one runner.
   packed_consumer_contract:
-    name: packed-consumer / contract
+    name: packed-consumer / ${{ matrix.lane }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        lane: [contract, peers-and-frameworks]
     # The matching image provides all three engines and their OS dependencies before consumers.
     container:
       image: mcr.microsoft.com/playwright:v1.65.1-noble
@@ -805,10 +813,10 @@ jobs:
     needs:
       - packed_consumer_tarball
       - packed_consumer_companions
-    # Typically ~8 minutes, but this job installs and exercises the tarballs through
+    # Each lane is typically ~4 minutes, but both install and exercise the tarballs through
     # several consumers, and a slow hosted runner has spent four minutes in toolchain setup and
-    # seven in the contracts step alone before the peer matrix even started; 15 cut two release
-    # qualifications short at the peer-compatibility step.
+    # seven in the contracts step alone; 15 cut two release qualifications short when the lanes
+    # still ran in one job.
     timeout-minutes: 25
     steps:
       - name: Match the runner's default font resolution
@@ -883,45 +891,53 @@ jobs:
       # Migrated consumers render in fresh Chromium, Firefox, and WebKit contexts against the
       # installed tarball, using the matching binaries supplied by the container.
       - name: Run packed consumer contracts
+        if: ${{ matrix.lane == 'contract' }}
         run: ./scripts/ci-phase.sh packed-contracts pnpm check:packed-consumer:contracts
         env:
           LYRA_PACKED_MIGRATION_ARTIFACTS: ${{ runner.temp }}/packed-migration-evidence
       - name: Upload installed migration evidence
-        if: ${{ always() }}
+        if: ${{ always() && matrix.lane == 'contract' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: packed-migration-evidence
           path: ${{ runner.temp }}/packed-migration-evidence
           if-no-files-found: ignore
           retention-days: 14
-      # Reuse the exact prepacked Lyra artifact from the contract check above. Its receipt binds
-      # these bytes to that pack; the peer runner then validates the archive and installs it through
-      # all four profiles under strict pnpm and npm consumers.
+      # The packed tooling tests, then the React/Vue/Svelte declaration and recipe consumers of the
+      # supplied tarball selected above.
+      - name: Run packed framework contracts
+        if: ${{ matrix.lane == 'peers-and-frameworks' }}
+        run: ./scripts/ci-phase.sh packed-frameworks pnpm check:packed-consumer:frameworks
+      # The exact prepacked Lyra artifact the contract lane consumes, checksum-verified above. Bind
+      # it to this checkout's name and version and to its SHA256SUMS line; the peer runner then
+      # validates the archive and installs it through all four profiles under strict pnpm and npm
+      # consumers.
       - name: Verify packed peer compatibility
-        env:
-          LYRA_PACKED_MIGRATION_ARTIFACTS: ${{ runner.temp }}/packed-migration-evidence
+        if: ${{ !cancelled() && matrix.lane == 'peers-and-frameworks' }}
         run: |
           set -euo pipefail
           shopt -s nullglob
-          tarballs=("$LYRA_PACKED_MIGRATION_ARTIFACTS"/packages/aceshooting-lyra-ui-*.tgz)
+          tarballs=(artifacts/packed-attw/aceshooting-lyra-ui-*.tgz)
           if [[ "${#tarballs[@]}" -ne 1 ]]; then
-            echo "::error::Expected exactly one preserved Lyra UI tarball"
+            echo "::error::Expected exactly one packed Lyra UI tarball"
             exit 1
           fi
           LYRA_PEER_TARBALL="${tarballs[0]}" node --input-type=module <<'NODE'
           import assert from 'node:assert/strict';
           import { createHash } from 'node:crypto';
           import { readFileSync } from 'node:fs';
-          import { basename } from 'node:path';
+          import { basename, dirname, join } from 'node:path';
           const tarball = process.env.LYRA_PEER_TARBALL;
-          const receipt = JSON.parse(readFileSync(`${tarball}.json`, 'utf8'));
           const pkg = JSON.parse(readFileSync('packages/lyra-ui/package.json', 'utf8'));
           const bytes = readFileSync(tarball);
-          assert.equal(receipt.name, pkg.name);
-          assert.equal(receipt.version, pkg.version);
-          assert.equal(receipt.fileName, basename(tarball));
-          assert.equal(receipt.packedBytes, bytes.length);
-          assert.equal(receipt.sha256, createHash('sha256').update(bytes).digest('hex'));
+          const receipt = readFileSync(join(dirname(tarball), 'SHA256SUMS'), 'utf8').trim().split('\n');
+          assert.equal(receipt.length, 1, 'SHA256SUMS must list exactly the one packed archive');
+          const [sha256, fileName] = receipt[0].split(/\s+\*?/u);
+          assert.equal(pkg.name, '@aceshooting/lyra-ui');
+          assert.equal(fileName, basename(tarball));
+          assert.equal(fileName, `aceshooting-lyra-ui-${pkg.version}.tgz`);
+          assert.ok(bytes.length > 0);
+          assert.equal(sha256, createHash('sha256').update(bytes).digest('hex'));
           NODE
           node scripts/check-peer-compatibility.mjs --tarball "${tarballs[0]}"
 
@@ -994,6 +1010,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      # A matrix result is `success` only when every leg succeeded, so CONTRACT_RESULT covers both
+      # the contract and the peers-and-frameworks legs.
       - name: Aggregate packed-consumer lanes
         env:
           CONTRACT_RESULT: ${{ needs.packed_consumer_contract.result }}
@@ -1188,9 +1206,6 @@ jobs:
       - name: Check theme builder in Firefox
         if: ${{ !cancelled() }}
         run: pnpm check:theme-builder --browser firefox
-      - name: Check theme builder in WebKit
-        if: ${{ !cancelled() }}
-        run: pnpm check:theme-builder --browser webkit
 
   docs_show_code:
     name: docs-and-storybook / show-code
@@ -1244,6 +1259,11 @@ jobs:
       - name: Check theme builder in Chromium
         if: ${{ !cancelled() }}
         run: pnpm check:theme-builder --browser chromium
+      # WebKit lives with the lighter Show Code shard: measured, shard 1 (4.3 min) plus Firefox and
+      # WebKit (2.9 min) made the theme-builder lane the longest docs job by three minutes.
+      - name: Check theme builder in WebKit
+        if: ${{ !cancelled() }}
+        run: pnpm check:theme-builder --browser webkit
 
   # Keep the stable required-check name while docs crawls and the three-engine theme builder
   # checks consume the same Storybook artifact. Any failed or skipped lane fails the aggregate.

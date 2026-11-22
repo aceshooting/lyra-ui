@@ -241,23 +241,37 @@ real data dependencies, so a red check names the phase to reproduce:
    non-fatal Codecov uploads. The runner refuses a missing `coverage-final.json`, `junit.xml` or
    `test-files.json` and proves the eight test manifests are disjoint, exhaustive and the
    deterministic partition of the inventory; the job separately rejects any non-success shard.
+   The partition is cost-balanced from `scripts/fixtures/test-file-costs.json`, which is measured
+   from these coverage shards (the merge job's `lyra-ui-test-timing` artifact), so it needs no
+   separate coverage table ([below](#scheduled-full-firefoxwebkit-suite)). Shard-to-shard spread on
+   one run is mostly runner speed, not the partition: the same partition has measured 352 s and
+   471 s for one shard on two runs, and container initialization (the image pull) occasionally
+   takes minutes instead of 20 s.
    Each worker runs one browser file at a time (determinism); only workers run concurrently. Each
    shard also bounds its browser sessions to 140 files and merges their raw reports. Local
    `pnpm --filter @aceshooting/lyra-ui test:coverage` stays complete and sequential (all eight shards,
    merge, cleanup); `scripts/ci.sh` and `scripts/test.sh` use that default. This is the one run of
    lyra-ui's own Chromium suite in push CI. Browser lanes use the Playwright image pinned in the
    workflow.
-4. **`packed-consumer`** aggregates independent phases. The contract lane checks checksum-verified
-   tarballs (lyra-ui from the ATTW package producer, the companion packages from the
-   companion-packages job) and never builds or packs; it verifies required files, then the packed
-   install/import/declaration/bundle/framework contract and packed-size budget, skipping only ATTW.
+4. **`packed-consumer`** aggregates independent phases. The `packed_consumer_contract` matrix
+   checks checksum-verified tarballs (lyra-ui from the ATTW package producer, the companion packages
+   from the companion-packages job) and never builds or packs. Its two legs run in parallel on the
+   same selected tarballs: `packed-consumer / contract` runs `pnpm check:packed-consumer:contracts`
+   (`check-packed-consumer.mjs --skip-attw`: required files, the packed
+   install/import/migration/runtime-singleton/declaration/bundle contracts and packed-size budget,
+   about 2.8 minutes) and uploads the migration evidence; `packed-consumer / peers-and-frameworks`
+   runs `pnpm check:packed-consumer:frameworks` (packed tooling tests, framework types, framework
+   recipes) and then the four peer-compatibility profiles against the downloaded
+   `packed-attw-tarball`, after binding it to this checkout's name and version and to its
+   `SHA256SUMS` line (about 1.8 minutes). One job ran both in about 7 minutes.
    ATTW export entries (from the current exports map, excluding CSS and the classic-script bootstrap)
    are sorted and round-robin partitioned across four jobs. One producer runs real `pnpm pack`,
    verifies tracked-source freshness and the archive's size and contents against the budgets, and
    uploads the tarball with its SHA-256; every worker verifies those bytes and the packed name,
    version and ordered exports before choosing its partition. The public-API lane consumes the shared
    dist and runs the networked semver gate. Locally `pnpm check:packed-consumer` is complete and
-   unsharded; `pnpm check:packed-consumer:contracts` is the CI-only path that skips ATTW.
+   unsharded; `check:packed-consumer:contracts` plus `check:packed-consumer:frameworks` are the
+   CI-only split that skips ATTW.
 
    `packages/lyra-ui/tsconfig.json` sets `"stripInternal": true`: a declaration whose JSDoc carries
    `@internal` (anywhere in the block, prose included) is erased from the emitted `.d.ts` even when a
@@ -267,8 +281,9 @@ real data dependencies, so a red check names the phase to reproduce:
 5. **`docs-and-storybook`**: `docs_build` builds the packages needed by the map worker and document
    engine stories, runs `pnpm docs:build` once, verifies the generated sitemap is fresh and uploads
    `storybook-static/`. The Storybook contract crawl and two Show Code shards run against that
-   artifact. The existing theme-builder job owns Show Code shard 1 plus the Firefox/WebKit theme
-   checks; the show-code job owns shard 2 plus the Chromium theme check. Each job runs its tasks
+   artifact. The existing theme-builder job owns Show Code shard 1 plus the Firefox theme check; the
+   show-code job owns the lighter shard 2 plus the Chromium and WebKit theme checks, which keeps the
+   two jobs within a few seconds of each other (about 5.5 minutes of work each). Each job runs its tasks
    sequentially, retaining the crawl's four-page default. The stable `docs-and-storybook` aggregate
    requires all three jobs. `DOCS_CHECK_SHARD_INDEX` and `DOCS_CHECK_SHARD_TOTAL` select disjoint,
    exhaustive partitions of sorted docs IDs; missing coordinates, duplicates, empty shards and

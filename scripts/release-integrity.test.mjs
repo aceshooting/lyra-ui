@@ -982,7 +982,20 @@ test('requires the exhaustive packed ATTW matrix in the stable release gate', ()
     'an over-budget archive must fail before checksum recording and upload');
   assert.equal([...tarballJob.matchAll(/pnpm pack --pack-destination/gu)].length, 1,
     'actual archive qualification must not repack');
-  assert.match(contractJob, /pnpm check:packed-consumer:contracts/u);
+  assert.match(contractJob, /^ {4}name: packed-consumer \/ \$\{\{ matrix\.lane \}\}$/mu);
+  assert.match(contractJob, /^ {6}fail-fast: false$/mu);
+  assert.match(contractJob, /^ {8}lane: \[contract, peers-and-frameworks\]$/mu,
+    'the packed contract and the peer/framework checks run as parallel legs of one matrix');
+  const contractSteps = contractJob.split(/\n(?= {6}- )/u);
+  const laneStep = (command) => {
+    const matches = contractSteps.filter((step) => step.includes(command));
+    assert.equal(matches.length, 1, `exactly one contract step runs ${command}`);
+    return matches[0];
+  };
+  assert.match(laneStep('pnpm check:packed-consumer:contracts'), /if: \$\{\{ matrix\.lane == 'contract' \}\}/u);
+  assert.match(laneStep('pnpm check:packed-consumer:frameworks'), /if: \$\{\{ matrix\.lane == 'peers-and-frameworks' \}\}/u);
+  assert.match(laneStep('node scripts/check-peer-compatibility.mjs'), /matrix\.lane == 'peers-and-frameworks'/u);
+  assert.match(laneStep('name: packed-migration-evidence'), /matrix\.lane == 'contract'/u);
   assert.doesNotMatch(contractJob, /pnpm check:packed-consumer(?:\s|$)/u);
   assert.match(contractJob, /- packed_consumer_tarball\b[\s\S]*- packed_consumer_companions\b/u);
   assert.match(contractJob, /name: packed-attw-tarball/u);
@@ -1050,6 +1063,14 @@ test('requires the exhaustive packed ATTW matrix in the stable release gate', ()
     rootPackage.scripts['check:packed-consumer:contracts'],
     /check-packed-consumer\.mjs --skip-attw/u
   );
+  // The two CI legs together run every part of the full local command except ATTW.
+  const commandParts = (script) => script.split(' && ').map((part) => part.trim());
+  const fullParts = commandParts(rootPackage.scripts['check:packed-consumer']);
+  const splitParts = [
+    ...commandParts(rootPackage.scripts['check:packed-consumer:contracts']),
+    ...commandParts(rootPackage.scripts['check:packed-consumer:frameworks']),
+  ].map((part) => part.replace(' --skip-attw', ''));
+  assert.deepEqual([...splitParts].sort(), [...fullParts].sort());
   assert.doesNotMatch(rootPackage.scripts['check:packed-consumer'], /skip-attw/u);
   assert.match(
     rootPackage.scripts['check:packed-consumer'],
@@ -3265,9 +3286,13 @@ test('primary CI and release qualification use the exact Node file while compati
     1,
     'the primary hosted packed-consumer contract job must run peer qualification exactly once',
   );
-  assert.match(contractJob, /tarballs=\("\$LYRA_PACKED_MIGRATION_ARTIFACTS"\/packages\/aceshooting-lyra-ui-\*\.tgz\)/u);
+  // The peer leg takes the checksum-verified packed-attw artifact, never a copy another leg preserved.
+  assert.match(contractJob, /tarballs=\(artifacts\/packed-attw\/aceshooting-lyra-ui-\*\.tgz\)/u);
+  assert.doesNotMatch(contractJob, /"\$LYRA_PACKED_MIGRATION_ARTIFACTS"\/packages/u);
   assert.match(contractJob, /"\$\{#tarballs\[@\]\}" -ne 1/u);
-  assert.match(contractJob, /receipt\.sha256, createHash\('sha256'\)\.update\(bytes\)\.digest\('hex'\)/u);
+  assert.match(contractJob, /join\(dirname\(tarball\), 'SHA256SUMS'\)/u);
+  assert.match(contractJob, /assert\.equal\(fileName, `aceshooting-lyra-ui-\$\{pkg\.version\}\.tgz`\)/u);
+  assert.match(contractJob, /assert\.equal\(sha256, createHash\('sha256'\)\.update\(bytes\)\.digest\('hex'\)\)/u);
   assert.match(contractJob, /node scripts\/check-peer-compatibility\.mjs --tarball "\$\{tarballs\[0\]\}"/u);
   assert.match(
     contractJob,
