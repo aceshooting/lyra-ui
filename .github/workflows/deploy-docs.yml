@@ -47,6 +47,8 @@ jobs:
       && github.event.workflow_run.head_branch == 'main'
       && github.event.workflow_run.head_repository.full_name == github.repository }}
     runs-on: ubuntu-latest
+    # About a minute, plus at most the 25-minute badge-totals step below.
+    timeout-minutes: 35
     permissions:
       actions: read
       contents: read
@@ -245,6 +247,7 @@ jobs:
     needs: build
     if: ${{ needs.build.outputs.current == 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       pages: write
       id-token: write

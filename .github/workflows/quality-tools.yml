@@ -51,7 +51,8 @@ jobs:
     env:
       # The image runs as root but GitHub mounts HOME=/github/home; keep one constant root-owned HOME.
       HOME: /root
-    timeout-minutes: 45
+    # About 9 minutes (three runs of 40 files); a hung browser frees its runner for the qualification sweeps.
+    timeout-minutes: 25
     steps:
       - name: Match the runner's default font resolution
         run: |
@@ -100,7 +101,8 @@ jobs:
     name: mutation testing (lyra-map)
     if: github.event_name == 'workflow_dispatch' || github.event.schedule == '41 3 * * 1'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # About 4 minutes: the unit suite, then every Stryker mutant.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -135,7 +137,7 @@ jobs:
     name: bundle composition
     if: github.event_name == 'workflow_dispatch' || github.event.schedule == '41 3 * * 1'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -170,7 +172,8 @@ jobs:
       options: --shm-size=2g
     env:
       HOME: /root
-    timeout-minutes: 30
+    # Three workloads of at most three sampling minutes each, after a one-minute build.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

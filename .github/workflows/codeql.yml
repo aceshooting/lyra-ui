@@ -21,6 +21,9 @@ permissions:
 jobs:
   analyze:
     runs-on: ubuntu-latest
+    # JavaScript analysis takes about 14 minutes and Actions about 4; a stalled analysis frees its
+    # runner instead of holding it for the six-hour default.
+    timeout-minutes: 30
     permissions:
       security-events: write
       packages: read

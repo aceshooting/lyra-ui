@@ -859,6 +859,38 @@ test('quality-tools is release qualification: every job is required, dispatchabl
   assert.doesNotMatch(job(workflow, 'ab-benchmark'), /github\.event\.schedule/u, 'the A/B benchmark never runs on a schedule');
 });
 
+// A stalled hosted job holds one of the account's 20 concurrent runners, which the qualification
+// sweeps compete for, until its timeout. The two exceptions are deliberate: the reusable release
+// verifier waits up to hours for qualification runs, and Scorecard's workflow stays minimal.
+test('every hosted job declares a finite job timeout, budgeted from its measured length', () => {
+  const untimed = new Set(['release-verification.yml/verify', 'scorecard.yml/analysis']);
+  const missing = [];
+  const budgets = new Map();
+  for (const file of readdirSync(new URL('../.github/workflows/', import.meta.url)).filter((name) => name.endsWith('.yml'))) {
+    const source = read(`.github/workflows/${file}`);
+    const body = source.slice(source.indexOf('\njobs:\n'));
+    for (const [, id] of body.matchAll(/^ {2}([A-Za-z0-9_-]+):$/gmu)) {
+      const text = job(body, id);
+      if (!/^ {4}runs-on:/mu.test(text)) continue;
+      const timeout = text.match(/^ {4}timeout-minutes: (.+)$/mu)?.[1];
+      if (timeout) budgets.set(`${file}/${id}`, timeout);
+      else if (!untimed.has(`${file}/${id}`)) missing.push(`${file}/${id}`);
+    }
+  }
+  assert.deepEqual(missing, [], 'jobs without timeout-minutes');
+  for (const key of untimed) assert.equal(budgets.has(key), false, `${key} is listed as untimed`);
+  // Release-qualification and publication budgets are about 2.5x their recent durations.
+  assert.deepEqual(Object.fromEntries(['quality-tools.yml/flake-hunt', 'quality-tools.yml/mutation',
+    'quality-tools.yml/bundle-composition', 'quality-tools.yml/ab-benchmark', 'codeql.yml/analyze',
+    'publish.yml/publish', 'publish.yml/dispatch-freshness', 'sign-release.yml/sign',
+    'deploy-docs.yml/build', 'deploy-docs.yml/deploy'].map((key) => [key, budgets.get(key)])), {
+    'quality-tools.yml/flake-hunt': '25', 'quality-tools.yml/mutation': '15',
+    'quality-tools.yml/bundle-composition': '10', 'quality-tools.yml/ab-benchmark': '20', 'codeql.yml/analyze': '30',
+    'publish.yml/publish': '15', 'publish.yml/dispatch-freshness': '5', 'sign-release.yml/sign': '15',
+    'deploy-docs.yml/build': '35', 'deploy-docs.yml/deploy': '10',
+  });
+});
+
 test('mocha retries stay at their default in the test lanes; only the flake hunt turns them off', () => {
   for (const file of ['ci.yml', 'full-engine.yml', 'test-all-browsers.yml']) {
     assert.doesNotMatch(read(`.github/workflows/${file}`), /WTR_RETRIES/u, `${file} keeps the retry`);

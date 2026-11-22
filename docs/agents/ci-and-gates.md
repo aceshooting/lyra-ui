@@ -420,7 +420,9 @@ per browser on independent runners through `scripts/test_all_browsers.sh`; brows
 jobs keep the release check names stable and the worker names expose the failed shard. Subset runs
 are for diagnosis only: the generated qualification manifest requires the Chromium, Chrome and Edge
 aggregates from one successful `workflow_dispatch` run whose `head_branch` is `main` and whose
-`head_sha` is the release commit, so a subset run cannot qualify a release.
+`head_sha` is the release commit, so a subset run cannot qualify a release. A shard's timeout is per
+browser: 25 minutes for Chromium, Chrome and Edge (6-10 minutes measured) and 45 for a four-way Firefox
+or Safari shard (about 20), so a hung shard frees its runner instead of holding it for an hour.
 
 ## Quality tools (`quality-tools.yml`)
 
@@ -960,6 +962,17 @@ hunt, mutation testing, bundle composition and the published-release benchmark
 ([Quality tools](#quality-tools-quality-toolsyml)). Releases require the push CI, the Chromium/Chrome/Edge
 Test All Browsers aggregates, every full-engine shard (Firefox and WebKit) and all four Quality tools jobs
 to succeed on the exact main commit before any tag is created.
+
+**Runner budget.** The account has 20 concurrent hosted runners. On a release commit, push CI (about
+215 runner-minutes), CodeQL (about 18), Test All Browsers (about 100), the full-engine suite (about 115)
+and Quality tools (about 21) share them, so the qualification wall time is set by the total
+runner-minutes, not by any one workflow's critical path: a new job, shard or duplicated build lengthens
+every release, and a split pays only when it removes more queued minutes than its per-job setup (about
+one minute) adds. Every hosted job declares `timeout-minutes` at roughly 2.5x its measured length, so a
+stalled job releases its runner (`ci-workflow-policy.test.mjs` enforces it); the two exceptions are
+`release-verification.yml`'s `verify`, whose qualification waits may legitimately last hours, and the
+minimal Scorecard workflow. An environment-approval wait (`npm-publish`) happens before the job starts
+and never counts against its timeout.
 
 ### Deterministic scale budgets
 

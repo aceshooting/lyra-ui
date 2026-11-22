@@ -16,6 +16,7 @@ import {
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
+import { runInNewContext } from 'node:vm';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
@@ -3880,7 +3881,14 @@ test('CI browser provisioning preserves requested rows, native engines and real 
   assert.match(testJob, /options: --shm-size=2g -v \/usr\/share\/fonts:\/usr\/share\/host-fonts:ro/u);
   assert.match(testJob, /HOME:.*'\/root'.*'\/home\/runner'/u);
   assert.match(testJob, /DejaVu/u);
-  assert.match(testJob, /timeout-minutes: 60/u);
+  // Chromium-family shards are budgeted near their measured length; Firefox and Safari four-way shards get more.
+  const timeout = testJob.match(/^ {4}timeout-minutes: \$\{\{ (.+) \}\}$/mu)?.[1];
+  assert.ok(timeout, 'the shard timeout is a per-browser expression');
+  const fromJSON = (value) => JSON.parse(value);
+  const contains = (list, value) => list.includes(value);
+  const minutes = Object.fromEntries(['chromium', 'chrome', 'edge', 'firefox', 'safari'].map((browser) =>
+    [browser, runInNewContext(timeout, { fromJSON, contains, matrix: { browser } }, { timeout: 100 })]));
+  assert.deepEqual(minutes, { chromium: 25, chrome: 25, edge: 25, firefox: 45, safari: 45 });
   assert.equal([...testJob.matchAll(/timeout-minutes:/gu)].length, 1);
   assert.match(testJob, /channel-os.*playwright install-deps "\$INSTALL_BROWSER"/u);
   assert.match(testJob, /channel-binary.*ci-install-browser\.sh "\$INSTALL_BROWSER"/u);

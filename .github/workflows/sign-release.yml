@@ -27,6 +27,8 @@ jobs:
   sign:
     needs: verify
     runs-on: ubuntu-latest
+    # Counts from the approved start, never the npm-publish approval wait; the steps take under a minute.
+    timeout-minutes: 15
     environment: npm-publish
     permissions:
       actions: read

@@ -55,6 +55,8 @@ jobs:
   publish:
     needs: verify
     runs-on: ubuntu-latest
+    # Counts from the approved start, never the npm-publish approval wait; the steps take about a minute.
+    timeout-minutes: 15
     environment: npm-publish
     permissions:
       actions: read
@@ -590,6 +592,7 @@ jobs:
     needs: [verify, confirm-registry]
     if: ${{ needs['confirm-registry'].result == 'success' && (github.event_name == 'release' || inputs.dry_run != true) && (startsWith(needs.verify.outputs.tag, 'lyra-ui@') || startsWith(needs.verify.outputs.tag, 'lyra-flags@')) }}
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       actions: write
     steps:

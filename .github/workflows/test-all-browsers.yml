@@ -71,7 +71,9 @@ jobs:
     needs: [plan, build]
     name: ${{ matrix.browser }} / shard ${{ matrix.shard }}/4
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # Chromium, Chrome and Edge shards take 6-10 minutes; a four-way Firefox or Safari shard about 20.
+    # A hung shard fails at about 2.5x its measured length instead of holding a runner for an hour.
+    timeout-minutes: ${{ contains(fromJSON('["firefox","safari"]'), matrix.browser) && 45 || 25 }}
     # Native engines inherit their pinned binaries and OS dependencies. Real Chrome/Edge channels
     # retain hosted VMs. An empty image means no job container; the matrix axes stay unchanged.
     container:
