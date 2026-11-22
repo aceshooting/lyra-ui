@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: '打开日历',
   item: '项',
   comboboxLoadError: '无法加载选项。',
+  comboboxRichContentUnavailable: '格式化的选项内容不可用。正在显示纯文本标签。',
   comboboxSelectedOverflow: '+{n}项',
   checkboxRequired: '如需继续，请勾选此项。',
   checkboxGroupRequired: '请至少选择一个选项。',

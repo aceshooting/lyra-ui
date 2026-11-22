@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'Avaa kalenteri',
   item: 'kohde',
   comboboxLoadError: 'Vaihtoehtoja ei voitu ladata.',
+  comboboxRichContentUnavailable: 'Vaihtoehtojen muotoiltu sisältö ei ole saatavilla. Näytetään pelkät nimet.',
   comboboxSelectedOverflow: '+{n} muuta',
   checkboxRequired: 'Valitse tämä ruutu, jos haluat jatkaa.',
   checkboxGroupRequired: 'Valitse vähintään yksi vaihtoehto.',

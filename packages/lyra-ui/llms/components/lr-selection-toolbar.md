@@ -82,7 +82,7 @@ The toolbar is a floating surface and paints from the **shared overlay-surface f
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
 `var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
-surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
+surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius-container)`) is the matching corner radius.
 
 **Slots:** `actions` — extra actions rendered after the built-in ask/quote/cite/copy buttons,
 inside the same `role="toolbar"` element and roving-tabindex group. **Optional peer deps:** none.

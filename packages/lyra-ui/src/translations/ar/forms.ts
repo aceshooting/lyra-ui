@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'فتح التقويم',
   item: 'عنصر',
   comboboxLoadError: 'تعذّر تحميل الخيارات.',
+  comboboxRichContentUnavailable: 'محتوى الخيارات المنسق غير متاح. يتم عرض تسميات نصية بسيطة.',
   comboboxSelectedOverflow: '+{n} أخرى',
   checkboxRequired: 'يُرجى تحديد هذا المربع للمتابعة.',
   checkboxGroupRequired: 'حدّد خيارًا واحدًا على الأقل.',

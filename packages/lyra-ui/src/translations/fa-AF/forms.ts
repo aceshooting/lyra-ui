@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'بازکردن تقویم',
   item: 'مورد',
   comboboxLoadError: 'بارگذاری گزینه‌ها ممکن نشد.',
+  comboboxRichContentUnavailable: 'محتوای قالب‌بندی‌شده گزینه‌ها در دسترس نیست. برچسب‌های ساده نمایش داده می‌شوند.',
   comboboxSelectedOverflow: '+{n} مورد دیگر',
   checkboxRequired: 'اگر می‌خواهید ادامه دهید، این خانه را علامت بزنید.',
   checkboxGroupRequired: 'دست‌کم یک گزینه را انتخاب کنید.',

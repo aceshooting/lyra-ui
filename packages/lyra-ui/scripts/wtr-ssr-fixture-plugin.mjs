@@ -60,7 +60,11 @@ export function ssrFixturePlugin() {
       const id = nextId++;
       return new Promise((resolve, reject) => {
         pending.set(id, { resolve, reject });
-        worker.postMessage({ id, template: payload.template });
+        worker.postMessage({
+          id,
+          template: payload.template,
+          locale: { catalogs: payload.catalogs ?? [], serverLocale: payload.serverLocale },
+        });
       });
     },
     async serverStop() {

@@ -111,7 +111,8 @@ const DEFAULT_PAGE_SIZE = 100;
  *   the zero-based index of the page's first row. The nested pager's own event of this name stops
  *   inside the shadow root, so one page action reaches a document listener once, targeted at the
  *   table. Vetoing it keeps `page` and suppresses `lr-page-change`.
- * @event lr-page-change - A pagination control requested a page. Frozen readonly `detail: { page, pageSize, offset }`;
+ * @event lr-page-change - A pagination control requested a page. Frozen readonly `detail: { page, pageSize, offset }`,
+ *   all three always present (the same shape as `lr-before-page-change` and `<lr-pagination>`);
  *   `page` is one-based and `offset` is `(page - 1) * pageSize`.
  * @event lr-cell-edit - An inline editor committed a value. `detail: { row, columnKey, value }`.
  * @event lr-column-resize-request - Cancelable proposal before accepting a keyboard resize or

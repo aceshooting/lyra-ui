@@ -32,3 +32,22 @@ export const Restart: StoryObj = {
 export const Rtl: StoryObj = {
   render: () => html`<div dir="rtl"><lr-number-ticker lang="ar" value="12840" eager></lr-number-ticker></div>`,
 };
+
+/** A ten-second count on a steep ease-out curve: the rounded text reaches the final value early, so
+ *  the ticker settles (and `lr-finish` fires) as soon as the number visibly stops. */
+export const EarlySettle: StoryObj = {
+  render: () => html`
+    <lr-number-ticker
+      value="250"
+      duration="10000"
+      easing="cubic-bezier(0, 1, 0, 1)"
+      eager
+      style="font-size: 2rem"
+      @lr-finish=${(event: Event) => {
+        const log = (event.target as HTMLElement).nextElementSibling;
+        if (log) log.textContent = 'Settled';
+      }}
+    ></lr-number-ticker>
+    <p aria-live="polite"></p>
+  `,
+};

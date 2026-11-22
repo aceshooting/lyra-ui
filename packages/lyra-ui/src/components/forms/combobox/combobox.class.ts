@@ -14,6 +14,8 @@ import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import { acquireNativeControlDescription, type NativeControlDescriptionLease } from '../../../internal/native-control-description.js';
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
+import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import { loadDompurify } from '../../../internal/dompurify-loader.js';
 import {
   LyraElement,
   type LyraEventDetailSnapshot,
@@ -101,7 +103,7 @@ import { bdi } from '../../../internal/bidi.js';
 import { DEV_DIAGNOSTICS, devWarnOnce } from '../../../internal/dev-warning.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_comboboxCreate, LYRA_DEFAULT_comboboxLabel, LYRA_DEFAULT_comboboxLoadError, LYRA_DEFAULT_comboboxOverflow, LYRA_DEFAULT_comboboxRequired, LYRA_DEFAULT_comboboxSelectedOverflow } from '../../../internal/default-strings/forms.generated.js';
+import { LYRA_DEFAULT_comboboxCreate, LYRA_DEFAULT_comboboxLabel, LYRA_DEFAULT_comboboxLoadError, LYRA_DEFAULT_comboboxOverflow, LYRA_DEFAULT_comboboxRequired, LYRA_DEFAULT_comboboxRichContentUnavailable, LYRA_DEFAULT_comboboxSelectedOverflow } from '../../../internal/default-strings/forms.generated.js';
 import { LYRA_DEFAULT_clear, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_notInCatalog, LYRA_DEFAULT_removeWithContext, LYRA_DEFAULT_retry, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_valueInvalid } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
@@ -186,6 +188,12 @@ export interface ComboboxSourceRow {
   readonly value: string;
   readonly label: string;
   readonly sub?: string;
+  /** Optional rich markup shown in place of the plain label text. It always passes through the
+   *  optional `dompurify` peer (plus a passive-content pass that drops interactive, network and
+   *  styling hooks) before rendering. While the peer loads, or when it is missing or fails, the
+   *  row shows the plain `label`. `label` stays the accessible name, filter text and committed
+   *  text either way. At most 4,096 UTF-16 code units; longer markup is ignored. */
+  readonly html?: string;
   /** Optional decorative leading visual. Its rendered subtree is inert and aria-hidden. */
   readonly icon?: unknown;
   /** Leading adornment, mirroring `<lr-option>`'s `start`/`prefix` slots. Inert and aria-hidden,
@@ -266,6 +274,9 @@ export interface ComboboxRequest {
 export interface ComboboxOption {
   readonly value: string;
   readonly label: string;
+  /** Optional sanitized rich content for the row; `label` stays its accessible name. See
+   *  {@link ComboboxSourceRow.html}. */
+  readonly html?: string;
   readonly disabled?: boolean;
 }
 
@@ -395,6 +406,7 @@ function normalizeSourceResult(input: unknown): {
       const start = content('start');
       const end = content('end');
       const sub = optionalText('sub');
+      const markup = optionalText('html');
       const accessibleLabel = optionalText('accessibleLabel');
       const dotColor = optionalText('dotColor');
       const title = optionalText('title');
@@ -412,6 +424,7 @@ function normalizeSourceResult(input: unknown): {
         value.length +
         label.length +
         (sub?.length ?? 0) +
+        (markup?.length ?? 0) +
         (accessibleLabel?.length ?? 0) +
         (dotColor?.length ?? 0) +
         (title?.length ?? 0) +
@@ -423,6 +436,7 @@ function normalizeSourceResult(input: unknown): {
         value,
         label,
         ...(sub === undefined ? {} : { sub }),
+        ...(markup === undefined ? {} : { html: markup }),
         ...(icon === undefined ? {} : { icon }),
         ...(start === undefined ? {} : { start }),
         ...(end === undefined ? {} : { end }),
@@ -525,6 +539,15 @@ export type LyraComboboxSourceErrorEvent =
  * An async `source` failure renders as a disabled listbox row, not a shadow-root live region; each
  * current post-mount rejection appends the localized `comboboxLoadError` message to the shared
  * light-DOM assertive announcement sink. Raw caught error text is never exposed to users.
+ * An async row (from `source` or `dataSource`) may carry `html`, rich markup rendered in place of
+ * its label text as the `option-html` part. The markup always passes through the optional
+ * `dompurify` peer, then a passive-content pass that removes interactive elements, network and
+ * styling attributes and custom elements; a superseded result is never applied. The row keeps its
+ * text `label` as its accessible name, filter text and committed text, and the rich content is
+ * `aria-hidden`. While the peer loads, every row shows its plain label. When the peer is missing,
+ * unusable or throws, rows stay on their plain labels (never raw markup), the listbox shows the
+ * localized `comboboxRichContentUnavailable` note as `option-html-fallback`, and the same message
+ * is announced once through the shared polite announcement sink.
  * The floating listbox is a nonmodal shared-overlay-manager entry. Visual stack order, Escape,
  * outside-pointer dismissal, and focus handoff are therefore owned by only the newest Lyra
  * overlay, including when another popup such as `lr-color-picker` remains open underneath it.
@@ -657,11 +680,10 @@ export type LyraComboboxSourceErrorEvent =
  *   surface under a coarse or hover-less pointer, which stops mobile Safari zooming on focus. `0px`
  *   disables it.
  * @cssprop [--lr-form-control-label-inline-size=30%] - Label column width while
- *   `label-placement="start"`.
- * @cssprop [--lr-form-control-label-gap=var(--lr-space-m)] - Space between the label column and
- *   the field while `label-placement="start"`.
- * @cssprop [--lr-form-control-label-block-gap=var(--lr-space-xs)] - Space between a label above
- *   the field and the field, in top placement and once a `label-placement="start"` row collapses.
+ *   `label-placement="start"`; `auto` sizes the column to the label text.
+ * @cssprop [--lr-form-control-label-gap] - Space between the label and the field: the label
+ *   column gap while `label-placement="start"` (default `var(--lr-space-m)`), and the gap under a
+ *   label above the field, in top placement or a collapsed start row (default `var(--lr-space-xs)`).
  * @cssprop [--lr-form-control-label-collapse-inline-size=var(--lr-size-20rem)] - Control width
  *   below which `label-placement="start"` returns the label above the field.
  * @cssprop [--lr-form-control-invalid-border-color=var(--lr-color-danger)] - Resting border while the
@@ -698,6 +720,10 @@ export type LyraComboboxSourceErrorEvent =
  * @csspart option-badge - An async option row's optional trailing metadata badge, and the
  *   localized "not in catalog" badge on a synthetic unmatched-value row (`with-unknown-option`).
  * @csspart option-overflow - The "+N more" indicator shown when rows are capped by `maxRender`.
+ * @csspart option-html - The sanitized rich content of an async row carrying `html`; hidden from
+ *   assistive technology, which reads the row's text `label` instead.
+ * @csspart option-html-fallback - The localized note shown when rows carry `html` but the optional
+ *   `dompurify` peer is missing or failed, so they fall back to their plain labels.
  * @csspart unknown-value - Badge shown next to the closed single-select input, or a `multiple`-mode
  *   tag, when the committed value matches no current option/row (see `isUnknownValue()`).
  * @csspart tags - The multi-select tag container.
@@ -805,7 +831,7 @@ export type LyraComboboxSourceErrorEvent =
  * @cssprop [--lr-overlay-border=var(--lr-color-border)] - Shared floating-surface edge colour, on
  * the listbox popup. Unlike a floating panel's decorative edge, it defaults to
  * the control tier: this popup belongs to the control it opens from.
- * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, on the
+ * @cssprop [--lr-overlay-radius=var(--lr-radius-container)] - Shared floating-surface corner radius, on the
  * listbox popup.
  * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored listbox
  * popup.
@@ -854,6 +880,7 @@ export class LyraCombobox<
     comboboxLoadError: LYRA_DEFAULT_comboboxLoadError,
     comboboxOverflow: LYRA_DEFAULT_comboboxOverflow,
     comboboxRequired: LYRA_DEFAULT_comboboxRequired,
+    comboboxRichContentUnavailable: LYRA_DEFAULT_comboboxRichContentUnavailable,
     comboboxSelectedOverflow: LYRA_DEFAULT_comboboxSelectedOverflow,
     fieldRequired: LYRA_DEFAULT_fieldRequired,
     loading: LYRA_DEFAULT_loading,
@@ -1335,6 +1362,11 @@ export class LyraCombobox<
   private _sourceTotal = 0;
   private _sourceTruncated = false;
   private readonly sourceErrorAnnouncements = new AnnouncementSinkController(this, { eager: ['assertive'] });
+  /** Sanitized `html` markup for the current async rows, keyed by row identity. A row absent here
+   *  renders its plain `label`: the fail-closed default while the sanitizer loads or after it fails. */
+  @state() private rowHtml: ReadonlyMap<ComboboxSourceRow, string> = new Map();
+  /** True when the current rows carry `html` the sanitizer peer could not render. */
+  @state() private rowHtmlUnavailable = false;
   @query('[part="combobox-input"]') private inputEl?: HTMLInputElement;
   // The default (unnamed) slot carrying `<lr-option>` children -- read once from `firstUpdated()`
   // in addition to its own `@slotchange` listener; see `collectInitialSlotAssignment`'s doc.
@@ -3536,6 +3568,7 @@ export class LyraCombobox<
         this._sourceTotal = normalized.total;
         this._sourceTruncated = normalized.truncated;
         this.asyncRows = normalized.rows;
+        void this.sanitizeRowHtml(normalized.rows, isCurrent);
         this.sourceFailed = false;
         this.sourceEverSettled = true;
         this.normalizeActiveIndex();
@@ -3571,6 +3604,51 @@ export class LyraCombobox<
       .finally(() => {
         if (token === this.sourceToken) this.sourceLoading = false;
       });
+  }
+
+  /** Sanitizes the optional `html` of one settled result. Every await is followed by the request's
+   *  own generation check plus a row-identity check, so a slower sanitizer pass for a superseded
+   *  result never writes over a newer one. A missing, unusable or throwing sanitizer leaves every
+   *  row on its plain label and surfaces the localized fallback note and one announcement. */
+  private async sanitizeRowHtml(rows: readonly ComboboxSourceRow[], isCurrent: () => boolean): Promise<void> {
+    this.rowHtml = new Map();
+    const pending = rows.filter((row) => row.html !== undefined);
+    if (pending.length === 0) {
+      this.rowHtmlUnavailable = false;
+      return;
+    }
+    const isStale = () => !isCurrent() || this.asyncRows !== rows;
+    let next: Map<ComboboxSourceRow, string> | null = null;
+    try {
+      const [sanitizer, passive] = await Promise.all([
+        loadDompurify(),
+        import('../../../internal/passive-markup.js'),
+      ]);
+      if (isStale()) return;
+      if (sanitizer) {
+        next = new Map();
+        const holder = this.ownerDocument.createElement('template');
+        for (const row of pending) {
+          holder.content.replaceChildren(
+            passive.sanitizePassiveMarkupFragment(sanitizer, row.html!, this.ownerDocument, 'passive-document')
+          );
+          const clean = holder.innerHTML;
+          // Markup that sanitizes to nothing visible keeps the plain label rather than a blank row.
+          if (clean.trim() !== '') next.set(row, clean);
+        }
+      }
+    } catch {
+      next = null;
+    }
+    if (isStale()) return;
+    if (next) {
+      this.rowHtml = next;
+      this.rowHtmlUnavailable = false;
+      return;
+    }
+    if (!this.rowHtmlUnavailable)
+      this.sourceErrorAnnouncements.announcePolite(this.localize('comboboxRichContentUnavailable'));
+    this.rowHtmlUnavailable = true;
   }
 
   private clearSourceTimer(): void {
@@ -3771,6 +3849,7 @@ export class LyraCombobox<
       }
       const id = `${this.listId}-opt-${i}`;
       const sourceOption = this.sourceOptionsByRow.get(o);
+      const richHtml = this.rowHtml.get(o);
       const selected = this.multiple || this.source || o.unknownValue !== undefined
         ? selectedSet.has(o.value)
         : this.singleSelectedOption !== undefined && sourceOption === this.singleSelectedOption;
@@ -3803,7 +3882,10 @@ export class LyraCombobox<
               ></span>`
             : ''}
           <span part="option-label">
-            <span>${bdi(o.label)}</span>
+            ${richHtml === undefined
+              ? html`<span>${bdi(o.label)}</span>`
+              : html`<span class="sr-only">${bdi(o.label)}</span
+                ><span part="option-html" aria-hidden="true" dir="auto">${unsafeHTML(richHtml)}</span>`}
             ${o.sub ? html`<span part="option-sub">${bdi(o.sub)}</span>` : ''}
           </span>
           ${o.badge != null
@@ -4083,6 +4165,9 @@ export class LyraCombobox<
                         n: getNumberFormat(this.effectiveLocale).format(overflow),
                       }
                     )}</div>`
+                : ''}
+              ${this.rowHtmlUnavailable && rows.some((row) => row.html !== undefined)
+                ? html`<div part="option-html-fallback">${this.localize('comboboxRichContentUnavailable')}</div>`
                 : ''}`}
         </div>
         ${renderFormControlHintError({

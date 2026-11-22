@@ -123,7 +123,7 @@ const TOOL_CALL_CHIP_STATUS = literalSetConverter<ToolStatus>(TOOL_CALL_STATUSES
  * on the anchored detail tooltip.
  * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge
  * colour, on the anchored detail tooltip.
- * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, on the
+ * @cssprop [--lr-overlay-radius=var(--lr-radius-container)] - Shared floating-surface corner radius, on the
  * anchored detail tooltip.
  * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored surface.
  * @cssprop --lr-positioning-strategy - Cascading `absolute`/`fixed` override for the detail

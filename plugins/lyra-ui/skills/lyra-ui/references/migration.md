@@ -36,7 +36,9 @@ Migrated Web Awesome and Shoelace icon tags emit `BEHAVIOR_REVIEW_REQUIRED` beca
 dependency-free default library contains only `add`, `check`, `close`, `search`, `menu`,
 `chevron-left`, `chevron-right`, `chevron-down`, `calendar`, `command`, and `trash`.
 Replace other names explicitly or provide their vocabulary with
-`registerIconLibrary('default', { resolver })`.
+`registerIconLibrary('default', { resolver })`. Web Awesome's Font Awesome names keep working
+after `registerFontAwesomeIconLibrary({ name: 'default' })` from
+`components/utility/icon/icon-library-font-awesome.js` (add `kitCode` for Pro families).
 Re-running the tool is idempotent; comments, prose, partial strings, and unrelated packages are
 left alone.
 
@@ -1884,6 +1886,69 @@ reported as `GLOBAL_REVIEW`, acknowledged as `lyra-migrate-reviewed: GLOBAL_REVI
 | locale-key | `xmlViewerCollapseNode` | `xmlViewerToggleNode` | Reported only. lr-xml-viewer names its node toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
 | locale-key | `xmlViewerExpandNode` | `xmlViewerToggleNode` | Reported only. lr-xml-viewer names its node toggle with one constant key while aria-expanded reports the state; a string override under the old key no longer applies. |
 | part | `<lr-thread-list> ::part(pin-glyph)` | Style the pin indicator through pin-icon. | Reported only. The pin indicator part is named pin-icon, like the without-pin-icon attribute that hides it. |
+
+## Migrating from Lyra 32 to Lyra 33 (`--origin=lyra-v32`)
+
+Lyra 32 minor releases and Lyra 33 rename some Lyra-only attributes, properties, events, CSS parts,
+custom properties and slots. Previous names still supported by the installed release are deprecated aliases.
+A removal floor is not an automatic removal date. Names and defaults in the pinned upstream's current, nondeprecated API remain mirrored.
+Run the CLI of the installed package after upgrading, within Lyra 32 or to Lyra 33. It
+applies only the entries the installed release ships, so running it again after a later upgrade
+picks up the rest:
+
+```bash
+npx lyra-ui-migrate --origin=lyra-v32 --diff src > lyra-v32.patch
+npx lyra-ui-migrate --origin=lyra-v32 --check --report=lyra-v32-migration.json src
+```
+
+`--diff` prints a patch and writes nothing. The profile rewrites a name only where the rewrite
+cannot change what the site reaches: attribute, property and slot bindings on the component in
+HTML, Lit, JSX, Vue, Svelte and Angular templates; `exportparts` and `::part()` or attribute
+selectors that name the component; and calls rooted at `querySelector('lr-…')`, `closest()` or
+`createElement()`. Events bubble and custom properties inherit, so a listener moves only when no
+other component already dispatches the new name, and an unowned listener or any custom-property
+use only when, in addition, every component with the old name renamed it the same way and the
+scanned code never dispatches the old name itself. Everything else is reported with a location;
+the old name keeps working meanwhile.
+
+| Code | Reported when |
+|---|---|
+| `RENAME_REVIEW` | An old name at a site that does not prove its component, or where another component keeps the name. |
+| `RENAME_TARGET_SHARED_REVIEW` | The new name is already used by another component, so renaming would widen the site. |
+| `NAME_GAINED_OWNER_REVIEW` | A listener, `::part()` selector or declaration of a name that more components use after the upgrade. |
+| `POLARITY_REVIEW` | A boolean replaced by its inverse is bound, assigned or selected, or set statically where a framework assigns properties. |
+| `DETAIL_SHAPE_REVIEW` | A listener may receive an event whose detail changed; details cannot be aliased. |
+| `RETIRED_EVENT_REVIEW` | A listener or event-name string may use an alias already removed in the target release; review its replacement and listener reach. |
+| `PROPERTY_CHANGE_REVIEW` | A property keeps its name but changes its accepted values or behavior; review the assignment without rewriting an ambiguous runtime value. |
+| `DEPRECATED_MEMBER_REVIEW`, `DEPRECATED_CONTENT_REVIEW` | A deprecated member, tag or kind of slotted content without a mechanical replacement. |
+| `DEPRECATED_MODULE_REVIEW` | A deprecated module, stylesheet, named export, window event or root attribute. Its replacement needs a semantic review. |
+| `GLOBAL_REVIEW` | A moved package specifier, removed root export or removed localization key that cannot be rewritten safely. |
+| `THEME_SCOPE_CSS_INPUT_REVIEW`, `THEME_SCOPE_OUTPUT_REVIEW`, `THEME_SCOPE_DYNAMIC_INPUT_REVIEW`, `THEME_SCOPE_REPEATED_REVIEW`, `THEME_SCOPE_DOUBLE_LAYER_REVIEW` | The `theme-scopes` rule found an input, shared output or marker that needs a theme scope by hand, or `tokens-root.css` imported next to `theme.css`, which already carries the layer. |
+| `MODULE_NAMESPACE_REVIEW` | A namespace, dynamic import or CommonJS module access whose exported bindings need review. |
+| `RENAME_CONFLICT_REVIEW` | The element already binds the new name, or the same receiver already listens to it with the same handler. |
+| `UNUSED_ACKNOWLEDGEMENT` | An acknowledgement comment matches no report. |
+
+After reviewing a site, add a comment containing `lyra-migrate-reviewed: CODE:name` (for example
+`DETAIL_SHAPE_REVIEW:lr-close`) on the reported line, alone on the line above it, or directly before
+the element's opening tag. Acknowledged reports no longer fail `--check`. Re-running the profile
+is idempotent. Templates rendered on the server must be re-rendered after migrating, because Lit
+hydration compares template strings.
+
+| Component | Property | Semantic change in Lyra 33 (reported, never rewritten) |
+|---|---|---|
+| `<lr-token-input>` | `delimiter` | Each character of delimiter is now a separate delimiter (";," splits at every semicolon and every comma, and typing either commits); a multi-character value no longer matches only as one whole string, so review a delimiter longer than one character. |
+
+Entries no component owns. A module specifier is rewritten where it is provably an import, re-export,
+dynamic import, `require()`, CSS `@import`, `<link href>`/`<script src>` or a `node_modules/` path, and in any
+string of a JSON file such as `.vscode/settings.json` (pass it as an explicit target); anywhere else it is
+reported. A removed root or barrel export is re-bound as `New as Old` in the import clause, so local references keep
+working. A removed custom property whose replacement is one custom property is rewritten to it. Other uses (a
+deep import, a namespace member), prefix or prose custom-property guidance and removed localization keys are
+reported as `GLOBAL_REVIEW`, acknowledged as `lyra-migrate-reviewed: GLOBAL_REVIEW:<name>`.
+
+| Kind | From | To | Handling |
+|---|---|---|---|
+| css-property | `--lr-form-control-label-block-gap` | --lr-form-control-label-gap | Rewritten; custom properties inherit, so the reach is unchanged. One label gap spaces a label above the field as well as a label-placement="start" column, so a value set for the start column now also spaces top labels; scope it to the start-placed controls if only the column should change. |
 
 ## Upstream compatibility spellings
 

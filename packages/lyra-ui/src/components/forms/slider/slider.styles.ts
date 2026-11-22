@@ -428,7 +428,15 @@ export const styles = css`
     overflow-wrap: break-word;
   }
   [part~="label"] {
-    ${formControlLabelTypography({ size: css`inherit`, color: css`var(--lr-color-text)` })}
+    ${formControlLabelTypography({ color: css`var(--lr-color-text)` })}
+  }
+  /* --lr-form-control-label-gap replaces the row gap under a label above the track; unset, the
+     margin is zero and the row gap alone spaces them. */
+  :host > :is([part~="label"], [part="label-row"]) {
+    --_lr-slider-label-gap: calc(
+      var(--lr-form-control-label-gap, var(--lr-slider-gap, var(--lr-space-s))) - var(--lr-slider-gap, var(--lr-space-s))
+    );
+    margin-block-end: var(--_lr-slider-label-gap);
   }
   [part="references"] {
     font-size: var(--lr-font-size-sm);
@@ -501,8 +509,11 @@ export const styles = css`
     column-gap: var(--_lr-label-gap);
   }
   :host([label-placement='start']:not([orientation='vertical'])) > :is([part~='label'], [part='label-row']) {
-    flex: 0 0 clamp(var(--_lr-label-column), (var(--_lr-label-collapse) - 100%) * 9999, 100%);
+    flex: 0 0 var(--_lr-label-column);
     box-sizing: border-box;
+    min-inline-size: clamp(0px, (var(--_lr-label-collapse) - 100%) * 9999, 100%);
+    max-inline-size: 100%;
+    margin-block-end: clamp(0px, (var(--_lr-label-collapse) - 100%) * 9999, var(--_lr-slider-label-gap));
   }
   :host([label-placement='start']:not([orientation='vertical'])) > [part='references'] {
     flex: 0 0 100%;

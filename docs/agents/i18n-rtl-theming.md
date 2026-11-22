@@ -68,6 +68,12 @@ treat a gap in any of them as a bug, not a missing feature.
   gate checks it (`check-source-policy.mjs`'s `intl-outside-cache` rule only catches a formatter
   constructed outside the shared cache, not a wrong locale value passed into it) — review by
   hand.
+- Server rendering sees no ancestor `lang`, only the host's own `locale`/`lang` and the active
+  locale. `localize()` and `effectiveLocale` therefore resolve the server's locale on a
+  hydrating first render and commit the inherited one on the next update, so hydration never
+  adopts stale server text. A component reading `effectiveMessageLocale` directly into a template
+  bypasses that; route rendered text through `localize()`/`effectiveLocale`. The hydrated-fixture
+  coverage is `test/hydration/localization.hydration.test.ts` ([testing.md](testing.md)).
 - Test convention: at minimum, one test proves the built-in English fallback renders unchanged
   with no locale registered; for any component whose behavior depends on a key showing up
   correctly, add a `.strings` override test (e.g. `.strings=${{ someKey: 'Texte' }}`) proving the

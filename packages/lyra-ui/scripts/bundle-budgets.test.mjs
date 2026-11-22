@@ -461,16 +461,21 @@ test('combobox minimum-query admission retains its reviewed initial-route ceilin
     'only the exceeded initial-route ceiling advances to the next 64-byte boundary');
 });
 
-// Standalone button registration retains the shared-base canary at the next 64-byte boundary.
-test('standalone button retains its reviewed gzip measurement and tight canary', () => {
-  const entry = 'dist/components/lr-button.js';
-  const measurement = 38_323;
-  const ceiling = budgetKilobytesToBytes(budgets[entry], entry);
-  assert.equal(budgets.$reviewedGzipBytes[entry], measurement);
-  assert.equal(ceiling, 38_336);
-  assert.equal(ceiling, Math.ceil(measurement / 64) * 64,
-    'the standalone button ceiling advances only to the next 64-byte boundary');
-});
+// The core form controls (button, select, input) keep dedicated standalone canaries at the next
+// 64-byte boundary above their reviewed measurements; growth needs a reviewed measurement change.
+for (const [entry, measurement, reviewedCeiling] of [
+  ['dist/components/lr-button.js', 38_323, 38_336],
+  ['dist/components/lr-select.js', 87_607, 87_616],
+  ['dist/components/lr-input.js', 47_491, 47_552],
+]) {
+  test(`${entry} retains its reviewed gzip measurement and tight core-control canary`, () => {
+    const ceiling = budgetKilobytesToBytes(budgets[entry], entry);
+    assert.equal(budgets.$reviewedGzipBytes[entry], measurement);
+    assert.equal(ceiling, reviewedCeiling);
+    assert.equal(ceiling, Math.ceil(measurement / 64) * 64,
+      'a core-control ceiling advances only to the next 64-byte boundary');
+  });
+}
 assert.deepEqual(reviewedCeilingKeys, [
   '$componentMaxGzipKb',
   '$componentP95GzipKb',
@@ -487,6 +492,7 @@ assert.deepEqual(reviewedCeilingKeys, [
   'dist/components/lr-combobox.js',
   'dist/components/lr-flow-canvas.js',
   'dist/components/lr-gauge.js',
+  'dist/components/lr-input.js',
   'dist/components/lr-pdf-viewer.js',
   'dist/components/lr-popover.js',
   'dist/components/lr-select.js',

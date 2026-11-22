@@ -270,7 +270,7 @@ export interface LyraCommandPaletteEventMap {
  *   without hijacking the library-wide `--lr-color-brand-quiet` token.
  * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-highest)] - Shared floating-surface fill of the palette dialog.
  * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge of the palette dialog.
- * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius of the palette dialog.
+ * @cssprop [--lr-overlay-radius=var(--lr-radius-container)] - Shared floating-surface corner radius of the palette dialog.
  * @cssprop [--lr-overlay-shadow-modal=var(--lr-shadow-xl)] - Elevation of the palette dialog.
  * @status stable
  * @since 4.0.0

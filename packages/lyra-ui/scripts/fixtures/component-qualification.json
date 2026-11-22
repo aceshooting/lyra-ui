@@ -12768,7 +12768,7 @@
           "evidence": [
             {
               "file": "src/components/forms/color-picker/color-picker.class.ts",
-              "line": 1294,
+              "line": 1295,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -12938,6 +12938,18 @@
               "state": "populated"
             },
             {
+              "file": "src/components/forms/combobox/combobox-option-html.test.ts",
+              "test": "is accessible with rich rows, a keyboard-active row, and the fallback note",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/forms/combobox/combobox-option-html.test.ts",
+              "test": "is accessible with rich rows, a keyboard-active row, and the fallback note",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/forms/combobox/combobox-rendering-a11y.test.ts",
               "test": "renders structured async-row adornments and preserves selected opaque data",
               "target": "el",
@@ -13043,10 +13055,16 @@
           "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
         },
         "peerFailure": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
-          "evidence": [],
-          "limitation": "The component declares no optional peer dependencies."
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/forms/combobox/combobox-rendering-a11y.test.ts",
+              "test": "renders a localized, non-live error row and announces each async source failure in light DOM",
+              "kind": "optional-peer failure-path test signal"
+            }
+          ],
+          "limitation": "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion."
         },
         "security": {
           "applicability": "applicable",
@@ -13054,7 +13072,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 3017,
+              "line": 17,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -13082,7 +13100,7 @@
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "Automated captures are enrolled, but complete human visual approval is not recorded.",
-        "The component declares no optional peer dependencies.",
+        "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion.",
         "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
@@ -13098,6 +13116,7 @@
           "src/components/forms/combobox/combobox-form-lifecycle.test.ts",
           "src/components/forms/combobox/combobox-live-option-writes.test.ts",
           "src/components/forms/combobox/combobox-min-query-length.test.ts",
+          "src/components/forms/combobox/combobox-option-html.test.ts",
           "src/components/forms/combobox/combobox-projection.test.ts",
           "src/components/forms/combobox/combobox-refresh.test.ts",
           "src/components/forms/combobox/combobox-remediation.test.ts",
@@ -13875,6 +13894,8 @@
           "scale",
           "narrowAllocation",
           "visual",
+          "peerFailure",
+          "security",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -13988,16 +14009,16 @@
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
+          "applicability": "applicable",
+          "status": "not-recorded",
           "evidence": [],
-          "limitation": "The component declares no optional peer dependencies."
+          "limitation": "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
+          "applicability": "applicable",
+          "status": "not-recorded",
           "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -14022,8 +14043,8 @@
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
-        "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -15976,6 +15997,8 @@
         "evidenceGaps": [
           "narrowAllocation",
           "visual",
+          "peerFailure",
+          "security",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -16098,16 +16121,16 @@
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
+          "applicability": "applicable",
+          "status": "not-recorded",
           "evidence": [],
-          "limitation": "The component declares no optional peer dependencies."
+          "limitation": "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
+          "applicability": "applicable",
+          "status": "not-recorded",
           "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -16132,8 +16155,8 @@
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
-        "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -16366,6 +16389,8 @@
         "reviewedAt": null,
         "evidenceGaps": [
           "visual",
+          "peerFailure",
+          "security",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -16492,16 +16517,16 @@
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
+          "applicability": "applicable",
+          "status": "not-recorded",
           "evidence": [],
-          "limitation": "The component declares no optional peer dependencies."
+          "limitation": "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
+          "applicability": "applicable",
+          "status": "not-recorded",
           "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -16525,8 +16550,8 @@
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
-        "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -18890,6 +18915,8 @@
         "evidenceGaps": [
           "reducedMotion",
           "visual",
+          "peerFailure",
+          "security",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -19016,16 +19043,16 @@
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
+          "applicability": "applicable",
+          "status": "not-recorded",
           "evidence": [],
-          "limitation": "The component declares no optional peer dependencies."
+          "limitation": "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
+          "applicability": "applicable",
+          "status": "not-recorded",
           "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -19049,8 +19076,8 @@
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
-        "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -24040,6 +24067,7 @@
         "evidenceGaps": [
           "scale",
           "visual",
+          "peerFailure",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -24182,10 +24210,10 @@
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
+          "applicability": "applicable",
+          "status": "not-recorded",
           "evidence": [],
-          "limitation": "The component declares no optional peer dependencies."
+          "limitation": "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion."
         },
         "security": {
           "applicability": "applicable",
@@ -24221,7 +24249,7 @@
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
-        "The component declares no optional peer dependencies.",
+        "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion.",
         "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
@@ -28929,6 +28957,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/utility/icon/icon-library-font-awesome.test.ts",
+              "test": "registers nothing until called, then renders a sanitized, currentColor icon",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/utility/icon/icon.test.ts",
               "test": "is accessible when given a label",
               "target": "el",
@@ -29046,8 +29080,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/utility/icon/icon-resource.ts",
-              "line": 4,
+              "file": "src/components/utility/icon/icon-library-font-awesome.ts",
+              "line": 8,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -29086,6 +29120,8 @@
         "tests": [
           "src/components/utility/icon/dompurify-loader.test.ts",
           "src/components/utility/icon/icon-defaults-sprite.test.ts",
+          "src/components/utility/icon/icon-library-font-awesome.property.test.ts",
+          "src/components/utility/icon/icon-library-font-awesome.test.ts",
           "src/components/utility/icon/icon-resource.test.ts",
           "src/components/utility/icon/icon-superseded-loads.test.ts",
           "src/components/utility/icon/icon.test.ts"
@@ -30229,7 +30265,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input-shared.ts",
-              "line": 905,
+              "line": 904,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -31965,7 +32001,7 @@
           "evidence": [
             {
               "file": "src/components/media/lightbox/lightbox.class.ts",
-              "line": 741,
+              "line": 849,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -32153,7 +32189,7 @@
           "evidence": [
             {
               "file": "src/components/media/lightbox/lightbox.class.ts",
-              "line": 741,
+              "line": 849,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -33255,7 +33291,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.class.ts",
-              "line": 1034,
+              "line": 1035,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -38654,7 +38690,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input-shared.ts",
-              "line": 905,
+              "line": 904,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39901,7 +39937,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input-shared.ts",
-              "line": 905,
+              "line": 904,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -40299,7 +40335,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 3017,
+              "line": 17,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -40343,6 +40379,7 @@
           "src/components/forms/combobox/combobox-form-lifecycle.test.ts",
           "src/components/forms/combobox/combobox-live-option-writes.test.ts",
           "src/components/forms/combobox/combobox-min-query-length.test.ts",
+          "src/components/forms/combobox/combobox-option-html.test.ts",
           "src/components/forms/combobox/combobox-projection.test.ts",
           "src/components/forms/combobox/combobox-refresh.test.ts",
           "src/components/forms/combobox/combobox-remediation.test.ts",
@@ -40527,7 +40564,7 @@
           "evidence": [
             {
               "file": "src/components/forms/otp-input/otp-input.class.ts",
-              "line": 394,
+              "line": 393,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -52059,7 +52096,7 @@
           "evidence": [
             {
               "file": "src/components/forms/slider/slider.class.ts",
-              "line": 886,
+              "line": 887,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -58287,7 +58324,7 @@
           "evidence": [
             {
               "file": "src/components/forms/textarea/textarea.class.ts",
-              "line": 733,
+              "line": 732,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -58949,7 +58986,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input-shared.ts",
-              "line": 905,
+              "line": 904,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -59223,6 +59260,8 @@
           "keyboard",
           "narrowAllocation",
           "visual",
+          "peerFailure",
+          "security",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -59332,16 +59371,16 @@
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
+          "applicability": "applicable",
+          "status": "not-recorded",
           "evidence": [],
-          "limitation": "The component declares no optional peer dependencies."
+          "limitation": "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
+          "applicability": "applicable",
+          "status": "not-recorded",
           "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -59367,8 +59406,8 @@
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
-        "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -64049,6 +64088,8 @@
           "rtl",
           "narrowAllocation",
           "visual",
+          "peerFailure",
+          "security",
           "forcedColors",
           "assistiveTechnology"
         ]
@@ -64159,16 +64200,16 @@
           "limitation": "No visual-regression story is enrolled for this tag."
         },
         "peerFailure": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
+          "applicability": "applicable",
+          "status": "not-recorded",
           "evidence": [],
-          "limitation": "The component declares no optional peer dependencies."
+          "limitation": "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion."
         },
         "security": {
-          "applicability": "not-applicable",
-          "status": "not-applicable",
+          "applicability": "applicable",
+          "status": "not-recorded",
           "evidence": [],
-          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+          "limitation": "Security applicability is tracked; source signals do not constitute a penetration test or external audit."
         },
         "forcedColors": {
           "applicability": "applicable",
@@ -64194,8 +64235,8 @@
         "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
         "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
         "No visual-regression story is enrolled for this tag.",
-        "The component declares no optional peer dependencies.",
-        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "A source signal does not substitute for a reviewed visible, localized, fail-closed failure-path assertion.",
+        "Security applicability is tracked; source signals do not constitute a penetration test or external audit.",
         "No forced-colors visual capture is enrolled for this tag.",
         "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
       ],
@@ -65379,7 +65420,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/voice-picker/voice-picker.class.ts",
-              "line": 593,
+              "line": 594,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

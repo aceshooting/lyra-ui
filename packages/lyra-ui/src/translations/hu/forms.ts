@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'Naptár megnyitása',
   item: 'elem',
   comboboxLoadError: 'Nem sikerült betölteni a lehetőségeket.',
+  comboboxRichContentUnavailable: 'A beállítások formázott tartalma nem érhető el. Egyszerű címkék jelennek meg.',
   comboboxSelectedOverflow: '+{n} további',
   checkboxRequired: 'A folytatáshoz jelölje be ezt a négyzetet.',
   checkboxGroupRequired: 'Válasszon legalább egy lehetőséget.',

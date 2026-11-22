@@ -580,7 +580,7 @@ freshness_diff "locale metadata (pnpm locale-manifest)" \
 
 step "editor data freshness"
 pnpm --filter @aceshooting/lyra-ui run generate-editor-data
-freshness_diff "editor data (pnpm generate-editor-data)" packages/lyra-ui/vscode-html-data.json packages/lyra-ui/vscode-css-data.json packages/lyra-ui/web-types.json
+freshness_diff "editor data (pnpm generate-editor-data)" packages/lyra-ui/vscode-html-data.json packages/lyra-ui/vscode-css-data.json packages/lyra-ui/web-types.json packages/lyra-ui/custom-elements.slim.json
 
 step "readme:check"
 pnpm readme:check

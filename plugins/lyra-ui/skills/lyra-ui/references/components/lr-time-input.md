@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 23 parts, 51 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 23 parts, 50 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `column`: `--lr-theme-scrollbar-color`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -192,7 +192,7 @@ replaced by it.
 
 The `popup` panel is a floating surface and paints from the **shared overlay-surface family**
 (16.0.0): `--lr-overlay-surface`, `--lr-overlay-border` (default `var(--lr-color-border)`),
-`--lr-overlay-radius` (default `var(--lr-radius)`) and `--lr-overlay-shadow-anchored` (default
+`--lr-overlay-radius` (default `var(--lr-radius-container)`) and `--lr-overlay-shadow-anchored` (default
 `var(--lr-shadow-m)`). None is declared on `:host`, so one declaration on `:root` — or on any
 ancestor, to scope it — retints this panel together with every other floating surface in the
 library. One deliberate difference from the rest of the family: `--lr-overlay-surface` defaults here
@@ -230,4 +230,4 @@ Further custom properties:
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).

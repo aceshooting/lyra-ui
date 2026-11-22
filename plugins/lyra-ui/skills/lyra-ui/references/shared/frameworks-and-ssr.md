@@ -98,6 +98,15 @@ corrects itself on the next update, so a slotted override lands one frame after 
 browser-only mount is unaffected and renders the final result the first time. Layout/observer/canvas/media work
 begins after hydration, and remote content is client-only.
 
+**Localized server output.** The server renderer gives a component no ancestors, so an ancestor
+`lang` (`<html lang="fr">`, `<div lang="fr">`) reaches only the browser. The server resolves
+messages and number/date formats from the host's own `locale`/`lang`, else the active locale. To
+serve translated text, import the catalog on the server and call `setLyraLocale(requestLocale)`
+around the render (clear it with `setLyraLocale('')` afterwards), matching the page's `lang`; also
+import the catalog in the browser before hydration. The hydrated page then keeps the server text
+with no flash. When the server rendered a different locale than the browser inherits, the
+hydrating render reproduces the server's text and the next update commits the inherited locale.
+
 **If hydration never runs at all** — a page that intentionally ships no script bundle, a reader
 that fetches the raw HTML, or a crawler — a `render-and-hydrate` tag's declarative-shadow-DOM
 output is either permanently complete and correct on its own, or only ever promised once hydration

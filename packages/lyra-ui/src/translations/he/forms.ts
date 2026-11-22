@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'פתח את לוח השנה',
   item: 'פריט',
   comboboxLoadError: 'לא ניתן לטעון אפשרויות.',
+  comboboxRichContentUnavailable: 'תוכן מעוצב של האפשרויות אינו זמין. מוצגות תוויות פשוטות.',
   comboboxSelectedOverflow: 'עוד {n}',
   checkboxRequired: 'אנא סמן את התיבה הזו אם ברצונך להמשיך.',
   checkboxGroupRequired: 'בחר באפשרות אחת לפחות.',

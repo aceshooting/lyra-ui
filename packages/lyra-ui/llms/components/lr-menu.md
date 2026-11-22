@@ -90,7 +90,7 @@ style those on `<lr-dropdown>` when using the overlay composition.
 **Themeable custom properties:** the standalone menu surface and a submenu's own surface paint from
 the **shared overlay-surface family** (16.0.0) — `--lr-overlay-surface` (default
 `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default `var(--lr-color-border-subtle)`),
-`--lr-overlay-radius` (default `var(--lr-radius)`) and, on the submenu only,
+`--lr-overlay-radius` (default `var(--lr-radius-container)`) and, on the submenu only,
 `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is declared on `:host`, so one
 declaration on `:root` (or on any ancestor, to scope it) retints this menu together with every other
 floating surface. A menu contained by `<lr-dropdown>` paints no surface of its own, so the family has

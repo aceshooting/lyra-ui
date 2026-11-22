@@ -43,7 +43,22 @@ export interface SsrFixtureOptions {
    * soon as the defect stops reproducing, so the allowance cannot outlive the fix.
    */
   readonly knownDefect?: { readonly matches: RegExp; readonly reason: string };
+  /**
+   * Built locale catalogs (`dist/translations/<tag>.js`) to register on the server and in the
+   * browser before rendering, for example `['fr']`. Registration is global and permanent for the
+   * run, like a page that imports the catalog.
+   */
+  readonly catalogs?: readonly string[];
+  /**
+   * The server render's active Lyra locale, as a per-request server sets it with
+   * `setLyraLocale()`. Lit's server DOM gives an element no ancestors, so an ancestor `lang` in the
+   * template only reaches the browser; this is how the server learns the page's language.
+   */
+  readonly serverLocale?: string;
 }
+
+/** What a server render needs besides the template; shared by {@link ssrFixture} and {@link ssrStaticDocument}. */
+export type SsrServerOptions = Pick<SsrFixtureOptions, 'catalogs' | 'serverLocale'>;
 
 interface ReactiveLike extends Element {
   readonly updateComplete: Promise<boolean>;
@@ -278,6 +293,43 @@ if (typeof before === 'function') {
  * a client-only render of the same template (the divergence Lit itself accepts silently, such as a
  * stale server text value).
  */
+const CATALOG_TAG = /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/;
+
+async function renderOnServer(template: TemplateResult, options: SsrServerOptions): Promise<ServerRender> {
+  const catalogs = [...(options.catalogs ?? [])];
+  for (const locale of [...catalogs, ...(options.serverLocale === undefined ? [] : [options.serverLocale])]) {
+    if (!CATALOG_TAG.test(locale)) throw new TypeError(`ssrFixture: ${JSON.stringify(locale)} is not a locale tag such as "fr".`);
+  }
+  return (await executeServerCommand('lyra-ssr-render', {
+    template: serializeValue(template, 'template'),
+    catalogs,
+    serverLocale: options.serverLocale,
+  })) as ServerRender;
+}
+
+/**
+ * Renders `template` on the server and loads the response into a script-less, same-origin iframe:
+ * the page a visitor sees when hydration JavaScript never runs. No definition reaches that
+ * document, so every host stays undefined and shows exactly its server markup (declarative shadow
+ * roots included). Client-render tags are allowed; they render no shadow root. The iframe is
+ * removed by the same `afterEach` cleanup as {@link ssrFixture}.
+ */
+export async function ssrStaticDocument(template: TemplateResult, options: SsrServerOptions = {}): Promise<Document> {
+  const server = await renderOnServer(template, options);
+  const frame = document.createElement('iframe');
+  frame.setAttribute('sandbox', 'allow-same-origin');
+  frame.style.cssText = 'inline-size: 40rem; block-size: 20rem; border: 0';
+  const container = document.createElement('div');
+  container.setAttribute('data-ssr-fixture', '');
+  container.append(frame);
+  containers.add(container);
+  document.body.append(container);
+  const loaded = new Promise<void>((resolve) => frame.addEventListener('load', () => resolve(), { once: true }));
+  frame.srcdoc = `<!doctype html><html><body>${server.html}</body></html>`;
+  await loaded;
+  return frame.contentDocument!;
+}
+
 export async function ssrFixture<T extends Element = HTMLElement>(
   template: TemplateResult,
   options: SsrFixtureOptions = {},
@@ -285,15 +337,15 @@ export async function ssrFixture<T extends Element = HTMLElement>(
   if (litElementLoadedBeforeHydrationSupport) {
     throw new Error('ssrFixture: lit-element loaded before hydration support. Import test/wtr-ssr-fixture.js first.');
   }
-  const server = (await executeServerCommand('lyra-ssr-render', {
-    template: serializeValue(template, 'template'),
-  })) as ServerRender;
+  const server = await renderOnServer(template, options);
   if (server.clientRendered.length) {
     throw new Error(
       `ssrFixture: ${server.clientRendered.join(', ')} declare the client-render SSR mode; ` +
         'hydrated fixtures cover render-and-hydrate tags only.',
     );
   }
+  // Catalogs register before any definition upgrades a host, as on a page that imports them first.
+  await Promise.all((options.catalogs ?? []).map((locale) => import(`/dist/translations/${locale}.js`)));
   await Promise.all(server.modules.map((module) => import(module)));
 
   const parse = (Document as unknown as { parseHTMLUnsafe?: (html: string) => Document }).parseHTMLUnsafe;

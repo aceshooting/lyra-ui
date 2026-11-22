@@ -38,6 +38,11 @@ pnpm add -D @aceshooting/lyra-ide
 import manifest from '@aceshooting/lyra-ide/custom-elements.json' with { type: 'json' };
 ```
 
+This is the full manifest, with descriptions, status, deprecations and the companion packages' tags.
+`@aceshooting/lyra-ui` itself points its `customElements` field at a slim, prose-free manifest
+(`custom-elements.slim.json`), so tools that only discover tags and their attributes, properties,
+events, slots, parts and CSS properties work without this package.
+
 Upgrading from lyra-ui 26 or earlier: see the [upgrade table](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/README.md#upgrading).
 
 MIT licensed.

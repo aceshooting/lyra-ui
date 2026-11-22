@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'ቀን መቁጠሪያ ክፈት',
   item: 'ንጥል',
   comboboxLoadError: 'አማራጮችን መጫን አልተቻለም።',
+  comboboxRichContentUnavailable: 'የተቀረጸ የአማራጭ ይዘት አይገኝም። ቀላል መለያዎች እየታዩ ነው።',
   comboboxSelectedOverflow: '+{n} ተጨማሪ',
   checkboxRequired: 'ለመቀጠል ከፈለጉ ይህን ሳጥን ይምረጡ።',
   checkboxGroupRequired: 'ቢያንስ አንድ አማራጭ ይምረጡ።',

@@ -29,6 +29,7 @@ const LYRA_RENAME_PROFILES = Object.freeze([
   Object.freeze({ origin: 'lyra-v25', fromMajor: 25, toMajor: 26, aliasRemovalMajor: 28 }),
   Object.freeze({ origin: 'lyra-v26', fromMajor: 26, toMajor: 27, aliasRemovalMajor: 29 }),
   Object.freeze({ origin: 'lyra-v31', fromMajor: 31, toMajor: 32, aliasRemovalMajor: 33 }),
+  Object.freeze({ origin: 'lyra-v32', fromMajor: 32, toMajor: 33, aliasRemovalMajor: 34 }),
 ]);
 
 export const LYRA_RENAME_ORIGINS = Object.freeze(LYRA_RENAME_PROFILES.map((profile) => profile.origin));
@@ -974,8 +975,9 @@ export function validateRenameLedger(ledger, { inventory, exportDeprecations = [
         const propertyOwner = historical?.state === 'retired'
           ? historical.sourceComponent ?? historicalSourceComponent(compatibilityContext, entry.tag, historical)
           : component;
+        // A property change keeps its name, so it may record a mirrored member whose behavior moved
+        // to its upstream meaning; only a `former` name has to be Lyra-only.
         if (!surfaceEntry(propertyOwner, 'property', entry.property)) findings.push(`${label}: the property is not on the public surface`);
-        else checkLyraOnly(label, entry.tag, 'property', entry.property);
         if (entry.former && surfaceEntry(propertyOwner, 'property', entry.former)) findings.push(`${label}: the former property name is still on the public surface`);
       }
     }

@@ -92,6 +92,11 @@ export const styles = css`
   }
   [part~="label"] {
     ${formControlLabelTypography({ color: css`var(--lr-color-text)`, weight: css`inherit` })}
+    /* --lr-form-control-label-gap replaces the row gap under the label; unset, the margin is zero. */
+    margin-block-end: calc(
+      var(--lr-form-control-label-gap, var(--lr-color-picker-gap, var(--_lr-color-picker-gap))) -
+        var(--lr-color-picker-gap, var(--_lr-color-picker-gap))
+    );
   }
   /* [part]:empty never matches -- the part always holds a literal <slot> child -- so emptiness is
      tracked in JS (hasLabel/hasHint/hasError) and reflected via hidden; otherwise the required

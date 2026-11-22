@@ -82,7 +82,7 @@ export const styles = css`
   [part='form-control-label'] {
     ${formControlLabelTypography({ color: css`var(--lr-color-text)` })}
     display: block;
-    margin-block-end: var(--lr-form-control-label-block-gap, var(--lr-space-xs));
+    margin-block-end: var(--lr-form-control-label-gap, var(--lr-space-xs));
   }
 
   [part='form-control-label'][hidden],

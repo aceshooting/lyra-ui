@@ -88,6 +88,7 @@ available to or used by the maintainers.
 | [`packages/lyra-3d`](./packages/lyra-3d) | Optional WebGL engines (three.js) for opted-in 3D views, loaded on demand; not yet released. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-3d)](https://www.npmjs.com/package/@aceshooting/lyra-3d) | See the [package README](./packages/lyra-3d/README.md) |
 | [`packages/lyra-ide`](./packages/lyra-ide) | Editor data (Custom Elements Manifest, JetBrains web-types, VS Code HTML/CSS custom data), versioned with `lyra-ui`. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-ide)](https://www.npmjs.com/package/@aceshooting/lyra-ide) | *n/a — JSON data* |
 | [`packages/lyra-translations`](./packages/lyra-translations) | The 80 built-in locale catalogs, versioned with `lyra-ui`. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-translations)](https://www.npmjs.com/package/@aceshooting/lyra-translations) | *n/a — opt-in locale modules* |
+| [`packages/lyra-cdn`](./packages/lyra-cdn) | Single-script-tag build for pages without a bundler: Lit, tslib and Floating UI bundled, a self-starting autoloader, no import map; versioned with `lyra-ui`. | [![npm](https://img.shields.io/npm/v/%40aceshooting%2Flyra-cdn)](https://www.npmjs.com/package/@aceshooting/lyra-cdn) | See the [package README](./packages/lyra-cdn/README.md) |
 
 See each package's own README for full install/usage details. For generated interfaces, start with the
 [Lyra Gen quickstart](./packages/lyra-gen/README.md#render-a-validated-view),
@@ -299,7 +300,7 @@ main `$lyra-ui` skill remains the exact API reference.
 
 `@aceshooting/lyra-ui` source is versioned at `32.1.0`; `@aceshooting/lyra-flags` source at `2.3.1`
 — see each package's own `CHANGELOG.md` for release history. Published npm versions can lag these
-source versions while a release is being qualified. `lyra-ide` and `lyra-translations` version in
+source versions while a release is being qualified. `lyra-ide`, `lyra-translations` and `lyra-cdn` version in
 lockstep with `lyra-ui`; `lyra-flags`, `lyra-docs`, `lyra-gen`, `lyra-map` and `lyra-3d` version independently
 with [Changesets](https://github.com/changesets/changesets), following semver.
 

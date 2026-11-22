@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'நாட்காட்டியைத் திற',
   item: 'உருப்படி',
   comboboxLoadError: 'விருப்பங்களை ஏற்ற முடியவில்லை.',
+  comboboxRichContentUnavailable: 'வடிவமைக்கப்பட்ட விருப்ப உள்ளடக்கம் கிடைக்கவில்லை. எளிய லேபிள்கள் காட்டப்படுகின்றன.',
   comboboxSelectedOverflow: 'மேலும் {n}',
   checkboxRequired: 'தொடர விரும்பினால் இந்தப் பெட்டியைத் தேர்வுசெய்யவும்.',
   checkboxGroupRequired: 'குறைந்தது ஒரு விருப்பத்தையாவது தேர்ந்தெடுக்கவும்.',

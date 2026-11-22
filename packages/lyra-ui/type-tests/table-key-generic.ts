@@ -80,3 +80,15 @@ void untypedRowKey;
 declare const fromTagMap: HTMLElementTagNameMap['lr-table'];
 const fromTagMapKeys: ReadonlySet<string | number> = fromTagMap.selectedRowKeys;
 void fromTagMapKeys;
+
+// --- `lr-page-change` carries the same required `{ page, pageSize, offset }` as
+// `lr-before-page-change`, so an offset/limit back end reads both without a fallback -------------
+declare const pageChange: LyraTableEventMap<Row, number>['lr-page-change'];
+const pageChangeSize: number = pageChange.detail.pageSize;
+const pageChangeOffset: number = pageChange.detail.offset;
+void pageChangeSize;
+void pageChangeOffset;
+
+// @ts-expect-error a hand-built `lr-page-change` detail must include `pageSize` and `offset`
+const pageOnlyDetail: LyraTableEventMap<Row, number>['lr-page-change']['detail'] = { page: 2 };
+void pageOnlyDetail;

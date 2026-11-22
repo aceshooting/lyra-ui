@@ -36,7 +36,7 @@ the slide animation are its own.
 - `floating: boolean = false` (attribute `floating`, reflected) — an inset, floating sheet: the
   panel keeps a `--lr-drawer-inset` gap (default `var(--lr-space-s)`) from every viewport edge
   (from the containing block's edges with `contained`; the safe-area insets still win where
-  larger) and rounds its corners with `--lr-overlay-radius` (default `var(--lr-radius)`).
+  larger) and rounds its corners with `--lr-overlay-radius` (default `var(--lr-radius-container)`).
   Off by default, so the drawer stays square and edge-flush.
 - `heading?: string`, `label: string`,
   `withoutCloseButton: boolean = false` (attribute `without-close-button`, reflected),

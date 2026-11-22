@@ -426,11 +426,10 @@ const DATE_PICKER_EXPORT_PARTS = [
  *   surface under a coarse or hover-less pointer, which stops mobile Safari zooming on focus. `0px`
  *   disables it.
  * @cssprop [--lr-form-control-label-inline-size=30%] - Label column width while
- *   `label-placement="start"`.
- * @cssprop [--lr-form-control-label-gap=var(--lr-space-m)] - Space between the label column and
- *   the field while `label-placement="start"`.
- * @cssprop [--lr-form-control-label-block-gap=var(--lr-space-xs)] - Space between a label above
- *   the field and the field, in top placement and once a `label-placement="start"` row collapses.
+ *   `label-placement="start"`; `auto` sizes the column to the label text.
+ * @cssprop [--lr-form-control-label-gap] - Space between the label and the field: the label
+ *   column gap while `label-placement="start"` (default `var(--lr-space-m)`), and the gap under a
+ *   label above the field, in top placement or a collapsed start row (default `var(--lr-space-xs)`).
  * @cssprop [--lr-form-control-label-collapse-inline-size=var(--lr-size-20rem)] - Control width
  *   below which `label-placement="start"` returns the label above the field.
  * @cssprop [--lr-form-control-invalid-border-color=var(--lr-color-danger)] - Resting border while the
@@ -2272,7 +2271,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
                 .max=${this.max}
                 .months=${normalizeCalendarMonths(this.months)}
                 .size=${this.size}
-                .locale=${this.effectiveMessageLocale}
+                .locale=${this.renderMessageLocale}
                 .strings=${this.strings}
                 .disabled=${this.effectiveDisabled}
                 .readonly=${this.readonly}

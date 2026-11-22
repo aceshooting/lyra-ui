@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'Открыть календарь',
   item: 'элемент',
   comboboxLoadError: 'Не удалось загрузить варианты.',
+  comboboxRichContentUnavailable: 'Форматированное содержимое вариантов недоступно. Показаны простые подписи.',
   comboboxSelectedOverflow: 'ещё {n}',
   checkboxRequired: 'Установите этот флажок, чтобы продолжить.',
   checkboxGroupRequired: 'Выберите хотя бы один вариант.',

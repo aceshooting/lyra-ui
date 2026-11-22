@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'Atvērt kalendāru',
   item: 'vienums',
   comboboxLoadError: 'Neizdevās ielādēt opcijas.',
+  comboboxRichContentUnavailable: 'Formatētais opciju saturs nav pieejams. Tiek rādītas vienkāršas etiķetes.',
   comboboxSelectedOverflow: '+{n} vēl',
   checkboxRequired: 'Lai turpinātu, atzīmējiet šo izvēles rūtiņu.',
   checkboxGroupRequired: 'Atlasiet vismaz vienu opciju.',

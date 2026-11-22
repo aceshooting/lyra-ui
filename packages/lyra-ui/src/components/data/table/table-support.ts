@@ -691,9 +691,8 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
   'lr-filter-change': CustomEvent<Readonly<{ filterText: string }>>;
   /** One-based `page`; `offset` is `(page - 1) * pageSize`. */
   'lr-before-page-change': CustomEvent<Readonly<{ page: number; pageSize: number; offset: number }>>;
-  /** `pageSize` and `offset` are always set (as on `lr-before-page-change`); they are typed optional
-   *  only so the published `{ page }` detail type stays assignable until the next major. */
-  'lr-page-change': CustomEvent<Readonly<{ page: number; pageSize?: number; offset?: number }>>;
+  /** Same shape as `lr-before-page-change`: one-based `page`; `offset` is `(page - 1) * pageSize`. */
+  'lr-page-change': CustomEvent<Readonly<{ page: number; pageSize: number; offset: number }>>;
   'lr-cell-edit': CustomEvent<Readonly<{ row: T; columnKey: string; value: string | number }>>;
   'lr-column-resize-request': CustomEvent<Readonly<{ columnKey: string; width: number }>>;
   'lr-column-resize': CustomEvent<Readonly<{ columnKey: string; width: number }>>;

@@ -44,6 +44,13 @@ test('installed supplied artifacts reject a missing declaration and executable r
     await writeFile(join(installed, 'dist', `${stem}.d.ts`), 'export {};');
     await writeFile(join(installed, 'dist', `${stem}.js`), 'export {};');
   }
+  // customElements must name the shipped slim manifest, never the full one.
+  await assert.rejects(verifyInstalledArtifacts(root), /slim manifest/);
+  await writeFile(join(installed, 'package.json'), JSON.stringify({ ...manifest, customElements: 'custom-elements.json' }));
+  await assert.rejects(verifyInstalledArtifacts(root), /slim manifest/);
+  await writeFile(join(installed, 'package.json'), JSON.stringify({ ...manifest, customElements: 'custom-elements.slim.json' }));
+  await assert.rejects(verifyInstalledArtifacts(root), /custom-elements\.slim\.json/);
+  await writeFile(join(installed, 'custom-elements.slim.json'), '{"schemaVersion":"1.0.0","modules":[]}');
   await verifyInstalledArtifacts(root);
   const declaration = join(installed, 'dist', 'custom-elements-jsx.d.ts');
   await rm(declaration);

@@ -850,8 +850,9 @@ package-manager compression can differ.
 - The file ceiling is derived exactly: base artifacts, one emitted JavaScript file per stable
   registration alias, a measured entry-point remainder and a seven-file reserve for the next component
   scaffold, below the historical file count. Validation requires the exact derivation.
-- Required consumer docs, declarations, CSS and runtime artifacts stay required; the manifest, editor
-  data and non-pseudo `dist/translations` must not appear in the lyra-ui tarball. Deleting public
+- Required consumer docs, declarations, CSS and runtime artifacts stay required; the full manifest,
+  editor data and non-pseudo `dist/translations` must not appear in the lyra-ui tarball (the slim
+  `custom-elements.slim.json` discovery manifest is a required artifact). Deleting public
   artifacts is not a size fix. Source, map, fixture, test and story rejection is independent of every
   size ceiling.
 - `check:bundle-size` (`scripts/check-bundle-size.mjs`) bundles the published entry points after a
@@ -885,8 +886,10 @@ spelled.
 `prepack` (`packages/lyra-ui/package.json#scripts.prepack`; read it for the chain) runs under
 `npm pack`/`npm publish` and determines tarball contents. It starts with `package-metadata` so a
 version bump cannot pack stale runtime version constants and includes `generate-editor-data`, which
-regenerates `vscode-html-data.json`, `vscode-css-data.json` and `web-types.json` from
-`custom-elements.json`. In `static-checks` the manifest is regenerated and diffed before editor data
+regenerates `vscode-html-data.json`, `vscode-css-data.json`, `web-types.json` and the slim
+`custom-elements.slim.json` (lyra-ui's own `customElements` target, `scripts/slim-manifest.mjs`) from
+`custom-elements.json`. The slim file is a derivative for discovery tooling: the public API gate and
+every generator read the full manifest, and `public-api-diff.mjs` refuses a slim-only package. In `static-checks` the manifest is regenerated and diffed before editor data
 (a stale manifest reddens the first diff, then editor data is generated from the corrected one); framework
 type and LLM freshness are enforced inside `pnpm lint`. Whenever you touch the public surface (JSDoc,
 attributes, parts, CSS properties), run `pnpm regen` and commit the whole set; one generator alone

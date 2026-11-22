@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'Күнтізбені ашу',
   item: 'элемент',
   comboboxLoadError: 'Нұсқаларды жүктеу мүмкін болмады.',
+  comboboxRichContentUnavailable: 'Пішімделген опция мазмұны қолжетімсіз. Қарапайым белгілер көрсетілуде.',
   comboboxSelectedOverflow: 'тағы +{n}',
   checkboxRequired: 'Жалғастыру үшін осы құсбелгіні қойыңыз.',
   checkboxGroupRequired: 'Кемінде бір нұсқаны таңдаңыз.',

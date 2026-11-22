@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'കലണ്ടർ തുറക്കുക',
   item: 'ഇനം',
   comboboxLoadError: 'ഓപ്ഷനുകൾ ലോഡ് ചെയ്യാനായില്ല.',
+  comboboxRichContentUnavailable: 'ഫോർമാറ്റ് ചെയ്ത ഓപ്ഷൻ ഉള്ളടക്കം ലഭ്യമല്ല. ലളിതമായ ലേബലുകൾ കാണിക്കുന്നു.',
   comboboxSelectedOverflow: '+{n} കൂടി',
   checkboxRequired: 'തുടരണമെങ്കിൽ ഈ ബോക്സ് ചെക്ക് ചെയ്യുക.',
   checkboxGroupRequired: 'കുറഞ്ഞത് ഒരു ഓപ്ഷനെങ്കിലും തിരഞ്ഞെടുക്കുക.',

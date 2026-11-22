@@ -41,6 +41,7 @@
     "./theme-core.css": "./dist/theme-core.css",
     "./density.css": "./dist/density.css",
     "./accents.css": "./dist/accents.css",
+    "./accent-roles.css": "./dist/accent-roles.css",
     "./design-tokens.css": "./dist/design-tokens.css",
     "./native.css": "./dist/native.css",
     "./utilities.css": "./dist/utilities.css",

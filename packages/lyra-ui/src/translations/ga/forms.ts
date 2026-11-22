@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'Oscail an féilire',
   item: 'mír',
   comboboxLoadError: 'Níorbh fhéidir na roghanna a lódáil.',
+  comboboxRichContentUnavailable: 'Níl ábhar formáidithe na roghanna ar fáil. Lipéid shimplí á dtaispeáint.',
   comboboxSelectedOverflow: '+{n} eile',
   checkboxRequired: 'Cuir tic sa bhosca seo más mian leat leanúint ar aghaidh.',
   checkboxGroupRequired: 'Roghnaigh rogha amháin ar a laghad.',

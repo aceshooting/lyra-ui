@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'カレンダーを開く',
   item: '件',
   comboboxLoadError: '選択肢を読み込めませんでした。',
+  comboboxRichContentUnavailable: '書式付きの選択肢コンテンツは利用できません。プレーンなラベルを表示しています。',
   comboboxSelectedOverflow: '他 {n} 件',
   checkboxRequired: '続行するにはこのチェックボックスをオンにしてください。',
   checkboxGroupRequired: '1 つ以上選択してください。',

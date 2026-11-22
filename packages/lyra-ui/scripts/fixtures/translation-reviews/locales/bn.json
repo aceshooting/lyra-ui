@@ -2,12 +2,12 @@
   "locale": "bn",
   "direction": "ltr",
   "source": {
-    "keyCount": 1774,
-    "sha256": "sha256:8ae25cf4e43884cd96df872036c450848b9aa8acbe8a3fe2e590a7c5d292436f"
+    "keyCount": 1775,
+    "sha256": "sha256:ad14e014505085ddb1ab428ddfa2d269b3e4c6764fbed873c02cdb89f7cb385b"
   },
   "catalog": {
-    "keyCount": 1774,
-    "sha256": "sha256:c150214c48f152e9767a71425d708a4566d730f3eded974323c64961acab6bc4"
+    "keyCount": 1775,
+    "sha256": "sha256:e83ed87eac5327f04bdeb113cb03cd65558098496ce66e93877598f61c29960f"
   },
   "translator": {
     "status": "complete-original",

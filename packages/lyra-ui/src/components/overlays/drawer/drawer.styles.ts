@@ -115,7 +115,7 @@ export const styles = css`
      drawer still keeps clear of the device safe areas) and rounds every corner with the shared
      overlay radius. The host carries the gap, so the panel drops its own safe-area padding. */
   :host([floating]) {
-    --_lr-drawer-radius: var(--lr-overlay-radius, var(--lr-radius));
+    --_lr-drawer-radius: var(--lr-overlay-radius, var(--lr-radius-container));
   }
   :host([floating]:not([contained])) {
     padding-block-start: max(var(--lr-drawer-inset, var(--lr-space-s)), var(--lr-safe-area-top));

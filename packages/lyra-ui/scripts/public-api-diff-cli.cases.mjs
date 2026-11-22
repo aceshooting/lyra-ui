@@ -5,9 +5,9 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
-  applyReviewedExceptions, diffPublicApi, evaluateSemverGate, normalizePublicApi,
-  ownPackageManifest, parseChangesetText, parseNpmPackOutput, runCli, validateTarEntries,
-  validateTarEntryTypes, versionBump,
+  acquirePublishedBaseline, applyReviewedExceptions, diffPublicApi, evaluateSemverGate, normalizePublicApi,
+  ownPackageManifest, parseChangesetText, parseNpmPackOutput, publicApiManifestFile, readPackageApi, runCli,
+  validateTarEntries, validateTarEntryTypes, versionBump,
 } from './public-api-diff.mjs';
 
 test('scopes default reviewed exceptions to the package being checked and honors an explicit path', (context) => {
@@ -205,4 +205,72 @@ test('compares a published IDE manifest without the companion packages\' modules
   };
   assert.deepEqual(ownPackageManifest(manifest).modules.map((module) => module.path), ['src/ui.ts']);
   assert.equal(ownPackageManifest(manifest).schemaVersion, '1.0.0');
+});
+
+const fullManifestFixture = {
+  schemaVersion: '1.0.0',
+  modules: [
+    { kind: 'javascript-module', path: 'src/ui.ts', declarations: [{ kind: 'class', name: 'LyraUi', tagName: 'lr-ui', customElement: true, description: 'Full prose.' }] },
+    { kind: 'javascript-module', path: 'lyra-docs/src/docx/docx-editor.class.ts', declarations: [] },
+  ],
+};
+const slimManifestFixture = {
+  schemaVersion: '1.0.0',
+  modules: [{ kind: 'javascript-module', path: 'dist/ui.js', declarations: [{ kind: 'class', name: 'LyraUi', tagName: 'lr-ui', customElement: true }] }],
+};
+
+test('reads the full manifest, never the slim customElements target, and refuses a slim-only package', (context) => {
+  const root = mkdtempSync(path.join(tmpdir(), 'lyra-public-api-slim-'));
+  context.after(() => rmSync(root, { recursive: true, force: true }));
+  const packageJson = { name: '@aceshooting/lyra-ui', version: '33.0.0', customElements: 'custom-elements.slim.json' };
+  writeFileSync(path.join(root, 'package.json'), JSON.stringify(packageJson));
+  writeFileSync(path.join(root, 'custom-elements.slim.json'), JSON.stringify(slimManifestFixture));
+  assert.throws(() => publicApiManifestFile(root, packageJson), /slim discovery manifest/);
+  writeFileSync(path.join(root, 'custom-elements.json'), JSON.stringify(fullManifestFixture));
+  assert.equal(publicApiManifestFile(root, packageJson), path.join(root, 'custom-elements.json'));
+  assert.deepEqual(readPackageApi(root).manifest, fullManifestFixture);
+  // A non-slim customElements target (a companion package) is still honored.
+  const companion = { name: '@aceshooting/lyra-docs', customElements: 'dist/custom-elements.json' };
+  rmSync(path.join(root, 'custom-elements.json'));
+  assert.throws(() => publicApiManifestFile(root, companion), /Missing custom-elements manifest/);
+  assert.equal(publicApiManifestFile(root, { name: 'x' }), undefined);
+});
+
+test('a published baseline that points customElements at the slim manifest compares the IDE package\'s full manifest', (context) => {
+  const temporaryDirectory = mkdtempSync(path.join(tmpdir(), 'lyra-public-api-baseline-'));
+  context.after(() => rmSync(temporaryDirectory, { recursive: true, force: true }));
+  const calls = [];
+  const run = (command, args) => {
+    calls.push([command, ...args]);
+    if (command === 'npm' && args[0] === 'view') return '"33.0.0"';
+    if (command === 'npm' && args[0] === 'pack') {
+      const destination = args[args.indexOf('--pack-destination') + 1];
+      const filename = args[1].startsWith('@aceshooting/lyra-ide') ? 'aceshooting-lyra-ide-33.0.0.tgz' : 'aceshooting-lyra-ui-33.0.0.tgz';
+      writeFileSync(path.join(destination, filename), '');
+      return JSON.stringify([{ filename }]);
+    }
+    if (command === 'tar' && args[0] === '-tzf') return 'package/package.json\n';
+    if (command === 'tar' && args[0] === '-tvzf') return '-rw-r--r-- 0/0 42 2026-08-02 00:00 package/package.json\n';
+    if (command === 'tar' && args[0] === '-xzf') {
+      const target = path.join(args[args.indexOf('-C') + 1], 'package');
+      mkdirSync(target, { recursive: true });
+      if (args[1].includes('lyra-ide')) {
+        writeFileSync(path.join(target, 'custom-elements.json'), JSON.stringify(fullManifestFixture));
+      } else {
+        writeFileSync(path.join(target, 'package.json'), JSON.stringify({
+          name: '@aceshooting/lyra-ui', version: '33.0.0', customElements: 'custom-elements.slim.json',
+        }));
+        writeFileSync(path.join(target, 'custom-elements.slim.json'), JSON.stringify(slimManifestFixture));
+      }
+      return '';
+    }
+    throw new Error(`unexpected ${command} ${args.join(' ')}`);
+  };
+  const published = acquirePublishedBaseline('@aceshooting/lyra-ui', { run, temporaryDirectory });
+  try {
+    assert.ok(calls.some((call) => call[0] === 'npm' && call[1] === 'pack' && call[2] === '@aceshooting/lyra-ide@33.0.0'));
+    assert.deepEqual(readPackageApi(published.root).manifest.modules.map((module) => module.path), ['src/ui.ts']);
+  } finally {
+    published.cleanup();
+  }
 });

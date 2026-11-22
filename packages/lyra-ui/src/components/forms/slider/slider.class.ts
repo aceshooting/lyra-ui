@@ -174,17 +174,18 @@ class LyraSliderBase extends LyraFormControlElement<LyraSliderEventMap> {}
  * @csspart base - Compatibility name on the interactive track row; use `slider`.
  * @csspart slider - Interactive track row. It is the same node as `base`.
  * @csspart form-control - Shoelace-compatible name on the same interactive row.
- * @cssprop [--lr-form-control-label-font-size=inherit] - Font size of the field label. Set it to
- *   `var(--lr-font-size-md-sm)` to match the `lr-input` and `lr-select` label size.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field
+ *   label, the same as the `lr-input` and `lr-select` label size. `1em` follows the surrounding size.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
  * @cssprop [--lr-form-control-label-text-align=inherit] - Text alignment of the field label.
  * @cssprop [--lr-form-control-label-text-transform=inherit] - Text transform of the field label.
  * @cssprop [--lr-form-control-label-inline-size=30%] - Label column width while
- *   `label-placement="start"`.
- * @cssprop [--lr-form-control-label-gap=var(--lr-space-m)] - Space between the label column and
- *   the field while `label-placement="start"`.
+ *   `label-placement="start"`; `auto` sizes the column to the label text.
+ * @cssprop [--lr-form-control-label-gap] - Space between the label and the field: the label
+ *   column gap while `label-placement="start"` (default `var(--lr-space-m)`), and the gap under a
+ *   label above the field, in top placement or a collapsed start row (default the slider row gap, `--lr-slider-gap`).
  * @cssprop [--lr-form-control-label-collapse-inline-size=var(--lr-size-20rem)] - Control width
  *   below which `label-placement="start"` returns the label above the field.
  * @csspart form-control-label - Shoelace-compatible name on the visible label.

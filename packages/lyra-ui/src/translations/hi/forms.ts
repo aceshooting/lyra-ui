@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'कैलेंडर खोलें',
   item: 'आइटम',
   comboboxLoadError: 'विकल्प लोड नहीं हो सके।',
+  comboboxRichContentUnavailable: 'फ़ॉर्मेट की गई विकल्प सामग्री उपलब्ध नहीं है। सादे लेबल दिखाए जा रहे हैं।',
   comboboxSelectedOverflow: '+{n} और',
   checkboxRequired: 'जारी रखने के लिए इस बॉक्स को चुनें।',
   checkboxGroupRequired: 'कम से कम एक विकल्प चुनें।',

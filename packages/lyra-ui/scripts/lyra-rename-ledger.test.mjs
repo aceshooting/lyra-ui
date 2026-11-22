@@ -360,7 +360,7 @@ test('the checked-in ledger is valid and complete against the checked-in invento
     [],
   );
   assert.deepEqual(checkedLedger.profiles.map((profile) => profile.origin), [...LYRA_RENAME_ORIGINS]);
-  assert.deepEqual(LYRA_RENAME_ORIGINS, ['lyra-v21', 'lyra-v22', 'lyra-v25', 'lyra-v26', 'lyra-v31']);
+  assert.deepEqual(LYRA_RENAME_ORIGINS, ['lyra-v21', 'lyra-v22', 'lyra-v25', 'lyra-v26', 'lyra-v31', 'lyra-v32']);
   assert.ok(!MIGRATION_ORIGINS.includes('lyra-v7') && MIGRATION_ORIGINS.includes('lyra-v21'));
   assert.deepEqual(validateRenameLedger(emptyRenameLedger(), { inventory: checkedInventory }), []);
 });
@@ -595,6 +595,7 @@ test('the migration-coverage gate adds completeness and the prefix polarity rule
     'lyra-v25': { renames: 0, defaults: 0, detailChanges: 0, propertyChanges: 0, retiredEvents: 0, reviews: 0, slotContent: 0, moduleReviews: 0 },
     'lyra-v26': { renames: 0, defaults: 0, detailChanges: 0, propertyChanges: 0, retiredEvents: 0, reviews: 0, slotContent: 0, moduleReviews: 0 },
     'lyra-v31': { renames: 0, defaults: 0, detailChanges: 0, propertyChanges: 0, retiredEvents: 0, reviews: 0, slotContent: 0, moduleReviews: 0 },
+    'lyra-v32': { renames: 0, defaults: 0, detailChanges: 0, propertyChanges: 0, retiredEvents: 0, reviews: 0, slotContent: 0, moduleReviews: 0 },
   });
   assertFinding(analyzeRenameLedger(emptyRenameLedger(), inventory).errors, /has no rename or review entry/);
   const undeclared = syntheticLedger();
@@ -2338,6 +2339,23 @@ test('lyra-v31 rewrites every renamed published CSS custom property, once', () =
     assert.deepEqual(result.changes.map(change => [change.action, change.target]), [['rewrite-css-property', entry.to]], entry.from);
     const rerun = migrateText(result.content, current, { file: 'theme.css', origin: 'lyra-v31' });
     assert.deepEqual(rerun.changes, [], `${entry.to} is stable`);
+  }
+});
+
+test('lyra-v32 rewrites the folded label gap once and reports lr-token-input delimiter sites', () => {
+  const current = buildMigrationContract(checkedInventory, {
+    renameLedger: readRenameLedger(), exportDeprecations: readExportDeprecations(), compatibilityContext: checkedCompatibilityContext,
+  });
+  const css = 'form { --lr-form-control-label-block-gap: 6px; }\n';
+  const rewritten = migrateText(css, current, { file: 'form.css', origin: 'lyra-v32' });
+  assert.equal(rewritten.content, 'form { --lr-form-control-label-gap: 6px; }\n');
+  assert.deepEqual(rewritten.changes.map(change => [change.action, change.target]), [['rewrite-css-property', '--lr-form-control-label-gap']]);
+  assert.deepEqual(migrateText(rewritten.content, current, { file: 'form.css', origin: 'lyra-v32' }).changes, [], 'a rerun is stable');
+  // Property changes report property reads and writes, never a plain attribute, which may be valid.
+  for (const input of ['<lr-token-input .delimiter=${";,"}></lr-token-input>', "const el = document.querySelector('lr-token-input'); el.delimiter = ';,';"]) {
+    const result = migrateText(input, current, { file: input.startsWith('<') ? 'a.ts' : 'b.ts', origin: 'lyra-v32' });
+    assert.equal(result.content, input, input);
+    assert.ok(result.warnings.some(site => site.upstreamMember === 'delimiter'), `${input}: ${describeWarnings(result.warnings).join('; ')}`);
   }
 });
 

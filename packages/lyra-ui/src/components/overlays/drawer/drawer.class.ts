@@ -68,7 +68,7 @@ export type LyraDrawerPlacement = 'start' | 'end' | 'top' | 'bottom';
  * @cssprop [--lr-drawer-inset=var(--lr-space-s)] - Gap between a `floating` panel and the viewport
  *   (or, with `contained`, its containing block) on every side. The device safe-area insets still
  *   win wherever they are larger. Ignored unless `floating` is set.
- * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner
+ * @cssprop [--lr-overlay-radius=var(--lr-radius-container)] - Shared floating-surface corner
  *   radius, read by the panel only when `floating` is set.
  * @cssprop [--lr-drawer-enter-x=calc(-1 * var(--lr-size-1rem))] - Horizontal offset the panel
  *   slides in from, and back out to, for start/end drawers. Its private default changes per

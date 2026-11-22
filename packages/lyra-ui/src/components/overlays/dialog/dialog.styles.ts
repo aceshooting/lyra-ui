@@ -37,7 +37,7 @@ export const styles = css`
     /* Restated for the press state because keyboard activation raises :active with no :hover. */
     --_lr-dialog-close-color-hover: var(--lr-color-brand);
     --_lr-dialog-close-color-active: var(--lr-icon-button-hover-color, var(--lr-color-brand));
-    --_lr-dialog-close-radius: var(--lr-overlay-radius, var(--lr-radius));
+    --_lr-dialog-close-radius: var(--lr-overlay-radius, var(--lr-radius-container));
     ${modalHostStyles}
     ${dialogChrome}
     /* Restates dialogChrome's frame with this dialog's own viewport-inset hook: the shared fragment

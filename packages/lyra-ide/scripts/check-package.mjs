@@ -26,7 +26,10 @@ assert.deepEqual(Object.keys(manifest.exports), [...IDE_DATA_FILES.map((file) =>
 assert.deepEqual(manifest.peerDependencies, { '@aceshooting/lyra-ui': 'workspace:^' });
 assert.equal(manifest.dependencies, undefined);
 assert.equal(manifest.version, ui.version, 'Versions move with lyra-ui through the changeset fixed group');
-assert.equal(ui.customElements, undefined, 'lyra-ui must not publish editor data');
+// lyra-ui points `customElements` at its slim discovery manifest only; the full manifest, web-types
+// and the VS Code data publish from this package.
+assert.equal(ui.customElements, 'custom-elements.slim.json', 'lyra-ui must point customElements at its slim manifest, never the full editor data');
+assert.equal(ui.files.includes('custom-elements.slim.json'), true, 'lyra-ui must publish its slim manifest');
 assert.equal(ui['web-types'], undefined, 'lyra-ui must not publish editor data');
 for (const file of IDE_DATA_FILES) {
   assert.equal(ui.files.includes(file), false, `lyra-ui must not publish ${file}`);

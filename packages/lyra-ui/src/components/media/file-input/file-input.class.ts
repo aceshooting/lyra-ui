@@ -173,7 +173,8 @@ export interface LyraFileInputEventMap {
  * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
  * @cssprop [--lr-form-control-label-text-align=inherit] - Text alignment of the field label.
  * @cssprop [--lr-form-control-label-text-transform=inherit] - Text transform of the field label.
- * @cssprop [--lr-form-control-label-block-gap=var(--lr-space-xs)] - Gap between the label and the field.
+ * @cssprop [--lr-form-control-label-gap=var(--lr-space-xs)] - Space between the label above the
+ *   field and the field.
  * @csspart form-control-label - The form-control label.
  * @csspart hint - The form-control hint.
  * @csspart error - The visible validation message or authored error content.

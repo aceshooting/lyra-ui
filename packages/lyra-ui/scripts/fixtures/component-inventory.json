@@ -27526,12 +27526,6 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-form-control-label-block-gap",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-xs)"
-          },
-          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -27558,8 +27552,7 @@
           {
             "name": "--lr-form-control-label-gap",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-m)"
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-inline-size",
@@ -30141,7 +30134,7 @@
             "name": "--lr-overlay-radius",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-radius)"
+            "default": "var(--lr-radius-container)"
           },
           {
             "name": "--lr-overlay-shadow-anchored",
@@ -33134,12 +33127,6 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-form-control-label-block-gap",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-xs)"
-          },
-          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -33166,8 +33153,7 @@
           {
             "name": "--lr-form-control-label-gap",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-m)"
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-inline-size",
@@ -34572,12 +34558,6 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-form-control-label-block-gap",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-xs)"
-          },
-          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -34604,8 +34584,7 @@
           {
             "name": "--lr-form-control-label-gap",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-m)"
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-inline-size",
@@ -34670,8 +34649,7 @@
           {
             "name": "--lr-overlay-radius",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-radius)"
+            "hasDefault": false
           },
           {
             "name": "--lr-overlay-shadow-anchored",
@@ -34956,7 +34934,9 @@
       "registrationModule": "src/components/lr-combobox.ts",
       "rootIncluded": true,
       "rootExclusion": null,
-      "optionalPeers": [],
+      "optionalPeers": [
+        "dompurify"
+      ],
       "maturity": {
         "status": "stable",
         "since": "4.0.0",
@@ -36463,6 +36443,14 @@
             "deprecated": null
           },
           {
+            "name": "option-html",
+            "deprecated": null
+          },
+          {
+            "name": "option-html-fallback",
+            "deprecated": null
+          },
+          {
             "name": "option-icon",
             "deprecated": null
           },
@@ -36712,12 +36700,6 @@
             "default": "var(--lr-color-danger)"
           },
           {
-            "name": "--lr-form-control-label-block-gap",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-xs)"
-          },
-          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -36744,8 +36726,7 @@
           {
             "name": "--lr-form-control-label-gap",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-m)"
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-inline-size",
@@ -36811,7 +36792,7 @@
             "name": "--lr-overlay-radius",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-radius)"
+            "default": "var(--lr-radius-container)"
           },
           {
             "name": "--lr-overlay-shadow-anchored",
@@ -37567,7 +37548,7 @@
             "name": "--lr-overlay-radius",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-radius)"
+            "default": "var(--lr-radius-container)"
           },
           {
             "name": "--lr-overlay-shadow-modal",
@@ -38612,7 +38593,9 @@
       "registrationModule": "src/components/lr-condition-builder.ts",
       "rootIncluded": true,
       "rootExclusion": null,
-      "optionalPeers": [],
+      "optionalPeers": [
+        "dompurify"
+      ],
       "maturity": {
         "status": "stable",
         "since": "9.0.0",
@@ -40506,7 +40489,7 @@
             "name": "--lr-overlay-radius",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-radius)"
+            "default": "var(--lr-radius-container)"
           },
           {
             "name": "--lr-overlay-shadow-anchored",
@@ -42584,7 +42567,9 @@
       "registrationModule": "src/components/lr-country-picker.ts",
       "rootIncluded": true,
       "rootExclusion": null,
-      "optionalPeers": [],
+      "optionalPeers": [
+        "dompurify"
+      ],
       "maturity": {
         "status": "experimental",
         "since": "25.5.0",
@@ -43374,12 +43359,6 @@
             "default": "var(--lr-color-danger)"
           },
           {
-            "name": "--lr-form-control-label-block-gap",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-xs)"
-          },
-          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -43406,8 +43385,7 @@
           {
             "name": "--lr-form-control-label-gap",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-m)"
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-inline-size",
@@ -44080,7 +44058,9 @@
       "registrationModule": "src/components/lr-currency-picker.ts",
       "rootIncluded": true,
       "rootExclusion": null,
-      "optionalPeers": [],
+      "optionalPeers": [
+        "dompurify"
+      ],
       "maturity": {
         "status": "experimental",
         "since": "25.5.0",
@@ -44846,12 +44826,6 @@
             "default": "var(--lr-color-danger)"
           },
           {
-            "name": "--lr-form-control-label-block-gap",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-xs)"
-          },
-          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -44878,8 +44852,7 @@
           {
             "name": "--lr-form-control-label-gap",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-m)"
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-inline-size",
@@ -49652,12 +49625,6 @@
             "default": "var(--lr-color-danger)"
           },
           {
-            "name": "--lr-form-control-label-block-gap",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-xs)"
-          },
-          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -49684,8 +49651,7 @@
           {
             "name": "--lr-form-control-label-gap",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-m)"
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-inline-size",
@@ -52523,7 +52489,7 @@
             "name": "--lr-overlay-radius",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-radius)"
+            "default": "var(--lr-radius-container)"
           },
           {
             "name": "--lr-overlay-shadow-modal",
@@ -54247,7 +54213,9 @@
       "registrationModule": "src/components/lr-document-library.ts",
       "rootIncluded": true,
       "rootExclusion": null,
-      "optionalPeers": [],
+      "optionalPeers": [
+        "dompurify"
+      ],
       "maturity": {
         "status": "stable",
         "since": "4.1.0",
@@ -58175,7 +58143,7 @@
             "name": "--lr-overlay-radius",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-radius)"
+            "default": "var(--lr-radius-container)"
           },
           {
             "name": "--lr-overlay-shadow-modal",
@@ -59760,7 +59728,7 @@
             "name": "--lr-overlay-radius",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-radius)"
+            "default": "var(--lr-radius-container)"
           },
           {
             "name": "--lr-overlay-shadow-anchored",
@@ -63503,7 +63471,7 @@
             "name": "--lr-overlay-radius",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-radius)"
+            "default": "var(--lr-radius-container)"
           },
           {
             "name": "--lr-overlay-shadow-anchored",
@@ -65854,7 +65822,7 @@
             "name": "--lr-overlay-radius",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-radius)"
+            "default": "var(--lr-radius-container)"
           },
           {
             "name": "--lr-overlay-shadow-anchored",
@@ -67221,12 +67189,6 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-form-control-label-block-gap",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-xs)"
-          },
-          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -67243,6 +67205,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-font-weight-semibold)"
+          },
+          {
+            "name": "--lr-form-control-label-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
           },
           {
             "name": "--lr-form-control-label-line-height",
@@ -67818,7 +67786,9 @@
       "registrationModule": "src/components/lr-filter-bar.ts",
       "rootIncluded": true,
       "rootExclusion": null,
-      "optionalPeers": [],
+      "optionalPeers": [
+        "dompurify"
+      ],
       "maturity": {
         "status": "stable",
         "since": "4.1.0",
@@ -83002,12 +82972,6 @@
             "default": "var(--lr-color-danger)"
           },
           {
-            "name": "--lr-form-control-label-block-gap",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-xs)"
-          },
-          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -83034,8 +82998,7 @@
           {
             "name": "--lr-form-control-label-gap",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-m)"
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-inline-size",
@@ -91820,12 +91783,6 @@
             "default": "var(--lr-color-danger)"
           },
           {
-            "name": "--lr-form-control-label-block-gap",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-xs)"
-          },
-          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -91852,8 +91809,7 @@
           {
             "name": "--lr-form-control-label-gap",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-m)"
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-inline-size",
@@ -92017,8 +91973,7 @@
           {
             "name": "--lr-overlay-radius",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-radius)"
+            "hasDefault": false
           },
           {
             "name": "--lr-overlay-shadow-anchored",
@@ -98545,7 +98500,7 @@
             "name": "--lr-overlay-radius",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-radius)"
+            "default": "var(--lr-radius-container)"
           },
           {
             "name": "--lr-overlay-shadow-anchored",
@@ -98822,7 +98777,7 @@
             "name": "--lr-overlay-radius",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-radius)"
+            "default": "var(--lr-radius-container)"
           },
           {
             "name": "--lr-overlay-shadow-anchored",
@@ -102640,12 +102595,6 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-form-control-label-block-gap",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-xs)"
-          },
-          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -102672,8 +102621,7 @@
           {
             "name": "--lr-form-control-label-gap",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-m)"
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-inline-size",
@@ -102877,8 +102825,7 @@
           {
             "name": "--lr-overlay-radius",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-radius)"
+            "hasDefault": false
           },
           {
             "name": "--lr-overlay-shadow-anchored",
@@ -106051,12 +105998,6 @@
             "default": "var(--lr-color-danger)"
           },
           {
-            "name": "--lr-form-control-label-block-gap",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-xs)"
-          },
-          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -106083,8 +106024,7 @@
           {
             "name": "--lr-form-control-label-gap",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-m)"
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-inline-size",
@@ -107346,7 +107286,7 @@
             "name": "--lr-overlay-radius",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-radius)"
+            "default": "var(--lr-radius-container)"
           },
           {
             "name": "--lr-overlay-shadow-anchored",
@@ -109951,12 +109891,6 @@
             "default": "var(--lr-color-danger)"
           },
           {
-            "name": "--lr-form-control-label-block-gap",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-xs)"
-          },
-          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -109983,8 +109917,7 @@
           {
             "name": "--lr-form-control-label-gap",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-m)"
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-inline-size",
@@ -112108,12 +112041,6 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-form-control-label-block-gap",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-xs)"
-          },
-          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -112140,8 +112067,7 @@
           {
             "name": "--lr-form-control-label-gap",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-m)"
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-inline-size",
@@ -117354,12 +117280,6 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-form-control-label-block-gap",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-xs)"
-          },
-          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -117386,8 +117306,7 @@
           {
             "name": "--lr-form-control-label-gap",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-m)"
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-inline-size",
@@ -121333,7 +121252,7 @@
             "name": "--lr-overlay-radius",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-radius)"
+            "default": "var(--lr-radius-container)"
           },
           {
             "name": "--lr-overlay-shadow-anchored",
@@ -129863,12 +129782,6 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-form-control-label-block-gap",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-xs)"
-          },
-          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -129895,8 +129808,7 @@
           {
             "name": "--lr-form-control-label-gap",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-m)"
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-inline-size",
@@ -138871,12 +138783,6 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-form-control-label-block-gap",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-xs)"
-          },
-          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -138893,6 +138799,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-font-weight-semibold)"
+          },
+          {
+            "name": "--lr-form-control-label-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
           },
           {
             "name": "--lr-form-control-label-line-height",
@@ -140275,12 +140187,6 @@
             "default": "var(--lr-color-danger)"
           },
           {
-            "name": "--lr-form-control-label-block-gap",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-xs)"
-          },
-          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -140307,8 +140213,7 @@
           {
             "name": "--lr-form-control-label-gap",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-m)"
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-inline-size",
@@ -140374,7 +140279,7 @@
             "name": "--lr-overlay-radius",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-radius)"
+            "default": "var(--lr-radius-container)"
           },
           {
             "name": "--lr-overlay-shadow-anchored",
@@ -141057,7 +140962,7 @@
             "name": "--lr-overlay-radius",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-radius)"
+            "default": "var(--lr-radius-container)"
           },
           {
             "name": "--lr-overlay-shadow-anchored",
@@ -142265,12 +142170,6 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-form-control-label-block-gap",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-xs)"
-          },
-          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -142297,8 +142196,7 @@
           {
             "name": "--lr-form-control-label-gap",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-m)"
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-inline-size",
@@ -143911,7 +143809,7 @@
             "name": "--lr-form-control-label-font-size",
             "deprecated": null,
             "hasDefault": true,
-            "default": "inherit"
+            "default": "var(--lr-font-size-md-sm)"
           },
           {
             "name": "--lr-form-control-label-font-weight",
@@ -143922,8 +143820,7 @@
           {
             "name": "--lr-form-control-label-gap",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-m)"
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-inline-size",
@@ -148392,6 +148289,16 @@
             "default": false
           },
           {
+            "name": "custom-states",
+            "property": "customStates",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
             "name": "disabled",
             "property": "disabled",
             "type": "boolean",
@@ -148482,6 +148389,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": false
+          },
+          {
+            "name": "customStates",
+            "attribute": "custom-states",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
           },
           {
             "name": "disabled",
@@ -155407,7 +155324,7 @@
           },
           {
             "name": "lr-page-change",
-            "type": "CustomEvent<Readonly<{ page: number; pageSize?: number; offset?: number }>>",
+            "type": "CustomEvent<Readonly<{ page: number; pageSize: number; offset: number }>>",
             "cancelable": "never",
             "constructor": "CustomEvent"
           },
@@ -159401,12 +159318,6 @@
             "default": "var(--lr-color-danger)"
           },
           {
-            "name": "--lr-form-control-label-block-gap",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-xs)"
-          },
-          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -159433,8 +159344,7 @@
           {
             "name": "--lr-form-control-label-gap",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-m)"
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-inline-size",
@@ -162226,12 +162136,6 @@
             "default": "var(--lr-color-danger)"
           },
           {
-            "name": "--lr-form-control-label-block-gap",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-xs)"
-          },
-          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -162258,8 +162162,7 @@
           {
             "name": "--lr-form-control-label-gap",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-m)"
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-inline-size",
@@ -162319,7 +162222,7 @@
             "name": "--lr-overlay-radius",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-radius)"
+            "default": "var(--lr-radius-container)"
           },
           {
             "name": "--lr-overlay-shadow-anchored",
@@ -163397,7 +163300,9 @@
       "registrationModule": "src/components/lr-time-zone-picker.ts",
       "rootIncluded": true,
       "rootExclusion": null,
-      "optionalPeers": [],
+      "optionalPeers": [
+        "dompurify"
+      ],
       "maturity": {
         "status": "experimental",
         "since": "25.5.0",
@@ -164163,12 +164068,6 @@
             "default": "var(--lr-color-danger)"
           },
           {
-            "name": "--lr-form-control-label-block-gap",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-xs)"
-          },
-          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -164195,8 +164094,7 @@
           {
             "name": "--lr-form-control-label-gap",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-m)"
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-inline-size",
@@ -165723,7 +165621,7 @@
             "name": "--lr-overlay-radius",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-radius)"
+            "default": "var(--lr-radius-container)"
           },
           {
             "name": "--lr-overlay-shadow-modal",
@@ -165795,7 +165693,7 @@
             "name": "--lr-toast-item-radius",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-radius)"
+            "default": "var(--lr-radius-container)"
           },
           {
             "name": "--lr-toast-padding",
@@ -167561,12 +167459,6 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-form-control-label-block-gap",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-xs)"
-          },
-          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -167593,8 +167485,7 @@
           {
             "name": "--lr-form-control-label-gap",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-m)"
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-inline-size",
@@ -169449,7 +169340,7 @@
             "name": "--lr-overlay-radius",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-radius)"
+            "default": "var(--lr-radius-container)"
           },
           {
             "name": "--lr-overlay-shadow-anchored",
@@ -172951,7 +172842,7 @@
             "name": "--lr-overlay-radius",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-radius)"
+            "default": "var(--lr-radius-container)"
           },
           {
             "name": "--lr-overlay-shadow-modal",
@@ -175659,7 +175550,9 @@
       "registrationModule": "src/components/lr-unit-picker.ts",
       "rootIncluded": true,
       "rootExclusion": null,
-      "optionalPeers": [],
+      "optionalPeers": [
+        "dompurify"
+      ],
       "maturity": {
         "status": "experimental",
         "since": "25.5.0",
@@ -176425,12 +176318,6 @@
             "default": "var(--lr-color-danger)"
           },
           {
-            "name": "--lr-form-control-label-block-gap",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-xs)"
-          },
-          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -176457,8 +176344,7 @@
           {
             "name": "--lr-form-control-label-gap",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-m)"
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-inline-size",
@@ -176869,7 +176755,7 @@
             "name": "--lr-overlay-radius",
             "deprecated": null,
             "hasDefault": true,
-            "default": "var(--lr-radius)"
+            "default": "var(--lr-radius-container)"
           },
           {
             "name": "--lr-overlay-shadow-anchored",
@@ -179638,12 +179524,6 @@
             "hasDefault": false
           },
           {
-            "name": "--lr-form-control-label-block-gap",
-            "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-xs)"
-          },
-          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -179670,8 +179550,7 @@
           {
             "name": "--lr-form-control-label-gap",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-space-m)"
+            "hasDefault": false
           },
           {
             "name": "--lr-form-control-label-inline-size",
@@ -179739,8 +179618,7 @@
           {
             "name": "--lr-overlay-radius",
             "deprecated": null,
-            "hasDefault": true,
-            "default": "var(--lr-radius)"
+            "hasDefault": false
           },
           {
             "name": "--lr-overlay-shadow-anchored",
@@ -244129,7 +244007,9 @@
         "lightDom": "surface-only",
         "runtime": {
           "registration": "all",
-          "optionalPeers": []
+          "optionalPeers": [
+            "dompurify"
+          ]
         },
         "accessibility": {
           "reviewStatus": "complete",

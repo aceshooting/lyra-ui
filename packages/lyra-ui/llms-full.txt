@@ -1537,7 +1537,9 @@ properties only — notably not `color-scheme` — so importing it paints nothin
 A **theme scope** is an element that re-derives the whole token layer from the `--lr-theme-*` inputs
 and the mode it sees. The list is closed: `:root`; the mode scopes `.lr-light`, `.lr-dark` and
 `[data-lr-theme]` (any value); the style-axis boundaries `[data-lr-mode]`, `[data-lr-look]`,
-`[data-lr-accent]`, `[data-lr-density]`, `[data-lr-contrast]`, `[data-lr-motion]`; a look's scoped
+`[data-lr-accent]`, the per-role `[data-lr-accent-neutral]`, `[data-lr-accent-success]`,
+`[data-lr-accent-warning]`, `[data-lr-accent-danger]`, `[data-lr-density]`, `[data-lr-contrast]`,
+`[data-lr-motion]`; a look's scoped
 `.light` / `.dark` aliases; the design-token fixture scopes `.lr-token-light`, `.lr-token-dark`,
 `[data-lr-design-token-mode]`; and the mode-neutral marker **`data-lr-theme-scope`**.
 
@@ -1842,6 +1844,7 @@ Each sheet is the one that style needs under `theme-core.css`:
 | `look: 'shadcn'`, `'material'`, `'data'`, `'terminal'`, `'high-contrast'` | `looks/<look>.css` |
 | `surface: 'glass'`, or the `.lr-surface-chrome` class | `surfaces/glass.css` |
 | a named `accent` such as `'emerald'` | `accents.css` |
+| a per-role `data-lr-accent-<role>` remap | `accent-roles.css` |
 | `density: 'compact'` or `'touch'` | `density.css` |
 
 An application that keeps the whole built-in profile should stay on `theme.css`, which is smaller
@@ -1862,6 +1865,53 @@ axes on `<html>` and restore only the mode, as in
   </head>
 </html>
 ```
+
+### Per-role accents — accent-roles.css
+
+`data-lr-accent` names the brand palette. To recolor another semantic role declaratively, import
+`accent-roles.css` and name a gemstone on the role's own attribute: `data-lr-accent-neutral`,
+`data-lr-accent-success`, `data-lr-accent-warning` or `data-lr-accent-danger`. The values are the
+nine gemstones that `data-lr-accent` accepts (`emerald`, `peridot`, `topaz`, `ruby`, `tourmaline`,
+`amethyst`, `aquamarine`, `sapphire`, `hematite`), plus `none`.
+
+```css
+@import "@aceshooting/lyra-ui/theme.css";
+@import "@aceshooting/lyra-ui/accent-roles.css";
+```
+
+```html
+<html data-lr-accent-success="aquamarine" data-lr-accent-danger="tourmaline">
+  …
+  <section data-lr-accent-success="sapphire">…</section>   <!-- this region only -->
+  <aside data-lr-accent-success="none">…</aside>           <!-- the look's own success colours -->
+</html>
+```
+
+- **Same ramp as brand.** A remapped role gets exactly the quiet, normal and loud fill, border and
+  `on` ramp that `data-lr-accent="<gemstone>"` gives brand, in both light and dark mode, qualified
+  by the same rules: every `on` colour meets 4.5:1 on its fill, the loud fill meets 4.5:1 as text on
+  the quiet fill and on every built-in reference surface (each look's page and raised surfaces),
+  and normal and loud borders meet 3:1 against those surfaces. Every component that reads `--lr-color-<role>-*` follows, including
+  `variant="success"` and friends.
+- **Defaults are unchanged.** Without a role attribute, or without `accent-roles.css`, each role
+  keeps the look's colours. Brand and the focus ring belong to `data-lr-accent`; a role attribute
+  never moves them, and remapping one role leaves the others alone.
+- **Scoping.** Each attribute is a theme scope, so it works on any element and nests: a closer
+  attribute wins, `none` restores the look's colours for that role below it, and an unknown value
+  changes nothing. A `data-lr-accent` element starts a fresh accent scope for every role, so set the
+  role attributes on that element (or inside it) as well when you nest a brand accent. Both
+  attributes compose on one element.
+- **Mode, contrast and forced colours.** The role follows the mode of its nearest scope
+  (`data-lr-mode`, `.lr-dark`, System). `prefers-contrast: more` and `data-lr-contrast="more"` still
+  strengthen control borders and focus rings exactly as they do with a brand accent. Under `forced-colors: active` the role aliases resolve to system colours, so
+  a remap never overrides the user's palette.
+- **Runtime precedence.** `setLyraStyle({ accent: { success: '#0d9488' } })` and
+  `applyLyraStyleScope()` write inline per-role ramps, which win over the attribute on the same
+  element; use them for arbitrary colours, and the attributes for the built-in palette with no
+  JavaScript and no first-paint flash.
+- **Cost.** `theme.css` and `theme-core.css` carry only the four scope selectors;
+  `accent-roles.css` (under 3 KB gzipped) holds the palettes, so pages that never remap a role pay
+  nothing.
 
 ### Cascade layers
 
@@ -3736,6 +3786,15 @@ corrects itself on the next update, so a slotted override lands one frame after 
 browser-only mount is unaffected and renders the final result the first time. Layout/observer/canvas/media work
 begins after hydration, and remote content is client-only.
 
+**Localized server output.** The server renderer gives a component no ancestors, so an ancestor
+`lang` (`<html lang="fr">`, `<div lang="fr">`) reaches only the browser. The server resolves
+messages and number/date formats from the host's own `locale`/`lang`, else the active locale. To
+serve translated text, import the catalog on the server and call `setLyraLocale(requestLocale)`
+around the render (clear it with `setLyraLocale('')` afterwards), matching the page's `lang`; also
+import the catalog in the browser before hydration. The hydrated page then keeps the server text
+with no flash. When the server rendered a different locale than the browser inherits, the
+hydrating render reproduces the server's text and the next update commits the inherited locale.
+
 **If hydration never runs at all** — a page that intentionally ships no script bundle, a reader
 that fetches the raw HTML, or a crawler — a `render-and-hydrate` tag's declarative-shadow-DOM
 output is either permanently complete and correct on its own, or only ever promised once hydration
@@ -4077,6 +4136,15 @@ metadata for editors: `custom-elements.json` (Custom Elements Manifest), `web-ty
 files matter when scaffolding a project's editor configuration. Build tools can import the manifest
 through the explicit `@aceshooting/lyra-ide/custom-elements.json` package export; native Node ESM
 uses `with { type: 'json' }` on that import.
+
+**Slim manifest in `@aceshooting/lyra-ui`.** The main package's `customElements` field points at
+`custom-elements.slim.json` (export `@aceshooting/lyra-ui/custom-elements.slim.json`), so Storybook,
+wc-toolkit and analyzers discover every tag without installing `@aceshooting/lyra-ide`. Per tag it
+lists attributes (name, `fieldName`, type, default), public fields and methods, events, slots, CSS
+parts, CSS properties and CSS states, already flattened across superclasses, with module paths at the
+shipped `dist/` files. It carries no descriptions, status, `since` or deprecation records and no
+companion-package tags; use the full `@aceshooting/lyra-ide/custom-elements.json` for those. The
+inheritance note below applies to the full manifest only.
 
 **Inherited members in `custom-elements.json`.** A subclass declaration's `cssParts` array is
 always the complete flattened set, including everything inherited from a superclass — `::part()`
@@ -8007,12 +8075,15 @@ Set `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, 
 `--lr-font-size-md-sm`, while checkbox-group and radio-group labels follow their control’s size tier.
 Set the three tokens on a form to give its field and group labels the same typography.
 `--lr-form-control-label-text-align` and `--lr-form-control-label-text-transform` (both default
-`inherit`) align and transform the same labels. A label above its field sits
-`--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`) from it in `lr-input`,
-`lr-textarea`, `lr-select`, `lr-combobox`, `lr-date-input`, `lr-time-input`, `lr-phone-input`,
-`lr-signature-pad`, `lr-locale-picker`, `lr-file-input` and the catalog pickers, including a
-`label-placement="start"` row once it collapses; `--lr-form-control-label-gap` stays the
-start-placement column gap.
+`inherit`) align and transform the same labels.
+
+One token, `--lr-form-control-label-gap`, spaces the label from its field in every placement: the
+inline gap of a `label-placement="start"` column (default `var(--lr-space-m)`), and the block gap
+under a label above the field, in top placement and in a start row that has collapsed (default
+`var(--lr-space-xs)`; `lr-radio-group` uses its row gap, `lr-checkbox-group` `0px` and `lr-slider`
+its row gap, `--lr-slider-gap`). It applies to every control that takes `label-placement`, plus
+`lr-segmented` and `lr-file-input`. Setting it on a form therefore moves top labels as well as
+start columns; scope it to the start-placed controls when only the column gap should change.
 
 ## Hiding the label visually: `label-display`
 
@@ -8048,6 +8119,10 @@ readout row take the column), the legend-style groups `lr-checkbox-group` and `l
 toolbar slot moves below the options) and, in the conversation family, `lr-model-select` and
 `lr-voice-picker`. `lr-segmented` keeps the label above. The label sits in an inline-start column of `--lr-form-control-label-inline-size` (default `30%`), `--lr-form-control-label-gap`
 (default `var(--lr-space-m)`) from the field, and the hint and error stay aligned under the field.
+`--lr-form-control-label-inline-size: auto` sizes the column to the label text instead, never wider
+than the row; a long label then stays on one line and the field takes the rest. The hint and error of
+a content-sized column start at the row's inline-start edge, because the indent cannot be derived
+from a keyword width.
 The label is top-aligned, level with the first line of the field, so it stays beside the first line
 of a tall field (`lr-textarea`, `lr-code-editor`, `lr-signature-pad`) instead of centring on it. With
 `label-display="hidden"` or no label the field spans the row and the hint and error start under it.
@@ -8061,6 +8136,10 @@ no size containment. The `<label for>` association is unchanged.
   <lr-input label="Reference" label-placement="start"></lr-input>
   <lr-select label="Carrier" label-placement="start">…</lr-select>
 </form>
+
+<!-- A content-sized column: each label is as wide as its text. -->
+<lr-input label="Delivery instructions" label-placement="start"
+  style="--lr-form-control-label-inline-size: auto"></lr-input>
 ```
 
 ## Touch font floor
@@ -8479,6 +8558,7 @@ AbortSignal; limit: number }) => Promise<readonly ComboboxSourceRow[] | { rows, 
   into an inert document and never inserted, so nothing in it runs; only its top-level `<option>` or
   `*-option` elements become rows. It drives the same pipeline as
   `source` (debounce, `lr-options-request`, cancellation, loading and failed states, row ceilings).
+  An option object may carry `html` (rich row content, see `ComboboxSourceRow.html` below).
   Assigning either provider replaces the other, and `dataSource` reads `null` once `source` is
   assigned; `source` keeps its `(query, { signal, limit })` shape.
 - `server: boolean = false` (attribute `server`, reflected) — server mode without a provider:
@@ -8579,7 +8659,7 @@ every selection change and a `form.reset()` — like a native control, only anot
 **8.0 migration:** the former camel-case string property `autoCorrect` is not retained as a public
 alias. Set the boolean `autocorrect` IDL, or use `autocorrect="on"` / `autocorrect="off"` in markup.
 
-`ComboboxSourceRow = { readonly value: string; readonly label: string; readonly sub?: string; readonly icon?: unknown; readonly start?: unknown;
+`ComboboxSourceRow = { readonly value: string; readonly label: string; readonly sub?: string; readonly html?: string; readonly icon?: unknown; readonly start?: unknown;
 readonly end?: unknown; readonly badge?: string |
 number; readonly title?: string; accessibleLabel?: string; data?: unknown; dotColor?: string; group?: string; disabled?:
 boolean }` — the row shape used by the async `source` path. `start` and `end` (new in 11.0.0) are
@@ -8592,6 +8672,19 @@ of the accessible name), and `data` is retained without being rendered
 for retrieval through `selectedRows`.
 `dotColor` accepts a valid CSS `color`; invalid values, declaration-breaking input, and `url()`
 render a transparent dot.
+`html` is optional rich markup shown in place of the label text, as the `option-html`
+part. It always passes through the optional `dompurify` peer (install it to use this field) and then a
+passive-content pass: script, event handlers, `style`, `part`, network attributes (`src`, `href`, …),
+iframes and media are removed, and links, buttons, form controls and custom elements are replaced by
+their text. A result superseded by a newer query is never applied. The row's text `label` remains its
+accessible name, filter text and committed text, and the rich content is `aria-hidden`; use
+`accessibleLabel` for a fuller spoken name as usual. While the peer loads, every row shows its plain
+label. If the peer is missing, unusable or throws, rows stay on their plain labels (raw markup is never
+rendered), the listbox shows the localized `comboboxRichContentUnavailable` message as
+`option-html-fallback` (plain text, not a live region), and the same message is announced once to
+`[data-lr-live-region="polite"]`. Markup longer than 4,096 UTF-16 code units, or markup that sanitizes
+to nothing, leaves the plain label. Style the content through `::part(option-html)` and inherited properties; class names in the
+markup do not match the component's shadow styles.
 The light-DOM `<lr-option>` path normalizes its supported label/sub/dot/group/data fields to the
 same internal row model — `<lr-option data>` is the light-DOM counterpart of an async row's own
 `data` field, reached by reference through `selectedRows` exactly the same way.
@@ -8768,6 +8861,8 @@ aria-hidden adornments cloned from the source option's `start`/`prefix` and `end
 from an async row's `start`/`end`), `option-label`, `option-sub` (a row's
 secondary line, when `sub` is set), `option-badge` (an async row's trailing metadata),
 `option-overflow` (the "+N more" indicator from `maxRender`),
+`option-html` (the sanitized rich content of an async row carrying `html`, hidden from assistive
+technology), `option-html-fallback` (the localized note shown when the `dompurify` peer is unavailable),
 `source-error-row` (the listbox row holding the failed-`source` state), `source-error` (the shared
 failed-load state itself, with `source-error-base`, `source-error-icon`, `source-error-heading`,
 `source-error-description` and `source-error-actions` forwarded from the composed `<lr-empty>`),
@@ -8854,7 +8949,7 @@ can retheme the selected row without hijacking `--lr-color-brand` library-wide.
 The listbox popup itself is a floating surface and paints from the **shared overlay-surface family**
 (16.0.0), not from the page surface every card and input reads: `--lr-overlay-surface` (default
 `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default `var(--lr-color-border)`),
-`--lr-overlay-radius` (default `var(--lr-radius)`) and `--lr-overlay-shadow-anchored` (default
+`--lr-overlay-radius` (default `var(--lr-radius-container)`) and `--lr-overlay-shadow-anchored` (default
 `var(--lr-shadow-m)`). None is declared on `:host`, so one declaration on `:root` — or on any
 ancestor, to scope it — retints this popup together with every other floating surface, and none of
 it touches the trigger row the popup drops from. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
@@ -9049,7 +9144,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -9464,7 +9559,7 @@ Mapped hooks `--tag-max-size` (default `var(--lr-size-12rem)`), `--show-duration
 
 The listbox is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
-`var(--lr-color-border)`), `--lr-overlay-radius` (default `var(--lr-radius)`) and
+`var(--lr-color-border)`), `--lr-overlay-radius` (default `var(--lr-radius-container)`) and
 `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is declared on `:host`, so one
 declaration on `:root` — or on any ancestor, to scope it — retints this listbox together with every
 other floating surface; the trigger it drops from is untouched and keeps the hooks below.
@@ -9630,7 +9725,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
@@ -10208,7 +10303,7 @@ and `dateTimeFormat(locale, options)`.
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -10480,7 +10575,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -11584,7 +11679,7 @@ first field's, referenced here by id.
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
@@ -11791,7 +11886,7 @@ The exact-320px RTL story keeps long label/hint copy and both fixed-size stepper
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 - `--lr-input-line-height` (default `inherit`): Line height of the native input text.
@@ -11974,7 +12069,7 @@ replaced by it.
 
 The `popup` panel is a floating surface and paints from the **shared overlay-surface family**
 (16.0.0): `--lr-overlay-surface`, `--lr-overlay-border` (default `var(--lr-color-border)`),
-`--lr-overlay-radius` (default `var(--lr-radius)`) and `--lr-overlay-shadow-anchored` (default
+`--lr-overlay-radius` (default `var(--lr-radius-container)`) and `--lr-overlay-shadow-anchored` (default
 `var(--lr-shadow-m)`). None is declared on `:host`, so one declaration on `:root` — or on any
 ancestor, to scope it — retints this panel together with every other floating surface in the
 library. One deliberate difference from the rest of the family: `--lr-overlay-surface` defaults here
@@ -12012,7 +12107,7 @@ Further custom properties:
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 
 ## `lr-native-time-input`
 
@@ -12116,7 +12211,7 @@ entry for the flush and cancellation rules.
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 - `--lr-input-line-height` (default `inherit`): Line height of the native input text.
@@ -12454,7 +12549,7 @@ Further custom properties:
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 
 ## `lr-time-range`
 
@@ -13461,7 +13556,7 @@ checkbox and does not emit `lr-change`.
 
 ## `lr-slider`
 
-**Label and readout.** The label inherits the surrounding font size by default; set `--lr-form-control-label-font-size: var(--lr-font-size-md-sm)` on the slider or a containing form to match the `lr-input`/`lr-select` label size. `label-placement="start"` (see "Label beside the field") puts the label in a column beside a horizontal track. `with-value` shows the **localized number** by default, even when a `valueFormatter` is set and even with `value-placement="label"`; the formatter feeds `aria-valuetext` and the tooltip only. Set `value-display="formatted"` to show the formatter's text in the readout. This is deliberate: a formatter written for assistive text (`"40 percent"`) would otherwise change the visible readout of every existing slider.
+**Label and readout.** The label uses the form-control label size, `var(--lr-font-size-md-sm)`, like `lr-input` and `lr-select`; set `--lr-form-control-label-font-size: 1em` on the slider to follow the surrounding font size instead. `label-placement="start"` (see "Label beside the field") puts the label in a column beside a horizontal track. `with-value` shows the **localized number** by default, even when a `valueFormatter` is set and even with `value-placement="label"`; the formatter feeds `aria-valuetext` and the tooltip only. Set `value-display="formatted"` to show the formatter's text in the readout. This is deliberate: a formatter written for assistive text (`"40 percent"`) would otherwise change the visible readout of every existing slider.
 
 Labelled `marks` render in the `marks` part: one `mark` per tick, a `mark-label` per label, and
 `mark-label-thinned` on a label hidden for overlapping its neighbour.
@@ -14293,7 +14388,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -14422,7 +14517,7 @@ fieldset disablement, so the group behaves like one native control.
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
@@ -14557,7 +14652,7 @@ a `.value=${...}` binding on first render) is applied once they arrive.
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
@@ -14732,13 +14827,14 @@ remove button from the tab order, never blocks `focus()`, and never excludes the
 `FormData` on submit — only `disabled` does that. Turning it on while a draft is half-typed or an
 inline editor is open discards that uncommitted state without moving focus.
 
-**`delimiter` is nullable, and only a single character acts as a commit key.** It does two separate
-jobs: it splits a committed draft into several tokens, and — _only when it is exactly one
-character_ — it is the keystroke that commits the draft. A multi-character delimiter is matched as
-one literal sequence: it still splits a pasted or committed draft, but no keystroke can ever match
-it, so nothing commits on typing. Pasting never commits by itself; the pasted text joins the draft.
+**`delimiter` is a set of single characters, and it is nullable.** Each character of the string is
+a delimiter on its own: `delimiter=";,"` splits at every semicolon and at every comma, and typing
+either one commits the draft. It does two jobs: it splits
+a committed draft (and a string assigned to `value`) into several tokens, and it supplies the
+keystrokes that commit the draft. Characters are code points, so an emoji delimiter stays whole.
+Pasting never commits by itself; the pasted text joins the draft.
 Setting it to `null` disables both, so a token may contain the delimiter verbatim. **`delimiter="null"`
-does not work** — that is the four-character string `null`. Use `delimiter="none"`, `delimiter=""`
+does not work** — that makes `n`, `u` and `l` delimiters. Use `delimiter="none"`, `delimiter=""`
 (both of which the attribute converter maps to `null`), or a property binding
 (`.delimiter=${null}`). Removing the attribute restores the `,` default.
 
@@ -14755,7 +14851,7 @@ and the control is neither disabled nor readonly. It proposes each removal throu
 `lr-clear`, and returns focus to the draft input.
 
 **`value` and `inputValue`.** The array stays canonical, but assigning a string to `value` (or
-`defaultValue`) splits it on the `delimiter` sequence (comma when none) into trimmed, non-empty tokens;
+`defaultValue`) splits it at each character of `delimiter` (comma when none) into trimmed, non-empty tokens;
 the reflected `value` attribute remains a JSON array. `inputValue` reads and writes the uncommitted draft
 without committing it.
 
@@ -14826,7 +14922,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -15002,7 +15098,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -15306,8 +15402,8 @@ The popup panel is a floating surface and paints from the **shared overlay-surfa
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
 `var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
-surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) reaches it only as the middle arm of
-`--lr-color-picker-radius`, which still wins when set. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+surface together with every other floating surface in the library. `--lr-overlay-radius` reaches it only as the middle arm of
+`--lr-color-picker-radius`, which still wins when set; left unset, the panel keeps the component's own radius default. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
 decorative `var(--lr-color-border-subtle)` floating panels default to: this panel belongs to the
 form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
@@ -15385,7 +15481,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -16088,7 +16184,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -16748,7 +16844,7 @@ preserve their shared part names and inherit shared form-control and surface tok
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 
 ## Currency catalog and rate helpers
 
@@ -16938,7 +17034,7 @@ including RTL and dark themes. `--lr-form-control-invalid-border-color` themes t
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 
 ## `lr-time-zone-picker`
 
@@ -17001,7 +17097,7 @@ in both modes, following the country picker's event contract.
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 
 ## `lr-unit-picker`
 
@@ -17062,7 +17158,7 @@ in both modes, following the country picker's event contract.
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 
 ## Country, time-zone and unit catalog helpers
 
@@ -17242,7 +17338,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -25861,7 +25957,13 @@ Locked or Not started), `description`. **Custom property:** `--lr-step-pulse-col
 `--pulse-color` (the unprefixed name wins when both are set); layout hooks are the stepper's
 `--lr-stepper-*` properties and their unprefixed aliases. **Custom states:** `:state(active)`, `:state(completed)`,
 `:state(loading)`, `:state(disabled)`, `:state(locked)` and `:state(clickable)`, e.g.
-`lr-step:state(locked) { opacity: 0.6; }`. **Accessibility:** host `role="listitem"`; `aria-current="step"`
+`lr-step:state(locked) { opacity: 0.6; }`. `customStates: string = ''` (attribute `custom-states`) adds
+author-defined states: each space-separated CSS identifier is published as `:state(<name>)`, e.g.
+`<lr-step custom-states="error">` with `lr-step:state(error)::part(marker) { border-color: var(--lr-color-danger); }`.
+The step's own names (`active`, `completed`, `loading`, `disabled`, `locked`, `clickable`), invalid
+identifiers, duplicates, names over 64 characters and names after the 32nd are ignored. It is a
+styling hook only (status text and stepper behavior are unchanged), so pair it with a visible cue.
+**Accessibility:** host `role="listitem"`; `aria-current="step"`
 sits on the focused element (the inner button while clickable, the host otherwise).
 
 ```html
@@ -26332,7 +26434,7 @@ height of the field label.
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` (default `var(--lr-space-xs)`): Space between the label above the field and the field.
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -27926,7 +28028,7 @@ style those on `<lr-dropdown>` when using the overlay composition.
 **Themeable custom properties:** the standalone menu surface and a submenu's own surface paint from
 the **shared overlay-surface family** (16.0.0) — `--lr-overlay-surface` (default
 `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default `var(--lr-color-border-subtle)`),
-`--lr-overlay-radius` (default `var(--lr-radius)`) and, on the submenu only,
+`--lr-overlay-radius` (default `var(--lr-radius-container)`) and, on the submenu only,
 `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is declared on `:host`, so one
 declaration on `:root` (or on any ancestor, to scope it) retints this menu together with every other
 floating surface. A menu contained by `<lr-dropdown>` paints no surface of its own, so the family has
@@ -31403,7 +31505,7 @@ follow `size`, from a compact `2xs` up to a roomier `xl` — and `--lr-toast-acc
 fill). Inherited or direct public values remain authoritative across every size and variant.
 
 `--lr-toast-item-gap` (default `var(--lr-space-s)`) controls the gap between the item's icon,
-message, and close action; `--lr-toast-item-radius` (default `var(--lr-radius)`) controls the item
+message, and close action; `--lr-toast-item-radius` (default `var(--lr-radius-container)`) controls the item
 surface and accent-bar start corners, ahead of the shared `--lr-overlay-radius`. They are
 deliberately separate from `--lr-toast-gap`, which continues to control only the region's stack
 spacing. The item joins the shared overlay-surface family for its fill and edge
@@ -31712,7 +31814,7 @@ the slide animation are its own.
 - `floating: boolean = false` (attribute `floating`, reflected) — an inset, floating sheet: the
   panel keeps a `--lr-drawer-inset` gap (default `var(--lr-space-s)`) from every viewport edge
   (from the containing block's edges with `contained`; the safe-area insets still win where
-  larger) and rounds its corners with `--lr-overlay-radius` (default `var(--lr-radius)`).
+  larger) and rounds its corners with `--lr-overlay-radius` (default `var(--lr-radius-container)`).
   Off by default, so the drawer stays square and edge-flush.
 - `heading?: string`, `label: string`,
   `withoutCloseButton: boolean = false` (attribute `without-close-button`, reflected),
@@ -32063,7 +32165,7 @@ footer rows, which are tighter than the body by default), `--lr-dialog-panel-dur
 The panel paints from the **shared overlay-surface family** (16.0.0), not from the page-surface
 tokens this entry previously named: `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`
 — the panel fill), `--lr-overlay-border` (default `var(--lr-color-border-subtle)` — the panel edge and the
-header's and footer's dividing rules unless `--lr-dialog-divider-color` is set), `--lr-overlay-radius` (default `var(--lr-radius)` — the panel
+header's and footer's dividing rules unless `--lr-dialog-divider-color` is set), `--lr-overlay-radius` (default `var(--lr-radius-container)` — the panel
 corner and the close button's) and `--lr-overlay-shadow-modal` (default `var(--lr-shadow-xl)` — the
 panel's elevation). None is declared on `:host`, so one declaration on `:root` (or on any ancestor,
 to scope it) retints the dialog together with every popup opened from it. Two dialog-scoped hooks
@@ -33056,7 +33158,7 @@ capped by the available space. `--lr-overlay-content-padding` (default `var(--lr
 
 The popup and its arrow paint from the **shared overlay-surface family** (16.0.0):
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
-`var(--lr-color-border-subtle)`), `--lr-overlay-radius` (default `var(--lr-radius)`) and
+`var(--lr-color-border-subtle)`), `--lr-overlay-radius` (default `var(--lr-radius-container)`) and
 `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). The arrow takes the fill and the
 edge but never the radius — its corners are already cut by its clip path. None of the four is
 declared on `:host`, so a single declaration on `:root` retints every floating surface in the
@@ -33685,7 +33787,7 @@ parent; set `lr-context-menu { display: block }` to get a box.
 `lr-context-menu` or any ancestor): `--max-width`
 (`var(--lr-overlay-max-inline-size, var(--lr-size-20rem))`), `--lr-overlay-surface`
 (`var(--lr-color-surface-overlay)`), `--lr-overlay-border` (`var(--lr-color-border-subtle)`),
-`--lr-overlay-radius` (`var(--lr-radius)`), `--lr-overlay-shadow-anchored` (`var(--lr-shadow-m)`),
+`--lr-overlay-radius` (`var(--lr-radius-container)`), `--lr-overlay-shadow-anchored` (`var(--lr-shadow-m)`),
 `--lr-overlay-max-inline-size` (`var(--lr-size-20rem)`), `--lr-context-menu-min-inline-size`
 (the menu's minimum inline size, capped by the available space; it wins over the shared
 `--lr-overlay-min-inline-size`, default `0px`, which it falls back to while unset), and
@@ -34903,7 +35005,7 @@ The menu popup is a floating surface and paints from the **shared overlay-surfac
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
 `var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
-surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
+surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius-container)`) is the matching corner radius.
 
 `--lr-positioning-strategy` — the format menu reads this same cascading `absolute`/`fixed`
 override documented on `<lr-popover>` when it is (re)positioned, falling back to its own `fixed`
@@ -35991,7 +36093,7 @@ The popup is a floating surface and paints from the **shared overlay-surface fam
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
 `var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
-surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
+surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius-container)`) is the matching corner radius.
 The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
 decorative `var(--lr-color-border-subtle)` floating panels default to: the listbox completes the
 value of the text field it is bound to and keeps that field's boundary contrast (see `<lr-popover>`).
@@ -36503,6 +36605,63 @@ Promise<string>`, `LyraIconLibraryMutator = (svg: SVGElement) => void`, and
   mirrored artwork in LTR and RTL. A glyph that must follow reading direction is mirrored by the
   wrapping part of the component that owns it; a second, direction-driven flip here would silently
   cancel that one out.
+
+### Font Awesome preset
+
+An opt-in resolver preset for Font Awesome lives at its own side-effect-free subpath. Importing it
+registers and fetches nothing; the built-in glyph set stays the offline default until you call
+`registerFontAwesomeIconLibrary()`, and even then an icon is requested only when an `<lr-icon>`
+names that library. Every request still runs the pipeline above (fetch allowlist, 1 MiB cap,
+DOMPurify, resource-sink stripping, shared bounded cache).
+
+```ts
+import "@aceshooting/lyra-ui/components/lr-icon.js";
+import { setDefaultIconFamily } from "@aceshooting/lyra-ui/components/utility/icon/icon-library.js";
+import { registerFontAwesomeIconLibrary } from "@aceshooting/lyra-ui/components/utility/icon/icon-library-font-awesome.js";
+
+// Free tier from a pinned jsDelivr release: classic solid/regular and brands.
+const unregister = registerFontAwesomeIconLibrary(); // library name "fa"
+// Pro and Pro+ families: a kit code (Font Awesome's kit SVG host) or a self-hosted copy.
+registerFontAwesomeIconLibrary({ name: "fa-pro", kitCode: "abc123" });
+registerFontAwesomeIconLibrary({ name: "fa-local", basePath: "/assets/fontawesome/svgs" });
+setDefaultIconFamily("sharp", "light"); // used by icons whose family/variant are unset
+```
+
+```html
+<lr-icon library="fa" name="house" label="Home"></lr-icon>
+<lr-icon library="fa" family="brands" name="github"></lr-icon>
+<lr-icon library="fa-pro" family="duotone" variant="thin" name="house" swap-opacity></lr-icon>
+```
+
+- Options (`LyraFontAwesomeIconLibraryOptions`): `name` (default `'fa'`; `'default'` makes Font
+  Awesome own every icon without a `library`), `kitCode`, `basePath` (wins over `kitCode`; icons
+  resolve to `<basePath>/<folder>/<name>.svg`), `version` (exact `major.minor.patch`, default
+  `FONT_AWESOME_DEFAULT_VERSION` = `7.3.1`), `defaultFamily` (default `'classic'`) and
+  `defaultVariant`. Malformed options throw at the call site. The function returns an unregister
+  callback that only removes its own registration.
+- Families (`LyraFontAwesomeFamily`): `classic` and `brands` (free); `duotone`, `sharp`,
+  `sharp-duotone` (Pro, each `solid`/`regular`/`light`/`thin`); and the single-style Pro+ packs
+  `chisel`, `etch`, `graphite`, `jelly`, `jelly-duo`, `jelly-fill`, `mosaic`, `notdog`,
+  `notdog-duo`, `pixel`, `slab`, `slab-press`, `slab-duo`, `slab-press-duo`, `thumbprint`,
+  `utility`, `utility-duo`, `utility-fill`, `vellum`, `whiteboard`. A single-style pack always
+  uses its own style (`jelly` → regular, `utility` → semibold, …), as `brands` ignores `variant`.
+  Variants (`LyraFontAwesomeVariant`): `solid`, `regular`, `light`, `thin`, `semibold`.
+- Precedence: the icon's `family`/`variant`, then `setDefaultIconFamily()`, then the preset's
+  `defaultFamily`/`defaultVariant`, then `classic` and the family's first style. A family given
+  without a variant uses that family's default style.
+- The resolver fails closed **before any request**: a name other than lowercase kebab-case (the
+  copy-pasted `fa-house` class form is accepted), an unknown family or variant, or a Pro family on
+  the free tier throws, so the icon shows the localized `iconLoadError` alert and emits `lr-error`
+  with `detail.src` set to the name. A 404, an oversized file or a missing sanitizer fails the same
+  way with `iconLoadError`, `iconTooLarge` or `iconSanitizerMissing`.
+- Duotone layers (`.fa-primary`/`.fa-secondary`) use the `--primary-*`/`--secondary-*` hooks and
+  `swap-opacity` listed above; they inherit, so one rule on an ancestor themes every icon. The
+  preset mutator only adds `fill="currentColor"` to SVGs that declare no fill.
+- Helpers for custom resolvers: `createFontAwesomeIconResolver(options)` (the same validated
+  resolver) and `fontAwesomeIconFolder(family, variant)` (`duotone`/`light` → `duotone-light`;
+  throws `RangeError` on unknown input). `fontAwesomeIconMutator` is exported too.
+- Font Awesome's icons are licensed separately (Free: CC BY 4.0); a kit code is a public,
+  domain-restricted token, so restrict it to your domains in Font Awesome's kit settings.
 
 ## `lr-visually-hidden`
 
@@ -37427,8 +37586,13 @@ count and during SSR.
 - `valueFormatter?: (value: number) => string` — property only; replaces Intl formatting
 
 **Methods:** `restart()` — count again from `startValue`.
-**Events:** `lr-finish` (`null` detail) — the ticker settled, including the instant paths. A later
-`value` change counts on from the number shown.
+**Events:** `lr-finish` (`null` detail) — the ticker settled, including the instant paths. A count
+settles early: on the first frame whose formatted text equals the formatted final value it shows
+that value, leaves `:state(counting)` and emits `lr-finish`, rather than repainting the same text until
+`duration` ends (with the default ease-out curve that is when the number visibly stops; an
+overshooting easing settles the first time its text reaches the final value). A `value` change,
+mid-count or later, counts on from the number shown; reduced motion turning on mid-count settles at
+once.
 **CSS parts:** `base`, `value`. **CSS state:** `:state(counting)`.
 
 **Accessibility and motion:** the counting text is `aria-hidden` and the final value is visually
@@ -41184,7 +41348,7 @@ Use `--lr-file-input-dropzone-active-border-color` and `--lr-file-input-dropzone
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Gap between the label and the field.
+- `--lr-form-control-label-gap` (default `var(--lr-space-xs)`): Space between the label above the field and the field.
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -42434,7 +42598,8 @@ A lightbox opened outside an existing native `dialog.showModal()` stays interact
 - `open: boolean = false` (reflected) — post-render writes run the same cancelable lifecycle as
   `show()`/`hide()`/`close()`. Initial `open` markup is state and emits no lifecycle events.
 - `images: readonly LyraLightboxImage[] = []` (attribute: false) —
-  `LyraLightboxImage { readonly src: string; readonly alt?: string; readonly caption?: string }`.
+  `LyraLightboxImage { readonly src: string; readonly alt?: string; readonly caption?: string; readonly thumbnail?: string }`
+  (`thumbnail` is the `with-thumbnails` strip image, falling back to `src`).
   Assignment clones/freezes the records and inspects at most 10,000 candidates; malformed records
   are omitted and updates require a new collection assignment. `src` is passed to the embedded
   frame, which runs it through `safeMediaSrc()`. `alt`/`caption` are caller data, never localized.
@@ -42443,7 +42608,9 @@ A lightbox opened outside an existing native `dialog.showModal()` stays interact
   Invalid defined sources show a localized error and retry action; they never fall back to the
   legacy array. Setting `undefined` restores the current `images` input. Reassign the source,
   including the same object, or call a keyless `requestUpdate()` after changing its revision or
-  mutable provider state. Unrelated named display updates do not refresh the source.
+  mutable provider state. Unrelated named display updates do not refresh the source. With
+  `with-thumbnails`, a separate strip window reads the descriptors of the 15 positions around the
+  current one (never the whole collection); a position still loading shows its number.
 - `index: number = 0` (reflected) — clamped defensively for rendering and re-synced (emitting
   `lr-index-change`) when the active collection shrinks. In source mode, it retains the requested
   logical index while its descriptor and image load.
@@ -42470,8 +42637,8 @@ A lightbox opened outside an existing native `dialog.showModal()` stays interact
   Blank labels use the localized `lightboxLabel` default.
 
 More properties: `withThumbnails` (attribute `with-thumbnails`, default `false`): Shows a strip of
-thumbnails for jumping between items (images or slotted items). Not available with `imageSource`,
-which only loads the current image. `withoutNavigation` (attribute `without-navigation`, default
+thumbnails for jumping between items in every mode; each uses the item's `thumbnail`, else the
+full image (a bounded 15-position window with `imageSource`). `withoutNavigation` (attribute `without-navigation`, default
 `false`): Hides the previous/next buttons. Swiping and the arrow keys still navigate. `withoutZoom`
 (attribute `without-zoom`, default `false`): Disables zooming and removes the zoom button and the
 embedded zoom controls.
@@ -42510,20 +42677,24 @@ document revokes obsolete work, so a late completion cannot display an old image
 pan/zoom frame stays mounted and retains focus. The provider should honor the request's abort
 signal; stale-result protection does not make an abort-ignoring provider settle promptly.
 
-**Events:** cancelable `lr-show`, followed after a successful open render by `lr-after-show`;
+**Events:** cancelable `lr-show`, followed by `lr-after-show` once the open panel has rendered and its
+enter animation has finished;
 conditionally cancelable `lr-hide` (`detail: LyraLightboxHideDetail = { source: Element }`):
 cancelable before a requested close, non-cancelable when an open instance unmounts. A requested
 close then emits cancelable `lr-close-request` with `{ reason: LyraLightboxCloseReason }`.
 An accepted dismissal sets `open = false` and emits non-cancelable `lr-close` with the same reason
 object. Use
 `lr-close-request` for vetoes and `lr-close` for accepted dismissals.
-`lr-after-hide` follows the closed render. Removal while open cannot be vetoed and reports reason
+`lr-after-hide` follows once the exit animation has finished. Both after-events fire straight after
+the render under `prefers-reduced-motion` or a zero duration, `show()`/`hide()` resolve with them,
+and a transition interrupted by the opposite one emits no after-event. Removal while open cannot be vetoed and reports reason
 `unmount`. `lr-index-change` (`detail: { index }`, fired
-for internally-driven navigation — a button, a keyboard shortcut, or `next()`/`previous()`/
-`goTo()` — and when a shrinking active collection normalizes the index; **not** when a consumer sets
+for internally-driven navigation — a button, a thumbnail, a swipe, a keyboard shortcut, or
+`next()`/`previous()`/`goTo()` — and when a shrinking active collection normalizes the index; **not** when a consumer sets
 `index` directly); `lr-item-change` (`detail: { index, previousIndex, item, previousItem }`, the
 items `null` in data mode) fires alongside `lr-index-change` for the same navigations and, like it,
-not when `index` is written directly; `lr-zoom-change` (`detail: {
+not when `index` is written directly, open or closed (the same rule as `lr-carousel`'s
+`lr-slide-change` for a direct `currentSlide` write; call `goTo()` to change the item and be notified); `lr-zoom-change` (`detail: {
 zoom }`) is not emitted by the lightbox itself — it bubbles up composed from the embedded frame.
 
 **Slots:** `actions` — extra toolbar buttons (download/share/delete), rendered in `[part="toolbar"]`
@@ -42583,9 +42754,8 @@ photo content.
   measured by the lightbox, so stale load events cannot apply a previous image's size. The fit
   policy covers the painted image only; the lightbox's DOM caption, toolbar, legend-like actions,
   and tooltip content remain outside that image surface.
-- scope for v1: no per-image slotted content (data-driven via `images` or `imageSource`), no dot indicators, no
-  visual open/close animation, no click-image-to-navigate, no touch-swipe. Lifecycle phases are
-  still observable through the before/after events and methods above.
+- scope: no dot indicators, no click-image-to-navigate and no inertial fling (only the release
+  distance decides a swipe). Per-item custom content uses `<lr-lightbox-item>` templates (below).
 
 Set `--lr-lightbox-control-hover-bg` and `--lr-lightbox-control-hover-color` for hovered controls. Set `--lr-lightbox-control-active-bg` and `--lr-lightbox-control-active-color` for pressed controls.
 
@@ -42616,12 +42786,32 @@ current item while open. URLs are validated: `src` for the link with `safeLinkHr
 with `safeMediaSrc()`; a rejected `src` leaves a button-style trigger and the item out of the viewer.
 An item with no `src` is activated with Enter/Space.
 
-**Lightbox additions** — `with-thumbnails` (thumbnail strip, not with `imageSource`), `without-navigation`
+**Custom slides** — anything other than an image or a native video (an embed, a player, another
+component) goes in a `<template>` that is a direct child of the item. The lightbox copies the
+template's content only while that slide is shown, into a `<div slot="slide-content">` it appends to
+itself (light DOM, so page styles apply), and removes the copy on any other slide or once the close
+motion ends. `src` is optional (it stays the no-JavaScript link when set); `width`/`height` give the
+slide its proportions; custom content cannot be zoomed; the slotted `img` or `thumbnail` stays the
+page and strip thumbnail. Slotted controls in the copy keep their arrow keys, and content that
+handles its own dragging should call `preventDefault()` on `pointerdown` so no swipe starts there.
+
+```html
+<lr-lightbox-item width="1600" height="900" thumbnail="/maps/route-thumb.jpg" alt="Route map">
+  <template><iframe src="https://maps.example/embed/route" title="Route map" style="inline-size: 100%; block-size: 100%; border: 0"></iframe></template>
+</lr-lightbox-item>
+```
+
+**Lightbox additions** — `with-thumbnails` (thumbnail strip, in every mode), `without-navigation`
 (hides previous/next; arrow keys and swipe stay), `without-zoom` (no zoom button/controls; the toolbar zoom button exists for slotted items only), `label`
 (reflected; names the dialog; a host `aria-label` wins), `items` and `currentItem` getters, `zoomIn()`/`zoomOut()`.
 `lr-item-change` fires with every `lr-index-change` and adds `{ index, previousIndex, item, previousItem }`
-(items are `null` in data mode); like `lr-index-change` it is not fired when `index` is written directly. Touch and pen swipes (not mouse) navigate, reversed under RTL, and are
-off while zoomed; `pointercancel` abandons a swipe. A `type="video"` item plays in a native `<video>`
+(items are `null` in data mode); like `lr-index-change` it is not fired when `index` is written directly.
+Touch and pen swipes (never mouse) follow the pointer once the drag is clearly horizontal: releasing
+at least 50px toward an existing item moves to it, the incoming slide continuing from the release
+point; a shorter or mostly vertical drag, a drag past the first/last item without `loop` (followed
+with resistance) and `pointercancel` settle the slide back. Directions reverse under RTL; under
+`prefers-reduced-motion` the slide does not follow the pointer and the release navigates or stays
+without motion. No swipe starts on a control, link, video or form field, or while zoomed. A `type="video"` item plays in a native `<video>`
 that pauses on slide change and close; zoom is unavailable for video. Slots `close-icon`,
 `previous-icon`, `next-icon`, `zoom-in-icon`, `zoom-out-icon`. Added part aliases: `dialog` (panel),
 `scroll-container` (stage), `image` (the zoomable `frame`),
@@ -42629,8 +42819,8 @@ that pauses on slide change and close; zoom is unavailable for video. Slots `clo
 Match them with `[part~="…"]` when querying.
 Motion: `--show-duration`/`--hide-duration` (or `--lr-lightbox-panel-duration`, default
 `--lr-duration-base`) drive the open/close and slide animations, which are flattened under
-`prefers-reduced-motion`; `lr-after-show`/`lr-after-hide` keep their render-based timing and the motion
-runs on after them (the host stays painted with `data-closing` until the exit motion ends).
+`prefers-reduced-motion`; `lr-after-show`/`lr-after-hide` wait for the open/close motion to finish
+(the host stays painted with `data-closing` until the exit motion ends).
 `--slide-gap` (`--lr-lightbox-slide-gap`), `--thumbnail-size` (`--lr-lightbox-thumbnail-size`) and
 `--media-border-radius` (`--lr-lightbox-media-radius`) style slides and the strip.
 Upstream-named styling properties: `--backdrop-color` (scrim), `--backdrop-filter` (default `none`,
@@ -52840,8 +53030,8 @@ The listbox is a floating surface and paints from the **shared overlay-surface f
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
 `var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
-surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) reaches it only as the middle arm of
-`--lr-model-select-radius`, which still wins when set. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+surface together with every other floating surface in the library. `--lr-overlay-radius` reaches it only as the middle arm of
+`--lr-model-select-radius`, which still wins when set; left unset, the listbox keeps the component's own radius default. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
 decorative `var(--lr-color-border-subtle)` floating panels default to: this listbox belongs to the
 form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
@@ -52891,7 +53081,7 @@ height of the field label.
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -55173,7 +55363,7 @@ family** (16.0.0): `--lr-overlay-surface` (default `var(--lr-color-surface-overl
 `--lr-overlay-border` (default `var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default
 `var(--lr-shadow-m)`). None is declared on `:host`, so one declaration on `:root` — or on any
 ancestor, to scope it — retints this surface together with every other floating surface in the
-library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
+library. `--lr-overlay-radius` (default `var(--lr-radius-container)`) is the matching corner radius.
 
 `--lr-positioning-strategy` (16.0.0) — the breakdown tooltip reads this same cascading
 `absolute`/`fixed` override documented on `<lr-popover>` when it is (re)positioned, falling back to
@@ -55622,7 +55812,8 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
   `var(--lr-color-border)` — the control tier, not the decorative `var(--lr-color-border-subtle)`
   floating panels default to, because the listbox belongs to the form control it opens from.
 - `--lr-overlay-radius` — Shared floating-surface corner radius, reached only as the middle arm of
-  `--lr-voice-picker-radius`, which still wins when set. Default: `var(--lr-radius)`.
+  `--lr-voice-picker-radius`, which still wins when set; left unset, the listbox keeps the
+  component's own radius default.
 - `--lr-overlay-shadow-anchored` — Elevation of the anchored listbox. Default: `var(--lr-shadow-m)`.
   None of the four is declared on `:host`, so one declaration on `:root` — or on any ancestor, to
   scope it — retints this listbox together with every other floating surface in the library.
@@ -55660,7 +55851,7 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -56330,7 +56521,7 @@ The toolbar is a floating surface and paints from the **shared overlay-surface f
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
 `var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
-surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
+surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius-container)`) is the matching corner radius.
 
 **Slots:** `actions` — extra actions rendered after the built-in ask/quote/cite/copy buttons,
 inside the same `role="toolbar"` element and roving-tabindex group. **Optional peer deps:** none.
@@ -56963,7 +57154,7 @@ The anchored detail tooltip is a floating surface and paints from the **shared o
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
 `var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
-surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
+surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius-container)`) is the matching corner radius.
 
 `--lr-positioning-strategy` (16.0.0) — the detail tooltip reads this same cascading
 `absolute`/`fixed` override documented on `<lr-popover>` when it is (re)positioned, falling back to
@@ -63353,7 +63544,7 @@ The anchored detail popover is a floating surface and paints from the **shared o
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
 `var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
-surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
+surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius-container)`) is the matching corner radius.
 
 `--lr-positioning-strategy` — the preview popover reads this same cascading
 `absolute`/`fixed` override documented on `<lr-popover>` when it is (re)positioned, falling back to
@@ -64223,7 +64414,7 @@ The anchored source-preview popover is a floating surface and paints from the **
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
 `var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
-surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
+surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius-container)`) is the matching corner radius.
 
 `--lr-positioning-strategy` — the source-preview popover reads this same cascading
 `absolute`/`fixed` override documented on `<lr-popover>` when it is (re)positioned, falling back to

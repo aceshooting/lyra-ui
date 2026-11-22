@@ -31,7 +31,8 @@ A lightbox opened outside an existing native `dialog.showModal()` stays interact
 - `open: boolean = false` (reflected) — post-render writes run the same cancelable lifecycle as
   `show()`/`hide()`/`close()`. Initial `open` markup is state and emits no lifecycle events.
 - `images: readonly LyraLightboxImage[] = []` (attribute: false) —
-  `LyraLightboxImage { readonly src: string; readonly alt?: string; readonly caption?: string }`.
+  `LyraLightboxImage { readonly src: string; readonly alt?: string; readonly caption?: string; readonly thumbnail?: string }`
+  (`thumbnail` is the `with-thumbnails` strip image, falling back to `src`).
   Assignment clones/freezes the records and inspects at most 10,000 candidates; malformed records
   are omitted and updates require a new collection assignment. `src` is passed to the embedded
   frame, which runs it through `safeMediaSrc()`. `alt`/`caption` are caller data, never localized.
@@ -40,7 +41,9 @@ A lightbox opened outside an existing native `dialog.showModal()` stays interact
   Invalid defined sources show a localized error and retry action; they never fall back to the
   legacy array. Setting `undefined` restores the current `images` input. Reassign the source,
   including the same object, or call a keyless `requestUpdate()` after changing its revision or
-  mutable provider state. Unrelated named display updates do not refresh the source.
+  mutable provider state. Unrelated named display updates do not refresh the source. With
+  `with-thumbnails`, a separate strip window reads the descriptors of the 15 positions around the
+  current one (never the whole collection); a position still loading shows its number.
 - `index: number = 0` (reflected) — clamped defensively for rendering and re-synced (emitting
   `lr-index-change`) when the active collection shrinks. In source mode, it retains the requested
   logical index while its descriptor and image load.
@@ -67,8 +70,8 @@ A lightbox opened outside an existing native `dialog.showModal()` stays interact
   Blank labels use the localized `lightboxLabel` default.
 
 More properties: `withThumbnails` (attribute `with-thumbnails`, default `false`): Shows a strip of
-thumbnails for jumping between items (images or slotted items). Not available with `imageSource`,
-which only loads the current image. `withoutNavigation` (attribute `without-navigation`, default
+thumbnails for jumping between items in every mode; each uses the item's `thumbnail`, else the
+full image (a bounded 15-position window with `imageSource`). `withoutNavigation` (attribute `without-navigation`, default
 `false`): Hides the previous/next buttons. Swiping and the arrow keys still navigate. `withoutZoom`
 (attribute `without-zoom`, default `false`): Disables zooming and removes the zoom button and the
 embedded zoom controls.
@@ -107,20 +110,24 @@ document revokes obsolete work, so a late completion cannot display an old image
 pan/zoom frame stays mounted and retains focus. The provider should honor the request's abort
 signal; stale-result protection does not make an abort-ignoring provider settle promptly.
 
-**Events:** cancelable `lr-show`, followed after a successful open render by `lr-after-show`;
+**Events:** cancelable `lr-show`, followed by `lr-after-show` once the open panel has rendered and its
+enter animation has finished;
 conditionally cancelable `lr-hide` (`detail: LyraLightboxHideDetail = { source: Element }`):
 cancelable before a requested close, non-cancelable when an open instance unmounts. A requested
 close then emits cancelable `lr-close-request` with `{ reason: LyraLightboxCloseReason }`.
 An accepted dismissal sets `open = false` and emits non-cancelable `lr-close` with the same reason
 object. Use
 `lr-close-request` for vetoes and `lr-close` for accepted dismissals.
-`lr-after-hide` follows the closed render. Removal while open cannot be vetoed and reports reason
+`lr-after-hide` follows once the exit animation has finished. Both after-events fire straight after
+the render under `prefers-reduced-motion` or a zero duration, `show()`/`hide()` resolve with them,
+and a transition interrupted by the opposite one emits no after-event. Removal while open cannot be vetoed and reports reason
 `unmount`. `lr-index-change` (`detail: { index }`, fired
-for internally-driven navigation — a button, a keyboard shortcut, or `next()`/`previous()`/
-`goTo()` — and when a shrinking active collection normalizes the index; **not** when a consumer sets
+for internally-driven navigation — a button, a thumbnail, a swipe, a keyboard shortcut, or
+`next()`/`previous()`/`goTo()` — and when a shrinking active collection normalizes the index; **not** when a consumer sets
 `index` directly); `lr-item-change` (`detail: { index, previousIndex, item, previousItem }`, the
 items `null` in data mode) fires alongside `lr-index-change` for the same navigations and, like it,
-not when `index` is written directly; `lr-zoom-change` (`detail: {
+not when `index` is written directly, open or closed (the same rule as `lr-carousel`'s
+`lr-slide-change` for a direct `currentSlide` write; call `goTo()` to change the item and be notified); `lr-zoom-change` (`detail: {
 zoom }`) is not emitted by the lightbox itself — it bubbles up composed from the embedded frame.
 
 **Slots:** `actions` — extra toolbar buttons (download/share/delete), rendered in `[part="toolbar"]`
@@ -180,9 +187,8 @@ photo content.
   measured by the lightbox, so stale load events cannot apply a previous image's size. The fit
   policy covers the painted image only; the lightbox's DOM caption, toolbar, legend-like actions,
   and tooltip content remain outside that image surface.
-- scope for v1: no per-image slotted content (data-driven via `images` or `imageSource`), no dot indicators, no
-  visual open/close animation, no click-image-to-navigate, no touch-swipe. Lifecycle phases are
-  still observable through the before/after events and methods above.
+- scope: no dot indicators, no click-image-to-navigate and no inertial fling (only the release
+  distance decides a swipe). Per-item custom content uses `<lr-lightbox-item>` templates (below).
 
 Set `--lr-lightbox-control-hover-bg` and `--lr-lightbox-control-hover-color` for hovered controls. Set `--lr-lightbox-control-active-bg` and `--lr-lightbox-control-active-color` for pressed controls.
 
@@ -213,12 +219,32 @@ current item while open. URLs are validated: `src` for the link with `safeLinkHr
 with `safeMediaSrc()`; a rejected `src` leaves a button-style trigger and the item out of the viewer.
 An item with no `src` is activated with Enter/Space.
 
-**Lightbox additions** — `with-thumbnails` (thumbnail strip, not with `imageSource`), `without-navigation`
+**Custom slides** — anything other than an image or a native video (an embed, a player, another
+component) goes in a `<template>` that is a direct child of the item. The lightbox copies the
+template's content only while that slide is shown, into a `<div slot="slide-content">` it appends to
+itself (light DOM, so page styles apply), and removes the copy on any other slide or once the close
+motion ends. `src` is optional (it stays the no-JavaScript link when set); `width`/`height` give the
+slide its proportions; custom content cannot be zoomed; the slotted `img` or `thumbnail` stays the
+page and strip thumbnail. Slotted controls in the copy keep their arrow keys, and content that
+handles its own dragging should call `preventDefault()` on `pointerdown` so no swipe starts there.
+
+```html
+<lr-lightbox-item width="1600" height="900" thumbnail="/maps/route-thumb.jpg" alt="Route map">
+  <template><iframe src="https://maps.example/embed/route" title="Route map" style="inline-size: 100%; block-size: 100%; border: 0"></iframe></template>
+</lr-lightbox-item>
+```
+
+**Lightbox additions** — `with-thumbnails` (thumbnail strip, in every mode), `without-navigation`
 (hides previous/next; arrow keys and swipe stay), `without-zoom` (no zoom button/controls; the toolbar zoom button exists for slotted items only), `label`
 (reflected; names the dialog; a host `aria-label` wins), `items` and `currentItem` getters, `zoomIn()`/`zoomOut()`.
 `lr-item-change` fires with every `lr-index-change` and adds `{ index, previousIndex, item, previousItem }`
-(items are `null` in data mode); like `lr-index-change` it is not fired when `index` is written directly. Touch and pen swipes (not mouse) navigate, reversed under RTL, and are
-off while zoomed; `pointercancel` abandons a swipe. A `type="video"` item plays in a native `<video>`
+(items are `null` in data mode); like `lr-index-change` it is not fired when `index` is written directly.
+Touch and pen swipes (never mouse) follow the pointer once the drag is clearly horizontal: releasing
+at least 50px toward an existing item moves to it, the incoming slide continuing from the release
+point; a shorter or mostly vertical drag, a drag past the first/last item without `loop` (followed
+with resistance) and `pointercancel` settle the slide back. Directions reverse under RTL; under
+`prefers-reduced-motion` the slide does not follow the pointer and the release navigates or stays
+without motion. No swipe starts on a control, link, video or form field, or while zoomed. A `type="video"` item plays in a native `<video>`
 that pauses on slide change and close; zoom is unavailable for video. Slots `close-icon`,
 `previous-icon`, `next-icon`, `zoom-in-icon`, `zoom-out-icon`. Added part aliases: `dialog` (panel),
 `scroll-container` (stage), `image` (the zoomable `frame`),
@@ -226,8 +252,8 @@ that pauses on slide change and close; zoom is unavailable for video. Slots `clo
 Match them with `[part~="…"]` when querying.
 Motion: `--show-duration`/`--hide-duration` (or `--lr-lightbox-panel-duration`, default
 `--lr-duration-base`) drive the open/close and slide animations, which are flattened under
-`prefers-reduced-motion`; `lr-after-show`/`lr-after-hide` keep their render-based timing and the motion
-runs on after them (the host stays painted with `data-closing` until the exit motion ends).
+`prefers-reduced-motion`; `lr-after-show`/`lr-after-hide` wait for the open/close motion to finish
+(the host stays painted with `data-closing` until the exit motion ends).
 `--slide-gap` (`--lr-lightbox-slide-gap`), `--thumbnail-size` (`--lr-lightbox-thumbnail-size`) and
 `--media-border-radius` (`--lr-lightbox-media-radius`) style slides and the strip.
 Upstream-named styling properties: `--backdrop-color` (scrim), `--backdrop-filter` (default `none`,

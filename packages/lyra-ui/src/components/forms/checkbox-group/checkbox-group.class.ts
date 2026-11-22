@@ -134,16 +134,15 @@ export type CheckboxGroupOrientation = LyraOrientation;
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @cssprop --lr-form-control-height - Single-line field height; a start-placed label aligns to the first line of a taller field.
- * @cssprop [--lr-form-control-label-block-gap=var(--lr-space-xs)] - Space between a label above
- *   the field and the field, in top placement and once a `label-placement="start"` row collapses.
  * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
  * @cssprop [--lr-form-control-label-text-align=inherit] - Text alignment of the field label.
  * @cssprop [--lr-form-control-label-text-transform=inherit] - Text transform of the field label.
  * @csspart form-control-label - Label.
  * @cssprop [--lr-form-control-label-inline-size=30%] - Label column width while
- *   `label-placement="start"`.
- * @cssprop [--lr-form-control-label-gap=var(--lr-space-m)] - Space between the label column and
- *   the field while `label-placement="start"`.
+ *   `label-placement="start"`; `auto` sizes the column to the label text.
+ * @cssprop [--lr-form-control-label-gap] - Space between the label and the field: the label
+ *   column gap while `label-placement="start"` (default `var(--lr-space-m)`), and the gap under a
+ *   label above the field, in top placement or a collapsed start row (default `0px`).
  * @cssprop [--lr-form-control-label-collapse-inline-size=var(--lr-size-20rem)] - Control width
  *   below which `label-placement="start"` returns the label above the field.
  * @csspart toolbar - Container for the supplementary controls.

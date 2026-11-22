@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'Mở lịch',
   item: 'mục',
   comboboxLoadError: 'Không thể tải danh sách lựa chọn.',
+  comboboxRichContentUnavailable: 'Nội dung tùy chọn có định dạng không khả dụng. Đang hiển thị nhãn thuần.',
   comboboxSelectedOverflow: 'Còn {n} mục',
   checkboxRequired: 'Vui lòng đánh dấu ô này để tiếp tục.',
   checkboxGroupRequired: 'Vui lòng chọn ít nhất một tùy chọn.',

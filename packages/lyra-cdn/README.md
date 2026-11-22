@@ -27,7 +27,7 @@ carrying class or attribute `lr-cloak` once the first scan settles.
 
 ## Also published
 
-`dist/` carries `theme.css`, `theme-core.css`, `density.css`, `accents.css`, `design-tokens.css`,
+`dist/` carries `theme.css`, `theme-core.css`, `density.css`, `accents.css`, `accent-roles.css`, `design-tokens.css`,
 `native.css` and `utilities.css`.
 
 ## Limits

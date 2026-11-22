@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'Deschide calendarul',
   item: 'element',
   comboboxLoadError: 'Opțiunile nu au putut fi încărcate.',
+  comboboxRichContentUnavailable: 'Conținutul formatat al opțiunilor nu este disponibil. Se afișează etichete simple.',
   comboboxSelectedOverflow: '+{n} altele',
   checkboxRequired: 'Bifează această casetă pentru a continua.',
   checkboxGroupRequired: 'Selectează cel puțin o opțiune.',

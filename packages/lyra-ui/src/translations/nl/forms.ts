@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'Kalender openen',
   item: 'onderdeel',
   comboboxLoadError: 'De opties konden niet worden geladen.',
+  comboboxRichContentUnavailable: 'Opgemaakte optie-inhoud is niet beschikbaar. Er worden eenvoudige labels weergegeven.',
   comboboxSelectedOverflow: '+{n} meer',
   checkboxRequired: 'Vink dit vakje aan om door te gaan.',
   checkboxGroupRequired: 'Selecteer ten minste één optie.',

@@ -148,6 +148,39 @@ describe('<lr-number-ticker>', () => {
     expect(shownText(el)).to.equal('20');
   });
 
+  it('settles early once the shown text equals the final text', async () => {
+    // This curve reaches 99% progress in well under a tenth of the duration, so "10" is shown
+    // almost at once and every later frame would repaint the same text.
+    const started = performance.now();
+    const el = await fixture<LyraNumberTicker>(
+      html`<lr-number-ticker eager value="10" duration="6000" easing="cubic-bezier(0, 1, 0, 1)"></lr-number-ticker>`,
+    );
+    let finishes = 0;
+    el.addEventListener('lr-finish', () => finishes++);
+    await waitUntil(() => finishes === 1, 'early finish', { timeout: 4000 });
+    expect(performance.now() - started).to.be.below(4000);
+    expect(shownText(el)).to.equal('10');
+    expect(el.matches(':state(counting)')).to.equal(false);
+    expect(el.shadowRoot!.querySelector('.sr-only') === null).to.equal(true);
+  });
+
+  it('keeps counting to a value changed mid-count, and settles at once when reduced motion turns on', async () => {
+    const host = await fixture<HTMLDivElement>(
+      html`<div><lr-number-ticker eager value="1000" duration="4000" easing="linear"></lr-number-ticker></div>`,
+    );
+    const el = host.querySelector('lr-number-ticker') as LyraNumberTicker;
+    let finishes = 0;
+    el.addEventListener('lr-finish', () => finishes++);
+    await waitUntil(() => el.matches(':state(counting)') && shownText(el) !== '0', 'counting');
+    el.value = 2000;
+    await waitUntil(() => Number(shownText(el).replace(/\D/g, '')) > 0 && el.matches(':state(counting)'), 'still counting');
+    expect(finishes).to.equal(0);
+    host.setAttribute('data-lr-motion', 'reduce');
+    await waitUntil(() => finishes === 1, 'reduced-motion settle', { timeout: 2000 });
+    expect(shownText(el)).to.equal('2,000');
+    expect(el.matches(':state(counting)')).to.equal(false);
+  });
+
   it('keeps the default for a blank numeric attribute', async () => {
     const el = await fixture<LyraNumberTicker>(html`<lr-number-ticker duration="" delay="" start-value=""></lr-number-ticker>`);
     expect(el.duration).to.equal(2000);

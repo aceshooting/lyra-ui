@@ -306,6 +306,7 @@ export type LyraMessageKey =
   | 'embeddingExplorerSpatialError'
   | 'embeddingExplorerSpatialLoading'
   | 'comboboxLoadError'
+  | 'comboboxRichContentUnavailable'
   | 'comboboxSelectedOverflow'
   | 'promptQueueItemLabel'
   | 'promptQueueActionLabel'

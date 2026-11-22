@@ -47,7 +47,7 @@ export const styles = css`
     ${formControlLabelTypography({ size: css`var(--lr-file-input-font-size, var(--_lr-file-input-font-size))` })}
     display: block;
     min-inline-size: 0;
-    margin-block-end: var(--lr-form-control-label-block-gap, var(--lr-space-xs));
+    margin-block-end: var(--lr-form-control-label-gap, var(--lr-space-xs));
     overflow-wrap: anywhere;
   }
   [part~="form-control-label"][hidden],

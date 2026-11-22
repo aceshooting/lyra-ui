@@ -626,6 +626,7 @@ export const styles = css`
     font-size: var(--lr-font-size-xs);
   }
   [part="option-overflow"],
+  [part="option-html-fallback"],
   .loading {
     padding: var(--lr-space-s) var(--lr-space-m);
     font-size: var(--lr-font-size-sm);

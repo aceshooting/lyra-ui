@@ -8,8 +8,8 @@
 - **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
-- **Optional peers** none
-- **Themeable via** 41 parts, 54 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Optional peers** `dompurify` — see `llms/peers.md`
+- **Themeable via** 43 parts, 53 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `combobox`: `--lr-combobox-gap`, `--lr-combobox-radius`; `form-control-label`: `--lr-form-control-required-content`; `listbox`: `--lr-theme-scrollbar-color`, `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-width`; `option-badge`: `--lr-combobox-option-badge-bg`
 - **Documented with** `lr-option` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -342,6 +342,7 @@ AbortSignal; limit: number }) => Promise<readonly ComboboxSourceRow[] | { rows, 
   into an inert document and never inserted, so nothing in it runs; only its top-level `<option>` or
   `*-option` elements become rows. It drives the same pipeline as
   `source` (debounce, `lr-options-request`, cancellation, loading and failed states, row ceilings).
+  An option object may carry `html` (rich row content, see `ComboboxSourceRow.html` below).
   Assigning either provider replaces the other, and `dataSource` reads `null` once `source` is
   assigned; `source` keeps its `(query, { signal, limit })` shape.
 - `server: boolean = false` (attribute `server`, reflected) — server mode without a provider:
@@ -442,7 +443,7 @@ every selection change and a `form.reset()` — like a native control, only anot
 **8.0 migration:** the former camel-case string property `autoCorrect` is not retained as a public
 alias. Set the boolean `autocorrect` IDL, or use `autocorrect="on"` / `autocorrect="off"` in markup.
 
-`ComboboxSourceRow = { readonly value: string; readonly label: string; readonly sub?: string; readonly icon?: unknown; readonly start?: unknown;
+`ComboboxSourceRow = { readonly value: string; readonly label: string; readonly sub?: string; readonly html?: string; readonly icon?: unknown; readonly start?: unknown;
 readonly end?: unknown; readonly badge?: string |
 number; readonly title?: string; accessibleLabel?: string; data?: unknown; dotColor?: string; group?: string; disabled?:
 boolean }` — the row shape used by the async `source` path. `start` and `end` (new in 11.0.0) are
@@ -455,6 +456,19 @@ of the accessible name), and `data` is retained without being rendered
 for retrieval through `selectedRows`.
 `dotColor` accepts a valid CSS `color`; invalid values, declaration-breaking input, and `url()`
 render a transparent dot.
+`html` is optional rich markup shown in place of the label text, as the `option-html`
+part. It always passes through the optional `dompurify` peer (install it to use this field) and then a
+passive-content pass: script, event handlers, `style`, `part`, network attributes (`src`, `href`, …),
+iframes and media are removed, and links, buttons, form controls and custom elements are replaced by
+their text. A result superseded by a newer query is never applied. The row's text `label` remains its
+accessible name, filter text and committed text, and the rich content is `aria-hidden`; use
+`accessibleLabel` for a fuller spoken name as usual. While the peer loads, every row shows its plain
+label. If the peer is missing, unusable or throws, rows stay on their plain labels (raw markup is never
+rendered), the listbox shows the localized `comboboxRichContentUnavailable` message as
+`option-html-fallback` (plain text, not a live region), and the same message is announced once to
+`[data-lr-live-region="polite"]`. Markup longer than 4,096 UTF-16 code units, or markup that sanitizes
+to nothing, leaves the plain label. Style the content through `::part(option-html)` and inherited properties; class names in the
+markup do not match the component's shadow styles.
 The light-DOM `<lr-option>` path normalizes its supported label/sub/dot/group/data fields to the
 same internal row model — `<lr-option data>` is the light-DOM counterpart of an async row's own
 `data` field, reached by reference through `selectedRows` exactly the same way.
@@ -631,6 +645,8 @@ aria-hidden adornments cloned from the source option's `start`/`prefix` and `end
 from an async row's `start`/`end`), `option-label`, `option-sub` (a row's
 secondary line, when `sub` is set), `option-badge` (an async row's trailing metadata),
 `option-overflow` (the "+N more" indicator from `maxRender`),
+`option-html` (the sanitized rich content of an async row carrying `html`, hidden from assistive
+technology), `option-html-fallback` (the localized note shown when the `dompurify` peer is unavailable),
 `source-error-row` (the listbox row holding the failed-`source` state), `source-error` (the shared
 failed-load state itself, with `source-error-base`, `source-error-icon`, `source-error-heading`,
 `source-error-description` and `source-error-actions` forwarded from the composed `<lr-empty>`),
@@ -717,7 +733,7 @@ can retheme the selected row without hijacking `--lr-color-brand` library-wide.
 The listbox popup itself is a floating surface and paints from the **shared overlay-surface family**
 (16.0.0), not from the page surface every card and input reads: `--lr-overlay-surface` (default
 `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default `var(--lr-color-border)`),
-`--lr-overlay-radius` (default `var(--lr-radius)`) and `--lr-overlay-shadow-anchored` (default
+`--lr-overlay-radius` (default `var(--lr-radius-container)`) and `--lr-overlay-shadow-anchored` (default
 `var(--lr-shadow-m)`). None is declared on `:host`, so one declaration on `:root` — or on any
 ancestor, to scope it — retints this popup together with every other floating surface, and none of
 it touches the trigger row the popup drops from. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
@@ -912,7 +928,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.

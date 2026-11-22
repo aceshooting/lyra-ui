@@ -125,7 +125,7 @@ The menu popup is a floating surface and paints from the **shared overlay-surfac
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
 `var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
-surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
+surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius-container)`) is the matching corner radius.
 
 `--lr-positioning-strategy` — the format menu reads this same cascading `absolute`/`fixed`
 override documented on `<lr-popover>` when it is (re)positioned, falling back to its own `fixed`
@@ -1214,7 +1214,7 @@ The popup is a floating surface and paints from the **shared overlay-surface fam
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
 `var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
-surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
+surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius-container)`) is the matching corner radius.
 The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
 decorative `var(--lr-color-border-subtle)` floating panels default to: the listbox completes the
 value of the text field it is bound to and keeps that field's boundary contrast (see `<lr-popover>`).
@@ -2707,8 +2707,13 @@ count and during SSR.
 - `valueFormatter?: (value: number) => string` — property only; replaces Intl formatting
 
 **Methods:** `restart()` — count again from `startValue`.
-**Events:** `lr-finish` (`null` detail) — the ticker settled, including the instant paths. A later
-`value` change counts on from the number shown.
+**Events:** `lr-finish` (`null` detail) — the ticker settled, including the instant paths. A count
+settles early: on the first frame whose formatted text equals the formatted final value it shows
+that value, leaves `:state(counting)` and emits `lr-finish`, rather than repainting the same text until
+`duration` ends (with the default ease-out curve that is when the number visibly stops; an
+overshooting easing settles the first time its text reaches the final value). A `value` change,
+mid-count or later, counts on from the number shown; reduced motion turning on mid-count settles at
+once.
 **CSS parts:** `base`, `value`. **CSS state:** `:state(counting)`.
 
 **Accessibility and motion:** the counting text is `aria-hidden` and the final value is visually

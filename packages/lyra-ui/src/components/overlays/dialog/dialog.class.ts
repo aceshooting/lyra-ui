@@ -303,7 +303,7 @@ const FULLSCREEN_NARROW_QUERY = '(max-width: 40rem)';
  * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge
  *   colour, on the panel and, unless `--lr-dialog-divider-color` is set, on the header's and
  *   footer's dividing rules.
- * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, on the
+ * @cssprop [--lr-overlay-radius=var(--lr-radius-container)] - Shared floating-surface corner radius, on the
  *   panel and on the close button.
  * @cssprop [--lr-overlay-shadow-modal=var(--lr-shadow-xl)] - Elevation of a modal panel. A separate
  *   tier from `--lr-overlay-shadow-anchored`, so raising popups never raises dialogs.

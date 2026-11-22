@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'Buɗe kalanda',
   item: 'abu',
   comboboxLoadError: 'An kasa loda zaɓuɓɓuka.',
+  comboboxRichContentUnavailable: 'Babu tsararren abun cikin zaɓuɓɓuka. Ana nuna sauƙaƙan lakabi.',
   comboboxSelectedOverflow: '+{n} ƙari',
   checkboxRequired: 'Da fatan zaɓi wannan akwatin don ci gaba.',
   checkboxGroupRequired: 'Zaɓi aƙalla zaɓi guda ɗaya.',

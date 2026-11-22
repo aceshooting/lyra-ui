@@ -185,7 +185,7 @@ function isContextMenuKey(event: KeyboardEvent): boolean {
  * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-high)] - Shared floating-surface fill.
  * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge
  *   colour.
- * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius.
+ * @cssprop [--lr-overlay-radius=var(--lr-radius-container)] - Shared floating-surface corner radius.
  * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored popup.
  * @cssprop [--lr-overlay-max-inline-size=var(--lr-size-20rem)] - Maximum inline size fallback of
  *   the popup.

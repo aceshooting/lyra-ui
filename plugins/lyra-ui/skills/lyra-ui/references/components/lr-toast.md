@@ -130,7 +130,7 @@ follow `size`, from a compact `2xs` up to a roomier `xl` — and `--lr-toast-acc
 fill). Inherited or direct public values remain authoritative across every size and variant.
 
 `--lr-toast-item-gap` (default `var(--lr-space-s)`) controls the gap between the item's icon,
-message, and close action; `--lr-toast-item-radius` (default `var(--lr-radius)`) controls the item
+message, and close action; `--lr-toast-item-radius` (default `var(--lr-radius-container)`) controls the item
 surface and accent-bar start corners, ahead of the shared `--lr-overlay-radius`. They are
 deliberately separate from `--lr-toast-gap`, which continues to control only the region's stack
 spacing. The item joins the shared overlay-surface family for its fill and edge

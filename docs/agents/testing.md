@@ -362,6 +362,14 @@ is rejected. A reproduced but unfixed defect takes `knownDefect: { matches, reas
 must match and at least one must, so the allowance fails as soon as the fix lands. Remove it with
 the fix. `allowReplacedServerNodes` and `skipClientRenderComparison` likewise take a reason.
 
+Translated output: `catalogs: ['fr']` registers the built `dist/translations/<tag>.js` on the
+server and in the browser, and `serverLocale: 'fr'` sets the server render's active locale (the
+per-request `setLyraLocale()` a real server uses, since the server never sees an ancestor `lang`).
+``ssrStaticDocument(html`...`, { catalogs, serverLocale })`` returns the server response loaded
+into a script-less iframe: the no-JavaScript page, with no definitions, that client-render tags may
+appear in. Assert there what a visitor sees before (or without) hydration, such as a visible label
+or translated text, and use `ssrFixture()` for the hydrated result.
+
 Run `pnpm build` first, then `pnpm test:hydration-fixtures` (Chromium, Firefox and WebKit
 concurrently; `HYDRATION_FIXTURE_BROWSERS=webkit` narrows it) or
 `pnpm exec wtr --files test/hydration/<file>.hydration.test.ts` for one file on one engine. The

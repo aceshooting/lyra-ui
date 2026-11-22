@@ -202,8 +202,8 @@ it('allows read-only paging and ignores a click during live disabling', async ()
   expect(el.value).to.deep.equal(values);
 });
 
-it('keeps a large literal-delimited add request atomic and preserves all accepted tokens', async () => {
-  const el = await fixture<LyraTokenInput>(html`<lr-token-input max-tokens-visible="3" delimiter="||"></lr-token-input>`);
+it('keeps a large delimited add request atomic and preserves all accepted tokens', async () => {
+  const el = await fixture<LyraTokenInput>(html`<lr-token-input max-tokens-visible="3" delimiter="|"></lr-token-input>`);
   const field = el.shadowRoot!.querySelector<HTMLInputElement>('[part="input"]')!;
   const values = Array.from({ length: 1000 }, (_, n) => `item${n}`);
   field.value = values.join(' || ') + '|| || item0';

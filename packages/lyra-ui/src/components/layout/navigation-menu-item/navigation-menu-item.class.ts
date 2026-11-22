@@ -135,7 +135,7 @@ const SHOW_OFFSET = 'translateY(var(--lr-size-neg-0-25rem))';
  *   of the floating panel.
  * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge
  *   colour of the floating panel.
- * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius of the
+ * @cssprop [--lr-overlay-radius=var(--lr-radius-container)] - Shared floating-surface corner radius of the
  *   floating panel.
  * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the floating panel.
  * @cssprop --lr-positioning-strategy - Cascading `absolute`/`fixed` override read when the panel

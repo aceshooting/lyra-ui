@@ -491,6 +491,25 @@ const webTypes = await read('@aceshooting/lyra-ide/web-types.json');
 if (webTypes.version !== ${JSON.stringify(uiVersion)}) throw new Error('web-types describes ' + webTypes.version);
 if (!(await read('@aceshooting/lyra-ide/vscode-html-data.json')).tags?.length) throw new Error('vscode-html-data has no tags');
 if (!(await read('@aceshooting/lyra-ide/vscode-css-data.json')).properties?.length) throw new Error('vscode-css-data has no properties');
+// lyra-ui's own customElements target: the slim manifest lists exactly lyra-ui's tags from the full one,
+// and every module it names ships in the lyra-ui tarball.
+const uiPackageUrl = new URL(import.meta.resolve('@aceshooting/lyra-ui/package.json'));
+const uiPackage = JSON.parse(await readFile(uiPackageUrl, 'utf8'));
+if (uiPackage.customElements !== 'custom-elements.slim.json') throw new Error('lyra-ui customElements points at ' + uiPackage.customElements);
+const slimUrl = new URL(import.meta.resolve('@aceshooting/lyra-ui/custom-elements.slim.json'));
+if (slimUrl.href !== new URL(uiPackage.customElements, uiPackageUrl).href) throw new Error('the slim manifest export and customElements disagree');
+const slim = JSON.parse(await readFile(slimUrl, 'utf8'));
+const tagsOf = (manifest, own) => manifest.modules.filter((module) => own(module.path))
+  .flatMap((module) => (module.declarations ?? []).filter((declaration) => declaration.customElement).map((declaration) => declaration.tagName)).sort();
+const slimTags = tagsOf(slim, () => true);
+const fullTags = tagsOf(cem, (path) => path.startsWith('src/'));
+if (slimTags.length === 0 || JSON.stringify(slimTags) !== JSON.stringify(fullTags)) {
+  throw new Error('the slim manifest lists ' + slimTags.length + ' tags, the full lyra-ui manifest ' + fullTags.length);
+}
+if (/"description":/.test(JSON.stringify(slim))) throw new Error('the slim manifest carries descriptions');
+for (const module of slim.modules) {
+  try { await readFile(new URL(module.path, uiPackageUrl)); } catch { throw new Error('the slim manifest names a module lyra-ui does not ship: ' + module.path); }
+}
 `);
   await run(pnpm, ['install', '--ignore-scripts', '--config.auto-install-peers=false'], fixtureDir, 'lyra-ide fixture install');
   await run(process.execPath, ['load.mjs'], fixtureDir, 'lyra-ide data load check');

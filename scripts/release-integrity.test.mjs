@@ -2709,7 +2709,8 @@ test('package lifecycle and root custom-elements metadata are clean-checkout saf
   const idePackage = JSON.parse(
     readFileSync(path.join(repoRoot, 'packages/lyra-ide/package.json'), 'utf8')
   );
-  assert.equal(lyraPackage.customElements, undefined);
+  // lyra-ui publishes only the slim discovery manifest derived from the full one.
+  assert.equal(lyraPackage.customElements, 'custom-elements.slim.json');
   assert.equal(idePackage.customElements, 'custom-elements.json');
   const lyraManifestRelativePath = path.posix.join(
     'packages/lyra-ui',

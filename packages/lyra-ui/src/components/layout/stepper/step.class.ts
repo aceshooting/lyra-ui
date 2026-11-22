@@ -17,6 +17,25 @@ import { LYRA_DEFAULT_stepperStateCompleted, LYRA_DEFAULT_stepperStateDisabled, 
 /** Attention animation drawn on a step's marker. */
 export type LyraStepAttention = 'none' | 'pulse' | 'bounce';
 
+/** The custom states the step publishes itself; `customStates` cannot add or remove them. */
+const OWN_STATES: ReadonlySet<string> = new Set(['active', 'completed', 'loading', 'disabled', 'locked', 'clickable']);
+/** A CSS identifier, as `:state()` requires (no leading digit, or digit after a single hyphen). */
+const STATE_NAME = /^(?:--|-?[A-Za-z_\u00A0-\uFFFF])[\w\u00A0-\uFFFF-]*$/;
+const MAX_CUSTOM_STATES = 32;
+const MAX_STATE_NAME_UNITS = 64;
+
+/** The distinct, valid author state names in a space-separated list, in their first order. */
+function authorStateNames(value: unknown): string[] {
+  if (typeof value !== 'string') return [];
+  const names: string[] = [];
+  for (const token of value.split(/\s+/)) {
+    if (names.length >= MAX_CUSTOM_STATES) break;
+    if (!token || token.length > MAX_STATE_NAME_UNITS || OWN_STATES.has(token) || !STATE_NAME.test(token)) continue;
+    if (!names.includes(token)) names.push(token);
+  }
+  return names;
+}
+
 /**
  * `<lr-step>` — one stage inside a child-driven `<lr-stepper>`: its position marker, label,
  * optional description and completion status. Mirrors `wa-step`.
@@ -31,6 +50,12 @@ export type LyraStepAttention = 'none' | 'pulse' | 'bounce';
  * cue only: pair a failed or flagged step with an `icon` and a clear label). `attention`
  * (`pulse` or `bounce`) animates the marker to draw the eye and stops under
  * `prefers-reduced-motion: reduce`.
+ *
+ * `custom-states` names extra states of the author's own (for example `custom-states="error"` on a
+ * step whose server check failed); each one is published as a CSS custom state, so
+ * `lr-step:state(error)::part(marker)` styles it without a wrapper class. These names are a
+ * styling hook only: they change neither the status text nor the stepper's behavior, so pair a
+ * meaningful state with a visible label, `variant` or `icon`.
  *
  * Every state also reaches assistive technology as visually hidden status text (completed,
  * loading, unavailable, locked, not started), localized through the standard string table, and
@@ -120,6 +145,14 @@ export class LyraStep extends LyraElement {
   @property({ reflect: true, converter: declaredDefaultConverter<LyraStepAttention>('none') })
   attention: LyraStepAttention = 'none';
 
+  /** Space-separated names of author-defined states, each published as a CSS custom state
+   *  (`custom-states="error retried"` matches `lr-step:state(error)` and `lr-step:state(retried)`).
+   *  Names must be CSS identifiers; names the step publishes itself (`active`, `completed`,
+   *  `loading`, `disabled`, `locked`, `clickable`) are ignored, as are duplicates, names over 64
+   *  characters and any after the 32nd. A styling hook only: the status text and the stepper's
+   *  behavior do not change. */
+  @property({ attribute: 'custom-states' }) customStates = '';
+
   /** Server rendering only: set it when a `description` is slotted so the server markup includes
    *  it before hydration. */
   @property({ type: Boolean, attribute: 'with-description' }) withDescription = false;
@@ -146,6 +179,8 @@ export class LyraStep extends LyraElement {
    *  matches the trailing half of its neighbour. Unset when that step is not completed. */
   @state() connectorStartVariant?: LyraVariant;
 
+  private publishedStates: readonly string[] = [];
+
   override connectedCallback(): void {
     super.connectedCallback();
     if (!this.hasAttribute('role')) this.setAttribute('role', 'listitem');
@@ -160,6 +195,12 @@ export class LyraStep extends LyraElement {
     setCustomState(this.stepInternals, 'disabled', this.disabled);
     setCustomState(this.stepInternals, 'locked', this.locked);
     setCustomState(this.stepInternals, 'clickable', this.clickable);
+    if (changed.has('customStates')) {
+      const next = authorStateNames(this.customStates);
+      for (const name of this.publishedStates) if (!next.includes(name)) setCustomState(this.stepInternals, name, false);
+      for (const name of next) setCustomState(this.stepInternals, name, true);
+      this.publishedStates = next;
+    }
     if (changed.has('active') || changed.has('clickable')) {
       // aria-current belongs on whichever element takes focus: the inner button while clickable,
       // the list item otherwise.

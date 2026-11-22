@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'Takvimi aç',
   item: 'öğe',
   comboboxLoadError: 'Seçenekler yüklenemedi.',
+  comboboxRichContentUnavailable: 'Biçimlendirilmiş seçenek içeriği kullanılamıyor. Düz etiketler gösteriliyor.',
   comboboxSelectedOverflow: '+{n} tane daha',
   checkboxRequired: 'Devam etmek için bu kutuyu işaretleyin.',
   checkboxGroupRequired: 'En az bir seçenek belirleyin.',

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 49 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 48 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `form-control-label`: `--lr-form-control-required-content`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -311,8 +311,8 @@ The listbox is a floating surface and paints from the **shared overlay-surface f
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
 `var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
-surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) reaches it only as the middle arm of
-`--lr-model-select-radius`, which still wins when set. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+surface together with every other floating surface in the library. `--lr-overlay-radius` reaches it only as the middle arm of
+`--lr-model-select-radius`, which still wins when set; left unset, the listbox keeps the component's own radius default. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
 decorative `var(--lr-color-border-subtle)` floating panels default to: this listbox belongs to the
 form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
@@ -362,7 +362,7 @@ height of the field label.
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.

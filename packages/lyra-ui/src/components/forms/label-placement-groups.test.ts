@@ -68,6 +68,39 @@ for (const name of Object.keys(MARKUP)) {
   });
 }
 
+/** Inline extent of a label's own text. */
+function textWidth(label: Element): number {
+  const range = document.createRange();
+  range.selectNodeContents(label);
+  return range.getBoundingClientRect().width;
+}
+
+for (const name of Object.keys(MARKUP)) {
+  it(`${name} sizes a content-sized start column (auto) to the label text`, async () => {
+    const wrapper = await fixture<HTMLDivElement>(html`<div style="inline-size: 640px; --lr-form-control-label-inline-size: auto"></div>`);
+    const host = await fixture<Placed>(MARKUP[name]!('start'), { parentNode: wrapper });
+    await host.updateComplete;
+    const labelEl = host.shadowRoot!.querySelector(PARTS[name]!.label)!;
+    const label = labelEl.getBoundingClientRect();
+    const field = host.shadowRoot!.querySelector(PARTS[name]!.field)!.getBoundingClientRect();
+    expect(Math.abs(label.width - textWidth(labelEl)), 'column fits the text').to.be.below(1.5);
+    expect(label.width, 'narrower than the 30% column').to.be.below(640 * 0.3);
+    expect(label.right, 'label before the field').to.be.at.most(field.left + 0.5);
+    expect(label.top, 'same row').to.be.below(field.bottom);
+  });
+
+  it(`${name} spaces a label above the field by --lr-form-control-label-gap`, async () => {
+    for (const gap of [13, 29]) {
+      const wrapper = await fixture<HTMLDivElement>(html`<div style="inline-size: 640px; --lr-form-control-label-gap: ${gap}px"></div>`);
+      const host = await fixture<Placed>(MARKUP[name]!('top'), { parentNode: wrapper });
+      await host.updateComplete;
+      const label = host.shadowRoot!.querySelector(PARTS[name]!.label)!.getBoundingClientRect();
+      const field = host.shadowRoot!.querySelector(PARTS[name]!.field)!.getBoundingClientRect();
+      expect(field.top - label.bottom, `${gap}px`).to.be.closeTo(gap, 0.75);
+    }
+  });
+}
+
 it('checkbox-group keeps its accessible name in the label-beside layout', async () => {
   const { host } = await mount('checkbox-group', 640, 'ltr', 'start');
   const fieldset = host.shadowRoot!.querySelector('fieldset')!;
@@ -78,15 +111,15 @@ it('checkbox-group keeps its accessible name in the label-beside layout', async 
   expect(fieldset.hasAttribute('aria-labelledby'), 'a host aria-label still wins').to.be.false;
 });
 
-it('slider label inherits the surrounding size by default and opts into the form-control label size', async () => {
+it('slider label follows the form-control label size by default and reads the label token', async () => {
   const input = await fixture<LitElement>(html`<lr-input label="L"></lr-input>`);
   const slider = await fixture<LitElement>(html`<lr-slider label="L" style="font-size: 23px"></lr-slider>`);
   const size = (el: LitElement, part: string) => getComputedStyle(el.shadowRoot!.querySelector(part)!).fontSize;
-  expect(size(slider, '[part~="label"]')).to.equal('23px');
-  const matched = await fixture<LitElement>(
-    html`<lr-slider label="L" style="--lr-form-control-label-font-size: var(--lr-font-size-md-sm)"></lr-slider>`,
+  expect(size(slider, '[part~="label"]'), 'no longer inherits the host size').to.equal(size(input, '[part~="form-control-label"]'));
+  const inherited = await fixture<LitElement>(
+    html`<lr-slider label="L" style="font-size: 23px; --lr-form-control-label-font-size: 1em"></lr-slider>`,
   );
-  expect(size(matched, '[part~="label"]')).to.equal(size(input, '[part~="form-control-label"]'));
+  expect(size(inherited, '[part~="label"]'), '1em restores the surrounding size').to.equal('23px');
   const themed = await fixture<LitElement>(html`<lr-slider label="L" style="--lr-form-control-label-font-size: 20px"></lr-slider>`);
   expect(size(themed, '[part~="label"]')).to.equal('20px');
 });

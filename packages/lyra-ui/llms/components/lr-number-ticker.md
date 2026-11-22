@@ -35,8 +35,13 @@ count and during SSR.
 - `valueFormatter?: (value: number) => string` — property only; replaces Intl formatting
 
 **Methods:** `restart()` — count again from `startValue`.
-**Events:** `lr-finish` (`null` detail) — the ticker settled, including the instant paths. A later
-`value` change counts on from the number shown.
+**Events:** `lr-finish` (`null` detail) — the ticker settled, including the instant paths. A count
+settles early: on the first frame whose formatted text equals the formatted final value it shows
+that value, leaves `:state(counting)` and emits `lr-finish`, rather than repainting the same text until
+`duration` ends (with the default ease-out curve that is when the number visibly stops; an
+overshooting easing settles the first time its text reaches the final value). A `value` change,
+mid-count or later, counts on from the number shown; reduced motion turning on mid-count settles at
+once.
 **CSS parts:** `base`, `value`. **CSS state:** `:state(counting)`.
 
 **Accessibility and motion:** the counting text is `aria-hidden` and the final value is visually

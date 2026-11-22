@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'Vula ikhalenda',
   item: 'into',
   comboboxLoadError: 'Izinketho azilayisekanga.',
+  comboboxRichContentUnavailable: 'Okuqukethwe kwezinketho okufomethiwe akutholakali. Kuboniswa amalebula alula.',
   comboboxSelectedOverflow: '+{n} ngaphezulu',
   checkboxRequired: 'Thikha leli bhokisi ukuze uqhubeke.',
   checkboxGroupRequired: 'Khetha okungenani inketho eyodwa.',

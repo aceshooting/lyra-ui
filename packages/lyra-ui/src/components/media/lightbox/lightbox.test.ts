@@ -303,12 +303,13 @@ it('routes post-render open writes through the lifecycle but treats initial open
   el.addEventListener('lr-close', () => lifecycle.push('close'));
   el.addEventListener('lr-after-hide', () => lifecycle.push('after-hide'));
 
+  // The after-events wait for the open/close animation, so each write waits for its own.
+  const shown = oneEvent(el, 'lr-after-show');
   el.open = true;
-  await el.updateComplete;
-  await Promise.resolve();
+  await shown;
+  const hidden = oneEvent(el, 'lr-after-hide');
   el.open = false;
-  await el.updateComplete;
-  await Promise.resolve();
+  await hidden;
 
   expect(lifecycle).to.deep.equal(['show', 'after-show', 'hide', 'close', 'after-hide']);
 });

@@ -83,6 +83,11 @@ export const styles = css`
   }
   [part="form-control-label"] {
     ${formControlLabelTypography({ size: css`inherit`, color: css`var(--lr-color-text)` })}
+    /* --lr-form-control-label-gap replaces the row gap under the label; unset, the margin is zero. */
+    margin-block-end: calc(
+      var(--lr-form-control-label-gap, var(--lr-token-input-gap, var(--_lr-token-input-gap))) -
+        var(--lr-token-input-gap, var(--_lr-token-input-gap))
+    );
   }
   /* The required marker comes from the one shared sheet (internal/form-control.styles.ts), keeping
      its glyph, colour and spacing consumer-settable. The rule below hides the older hand-rolled

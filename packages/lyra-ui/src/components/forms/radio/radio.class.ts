@@ -776,7 +776,7 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
         <slot name="start" @slotchange=${this.onAdornmentSlotChange}></slot>
         <slot name="prefix" @slotchange=${this.onAdornmentSlotChange}></slot>
       </span>
-      <span part="label" ?hidden=${!this.hasLabel}
+      <span part="label" ?hidden=${!this.renderSlotPresence(this.hasLabel)}
         ><slot @slotchange=${this.labelController.onSlotChange}></slot
       ></span>
       <span part="end suffix" ?hidden=${!this.hasEnd}>
@@ -830,7 +830,7 @@ export class LyraRadio extends CheckedFormAssociated(LyraRadioBase) {
         aria-label=${hostAriaLabel(this) ?? nothing}
         @click=${this.onClick} @keydown=${this.onKeyDown} @focus=${this.onFocus} @blur=${this.onBlur}>
         <span part=${controlParts}>${this.checked ? html`<span part="dot checked-icon"></span>` : nothing}</span>
-        <span part="label" ?hidden=${!this.hasLabel}><slot @slotchange=${this.labelController.onSlotChange}></slot></span>
+        <span part="label" ?hidden=${!this.renderSlotPresence(this.hasLabel)}><slot @slotchange=${this.labelController.onSlotChange}></slot></span>
       </span>
     `;
   }

@@ -285,7 +285,7 @@ follow `size`, from a compact `2xs` up to a roomier `xl` — and `--lr-toast-acc
 fill). Inherited or direct public values remain authoritative across every size and variant.
 
 `--lr-toast-item-gap` (default `var(--lr-space-s)`) controls the gap between the item's icon,
-message, and close action; `--lr-toast-item-radius` (default `var(--lr-radius)`) controls the item
+message, and close action; `--lr-toast-item-radius` (default `var(--lr-radius-container)`) controls the item
 surface and accent-bar start corners, ahead of the shared `--lr-overlay-radius`. They are
 deliberately separate from `--lr-toast-gap`, which continues to control only the region's stack
 spacing. The item joins the shared overlay-surface family for its fill and edge
@@ -594,7 +594,7 @@ the slide animation are its own.
 - `floating: boolean = false` (attribute `floating`, reflected) — an inset, floating sheet: the
   panel keeps a `--lr-drawer-inset` gap (default `var(--lr-space-s)`) from every viewport edge
   (from the containing block's edges with `contained`; the safe-area insets still win where
-  larger) and rounds its corners with `--lr-overlay-radius` (default `var(--lr-radius)`).
+  larger) and rounds its corners with `--lr-overlay-radius` (default `var(--lr-radius-container)`).
   Off by default, so the drawer stays square and edge-flush.
 - `heading?: string`, `label: string`,
   `withoutCloseButton: boolean = false` (attribute `without-close-button`, reflected),
@@ -945,7 +945,7 @@ footer rows, which are tighter than the body by default), `--lr-dialog-panel-dur
 The panel paints from the **shared overlay-surface family** (16.0.0), not from the page-surface
 tokens this entry previously named: `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`
 — the panel fill), `--lr-overlay-border` (default `var(--lr-color-border-subtle)` — the panel edge and the
-header's and footer's dividing rules unless `--lr-dialog-divider-color` is set), `--lr-overlay-radius` (default `var(--lr-radius)` — the panel
+header's and footer's dividing rules unless `--lr-dialog-divider-color` is set), `--lr-overlay-radius` (default `var(--lr-radius-container)` — the panel
 corner and the close button's) and `--lr-overlay-shadow-modal` (default `var(--lr-shadow-xl)` — the
 panel's elevation). None is declared on `:host`, so one declaration on `:root` (or on any ancestor,
 to scope it) retints the dialog together with every popup opened from it. Two dialog-scoped hooks
@@ -1938,7 +1938,7 @@ capped by the available space. `--lr-overlay-content-padding` (default `var(--lr
 
 The popup and its arrow paint from the **shared overlay-surface family** (16.0.0):
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
-`var(--lr-color-border-subtle)`), `--lr-overlay-radius` (default `var(--lr-radius)`) and
+`var(--lr-color-border-subtle)`), `--lr-overlay-radius` (default `var(--lr-radius-container)`) and
 `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). The arrow takes the fill and the
 edge but never the radius — its corners are already cut by its clip path. None of the four is
 declared on `:host`, so a single declaration on `:root` retints every floating surface in the
@@ -2567,7 +2567,7 @@ parent; set `lr-context-menu { display: block }` to get a box.
 `lr-context-menu` or any ancestor): `--max-width`
 (`var(--lr-overlay-max-inline-size, var(--lr-size-20rem))`), `--lr-overlay-surface`
 (`var(--lr-color-surface-overlay)`), `--lr-overlay-border` (`var(--lr-color-border-subtle)`),
-`--lr-overlay-radius` (`var(--lr-radius)`), `--lr-overlay-shadow-anchored` (`var(--lr-shadow-m)`),
+`--lr-overlay-radius` (`var(--lr-radius-container)`), `--lr-overlay-shadow-anchored` (`var(--lr-shadow-m)`),
 `--lr-overlay-max-inline-size` (`var(--lr-size-20rem)`), `--lr-context-menu-min-inline-size`
 (the menu's minimum inline size, capped by the available space; it wins over the shared
 `--lr-overlay-min-inline-size`, default `0px`, which it falls back to while unset), and

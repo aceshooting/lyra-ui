@@ -38,7 +38,14 @@ function decimalPlaces(n: number): number {
  * `Intl.NumberFormat` in the effective locale. Use it for dashboard figures and landing-page metrics.
  *
  * Under `prefers-reduced-motion: reduce` (or when `duration` is 0) it jumps straight to the final
- * value. Assistive technology never hears the animation: the counting text is `aria-hidden` and the
+ * value; reduced motion turning on mid-count settles the run at once.
+ *
+ * A count settles early: on the first frame whose formatted text equals the formatted final value
+ * it shows that value, leaves `:state(counting)` and emits `lr-finish`, instead of repainting the
+ * same text until `duration` ends. With the default ease-out curve the last stretch of a count
+ * never changes the rounded text, so `lr-finish` arrives when the number visibly stops. An
+ * overshooting easing settles the first time its text reaches the final value. A `value` change
+ * during a count is not a settle: the count continues from the number shown to the new value. Assistive technology never hears the animation: the counting text is `aria-hidden` and the
  * final value is present in visually hidden text from the start. A later `value` change after the
  * first count is announced once, politely, through the shared light-DOM live region. It renders its
  * start value during SSR and counts after hydration, once it is on screen.
@@ -47,7 +54,8 @@ function decimalPlaces(n: number): number {
  * @csspart base - The container around the displayed number.
  * @csspart value - The displayed (counting) number.
  * @cssstate counting - Applied while the number is counting.
- * @event lr-finish - The ticker settled on its value, including the instant reduced-motion and zero-duration paths.
+ * @event lr-finish - The ticker settled on its value: when the shown text first equals the final text
+ *   (early settle), and on the instant reduced-motion and zero-duration paths.
  * @status experimental
  * @since 32.1.0
  */
@@ -210,9 +218,16 @@ export class LyraNumberTicker extends LyraElement<LyraNumberTickerEventMap> {
       }
       // displayValue stays null through the delay so an interrupted run keeps its delay.
       if (time >= delay) {
-        setCustomState(this.internals, 'counting', true);
         const progress = animation.effect?.getComputedTiming().progress ?? 0;
-        this.displayValue = from + (to - from) * finiteNumber(Number(progress), 0);
+        const shown = from + (to - from) * finiteNumber(Number(progress), 0);
+        // Early settle: once the formatted text equals the final text, the remaining frames would
+        // repaint the same string, so the run ends now instead of at the full duration.
+        if (this.format(shown) === this.format(to)) {
+          void this.finish();
+          return;
+        }
+        setCustomState(this.internals, 'counting', true);
+        this.displayValue = shown;
       }
       this.frame = requestAnimationFrame(tick);
     };

@@ -97,6 +97,43 @@ for (const name of NAMES) {
   });
 }
 
+/** Inline extent of the label's own text, and how many lines it wraps onto. */
+function labelText(root: ShadowRoot): { width: number; lines: number } {
+  const range = document.createRange();
+  range.selectNodeContents(root.querySelector('[part~="form-control-label"]')!);
+  const rects = [...range.getClientRects()].filter((rect) => rect.width > 0);
+  return { width: range.getBoundingClientRect().width, lines: new Set(rects.map((rect) => Math.round(rect.top))).size };
+}
+
+it('every control sizes a content-sized start column (auto) to the label text, and still collapses when narrow', async () => {
+  const long = 'Preferred shipping reference number';
+  for (const name of NAMES) {
+    const auto = (el: Placed) => {
+      el.setAttribute('label', long);
+      el.style.setProperty('--lr-form-control-label-inline-size', 'auto');
+    };
+    const { root, control, label, field } = await mount(name, 640, 'ltr', 'start', auto);
+    const text = labelText(root);
+    const padding = parseFloat(getComputedStyle(root.querySelector('[part~="form-control-label"]')!).paddingInlineStart) +
+      parseFloat(getComputedStyle(root.querySelector('[part~="form-control-label"]')!).paddingInlineEnd);
+    expect(text.lines, `${name}: one line`).to.equal(1);
+    expect(label.width, `${name}: wider than the 30% column`).to.be.above(640 * 0.3);
+    expect(Math.abs(label.width - text.width - padding), `${name}: column fits the text`).to.be.below(1.5);
+    expect(Math.abs(field.left - label.right - parseFloat(getComputedStyle(control).columnGap)), `${name}: field follows the gap`).to.be.below(1);
+    const narrow = await mount(name, 280, 'ltr', 'start', auto);
+    expect(narrow.label.bottom, `${name}: collapses above the field`).to.be.at.most(narrow.field.top);
+  }
+});
+
+it('every control spaces a label above the field by --lr-form-control-label-gap', async () => {
+  for (const name of NAMES) {
+    for (const gap of [13, 29]) {
+      const { label, field } = await mount(name, 640, 'ltr', '', (el) => el.style.setProperty('--lr-form-control-label-gap', `${gap}px`));
+      expect(field.top - label.bottom, `${name} ${gap}px`).to.be.closeTo(gap, 0.75);
+    }
+  }
+});
+
 it('every control keeps the hint under the field when the start label is hidden or absent', async () => {
   for (const name of NAMES) {
     for (const hide of ['label-display', 'no-label'] as const) {

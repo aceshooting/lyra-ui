@@ -22,6 +22,7 @@ export const CDN_STYLESHEETS = Object.freeze([
   ['theme-core.css', 'theme-core.css'],
   ['density.css', 'density.css'],
   ['accents.css', 'accents.css'],
+  ['accent-roles.css', 'accent-roles.css'],
   ['styles/native.css', 'native.css'],
   ['styles/utilities.css', 'utilities.css'],
   ['styles/design-tokens.css', 'design-tokens.css'],

@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'Bukak tanggalan',
   item: 'barang',
   comboboxLoadError: 'Pilihan ora bisa dimuat.',
+  comboboxRichContentUnavailable: 'Isi pilihan sing diformat ora kasedhiya. Nampilake label biasa.',
   comboboxSelectedOverflow: '+{n} liyane',
   checkboxRequired: 'Centhang kothak iki supaya bisa nerusake.',
   checkboxGroupRequired: 'Pilih paling ora siji pilihan.',

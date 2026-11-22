@@ -29,3 +29,41 @@ export const Default: StoryObj = {
     </lr-lightbox>
   `,
 };
+
+/** A `<template>` child makes a custom slide: its content is copied into the viewer only while
+ *  that slide is shown, page styles apply to it, and `width`/`height` keep its proportions. The
+ *  slotted image remains the page and strip thumbnail. Swipe by touch to see the slide follow the
+ *  pointer. */
+export const CustomTemplateSlide: StoryObj = {
+  render: () => html`
+    <style>
+      .swatch-card {
+        display: grid;
+        place-content: center;
+        gap: var(--lr-space-s);
+        padding: var(--lr-space-l);
+        background: var(--lr-color-surface);
+        color: var(--lr-color-text);
+        text-align: center;
+      }
+    </style>
+    <lr-lightbox label="Swatches" with-thumbnails>
+      <lr-lightbox-item src=${blue} alt="Blue swatch" width="640" height="360">
+        <img src=${blue} alt="Blue swatch" width="160" height="90" />
+      </lr-lightbox-item>
+      <lr-lightbox-item alt="Swatch details" width="640" height="360">
+        <img src=${amber} alt="Swatch details" width="160" height="90" />
+        <template>
+          <div class="swatch-card">
+            <strong>Amber</strong>
+            <span>Custom slide content, copied in only while it is shown.</span>
+            <button type="button">A focusable control</button>
+          </div>
+        </template>
+      </lr-lightbox-item>
+      <lr-lightbox-item src=${amber} alt="Amber swatch" width="640" height="360">
+        <img src=${amber} alt="Amber swatch" width="160" height="90" />
+      </lr-lightbox-item>
+    </lr-lightbox>
+  `,
+};

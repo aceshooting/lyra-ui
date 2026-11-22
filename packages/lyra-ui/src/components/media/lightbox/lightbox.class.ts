@@ -26,7 +26,8 @@ import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js'
 import { normalizeImageFit, type LyraImageFit } from '../../../internal/image-fit.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
 import { styles } from './lightbox.styles.js';
-import { LightboxSourceController } from './lightbox-source.js';
+import { LightboxSourceController, SOURCE_THUMBNAIL_WINDOW } from './lightbox-source.js';
+import { prefersReducedMotion } from '../../../internal/motion.js';
 import type { LyraPanZoom } from '../pan-zoom/pan-zoom.class.js';
 import { keyEventOwnedByInnerControl } from '../../../internal/hotkey.js';
 import { isElement } from '../../../internal/rendered-tree-traversal.js';
@@ -58,10 +59,12 @@ function snapshotLightboxImages(value: unknown): readonly LyraLightboxImage[] {
         if (typeof src !== 'string') continue;
         const alt = candidate.alt;
         const caption = candidate.caption;
+        const thumbnail = candidate.thumbnail;
         images.push(Object.freeze({
           src,
           ...(typeof alt === 'string' ? { alt } : {}),
           ...(typeof caption === 'string' ? { caption } : {}),
+          ...(typeof thumbnail === 'string' ? { thumbnail } : {}),
         }));
       } catch {
         // A hostile getter invalidates only its own record; later valid images remain reachable.
@@ -111,7 +114,9 @@ export interface LyraLightboxItemChangeDetail {
 /** The viewer's record for one slotted item. */
 interface LightboxItemRecord {
   readonly element: LyraLightboxItem;
-  readonly type: 'image' | 'video';
+  /** `custom` items show a copy of their `<template>` instead of an image or video. */
+  readonly type: 'image' | 'video' | 'custom';
+  readonly template?: HTMLTemplateElement;
   readonly thumbnail: string;
   readonly width?: number;
   readonly height?: number;
@@ -124,6 +129,13 @@ function setItemViewerState(item: LyraLightboxItem, name: 'active' | 'morphing',
 
 const SWIPE_DISTANCE = 50;
 const SWIPE_SLOP = 10;
+/** Share of the drag distance the slide follows when there is no item in that direction. */
+const SWIPE_EDGE_RESISTANCE = 0.3;
+/** The light-DOM slot name of the copied custom slide content. */
+const CUSTOM_SLIDE_SLOT = 'slide-content';
+const CUSTOM_SLIDE_ATTRIBUTE = 'data-lightbox-slide';
+/** Pointer targets that own their own drag or tap, so a swipe never starts on them. */
+const SWIPE_EXEMPT = 'video, button, a[href], input, select, textarea, [contenteditable]:not([contenteditable="false"])';
 const MAX_THUMBNAILS = 200;
 /** The documented opening and closing duration properties the surface animations read. */
 const SHOW_DURATION_PROPERTY = '--show-duration';
@@ -184,10 +196,13 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
  * who had Tabbed into the frame's viewport mid-navigation.
  *
  * Lifecycle: `show()` emits cancelable `lr-show` before committing `open=true`, followed by
- * `lr-after-show` after the open panel renders. `hide()`/`close()` and post-render writes to
- * `open=false` emits cancelable `lr-hide` and `lr-close-request`, followed by
- * `lr-close` with `{ reason }` after the state commits, and
- * `lr-after-hide` after the closed state renders. A veto leaves the property and reflected
+ * `lr-after-show` once the open panel has rendered and its enter animation has finished.
+ * `hide()`/`close()` and post-render writes to `open=false` emit cancelable `lr-hide` and
+ * `lr-close-request`, followed by `lr-close` with `{ reason }` after the state commits, and
+ * `lr-after-hide` once the exit animation has finished. Under `prefers-reduced-motion` or a zero
+ * `--show-duration`/`--hide-duration` the animations finish at once, so both events follow the
+ * render directly. A transition interrupted by the opposite one emits no after-event of its own.
+ * The returned promises resolve with the after-events. A veto leaves the property and reflected
  * attribute synchronized. Initial `open` markup is state rather than a transition and emits no
  * lifecycle events. Removing an open instance emits non-cancelable `lr-hide`, `lr-close` with
  * reason `unmount`, and `lr-after-hide`; removal cannot be vetoed.
@@ -197,16 +212,27 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
  * page. Items with `type="video"` play in a native `<video>` that pauses when the slide changes
  * or the viewer closes. `with-thumbnails` adds a thumbnail strip, `without-navigation` hides the
  * previous/next buttons (swipe and arrow keys still work), and `without-zoom` removes zooming.
- * A horizontal touch or pen swipe moves between items (reversed under RTL); the open/close and
+ * An item whose direct child is a `<template>` shows a copy of that template's content as its
+ * slide (see `<lr-lightbox-item>`); the copy is made while the slide is shown and placed in a
+ * `<div slot="slide-content">` the lightbox appends to itself, so page styles reach it.
+ * Content that handles its own dragging should call `preventDefault()` on `pointerdown` so a swipe
+ * does not start there.
+ *
+ * **Swiping.** In every mode, a touch or pen drag that is clearly horizontal moves the slide with
+ * the pointer. Releasing it at least 50px from where it started, toward an existing item, moves to
+ * that item and the incoming slide continues from the release point; a shorter drag, a mostly
+ * vertical one, a drag past the first or last item without `loop` (which follows the pointer with
+ * resistance), and a `pointercancel` settle the slide back into place. Directions reverse under
+ * RTL. Under `prefers-reduced-motion` the slide does not follow the pointer and the release
+ * navigates or stays without motion. A mouse never swipes, nor does a drag that starts on a
+ * control, a link, a video or a form field, or while the image is zoomed in. The open/close and
  * slide motion use the `--show-duration`/`--hide-duration`/`--slide-gap` properties and stop under
  * `prefers-reduced-motion`.
  *
  * **Scope (deliberate, not oversights):** no dot-style indicators (a textual counter scales
  * better to photo-set sizes); no click-on-image-to-navigate (the image is already meaningfully
  * interactive -- it focuses the zoomable frame's viewport and drives its native scroll-to-pan);
- * no inertial drag-follow while swiping (a swipe past the threshold navigates once); slotted
- * items show images through the embedded pan-zoom frame, so custom `<template>` slide content is
- * not supported.
+ * no inertial fling (only the release distance decides).
  *
  * When opened outside an existing native modal dialog, the modal surface uses an internal
  * native dialog so pointer, keyboard, and focus interaction remain available without moving
@@ -229,16 +255,21 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
  *   Calling `preventDefault()` keeps the lightbox open.
  * @event lr-close - Non-cancelable accepted dismissal with `{ reason }` detail, including unmount.
  * @event lr-show - Cancelable request fired by `show()` before `open` changes.
- * @event lr-after-show - Fired after a successful `show()` has rendered the open panel.
- * @event lr-after-hide - Fired after a successful `hide()`/`close()` has rendered closed.
+ * @event lr-after-show - Fired after a successful `show()` has rendered the open panel and its
+ *   enter animation has finished (immediately under reduced motion or a zero duration).
+ * @event lr-after-hide - Fired after a successful `hide()`/`close()` has rendered closed and its
+ *   exit animation has finished (immediately under reduced motion or a zero duration).
  * @event lr-index-change - Fired for `next()`/`previous()`/`goTo()` navigation, including the
- *   built-in button and keyboard paths, and when a shrinking `images` moves the shown image. Not
- *   fired when a consumer sets `index` directly. Source mode uses the complete logical count
+ *   built-in button, swipe, thumbnail and keyboard paths, and when a shrinking `images` moves the
+ *   shown image. Not fired when a consumer sets `index` directly (as `<lr-carousel>` does not fire
+ *   `lr-slide-change` for a direct `currentSlide` write); call `goTo()` to change the item and be
+ *   notified. Source mode uses the complete logical count
  *   and emits the requested index before asynchronous image resolution. `detail: { index }` is always the rendered
  *   integer index.
  * @event lr-item-change - Fired alongside `lr-index-change` for the same navigations, with
  *   `detail: { index, previousIndex, item, previousItem }` (items are `null` in data mode). Like
- *   `lr-index-change` it reports navigation, so writing `index` directly does not fire it.
+ *   `lr-index-change` it reports navigation, so writing `index` directly does not fire it, whether
+ *   the lightbox is open or closed; `goTo()`, `next()` and `previous()` do.
  * @event lr-zoom-change - Not emitted by `LyraLightbox` itself -- see the interface doc above.
  *   `detail: { zoom }`.
  * @csspart surface - The viewer's viewport layer. Only positioned and shown while open (slotted mode).
@@ -383,7 +414,8 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
 
   /** Optional host-owned full image collection. Takes precedence over images; undefined restores
    * legacy input. Reassign, including the same source, or call requestUpdate() after mutation.
-   * Only the current image loads; at most three descriptors are retained. Each key/src/alt/caption
+   * Only the current image loads; at most three descriptors are retained (with `with-thumbnails`,
+ * a separate strip window also reads the descriptors of the 15 positions around the current one). Each key/src/alt/caption
    * is limited to 65,536 UTF-16 units. Invalid defined sources fail closed with a retry action.
    * index remains the requested logical index while its image loads. */
   @property({ attribute: false, noAccessor: true, hasChanged: () => true })
@@ -462,8 +494,10 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
    *  Not reflected, matching the published contract. */
   @property({ type: Boolean, attribute: 'without-counter' }) withoutCounter = false;
 
-  /** Shows a strip of thumbnails for jumping between items (images or slotted items). Not
-   *  available with `imageSource`, which only loads the current image. */
+  /** Shows a strip of thumbnails for jumping between items. Each uses the item's `thumbnail`
+   *  (slotted items and `images`/`imageSource` records), else the full image. With `imageSource`
+   *  the strip covers the 15 positions around the current one and reads only their descriptors;
+   *  a position whose descriptor is still loading shows its number. */
   @property({ type: Boolean, reflect: true, attribute: 'with-thumbnails' }) withThumbnails = false;
 
   /** Hides the previous/next buttons. Swiping and the arrow keys still navigate. */
@@ -516,7 +550,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   private renderedRecord?: LightboxItemRecord;
   private lastShownSrc = '';
   private firstUpdateDone = false;
-  private swipe?: { id: number; x: number; y: number };
+  private swipe?: { id: number; x: number; y: number; dx: number; dragging: boolean };
   private transitionAnimations: Animation[] = [];
   private morphGeneration = 0;
   private morphingItem?: LyraLightboxItem;
@@ -543,7 +577,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   private collectItems(): LyraLightboxItem[] {
     const own = tag('lightbox');
     return Array.from(this.querySelectorAll<LyraLightboxItem>(tag('lightbox-item'))).filter(
-      (element) => element.closest(own) === this,
+      (element) => element.closest(own) === this && !element.closest(`[${CUSTOM_SLIDE_ATTRIBUTE}]`),
     );
   }
 
@@ -558,8 +592,9 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     for (const element of this.collectItems()) {
       const raw = element as Partial<LyraLightboxItem> & Element;
       const src = raw.mediaSrc ?? safeMediaSrc(element.getAttribute('src')) ?? '';
-      if (!src) continue;
-      const type = (raw.type ?? element.getAttribute('type')) === 'video' ? 'video' : 'image';
+      const template = raw.slideTemplate ?? element.querySelector<HTMLTemplateElement>(':scope > template') ?? undefined;
+      if (!src && !template) continue;
+      const type = template ? 'custom' : (raw.type ?? element.getAttribute('type')) === 'video' ? 'video' : 'image';
       const alt = raw.resolvedAlt ?? element.getAttribute('alt') ?? '';
       const caption = raw.captionText ?? element.getAttribute('caption') ?? '';
       const width = Number(raw.width ?? element.getAttribute('width'));
@@ -567,6 +602,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
       records.push({
         element: element as LyraLightboxItem,
         type,
+        ...(template ? { template } : {}),
         thumbnail: raw.thumbnailSrc ?? safeMediaSrc(element.getAttribute('thumbnail')) ?? '',
         ...(Number.isFinite(width) && width > 0 ? { width } : {}),
         ...(Number.isFinite(height) && height > 0 ? { height } : {}),
@@ -577,7 +613,8 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
       .map((record, i) => `${i}\u0000${images[i]!.src}\u0000${images[i]!.alt}\u0000${images[i]!.caption ?? ''}\u0000${record.type}\u0000${record.thumbnail}\u0000${record.width ?? ''}x${record.height ?? ''}`)
       .join('\u0001');
     const sameElements =
-      records.length === this.itemRecords.length && records.every((record, i) => record.element === this.itemRecords[i]!.element);
+      records.length === this.itemRecords.length &&
+      records.every((record, i) => record.element === this.itemRecords[i]!.element && record.template === this.itemRecords[i]!.template);
     if (signature === this.lastItemSignature && sameElements) return;
     this.lastItemSignature = signature;
     this.itemRecords = Object.freeze(records);
@@ -611,7 +648,8 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   }
 
   private canZoom(): boolean {
-    return !this.withoutZoom && this.itemRecords[this.currentIndex()]?.type !== 'video';
+    const type = this.itemMode ? this.itemRecords[this.currentIndex()]?.type : undefined;
+    return !this.withoutZoom && type !== 'video' && type !== 'custom';
   }
 
   private toggleZoom = (): void => {
@@ -631,27 +669,95 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   }
 
   private onSwipeStart = (event: PointerEvent): void => {
-    if (event.pointerType === 'mouse' || !event.isPrimary || this.imageCount() < 2) return;
+    if (event.defaultPrevented || event.pointerType === 'mouse' || !event.isPrimary || this.imageCount() < 2) return;
     if (this.zoomLevel > 1) return;
-    if ((event.composedPath() as Node[]).some((node) => isElement(node) && node.matches('video, button, a[href]'))) return;
-    this.swipe = { id: event.pointerId, x: event.clientX, y: event.clientY };
+    if ((event.composedPath() as Node[]).some((node) => isElement(node) && node.matches(SWIPE_EXEMPT))) return;
+    this.releaseDrag(false);
+    this.swipe = { id: event.pointerId, x: event.clientX, y: event.clientY, dx: 0, dragging: false };
+  };
+
+  /** Moves the slide with the pointer once the gesture is clearly horizontal. Under reduced motion
+   *  the slide stays put and only the release decides. */
+  private onSwipeMove = (event: PointerEvent): void => {
+    const swipe = this.swipe;
+    if (!swipe || swipe.id !== event.pointerId) return;
+    const dx = event.clientX - swipe.x;
+    const dy = event.clientY - swipe.y;
+    swipe.dx = dx;
+    if (!swipe.dragging) {
+      if (Math.abs(dx) < SWIPE_SLOP || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+      swipe.dragging = true;
+    }
+    if (prefersReducedMotion(this)) return;
+    const slide = this.slideElement();
+    if (!slide) return;
+    for (const animation of slide.getAnimations()) animation.cancel();
+    const offset = this.hasNeighbor(this.swipeIsForward(dx)) ? dx : dx * SWIPE_EDGE_RESISTANCE;
+    slide.style.transform = `translateX(${offset}px)`;
+    slide.toggleAttribute('data-dragging', true);
   };
 
   private onSwipeEnd = (event: PointerEvent): void => {
     const swipe = this.swipe;
     if (!swipe || swipe.id !== event.pointerId) return;
-    this.swipe = undefined;
     const dx = event.clientX - swipe.x;
     const dy = event.clientY - swipe.y;
-    if (Math.abs(dx) < SWIPE_DISTANCE || Math.abs(dx) < Math.abs(dy) * 1.2 || Math.abs(dx) < SWIPE_SLOP) return;
-    const forward = this.effectiveDirection === 'rtl' ? dx > 0 : dx < 0;
+    const forward = this.swipeIsForward(dx);
+    const navigates =
+      Math.abs(dx) >= SWIPE_DISTANCE && Math.abs(dx) >= Math.abs(dy) * 1.2 && this.hasNeighbor(forward);
+    if (!navigates) {
+      this.releaseDrag(true);
+      return;
+    }
+    // The incoming slide continues from where the dragged one was let go.
+    this.swipeRelease = swipe.dragging && !prefersReducedMotion(this) ? dx : 0;
+    this.releaseDrag(false);
     if (forward) this.next();
     else this.previous();
+    if (this.pendingIndexChange === undefined) this.swipeRelease = 0;
   };
 
   private onSwipeCancel = (event: PointerEvent): void => {
-    if (this.swipe?.id === event.pointerId) this.swipe = undefined;
+    if (this.swipe?.id === event.pointerId) this.releaseDrag(true);
   };
+
+  /** Ends the current gesture; `settle` animates a dragged slide back into place. */
+  private releaseDrag(settle: boolean): void {
+    const swipe = this.swipe;
+    this.swipe = undefined;
+    const slide = this.slideElement();
+    if (!slide || !slide.hasAttribute('data-dragging')) return;
+    const from = slide.style.transform;
+    slide.style.removeProperty('transform');
+    slide.removeAttribute('data-dragging');
+    if (!settle || !swipe?.dragging || !from) return;
+    const animation = animateRegistered(this, slide, 'lightbox.slide.return', this.effectiveDirection, {
+      keyframes: [{ transform: from }, { transform: 'translateX(0)' }],
+      durationProperties: ['--lr-lightbox-panel-duration', '--lr-duration-base'],
+      easingProperties: ['--lr-easing-standard'],
+    });
+    if (animation) void animation.finished.catch(() => undefined);
+  }
+
+  /** Whether a horizontal movement of `dx` pixels points toward the next item. */
+  private swipeIsForward(dx: number): boolean {
+    return this.effectiveDirection === 'rtl' ? dx > 0 : dx < 0;
+  }
+
+  private hasNeighbor(forward: boolean): boolean {
+    const count = this.imageCount();
+    if (count < 2) return false;
+    if (this.loop) return true;
+    const current = this.currentIndex();
+    return forward ? current < count - 1 : current > 0;
+  }
+
+  private slideElement(): HTMLElement | null {
+    return this.hasUpdated ? this.renderRoot.querySelector<HTMLElement>('[part="slide"]') : null;
+  }
+
+  /** Pixel offset of a slide released mid-drag, consumed by the next slide animation. */
+  private swipeRelease = 0;
   @state() private liveText = '';
 
   @query(tag('pan-zoom')) private frameEl?: LyraPanZoom;
@@ -720,7 +826,8 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     this.changeTo(index);
   }
 
-  /** Request opening, then resolve once the open panel is rendered. */
+  /** Request opening, then resolve once the open panel is rendered and its enter animation has
+   *  finished (immediately under reduced motion or a zero duration). */
   async show(): Promise<void> {
     if (this.openRequest.coalesce(true) || this._open) return;
     this.openRequest.begin(true);
@@ -736,8 +843,11 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     this.applyOpenState(true);
     const generation = ++this.transitionGeneration;
     await this.updateComplete;
-    // The open animation keeps running after this point: `lr-after-show` keeps its rendered-open
-    // timing rather than waiting for the motion to finish.
+    // `updated()` started the enter animation for this render; `lr-after-show` waits for it, as on
+    // the other overlays. A close or reopen in the meantime cancels it and bumps the generation,
+    // so an interrupted open never reports that it finished.
+    if (generation !== this.transitionGeneration || !this._open) return;
+    await this.settleAnimations();
     if (generation === this.transitionGeneration && this._open) this.emit('lr-after-show', null);
   }
 
@@ -785,14 +895,14 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
       if (this._open) this.removeAttribute('data-closing');
       return;
     }
-    // The exit animation starts here and finishes after `lr-after-hide` (and after this promise),
-    // which both keep their rendered-closed timing; `data-closing` only keeps the fading surface
-    // painted meanwhile.
-    const exit = this.playExit();
+    // `data-closing` keeps the fading surface painted while the exit animation runs; `lr-after-hide`
+    // (and this promise) wait for it to finish, as on the other overlays. A reopen in the meantime
+    // cancels the exit and bumps the generation, so the interrupted close reports nothing more.
+    await this.playExit();
+    if (generation !== this.transitionGeneration || this._open) return;
+    this.removeAttribute('data-closing');
+    this.syncCustomSlide();
     this.emit('lr-after-hide', null);
-    void exit.then(() => {
-      if (generation === this.transitionGeneration && !this._open) this.removeAttribute('data-closing');
-    });
   }
 
   private cancelTransitionAnimations(): void {
@@ -852,8 +962,51 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
       easingProperties: ['--lr-easing-standard'],
     });
     const sign = forward ? 1 : -1;
-    const animation = animateRegistered(this, slide, forward ? 'lightbox.slide.next' : 'lightbox.slide.previous', this.effectiveDirection, spec(sign));
+    const release = this.swipeRelease;
+    this.swipeRelease = 0;
+    let motion = spec(sign);
+    if (release) {
+      // A released drag: start the incoming slide beside the point where the dragged one was let
+      // go. Pointer offsets are physical, so both directions use the same keyframes.
+      const physical = this.effectiveDirection === 'rtl' ? -sign : sign;
+      const keyframes: Keyframe[] = [
+        { opacity: 0, transform: `translateX(calc(${physical} * (100% + ${gap}) + ${release}px))` },
+        { opacity: 1, transform: 'translateX(0)' },
+      ];
+      motion = { ...motion, keyframes, rtlKeyframes: keyframes };
+    }
+    const animation = animateRegistered(this, slide, forward ? 'lightbox.slide.next' : 'lightbox.slide.previous', this.effectiveDirection, motion);
     if (animation) void animation.finished.catch(() => undefined);
+  }
+
+  private customSlide?: { readonly record: LightboxItemRecord; readonly element: HTMLElement };
+
+  /** Keeps the copied `<template>` content in step with the shown custom item: created when that
+   *  slide is shown, kept through the close motion, removed on any other slide or once closed. */
+  private syncCustomSlide(): void {
+    const showing = this.isConnected && (this.open || this.hasAttribute('data-closing'));
+    const record = showing && this.itemMode ? this.itemRecords[this.currentIndex()] : undefined;
+    const wanted = record?.type === 'custom' && record.template ? record : undefined;
+    if (this.customSlide && this.customSlide.record.template === wanted?.template && this.customSlide.record.element === wanted?.element) return;
+    this.removeCustomSlide();
+    if (!wanted?.template) return;
+    const doc = this.ownerDocument;
+    const element = doc.createElement('div');
+    element.slot = CUSTOM_SLIDE_SLOT;
+    element.setAttribute(CUSTOM_SLIDE_ATTRIBUTE, '');
+    if (wanted.width && wanted.height) {
+      element.setAttribute('data-ratio', '');
+      element.style.setProperty('--_lr-lightbox-slide-ratio', String(wanted.width / wanted.height));
+    }
+    element.append(doc.importNode(wanted.template.content, true));
+    this.customSlide = { record: wanted, element };
+    this.append(element);
+  }
+
+  private removeCustomSlide(): void {
+    const current = this.customSlide;
+    this.customSlide = undefined;
+    current?.element.remove();
   }
 
   /** Publishes the item's `morphing` state while the open or close motion runs, then clears it. */
@@ -909,6 +1062,8 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     this.sourceBindingCurrent = this.sourceController.update(this.imageSource, this.effectiveLocale);
     this.toggleAttribute('data-items', this.itemMode);
     if (changed.has('index') || changed.has('open')) this.pauseVideos();
+    // A programmatic change or a close mid-drag drops the gesture; the slide snaps into place.
+    if ((changed.has('index') || changed.has('open') || changed.has('zoomLevel')) && this.swipe) this.releaseDrag(false);
     if ((changed.has('index') || changed.has('imageSource') || changed.has('itemsVersion')) && this.zoomLevel !== 1) this.zoomLevel = 1;
     if (this.sourceBindingCurrent && (changed.has('itemsVersion') || changed.has('images') || changed.has('index') || changed.has('imageSource') || changed.has('sourceState'))) {
       const index = changed.has('index') ? undefined : this.index;
@@ -918,7 +1073,11 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
         this.pendingIndexChange = intent;
       }
     }
-    if (this.sourceBindingCurrent && this.imageSource !== undefined) this.sourceController.select(this.currentIndex());
+    if (this.sourceBindingCurrent && this.imageSource !== undefined) {
+      this.sourceController.select(this.currentIndex());
+      const count = this.sourceController.count;
+      if (this.withThumbnails && count > 1) this.sourceController.requestThumbnails(...this.thumbnailRange(count, this.currentIndex()));
+    }
     if (!this.sourceBindingCurrent) {
       // A provider callback can replace the binding inside this update. Lit folds writes made
       // during willUpdate into the current cycle, so schedule a named paint for the newest input.
@@ -1019,6 +1178,8 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     this.renderedIndex = current;
     this.renderedRecord = record;
     this.firstUpdateDone = true;
+    this.swipeRelease = 0;
+    this.syncCustomSlide();
   }
 
   override connectedCallback(): void {
@@ -1064,7 +1225,8 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     this.removeEventListener('click', this.onHostClick);
     this.itemObserver?.disconnect();
     this.itemObserver = undefined;
-    this.swipe = undefined;
+    this.releaseDrag(false);
+    this.removeCustomSlide();
     this.cancelTransitionAnimations();
     this.removeAttribute('data-closing');
     super.disconnectedCallback();
@@ -1125,12 +1287,13 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
 
   private onPanelKeyDown = (event: KeyboardEvent): void => {
     if (event.defaultPrevented || shouldIgnoreNavigationKey(event) || event.shiftKey) return;
-    // A slotted button/link (actions slot) owns Arrow keys; the lightbox's own shadow controls do not.
+    // A slotted control (actions slot, custom slide content) owns Arrow keys; the lightbox's own
+    // shadow controls do not.
     for (const target of event.composedPath() as Node[]) {
       if (target === this) break;
       if (
         isElement(target) && target.getRootNode() !== this.shadowRoot &&
-        target.matches('a[href], button, [role="button"], [role="link"]')
+        target.matches('a[href], button, [role="button"], [role="link"], [role="slider"], input, select, textarea, [contenteditable]:not([contenteditable="false"])')
       ) return;
     }
     if ((event.composedPath() as Node[]).some((node) => isElement(node) && node.localName === 'video')) return;
@@ -1172,30 +1335,41 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     });
   }
 
+  /** The `[start, end)` positions the thumbnail strip shows around `current`. */
+  private thumbnailRange(count: number, current: number): [number, number] {
+    const size = this.imageSource === undefined ? MAX_THUMBNAILS : SOURCE_THUMBNAIL_WINDOW;
+    const start = Math.max(0, Math.min(current - Math.floor(size / 2), count - size));
+    return [start, Math.min(count, start + size)];
+  }
+
   private renderThumbnails(count: number, current: number): TemplateResult | typeof nothing {
-    if (!this.withThumbnails || count < 2 || this.imageSource !== undefined) return nothing;
-    const half = Math.floor(MAX_THUMBNAILS / 2);
-    const start = Math.max(0, Math.min(current - half, count - MAX_THUMBNAILS));
-    const end = Math.min(count, start + MAX_THUMBNAILS);
+    if (!this.withThumbnails || count < 2) return nothing;
+    const sourceMode = this.imageSource !== undefined;
+    const [start, end] = this.thumbnailRange(count, current);
     const formatter = getNumberFormat(this.effectiveLocale, { maximumFractionDigits: 0, useGrouping: false });
     const thumbs: TemplateResult[] = [];
     for (let i = start; i < end; i++) {
-      const image = this.activeImages[i];
-      if (!image) continue;
+      // Source mode reads the strip window's descriptors; one still loading shows its number.
+      const image = sourceMode ? this.sourceController.thumbnailAt(i) : this.activeImages[i];
+      if (!image && !sourceMode) continue;
       const record = this.itemMode ? this.itemRecords[i] : undefined;
-      const source = safeMediaSrc(record?.thumbnail || (record?.type === 'video' ? '' : image.src));
+      const media = record ? record.thumbnail || (record.type === 'image' ? image?.src : '') : image?.thumbnail || image?.src;
+      const source = safeMediaSrc(media);
       const active = i === current;
       const position = this.localize('lightboxImagePosition', undefined, {
         index: formatter.format(i + 1),
         total: formatter.format(count),
       });
+      const content = source
+        ? html`<img src=${source} alt="" loading="lazy" decoding="async" />`
+        : record?.type === 'video' ? playIcon() : html`<span aria-hidden="true">${formatter.format(i + 1)}</span>`;
       thumbs.push(html`<button
         type="button"
         part=${active ? 'thumbnail thumbnail-active' : 'thumbnail'}
-        aria-label=${image.alt || position}
+        aria-label=${image?.alt || position}
         aria-current=${active ? 'true' : 'false'}
         @click=${() => this.goTo(i)}
-      >${source ? html`<img src=${source} alt="" loading="lazy" decoding="async" />` : playIcon()}</button>`);
+      >${content}</button>`);
     }
     return html`<div part="thumbnails">${thumbs}</div>`;
   }
@@ -1207,6 +1381,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
       ? (count > 0 ? this.activeImages[current] : undefined) : this.sourceController.image;
     const record = this.itemMode ? this.itemRecords[current] : undefined;
     const isVideo = record?.type === 'video';
+    const isCustom = record?.type === 'custom';
     const mediaSrc = isVideo ? safeMediaSrc(image?.src) ?? '' : '';
     const sourceState = this.imageSource === undefined ? undefined : this.sourceController.state;
     const label = this.accessibleLabel?.trim()
@@ -1227,7 +1402,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     const zoomed = this.zoomLevel > 1;
     // The toolbar zoom toggle belongs to the slotted-item viewer; data mode keeps its original
     // chrome (the embedded pan-zoom controls) so existing galleries gain no new button.
-    const showZoom = this.itemMode && !this.withoutZoom && !isVideo && count > 0;
+    const showZoom = this.itemMode && !this.withoutZoom && !isVideo && !isCustom && count > 0;
 
     return html`<slot></slot><div part="surface">${this.nativeModal.render(html`
       <div part="backdrop" @click=${this.onBackdropClick}></div>
@@ -1263,6 +1438,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
           part="stage scroll-container"
           aria-busy=${sourceState === 'loading' ? 'true' : 'false'}
           @pointerdown=${this.onSwipeStart}
+          @pointermove=${this.onSwipeMove}
           @pointerup=${this.onSwipeEnd}
           @pointercancel=${this.onSwipeCancel}
         >
@@ -1295,11 +1471,12 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
                   height=${ifDefined(record?.height)}
                 ></video>`)
               : nothing}
+            ${isCustom ? html`<slot name=${CUSTOM_SLIDE_SLOT}></slot>` : nothing}
             <lr-pan-zoom
               part="frame image"
               exportparts="viewport:frame-viewport,content:frame-content,controls:frame-controls"
-              ?hidden=${isVideo}
-              .src=${live(isVideo ? '' : image?.src ?? '')}
+              ?hidden=${isVideo || isCustom}
+              .src=${live(isVideo || isCustom ? '' : image?.src ?? '')}
               alt=${image?.alt ?? ''}
               .fit=${this.fit}
               .minZoom=${this.withoutZoom ? 1 : this.minZoom}

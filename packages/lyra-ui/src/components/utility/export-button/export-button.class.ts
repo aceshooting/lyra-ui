@@ -176,7 +176,7 @@ export interface LyraExportButtonEventMap {
  * on the menu popup.
  * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge
  * colour, on the menu popup.
- * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, on
+ * @cssprop [--lr-overlay-radius=var(--lr-radius-container)] - Shared floating-surface corner radius, on
  * the menu popup.
  * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored surface.
  * @cssprop --lr-positioning-strategy - Cascading `absolute`/`fixed` override for the format

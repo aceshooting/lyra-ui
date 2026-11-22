@@ -22,6 +22,7 @@ const REQUIRED_TARBALL_FILES = Object.freeze([
   'skills/compose-lyra-interfaces/SKILL.md',
   'dist/cli/lyra-ui.mjs',
   'dist/cli/init-agents.mjs',
+  'custom-elements.slim.json',
 ]);
 const REPOSITORY_ONLY_TARBALL_FILES = Object.freeze(['llms-full.txt']);
 // Published by @aceshooting/lyra-ide and @aceshooting/lyra-translations instead; the pseudo-locales stay.

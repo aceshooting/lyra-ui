@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'ပြက္ခဒိန် ဖွင့်ရန်',
   item: 'အရာ',
   comboboxLoadError: 'ရွေးချယ်စရာများကို မတင်နိုင်ပါ။',
+  comboboxRichContentUnavailable: 'ဖော်မတ်ထားသော ရွေးချယ်စရာ အကြောင်းအရာ မရနိုင်ပါ။ ရိုးရိုးတံဆိပ်များကို ပြသနေသည်။',
   comboboxSelectedOverflow: 'နောက်ထပ် {n} ခု',
   checkboxRequired: 'ဆက်လက်လုပ်ဆောင်ရန် ဤအကွက်ကို အမှန်ခြစ်ပါ။',
   checkboxGroupRequired: 'အနည်းဆုံး ရွေးချယ်စရာတစ်ခုကို ရွေးပါ။',

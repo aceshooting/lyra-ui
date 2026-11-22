@@ -275,6 +275,15 @@ files matter when scaffolding a project's editor configuration. Build tools can 
 through the explicit `@aceshooting/lyra-ide/custom-elements.json` package export; native Node ESM
 uses `with { type: 'json' }` on that import.
 
+**Slim manifest in `@aceshooting/lyra-ui`.** The main package's `customElements` field points at
+`custom-elements.slim.json` (export `@aceshooting/lyra-ui/custom-elements.slim.json`), so Storybook,
+wc-toolkit and analyzers discover every tag without installing `@aceshooting/lyra-ide`. Per tag it
+lists attributes (name, `fieldName`, type, default), public fields and methods, events, slots, CSS
+parts, CSS properties and CSS states, already flattened across superclasses, with module paths at the
+shipped `dist/` files. It carries no descriptions, status, `since` or deprecation records and no
+companion-package tags; use the full `@aceshooting/lyra-ide/custom-elements.json` for those. The
+inheritance note below applies to the full manifest only.
+
 **Inherited members in `custom-elements.json`.** A subclass declaration's `cssParts` array is
 always the complete flattened set, including everything inherited from a superclass — `::part()`
 has no type-level inheritance chain a consumer could otherwise walk. `attributes`, `members`,

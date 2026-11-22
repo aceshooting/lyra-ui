@@ -17,6 +17,8 @@ import '../components/lr-color-picker.js';
 import '../components/lr-time-input.js';
 import '../components/lr-model-select.js';
 import '../components/lr-voice-picker.js';
+import '../components/lr-drawer.js';
+import '../components/lr-toast-item.js';
 
 const TEST_FLAG_SRC = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3 2"%3E%3Cpath fill="%23005" d="M0 0h3v2H0z"/%3E%3Cpath fill="white" d="M1 0h1v2H1zM0 .5h3v1H0z"/%3E%3C/svg%3E';
 before(() => setFlagUrlResolver(async () => TEST_FLAG_SRC));
@@ -378,6 +380,46 @@ it('lets a component-scoped radius outrank the shared overlay radius', async () 
   expect(paint(componentWins.box).corner, 'listbox corner with the component hook set').to.equal(
     '7px',
   );
+});
+
+it('defaults the overlay radius to the container radius on every surface that reads it', async () => {
+  // `--lr-overlay-radius` is documented as `var(--lr-radius-container)` on every tag. A surface
+  // whose own fallback still named `--lr-radius` would ignore a theme's container radius, which is
+  // the one input that tells the two apart; `--lr-radius` is pinned to a different value so a
+  // stale fallback cannot pass by coincidence.
+  const CONTAINER = '13px';
+  const theme = `--lr-radius: 2px; --lr-theme-border-radius-container: ${CONTAINER};`;
+  const wrong: string[] = [];
+  const check = (name: string, corner: string): void => {
+    if (corner !== CONTAINER) wrong.push(`${name} corner is ${corner}`);
+  };
+
+  for (const build of [...OVERLAY_BUILDERS, mountTimeInput]) {
+    const surface = await build(theme);
+    check(surface.name, paint(surface.box).corner);
+  }
+
+  const dialog = await mountDialog(theme);
+  const closeControl = shadowPart(
+    shadowPart(dialog.host, '[part~="close-button"]', 'lr-dialog'),
+    '[part~="button"]',
+    'lr-dialog close button',
+  );
+  check('lr-dialog close button', paint(closeControl).corner);
+
+  const drawer = await hostIn(
+    theme,
+    'lr-drawer',
+    html`<lr-drawer open floating label="Filters" style="--lr-duration-base: 0ms">Body</lr-drawer>`,
+  );
+  check('lr-drawer floating panel', paint(shadowPart(drawer, '[part~="panel"]', 'lr-drawer')).corner);
+  (drawer as HTMLElement & { open: boolean }).open = false;
+  await settle(drawer);
+
+  const toast = await hostIn(theme, 'lr-toast-item', html`<lr-toast-item duration="0">Saved</lr-toast-item>`);
+  check('lr-toast-item', paint(shadowPart(toast, '[part="toast-item"]', 'lr-toast-item')).corner);
+
+  expect(wrong.join('\n'), 'surfaces whose unset overlay radius ignored the container radius').to.equal('');
 });
 
 it('reaches an anchored surface outside the six components the family enumerates', async () => {

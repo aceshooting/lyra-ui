@@ -516,7 +516,7 @@ export class LyraCheckbox extends CheckedFormAssociated(LyraCheckboxBase) {
               ${mixed ? indeterminateGlyph() : this.checked ? checkmarkGlyph() : nothing}
             </span>
           </span>
-          <span id="checkbox-label" part="label" ?hidden=${!this.hasLabelSlot}>
+          <span id="checkbox-label" part="label" ?hidden=${!this.renderSlotPresence(this.hasLabelSlot)}>
             <slot @slotchange=${this.labelController.onSlotChange}></slot>
           </span>
         </span>

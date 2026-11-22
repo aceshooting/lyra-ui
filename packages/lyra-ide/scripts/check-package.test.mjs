@@ -24,7 +24,7 @@ function check(context, edit = () => {}) {
   const repository = mkdtempSync(join(tmpdir(), 'lyra-ide-contract-'));
   context.after(() => rmSync(repository, { recursive: true, force: true }));
   const manifest = structuredClone(realManifest);
-  const ui = { version: manifest.version, files: ['dist', 'README.md'] };
+  const ui = { version: manifest.version, customElements: 'custom-elements.slim.json', files: ['dist', 'README.md', 'custom-elements.slim.json'] };
   const root = { packageManager: manifest.packageManager };
   edit(manifest, ui, root);
   const ide = join(repository, 'packages/lyra-ide');
@@ -59,7 +59,9 @@ const violations = [
   ['a peer range other than the workspace caret', manifest => { manifest.peerDependencies['@aceshooting/lyra-ui'] = '1.0.0'; }, /1\.0\.0/u],
   ['a runtime dependency', manifest => { manifest.dependencies = { 'left-pad': '1.0.0' }; }, /left-pad/u],
   ['a version that no longer follows lyra-ui', manifest => { manifest.version = '0.0.1'; }, /changeset fixed group/u],
-  ['lyra-ui publishing a customElements pointer', (_manifest, ui) => { ui.customElements = 'custom-elements.json'; }, /lyra-ui must not publish editor data/u],
+  ['lyra-ui pointing customElements at the full manifest', (_manifest, ui) => { ui.customElements = 'custom-elements.json'; }, /never the full editor data/u],
+  ['lyra-ui dropping its customElements pointer', (_manifest, ui) => { delete ui.customElements; }, /slim manifest/u],
+  ['lyra-ui not publishing its slim manifest', (_manifest, ui) => { ui.files = ui.files.filter((file) => file !== 'custom-elements.slim.json'); }, /must publish its slim manifest/u],
   ['lyra-ui publishing a web-types pointer', (_manifest, ui) => { ui['web-types'] = 'web-types.json'; }, /lyra-ui must not publish editor data/u],
   ...IDE_DATA_FILES.map(file => [`lyra-ui publishing ${file}`,
     (_manifest, ui) => { ui.files.push(file); }, new RegExp(`lyra-ui must not publish ${file.replaceAll('.', '\\.')}`, 'u')]),

@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'کلیزندر پرانیزئ',
   item: 'توکی',
   comboboxLoadError: 'غوراوي نه شوې راوړل کېدای.',
+  comboboxRichContentUnavailable: 'د انتخابونو بڼه شوې منځپانګه شتون نه لري. ساده لیبلونه ښودل کېږي.',
   comboboxSelectedOverflow: '+{n} نور',
   checkboxRequired: 'که دوام ورکول غواړئ، دا بکس نښه کړئ.',
   checkboxGroupRequired: 'لږ تر لږه یو انتخاب وکړئ.',

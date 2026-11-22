@@ -29,7 +29,7 @@ import { css } from 'lit';
  *   `--lr-color-border` for a popup that belongs to a form control. Content separators *inside*
  *   an overlay (a menu's header rule, a slotted `hr`) are deliberately not part of this: they
  *   divide content, they do not draw the surface.
- * - `--lr-overlay-radius` — the corner radius, defaulting to `--lr-radius`.
+ * - `--lr-overlay-radius` — the corner radius, defaulting to `--lr-radius-container`.
  *
  * Edge tier. A floating panel — a popover, a dropdown or menu, a detail or preview card, a
  * floating toolbar, a dialog panel — takes the decorative tier, `--lr-color-border-subtle`.

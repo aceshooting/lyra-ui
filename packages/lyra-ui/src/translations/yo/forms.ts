@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'Ṣí kàlẹ́ńdà',
   item: 'ohun',
   comboboxLoadError: 'Kò ṣeé ṣe láti gbé àwọn àṣàyàn wọlé.',
+  comboboxRichContentUnavailable: 'Àkóónú àṣàyàn tí a ṣe àtòjọ rẹ̀ kò sí. À ń fi àwọn àmì lásán hàn.',
   comboboxSelectedOverflow: '+{n} sí i',
   checkboxRequired: 'Tẹ àpótí yìí bí o bá fẹ́ tẹ̀síwájú.',
   checkboxGroupRequired: 'Yan ó kéré tán àṣàyàn kan.',

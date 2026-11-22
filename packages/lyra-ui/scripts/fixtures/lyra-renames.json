@@ -8862,6 +8862,34 @@
           "since": "32.0.0"
         }
       ]
+    },
+    {
+      "origin": "lyra-v32",
+      "fromMajor": 32,
+      "toMajor": 33,
+      "aliasRemovalMajor": 34,
+      "renames": [],
+      "defaults": [],
+      "detailChanges": [],
+      "reviews": [],
+      "slotContent": [],
+      "moduleReviews": [],
+      "propertyChanges": [
+        {
+          "tag": "lr-token-input",
+          "property": "delimiter",
+          "summary": "Each character of delimiter is now a separate delimiter (\";,\" splits at every semicolon and every comma, and typing either commits); a multi-character value no longer matches only as one whole string, so review a delimiter longer than one character."
+        }
+      ],
+      "globals": [
+        {
+          "kind": "css-property",
+          "from": "--lr-form-control-label-block-gap",
+          "to": "--lr-form-control-label-gap",
+          "summary": "One label gap spaces a label above the field as well as a label-placement=\"start\" column, so a value set for the start column now also spaces top labels; scope it to the start-placed controls if only the column should change.",
+          "since": "33.0.0"
+        }
+      ]
     }
   ]
 }

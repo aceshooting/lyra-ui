@@ -288,6 +288,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   embeddingExplorerSpatialError: 'The spatial source or viewport is invalid or unavailable.',
   embeddingExplorerSpatialLoading: 'Loading spatial data…',
   comboboxLoadError: 'Could not load options.',
+  comboboxRichContentUnavailable: 'Formatted option content is unavailable. Showing plain labels.',
   comboboxSelectedOverflow: '+{n} more',
   promptQueueItemLabel: 'Queued prompt {index}',
   promptQueueActionLabel: '{action}, queued prompt {index}',

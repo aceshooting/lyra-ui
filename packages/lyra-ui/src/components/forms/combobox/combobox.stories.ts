@@ -960,6 +960,31 @@ export const DataSourceOptionsEvents: Story = {
   `,
 };
 
+const HTML_CITIES = [
+  { value: 'lisbon', label: 'Lisbon, Portugal', html: '<b>Lisbon</b> <small>Portugal</small>' },
+  { value: 'lyon', label: 'Lyon, France', html: '<b>Lyon</b> <small>France</small>' },
+  { value: 'lima', label: 'Lima, Peru', html: '<b>Lima</b> <small>Peru</small><img src="x" onerror="alert(1)">' },
+];
+
+export const DataSourceOptionHtml: Story = {
+  name: 'dataSource rows with sanitized html',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A returned option may carry html. It renders only after the optional dompurify peer sanitizes it (the onerror handler and image request in the Lima row are removed); while the peer loads, or if it is missing, each row shows its plain label and a localized note explains why. The label stays the accessible name, filter text and committed text.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-combobox
+      label="City"
+      .dataSource=${({ query }: { query: string }) =>
+        HTML_CITIES.filter(city => city.label.toLowerCase().includes(query.toLowerCase()))}
+    ></lr-combobox>
+  `,
+};
+
 const SERVER_CITIES = ['Lisbon', 'Lyon', 'Lima', 'Ljubljana', 'Luxembourg'];
 
 export const ServerModeAndStatusSlots: Story = {

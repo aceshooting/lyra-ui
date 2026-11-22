@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'Άνοιγμα ημερολογίου',
   item: 'στοιχείο',
   comboboxLoadError: 'Δεν ήταν δυνατή η φόρτωση των επιλογών.',
+  comboboxRichContentUnavailable: 'Το μορφοποιημένο περιεχόμενο των επιλογών δεν είναι διαθέσιμο. Εμφανίζονται απλές ετικέτες.',
   comboboxSelectedOverflow: '+{n} ακόμη',
   checkboxRequired: 'Επιλέξτε αυτό το πλαίσιο για να συνεχίσετε.',
   checkboxGroupRequired: 'Επιλέξτε τουλάχιστον μία επιλογή.',

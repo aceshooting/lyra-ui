@@ -202,7 +202,7 @@ function registerMenuWidthScale(doc: Document): void {
  * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge
  *   colour, on the same two surfaces. The header/footer dividing rules and a slotted `hr` are
  *   deliberately excluded: they separate content, they do not draw the surface's own edge.
- * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, on the
+ * @cssprop [--lr-overlay-radius=var(--lr-radius-container)] - Shared floating-surface corner radius, on the
  *   same two surfaces.
  * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored submenu
  *   surface.

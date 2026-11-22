@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'Ava kalender',
   item: 'üksus',
   comboboxLoadError: 'Valikuid ei õnnestunud laadida.',
+  comboboxRichContentUnavailable: 'Valikute vormindatud sisu pole saadaval. Kuvatakse lihtsad sildid.',
   comboboxSelectedOverflow: '+{n} veel',
   checkboxRequired: 'Jätkamiseks märkige see ruut.',
   checkboxGroupRequired: 'Valige vähemalt üks valik.',

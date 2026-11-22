@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'Kaalaandarii bani',
   item: 'wanta',
   comboboxLoadError: 'Filannoowwan fe\'uun hin danda\'amne.',
+  comboboxRichContentUnavailable: 'Qabiyyeen filannoo qindaa’e hin jiru. Mallattoowwan salphaan agarsiifamaa jiru.',
   comboboxSelectedOverflow: '+{n} dabalataa',
   checkboxRequired: 'Itti fufuuf sanduuqa kana mallatteessi.',
   checkboxGroupRequired: 'Filannoo tokko yoo xiqqaate filadhu.',

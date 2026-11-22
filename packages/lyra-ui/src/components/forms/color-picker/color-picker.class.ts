@@ -331,15 +331,14 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=inherit] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
- * @cssprop [--lr-form-control-label-block-gap=var(--lr-space-xs)] - Space between a label above
- *   the field and the field, in top placement and once a `label-placement="start"` row collapses.
  * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
  * @cssprop [--lr-form-control-label-text-align=inherit] - Text alignment of the field label.
  * @cssprop [--lr-form-control-label-text-transform=inherit] - Text transform of the field label.
  * @cssprop [--lr-form-control-label-inline-size=30%] - Label column width while
- *   `label-placement="start"`.
- * @cssprop [--lr-form-control-label-gap=var(--lr-space-m)] - Space between the label column and
- *   the field while `label-placement="start"`.
+ *   `label-placement="start"`; `auto` sizes the column to the label text.
+ * @cssprop [--lr-form-control-label-gap] - Space between the label and the field: the label
+ *   column gap while `label-placement="start"` (default `var(--lr-space-m)`), and the gap under a
+ *   label above the field, in top placement or a collapsed start row (default the picker row gap, `--lr-color-picker-gap` (`var(--lr-space-xs)`)).
  * @cssprop [--lr-form-control-label-collapse-inline-size=var(--lr-size-20rem)] - Control width
  *   below which `label-placement="start"` returns the label above the field.
  * @csspart form-control-label - The label. It also carries the `label` compatibility name.
@@ -444,8 +443,10 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  * @cssprop [--lr-overlay-border=var(--lr-color-border)] - Shared floating-surface edge colour, on
  * the picker panel. Unlike a floating panel's decorative edge, it defaults to
  * the control tier: this popup belongs to the control it opens from.
- * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, read by
- * the picker panel only as the middle arm of `--lr-color-picker-radius`, which still wins when set.
+ * @cssprop --lr-overlay-radius - Shared floating-surface corner radius, read by the picker panel only as
+ * the middle arm of `--lr-color-picker-radius`, which still wins when set. Left unset, the picker panel keeps
+ * this component's own radius default instead of the overlay family's `var(--lr-radius-container)`,
+ * so it keeps matching the trigger.
  * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored surface.
  * @cssprop --lr-positioning-strategy - Cascading `absolute`/`fixed` override for
  *   {@link positioningStrategy}/`hoist`, read from computed style when the panel is

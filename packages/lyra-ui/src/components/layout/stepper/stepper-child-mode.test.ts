@@ -466,6 +466,67 @@ describe('lr-step custom states', () => {
     expect(states(a!)).to.deep.equal(['active', 'completed']);
     expect(states(b!)).to.deep.equal([]);
   });
+
+  it('publishes author-defined custom-states names and follows changes', async () => {
+    const el = await fixture<LyraStepper>(html`
+      <lr-stepper>
+        <lr-step name="a" custom-states="error  retried error">A</lr-step>
+        <lr-step name="b">B</lr-step>
+      </lr-stepper>
+    `);
+    const [a, b] = stepsOf(el);
+    await Promise.all(stepsOf(el).map((step) => step.updateComplete));
+    expect(a!.matches(':state(error)')).to.equal(true);
+    expect(a!.matches(':state(retried)')).to.equal(true);
+    expect(b!.matches(':state(error)')).to.equal(false);
+    // Styling through the state reaches the marker part.
+    const style = document.createElement('style');
+    style.textContent = 'lr-step:state(error)::part(marker) { outline: 3px solid rgb(255, 0, 0); }';
+    document.head.append(style);
+    try {
+      expect(getComputedStyle(a!.shadowRoot!.querySelector('[part="marker"]')!).outlineColor).to.equal('rgb(255, 0, 0)');
+      expect(getComputedStyle(b!.shadowRoot!.querySelector('[part="marker"]')!).outlineStyle).to.equal('none');
+    } finally {
+      style.remove();
+    }
+    const before = status(a!);
+    a!.customStates = 'retried';
+    await a!.updateComplete;
+    expect(a!.matches(':state(error)')).to.equal(false);
+    expect(a!.matches(':state(retried)')).to.equal(true);
+    expect(status(a!)).to.equal(before);
+    a!.removeAttribute('custom-states');
+    a!.customStates = '';
+    await a!.updateComplete;
+    expect(a!.matches(':state(retried)')).to.equal(false);
+  });
+
+  it('ignores built-in, invalid and excess custom-states names', async () => {
+    const many = Array.from({ length: 40 }, (_, i) => `s${i}`).join(' ');
+    const el = await fixture<LyraStepper>(html`
+      <lr-stepper>
+        <lr-step name="a" custom-states="completed 9lives -1x ${'x'.repeat(65)} ok">A</lr-step>
+        <lr-step name="b" custom-states=${many}>B</lr-step>
+      </lr-stepper>
+    `);
+    const [a, b] = stepsOf(el);
+    await Promise.all(stepsOf(el).map((step) => step.updateComplete));
+    expect(a!.matches(':state(ok)')).to.equal(true);
+    // A built-in name in the list neither adds the state nor removes the step's own value.
+    expect(a!.matches(':state(completed)')).to.equal(false);
+    a!.completed = true;
+    a!.customStates = 'ok';
+    await a!.updateComplete;
+    expect(a!.matches(':state(completed)')).to.equal(true);
+    expect(b!.matches(':state(s31)')).to.equal(true);
+    expect(b!.matches(':state(s32)')).to.equal(false);
+  });
+
+  it('keeps custom-states unset by default', async () => {
+    const el = await fixture<LyraStep>(html`<lr-step name="solo">Solo</lr-step>`);
+    expect(el.customStates).to.equal('');
+    expect(el.hasAttribute('custom-states')).to.equal(false);
+  });
 });
 
 describe('lr-stepper upstream-compatible surface', () => {

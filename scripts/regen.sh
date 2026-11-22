@@ -147,7 +147,7 @@ pnpm --filter @aceshooting/lyra-ui theme-scopes
 step "adoptable reservation stylesheet (src/styles/reservations.styles.ts)"
 pnpm --filter @aceshooting/lyra-ui generate-reservation-styles
 
-step "editor data (vscode-html-data.json / vscode-css-data.json / web-types.json)"
+step "editor data (vscode-html-data.json / vscode-css-data.json / web-types.json / custom-elements.slim.json)"
 pnpm --filter @aceshooting/lyra-ui generate-editor-data
 
 step "Claude/Codex plugin manifest versions"
@@ -234,6 +234,7 @@ CHANGED_PATHS=(
   packages/lyra-ui/vscode-html-data.json
   packages/lyra-ui/vscode-css-data.json
   packages/lyra-ui/web-types.json
+  packages/lyra-ui/custom-elements.slim.json
   packages/lyra-ui/llms.txt
   packages/lyra-ui/llms-full.txt
   packages/lyra-ui/llms/

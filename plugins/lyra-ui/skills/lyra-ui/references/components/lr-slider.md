@@ -17,7 +17,7 @@
 
 ## `lr-slider`
 
-**Label and readout.** The label inherits the surrounding font size by default; set `--lr-form-control-label-font-size: var(--lr-font-size-md-sm)` on the slider or a containing form to match the `lr-input`/`lr-select` label size. `label-placement="start"` (see "Label beside the field") puts the label in a column beside a horizontal track. `with-value` shows the **localized number** by default, even when a `valueFormatter` is set and even with `value-placement="label"`; the formatter feeds `aria-valuetext` and the tooltip only. Set `value-display="formatted"` to show the formatter's text in the readout. This is deliberate: a formatter written for assistive text (`"40 percent"`) would otherwise change the visible readout of every existing slider.
+**Label and readout.** The label uses the form-control label size, `var(--lr-font-size-md-sm)`, like `lr-input` and `lr-select`; set `--lr-form-control-label-font-size: 1em` on the slider to follow the surrounding font size instead. `label-placement="start"` (see "Label beside the field") puts the label in a column beside a horizontal track. `with-value` shows the **localized number** by default, even when a `valueFormatter` is set and even with `value-placement="label"`; the formatter feeds `aria-valuetext` and the tooltip only. Set `value-display="formatted"` to show the formatter's text in the readout. This is deliberate: a formatter written for assistive text (`"40 percent"`) would otherwise change the visible readout of every existing slider.
 
 Labelled `marks` render in the `marks` part: one `mark` per tick, a `mark-label` per label, and
 `mark-label-thinned` on a label hidden for overlapping its neighbour.

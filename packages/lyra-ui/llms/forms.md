@@ -86,12 +86,15 @@ Set `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, 
 `--lr-font-size-md-sm`, while checkbox-group and radio-group labels follow their control’s size tier.
 Set the three tokens on a form to give its field and group labels the same typography.
 `--lr-form-control-label-text-align` and `--lr-form-control-label-text-transform` (both default
-`inherit`) align and transform the same labels. A label above its field sits
-`--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`) from it in `lr-input`,
-`lr-textarea`, `lr-select`, `lr-combobox`, `lr-date-input`, `lr-time-input`, `lr-phone-input`,
-`lr-signature-pad`, `lr-locale-picker`, `lr-file-input` and the catalog pickers, including a
-`label-placement="start"` row once it collapses; `--lr-form-control-label-gap` stays the
-start-placement column gap.
+`inherit`) align and transform the same labels.
+
+One token, `--lr-form-control-label-gap`, spaces the label from its field in every placement: the
+inline gap of a `label-placement="start"` column (default `var(--lr-space-m)`), and the block gap
+under a label above the field, in top placement and in a start row that has collapsed (default
+`var(--lr-space-xs)`; `lr-radio-group` uses its row gap, `lr-checkbox-group` `0px` and `lr-slider`
+its row gap, `--lr-slider-gap`). It applies to every control that takes `label-placement`, plus
+`lr-segmented` and `lr-file-input`. Setting it on a form therefore moves top labels as well as
+start columns; scope it to the start-placed controls when only the column gap should change.
 
 ## Hiding the label visually: `label-display`
 
@@ -127,6 +130,10 @@ readout row take the column), the legend-style groups `lr-checkbox-group` and `l
 toolbar slot moves below the options) and, in the conversation family, `lr-model-select` and
 `lr-voice-picker`. `lr-segmented` keeps the label above. The label sits in an inline-start column of `--lr-form-control-label-inline-size` (default `30%`), `--lr-form-control-label-gap`
 (default `var(--lr-space-m)`) from the field, and the hint and error stay aligned under the field.
+`--lr-form-control-label-inline-size: auto` sizes the column to the label text instead, never wider
+than the row; a long label then stays on one line and the field takes the rest. The hint and error of
+a content-sized column start at the row's inline-start edge, because the indent cannot be derived
+from a keyword width.
 The label is top-aligned, level with the first line of the field, so it stays beside the first line
 of a tall field (`lr-textarea`, `lr-code-editor`, `lr-signature-pad`) instead of centring on it. With
 `label-display="hidden"` or no label the field spans the row and the hint and error start under it.
@@ -140,6 +147,10 @@ no size containment. The `<label for>` association is unchanged.
   <lr-input label="Reference" label-placement="start"></lr-input>
   <lr-select label="Carrier" label-placement="start">…</lr-select>
 </form>
+
+<!-- A content-sized column: each label is as wide as its text. -->
+<lr-input label="Delivery instructions" label-placement="start"
+  style="--lr-form-control-label-inline-size: auto"></lr-input>
 ```
 
 ## Touch font floor
@@ -558,6 +569,7 @@ AbortSignal; limit: number }) => Promise<readonly ComboboxSourceRow[] | { rows, 
   into an inert document and never inserted, so nothing in it runs; only its top-level `<option>` or
   `*-option` elements become rows. It drives the same pipeline as
   `source` (debounce, `lr-options-request`, cancellation, loading and failed states, row ceilings).
+  An option object may carry `html` (rich row content, see `ComboboxSourceRow.html` below).
   Assigning either provider replaces the other, and `dataSource` reads `null` once `source` is
   assigned; `source` keeps its `(query, { signal, limit })` shape.
 - `server: boolean = false` (attribute `server`, reflected) — server mode without a provider:
@@ -658,7 +670,7 @@ every selection change and a `form.reset()` — like a native control, only anot
 **8.0 migration:** the former camel-case string property `autoCorrect` is not retained as a public
 alias. Set the boolean `autocorrect` IDL, or use `autocorrect="on"` / `autocorrect="off"` in markup.
 
-`ComboboxSourceRow = { readonly value: string; readonly label: string; readonly sub?: string; readonly icon?: unknown; readonly start?: unknown;
+`ComboboxSourceRow = { readonly value: string; readonly label: string; readonly sub?: string; readonly html?: string; readonly icon?: unknown; readonly start?: unknown;
 readonly end?: unknown; readonly badge?: string |
 number; readonly title?: string; accessibleLabel?: string; data?: unknown; dotColor?: string; group?: string; disabled?:
 boolean }` — the row shape used by the async `source` path. `start` and `end` (new in 11.0.0) are
@@ -671,6 +683,19 @@ of the accessible name), and `data` is retained without being rendered
 for retrieval through `selectedRows`.
 `dotColor` accepts a valid CSS `color`; invalid values, declaration-breaking input, and `url()`
 render a transparent dot.
+`html` is optional rich markup shown in place of the label text, as the `option-html`
+part. It always passes through the optional `dompurify` peer (install it to use this field) and then a
+passive-content pass: script, event handlers, `style`, `part`, network attributes (`src`, `href`, …),
+iframes and media are removed, and links, buttons, form controls and custom elements are replaced by
+their text. A result superseded by a newer query is never applied. The row's text `label` remains its
+accessible name, filter text and committed text, and the rich content is `aria-hidden`; use
+`accessibleLabel` for a fuller spoken name as usual. While the peer loads, every row shows its plain
+label. If the peer is missing, unusable or throws, rows stay on their plain labels (raw markup is never
+rendered), the listbox shows the localized `comboboxRichContentUnavailable` message as
+`option-html-fallback` (plain text, not a live region), and the same message is announced once to
+`[data-lr-live-region="polite"]`. Markup longer than 4,096 UTF-16 code units, or markup that sanitizes
+to nothing, leaves the plain label. Style the content through `::part(option-html)` and inherited properties; class names in the
+markup do not match the component's shadow styles.
 The light-DOM `<lr-option>` path normalizes its supported label/sub/dot/group/data fields to the
 same internal row model — `<lr-option data>` is the light-DOM counterpart of an async row's own
 `data` field, reached by reference through `selectedRows` exactly the same way.
@@ -847,6 +872,8 @@ aria-hidden adornments cloned from the source option's `start`/`prefix` and `end
 from an async row's `start`/`end`), `option-label`, `option-sub` (a row's
 secondary line, when `sub` is set), `option-badge` (an async row's trailing metadata),
 `option-overflow` (the "+N more" indicator from `maxRender`),
+`option-html` (the sanitized rich content of an async row carrying `html`, hidden from assistive
+technology), `option-html-fallback` (the localized note shown when the `dompurify` peer is unavailable),
 `source-error-row` (the listbox row holding the failed-`source` state), `source-error` (the shared
 failed-load state itself, with `source-error-base`, `source-error-icon`, `source-error-heading`,
 `source-error-description` and `source-error-actions` forwarded from the composed `<lr-empty>`),
@@ -933,7 +960,7 @@ can retheme the selected row without hijacking `--lr-color-brand` library-wide.
 The listbox popup itself is a floating surface and paints from the **shared overlay-surface family**
 (16.0.0), not from the page surface every card and input reads: `--lr-overlay-surface` (default
 `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default `var(--lr-color-border)`),
-`--lr-overlay-radius` (default `var(--lr-radius)`) and `--lr-overlay-shadow-anchored` (default
+`--lr-overlay-radius` (default `var(--lr-radius-container)`) and `--lr-overlay-shadow-anchored` (default
 `var(--lr-shadow-m)`). None is declared on `:host`, so one declaration on `:root` — or on any
 ancestor, to scope it — retints this popup together with every other floating surface, and none of
 it touches the trigger row the popup drops from. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
@@ -1128,7 +1155,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -1543,7 +1570,7 @@ Mapped hooks `--tag-max-size` (default `var(--lr-size-12rem)`), `--show-duration
 
 The listbox is a floating surface and paints from the **shared overlay-surface family** (16.0.0):
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
-`var(--lr-color-border)`), `--lr-overlay-radius` (default `var(--lr-radius)`) and
+`var(--lr-color-border)`), `--lr-overlay-radius` (default `var(--lr-radius-container)`) and
 `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is declared on `:host`, so one
 declaration on `:root` — or on any ancestor, to scope it — retints this listbox together with every
 other floating surface; the trigger it drops from is untouched and keeps the hooks below.
@@ -1709,7 +1736,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
@@ -2287,7 +2314,7 @@ and `dateTimeFormat(locale, options)`.
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -2559,7 +2586,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -3663,7 +3690,7 @@ first field's, referenced here by id.
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
@@ -3870,7 +3897,7 @@ The exact-320px RTL story keeps long label/hint copy and both fixed-size stepper
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 - `--lr-input-line-height` (default `inherit`): Line height of the native input text.
@@ -4053,7 +4080,7 @@ replaced by it.
 
 The `popup` panel is a floating surface and paints from the **shared overlay-surface family**
 (16.0.0): `--lr-overlay-surface`, `--lr-overlay-border` (default `var(--lr-color-border)`),
-`--lr-overlay-radius` (default `var(--lr-radius)`) and `--lr-overlay-shadow-anchored` (default
+`--lr-overlay-radius` (default `var(--lr-radius-container)`) and `--lr-overlay-shadow-anchored` (default
 `var(--lr-shadow-m)`). None is declared on `:host`, so one declaration on `:root` — or on any
 ancestor, to scope it — retints this panel together with every other floating surface in the
 library. One deliberate difference from the rest of the family: `--lr-overlay-surface` defaults here
@@ -4091,7 +4118,7 @@ Further custom properties:
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 
 ## `lr-native-time-input`
 
@@ -4195,7 +4222,7 @@ entry for the flush and cancellation rules.
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 - `--lr-input-line-height` (default `inherit`): Line height of the native input text.
@@ -4533,7 +4560,7 @@ Further custom properties:
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 
 ## `lr-time-range`
 
@@ -5540,7 +5567,7 @@ checkbox and does not emit `lr-change`.
 
 ## `lr-slider`
 
-**Label and readout.** The label inherits the surrounding font size by default; set `--lr-form-control-label-font-size: var(--lr-font-size-md-sm)` on the slider or a containing form to match the `lr-input`/`lr-select` label size. `label-placement="start"` (see "Label beside the field") puts the label in a column beside a horizontal track. `with-value` shows the **localized number** by default, even when a `valueFormatter` is set and even with `value-placement="label"`; the formatter feeds `aria-valuetext` and the tooltip only. Set `value-display="formatted"` to show the formatter's text in the readout. This is deliberate: a formatter written for assistive text (`"40 percent"`) would otherwise change the visible readout of every existing slider.
+**Label and readout.** The label uses the form-control label size, `var(--lr-font-size-md-sm)`, like `lr-input` and `lr-select`; set `--lr-form-control-label-font-size: 1em` on the slider to follow the surrounding font size instead. `label-placement="start"` (see "Label beside the field") puts the label in a column beside a horizontal track. `with-value` shows the **localized number** by default, even when a `valueFormatter` is set and even with `value-placement="label"`; the formatter feeds `aria-valuetext` and the tooltip only. Set `value-display="formatted"` to show the formatter's text in the readout. This is deliberate: a formatter written for assistive text (`"40 percent"`) would otherwise change the visible readout of every existing slider.
 
 Labelled `marks` render in the `marks` part: one `mark` per tick, a `mark-label` per label, and
 `mark-label-thinned` on a label hidden for overlapping its neighbour.
@@ -6372,7 +6399,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -6501,7 +6528,7 @@ fieldset disablement, so the group behaves like one native control.
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
@@ -6636,7 +6663,7 @@ a `.value=${...}` binding on first render) is applied once they arrive.
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
@@ -6811,13 +6838,14 @@ remove button from the tab order, never blocks `focus()`, and never excludes the
 `FormData` on submit — only `disabled` does that. Turning it on while a draft is half-typed or an
 inline editor is open discards that uncommitted state without moving focus.
 
-**`delimiter` is nullable, and only a single character acts as a commit key.** It does two separate
-jobs: it splits a committed draft into several tokens, and — _only when it is exactly one
-character_ — it is the keystroke that commits the draft. A multi-character delimiter is matched as
-one literal sequence: it still splits a pasted or committed draft, but no keystroke can ever match
-it, so nothing commits on typing. Pasting never commits by itself; the pasted text joins the draft.
+**`delimiter` is a set of single characters, and it is nullable.** Each character of the string is
+a delimiter on its own: `delimiter=";,"` splits at every semicolon and at every comma, and typing
+either one commits the draft. It does two jobs: it splits
+a committed draft (and a string assigned to `value`) into several tokens, and it supplies the
+keystrokes that commit the draft. Characters are code points, so an emoji delimiter stays whole.
+Pasting never commits by itself; the pasted text joins the draft.
 Setting it to `null` disables both, so a token may contain the delimiter verbatim. **`delimiter="null"`
-does not work** — that is the four-character string `null`. Use `delimiter="none"`, `delimiter=""`
+does not work** — that makes `n`, `u` and `l` delimiters. Use `delimiter="none"`, `delimiter=""`
 (both of which the attribute converter maps to `null`), or a property binding
 (`.delimiter=${null}`). Removing the attribute restores the `,` default.
 
@@ -6834,7 +6862,7 @@ and the control is neither disabled nor readonly. It proposes each removal throu
 `lr-clear`, and returns focus to the draft input.
 
 **`value` and `inputValue`.** The array stays canonical, but assigning a string to `value` (or
-`defaultValue`) splits it on the `delimiter` sequence (comma when none) into trimmed, non-empty tokens;
+`defaultValue`) splits it at each character of `delimiter` (comma when none) into trimmed, non-empty tokens;
 the reflected `value` attribute remains a JSON array. `inputValue` reads and writes the uncommitted draft
 without committing it.
 
@@ -6905,7 +6933,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -7081,7 +7109,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -7385,8 +7413,8 @@ The popup panel is a floating surface and paints from the **shared overlay-surfa
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
 `var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
-surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) reaches it only as the middle arm of
-`--lr-color-picker-radius`, which still wins when set. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+surface together with every other floating surface in the library. `--lr-overlay-radius` reaches it only as the middle arm of
+`--lr-color-picker-radius`, which still wins when set; left unset, the panel keeps the component's own radius default. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
 decorative `var(--lr-color-border-subtle)` floating panels default to: this panel belongs to the
 form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
@@ -7464,7 +7492,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -8167,7 +8195,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -8827,7 +8855,7 @@ preserve their shared part names and inherit shared form-control and surface tok
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 
 ## Currency catalog and rate helpers
 
@@ -9017,7 +9045,7 @@ including RTL and dark themes. `--lr-form-control-invalid-border-color` themes t
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 
 ## `lr-time-zone-picker`
 
@@ -9080,7 +9108,7 @@ in both modes, following the country picker's event contract.
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 
 ## `lr-unit-picker`
 
@@ -9141,7 +9169,7 @@ in both modes, following the country picker's event contract.
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 
 ## Country, time-zone and unit catalog helpers
 
@@ -9321,7 +9349,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.

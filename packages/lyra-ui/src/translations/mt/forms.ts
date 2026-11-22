@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'Iftaħ il-kalendarju',
   item: 'element',
   comboboxLoadError: 'L-għażliet ma setgħux jitgħabbew.',
+  comboboxRichContentUnavailable: 'Il-kontenut ifformattjat tal-għażliet mhuwiex disponibbli. Qed jintwerew tikketti sempliċi.',
   comboboxSelectedOverflow: '+{n} oħra',
   checkboxRequired: 'Jekk jogħġbok immarka din il-kaxxa jekk trid tkompli.',
   checkboxGroupRequired: 'Agħżel mill-inqas għażla waħda.',

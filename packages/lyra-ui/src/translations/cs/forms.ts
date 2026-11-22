@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'Otevřít kalendář',
   item: 'položka',
   comboboxLoadError: 'Možnosti se nepodařilo načíst.',
+  comboboxRichContentUnavailable: 'Formátovaný obsah možností není k dispozici. Zobrazují se prosté popisky.',
   comboboxSelectedOverflow: '+{n} další',
   checkboxRequired: 'Chcete-li pokračovat, zaškrtněte toto políčko.',
   checkboxGroupRequired: 'Vyberte alespoň jednu možnost.',

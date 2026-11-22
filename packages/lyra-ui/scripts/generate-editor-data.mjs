@@ -5,6 +5,9 @@
 //   - web-types.json         (JetBrains' web-types format -- tags, attributes, JS properties, DOM
 //                              events, slots and CSS properties; CSS-part tables remain
 //                              tag-description prose)
+//   - custom-elements.slim.json (lyra-ui's own `customElements` target: the flattened, prose-free
+//                              discovery manifest from scripts/slim-manifest.mjs; the three files
+//                              above and the full manifest publish from @aceshooting/lyra-ide)
 // TypeScript consumers already get tag/attribute completion via the generated
 // `HTMLElementTagNameMap` (produced by `tsc` alongside `dist/*.d.ts`). Plain HTML, Vue templates,
 // and Angular templates never go through that type graph, so editors need these small JSON data
@@ -39,19 +42,20 @@ import { editorDescription, editorMemberDescription, editorSummary, isCurrentEdi
 import { mergeDesignTokenEditorProperties } from './design-token-editor.mjs';
 import { expandManifestInheritance } from './manifest-compact.mjs';
 import { mergeManifests, readCompanionManifests } from './companion-manifests.mjs';
+import { SLIM_MANIFEST_FILE, renderSlimManifest } from './slim-manifest.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const manifestPath = join(packageDir, 'custom-elements.json');
 const htmlDataPath = join(packageDir, 'vscode-html-data.json');
 const cssDataPath = join(packageDir, 'vscode-css-data.json');
 const webTypesPath = join(packageDir, 'web-types.json');
+const slimManifestPath = join(packageDir, SLIM_MANIFEST_FILE);
 const publishedJson = (value) => `${JSON.stringify(value)}\n`;
 
 // Companion packages (lyra-docs, lyra-gen) register their own tags; their manifests join lyra-ui's so
 // the editor data covers every `lr-*` element a consumer can import.
-const manifest = expandManifestInheritance(
-  mergeManifests(JSON.parse(readFileSync(manifestPath, 'utf8')), readCompanionManifests()),
-);
+const ownManifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+const manifest = expandManifestInheritance(mergeManifests(structuredClone(ownManifest), readCompanionManifests()));
 const pkg = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8'));
 const designTokenInput = JSON.parse(
   readFileSync(join(packageDir, 'scripts', 'fixtures', 'token-editor.generated.json'), 'utf8'),
@@ -210,11 +214,13 @@ const webTypes = {
 };
 
 writeFileSync(webTypesPath, publishedJson(webTypes));
+// Only lyra-ui's own tags: companion packages publish their elements from their own packages.
+writeFileSync(slimManifestPath, renderSlimManifest(ownManifest));
 
 const webTypesElements = webTypes.contributions.html.elements;
 const countTags = (predicate) => webTypesElements.filter(predicate).length;
 console.log(
-  `Wrote ${customElements.length} tags to vscode-html-data.json, ${cssData.properties.length} custom properties to vscode-css-data.json, and both to web-types.json ` +
+  `Wrote ${customElements.length} tags to vscode-html-data.json, ${cssData.properties.length} custom properties to vscode-css-data.json, both to web-types.json, and the slim manifest to ${SLIM_MANIFEST_FILE} ` +
     `(${countTags((element) => element.js?.properties?.length)} tags with JS properties, ` +
     `${countTags((element) => element.js?.events?.length)} with events, ` +
     `${countTags((element) => element.slots?.length)} with slots)`,

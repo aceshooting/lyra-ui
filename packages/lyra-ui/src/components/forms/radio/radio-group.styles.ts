@@ -21,6 +21,11 @@ export const groupStyles = css`
   }
   [part~="label"] {
     ${formControlLabelTypography({ size: css`var(--lr-form-control-font-size)`, color: css`var(--lr-color-text)` })}
+    /* --lr-form-control-label-gap replaces the row gap under the label; unset, the margin is zero. */
+    margin-block-end: calc(
+      var(--lr-form-control-label-gap, var(--lr-radio-group-row-gap, var(--_lr-radio-group-row-gap))) -
+        var(--lr-radio-group-row-gap, var(--_lr-radio-group-row-gap))
+    );
   }
   [part~="label"][hidden],
   [part~="hint"][hidden],

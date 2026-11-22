@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'Fungua kalenda',
   item: 'kipengee',
   comboboxLoadError: 'Imeshindwa kupakia machaguo.',
+  comboboxRichContentUnavailable: 'Maudhui ya chaguo yaliyoumbizwa hayapatikani. Inaonyesha lebo za kawaida.',
   comboboxSelectedOverflow: '+{n} zaidi',
   checkboxRequired: 'Tia alama kwenye kisanduku hiki ili kuendelea.',
   checkboxGroupRequired: 'Chagua angalau chaguo moja.',

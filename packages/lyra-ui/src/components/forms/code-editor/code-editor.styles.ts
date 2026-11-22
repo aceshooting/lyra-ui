@@ -49,6 +49,8 @@ export const styles = css`
   }
   [part~='label'] {
     ${formControlLabelTypography({ size: css`inherit`, color: css`var(--lr-color-text)` })}
+    /* --lr-form-control-label-gap replaces the row gap under the label; unset, the margin is zero. */
+    margin-block-end: calc(var(--lr-form-control-label-gap, var(--lr-space-xs)) - var(--lr-space-xs));
   }
   ${formControlRequiredMarker}
   /* The editor frame is the one scroll viewport. A private text measurement layer sizes the

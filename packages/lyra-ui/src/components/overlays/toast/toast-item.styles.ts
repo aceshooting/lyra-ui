@@ -70,7 +70,7 @@ export const styles = css`
        */
     ${overlaySurfaceFill}
     color: var(--lr-color-text);
-    border-radius: var(--lr-toast-item-radius, var(--lr-overlay-radius, var(--lr-radius)));
+    border-radius: var(--lr-toast-item-radius, var(--lr-overlay-radius, var(--lr-radius-container)));
     /* Modal layer, but a small unscrimmed float rather than a page-blocking panel -- the lower of
        the two modal steps by default; the shared modal elevation hook still reaches it. */
     box-shadow: var(--lr-overlay-shadow-modal, var(--lr-shadow-l));
@@ -104,8 +104,8 @@ export const styles = css`
     inset-inline-start: 0;
     inline-size: var(--lr-toast-accent-width, var(--_lr-toast-accent-width));
     background: var(--lr-toast-accent-color, var(--_lr-toast-accent-color));
-    border-start-start-radius: var(--lr-toast-item-radius, var(--lr-overlay-radius, var(--lr-radius)));
-    border-end-start-radius: var(--lr-toast-item-radius, var(--lr-overlay-radius, var(--lr-radius)));
+    border-start-start-radius: var(--lr-toast-item-radius, var(--lr-overlay-radius, var(--lr-radius-container)));
+    border-end-start-radius: var(--lr-toast-item-radius, var(--lr-overlay-radius, var(--lr-radius-container)));
   }
   [part="icon"] {
     display: inline-flex;

@@ -40,7 +40,13 @@ Locked or Not started), `description`. **Custom property:** `--lr-step-pulse-col
 `--pulse-color` (the unprefixed name wins when both are set); layout hooks are the stepper's
 `--lr-stepper-*` properties and their unprefixed aliases. **Custom states:** `:state(active)`, `:state(completed)`,
 `:state(loading)`, `:state(disabled)`, `:state(locked)` and `:state(clickable)`, e.g.
-`lr-step:state(locked) { opacity: 0.6; }`. **Accessibility:** host `role="listitem"`; `aria-current="step"`
+`lr-step:state(locked) { opacity: 0.6; }`. `customStates: string = ''` (attribute `custom-states`) adds
+author-defined states: each space-separated CSS identifier is published as `:state(<name>)`, e.g.
+`<lr-step custom-states="error">` with `lr-step:state(error)::part(marker) { border-color: var(--lr-color-danger); }`.
+The step's own names (`active`, `completed`, `loading`, `disabled`, `locked`, `clickable`), invalid
+identifiers, duplicates, names over 64 characters and names after the 32nd are ignored. It is a
+styling hook only (status text and stepper behavior are unchanged), so pair it with a visible cue.
+**Accessibility:** host `role="listitem"`; `aria-current="step"`
 sits on the focused element (the inner button while clickable, the host otherwise).
 
 ```html

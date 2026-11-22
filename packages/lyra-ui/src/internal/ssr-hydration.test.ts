@@ -2,6 +2,7 @@ import { setFlagUrlResolver } from '../components/media/flag/flag.class.js';
 import { fixtureCleanup, fixture, expect, html, waitUntil } from '@open-wc/testing';
 import { html as litHtml } from 'lit';
 import { LyraElement } from './lyra-element.js';
+import { registerLyraLocale } from './localization-runtime.js';
 import { tag } from './prefix.js';
 import '../components/lr-chat-composer.js';
 import '../components/lr-thread-list.js';
@@ -373,6 +374,38 @@ it('formats in the server locale first, then commits an ancestor lang after hydr
   const explicit = await mountServerRendered(`<lr-format-number lang="de" value="1234.5">${SERVER_SHADOW}</lr-format-number>`);
   await explicit.updateComplete;
   expect(text(explicit)).to.equal('1.234,5');
+});
+
+class DemoLocalized extends LyraElement {
+  protected static override readonly defaultStrings = Object.freeze({ close: 'Close' });
+  override render() {
+    return litHtml`<button aria-label=${this.localize('close')}>${this.localize('close')}</button>`;
+  }
+}
+customElements.define(tag('demo-localized'), DemoLocalized);
+
+it('resolves messages in the server locale first, then commits an ancestor lang after hydration', async () => {
+  registerLyraLocale('fr', { close: 'Fermer' });
+  const demo = tag('demo-localized');
+  const wrapper = await mountServerRendered(`<p lang="fr"><${demo}>${SERVER_SHADOW}</${demo}></p>`);
+  const el = wrapper.querySelector<LyraElement>(demo)!;
+  await el.updateComplete;
+  const button = () => el.shadowRoot!.querySelector('button')!;
+  // The server saw no ancestor, so the hydrating render reproduces its default-catalog text.
+  expect([button().textContent, button().getAttribute('aria-label')]).to.deep.equal(['Close', 'Close']);
+  await waitUntil(() => button().textContent === 'Fermer');
+  expect(button().getAttribute('aria-label')).to.equal('Fermer');
+
+  // A host lang reaches the server too, so the hydrating render already uses it.
+  const explicit = await mountServerRendered(`<${demo} lang="fr">${SERVER_SHADOW}</${demo}>`);
+  await explicit.updateComplete;
+  expect(explicit.shadowRoot!.querySelector('button')!.textContent).to.equal('Fermer');
+
+  // A browser-only mount under the same ancestor renders translated from its first update.
+  const client = await mountServerRendered(`<p lang="fr"><${demo}></${demo}></p>`);
+  const clientEl = client.querySelector<LyraElement>(demo)!;
+  await clientEl.updateComplete;
+  expect(clientEl.shadowRoot!.querySelector('button')!.textContent).to.equal('Fermer');
 });
 
 it('keeps lr-icon custom-content slot outside the svg so it survives HTML parsing', async () => {

@@ -369,3 +369,15 @@ export const LabelPlacementStart: Story = {
     </div>
   `,
 };
+
+/** `--lr-form-control-label-inline-size: auto` sizes the start column to each label's text, and one
+ *  `--lr-form-control-label-gap` spaces both the column and a label above the field. */
+export const LabelColumnAndGap: Story = {
+  render: () => html`
+    <div style="display:grid;gap:var(--lr-space-m);max-inline-size:var(--lr-size-36rem);--lr-form-control-label-gap:var(--lr-space-s)">
+      <lr-input label="Reference" label-placement="start" style="--lr-form-control-label-inline-size: auto"></lr-input>
+      <lr-input label="Delivery instructions" label-placement="start" style="--lr-form-control-label-inline-size: auto"></lr-input>
+      <lr-input label="Above the field"></lr-input>
+    </div>
+  `,
+};

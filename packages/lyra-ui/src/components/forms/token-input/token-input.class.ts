@@ -96,16 +96,33 @@ const delimiterConverter = {
   },
 };
 
-/** Splits `text` on `delimiter` matched as one literal sequence (the whole string, never its
- *  individual characters); `null` or empty keeps `text` whole. Entries are not trimmed here. */
-function splitLiteral(text: string, delimiter: string | null): string[] {
-  return delimiter ? text.split(delimiter) : [text];
+/** The single characters (code points, so an astral glyph stays whole) of a `delimiter`, each
+ *  one a separator on its own; `null` or empty yields none. */
+function delimiterSet(delimiter: string | null): ReadonlySet<string> {
+  return new Set(delimiter ? Array.from(delimiter) : []);
 }
 
-/** Splits an assigned string on the `delimiter` sequence (comma when none) into trimmed,
- *  non-empty tokens. */
+/** Splits `text` at every character of the `delimiter` set; `null` or empty keeps `text` whole.
+ *  Entries are not trimmed here. */
+function splitDelimited(text: string, delimiter: string | null): string[] {
+  const separators = delimiterSet(delimiter);
+  if (!separators.size) return [text];
+  const parts: string[] = [];
+  let current = '';
+  for (const char of text) {
+    if (separators.has(char)) {
+      parts.push(current);
+      current = '';
+    } else current += char;
+  }
+  parts.push(current);
+  return parts;
+}
+
+/** Splits an assigned string at every character of the `delimiter` set (comma when none) into
+ *  trimmed, non-empty tokens. */
 function parseDelimited(text: string, delimiter: string | null): readonly string[] {
-  return Object.freeze(splitLiteral(text, delimiter || ',').map(part => part.trim()).filter(Boolean));
+  return Object.freeze(splitDelimited(text, delimiter || ',').map(part => part.trim()).filter(Boolean));
 }
 
 /** A finite, non-negative whole-number limit, or `null` when unset or unusable. */
@@ -211,15 +228,14 @@ const stringArrayConverter = {
  * @cssprop [--lr-form-control-label-font-size=inherit] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
- * @cssprop [--lr-form-control-label-block-gap=var(--lr-space-xs)] - Space between a label above
- *   the field and the field, in top placement and once a `label-placement="start"` row collapses.
  * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
  * @cssprop [--lr-form-control-label-text-align=inherit] - Text alignment of the field label.
  * @cssprop [--lr-form-control-label-text-transform=inherit] - Text transform of the field label.
  * @cssprop [--lr-form-control-label-inline-size=30%] - Label column width while
- *   `label-placement="start"`.
- * @cssprop [--lr-form-control-label-gap=var(--lr-space-m)] - Space between the label column and
- *   the field while `label-placement="start"`.
+ *   `label-placement="start"`; `auto` sizes the column to the label text.
+ * @cssprop [--lr-form-control-label-gap] - Space between the label and the field: the label
+ *   column gap while `label-placement="start"` (default `var(--lr-space-m)`), and the gap under a
+ *   label above the field, in top placement or a collapsed start row (default the field row gap, `--lr-token-input-gap` (`var(--lr-space-xs)`)).
  * @cssprop [--lr-form-control-label-collapse-inline-size=var(--lr-size-20rem)] - Control width
  *   below which `label-placement="start"` returns the label above the field.
  * @csspart form-control-label - Label.
@@ -444,10 +460,11 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     if (!this._editable) this.discardTransientState(false);
     this.requestUpdate('editable', old);
   }
-  /** Character(s) that split a typed draft into several tokens, matched as one literal sequence,
-   *  and (when a single character) the keystroke that commits the draft. `null` — from the
-   *  property, or from `delimiter="none"` / `delimiter=""` — disables both, so a token may contain
-   *  the delimiter verbatim. Defaults to `,`. */
+  /** The set of single characters that split a draft into several tokens: each character of the
+   *  string is a delimiter on its own (`";,"` splits at a semicolon and at a comma), and typing any
+   *  of them commits the draft. `null` — from the property, or from `delimiter="none"` /
+   *  `delimiter=""` — disables both, so a token may contain those characters verbatim. Defaults
+   *  to `,`. */
   @property({ attribute: 'delimiter', converter: delimiterConverter })
   delimiter: string | null = ',';
   /** Maximum number of tokens. Once reached, typed or pasted text cannot be committed (the draft
@@ -612,7 +629,7 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
   private _readonly = false;
 
   /** Committed tokens; the array is canonical. Assigning a string instead splits it on the
-   *  `delimiter` sequence (comma when none) into trimmed, non-empty tokens. Reassigning the same
+   *  characters of `delimiter` (comma when none) into trimmed, non-empty tokens. Reassigning the same
    *  token sequence preserves any inline edit. Reads return a frozen `readonly string[]`, so a
    *  change is made by assigning a new array rather than mutating the one read back. */
   @property({ attribute: false })
@@ -967,7 +984,7 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
   }
   private addDraft(): void {
     if (isLiveDisabled(this) || this.readonly) return;
-    const candidates = splitLiteral(this.draft, this.delimiter);
+    const candidates = splitDelimited(this.draft, this.delimiter);
     const capacity = this.tokenCapacity;
     const seen = this.allowDuplicates ? null : new Set(this.value);
     let added: string[] = [];
@@ -1014,7 +1031,7 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     } else {
       this.updateValue(next);
     }
-    this.draft = overflow.join(this.delimiter || ',');
+    this.draft = overflow.join(Array.from(this.delimiter || ',')[0]);
   }
 
   /** Removes every token the `lr-token-remove-request` listeners do not protect. */
@@ -1290,7 +1307,7 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     if (isLiveDisabled(this)) return;
     if (
       event.key === 'Enter' ||
-      (this.delimiter !== null && event.key === this.delimiter)
+      delimiterSet(this.delimiter).has(event.key)
     ) {
       if (this.draft.trim()) {
         event.preventDefault();

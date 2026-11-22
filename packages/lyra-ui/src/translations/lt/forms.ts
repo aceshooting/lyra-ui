@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'Atidaryti kalendorių',
   item: 'elementas',
   comboboxLoadError: 'Nepavyko įkelti parinkčių.',
+  comboboxRichContentUnavailable: 'Suformatuotas parinkčių turinys nepasiekiamas. Rodomos paprastos etiketės.',
   comboboxSelectedOverflow: 'Dar +{n}',
   checkboxRequired: 'Norėdami tęsti, pažymėkite šį langelį.',
   checkboxGroupRequired: 'Pasirinkite bent vieną parinktį.',

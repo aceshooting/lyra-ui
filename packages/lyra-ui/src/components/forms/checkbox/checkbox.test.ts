@@ -411,6 +411,28 @@ it("hides the label part when the default slot has no real content", async () =>
   expect(label.hidden).to.be.true;
 });
 
+it("keeps the server-first label visible through hydration and collapses an empty one after it", async () => {
+  const container = (await fixture(html`<div></div>`)) as HTMLDivElement;
+  const mount = (text: string) => {
+    const el = container.ownerDocument.createElement("lr-checkbox") as LyraCheckbox;
+    if (!text) el.setAttribute("aria-label", "Pin");
+    // A pre-existing shadow root is what the declarative-shadow-DOM parser supplies before a
+    // server-rendered element's first connectedCallback().
+    el.attachShadow({ mode: "open" });
+    if (text) el.append(container.ownerDocument.createTextNode(text));
+    container.append(el);
+    return el;
+  };
+  const labelled = mount("Accept terms");
+  const empty = mount("");
+  await Promise.all([labelled.updateComplete, empty.updateComplete]);
+  const label = (el: LyraCheckbox) => el.shadowRoot!.querySelector('[part="label"]') as HTMLElement;
+  expect([label(labelled).hidden, label(empty).hidden]).to.deep.equal([false, false]);
+
+  await waitUntil(() => label(empty).hidden);
+  expect(label(labelled).hidden).to.be.false;
+});
+
 it("shows the label part for plain slotted text (a text node, not an element)", async () => {
   const el = (await fixture(
     html`<lr-checkbox>Accept terms</lr-checkbox>`

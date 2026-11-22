@@ -202,3 +202,41 @@ it('rebinds same-source revisions and locale context without unbounded reads', a
   expect(el.shadowRoot!.querySelector('[part="source-error"]') === null).to.equal(true);
   expect(el.shadowRoot!.querySelector('[part="counter"]') === null).to.equal(true);
 });
+
+it('shows a bounded thumbnail strip in source mode that reads only the strip window', async () => {
+  const reads = new Set<number>();
+  const thumb = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="4" height="4"%3E%3C/svg%3E';
+  const source: Source = { revision: 1, images: { count: 1_000, itemAt: index => {
+    reads.add(index);
+    return { key: String(index), order: index, value: { src, alt: `Image ${index}`, caption: `Image ${index}`, ...(index % 2 ? { thumbnail: thumb } : {}) } };
+  } } };
+  const el = await fixture<SourceLightbox>(html`<lr-lightbox with-thumbnails .imageSource=${source}></lr-lightbox>`);
+  el.open = true;
+  await ready(el, 'Image 0');
+  const thumbs = () => [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="thumbnail"]')];
+  await waitUntil(() => thumbs().length === 15 && thumbs()[14]!.getAttribute('aria-label') === 'Image 14', 'strip loaded');
+  expect(thumbs()[0]!.getAttribute('aria-current')).to.equal('true');
+  expect(thumbs()[1]!.querySelector('img')!.getAttribute('src')).to.equal(thumb);
+  expect(thumbs()[2]!.querySelector('img')!.getAttribute('src')).to.equal(src);
+  el.goTo(500);
+  await ready(el, 'Image 500');
+  await waitUntil(() => thumbs()[7]?.getAttribute('aria-label') === 'Image 500', 'strip follows the current image');
+  expect(thumbs()[7]!.getAttribute('aria-current')).to.equal('true');
+  expect(thumbs()[0]!.getAttribute('aria-label')).to.equal('Image 493');
+  const changed = new Promise<number>(resolve => el.addEventListener('lr-item-change', event => resolve(event.detail.index), { once: true }));
+  thumbs()[8]!.click();
+  expect(await changed).to.equal(501);
+  expect([...reads].every(index => index <= 14 || (index >= 493 && index <= 508))).to.equal(true);
+  expect(reads.size).to.be.at.most(32);
+  el.open = false;
+});
+
+it('uses a data-mode image thumbnail in the strip', async () => {
+  const thumb = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="2" height="2"%3E%3C/svg%3E';
+  const el = await fixture<LyraLightbox>(html`<lr-lightbox with-thumbnails .images=${[{ src, alt: 'A', thumbnail: thumb }, { src, alt: 'B' }]}></lr-lightbox>`);
+  el.open = true;
+  await el.updateComplete;
+  const images = [...el.shadowRoot!.querySelectorAll('[part~="thumbnail"] img')].map(image => image.getAttribute('src'));
+  expect(images).to.deep.equal([thumb, src]);
+  el.open = false;
+});

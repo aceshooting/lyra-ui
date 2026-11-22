@@ -1868,8 +1868,8 @@ The listbox is a floating surface and paints from the **shared overlay-surface f
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
 `var(--lr-color-border)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
-surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) reaches it only as the middle arm of
-`--lr-model-select-radius`, which still wins when set. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
+surface together with every other floating surface in the library. `--lr-overlay-radius` reaches it only as the middle arm of
+`--lr-model-select-radius`, which still wins when set; left unset, the listbox keeps the component's own radius default. The edge deliberately keeps the control tier, `var(--lr-color-border)`, rather than the
 decorative `var(--lr-color-border-subtle)` floating panels default to: this listbox belongs to the
 form control it opens from and keeps that control's boundary contrast (see `<lr-popover>`).
 
@@ -1919,7 +1919,7 @@ height of the field label.
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -4201,7 +4201,7 @@ family** (16.0.0): `--lr-overlay-surface` (default `var(--lr-color-surface-overl
 `--lr-overlay-border` (default `var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default
 `var(--lr-shadow-m)`). None is declared on `:host`, so one declaration on `:root` — or on any
 ancestor, to scope it — retints this surface together with every other floating surface in the
-library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
+library. `--lr-overlay-radius` (default `var(--lr-radius-container)`) is the matching corner radius.
 
 `--lr-positioning-strategy` (16.0.0) — the breakdown tooltip reads this same cascading
 `absolute`/`fixed` override documented on `<lr-popover>` when it is (re)positioned, falling back to
@@ -4650,7 +4650,8 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
   `var(--lr-color-border)` — the control tier, not the decorative `var(--lr-color-border-subtle)`
   floating panels default to, because the listbox belongs to the form control it opens from.
 - `--lr-overlay-radius` — Shared floating-surface corner radius, reached only as the middle arm of
-  `--lr-voice-picker-radius`, which still wins when set. Default: `var(--lr-radius)`.
+  `--lr-voice-picker-radius`, which still wins when set; left unset, the listbox keeps the
+  component's own radius default.
 - `--lr-overlay-shadow-anchored` — Elevation of the anchored listbox. Default: `var(--lr-shadow-m)`.
   None of the four is declared on `:host`, so one declaration on `:root` — or on any ancestor, to
   scope it — retints this listbox together with every other floating surface in the library.
@@ -4688,7 +4689,7 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -5359,7 +5360,7 @@ The toolbar is a floating surface and paints from the **shared overlay-surface f
 `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default
 `var(--lr-color-border-subtle)`) and `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is
 declared on `:host`, so one declaration on `:root` — or on any ancestor, to scope it — retints this
-surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius)`) is the matching corner radius.
+surface together with every other floating surface in the library. `--lr-overlay-radius` (default `var(--lr-radius-container)`) is the matching corner radius.
 
 **Slots:** `actions` — extra actions rendered after the built-in ask/quote/cite/copy buttons,
 inside the same `role="toolbar"` element and roving-tabindex group. **Optional peer deps:** none.

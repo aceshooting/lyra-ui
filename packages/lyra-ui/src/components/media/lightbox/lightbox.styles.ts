@@ -199,6 +199,28 @@ export const styles = css`
     border-radius: var(--media-border-radius, var(--lr-lightbox-media-radius, 0));
     overflow: hidden;
   }
+  [part="slide"][data-dragging] {
+    will-change: transform;
+  }
+  slot[name="slide-content"] {
+    display: grid;
+    place-items: center;
+    container-type: size;
+    inline-size: 100%;
+    block-size: 100%;
+  }
+  slot[name="slide-content"]::slotted(*) {
+    box-sizing: border-box;
+    inline-size: 100%;
+    block-size: 100%;
+    overflow: auto;
+  }
+  /* An item with width and height keeps its proportions, as large as the slide allows. */
+  slot[name="slide-content"]::slotted([data-ratio]) {
+    inline-size: min(100cqi, 100cqb * var(--_lr-lightbox-slide-ratio));
+    block-size: auto;
+    aspect-ratio: var(--_lr-lightbox-slide-ratio);
+  }
   lr-pan-zoom[part~="frame"] {
     display: block;
     inline-size: 100%;

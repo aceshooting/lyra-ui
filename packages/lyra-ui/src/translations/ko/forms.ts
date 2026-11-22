@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: '달력 열기',
   item: '항목',
   comboboxLoadError: '옵션을 로드할 수 없습니다.',
+  comboboxRichContentUnavailable: '서식이 지정된 옵션 콘텐츠를 사용할 수 없습니다. 일반 레이블을 표시합니다.',
   comboboxSelectedOverflow: '+ {n} 더 보기',
   checkboxRequired: '계속하려면 이 확인란을 선택하세요.',
   checkboxGroupRequired: '하나 이상의 옵션을 선택하십시오.',

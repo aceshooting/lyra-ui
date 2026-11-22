@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'క్యాలెండర్‌ను తెరవండి',
   item: 'అంశం',
   comboboxLoadError: 'ఎంపికలను లోడ్ చేయలేకపోయాం.',
+  comboboxRichContentUnavailable: 'ఫార్మాట్ చేసిన ఎంపిక కంటెంట్ అందుబాటులో లేదు. సాధారణ లేబుల్‌లు చూపబడుతున్నాయి.',
   comboboxSelectedOverflow: '+{n} మరిన్ని',
   checkboxRequired: 'కొనసాగించాలంటే ఈ పెట్టెను ఎంచుకోండి.',
   checkboxGroupRequired: 'కనీసం ఒక ఎంపికను ఎంచుకోండి.',

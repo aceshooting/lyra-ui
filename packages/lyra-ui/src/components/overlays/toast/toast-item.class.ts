@@ -149,7 +149,7 @@ export interface LyraToastItemEventMap {
  *   follows `size` across the shared six-step ladder; an inherited or direct public value wins.
  * @cssprop [--lr-toast-item-gap=var(--lr-space-s)] - Gap between the item icon, message, and close
  *   button. Unlike `--lr-toast-gap`, this does not affect spacing between stacked items.
- * @cssprop [--lr-toast-item-radius=var(--lr-radius)] - Corner radius of the item surface and its
+ * @cssprop [--lr-toast-item-radius=var(--lr-radius-container)] - Corner radius of the item surface and its
  *   accent bar's inline-start corners.
  * Pointer-state hooks are inline fallbacks, so they inherit from the item or an ancestor without
  * recoloring the item surface or the stack.
@@ -169,7 +169,7 @@ export interface LyraToastItemEventMap {
  * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge of the item.
  * @cssprop [--lr-overlay-shadow-modal=var(--lr-shadow-l)] - Shared modal elevation of the item; its
  *   default is the lower modal step, below lr-dialog's.
- * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, behind
+ * @cssprop [--lr-overlay-radius=var(--lr-radius-container)] - Shared floating-surface corner radius, behind
  *   `--lr-toast-item-radius`.
  * @cssprop --lr-icon-button-bg - Resting background of the icon-only action buttons.
  * @cssprop --lr-icon-button-active-bg - Pressed background of the icon-only action buttons.

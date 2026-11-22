@@ -4,6 +4,7 @@ import '../../lr-lightbox-item.js';
 import type { LyraLightbox } from '../../lr-lightbox.js';
 import type { LyraLightboxItem } from '../../lr-lightbox-item.js';
 import { chooseSrcsetCandidate } from '../../../internal/srcset.js';
+import { setReducedMotion } from '../../../../test/wtr-media.js';
 
 const svg = (color: string): string =>
   `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><rect width="8" height="8" fill="${color}"/></svg>`)}`;
@@ -201,6 +202,212 @@ describe('lr-lightbox slotted items', () => {
     el.open = false;
   });
 
+  describe('drag-following swipe', () => {
+    const slideOf = (el: LyraLightbox): HTMLElement => el.shadowRoot!.querySelector<HTMLElement>('[part="slide"]')!;
+    const offset = (slide: HTMLElement): number => {
+      const transform = getComputedStyle(slide).transform;
+      return transform === 'none' ? 0 : new DOMMatrixReadOnly(transform).m41;
+    };
+
+    it('tracks the pointer, resists past the first item and settles back on a short drag', async () => {
+      const el = await gallery();
+      el.open = true;
+      await el.updateComplete;
+      const target = stage(el);
+      const slide = slideOf(el);
+      touch(target, 'pointerdown', 200, 100);
+      touch(target, 'pointermove', 205, 100);
+      expect(offset(slide)).to.equal(0);
+      touch(target, 'pointermove', 170, 102);
+      expect(offset(slide)).to.be.closeTo(-30, 0.5);
+      // Toward the previous item, which index 0 does not have without loop: the slide resists.
+      touch(target, 'pointermove', 240, 102);
+      expect(offset(slide)).to.be.closeTo(12, 0.5);
+      touch(target, 'pointerup', 240, 102);
+      expect(slide.style.transform).to.equal('');
+      await waitUntil(() => offset(slide) === 0, 'settled back');
+      expect(el.index).to.equal(0);
+      el.open = false;
+    });
+
+    it('settles back on pointercancel and on a mostly vertical drag', async () => {
+      const el = await gallery();
+      el.open = true;
+      await el.updateComplete;
+      const target = stage(el);
+      const slide = slideOf(el);
+      let changes = 0;
+      el.addEventListener('lr-item-change', () => changes++);
+      touch(target, 'pointerdown', 200);
+      touch(target, 'pointermove', 100);
+      expect(offset(slide)).to.be.closeTo(-100, 0.5);
+      touch(target, 'pointercancel', 100);
+      touch(target, 'pointerup', 100);
+      await waitUntil(() => offset(slide) === 0, 'settled after cancel');
+      touch(target, 'pointerdown', 200, 0);
+      touch(target, 'pointermove', 140, 200);
+      expect(offset(slide)).to.equal(0);
+      touch(target, 'pointerup', 140, 200);
+      await el.updateComplete;
+      expect(el.index).to.equal(0);
+      expect(changes).to.equal(0);
+      el.open = false;
+    });
+
+    it('navigates on a release past the threshold and continues the incoming slide from there, reversed under RTL', async () => {
+      const el = await gallery();
+      el.open = true;
+      await el.updateComplete;
+      const target = stage(el);
+      const slide = slideOf(el);
+      const changed = oneEvent(el, 'lr-item-change');
+      touch(target, 'pointerdown', 300);
+      touch(target, 'pointermove', 220);
+      touch(target, 'pointerup', 220);
+      const event = await changed;
+      expect(event.detail.index).to.equal(1);
+      expect(slide.style.transform).to.equal('');
+      const incoming = slide.getAnimations().find((animation) => animation.id === 'lightbox.slide.next');
+      expect(incoming !== undefined).to.equal(true);
+      expect(String((incoming!.effect as KeyframeEffect).getKeyframes()[0]!.transform)).to.contain('-80px');
+      el.open = false;
+      await el.updateComplete;
+
+      el.dir = 'rtl';
+      el.index = 0;
+      el.open = true;
+      await el.updateComplete;
+      touch(target, 'pointerdown', 100);
+      touch(target, 'pointermove', 160);
+      // The slide follows the finger physically; under RTL that drag points to the next item.
+      expect(offset(slide)).to.be.closeTo(60, 0.5);
+      touch(target, 'pointerup', 160);
+      await el.updateComplete;
+      expect(el.index).to.equal(1);
+      el.open = false;
+    });
+
+    it('does not move the slide under reduced motion but still navigates on release', async () => {
+      const el = await gallery();
+      el.closest('div')!.setAttribute('data-lr-motion', 'reduce');
+      el.open = true;
+      await el.updateComplete;
+      const target = stage(el);
+      const slide = slideOf(el);
+      touch(target, 'pointerdown', 300);
+      touch(target, 'pointermove', 200);
+      expect(offset(slide)).to.equal(0);
+      expect(slide.style.transform).to.equal('');
+      touch(target, 'pointerup', 200);
+      await el.updateComplete;
+      expect(el.index).to.equal(1);
+      expect(slide.getAnimations().every((animation) => animation.playState === 'finished' || animation.effect?.getComputedTiming().duration === 0)).to.equal(true);
+      el.open = false;
+    });
+
+    it('drops a drag when index changes programmatically mid-gesture', async () => {
+      const el = await gallery();
+      el.open = true;
+      await el.updateComplete;
+      const target = stage(el);
+      const slide = slideOf(el);
+      touch(target, 'pointerdown', 300);
+      touch(target, 'pointermove', 250);
+      expect(slide.style.transform).to.not.equal('');
+      el.index = 2;
+      await el.updateComplete;
+      expect(slide.style.transform).to.equal('');
+      touch(target, 'pointerup', 150);
+      await el.updateComplete;
+      expect(el.index).to.equal(2);
+      el.open = false;
+    });
+  });
+
+  it('reports navigation with lr-item-change, never a direct index write, open or closed', async () => {
+    const el = await gallery();
+    const seen: number[] = [];
+    el.addEventListener('lr-item-change', (event) => seen.push(event.detail.index));
+    el.index = 2;
+    await el.updateComplete;
+    el.open = true;
+    await el.updateComplete;
+    el.index = 1;
+    await el.updateComplete;
+    expect(seen).to.deep.equal([]);
+    el.goTo(0);
+    await el.updateComplete;
+    el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="navigation-button-next"]')!.click();
+    await el.updateComplete;
+    expect(seen).to.deep.equal([0, 1]);
+    el.open = false;
+  });
+
+  describe('custom <template> slides', () => {
+    const mixed = async (): Promise<LyraLightbox> => {
+      const wrapper = await fixture<HTMLDivElement>(html`<div></div>`);
+      wrapper.innerHTML = `
+        <style>.embed-copy { color: rgb(1, 2, 3); }</style>
+        <lr-lightbox label="Mixed">
+          <lr-lightbox-item src="${svg('red')}"><img src="${svg('red')}" alt="Red" /></lr-lightbox-item>
+          <lr-lightbox-item width="400" height="200" thumbnail="${svg('blue')}" alt="Embed"><template><p class="embed-copy">Custom <button type="button">Act</button></p></template></lr-lightbox-item>
+          <lr-lightbox-item src="${svg('green')}"><img src="${svg('green')}" alt="Green" /></lr-lightbox-item>
+        </lr-lightbox>`;
+      const el = wrapper.querySelector<LyraLightbox>('lr-lightbox')!;
+      await el.updateComplete;
+      await Promise.all(el.items.map((item) => item.updateComplete));
+      await el.updateComplete;
+      return el;
+    };
+    const copy = (el: LyraLightbox): HTMLElement | null => el.querySelector<HTMLElement>(':scope > [data-lightbox-slide]');
+
+    it('copies the template into a light-DOM slide only while that slide is shown', async () => {
+      const el = await mixed();
+      expect(el.items).to.have.length(3);
+      expect(el.items[1]!.matches(':state(empty)')).to.equal(false);
+      expect(copy(el)).to.equal(null);
+      el.index = 1;
+      await el.show();
+      const shown = copy(el)!;
+      expect(shown.getAttribute('slot')).to.equal('slide-content');
+      expect(shown.assignedSlot?.name).to.equal('slide-content');
+      expect(getComputedStyle(shown.querySelector('.embed-copy')!).color).to.equal('rgb(1, 2, 3)');
+      expect(getComputedStyle(shown).aspectRatio.replace(/\s/g, '')).to.equal('2/1');
+      // WebKit's headless run does not lay out the open panel here; measure where it is laid out.
+      const box = shown.getBoundingClientRect();
+      if (box.height > 0) expect(box.width / box.height).to.be.closeTo(2, 0.05);
+      expect(el.shadowRoot!.querySelector<HTMLElement>('lr-pan-zoom')!.hidden).to.equal(true);
+      expect(el.shadowRoot!.querySelector('[part="zoom-button"]')).to.equal(null);
+      expect(el.shadowRoot!.querySelector('[part="caption"]')).to.equal(null);
+      // The copied button keeps its own arrow keys.
+      shown.querySelector('button')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true, cancelable: true }));
+      await el.updateComplete;
+      expect(el.index).to.equal(1);
+      el.next();
+      await el.updateComplete;
+      expect(copy(el)).to.equal(null);
+      el.previous();
+      await el.updateComplete;
+      expect(copy(el) !== null && copy(el) !== shown).to.equal(true);
+      await el.close();
+      await waitUntil(() => !el.hasAttribute('data-closing'), 'exit motion done');
+      expect(copy(el)).to.equal(null);
+    });
+
+    it('uses the item thumbnail in the strip and is not collected from inside its own copy', async () => {
+      const el = await mixed();
+      el.withThumbnails = true;
+      el.index = 1;
+      await el.show();
+      const thumbs = el.shadowRoot!.querySelectorAll('[part~="thumbnail"]');
+      expect(thumbs.length).to.equal(3);
+      expect(thumbs[1]!.querySelector('img')!.getAttribute('src')).to.equal(svg('blue'));
+      expect(thumbs[1]!.getAttribute('aria-label')).to.equal('Embed');
+      expect(el.items).to.have.length(3);
+      await el.close();
+    });
+  });
+
   it('follows the physical arrow keys under dir="rtl"', async () => {
     const wrapper = await fixture<HTMLDivElement>(html`<div dir="rtl">
       <lr-lightbox label="x" dir="rtl">
@@ -318,21 +525,70 @@ describe('lr-lightbox slotted items', () => {
     el.open = false;
   });
 
-  it('keeps the after-show and after-hide timing while the open and close motion runs', async () => {
+  it('fires after-show and after-hide only once the open and close motion has finished', async () => {
     const el = await gallery();
-    el.style.setProperty('--show-duration', '400ms');
-    el.style.setProperty('--hide-duration', '400ms');
+    el.style.setProperty('--show-duration', '300ms');
+    el.style.setProperty('--hide-duration', '300ms');
     const seen: string[] = [];
     el.addEventListener('lr-after-show', () => seen.push('after-show'));
     el.addEventListener('lr-after-hide', () => seen.push('after-hide'));
-    el.open = true;
+    const running = (): number => panel(el).getAnimations().filter((a) => a.playState === 'running').length;
+
+    const shown = el.show();
     await el.updateComplete;
     await Promise.resolve();
+    expect(running(), 'the enter animation is running').to.be.greaterThan(0);
+    expect(seen, 'no after-show while the enter animation runs').to.deep.equal([]);
+    await shown;
     expect(seen).to.deep.equal(['after-show']);
-    await el.close();
+    expect(running(), 'after-show waits for the enter animation').to.equal(0);
+
+    const hidden = el.close();
+    await el.updateComplete;
+    await Promise.resolve();
+    expect(el.hasAttribute('data-closing')).to.equal(true);
+    expect(seen, 'no after-hide while the exit animation runs').to.deep.equal(['after-show']);
+    await hidden;
     expect(seen).to.deep.equal(['after-show', 'after-hide']);
-    await waitUntil(() => !el.hasAttribute('data-closing'), 'closing state clears after the exit motion');
+    expect(el.hasAttribute('data-closing'), 'the exit animation has ended by after-hide').to.equal(false);
   });
+
+  it('suppresses the after-event of a transition the opposite one interrupts', async () => {
+    const el = await gallery();
+    el.style.setProperty('--show-duration', '300ms');
+    el.style.setProperty('--hide-duration', '300ms');
+    const seen: string[] = [];
+    el.addEventListener('lr-after-show', () => seen.push('after-show'));
+    el.addEventListener('lr-after-hide', () => seen.push('after-hide'));
+    const shown = el.show();
+    await el.updateComplete;
+    await el.close();
+    await shown;
+    expect(seen, 'the interrupted open reports nothing').to.deep.equal(['after-hide']);
+  });
+
+  for (const branch of ['reduced motion', 'zero duration'] as const) {
+    it(`fires after-show and after-hide straight after the render under ${branch}`, async () => {
+      if (branch === 'reduced motion') await setReducedMotion('reduce');
+      try {
+        const el = await gallery();
+        const duration = branch === 'reduced motion' ? '300ms' : '0ms';
+        el.style.setProperty('--show-duration', duration);
+        el.style.setProperty('--hide-duration', duration);
+        const seen: string[] = [];
+        el.addEventListener('lr-after-show', () => seen.push('after-show'));
+        el.addEventListener('lr-after-hide', () => seen.push('after-hide'));
+        const started = performance.now();
+        await el.show();
+        await el.close();
+        expect(seen).to.deep.equal(['after-show', 'after-hide']);
+        expect(el.hasAttribute('data-closing')).to.equal(false);
+        expect(performance.now() - started, 'neither event waited for a 300ms animation').to.be.lessThan(250);
+      } finally {
+        if (branch === 'reduced motion') await setReducedMotion('no-preference');
+      }
+    });
+  }
 
   it('clears its closing state after the exit animation and passes axe while open', async () => {
     const el = await gallery();

@@ -38,8 +38,18 @@ function dimension(value: unknown): number | undefined {
  * largest. `width` and `height` reserve the item's own space (and the viewer's placeholder) before
  * the media loads, so a gallery does not shift as it fills in.
  *
+ * **Custom content.** For anything other than an image or a native video (an embed, a player, a
+ * comparison, another component), put it in a `<template>` that is a direct child of the item.
+ * The lightbox copies the template's content into the slide only while that slide is shown, so
+ * nothing in it loads or runs before then, and removes the copy when the slide changes or the
+ * viewer closes. The copy is light DOM, so page styles apply. `src` is optional for such an item
+ * (it still becomes the no-JavaScript link when set), `width` and `height` give the slide its
+ * proportions, and custom content cannot be zoomed. The slotted `<img>` or `thumbnail` remains
+ * the item's page thumbnail and its thumbnail in the strip.
+ *
  * @customElement lr-lightbox-item
  * @slot - The item's thumbnail, usually an `<img>`. Clicking it opens the lightbox at this item.
+ *   A direct `<template>` child is not shown here; it holds the item's custom slide content.
  *   Leave it empty (with no `thumbnail`) for an item that only appears inside the lightbox.
  * @slot caption - Optional caption text shown with the item in the lightbox. Not displayed on the
  *   page; the lightbox reads its text content.
@@ -94,6 +104,11 @@ export class LyraLightboxItem extends LyraElement {
   /** @internal The slotted thumbnail image, if any. */
   get thumbnailElement(): HTMLImageElement | null {
     return this.querySelector(':scope > img, :scope img');
+  }
+
+  /** @internal The direct `<template>` child holding custom slide content, if any. */
+  get slideTemplate(): HTMLTemplateElement | null {
+    return this.querySelector(':scope > template');
   }
 
   /** @internal Thumbnail URL from the slotted image or the `thumbnail` property, already validated. */
@@ -154,8 +169,11 @@ export class LyraLightboxItem extends LyraElement {
   private onSlotChange = (): void => {
     const slot = this.renderRoot.querySelector<HTMLSlotElement>('slot:not([name])');
     const assigned = slot?.assignedNodes({ flatten: true }) ?? [];
+    // A <template> holds custom slide content; it renders nothing on the page.
     const hasContent = assigned.some((node) =>
-      node.nodeType === Node.ELEMENT_NODE ? true : Boolean(node.textContent?.trim()),
+      node.nodeType === Node.ELEMENT_NODE
+        ? (node as Element).localName !== 'template'
+        : Boolean(node.textContent?.trim()),
     );
     this.toggleAttribute('data-empty', !hasContent && !this.thumbnail);
     setCustomState(this.itemInternals, 'empty', !hasContent && !this.thumbnail);

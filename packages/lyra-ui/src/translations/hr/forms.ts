@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'Otvori kalendar',
   item: 'stavka',
   comboboxLoadError: 'Učitavanje mogućnosti nije uspjelo.',
+  comboboxRichContentUnavailable: 'Oblikovani sadržaj opcija nije dostupan. Prikazuju se obične oznake.',
   comboboxSelectedOverflow: '+{n} više',
   checkboxRequired: 'Označite ovaj okvir ako želite nastaviti.',
   checkboxGroupRequired: 'Odaberite barem jednu mogućnost.',

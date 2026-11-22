@@ -287,7 +287,7 @@ export interface LyraPopoverEventMap {
  *   that subtree without touching the page, card and control surfaces behind them.
  * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge
  *   colour, on the popup and on the arrow's two outward-facing edges.
- * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius. The
+ * @cssprop [--lr-overlay-radius=var(--lr-radius-container)] - Shared floating-surface corner radius. The
  *   arrow is deliberately excluded: its corners are already cut by its clip path.
  * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of an anchored,
  *   positioner-placed overlay. A separate tier from `--lr-overlay-shadow-modal`, so raising popups

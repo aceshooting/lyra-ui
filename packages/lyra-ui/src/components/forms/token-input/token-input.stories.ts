@@ -359,3 +359,12 @@ export const SsrHintsAndDelimitedValue: Story = {
     </lr-token-input>
   `,
 };
+
+/** Each character of `delimiter` is a delimiter on its own: here a semicolon, a comma or a
+ *  vertical bar commits the draft and splits a pasted list. */
+export const DelimiterSet: Story = {
+  name: 'Several single-character delimiters',
+  render: () => html`
+    <lr-token-input label="Tags" delimiter=";,|" hint="Separate entries with ; , or |."></lr-token-input>
+  `,
+};

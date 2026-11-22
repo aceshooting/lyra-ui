@@ -39,7 +39,7 @@ export const styles = css`
   [part~='form-control-label'] {
     ${formControlLabelTypography()}
     ${blockHost}
-    margin-block-end: var(--lr-form-control-label-block-gap, var(--lr-space-xs));
+    margin-block-end: var(--lr-form-control-label-gap, var(--lr-space-xs));
     overflow-wrap: anywhere;
   }
   [part~='form-control-label'][hidden] {
@@ -244,7 +244,7 @@ export const styles = css`
        control tier, as every form control's own popup does (overlay-surface.styles.ts). */
     border: var(--lr-border-width-thin) solid
       var(--lr-overlay-border, var(--lr-color-border));
-    border-radius: var(--lr-overlay-radius, var(--lr-radius));
+    border-radius: var(--lr-overlay-radius, var(--lr-radius-container));
     background: var(--lr-overlay-surface, var(--lr-color-surface-raised));
     box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
     color: var(--lr-color-text);

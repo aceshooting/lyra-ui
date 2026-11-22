@@ -216,6 +216,30 @@ export const MillionImageSource: Story = {
   },
 };
 
+/** `with-thumbnails` with a host-owned source: the strip covers the 15 positions around the
+ *  current image and reads only their descriptors, using each record's optional `thumbnail`. */
+export const SourceThumbnails: Story = {
+  render: () => {
+    const source: import('../../lr-lightbox.js').LyraLightboxSource = {
+      revision: 1,
+      images: {
+        count: 10_000,
+        itemAt: index => ({ key: String(index), order: index, value: {
+          src: images[index % images.length]!.src,
+          thumbnail: images[index % images.length]!.src,
+          alt: `Illustration ${index + 1}`,
+        } }),
+      },
+    };
+    return html`
+      <button @click=${(event: Event) => {
+        const lightbox = (event.currentTarget as HTMLElement).nextElementSibling as LyraLightbox;
+        void lightbox.show();
+      }}>Open with thumbnails</button>
+      <lr-lightbox .imageSource=${source} with-thumbnails fit="contain"></lr-lightbox>`;
+  },
+};
+
 export const SlottedItems: Story = {
   render: () => html`
     <lr-lightbox label="Illustrations" with-thumbnails loop>

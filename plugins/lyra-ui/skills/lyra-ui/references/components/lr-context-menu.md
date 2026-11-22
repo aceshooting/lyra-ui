@@ -186,7 +186,7 @@ parent; set `lr-context-menu { display: block }` to get a box.
 `lr-context-menu` or any ancestor): `--max-width`
 (`var(--lr-overlay-max-inline-size, var(--lr-size-20rem))`), `--lr-overlay-surface`
 (`var(--lr-color-surface-overlay)`), `--lr-overlay-border` (`var(--lr-color-border-subtle)`),
-`--lr-overlay-radius` (`var(--lr-radius)`), `--lr-overlay-shadow-anchored` (`var(--lr-shadow-m)`),
+`--lr-overlay-radius` (`var(--lr-radius-container)`), `--lr-overlay-shadow-anchored` (`var(--lr-shadow-m)`),
 `--lr-overlay-max-inline-size` (`var(--lr-size-20rem)`), `--lr-context-menu-min-inline-size`
 (the menu's minimum inline size, capped by the available space; it wins over the shared
 `--lr-overlay-min-inline-size`, default `0px`, which it falls back to while unset), and

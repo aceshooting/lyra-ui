@@ -179,13 +179,29 @@ describe('custom states', () => {
 });
 
 describe('delimiter', () => {
-  it('matches a multi-character delimiter as one literal sequence, as before', async () => {
+  it('treats a multi-character delimiter as a set of single-character delimiters', async () => {
     const el = await fixture<LyraTokenInput>(html`<lr-token-input delimiter=";,"></lr-token-input>`);
-    typeInto(el, 'a;b,c;,d');
-    expect(press(el, ';').defaultPrevented, 'no single keystroke matches a two-character delimiter').to.equal(false);
-    expect(el.value).to.deep.equal([]);
+    typeInto(el, 'a');
+    expect(press(el, ';').defaultPrevented, 'each character is a commit key').to.equal(true);
+    expect(el.value).to.deep.equal(['a']);
+    typeInto(el, 'b');
+    press(el, ',');
+    expect(el.value).to.deep.equal(['a', 'b']);
+    typeInto(el, 'c;d,e;,f');
     press(el, 'Enter');
-    expect(el.value).to.deep.equal(['a;b,c', 'd']);
+    expect(el.value, 'a committed draft splits on every character of the set').to.deep.equal(['a', 'b', 'c', 'd', 'e', 'f']);
+    typeInto(el, 'g');
+    expect(press(el, 'Tab').defaultPrevented, 'a named key never matches the set').to.equal(false);
+  });
+
+  it('splits on each code point of the set, never on half of a surrogate pair', async () => {
+    const el = await fixture<LyraTokenInput>(html`<lr-token-input delimiter="🍎|"></lr-token-input>`);
+    typeInto(el, 'a🍎b|c');
+    press(el, 'Enter');
+    expect(el.value).to.deep.equal(['a', 'b', 'c']);
+    typeInto(el, 'd');
+    press(el, '🍎');
+    expect(el.value).to.deep.equal(['a', 'b', 'c', 'd']);
   });
 
   it('leaves a paste in the draft instead of committing it', async function () {
@@ -235,7 +251,7 @@ describe('string values and inputValue', () => {
     expect(el.defaultValue).to.deep.equal(['p', 'q']);
     el.delimiter = ';,';
     el.value = 'a;,b,c';
-    expect(el.value, 'a multi-character delimiter splits a string as one sequence').to.deep.equal(['a', 'b,c']);
+    expect(el.value, 'a multi-character delimiter splits a string on each of its characters').to.deep.equal(['a', 'b', 'c']);
   });
 
   it('splits a string on a comma when no delimiter is set', async () => {

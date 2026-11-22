@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'Open di calendar',
   item: 'thing',
   comboboxLoadError: 'E no fit load di options.',
+  comboboxRichContentUnavailable: 'Di option content wey dem format no dey available. We dey show plain label.',
   comboboxSelectedOverflow: '+{n} still dey',
   checkboxRequired: 'Abeg tick dis box if you wan continue.',
   checkboxGroupRequired: 'Select one option at least.',

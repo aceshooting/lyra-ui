@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'ڪئلينڊر کوليو',
   item: 'شيءِ',
   comboboxLoadError: 'اختيار لوڊ نه ٿي سگهيا.',
+  comboboxRichContentUnavailable: 'فارميٽ ٿيل اختيار جو مواد دستياب ناهي. سادا ليبل ڏيکاريا پيا وڃن.',
   comboboxSelectedOverflow: '+{n} وڌيڪ',
   checkboxRequired: 'اڳتي وڌڻ لاءِ هن خاني تي نشان لڳايو.',
   checkboxGroupRequired: 'گهٽ ۾ گهٽ هڪ اختيار چونڊيو.',

@@ -325,6 +325,11 @@ TypeScript consumers get completion from `HTMLElementTagNameMap`. For HTML, in-D
 `custom-elements.json`, `cssParts` is flattened but `attributes`/`members`/`events`/`slots`/`cssProperties` list only a
 declaration's own and overridden entries; walk the `superclass` chain or use the resolved `web-types.json`.
 
+Without `@aceshooting/lyra-ide`, tools that read this package's `customElements` field (Storybook, wc-toolkit,
+analyzers) find `custom-elements.slim.json` (also the `@aceshooting/lyra-ui/custom-elements.slim.json` export): every tag
+with its attributes, public members, events, slots, CSS parts, CSS properties and CSS states, flattened across superclasses
+and pointing at the shipped `dist/` modules, without descriptions, status or deprecation records.
+
 A per-tag entry can register several elements (`components/lr-table.js` also defines `<lr-empty>`, `<lr-pagination>`,
 `<lr-skeleton>` and `<lr-spinner>`); tooling reads `registrations.json` (`entries[].registers`; `pnpm run registration-graph`).
 

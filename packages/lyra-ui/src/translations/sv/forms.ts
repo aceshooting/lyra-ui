@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'Öppna kalender',
   item: 'objekt',
   comboboxLoadError: 'Det gick inte att läsa in alternativen.',
+  comboboxRichContentUnavailable: 'Formaterat innehåll i alternativen är inte tillgängligt. Visar enkla etiketter.',
   comboboxSelectedOverflow: '+{n} till',
   checkboxRequired: 'Markera den här rutan om du vill fortsätta.',
   checkboxGroupRequired: 'Välj minst ett alternativ.',

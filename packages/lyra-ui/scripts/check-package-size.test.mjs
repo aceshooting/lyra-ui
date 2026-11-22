@@ -68,6 +68,7 @@ const requiredTarballFiles = [
   'skills/compose-lyra-interfaces/SKILL.md',
   'dist/cli/lyra-ui.mjs',
   'dist/cli/init-agents.mjs',
+  'custom-elements.slim.json',
 ];
 
 const expectedPackage = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
@@ -528,7 +529,7 @@ test('retains seven scaffold files above the reviewed required-artifact inventor
     fileBudget.baseArtifactCeiling +
       fileBudget.stableTagAliasCount * fileBudget.emittedFilesPerAlias +
       fileBudget.measuredEntrypointRemainder,
-    3_345,
+    3_346,
     'the derivation must bind the reviewed complete package inventory',
   );
   assert.equal(
@@ -538,12 +539,12 @@ test('retains seven scaffold files above the reviewed required-artifact inventor
   );
   assert.equal(
     actualBudgets.maximum.fileCount,
-    3_352,
+    3_353,
     'the complete inventory retains exactly seven scaffold files',
   );
   assert.deepEqual(
     [actualBudgets.maximum.packedBytes, actualBudgets.maximum.unpackedBytes],
-    [9_999_999, 24_453_952],
+    [9_999_999, 25_970_432],
     'the split package keeps the absolute download ceiling and a tight unpacked ceiling',
   );
 
@@ -555,7 +556,7 @@ test('retains seven scaffold files above the reviewed required-artifact inventor
     'dist/internal/opaque-content-border.styles.js',
     'dist/internal/opaque-content-border.styles.d.ts',
   ];
-  for (const fileCount of [3_345, 3_352, 3_353]) {
+  for (const fileCount of [3_346, 3_353, 3_354]) {
     const extraFiles = Array.from(
       { length: fileCount - requiredTarballFiles.length - requiredAdditions.length },
       (_, index) => `dist/required-entrypoint-${index}.js`,
@@ -568,7 +569,7 @@ test('retains seven scaffold files above the reviewed required-artifact inventor
     const findings = packageBudgetFindings(metrics, actualBudgets);
     assert.deepEqual(
       findings,
-      fileCount === 3_353 ? ['fileCount 3,353 exceeds hard budget 3,352'] : [],
+      fileCount === 3_354 ? ['fileCount 3,354 exceeds hard budget 3,353'] : [],
       'the measured package and exact reserve pass, while one additional artifact fails',
     );
   }

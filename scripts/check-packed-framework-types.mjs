@@ -282,13 +282,15 @@ export async function verifyInstalledArtifacts(fixtureDir) {
   }
 
   const packageManifest = JSON.parse(await readFile(join(installed, 'package.json'), 'utf8'));
-  // The manifest and IDE data ship in @aceshooting/lyra-ide, not in this package.
+  // The full manifest and IDE data ship in @aceshooting/lyra-ide; this package points
+  // `customElements` only at its slim discovery manifest.
   if (
-    packageManifest.customElements !== undefined ||
+    packageManifest.customElements !== 'custom-elements.slim.json' ||
     packageManifest.exports?.['./custom-elements.json'] !== undefined
   ) {
-    throw new Error('the packed package must not carry the custom-elements manifest metadata');
+    throw new Error('the packed package must point customElements at its slim manifest and not carry the full custom-elements manifest');
   }
+  await access(join(installed, packageManifest.customElements));
 
   for (const runtimeFile of [
     'dist/custom-elements-jsx.js',

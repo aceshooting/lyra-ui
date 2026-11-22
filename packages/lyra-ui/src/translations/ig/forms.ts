@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'Mepee kalenda',
   item: 'ihe',
   comboboxLoadError: 'Enweghị ike ibunye nhọrọ.',
+  comboboxRichContentUnavailable: 'Ọdịnaya nhọrọ ahaziri ahazi adịghị. A na-egosi akara dị mfe.',
   comboboxSelectedOverflow: '+{n} ọzọ',
   checkboxRequired: 'Biko kaa igbe a ma ịchọrọ ịga n’ihu.',
   checkboxGroupRequired: 'Họrọ opekata mpe otu nhọrọ.',

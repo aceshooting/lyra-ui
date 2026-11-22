@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'کیلنڈر کھولو',
   item: 'آئٹم',
   comboboxLoadError: 'اختیار لوڈ نئیں ہو سکے۔',
+  comboboxRichContentUnavailable: 'فارمیٹ کیتا ہویا آپشن مواد دستیاب نئیں۔ سادے لیبل وکھائے جا رہے نیں۔',
   comboboxSelectedOverflow: '+{n} ہور',
   checkboxRequired: 'اگے ودھن لئی ایہہ خانہ چیک کرو۔',
   checkboxGroupRequired: 'گھٹ توں گھٹ اک اختیار چنو۔',

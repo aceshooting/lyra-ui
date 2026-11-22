@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 22 parts, 41 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 22 parts, 40 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `form-control-label`: `--lr-form-control-required-content`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -186,13 +186,14 @@ remove button from the tab order, never blocks `focus()`, and never excludes the
 `FormData` on submit — only `disabled` does that. Turning it on while a draft is half-typed or an
 inline editor is open discards that uncommitted state without moving focus.
 
-**`delimiter` is nullable, and only a single character acts as a commit key.** It does two separate
-jobs: it splits a committed draft into several tokens, and — _only when it is exactly one
-character_ — it is the keystroke that commits the draft. A multi-character delimiter is matched as
-one literal sequence: it still splits a pasted or committed draft, but no keystroke can ever match
-it, so nothing commits on typing. Pasting never commits by itself; the pasted text joins the draft.
+**`delimiter` is a set of single characters, and it is nullable.** Each character of the string is
+a delimiter on its own: `delimiter=";,"` splits at every semicolon and at every comma, and typing
+either one commits the draft. It does two jobs: it splits
+a committed draft (and a string assigned to `value`) into several tokens, and it supplies the
+keystrokes that commit the draft. Characters are code points, so an emoji delimiter stays whole.
+Pasting never commits by itself; the pasted text joins the draft.
 Setting it to `null` disables both, so a token may contain the delimiter verbatim. **`delimiter="null"`
-does not work** — that is the four-character string `null`. Use `delimiter="none"`, `delimiter=""`
+does not work** — that makes `n`, `u` and `l` delimiters. Use `delimiter="none"`, `delimiter=""`
 (both of which the attribute converter maps to `null`), or a property binding
 (`.delimiter=${null}`). Removing the attribute restores the `,` default.
 
@@ -209,7 +210,7 @@ and the control is neither disabled nor readonly. It proposes each removal throu
 `lr-clear`, and returns focus to the draft input.
 
 **`value` and `inputValue`.** The array stays canonical, but assigning a string to `value` (or
-`defaultValue`) splits it on the `delimiter` sequence (comma when none) into trimmed, non-empty tokens;
+`defaultValue`) splits it at each character of `delimiter` (comma when none) into trimmed, non-empty tokens;
 the reflected `value` attribute remains a JSON array. `inputValue` reads and writes the uncommitted draft
 without committing it.
 
@@ -280,7 +281,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.

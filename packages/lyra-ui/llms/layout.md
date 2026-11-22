@@ -1734,7 +1734,13 @@ Locked or Not started), `description`. **Custom property:** `--lr-step-pulse-col
 `--pulse-color` (the unprefixed name wins when both are set); layout hooks are the stepper's
 `--lr-stepper-*` properties and their unprefixed aliases. **Custom states:** `:state(active)`, `:state(completed)`,
 `:state(loading)`, `:state(disabled)`, `:state(locked)` and `:state(clickable)`, e.g.
-`lr-step:state(locked) { opacity: 0.6; }`. **Accessibility:** host `role="listitem"`; `aria-current="step"`
+`lr-step:state(locked) { opacity: 0.6; }`. `customStates: string = ''` (attribute `custom-states`) adds
+author-defined states: each space-separated CSS identifier is published as `:state(<name>)`, e.g.
+`<lr-step custom-states="error">` with `lr-step:state(error)::part(marker) { border-color: var(--lr-color-danger); }`.
+The step's own names (`active`, `completed`, `loading`, `disabled`, `locked`, `clickable`), invalid
+identifiers, duplicates, names over 64 characters and names after the 32nd are ignored. It is a
+styling hook only (status text and stepper behavior are unchanged), so pair it with a visible cue.
+**Accessibility:** host `role="listitem"`; `aria-current="step"`
 sits on the focused element (the inner button while clickable, the host otherwise).
 
 ```html
@@ -2206,7 +2212,7 @@ height of the field label.
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-gap` (default `var(--lr-space-xs)`): Space between the label above the field and the field.
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -3800,7 +3806,7 @@ style those on `<lr-dropdown>` when using the overlay composition.
 **Themeable custom properties:** the standalone menu surface and a submenu's own surface paint from
 the **shared overlay-surface family** (16.0.0) — `--lr-overlay-surface` (default
 `var(--lr-color-surface-overlay)`), `--lr-overlay-border` (default `var(--lr-color-border-subtle)`),
-`--lr-overlay-radius` (default `var(--lr-radius)`) and, on the submenu only,
+`--lr-overlay-radius` (default `var(--lr-radius-container)`) and, on the submenu only,
 `--lr-overlay-shadow-anchored` (default `var(--lr-shadow-m)`). None is declared on `:host`, so one
 declaration on `:root` (or on any ancestor, to scope it) retints this menu together with every other
 floating surface. A menu contained by `<lr-dropdown>` paints no surface of its own, so the family has

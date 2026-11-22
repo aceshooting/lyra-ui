@@ -1,4 +1,4 @@
-import { html, ssrFixture } from '../wtr-ssr-fixture.js';
+import { html, ssrFixture, ssrStaticDocument } from '../wtr-ssr-fixture.js';
 import { expect } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../wtr-focus.js';
@@ -38,6 +38,51 @@ describe('hydrated forms', () => {
     await checkbox.updateComplete;
     expect(checkbox.checked).to.equal(false);
     expect(new FormData(form).get('terms')).to.equal(null);
+  });
+});
+
+/** Whether `host`'s own light-DOM text lays out with a non-empty box (slotted or not). */
+function textIsPainted(host: Element): boolean {
+  const range = host.ownerDocument.createRange();
+  range.selectNodeContents(host);
+  const box = range.getBoundingClientRect();
+  return box.width > 0 && box.height > 0;
+}
+
+describe('server-rendered choice labels without JavaScript', () => {
+  it('lr-checkbox shows its slotted label in the server markup alone', async () => {
+    const served = await ssrStaticDocument(html`<form>
+      <lr-checkbox name="terms" value="yes">Accept terms</lr-checkbox>
+    </form>`);
+    const checkbox = served.querySelector('lr-checkbox')!;
+    expect(checkbox.matches(':defined')).to.equal(false, 'no definition reaches the static page');
+    expect(checkbox.shadowRoot!.querySelector('[part="label"]')!.hasAttribute('hidden')).to.equal(false);
+    expect(textIsPainted(checkbox)).to.equal(true);
+  });
+
+  it('lr-radio shows its label inside a server-rendered lr-radio-group', async () => {
+    const served = await ssrStaticDocument(html`<form>
+      <lr-radio-group name="plan" label="Plan">
+        <lr-radio value="basic">Basic</lr-radio>
+        <lr-radio value="pro">Pro</lr-radio>
+      </lr-radio-group>
+    </form>`);
+    const group = served.querySelector('lr-radio-group')!;
+    expect(group.shadowRoot).to.not.equal(null);
+    const radios = [...served.querySelectorAll('lr-radio')];
+    expect(radios.map((radio) => textIsPainted(radio))).to.deep.equal([true, true]);
+  });
+});
+
+describe('hydrated forms: checkbox label presence', () => {
+  it('lr-checkbox keeps the server label wrapper through hydration and collapses an empty one after it', async () => {
+    const form = await ssrFixture<HTMLFormElement>(html`<form>
+      <lr-checkbox name="terms">Accept terms</lr-checkbox>
+      <lr-checkbox name="icon-only" aria-label="Pin"></lr-checkbox>
+    </form>`);
+    const [labelled, iconOnly] = [...form.querySelectorAll('lr-checkbox')];
+    expect(labelled!.shadowRoot!.querySelector('[part="label"]')!.hasAttribute('hidden')).to.equal(false);
+    expect(iconOnly!.shadowRoot!.querySelector('[part="label"]')!.hasAttribute('hidden')).to.equal(true);
   });
 });
 

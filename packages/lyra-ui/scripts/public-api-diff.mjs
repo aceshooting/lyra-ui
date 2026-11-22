@@ -9,6 +9,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseSync } from 'oxc-parser';
 import { expandManifestInheritance } from './manifest-compact.mjs';
+import { SLIM_MANIFEST_FILE } from './slim-manifest.mjs';
 import {
   findTopLevel,
   matchingIndex,
@@ -4194,9 +4195,9 @@ export function acquirePublishedBaseline(
     if (!existsSync(path.join(root, 'package.json'))) {
       throw new Error('Published baseline tarball does not contain package/package.json.');
     }
-    // A baseline from the split onward has no manifest of its own: take the same version's from the IDE package.
-    if (packageName === '@aceshooting/lyra-ui' && !existsSync(path.join(root, 'custom-elements.json'))
-      && !readJson(path.join(root, 'package.json')).customElements) {
+    // A baseline from the split onward has no full manifest of its own (later releases point
+    // `customElements` at the slim discovery manifest only): take the same version's from the IDE package.
+    if (packageName === '@aceshooting/lyra-ui' && !existsSync(path.join(root, 'custom-elements.json'))) {
       const ideDirectory = path.join(workingDirectory, 'ide');
       mkdirSync(ideDirectory);
       const ideTarball = path.join(ideDirectory, path.basename(parseNpmPackOutput(execute('npm', [
@@ -4225,19 +4226,34 @@ const FRAMEWORK_DECLARATION_FILES = Object.freeze({
   svelte: 'dist/svelte.d.ts',
 });
 
+/**
+ * The manifest the gate compares. The full `custom-elements.json` wins whenever it sits at the root:
+ * a checkout keeps it beside the sources, and a published baseline from 27.0.0 on gets the same
+ * version's copy from @aceshooting/lyra-ide. `customElements` may name the prose-free slim discovery
+ * manifest, which drops descriptions, privacy and inheritance edges; diffing it against a full one
+ * reports every dropped detail as a break, so it never feeds the gate.
+ */
+export function publicApiManifestFile(root, packageJson) {
+  const full = path.join(root, 'custom-elements.json');
+  if (existsSync(full)) return full;
+  const target = packageJson.customElements;
+  if (typeof target !== 'string') return undefined;
+  if (path.posix.basename(target.replaceAll('\\', '/')) === SLIM_MANIFEST_FILE) {
+    throw new Error(
+      `${packageJson.name ?? root} points customElements at the slim discovery manifest (${target}); `
+        + 'place the full custom-elements.json from @aceshooting/lyra-ide at the package root to compare its API.',
+    );
+  }
+  const manifestFile = path.join(root, target);
+  if (!existsSync(manifestFile)) throw new Error(`Missing custom-elements manifest: ${manifestFile}`);
+  return manifestFile;
+}
+
 export function readPackageApi(root) {
   const packageJsonFile = path.join(root, 'package.json');
   if (!existsSync(packageJsonFile)) throw new Error(`Missing public API package metadata: ${packageJsonFile}`);
   const packageJson = readJson(packageJsonFile);
-  // Releases from 27.0.0 ship the manifest in @aceshooting/lyra-ide; a checkout keeps it beside the sources.
-  const manifestRelative = packageJson.customElements
-    ?? (existsSync(path.join(root, 'custom-elements.json')) ? 'custom-elements.json' : undefined);
-  const manifestFile = typeof manifestRelative === 'string'
-    ? path.join(root, manifestRelative)
-    : undefined;
-  if (manifestFile && !existsSync(manifestFile)) {
-    throw new Error(`Missing custom-elements manifest: ${manifestFile}`);
-  }
+  const manifestFile = publicApiManifestFile(root, packageJson);
   const declarations = { files: {}, packageFiles: [] };
   const collectFiles = (directory, relativeDirectory) => {
     if (!existsSync(directory)) return;

@@ -27,14 +27,22 @@ function normalize(value: unknown): Record {
   const src = text(field(image, 'src'))!;
   const alt = text(field(image, 'alt'), true);
   const caption = text(field(image, 'caption'), true);
+  const thumbnail = text(field(image, 'thumbnail'), true);
   return Object.freeze({ key, order, value: Object.freeze({ src,
     ...(alt === undefined ? {} : { alt }), ...(caption === undefined ? {} : { caption }),
+    ...(thumbnail === undefined ? {} : { thumbnail }),
   }) });
 }
 
-/** One current image effect backed by at most three bounded source descriptors. */
+/** Descriptors the thumbnail strip shows around the current image in source mode. */
+export const SOURCE_THUMBNAIL_WINDOW = 15;
+
+/** One current image effect backed by at most three bounded source descriptors, plus, only while a
+ *  thumbnail strip is shown, a separate window of at most 25 strip descriptors. */
 export class LightboxSourceController implements ReactiveController {
   readonly window: SourceWindowController<Record>;
+  private readonly strip: SourceWindowController<Record>;
+  private stripBound = false;
   private readonly requests: SourceRequestController<'image'>;
   private input?: LyraLightboxSource;
   private locale = '';
@@ -49,6 +57,9 @@ export class LightboxSourceController implements ReactiveController {
   constructor(private readonly host: Host, private readonly repaint: () => void) {
     this.requests = new SourceRequestController(host, { channels: ['image'], onReset: () => this.clearImage() });
     this.window = new SourceWindowController(host, { pageSize: 1, maxRows: 3, maxPages: 3, maxConcurrent: 1,
+      keyOf: record => record.key, normalize, onChange: repaint,
+    });
+    this.strip = new SourceWindowController(host, { pageSize: 5, maxRows: 25, maxPages: 5, maxConcurrent: 1,
       keyOf: record => record.key, normalize, onChange: repaint,
     });
     host.addController(this);
@@ -69,7 +80,37 @@ export class LightboxSourceController implements ReactiveController {
     this.transaction++;
     this.requests.refresh();
     this.window.bind(undefined);
+    this.unbindStrip();
     this.repaint();
+  }
+
+  private unbindStrip(): void {
+    if (!this.stripBound) return;
+    this.stripBound = false;
+    this.strip.bind(undefined);
+  }
+
+  /** Requests the strip descriptors for `[start, end)`; binds the strip window on first use so a
+   *  lightbox without thumbnails never reads more than the current image's descriptors. */
+  requestThumbnails(start: number, end: number): void {
+    if (this.dirty || !this.count || !this.input) return;
+    if (!this.stripBound) {
+      try {
+        this.strip.bind({ owner: this.input, revision: sourceRevision(this.input.revision), epoch: this.requests.epoch,
+          locale: this.locale, view: this.input.images });
+      } catch {
+        return;
+      }
+      this.stripBound = true;
+    }
+    this.strip.requestRange(start, Math.max(start, end));
+  }
+
+  /** The strip descriptor at `index` once it has loaded, else `undefined`. */
+  thumbnailAt(index: number): LyraLightboxImage | undefined {
+    if (!this.stripBound) return undefined;
+    const slot = this.strip.source.itemAt(index);
+    return slot.state === 'ready' ? slot.value.value : undefined;
   }
 
   /** False means a callback superseded this binding; its count must not normalize host state. */
@@ -77,6 +118,7 @@ export class LightboxSourceController implements ReactiveController {
     if (!this.dirty && input === this.input && locale === this.locale) return true;
     const transaction = ++this.transaction;
     this.input = input; this.locale = locale; this.dirty = false;
+    this.unbindStrip();
     this.requests.refresh();
     if (transaction !== this.transaction) return false;
     this.window.bind(undefined);

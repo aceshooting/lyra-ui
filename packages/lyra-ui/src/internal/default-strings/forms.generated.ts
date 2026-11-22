@@ -24,6 +24,7 @@ export const LYRA_DEFAULT_comboboxLabel: LyraMessage = 'Combobox';
 export const LYRA_DEFAULT_comboboxLoadError: LyraMessage = 'Could not load options.';
 export const LYRA_DEFAULT_comboboxOverflow: LyraMessage = '+{n} more — refine your search';
 export const LYRA_DEFAULT_comboboxRequired: LyraMessage = 'Please select an option.';
+export const LYRA_DEFAULT_comboboxRichContentUnavailable: LyraMessage = 'Formatted option content is unavailable. Showing plain labels.';
 export const LYRA_DEFAULT_comboboxSelectedOverflow: LyraMessage = '+{n} more';
 export const LYRA_DEFAULT_countryPickerLabel: LyraMessage = 'Country';
 export const LYRA_DEFAULT_currencyPickerLabel: LyraMessage = 'Currency';

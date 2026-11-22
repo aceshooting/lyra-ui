@@ -9,6 +9,7 @@ const strings: LyraLocaleStrings = {
   openCalendar: 'Fungola kalandriye',
   item: 'eloko',
   comboboxLoadError: 'Tokoki te kocharger ba option.',
+  comboboxRichContentUnavailable: 'Makambo ya maponi oyo ebongisami ezali te. Tozali kolakisa bilembo ya pɛtɛɛ.',
   comboboxSelectedOverflow: '+{n} mosusu',
   checkboxRequired: 'Tyá elembo na kati ya boîte oyo mpo okoba.',
   checkboxGroupRequired: 'Pona ata option moko.',

@@ -2,12 +2,12 @@
   "locale": "uk",
   "direction": "ltr",
   "source": {
-    "keyCount": 1774,
-    "sha256": "sha256:8ae25cf4e43884cd96df872036c450848b9aa8acbe8a3fe2e590a7c5d292436f"
+    "keyCount": 1775,
+    "sha256": "sha256:ad14e014505085ddb1ab428ddfa2d269b3e4c6764fbed873c02cdb89f7cb385b"
   },
   "catalog": {
-    "keyCount": 1774,
-    "sha256": "sha256:354b59ddb71b612850688bd960fca9bfaa33218deb5325b6c104d15c867d3a3a"
+    "keyCount": 1775,
+    "sha256": "sha256:013dd9d9dfc758bc22ece55e22f7ff15eba513f1f45c04365cb9bf217abb2fab"
   },
   "translator": {
     "status": "complete-original",

@@ -12,6 +12,9 @@ export interface LyraLightboxImage {
   readonly alt?: string;
   /** Optional visible caption for this image, rendered in `part="caption"` below the stage. */
   readonly caption?: string;
+  /** Optional small image for the `with-thumbnails` strip; the strip falls back to `src`.
+   *  Validated with `safeMediaSrc()` before use. */
+  readonly thumbnail?: string;
 }
 
 /** Host-owned access to the complete ordered image collection. */

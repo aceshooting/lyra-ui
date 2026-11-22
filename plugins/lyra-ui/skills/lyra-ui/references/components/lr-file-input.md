@@ -376,7 +376,7 @@ Use `--lr-file-input-dropzone-active-border-color` and `--lr-file-input-dropzone
 
 Further custom properties:
 
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Gap between the label and the field.
+- `--lr-form-control-label-gap` (default `var(--lr-space-xs)`): Space between the label above the field and the field.
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.

@@ -899,7 +899,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     let effectiveLocale: string | undefined;
     const resolveLocale = () => (effectiveLocale ??= this.effectiveMessageLocale);
     const message = resolveLyraStringWithLocale(
-      resolveLocale,
+      () => this.hydratingRenderLocale(resolveLocale()),
       key,
       this.strings,
       fallback,
@@ -927,13 +927,27 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     return locale;
   }
 
+  /** The message locale to hand a composed child control while rendering: during a hydrating
+   * first render it is the locale the server rendered with, so the child's adopted text matches. */
+  protected get renderMessageLocale(): string {
+    return this.hydratingRenderLocale(this.effectiveMessageLocale);
+  }
+
   /** The canonical, structurally valid locale used for locale-sensitive platform APIs. */
   protected get effectiveLocale(): string {
-    const locale = resolveIntlLocale(this.effectiveMessageLocale);
-    // Hydration adopts server text without re-checking it, so a hydrating first render formats in
-    // the locale the server resolved; the post-hydration render then commits the inherited one.
+    return resolveIntlLocale(this.hydratingRenderLocale(this.effectiveMessageLocale));
+  }
+
+  /**
+   * Hydration adopts server text and attributes without re-checking them, so a hydrating first
+   * render resolves messages and formats in the locale the server resolved. The server never sees
+   * an ancestor `lang`, only the host's own `locale`/`lang` and its active locale; when the
+   * inherited locale differs, the post-hydration render commits it instead of leaving the server
+   * text stale.
+   */
+  private hydratingRenderLocale(locale: string): string {
     if (this.hydratingServerShadow !== true || this.hasUpdated || this.locale) return locale;
-    const server = resolveIntlLocale(resolveLyraServerLocale(this));
+    const server = resolveLyraServerLocale(this);
     if (server !== locale) this[SEED_FIRST_RENDER_STATE](rerenderAfterHydration);
     return server;
   }
