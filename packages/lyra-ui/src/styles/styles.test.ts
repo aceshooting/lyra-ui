@@ -859,3 +859,29 @@ describe('native control extensions', () => {
     expect(getComputedStyle(el.querySelector('#m')!).borderRadius).to.equal('0px');
   });
 });
+
+it("applies the flex, text and table-row utilities added for Web Awesome parity", async () => {
+  const el = await fixture(html`
+    <div>
+      <p id="even" class="lr-flex lr-justify-evenly lr-self-baseline lr-wrap-reverse">x</p>
+      <p id="text" class="lr-text-justify lr-font-light lr-tabular-nums">x</p>
+      <table class="lr-zebra-rows">
+        <tbody>
+          <tr><td>a</td></tr>
+          <tr id="even-row"><td>b</td></tr>
+        </tbody>
+      </table>
+    </div>
+  `);
+  const even = getComputedStyle(el.querySelector("#even")!);
+  expect(even.justifyContent).to.equal("space-evenly");
+  expect(even.alignSelf).to.equal("baseline");
+  expect(even.flexWrap).to.equal("wrap-reverse");
+  const text = getComputedStyle(el.querySelector("#text")!);
+  expect(text.textAlign).to.equal("justify");
+  expect(text.fontWeight).to.equal("300");
+  expect(text.fontVariantNumeric).to.equal("tabular-nums");
+  const row = getComputedStyle(el.querySelector("#even-row")!);
+  expect(row.backgroundColor).to.not.equal("rgba(0, 0, 0, 0)");
+  expect(getComputedStyle(el.querySelector("tbody tr")!).backgroundColor).to.equal("rgba(0, 0, 0, 0)");
+});

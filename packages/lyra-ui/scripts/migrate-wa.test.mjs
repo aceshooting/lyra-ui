@@ -2954,13 +2954,24 @@ test('type-scale classes rewrite to the nearest class and warn; heading classes 
 });
 
 test('palette pairs and native.css opt-ins are reported, never rewritten; unlisted names are left alone', () => {
-  const input = '<div class="wa-brand-blue wa-zebra-rows wa-theme-default sl-mystery wa-mystery"></div>\n';
+  const input = '<div class="wa-brand-blue wa-invert wa-theme-default sl-mystery wa-mystery"></div>\n';
   const result = migrateClasses(input);
   assert.equal(result.content, input);
   assert.equal(result.warnings.length, 3);
   assert.ok(result.warnings.every((entry) => entry.warningCode === 'UPSTREAM_CLASS_REVIEW'));
   assert.equal(lookupUpstreamClass('my-wa-stack'), null);
   assert.equal(lookupUpstreamClass('stack'), null);
+});
+
+test('simple flex, text and table-row utilities rewrite exactly', () => {
+  const result = migrateClasses(
+    '<table class="wa-zebra-rows wa-hover-rows wa-tabular-nums"></table><p class="wa-text-justify wa-font-weight-light wa-align-self-baseline wa-justify-content-space-evenly wa-flex-wrap-reverse"></p>\n',
+  );
+  assert.equal(
+    result.content,
+    '<table class="lr-zebra-rows lr-hover-rows lr-tabular-nums"></table><p class="lr-text-justify lr-font-light lr-self-baseline lr-justify-evenly lr-wrap-reverse"></p>\n',
+  );
+  assert.equal(result.warnings.length, 0);
 });
 
 test('only whole class tokens in class positions are touched', () => {

@@ -383,6 +383,10 @@
     flex-wrap: nowrap;
   }
 
+  :where(.lr-wrap-reverse) {
+    flex-wrap: wrap-reverse;
+  }
+
   :where(.lr-grow) {
     flex-grow: 1;
   }
@@ -439,6 +443,10 @@
     justify-content: space-around;
   }
 
+  :where(.lr-justify-evenly) {
+    justify-content: space-evenly;
+  }
+
   :where(.lr-self-start) {
     align-self: start;
   }
@@ -453,6 +461,10 @@
 
   :where(.lr-self-stretch) {
     align-self: stretch;
+  }
+
+  :where(.lr-self-baseline) {
+    align-self: baseline;
   }
 
   :where(.lr-gap-0) {
@@ -555,6 +567,10 @@
     text-align: end;
   }
 
+  :where(.lr-text-justify) {
+    text-align: justify;
+  }
+
   :where(.lr-text-xs) {
     font-size: var(--lr-font-size-xs, var(--lr-theme-font-size-xs, 0.75rem));
   }
@@ -605,6 +621,32 @@
     );
   }
 
+  :where(.lr-font-light) {
+    font-weight: var(
+      --lr-font-weight-light,
+      var(--lr-theme-font-weight-light, 300)
+    );
+  }
+
+  :where(.lr-tabular-nums) {
+    font-variant-numeric: tabular-nums;
+  }
+
+  :where(.lr-zebra-rows) :where(tbody tr:nth-child(even)) {
+    background-color: color-mix(
+      in srgb,
+      var(--lr-color-text, CanvasText) calc(var(--lr-color-mix-hover, 12%) / 2),
+      transparent
+    );
+  }
+
+  :where(.lr-hover-rows) :where(tbody tr:hover) {
+    background-color: color-mix(
+      in srgb,
+      var(--lr-color-text, CanvasText) var(--lr-color-mix-hover, 12%),
+      transparent
+    );
+  }
   :where(.lr-font-medium) {
     font-weight: var(
       --lr-font-weight-medium,
