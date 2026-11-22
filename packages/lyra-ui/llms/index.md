@@ -101,10 +101,10 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-document-library` · lr-document-library.js · `stable` since `4.1.0` · ~170 KiB gzip — a searchable, filterable inventory of documents with versions, tags, owners, freshness, and bulk selection.
 - `lr-graph-query-builder` · lr-graph-query-builder.js · `stable` since `4.1.0` · ~110 KiB gzip — an editor for a single typed relationship/path filter (`GraphQuery`) over a knowledge graph: start/end entity anchors, relationship-type...
 - `lr-condition-builder` · lr-condition-builder.js · `stable` since `9.0.0` · ~162 KiB gzip — a composable structured-condition builder for tabular/dashboard data: a flat list of field/operator/value condition rows combined with...
-- `lr-treemap` · lr-treemap.js · `experimental` since `unreleased` · ~45 KiB gzip — A peer-free SVG treemap.
-- `lr-sankey` · lr-sankey.js · `experimental` since `unreleased` · ~48 KiB gzip — A peer-free SVG Sankey chart for weighted flows across stages.
-- `lr-chord` · lr-chord.js · `experimental` since `unreleased` · ~47 KiB gzip — A peer-free SVG chord chart for symmetric co-occurrence data.
-- `lr-choropleth` · lr-choropleth.js · `experimental` since `unreleased` · ~46 KiB gzip — A peer-free SVG choropleth for caller-supplied GeoJSON or TopoJSON.
+- `lr-treemap` · lr-treemap.js · `experimental` since `32.0.0` · ~45 KiB gzip — A peer-free SVG treemap.
+- `lr-sankey` · lr-sankey.js · `experimental` since `32.0.0` · ~48 KiB gzip — A peer-free SVG Sankey chart for weighted flows across stages.
+- `lr-chord` · lr-chord.js · `experimental` since `32.0.0` · ~47 KiB gzip — A peer-free SVG chord chart for symmetric co-occurrence data.
+- `lr-choropleth` · lr-choropleth.js · `experimental` since `32.0.0` · ~46 KiB gzip — A peer-free SVG choropleth for caller-supplied GeoJSON or TopoJSON.
 
 ## Layout, navigation & structure — `components/layout/` (40)
 
@@ -173,7 +173,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-alert` · lr-alert.js · `stable` since `8.0.0` · ~50 KiB gzip — a closed-by-default inline alert that can also move into the shared toast stack.
 - `lr-callout` · lr-callout.js · `stable` since `4.0.0` · ~44 KiB gzip — an inline message surface for status, warning, and error content.
 - `lr-rating` · lr-rating.js · `stable` since `4.0.0` · ~34 KiB gzip — a keyboard-accessible star rating control.
-- `lr-help` · lr-help.js · `experimental` since `unreleased` · ~66 KiB gzip — a compact "?" explanation disclosure: an `<lr-icon-button>` trigger that opens an `<lr-popover>` holding the slotted explanation.
+- `lr-help` · lr-help.js · `experimental` since `32.0.0` · ~66 KiB gzip — a compact "?" explanation disclosure: an `<lr-icon-button>` trigger that opens an `<lr-popover>` holding the slotted explanation.
 
 ## Utilities, formatting & observers — `components/utility/` (21)
 
@@ -197,7 +197,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-known-date` · lr-known-date.js · `stable` since `4.0.0` · ~51 KiB gzip — a date a user already knows (a birthdate, a passport issue/expiry date) collected as three plain, labeled day/month/year number fields in...
 - `lr-random-content` · lr-random-content.js · `stable` since `4.0.0` · ~41 KiB gzip — displays a randomly (or sequentially) chosen subset of its slotted children and hides the rest, for A/B copy testing, testimonial/quote...
 - `lr-tour` · lr-tour.js · `stable` since `4.0.0` · ~58 KiB gzip — - a spotlight-and-step guided walkthrough for first-run onboarding.
-- `lr-style-panel` · lr-style-panel.js · `experimental` since `unreleased` · ~127 KiB gzip — ready-made appearance controls bound to the document style runtime (`setLyraStyle()`/`getLyraStyle()` from `theme.js`): colour mode...
+- `lr-style-panel` · lr-style-panel.js · `experimental` since `32.0.0` · ~127 KiB gzip — ready-made appearance controls bound to the document style runtime (`setLyraStyle()`/`getLyraStyle()` from `theme.js`): colour mode...
 
 ## Media, files & maps — `components/media/` (23)
 

@@ -5,7 +5,7 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-treemap.js';` (stable tag alias; registers the tag)
 - **Class** `LyraTreemap`, also available unregistered from `@aceshooting/lyra-ui/components/data/treemap/treemap.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
-- **Status** `experimental` since `unreleased` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `experimental` since `32.0.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none

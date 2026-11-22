@@ -104,7 +104,7 @@ export interface LyraStylePanelEventMap {
  * @csspart reset - The reset `lr-button`.
  * @cssprop [--lr-style-panel-gap=var(--lr-space-m)] - Space between the controls.
  * @status experimental
- * @since unreleased
+ * @since 32.0.0
  */
 export class LyraStylePanel extends LyraElement<LyraStylePanelEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START

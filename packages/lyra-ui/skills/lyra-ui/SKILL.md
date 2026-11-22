@@ -70,7 +70,7 @@ density. Preserve saved style/locale choices and explicit project branding; rest
 only inside an authorized migration or redesign. To keep the pre-default look select
 `look: 'lyra'`, `surface: 'solid'`, `accent: null` explicitly (`accent: null` clears;
 `resetLyraStyle()` restores Emerald). Read the
-[Lyra signature starter](https://github.com/aceshooting/lyra-ui/blob/lyra-ui@31.2.1/packages/lyra-ui/llms/shared/styles-and-tokens.md#lyra-signature-starter) before
+[Lyra signature starter](https://github.com/aceshooting/lyra-ui/blob/lyra-ui@32.0.0/packages/lyra-ui/llms/shared/styles-and-tokens.md#lyra-signature-starter) before
 changing startup or persistence.
 
 ## Companion packages

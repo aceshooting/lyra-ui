@@ -108,7 +108,7 @@ function capFairly(rects: readonly TreemapRect[], limit: number): readonly Treem
  * @csspart limit - Shown when a data or rendering limit is reached.
  * @cssprop [--lr-treemap-height=clamp(var(--lr-size-12rem), 62.5cqi, var(--lr-size-30rem))] - Block size of the plot.
  * @status experimental
- * @since unreleased
+ * @since 32.0.0
  */
 export class LyraTreemap extends LyraElement<LyraTreemapEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START

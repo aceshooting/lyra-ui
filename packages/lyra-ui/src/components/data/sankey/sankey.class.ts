@@ -85,7 +85,7 @@ function plotX(x: number, width: number, plotWidth: number, rtl: boolean): numbe
  * @csspart limit - Shown when an input limit is reached.
  * @cssprop [--lr-sankey-height=clamp(var(--lr-size-12rem), 62.5cqi, var(--lr-size-30rem))] - Block size of the plot.
  * @status experimental
- * @since unreleased
+ * @since 32.0.0
  */
 export class LyraSankey extends LyraElement<LyraSankeyEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START

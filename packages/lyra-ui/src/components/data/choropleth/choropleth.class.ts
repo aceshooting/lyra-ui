@@ -94,7 +94,7 @@ function regionColor(position: number, palette: LyraChoroplethPalette): string {
  * @csspart limit - Shown when a region has no drawable area.
  * @cssprop [--lr-choropleth-height=clamp(var(--lr-size-12rem), 62.5cqi, var(--lr-size-30rem))] - Block size of the plot.
  * @status experimental
- * @since unreleased
+ * @since 32.0.0
  */
 export class LyraChoropleth extends LyraElement<LyraChoroplethEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START

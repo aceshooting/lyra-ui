@@ -32,7 +32,7 @@ import { LYRA_DEFAULT_details } from '../../../internal/default-strings/shared.g
  * @cssprop [--lr-help-max-inline-size=var(--lr-size-20rem)] - Maximum inline size of the
  *   explanation popup.
  * @status experimental
- * @since unreleased
+ * @since 32.0.0
  */
 export class LyraHelp extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: START

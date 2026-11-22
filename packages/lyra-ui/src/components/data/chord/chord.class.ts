@@ -120,7 +120,7 @@ function ribbonMarkId(source: string, target: string): string {
  * @csspart limit - Shown when a positive pair cannot be represented in the plot.
  * @cssprop [--lr-chord-height=clamp(var(--lr-size-16rem), 100cqi, var(--lr-size-30rem))] - Block size of the plot.
  * @status experimental
- * @since unreleased
+ * @since 32.0.0
  */
 export class LyraChord extends LyraElement<LyraChordEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START
