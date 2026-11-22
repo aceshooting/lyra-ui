@@ -2023,6 +2023,15 @@ test('icon migrations require review of the intentionally smaller built-in name 
     ],
   );
   assert.ok(reviews.every(({ message }) => /registerIconLibrary/u.test(message)));
+  // Each review points at the opt-in preset that restores that upstream's default vocabulary.
+  assert.deepEqual(
+    reviews.map(({ message }) =>
+      /icon-library-bootstrap\.js/u.test(message) ? 'bootstrap'
+        : /icon-library-font-awesome\.js/u.test(message) ? 'font-awesome' : 'none'),
+    ['bootstrap', 'font-awesome', 'bootstrap'],
+  );
+  assert.ok(reviews[0].message.includes("registerBootstrapIconLibrary({ name: 'default' })"));
+  assert.ok(reviews[1].message.includes("registerFontAwesomeIconLibrary({ name: 'default' })"));
   assert.ok(
     reviews.every(({ message }) =>
       /only add, check, close, search, menu, chevron-left, chevron-right, chevron-down, calendar, command, and trash/u.test(

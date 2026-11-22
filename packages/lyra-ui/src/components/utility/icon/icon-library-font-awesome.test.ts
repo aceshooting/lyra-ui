@@ -115,7 +115,7 @@ describe('registerFontAwesomeIconLibrary with <lr-icon>', () => {
       expect(fetch.urls).to.deep.equal([`${FREE}/solid/house.svg`]);
       const svg = el.shadowRoot!.querySelector('svg')!;
       expect(svg.getAttribute('fill')).to.equal('currentColor');
-      expect(el.shadowRoot!.querySelector('script')).to.equal(null);
+      expect(el.shadowRoot!.querySelector('script') === null).to.equal(true);
       await expect(el).to.be.accessible();
     } finally {
       fetch.restore();

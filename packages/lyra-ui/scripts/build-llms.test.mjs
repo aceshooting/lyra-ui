@@ -821,6 +821,11 @@ assert.match(
   /`BEHAVIOR_REVIEW_REQUIRED`[\s\S]*registerIconLibrary\('default', \{ resolver \}\)/u,
   'generated migration guidance must expose the icon-name vocabulary review and its remedy',
 );
+assert.match(
+  migration,
+  /registerBootstrapIconLibrary\(\{ name: 'default' \}\)[\s\S]*icon-library-bootstrap\.js/u,
+  'generated migration guidance must name the Bootstrap Icons preset for Shoelace icon names',
+);
 assert.match(migration, /`REGISTRATION_CLOSURE_REQUIRED`/);
 assert.match(migration, /`@awesome\.me\/webawesome` and `@awesome\.me\/webawesome-pro`/);
 assert.match(migration, /standalone CSS/);

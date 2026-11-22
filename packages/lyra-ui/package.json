@@ -1746,6 +1746,7 @@
     "./components/utility/format/format-date.class.js": "./dist/components/utility/format/format-date.class.js",
     "./components/utility/format/format-number.class.js": "./dist/components/utility/format/format-number.class.js",
     "./components/utility/format/relative-time.class.js": "./dist/components/utility/format/relative-time.class.js",
+    "./components/utility/icon/icon-library-bootstrap.js": "./dist/components/utility/icon/icon-library-bootstrap.js",
     "./components/utility/icon/icon-library-font-awesome.js": "./dist/components/utility/icon/icon-library-font-awesome.js",
     "./components/utility/icon/icon-library.js": "./dist/components/utility/icon/icon-library.js",
     "./components/utility/icon/icon.class.js": "./dist/components/utility/icon/icon.class.js",

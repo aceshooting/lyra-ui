@@ -12394,6 +12394,150 @@
       }
     },
     {
+      "module": "src/components/utility/icon/icon-library-bootstrap.ts",
+      "exportName": "bootstrapIconMutator",
+      "kind": "function",
+      "fingerprint": "70b5ec536eb093516b57",
+      "routes": [
+        "src/components/utility/icon/icon-library-bootstrap.ts"
+      ],
+      "document": "llms/utility.md",
+      "family": "utility",
+      "locator": {
+        "kind": "utility",
+        "name": "components-utility-icon-icon-library-bootstrap-contracts",
+        "declaration": "bootstrapIconMutator"
+      }
+    },
+    {
+      "module": "src/components/utility/icon/icon-library-bootstrap.ts",
+      "exportName": "createBootstrapIconResolver",
+      "kind": "function",
+      "fingerprint": "3c6356e2f3c0c8376833",
+      "routes": [
+        "src/components/utility/icon/icon-library-bootstrap.ts"
+      ],
+      "document": "llms/utility.md",
+      "family": "utility",
+      "locator": {
+        "kind": "utility",
+        "name": "components-utility-icon-icon-library-bootstrap-contracts",
+        "declaration": "createBootstrapIconResolver"
+      }
+    },
+    {
+      "module": "src/components/utility/icon/icon-library-bootstrap.ts",
+      "exportName": "LyraBootstrapIconLibraryOptions",
+      "kind": "interface",
+      "fingerprint": "50c31abe05e43140ecea",
+      "routes": [
+        "src/components/utility/icon/icon-library-bootstrap.ts"
+      ],
+      "document": "llms/utility.md",
+      "family": "utility",
+      "locator": {
+        "kind": "utility",
+        "name": "components-utility-icon-icon-library-bootstrap-contracts",
+        "declaration": "LyraBootstrapIconLibraryOptions"
+      }
+    },
+    {
+      "module": "src/components/utility/icon/icon-library-bootstrap.ts",
+      "exportName": "registerBootstrapIconLibrary",
+      "kind": "function",
+      "fingerprint": "aeb7fd020870b52ddde2",
+      "routes": [
+        "src/components/utility/icon/icon-library-bootstrap.ts"
+      ],
+      "document": "llms/utility.md",
+      "family": "utility",
+      "locator": {
+        "kind": "utility",
+        "name": "components-utility-icon-icon-library-bootstrap-contracts",
+        "declaration": "registerBootstrapIconLibrary"
+      }
+    },
+    {
+      "module": "src/components/utility/icon/icon-library-font-awesome.ts",
+      "exportName": "createFontAwesomeIconResolver",
+      "kind": "function",
+      "fingerprint": "ba07c61e8b3107113f6f",
+      "routes": [
+        "src/components/utility/icon/icon-library-font-awesome.ts"
+      ],
+      "document": "llms/utility.md",
+      "family": "utility",
+      "locator": {
+        "kind": "utility",
+        "name": "components-utility-icon-icon-library-font-awesome-contracts",
+        "declaration": "createFontAwesomeIconResolver"
+      }
+    },
+    {
+      "module": "src/components/utility/icon/icon-library-font-awesome.ts",
+      "exportName": "fontAwesomeIconFolder",
+      "kind": "function",
+      "fingerprint": "6451d6ed40ec03b81d27",
+      "routes": [
+        "src/components/utility/icon/icon-library-font-awesome.ts"
+      ],
+      "document": "llms/utility.md",
+      "family": "utility",
+      "locator": {
+        "kind": "utility",
+        "name": "components-utility-icon-icon-library-font-awesome-contracts",
+        "declaration": "fontAwesomeIconFolder"
+      }
+    },
+    {
+      "module": "src/components/utility/icon/icon-library-font-awesome.ts",
+      "exportName": "fontAwesomeIconMutator",
+      "kind": "function",
+      "fingerprint": "7fce301fd333636151c8",
+      "routes": [
+        "src/components/utility/icon/icon-library-font-awesome.ts"
+      ],
+      "document": "llms/utility.md",
+      "family": "utility",
+      "locator": {
+        "kind": "utility",
+        "name": "components-utility-icon-icon-library-font-awesome-contracts",
+        "declaration": "fontAwesomeIconMutator"
+      }
+    },
+    {
+      "module": "src/components/utility/icon/icon-library-font-awesome.ts",
+      "exportName": "LyraFontAwesomeIconLibraryOptions",
+      "kind": "interface",
+      "fingerprint": "577c5da32eb6e74dab58",
+      "routes": [
+        "src/components/utility/icon/icon-library-font-awesome.ts"
+      ],
+      "document": "llms/utility.md",
+      "family": "utility",
+      "locator": {
+        "kind": "utility",
+        "name": "components-utility-icon-icon-library-font-awesome-contracts",
+        "declaration": "LyraFontAwesomeIconLibraryOptions"
+      }
+    },
+    {
+      "module": "src/components/utility/icon/icon-library-font-awesome.ts",
+      "exportName": "registerFontAwesomeIconLibrary",
+      "kind": "function",
+      "fingerprint": "31ffbec5cdc7c00b5f32",
+      "routes": [
+        "src/components/utility/icon/icon-library-font-awesome.ts"
+      ],
+      "document": "llms/utility.md",
+      "family": "utility",
+      "locator": {
+        "kind": "utility",
+        "name": "components-utility-icon-icon-library-font-awesome-contracts",
+        "declaration": "registerFontAwesomeIconLibrary"
+      }
+    },
+    {
       "module": "src/components/utility/icon/icon-library.ts",
       "exportName": "getIconLibrary",
       "kind": "function",

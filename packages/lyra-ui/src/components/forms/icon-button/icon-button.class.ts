@@ -125,7 +125,8 @@ function namesControl(nodes: Iterable<Node>): boolean {
  * library contains only `add`, `check`, `close`, `search`, `menu`, `chevron-left`,
  * `chevron-right`, `chevron-down`, `calendar`, `command`, and `trash`; any other `icon`/`name`
  * renders no glyph unless a matching library is registered, including through
- * `registerIconLibrary('default', { resolver })`.
+ * `registerIconLibrary('default', { resolver })`. `registerBootstrapIconLibrary({ name: 'default' })`
+ * from `components/utility/icon/icon-library-bootstrap.js` restores Shoelace's Bootstrap Icons names.
  *
  * A safe `href` (`http:`/`https:`/`blob:`/`mailto:`/`tel:`/`sms:`/relative, see
  * `safeActionLinkHref`) switches the interactive root to a native anchor. `rel` is independently

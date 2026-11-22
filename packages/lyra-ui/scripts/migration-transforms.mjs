@@ -159,12 +159,37 @@ function reducedMotionReviewMessage(upstreamTag) {
   );
 }
 
+/**
+ * The opt-in resolver preset that restores each upstream's default icon vocabulary: Shoelace
+ * resolves Bootstrap Icons by default, Web Awesome resolves Font Awesome. Registering it under
+ * `'default'` is an application-level decision (CDN or self-hosted, kit code), so the codemod
+ * names the call instead of inserting it.
+ */
+function iconVocabularyPreset(upstreamTag) {
+  return upstreamTag.startsWith('sl-')
+    ? {
+        vocabulary: 'Bootstrap Icons',
+        call: "registerBootstrapIconLibrary({ name: 'default' })",
+        module: '@aceshooting/lyra-ui/components/utility/icon/icon-library-bootstrap.js',
+        extra: ' (pass basePath to self-host)',
+      }
+    : {
+        vocabulary: 'Font Awesome',
+        call: "registerFontAwesomeIconLibrary({ name: 'default' })",
+        module: '@aceshooting/lyra-ui/components/utility/icon/icon-library-font-awesome.js',
+        extra: ' (add kitCode for Pro families)',
+      };
+}
+
 function iconVocabularyReviewMessage(upstreamTag) {
+  const preset = iconVocabularyPreset(upstreamTag);
   return (
     `${upstreamTag}'s icon-name vocabulary is not bundled with Lyra. The default library includes ` +
     'only add, check, close, search, menu, chevron-left, chevron-right, chevron-down, calendar, ' +
-    'command, and trash; any other migrated name renders no glyph. Register the required ' +
-    `vocabulary with registerIconLibrary('default', { resolver }) or replace each name explicitly.`
+    'command, and trash; any other migrated name renders no glyph. To keep the upstream ' +
+    `${preset.vocabulary} names, call ${preset.call} from ${preset.module} once at startup` +
+    `${preset.extra}; otherwise register the required vocabulary with ` +
+    `registerIconLibrary('default', { resolver }) or replace each name explicitly.`
   );
 }
 
