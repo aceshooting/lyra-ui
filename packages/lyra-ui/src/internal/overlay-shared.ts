@@ -122,7 +122,7 @@ function isElementAnchor(anchor: Element | VirtualAnchor): anchor is Element {
 
 /** Whether a direct `anchor` can position a surface right now: a connected element, or a virtual
  *  element whose `getBoundingClientRect` is callable. Anything else is ignored, as if unset. */
-export function liveDirectAnchor(anchor: Element | VirtualAnchor | null | undefined): boolean {
+function liveDirectAnchor(anchor: Element | VirtualAnchor | null | undefined): boolean {
   if (!anchor || typeof anchor !== 'object') return false;
   if (isElementAnchor(anchor)) return anchor.isConnected;
   return typeof (anchor as Partial<VirtualAnchor>).getBoundingClientRect === 'function';

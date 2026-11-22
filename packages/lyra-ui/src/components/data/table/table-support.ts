@@ -92,7 +92,7 @@ export type TableRowAttributes = Readonly<Record<string, TableRowAttributeValue>
 
 /** The ARIA attributes `rowAttributes` may set on a body row; everything else ARIA on the row
  *  (`aria-selected`, the row role's state) is owned by the table. */
-export const TABLE_ROW_ARIA_ATTRIBUTES: readonly string[] = Object.freeze([
+const TABLE_ROW_ARIA_ATTRIBUTES: readonly string[] = Object.freeze([
   'aria-label',
   'aria-description',
   'aria-current',
