@@ -46,7 +46,7 @@ for the page.
 | `chart.js` | `^4.0.1` | `lr-bar-chart`, `lr-box-plot`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
 | `chartjs-plugin-annotation` | `^3.0.0` | `lr-bar-chart`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
 | `chartjs-plugin-datalabels` | `^2.2.0` | `lr-bar-chart`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
-| `chartjs-plugin-zoom` | `^2.0.0` | `lr-bar-chart`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
+| `chartjs-plugin-zoom` | `^2.0.0 \|\| ^3.0.0` | `lr-bar-chart`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |
 | `d3-drag` | `^3.0.1` | `lr-graph`, `lr-knowledge-graph-explorer` |
 | `d3-force` | `^3.0.1` | `lr-graph`, `lr-knowledge-graph-explorer` |
 | `d3-selection` | `^3.0.1` | `lr-graph`, `lr-knowledge-graph-explorer` |

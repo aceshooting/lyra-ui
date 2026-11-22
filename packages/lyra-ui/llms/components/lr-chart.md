@@ -875,8 +875,9 @@ resolved to concrete colors/CSS-pixel numbers on every draw; `rem` uses the live
 
 **Optional peer deps:** `chart.js` (mandatory peer, lazy-imported on every `connectedCallback()`
 regardless of options), `chartjs-plugin-zoom` (lazy-imported *additionally* only when `zoomable` is
-— or later becomes — `true`; never fetched for a chart that keeps `zoomable` unset/false, since the plugin
-has a hard dependency on `hammerjs`), `chartjs-plugin-datalabels` only when `data-labels` or
+— or later becomes — `true`; never fetched for a chart that keeps `zoomable` unset/false; both the
+`^2.0.0` line, which pulls in `hammerjs`, and the dependency-free `^3.0.0` line are supported),
+`chartjs-plugin-datalabels` only when `data-labels` or
 `stack-totals` is enabled, and `chartjs-plugin-annotation` only when `annotations` contains a usable
 entry. Each capability load is memoized once per page, registering only the tree-shaken
 controller/element/scale subset actually used. A failed zoom, data-label, or annotation peer is not

@@ -25,18 +25,6 @@ const coverageFloors = JSON.parse(
   readFileSync(new URL('./scripts/coverage-floors.json', import.meta.url), 'utf8'),
 );
 
-/**
- * `chartjs-plugin-zoom` (an optional chart peer dependency) has a hard
- * dependency on `hammerjs`, a UMD-only package with no ESM build. The
- * browser's native ESM loader can't `import Hammer from 'hammerjs'` because
- * the file never emits an `export` statement — it just assigns
- * `window.Hammer` when it detects no CJS/AMD loader (see hammerjs's own UMD
- * footer). Real consumers bundle with Vite/webpack/esbuild-bundle, which
- * already do this kind of CJS/UMD interop automatically; `@web/test-runner`
- * serves unbundled ESM, so this tiny plugin appends a synthetic
- * `export default` once hammer.js has run and populated `window.Hammer`,
- * purely to unblock this test environment.
- */
 // Source tests run before dist exists. Resolve the two diagnostic facades to their source
 // development modules; built/packed imports still exercise package.json's conditional mapping.
 const sourceDiagnosticsPlugin = {
@@ -47,15 +35,6 @@ const sourceDiagnosticsPlugin = {
       return context.body.replaceAll('#lyra-dev-warning', './dev-warning.development.js');
     if (context.path.endsWith('/src/internal/dev-mode-attribute-warning.ts'))
       return context.body.replaceAll('#lyra-dev-attributes', './dev-mode-attribute-warning.development.js');
-  },
-};
-
-const hammerEsmInteropPlugin = {
-  name: 'hammerjs-esm-interop',
-  transform(context) {
-    if (context.response.is('js') && context.path.endsWith('/hammerjs/hammer.js')) {
-      return `${context.body}\nexport default window.Hammer;\n`;
-    }
   },
 };
 
@@ -550,7 +529,6 @@ export default {
     esbuildPlugin({ ts: true, json: true, target: 'es2022', tsconfig: 'tsconfig.json' }),
     sourceDiagnosticsPlugin,
     waitUntilPollIntervalPlugin,
-    hammerEsmInteropPlugin,
     papaparseEsmInteropPlugin,
     mammothEsmInteropPlugin,
     jszipEsmInteropPlugin,

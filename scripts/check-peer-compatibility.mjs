@@ -62,7 +62,7 @@ export const CANONICAL_MANAGED_PEER_RANGES = Object.freeze({
   'chart.js': '^4.0.1',
   'chartjs-plugin-annotation': '^3.0.0',
   'chartjs-plugin-datalabels': '^2.2.0',
-  'chartjs-plugin-zoom': '^2.0.0',
+  'chartjs-plugin-zoom': '^2.0.0 || ^3.0.0',
   dompurify: '^3.4.14',
   katex: '^0.18.4 || ^0.19.0',
   mammoth: '^1.12.1',
@@ -104,6 +104,7 @@ const REVIEWED_CHART_PACKAGE_PEER_RANGES = Object.freeze({
   'chartjs-plugin-zoom': Object.freeze({
     '2.0.0': '>=3.2.0',
     '2.2.0': '>=3.2.0',
+    '3.0.0': '>=3.2.0',
   }),
 });
 const STABLE_VERSION_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/u;

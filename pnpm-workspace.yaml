@@ -85,17 +85,17 @@ overrides:
   '@stryker-mutator/tap-runner@10.1.1>glob': 14.0.3
 minimumReleaseAgeExclude:
   - '@aceshooting/lyra-flags@0.1.0'
-  - '@secretlint/config-creator@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1'
-  - '@secretlint/config-loader@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1'
-  - '@secretlint/core@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1'
-  - '@secretlint/formatter@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1'
-  - '@secretlint/node@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1'
-  - '@secretlint/profiler@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1'
-  - '@secretlint/resolver@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1'
-  - '@secretlint/source-creator@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1'
-  - '@secretlint/types@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1'
-  - '@secretlint/walker@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1'
-  - secretlint@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1
+  - '@secretlint/config-creator@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1 || 14.1.0'
+  - '@secretlint/config-loader@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1 || 14.1.0'
+  - '@secretlint/core@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1 || 14.1.0'
+  - '@secretlint/formatter@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1 || 14.1.0'
+  - '@secretlint/node@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1 || 14.1.0'
+  - '@secretlint/profiler@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1 || 14.1.0'
+  - '@secretlint/resolver@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1 || 14.1.0'
+  - '@secretlint/source-creator@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1 || 14.1.0'
+  - '@secretlint/types@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1 || 14.1.0'
+  - '@secretlint/walker@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1 || 14.1.0'
+  - secretlint@13.0.4 || 13.0.6 || 13.0.7 || 13.1.0 || 14.0.1 || 14.1.0
   - '@publint/pack@0.1.6'
   - publint@0.3.22 || 0.3.23 || 0.3.25
   - '@storybook/addon-a11y@10.5.4 || 10.5.6 || 10.5.7 || 10.5.8 || 10.5.9 || 10.5.10 || 10.6.1 || 10.6.2 || 10.6.3 || 10.6.4 || 10.6.5 || 10.6.8'
@@ -177,7 +177,7 @@ minimumReleaseAgeExclude:
   - react@19.3.0 || 19.3.1
   - react-dom@19.3.0 || 19.3.1
   - scheduler@0.28.0
-  - fast-check@4.10.0 || 4.10.1 || 4.10.3
+  - fast-check@4.10.0 || 4.10.1 || 4.10.3 || 4.11.0
   - '@aiden0z/pptx-renderer@1.3.0'
   - '@maplibre/maplibre-gl-style-spec@26.4.4 || 26.5.0 || 26.5.1 || 26.7.0 || 26.9.0'
   - '@img/sharp-darwin-arm64@0.35.5'
@@ -230,14 +230,14 @@ minimumReleaseAgeExclude:
   - playwright@1.64.1 || 1.65.1
   - '@asamuzakjp/dom-selector@10.0.3'
   - jsdom@30.1.3 || 31.0.1
-  - '@oxlint-tsgolint/darwin-arm64@7.0.2005 || 7.0.2007'
-  - '@oxlint-tsgolint/darwin-x64@7.0.2005 || 7.0.2007'
-  - '@oxlint-tsgolint/linux-arm64@7.0.2005 || 7.0.2007'
-  - '@oxlint-tsgolint/linux-x64@7.0.2005 || 7.0.2007'
-  - '@oxlint-tsgolint/win32-arm64@7.0.2005 || 7.0.2007'
-  - '@oxlint-tsgolint/win32-x64@7.0.2005 || 7.0.2007'
+  - '@oxlint-tsgolint/darwin-arm64@7.0.2005 || 7.0.2007 || 7.0.2008'
+  - '@oxlint-tsgolint/darwin-x64@7.0.2005 || 7.0.2007 || 7.0.2008'
+  - '@oxlint-tsgolint/linux-arm64@7.0.2005 || 7.0.2007 || 7.0.2008'
+  - '@oxlint-tsgolint/linux-x64@7.0.2005 || 7.0.2007 || 7.0.2008'
+  - '@oxlint-tsgolint/win32-arm64@7.0.2005 || 7.0.2007 || 7.0.2008'
+  - '@oxlint-tsgolint/win32-x64@7.0.2005 || 7.0.2007 || 7.0.2008'
   - chart.js@4.6.1
-  - oxlint-tsgolint@7.0.2005 || 7.0.2007
+  - oxlint-tsgolint@7.0.2005 || 7.0.2007 || 7.0.2008
   - prosemirror-transform@1.12.4
   - '@stryker-mutator/api@10.1.1'
   - '@stryker-mutator/core@10.1.1'
@@ -316,6 +316,7 @@ minimumReleaseAgeExclude:
   - '@rolldown/binding-win32-arm64-msvc@1.3.3'
   - '@rolldown/binding-win32-x64-msvc@1.3.3'
   - rolldown@1.3.3
+  - chartjs-plugin-zoom@3.0.0
 allowBuilds:
   esbuild: true
   rs-module-lexer: true

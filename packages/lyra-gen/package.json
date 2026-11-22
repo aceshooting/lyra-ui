@@ -229,7 +229,7 @@
     "ai": "7.0.179",
     "ajv": "8.20.0",
     "esbuild": "^0.28.2",
-    "fast-check": "^4.10.3",
+    "fast-check": "^4.11.0",
     "playwright": "^1.65.1",
     "typescript": "^7.0.2"
   },
