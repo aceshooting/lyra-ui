@@ -3,6 +3,7 @@ import './components/lr-dialog.js';
 import './components/lr-switch.js';
 import type { LyraDialog } from './components/lr-dialog.js';
 import type { LyraSwitch } from './components/lr-switch.js';
+import * as eventClasses from './event-classes.js';
 import { LyraCloseRequestEvent, LyraChangeEvent, LyraEvent, LyraSortEvent } from './event-classes.js';
 import { LyraElement } from './internal/lyra-element.js';
 
@@ -58,6 +59,35 @@ describe('per-event classes', () => {
     expect(made instanceof LyraChangeEvent).to.equal(false);
     expect(new Event('lr-sort') instanceof LyraSortEvent).to.equal(false);
     expect(new CustomEvent('lr-sort') instanceof LyraSortEvent).to.equal(false);
+  });
+
+  it('construct every exported class as its own named, bubbling event and match only that name', () => {
+    type EventClass = (new (detail: unknown, options?: { cancelable?: boolean }) => CustomEvent) & {
+      eventName?: string;
+    };
+    const classes = (Object.entries(eventClasses) as unknown as [string, EventClass][])
+      .filter(([, value]) => value !== (LyraEvent as unknown) && typeof value === 'function');
+    expect(classes.length).to.be.greaterThan(400);
+    const failures: string[] = [];
+    const names = new Set<string>();
+    classes.forEach(([exportName, EventClass], index) => {
+      const name = EventClass.eventName ?? '';
+      const words = name.replace(/^lr-/, '').split('-').map((word) => word[0]!.toUpperCase() + word.slice(1));
+      const detail = { index };
+      const event = new EventClass(detail, { cancelable: index % 2 === 0 });
+      const other = classes[(index + 1) % classes.length]![1];
+      if (exportName !== `Lyra${words.join('')}Event`) failures.push(`${exportName}: name ${name}`);
+      if (event.type !== name) failures.push(`${exportName}: type ${event.type}`);
+      if (!(event instanceof EventClass) || !(event instanceof LyraEvent)) failures.push(`${exportName}: instanceof`);
+      if (event instanceof other) failures.push(`${exportName}: matched ${other.eventName}`);
+      if (!event.bubbles || !event.composed || event.cancelable !== (index % 2 === 0)) {
+        failures.push(`${exportName}: flags`);
+      }
+      if (event.detail !== detail) failures.push(`${exportName}: detail`);
+      names.add(name);
+    });
+    expect(failures).to.deep.equal([]);
+    expect(names.size).to.equal(classes.length);
   });
 
   it('still match events created for an element adopted into another window', async () => {
