@@ -1,0 +1,337 @@
+{
+  "$comment": [
+    "Reviewed routes from Web Awesome (--wa-*) and Shoelace (--sl-*) design tokens to Lyra document-layer tokens, read by scripts/migration-token-routes.mjs.",
+    "Only upstream token NAMES and their publicly documented values or roles were compared; no upstream source was copied.",
+    "exact: the same role, and for a metric scale the same documented value; rewritten silently and reported as a change.",
+    "approximate: the same role with a value that may differ; rewritten and reported as UPSTREAM_TOKEN_APPROXIMATE_REVIEW.",
+    "review: a known token with no Lyra equivalent; left as-is and reported as UPSTREAM_TOKEN_REVIEW with the note as the hint. reviewPatterns cover whole families the same way.",
+    "Every target must be declared by the document token layer (src/styles/tokens-root.css); scripts/migration-token-routes.test.mjs enforces it."
+  ],
+  "exact": {
+    "--sl-border-radius-large": "--lr-radius",
+    "--sl-border-radius-medium": "--lr-radius-xs",
+    "--sl-border-radius-pill": "--lr-radius-pill",
+    "--sl-focus-ring": "--lr-focus-ring",
+    "--sl-focus-ring-color": "--lr-focus-ring-color",
+    "--sl-focus-ring-width": "--lr-focus-ring-width",
+    "--sl-font-mono": "--lr-font-mono",
+    "--sl-font-sans": "--lr-font",
+    "--sl-font-size-2x-small": "--lr-font-size-2xs",
+    "--sl-font-size-3x-large": "--lr-font-size-5xl",
+    "--sl-font-size-large": "--lr-font-size-xl",
+    "--sl-font-size-small": "--lr-font-size-m",
+    "--sl-font-size-x-small": "--lr-font-size-xs",
+    "--sl-font-weight-bold": "--lr-font-weight-bold",
+    "--sl-font-weight-normal": "--lr-font-weight-normal",
+    "--sl-font-weight-semibold": "--lr-font-weight-medium",
+    "--sl-input-border-width": "--lr-border-width-thin",
+    "--sl-line-height-dense": "--lr-line-height-1-4",
+    "--sl-line-height-denser": "--lr-line-height-none",
+    "--sl-overlay-background-color": "--lr-color-overlay",
+    "--sl-panel-background-color": "--lr-color-surface",
+    "--sl-panel-border-width": "--lr-border-width-thin",
+    "--sl-spacing-2x-small": "--lr-space-xs",
+    "--sl-spacing-3x-large": "--lr-space-3xl",
+    "--sl-spacing-3x-small": "--lr-space-2xs",
+    "--sl-spacing-medium": "--lr-space-l",
+    "--sl-spacing-small": "--lr-space-m",
+    "--sl-spacing-x-small": "--lr-space-s",
+    "--sl-z-index-dropdown": "--lr-layer-dropdown",
+    "--wa-border-radius-pill": "--lr-radius-pill",
+    "--wa-border-width-l": "--lr-border-width-thick",
+    "--wa-border-width-m": "--lr-border-width-medium",
+    "--wa-border-width-s": "--lr-border-width-thin",
+    "--wa-color-brand-border-loud": "--lr-color-brand-border-loud",
+    "--wa-color-brand-border-normal": "--lr-color-brand-border-normal",
+    "--wa-color-brand-border-quiet": "--lr-color-brand-border-quiet",
+    "--wa-color-brand-fill-loud": "--lr-color-brand-fill-loud",
+    "--wa-color-brand-fill-normal": "--lr-color-brand-fill-normal",
+    "--wa-color-brand-fill-quiet": "--lr-color-brand-fill-quiet",
+    "--wa-color-brand-on-loud": "--lr-color-brand-on-loud",
+    "--wa-color-brand-on-normal": "--lr-color-brand-on-normal",
+    "--wa-color-brand-on-quiet": "--lr-color-brand-on-quiet",
+    "--wa-color-danger-border-loud": "--lr-color-danger-border-loud",
+    "--wa-color-danger-border-normal": "--lr-color-danger-border-normal",
+    "--wa-color-danger-border-quiet": "--lr-color-danger-border-quiet",
+    "--wa-color-danger-fill-loud": "--lr-color-danger-fill-loud",
+    "--wa-color-danger-fill-normal": "--lr-color-danger-fill-normal",
+    "--wa-color-danger-fill-quiet": "--lr-color-danger-fill-quiet",
+    "--wa-color-danger-on-loud": "--lr-color-danger-on-loud",
+    "--wa-color-danger-on-normal": "--lr-color-danger-on-normal",
+    "--wa-color-danger-on-quiet": "--lr-color-danger-on-quiet",
+    "--wa-color-focus": "--lr-focus-ring-color",
+    "--wa-color-neutral-border-loud": "--lr-color-neutral-border-loud",
+    "--wa-color-neutral-border-normal": "--lr-color-neutral-border-normal",
+    "--wa-color-neutral-border-quiet": "--lr-color-neutral-border-quiet",
+    "--wa-color-neutral-fill-loud": "--lr-color-neutral-fill-loud",
+    "--wa-color-neutral-fill-normal": "--lr-color-neutral-fill-normal",
+    "--wa-color-neutral-fill-quiet": "--lr-color-neutral-fill-quiet",
+    "--wa-color-neutral-on-loud": "--lr-color-neutral-on-loud",
+    "--wa-color-neutral-on-normal": "--lr-color-neutral-on-normal",
+    "--wa-color-neutral-on-quiet": "--lr-color-neutral-on-quiet",
+    "--wa-color-overlay-modal": "--lr-color-overlay",
+    "--wa-color-shadow": "--lr-color-shadow",
+    "--wa-color-success-border-loud": "--lr-color-success-border-loud",
+    "--wa-color-success-border-normal": "--lr-color-success-border-normal",
+    "--wa-color-success-border-quiet": "--lr-color-success-border-quiet",
+    "--wa-color-success-fill-loud": "--lr-color-success-fill-loud",
+    "--wa-color-success-fill-normal": "--lr-color-success-fill-normal",
+    "--wa-color-success-fill-quiet": "--lr-color-success-fill-quiet",
+    "--wa-color-success-on-loud": "--lr-color-success-on-loud",
+    "--wa-color-success-on-normal": "--lr-color-success-on-normal",
+    "--wa-color-success-on-quiet": "--lr-color-success-on-quiet",
+    "--wa-color-surface-border": "--lr-color-border",
+    "--wa-color-surface-default": "--lr-color-surface",
+    "--wa-color-surface-raised": "--lr-color-surface-raised",
+    "--wa-color-text-normal": "--lr-color-text",
+    "--wa-color-text-quiet": "--lr-color-text-quiet",
+    "--wa-color-warning-border-loud": "--lr-color-warning-border-loud",
+    "--wa-color-warning-border-normal": "--lr-color-warning-border-normal",
+    "--wa-color-warning-border-quiet": "--lr-color-warning-border-quiet",
+    "--wa-color-warning-fill-loud": "--lr-color-warning-fill-loud",
+    "--wa-color-warning-fill-normal": "--lr-color-warning-fill-normal",
+    "--wa-color-warning-fill-quiet": "--lr-color-warning-fill-quiet",
+    "--wa-color-warning-on-loud": "--lr-color-warning-on-loud",
+    "--wa-color-warning-on-normal": "--lr-color-warning-on-normal",
+    "--wa-color-warning-on-quiet": "--lr-color-warning-on-quiet",
+    "--wa-font-family-body": "--lr-font",
+    "--wa-font-family-code": "--lr-font-mono",
+    "--wa-font-family-heading": "--lr-font-heading",
+    "--wa-font-weight-normal": "--lr-font-weight-normal",
+    "--wa-space-2xs": "--lr-space-xs",
+    "--wa-space-3xl": "--lr-space-3xl",
+    "--wa-space-3xs": "--lr-space-2xs",
+    "--wa-space-4xl": "--lr-space-4xl",
+    "--wa-space-l": "--lr-space-xl",
+    "--wa-space-m": "--lr-space-l",
+    "--wa-space-s": "--lr-space-m",
+    "--wa-space-xl": "--lr-space-2xl",
+    "--wa-space-xs": "--lr-space-s"
+  },
+  "approximate": {
+    "--sl-color-danger-600": {
+      "target": "--lr-color-danger-fill-loud",
+      "note": "the 600 step is the loud danger fill role; the Lyra semantic grid is theme-derived, not a numbered palette"
+    },
+    "--sl-color-neutral-600": {
+      "target": "--lr-color-neutral-fill-loud",
+      "note": "the 600 step is the loud neutral fill role; the Lyra semantic grid is theme-derived, not a numbered palette"
+    },
+    "--sl-color-primary-600": {
+      "target": "--lr-color-brand-fill-loud",
+      "note": "the 600 step is the loud brand fill role; the Lyra semantic grid is theme-derived, not a numbered palette"
+    },
+    "--sl-color-success-600": {
+      "target": "--lr-color-success-fill-loud",
+      "note": "the 600 step is the loud success fill role; the Lyra semantic grid is theme-derived, not a numbered palette"
+    },
+    "--sl-color-warning-600": {
+      "target": "--lr-color-warning-fill-loud",
+      "note": "the 600 step is the loud warning fill role; the Lyra semantic grid is theme-derived, not a numbered palette"
+    },
+    "--sl-panel-border-color": {
+      "target": "--lr-color-border",
+      "note": "the panel border role maps to the Lyra border role, which is a stronger default line"
+    },
+    "--sl-shadow-large": {
+      "target": "--lr-shadow-l",
+      "note": "the elevation step matches but the shadow geometry differs"
+    },
+    "--sl-shadow-medium": {
+      "target": "--lr-shadow-m",
+      "note": "the elevation step matches but the shadow geometry differs"
+    },
+    "--sl-shadow-small": {
+      "target": "--lr-shadow-s",
+      "note": "the elevation step matches but the shadow geometry differs"
+    },
+    "--sl-shadow-x-large": {
+      "target": "--lr-shadow-xl",
+      "note": "the elevation step matches but the shadow geometry differs"
+    },
+    "--sl-shadow-x-small": {
+      "target": "--lr-shadow-xs",
+      "note": "the elevation step matches but the shadow geometry differs"
+    },
+    "--sl-transition-fast": {
+      "target": "--lr-duration-fast",
+      "note": "the duration role matches, but 150ms becomes the shorter Lyra fast duration"
+    },
+    "--sl-transition-medium": {
+      "target": "--lr-duration-base",
+      "note": "the duration role matches, but 250ms becomes the shorter Lyra base duration"
+    },
+    "--sl-z-index-toast": {
+      "target": "--lr-layer-toast",
+      "note": "the toast role matches but the Lyra layer sits higher than 950"
+    },
+    "--sl-z-index-tooltip": {
+      "target": "--lr-layer-popover",
+      "note": "the same stacking value under the Lyra popover role"
+    },
+    "--wa-border-radius-m": {
+      "target": "--lr-radius",
+      "note": "the radius scales are not value-aligned"
+    },
+    "--wa-border-radius-s": {
+      "target": "--lr-radius-xs",
+      "note": "the radius scales are not value-aligned"
+    },
+    "--wa-focus-ring": {
+      "target": "--lr-focus-ring",
+      "note": "the shorthand role matches but its width or style may differ"
+    },
+    "--wa-focus-ring-offset": {
+      "target": "--lr-focus-ring-offset",
+      "note": "the role matches but the offset may differ"
+    },
+    "--wa-focus-ring-width": {
+      "target": "--lr-focus-ring-width",
+      "note": "the role matches but the width may differ"
+    },
+    "--wa-font-size-2xl": {
+      "target": "--lr-font-size-2xl",
+      "note": "the type scales are not value-aligned, so check the rendered size"
+    },
+    "--wa-font-size-2xs": {
+      "target": "--lr-font-size-2xs",
+      "note": "the type scales are not value-aligned, so check the rendered size"
+    },
+    "--wa-font-size-3xl": {
+      "target": "--lr-font-size-3xl",
+      "note": "the type scales are not value-aligned, so check the rendered size"
+    },
+    "--wa-font-size-3xs": {
+      "target": "--lr-font-size-3xs",
+      "note": "the type scales are not value-aligned, so check the rendered size"
+    },
+    "--wa-font-size-4xl": {
+      "target": "--lr-font-size-4xl",
+      "note": "the type scales are not value-aligned, so check the rendered size"
+    },
+    "--wa-font-size-5xl": {
+      "target": "--lr-font-size-5xl",
+      "note": "the type scales are not value-aligned, so check the rendered size"
+    },
+    "--wa-font-size-l": {
+      "target": "--lr-font-size-lg",
+      "note": "the type scales are not value-aligned, so check the rendered size"
+    },
+    "--wa-font-size-s": {
+      "target": "--lr-font-size-sm",
+      "note": "the type scales are not value-aligned, so check the rendered size"
+    },
+    "--wa-font-size-xl": {
+      "target": "--lr-font-size-xl",
+      "note": "the type scales are not value-aligned, so check the rendered size"
+    },
+    "--wa-font-size-xs": {
+      "target": "--lr-font-size-xs",
+      "note": "the type scales are not value-aligned, so check the rendered size"
+    },
+    "--wa-font-weight-bold": {
+      "target": "--lr-font-weight-bold",
+      "note": "the named weight is the same role, but the numeric weight may differ by one step"
+    },
+    "--wa-font-weight-semibold": {
+      "target": "--lr-font-weight-semibold",
+      "note": "the named weight is the same role, but the numeric weight may differ by one step"
+    },
+    "--wa-line-height-condensed": {
+      "target": "--lr-line-height-compact",
+      "note": "the line-height roles match but the ratios are not value-aligned"
+    },
+    "--wa-line-height-expanded": {
+      "target": "--lr-line-height-loose",
+      "note": "the line-height roles match but the ratios are not value-aligned"
+    },
+    "--wa-line-height-normal": {
+      "target": "--lr-line-height-normal",
+      "note": "the line-height roles match but the ratios are not value-aligned"
+    },
+    "--wa-shadow-l": {
+      "target": "--lr-shadow-l",
+      "note": "the elevation step matches but the shadow geometry differs"
+    },
+    "--wa-shadow-m": {
+      "target": "--lr-shadow-m",
+      "note": "the elevation step matches but the shadow geometry differs"
+    },
+    "--wa-shadow-s": {
+      "target": "--lr-shadow-s",
+      "note": "the elevation step matches but the shadow geometry differs"
+    },
+    "--wa-transition-easing": {
+      "target": "--lr-easing-standard",
+      "note": "the easing role matches but the timing function may differ"
+    },
+    "--wa-transition-fast": {
+      "target": "--lr-duration-fast",
+      "note": "the duration role matches but the length differs"
+    },
+    "--wa-transition-normal": {
+      "target": "--lr-duration-base",
+      "note": "the duration role matches but the length differs"
+    }
+  },
+  "review": {
+    "--sl-border-radius-circle": "Lyra has no circle radius token; use 50%",
+    "--sl-border-radius-small": "0.1875rem has no Lyra radius step; the neighbours are a literal 0 and --lr-radius-xs (0.25rem)",
+    "--sl-border-radius-x-large": "1rem has no Lyra radius step; --lr-radius (0.5rem) is the default",
+    "--sl-focus-ring-offset": "the Lyra focus ring offset defaults to 0px rather than 1px; use --lr-focus-ring-offset and check the gap",
+    "--sl-focus-ring-style": "the Lyra focus ring is always solid; use --lr-focus-ring",
+    "--sl-font-serif": "Lyra has no serif family token; declare the family yourself",
+    "--sl-font-size-2x-large": "2.25rem has no Lyra type step; the neighbours are --lr-font-size-3xl (2rem) and --lr-font-size-4xl (2.5rem)",
+    "--sl-font-size-4x-large": "4.5rem has no Lyra type step; Lyra type stops at --lr-font-size-5xl (3rem)",
+    "--sl-font-size-medium": "Lyra has no 1rem type step; the neighbours are --lr-font-size-m (0.875rem) and --lr-font-size-lg (1.125rem)",
+    "--sl-font-size-x-large": "1.5rem has no Lyra type step; the neighbours are --lr-font-size-xl (1.25rem) and --lr-font-size-2xl (1.75rem)",
+    "--sl-font-weight-light": "Lyra has no light weight token; --lr-font-weight-normal is the lightest",
+    "--sl-line-height-loose": "2.2 has no Lyra line-height step; --lr-line-height-loose (1.6) is the tallest",
+    "--sl-line-height-looser": "2.6 has no Lyra line-height step; --lr-line-height-loose (1.6) is the tallest",
+    "--sl-line-height-normal": "1.8 has no Lyra line-height step; --lr-line-height-loose (1.6) is the tallest",
+    "--sl-spacing-2x-large": "2.25rem has no Lyra spacing step; the neighbours are --lr-space-2xl (2rem) and --lr-space-3xl (3rem)",
+    "--sl-spacing-4x-large": "4.5rem has no Lyra spacing step; Lyra spacing stops at --lr-space-4xl (4rem)",
+    "--sl-spacing-large": "1.25rem has no Lyra spacing step; the neighbours are --lr-space-l (1rem) and --lr-space-xl (1.5rem)",
+    "--sl-spacing-x-large": "1.75rem has no Lyra spacing step; the neighbours are --lr-space-xl (1.5rem) and --lr-space-2xl (2rem)",
+    "--sl-transition-slow": "Lyra has no 500ms interaction duration; --lr-duration-ambient (1.8s) is for ambient motion only",
+    "--sl-transition-x-fast": "Lyra has no 50ms duration; --lr-duration-fast (120ms) is the shortest",
+    "--sl-transition-x-slow": "Lyra has no 1000ms interaction duration; --lr-duration-ambient (1.8s) is for ambient motion only",
+    "--sl-z-index-dialog": "Lyra stacks dialogs on --lr-layer-modal (1000), above its dropdown layer; check the relative order",
+    "--sl-z-index-drawer": "Lyra stacks drawers on --lr-layer-modal (1000), above its dropdown layer; check the relative order",
+    "--wa-border-radius-circle": "Lyra has no circle radius token; use 50%",
+    "--wa-border-radius-l": "Lyra has no large radius step; use --lr-radius-container or a literal",
+    "--wa-border-radius-square": "Lyra has no square radius token; use 0",
+    "--wa-border-style": "Lyra has no border-style token; use solid",
+    "--wa-color-overlay-inline": "Lyra has one overlay scrim, --lr-color-overlay",
+    "--wa-color-overlay-media": "Lyra has --lr-color-overlay and --lr-color-overlay-strong; choose by contrast",
+    "--wa-color-surface-lowered": "Lyra has no lowered surface; the surface-container steps (--lr-color-surface-container-low and siblings) are the nearest roles",
+    "--wa-color-text-link": "Lyra has no link colour token; --lr-color-brand-fill-loud is the usual choice",
+    "--wa-focus-ring-style": "the Lyra focus ring is always solid; use --lr-focus-ring",
+    "--wa-font-family-longform": "Lyra has no long-form family token; use --lr-font or --lr-font-heading",
+    "--wa-font-size-m": "Lyra has no 1rem type step; the neighbours are --lr-font-size-m (0.875rem) and --lr-font-size-lg (1.125rem)",
+    "--wa-font-size-scale": "Lyra has no type-scale multiplier; retheme the individual --lr-theme-font-size-* inputs",
+    "--wa-font-weight-light": "Lyra has no light weight token; --lr-font-weight-normal is the lightest",
+    "--wa-space-2xl": "2.5rem has no Lyra spacing step; the neighbours are --lr-space-2xl (2rem) and --lr-space-3xl (3rem)",
+    "--wa-space-5xl": "Lyra spacing stops at --lr-space-4xl (4rem)",
+    "--wa-space-scale": "Lyra has no spacing multiplier; retheme the individual --lr-theme-space-* inputs",
+    "--wa-transition-slow": "Lyra has no slow interaction duration; --lr-duration-ambient (1.8s) is for ambient motion only"
+  },
+  "reviewPatterns": [
+    {
+      "pattern": "^--sl-color-(?:primary|success|warning|danger|neutral)-\\d+$",
+      "note": "Lyra has no numbered palette custom properties; use the semantic --lr-color-<role>-{fill,border,on}-{quiet,normal,loud} grid"
+    },
+    {
+      "pattern": "^--sl-color-[a-z]+-\\d+$",
+      "note": "Lyra has no hue palette custom properties; use a semantic --lr-color-* role or a literal colour"
+    },
+    {
+      "pattern": "^--wa-color-(?:brand|neutral|success|warning|danger)-\\d+$",
+      "note": "Lyra has no numbered palette custom properties; use the semantic --lr-color-<role>-{fill,border,on}-{quiet,normal,loud} grid"
+    },
+    {
+      "pattern": "^--wa-color-[a-z]+-\\d+$",
+      "note": "Lyra has no hue palette custom properties; use a semantic --lr-color-* role or a literal colour"
+    }
+  ]
+}

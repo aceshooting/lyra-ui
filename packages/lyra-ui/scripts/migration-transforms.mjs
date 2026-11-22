@@ -36,6 +36,7 @@ import {
   scanClassTokens,
   scanCssUrlImports,
 } from './migration-upstream-assets.mjs';
+import { lookupUpstreamToken, scanUpstreamTokenRoutes } from './migration-token-routes.mjs';
 
 /** Whether an import names the package itself or an entry that registers every component. */
 function isRegistrationRoot(imported) {
@@ -518,7 +519,8 @@ export function scanUnrewrittenUpstreamReferences(text) {
     }
   }
 
-  // 4. Upstream custom properties. Never auto-rewritten -- see the call site.
+  // 4. Upstream custom properties without a reviewed route (fixtures/upstream-token-routes.json).
+  //    Routed ones are rewritten by migrateText() and filtered out at the call site.
   //    A name the file also DECLARES is the consumer's own property that merely happens to share
   //    the prefix, not an upstream token they are consuming; warning on it would be a false
   //    positive. Same "reads but never declares" discriminator check-manifest-coverage.mjs uses.
@@ -528,13 +530,14 @@ export function scanUnrewrittenUpstreamReferences(text) {
   for (const match of text.matchAll(/--(?<ecosystem>wa|sl)-[a-z0-9-]+/g)) {
     const token = match[0];
     if (declaredHere.has(token)) continue;
+    const hint = lookupUpstreamToken(token)?.note;
     push(
       match.index,
       `${match.groups.ecosystem}-tokens`,
       'custom-property',
       'UPSTREAM_TOKEN_REVIEW',
       token,
-      `\`${token}\` is an upstream design token with no automatic Lyra equivalent, and was left as-is. A var() naming a token that no longer exists falls back to its second argument, or to nothing -- silently. Map it by hand against llms/tokens.md; note the spacing scales are offset by one step, so renaming by name alone tightens every gap.`,
+      `\`${token}\` is an upstream design token with no exact Lyra equivalent, and was left as-is${hint ? `: ${hint}` : ''}. A var() naming a token that no longer exists falls back to its second argument, or to nothing -- silently. Map it by hand against llms/tokens.md; note the spacing scales are offset by one step, so renaming by name alone tightens every gap.`,
     );
   }
 
@@ -1339,6 +1342,26 @@ export function migrateText(original, contract, options = {}) {
     }
   }
 
+  // Upstream design tokens with a reviewed route (fixtures/upstream-token-routes.json). Exact routes
+  // share the role and, on a metric scale, the documented value; approximate ones share the role
+  // only, so they are rewritten and still reported. Everything else falls to the review scan below.
+  for (const hit of scanUpstreamTokenRoutes(original, (offset) => insideRanges(offset, ignoredRanges))) {
+    // A range an earlier pass already rewrote (an inventory member rename) keeps that rewrite.
+    if (edits.some((edit) => hit.start < edit.end && edit.start < hit.end)) continue;
+    addEdit(hit.start, hit.end, hit.target, {
+      upstreamTag: null,
+      origin: hit.origin,
+      upstreamMember: hit.token,
+      action: 'rewrite-token',
+      target: hit.target,
+      message: `Rewrite the ${hit.token} design token to ${hit.target}.`,
+    });
+    if (hit.kind === 'approximate') {
+      warn(hit.start, null, hit.token, 'UPSTREAM_TOKEN_APPROXIMATE_REVIEW', hit.target,
+        `${hit.token} was rewritten to the nearest Lyra token ${hit.target}; ${hit.note}.`, hit.origin);
+    }
+  }
+
   // ---------------------------------------------------------------------------------------------
   // Reference classes this codemod does NOT rewrite. Each one fails SILENTLY at runtime after a
   // migration: a CSS rule keyed on a tag that no longer exists simply matches nothing, ::slotted()
@@ -1348,10 +1371,10 @@ export function migrateText(original, contract, options = {}) {
   // reported a clean migration over visibly broken styling, which is the actual defect: the tool is
   // documented as a CI gate, so silence there is certification.
   //
-  // These are warnings, never rewrites. For tokens that is a deliberate refusal rather than
-  // laziness: the two spacing scales are offset by one step (Web Awesome `m` is 1rem, Lyra `m` is
-  // 0.75rem), so a blind --wa-X -> --lr-X rename silently tightens every gap, while mapping by
-  // value has no target for 1.5rem or 2.5rem. Naming each occurrence is worth more than a guess.
+  // These are warnings, never rewrites. Tokens are only rewritten through the reviewed route table
+  // above, never by name: the two spacing scales are offset by one step (Web Awesome `m` is 1rem,
+  // Lyra `m` is 0.75rem), so a blind --wa-X -> --lr-X rename silently tightens every gap, and a
+  // value with no Lyra step (2.5rem) has no target. Naming each occurrence beats a guess.
   //
   // Filtered against the rewrite ranges this pass actually produced, so a reference the inventory
   // DOES map (a `--wa-old-color` with a declared `--lr-*` target, say) is never both rewritten and

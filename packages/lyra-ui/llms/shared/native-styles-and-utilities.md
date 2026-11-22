@@ -463,6 +463,17 @@ are not value-aligned. `wa-heading-*`, `wa-caption-*`, `wa-longform-*`, the hue-
 `wa-form-control-*` classes and the gaps Lyra has no step for are reported as `UPSTREAM_CLASS_REVIEW`
 with the nearest alternative and are not rewritten.
 
+Design-token references (`var(--wa-*)`, `var(--sl-*)`) follow a reviewed route table, matched by role
+and resolved value rather than by name, and every target is a document-layer token. Semantic colours
+(`--wa-color-brand-fill-loud` becomes `--lr-color-brand-fill-loud`; surface, text, border, overlay,
+shadow and focus colours likewise), border widths, font families and weights, and spacing steps
+with the same length (`--wa-space-m` and `--sl-spacing-medium`, both 1rem, become `--lr-space-l`) are
+rewritten silently. Type sizes, radii, line heights, shadows, durations, easing and the Shoelace
+`-600` palette steps rewrite to the nearest role and report `UPSTREAM_TOKEN_APPROXIMATE_REVIEW`.
+A token with no equivalent (`--wa-space-2xl` at 2.5rem, numbered and hue palettes) stays as-is and is
+reported as `UPSTREAM_TOKEN_REVIEW` with the nearest alternatives. A token the file declares itself
+(`--wa-space-m: 2rem`) is treated as its own property and left alone.
+
 Stylesheet and loader imports (`import '...'` and CSS `@import`) map to real package subpaths:
 `dist/styles/webawesome.css` becomes `theme.css`, `native.css` and `utilities.css`;
 `styles/native.css`, `styles/utilities.css`, `styles/themes/default.css` and Shoelace

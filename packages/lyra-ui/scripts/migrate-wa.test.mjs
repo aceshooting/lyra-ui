@@ -2649,7 +2649,7 @@ test('warns about upstream references it cannot rewrite', () => {
     '  static styles = css`',
     '    wa-card { padding: 1px; }',
     '    ::slotted(wa-option) { display: none; }',
-    '    :host { gap: var(--wa-space-m); }',
+    '    :host { gap: var(--wa-space-m); margin: var(--wa-space-2xl); }',
     '  `;',
     "  a() { return this.querySelectorAll('wa-option'); }",
     "  b() { return this.shadowRoot?.querySelector('wa-card'); }",
@@ -2666,11 +2666,12 @@ test('warns about upstream references it cannot rewrite', () => {
     codes.has('SELECTOR_STRING_REVIEW'),
     'a selector string reached through this./shadowRoot?. must be reported',
   );
-  assert.ok(codes.has('UPSTREAM_TOKEN_REVIEW'), 'an upstream --wa-* token must be reported');
+  assert.ok(codes.has('UPSTREAM_TOKEN_REVIEW'), 'an upstream --wa-* token with no Lyra step must be reported');
 
-  // The tokens are deliberately NOT rewritten: the two spacing scales are offset by one step, so a
-  // rename by name alone silently tightens every gap.
-  assert.match(result.content, /--wa-space-m/, 'tokens stay verbatim, reported rather than guessed');
+  // Tokens are rewritten only through the reviewed route table, by resolved value: the two spacing
+  // scales are offset by one step, so --wa-space-m (1rem) is --lr-space-l, and 2.5rem has no step.
+  assert.match(result.content, /var\(--lr-space-l\)/, 'a token with an exact Lyra step is rewritten by value');
+  assert.match(result.content, /var\(--wa-space-2xl\)/, 'a token with no Lyra step stays verbatim, reported');
   assert.match(result.content, /wa-card \{ padding/, 'css`` selectors stay verbatim too');
 });
 
