@@ -996,28 +996,6 @@ const REVIEWED_PART_REWRITES = new Map([
 
 const REVIEWED_DEFAULT_REWRITES = new Map([
   [
-    'sl-copy-button',
-    [
-      {
-        memberKind: 'attribute',
-        member: 'feedback-duration',
-        action: 'insert-if-absent',
-        value: 1000,
-      },
-    ],
-  ],
-  [
-    'wa-copy-button',
-    [
-      {
-        memberKind: 'attribute',
-        member: 'feedback-duration',
-        action: 'insert-if-absent',
-        value: 1000,
-      },
-    ],
-  ],
-  [
     'sl-badge',
     [
       {

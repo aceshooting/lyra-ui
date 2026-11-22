@@ -55,6 +55,27 @@ export const Horizontal: Story = {
   `,
 };
 
+export const AutoOrientation: Story = {
+  name: 'Auto orientation',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`orientation="auto"` measures the timeline and runs it as a row while every item gets about 10em of its inline size, and as a column otherwise. Narrow the canvas (or the resizable frame below) past that point and the same markup stacks; `effectiveOrientation` and the `data-effective-orientation` host attribute report the axis in effect.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="resize: horizontal; overflow: auto; inline-size: 40rem; max-inline-size: 100%; min-inline-size: 12rem; padding: var(--lr-space-s); border: var(--lr-border-width-thin) dashed var(--lr-color-border-subtle)">
+      <lr-timeline orientation="auto" aria-label="Release stages">
+        <lr-timeline-item variant="success">Build</lr-timeline-item>
+        <lr-timeline-item variant="success">Test</lr-timeline-item>
+        <lr-timeline-item variant="brand" active>Release</lr-timeline-item>
+      </lr-timeline>
+    </div>
+  `,
+};
+
 export const HorizontalScrollingStrip: Story = {
   name: 'Horizontal strip narrow enough to scroll',
   parameters: {

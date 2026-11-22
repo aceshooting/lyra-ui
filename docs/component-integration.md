@@ -302,7 +302,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-time-input"></a>`lr-time-input` | forms | `import '@aceshooting/lyra-ui/components/lr-time-input.js';` | none | none | none | 73.3 KiB |
 | <a id="lr-time-range"></a>`lr-time-range` | forms | `import '@aceshooting/lyra-ui/components/lr-time-range.js';` | none | none | none | 39.2 KiB |
 | <a id="lr-time-zone-picker"></a>`lr-time-zone-picker` | forms | `import '@aceshooting/lyra-ui/components/lr-time-zone-picker.js';` | `dompurify` | `lr-option`, `lr-select` | `lr-combobox`, `lr-empty` | 121.2 KiB |
-| <a id="lr-timeline"></a>`lr-timeline` | data | `import '@aceshooting/lyra-ui/components/lr-timeline.js';` | none | `lr-timeline-item` | `lr-relative-time` | 42.5 KiB |
+| <a id="lr-timeline"></a>`lr-timeline` | data | `import '@aceshooting/lyra-ui/components/lr-timeline.js';` | none | `lr-timeline-item` | `lr-relative-time` | 42.9 KiB |
 | <a id="lr-timeline-item"></a>`lr-timeline-item` | data | `import '@aceshooting/lyra-ui/components/lr-timeline-item.js';` | none | `lr-relative-time` | none | 29.6 KiB |
 | <a id="lr-toast"></a>`lr-toast` | overlays | `import '@aceshooting/lyra-ui/components/lr-toast.js';` | none | `lr-toast-item` | none | 42.6 KiB |
 | <a id="lr-toast-item"></a>`lr-toast-item` | overlays | `import '@aceshooting/lyra-ui/components/lr-toast-item.js';` | none | none | none | 40.3 KiB |

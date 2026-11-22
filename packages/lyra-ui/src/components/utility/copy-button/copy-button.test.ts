@@ -1028,6 +1028,28 @@ it('restores each copy trigger baseline across replacement and preserves a consu
     expect(feedbackText(el)).to.equal('Copié');
   });
 
+  it('defaults feedback-duration to 1000 ms, the shared Web Awesome and Shoelace default', async () => {
+    const el = (await fixture(html`<lr-copy-button value="hello"></lr-copy-button>`)) as LyraCopyButton;
+    expect(el.feedbackDuration).to.equal(1000);
+    expect(el.hasAttribute('feedback-duration')).to.equal(false);
+    const delays: number[] = [];
+    const original = window.setTimeout;
+    const browserSetTimeout = original as unknown as (handler: TimerHandler, delay?: number, ...args: unknown[]) => number;
+    window.setTimeout = ((handler: TimerHandler, delay?: number, ...args: unknown[]) => {
+      delays.push(Number(delay ?? 0));
+      return browserSetTimeout.call(window, handler, delay, ...args);
+    }) as unknown as typeof window.setTimeout;
+    try {
+      baseButton(el).click();
+      await settle(el);
+    } finally {
+      window.setTimeout = original;
+    }
+    expect(baseButton(el).getAttribute('aria-label')).to.equal('Copied!');
+    expect(delays).to.include(1000);
+    expect(delays).not.to.include(1500);
+  });
+
   it('supports a configurable feedback duration', async () => {
     const el = (await fixture(html`
       <lr-copy-button value="hello" feedback-duration="20"></lr-copy-button>
@@ -1050,9 +1072,9 @@ it('restores each copy trigger baseline across replacement and preserves a consu
     await settle(el);
     expect(baseButton(el).getAttribute('aria-label')).to.equal('Copied!');
 
-    // NaN self-heals to the shared copy feedback duration (1500ms), not 0/never -- a short wait must
+    // NaN self-heals to the 1000ms default feedback duration, not 0/never -- a short wait must
     // NOT have already reverted it.
-    // wait-reason: negative assertion, a NaN duration self-heals to 1500ms so a short wait must not have reverted the confirmation
+    // wait-reason: negative assertion, a NaN duration self-heals to 1000ms so a short wait must not have reverted the confirmation
     await aTimeout(50);
     await el.updateComplete;
     expect(baseButton(el).getAttribute('aria-label')).to.equal('Copied!');

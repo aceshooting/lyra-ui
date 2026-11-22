@@ -39,11 +39,11 @@ describe('lr-timeline wa-timeline mirror: container', () => {
     expect(el.collision).to.equal('overlap');
   });
 
-  it('reflects and normalizes marker-placement and marker-alignment, and keeps vertical for orientation=auto', async () => {
+  it('reflects and normalizes marker-placement and marker-alignment, and accepts orientation=auto', async () => {
     const el = await fixture<LyraTimeline>(html`<lr-timeline marker-placement="alternate" marker-alignment="center" orientation="auto"></lr-timeline>`);
     expect(el.markerPlacement).to.equal('alternate');
     expect(el.markerAlignment).to.equal('center');
-    expect(el.orientation).to.equal('vertical');
+    expect(el.orientation).to.equal('auto');
     el.markerPlacement = 'end';
     await el.updateComplete;
     expect(el.getAttribute('marker-placement')).to.equal('end');

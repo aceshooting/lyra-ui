@@ -8876,6 +8876,16 @@
       "moduleReviews": [],
       "propertyChanges": [
         {
+          "tag": "lr-copy-button",
+          "property": "feedbackDuration",
+          "summary": "An omitted feedback-duration now shows the copied or failed feedback for 1000 ms instead of 1500 ms, matching Web Awesome and Shoelace; set feedback-duration=\"1500\" to keep the longer feedback."
+        },
+        {
+          "tag": "lr-timeline",
+          "property": "orientation",
+          "summary": "orientation=\"auto\" is now accepted instead of falling back to vertical: an auto timeline runs as a row while its measured inline size gives every item about 10em, and the property's type includes 'auto', so review code that switches over orientation (read effectiveOrientation for the axis in effect)."
+        },
+        {
           "tag": "lr-token-input",
           "property": "delimiter",
           "summary": "Each character of delimiter is now a separate delimiter (\";,\" splits at every semicolon and every comma, and typing either commits); a multi-character value no longer matches only as one whole string, so review a delimiter longer than one character."

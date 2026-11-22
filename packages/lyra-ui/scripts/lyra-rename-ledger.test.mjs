@@ -2342,7 +2342,7 @@ test('lyra-v31 rewrites every renamed published CSS custom property, once', () =
   }
 });
 
-test('lyra-v32 rewrites the folded label gap once and reports lr-token-input delimiter sites', () => {
+test('lyra-v32 rewrites the folded label gap once and reports lr-token-input, lr-copy-button and lr-timeline property sites', () => {
   const current = buildMigrationContract(checkedInventory, {
     renameLedger: readRenameLedger(), exportDeprecations: readExportDeprecations(), compatibilityContext: checkedCompatibilityContext,
   });
@@ -2356,6 +2356,14 @@ test('lyra-v32 rewrites the folded label gap once and reports lr-token-input del
     const result = migrateText(input, current, { file: input.startsWith('<') ? 'a.ts' : 'b.ts', origin: 'lyra-v32' });
     assert.equal(result.content, input, input);
     assert.ok(result.warnings.some(site => site.upstreamMember === 'delimiter'), `${input}: ${describeWarnings(result.warnings).join('; ')}`);
+  }
+  for (const [input, member] of [
+    ['<lr-copy-button .feedbackDuration=${1500}></lr-copy-button>', 'feedbackDuration'],
+    ["const el = document.querySelector('lr-timeline'); if (el.orientation === 'vertical') {}", 'orientation'],
+  ]) {
+    const result = migrateText(input, current, { file: 'c.ts', origin: 'lyra-v32' });
+    assert.equal(result.content, input, input);
+    assert.ok(result.warnings.some(site => site.upstreamMember === member), `${input}: ${describeWarnings(result.warnings).join('; ')}`);
   }
 });
 

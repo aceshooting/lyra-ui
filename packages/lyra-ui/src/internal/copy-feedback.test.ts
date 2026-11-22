@@ -30,9 +30,9 @@ it('shares one 1500 ms copied-feedback duration', () => {
   expect(COPY_FEEDBACK_MS).to.equal(1500);
 });
 
-it('defaults lr-copy-button feedback-duration to the shared constant', async () => {
+it('keeps lr-copy-button on its mirrored 1000 ms feedback-duration default, not the shared constant', async () => {
   const el = await fixture<LyraCopyButton>(html`<lr-copy-button value="x"></lr-copy-button>`);
-  expect(el.feedbackDuration).to.equal(COPY_FEEDBACK_MS);
+  expect(el.feedbackDuration).to.equal(1000);
 });
 
 for (const tag of ['lr-json-viewer', 'lr-diff-view'] as const) {

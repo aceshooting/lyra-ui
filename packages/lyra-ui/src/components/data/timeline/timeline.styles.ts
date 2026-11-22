@@ -18,7 +18,9 @@ export const styles = css`
     --_lr-timeline-item-gap-block-end: var(--lr-timeline-gap, var(--lr-space-l));
     --_lr-timeline-item-gap-inline-end: 0;
   }
-  :host([orientation='horizontal']) {
+  /* An orientation="auto" timeline carries data-effective-orientation (set from its measured inline
+     size), so every horizontal rule also matches an auto timeline currently running as a row. */
+  :host(:is([orientation='horizontal'], [data-effective-orientation='horizontal'])) {
     --_lr-timeline-item-direction: column; /* marker above content */
     --_lr-timeline-item-track-direction: row;
     --_lr-timeline-item-gap-block-end: 0;
@@ -42,7 +44,7 @@ export const styles = css`
 
   /* marker-placement="end": the marker follows the content. row-reverse is inline-logical, so the
      sides swap again under RTL without an override. */
-  :host([marker-placement='end']:not([orientation='horizontal'])) [part~='base'] {
+  :host([marker-placement='end']:not([orientation='horizontal'], [data-effective-orientation='horizontal'])) [part~='base'] {
     --_lr-timeline-item-direction: row-reverse;
     --_lr-timeline-item-content-align: end;
     --_lr-timeline-item-opposite-align: start;
@@ -50,7 +52,7 @@ export const styles = css`
 
   /* marker-alignment="center": the marker centers on the item's full height and the rail halves
      run above and below it as one line. */
-  :host([marker-alignment='center']:not([orientation='horizontal'])) [part~='base'] {
+  :host([marker-alignment='center']:not([orientation='horizontal'], [data-effective-orientation='horizontal'])) [part~='base'] {
     --_lr-timeline-item-track-justify: center;
     --_lr-timeline-item-rail-position: absolute;
     --_lr-timeline-item-rail-inline: 100%;
@@ -66,7 +68,7 @@ export const styles = css`
      sides. Narrower than 30em every item falls back to the start layout. The even-numbered items
      read the flip values through their own :host(:nth-of-type(even)) rule. */
   @container (min-width: 30em) {
-    :host([marker-placement='alternate']:not([orientation='horizontal'])) [part~='base'] {
+    :host([marker-placement='alternate']:not([orientation='horizontal'], [data-effective-orientation='horizontal'])) [part~='base'] {
       --_lr-timeline-item-base-display: grid;
       --_lr-timeline-item-track-col: 2;
       --_lr-timeline-alt-content-col: 3;
@@ -97,7 +99,7 @@ export const styles = css`
     block-size: var(--lr-timeline-time-extent, var(--lr-size-20rem));
     margin-block-end: var(--_lr-timeline-trailing-extent, 0);
   }
-  :host([scale='time'][orientation='horizontal']) [part~='base'] {
+  :host([scale='time']:is([orientation='horizontal'], [data-effective-orientation='horizontal'])) [part~='base'] {
     block-size: var(--_lr-timeline-content-height, auto);
     inline-size: var(--lr-timeline-time-extent, var(--lr-size-20rem));
   }
@@ -128,7 +130,7 @@ export const styles = css`
     inline-size: calc(100% - var(--_lr-timeline-lane-indent));
   }
   /* Horizontal timelines run along the inline axis, so their cross axis is the block axis. */
-  :host([scale='time'][collision='stack'][orientation='horizontal']) ::slotted(*) {
+  :host([scale='time'][collision='stack']:is([orientation='horizontal'], [data-effective-orientation='horizontal'])) ::slotted(*) {
     inset-inline-start: var(--_lr-timeline-item-offset, 0%);
     inset-block-start: var(--_lr-timeline-lane-indent);
     inline-size: auto;
@@ -136,7 +138,7 @@ export const styles = css`
   /* Horizontal runs along the inline axis, so the offset moves to inset-inline-start -- a logical
      property, so an RTL timeline reverses for free, the same reasoning as the orientation
      properties above. */
-  :host([scale='time'][orientation='horizontal']) ::slotted(*) {
+  :host([scale='time']:is([orientation='horizontal'], [data-effective-orientation='horizontal'])) ::slotted(*) {
     inset-block-start: 0;
     inset-inline-start: var(--_lr-timeline-item-offset, 0%);
     inline-size: auto;
@@ -147,7 +149,7 @@ export const styles = css`
     display: none !important;
   }
 
-  :host([scale='time'][collision='cluster'][orientation='horizontal'])
+  :host([scale='time'][collision='cluster']:is([orientation='horizontal'], [data-effective-orientation='horizontal']))
     [part~='base'] {
     min-block-size: max(
       var(--lr-icon-button-size),
@@ -155,7 +157,7 @@ export const styles = css`
     );
   }
 
-  :host([orientation='horizontal']) [part~='base'] {
+  :host(:is([orientation='horizontal'], [data-effective-orientation='horizontal'])) [part~='base'] {
     flex-direction: row;
     /* Mirrors <lr-tab-group>: a horizontal timeline becomes a horizontally-scrollable strip rather
        than breaking layout. overflow-y is pinned explicitly because the overflow spec forces an
@@ -176,7 +178,7 @@ export const styles = css`
     ${focusRing}
   }
   /* The shared edge fade is for the horizontal strip only; a vertical base never scrolls sideways. */
-  :host(:not([orientation='horizontal'])) [part~='base'] {
+  :host(:not([orientation='horizontal'], [data-effective-orientation='horizontal'])) [part~='base'] {
     -webkit-mask-image: none;
     mask-image: none;
   }

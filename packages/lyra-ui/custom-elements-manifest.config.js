@@ -107,7 +107,7 @@ export const ACCESSOR_RUNTIME_CONTRACTS = new Map([
   [
     'lr-copy-button',
     {
-      feedbackDuration: { default: '1500', attribute: 'feedback-duration' },
+      feedbackDuration: { default: '1000', attribute: 'feedback-duration' },
     },
   ],
   [

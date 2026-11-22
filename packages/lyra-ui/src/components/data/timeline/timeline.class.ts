@@ -1,4 +1,5 @@
 import { OwnedFrame } from '../../../internal/owned-timer.js';
+import { OwnedResizeObserver, readInlineSize } from '../../../internal/owned-observer.js';
 import { layoutScale, toLayoutRect } from '../../../internal/layout-scale.js';
 import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { html, type PropertyValues, type TemplateResult } from 'lit';
@@ -39,7 +40,17 @@ import { LYRA_DEFAULT_timeline, LYRA_DEFAULT_timelineClusterCount } from '../../
 
 
 
-const TIMELINE_ORIENTATION = literalSetConverter<LyraOrientation>(['vertical', 'horizontal'], 'vertical');
+/** Layout axis of a timeline. `auto` runs it as a row while its measured inline size gives every
+ *  item about 10em, and as a column otherwise. */
+export type LyraTimelineOrientation = LyraOrientation | 'auto';
+
+const TIMELINE_ORIENTATION = literalSetConverter<LyraTimelineOrientation>(
+  ['vertical', 'horizontal', 'auto'],
+  'vertical'
+);
+
+/** Inline room, in the timeline's own `em`, that `orientation="auto"` needs per item for a row. */
+const AUTO_ROW_ITEM_EMS = 10;
 
 /** Which side of its content an item's marker sits on; `alternate` swaps sides on every other item. */
 export type LyraTimelineMarkerPlacement = 'start' | 'end' | 'alternate';
@@ -162,8 +173,9 @@ function itemEpochMs(element: Element): number | null {
  *   landmark, so it doesn't need a two-layer `base`+`list` split). Flex container: `flex-direction:
  *   column` in `vertical` orientation (the default), `flex-direction: row` (with `overflow-x: auto`,
  *   `overflow-y: hidden`, and an edge-fade `mask-image` applied only while the strip actually
- *   overflows) in `horizontal` orientation. Its `tabindex` rises from `-1` to `0` while (and only
- *   while) that horizontal strip genuinely overflows: timeline items are passive, so nothing
+ *   overflows) in `horizontal` orientation and while an `auto` timeline runs as a row. Its
+ *   `tabindex` rises from `-1` to `0` while (and only while) that horizontal strip genuinely
+ *   overflows: timeline items are passive, so nothing
  *   inside is tabbable and the off-screen events would otherwise be pointer-only content. Style
  *   that state with `::part(base):focus-visible`.
  * @cssprop [--lr-timeline-gap=var(--lr-space-l)] - Spacing between consecutive items along the
@@ -223,24 +235,51 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
 
   static override styles = [LyraElement.styles, scrollOverflowFadeStyles, styles];
 
-  private _orientation: LyraOrientation = 'vertical';
+  private _orientation: LyraTimelineOrientation = 'vertical';
   /** `'vertical'` (the default) lays items out in a column, the primary/most-common use case — an
    *  audit trail or agent history reads top-to-bottom. `'horizontal'` lays them out in a row.
-   *  Web Awesome's `orientation="auto"` is not accepted yet: it would widen the published read type
-   *  of this property, so an unrecognized value keeps the `'vertical'` default.
+   *  `'auto'` picks between the two from the timeline's own measured inline size: a row while
+   *  every item gets about 10em of it, a column otherwise, so a phone-width or narrow-pane timeline
+   *  stacks with no breakpoint to author. An `auto` timeline renders as a column until it has
+   *  been measured (including server-rendered markup). Read `effectiveOrientation` for the axis
+   *  in effect. An unrecognized value keeps the `'vertical'` default.
    *  Deliberately differs from `<lr-stepper>`'s `'horizontal'` default — don't copy that default by
    *  habit. */
   @property({ reflect: true, converter: TIMELINE_ORIENTATION })
-  get orientation(): LyraOrientation {
+  get orientation(): LyraTimelineOrientation {
     return this._orientation;
   }
-  set orientation(value: LyraOrientation) {
+  set orientation(value: LyraTimelineOrientation) {
     const normalized = TIMELINE_ORIENTATION.normalizeReflected(this, 'orientation', value);
     const previous = this._orientation;
     if (previous === normalized) return;
     this._orientation = normalized;
     this.requestUpdate('orientation', previous);
   }
+
+  /** The axis an `auto` timeline currently runs along; equal to `orientation` otherwise. */
+  @state() private _effectiveOrientation: LyraOrientation = 'vertical';
+
+  /** The layout axis in effect: `orientation` itself, or the measured choice of an
+   *  `orientation="auto"` timeline (`'vertical'` until it has been measured). While `auto`, the
+   *  host also carries a `data-effective-orientation` attribute with the same value. */
+  get effectiveOrientation(): LyraOrientation {
+    return this._effectiveOrientation;
+  }
+
+  /** The host's last measured content-box inline size, used only by `orientation="auto"`. */
+  private measuredInlineSize = Number.NaN;
+  private readonly autoOrientationFrame = new OwnedFrame(this);
+  /** Watches the host's own box, whose inline size comes from its container rather than its
+   *  layout axis (it is `display: block`), so switching axes cannot feed back into the reading. */
+  private readonly autoOrientationObserver = new OwnedResizeObserver(this, entries => {
+    const width = readInlineSize(entries[entries.length - 1]);
+    if (width === undefined) return;
+    this.autoOrientationFrame.schedule(() => {
+      this.measuredInlineSize = width;
+      this.syncEffectiveOrientation();
+    });
+  });
 
   private _markerPlacement: LyraTimelineMarkerPlacement = 'start';
   /** Which side of its content each item's marker sits on while the timeline runs as a column.
@@ -420,6 +459,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    if (this.hasUpdated && this.orientation === 'auto') this.armAutoOrientation();
     if (this.hasUpdated) {
       this.scheduleAfterUpdate(
         () => {
@@ -447,7 +487,55 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
     if (this.collisionClusters.length > 0) {
       this.collisionClusters = EMPTY_TIMELINE_CLUSTERS;
     }
+    this.resetAutoOrientation();
     super.disconnectedCallback();
+  }
+
+  override adoptedCallback(): void {
+    super.adoptedCallback();
+    // The observer belongs to the previous document's realm; connectedCallback() re-arms it.
+    this.resetAutoOrientation();
+  }
+
+  /** Observes the host while `orientation="auto"`; idempotent. */
+  private armAutoOrientation(): void {
+    if (this.autoOrientationObserver.active) return;
+    this.autoOrientationObserver.clear();
+    this.autoOrientationObserver.observe(this);
+  }
+
+  private resetAutoOrientation(): void {
+    this.autoOrientationFrame.cancel();
+    this.autoOrientationObserver.clear();
+  }
+
+  /** Resolves `effectiveOrientation` from `orientation` and, while `auto`, the last measurement,
+   *  and mirrors it to the host's `data-effective-orientation` attribute that the styles key on. */
+  private syncEffectiveOrientation(): void {
+    const auto = this.orientation === 'auto';
+    const next: LyraOrientation = auto
+      ? this.autoRunsAsRow()
+        ? 'horizontal'
+        : 'vertical'
+      : (this.orientation as LyraOrientation);
+    if (auto) {
+      if (this.getAttribute('data-effective-orientation') !== next) {
+        this.setAttribute('data-effective-orientation', next);
+      }
+    } else if (this.hasAttribute('data-effective-orientation')) {
+      this.removeAttribute('data-effective-orientation');
+    }
+    if (this._effectiveOrientation !== next) this._effectiveOrientation = next;
+  }
+
+  /** Whether an `auto` timeline has room for a row: about 10em (in its own computed font size)
+   *  per item. An unmeasured or collapsed width keeps the column. */
+  private autoRunsAsRow(): boolean {
+    const width = this.measuredInlineSize;
+    if (!Number.isFinite(width) || width <= 0) return false;
+    const fontSize = Number.parseFloat(getComputedStyle(this).fontSize);
+    if (!Number.isFinite(fontSize) || fontSize <= 0) return false;
+    return width >= Math.max(1, this.slottedCount) * fontSize * AUTO_ROW_ITEM_EMS;
   }
 
   protected override willUpdate(changed: PropertyValues): void {
@@ -460,6 +548,19 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
       this.slottedCount = Array.from(this.children).filter(
         (element) => !element.getAttribute('slot') && element.localName === tag('timeline-item'),
       ).length;
+    }
+    if (!this.hasUpdated || changed.has('orientation') || changed.has('slottedCount')) {
+      this.syncEffectiveOrientation();
+    }
+    if (this.isConnected && this.orientation === 'auto') {
+      // Seed the first render from the current allocation so a client-rendered auto timeline does
+      // not paint one axis and then flip (deferred past hydration, which keeps the column the
+      // server rendered); the observer owns every later change.
+      this.seedFirstRenderState(() => {
+        const width = this.getBoundingClientRect().width;
+        if (width > 0) this.measuredInlineSize = width;
+        this.syncEffectiveOrientation();
+      });
     }
     if (!this.hasUpdated) {
       this.seedFirstRenderState(() => this.applyTimeScale());
@@ -479,14 +580,14 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
     // invalidation so an item resize does not remeasure every sibling. Structural updates enroll
     // only new targets, while allocation and placement changes refresh the complete geometry.
     if (changed.size === 0 || [...changed.keys()].some(key => key !== 'accessibleLabel')) this.invalidateTimeGeometry();
-    if (this.overflowItemsPending || changed.has('scale') || changed.has('orientation')) this.syncItemObservations();
+    if (this.overflowItemsPending || changed.has('scale') || changed.has('_effectiveOrientation')) this.syncItemObservations();
     if (changed.has('ordered') || changed.has('start')) this.syncOrdinals();
     // After the controller's own `hostUpdated()` measurement, which Lit runs before this method,
     // so the overflow attribute read below is this render's.
     this.syncScrollTabStop();
     this.scheduleTimeExtentMeasurement();
     if (
-      (changed.has('collisionClusters') || changed.has('orientation')) &&
+      (changed.has('collisionClusters') || changed.has('_effectiveOrientation')) &&
       this.collisionClusters.length > 0
     ) {
       this.scheduleAfterUpdate(
@@ -497,6 +598,8 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
     if (this.collisionClusters.length > 0) {
       this.syncClusterPresentations(this.collisionClusters);
     }
+    if (this.orientation === 'auto') this.armAutoOrientation();
+    else this.resetAutoOrientation();
   }
 
   /** Makes the horizontal strip reachable by keyboard while, and only while, it genuinely
@@ -518,7 +621,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
     const base = this.renderRoot.querySelector<HTMLElement>('[part~="base"]');
     if (!base) return;
     const reachableOnlyByScrolling =
-      this.orientation === 'horizontal' &&
+      this._effectiveOrientation === 'horizontal' &&
       base.hasAttribute(SCROLL_OVERFLOW_ATTRIBUTE);
     base.setAttribute('tabindex', reachableOnlyByScrolling ? '0' : '-1');
   }
@@ -825,7 +928,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
     const base = this.renderRoot.querySelector<HTMLElement>('[part~="base"]');
     if (!base) return TIMELINE_COLLISION_THRESHOLD;
     const axisExtent =
-      this.orientation === 'horizontal' ? base.clientWidth : base.clientHeight;
+      this._effectiveOrientation === 'horizontal' ? base.clientWidth : base.clientHeight;
     if (!Number.isFinite(axisExtent) || axisExtent <= 0) {
       return TIMELINE_COLLISION_THRESHOLD;
     }
@@ -838,7 +941,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
       const rect = toLayoutRect(marker, marker.getBoundingClientRect());
       markerExtent = Math.max(
         markerExtent,
-        this.orientation === 'horizontal' ? rect.width : rect.height
+        this._effectiveOrientation === 'horizontal' ? rect.width : rect.height
       );
     }
     if (!Number.isFinite(markerExtent) || markerExtent <= 0) {
@@ -859,7 +962,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
       if (!base) return;
       // The latest vertical item sits at 100%, below the axis: reserve its overhang after the base.
       let overhang = 0;
-      if (this.scale === 'time' && this.orientation !== 'horizontal') {
+      if (this.scale === 'time' && this._effectiveOrientation !== 'horizontal') {
         const bottom = base.getBoundingClientRect().bottom;
         const scaleY = layoutScale(base).y;
         for (const item of this.timelineItems()) {
@@ -871,7 +974,7 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
       if (base.style.getPropertyValue('--_lr-timeline-trailing-extent') !== trailing) {
         base.style.setProperty('--_lr-timeline-trailing-extent', trailing);
       }
-      if (this.scale !== 'time' || this.orientation !== 'horizontal' || this.collision === 'cluster') {
+      if (this.scale !== 'time' || this._effectiveOrientation !== 'horizontal' || this.collision === 'cluster') {
         base.style.removeProperty('--_lr-timeline-content-height');
         return;
       }
@@ -909,8 +1012,8 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
     let geometry = this.itemGeometry.get(item);
     if (!geometry) {
       geometry = item.getClientRects().length
-        ? { bottom: this.orientation === 'horizontal' ? 0 : (item.getBoundingClientRect().bottom - baseBottom) / scaleY,
-          extent: this.orientation === 'horizontal' ? item.offsetTop + item.offsetHeight + 1 : 0 }
+        ? { bottom: this._effectiveOrientation === 'horizontal' ? 0 : (item.getBoundingClientRect().bottom - baseBottom) / scaleY,
+          extent: this._effectiveOrientation === 'horizontal' ? item.offsetTop + item.offsetHeight + 1 : 0 }
         : { bottom: 0, extent: 0 };
       this.itemGeometry.set(item, geometry);
     }

@@ -382,6 +382,7 @@ export type {
   LyraRandomContentEventMap,
 } from './components/utility/random-content/random-content.class.js';
 export type {
+  LyraTimelineOrientation,
   LyraTimelineScale,
   LyraTimelineMarkerPlacement,
   LyraTimelineMarkerAlignment,

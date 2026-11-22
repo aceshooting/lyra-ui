@@ -27,7 +27,6 @@ import {
 import type { LyraToolbarAction } from '../../../internal/toolbar-actions.js';
 import type { LyraIconButton } from '../../forms/icon-button/icon-button.class.js';
 import { styles } from './copy-button.styles.js';
-import { COPY_FEEDBACK_MS } from '../../../internal/copy-feedback.js';
 import { leaseTabIndex } from '../../../internal/tab-index-lease.js';
 import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -35,8 +34,10 @@ import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-/** The `feedback-duration` default, in milliseconds. */
-const DEFAULT_FEEDBACK_DURATION = COPY_FEEDBACK_MS;
+/** The `feedback-duration` default, in milliseconds: the mirrored upstream default. Deliberately
+ *  not the library's shared built-in copy-feedback duration, which only internal copy affordances
+ *  use. */
+const DEFAULT_FEEDBACK_DURATION = 1000;
 
 export type {
   LyraClipboardWriteFailure,
@@ -223,7 +224,8 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     });
   }
 
-  /** How long, in milliseconds, the copied confirmation or failure state remains visible. */
+  /** How long, in milliseconds, the copied confirmation or failure state remains visible.
+   *  Defaults to `1000`. A non-finite value falls back to `1000`; a negative one clamps to `0`. */
   @property({ converter: blankNumberConverter(DEFAULT_FEEDBACK_DURATION), attribute: 'feedback-duration' }) feedbackDuration: number = DEFAULT_FEEDBACK_DURATION;
 
   @state() private status: CopyStatus = 'rest';
