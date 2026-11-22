@@ -909,7 +909,7 @@ test('budgets the platform matrix for degraded fresh-runner OS dependency setup'
   );
 });
 
-test('runs the complete lint inventory as concurrent lanes in the stable lint gate', () => {
+test('runs the complete lint inventory as one runner per lane behind the stable lint gate', () => {
   const workflow = readFileSync(
     path.join(repoRoot, '.github/workflows/ci.yml'),
     'utf8'
@@ -917,17 +917,22 @@ test('runs the complete lint inventory as concurrent lanes in the stable lint ga
   const lyraPackage = JSON.parse(
     readFileSync(path.join(repoRoot, 'packages/lyra-ui/package.json'), 'utf8')
   );
+  const laneStart = workflow.indexOf('\n  lint_lane:');
   const lintStart = workflow.indexOf('\n  lint:');
   const staticStart = workflow.indexOf('\n  static-checks:');
-  assert.ok(lintStart > 0 && staticStart > lintStart, 'CI must keep one lint job before static-checks');
+  assert.ok(laneStart > 0 && lintStart > laneStart && staticStart > lintStart, 'CI must keep the lint lanes and the lint gate before static-checks');
+  const laneJob = workflow.slice(laneStart, lintStart);
   const lintJob = workflow.slice(lintStart, staticStart);
   assert.match(workflow.slice(workflow.lastIndexOf('\n  # release-qualification:', lintStart), lintStart + 10), /# release-qualification: required\n  lint:/u);
+  assert.match(laneJob, /lane: \[1, 2, 3\]/u);
+  assert.match(laneJob, /fetch-depth: 0/u);
+  assert.match(laneJob, /node-version-file: \.nvmrc/u);
+  assert.match(laneJob, /- run: pnpm --filter @aceshooting\/lyra-ui run lint:ci-shard --shard "\$LINT_LANE\/3"/u);
   assert.match(lintJob, /name: lint\n/u);
-  assert.match(lintJob, /fetch-depth: 0/u);
-  assert.match(lintJob, /node-version-file: \.nvmrc/u);
-  assert.match(lintJob, /- run: pnpm --filter @aceshooting\/lyra-ui run lint:parallel/u);
-  assert.match(lintJob, /CI_JOBS: "3"/u);
-  assert.doesNotMatch(workflow, /lint_shard|continue-on-error/u);
+  assert.match(lintJob, /if: \$\{\{ always\(\) \}\}/u);
+  assert.match(lintJob, /needs: lint_lane/u);
+  assert.match(lintJob, /needs\.lint_lane\.result/u);
+  assert.doesNotMatch(workflow, /continue-on-error/u);
   assert.equal(
     lyraPackage.scripts.lint,
     'pnpm run contract-policy && tsc --noEmit -p tsconfig.json && pnpm run test:types && pnpm run check:test-types'
@@ -2592,11 +2597,12 @@ test('release workflow qualifies the exact main commit before tagging, releasing
     path.join(repoRoot, '.github/workflows/ci.yml'),
     'utf8'
   );
-  const lintJob = ciWorkflow.slice(
-    ciWorkflow.indexOf('\n  lint:'),
-    ciWorkflow.indexOf('\n  static-checks:')
+  // The lint lanes run the tag-reading component-metadata gate.
+  const lintLanes = ciWorkflow.slice(
+    ciWorkflow.indexOf('\n  lint_lane:'),
+    ciWorkflow.indexOf('\n  lint:')
   );
-  assert.match(lintJob, /fetch-depth: 0/);
+  assert.match(lintLanes, /fetch-depth: 0/);
 });
 
 test('release planning tags only unreleased stable package versions', () => {

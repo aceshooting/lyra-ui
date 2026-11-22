@@ -45,7 +45,7 @@ jobs:
 
   # release-qualification: matrix
   full-engine:
-    name: ${{ matrix.browser }} / shard ${{ matrix.shard }}/8
+    name: ${{ matrix.browser }} / shard ${{ matrix.shard }}/${{ matrix.total }}
     needs: build
     runs-on: ubuntu-latest
     # The official Playwright image ships every OS-level browser dependency AND the matching
@@ -73,21 +73,71 @@ jobs:
     timeout-minutes: 90
     strategy:
       fail-fast: false
-      # 8 shards per engine (was 4). Unlike ci.yml's platform-contracts matrix -- where finer
-      # sharding lost to fixed per-job overhead because test:platform is only ~40 files -- this
-      # workflow runs the COMPLETE suite (~980 files), balanced by the measured per-file costs in
-      # scripts/fixtures/test-file-costs.json. Shards run in parallel, so wall time is one shard.
+      # Shard counts per engine follow measured wall time: Firefox runs the suite about twice as
+      # slowly as WebKit, so it gets 10 shards and WebKit 6 (16 runners, as with 8 + 8, but the
+      # slowest shard drops from ~11 to ~8 min). This workflow runs the COMPLETE suite (~980 files),
+      # balanced by the measured per-file costs in scripts/fixtures/test-file-costs.json. Unlike
+      # ci.yml's platform-contracts matrix -- where finer sharding lost to fixed per-job overhead
+      # because test:platform is only ~40 files -- shards run in parallel, so wall time is one shard.
       #
       # Deliberately more shards rather than more concurrency inside each shard: raising a lane's
       # WTR_CONCURRENCY was measured to break lr-span-waterfall's and lr-test-results' hover
       # assertions, which pass again at the tuned value. Pointer and paint timing degrades under
       # CPU contention, so every wtr process must keep CI's per-process shape.
       #
-      # scripts/test.sh mirrors this via TEST_SH_ENGINE_SHARDS, so a failing shard here reproduces
-      # locally as the identically-numbered shard.
+      # scripts/test.sh mirrors this via TEST_SH_ENGINE_SHARDS: a failing shard here reproduces
+      # locally as the identically-numbered shard with TEST_SH_ENGINE_SHARDS set to that engine's
+      # total (10 for Firefox, 6 for WebKit).
       matrix:
-        browser: [firefox, webkit]
-        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+        include:
+          - browser: firefox
+            shard: 1
+            total: 10
+          - browser: firefox
+            shard: 2
+            total: 10
+          - browser: firefox
+            shard: 3
+            total: 10
+          - browser: firefox
+            shard: 4
+            total: 10
+          - browser: firefox
+            shard: 5
+            total: 10
+          - browser: firefox
+            shard: 6
+            total: 10
+          - browser: firefox
+            shard: 7
+            total: 10
+          - browser: firefox
+            shard: 8
+            total: 10
+          - browser: firefox
+            shard: 9
+            total: 10
+          - browser: firefox
+            shard: 10
+            total: 10
+          - browser: webkit
+            shard: 1
+            total: 6
+          - browser: webkit
+            shard: 2
+            total: 6
+          - browser: webkit
+            shard: 3
+            total: 6
+          - browser: webkit
+            shard: 4
+            total: 6
+          - browser: webkit
+            shard: 5
+            total: 6
+          - browser: webkit
+            shard: 6
+            total: 6
     steps:
       - name: Match the runner's default font resolution
         run: |
@@ -130,5 +180,5 @@ jobs:
           WTR_STRICT_CONSOLE: '1'
           WTR_COVERAGE: '0'
           WTR_SHARD_INDEX: ${{ matrix.shard }}
-          WTR_SHARD_TOTAL: '8'
+          WTR_SHARD_TOTAL: ${{ matrix.total }}
         run: pnpm --filter @aceshooting/lyra-ui test:full-engine-shard

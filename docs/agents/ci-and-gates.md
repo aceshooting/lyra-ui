@@ -208,15 +208,17 @@ reviewed re-measurement.
 failure locally with the same commands in the same order. Six primary check families are split along
 real data dependencies, so a red check names the phase to reproduce:
 
-1. **`lint`** runs `pnpm --filter @aceshooting/lyra-ui run lint:parallel`: a deterministic weighted
-   partition of the `contract-policy` commands plus the three type-check suffixes into three
-   concurrent lanes on one runner, read directly from `package.json`. Occurrence ordinals keep the
+1. **`lint`** aggregates three `lint / lane N/3` runners, each running
+   `pnpm --filter @aceshooting/lyra-ui run lint:ci-shard --shard N/3`: a deterministic weighted
+   partition of the `contract-policy` commands plus the three type-check suffixes, read directly from
+   `package.json`. One runner per lane (instead of three lanes contending for one runner's cores)
+   keeps the gate at its slowest lane. Occurrence ordinals keep the
    split disjoint and exhaustive, per-command costs in `scripts/fixtures/lint-command-costs.json`
-   weight it (a new command gets unit cost), and each lane keeps original policy order. The job uses
+   weight it (a new command gets unit cost), and each lane keeps original policy order. The lanes use
    a full-history checkout because the component-metadata gate reads tags. Remeasure costs from the
-   `lint-timing` artifact with `node packages/lyra-ui/scripts/ci-costs.mjs lint <lint-timing.jsonl>`.
-   Local `pnpm lint` stays complete and sequential. `pnpm lint:parallel` with `CI_JOBS` set (as CI
-   sets it) runs CI's three-lane partition; without it, every inventory command becomes its own job,
+   `lint-timing-<lane>` artifacts with `node packages/lyra-ui/scripts/ci-costs.mjs lint <files>`.
+   Local `pnpm lint` stays complete and sequential. `pnpm lint:parallel` with `CI_JOBS` set runs CI's
+   three-lane partition on one host; without it, every inventory command becomes its own job,
    longest measured first, on every core but two (`scripts/local-parallelism.mjs`, capped at 2 GiB
    of available memory per worker), printing failing output whole and reporting every failure in
    one pass. No lane needs Playwright or a build.

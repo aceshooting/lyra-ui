@@ -50,12 +50,17 @@ jobs:
           HEAD_SHA: ${{ github.sha }}
         run: node scripts/ci-change-scope.mjs --base "$BASE_SHA" --head "$HEAD_SHA" >> "$GITHUB_OUTPUT"
 
-  # The `lint` inventory as three measured lanes at once on one runner (peak ~12 GB of 16 GB).
-  # release-qualification: required
-  lint:
-    name: lint
+  # The `lint` inventory as three measured lanes, one runner each. Sharing one runner made the
+  # lanes contend for its four cores (~15-17 min, CI's longest job); separate runners cost two
+  # extra setups (~1.5 min each) and bring the gate down to its slowest lane.
+  lint_lane:
+    name: lint / lane ${{ matrix.lane }}/3
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        lane: [1, 2, 3]
     steps:
       # check:component-metadata needs release tags; it fails closed in shallow clones.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -69,18 +74,37 @@ jobs:
           package-manager-cache: false
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @aceshooting/lyra-map --filter @aceshooting/lyra-3d build
-      - run: pnpm --filter @aceshooting/lyra-ui run lint:parallel
+      - run: pnpm --filter @aceshooting/lyra-ui run lint:ci-shard --shard "$LINT_LANE/3"
         env:
-          CI_JOBS: "3"
+          LINT_LANE: ${{ matrix.lane }}
           LINT_TIMING_REPORT: ${{ runner.temp }}/lint-timing.jsonl
-      # Input for `node packages/lyra-ui/scripts/ci-costs.mjs lint <file>`.
+      # Input for `node packages/lyra-ui/scripts/ci-costs.mjs lint <files>`.
       - if: ${{ !cancelled() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: lint-timing
+          name: lint-timing-${{ matrix.lane }}
           path: ${{ runner.temp }}/lint-timing.jsonl
           if-no-files-found: warn
           retention-days: 14
+
+  # Stable branch-protection/release check; `always()` turns a failed or cancelled lane red
+  # instead of skipping this job.
+  # release-qualification: required
+  lint:
+    name: lint
+    if: ${{ always() }}
+    needs: lint_lane
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every lint lane
+        env:
+          LINT_LANE_RESULT: ${{ needs.lint_lane.result }}
+        run: |
+          if [[ "$LINT_LANE_RESULT" != "success" ]]; then
+            echo "::error::lint lanes concluded: $LINT_LANE_RESULT"
+            exit 1
+          fi
 
   # Static/config consistency checks: none of these need a library build, a docs build, or a
   # browser. They read already-committed files (custom-elements.json, llms/, plugin manifests,
