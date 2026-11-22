@@ -71,6 +71,8 @@ export const CURATED_COMPONENT_HELPER_MODULES = Object.freeze([
   'src/components/retrieval/graph/graph-loader.ts',
   'src/components/utility/export-button/csv.ts',
   'src/components/utility/icon/icon-library.ts',
+  // The opt-in Font Awesome resolver preset; side-effect-free, so it is a route, not a registration.
+  'src/components/utility/icon/icon-library-font-awesome.ts',
   'src/components/viewers/archive-viewer/archive-viewer-register.ts',
   'src/components/viewers/calendar-viewer/calendar-viewer-register.ts',
   'src/components/viewers/contact-viewer/contact-viewer-register.ts',

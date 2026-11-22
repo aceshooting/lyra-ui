@@ -1727,6 +1727,63 @@ Promise<string>`, `LyraIconLibraryMutator = (svg: SVGElement) => void`, and
   wrapping part of the component that owns it; a second, direction-driven flip here would silently
   cancel that one out.
 
+### Font Awesome preset
+
+An opt-in resolver preset for Font Awesome lives at its own side-effect-free subpath. Importing it
+registers and fetches nothing; the built-in glyph set stays the offline default until you call
+`registerFontAwesomeIconLibrary()`, and even then an icon is requested only when an `<lr-icon>`
+names that library. Every request still runs the pipeline above (fetch allowlist, 1 MiB cap,
+DOMPurify, resource-sink stripping, shared bounded cache).
+
+```ts
+import "@aceshooting/lyra-ui/components/lr-icon.js";
+import { setDefaultIconFamily } from "@aceshooting/lyra-ui/components/utility/icon/icon-library.js";
+import { registerFontAwesomeIconLibrary } from "@aceshooting/lyra-ui/components/utility/icon/icon-library-font-awesome.js";
+
+// Free tier from a pinned jsDelivr release: classic solid/regular and brands.
+const unregister = registerFontAwesomeIconLibrary(); // library name "fa"
+// Pro and Pro+ families: a kit code (Font Awesome's kit SVG host) or a self-hosted copy.
+registerFontAwesomeIconLibrary({ name: "fa-pro", kitCode: "abc123" });
+registerFontAwesomeIconLibrary({ name: "fa-local", basePath: "/assets/fontawesome/svgs" });
+setDefaultIconFamily("sharp", "light"); // used by icons whose family/variant are unset
+```
+
+```html
+<lr-icon library="fa" name="house" label="Home"></lr-icon>
+<lr-icon library="fa" family="brands" name="github"></lr-icon>
+<lr-icon library="fa-pro" family="duotone" variant="thin" name="house" swap-opacity></lr-icon>
+```
+
+- Options (`LyraFontAwesomeIconLibraryOptions`): `name` (default `'fa'`; `'default'` makes Font
+  Awesome own every icon without a `library`), `kitCode`, `basePath` (wins over `kitCode`; icons
+  resolve to `<basePath>/<folder>/<name>.svg`), `version` (exact `major.minor.patch`, default
+  `FONT_AWESOME_DEFAULT_VERSION` = `7.3.1`), `defaultFamily` (default `'classic'`) and
+  `defaultVariant`. Malformed options throw at the call site. The function returns an unregister
+  callback that only removes its own registration.
+- Families (`LyraFontAwesomeFamily`): `classic` and `brands` (free); `duotone`, `sharp`,
+  `sharp-duotone` (Pro, each `solid`/`regular`/`light`/`thin`); and the single-style Pro+ packs
+  `chisel`, `etch`, `graphite`, `jelly`, `jelly-duo`, `jelly-fill`, `mosaic`, `notdog`,
+  `notdog-duo`, `pixel`, `slab`, `slab-press`, `slab-duo`, `slab-press-duo`, `thumbprint`,
+  `utility`, `utility-duo`, `utility-fill`, `vellum`, `whiteboard`. A single-style pack always
+  uses its own style (`jelly` → regular, `utility` → semibold, …), as `brands` ignores `variant`.
+  Variants (`LyraFontAwesomeVariant`): `solid`, `regular`, `light`, `thin`, `semibold`.
+- Precedence: the icon's `family`/`variant`, then `setDefaultIconFamily()`, then the preset's
+  `defaultFamily`/`defaultVariant`, then `classic` and the family's first style. A family given
+  without a variant uses that family's default style.
+- The resolver fails closed **before any request**: a name other than lowercase kebab-case (the
+  copy-pasted `fa-house` class form is accepted), an unknown family or variant, or a Pro family on
+  the free tier throws, so the icon shows the localized `iconLoadError` alert and emits `lr-error`
+  with `detail.src` set to the name. A 404, an oversized file or a missing sanitizer fails the same
+  way with `iconLoadError`, `iconTooLarge` or `iconSanitizerMissing`.
+- Duotone layers (`.fa-primary`/`.fa-secondary`) use the `--primary-*`/`--secondary-*` hooks and
+  `swap-opacity` listed above; they inherit, so one rule on an ancestor themes every icon. The
+  preset mutator only adds `fill="currentColor"` to SVGs that declare no fill.
+- Helpers for custom resolvers: `createFontAwesomeIconResolver(options)` (the same validated
+  resolver) and `fontAwesomeIconFolder(family, variant)` (`duotone`/`light` → `duotone-light`;
+  throws `RangeError` on unknown input). `fontAwesomeIconMutator` is exported too.
+- Font Awesome's icons are licensed separately (Free: CC BY 4.0); a kit code is a public,
+  domain-restricted token, so restrict it to your domains in Font Awesome's kit settings.
+
 ## `lr-visually-hidden`
 
 Hides its slotted content from sight while leaving it in the accessibility tree, so a screen reader
