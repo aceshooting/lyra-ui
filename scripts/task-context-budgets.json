@@ -14,28 +14,29 @@
       "published23Utf8Bytes": 64183,
       "reviewedCheckpointUtf8Bytes": 58280,
       "reviewedCheckpointProxyTokens": 14112,
-      "ceilingUtf8Bytes": 62974,
-      "$comment": "The table reference gained the stacked small-screen layout, row links and offset pagination in 32.0.0, measuring 62,584 UTF-8 bytes; the ceiling advances to that exact measurement. Later 32.0.0 reference additions then brought the route to 62,655 UTF-8 bytes; the ceiling advances to that exact measurement. The lr-table event rename and pager reference updates bring it to 62,883 UTF-8 bytes; the ceiling advances to that exact measurement. The contained pager request event note brings it to 62,974 UTF-8 bytes; the ceiling advances to that exact measurement."
+      "ceilingUtf8Bytes": 69893,
+      "$comment": "The table reference gained the stacked small-screen layout, row links and offset pagination in 32.0.0, measuring 62,584 UTF-8 bytes; the ceiling advances to that exact measurement. Later 32.0.0 reference additions then brought the route to 62,655 UTF-8 bytes; the ceiling advances to that exact measurement. The lr-table event rename and pager reference updates bring it to 62,883 UTF-8 bytes; the ceiling advances to that exact measurement. The contained pager request event note brings it to 62,974 UTF-8 bytes; the ceiling advances to that exact measurement. The 32.1.0 additions (table stacked header modes, row headers and wrap, plus the Web Awesome 3.15.0 parity references) bring the route to 69,893 UTF-8 bytes; the ceiling advances to that exact measurement."
     },
     "component-discovery": {
       "published23Utf8Bytes": 106727,
       "reviewedCheckpointUtf8Bytes": 98043,
       "reviewedCheckpointProxyTokens": 24161,
-      "ceilingUtf8Bytes": 106969,
-      "$comment": "The 32.0.0 discovery route, carrying the new data-grid pagination, request-event and pager-focus guidance, measured 102,070 UTF-8 bytes. The table and data-grid references then gained the pager and skeleton registration notes, column fit on Enter, row-context editor names and the constant row-toggle name, bringing the route to 103,100 UTF-8 bytes. The pagination page-size selector and its events then brought it to 103,192 UTF-8 bytes; its ceiling advances to that exact measurement. The lr-style-panel, lr-help and remaining 32.0.0 reference additions then brought the route to 106,644 UTF-8 bytes; the ceiling advances to that exact measurement. The review fixes bring the route to 106,787 UTF-8 bytes; the ceiling advances to that exact measurement. The visually hidden thread-list styles and the contained pager event note bring it to 106,969 UTF-8 bytes; the ceiling advances to that exact measurement."
+      "ceilingUtf8Bytes": 113953,
+      "$comment": "The 32.0.0 discovery route, carrying the new data-grid pagination, request-event and pager-focus guidance, measured 102,070 UTF-8 bytes. The table and data-grid references then gained the pager and skeleton registration notes, column fit on Enter, row-context editor names and the constant row-toggle name, bringing the route to 103,100 UTF-8 bytes. The pagination page-size selector and its events then brought it to 103,192 UTF-8 bytes; its ceiling advances to that exact measurement. The lr-style-panel, lr-help and remaining 32.0.0 reference additions then brought the route to 106,644 UTF-8 bytes; the ceiling advances to that exact measurement. The review fixes bring the route to 106,787 UTF-8 bytes; the ceiling advances to that exact measurement. The visually hidden thread-list styles and the contained pager event note bring it to 106,969 UTF-8 bytes; the ceiling advances to that exact measurement. The 32.1.0 additions (table stacked header modes, row headers and wrap, plus the Web Awesome 3.15.0 parity references) bring the route to 113,953 UTF-8 bytes; the ceiling advances to that exact measurement."
     },
     "imports-ssr": {
       "published23Utf8Bytes": 43687,
       "reviewedCheckpointUtf8Bytes": 44244,
       "reviewedCheckpointProxyTokens": 10573,
-      "ceilingUtf8Bytes": 46043
+      "ceilingUtf8Bytes": 49251,
+      "$comment": "The 32.1.0 additions (the lyra-cdn single-script route, event classes and hydrated SSR fixture guidance) bring the route to 49,251 UTF-8 bytes; the ceiling advances to that exact measurement."
     },
     "look-composition": {
       "published23Utf8Bytes": 14858,
       "reviewedCheckpointUtf8Bytes": 15258,
       "reviewedCheckpointProxyTokens": 4018,
-      "ceilingUtf8Bytes": 16066,
-      "$comment": "The component discovery index with the model-viewer entry measured 16,005 UTF-8 bytes for this route. The entry index, which now lists the treemap, sankey, chord and choropleth elements, brings it to 16,053 UTF-8 bytes; its ceiling advances to that exact measurement."
+      "ceilingUtf8Bytes": 16131,
+      "$comment": "The component discovery index with the model-viewer entry measured 16,005 UTF-8 bytes for this route. The entry index, which now lists the treemap, sankey, chord and choropleth elements, brings it to 16,053 UTF-8 bytes; its ceiling advances to that exact measurement. The 32.1.0 additions bring the route to 16,131 UTF-8 bytes; the ceiling advances to that exact measurement."
     },
     "v29-v30-upgrade": {
       "published23Utf8Bytes": null,
