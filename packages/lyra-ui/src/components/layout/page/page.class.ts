@@ -103,6 +103,8 @@ export interface LyraPageEventMap {
  * abandons it.
  *
  * @customElement lr-page
+ * @attr {string} disable-sticky - Whitespace-separated Page regions whose sticky positioning is
+ *   disabled: `banner`, `header`, `subheader`, `menu`, and `aside`.
  * @slot - Main content.
  * @slot aside - Complementary content beside the main region.
  * @slot banner - A page-wide notice above the header.

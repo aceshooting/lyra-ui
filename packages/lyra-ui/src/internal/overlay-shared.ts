@@ -128,9 +128,11 @@ export function liveDirectAnchor(anchor: Element | VirtualAnchor | null | undefi
   return typeof (anchor as Partial<VirtualAnchor>).getBoundingClientRect === 'function';
 }
 
-/** The element half of a direct `anchor`, for structural tracking; `null` for a virtual one. */
-export function directAnchorElement(anchor: Element | VirtualAnchor | null | undefined): Element | null {
-  return anchor && typeof anchor === 'object' && isElementAnchor(anchor) ? anchor : null;
+/** Whether a `virtualElement` value can position a surface: an object whose
+ *  `getBoundingClientRect` is callable. Anything else is ignored, as if unset. */
+export function liveVirtualElement(value: VirtualAnchor | null | undefined): value is VirtualAnchor {
+  return !!value && typeof value === 'object' &&
+    typeof (value as Partial<VirtualAnchor>).getBoundingClientRect === 'function';
 }
 
 /**

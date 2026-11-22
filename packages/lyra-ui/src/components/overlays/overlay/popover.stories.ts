@@ -162,7 +162,7 @@ export const VirtualElementAnchor: Story = {
     docs: {
       description: {
         story:
-          '`anchor` accepts a virtual element: any object with `getBoundingClientRect()` and an optional `contextElement`. Select some text in the paragraph to anchor the popover to the selection; the anchor persists until replaced.',
+          '`virtualElement` accepts a virtual element: any object with `getBoundingClientRect()` and an optional `contextElement`. Select some text in the paragraph to anchor the popover to the selection; the anchor persists until replaced.',
       },
     },
   },
@@ -173,7 +173,7 @@ export const VirtualElementAnchor: Story = {
       const selection = root.ownerDocument.getSelection();
       if (!selection || selection.isCollapsed || selection.rangeCount === 0) return;
       const range = selection.getRangeAt(0).cloneRange();
-      popover.anchor = { getBoundingClientRect: () => range.getBoundingClientRect(), contextElement: root };
+      popover.virtualElement = { getBoundingClientRect: () => range.getBoundingClientRect(), contextElement: root };
       void popover.show();
     };
     return html`

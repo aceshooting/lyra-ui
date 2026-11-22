@@ -2,8 +2,9 @@
 '@aceshooting/lyra-ui': minor
 ---
 
-`lr-popover`'s `anchor` also accepts a virtual element, any object with `getBoundingClientRect()`
-and an optional `contextElement` (new `LyraPopoverAnchor` type); element anchors behave as before.
+`lr-popover` and `lr-dropdown` gain a property-only `virtualElement` that positions the popup against
+a virtual element, any object with `getBoundingClientRect()` and an optional `contextElement` (new
+`LyraPopoverVirtualElement` type), ahead of `anchor`; `anchor` and element anchors behave as before.
 `lr-dropdown-item` exposes the `active`, `checked`, `disabled`, `has-submenu`, `link` and
 `submenu-open` custom states. `lr-page` gains a reflected `disableSticky` property for the existing
 `disable-sticky` attribute, and accepts and reflects `nonce` for migrated markup.

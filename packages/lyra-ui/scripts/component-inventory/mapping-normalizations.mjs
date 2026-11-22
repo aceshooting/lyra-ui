@@ -1909,6 +1909,8 @@ const REVIEWED_OPAQUE_TYPE_EQUIVALENCE_GROUPS = new Map([
   [
     'wa-popover',
     [
+      // Reviewed: anchor keeps its published `Element | null` contract; a virtual element is
+      // accepted through the separate `virtualElement` property instead.
       ['property', ['anchor'], 'null | Element | VirtualElement', 'Element | null'],
       [
         'attribute',
@@ -3831,11 +3833,6 @@ const REVIEWED_MAPPING_NORMALIZATIONS = new Map([
     'wa-popover',
     {
       defaultEquivalences: [reviewedDefaultEquivalence('for', null, '')],
-      // anchor is a getter/setter pair (the setter also accepts a virtual element), so the manifest
-      // records no initializer; the getter reads null until an anchor is assigned.
-      derivedDefaultEquivalences: [
-        { memberKind: 'property', member: 'anchor', upstream: null, target: 'null until an anchor is assigned' },
-      ],
     },
   ],
   [

@@ -1187,7 +1187,7 @@ export type {
   LyraTooltipLabelMode,
   LyraTooltipTrigger,
 } from './components/overlays/overlay/tooltip.class.js';
-export type { LyraArrowPlacement, LyraPopoverAnchor } from './components/overlays/overlay/popover.class.js';
+export type { LyraArrowPlacement, LyraPopoverVirtualElement } from './components/overlays/overlay/popover.class.js';
 export type { LyraDropdownEventMap } from './components/overlays/overlay/dropdown.class.js';
 export type {
   LyraContextMenuEventMap,
