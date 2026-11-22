@@ -359,9 +359,12 @@ for (const [name, markup, owner, selector, property] of [
 it('reports positions beyond the widget view and dashboard cell limits and clears loss on replacement', async () => {
   const views = Array.from({ length: 258 }, (_, i) => ({ viewId: `v${i}`, label: String(i) }));
   const cells = Array.from({ length: 1_002 }, (_, i) => ({ cellId: `c${i}`, x: 0, y: i, w: 1, h: 1 }));
-  const root = await fixture(html`<div><lr-widget .views=${views}></lr-widget><lr-dashboard-grid .layout=${cells}></lr-dashboard-grid></div>`);
-  const widget = root.querySelector('lr-widget')!;
-  const grid = root.querySelector('lr-dashboard-grid')!;
+  // The caps apply synchronously in the setters, so detached hosts keep the test from rendering
+  // 1,000 cells and 256 views (slow enough under WebKit on CI to exceed the test timeout).
+  const widget = document.createElement('lr-widget');
+  const grid = document.createElement('lr-dashboard-grid');
+  widget.views = views;
+  grid.layout = cells;
   expect([widget.omittedViews, grid.omittedCells]).to.deep.equal([2, 2]);
   expect([widget.views.length, grid.layout.length]).to.deep.equal([256, 1_000]);
   widget.views = views.slice(0, 2);
