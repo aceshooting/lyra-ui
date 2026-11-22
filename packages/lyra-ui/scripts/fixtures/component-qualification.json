@@ -244,7 +244,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/details.class.ts",
-              "line": 477,
+              "line": 481,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -281,6 +281,7 @@
         "tests": [
           "src/components/layout/details/accordion.test.ts",
           "src/components/layout/details/details-coverage.test.ts",
+          "src/components/layout/details/details-icon-tokens.test.ts",
           "src/components/layout/details/details-interaction.test.ts",
           "src/components/layout/details/details-lifecycle-edges.test.ts",
           "src/components/layout/details/details-summary-hover-color.test.ts",
@@ -460,7 +461,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/details.class.ts",
-              "line": 477,
+              "line": 481,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -497,6 +498,7 @@
         "tests": [
           "src/components/layout/details/accordion.test.ts",
           "src/components/layout/details/details-coverage.test.ts",
+          "src/components/layout/details/details-icon-tokens.test.ts",
           "src/components/layout/details/details-interaction.test.ts",
           "src/components/layout/details/details-lifecycle-edges.test.ts",
           "src/components/layout/details/details-summary-hover-color.test.ts",
@@ -5227,7 +5229,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 517,
+              "line": 520,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -5552,7 +5554,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 517,
+              "line": 520,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -6612,7 +6614,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 517,
+              "line": 520,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -7202,6 +7204,7 @@
           "src/components/forms/button/button-icon-only-live-resize.test.ts",
           "src/components/forms/button/button-label-activation.test.ts",
           "src/components/forms/button/button-label-layout.test.ts",
+          "src/components/forms/button/button-link-line-tokens.test.ts",
           "src/components/forms/button/button-loading.test.ts",
           "src/components/forms/button/button-remediation.test.ts",
           "src/components/forms/button/button-state-restoration.test.ts",
@@ -7373,6 +7376,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/layout/button-group/button-group-justify.test.ts",
           "src/components/layout/button-group/button-group.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -8202,6 +8206,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/card/card-interaction.test.ts",
+          "src/components/layout/card/card-min-size-body-align.test.ts",
           "src/components/layout/card/card-w13-border-color.test.ts",
           "src/components/layout/card/card-w13b-body-padding.test.ts",
           "src/components/layout/card/card.test.ts"
@@ -9004,7 +9009,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 517,
+              "line": 520,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -12763,7 +12768,7 @@
           "evidence": [
             {
               "file": "src/components/forms/color-picker/color-picker.class.ts",
-              "line": 1289,
+              "line": 1294,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -13049,7 +13054,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 3012,
+              "line": 3017,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -17420,6 +17425,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/date-picker/calendar-core.test.ts",
+          "src/components/forms/date-picker/date-input-action-color.test.ts",
           "src/components/forms/date-picker/date-input-closed-layout.test.ts",
           "src/components/forms/date-picker/date-input-form-lifecycle.test.ts",
           "src/components/forms/date-picker/date-input-locale-parse.test.ts",
@@ -17637,6 +17643,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/date-picker/calendar-core.test.ts",
+          "src/components/forms/date-picker/date-input-action-color.test.ts",
           "src/components/forms/date-picker/date-input-closed-layout.test.ts",
           "src/components/forms/date-picker/date-input-form-lifecycle.test.ts",
           "src/components/forms/date-picker/date-input-locale-parse.test.ts",
@@ -17827,7 +17834,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/details.class.ts",
-              "line": 477,
+              "line": 481,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -17864,6 +17871,7 @@
         "tests": [
           "src/components/layout/details/accordion.test.ts",
           "src/components/layout/details/details-coverage.test.ts",
+          "src/components/layout/details/details-icon-tokens.test.ts",
           "src/components/layout/details/details-interaction.test.ts",
           "src/components/layout/details/details-lifecycle-edges.test.ts",
           "src/components/layout/details/details-summary-hover-color.test.ts",
@@ -18124,6 +18132,7 @@
           "src/components/overlays/dialog/dialog-close-composition.test.ts",
           "src/components/overlays/dialog/dialog-content-boundaries.test.ts",
           "src/components/overlays/dialog/dialog-exit-layering.test.ts",
+          "src/components/overlays/dialog/dialog-header-body-tokens.test.ts",
           "src/components/overlays/dialog/dialog-heading-letter-spacing.test.ts",
           "src/components/overlays/dialog/dialog-remediation.test.ts",
           "src/components/overlays/dialog/dialog-reparent-layering.test.ts",
@@ -19809,7 +19818,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 517,
+              "line": 520,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -20992,6 +21001,7 @@
           "src/components/layout/menu/menu-item-color-token.test.ts",
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
+          "src/components/layout/menu/menu-label-typography.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
           "src/components/layout/menu/menu-max-block-size.test.ts",
           "src/components/layout/menu/menu-popup-tab-stops.test.ts",
@@ -21934,7 +21944,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/empty/empty.class.ts",
-              "line": 139,
+              "line": 140,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -21973,6 +21983,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/overlays/empty/empty-icon-color.test.ts",
           "src/components/overlays/empty/empty-remediation.test.ts",
           "src/components/overlays/empty/empty.test.ts"
         ],
@@ -23369,7 +23380,7 @@
           "evidence": [
             {
               "file": "src/components/utility/export-button/export-button.class.ts",
-              "line": 870,
+              "line": 875,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -23409,6 +23420,7 @@
           "src/components/utility/export-button/export-button-collection-boundaries.test.ts",
           "src/components/utility/export-button/export-button-menu-toggling.test.ts",
           "src/components/utility/export-button/export-button-top-layer.test.ts",
+          "src/components/utility/export-button/export-button-trigger-type.test.ts",
           "src/components/utility/export-button/export-button.test.ts",
           "src/components/utility/export-button/positioning-strategy.test.ts"
         ],
@@ -24181,7 +24193,7 @@
           "evidence": [
             {
               "file": "src/components/layout/filter-bar/filter-bar.class.ts",
-              "line": 1478,
+              "line": 1484,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -24218,6 +24230,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/filter-bar/filter-bar-choice-cost.test.ts",
+          "src/components/layout/filter-bar/filter-bar-control-size.test.ts",
           "src/components/layout/filter-bar/filter-bar-end-alignment.test.ts",
           "src/components/layout/filter-bar/filter-bar-panel-fixes.test.ts",
           "src/components/layout/filter-bar/filter-bar-registration.test.ts",
@@ -27307,7 +27320,7 @@
           "evidence": [
             {
               "file": "src/components/data/graph-query-builder/graph-query-builder.class.ts",
-              "line": 962,
+              "line": 965,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -28029,6 +28042,7 @@
           "src/components/data/heatmap/heatmap-input-edges.test.ts",
           "src/components/data/heatmap/heatmap-label-cache.test.ts",
           "src/components/data/heatmap/heatmap-label-cost.test.ts",
+          "src/components/data/heatmap/heatmap-legend-layout-tokens.test.ts",
           "src/components/data/heatmap/heatmap-legend-placement-fill.test.ts",
           "src/components/data/heatmap/heatmap-legend-visibility.test.ts",
           "src/components/data/heatmap/heatmap-matrix-controller-boundaries.test.ts",
@@ -28567,7 +28581,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 517,
+              "line": 520,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -30120,8 +30134,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/input/input.test.ts",
-              "test": "contains long RTL action/adornment content in an exact 320px allocation",
+              "file": "src/components/forms/input/input-text-tokens.test.ts",
+              "test": "--lr-input-number-direction sets the direction of numeric content only",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -30215,7 +30229,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input-shared.ts",
-              "line": 897,
+              "line": 905,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -30259,6 +30273,7 @@
           "src/components/forms/input/input-native-value-views.test.ts",
           "src/components/forms/input/input-remediation.test.ts",
           "src/components/forms/input/input-required.test.ts",
+          "src/components/forms/input/input-text-tokens.test.ts",
           "src/components/forms/input/input.test.ts",
           "src/components/forms/input/native-time-input.test.ts",
           "src/components/forms/input/number-input-immediate-disabled.test.ts",
@@ -31748,7 +31763,7 @@
           "evidence": [
             {
               "file": "src/components/utility/known-date/known-date.class.ts",
-              "line": 395,
+              "line": 398,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -32348,7 +32363,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 517,
+              "line": 520,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -32713,7 +32728,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 517,
+              "line": 520,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -33240,7 +33255,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.class.ts",
-              "line": 1026,
+              "line": 1034,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -33279,6 +33294,7 @@
           "src/components/forms/locale-picker/locale-picker-closed-layout.test.ts",
           "src/components/forms/locale-picker/locale-picker-empty-catalog-boundaries.test.ts",
           "src/components/forms/locale-picker/locale-picker-lazy-names.test.ts",
+          "src/components/forms/locale-picker/locale-picker-listbox-min-size.test.ts",
           "src/components/forms/locale-picker/locale-picker-loader.test.ts",
           "src/components/forms/locale-picker/locale-picker-option-display.test.ts",
           "src/components/forms/locale-picker/locale-picker-placement-recovery.test.ts",
@@ -34369,6 +34385,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/conversation/markdown/katex-loader.test.ts",
+          "src/components/conversation/markdown/markdown-body-type-tokens.test.ts",
           "src/components/conversation/markdown/markdown-code-chrome.test.ts",
           "src/components/conversation/markdown/markdown-code-copy-reentry.test.ts",
           "src/components/conversation/markdown/markdown-code-header.test.ts",
@@ -34603,6 +34620,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/conversation/markdown/katex-loader.test.ts",
+          "src/components/conversation/markdown/markdown-body-type-tokens.test.ts",
           "src/components/conversation/markdown/markdown-code-chrome.test.ts",
           "src/components/conversation/markdown/markdown-code-copy-reentry.test.ts",
           "src/components/conversation/markdown/markdown-code-header.test.ts",
@@ -35723,6 +35741,7 @@
           "src/components/layout/menu/menu-item-color-token.test.ts",
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
+          "src/components/layout/menu/menu-label-typography.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
           "src/components/layout/menu/menu-max-block-size.test.ts",
           "src/components/layout/menu/menu-popup-tab-stops.test.ts",
@@ -35983,6 +36002,7 @@
           "src/components/layout/menu/menu-item-color-token.test.ts",
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
+          "src/components/layout/menu/menu-label-typography.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
           "src/components/layout/menu/menu-max-block-size.test.ts",
           "src/components/layout/menu/menu-popup-tab-stops.test.ts",
@@ -36187,6 +36207,7 @@
           "src/components/layout/menu/menu-item-color-token.test.ts",
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
+          "src/components/layout/menu/menu-label-typography.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
           "src/components/layout/menu/menu-max-block-size.test.ts",
           "src/components/layout/menu/menu-popup-tab-stops.test.ts",
@@ -38541,8 +38562,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/input/input.test.ts",
-              "test": "contains long RTL action/adornment content in an exact 320px allocation",
+              "file": "src/components/forms/input/input-text-tokens.test.ts",
+              "test": "--lr-input-number-direction sets the direction of numeric content only",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -38633,7 +38654,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input-shared.ts",
-              "line": 897,
+              "line": 905,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -38677,6 +38698,7 @@
           "src/components/forms/input/input-native-value-views.test.ts",
           "src/components/forms/input/input-remediation.test.ts",
           "src/components/forms/input/input-required.test.ts",
+          "src/components/forms/input/input-text-tokens.test.ts",
           "src/components/forms/input/input.test.ts",
           "src/components/forms/input/native-time-input.test.ts",
           "src/components/forms/input/number-input-immediate-disabled.test.ts",
@@ -39798,8 +39820,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/input/input.test.ts",
-              "test": "contains long RTL action/adornment content in an exact 320px allocation",
+              "file": "src/components/forms/input/input-text-tokens.test.ts",
+              "test": "--lr-input-number-direction sets the direction of numeric content only",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -39879,7 +39901,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input-shared.ts",
-              "line": 897,
+              "line": 905,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39923,6 +39945,7 @@
           "src/components/forms/input/input-native-value-views.test.ts",
           "src/components/forms/input/input-remediation.test.ts",
           "src/components/forms/input/input-required.test.ts",
+          "src/components/forms/input/input-text-tokens.test.ts",
           "src/components/forms/input/input.test.ts",
           "src/components/forms/input/native-time-input.test.ts",
           "src/components/forms/input/number-input-immediate-disabled.test.ts",
@@ -40276,7 +40299,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 3012,
+              "line": 3017,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -40504,7 +40527,7 @@
           "evidence": [
             {
               "file": "src/components/forms/otp-input/otp-input.class.ts",
-              "line": 389,
+              "line": 394,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -42437,7 +42460,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 517,
+              "line": 520,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -42743,7 +42766,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 517,
+              "line": 520,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -45567,7 +45590,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 517,
+              "line": 520,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -50033,7 +50056,7 @@
           "evidence": [
             {
               "file": "src/components/charts/chart/box-plot.class.ts",
-              "line": 517,
+              "line": 520,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -50595,6 +50618,7 @@
         "tests": [
           "src/components/layout/segmented/segmented-checked-contrast.test.ts",
           "src/components/layout/segmented/segmented-field-label.test.ts",
+          "src/components/layout/segmented/segmented-icon-placement-full-width.test.ts",
           "src/components/layout/segmented/segmented-items-replacement.test.ts",
           "src/components/layout/segmented/segmented-layout.test.ts",
           "src/components/layout/segmented/segmented-select-request.test.ts",
@@ -51217,7 +51241,7 @@
           "evidence": [
             {
               "file": "src/components/media/sequence-playback/sequence-playback.class.ts",
-              "line": 225,
+              "line": 230,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -51253,6 +51277,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/sequence-playback/sequence-playback-full-width.test.ts",
           "src/components/media/sequence-playback/sequence-playback-position.test.ts",
           "src/components/media/sequence-playback/sequence-playback-remediation.test.ts",
           "src/components/media/sequence-playback/sequence-playback-w13-value-tokens.test.ts",
@@ -52034,7 +52059,7 @@
           "evidence": [
             {
               "file": "src/components/forms/slider/slider.class.ts",
-              "line": 878,
+              "line": 886,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -52077,6 +52102,7 @@
           "src/components/forms/slider/slider-pointer-ownership.test.ts",
           "src/components/forms/slider/slider-remediation.test.ts",
           "src/components/forms/slider/slider-rendering-a11y.test.ts",
+          "src/components/forms/slider/slider-thumb-value-tokens.test.ts",
           "src/components/forms/slider/slider.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -53996,6 +54022,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/data/stat/stat-accessible-names.test.ts",
+          "src/components/data/stat/stat-align-truncate-border.test.ts",
           "src/components/data/stat/stat-boundaries.test.ts",
           "src/components/data/stat/stat-remediation-b09.test.ts",
           "src/components/data/stat/stat-remediation.test.ts",
@@ -56974,6 +57001,12 @@
               "state": "populated"
             },
             {
+              "file": "src/components/data/table/table-cell-tokens.test.ts",
+              "test": "wraps a nowrap column while stacked so a card never scrolls sideways, LTR and RTL at 320px",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/data/table/table-editing.test.ts",
               "test": "is accessible with a column of persistent editors rendered",
               "target": "el",
@@ -57041,7 +57074,61 @@
             },
             {
               "file": "src/components/data/table/table-stack.test.ts",
+              "test": "'sortable' keeps only the sortable headers visible, the rest stay named and in the a11y tree",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/table/table-stack.test.ts",
+              "test": "'sortable' with no sortable column and 'hidden' remove the strip's visible height",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/table/table-stack.test.ts",
               "test": "always stacks rows as blocks with visible column captions and unchanged roles",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/table/table-stack.test.ts",
+              "test": "spans the stacked caption across the cards",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/table/table-stack.test.ts",
+              "test": "stays inside a 320px allocation in both directions",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/table/table-structure.test.ts",
+              "test": "omits the thead and stays named by its caption, attribute and property alike",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/table/table-structure.test.ts",
+              "test": "renders the column as th scope=row with the rowheader role, leaving others as gridcells",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/table/table-structure.test.ts",
+              "test": "stays accessible stacked, under RTL and at 320px",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/table/table-structure.test.ts",
+              "test": "stays accessible stacked, under RTL and at 320px",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/data/table/table-structure.test.ts",
+              "test": "writes allowed data-* and aria attributes per row with the rendered index",
               "target": "el",
               "state": "populated"
             },
@@ -57105,8 +57192,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/table/table-layout.test.ts",
-              "test": "scroll-mode='auto' contains actual horizontal overflow inside a 320px allocation",
+              "file": "src/components/data/table/table-cell-tokens.test.ts",
+              "test": "wraps a nowrap column while stacked so a card never scrolls sideways, LTR and RTL at 320px",
               "kind": "320px allocation test signal"
             }
           ]
@@ -57215,6 +57302,7 @@
           "src/components/data/table/table-boundaries.test.ts",
           "src/components/data/table/table-cell-content.test.ts",
           "src/components/data/table/table-cell-link.test.ts",
+          "src/components/data/table/table-cell-tokens.test.ts",
           "src/components/data/table/table-editing.test.ts",
           "src/components/data/table/table-expansion.test.ts",
           "src/components/data/table/table-filter-work.test.ts",
@@ -57236,6 +57324,7 @@
           "src/components/data/table/table-selection.test.ts",
           "src/components/data/table/table-stack.test.ts",
           "src/components/data/table/table-sticky-overlay.test.ts",
+          "src/components/data/table/table-structure.test.ts",
           "src/components/data/table/table-theme-tokens.test.ts",
           "src/components/data/table/table-w13-tokens.test.ts",
           "src/components/data/table/table-w13b-tokens.test.ts",
@@ -58198,7 +58287,7 @@
           "evidence": [
             {
               "file": "src/components/forms/textarea/textarea.class.ts",
-              "line": 728,
+              "line": 733,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -58779,8 +58868,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/forms/input/input.test.ts",
-              "test": "contains long RTL action/adornment content in an exact 320px allocation",
+              "file": "src/components/forms/input/input-text-tokens.test.ts",
+              "test": "--lr-input-number-direction sets the direction of numeric content only",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -58860,7 +58949,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input-shared.ts",
-              "line": 897,
+              "line": 905,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -58904,6 +58993,7 @@
           "src/components/forms/input/input-native-value-views.test.ts",
           "src/components/forms/input/input-remediation.test.ts",
           "src/components/forms/input/input-required.test.ts",
+          "src/components/forms/input/input-text-tokens.test.ts",
           "src/components/forms/input/input.test.ts",
           "src/components/forms/input/native-time-input.test.ts",
           "src/components/forms/input/number-input-immediate-disabled.test.ts",
@@ -65289,7 +65379,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/voice-picker/voice-picker.class.ts",
-              "line": 588,
+              "line": 593,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

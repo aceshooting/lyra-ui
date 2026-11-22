@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 21 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 21 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -142,5 +142,8 @@ paint use `--lr-rubric-form-submit-hover-bg`, `--lr-rubric-form-submit-hover-bor
 and color-mix treatments as fallbacks. Disabled actions still dim through `--lr-opacity-disabled`,
 the same library-wide token every other disabled control reads.
 
-More themeable custom properties: `--lr-form-control-label-line-height` (default `inherit`): Line
-height of the field label.
+Further custom properties:
+
+- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.

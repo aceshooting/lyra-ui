@@ -14424,6 +14424,12 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-chart-legend-item-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-chart-legend-item-min-height",
             "deprecated": null,
             "hasDefault": true,
@@ -14434,6 +14440,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-2xs)"
+          },
+          {
+            "name": "--lr-chart-legend-justify",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "normal"
           },
           {
             "name": "--lr-chart-legend-padding",
@@ -15142,6 +15154,12 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-chart-legend-item-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-chart-legend-item-min-height",
             "deprecated": null,
             "hasDefault": true,
@@ -15152,6 +15170,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-2xs)"
+          },
+          {
+            "name": "--lr-chart-legend-justify",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "normal"
           },
           {
             "name": "--lr-chart-legend-padding",
@@ -17421,6 +17445,12 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-chart-legend-item-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-chart-legend-item-min-height",
             "deprecated": null,
             "hasDefault": true,
@@ -17431,6 +17461,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-2xs)"
+          },
+          {
+            "name": "--lr-chart-legend-justify",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "normal"
           },
           {
             "name": "--lr-chart-legend-padding",
@@ -18790,6 +18826,30 @@
             "default": "nowrap"
           },
           {
+            "name": "--lr-button-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-button-link-hover-text-decoration",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "underline"
+          },
+          {
+            "name": "--lr-button-link-min-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
+          },
+          {
+            "name": "--lr-button-link-text-decoration",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "underline"
+          },
+          {
             "name": "--lr-button-min-height",
             "deprecated": null,
             "hasDefault": true,
@@ -19254,6 +19314,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-2xs)"
+          },
+          {
+            "name": "--lr-button-group-justify",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "normal"
           }
         ],
         "cssStates": [],
@@ -20852,10 +20918,22 @@
             "default": "var(--lr-color-brand)"
           },
           {
+            "name": "--lr-card-body-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "normal"
+          },
+          {
             "name": "--lr-card-body-gap",
             "deprecated": null,
             "hasDefault": true,
             "default": 0
+          },
+          {
+            "name": "--lr-card-body-justify",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "normal"
           },
           {
             "name": "--lr-card-body-padding",
@@ -20909,6 +20987,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-card-min-block-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
           },
           {
             "name": "--lr-card-outlined-bg",
@@ -23195,6 +23279,12 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-chart-legend-item-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-chart-legend-item-min-height",
             "deprecated": null,
             "hasDefault": true,
@@ -23205,6 +23295,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-2xs)"
+          },
+          {
+            "name": "--lr-chart-legend-justify",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "normal"
           },
           {
             "name": "--lr-chart-legend-padding",
@@ -27430,6 +27526,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-label-block-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -27467,6 +27569,18 @@
           },
           {
             "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-transform",
             "deprecated": null,
             "hasDefault": true,
             "default": "inherit"
@@ -33020,6 +33134,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-label-block-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -33057,6 +33177,24 @@
           },
           {
             "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-transform",
             "deprecated": null,
             "hasDefault": true,
             "default": "inherit"
@@ -34434,6 +34572,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-label-block-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -34471,6 +34615,24 @@
           },
           {
             "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-transform",
             "deprecated": null,
             "hasDefault": true,
             "default": "inherit"
@@ -36550,6 +36712,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-form-control-label-block-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -36587,6 +36755,18 @@
           },
           {
             "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-transform",
             "deprecated": null,
             "hasDefault": true,
             "default": "inherit"
@@ -43194,6 +43374,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-form-control-label-block-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -44658,6 +44844,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-label-block-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
           },
           {
             "name": "--lr-form-control-label-collapse-inline-size",
@@ -49343,6 +49535,12 @@
             "default": "var(--lr-date-input-radius)"
           },
           {
+            "name": "--lr-date-input-action-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
+          },
+          {
             "name": "--lr-date-input-action-hover-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -49454,6 +49652,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-form-control-label-block-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -49491,6 +49695,24 @@
           },
           {
             "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-transform",
             "deprecated": null,
             "hasDefault": true,
             "default": "inherit"
@@ -51504,6 +51726,18 @@
             "default": "var(--lr-space-s)"
           },
           {
+            "name": "--lr-details-icon-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-details-icon-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-1rem)"
+          },
+          {
             "name": "--lr-details-outlined-bg",
             "deprecated": null,
             "hasDefault": true,
@@ -52172,10 +52406,22 @@
             "default": "none"
           },
           {
+            "name": "--lr-dialog-body-overflow",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
             "name": "--lr-dialog-divider-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-overlay-border)"
+          },
+          {
+            "name": "--lr-dialog-header-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-border-width-thin) solid var(--lr-dialog-divider-color)"
           },
           {
             "name": "--lr-dialog-heading-font-family",
@@ -52200,6 +52446,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "normal"
+          },
+          {
+            "name": "--lr-dialog-heading-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
           },
           {
             "name": "--lr-dialog-height",
@@ -57039,6 +57291,12 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-chart-legend-item-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-chart-legend-item-min-height",
             "deprecated": null,
             "hasDefault": true,
@@ -57049,6 +57307,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-2xs)"
+          },
+          {
+            "name": "--lr-chart-legend-justify",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "normal"
           },
           {
             "name": "--lr-chart-legend-padding",
@@ -57754,10 +58018,22 @@
             "default": "none"
           },
           {
+            "name": "--lr-dialog-body-overflow",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "auto"
+          },
+          {
             "name": "--lr-dialog-divider-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-overlay-border)"
+          },
+          {
+            "name": "--lr-dialog-header-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-border-width-thin) solid var(--lr-dialog-divider-color)"
           },
           {
             "name": "--lr-dialog-heading-font-family",
@@ -57782,6 +58058,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "normal"
+          },
+          {
+            "name": "--lr-dialog-heading-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
           },
           {
             "name": "--lr-dialog-height",
@@ -62233,6 +62515,24 @@
             "default": "inherit"
           },
           {
+            "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-transform",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
             "hasDefault": true,
@@ -62675,6 +62975,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-font-weight-semibold)"
+          },
+          {
+            "name": "--lr-empty-icon-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
           },
           {
             "name": "--lr-empty-icon-size",
@@ -65475,6 +65781,17 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-export-button-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-export-button-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-export-button-gap",
             "deprecated": null,
             "hasDefault": true,
@@ -65514,6 +65831,12 @@
             "name": "--lr-export-button-menu-item-hover-color",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-export-button-padding-inline",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-m)"
           },
           {
             "name": "--lr-export-button-radius",
@@ -66898,6 +67221,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-label-block-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -66917,6 +67246,18 @@
           },
           {
             "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-transform",
             "deprecated": null,
             "hasDefault": true,
             "default": "inherit"
@@ -67818,6 +68159,16 @@
           }
         ],
         "cssProperties": [
+          {
+            "name": "--lr-filter-bar-control-font-size",
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "--lr-filter-bar-control-height",
+            "deprecated": null,
+            "hasDefault": false
+          },
           {
             "name": "--lr-filter-bar-field-basis",
             "deprecated": null,
@@ -74240,6 +74591,18 @@
             "default": "inherit"
           },
           {
+            "name": "--lr-form-control-label-text-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-transform",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-graph-query-builder-run-active-bg",
             "deprecated": null,
             "hasDefault": false
@@ -75991,6 +76354,18 @@
             "default": "var(--lr-space-xs)"
           },
           {
+            "name": "--lr-heatmap-legend-justify",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "normal"
+          },
+          {
+            "name": "--lr-heatmap-legend-offset",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-heatmap-legend-padding",
             "deprecated": null,
             "hasDefault": true,
@@ -76019,6 +76394,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-2px)"
+          },
+          {
+            "name": "--lr-heatmap-legend-swatch-radius",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-radius-xs)"
           },
           {
             "name": "--lr-heatmap-legend-swatch-size",
@@ -77824,6 +78205,12 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-chart-legend-item-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-chart-legend-item-min-height",
             "deprecated": null,
             "hasDefault": true,
@@ -77834,6 +78221,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-2xs)"
+          },
+          {
+            "name": "--lr-chart-legend-justify",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "normal"
           },
           {
             "name": "--lr-chart-legend-padding",
@@ -82609,6 +83002,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-form-control-label-block-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -82646,6 +83045,18 @@
           },
           {
             "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-transform",
             "deprecated": null,
             "hasDefault": true,
             "default": "inherit"
@@ -82750,6 +83161,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-xs)"
+          },
+          {
+            "name": "--lr-input-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-input-number-direction",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "ltr"
           },
           {
             "name": "--lr-input-padding-block",
@@ -86680,6 +87103,24 @@
             "default": "inherit"
           },
           {
+            "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-transform",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
             "hasDefault": true,
@@ -89183,6 +89624,12 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-chart-legend-item-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-chart-legend-item-min-height",
             "deprecated": null,
             "hasDefault": true,
@@ -89193,6 +89640,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-2xs)"
+          },
+          {
+            "name": "--lr-chart-legend-justify",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "normal"
           },
           {
             "name": "--lr-chart-legend-padding",
@@ -90204,6 +90657,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-s)"
+          },
+          {
+            "name": "--lr-chart-legend-item-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-chart-legend-justify",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "center"
           },
           {
             "name": "--lr-chart-legend-padding",
@@ -91355,6 +91820,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-form-control-label-block-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -91392,6 +91863,18 @@
           },
           {
             "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-transform",
             "deprecated": null,
             "hasDefault": true,
             "default": "inherit"
@@ -91436,6 +91919,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-xs)"
+          },
+          {
+            "name": "--lr-locale-picker-listbox-min-inline-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-12rem)"
           },
           {
             "name": "--lr-locale-picker-open-border-color",
@@ -91978,6 +92467,16 @@
             "default": "button"
           },
           {
+            "name": "legend-flow",
+            "property": "legendFlow",
+            "type": "LyraMapLegendFlow",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "row"
+          },
+          {
             "name": "legend-gradient-hi-label",
             "property": "legendGradientHiLabel",
             "type": "string | null",
@@ -92421,6 +92920,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "button"
+          },
+          {
+            "name": "legendFlow",
+            "attribute": "legend-flow",
+            "type": "LyraMapLegendFlow",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "row"
           },
           {
             "name": "legendGradient",
@@ -93328,6 +93837,12 @@
             "default": 0
           },
           {
+            "name": "--lr-map-attribution-margin",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-map-control-gap)"
+          },
+          {
             "name": "--lr-map-attribution-max-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -93623,6 +94138,18 @@
             "default": 1
           },
           {
+            "name": "--lr-map-legend-disclosure-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-font-weight-semibold)"
+          },
+          {
+            "name": "--lr-map-legend-disclosure-min-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-size)"
+          },
+          {
             "name": "--lr-map-legend-disclosure-padding",
             "deprecated": null,
             "hasDefault": true,
@@ -93645,6 +94172,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 1
+          },
+          {
+            "name": "--lr-map-legend-group-heading-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-map-legend-group-heading-padding",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 0
           },
           {
             "name": "--lr-map-legend-hidden-swatch-opacity",
@@ -93703,6 +94242,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-0-75rem)"
+          },
+          {
+            "name": "--lr-map-legend-toggle-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-map-legend-toggle-min-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-icon-button-size)"
           },
           {
             "name": "--lr-map-legend-toggle-padding",
@@ -95303,6 +95854,12 @@
             "default": "calc(var(--lr-radius) * 0.5)"
           },
           {
+            "name": "--lr-markdown-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-markdown-content-min-size",
             "deprecated": null,
             "hasDefault": true,
@@ -95313,6 +95870,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-font-mono)"
+          },
+          {
+            "name": "--lr-markdown-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
           },
           {
             "name": "--lr-markdown-heading-1-font-size",
@@ -95393,6 +95956,12 @@
             "default": "var(--lr-color-warning-quiet)"
           },
           {
+            "name": "--lr-markdown-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-line-height-loose)"
+          },
+          {
             "name": "--lr-markdown-link-color",
             "deprecated": null,
             "hasDefault": true,
@@ -95405,6 +95974,12 @@
             "default": "var(--lr-markdown-link-color)"
           },
           {
+            "name": "--lr-markdown-list-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-markdown-block-gap)"
+          },
+          {
             "name": "--lr-markdown-list-indent",
             "deprecated": null,
             "hasDefault": true,
@@ -95415,6 +95990,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-markdown-paragraph-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-markdown-block-gap)"
           },
           {
             "name": "--lr-markdown-table-header-bg",
@@ -96282,6 +96863,12 @@
             "default": "calc(var(--lr-radius) * 0.5)"
           },
           {
+            "name": "--lr-markdown-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-markdown-content-min-size",
             "deprecated": null,
             "hasDefault": true,
@@ -96292,6 +96879,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-font-mono)"
+          },
+          {
+            "name": "--lr-markdown-font-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
           },
           {
             "name": "--lr-markdown-heading-1-font-size",
@@ -96372,6 +96965,12 @@
             "default": "var(--lr-color-warning-quiet)"
           },
           {
+            "name": "--lr-markdown-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-line-height-loose)"
+          },
+          {
             "name": "--lr-markdown-link-color",
             "deprecated": null,
             "hasDefault": true,
@@ -96384,6 +96983,12 @@
             "default": "var(--lr-markdown-link-color)"
           },
           {
+            "name": "--lr-markdown-list-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-markdown-block-gap)"
+          },
+          {
             "name": "--lr-markdown-list-indent",
             "deprecated": null,
             "hasDefault": true,
@@ -96394,6 +96999,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "none"
+          },
+          {
+            "name": "--lr-markdown-paragraph-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-markdown-block-gap)"
           },
           {
             "name": "--lr-markdown-table-header-bg",
@@ -98997,6 +99608,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-menu-label-font-family",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-menu-label-font-size",
             "deprecated": null,
             "hasDefault": true,
@@ -99015,9 +99632,21 @@
             "default": "normal"
           },
           {
+            "name": "--lr-menu-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-line-height-snug)"
+          },
+          {
             "name": "--lr-menu-label-padding",
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "--lr-menu-label-text-transform",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
           }
         ],
         "cssStates": [],
@@ -102011,6 +102640,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-label-block-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -102048,6 +102683,18 @@
           },
           {
             "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-transform",
             "deprecated": null,
             "hasDefault": true,
             "default": "inherit"
@@ -105404,6 +106051,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-form-control-label-block-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -105441,6 +106094,18 @@
           },
           {
             "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-transform",
             "deprecated": null,
             "hasDefault": true,
             "default": "inherit"
@@ -105545,6 +106210,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-xs)"
+          },
+          {
+            "name": "--lr-input-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-input-number-direction",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "ltr"
           },
           {
             "name": "--lr-input-padding-block",
@@ -109274,6 +109951,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-form-control-label-block-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -109311,6 +109994,18 @@
           },
           {
             "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-transform",
             "deprecated": null,
             "hasDefault": true,
             "default": "inherit"
@@ -109415,6 +110110,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-xs)"
+          },
+          {
+            "name": "--lr-input-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-input-number-direction",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "ltr"
           },
           {
             "name": "--lr-input-padding-block",
@@ -111401,6 +112108,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-label-block-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -111438,6 +112151,24 @@
           },
           {
             "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-transform",
             "deprecated": null,
             "hasDefault": true,
             "default": "inherit"
@@ -116614,6 +117345,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-label-block-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -116651,6 +117388,24 @@
           },
           {
             "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-transform",
             "deprecated": null,
             "hasDefault": true,
             "default": "inherit"
@@ -118146,6 +118901,12 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-chart-legend-item-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-chart-legend-item-min-height",
             "deprecated": null,
             "hasDefault": true,
@@ -118156,6 +118917,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-2xs)"
+          },
+          {
+            "name": "--lr-chart-legend-justify",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "normal"
           },
           {
             "name": "--lr-chart-legend-padding",
@@ -119365,6 +120132,12 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-chart-legend-item-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-chart-legend-item-min-height",
             "deprecated": null,
             "hasDefault": true,
@@ -119375,6 +120148,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-2xs)"
+          },
+          {
+            "name": "--lr-chart-legend-justify",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "normal"
           },
           {
             "name": "--lr-chart-legend-padding",
@@ -126552,6 +127331,12 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-chart-legend-item-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-chart-legend-item-min-height",
             "deprecated": null,
             "hasDefault": true,
@@ -126562,6 +127347,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-2xs)"
+          },
+          {
+            "name": "--lr-chart-legend-justify",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "normal"
           },
           {
             "name": "--lr-chart-legend-padding",
@@ -129052,6 +129843,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-label-block-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -129089,6 +129886,18 @@
           },
           {
             "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-transform",
             "deprecated": null,
             "hasDefault": true,
             "default": "inherit"
@@ -135542,6 +136351,18 @@
             "default": "inherit"
           },
           {
+            "name": "--lr-form-control-label-text-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-transform",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
             "hasDefault": true,
@@ -137208,6 +138029,12 @@
             "default": "var(--lr-color-brand-quiet)"
           },
           {
+            "name": "--lr-chart-legend-item-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-chart-legend-item-min-height",
             "deprecated": null,
             "hasDefault": true,
@@ -137218,6 +138045,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-space-2xs)"
+          },
+          {
+            "name": "--lr-chart-legend-justify",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "normal"
           },
           {
             "name": "--lr-chart-legend-padding",
@@ -137739,6 +138572,16 @@
             "default": false
           },
           {
+            "name": "full-width",
+            "property": "fullWidth",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "hint",
             "property": "hint",
             "type": "string",
@@ -137747,6 +138590,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "icon-placement",
+            "property": "iconPlacement",
+            "type": "LyraSegmentedIconPlacement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "start"
           },
           {
             "name": "label",
@@ -137821,6 +138674,16 @@
             "default": false
           },
           {
+            "name": "fullWidth",
+            "attribute": "full-width",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "hint",
             "attribute": "hint",
             "type": "string",
@@ -137829,6 +138692,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "iconPlacement",
+            "attribute": "icon-placement",
+            "type": "LyraSegmentedIconPlacement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "start"
           },
           {
             "name": "items",
@@ -137978,6 +138851,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-label-block-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-form-control-label-color",
             "deprecated": null,
             "hasDefault": true,
@@ -137997,6 +138876,18 @@
           },
           {
             "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-transform",
             "deprecated": null,
             "hasDefault": true,
             "default": "inherit"
@@ -139364,6 +140255,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-form-control-label-block-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -139401,6 +140298,18 @@
           },
           {
             "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-transform",
             "deprecated": null,
             "hasDefault": true,
             "default": "inherit"
@@ -140220,6 +141129,16 @@
             "default": 0
           },
           {
+            "name": "full-width",
+            "property": "fullWidth",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "hidden",
             "property": "hidden",
             "type": "boolean",
@@ -140300,6 +141219,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0
+          },
+          {
+            "name": "fullWidth",
+            "attribute": "full-width",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "hidden",
@@ -141316,6 +142245,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-label-block-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -141353,6 +142288,18 @@
           },
           {
             "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-transform",
             "deprecated": null,
             "hasDefault": true,
             "default": "inherit"
@@ -142971,6 +143918,18 @@
             "default": "inherit"
           },
           {
+            "name": "--lr-form-control-label-text-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-transform",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-form-control-required-color",
             "deprecated": null,
             "hasDefault": true,
@@ -143055,10 +144014,22 @@
             "default": "var(--lr-color-surface)"
           },
           {
+            "name": "--lr-slider-thumb-border-width",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-border-width-medium)"
+          },
+          {
             "name": "--lr-slider-thumb-hover-ring-color",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-brand-quiet)"
+          },
+          {
+            "name": "--lr-slider-thumb-shadow",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-shadow-s)"
           },
           {
             "name": "--lr-slider-thumb-size",
@@ -143089,6 +144060,18 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "calc(var(--lr-slider-thumb-size) * 0.25)"
+          },
+          {
+            "name": "--lr-slider-value-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
+          },
+          {
+            "name": "--lr-slider-value-font-family",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
           },
           {
             "name": "--marker-height",
@@ -146656,6 +147639,16 @@
             "hasDefault": false
           },
           {
+            "name": "truncate",
+            "property": "truncate",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "unit",
             "property": "unit",
             "type": "string",
@@ -146864,6 +147857,16 @@
             "hasDefault": false
           },
           {
+            "name": "truncate",
+            "attribute": "truncate",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "unit",
             "attribute": "unit",
             "type": "string",
@@ -146985,10 +147988,22 @@
         ],
         "cssProperties": [
           {
+            "name": "--lr-stat-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "normal"
+          },
+          {
             "name": "--lr-stat-bg",
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-surface)"
+          },
+          {
+            "name": "--lr-stat-border-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-border-subtle)"
           },
           {
             "name": "--lr-stat-caption-color",
@@ -147079,6 +148094,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-size-0-04em)"
+          },
+          {
+            "name": "--lr-stat-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
           },
           {
             "name": "--lr-stat-label-text-transform",
@@ -153573,6 +154594,16 @@
             "default": "never"
           },
           {
+            "name": "stack-header",
+            "property": "stackHeader",
+            "type": "TableStackHeader",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
             "name": "storage-key",
             "property": "storageKey",
             "type": "string | undefined",
@@ -153594,6 +154625,16 @@
           {
             "name": "unknown-total",
             "property": "unknownTotal",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "without-header-row",
+            "property": "withoutHeaderRow",
             "type": "boolean",
             "reflects": true,
             "inferred": false,
@@ -154072,6 +155113,15 @@
             "hasDefault": false
           },
           {
+            "name": "rowAttributes",
+            "attribute": null,
+            "type": "(row: T, index: number) => TableRowAttributes | undefined | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "rowExpandLabel",
             "attribute": null,
             "type": "(row: T, expanded: boolean) => string | undefined",
@@ -154216,6 +155266,16 @@
             "default": "never"
           },
           {
+            "name": "stackHeader",
+            "attribute": "stack-header",
+            "type": "TableStackHeader",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "visible"
+          },
+          {
             "name": "storageKey",
             "attribute": "storage-key",
             "type": "string | undefined",
@@ -154252,6 +155312,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "withoutHeaderRow",
+            "attribute": "without-header-row",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "slots": [
@@ -154615,6 +155685,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-table-border",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-border-width-thin) solid var(--lr-color-border-subtle)"
+          },
+          {
             "name": "--lr-table-caption-color",
             "deprecated": null,
             "hasDefault": true,
@@ -154652,6 +155728,12 @@
           },
           {
             "name": "--lr-table-cell-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-table-cell-line-height",
             "deprecated": null,
             "hasDefault": true,
             "default": "inherit"
@@ -154882,6 +155964,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-table-row-header-font-weight",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
             "name": "--lr-table-row-height",
             "deprecated": null,
             "hasDefault": false
@@ -154907,6 +155995,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "transparent"
+          },
+          {
+            "name": "--lr-table-sort-icon-vertical-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "middle"
           },
           {
             "name": "--lr-table-sortable-header-active-bg",
@@ -158287,6 +159381,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-form-control-label-block-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -158324,6 +159424,24 @@
           },
           {
             "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-transform",
             "deprecated": null,
             "hasDefault": true,
             "default": "inherit"
@@ -161088,6 +162206,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-form-control-label-block-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -161125,6 +162249,24 @@
           },
           {
             "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-transform",
             "deprecated": null,
             "hasDefault": true,
             "default": "inherit"
@@ -162999,6 +164141,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-color-danger)"
+          },
+          {
+            "name": "--lr-form-control-label-block-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
           },
           {
             "name": "--lr-form-control-label-collapse-inline-size",
@@ -166393,6 +167541,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-label-block-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -166430,6 +167584,18 @@
           },
           {
             "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-transform",
             "deprecated": null,
             "hasDefault": true,
             "default": "inherit"
@@ -175239,6 +176405,12 @@
             "default": "var(--lr-color-danger)"
           },
           {
+            "name": "--lr-form-control-label-block-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -178446,6 +179618,12 @@
             "hasDefault": false
           },
           {
+            "name": "--lr-form-control-label-block-gap",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-space-xs)"
+          },
+          {
             "name": "--lr-form-control-label-collapse-inline-size",
             "deprecated": null,
             "hasDefault": true,
@@ -178483,6 +179661,18 @@
           },
           {
             "name": "--lr-form-control-label-line-height",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-align",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "inherit"
+          },
+          {
+            "name": "--lr-form-control-label-text-transform",
             "deprecated": null,
             "hasDefault": true,
             "default": "inherit"

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 26 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -277,5 +277,9 @@ including when that allocation shrinks after the content renders.
 
 The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.
 
-More themeable custom properties: `--lr-form-control-label-line-height` (default `inherit`): Line
-height of the field label.
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.

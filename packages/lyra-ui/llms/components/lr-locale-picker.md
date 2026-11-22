@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 37 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 41 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -17,6 +17,10 @@
 ## `lr-locale-picker`
 
 `--lr-locale-picker-trigger-radius` rounds the trigger only; unset it follows `--lr-locale-picker-radius`, which keeps rounding the listbox and options.
+
+`--lr-locale-picker-listbox-min-inline-size` (default `var(--lr-size-12rem)`) is the options
+popover's minimum inline size, still capped by the viewport, the space beside the trigger and the
+popover's `28rem` maximum.
 
 Under a coarse pointer the editable text is floored at `--lr-form-control-touch-font-size-min`
 (default `16px`; `0px` opts out) so mobile Safari does not zoom on focus; see "Touch font floor".
@@ -350,3 +354,10 @@ only once it has registered the requested messages; it must not change the activ
 - `--lr-locale-picker-option-selected-color` — Selected option text. Default: `var(--lr-color-brand)`.
 
 The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.
+
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 28 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 28 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -132,3 +132,9 @@ height of the field label.
 - `hint` attribute — Supporting text rendered below the outer label.
 - `hint` slot — Supporting text for the complete form control.
 - `part="hint"` — Supporting text for the complete form control.
+
+Further custom properties:
+
+- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
