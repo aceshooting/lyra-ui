@@ -947,7 +947,7 @@
       "module": "src/autoloader.ts",
       "exportName": "AutoloaderErrorEventDetail",
       "kind": "interface",
-      "fingerprint": "f25f38f7b56999b67e85",
+      "fingerprint": "7da5a3caa466185c9f24",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -963,7 +963,7 @@
       "module": "src/autoloader.ts",
       "exportName": "AutoloaderEventDetail",
       "kind": "interface",
-      "fingerprint": "3a31ff90105e05cdf7dc",
+      "fingerprint": "40965dafe5b37ce30adf",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -1011,7 +1011,7 @@
       "module": "src/autoloader.ts",
       "exportName": "discover",
       "kind": "function",
-      "fingerprint": "43065125ba0502733e90",
+      "fingerprint": "354ecc4a0516e2302eec",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -1027,7 +1027,7 @@
       "module": "src/autoloader.ts",
       "exportName": "start",
       "kind": "function",
-      "fingerprint": "dbb47cff1780e508ef30",
+      "fingerprint": "2d6035694a3065487a10",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -12397,7 +12397,7 @@
       "module": "src/components/utility/icon/icon-library.ts",
       "exportName": "getIconLibrary",
       "kind": "function",
-      "fingerprint": "4c6397006f847653b6b0",
+      "fingerprint": "400d7f8083a29b037fad",
       "routes": [
         "src/all.ts",
         "src/components/lr-icon.ts",
@@ -12418,7 +12418,7 @@
       "module": "src/components/utility/icon/icon-library.ts",
       "exportName": "LyraIconLibrary",
       "kind": "interface",
-      "fingerprint": "f7025490ed5179589ecb",
+      "fingerprint": "0a744e2ed65faca96059",
       "routes": [
         "src/all.ts",
         "src/components/lr-icon.ts",
@@ -12439,7 +12439,7 @@
       "module": "src/components/utility/icon/icon-library.ts",
       "exportName": "LyraIconLibraryOptions",
       "kind": "interface",
-      "fingerprint": "56c80cbe71b2e143e07b",
+      "fingerprint": "16a50a631f5e3ef5795b",
       "routes": [
         "src/all.ts",
         "src/components/lr-icon.ts",
@@ -12460,7 +12460,7 @@
       "module": "src/components/utility/icon/icon-library.ts",
       "exportName": "registerIconLibrary",
       "kind": "function",
-      "fingerprint": "dbd114d0b237d3d38f27",
+      "fingerprint": "0ce40e5440ece3246709",
       "routes": [
         "src/all.ts",
         "src/components/lr-icon.ts",
@@ -14302,7 +14302,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "5355cde9615e46ed7c72",
+      "fingerprint": "7598deae53aa01505d5e",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15248,7 +15248,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "d64e14b9d1da4b1e535f",
+      "fingerprint": "bd3a48c77c76919e5899",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15382,7 +15382,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "8e0922e29523388f7968",
+      "fingerprint": "1789274d931c94939658",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15984,7 +15984,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "a7e62d92a75e0b35db34",
+      "fingerprint": "96e9024b2015e6ec01c6",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16000,7 +16000,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "08654f55938ac324674f",
+      "fingerprint": "dfeebd02844001f9f80e",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16016,7 +16016,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "6eb6f0302803459560fe",
+      "fingerprint": "5041d6a60121135d770d",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16367,7 +16367,7 @@
       "module": "src/utilities/defined.ts",
       "exportName": "allDefined",
       "kind": "function",
-      "fingerprint": "38dd573eef55b9a9b7e3",
+      "fingerprint": "a956042bac541f023d9e",
       "routes": [
         "src/utilities/defined.ts",
         "src/utilities/index.ts"
@@ -16543,7 +16543,7 @@
       "module": "src/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "ecf7cd0093a38c395a30",
+      "fingerprint": "52237bd6de83f53011df",
       "routes": [
         "src/localization.ts",
         "src/utilities/index.ts"
@@ -16560,7 +16560,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "749e9a04ee1c33ef1ef1",
+      "fingerprint": "ef7cef610200a5ef73ca",
       "routes": [
         "src/vue.ts"
       ],
@@ -16952,7 +16952,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "bb9606faa8bd2432dc9f",
+      "fingerprint": "d5a51abe2d8efc35195f",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -16977,7 +16977,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocaleDelta",
       "kind": "function",
-      "fingerprint": "7315060ad3bff1a92039",
+      "fingerprint": "d194f363601dda9295b8",
       "routes": [
         "src/localization.ts"
       ],
@@ -22857,7 +22857,7 @@
       "module": "src/theme/theme.ts",
       "exportName": "LyraLookEntry",
       "kind": "interface",
-      "fingerprint": "ba883b559275bad348ce",
+      "fingerprint": "c17124c979b6a07fa2e8",
       "routes": [
         "src/all.ts",
         "src/lyra.ts",
@@ -22932,10 +22932,7 @@
       "kind": "function",
       "fingerprint": "6bbb50ee5905009333cd",
       "routes": [
-        "src/all.ts",
-        "src/components/overlays/dialog/prompt.ts",
-        "src/lyra.ts",
-        "src/ssr/all.ts"
+        "src/components/overlays/dialog/prompt.ts"
       ],
       "document": "llms/overlays.md",
       "family": "overlays",
@@ -22951,10 +22948,7 @@
       "kind": "interface",
       "fingerprint": "8756128ef77f2419f4d7",
       "routes": [
-        "src/all.ts",
-        "src/components/overlays/dialog/prompt.ts",
-        "src/lyra.ts",
-        "src/ssr/all.ts"
+        "src/components/overlays/dialog/prompt.ts"
       ],
       "document": "llms/overlays.md",
       "family": "overlays",
@@ -22962,6 +22956,243 @@
         "kind": "utility",
         "name": "components-overlays-dialog-prompt-contracts",
         "declaration": "PromptOptions"
+      }
+    },
+    {
+      "module": "src/components/conversation/code-block/code-block-base.class.ts",
+      "exportName": "LyraCodeBlockLoadDetail",
+      "kind": "interface",
+      "fingerprint": "90f1969eb0879f352a2e",
+      "routes": [
+        "src/all.ts",
+        "src/components/conversation/code-block/code-block-core.class.ts",
+        "src/components/conversation/code-block/code-block.class.ts",
+        "src/components/conversation/index.ts",
+        "src/components/lr-code-block-core.ts",
+        "src/components/lr-code-block.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/conversation.md",
+      "family": "conversation",
+      "locator": {
+        "kind": "utility",
+        "name": "components-conversation-code-block-code-block-base-contracts",
+        "declaration": "LyraCodeBlockLoadDetail"
+      }
+    },
+    {
+      "module": "src/components/forms/combobox/combobox.class.ts",
+      "exportName": "ComboboxOption",
+      "kind": "interface",
+      "fingerprint": "1d0bbb2da7e3480096ff",
+      "routes": [
+        "src/all.ts",
+        "src/components/forms/combobox/combobox.class.ts",
+        "src/components/forms/index.ts",
+        "src/components/lr-combobox.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "utility",
+        "name": "components-forms-combobox-combobox-contracts",
+        "declaration": "ComboboxOption"
+      }
+    },
+    {
+      "module": "src/components/forms/combobox/combobox.class.ts",
+      "exportName": "ComboboxRequest",
+      "kind": "interface",
+      "fingerprint": "f8e1fe09956ad5b29e6b",
+      "routes": [
+        "src/all.ts",
+        "src/components/forms/combobox/combobox.class.ts",
+        "src/components/forms/index.ts",
+        "src/components/lr-combobox.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/forms.md",
+      "family": "forms",
+      "locator": {
+        "kind": "utility",
+        "name": "components-forms-combobox-combobox-contracts",
+        "declaration": "ComboboxRequest"
+      }
+    },
+    {
+      "module": "src/components/layout/stepper/stepper.class.ts",
+      "exportName": "LyraStepChangeDetail",
+      "kind": "interface",
+      "fingerprint": "05b24a0e187cb749ad58",
+      "routes": [
+        "src/all.ts",
+        "src/components/layout/index.ts",
+        "src/components/layout/stepper/stepper.class.ts",
+        "src/components/lr-stepper.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/layout.md",
+      "family": "layout",
+      "locator": {
+        "kind": "utility",
+        "name": "components-layout-stepper-stepper-contracts",
+        "declaration": "LyraStepChangeDetail"
+      }
+    },
+    {
+      "module": "src/components/media/lightbox/lightbox.class.ts",
+      "exportName": "LyraLightboxItemChangeDetail",
+      "kind": "interface",
+      "fingerprint": "e8372decb53933cd7ef7",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-lightbox.ts",
+        "src/components/media/index.ts",
+        "src/components/media/lightbox/lightbox.class.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-lightbox-lightbox-contracts",
+        "declaration": "LyraLightboxItemChangeDetail"
+      }
+    },
+    {
+      "module": "src/components/utility/icon/icon-library.ts",
+      "exportName": "getDefaultIconFamily",
+      "kind": "function",
+      "fingerprint": "e70cf4df84a768fcc961",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-icon.ts",
+        "src/components/utility/icon/icon-library.ts",
+        "src/components/utility/index.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/utility.md",
+      "family": "utility",
+      "locator": {
+        "kind": "utility",
+        "name": "components-utility-icon-icon-library-contracts",
+        "declaration": "getDefaultIconFamily"
+      }
+    },
+    {
+      "module": "src/components/utility/icon/icon-library.ts",
+      "exportName": "getDefaultIconVariant",
+      "kind": "function",
+      "fingerprint": "e70cf4df84a768fcc961",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-icon.ts",
+        "src/components/utility/icon/icon-library.ts",
+        "src/components/utility/index.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/utility.md",
+      "family": "utility",
+      "locator": {
+        "kind": "utility",
+        "name": "components-utility-icon-icon-library-contracts",
+        "declaration": "getDefaultIconVariant"
+      }
+    },
+    {
+      "module": "src/components/utility/icon/icon-library.ts",
+      "exportName": "setDefaultIconFamily",
+      "kind": "function",
+      "fingerprint": "78e75fedc8f9785b6347",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-icon.ts",
+        "src/components/utility/icon/icon-library.ts",
+        "src/components/utility/index.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/utility.md",
+      "family": "utility",
+      "locator": {
+        "kind": "utility",
+        "name": "components-utility-icon-icon-library-contracts",
+        "declaration": "setDefaultIconFamily"
+      }
+    },
+    {
+      "module": "src/internal/all-defined-arguments.ts",
+      "exportName": "AllDefinedWaitOptions",
+      "kind": "interface",
+      "fingerprint": "3bb0d4a86d02966d5894",
+      "routes": [
+        "src/utilities/defined.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared/testing-and-utilities.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "defined",
+        "declaration": "AllDefinedWaitOptions"
+      }
+    },
+    {
+      "module": "src/internal/lyra-event.ts",
+      "exportName": "LyraEventOptions",
+      "kind": "interface",
+      "fingerprint": "67b25096d623473744cf",
+      "routes": [
+        "src/event-classes.ts"
+      ],
+      "document": "llms/shared/events-and-types.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "instanceof",
+        "declaration": "LyraEventOptions"
+      }
+    },
+    {
+      "module": "src/utilities/form.ts",
+      "exportName": "serialize",
+      "kind": "function",
+      "fingerprint": "d3162d211c3a9976fead",
+      "routes": [
+        "src/utilities/form.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared/testing-and-utilities.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "form",
+        "declaration": "serialize"
+      }
+    },
+    {
+      "module": "src/utilities/form.ts",
+      "exportName": "serializeFormData",
+      "kind": "function",
+      "fingerprint": "5a19c7f826bbd925f0c0",
+      "routes": [
+        "src/utilities/form.ts",
+        "src/utilities/index.ts"
+      ],
+      "document": "llms/shared/testing-and-utilities.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "form",
+        "declaration": "serializeFormData"
       }
     }
   ],
