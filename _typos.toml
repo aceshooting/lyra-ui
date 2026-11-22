@@ -104,6 +104,7 @@ valide = "valide"
 apparence = "apparence"
 mesures = "mesures"
 # French, German and Polish sample strings (localization overrides under test).
+vor = "vor"
 sur = "sur"
 Sur = "Sur"
 invalide = "invalide"
