@@ -5,13 +5,13 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-widget.js';` (stable tag alias; registers the tag)
 - **Class** `LyraWidget`, also available unregistered from `@aceshooting/lyra-ui/components/layout/widget/widget.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 16 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `actions`: `--lr-scroll-fade-size`; `backdrop`: `--lr-widget-backdrop-inset`, `--lr-widget-overlay-color`; `base`: `--lr-widget-fullscreen-inset`; `collapse-button`: `--lr-widget-collapse-button-hover-bg`, `--lr-widget-collapse-button-hover-color`; `fullscreen-button`: `--lr-widget-fullscreen-button-hover-bg`, `--lr-widget-fullscreen-button-hover-color`; `view-toggle`: `--lr-widget-view-toggle-hover-bg`, `--lr-widget-view-toggle-hover-color`; `view-toggles`: `--lr-scroll-fade-size`
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

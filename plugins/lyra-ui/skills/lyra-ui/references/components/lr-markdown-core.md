@@ -5,13 +5,13 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-markdown-core.js';` (stable tag alias; registers the tag)
 - **Class** `LyraMarkdownCore`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/markdown/markdown-core.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
 - **Themeable via** 24 parts, 57 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `code-block`: `--lr-code-block-tab-size`, `--lr-markdown-code-bg`, `--lr-markdown-code-block-font-size`, `--lr-markdown-code-block-line-height`, `--lr-markdown-code-block-padding`, `--lr-markdown-code-block-radius`; `content`: `--lr-markdown-font-mono`, `--lr-markdown-max-height`; `table`: `--lr-markdown-table-header-bg`
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

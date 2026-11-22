@@ -5,12 +5,12 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-tool-result-dialog.js';` (stable tag alias; registers the tag)
 - **Class** `LyraToolResultDialog`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/tool-result-dialog/tool-result-dialog.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 12 parts, 28 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

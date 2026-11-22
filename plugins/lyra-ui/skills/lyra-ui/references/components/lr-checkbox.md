@@ -5,13 +5,13 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-checkbox.js';` (stable tag alias; registers the tag)
 - **Class** `LyraCheckbox`, also available unregistered from `@aceshooting/lyra-ui/components/forms/checkbox/checkbox.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 15 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `box`: `--lr-checkbox-bg`, `--lr-checkbox-border-color`, `--lr-checkbox-checked-bg`, `--lr-checkbox-checked-border-color`, `--lr-checkbox-box-radius`, `--lr-checkbox-box-size`; `label`: `--lr-checkbox-label-font-size`, `--lr-checkbox-label-color`
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

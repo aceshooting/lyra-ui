@@ -5,10 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-app-rail-item.js';` (stable tag alias; registers the tag)
 - **Class** `LyraAppRailItem`, also available unregistered from `@aceshooting/lyra-ui/components/layout/app-rail/app-rail-item.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 11 parts, 30 custom properties — see `lr-app-rail.md`
 - **Documented with** `lr-app-rail`: see [lr-app-rail.md](./lr-app-rail.md).
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)

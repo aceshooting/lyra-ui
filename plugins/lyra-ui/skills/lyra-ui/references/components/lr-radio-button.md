@@ -5,13 +5,13 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-radio-button.js';` (stable tag alias; registers the tag)
 - **Class** `LyraRadioButton`, also available unregistered from `@aceshooting/lyra-ui/components/forms/radio/radio-button.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 13 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `button`: `--lr-radio-button-bg`, `--lr-radio-button-border-color`; `circle`: `--lr-radio-bg`, `--lr-radio-border-color`, `--lr-radio-checked-border-color`, `--lr-radio-circle-size`; `dot`: `--lr-radio-checked-dot-color`, `--lr-radio-dot-size`; `label`: `--lr-radio-label-color`, `--lr-radio-label-font-size`
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

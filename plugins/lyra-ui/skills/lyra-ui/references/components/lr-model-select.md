@@ -5,13 +5,13 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-model-select.js';` (stable tag alias; registers the tag)
 - **Class** `LyraModelSelect`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/model-select/model-select.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 16 parts, 48 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `form-control-label`: `--lr-form-control-required-content`
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 
@@ -239,7 +239,7 @@ non-empty,
 `[part="form-control-label"]` paints the library's shared required marker — the same `::after` rule
 every labelled control in the library uses, so `--lr-form-control-required-content`,
 `--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it here
-exactly as they do on `lr-input` (see `llms/shared.md` → "The required-field marker"). With no visible label there
+exactly as they do on `lr-input` (see `llms/shared/` → "The required-field marker"). With no visible label there
 is nothing to mark and no stray glyph is rendered. Correspondingly, while the picker is barred from
 constraint validation — its own `disabled` or `readonly`, or an ancestor `<fieldset disabled>` — it
 reports no violation and publishes neither `:state(invalid)` nor

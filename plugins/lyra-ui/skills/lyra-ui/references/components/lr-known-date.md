@@ -5,13 +5,13 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-known-date.js';` (stable tag alias; registers the tag)
 - **Class** `LyraKnownDate`, also available unregistered from `@aceshooting/lyra-ui/components/utility/known-date/known-date.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 16 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `field-input`: `--lr-known-date-field-padding-block`, `--lr-known-date-field-padding-inline`, `--lr-known-date-field-font-size`, `--lr-known-date-field-min-height`, `--lr-known-date-field-height`, `--lr-known-date-invalid-border-color`; `legend`: `--lr-form-control-required-content`
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 
@@ -147,7 +147,7 @@ one detail specific to this component: `[part="legend"]` owns the marker, while
 `[part="form-control-label"]` owns only the label content inside that legend. A
 `::part(form-control-label)` rule therefore cannot retheme the marker; use the three public marker
 properties above. With no label the legend is hidden and nothing is painted. Full description in
-`llms/shared.md` → "The required-field marker".
+`llms/shared/` → "The required-field marker".
 
 **CSS states:** `:state(blank)` while the composite value is empty/incomplete;
 `:state(disabled)` for direct or fieldset-cascaded disablement.

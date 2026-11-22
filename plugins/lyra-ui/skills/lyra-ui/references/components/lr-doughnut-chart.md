@@ -5,10 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-doughnut-chart.js';` (stable tag alias; registers the tag)
 - **Class** `LyraDoughnutChart`, also available unregistered from `@aceshooting/lyra-ui/components/charts/chart/doughnut-chart.class.js`
 - **Family** `components/charts/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
 - **Themeable via** 19 parts, 54 custom properties — see `lr-line-chart.md`
 - **Documented with** `lr-line-chart`: see [lr-line-chart.md](./lr-line-chart.md).
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)

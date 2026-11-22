@@ -5,13 +5,13 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-image-viewer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraImageViewer`, also available unregistered from `@aceshooting/lyra-ui/components/media/image-viewer/image-viewer.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `@aceshooting/lyra-3d` — see `llms/peers.md`
 - **Themeable via** 24 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `annotate-toggle`: `--lr-image-viewer-annotate-active-bg`, `--lr-image-viewer-annotate-active-border-color`; `annotation-box`: `--lr-image-viewer-annotation-box-border`, `--lr-image-viewer-annotation-box-bg`; `highlight`: `--lr-image-viewer-highlight-active-color`, `--lr-image-viewer-highlight-active-border-width`, `--lr-image-viewer-highlight-active-outline-width`, `--lr-image-viewer-highlight-active-outline-offset`, `--lr-image-viewer-annotation-box-border`, `--lr-image-viewer-highlight-fill`
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

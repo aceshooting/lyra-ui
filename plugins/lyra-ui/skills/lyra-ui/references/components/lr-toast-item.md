@@ -5,10 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-toast-item.js';` (stable tag alias; registers the tag)
 - **Class** `LyraToastItem`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/toast/toast-item.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 13 parts, 30 custom properties — see `lr-toast.md`
 - **Documented with** `lr-toast`: see [lr-toast.md](./lr-toast.md).
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)

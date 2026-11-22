@@ -5,13 +5,13 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-conversation-item.js';` (stable tag alias; registers the tag)
 - **Class** `LyraConversationItem`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/conversation-item/conversation-item.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 13 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `actions`: `--lr-conversation-item-align`; `active-indicator`: `--lr-conversation-item-active-indicator-color`, `--lr-conversation-item-active-indicator-inset-inline`, `--lr-conversation-item-active-indicator-width`; `base`: `--lr-conversation-item-align`, `--lr-conversation-item-compact-gap`, `--lr-conversation-item-compact-padding`; `excerpt`: `--lr-conversation-item-active-color`, `--lr-conversation-item-align`; `select-button`: `--lr-conversation-item-align`; `timestamp`: `--lr-conversation-item-active-color`
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

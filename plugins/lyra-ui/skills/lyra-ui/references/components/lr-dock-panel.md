@@ -5,13 +5,13 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-dock-panel.js';` (stable tag alias; registers the tag)
 - **Class** `LyraDockPanel`, also available unregistered from `@aceshooting/lyra-ui/components/layout/dock-panel/dock-panel.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `collapse-toggle`: `--lr-dock-panel-collapse-toggle-hover-bg`, `--lr-dock-panel-collapse-toggle-hover-color`, `--lr-dock-panel-handle-hover-color`; `handle`: `--lr-dock-panel-handle-active-color`, `--lr-dock-panel-handle-hover-color`
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

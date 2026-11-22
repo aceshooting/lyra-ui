@@ -5,13 +5,13 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-switch.js';` (stable tag alias; registers the tag)
 - **Class** `LyraSwitch`, also available unregistered from `@aceshooting/lyra-ui/components/forms/switch/switch.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 12 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `label`: `--lr-switch-label-font-size`, `--lr-switch-label-color`, `--lr-switch-checked-label-color`, `--lr-switch-checked-label-font-weight`; `track`: `--lr-switch-invalid-border-color`, `--lr-switch-track-fill`, `--lr-switch-track-border`, `--lr-switch-checked-track-border`
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

@@ -5,13 +5,13 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-filter-bar.js';` (stable tag alias; registers the tag)
 - **Class** `LyraFilterBar`, also available unregistered from `@aceshooting/lyra-ui/components/layout/filter-bar/filter-bar.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify` — see `llms/peers.md`
 - **Themeable via** 30 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `controls`: `--lr-filter-bar-gap`; `end`: `--lr-filter-bar-gap`; `field`: `--lr-filter-bar-field-basis`
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

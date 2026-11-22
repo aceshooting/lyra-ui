@@ -5,12 +5,12 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-format-number.js';` (stable tag alias; registers the tag)
 - **Class** `LyraFormatNumber`, also available unregistered from `@aceshooting/lyra-ui/components/utility/format/format-number.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** nothing component-specific — inherits only the shared surface
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 
@@ -26,7 +26,7 @@ Shared by all four formatters (`lr-format-number`, `lr-format-date`, `lr-format-
 `lr-relative-time`): each is text-only — a `display: inline` host with **no CSS parts, no events, and
 no themeable custom properties of its own** — rendering one formatted string into its shadow root.
 Locale comes from the shared `effectiveLocale` (this element's own `locale`, else the nearest
-inherited `lang`; see `llms/shared.md`) and is passed to `Intl` as `undefined` when it resolves
+inherited `lang`; see `llms/shared/`) and is passed to `Intl` as `undefined` when it resolves
 empty, which means "the runtime's default locale". Every `Intl` instance is pulled from the shared
 memoized `internal/intl-cache.ts` (one instance per locale + options pair, LRU-capped), so these are
 cheap to use per row in a large table or feed.

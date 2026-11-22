@@ -5,13 +5,13 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-tool-call-block.js';` (stable tag alias; registers the tag)
 - **Class** `LyraToolCallBlock`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/tool-call-block/tool-call-block.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
-- **Status** `experimental` since `21.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `experimental` since `21.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 15 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `header`: `--lr-tool-call-block-header-hover-bg`
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

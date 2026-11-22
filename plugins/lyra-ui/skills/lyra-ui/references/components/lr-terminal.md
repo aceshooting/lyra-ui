@@ -5,13 +5,13 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-terminal.js';` (stable tag alias; registers the tag)
 - **Class** `LyraTerminal`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/terminal/terminal.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 17 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `copy-button`: `--lr-terminal-highlight-accent-bg`, `--lr-terminal-toolbar-button-hover-bg`; `download-button`: `--lr-terminal-highlight-accent-bg`, `--lr-terminal-toolbar-button-hover-bg`; `line`: `--lr-terminal-compact-line-padding-inline`; `toolbar`: `--lr-terminal-compact-toolbar-gap`, `--lr-terminal-compact-toolbar-padding`; `viewport`: `--lr-terminal-height`
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

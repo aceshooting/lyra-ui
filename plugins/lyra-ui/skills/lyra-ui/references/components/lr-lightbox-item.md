@@ -5,10 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-lightbox-item.js';` (stable tag alias; registers the tag)
 - **Class** `LyraLightboxItem`, also available unregistered from `@aceshooting/lyra-ui/components/media/lightbox/lightbox-item.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `32.1.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `32.1.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 4 parts, 0 custom properties — see `lr-lightbox.md`
 - **Documented with** `lr-lightbox`: see [lr-lightbox.md](./lr-lightbox.md).
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)

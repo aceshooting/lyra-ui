@@ -5,12 +5,12 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-icon-button.js';` (stable tag alias; registers the tag)
 - **Class** `LyraIconButton`, also available unregistered from `@aceshooting/lyra-ui/components/forms/icon-button/icon-button.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify` — see `llms/peers.md`
 - **Themeable via** 3 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 
@@ -70,7 +70,7 @@ stays empty; whitespace-only is ignored), then `label`, then a name the slotted 
 `aria-label` or an `alt` (for example `<span>Close</span>` or `<svg role="img" aria-label="Close">`).
 Only when none of them supplies one does it fall back to the localized `iconButtonLabel` string
 rather than being empty — override it per instance with `.strings` or app-wide with
-`registerLyraLocale()` (see `llms/shared.md`); don't rely on the fallback for a button whose purpose
+`registerLyraLocale()` (see `llms/shared/`); don't rely on the fallback for a button whose purpose
 isn't generic. Slotted content is re-checked on `slotchange`, not on text edits inside it.
 
 For icon-only toggles (mute, favorite, pin), assign the non-reflected `pressed` property (`true`,
@@ -162,7 +162,7 @@ than it grows the button and keeps its own aspect ratio; a small glyph pads out 
 library-wide token (declared on every `lr-*` host by the shared token layer, and the shared minimum tappable size
 that several other components size their icon-only controls against), so overriding
 `--lr-theme-icon-button-size` globally resizes all of them together. Keep the resolved value at or
-above 24px — see `llms/shared.md`. **`--lr-icon-button-size` is element-scoped, unlike every other
+above 24px — see `llms/shared/`. **`--lr-icon-button-size` is element-scoped, unlike every other
 token in this section:** the shared token layer re-declares it on every `lr-*` host's own `:host`,
 so a rule that sets `--lr-icon-button-size` on an ancestor wrapper is reset the moment it crosses
 into any intervening `lr-*` component and never reaches a `<lr-icon-button>` composed inside it
@@ -172,7 +172,7 @@ sits between the rule and the property; setting `--lr-icon-button-size-scope` on
 resize one subtree; or setting `--lr-theme-icon-button-size` on an ancestor to resize the whole
 application. The shared layer reads the latter two through `var()` at every level, so both reach a
 `<lr-icon-button>` composed inside another component, e.g. `<lr-copy-button>`/
-`<lr-message-actions>` -- see `llms/shared.md` for the full scope table.
+`<lr-message-actions>` -- see `llms/shared/` for the full scope table.
 
 Lowering the floor for a dense action row below 24px is safe **only through the two ancestor
 levers**. The coarse-pointer/no-hover media rule reads those, and floors the RENDERED hit area back

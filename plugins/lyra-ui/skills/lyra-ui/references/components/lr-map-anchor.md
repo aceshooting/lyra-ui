@@ -5,13 +5,13 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-map-anchor.js';` (stable tag alias; registers the tag)
 - **Class** `LyraMapAnchor`, also available unregistered from `@aceshooting/lyra-ui/components/media/map/map-anchor.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
-- **Status** `experimental` since `30.1.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `experimental` since `30.1.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 4 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `body`: `--lr-map-anchor-close-reservation`; `close-button`: `--lr-map-anchor-close-reservation`, `--lr-map-popup-close-button-active-bg`, `--lr-map-popup-close-button-active-color`, `--lr-map-popup-close-button-hover-bg`, `--lr-map-popup-close-button-hover-color`
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

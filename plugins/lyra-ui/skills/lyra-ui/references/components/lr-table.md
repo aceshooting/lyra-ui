@@ -5,13 +5,13 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-table.js';` (stable tag alias; registers the tag)
 - **Class** `LyraTable`, also available unregistered from `@aceshooting/lyra-ui/components/data/table/table.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 59 parts, 64 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-table-border`, `--lr-theme-scrollbar-color`, `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-width`; `caption`: `--lr-table-caption-color`, `--lr-table-caption-font-size`, `--lr-table-caption-font-weight`, `--lr-table-caption-padding`, `--lr-table-caption-text-align`; `header-cell`: `--lr-table-header-sorted-bg`; `row`: `--lr-table-row-selected-bg`
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

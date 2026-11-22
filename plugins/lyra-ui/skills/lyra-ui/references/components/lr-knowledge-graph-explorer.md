@@ -5,12 +5,12 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-knowledge-graph-explorer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraKnowledgeGraphExplorer`, also available unregistered from `@aceshooting/lyra-ui/components/retrieval/knowledge-graph-explorer/knowledge-graph-explorer.class.js`
 - **Family** `components/retrieval/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.1.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [retrieval](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/retrieval.md)
 - **Deprecations** none
 - **Optional peers** `@aceshooting/lyra-3d`, `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` — see `llms/peers.md`
 - **Themeable via** 19 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

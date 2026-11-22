@@ -5,13 +5,13 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-tool-param-form.js';` (stable tag alias; registers the tag)
 - **Class** `LyraToolParamForm`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/tool-param-form/tool-param-form.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 8 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `label`: `--lr-form-control-required-content`
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 
@@ -179,7 +179,7 @@ with the library's shared required marker — the same `::after` rule and the sa
 every labelled control in the library uses (`--lr-form-control-required-content`,
 `--lr-form-control-required-color` and `--lr-form-control-required-offset`), so retuning or
 suppressing the marker application-wide reaches this form's fields
-too (see `llms/shared.md` → "The required-field marker"). Requiredness here is **per field**, not per host:
+too (see `llms/shared/` → "The required-field marker"). Requiredness here is **per field**, not per host:
 the host carries no `required` attribute, so the marker keys off a `data-required` attribute the
 component sets on each `[part="field"]` wrapper. That attribute is component-owned bookkeeping —
 never write it, and note that `::part(field)[data-required]` is invalid CSS (an attribute selector

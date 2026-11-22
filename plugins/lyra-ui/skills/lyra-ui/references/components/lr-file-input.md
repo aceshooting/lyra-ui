@@ -5,13 +5,13 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-file-input.js';` (stable tag alias; registers the tag)
 - **Class** `LyraFileInput`, also available unregistered from `@aceshooting/lyra-ui/components/media/file-input/file-input.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 22 parts, 38 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `dropzone-icon`: `--lr-file-input-dropzone-icon-size`; `file`: `--lr-file-input-file-bg`, `--lr-file-input-file-border-color`, `--lr-file-input-file-radius`; `file-input`: `--lr-file-input-accept-bg`, `--lr-file-input-accept-border-color`, `--lr-file-input-compact-padding`, `--lr-file-input-dropzone-padding`, `--lr-file-input-radius`, `--lr-file-input-reject-bg`, `--lr-file-input-reject-border-color`; `file-thumbnail`: `--lr-file-input-thumbnail-size`; `form-control-label`: `--lr-form-control-required-content`; `remove-button`: `--lr-file-input-remove-hover-bg`
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 
@@ -276,7 +276,7 @@ matching native `:invalid`; `required`/`optional` keep publishing.
 paints the library's shared required marker — the same `::after` rule every labelled control in
 the library uses, not a copy of it, so `--lr-form-control-required-content`,
 `--lr-form-control-required-color` and `--lr-form-control-required-offset` retune or suppress it
-here exactly as they do on `lr-input`. See `llms/shared.md` → "The required-field marker".
+here exactly as they do on `lr-input`. See `llms/shared/` → "The required-field marker".
 
 **Themeable custom properties:** `--lr-file-input-gap` (default `var(--lr-space-xs)`) — gap between
 the dropzone's slotted children; `--lr-file-input-radius` (default `var(--lr-radius)`) — corner

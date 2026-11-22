@@ -5,12 +5,12 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-copy-button.js';` (stable tag alias; registers the tag)
 - **Class** `LyraCopyButton`, also available unregistered from `@aceshooting/lyra-ui/components/utility/copy-button/copy-button.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 14 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 
@@ -194,7 +194,7 @@ import type {
   rendering.
 - Copy affordance strings are localizable: `copy` (`'Copy'`), `copied` (`'Copied!'`) and
   `copyFailed` (`'Copy failed'`), overridable per instance through `.strings` or app-wide through
-  `registerLyraLocale()` (see `llms/shared.md`). Explicit `*-label` properties take precedence.
+  `registerLyraLocale()` (see `llms/shared/`). Explicit `*-label` properties take precedence.
 - Native `dir`/`lang` remain inherited global attributes. The component is not form-associated.
 - Use `size="2xs"` or `size="xs"` for dense metadata or action rows. A selected tier follows the
   shared form-control height, font and radius inputs (`--lr-theme-form-control-height-<tier>`,

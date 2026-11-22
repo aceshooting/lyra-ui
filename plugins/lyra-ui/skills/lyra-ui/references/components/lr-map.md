@@ -5,13 +5,13 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-map.js';` (stable tag alias; registers the tag)
 - **Class** `LyraMap`, also available unregistered from `@aceshooting/lyra-ui/components/media/map/map.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `@aceshooting/lyra-map`, `dompurify`, `maplibre-gl` — see `llms/peers.md`
 - **Themeable via** 93 parts, 95 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `anchor-body`: `--lr-map-anchor-close-reservation`; `anchor-close`: `--lr-map-anchor-close-reservation`; `initialization-activate`: `--lr-map-initialization-activate-label-display`; `initialization-activate-label`: `--lr-map-initialization-activate-label-display`; `initialization-placeholder`: `--lr-map-initialization-placeholder-bg`; `initialization-skeleton`: `--lr-map-initialization-skeleton-display`; `legend-disclosure`: `--lr-map-legend-disclosure-font-weight`, `--lr-map-legend-disclosure-min-height`, `--lr-map-legend-disclosure-padding`; `legend-group-heading`: `--lr-map-legend-group-heading-color`, `--lr-map-legend-group-heading-padding`; `legend-toggle`: `--lr-map-legend-toggle-font-weight`, `--lr-map-legend-toggle-min-height`, `--lr-map-legend-toggle-padding`; `popup-close-button`: `--lr-map-popup-close-button-active-bg`, `--lr-map-popup-close-button-active-color`, `--lr-map-popup-close-button-hover-bg`, `--lr-map-popup-close-button-hover-color`
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

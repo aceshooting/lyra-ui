@@ -5,13 +5,13 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-subagent-panel.js';` (stable tag alias; registers the tag)
 - **Class** `LyraSubagentPanel`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/subagent-panel/subagent-panel.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `7.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 16 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `cancel`: `--lr-subagent-panel-compact-action-padding`; `model`: `--lr-subagent-panel-compact-font-size`; `retry`: `--lr-subagent-panel-compact-action-padding`; `run-trigger`: `--lr-subagent-panel-compact-trigger-gap`, `--lr-subagent-panel-compact-trigger-padding`; `task`: `--lr-subagent-panel-compact-font-size`
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

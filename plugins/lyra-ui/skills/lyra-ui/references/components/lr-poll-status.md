@@ -5,13 +5,13 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-poll-status.js';` (stable tag alias; registers the tag)
 - **Class** `LyraPollStatus`, also available unregistered from `@aceshooting/lyra-ui/components/utility/poll-status/poll-status.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `indicator`: `--lr-poll-status-due-bg`; `pause-button`: `--lr-poll-status-pause-active-bg`, `--lr-poll-status-pause-active-color`, `--lr-poll-status-pause-hover-bg`, `--lr-poll-status-pause-hover-color`; `refresh-button`: `--lr-poll-status-refresh-active-bg`, `--lr-poll-status-refresh-active-color`, `--lr-poll-status-refresh-hover-bg`, `--lr-poll-status-refresh-hover-color`
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

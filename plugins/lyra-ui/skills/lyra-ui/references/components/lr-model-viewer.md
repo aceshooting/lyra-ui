@@ -5,12 +5,12 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-model-viewer.js';` (stable tag alias; registers the tag)
 - **Class** `LyraModelViewer`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/model-viewer/model-viewer.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
-- **Status** `experimental` since `30.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `experimental` since `30.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `@aceshooting/lyra-3d` — see `llms/peers.md`
 - **Themeable via** 10 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

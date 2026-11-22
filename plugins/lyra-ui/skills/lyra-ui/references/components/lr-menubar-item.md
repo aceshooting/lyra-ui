@@ -5,10 +5,10 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-menubar-item.js';` (stable tag alias; registers the tag)
 - **Class** `LyraMenubarItem`, also available unregistered from `@aceshooting/lyra-ui/components/layout/menubar/menubar-item.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
-- **Status** `experimental` since `21.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `experimental` since `21.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 2 parts, 4 custom properties — see `lr-menubar.md`
 - **Documented with** `lr-menubar`: see [lr-menubar.md](./lr-menubar.md).
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)

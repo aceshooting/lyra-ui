@@ -5,12 +5,12 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-help.js';` (stable tag alias; registers the tag)
 - **Class** `LyraHelp`, also available unregistered from `@aceshooting/lyra-ui/components/overlays/help/help.class.js`
 - **Family** `components/overlays/` — see `llms/index.md` for its siblings
-- **Status** `experimental` since `32.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `experimental` since `32.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

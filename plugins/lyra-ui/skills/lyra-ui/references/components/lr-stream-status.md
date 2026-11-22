@@ -5,13 +5,13 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-stream-status.js';` (stable tag alias; registers the tag)
 - **Class** `LyraStreamStatus`, also available unregistered from `@aceshooting/lyra-ui/components/conversation/stream-status/stream-status.class.js`
 - **Family** `components/conversation/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 6 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-stream-status-stalled-bg`, `--lr-stream-status-stalled-border-color`; `indicator`: `--lr-stream-status-dot-color`, `--lr-stream-status-dot-opacity`; `message`: `--lr-stream-status-message-color`; `phase`: `--lr-stream-status-message-color`
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

@@ -5,14 +5,14 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-app-rail.js';` (stable tag alias; registers the tag)
 - **Class** `LyraAppRail`, also available unregistered from `@aceshooting/lyra-ui/components/layout/app-rail/app-rail.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 13 parts, 57 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `backdrop`: `--lr-app-rail-panel-inset-block-start`; `base`: `--lr-app-rail-bg`; `footer`: `--lr-app-rail-footer-padding`; `header`: `--lr-app-rail-header-min-block-size`, `--lr-app-rail-header-padding`; `nav`: `--lr-app-rail-nav-gap`, `--lr-app-rail-nav-padding`; `panel`: `--lr-app-rail-panel-bg`, `--lr-app-rail-panel-inset-block-start`, `--lr-app-rail-panel-overflow-block`, `--lr-app-rail-panel-overflow-inline`, `--lr-app-rail-panel-radius`, `--lr-app-rail-panel-radius-end-end`, `--lr-app-rail-panel-radius-end-start`, `--lr-app-rail-panel-radius-start-end`, `--lr-app-rail-panel-radius-start-start`, `--lr-app-rail-panel-shadow`; `toggle`: `--lr-app-rail-collapse-toggle-active-bg`
 - **Documented with** `lr-app-rail-item`, `lr-app-rail-group` (same section below)
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

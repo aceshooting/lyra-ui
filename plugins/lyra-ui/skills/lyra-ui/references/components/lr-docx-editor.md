@@ -5,15 +5,15 @@
 - **Import** `import '@aceshooting/lyra-docs/docx/editor';` (registers the tag; ships in `@aceshooting/lyra-docs`)
 - **Class** `LyraDocxEditor`, also available unregistered from `@aceshooting/lyra-docs/docx/editor.class`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
-- **Status** `experimental` since `0.1.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `experimental` since `0.1.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 176 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 
 ## `lr-docx-editor`
 
-Companion element from `@aceshooting/lyra-docs`: an in-browser `.docx` editor driven by a session from `createDocxSession()`. The package root registers nothing; import `@aceshooting/lyra-docs/docx/editor` and `@aceshooting/lyra-docs/docx/editor.css`. Its attributes, events, parts and custom properties are in `packages/lyra-docs/custom-elements.json` and the generated per-tag page; the foundation guide (`llms/shared.md`) covers command search, the review panels and toolbar placement.
+Companion element from `@aceshooting/lyra-docs`: an in-browser `.docx` editor driven by a session from `createDocxSession()`. The package root registers nothing; import `@aceshooting/lyra-docs/docx/editor` and `@aceshooting/lyra-docs/docx/editor.css`. Its attributes, events, parts and custom properties are in `packages/lyra-docs/custom-elements.json` and the generated per-tag page; the foundation guide (`llms/shared/`) covers command search, the review panels and toolbar placement.

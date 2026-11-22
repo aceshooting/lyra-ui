@@ -5,13 +5,13 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-thinking-panel.js';` (stable tag alias; registers the tag)
 - **Class** `LyraThinkingPanel`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/thinking-panel/thinking-panel.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 6 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-thinking-panel-bg`; `body`: `--lr-thinking-panel-body-hover-outline-color`, `--lr-thinking-panel-body-hover-outline-offset`, `--lr-thinking-panel-body-hover-outline-style`, `--lr-thinking-panel-body-hover-outline-width`, `--lr-thinking-panel-compact-body-font-size`, `--lr-thinking-panel-compact-body-padding`, `--lr-thinking-panel-max-block-size`; `header`: `--lr-thinking-panel-compact-header-font-size`, `--lr-thinking-panel-compact-header-padding`, `--lr-thinking-panel-header-hover-bg`
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

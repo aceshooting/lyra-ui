@@ -5,14 +5,14 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-date-picker.js';` (stable tag alias; registers the tag)
 - **Class** `LyraDatePicker`, also available unregistered from `@aceshooting/lyra-ui/components/forms/date-picker/date-picker.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
-- **Status** `experimental` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `experimental` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 38 parts, 34 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `next`: `--lr-date-picker-nav-hover-bg`; `previous`: `--lr-date-picker-nav-hover-bg`
 - **Documented with** `lr-date-input` (same section below)
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

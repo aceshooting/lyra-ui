@@ -5,13 +5,13 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-av-player.js';` (stable tag alias; registers the tag)
 - **Class** `LyraAvPlayer`, also available unregistered from `@aceshooting/lyra-ui/components/media/av-player/av-player.class.js`
 - **Family** `components/media/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 18 parts, 16 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `cue`: `--lr-av-player-cue-hover-bg`, `--lr-av-player-cue-current-bg`, `--lr-av-player-cue-match-color`, `--lr-av-player-cue-active-match-color`; `rate-select`: `--lr-av-player-rate-select-hover-bg`, `--lr-av-player-rate-select-active-bg`; `timeline`: `--lr-av-player-timeline-hover-border-color`; `timeline-marker`: `--lr-av-player-marker-active-color`, `--lr-av-player-marker-bg`, `--lr-av-player-marker-success-bg`, `--lr-av-player-marker-warning-bg`, `--lr-av-player-marker-danger-bg`, `--lr-av-player-marker-neutral-bg`, `--lr-av-player-marker-fill`
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

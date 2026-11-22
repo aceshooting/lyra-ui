@@ -6,7 +6,7 @@ import { docsPublicMetadataErrors, renderDocsRobots, renderDocsSitemap, resolveD
 
 import {
   rewriteStandaloneComponentReference,
-  rewriteStandaloneSharedReference,
+  rewriteStandaloneIndexReference,
   trimStandaloneChangelog,
 } from './skill-reference-context.mjs';
 
@@ -45,17 +45,20 @@ if (missingFromShortLlms.length) {
 }
 
 // The skill's references/ are generated context-aware copies of packages/lyra-ui/llms/ (see
-// ./package.sh). Every tag must have its own reference file there. The two intentional standalone
+// ./package.sh). Every tag must have its own reference file there. The intentional standalone
 // transformations are reproduced here; everything else remains byte-identical to its authored
 // package source.
 const skillReferences = join(root, 'plugins/lyra-ui/skills/lyra-ui/references');
-for (const file of ['index.md', 'shared.md', 'tokens.md', 'peers.md', 'migration.md']) {
+for (const file of ['index.md', 'tokens.md', 'peers.md', 'migration.md']) {
   const copy = join(skillReferences, file);
   const source = read(`packages/lyra-ui/llms/${file}`);
-  const expected = file === 'shared.md' ? rewriteStandaloneSharedReference(source) : source;
+  const expected = file === 'index.md' ? rewriteStandaloneIndexReference(source) : source;
   if (!existsSync(copy) || readFileSync(copy, 'utf8') !== expected) {
     errors.push(`plugins/lyra-ui/skills/lyra-ui/references/${file} is missing or out of sync; run \`./package.sh\``);
   }
+}
+if (existsSync(join(skillReferences, 'shared.md'))) {
+  errors.push('plugins/lyra-ui/skills/lyra-ui/references/shared.md must not be bundled (focused shared/ topics replace it); run `./package.sh`');
 }
 const staleReferenceFiles = tags.filter((tag) => {
   const relative = `components/${tag}.md`;

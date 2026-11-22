@@ -34,7 +34,7 @@ echo "Regenerating packages/lyra-ui/llms/ (pnpm --filter @aceshooting/lyra-ui ru
 echo "Regenerating references/ from packages/lyra-ui/llms/..."
 rm -rf "${REFERENCES_DIR}"
 mkdir -p "${REFERENCES_DIR}"
-for file in index.md shared.md tokens.md peers.md migration.md; do
+for file in index.md tokens.md peers.md migration.md; do
   cp "${LLMS_DIR}/${file}" "${REFERENCES_DIR}/${file}"
 done
 cp -r "${LLMS_DIR}/shared" "${REFERENCES_DIR}/shared"

@@ -6,13 +6,13 @@
 - **Compound usage registrations** `import '@aceshooting/lyra-ui/components/lr-checkbox.js';` — required by the consumer-supplied child tags in this reference; usage-only, not registration dependencies of `lr-checkbox-group`
 - **Class** `LyraCheckboxGroup`, also available unregistered from `@aceshooting/lyra-ui/components/forms/checkbox-group/checkbox-group.class.js`
 - **Family** `components/forms/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 8 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `form-control-label`: `--lr-form-control-required-content`
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

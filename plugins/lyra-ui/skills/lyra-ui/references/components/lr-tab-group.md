@@ -6,13 +6,13 @@
 - **Compound usage registrations** `import '@aceshooting/lyra-ui/components/lr-tab.js';`, `import '@aceshooting/lyra-ui/components/lr-tab-panel.js';` — required by the consumer-supplied child tags in this reference; usage-only, not registration dependencies of `lr-tab-group`
 - **Class** `LyraTabGroup`, also available unregistered from `@aceshooting/lyra-ui/components/layout/tab-group/tab-group.class.js`
 - **Family** `components/layout/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `8.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 17 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `panel`: `--lr-tab-group-panel-hover-outline-color`, `--lr-tab-group-panel-hover-outline-offset`, `--lr-tab-group-panel-hover-outline-style`, `--lr-tab-group-panel-hover-outline-width`
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

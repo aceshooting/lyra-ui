@@ -5,13 +5,13 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-page-rail.js';` (stable tag alias; registers the tag)
 - **Class** `LyraPageRail`, also available unregistered from `@aceshooting/lyra-ui/components/viewers/page-rail/page-rail.class.js`
 - **Family** `components/viewers/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 15 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `heat-dot`: `--lr-page-rail-heat-accent-color`; `heat-dot-danger`: `--lr-page-rail-heat-danger-color`; `heat-dot-neutral`: `--lr-page-rail-heat-neutral-color`; `heat-dot-success`: `--lr-page-rail-heat-success-color`; `heat-dot-warning`: `--lr-page-rail-heat-warning-color`; `page`: `--lr-page-rail-current-bg`; `page-current`: `--lr-page-rail-current-bg`
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

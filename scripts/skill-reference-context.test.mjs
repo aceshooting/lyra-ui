@@ -19,7 +19,7 @@ import {
   isLlmsFullMarkdownTarget,
   markdownLinkTargets,
   rewriteStandaloneComponentReference,
-  rewriteStandaloneSharedReference,
+  rewriteStandaloneIndexReference,
   STANDALONE_CHANGELOG_POINTER,
   trimStandaloneChangelog,
   validateSharedTopicLinks,
@@ -143,11 +143,11 @@ function validateStandaloneTree(treeRoot) {
   }
   assert.equal(
     changelogLinks,
-    componentFiles.length + 1 + sharedTopicFiles.reduce((count, file) => {
+    componentFiles.length + sharedTopicFiles.reduce((count, file) => {
       const contents = readFileSync(file, 'utf8');
       return count + markdownLinkTargets(contents).filter(isChangelogMarkdownTarget).length;
     }, 0),
-    'every component, shared.md, and focused topic changelog link must resolve inside the skill',
+    'every component and focused topic changelog link must resolve inside the skill',
   );
   return { componentFiles, referenceFiles, skillMarkdownFiles };
 }
@@ -176,29 +176,27 @@ test('heading anchors retain text, Unicode and duplicate suffixes without markup
 });
 
 test('context rewrites are exact and fail closed on drift', () => {
-  const packageShared = readFileSync(path.join(packageRoot, 'llms', 'shared.md'), 'utf8');
   assert.equal(
     validateSharedTopicLinks(path.join(packageRoot, 'llms', 'shared')),
     true,
     'published topic paths and heading anchors must resolve from their package location',
   );
-  const standaloneShared = rewriteStandaloneSharedReference(packageShared);
-  assert.match(
-    standaloneShared,
-    /bundled\s+\[CHANGELOG\.md\]\(\.\.\/CHANGELOG\.md\):\s+it\s+holds\s+the\s+current\s+major/u,
-  );
-  assert.doesNotMatch(standaloneShared, /self-contained changelog/u);
-  assert.match(
-    standaloneShared,
-    /Family-wide\s+breaking-change\s+summaries\s+are\s+linked/u,
-  );
-  assert.deepEqual(
-    markdownLinkTargets(standaloneShared).filter(isLlmsFullMarkdownTarget),
-    [],
+  const packageIndex = readFileSync(path.join(packageRoot, 'llms', 'index.md'), 'utf8');
+  const standaloneIndex = rewriteStandaloneIndexReference(packageIndex);
+  assert.doesNotMatch(standaloneIndex, /shared\.md/u);
+  assert.throws(
+    () => rewriteStandaloneIndexReference(packageIndex.replace('remains at `llms/shared.md`', 'remains elsewhere')),
+    /Expected exactly one llms\/shared\.md compatibility sentence/u,
   );
   assert.throws(
-    () => rewriteStandaloneSharedReference(packageShared.replace('Family-wide', 'Release-wide')),
-    /Expected exactly one authored release-history paragraph/u,
+    () => rewriteStandaloneComponentReference('- see llms/shared.md for details'),
+    /omitted llms\/shared\.md assembly/u,
+  );
+  assert.equal(
+    rewriteStandaloneComponentReference(
+      '- **Status** `stable` since `4.0.0` \u2014 see the maturity and deprecation policy in `llms/shared.md`',
+    ),
+    '- **Status** `stable` since `4.0.0` \u2014 see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`',
   );
 
   const component =
@@ -329,10 +327,15 @@ test('staged standalone references preserve package truth in their own link cont
   );
   assert.ok(stagedChangelog.includes(STANDALONE_CHANGELOG_POINTER));
 
-  const packageShared = readFileSync(path.join(packageRoot, 'llms', 'shared.md'), 'utf8');
-  const stagedShared = readFileSync(path.join(referencesRoot, 'shared.md'), 'utf8');
-  assert.equal(stagedShared, rewriteStandaloneSharedReference(packageShared));
-  assert.match(stagedShared, /breaking-change summaries are linked/u);
+  assert.equal(
+    existsSync(path.join(referencesRoot, 'shared.md')),
+    false,
+    'the skill omits the combined shared.md assembly',
+  );
+  assert.equal(
+    readFileSync(path.join(referencesRoot, 'index.md'), 'utf8'),
+    rewriteStandaloneIndexReference(readFileSync(path.join(packageRoot, 'llms', 'index.md'), 'utf8')),
+  );
 
   const packageSharedTopics = path.join(packageRoot, 'llms', 'shared');
   const stagedSharedTopics = path.join(referencesRoot, 'shared');

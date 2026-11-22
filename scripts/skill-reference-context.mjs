@@ -10,22 +10,16 @@ import { isMainModule } from '../packages/lyra-ui/scripts/is-main-module.mjs';
 export const FAMILY_SUMMARY_LINK_SUFFIX =
   '; family-wide breaking-change summaries: [llms-full.txt](../../llms-full.txt)';
 
-const SHARED_PACKAGE_RELEASE_PARAGRAPH = [
-  '`since` records when a tag first appeared, not later changes. Before upgrading, read the',
-  'package\'s [CHANGELOG.md](../CHANGELOG.md) (current major, including minor and patch).',
-  'Family-wide breaking-change summaries open each authored `llms/<family>.md`, and each generated',
-  '`llms/components/<tag>.md` header links its family summary. `llms/migration.md` covers only',
-  '`wa-*`/`sl-*` renames, not Lyra release history.',
-].join('\n');
-
-const SHARED_STANDALONE_RELEASE_PARAGRAPH = [
-  '`since` records when a tag first appeared, not later changes. Before upgrading, read the bundled',
-  '[CHANGELOG.md](../CHANGELOG.md): it holds the current major; older history is linked from the',
-  'package\'s own CHANGELOG.md and at https://github.com/aceshooting/lyra-ui/releases. Family-wide',
-  'breaking-change summaries are linked from each component reference to the authored family guide.',
-  '`llms/migration.md` covers only `wa-*`/`sl-*` renames, not Lyra release',
-  'history.',
-].join('\n');
+// The skill omits the combined llms/shared.md compatibility assembly; its prose pointers are
+// routed to the focused topic guides instead.
+const SHARED_POLICY_POINTER = 'maturity and deprecation policy in `llms/shared.md`';
+const SHARED_POLICY_POINTER_STANDALONE =
+  'maturity and deprecation policy in `llms/shared/imports-and-registration.md`';
+const SHARED_BEHAVIOR_POINTER = 'TS types): `llms/shared.md`';
+const SHARED_BEHAVIOR_POINTER_STANDALONE =
+  'TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)';
+const INDEX_COMPAT_SENTENCE =
+  'The combined\ncompatibility guide remains at `llms/shared.md`. ';
 
 /** Appended to the standalone skill's trimmed CHANGELOG.md so older history stays reachable. */
 export const STANDALONE_CHANGELOG_POINTER =
@@ -98,23 +92,18 @@ function filesUnder(directory, predicate, files = []) {
   return files;
 }
 
-export function rewriteStandaloneSharedReference(text) {
-  const occurrences = countOccurrences(text, SHARED_PACKAGE_RELEASE_PARAGRAPH);
-  if (occurrences !== 1) {
-    throw new Error(
-      `Expected exactly one authored release-history paragraph in llms/shared.md, found ${occurrences}.`,
-    );
+function assertNoSharedAssemblyPointer(text, label) {
+  if (text.includes('shared.md')) {
+    throw new Error(`${label} still points at the omitted llms/shared.md assembly.`);
   }
-  const rewritten = text.replace(
-    SHARED_PACKAGE_RELEASE_PARAGRAPH,
-    SHARED_STANDALONE_RELEASE_PARAGRAPH,
-  );
-  const unexpectedLinks = llmsFullMarkdownTargets(rewritten);
-  if (unexpectedLinks.length > 0) {
-    throw new Error(
-      `Standalone shared.md retains ${unexpectedLinks.length} llms-full.txt Markdown link(s).`,
-    );
+}
+
+export function rewriteStandaloneIndexReference(text) {
+  if (countOccurrences(text, INDEX_COMPAT_SENTENCE) !== 1) {
+    throw new Error('Expected exactly one llms/shared.md compatibility sentence in llms/index.md.');
   }
+  const rewritten = text.replace(INDEX_COMPAT_SENTENCE, '');
+  assertNoSharedAssemblyPointer(rewritten, 'Standalone index.md');
   return rewritten;
 }
 
@@ -126,7 +115,14 @@ export function rewriteStandaloneComponentReference(text, label = 'component ref
       `${label} has ${linked.length} llms-full.txt Markdown link target(s), but ${exactSuffixes} exact family-summary suffix(es).`,
     );
   }
-  return text.replaceAll(FAMILY_SUMMARY_LINK_SUFFIX, '');
+  const rewritten = text
+    .replaceAll(FAMILY_SUMMARY_LINK_SUFFIX, '')
+    .replaceAll(SHARED_POLICY_POINTER, SHARED_POLICY_POINTER_STANDALONE)
+    .replaceAll(SHARED_BEHAVIOR_POINTER, SHARED_BEHAVIOR_POINTER_STANDALONE)
+    // Any other prose mention names the topic directory; the index lists each focused guide.
+    .replaceAll('`llms/shared.md`', '`llms/shared/`');
+  assertNoSharedAssemblyPointer(rewritten, label);
+  return rewritten;
 }
 
 function headingAnchors(text) {
@@ -204,11 +200,10 @@ export function validateSharedTopicLinks(sharedTopicsDir) {
 }
 
 function rewriteStandaloneReferenceTree(referencesDir, changelogSource) {
-  const sharedPath = path.join(referencesDir, 'shared.md');
   const sharedTopicsDir = path.join(referencesDir, 'shared');
   const componentsDir = path.join(referencesDir, 'components');
-  if (!existsSync(sharedPath) || !existsSync(sharedTopicsDir) || !existsSync(componentsDir)) {
-    throw new Error(`${referencesDir} must contain shared.md, shared/, and components/.`);
+  if (!existsSync(sharedTopicsDir) || !existsSync(componentsDir)) {
+    throw new Error(`${referencesDir} must contain shared/ and components/.`);
   }
   for (const [topic] of SHARED_TOPICS) {
     const topicPath = path.join(sharedTopicsDir, `${topic}.md`);
@@ -217,10 +212,8 @@ function rewriteStandaloneReferenceTree(referencesDir, changelogSource) {
     }
   }
 
-  writeFileSync(
-    sharedPath,
-    rewriteStandaloneSharedReference(readFileSync(sharedPath, 'utf8')),
-  );
+  const indexPath = path.join(referencesDir, 'index.md');
+  writeFileSync(indexPath, rewriteStandaloneIndexReference(readFileSync(indexPath, 'utf8')));
 
   const skillRoot = path.dirname(referencesDir);
   if (changelogSource) {

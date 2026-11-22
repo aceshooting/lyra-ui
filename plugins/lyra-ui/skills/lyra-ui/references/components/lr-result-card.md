@@ -5,14 +5,14 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-result-card.js';` (stable tag alias; registers the tag)
 - **Class** `LyraResultCard`, also available unregistered from `@aceshooting/lyra-ui/components/agent-tools/result-card/result-card.class.js`
 - **Family** `components/agent-tools/` — see `llms/index.md` for its siblings
-- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `stable` since `4.0.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
 - **Themeable via** 5 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-result-card-bg`; `body`: `--lr-result-card-compact-body-gap`, `--lr-result-card-compact-body-padding`; `header`: `--lr-result-card-border-color`, `--lr-result-card-compact-header-gap`, `--lr-result-card-compact-header-padding`
 - **Documented with** `lr-result-field` (same section below)
-- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
+- **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
 

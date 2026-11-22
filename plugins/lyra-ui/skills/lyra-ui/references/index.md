@@ -26,8 +26,7 @@ events and types (`llms/shared/events-and-types.md`), forms and accessibility
 (`llms/shared/native-styles-and-utilities.md`), localization and RTL
 (`llms/shared/localization-and-rtl.md`), frameworks and SSR
 (`llms/shared/frameworks-and-ssr.md`), AI and optional peers (`llms/shared/ai-and-peers.md`),
-and testing and utilities (`llms/shared/testing-and-utilities.md`). The combined
-compatibility guide remains at `llms/shared.md`. Design tokens: `llms/tokens.md`.
+and testing and utilities (`llms/shared/testing-and-utilities.md`). Design tokens: `llms/tokens.md`.
 Optional peers: `llms/peers.md`. Safe `wa-*`/`sl-*` migration: `llms/migration.md`.
 
 **Size.** `~N KiB gzip` is the measured standalone cost of importing that one registration entry
