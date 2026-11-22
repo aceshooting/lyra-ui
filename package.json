@@ -85,7 +85,7 @@
     "d3-force": "^3.0.1",
     "d3-selection": "^3.0.1",
     "d3-zoom": "^3.0.1",
-    "dependency-cruiser": "18.8.0",
+    "dependency-cruiser": "18.9.0",
     "eslint-plugin-lit": "2.3.1",
     "eslint-plugin-wc": "3.1.0",
     "istanbul-lib-coverage": "^3.2.2",
