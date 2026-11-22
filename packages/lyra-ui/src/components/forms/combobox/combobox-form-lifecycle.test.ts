@@ -1034,7 +1034,7 @@ describe("validity custom states", () => {
     const removed = await make(true);
     removed.value = ["a"];
     await removed.updateComplete;
-    removed.shadowRoot!.querySelector<HTMLButtonElement>('[part="tag__remove-button"]')!.click();
+    removed.shadowRoot!.querySelector<HTMLButtonElement>('[part~="tag__remove-button"]')!.click();
     await removed.updateComplete;
     expect(removed.matches(":state(user-invalid)"), "user-invalid after removing the last tag").to.be.true;
 
@@ -2025,7 +2025,7 @@ describe("readonly", () => {
     await el.updateComplete;
 
     const removeButton = el.shadowRoot!.querySelector(
-      '[part="tag__remove-button"]'
+      '[part~="tag__remove-button"]'
     ) as HTMLButtonElement;
     expect(removeButton.disabled, "the remove button is disabled").to.be
       .true;
@@ -2079,7 +2079,7 @@ describe("readonly", () => {
     await el.hide();
 
     const removeButton = el.shadowRoot!.querySelector(
-      '[part="tag__remove-button"]'
+      '[part~="tag__remove-button"]'
     ) as HTMLButtonElement;
     expect(removeButton.disabled).to.be.false;
     removeButton.click();

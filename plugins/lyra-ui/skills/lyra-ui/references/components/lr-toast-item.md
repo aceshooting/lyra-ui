@@ -9,6 +9,6 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 30 custom properties — see `lr-toast.md`
+- **Themeable via** 13 parts, 30 custom properties — see `lr-toast.md`
 - **Documented with** `lr-toast`: see [lr-toast.md](./lr-toast.md).
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

@@ -350,7 +350,7 @@ it("emits the same native input/change pair when a selected tag is removed", asy
 
   (
     el.shadowRoot!.querySelector(
-      '[part="tag__remove-button"]'
+      '[part~="tag__remove-button"]'
     ) as HTMLButtonElement
   ).click();
 
@@ -370,7 +370,7 @@ it("removes only the clicked occurrence of a duplicate-valued tag, not every occ
 
   const removeButtons = [
     ...el.shadowRoot!.querySelectorAll<HTMLButtonElement>(
-      '[part="tag__remove-button"]'
+      '[part~="tag__remove-button"]'
     ),
   ];
   expect(removeButtons.length).to.equal(3);
@@ -522,7 +522,7 @@ it("removes a value via its tag button", async () => {
   await el.updateComplete;
 
   const removeBtn = el.shadowRoot!.querySelector(
-    '[part="tag__remove-button"]'
+    '[part~="tag__remove-button"]'
   ) as HTMLButtonElement;
   removeBtn.click();
   await el.updateComplete;
@@ -1090,7 +1090,7 @@ it("uses shared svg icons instead of literal glyphs for chevron, clear, and tag-
   expect(clearBtn.textContent?.trim()).to.equal("");
 
   const removeBtn = el.shadowRoot!.querySelector(
-    '[part="tag__remove-button"]'
+    '[part~="tag__remove-button"]'
   ) as HTMLElement;
   expect(removeBtn.querySelector("svg") !== null).to.be.true;
   expect(removeBtn.textContent?.trim()).to.equal("");
@@ -1223,7 +1223,7 @@ it("applies the shared focus-ring tokens to the clear and tag-remove buttons", a
   `)) as LyraCombobox;
   await el.updateComplete;
   for (const part of ['clear-button', 'tag__remove-button']) {
-    const control = el.shadowRoot!.querySelector<HTMLElement>(`[part="${part}"]`)!;
+    const control = el.shadowRoot!.querySelector<HTMLElement>(`[part~="${part}"]`)!;
     expect(control, part).to.not.equal(null);
     await focusByKeyboard(control);
     const style = getComputedStyle(control);
@@ -1926,7 +1926,7 @@ it("keeps the clear and tag-remove buttons disabled while the combobox is disabl
     '[part="clear-button"]'
   ) as HTMLButtonElement | null;
   const removeBtn = el.shadowRoot!.querySelector(
-    '[part="tag__remove-button"]'
+    '[part~="tag__remove-button"]'
   ) as HTMLButtonElement | null;
   expect(clearBtn?.disabled).to.be.true;
   expect(removeBtn?.disabled).to.be.true;

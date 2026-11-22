@@ -383,7 +383,6 @@ export type {
 } from './components/utility/random-content/random-content.class.js';
 export type {
   LyraTimelineScale,
-  LyraTimelineOrientation,
   LyraTimelineMarkerPlacement,
   LyraTimelineMarkerAlignment,
   LyraTimelineCollision,
@@ -901,7 +900,11 @@ export type {
   WordCloudWord,
 } from './components/data/word-cloud/word-cloud.class.js';
 export type {
+  ComboboxDataSource,
   ComboboxFilterDetail,
+  ComboboxOption,
+  ComboboxOptions,
+  ComboboxRequest,
   ComboboxSource,
   ComboboxSourceRow,
 } from './components/forms/combobox/combobox.class.js';
@@ -1184,7 +1187,7 @@ export type {
   LyraTooltipLabelMode,
   LyraTooltipTrigger,
 } from './components/overlays/overlay/tooltip.class.js';
-export type { LyraArrowPlacement } from './components/overlays/overlay/popover.class.js';
+export type { LyraArrowPlacement, LyraPopoverAnchor } from './components/overlays/overlay/popover.class.js';
 export type { LyraDropdownEventMap } from './components/overlays/overlay/dropdown.class.js';
 export type {
   LyraContextMenuEventMap,
@@ -1351,6 +1354,8 @@ export type {
   LyraStepItem,
   LyraStepperOrientationChangeDetail,
   LyraStepState,
+  LyraStepChangeDetail,
+  LyraStepperOrientation,
 } from './components/layout/stepper/stepper.class.js';
 export type {
   LyraSegmentedItem,
@@ -1470,7 +1475,20 @@ export type {
   LyraAccordionHeadingLevel,
   LyraAccordionIconPlacement,
 } from './components/layout/details/accordion-item.class.js';
-export type { LyraDividerOrientation } from './components/utility/divider/divider.class.js';
+export type { LyraDividerOrientation, LyraDividerLabelPlacement } from './components/utility/divider/divider.class.js';
+export type {
+  LyraCounterDateSource,
+  LyraCounterDirection,
+  LyraCounterEventMap,
+  LyraCounterFormat,
+} from './components/utility/counter/counter.class.js';
+export type { LyraCounterUnit } from './components/utility/counter/counter-time.js';
+export type {
+  LyraNumberTickerCurrencyDisplay,
+  LyraNumberTickerEventMap,
+  LyraNumberTickerType,
+} from './components/utility/number-ticker/number-ticker.class.js';
+export type { LyraStepAttention } from './components/layout/stepper/step.class.js';
 export type { LyraBreadcrumbItemTarget } from './components/layout/breadcrumb/breadcrumb-item.class.js';
 export type {
   LyraFormatBytesUnit,
@@ -2353,7 +2371,7 @@ export type {
   ChangeReviewHunk,
   LyraChangeReviewEventMap,
 } from './components/agent-tools/change-review/change-review.class.js';
-export type { LyraCodeBlockBaseEventMap } from './components/conversation/code-block/code-block-base.class.js';
+export type { LyraCodeBlockBaseEventMap, LyraCodeBlockLoadDetail } from './components/conversation/code-block/code-block-base.class.js';
 export type { ShikiHighlighter } from './components/conversation/code-block/shiki-types.js';
 export type { LyraLocaleLoader } from './locale-loader.js';
 export type {

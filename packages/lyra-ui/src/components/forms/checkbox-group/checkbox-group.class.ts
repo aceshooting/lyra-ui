@@ -170,6 +170,7 @@ export type CheckboxGroupOrientation = LyraOrientation;
  * themeable independently of error text and invalid borders.
  * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
  * required marker.
+ * @cssprop --lr-form-control-height - Base unit of the default row and option gaps.
  * @status stable
  * @since 4.0.0
  */

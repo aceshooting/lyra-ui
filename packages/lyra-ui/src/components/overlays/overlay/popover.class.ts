@@ -52,6 +52,8 @@ import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { animateRegistered } from '../../../internal/registered-animation.js';
 import { applyOverlayArrow, type LyraArrowPlacement } from './overlay-arrow.js';
 import {
+  directAnchorElement,
+  liveDirectAnchor,
   normalizeVirtualRect,
   OverlayAnchorIdentity,
   OverlayDelayTimer,
@@ -168,6 +170,11 @@ const DEFAULT_TRIGGER_DELAY = 0;
 
 export type { LyraArrowPlacement, OverlayVirtualRect, PlaceStrategy };
 
+/** What `anchor` positions against: an element, or a virtual element -- any object whose
+ *  `getBoundingClientRect()` returns the rectangle to anchor to, with an optional
+ *  `contextElement` supplying scroll, scale and direction context. */
+export type LyraPopoverAnchor = Element | VirtualAnchor;
+
 /** The `showAt()` rectangle, shared verbatim with `<lr-tooltip>` (see `src/internal/overlay-shared.ts`). */
 
 export interface LyraPopoverEventMap {
@@ -228,6 +235,8 @@ export interface LyraPopoverEventMap {
  * Positioning resolves `showAt()` virtual anchor, direct `.anchor`, `for`, then the interaction
  * owner, in that order. Thus `anchor` can position against an element that never receives click or
  * ARIA state, while `for` owns both positioning and interaction only when no trigger is slotted.
+ * `anchor` also accepts a virtual element -- an object with `getBoundingClientRect()` and an
+ * optional `contextElement` -- that persists until replaced, unlike a one-shot `showAt()`.
  * Activating an enabled, non-inert light-DOM descendant with `data-popover="close"` requests this
  * closest owning popover to close. Nested popovers consume their own close actions.
  *
@@ -416,9 +425,24 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
    *  root. While connected it wins over `for` for both positioning and interaction; a slotted
    *  trigger still wins interaction and a direct `.anchor` still wins positioning. */
   @property({ attribute: false }) forElement: HTMLElement | null = null;
-  /** Positioning-only element anchor. Takes precedence over `for` and the interaction owner, but
-   *  never receives click listeners or generated ARIA. */
-  @property({ attribute: false }) anchor: Element | null = null;
+  /** Positioning-only anchor: an element, or a virtual element (an object with a
+   *  `getBoundingClientRect()` method and an optional `contextElement`) such as a text selection
+   *  or a cursor position. Takes precedence over `for` and the interaction owner, but never
+   *  receives click listeners or generated ARIA. A virtual element is re-measured on every
+   *  reposition, stays in effect until replaced, and needs no DOM connection; `showAt()` still
+   *  wins while active. A value that is neither is ignored. Reading `anchor` returns the direct
+   *  element anchor, or `null` while a virtual element (or nothing) is assigned. */
+  @property({ attribute: false })
+  get anchor(): Element | null {
+    return directAnchorElement(this._anchor);
+  }
+  set anchor(value: LyraPopoverAnchor | null) {
+    const previous = this._anchor;
+    if (previous === value) return;
+    this._anchor = value;
+    this.requestUpdate('anchor', previous);
+  }
+  private _anchor: LyraPopoverAnchor | null = null;
   /**
    * Additional light-dismiss containment while using a DOM anchor. Pointer presses within this
    * connected element and its composed descendants do not dismiss the popup. The boundary must
@@ -745,7 +769,13 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     const direction = this.effectiveDirection;
     this.directionChanged = direction !== this.positioningDirection;
     this.positioningDirection = direction;
-    if (this.anchorIdentity.lostAnchorProperty(changed, this.anchor) && this.open && !this.resolveAnchor()) {
+    const previousAnchor = changed.get('anchor') as LyraPopoverAnchor | null | undefined;
+    const lostVirtualAnchor = changed.has('anchor') && liveDirectAnchor(previousAnchor) &&
+      directAnchorElement(previousAnchor) === null;
+    if (
+      (this.anchorIdentity.lostAnchorProperty(changed, this._anchor) || lostVirtualAnchor) &&
+      this.open && !this.resolveAnchor()
+    ) {
       void this.forceClose({ focusTrigger: false });
     }
     // `anchorPositioned` gates `?data-hidden`, keeping the popup invisible until Floating UI has
@@ -943,8 +973,8 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     // A `for` target can be inserted or replaced while closed and owns interaction, so it remains
     // observable. A direct anchor has no interaction contract and only needs structural tracking
     // while an open surface is actively positioned against it. Slotted triggers use slotchange.
-    const directAnchor = this.open ? (this.anchor ?? this.forElement ?? undefined) : undefined;
-    this.anchorIdentity.observe(this, directAnchor, this.for, () => this.anchor, (directAnchorRemoved) => {
+    const directAnchor = this.open ? (directAnchorElement(this._anchor) ?? this.forElement ?? undefined) : undefined;
+    this.anchorIdentity.observe(this, directAnchor, this.for, () => directAnchorElement(this._anchor), (directAnchorRemoved) => {
       // The trigger's own subtree and upgrade observers re-sync an unchanged trigger.
       if (this.resolveInteractionTrigger() !== this.triggerElement) this.syncInteractionTrigger();
       if (!this.open) return;
@@ -1103,7 +1133,7 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   private resolveAnchor(): Element | VirtualAnchor | null {
     return resolveOverlayAnchor(this, {
       virtualAnchor: this.virtualAnchor,
-      anchor: this.anchor,
+      anchor: this._anchor,
       for: this.connectedForElement ? '' : this.for,
       trigger: this.triggerElement,
     });

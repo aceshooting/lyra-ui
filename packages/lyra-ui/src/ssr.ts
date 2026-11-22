@@ -115,6 +115,9 @@ export const LYRA_SSR_CLIENT_RENDER_TAGS = Object.freeze(
  * depends on the capability.
  */
 export const LYRA_SSR_TAG_CAPABILITIES = Object.freeze({
+  [tag('number-ticker')]: {
+    observers: 'after-hydration', // shows the start value until an intersection observer starts the count
+  },
   [tag('bar-chart')]: {
     canvas: 'after-hydration', // paints its series onto a 2D canvas surface
   },
@@ -363,6 +366,8 @@ export const LYRA_SSR_AUDITED_STATIC_SAFE_TAGS = Object.freeze([
   'lr-control-group',
   'lr-conversation-item',
   'lr-copy-button',
+  // The server render shows the elapsed or remaining time at render time; ticking only refreshes it.
+  'lr-counter',
   // Catalog labels, committed identifiers and decorative flags need no browser capability.
   'lr-country-picker',
   'lr-dashboard-grid',
@@ -418,6 +423,8 @@ export const LYRA_SSR_AUDITED_STATIC_SAFE_TAGS = Object.freeze([
   'lr-knowledge-base-admin',
   'lr-known-date',
   'lr-lightbox',
+  // The trigger link and its thumbnail render completely; opening the lightbox needs hydration.
+  'lr-lightbox-item',
   'lr-live-region',
   'lr-locale-picker',
   'lr-markdown',

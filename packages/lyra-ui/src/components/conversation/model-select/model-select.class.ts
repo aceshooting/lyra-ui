@@ -225,6 +225,7 @@ export interface LyraModelSelectEventMap {
  * @cssprop --lr-form-control-radius - Default corner radius of the trigger and option rows.
  * @cssprop --lr-positioner-available-block-size - Available block size published by the positioner to cap the popup height.
  * @cssprop --lr-positioner-available-inline-size - Available inline size published by the positioner to constrain the popup width.
+ * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
  * @status stable
  * @since 4.0.0
  */

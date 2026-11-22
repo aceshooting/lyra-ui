@@ -5,6 +5,8 @@ import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { PropertyValues, TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
+import { setCustomState } from '../../../internal/custom-states.js';
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { nextId } from '../../../internal/a11y.js';
 import { dedent, stripLeadingNewline } from '../../../internal/dedent.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
@@ -13,6 +15,7 @@ import { requestThenCommit } from '../../../internal/request-commit.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import type { LyraHighlight, LyraAnchor, TextSelectRect } from '../../../internal/document-anchors.js';
 import { SHIKI_SOURCE_MAX_CODE_UNITS, type ShikiHighlighter } from './shiki-types.js';
+import { normalizeShikiLanguage } from '../../../internal/shiki/core.js';
 import {
   CodeBlockHeaderActionsController,
   CodeBlockInteractionController,
@@ -38,10 +41,17 @@ import { LYRA_DEFAULT_copied, LYRA_DEFAULT_copy, LYRA_DEFAULT_copyFailed } from 
 
 
 
+/** Payload of `lr-load`: whether the code was highlighted (`true`) or no grammar exists for the
+ *  current `language` and the code renders as plain text (`false`). */
+export interface LyraCodeBlockLoadDetail {
+  highlighted: boolean;
+}
+
 /** Shared event contract retained by both public event-map names. */
 export interface LyraCodeBlockBaseEventMap {
   'lr-copy': CustomEvent<LyraClipboardWriteSuccess>;
   'lr-error': CustomEvent<null>;
+  'lr-load': CustomEvent<LyraCodeBlockLoadDetail>;
   'lr-copy-error': CustomEvent<LyraClipboardWriteFailure>;
   'lr-toggle-request': CustomEvent<LyraCodeBlockToggleDetail>;
   'lr-toggle': CustomEvent<LyraCodeBlockToggleDetail>;
@@ -140,8 +150,9 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
   }
 
   /** Alias of `withoutCopyButton`, accepted as the `without-copy` attribute. Reads and writes
-   *  that same state. */
-  @property({ type: Boolean, attribute: 'without-copy' })
+   *  that same state, and the attribute reflects it whichever spelling set it.
+   *  @default false */
+  @property({ type: Boolean, attribute: 'without-copy', reflect: true })
   get withoutCopy(): boolean { return this.withoutCopyButton; }
   set withoutCopy(value: boolean) { this.withoutCopyButton = value; }
 
@@ -183,6 +194,11 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
   @state() protected justCopied = false;
   @state() protected copyFailed = false;
   @state() protected isDarkTheme = false;
+  /** Set when the current language has no usable grammar, so the code renders as plain text.
+   *  Each subclass sets it when a highlight attempt settles without output. */
+  @state() protected grammarUnavailable = false;
+  private readonly highlightInternals = attachInternalsSafely(this);
+  private reportedGrammarError = false;
 
   protected restoreFocusedLineAfterUpdate = false;
   protected highlightToken = 0;
@@ -293,6 +309,9 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     this.announcements.setExclusiveChannel(this.withoutCopyButton ? undefined : 'polite');
+    // `without-copy` mirrors `without-copy-button`; requesting it here lets Lit reflect the alias
+    // in this same update whichever spelling changed.
+    if (changed.has('withoutCopyButton')) this.requestUpdate('withoutCopy', changed.get('withoutCopyButton'));
     this.seedFirstRenderState(() => this.refreshTheme());
     this.headerActions.sync();
     this.restoreFocusedLineAfterUpdate = codeBlockLineHasFocus(this);
@@ -301,6 +320,8 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
       this.plainKey = [];
       this.focusedLine = clampCodeBlockFocusedLine(this.focusedLine, this.lineCount());
     }
+    // A new language (or grammar map) is a new question; a code edit keeps the last answer.
+    if (changed.has('language') || changed.has('languages')) this.grammarUnavailable = false;
     this.beforeHighlightUpdate(changed);
     if (!this.interactions.needsHighlightResync(
       changed,
@@ -310,6 +331,7 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
     if (this.highlightLimited) {
       this.highlightToken++;
       this.highlightedHtml = null;
+      this.grammarUnavailable = false;
     } else if (this.shikiReady || this.hasPreSuppliedGrammar()) this.syncHighlight();
     else this.highlightedHtml = null;
   }
@@ -317,6 +339,7 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     applyCodeBlockAriaBusy(this, !this.highlightLimited && this.showsSkeleton());
+    this.syncHighlightStates(changed);
     this.patchLineState();
     this.interactions.syncLineButtons(this.focusedLine, this.plainDomChanged);
     this.plainDomChanged = false;
@@ -325,6 +348,25 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
       this.restoreFocusedLineAfterUpdate = false;
     }
   }
+
+  /** Publishes `:state(loading|error|highlighted)` and the matching `lr-load`. A missing grammar
+   *  is reported through `:state(error)` and `lr-load` with `highlighted: false`, never through
+   *  `lr-error`, which stays the clipboard-failure notification. */
+  private syncHighlightStates(changed: PropertyValues): void {
+    const highlighted = this.highlightedHtml !== null;
+    const wanted = normalizeShikiLanguage(this.language ?? '') !== '' && !this.highlightLimited;
+    const error = wanted && !highlighted && (this.grammarUnavailable || !this.grammarMayLoad());
+    setCustomState(this.highlightInternals, 'highlighted', highlighted);
+    setCustomState(this.highlightInternals, 'error', error);
+    setCustomState(this.highlightInternals, 'loading', wanted && !highlighted && !error);
+    if (changed.has('highlightedHtml') && highlighted) this.emit('lr-load', { highlighted: true });
+    if (error && !this.reportedGrammarError) this.emit('lr-load', { highlighted: false });
+    this.reportedGrammarError = error;
+  }
+
+  /** Whether a grammar for the current language could still arrive. The regular code block can
+   *  always try its dynamic grammar table; the build-lean one only knows its `languages` map. */
+  protected grammarMayLoad(): boolean { return true; }
 
   protected beforeHighlightUpdate(_changed: PropertyValues): void {}
   protected abstract preSuppliedGrammar(): unknown;

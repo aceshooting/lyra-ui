@@ -49,6 +49,12 @@ and event listeners survive every breakpoint crossing.
 - `autoStickyOffsets: boolean = false` (attribute `auto-sticky-offsets`, reflected) — positions
   sticky regions below the measured banner, header, and subheader. Their height properties still
   set minimum sizes and provide offsets during server rendering and before measurement.
+- `disableSticky: string | null` (accessor over the `disable-sticky` attribute; reads `null` when absent, `null` removes it) — the
+  whitespace-separated regions whose sticky positioning is disabled (see below); `null` keeps every
+  region sticky.
+- `nonce` (reflected, no default) — accepted so migrated `wa-page` markup keeps it; it changes
+  nothing, because the Page injects no `<style>` or `<script>` element (its styles are constructable
+  stylesheets, which a `style-src` nonce does not govern).
 - `navigationPlacement: 'start' | 'end' = 'start'` (attribute `navigation-placement`, reflected) —
   a logical placement: `start` is left in LTR and right in RTL; `end` is the reverse.
 - `tabindex: string = '-1'` (reflected) — the host fragment target's native focusability. The Page
@@ -64,7 +70,7 @@ and event listeners survive every breakpoint crossing.
 `toggleNavigation(): void` update `navOpen`. `visiblePixelsInViewport(element: HTMLElement | null):
 number` returns the element's finite, viewport-clamped vertical intersection in CSS pixels (`0` for
 `null`, invalid geometry, no intersection, or an element in a detached document with no viewport).
-This is a deliberate owner-realm safety divergence from Web Awesome 3.11, whose method returns
+This is a deliberate owner-realm safety divergence from Web Awesome 3.15, whose method returns
 `null` for a null input and measures detached-document geometry against the ambient page viewport;
 code migrating from `wa-page` should treat Lyra's always-finite `number` result as canonical.
 

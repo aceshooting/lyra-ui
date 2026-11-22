@@ -369,6 +369,7 @@ export interface LyraLocalePickerEventMap {
  *   `fixed` default, read from computed style when it is (re)positioned. Set it once on `:root`,
  *   a theme, or one clipping ancestor to change every unset locale picker beneath it; an
  *   unrecognized value falls back to `fixed`.
+ * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
  * @status stable
  * @since 6.0.0
  */

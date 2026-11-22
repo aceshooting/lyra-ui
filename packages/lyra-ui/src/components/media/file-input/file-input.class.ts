@@ -199,6 +199,7 @@ export interface LyraFileInputEventMap {
  * @csspart file-name - Selected filename.
  * @csspart file-size - Localized selected-file size.
  * @csspart remove-button - Removes one selected file.
+ * @csspart remove-button__button - Web Awesome-named alias on the same remove button.
  * @cssstate required - Matches while `required` is set. Style with `lr-file-input:state(required)`.
  * @cssstate optional - Matches while `required` is not set — the complement of `required`.
  * @cssstate valid - Matches while the control satisfies its constraints — `required`, every entry
@@ -232,7 +233,7 @@ export interface LyraFileInputEventMap {
  * @cssprop [--lr-file-input-file-border-color=var(--lr-color-border-subtle)] - Border color of each
  *   `[part="file"]` row.
  * @cssprop [--lr-file-input-remove-hover-bg=var(--lr-color-brand-quiet)] - Background of a hovered
- *   `[part="remove-button"]`.
+ *   `[part~="remove-button"]`.
  * @cssprop --lr-file-input-remove-active-bg - Background of a pressed remove button. Defaults to the
  *   hover background mixed by the press step.
  * @cssprop [--lr-file-input-thumbnail-size=var(--lr-icon-button-size)] - Size of each
@@ -278,6 +279,7 @@ export interface LyraFileInputEventMap {
  * themeable independently of error text and invalid borders.
  * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
  * required marker.
+ * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
  * @status stable
  * @since 4.0.0
  */
@@ -1125,14 +1127,14 @@ export class LyraFileInput extends LyraFormControlElement<LyraFileInputEventMap>
     // The row was rendered for `file`; a host that replaced `files` since leaves the current record alone.
     if (isLiveDisabled(this) || index < 0 || this._files[index] !== file) return;
     this.touched = true;
-    const hadFocus = shadowFocusTarget(this)?.matches('[part="remove-button"]');
+    const hadFocus = shadowFocusTarget(this)?.matches('[part~="remove-button"]');
     this.files = this._files.filter((_, candidate) => candidate !== index);
     const value = Object.freeze([...this._files]);
     emitValueEvents(this, 'input', { value }, detail => this.emit('lr-input', detail));
     emitValueEvents(this, 'change', { value }, detail => this.emit('lr-change', detail));
     if (!hadFocus) return;
     void this.updateComplete.then(() => {
-      const buttons = this.renderRoot.querySelectorAll<HTMLElement>('[part="remove-button"]');
+      const buttons = this.renderRoot.querySelectorAll<HTMLElement>('[part~="remove-button"]');
       (buttons[Math.min(index, buttons.length - 1)] ?? this.baseEl)?.focus();
     });
   }
@@ -1154,7 +1156,7 @@ export class LyraFileInput extends LyraFormControlElement<LyraFileInputEventMap>
         <span part="file-size">${this.fileSize(file)}</span>
       </span>
       <button
-        part="remove-button"
+        part="remove-button remove-button__button"
         type="button"
         ?disabled=${this.effectiveDisabled}
         aria-label=${this.localize('removeWithContext', undefined, { label: file.name })}

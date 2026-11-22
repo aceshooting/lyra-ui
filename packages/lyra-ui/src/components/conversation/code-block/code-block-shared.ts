@@ -27,7 +27,7 @@ import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
-import { chevronIcon, copyIcon } from '../../../internal/icons.js';
+import { checkIcon, chevronIcon, copyIcon, errorCircleIcon } from '../../../internal/icons.js';
 import { motionScrollBehavior } from '../../../internal/motion.js';
 import { styleMap } from 'lit/directives/style-map.js';
 import { sanitizeCssLength } from '../../../internal/safe-css.js';
@@ -65,6 +65,13 @@ function codeBlockCopyLabel(
 ): string {
   if (copyFailed) return localize('copyFailed');
   return justCopied ? localize('copiedToClipboard') : localize('copyCode');
+}
+
+/** The icon-appearance copy glyph for the current outcome, each wrapped in its own part. */
+function codeBlockCopyGlyph(justCopied: boolean, copyFailed: boolean): TemplateResult {
+  if (copyFailed) return html`<span part="copy-button__error-icon" class="copy-glyph" aria-hidden="true">${errorCircleIcon()}</span>`;
+  if (justCopied) return html`<span part="copy-button__success-icon" class="copy-glyph" aria-hidden="true">${checkIcon()}</span>`;
+  return html`<span part="copy-button__copy-icon" class="copy-glyph" aria-hidden="true">${copyIcon()}</span>`;
 }
 
 /** The `[part="body"]` region's `aria-label`: the filename when set, else a
@@ -415,7 +422,129 @@ export function tokenizeCodeBlock(
   hl: ShikiHighlighterCore,
   options: CodeBlockTokenizeOptions
 ): string | null {
-  return highlightToHtml(hl, options.code, options.lang, [codeBlockLineTransformer(options)]);
+  return highlightToHtml(
+    hl,
+    options.code,
+    options.lang,
+    [codeBlockLineTransformer(options), codeBlockTokenTransformer()],
+    { includeExplanation: 'scopeName' },
+  );
+}
+
+/** The syntax categories a highlighted token can carry as `data-token`, each recolored by the
+ *  same-named `--<category>-color` custom property. */
+type LyraCodeTokenCategory =
+  | 'comment'
+  | 'keyword'
+  | 'operator'
+  | 'string'
+  | 'constant'
+  | 'function'
+  | 'type'
+  | 'variable'
+  | 'property'
+  | 'tag'
+  | 'selector'
+  | 'inserted'
+  | 'deleted';
+
+// TextMate scope prefixes, most specific first. A scope matches a prefix when it equals it or
+// continues it with a dot, so `string` matches `string.quoted.double.json` but not `stringify`.
+const CODE_TOKEN_SCOPES: readonly (readonly [string, LyraCodeTokenCategory])[] = [
+  ['markup.inserted', 'inserted'],
+  ['markup.deleted', 'deleted'],
+  ['comment', 'comment'],
+  ['punctuation.definition.comment', 'comment'],
+  ['markup.quote', 'comment'],
+  ['entity.other.attribute-name.class', 'selector'],
+  ['entity.other.attribute-name.id', 'selector'],
+  ['entity.other.attribute-name.pseudo-class', 'selector'],
+  ['entity.other.attribute-name.pseudo-element', 'selector'],
+  ['meta.selector', 'selector'],
+  ['entity.other.attribute-name', 'property'],
+  ['entity.name.tag', 'tag'],
+  ['support.type.property-name', 'property'],
+  ['meta.object-literal.key', 'property'],
+  ['variable.other.property', 'property'],
+  ['variable.other.object.property', 'property'],
+  ['entity.name.function', 'function'],
+  ['support.function', 'function'],
+  ['meta.decorator', 'function'],
+  ['variable.parameter.keyframe-list', 'function'],
+  ['entity.name.type', 'type'],
+  ['entity.name.class', 'type'],
+  ['entity.name.namespace', 'type'],
+  ['entity.other.inherited-class', 'type'],
+  ['support.type', 'type'],
+  ['support.class', 'type'],
+  ['string.regexp', 'string'],
+  ['string', 'string'],
+  ['markup.underline.link', 'string'],
+  ['markup.inline.raw', 'string'],
+  ['markup.raw', 'string'],
+  ['constant', 'constant'],
+  ['support.constant', 'constant'],
+  ['keyword.other.unit', 'constant'],
+  ['punctuation.definition.template-expression', 'variable'],
+  ['punctuation.section.embedded', 'variable'],
+  ['variable', 'variable'],
+  ['keyword.operator', 'operator'],
+  ['punctuation', 'operator'],
+  ['keyword', 'keyword'],
+  ['storage', 'keyword'],
+  ['meta.tag.sgml.doctype', 'keyword'],
+  ['markup.heading', 'keyword'],
+  ['entity.name.section', 'keyword'],
+];
+
+function scopeCategory(scope: string): LyraCodeTokenCategory | undefined {
+  for (const [prefix, category] of CODE_TOKEN_SCOPES) {
+    if (scope === prefix || (scope.startsWith(prefix) && scope.charAt(prefix.length) === '.')) return category;
+  }
+  return undefined;
+}
+
+/** Classifies one token from its scope stack (outermost first). The innermost scope that maps to a
+ *  category decides, so a string's quotes and its text can disagree; the caller weighs pieces. */
+function codeTokenCategory(scopes: readonly string[]): LyraCodeTokenCategory | undefined {
+  for (let index = scopes.length - 1; index >= 0; index -= 1) {
+    const category = scopeCategory(scopes[index]!);
+    if (category) return category;
+  }
+  return undefined;
+}
+
+const LIGHT_COLOR = /(?:^|;)\s*color\s*:\s*([^;]+)/u;
+
+/**
+ * Tags each highlighted token with its syntax category (`data-token`) and copies the light theme's
+ * color into `--_lr-token-color`, so `code-block.styles.ts` can let a `--<category>-color`
+ * override win in either theme while an unset property keeps the theme's own color. A merged
+ * token can span several scoped pieces (a string's quotes and its text); the piece with the most
+ * non-whitespace characters decides.
+ */
+function codeBlockTokenTransformer(): ShikiTransformer {
+  return {
+    name: 'lr-code-block-tokens',
+    span(node, _line, _col, _lineElement, token) {
+      let best: LyraCodeTokenCategory | undefined;
+      let weight = 0;
+      for (const piece of token.explanation ?? []) {
+        const size = piece.content.replace(/\s+/gu, '').length;
+        if (size <= weight) continue;
+        const category = codeTokenCategory(piece.scopes.map((scope) => scope.scopeName));
+        if (!category) continue;
+        best = category;
+        weight = size;
+      }
+      if (!best) return;
+      node.properties['data-token'] = best;
+      const style = node.properties['style'];
+      if (typeof style !== 'string') return;
+      const light = LIGHT_COLOR.exec(style)?.[1]?.trim();
+      if (light) node.properties['style'] = `${style};--_lr-token-color:${light}`;
+    },
+  };
 }
 
 export function parseHighlightLines(
@@ -680,7 +809,7 @@ function renderCodeBlockHeader(
           ? html`
               <lr-icon-button
                 part=${options.copyAppearance === 'icon' ? 'copy-button copy-button-icon' : 'copy-button copy-button-text'}
-                exportparts="button:copy-button-control"
+                exportparts="button:copy-button-control, button:copy-button__button"
                 aria-label=${codeBlockCopyLabel(
                   options.localize,
                   options.justCopied,
@@ -689,13 +818,18 @@ function renderCodeBlockHeader(
                 @click=${options.onCopy}
               >
                 ${options.copyAppearance === 'icon'
-                  ? copyIcon()
+                  ? codeBlockCopyGlyph(options.justCopied, options.copyFailed)
                   : options.copyFailed
                     ? options.localize('copyFailed')
                     : options.justCopied
                       ? options.localize('copied')
                       : options.localize('copy')}
               </lr-icon-button>
+              <span part="copy-button__feedback" class="copy-feedback" aria-hidden="true">${options.copyFailed
+                ? options.localize('copyFailed')
+                : options.justCopied
+                  ? options.localize('copiedToClipboard')
+                  : ''}</span>
             `
           : nothing}
         <span part="header-actions" ?hidden=${!options.hasHeaderActions}><slot name="header-actions"></slot></span>
@@ -805,6 +939,9 @@ export function renderCodeBlockShell(
 interface CodeBlockInteractionHost extends HTMLElement {
   readonly renderRoot: HTMLElement | DocumentFragment;
   readonly updateComplete: Promise<boolean>;
+  /** The authored `code` property; kept on this published host contract. */
+  readonly code: string;
+  /** The effective source (the `code` property, else the slotted text) the interactions read. */
   readonly sourceCode: string;
 }
 

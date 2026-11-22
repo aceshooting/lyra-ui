@@ -30,6 +30,17 @@ import {
   serializeLocalDefault,
 } from './migration-analysis.mjs';
 import { migrateRenameText } from './migration-renames.mjs';
+import {
+  lookupUpstreamClass,
+  resolveUpstreamAssetRoute,
+  scanClassTokens,
+  scanCssUrlImports,
+} from './migration-upstream-assets.mjs';
+
+/** Whether an import names the package itself or an entry that registers every component. */
+function isRegistrationRoot(imported) {
+  return !imported.subpath || resolveUpstreamAssetRoute(imported.subpath)?.kind === 'registry';
+}
 
 
 /**
@@ -550,9 +561,12 @@ export function migrateText(original, contract, options = {}) {
     ignoredRanges,
     contract,
   );
-  const imports = scanImports(original, ignoredRanges, contract);
+  const imports = [
+    ...scanImports(original, ignoredRanges, contract),
+    ...scanCssUrlImports(original, contract, (offset) => insideRanges(offset, ignoredRanges)),
+  ].sort((left, right) => left.start - right.start);
   const bareImportPackages = new Set(
-    imports.filter((imported) => imported.sideEffect && !imported.subpath).map((imported) => imported.packageName),
+    imports.filter((imported) => imported.sideEffect && isRegistrationRoot(imported)).map((imported) => imported.packageName),
   );
   const blockedMappings = new Set([
     ...(options.blockedMappings ?? []),
@@ -579,7 +593,7 @@ export function migrateText(original, contract, options = {}) {
     const mapping = upstreamTag ? contract.mappings.get(upstreamTag) : null;
     if (mapping && AUTO_CLASSIFICATIONS.has(mapping.classification)) {
       blockedMappings.add(mapping.upstreamTag);
-    } else if (!imported.subpath) {
+    } else if (isRegistrationRoot(imported)) {
       blockedEcosystems.add(imported.ecosystem);
     }
   }
@@ -1141,8 +1155,15 @@ export function migrateText(original, contract, options = {}) {
     }
   }
 
+  const reportAsset = (imported, route, code) =>
+    warn(imported.start, null, 'module', code, null, route.note, imported.ecosystem);
   for (const imported of imports) {
     const { ecosystem } = imported;
+    const route = imported.subpath ? resolveUpstreamAssetRoute(imported.subpath) : null;
+    if (!imported.sideEffect && route?.kind === 'none') {
+      reportAsset(imported, route, 'UPSTREAM_ASSET_REVIEW');
+      continue;
+    }
     if (!imported.sideEffect) {
       usage[ecosystem].manual += 1;
       warn(
@@ -1156,7 +1177,48 @@ export function migrateText(original, contract, options = {}) {
       );
       continue;
     }
-    if (!imported.subpath) {
+    if (route && route.kind !== 'registry') {
+      const canRewrite = rewriteBarePackages.has(ecosystem) || rewriteBarePackages.has(imported.packageName);
+      if (route.kind === 'none') {
+        reportAsset(imported, route, 'UPSTREAM_ASSET_REVIEW');
+      } else if (route.kind === 'loader' && !canRewrite) {
+        warn(
+          imported.start,
+          null,
+          'module',
+          'PACKAGE_IMPORT_BLOCKED',
+          route.targets[0],
+          `The ${ecosystem} autoloader import remains because this scan contains manual uses; the Lyra autoloader registers only migrated tags.`,
+          ecosystem,
+        );
+      } else {
+        addEdit(imported.start, imported.end, route.targets[0], {
+          upstreamTag: null,
+          origin: ecosystem,
+          upstreamMember: 'module',
+          action: 'rewrite-import',
+          target: route.targets[0],
+          message: `Rewrite the ${imported.packageName} ${route.kind === 'style' ? 'stylesheet' : 'loader'} import to its Lyra counterpart.`,
+        });
+        const lineEnding = original.includes('\r\n') ? '\r\n' : '\n';
+        for (const specifier of route.targets.slice(1).reverse()) {
+          const quoted = `${imported.quote}${specifier}${imported.quote}`;
+          edits.push({
+            start: imported.statementEnd,
+            end: imported.statementEnd,
+            replacement:
+              imported.kind === 'css-import'
+                ? `${lineEnding}@import url(${quoted});`
+                : `${lineEnding}import ${quoted};`,
+          });
+          change(imported.start, null, 'module', 'insert-registration', specifier,
+            'Insert the Lyra stylesheet that replaces the rest of the upstream bundle.', ecosystem);
+        }
+        if (route.note) reportAsset(imported, route, 'UPSTREAM_ASSET_REVIEW');
+      }
+      continue;
+    }
+    if (isRegistrationRoot(imported)) {
       const canRewrite = rewriteBarePackages.has(ecosystem) || rewriteBarePackages.has(imported.packageName);
       const registeredMappings =
         rootRegistrationMappings.get(imported.packageName) ?? rootRegistrationMappings.get(ecosystem) ?? new Set();
@@ -1251,6 +1313,30 @@ export function migrateText(original, contract, options = {}) {
       target,
       message: `Rewrite the ${upstreamTag} registration entry to its checked Lyra package route.`,
     });
+  }
+
+  // Utility and theme classes in class positions. Whole tokens only; see migration-upstream-assets.mjs.
+  for (const { token, start, end } of scanClassTokens(original, (offset) => insideRanges(offset, ignoredRanges))) {
+    const hit = lookupUpstreamClass(token);
+    if (!hit) continue;
+    const origin = token.startsWith('sl-') ? 'shoelace' : 'webawesome';
+    if (hit.kind === 'review') {
+      warn(start, null, token, 'UPSTREAM_CLASS_REVIEW', null,
+        `The ${token} class has no automatic Lyra equivalent: ${hit.hint}.`, origin);
+      continue;
+    }
+    addEdit(start, end, hit.target, {
+      upstreamTag: null,
+      origin,
+      upstreamMember: token,
+      action: 'rewrite-class',
+      target: hit.target,
+      message: `Rewrite the ${token} class to ${hit.target}.`,
+    });
+    if (hit.kind === 'approximate') {
+      warn(start, null, token, 'UPSTREAM_CLASS_APPROXIMATE_REVIEW', hit.target,
+        `${token} was rewritten to the nearest Lyra class ${hit.target}; the type and radius scales are not value-aligned, so check the rendered size.`, origin);
+    }
   }
 
   // ---------------------------------------------------------------------------------------------

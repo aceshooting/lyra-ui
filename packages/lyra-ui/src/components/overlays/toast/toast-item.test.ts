@@ -2207,3 +2207,23 @@ it('pauses its countdown while the document is hidden', async () => {
   }
   await waitUntil(() => !el.isConnected, 'the countdown resumes once visible', { timeout: 1500 });
 });
+
+it('exposes the upstream progress-ring__progress-ring part on the ring SVG and styles it through ::part', async () => {
+  const host = await fixture<HTMLElement>(html`
+    <div>
+      <style>
+        lr-toast-item.aliased::part(progress-ring__progress-ring) {
+          opacity: 0.5;
+        }
+      </style>
+      <lr-toast-item class="aliased" duration="5000">Progress</lr-toast-item>
+    </div>
+  `);
+  const el = host.querySelector('lr-toast-item') as LyraToastItem;
+  await el.updateComplete;
+  const ring = el.shadowRoot!.querySelector<SVGElement>('[part~="progress-ring__progress-ring"]')!;
+  expect(ring.getAttribute('part')!.split(' ')).to.include.members(['progress-ring__base', 'progress-ring__progress-ring']);
+  expect(ring.localName).to.equal('svg');
+  expect(getComputedStyle(ring).opacity).to.equal('0.5');
+  el.duration = 0;
+});

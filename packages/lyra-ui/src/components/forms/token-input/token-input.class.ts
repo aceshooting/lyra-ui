@@ -1,6 +1,6 @@
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { formControlSupportingState, renderFormControlHintError } from '../../../internal/form-control-template.js';
-import { AutocorrectState, installNativeSelectionAccessors, setNativeRangeText, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
+import { AutocorrectState, installNativeInputModeAliases, installNativeSelectionAccessors, setNativeRangeText, nativeAutocorrectAttribute } from '../../../internal/native-text-control.js';
 import { ref } from 'lit/directives/ref.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { finiteCount } from '../../../internal/numbers.js';
@@ -34,6 +34,7 @@ import {
   relayNativeEvent,
 } from '../../../internal/native-event-relay.js';
 import { sizes } from '../../../internal/sizes.styles.js';
+import { currentValidityValidator, type LyraFormValidator } from '../form-validator.js';
 import type { LyraAppearance, LyraSize, LyraLabelDisplay, LyraLabelPlacement } from '../../../internal/variants.js';
 import { styles } from './token-input.styles.js';
 import {
@@ -95,26 +96,19 @@ const delimiterConverter = {
   },
 };
 
-/** Splits `text` on every character of `delimiters`, trimming and dropping empty entries. */
-function parseDelimited(text: string, delimiters: string | null): readonly string[] {
-  const chars = new Set(delimiters ? [...delimiters] : [',']);
-  const parts: string[] = [];
-  let current = '';
-  for (const char of text) {
-    if (chars.has(char)) {
-      parts.push(current);
-      current = '';
-    } else current += char;
-  }
-  parts.push(current);
-  return Object.freeze(parts.map(part => part.trim()).filter(Boolean));
+/** Splits `text` on `delimiter` matched as one literal sequence (the whole string, never its
+ *  individual characters); `null` or empty keeps `text` whole. Entries are not trimmed here. */
+function splitLiteral(text: string, delimiter: string | null): string[] {
+  return delimiter ? text.split(delimiter) : [text];
+}
+
+/** Splits an assigned string on the `delimiter` sequence (comma when none) into trimmed,
+ *  non-empty tokens. */
+function parseDelimited(text: string, delimiter: string | null): readonly string[] {
+  return Object.freeze(splitLiteral(text, delimiter || ',').map(part => part.trim()).filter(Boolean));
 }
 
 /** A finite, non-negative whole-number limit, or `null` when unset or unusable. */
-function tokenLimit(value: unknown): number | null {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? Math.floor(value) : null;
-}
-
 function normalizeStringArray(value: unknown): readonly string[] {
   if (!Array.isArray(value)) return Object.freeze([]);
   try {
@@ -128,15 +122,18 @@ function normalizeStringArray(value: unknown): readonly string[] {
   }
 }
 
+/** The `value` attribute holds either a JSON array (the reflected form, used verbatim) or
+ *  delimiter-separated text, which the `defaultValue` setter splits on the current `delimiter`. */
 const stringArrayConverter = {
-  fromAttribute: (value: string | null): readonly string[] | null => {
+  fromAttribute: (value: string | null): readonly string[] | string | null => {
     if (value === null) return null;
     try {
       const parsed: unknown = JSON.parse(value);
-      return normalizeStringArray(parsed);
+      if (Array.isArray(parsed)) return normalizeStringArray(parsed);
     } catch {
-      return [];
+      // Not JSON: delimiter-separated text.
     }
+    return value;
   },
   toAttribute: (value: readonly string[] | null): string | null =>
     value == null ? null : JSON.stringify(value),
@@ -310,6 +307,7 @@ const stringArrayConverter = {
  *   alone.
  * @cssstate user-invalid - `invalid`, but only after that same interaction — a required control
  *   nobody has touched yet is invalid without being styled as an error.
+ * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
  * @status stable
  * @since 4.0.0
  */
@@ -336,6 +334,11 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     installNativeSelectionAccessors(this.prototype, host => host.inputEl, { methods: false });
   }
 
+  /** Intrinsic validator catalog: reports the control's current `required`, `min-tags` and
+   *  `max-tags` validity under the native `ValidityState` keys. */
+  static get validators(): LyraFormValidator<LyraTokenInput>[] {
+    return [currentValidityValidator('required', 'disabled', 'readonly', 'value', 'min-tags', 'max-tags')];
+  }
   static formAssociated = true;
   static override styles = [LyraElement.styles, sizes, styles];
 
@@ -371,6 +374,13 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
    */
   @property({ attribute: 'label-placement', reflect: true }) labelPlacement: LyraLabelPlacement = 'top';
   @property() hint = '';
+  /** Server-rendering hint that a `label` slot is filled, so the label row renders before slot
+   *  content is observed. Display only: an empty reserved label never replaces the fallback
+   *  accessible name. */
+  @property({ type: Boolean, attribute: 'with-label' }) withLabel = false;
+  /** Server-rendering hint that a `hint` slot is filled, so the hint row renders before slot
+   *  content is observed. */
+  @property({ type: Boolean, attribute: 'with-hint' }) withHint = false;
   @property({ attribute: 'error-text' }) errorText = '';
   /** Placeholder shown in the draft input while it is empty. */
   @property() placeholder = '';
@@ -397,6 +407,9 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
   override set autocorrect(next: boolean | string) {
     this.autocorrectState.set(next);
   }
+  /** Lowercase mapped IDLs that delegate to the existing reactive native spellings. */
+  declare inputmode: string;
+  declare enterkeyhint: string;
   /** Names the wrapper and draft input. An empty attribute suppresses label linkage.
    * Whitespace alone falls back to the visible label, placeholder, or localized name. */
   @property({ attribute: 'aria-label' }) accessibleLabel = '';
@@ -431,11 +444,10 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     if (!this._editable) this.discardTransientState(false);
     this.requestUpdate('editable', old);
   }
-  /** Characters that turn typed text into tokens. Every character is its own delimiter: typing any
-   *  of them commits the draft, and a commit or paste splits on all of them, so `";,"` accepts both
-   *  semicolons and commas. `null` — from the property, or from `delimiter="none"` / `delimiter=""`
-   *  — disables splitting and the delimiter keystroke (Enter, Tab and blur still commit), so a token
-   *  may contain any character verbatim. Defaults to `,`. */
+  /** Character(s) that split a typed draft into several tokens, matched as one literal sequence,
+   *  and (when a single character) the keystroke that commits the draft. `null` — from the
+   *  property, or from `delimiter="none"` / `delimiter=""` — disables both, so a token may contain
+   *  the delimiter verbatim. Defaults to `,`. */
   @property({ attribute: 'delimiter', converter: delimiterConverter })
   delimiter: string | null = ',';
   /** Maximum number of tokens. Once reached, typed or pasted text cannot be committed (the draft
@@ -449,6 +461,16 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
    *  non-finite means no minimum.
    *  @attr min-tags */
   @property({ attribute: 'min-tags', converter: blankNumberConverter(null) }) minTags: number | null = null;
+  /** `maxTags` as a whole count, or `null` while it is unset, negative or non-finite. */
+  private get maxTagLimit(): number | null {
+    const value: unknown = this.maxTags;
+    return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? finiteCount(Math.floor(value)) : null;
+  }
+  /** `minTags` as a whole count, or `null` while it is unset, negative or non-finite. */
+  private get minTagLimit(): number | null {
+    const value: unknown = this.minTags;
+    return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? finiteCount(Math.floor(value)) : null;
+  }
   /** Shows a button that removes every token while there is at least one and the control is neither
    *  disabled nor readonly. Same as `clearable`. */
   @property({ type: Boolean, reflect: true, attribute: 'with-clear' }) withClear = false;
@@ -569,7 +591,8 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
   private readonly hostDescription = new HostDescriptionController(this, () => this.inputEl ?? null);
   private internals: ElementInternals;
   private validityController: FormControlController;
-  /** Consumer-supplied validation message reflected through `custom-error`. */
+  /** Consumer-supplied validation message reflected through `custom-error`.
+   */
   declare customError: string | null;
   private labelId = nextId('token-input-label');
   private readonly supportingId = nextId('token');
@@ -589,8 +612,9 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
   private _readonly = false;
 
   /** Committed tokens; the array is canonical. Assigning a string instead splits it on the
-   *  `delimiter` characters (comma when none) into trimmed, non-empty tokens. Reassigning the same
-   *  token sequence preserves any inline edit. */
+   *  `delimiter` sequence (comma when none) into trimmed, non-empty tokens. Reassigning the same
+   *  token sequence preserves any inline edit. Reads return a frozen `readonly string[]`, so a
+   *  change is made by assigning a new array rather than mutating the one read back. */
   @property({ attribute: false })
   get value(): readonly string[] {
     return this._value;
@@ -610,7 +634,9 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     this.requestUpdate('value', old);
     if (this.internals) this.syncValidity();
   }
-  /** Reflected JSON-array reset default; changing it never overwrites a dirty live token list. */
+  /** Reset default, reflected to the `value` attribute as a JSON array. The attribute also
+   *  accepts delimiter-separated text (`value="a, b"`), split like a string assignment; a JSON
+   *  array is used verbatim and never split. Changing it never overwrites a dirty live token list. */
   get defaultValue(): readonly string[] {
     return this._defaultValue;
   }
@@ -632,11 +658,12 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
   /** The form submission key, reflected synchronously for native form APIs.
    *  This control keys its `FormData` entries directly off `name` (see
    *  `syncValidity()`), so a rename must rebuild that `FormData` in the same
-   *  tick -- mirrors `<lr-combobox>`'s identical `name` setter. */
+   *  tick -- mirrors `<lr-combobox>`'s identical `name` setter. `null` removes the name.
+   */
   get name(): string {
     return this._name;
   }
-  set name(next: string) {
+  set name(next: string | null) {
     const old = this._name;
     this._name = next ?? '';
     reflectFormName(this, this._name);
@@ -644,6 +671,8 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     this.requestUpdate('name', old);
   }
 
+  /** Makes at least one token required for the control to be valid.
+   */
   get required(): boolean {
     return this._required;
   }
@@ -655,6 +684,9 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     this.requestUpdate('required', old);
   }
 
+  /** Disables the control: it cannot be focused or edited and is excluded from form submission
+   *  and validation.
+   */
   get disabled(): boolean {
     return this._disabled;
   }
@@ -676,7 +708,8 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
   /** Forwards native read-only behavior to the draft input and the inline token editor, and
    *  blocks every other value-committing affordance (adding, removing, or editing a token) while
    *  leaving the control, its tokens, and its remove buttons focusable and its current value
-   *  submitted with the form -- mirroring `lr-input`'s `readonly`. */
+   *  submitted with the form -- mirroring `lr-input`'s `readonly`.
+   */
   get readonly(): boolean {
     return this._readonly;
   }
@@ -799,6 +832,11 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     // never touches the custom layer the line above just set.
     this.syncValidity();
   }
+  /** Clears a consumer-supplied validation error and recomputes the token constraints, so a
+   *  `required` control with no tokens stays `valueMissing`. */
+  resetValidity(): void {
+    this.setCustomValidity('');
+  }
   /** Reads both component state and the UA's synchronous fieldset cascade before actions mutate
    * or enter one of this compound control's still-rendered native focus surfaces. */
   override focus(options?: FocusOptions): void {
@@ -865,8 +903,8 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     const barred = this.barredFromValidation;
     const count = this.value.length;
     const missing = !barred && this.required && count === 0;
-    const min = tokenLimit(this.minTags);
-    const max = tokenLimit(this.maxTags);
+    const min = this.minTagLimit;
+    const max = this.maxTagLimit;
     const under = !barred && min !== null && count > 0 && count < min;
     const over = !barred && max !== null && count > max;
     this.validityController.setValidity(
@@ -922,29 +960,14 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     dispatchNativeEvent(this, 'change');
     this.emit('lr-change', detail);
   }
-  /** Characters that commit and split the draft; empty while `delimiter` is `null` or empty. */
-  private get delimiterChars(): string {
-    return typeof this.delimiter === 'string' ? this.delimiter : '';
-  }
   /** How many more tokens fit under `max-tags`; `Infinity` while unlimited. */
   private get tokenCapacity(): number {
-    const max = tokenLimit(this.maxTags);
+    const max = this.maxTagLimit;
     return max === null ? Infinity : Math.max(0, max - this.value.length);
   }
-  private addDraft(text: string = this.draft): void {
+  private addDraft(): void {
     if (isLiveDisabled(this) || this.readonly) return;
-    const chars = new Set(this.delimiterChars);
-    const candidates: string[] = [];
-    if (chars.size) {
-      let current = '';
-      for (const char of text) {
-        if (chars.has(char)) {
-          candidates.push(current);
-          current = '';
-        } else current += char;
-      }
-      candidates.push(current);
-    } else candidates.push(text);
+    const candidates = splitLiteral(this.draft, this.delimiter);
     const capacity = this.tokenCapacity;
     const seen = this.allowDuplicates ? null : new Set(this.value);
     let added: string[] = [];
@@ -980,7 +1003,7 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     if (this.value !== before) {
       const live = [...this.value];
       const liveSeen = this.allowDuplicates ? null : new Set(live);
-      const max = tokenLimit(this.maxTags);
+      const max = this.maxTagLimit;
       for (const token of added) {
         if (liveSeen?.has(token)) continue;
         if (max !== null && live.length >= max) break;
@@ -991,23 +1014,8 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     } else {
       this.updateValue(next);
     }
-    this.draft = overflow.join(this.delimiterChars[0] ?? ',');
+    this.draft = overflow.join(this.delimiter || ',');
   }
-
-  /** Splits pasted text on the delimiter characters instead of leaving it as one draft. */
-  private onPaste = (event: ClipboardEvent): void => {
-    if (isLiveDisabled(this) || this.readonly || !this.delimiterChars) return;
-    const pasted = event.clipboardData?.getData('text/plain') ?? '';
-    const chars = new Set(this.delimiterChars);
-    if (![...pasted].some(char => chars.has(char))) return;
-    event.preventDefault();
-    const input = event.currentTarget as HTMLInputElement;
-    const start = input.selectionStart ?? input.value.length;
-    const end = input.selectionEnd ?? start;
-    const combined = input.value.slice(0, start) + pasted + input.value.slice(end);
-    this.inputValue = combined;
-    this.addDraft(combined);
-  };
 
   /** Removes every token the `lr-token-remove-request` listeners do not protect. */
   private clearTokens(): void {
@@ -1282,7 +1290,7 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     if (isLiveDisabled(this)) return;
     if (
       event.key === 'Enter' ||
-      (event.key.length > 0 && [...this.delimiterChars].includes(event.key))
+      (this.delimiter !== null && event.key === this.delimiter)
     ) {
       if (this.draft.trim()) {
         event.preventDefault();
@@ -1346,10 +1354,12 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     }
     this._valueDirty = false;
   }
+  /** Restores the submitted token list; `reason` is accepted for the platform signature only. */
   formStateRestoreCallback(
     state: string | File | FormData | null,
-    _mode?: 'restore' | 'autocomplete'
+    reason?: 'autocomplete' | 'restore'
   ): void {
+    void reason;
     this.value = readStringArrayFormDataState(state);
     this.discardTransientState(true);
     this.rovingIndex = 0;
@@ -1462,15 +1472,17 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     this.renderedTokenValues = this.value;
     const overflow = this.value.length - entries.length;
     const showClear = (this.withClear || this.clearable) && !this.effectiveDisabled && !this.readonly && this.value.length > 0;
-    const hasLabel = this.slotPresence.has('label') || Boolean(normalizeLabel(this.label));
+    const hasNamedLabel = this.slotPresence.has('label') || Boolean(normalizeLabel(this.label));
+    const hasLabel = hasNamedLabel || this.withLabel;
     const hostLabel = hostAriaLabel(this);
-    const labelledBy = hostLabel === null && hasLabel ? this.labelId : nothing;
-    const name = hostLabel ?? (hasLabel ? nothing : normalizeLabel(this.placeholder) ?? this.localize('tokenInputLabel'));
+    const labelledBy = hostLabel === null && hasNamedLabel ? this.labelId : nothing;
+    const name = hostLabel ?? (hasNamedLabel ? nothing : normalizeLabel(this.placeholder) ?? this.localize('tokenInputLabel'));
     const supporting = {
       presence: { has: (name: string) => name !== 'help-text' && this.slotPresence.has(name) },
       idPrefix: this.supportingId,
       hint: this.hint,
       errorText: this.errorText,
+      withHint: this.withHint,
     };
     const { hasHint, hasError, describedBy } = formControlSupportingState(supporting);
     return html`<div part="form-control">
@@ -1532,7 +1544,6 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
             ? 'true'
             : 'false'}
           @input=${this.onInput}
-          @paste=${this.onPaste}
           @change=${this.stopInternalChange}
           @keydown=${this.onKeyDown}
           @blur=${this.onBlur}
@@ -1557,6 +1568,7 @@ export class LyraTokenInput extends LyraFormControlElement<LyraTokenInputEventMa
     </div>`;
   }
 }
+installNativeInputModeAliases(LyraTokenInput.prototype);
 declare global {
   interface HTMLElementTagNameMap {
     'lr-token-input': LyraTokenInput;

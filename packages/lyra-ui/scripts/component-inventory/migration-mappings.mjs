@@ -1,6 +1,6 @@
 import { buildMirrorMap } from '../migrate-wa.mjs';
 import { reviewedAccessibilityMetadata } from './accessibility.mjs';
-import { reviewedTypeEquivalences, normalizedNormalizations, reviewedMappingNormalizations, hasReviewedMappingNormalizations } from './mapping-normalizations.mjs';
+import { reviewedTypeEquivalences, normalizedNormalizations, reviewedMappingNormalizations, hasReviewedMappingNormalizations, REVIEWED_EVENT_SEMANTICS_DIFFERENCES } from './mapping-normalizations.mjs';
 import { REWRITE_RULE_SECTIONS, compareMappedSurfaces, deriveStaticApiReviewStatus, emptyRewrites } from '../component-inventory.mjs';
 
 const REQUIRED_TARGETS = new Map([
@@ -312,6 +312,15 @@ const DECISION_OVERRIDES = new Map([
     },
   ]),
   [
+    'wa-stepper',
+    {
+      classification: 'warning-required',
+      rationale:
+        'The pinned Web Awesome manifest lists an event named `detail` typed WaStepChangeEvent beside wa-before-step-change and wa-step-change. No documented API dispatches an event of that name: it is the step-change event class recorded a second time, so Lyra maps the two documented events and a listener for `detail` requires review.',
+      expectedDrift: [{ code: 'missing-event', section: 'events', member: 'detail' }],
+    },
+  ],
+  [
     'sl-checkbox',
     {
       classification: 'warning-required',
@@ -531,6 +540,15 @@ const DECISION_OVERRIDES = new Map([
     },
   ],
   [
+    'wa-code-highlighter',
+    {
+      classification: 'warning-required',
+      rationale:
+        'lr-code-block exposes its code as a named, focusable role="group" surface where wa-code-highlighter exposes a region landmark, so assistive-technology navigation that relies on the region landmark needs review. Highlighting also needs the optional shiki peer.',
+      expectedDrift: [],
+    },
+  ],
+  [
     'wa-date-input',
     {
       classification: 'warning-required',
@@ -742,7 +760,7 @@ const BEHAVIOR_PARITY_OVERRIDES = new Map([
 ]);
 
 const PAGE_METHOD_EDGE_RATIONALE =
-  'Lyra returns a finite 0 for null and for an element in a detached document with no viewport; Web Awesome 3.11 returns null for null and measures detached-document geometry against the ambient page viewport.';
+  'Lyra returns a finite 0 for null and for an element in a detached document with no viewport; Web Awesome 3.15 returns null for null and measures detached-document geometry against the ambient page viewport.';
 
 const REVIEWED_METHOD_EDGE_SEMANTICS = new Map([
   [
@@ -912,6 +930,7 @@ export function migrationParityMetadata({
 }
 
 const DECISION_NOTES = new Map([
+  ...REVIEWED_EVENT_SEMANTICS_DIFFERENCES,
   [
     'wa-video',
     'Lyra adds load(), validates media and thumbnail URLs, preserves consumer source/track nodes, caps thumbnail VTT input, and rejects unsupported fullscreen requests. These fail-closed additions do not change the documented safe-use contract.',
@@ -930,11 +949,48 @@ const DECISION_NOTES = new Map([
 // working through the migration and records the name as migrated away, not mirrored.
 const REVIEWED_PART_REWRITES = new Map([
   ['wa-accordion-item', [{ from: 'base', to: 'accordion-item' }]],
-  ['wa-file-input', [{ from: 'base', to: 'file-input' }, { from: 'label', to: 'form-control-label' }]],
+  ['wa-button-group', [{ from: 'base', to: 'button-group' }]],
+  [
+    'wa-color-picker',
+    [
+      { from: 'base', to: 'color-picker' },
+      { from: 'eyedropper-button__base', to: 'eyedropper-button__button' },
+      { from: 'format-button__base', to: 'format-button__button' },
+    ],
+  ],
+  ['wa-date-input', [{ from: 'date-picker__base', to: 'date-picker__date-picker' }]],
+  ['wa-dialog', [{ from: 'close-button__base', to: 'close-button__button' }]],
+  ['wa-drawer', [{ from: 'close-button__base', to: 'close-button__button' }]],
+  [
+    'wa-file-input',
+    [
+      { from: 'base', to: 'file-input' },
+      { from: 'label', to: 'form-control-label' },
+      { from: 'remove-button__base', to: 'remove-button__button' },
+    ],
+  ],
   ['wa-known-date', [{ from: 'label', to: 'form-control-label' }]],
   ['wa-qr-code', [{ from: 'base', to: 'qr-code' }]],
   ['sl-qr-code', [{ from: 'base', to: 'qr-code' }]],
+  [
+    'wa-select',
+    [
+      { from: 'label', to: 'form-control-label' },
+      { from: 'tag__remove-button__base', to: 'tag__remove-button__button' },
+    ],
+  ],
+  ['wa-slider', [{ from: 'tooltip__base', to: 'tooltip__tooltip' }]],
   ['wa-sparkline', [{ from: 'base', to: 'sparkline' }]],
+  ['wa-tab-panel', [{ from: 'base', to: 'tab-panel' }]],
+  ['wa-tag-input', [{ from: 'tag__remove-button__base', to: 'tag__remove-button__button' }]],
+  [
+    'wa-tooltip',
+    [
+      { from: 'base', to: 'tooltip' },
+      { from: 'base__popup', to: 'tooltip__popup' },
+      { from: 'base__arrow', to: 'tooltip__arrow' },
+    ],
+  ],
   ['wa-video-playlist', [{ from: 'base', to: 'video-playlist' }]],
 ]);
 

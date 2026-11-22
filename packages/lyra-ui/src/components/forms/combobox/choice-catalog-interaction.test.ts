@@ -113,7 +113,7 @@ it('keeps the selection and draft after vetoing creation, removal, or clear', as
   const root = combo.shadowRoot!;
   root.querySelector<HTMLElement>('[part="option"]')!.click();
   expect(combo.querySelectorAll('lr-option').length).to.equal(1);
-  root.querySelector<HTMLElement>('[part="tag__remove-button"]')!.click();
+  root.querySelector<HTMLElement>('[part~="tag__remove-button"]')!.click();
   root.querySelector<HTMLElement>('[part="clear-button"]')!.click();
   expect(proposals).to.deep.equal([['one', 'New'], [], []]);
   expect(combo.value).to.deep.equal(['one']);
@@ -122,7 +122,7 @@ it('keeps the selection and draft after vetoing creation, removal, or clear', as
   root.querySelector<HTMLElement>('[part="option"]')!.click();
   expect(combo.value).to.deep.equal(['one', 'New']);
   await combo.updateComplete;
-  root.querySelector<HTMLElement>('[part="tag__remove-button"]')!.click();
+  root.querySelector<HTMLElement>('[part~="tag__remove-button"]')!.click();
   expect(combo.value).to.deep.equal(['New']);
   root.querySelector<HTMLElement>('[part="clear-button"]')!.click();
   expect(combo.value).to.deep.equal([]);

@@ -436,6 +436,43 @@ logical start inset, quiet markers). Disabled controls use `not-allowed`, every 
 shared focus ring, and `forced-colors: active` maps accents and bars to system colours. Dark mode
 follows the tokens.
 
+### Migrating Web Awesome and Shoelace classes and stylesheets
+
+`lyra-ui-migrate` (no `--origin`) rewrites the upstream utility and theme classes that have a Lyra
+counterpart, and only whole class tokens in class positions: `class`/`className` values,
+`:class`, `[class]` and `[ngClass]` bindings, `className={...}`, `classMap()`, `classList.add/remove/
+toggle/contains/replace()`, `.className =` and `setAttribute('class', ...)`. Selectors, prose, other
+attributes and `${}`/`{{}}` interpolations are never read. A name the tool does not list is left alone,
+because it is as likely your own class as an upstream one.
+
+| Upstream | Lyra |
+| -------- | ---- |
+| `wa-stack`, `wa-cluster`, `wa-flank`, `wa-split`, `wa-frame` (with `:end`, `:column`, `:square`, `:landscape`, `:portrait`) | `lr-stack`, `lr-cluster`, `lr-flank`/`lr-flank-end`, `lr-split`/`lr-split-column`, `lr-frame`/`lr-frame-*` |
+| `wa-grid`, `wa-span-grid` | `lr-grid-auto`, `lr-span-grid` |
+| `wa-gap-<step>` | `lr-gap-<step>`, mapped by resolved length: the two spacing scales are offset by one step, so `wa-gap-m` (1rem) is `lr-gap-l` |
+| `wa-align-items-*`, `wa-align-self-*`, `wa-justify-content-*`, `wa-flex-wrap`/`wa-flex-nowrap` | `lr-items-*`, `lr-self-*`, `lr-justify-*`, `lr-wrap`/`lr-nowrap` |
+| `wa-text-*`, `wa-font-weight-*`, `wa-color-text-quiet`, `wa-link-plain`, `wa-list-plain`, `wa-prose`, `wa-visually-hidden`, `wa-cloak`, `wa-placeholder`, `wa-scroll-lock` | the same helper under `lr-`; see the inventory above |
+| `wa-brand`, `wa-neutral`, `wa-success`, `wa-warning`, `wa-danger`, `wa-size-*` | `lr-brand`, `lr-neutral`, `lr-success`, `lr-warning`, `lr-danger`, `lr-size-*` |
+| `wa-dark`, `wa-light`, `sl-theme-dark`, `sl-theme-light` | `lr-dark`, `lr-light` |
+
+`wa-font-size-*`, `wa-body-*` and `wa-border-radius-s`/`-m` rewrite to the nearest class
+(`lr-text-*`, `lr-radius-*`) and report `UPSTREAM_CLASS_APPROXIMATE_REVIEW`: the type and radius scales
+are not value-aligned. `wa-heading-*`, `wa-caption-*`, `wa-longform-*`, the hue-pinned variants
+(`wa-brand-blue`), `wa-theme-*`, the `native.css` opt-ins (`wa-button`, `wa-zebra-rows`, ...), the
+`wa-form-control-*` classes and the gaps Lyra has no step for are reported as `UPSTREAM_CLASS_REVIEW`
+with the nearest alternative and are not rewritten.
+
+Stylesheet and loader imports (`import '...'` and CSS `@import`) map to real package subpaths:
+`dist/styles/webawesome.css` becomes `theme.css`, `native.css` and `utilities.css`;
+`styles/native.css`, `styles/utilities.css`, `styles/themes/default.css` and Shoelace
+`themes/light.css`/`dark.css` become the matching one. `native.css` styles only inside `.lr-native`, and
+`dark.css` is mode switching with `lr-dark`, so both carry an `UPSTREAM_ASSET_REVIEW` note. The
+self-starting loaders (`webawesome.loader.js`, `shoelace-autoloader.js`) become
+`@aceshooting/lyra-ui/autoloader-cdn.js` and, like the all-components entries (`webawesome.js`,
+`shoelace.js`), are rewritten only when the scanned files have no manual uses left. `setBasePath` and
+`utilities/base-path`, `layers.css`, the `awesome` and `shoelace` themes and the colour palettes have no
+Lyra counterpart and are reported as `UPSTREAM_ASSET_REVIEW`.
+
 ### Hue palette
 
 ```css

@@ -179,3 +179,26 @@ export const Sizes: Story = {
     </div>
   `,
 };
+
+export const CustomStates: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Each item exposes `:state(active)` while focused, `:state(checked)`, `:state(disabled)`, `:state(has-submenu)`, `:state(link)` for a safe `href`, and `:state(submenu-open)`.',
+      },
+    },
+  },
+  render: () => html`
+    <style>
+      .story-dropdown-states lr-dropdown-item:state(checked) { font-weight: var(--lr-font-weight-semibold); }
+      .story-dropdown-states lr-dropdown-item:state(link) { text-decoration: underline; }
+      .story-dropdown-states lr-dropdown-item:state(disabled) { font-style: italic; }
+    </style>
+    <div class="story-dropdown-states" role="menu" aria-label="View options">
+      <lr-dropdown-item type="checkbox" checked value="grid">Show grid</lr-dropdown-item>
+      <lr-dropdown-item href="https://example.com/">Documentation</lr-dropdown-item>
+      <lr-dropdown-item disabled value="export">Export</lr-dropdown-item>
+    </div>
+  `,
+};

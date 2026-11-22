@@ -126,7 +126,7 @@ describe('label', () => {
     const base = el.shadowRoot!.querySelector<HTMLElement>('[part="base"]')!;
     expect(base.getAttribute('role')).to.equal('separator');
     expect(base.getAttribute('aria-label')).to.equal('Or');
-    const [start, end] = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="line"]')];
+    const [start, end] = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="line"]')] as [HTMLElement, HTMLElement];
     const label = el.shadowRoot!.querySelector<HTMLElement>('[part="label"]')!;
     expect(label.querySelector('slot')).to.exist;
     expect(Math.abs(start.getBoundingClientRect().width - end.getBoundingClientRect().width)).to.be.lessThan(1.5);
@@ -146,7 +146,7 @@ describe('label', () => {
     const el = await fixture<LyraDivider>(
       html`<lr-divider label-placement="start" style="--label-offset: 40px; --label-spacing: 9px">Or</lr-divider>`,
     );
-    const [start, end] = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="line"]')];
+    const [start, end] = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="line"]')] as [HTMLElement, HTMLElement];
     expect(start.getBoundingClientRect().width).to.be.closeTo(40, 1);
     expect(end.getBoundingClientRect().width).to.be.greaterThan(40);
     expect(getComputedStyle(el.shadowRoot!.querySelector('[part="label"]')!).paddingLeft).to.equal('9px');

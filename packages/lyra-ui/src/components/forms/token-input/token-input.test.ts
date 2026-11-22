@@ -1511,9 +1511,10 @@ it("separates its live token array from the reflected JSON current default", asy
   ).to.deep.equal(["pristine"]);
 });
 
-it("normalizes JSON reset defaults through the same string-only boundary as property writes", async () => {
+it("normalizes JSON reset defaults through the same string-only boundary as property writes, and splits non-JSON text", async () => {
   for (const [serialized, normalized] of [
-    ["not JSON", []],
+    ["not JSON", ["not JSON"]],
+    ["one, two", ["one", "two"]],
     ['["alpha", 2]', ["alpha"]],
   ] as const) {
     const form = (await fixture(html`

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 22 parts, 41 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 22 parts, 38 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `form-control-label`: `--lr-form-control-required-content`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -52,8 +52,12 @@ preserves the inline editor, its draft, and its focus. A changed sequence ends t
 property and the attribute are equivalent: `el.appearance = 'filled'` repaints the token row.
 
 **Properties:** live, non-reflecting `value`, reflected `defaultValue` (attribute `value`, encoded
-as a JSON string array), `customError` (`custom-error`), `label`, `hint`, `errorText`
-(`error-text`), `placeholder`, `name`,
+as a JSON string array; the attribute also accepts delimiter-separated text such as `value="a, b"`,
+split on `delimiter` like a string assignment, while a JSON array is used verbatim and never split),
+`customError` (`custom-error`), `label`, `hint`, `errorText`
+(`error-text`), `withLabel`/`withHint` (`with-label`/`with-hint`, default `false` — server-rendering
+hints that reserve the label and hint rows before slotted content is observed; an empty reserved
+label never replaces the fallback accessible name), `placeholder`, `name` (`null` removes it),
 `required`, `disabled`,
 `readonly: boolean = false` (reflected — forwards native read-only behavior to the draft input and
 the inline token editor, and blocks adding, removing or editing a token while leaving the draft
@@ -73,7 +77,7 @@ rounds the token row's corners by changing the private radius default to `--lr-r
 chips share the public `--lr-token-input-radius` hook with the row, and an inherited or direct
 value remains authoritative),
 `allowDuplicates`
-(`allow-duplicates`, default `false`), `editable` (reflected, default `false` — see below), and
+(`allow-duplicates`, not reflected, default `false`), `editable` (reflected, default `false` — see below), and
 `delimiter: string | null` (default `','` — see below).
 `maxTokensVisible: number = 200` (attribute `max-tokens-visible`) limits the number of mounted
 tokens. Omitting or removing the attribute, or supplying a non-finite limit, uses the 200-token
@@ -81,10 +85,19 @@ window; set `max-tokens-visible="0"` to keep mounting every token.
 The `previous-page` and `next-page` buttons page through the tokens, including in a read-only
 field. The `token-overflow` part shows how many tokens are outside the current window. The value
 array and form submission always include every token.
-The native text hints `autocomplete`, `inputmode` (`inputMode`), and `enterkeyhint`
-(`enterKeyHint`) go to both the draft input and the inline token editor. Empty values leave the
+The native text hints `autocomplete`, `inputmode` (`inputMode`; the lowercase `inputmode` property
+is an alias), and `enterkeyhint` (`enterKeyHint`, likewise aliased) go to both the draft input and the inline token editor. Empty values leave the
 optional native attributes unset. The default accessible name is localized as "Tokens" when the
 field has no label, accessible-name override, or nonblank placeholder.
+
+`resetValidity()` clears a `setCustomValidity()` message and recomputes the token constraints (a
+`required` list with no tokens stays `valueMissing`). The static `validators` getter returns the
+intrinsic validator catalog, reporting the current `required`/`min-tags`/`max-tags` validity under the
+native `ValidityState` keys.
+
+More properties: `withClear` (attribute `with-clear`, default `false`): Shows a button that removes
+every token while there is at least one and the control is neither disabled nor readonly. Same as
+`clearable`.
 
 **Slots:** `label`, `hint`, `error`, `start` (adornment before the tokens), `end` (adornment after
 the draft input) — both wrapped in a `hidden`-toggling span, mirroring `lr-combobox`'s identical
@@ -105,6 +118,11 @@ unchanged), and `lr-token-edit-request`
 cancelable; `preventDefault()` keeps the token in `value` unchanged and leaves the inline editor
 open with the user's edited text intact, rather than closing and discarding it).
 All three mutators share one veto contract.
+`lr-create` (`detail: { inputValue }` — cancelable) fires once per typed or pasted candidate
+before the batch-level `lr-token-add-request`; `preventDefault()` drops that one token, and when
+every candidate is rejected the draft text stays in the input. `lr-clear` (`detail: null`) fires
+after `input`/`change` when the clear button removed the tokens; each removal is first proposed
+through `lr-token-remove-request`, so a vetoed token stays.
 `lr-invalid` (`detail: null`) is emitted once as a bubbling/composed, cancelable alias when native
 validity fails. Calling `preventDefault()` also cancels the native `invalid` event and suppresses
 the browser’s validation bubble.
@@ -168,19 +186,19 @@ remove button from the tab order, never blocks `focus()`, and never excludes the
 `FormData` on submit — only `disabled` does that. Turning it on while a draft is half-typed or an
 inline editor is open discards that uncommitted state without moving focus.
 
-**`delimiter` is a set of characters and is nullable.** Every character of the string is its own
-delimiter: typing any of them commits the draft, and a commit or a real paste splits on all of them
-(`delimiter=";,"` accepts both). A paste that contains a delimiter character commits immediately; a
-paste without one is left to the browser. Setting it to `null` disables both splitting and the
-keystroke (Enter, Tab and blur still commit), so a token may contain the delimiter verbatim.
-`delimiter=""` already meant exactly this Enter-only mode and still does. **`delimiter="null"` does
-not work** — that is the four-character string `null`. Use `delimiter="none"`, `delimiter=""` (both of
-which the attribute converter maps to `null`), or a property binding (`.delimiter=${null}`). Removing
-the attribute restores the `,` default.
+**`delimiter` is nullable, and only a single character acts as a commit key.** It does two separate
+jobs: it splits a committed draft into several tokens, and — _only when it is exactly one
+character_ — it is the keystroke that commits the draft. A multi-character delimiter is matched as
+one literal sequence: it still splits a pasted or committed draft, but no keystroke can ever match
+it, so nothing commits on typing. Pasting never commits by itself; the pasted text joins the draft.
+Setting it to `null` disables both, so a token may contain the delimiter verbatim. **`delimiter="null"`
+does not work** — that is the four-character string `null`. Use `delimiter="none"`, `delimiter=""`
+(both of which the attribute converter maps to `null`), or a property binding
+(`.delimiter=${null}`). Removing the attribute restores the `,` default.
 
 **`max-tags` / `min-tags`** (`maxTags`/`minTags`, both `null` by default, so unset changes nothing).
-At the maximum, typed or pasted text cannot commit and stays in the field (a paste commits what fits and
-leaves the rest); removal, inline editing and clearing keep working. A programmatic `value` longer than
+At the maximum, typed or pasted text cannot commit and stays in the field (a split draft commits what fits
+and leaves the rest); removal, inline editing and clearing keep working. A programmatic `value` longer than
 `max-tags` reports `rangeOverflow`; a list shorter than `min-tags` reports `rangeUnderflow`, enforced only
 once at least one token exists (use `required` for the empty case). Messages are localized
 (`tokenInputTooFew`, `tokenInputTooMany`); disabled or readonly controls report neither.
@@ -191,7 +209,7 @@ and the control is neither disabled nor readonly. It proposes each removal throu
 `lr-clear`, and returns focus to the draft input.
 
 **`value` and `inputValue`.** The array stays canonical, but assigning a string to `value` (or
-`defaultValue`) splits it on the `delimiter` characters (comma when none) into trimmed, non-empty tokens;
+`defaultValue`) splits it on the `delimiter` sequence (comma when none) into trimmed, non-empty tokens;
 the reflected `value` attribute remains a JSON array. `inputValue` reads and writes the uncommitted draft
 without committing it.
 
@@ -228,6 +246,9 @@ inline to `--lr-size-8rem`), `--lr-token-input-min-input-inline-size` (default `
 floor that input keeps once tokens have consumed the row), and `--lr-token-input-editor-inline-size`
 (default `--lr-size-6rem`, the inline size of the inline token editor opened by `editable`).
 
+More themeable custom properties: `--lr-form-control-label-line-height` (default `inherit`): Line
+height of the field label.
+
 **Additional API surface:**
 
 - `--lr-token-input-token-padding` — Per-token chip padding, scaled by `size`.
@@ -256,10 +277,3 @@ floor that input keeps once tokens have consumed the row), and `--lr-token-input
 - `--lr-token-input-invalid-border-color` overrides the shared `--lr-form-control-invalid-border-color` on this row. The default is `--lr-color-danger`.
 
 The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.
-
-Further custom properties:
-
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
-- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
-- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
-- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.

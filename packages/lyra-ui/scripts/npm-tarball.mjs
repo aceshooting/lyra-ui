@@ -15,7 +15,7 @@ export function invariant(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-export function sha256(value) {
+function sha256(value) {
   return createHash('sha256').update(value).digest('hex');
 }
 

@@ -944,18 +944,63 @@ export const DataSourceOptionsEvents: Story = {
     docs: {
       description: {
         story:
-          'dataSource is an alias of source. lr-options-request announces each call with its query and AbortSignal, lr-options-error reports a rejection, and reload() asks the provider again for the current query.',
+          'dataSource receives one { query, signal } request and may return option objects, option elements or option markup. lr-options-request announces each call with its query and AbortSignal, lr-options-error reports a rejection, and reload() asks the provider again for the current query.',
       },
     },
   },
   render: () => html`
     <lr-combobox
       label="City"
-      .dataSource=${async (query: string) =>
+      .dataSource=${async ({ query }: { query: string }) =>
         ['Lisbon', 'Lyon', 'Lima'].filter(city => city.toLowerCase().includes(query.toLowerCase())).map(city => ({ value: city, label: city }))}
       @lr-options-request=${(event: CustomEvent<{ query: string }>) => console.log('lr-options-request', event.detail.query)}
       @lr-options-error=${(event: CustomEvent<{ error: unknown }>) => console.log('lr-options-error', event.detail.error)}
     ></lr-combobox>
     <button type="button" @click=${(event: Event) => (event.currentTarget as HTMLElement).previousElementSibling && (((event.currentTarget as HTMLElement).previousElementSibling) as unknown as { reload(): void }).reload()}>Reload</button>
+  `,
+};
+
+const SERVER_CITIES = ['Lisbon', 'Lyon', 'Lima', 'Ljubljana', 'Luxembourg'];
+
+export const ServerModeAndStatusSlots: Story = {
+  name: 'server mode with status slots',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'With server set, the combobox does not filter: each lr-options-request carries the query and an AbortSignal, the host replaces the lr-option children and clears loading. The empty, no-results and loading slots replace the listbox status rows.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-combobox
+      label="City"
+      server
+      @lr-options-request=${(event: CustomEvent<{ query: string; signal: AbortSignal }>) => {
+        const host = event.currentTarget as HTMLElement & { loading: boolean };
+        const { query, signal } = event.detail;
+        setTimeout(() => {
+          if (signal.aborted) return;
+          const matches = SERVER_CITIES.filter(city => city.toLowerCase().includes(query.toLowerCase()));
+          host.replaceChildren(
+            ...matches.map(city => {
+              const option = document.createElement('lr-option');
+              option.setAttribute('value', city);
+              option.textContent = city;
+              return option;
+            }),
+            ...['empty', 'no-results', 'loading'].map(name => {
+              const status = document.createElement('span');
+              status.slot = name;
+              status.textContent = name === 'empty' ? 'Start typing a city' : name === 'no-results' ? 'No city matches' : 'Searching cities';
+              return status;
+            })
+          );
+          host.loading = false;
+        }, 400);
+      }}
+    >
+      <span slot="loading">Searching cities</span>
+    </lr-combobox>
   `,
 };

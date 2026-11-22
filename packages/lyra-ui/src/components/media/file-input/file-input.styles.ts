@@ -257,7 +257,7 @@ export const styles = css`
       var(--_lr-file-input-detail-font-size)
     );
   }
-  [part="remove-button"] {
+  [part~="remove-button"] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -271,17 +271,17 @@ export const styles = css`
     cursor: pointer;
     transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
-  [part="remove-button"]:hover:where(:not(:disabled)) {
+  [part~="remove-button"]:hover:where(:not(:disabled)) {
     background: var(--lr-file-input-remove-hover-bg, var(--lr-color-brand-quiet));
     color: var(--lr-color-text);
   }
-  [part="remove-button"]:active:where(:not(:disabled)) {
+  [part~="remove-button"]:active:where(:not(:disabled)) {
     background: var(--lr-file-input-remove-active-bg, ${activeFill('var(--lr-file-input-remove-hover-bg, var(--lr-color-brand-quiet))')});
   }
-  [part="remove-button"]:focus-visible {
+  [part~="remove-button"]:focus-visible {
     ${focusRingShorthand}
   }
-  [part="remove-button"]:disabled {
+  [part~="remove-button"]:disabled {
     ${disabledControl}
   }
   ${formControlSupportingColor}

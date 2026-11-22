@@ -501,6 +501,7 @@ export interface LyraRubricFormEventMap {
  *   form submission attempt. Not after a silent `checkValidity()` alone.
  * @cssstate user-invalid - `invalid`, but only after that same interaction — a rubric nobody has
  *   touched yet is invalid without being styled as an error.
+ * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
  * @status stable
  * @since 4.0.0
  */

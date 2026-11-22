@@ -39,11 +39,11 @@ describe('lr-timeline wa-timeline mirror: container', () => {
     expect(el.collision).to.equal('overlap');
   });
 
-  it('reflects and normalizes marker-placement, marker-alignment and orientation=auto', async () => {
+  it('reflects and normalizes marker-placement and marker-alignment, and keeps vertical for orientation=auto', async () => {
     const el = await fixture<LyraTimeline>(html`<lr-timeline marker-placement="alternate" marker-alignment="center" orientation="auto"></lr-timeline>`);
     expect(el.markerPlacement).to.equal('alternate');
     expect(el.markerAlignment).to.equal('center');
-    expect(el.orientation).to.equal('auto');
+    expect(el.orientation).to.equal('vertical');
     el.markerPlacement = 'end';
     await el.updateComplete;
     expect(el.getAttribute('marker-placement')).to.equal('end');
@@ -142,22 +142,6 @@ describe('lr-timeline wa-timeline mirror: container', () => {
     expect(getComputedStyle(rail).position).to.equal('static');
     expect(getComputedStyle(rail, '::before').content).to.equal('none');
   });
-
-  it('orientation=auto is a column when narrow and a row when wide', async () => {
-    const narrow = await build('orientation="auto"', 500);
-    const [a, b] = items(narrow);
-    expect(rect(b!).top).to.be.greaterThan(rect(a!).top + 5);
-    const wide = await build('orientation="auto"', 900);
-    const [c, d] = items(wide);
-    expect(Math.abs(rect(d!).top - rect(c!).top)).to.be.lessThan(2);
-    expect(rect(d!).left).to.be.greaterThan(rect(c!).left + 20);
-  });
-
-  it('orientation=auto behaves as vertical with scale="time"', async () => {
-    const el = await build('orientation="auto" scale="time"', 900);
-    expect(el.orientation).to.equal('auto');
-    expect(getComputedStyle(parts(el, '[part~="base"]')).flexDirection).to.not.equal('row');
-  });
 });
 
 describe('lr-timeline wa-timeline mirror: custom properties', () => {
@@ -219,7 +203,7 @@ describe('lr-timeline-item wa-timeline-item mirror', () => {
     const item = await fixture<LyraTimelineItem>(html`<lr-timeline-item><span slot="opposite">Mon</span>A</lr-timeline-item>`);
     await twoFrames();
     expect(opposite(item).hidden).to.equal(false);
-    expect(parts(item, 'slot[name="opposite"]').assignedNodes().length).to.equal(1);
+    expect((parts(item, 'slot[name="opposite"]') as HTMLSlotElement).assignedNodes().length).to.equal(1);
   });
 
   it('with-opposite renders the opposite column before slot content exists', async () => {
@@ -245,7 +229,7 @@ describe('lr-timeline-item wa-timeline-item mirror', () => {
     const item = await fixture<LyraTimelineItem>(html`<lr-timeline-item><span slot="icon">*</span>A</lr-timeline-item>`);
     await twoFrames();
     expect(marker(item).hasAttribute('data-has-icon')).to.equal(true);
-    expect(parts(item, 'slot[name="icon"]').assignedNodes().length).to.equal(1);
+    expect((parts(item, 'slot[name="icon"]') as HTMLSlotElement).assignedNodes().length).to.equal(1);
     const legacy = await fixture<LyraTimelineItem>(html`<lr-timeline-item><span slot="marker-icon">*</span>A</lr-timeline-item>`);
     await twoFrames();
     expect(marker(legacy).hasAttribute('data-has-icon')).to.equal(true);

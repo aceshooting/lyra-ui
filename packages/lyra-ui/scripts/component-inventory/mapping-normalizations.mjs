@@ -132,6 +132,88 @@ const LYRA_MODAL_CONTROLLER_DEFAULT =
 // changes fail validation instead of silently broadening a global alias rule.
 const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
   [
+    'wa-counter',
+    [
+      ['attribute', ['direction'], "'down' | 'up'", 'LyraCounterDirection'],
+      ['attribute', ['format'], "'long' | 'short' | 'narrow'", 'LyraCounterFormat'],
+      [
+        'attribute',
+        ['largest-unit', 'smallest-unit'],
+        "'years' | 'months' | 'days' | 'hours' | 'minutes' | 'seconds'",
+        'LyraCounterUnit',
+      ],
+    ],
+  ],
+  [
+    'wa-lightbox-item',
+    [['attribute', ['type'], "'image' | 'video'", 'LyraLightboxItemType']],
+  ],
+  [
+    'wa-number-ticker',
+    [
+      [
+        'attribute',
+        ['currency-display'],
+        "'symbol' | 'narrowSymbol' | 'code' | 'name'",
+        'LyraNumberTickerCurrencyDisplay',
+      ],
+      [
+        'attribute',
+        ['type'],
+        "'currency' | 'decimal' | 'percent'",
+        'LyraNumberTickerType',
+      ],
+    ],
+  ],
+  [
+    'wa-step',
+    [
+      ['attribute', ['attention'], "'none' | 'pulse' | 'bounce'", 'LyraStepAttention'],
+      [
+        'attribute',
+        ['variant'],
+        "'neutral' | 'brand' | 'success' | 'warning' | 'danger'",
+        'LyraVariant',
+      ],
+    ],
+  ],
+  [
+    'wa-stepper',
+    [
+      [
+        'attribute',
+        ['orientation'],
+        "'horizontal' | 'vertical' | 'auto'",
+        'LyraStepperOrientation',
+      ],
+    ],
+  ],
+  [
+    'wa-tag-input',
+    [
+      [
+        'attribute',
+        ['appearance'],
+        "'filled' | 'outlined' | 'filled-outlined'",
+        'LyraAppearance',
+      ],
+      [
+        'attribute',
+        ['size'],
+        "'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' | 'large'",
+        'LyraSize',
+      ],
+      // Intentional difference: the `value` attribute accepts the upstream delimiter-separated
+      // text and a JSON array, and its `defaultValue` field reads back the parsed frozen token
+      // list rather than the raw string.
+      ['attribute', ['value'], 'string | null', 'readonly string[]'],
+      // Intentional difference: the live `value` setter accepts every upstream `string[]` write
+      // (and a delimiter-separated string), but reads return a frozen `readonly string[]` so an
+      // in-place mutation can never bypass validation, form data and change events.
+      ['property', ['value'], 'string[]', 'readonly string[]'],
+    ],
+  ],
+  [
     'sl-alert',
     [
       [
@@ -798,6 +880,12 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
     [
       [
         'attribute',
+        ['label-placement'],
+        "'start' | 'center' | 'end'",
+        'LyraDividerLabelPlacement',
+      ],
+      [
+        'attribute',
         ['orientation'],
         "'horizontal' | 'vertical'",
         'LyraDividerOrientation',
@@ -1053,6 +1141,9 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
         'PageNavigationPlacement',
       ],
       ['attribute', ['view'], "'mobile' | 'desktop'", 'PageView'],
+      // An unset `nonce` reads `undefined` on both; the DOM typings declare HTMLElement#nonce as
+      // `string`, so the override cannot spell the `undefined` half.
+      ['attribute', ['nonce'], 'string | undefined', 'string'],
     ],
   ],
   [
@@ -1475,6 +1566,18 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
 // stale-rule guarantees as the local-alias table above.
 const REVIEWED_OPAQUE_TYPE_EQUIVALENCE_GROUPS = new Map([
   [
+    'wa-counter',
+    [
+      ['attribute', ['date'], 'Date | string', 'LyraCounterDateSource | undefined'],
+      [
+        'property',
+        ['valueFormatter'],
+        '(value: number, unit: CounterUnit) => string',
+        '(value: number, unit: LyraCounterUnit) => string | undefined',
+      ],
+    ],
+  ],
+  [
     'sl-alert',
     [
       [
@@ -1806,6 +1909,7 @@ const REVIEWED_OPAQUE_TYPE_EQUIVALENCE_GROUPS = new Map([
   [
     'wa-popover',
     [
+      ['property', ['anchor'], 'null | Element | VirtualElement', 'Element | null'],
       [
         'attribute',
         ['placement'],
@@ -2149,6 +2253,23 @@ const REVIEWED_EVENT_TYPE_EQUIVALENCE_GROUPS = new Map([
     ],
   ],
   [
+    'wa-lightbox',
+    [
+      [
+        'event',
+        ['wa-hide'],
+        '{ source: Element }',
+        'CustomEvent<LyraLightboxHideDetail>',
+      ],
+      [
+        'event',
+        ['wa-item-change'],
+        '{ index: number, previousIndex: number, item: WaLightboxItem, previousItem: WaLightboxItem | null }',
+        'CustomEvent<LyraLightboxItemChangeDetail>',
+      ],
+    ],
+  ],
+  [
     'wa-mutation-observer',
     [
       [
@@ -2167,6 +2288,17 @@ const REVIEWED_EVENT_TYPE_EQUIVALENCE_GROUPS = new Map([
         ['wa-hover'],
         "{ phase: 'start' | 'move' | 'end', value: number }",
         'CustomEvent<{ phase: LyraRatingHoverPhase; value: number }>',
+      ],
+    ],
+  ],
+  [
+    'wa-stepper',
+    [
+      [
+        'event',
+        ['wa-before-step-change', 'wa-step-change'],
+        '{ name: string, previousName: string | null, step: WaStep, previousStep: WaStep | null }',
+        'CustomEvent<LyraStepChangeDetail>',
       ],
     ],
   ],
@@ -2214,6 +2346,7 @@ const NULLABLE_STRING_ATTRIBUTE_TYPE_EQUIVALENCE_MEMBERS = new Map([
   ['wa-rating', ['name']],
   ['wa-select', ['name']],
   ['wa-switch', ['name', 'value']],
+  ['wa-tag-input', ['name']],
   ['wa-textarea', ['name']],
   ['wa-time-input', ['name']],
   ['wa-tooltip', ['for']],
@@ -2237,6 +2370,7 @@ const STATIC_VALIDATOR_TYPE_EQUIVALENCE_TARGETS = new Map([
   ['wa-select', 'LyraFormValidator<LyraSelect>[]'],
   ['wa-slider', 'LyraFormValidator<LyraSlider>[]'],
   ['wa-switch', 'LyraFormValidator<LyraSwitch>[]'],
+  ['wa-tag-input', 'LyraFormValidator<LyraTokenInput>[]'],
   ['wa-textarea', 'LyraFormValidator<LyraTextarea>[]'],
   ['wa-time-input', 'LyraFormValidator<LyraTimeInput>[]'],
 ]);
@@ -2328,7 +2462,7 @@ const REVIEWED_ATTRIBUTE_PROPERTY_EQUIVALENCE_GROUPS = new Map([
       ['value', 'value', 'defaultValue'],
     ],
   ],
-  ...['wa-combobox', 'wa-input', 'wa-number-input', 'wa-textarea'].map(
+  ...['wa-combobox', 'wa-input', 'wa-number-input', 'wa-tag-input', 'wa-textarea'].map(
     (tag) => [
       tag,
       [
@@ -2533,7 +2667,13 @@ const REVIEWED_REFLECTION_EQUIVALENCE_GROUPS = new Map([
       ['property', ['form', 'required'], false, true],
     ],
   ],
-  ['wa-radio-group', [['property', ['form'], false, true]]],
+  [
+    'wa-radio-group',
+    [
+      ['attribute', ['disabled'], false, true],
+      ['property', ['form'], false, true],
+    ],
+  ],
   [
     'wa-rating',
     [
@@ -2575,7 +2715,19 @@ const REVIEWED_REFLECTION_EQUIVALENCE_GROUPS = new Map([
       ],
     ],
   ],
+  // The published lr-lightbox contract never reflected without-counter; reflecting it now would
+  // change the serialized DOM of existing pages, so the upstream mirror stays a property only.
+  ['wa-lightbox', [['attribute', ['without-counter'], true, false]]],
   ['wa-tag', [['attribute', ['with-remove'], false, true]]],
+  [
+    'wa-tag-input',
+    [
+      // The published lr-token-input contract never reflected allow-duplicates.
+      ['attribute', ['allow-duplicates'], true, false],
+      ['attribute', ['disabled', 'with-clear'], false, true],
+      ['property', ['form'], false, true],
+    ],
+  ],
   [
     'wa-textarea',
     [
@@ -2636,7 +2788,7 @@ const REVIEWED_CSS_DEFAULT_EQUIVALENCE_GROUPS = new Map([
   ['wa-carousel', [['--slide-gap', 'var(--wa-space-m)', 'var(--lr-space-m)']]],
   [
     'wa-checkbox-group',
-    [['--gap', '0.5em', 'var(--lr-checkbox-group-option-gap)']],
+    [['--gap', '0.75em', 'var(--lr-checkbox-group-option-gap)']],
   ],
   [
     'wa-details',
@@ -2656,6 +2808,11 @@ const REVIEWED_CSS_DEFAULT_EQUIVALENCE_GROUPS = new Map([
   [
     'wa-dialog',
     [
+      [
+        '--backdrop-color',
+        'var(--wa-color-overlay-modal)',
+        'var(--lr-color-overlay)',
+      ],
       ['--backdrop-filter', 'none', 'var(--lr-dialog-backdrop-filter,none)'],
       ['--hide-duration', 'var(--wa-transition-normal)', null],
       ['--show-duration', 'var(--wa-transition-normal)', null],
@@ -2664,6 +2821,11 @@ const REVIEWED_CSS_DEFAULT_EQUIVALENCE_GROUPS = new Map([
   [
     'wa-drawer',
     [
+      [
+        '--backdrop-color',
+        'var(--wa-color-overlay-modal)',
+        'var(--lr-color-overlay)',
+      ],
       ['--backdrop-filter', 'none', 'var(--lr-dialog-backdrop-filter,none)'],
       ['--hide-duration', 'var(--wa-transition-normal)', null],
       ['--show-duration', 'var(--wa-transition-normal)', null],
@@ -2674,6 +2836,63 @@ const REVIEWED_CSS_DEFAULT_EQUIVALENCE_GROUPS = new Map([
     [
       ['--animation-delay', 0, '0s'],
       ['--animation-duration', '1s', 'var(--lr-duration-icon)'],
+    ],
+  ],
+  // Lyra paints tokens from its Shiki light/dark themes; each syntax color property is an
+  // override hook with no literal default, and an unset one keeps the theme's color.
+  [
+    'wa-code-highlighter',
+    [
+      ['--comment-color', 'light-dark(var(--wa-color-gray-40), var(--wa-color-gray-60))', null],
+      ['--constant-color', 'light-dark(var(--wa-color-orange-40), var(--wa-color-orange-60))', null],
+      ['--deleted-color', 'light-dark(var(--wa-color-red-40), var(--wa-color-red-60))', null],
+      ['--function-color', 'light-dark(var(--wa-color-blue-40), var(--wa-color-blue-60))', null],
+      ['--inserted-color', 'light-dark(var(--wa-color-green-40), var(--wa-color-green-60))', null],
+      ['--keyword-color', 'light-dark(var(--wa-color-purple-40), var(--wa-color-purple-60))', null],
+      ['--operator-color', 'light-dark(var(--wa-color-gray-30), var(--wa-color-gray-80))', null],
+      ['--property-color', 'light-dark(var(--wa-color-blue-40), var(--wa-color-blue-60))', null],
+      ['--selector-color', 'light-dark(var(--wa-color-purple-40), var(--wa-color-purple-60))', null],
+      ['--string-color', 'light-dark(var(--wa-color-green-40), var(--wa-color-green-60))', null],
+      ['--tag-color', 'light-dark(var(--wa-color-purple-40), var(--wa-color-purple-60))', null],
+      ['--type-color', 'light-dark(var(--wa-color-blue-40), var(--wa-color-blue-60))', null],
+      ['--variable-color', 'light-dark(var(--wa-color-blue-40), var(--wa-color-blue-60))', null],
+    ],
+  ],
+  [
+    // The aliases resolve to Lyra's existing lightbox tokens, so a page that sets none of them
+    // keeps the same rendering it had before the upstream names existed.
+    'wa-lightbox',
+    [
+      [
+        '--backdrop-color',
+        'var(--wa-color-overlay-media)',
+        'var(--lr-color-overlay-strong)',
+      ],
+      ['--backdrop-filter', 'blur(1rem)', 'none'],
+      ['--controls-background', 'rgb(0 0 0 / 0.5)', 'var(--lr-color-neutral)'],
+      [
+        '--controls-color',
+        'var(--wa-color-neutral-95)',
+        'var(--lr-color-on-neutral)',
+      ],
+      [
+        '--hide-duration',
+        'var(--wa-transition-slow)',
+        'var(--lr-lightbox-panel-duration)',
+      ],
+      ['--media-border-radius', '0px', 'var(--lr-lightbox-media-radius)'],
+      [
+        '--show-duration',
+        'var(--wa-transition-slow)',
+        'var(--lr-lightbox-panel-duration)',
+      ],
+      ['--slide-gap', 'var(--wa-space-xl)', 'var(--lr-lightbox-slide-gap)'],
+      [
+        '--spacing',
+        'clamp(var(--wa-space-m), 3vw, var(--wa-space-2xl))',
+        'var(--lr-space-s)',
+      ],
+      ['--thumbnail-size', '3.5rem', 'var(--lr-lightbox-thumbnail-size)'],
     ],
   ],
   [
@@ -2798,6 +3017,24 @@ const REVIEWED_CSS_DEFAULT_EQUIVALENCE_GROUPS = new Map([
     ],
   ],
   [
+    'wa-stepper',
+    [
+      [
+        '--connector-color',
+        'var(--wa-color-neutral-fill-normal)',
+        'var(--lr-stepper-connector-color,var(--lr-color-neutral-fill-normal))',
+      ],
+      ['--connector-gap', '0.35em', 'var(--lr-stepper-connector-gap,var(--lr-size-0-35em))'],
+      [
+        '--connector-width',
+        'var(--wa-border-width-m)',
+        'var(--lr-stepper-connector-width,var(--lr-border-width-medium))',
+      ],
+      ['--gap', 'var(--wa-space-l)', 'var(--lr-stepper-step-gap,var(--lr-space-m))'],
+      ['--marker-size', '2em', 'var(--lr-stepper-marker-size,var(--lr-size-2rem))'],
+    ],
+  ],
+  [
     'wa-time-input',
     [
       [
@@ -2915,6 +3152,13 @@ const REVIEWED_TARGET_CSS_DEFAULT_ADDITION_GROUPS = [
       ['--color', 'var(--lr-color-border-subtle)'],
       ['--spacing', 0],
       ['--width', 'var(--lr-border-width-thin)'],
+    ],
+  ],
+  [
+    ['wa-divider'],
+    [
+      ['--label-offset', '2em'],
+      ['--label-spacing', 'var(--lr-space-s)'],
     ],
   ],
   [
@@ -3159,7 +3403,6 @@ const REVIEWED_DEPRECATION_EQUIVALENCE_GROUPS = new Map([
     'wa-button-group',
     'wa-carousel',
     'wa-checkbox',
-    'wa-color-picker',
     'wa-comparison',
     'wa-details',
     'wa-dropdown',
@@ -3172,19 +3415,29 @@ const REVIEWED_DEPRECATION_EQUIVALENCE_GROUPS = new Map([
     'wa-spinner',
     'wa-switch',
     'wa-tab',
-    'wa-tab-group',
     'wa-tab-panel',
-    'wa-tag',
-    'wa-tooltip',
     'wa-tree',
-    'wa-tree-item',
   ].map((tag) => [tag, [['parts', ['base'], true, null, false, null]]]),
+  // Exported parts upstream deprecated in favor of component-named exports; the target keeps
+  // them undeprecated beside the replacement where it publishes one.
+  ...[
+    ['wa-color-picker', ['base', 'eyedropper-button__base', 'format-button__base']],
+    ['wa-dialog', ['close-button__base']],
+    ['wa-drawer', ['close-button__base']],
+    ['wa-slider', ['tooltip__base']],
+    ['wa-tab-group', ['base', 'scroll-button__base']],
+    ['wa-tag', ['base', 'remove-button__base']],
+    ['wa-toast-item', ['progress-ring__base']],
+    ['wa-tooltip', ['base', 'base__arrow', 'base__popup']],
+    ['wa-tree-item', ['base', 'checkbox__base', 'spinner__base']],
+  ].map(([tag, parts]) => [tag, [['parts', parts, true, null, false, null]]]),
   ['wa-accordion-item', [['parts', ['base'], true, null, false, null]]],
   [
     'wa-file-input',
     [
       ['parts', ['base'], true, 'file-input', false, null],
       ['parts', ['label'], true, 'form-control-label', false, null],
+      ['parts', ['remove-button__base'], true, null, false, null],
     ],
   ],
   ['wa-sparkline', [['parts', ['base'], true, 'sparkline', false, null]]],
@@ -3198,10 +3451,24 @@ const REVIEWED_DEPRECATION_EQUIVALENCE_GROUPS = new Map([
       ],
     ]
   ),
-  ...['wa-combobox', 'wa-select'].map((tag) => [
-    tag,
-    [['parts', ['label'], true, 'form-control-label', false, null]],
-  ]),
+  [
+    'wa-combobox',
+    [
+      ['parts', ['label'], true, 'form-control-label', false, null],
+      ['parts', ['tag__remove-button__base'], true, null, false, null],
+    ],
+  ],
+  [
+    'wa-select',
+    [
+      ['parts', ['label'], true, 'form-control-label', false, null],
+      ['parts', ['tag__remove-button__base'], true, null, false, null],
+    ],
+  ],
+  [
+    'wa-tag-input',
+    [['parts', ['tag__remove-button__base'], true, null, false, null]],
+  ],
   [
     'wa-known-date',
     [
@@ -3215,6 +3482,7 @@ const REVIEWED_DEPRECATION_EQUIVALENCE_GROUPS = new Map([
     [
       ['parts', ['base'], true, 'date-input', false, null],
       ['parts', ['label'], true, 'form-control-label', false, null],
+      ['parts', ['date-picker__base'], true, null, false, null],
     ],
   ],
   ['wa-date-picker', [['parts', ['base'], true, 'date-picker', false, null]]],
@@ -3428,6 +3696,12 @@ const REVIEWED_MAPPING_NORMALIZATIONS = new Map([
         reviewedCancelabilityEquivalence('wa-invalid', 'never', 'always'),
         reviewedCancelabilityEquivalence('wa-show', 'never', 'always'),
       ],
+      // The typing debounce keeps Lyra's established 200ms default (the `source-delay` it aliases)
+      // rather than upstream's 250ms; `filter-debounce="250"` restores the upstream timing.
+      defaultEquivalences: [
+        reviewedDefaultEquivalence('filter-debounce', 250, 200),
+        reviewedPropertyDefaultEquivalence('filterDebounce', 250, 200),
+      ],
     },
   ],
   [
@@ -3530,6 +3804,18 @@ const REVIEWED_MAPPING_NORMALIZATIONS = new Map([
     },
   ],
   [
+    'wa-lightbox',
+    {
+      cancelabilityPathAdditions: [
+        reviewedCancelabilityPathAddition(
+          'wa-hide',
+          'an open lightbox removed from the document, where the close has already happened and no ' +
+            'veto could undo it; every dismissal path the upstream tag documents stays cancelable'
+        ),
+      ],
+    },
+  ],
+  [
     'wa-input',
     { defaultEquivalences: [reviewedDefaultEquivalence('name', null, '')] },
   ],
@@ -3543,7 +3829,14 @@ const REVIEWED_MAPPING_NORMALIZATIONS = new Map([
   ],
   [
     'wa-popover',
-    { defaultEquivalences: [reviewedDefaultEquivalence('for', null, '')] },
+    {
+      defaultEquivalences: [reviewedDefaultEquivalence('for', null, '')],
+      // anchor is a getter/setter pair (the setter also accepts a virtual element), so the manifest
+      // records no initializer; the getter reads null until an anchor is assigned.
+      derivedDefaultEquivalences: [
+        { memberKind: 'property', member: 'anchor', upstream: null, target: 'null until an anchor is assigned' },
+      ],
+    },
   ],
   [
     'wa-popup',
@@ -3564,8 +3857,33 @@ const REVIEWED_MAPPING_NORMALIZATIONS = new Map([
     },
   ],
   [
+    'wa-number-ticker',
+    {
+      defaultEquivalences: [
+        reviewedDefaultEquivalence(
+          'easing',
+          'DEFAULT_EASING',
+          'cubic-bezier(0.16, 1, 0.3, 1)'
+        ),
+      ],
+    },
+  ],
+  [
     'wa-radio',
     { defaultEquivalences: [reviewedDefaultEquivalence('name', null, '')] },
+  ],
+  [
+    'wa-stepper',
+    {
+      derivedDefaultEquivalences: [
+        {
+          memberKind: 'attribute',
+          member: 'label',
+          upstream: '',
+          target: 'unnamed step list',
+        },
+      ],
+    },
   ],
   [
     'wa-radio-group',
@@ -3585,12 +3903,36 @@ const REVIEWED_MAPPING_NORMALIZATIONS = new Map([
     { defaultEquivalences: [reviewedDefaultEquivalence('name', null, '')] },
   ],
   [
+    // The published lr-token-input manifest documents these runtime defaults only in prose; adding
+    // manifest defaults would change the published contract, and the runtime values already match.
+    'wa-tag-input',
+    {
+      derivedDefaultEquivalences: [
+        { memberKind: 'attribute', member: 'custom-error', upstream: null, target: 'null (no custom error)' },
+        { memberKind: 'attribute', member: 'disabled', upstream: false, target: 'false (boolean attribute absent)' },
+        { memberKind: 'attribute', member: 'name', upstream: null, target: 'empty name (unnamed control)' },
+        { memberKind: 'attribute', member: 'readonly', upstream: false, target: 'false (boolean attribute absent)' },
+        { memberKind: 'attribute', member: 'required', upstream: false, target: 'false (boolean attribute absent)' },
+      ],
+    },
+  ],
+  [
     'wa-textarea',
     { defaultEquivalences: [reviewedDefaultEquivalence('name', null, '')] },
   ],
   [
     'wa-tooltip',
     { defaultEquivalences: [reviewedDefaultEquivalence('for', null, '')] },
+  ],
+]);
+
+// Reviewed event-semantics differences: a mapped event whose name and payload type match but whose
+// trigger set differs. The comparison only sees names and types, so each difference is recorded
+// here with its reason and surfaced as a migration note on the mapping.
+export const REVIEWED_EVENT_SEMANTICS_DIFFERENCES = new Map([
+  [
+    'wa-code-highlighter',
+    'wa-error, mapped to lr-error, fires when no grammar exists for the language. lr-error keeps its established meaning, a clipboard-write failure, so a missing grammar is reported through :state(error) and an lr-load whose detail.highlighted is false; migrated wa-error listeners that handle a missing grammar should listen for that lr-load instead.',
   ],
 ]);
 

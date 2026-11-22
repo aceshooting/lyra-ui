@@ -57,6 +57,8 @@ the slide animation are its own.
   from the drawer-specific `--size` CSS custom property below, which maps to this same panel's own
   `inline-size`/`block-size` for the active axis.
 
+More properties: `with-label`: see the component JSDoc.
+
 **Methods:** `show(): Promise<void>`, `hide(): Promise<void>`,
 `close(reason?: DialogCloseReason): Promise<void>` — inherited unchanged from `lr-dialog`; each
 promise settles after the matching `lr-after-*` event.

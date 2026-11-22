@@ -2265,6 +2265,20 @@ describe('range presets forwarding', () => {
     expect(exported, 'presets must be reachable from outside').to.contain('presets');
     expect(exported, 'preset-button must be reachable from outside').to.contain('preset-button');
   });
+
+  it('forwards the nested picker parts under the date-picker__ prefix', async () => {
+    const el = await openedInput();
+    await waitUntil(() => picker(el).shadowRoot?.querySelector('[part~="day"]') != null, 'the open picker renders days');
+    const day = picker(el).shadowRoot!.querySelector('[part~="day"]');
+    const style = document.createElement('style');
+    style.textContent = 'lr-date-input::part(date-picker__day) { outline-color: rgb(1, 2, 3); }';
+    document.head.append(style);
+    try {
+      expect(getComputedStyle(day!).outlineColor).to.equal('rgb(1, 2, 3)');
+    } finally {
+      style.remove();
+    }
+  });
 });
 
 it('exposes --lr-date-input-fill/--lr-date-input-border-color as retheme knobs without a ::part() rule', async () => {

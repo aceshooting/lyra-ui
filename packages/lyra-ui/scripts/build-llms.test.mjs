@@ -1046,7 +1046,7 @@ assert.match(
 );
 // Keep the complete shared token inventory visible in the generated reference.
 assert.match(tokens, /## Direct theme-backed tokens \(287\)/);
-assert.match(tokens, /## Derived and fixed tokens \(77\)/);
+assert.match(tokens, /## Derived and fixed tokens \(82\)/);
 // The effective Shadcn defaults keep decorative edges separate from control borders.
 assert.equal(
   tokens.split('\n').find(line => line.startsWith('| `--lr-color-border-subtle` |')),

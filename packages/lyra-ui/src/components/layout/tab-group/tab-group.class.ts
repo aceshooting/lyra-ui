@@ -212,6 +212,7 @@ export interface LyraTabGroupEventMap {
  * @csspart tablist - The `role="tablist"` row of tab buttons.
  * @csspart scroll-button - Shared part on both overflow scroll controls.
  * @csspart scroll-button__base - Export-compatible base name on both scroll controls.
+ * @csspart scroll-button__button - Upstream name for the inner native button of a scroll control; on the same node as `scroll-button`.
  * @csspart scroll-button-start - The control that scrolls the tabs toward their inline start ("previous" — the right-hand control under RTL).
  * @csspart scroll-button-end - The control that scrolls the tabs toward their inline end ("next" — the left-hand control under RTL).
  * @csspart scroll-button--start - Upstream modifier alias on `scroll-button-start`.
@@ -1360,8 +1361,8 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       edge === 'start' ? this.scrollStartAvailable : this.scrollEndAvailable;
     const part =
       edge === 'start'
-        ? 'scroll-button scroll-button__base scroll-button-start scroll-button--start'
-        : 'scroll-button scroll-button__base scroll-button-end scroll-button--end';
+        ? 'scroll-button scroll-button__base scroll-button__button scroll-button-start scroll-button--start'
+        : 'scroll-button scroll-button__base scroll-button__button scroll-button-end scroll-button--end';
     return html`<button
       type="button"
       part=${part}

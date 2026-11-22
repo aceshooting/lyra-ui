@@ -158,7 +158,7 @@ export const styles = css`
     align-items: center;
     justify-content: center;
   }
-  [part='spinner__base'] {
+  [part~='spinner__base'] {
     box-sizing: border-box;
     inline-size: var(--lr-size-1rem);
     block-size: var(--lr-size-1rem);
@@ -208,7 +208,7 @@ export const styles = css`
   :host([aria-disabled='true']) [part='checkbox']:active [part~='checkbox__control'] {
     border-color: var(--lr-color-border);
   }
-  [part='checkbox__base'] {
+  [part~='checkbox__base'] {
     display: inline-flex;
   }
   [part~='checkbox__control'] {
@@ -355,7 +355,7 @@ export const styles = css`
 
   @media (prefers-reduced-motion: reduce) {
     [part='children'],
-    [part='spinner__base'] {
+    [part~='spinner__base'] {
       animation: none;
     }
   }

@@ -217,6 +217,7 @@ class LyraPhoneInputBase extends LyraElement<LyraPhoneInputEventMap> {}
  *   retunable without touching any other danger-coloured surface.
  * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
  *   marker.
+ * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
  * @status stable
  * @since 4.0.0
  */

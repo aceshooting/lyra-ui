@@ -4,7 +4,7 @@ import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
 import { ModalSurfaceController } from '../../../internal/modal-surface-controller.js';
 import { nativeModalCarrierStyles } from '../../../internal/native-modal-carrier.styles.js';
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { html, isServer, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import type { LyraSize } from '../../../internal/variants.js';
@@ -424,8 +424,8 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   private releaseFullscreenQuery?: () => void;
 
   /** Server-rendering hint: set it when a `label` slot child is provided so the server markup
-   * already carries the titled header before hydration. In the browser the real slot content
-   * decides; a `with-label` dialog with no label text still renders an (empty) heading. */
+   * already carries the titled header before hydration. In the browser only the real label
+   * content decides, so a `with-label` dialog with no label renders no empty heading. */
   @property({ type: Boolean, attribute: 'with-label' }) withLabel = false;
 
   @state() private hasFooterSlot = false;
@@ -1078,7 +1078,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     // shadow-owned visible title. Only the final case uses aria-labelledby.
     const suppressHeader = this.withoutHeader || this.noHeader;
     const renderHeading =
-      !suppressHeader && !this.headingText && (this.hasLabelSlot || this.withLabel || (this.label ?? '').length > 0 || !!this.heading);
+      !suppressHeader && !this.headingText && (this.hasLabelSlot || (isServer && this.withLabel) || (this.label ?? '').length > 0 || !!this.heading);
     const hasHostName = this.hostAriaLabel !== null;
     const explicitName = hasHostName ? this.hostAriaLabel : this.headingText;
     const hasExplicitName = hasHostName || Boolean(explicitName);

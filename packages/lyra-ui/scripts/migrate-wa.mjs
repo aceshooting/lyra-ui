@@ -506,7 +506,10 @@ Only exact and fully rewritten inventory mappings change automatically. Conceptu
 unsupported, unknown, and unresolved deep-import uses remain unchanged with source-located
 warnings. The optional JSON report has a stable schema for CI and review tooling.
 
-Without --origin, only Web Awesome and Shoelace migrations run. --origin=lyra-v21 migrates
+Without --origin, only Web Awesome and Shoelace migrations run: tags, members, package and
+registration imports, theme/native/utility stylesheet imports, the autoloader entry, and the
+utility and theme-mode classes written in class attributes, classList calls and class bindings.
+Upstream classes and stylesheets with no Lyra counterpart are reported, never rewritten. --origin=lyra-v21 migrates
 deprecated Lyra 21 member names
 (attributes, properties, events, parts, custom properties and slots) where the rewrite cannot
 change what a site reaches, preserves changed defaults, and reports everything else, including

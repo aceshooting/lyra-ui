@@ -40,13 +40,13 @@
     "                    package, method signature, or reviewed case changes."
   ],
   "webawesome": {
-    "version": "3.11.0",
-    "commit": "1d05f1a4468336de35d2c61282a953ef07da3bdf",
+    "version": "3.15.0",
+    "commit": "9166643c4f340cd3a4771cb25d41c645c58bc3c6",
     "runtimeMethodEdgeSemantics": {
       "source": {
         "package": "@awesome.me/webawesome",
-        "version": "3.11.0",
-        "tarballIntegrity": "sha512-WM8kyP+AdAT3/zwNpc/YzN3Nu5pRD6ksREFZAct/DIn6KMnQs8lPVfiPbJrOpKMk8OaSnQX19iiwFGjoswXVXw=="
+        "version": "3.15.0",
+        "tarballIntegrity": "sha512-r2RWOu/QAaTShbTy3QfpOw+j2Mc7z+iY/PA1rBbsmrWOm2DMv7K2wNYe4IXt6TgTswkrKuQM19RCGC5FJh7GFg=="
       },
       "methods": [
         {
@@ -90,9 +90,11 @@
       "wa-carousel-item",
       "wa-checkbox",
       "wa-checkbox-group",
+      "wa-code-highlighter",
       "wa-color-picker",
       "wa-comparison",
       "wa-copy-button",
+      "wa-counter",
       "wa-details",
       "wa-dialog",
       "wa-divider",
@@ -107,9 +109,12 @@
       "wa-input",
       "wa-intersection-observer",
       "wa-known-date",
+      "wa-lightbox",
+      "wa-lightbox-item",
       "wa-markdown",
       "wa-mutation-observer",
       "wa-number-input",
+      "wa-number-ticker",
       "wa-option",
       "wa-otp-input",
       "wa-page",
@@ -131,11 +136,14 @@
       "wa-slider",
       "wa-spinner",
       "wa-split-panel",
+      "wa-step",
+      "wa-stepper",
       "wa-switch",
       "wa-tab",
       "wa-tab-group",
       "wa-tab-panel",
       "wa-tag",
+      "wa-tag-input",
       "wa-textarea",
       "wa-time-input",
       "wa-toast",
@@ -361,7 +369,8 @@
   },
   "noCounterpart": {},
   "unaliasedEvents": {
-    "wa-data-grid wa-data-request": "Lyra exposes the same server-request detail through the preferred `lr-request` event and retains `request` as a deprecated compatibility event. It does not dispatch `wa-data-request`."
+    "wa-data-grid wa-data-request": "Lyra exposes the same server-request detail through the preferred `lr-request` event and retains `request` as a deprecated compatibility event. It does not dispatch `wa-data-request`.",
+    "wa-stepper detail": "Web Awesome 3.15's published manifest lists the `WaStepChangeEvent` type of `wa-step-change` as an event named `detail`; no `detail` event is dispatched upstream, so Lyra has nothing to alias. The real event maps to `lr-step-change`."
   },
   "attributeRenames": [
     {

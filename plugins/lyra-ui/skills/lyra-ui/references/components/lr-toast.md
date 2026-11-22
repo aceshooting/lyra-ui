@@ -115,7 +115,7 @@ accepted show or hide interrupted by disconnection resumes after reconnection an
 **Slots:** default (message), `icon`
 
 **CSS parts:** `toast-item`, `accent`, `icon`, `content`, `close-button`, `close-icon`,
-`close-icon__svg`, `progress-ring`, `progress-ring__base`, `progress-ring__indicator`,
+`close-icon__svg`, `progress-ring`, `progress-ring__base`, `progress-ring__progress-ring` (same SVG as `progress-ring__base`), `progress-ring__indicator`,
 `progress-ring__label`, `progress-ring__track`. The progress-ring tree is rendered for a finite,
 positive auto-dismiss duration and surrounds the close glyph; its indicator pauses alongside the
 auto-dismiss timer on hover or focus.

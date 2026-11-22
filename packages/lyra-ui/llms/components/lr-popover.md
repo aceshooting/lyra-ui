@@ -147,9 +147,17 @@ If the import fails, leave the native disclosure visible and usable.
     if (row && card.forElement !== row) card.forElement = row;
   });
   ```
-- `anchor: Element | null = null` (property only) — positioning-only direct anchor, taking priority
-  over `for` and the interaction owner but never receiving click listeners or generated ARIA; a
-  `showAt()` virtual anchor still wins
+- `anchor: LyraPopoverAnchor | null = null` (property only; `LyraPopoverAnchor = Element |
+  VirtualAnchor`) — positioning-only direct anchor, taking priority over `for` and the interaction
+  owner but never receiving click listeners or generated ARIA; a `showAt()` virtual anchor still
+  wins. Besides an element it accepts a virtual element: any object with `getBoundingClientRect()`
+  and an optional `contextElement` (scroll, scale and direction context), such as a text-selection
+  range or a cursor point. Unlike `showAt()`, it persists across close and reopen until replaced;
+  assign a new object to move the popover. Clearing the sole anchor while open closes the popover;
+  a value with no callable `getBoundingClientRect` is ignored. The setter accepts
+  `LyraPopoverAnchor | null`; the getter is typed `Element | null` and returns the element anchor,
+  or `null` while a virtual element (or nothing) is assigned.
+  `popover.anchor = { getBoundingClientRect: () => range.getBoundingClientRect() };`
 - `interactionBoundary: Element | null = null` (property only) — additional light-dismiss
   containment for DOM anchoring. Pointer presses within this connected element and its composed
   descendants keep the popup open, so a collection's own activation handler can change `.anchor`

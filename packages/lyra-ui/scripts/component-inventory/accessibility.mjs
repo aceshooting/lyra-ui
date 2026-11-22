@@ -726,6 +726,154 @@ const REVIEWED_ACCESSIBILITY_PROFILES = Object.freeze({
       focus: ['frame-focus-gated', 'native-focus'],
     }
   ),
+  'code-region': accessibilityProfile(
+    'A named code region keeps its code as readable text and offers a localized copy action that reports its result.',
+    {
+      semantics: ['button', 'region', 'text-content'],
+      naming: ['content-or-author-label', 'control-labels-localized'],
+      keyboard: ['native-activation'],
+      focus: ['native-focus'],
+      announcements: ['copy-result'],
+    }
+  ),
+  'code-group': accessibilityProfile(
+    'A named code group keeps its code as readable text and offers a localized copy action that reports its result.',
+    {
+      semantics: ['button', 'group', 'text-content'],
+      naming: ['content-or-author-label', 'control-labels-localized'],
+      keyboard: ['native-activation'],
+      focus: ['native-focus'],
+      announcements: ['copy-result'],
+    }
+  ),
+  'duration-text': accessibilityProfile(
+    'A named time display is read as one localized phrase on demand rather than announced on every tick.',
+    {
+      semantics: ['text-content'],
+      naming: ['content-or-author-label'],
+    }
+  ),
+  'counting-number': accessibilityProfile(
+    'An animated number exposes only its settled value, announces a changed value once, and skips the count under reduced motion.',
+    {
+      semantics: ['text-content'],
+      announcements: ['content-change'],
+      motion: ['respects-reduced-motion', 'suppresses-animation'],
+    }
+  ),
+  'media-viewer': accessibilityProfile(
+    'A named full-screen media viewer is a modal dialog with arrow-key item navigation, Escape dismissal, and focus return.',
+    {
+      semantics: ['dialog'],
+      naming: ['content-or-author-label', 'control-labels-localized'],
+      keyboard: ['arrow-navigation', 'escape-dismiss', 'native-activation'],
+      focus: ['focus-return', 'focus-trap', 'initial-focus'],
+      states: ['modal'],
+    }
+  ),
+  'media-viewer-target': accessibilityProfile(
+    'A named full-screen media viewer is a modal dialog with arrow and Home/End item navigation, Escape dismissal, focus return, and current/loading item state.',
+    {
+      semantics: ['dialog'],
+      naming: ['content-or-author-label', 'control-labels-localized'],
+      keyboard: [
+        'arrow-navigation',
+        'escape-dismiss',
+        'home-end-navigation',
+        'native-activation',
+      ],
+      focus: ['focus-return', 'focus-trap', 'initial-focus'],
+      states: ['busy', 'current', 'modal'],
+    }
+  ),
+  'media-viewer-item': accessibilityProfile(
+    'A content-named link opens its item in the viewer and keeps working without scripting.',
+    {
+      semantics: ['link'],
+      naming: ['content-or-author-label'],
+      keyboard: ['native-activation'],
+      focus: ['native-focus'],
+    }
+  ),
+  'media-viewer-item-target': accessibilityProfile(
+    'A content-named link, or a button when it has no URL, opens its item in the viewer.',
+    {
+      semantics: ['button', 'link'],
+      naming: ['content-or-author-label'],
+      keyboard: ['native-activation'],
+      focus: ['native-focus'],
+    }
+  ),
+  step: accessibilityProfile(
+    'A content-named step exposes current, completed-or-loading, and disabled status, and is a native button only when its stepper is clickable.',
+    {
+      semantics: ['button', 'text-content'],
+      naming: ['content-derived'],
+      keyboard: ['native-activation'],
+      focus: ['native-focus'],
+      states: ['busy', 'current', 'disabled'],
+    }
+  ),
+  'step-target': accessibilityProfile(
+    'A content-named step exposes current, completed-or-loading, and disabled status, is a native button only when its stepper is clickable, and stops its loading motion under reduced motion.',
+    {
+      semantics: ['button', 'text-content'],
+      naming: ['content-derived'],
+      keyboard: ['native-activation'],
+      focus: ['native-focus'],
+      states: ['busy', 'current', 'disabled'],
+      motion: ['respects-reduced-motion'],
+    }
+  ),
+  stepper: accessibilityProfile(
+    'A named list of steps marks the current step and exposes its orientation; clickable steps jump on native activation.',
+    {
+      semantics: ['list'],
+      naming: ['content-or-author-label'],
+      keyboard: ['native-activation'],
+      focus: ['native-focus'],
+      states: ['current', 'orientation'],
+    }
+  ),
+  'stepper-target': accessibilityProfile(
+    'A named list of steps marks the current step, exposes orientation and disabled steps, and politely announces accepted step changes.',
+    {
+      semantics: ['group', 'list'],
+      naming: ['content-or-author-label'],
+      keyboard: ['native-activation'],
+      focus: ['native-focus'],
+      states: ['current', 'disabled', 'orientation'],
+      announcements: ['selection-change'],
+    }
+  ),
+  'tag-field': accessibilityProfile(
+    'A labelled text field collects removable tags with localized remove actions and exposes form validity.',
+    {
+      semantics: ['button', 'textbox'],
+      naming: ['control-labels-localized', 'visible-or-author-label'],
+      keyboard: ['native-activation', 'native-editing'],
+      focus: ['native-focus'],
+      states: ['disabled', 'invalid', 'readonly', 'required'],
+      announcements: ['validation-message'],
+    }
+  ),
+  'tag-field-target': accessibilityProfile(
+    'A labelled text field collects removable tokens in a named group, moves between tokens with arrow and Home/End keys, cancels token edits with Escape, and exposes form validity.',
+    {
+      semantics: ['button', 'group', 'textbox'],
+      naming: ['control-labels-localized', 'visible-or-author-label'],
+      keyboard: [
+        'arrow-navigation',
+        'escape-dismiss',
+        'home-end-navigation',
+        'native-activation',
+        'native-editing',
+      ],
+      focus: ['native-focus'],
+      states: ['disabled', 'invalid', 'readonly', 'required'],
+      announcements: ['validation-message'],
+    }
+  ),
 });
 
 export function accessibilityProfileCatalog() {
@@ -911,6 +1059,18 @@ assignAccessibility('toast-region', ['wa-toast']);
 assignAccessibility('video', ['wa-video']);
 assignAccessibility('video-playlist', ['wa-video-playlist']);
 assignAccessibility('frame', ['wa-zoomable-frame']);
+assignAccessibility('code-region', ['wa-code-highlighter'], 'code-group');
+assignAccessibility('duration-text', ['wa-counter']);
+assignAccessibility('counting-number', ['wa-number-ticker']);
+assignAccessibility('media-viewer', ['wa-lightbox'], 'media-viewer-target');
+assignAccessibility(
+  'media-viewer-item',
+  ['wa-lightbox-item'],
+  'media-viewer-item-target'
+);
+assignAccessibility('step', ['wa-step'], 'step-target');
+assignAccessibility('stepper', ['wa-stepper'], 'stepper-target');
+assignAccessibility('tag-field', ['wa-tag-input'], 'tag-field-target');
 
 assertAccessibilityProfilesReferenced(
   REVIEWED_ACCESSIBILITY_PROFILES,

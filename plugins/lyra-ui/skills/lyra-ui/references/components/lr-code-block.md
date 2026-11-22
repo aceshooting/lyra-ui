@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 16 parts, 29 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 21 parts, 42 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `body`: `--lr-code-block-max-height`, `--lr-theme-scrollbar-color`, `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-width`; `code`: `--lr-code-block-font`; `header`: `--lr-code-block-language-bg`; `language`: `--lr-code-block-language-bg`, `--lr-code-block-language-color`; `pre`: `--lr-code-block-font`, `--lr-code-block-language-color`, `--lr-code-block-tab-size`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -19,8 +19,8 @@
 
 Assign new `languages` or `languageLoaders` maps to update available grammars. The component preserves the identity of a supplied concrete map.
 
-Fenced code display with optional lazy syntax highlighting and a copy button. First-party invention
-(no Web Awesome equivalent). It lazily loads the optional `shiki` peer for syntax highlighting and
+Fenced code display with optional lazy syntax highlighting and a copy button. Mirrors Web Awesome's
+`wa-code-highlighter`. It lazily loads the optional `shiki` peer for syntax highlighting and
 includes a compact GreyCat/GCL grammar because
 Shiki does not bundle one. It falls back to a plain `<pre><code>` when that peer isn't installed or
 `language` is unset/unrecognized. That
@@ -71,7 +71,7 @@ through an activatable gutter reuses the source lines and updates the previous a
   reflected) keeps it as written except the newline right after the opening tag. A non-empty `code`
   wins and is never dedented.
 - Aliases: `label` (accessible name; host `aria-label` wins) and `without-copy`
-  (= `without-copy-button`).
+  (= `without-copy-button`; `withoutCopy: boolean = false`, reflected whichever spelling set it).
 - `withoutCopyButton: boolean = false` (attribute `without-copy-button`, reflected) — hides the
   copy-to-clipboard button, which is shown by default.
 - `maxHeight: string = ''` (attribute `max-height`) — a CSS length (e.g. `"20rem"`); once set, the
@@ -132,7 +132,11 @@ when the anchor isn't a `line-range`, the id isn't found, or the start line is o
 
 **Events:** `lr-copy` (frozen `detail: { ok: true, text }` — fires only after the raw `code` value
 was written successfully), `lr-error` (`detail: null` — generic notification when clipboard writing
-fails), `lr-copy-error` (frozen `detail: { ok: false, text, reason, error }`, where `reason` is
+fails; `lr-copy-error` carries the full failure), `lr-load` (`detail: { highlighted: boolean }` —
+`true` when the grammar loaded and the code was highlighted, fired again whenever new highlighted
+output replaces the old; `false` once when no grammar exists for the current `language` and the code
+renders as plain text, alongside `:state(error)`; unlike `wa-error`, a missing grammar never fires
+`lr-error`), `lr-copy-error` (frozen `detail: { ok: false, text, reason, error }`, where `reason` is
 `'unsupported' | 'denied' | 'failed'`), `lr-toggle-request` (cancelable;
 `detail: { expanded }` is the proposed next state; canceling leaves the host `collapsed` property
 unchanged),
@@ -142,7 +146,8 @@ unchanged),
 `lr-text-select` (`detail: { text, anchor, rects }` — a text selection inside the code body ended;
 `anchor` is a `line-range` anchor covering the selected lines)
 
-**Slots:** `header-actions` — extra controls for the header row, rendered after the copy control.
+**Slots:** default — the code as light-DOM text when `code` is empty (read as source, not
+projected; see light-DOM source above). `header-actions` — extra controls for the header row, rendered after the copy control.
 Their presence alone is enough to render the header, and appending or removing such a child at any
 time brings the header into existence or retires it (the host's own light DOM is observed; no
 property write is needed).
@@ -151,7 +156,11 @@ property write is needed).
 `copy-button` (the copy control, a composed `<lr-icon-button>` as of 16.0.0; it also carries
 `copy-button-text` or `copy-button-icon` for the active `copyAppearance`, so match it by token —
 `[part~="copy-button"]` — not by exact value), `copy-button-text` / `copy-button-icon` (the copy
-control in each appearance), `copy-button-control` (the copy control's own native `<button>`),
+control in each appearance), `copy-button-control` (the copy control's own native `<button>`;
+`copy-button__button` is the same node), `copy-button__copy-icon` / `copy-button__success-icon` /
+`copy-button__error-icon` (the icon-appearance glyph at rest, after a successful copy and after a
+failed one), `copy-button__feedback` (visually hidden, `aria-hidden` mirror of the copy outcome text,
+empty at rest),
 `header-actions` (the wrapper around the `header-actions` slot; it carries the `hidden` attribute
 and computes to `display: none` whenever nothing is assigned, so an empty slot contributes no
 header gap — a rule that sets `display` on it must qualify itself with `:not([hidden])`),
@@ -174,6 +183,22 @@ copy control exactly as the background/color/radius tokens do. A component with 
 border simply has no default to relay, which is different from border theming being broken. Size
 remains the one exception that does not cross this way: use `--lr-theme-icon-button-size`, never
 `--lr-icon-button-size`, as noted above.
+
+**Custom states:** `:state(loading)` (a `language` is set and its grammar or the highlighter is
+still loading), `:state(error)` (no grammar exists for the current `language`; plain text renders),
+`:state(highlighted)` (the code is rendered with syntax highlighting). None applies while
+`language` is unset or the source exceeds the highlighting ceiling.
+
+**Syntax colors:** `--comment-color`, `--keyword-color`, `--operator-color`, `--string-color`,
+`--constant-color`, `--function-color`, `--type-color`, `--variable-color`, `--property-color`,
+`--tag-color`, `--selector-color`, `--inserted-color` and `--deleted-color` recolor highlighted
+tokens of that category in both the light and dark themes. Each is unset by default, which keeps
+the Shiki theme's own token color. Tokens are classified from their TextMate scopes; the plain-text
+fallback has no tokens to recolor.
+
+```css
+lr-code-block { --keyword-color: var(--lr-color-brand); --string-color: var(--lr-color-success); }
+```
 
 **Themeable custom properties:** `--lr-code-block-padding` controls code padding, `--lr-code-block-radius`
 controls the frame corners, and `--lr-code-block-header-bg`, `--lr-code-block-header-color` and

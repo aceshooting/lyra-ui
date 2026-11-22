@@ -10,7 +10,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `form-control-label`: `--lr-form-control-required-content`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -137,9 +137,3 @@ group has no selected radio. `focus()` moves focus to the selected (or first ena
 fieldset disablement, so the group behaves like one native control.
 
 `labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column, sized by `--lr-form-control-label-inline-size`, `--lr-form-control-label-gap` and `--lr-form-control-label-collapse-inline-size`; every form-control label also reads `--lr-form-control-label-line-height` (default `inherit`). See "Label beside the field: `label-placement`".
-
-Further custom properties:
-
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
-- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
-- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.

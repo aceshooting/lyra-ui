@@ -58,8 +58,8 @@ export class LyraDivider extends LyraElement {
   @property({ attribute: 'with-label', type: Boolean, reflect: true }) withLabel = false;
   private readonly slotPresence = new SlotPresenceController(this, { observeLightDom: true });
 
-  protected override willUpdate(changed: PropertyValues<this>): void {
-    super.willUpdate(changed);
+  protected override willUpdate(_changedProperties: PropertyValues): void {
+    super.willUpdate(_changedProperties);
     if (!isServer) this.withLabel = this.slotPresence.hasResolved();
   }
 

@@ -80,6 +80,17 @@ export interface ShikiTransformer {
   pre?(node: ShikiTransformerNode): void;
   code?(node: ShikiTransformerNode): void;
   line?(node: ShikiTransformerNode, line: number): void;
+  span?(node: ShikiTransformerNode, line: number, col: number, lineElement: ShikiTransformerNode, token: ShikiTransformerToken): void;
+}
+
+/** The subset of a Shiki token a `span` hook reads. `explanation` is present only when the
+ *  highlight call asks for it (`includeExplanation`). */
+export interface ShikiTransformerToken {
+  content: string;
+  explanation?: readonly {
+    content: string;
+    scopes: readonly { scopeName: string }[];
+  }[];
 }
 
 // Peer-neutral values shared by the full and fine-grained loaders. This module must never import

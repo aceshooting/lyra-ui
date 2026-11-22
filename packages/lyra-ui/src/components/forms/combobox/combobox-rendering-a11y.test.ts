@@ -135,7 +135,7 @@ it("falls back to the raw value in a remove-tag's accessible name when the optio
   await el.updateComplete;
   const removeButtons = [
     ...el.shadowRoot!.querySelectorAll<HTMLButtonElement>(
-      '[part="tag__remove-button"]'
+      '[part~="tag__remove-button"]'
     ),
   ];
   const blankOptionButton = removeButtons[1]!;
@@ -226,7 +226,7 @@ it("is accessible with the listbox open, a keyboard-active option, and selected 
   expect(
     el.shadowRoot!.querySelectorAll('[part="tag"]').length
   ).to.be.greaterThan(0);
-  expect(el.shadowRoot!.querySelector('[part="tag__remove-button"]') !== null)
+  expect(el.shadowRoot!.querySelector('[part~="tag__remove-button"]') !== null)
     .to.be.true;
   expect(input.getAttribute("aria-activedescendant")).to.not.be.empty;
   finishListboxAnimation(el);
@@ -365,7 +365,7 @@ it("meets the shared hit-area floor on the tag remove button and clear button", 
   await el.updateComplete;
 
   const removeBtn = el.shadowRoot!.querySelector(
-    '[part="tag__remove-button"]'
+    '[part~="tag__remove-button"]'
   ) as HTMLElement;
   expect(getComputedStyle(removeBtn).minInlineSize).to.equal("36px");
   expect(getComputedStyle(removeBtn).minBlockSize).to.equal("36px");
@@ -1821,7 +1821,7 @@ describe("clear affordance on the filter axis", () => {
     `)) as LyraCombobox;
     await el.updateComplete;
     const removeBtn = el.shadowRoot!.querySelector(
-      '[part="tag__remove-button"]'
+      '[part~="tag__remove-button"]'
     ) as HTMLButtonElement;
     el.disabled = true;
     await el.updateComplete;
@@ -1918,7 +1918,7 @@ it("repaints the clear button and a selected tag's remove button on :hover", asy
       'clear button did not repaint on :hover'
     );
 
-    const remove = el.shadowRoot!.querySelector<HTMLElement>('[part="tag__remove-button"]')!;
+    const remove = el.shadowRoot!.querySelector<HTMLElement>('[part~="tag__remove-button"]')!;
     const restBackground = getComputedStyle(remove).backgroundColor;
     await hoverUntilMatched(remove, 'tag remove button never matched :hover');
     await waitUntil(
@@ -2213,7 +2213,7 @@ it("tints the tag remove button on hover and deepens that tint while it is press
   el.value = ["a"];
   await el.updateComplete;
   const remove = el.shadowRoot!.querySelector(
-    '[part="tag__remove-button"]'
+    '[part~="tag__remove-button"]'
   ) as HTMLElement;
   const rect = remove.getBoundingClientRect();
   const centre: [number, number] = [
@@ -2477,7 +2477,7 @@ it("is a no-op the second time the same tag remove button fires before a re-rend
   `)) as LyraCombobox;
   await el.updateComplete;
   const removeBtn = el.shadowRoot!.querySelector(
-    '[part="tag__remove-button"]'
+    '[part~="tag__remove-button"]'
   ) as HTMLButtonElement;
   let changeCount = 0;
   el.addEventListener("change", () => changeCount++);

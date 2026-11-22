@@ -127,10 +127,10 @@ function reviewedPublicDocumentation({
       status: 'complete',
       source: 'official-public-documentation',
       sourceUrl: url,
-      sourceVersion: '3.11.0',
+      sourceVersion: '3.15.0',
       sourceSha256: sha256,
       sourceHashNormalization: 'cloudflare-data-cfemail-v1',
-      reviewedAt: '2026-08-02',
+      reviewedAt: '2026-11-22',
       unreviewedSections: [],
     },
   };
@@ -181,7 +181,7 @@ export const CHART_REVIEW_EVIDENCE = new Map([
     [
       'chart',
       'bar',
-      '5165e2b004b5b1214a29aea843670e5b963ef5424cb27379c2b58b1611b8ee0e',
+      '5c78200d98c215029b6cf85b8bad62f63f8eaad858491d7adb66ce10199e8f26',
     ],
   ],
   [
@@ -189,7 +189,7 @@ export const CHART_REVIEW_EVIDENCE = new Map([
     [
       'bar-chart',
       'bar',
-      'fe2969c238434c32679554cf9e36e66f32d2faf8aa2100b4efa491967e2f7d43',
+      '2730f0758c5a4702e6b03d6daa6ebb3fed4ad9ff45f0946c4e8c82303706127d',
     ],
   ],
   [
@@ -197,7 +197,7 @@ export const CHART_REVIEW_EVIDENCE = new Map([
     [
       'bubble-chart',
       'bubble',
-      'c18a710316888476a09008ce4f7ba0fa864f6a7c5d96ab7e972a50e492e46dbd',
+      'f54ed13586cc067bc83649c099ac778a5ea37d65951864a4308052845c076685',
     ],
   ],
   [
@@ -205,7 +205,7 @@ export const CHART_REVIEW_EVIDENCE = new Map([
     [
       'doughnut-chart',
       'doughnut',
-      'f0537eda572288c36700e54917f6915d3970126bdfb7b9718d93e3a4d3bfec57',
+      '2b71e6183e611d464f893a276b7c6e985eb13755ac2268fe54796308620c54ab',
     ],
   ],
   [
@@ -213,7 +213,7 @@ export const CHART_REVIEW_EVIDENCE = new Map([
     [
       'line-chart',
       'line',
-      'f318b950f8a0c7cdae1d436bd1d2cd2b02b8b678ef0164f86907309a87da54a2',
+      '699b556b5110da06914b40515c582858c835479858e4e1981a2a425498c80d4a',
     ],
   ],
   [
@@ -221,7 +221,7 @@ export const CHART_REVIEW_EVIDENCE = new Map([
     [
       'pie-chart',
       'pie',
-      'a5ebc5a5fb6cae11d7d602ca37f536db81267a6af54e1bc9d9bfaeaf442238ff',
+      '2e8d6dce49d5f5191c0cba85286acd170af7187ded6b48fb461d00e551a2bbc7',
     ],
   ],
   [
@@ -229,7 +229,7 @@ export const CHART_REVIEW_EVIDENCE = new Map([
     [
       'polar-area-chart',
       'polarArea',
-      'b00297da3a51e7b5a5ce922cfe1f5c158a95b34669c3a55a53c8b47665b08ea5',
+      'a75df22813254d3044933979b42d2136978594686c5abf70b99f56cf6ada49c2',
     ],
   ],
   [
@@ -237,7 +237,7 @@ export const CHART_REVIEW_EVIDENCE = new Map([
     [
       'radar-chart',
       'radar',
-      '5d54d45a9263bf16a2fde8a95e41e31c4fcfe428884d271cca537c1bc63bc53c',
+      '807a084af346002fbd89b7a5f94ae9b5f7c47c8bb3096304f30c32ce5ae35596',
     ],
   ],
   [
@@ -245,7 +245,7 @@ export const CHART_REVIEW_EVIDENCE = new Map([
     [
       'scatter-chart',
       'scatter',
-      '1f5a3191e2895f28efc75aa5e441deb7eb1293d7ab48787c807c04ea93414a2a',
+      '6fd92d62dc0da18ac31fb6774b23e4fd2cf7ffbb504b4f79346fe46152b5ccda',
     ],
   ],
 ]);
@@ -340,7 +340,7 @@ export function reviewedWebAwesomeSparkline() {
     ],
     cssProperties: ['--fill-color', '--line-color', '--line-width'],
     url: 'https://webawesome.com/docs/components/sparkline/',
-    sha256: 'f1ad77432edfdb1f5f45a2caf5a707187478d851295a66a4968c02fe78770516',
+    sha256: 'd9dff53cf50ab74307d515197c9b45ea7daad0743c3d6213e47691a296d39b1a',
   });
 }
 
@@ -366,6 +366,17 @@ export function reviewedWebAwesomeCombobox() {
       "'off' | 'none' | 'on' | 'sentences' | 'words' | 'characters'"
     ),
     reviewedPropertyWithoutDefault('autocorrect', 'autocorrect', 'boolean'),
+    reviewedPropertyWithoutDefault(
+      'currentOption',
+      null,
+      'WaOption | undefined'
+    ),
+    reviewedProperty(
+      'dataSource',
+      null,
+      '((request: ComboboxRequest) => Promise<ComboboxOptions> | ComboboxOptions) | null',
+      null
+    ),
     reviewedProperty('disabled', 'disabled', 'boolean', false),
     reviewedPropertyWithoutDefault(
       'enterkeyhint',
@@ -378,6 +389,7 @@ export function reviewedWebAwesomeCombobox() {
       '((option: WaOption, query: string) => boolean) | null',
       null
     ),
+    reviewedProperty('filterDebounce', 'filter-debounce', 'number', 250),
     reviewedPropertyWithoutDefault('form', null, 'HTMLFormElement | null'),
     reviewedPropertyWithoutDefault(
       'getTag',
@@ -392,6 +404,7 @@ export function reviewedWebAwesomeCombobox() {
     ),
     reviewedProperty('inputValue', null, 'string', ''),
     reviewedProperty('label', 'label', 'string', ''),
+    reviewedProperty('loading', 'loading', 'boolean', false, true),
     reviewedProperty('maxOptionsVisible', 'max-options-visible', 'number', 3),
     reviewedProperty('multiple', 'multiple', 'boolean', false, true),
     reviewedProperty('name', 'name', 'string | null', '', true),
@@ -406,6 +419,7 @@ export function reviewedWebAwesomeCombobox() {
       true
     ),
     reviewedProperty('required', 'required', 'boolean', false, true),
+    reviewedProperty('server', 'server', 'boolean', false, true),
     reviewedProperty(
       'size',
       'size',
@@ -430,7 +444,19 @@ export function reviewedWebAwesomeCombobox() {
     tag: 'wa-combobox',
     maturity: { status: 'stable', since: '3.1' },
     properties,
-    slots: ['', 'clear-icon', 'end', 'expand-icon', 'hint', 'label', 'start'],
+    slots: [
+      '',
+      'clear-icon',
+      'empty',
+      'end',
+      'error',
+      'expand-icon',
+      'hint',
+      'label',
+      'loading',
+      'no-results',
+      'start',
+    ],
     events: [
       reviewedNativeEvent('blur', 'FocusEvent'),
       reviewedNativeEvent(
@@ -452,13 +478,23 @@ export function reviewedWebAwesomeCombobox() {
       ),
       reviewedEvent('wa-hide'),
       reviewedEvent('wa-invalid'),
+      reviewedEvent(
+        'wa-options-error',
+        'CustomEvent<{ error: unknown; request: { query: string } }>'
+      ),
+      reviewedEvent(
+        'wa-options-request',
+        'CustomEvent<{ query: string; signal: AbortSignal }>'
+      ),
       reviewedEvent('wa-show'),
     ],
     parts: [
       'clear-button',
       'combobox',
       'combobox-input',
+      'empty',
       'end',
+      'error',
       'expand-icon',
       'form-control',
       'form-control-input',
@@ -466,15 +502,23 @@ export function reviewedWebAwesomeCombobox() {
       'hint',
       { name: 'label', deprecated: 'Use the form-control-label part instead.' },
       'listbox',
+      'loading',
+      'no-results',
+      'spinner',
       'start',
+      'status',
       'tag',
       'tag__content',
       'tag__remove-button',
-      'tag__remove-button__base',
+      {
+        name: 'tag__remove-button__base',
+        deprecated: 'Use the tag__remove-button__button part instead.',
+      },
+      'tag__remove-button__button',
       'tags',
     ],
     cssProperties: ['--hide-duration', '--show-duration', '--tag-max-size'],
-    cssStates: ['blank', 'disabled'],
+    cssStates: ['blank', 'disabled', 'loading', 'showing-loading-row'],
     methods: [
       reviewedMethod('blur'),
       reviewedMethod('focus', [
@@ -485,6 +529,7 @@ export function reviewedWebAwesomeCombobox() {
         reviewedParameter('reason', "'autocomplete' | 'restore'"),
       ]),
       reviewedMethod('hide'),
+      reviewedMethod('reload'),
       reviewedMethod('resetValidity'),
       reviewedMethod('setCustomValidity', [
         reviewedParameter('message', 'string'),
@@ -501,7 +546,7 @@ export function reviewedWebAwesomeCombobox() {
       delegatedMethods: ['blur', 'focus'],
     },
     url: 'https://webawesome.com/docs/components/combobox/',
-    sha256: '878fceb16d17a6ced71602f22d51339958c16138a470858f5dccf2d8d6419ec3',
+    sha256: 'b1f6fa105bdc60967afea41e7a6c99fb6be140dd615d153b7352c93f015020f2',
   });
 }
 
@@ -570,6 +615,11 @@ export function reviewedWebAwesomeFileInput() {
       'hint',
       { name: 'label', deprecated: 'Use the form-control-label part instead.' },
       'remove-button',
+      {
+        name: 'remove-button__base',
+        deprecated: 'Use the remove-button__button part instead.',
+      },
+      'remove-button__button',
     ],
     cssStates: ['blank', 'dragging'],
     methods: [
@@ -596,7 +646,7 @@ export function reviewedWebAwesomeFileInput() {
       delegatedMethods: ['blur', 'focus'],
     },
     url: 'https://webawesome.com/docs/components/file-input/',
-    sha256: 'ce9311420d7f5e29ebfd736d8e99a61aeb412e36765729113fa23b84990a3b05',
+    sha256: '441cff764812b348a1ba9ecc5b1cec1ae5d474ecf2e9fd6c6f5e527b49030588',
   });
 }
 
@@ -726,7 +776,7 @@ export function reviewedWebAwesomeDateInput() {
     reviewedMethod(name, parameters, UNSPECIFIED_PUBLIC_RETURN);
   return reviewedPublicDocumentation({
     tag: 'wa-date-input',
-    maturity: { status: 'experimental', since: '3.8' },
+    maturity: { status: 'stable', since: '3.8' },
     properties,
     slots: [
       'clear-icon',
@@ -757,6 +807,43 @@ export function reviewedWebAwesomeDateInput() {
       'clear-button',
       'date-input',
       'date-picker',
+      {
+        name: 'date-picker__base',
+        deprecated: 'Use the date-picker__date-picker part instead.',
+      },
+      'date-picker__date-picker',
+      'date-picker__day',
+      'date-picker__day-disabled',
+      'date-picker__day-label',
+      'date-picker__day-outside',
+      'date-picker__day-placeholder',
+      'date-picker__day-range-end',
+      'date-picker__day-range-inner',
+      'date-picker__day-range-preview',
+      'date-picker__day-range-start',
+      'date-picker__day-selected',
+      'date-picker__day-today',
+      'date-picker__day-weekend',
+      'date-picker__footer',
+      'date-picker__grid',
+      'date-picker__header',
+      'date-picker__month',
+      'date-picker__month-label',
+      'date-picker__months',
+      'date-picker__next',
+      'date-picker__previous',
+      'date-picker__title',
+      'date-picker__view-cell',
+      'date-picker__view-grid',
+      'date-picker__view-item',
+      'date-picker__view-item-disabled',
+      'date-picker__view-item-selected',
+      'date-picker__view-item-today',
+      'date-picker__view-row',
+      'date-picker__weekday',
+      'date-picker__weekdays',
+      'date-picker__weeknumber',
+      'date-picker__weeknumbers',
       'end',
       'expand-button',
       'expand-icon',
@@ -797,7 +884,7 @@ export function reviewedWebAwesomeDateInput() {
       delegatedMethods: ['blur', 'focus'],
     },
     url: 'https://webawesome.com/docs/components/date-input/',
-    sha256: 'f02d777c5ea505c9eeafee76a0418647b83aeff513e2830915547937cda418b9',
+    sha256: 'd0d610f481abbcc34547d79870c52e90bcbd292088912779472c54883b66d4c3',
   });
 }
 
@@ -889,9 +976,9 @@ export function reviewedWebAwesomeDatePicker() {
     reviewedMethod(name, parameters, UNSPECIFIED_PUBLIC_RETURN);
   return reviewedPublicDocumentation({
     tag: 'wa-date-picker',
-    maturity: { status: 'experimental', since: '3.8' },
+    maturity: { status: 'stable', since: '3.8' },
     properties,
-    slots: ['footer', 'header', 'next-icon', 'previous-icon'],
+    slots: ['day-YYYY-MM-DD', 'footer', 'header', 'next-icon', 'previous-icon'],
     events: [
       reviewedNativeEvent('change'),
       reviewedNativeEvent('input', 'InputEvent'),
@@ -947,7 +1034,7 @@ export function reviewedWebAwesomeDatePicker() {
     ],
     native: { forwardedEvents: nativeEvents, delegatedMethods: ['focus'] },
     url: 'https://webawesome.com/docs/components/date-picker/',
-    sha256: '9dc70a6ef8da5c99193cb82cb30887972f25133691f74963daf90f316678d6ff',
+    sha256: 'c5c0adacd41ce1f1bddd91e034425c96f49f0b7656b0b5a92e29e4482a5dce74',
   });
 }
 
@@ -1086,7 +1173,7 @@ export function reviewedWebAwesomeDataGrid() {
     reviewedMethod(name, parameters, UNSPECIFIED_PUBLIC_RETURN);
   return reviewedPublicDocumentation({
     tag: 'wa-data-grid',
-    maturity: { status: 'experimental', since: '3.11' },
+    maturity: { status: 'stable', since: '3.11' },
     properties,
     slots: ['empty', 'loading', 'no-results'],
     events: [
@@ -1215,7 +1302,7 @@ export function reviewedWebAwesomeDataGrid() {
     ],
     native: { forwardedEvents: [], delegatedMethods: ['focus'] },
     url: 'https://webawesome.com/docs/components/data-grid/',
-    sha256: '4712e4032ddfb07bf32bacf18733c478b7b939e0af766609826d04d836d8239e',
+    sha256: '4cb061d23c1ba79b87a8e07b0d780373c70b7acbdbd8d6bc91dee8ebfb997d78',
   });
 }
 
@@ -1281,7 +1368,7 @@ export function reviewedWebAwesomeVideo() {
     tag: 'wa-video',
     module: null,
     tier: 'pro',
-    maturity: { status: 'experimental', since: '3.7', deprecated: null },
+    maturity: { status: 'stable', since: '3.7', deprecated: null },
     surface: {
       attributes,
       properties,
@@ -1308,7 +1395,6 @@ export function reviewedWebAwesomeVideo() {
         'controls-overlay',
         'poster-overlay',
         'poster-play-button',
-        'progress',
         'thumbnail',
         'timeline',
         'timeline-indicator',
@@ -1354,11 +1440,11 @@ export function reviewedWebAwesomeVideo() {
       status: 'complete',
       source: 'official-public-documentation',
       sourceUrl: 'https://webawesome.com/docs/components/video/',
-      sourceVersion: '3.11.0',
+      sourceVersion: '3.15.0',
       sourceSha256:
-        '3823f6e9dbf7330a333dde9612e987b851f3fa8762b6cd007d93ccd1d71f6362',
+        'a8f47beaf656628f753f93fe5a2c5818a1ed05a430cb61ba59f6a09f865ebb3f',
       sourceHashNormalization: 'cloudflare-data-cfemail-v1',
-      reviewedAt: '2026-08-02',
+      reviewedAt: '2026-11-22',
       unreviewedSections: [],
     },
   };
@@ -1390,7 +1476,7 @@ export function reviewedWebAwesomeVideoPlaylist() {
     tag: 'wa-video-playlist',
     module: null,
     tier: 'pro',
-    maturity: { status: 'experimental', since: '3.7', deprecated: null },
+    maturity: { status: 'stable', since: '3.7', deprecated: null },
     surface: {
       attributes,
       properties,
@@ -1433,11 +1519,11 @@ export function reviewedWebAwesomeVideoPlaylist() {
       status: 'complete',
       source: 'official-public-documentation',
       sourceUrl: 'https://webawesome.com/docs/components/video-playlist/',
-      sourceVersion: '3.11.0',
+      sourceVersion: '3.15.0',
       sourceSha256:
-        'bcb3e7ea61f1a5f5e3ced4b3be538e790c3ba8e1b22832576dbc44da0e1ef75a',
+        '285a89f59365df4b8ebb9c7e526234c754bb9d6f836565290c25b148cb622660',
       sourceHashNormalization: 'cloudflare-data-cfemail-v1',
-      reviewedAt: '2026-08-02',
+      reviewedAt: '2026-11-22',
       unreviewedSections: [],
     },
   };

@@ -190,7 +190,7 @@ export const styles = css`
     block-size: var(--lr-size-24px);
     pointer-events: none;
   }
-  [part="progress-ring__base"] {
+  [part~="progress-ring__base"] {
     position: absolute;
     inset: 0;
     inline-size: 100%;

@@ -15,6 +15,9 @@ const meta: Meta = {
     '--lr-lightbox-overlay-color': { control: false },
     '--lr-lightbox-control-bg': { control: false },
     '--lr-lightbox-control-color': { control: false },
+    '--backdrop-color': { control: false },
+    '--controls-background': { control: false },
+    '--controls-color': { control: false },
   },
 };
 export default meta;
@@ -222,6 +225,24 @@ export const SlottedItems: Story = {
           <span slot="caption">${image.caption}</span>
         </lr-lightbox-item>
         ${index === 1 ? html`<lr-lightbox-item type="video" src="data:video/mp4;base64,AAAA" thumbnail=${image.src} alt="Clip"></lr-lightbox-item>` : ''}
+      `)}
+    </lr-lightbox>`,
+};
+
+export const StylingHooks: Story = {
+  parameters: { docs: { description: { story: 'The backdrop, controls and spacing properties, the `open`/`zoomed` and item `active`/`empty`/`morphing` custom states, and the `dialog`, `image` and `navigation-button` part aliases.' } } },
+  render: () => html`
+    <style>
+      lr-lightbox.styled-hooks:state(zoomed)::part(toolbar) { opacity: 0.6; }
+      lr-lightbox.styled-hooks::part(navigation-button) { border-radius: var(--lr-radius); }
+      lr-lightbox.styled-hooks lr-lightbox-item:state(active) { opacity: 0.5; }
+    </style>
+    <lr-lightbox class="styled-hooks" label="Styled illustrations" style="--backdrop-color: var(--lr-color-overlay); --backdrop-filter: blur(var(--lr-space-s));
+      --controls-background: var(--lr-color-brand); --controls-color: var(--lr-color-on-brand); --spacing: var(--lr-space-l);">
+      ${images.map((image) => html`
+        <lr-lightbox-item src=${image.src} alt=${image.alt} width="640" height="360">
+          <img src=${image.src} alt=${image.alt} width="160" height="90" />
+        </lr-lightbox-item>
       `)}
     </lr-lightbox>`,
 };

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 47 parts, 48 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 47 parts, 45 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -263,6 +263,9 @@ above, not a copy of it, so `--lr-form-control-required-content`,
 here exactly as they do on `lr-input`. With no label text the part is hidden and no glyph is
 painted. Also `swatch-check` (the check-mark icon inside the selected swatch).
 
+Further CSS parts: `eyedropper-button__button`: Web Awesome-named alias on the same node as
+`eyedropper-button`.
+
 **Themeable custom properties:** `--lr-color-picker-swatch-size` sizes the centered visible swatch,
 not the button's minimum target. Its private default follows `size` (default `'m'` reads `2.25rem`,
 `'2xs'` reads `1.25rem`, etc.), matching the visual-density ladder `lr-input` uses. The trigger's
@@ -321,6 +324,9 @@ panel is (re)positioned. An explicit `positioning-strategy`/`hoist` on the insta
 over it; otherwise it wins over this control's own mirrored `absolute` default. One declaration on
 `:root`, a theme, or a single clipping ancestor changes every unset color picker beneath it instead
 of authoring `positioning-strategy`/`hoist` on each instance.
+
+More themeable custom properties: `--lr-form-control-label-line-height` (default `inherit`): Line
+height of the field label.
 
 **Additional API surface:**
 
@@ -383,10 +389,3 @@ of authoring `positioning-strategy`/`hoist` on each instance.
   entry in the text field is discarded rather than reappearing on the next open.
 
 The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.
-
-Further custom properties:
-
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
-- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
-- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
-- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.

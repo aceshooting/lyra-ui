@@ -8,12 +8,12 @@ export const stepStyles = css`
     flex: 1 1 0;
     min-inline-size: 0;
     --_pad: var(--lr-space-2xs);
-    --_size: var(--lr-stepper-marker-size, var(--lr-size-2rem));
-    --_cw: var(--lr-stepper-connector-width, var(--lr-border-width-medium));
-    --_gap: var(--lr-stepper-connector-gap, var(--lr-size-0-35em));
+    --_size: var(--marker-size, var(--lr-stepper-marker-size, var(--lr-size-2rem)));
+    --_cw: var(--connector-width, var(--lr-stepper-connector-width, var(--lr-border-width-medium)));
+    --_gap: var(--connector-gap, var(--lr-stepper-connector-gap, var(--lr-size-0-35em)));
     --_fill: var(--lr-color-brand);
     --_on: var(--lr-color-on-brand);
-    --_line: var(--lr-stepper-connector-color, var(--lr-color-neutral-fill-normal));
+    --_line: var(--connector-color, var(--lr-stepper-connector-color, var(--lr-color-neutral-fill-normal)));
   }
   :host([variant='neutral']) {
     --_fill: var(--lr-color-neutral);
@@ -101,7 +101,7 @@ export const stepStyles = css`
     color: var(--_fill);
     font-size: var(--lr-font-size-sm);
     font-variant-numeric: tabular-nums;
-    --_pulse: var(--lr-step-pulse-color, var(--_fill));
+    --_pulse: var(--pulse-color, var(--lr-step-pulse-color, var(--_fill)));
   }
   :host([variant='brand']) .step:not([data-active]):not([data-completed]) .marker {
     border-color: var(--lr-color-neutral-fill-normal);
@@ -137,7 +137,7 @@ export const stepStyles = css`
     pointer-events: none;
   }
   .connector-end {
-    background: var(--lr-stepper-connector-color-active, var(--_fill));
+    background: var(--connector-color-active, var(--lr-stepper-connector-active-color, var(--_fill)));
   }
   .step:not([data-completed]) .connector-end {
     background: var(--_line);
@@ -146,19 +146,19 @@ export const stepStyles = css`
     background: var(--_line);
   }
   .connector-start[data-variant='neutral'] {
-    background: var(--lr-stepper-connector-color-active, var(--lr-color-neutral));
+    background: var(--connector-color-active, var(--lr-stepper-connector-active-color, var(--lr-color-neutral)));
   }
   .connector-start[data-variant='brand'] {
-    background: var(--lr-stepper-connector-color-active, var(--lr-color-brand));
+    background: var(--connector-color-active, var(--lr-stepper-connector-active-color, var(--lr-color-brand)));
   }
   .connector-start[data-variant='success'] {
-    background: var(--lr-stepper-connector-color-active, var(--lr-color-success));
+    background: var(--connector-color-active, var(--lr-stepper-connector-active-color, var(--lr-color-success)));
   }
   .connector-start[data-variant='warning'] {
-    background: var(--lr-stepper-connector-color-active, var(--lr-color-warning));
+    background: var(--connector-color-active, var(--lr-stepper-connector-active-color, var(--lr-color-warning)));
   }
   .connector-start[data-variant='danger'] {
-    background: var(--lr-stepper-connector-color-active, var(--lr-color-danger));
+    background: var(--connector-color-active, var(--lr-stepper-connector-active-color, var(--lr-color-danger)));
   }
   .step[data-first] .connector-start,
   .step[data-last] .connector-end {
@@ -179,7 +179,7 @@ export const stepStyles = css`
   }
   /* Vertical: the marker sits in a leading column with the lines above and below it. */
   .step[data-vertical] {
-    padding-block: var(--lr-stepper-step-gap, var(--lr-space-m)) 0;
+    padding-block: var(--gap, var(--lr-stepper-step-gap, var(--lr-space-m))) 0;
   }
   .step[data-vertical] .body {
     flex-direction: row;
@@ -199,10 +199,10 @@ export const stepStyles = css`
   .step[data-vertical] .connector-start {
     inset-block-start: 0;
     inset-block-end: auto;
-    block-size: calc(var(--lr-stepper-step-gap, var(--lr-space-m)) + var(--_pad) - var(--_gap));
+    block-size: calc(var(--gap, var(--lr-stepper-step-gap, var(--lr-space-m))) + var(--_pad) - var(--_gap));
   }
   .step[data-vertical] .connector-end {
-    inset-block-start: calc(var(--lr-stepper-step-gap, var(--lr-space-m)) + var(--_pad) + var(--_size) + var(--_gap));
+    inset-block-start: calc(var(--gap, var(--lr-stepper-step-gap, var(--lr-space-m))) + var(--_pad) + var(--_size) + var(--_gap));
     inset-block-end: 0;
   }
   .step[data-vertical][data-first] {

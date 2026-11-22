@@ -7,9 +7,9 @@ import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.j
 
 export const styles = css`
   :host {
-    --_lr-lightbox-overlay-color: var(--lr-color-overlay-strong);
-    --_lr-lightbox-control-bg: var(--lr-color-neutral);
-    --_lr-lightbox-control-color: var(--lr-color-on-neutral);
+    --_lr-lightbox-overlay-color: var(--backdrop-color, var(--lr-color-overlay-strong));
+    --_lr-lightbox-control-bg: var(--controls-background, var(--lr-color-neutral));
+    --_lr-lightbox-control-color: var(--controls-color, var(--lr-color-on-neutral));
     ${modalHostStyles}
     max-inline-size: none;
     max-block-size: none;
@@ -23,6 +23,10 @@ export const styles = css`
   }
   [part="surface"] {
     display: contents;
+  }
+  /* Only slotted items use the default slot; data-mode children stay unrendered as before. */
+  :host(:not([data-items])) slot:not([name]) {
+    display: none;
   }
   /* Slotted items keep the host inline on the page; only the viewer layer is a viewport overlay. */
   :host([data-items]),
@@ -54,12 +58,13 @@ export const styles = css`
       --lr-lightbox-overlay-color,
       var(--_lr-lightbox-overlay-color)
     );
+    backdrop-filter: var(--backdrop-filter, none);
   }
   [part~="panel"] {
     position: relative;
     display: flex;
     flex-direction: column;
-    gap: var(--lr-space-s);
+    gap: var(--spacing, var(--lr-space-s));
     inline-size: 100%;
     block-size: 100%;
     min-inline-size: 0;
@@ -194,15 +199,15 @@ export const styles = css`
     border-radius: var(--media-border-radius, var(--lr-lightbox-media-radius, 0));
     overflow: hidden;
   }
-  lr-pan-zoom[part="frame"] {
+  lr-pan-zoom[part~="frame"] {
     display: block;
     inline-size: 100%;
     block-size: 100%;
   }
-  lr-pan-zoom[part="frame"][hidden] {
+  lr-pan-zoom[part~="frame"][hidden] {
     display: none;
   }
-  :host([without-zoom]) lr-pan-zoom[part="frame"]::part(controls) {
+  :host([without-zoom]) lr-pan-zoom[part~="frame"]::part(controls) {
     display: none;
   }
   [part="video"] {
@@ -249,6 +254,9 @@ export const styles = css`
   [part~="thumbnail"]:hover {
     opacity: 1;
   }
+  [part~="thumbnail"]:active {
+    opacity: 0.85;
+  }
   [part~="thumbnail"]:focus-visible {
     ${focusRingShorthand}
   }
@@ -256,10 +264,10 @@ export const styles = css`
     opacity: 1;
     border-color: var(--lr-lightbox-control-color, var(--_lr-lightbox-control-color));
   }
-  lr-pan-zoom[part="frame"]::part(base) {
+  lr-pan-zoom[part~="frame"]::part(base) {
     block-size: 100%;
   }
-  lr-pan-zoom[part="frame"]::part(viewport) {
+  lr-pan-zoom[part~="frame"]::part(viewport) {
     block-size: 100%;
   }
   [part~="previous-button"],

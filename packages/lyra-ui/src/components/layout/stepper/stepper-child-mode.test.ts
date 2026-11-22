@@ -34,7 +34,7 @@ describe('lr-stepper child mode', () => {
     expect(steps[0]!.getAttribute('role')).to.equal('listitem');
     expect(steps[0]!.getAttribute('aria-current')).to.equal('step');
     expect(steps[1]!.hasAttribute('aria-current')).to.equal(false);
-    const base = el.shadowRoot!.querySelector('[part="base"]')!;
+    const base = el.shadowRoot!.querySelector('[part~="base"]')!;
     expect(base.getAttribute('role')).to.equal('list');
     expect(el.shadowRoot!.querySelector('[part="stepper"]')!.getAttribute('role')).to.equal('group');
     expect(el.shadowRoot!.querySelector('[part="stepper"]')!.getAttribute('aria-label')).to.equal('Checkout');
@@ -317,7 +317,7 @@ describe('lr-stepper child mode', () => {
         <lr-stepper orientation="vertical"><lr-step name="a">A</lr-step><lr-step name="b">B</lr-step></lr-stepper>
       `);
       expect(el.hasAttribute('data-effective-orientation')).to.equal(false);
-      expect(getComputedStyle(el.shadowRoot!.querySelector('[part="base"]')!).flexDirection).to.equal('column');
+      expect(getComputedStyle(el.shadowRoot!.querySelector('[part~="base"]')!).flexDirection).to.equal('column');
     });
 
     it('uses Up/Down while stacked', async () => {
@@ -390,7 +390,7 @@ describe('lr-stepper data-driven mode alongside child mode', () => {
     expect(parts).to.have.length(2);
     expect(el.shadowRoot!.querySelector('slot') === null).to.equal(true);
     expect(el.shadowRoot!.querySelector('[part="stepper"]') === null).to.equal(true);
-    expect(el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('role')).to.equal('list');
+    expect(el.shadowRoot!.querySelector('[part~="base"]')!.getAttribute('role')).to.equal('list');
     let selected = 0;
     el.addEventListener('lr-step-select', () => (selected += 1));
     (parts[0] as HTMLElement).click();
@@ -437,5 +437,130 @@ describe('lr-stepper data-driven mode alongside child mode', () => {
     `);
     const el = wrap.querySelector<LyraStepper>('lr-stepper')!;
     await waitUntil(() => el.effectiveOrientation === 'vertical');
+  });
+});
+
+describe('lr-step custom states', () => {
+  it('publishes active, completed, loading, disabled, locked and clickable as :state()', async () => {
+    const el = await fixture<LyraStepper>(html`
+      <lr-stepper linear clickable>
+        <lr-step name="a" completed>A</lr-step>
+        <lr-step name="b" loading>B</lr-step>
+        <lr-step name="c">C</lr-step>
+        <lr-step name="d" disabled>D</lr-step>
+      </lr-stepper>
+    `);
+    const [a, b, c, d] = stepsOf(el);
+    await waitUntil(() => a!.position === 1);
+    await Promise.all(stepsOf(el).map((step) => step.updateComplete));
+    const states = (step: LyraStep): string[] =>
+      ['active', 'completed', 'loading', 'disabled', 'locked', 'clickable'].filter((name) => step.matches(`:state(${name})`));
+    expect(states(a!)).to.deep.equal(['active', 'completed', 'clickable']);
+    expect(states(b!)).to.deep.equal(['loading', 'clickable']);
+    expect(states(c!)).to.deep.equal(['locked', 'clickable']);
+    expect(states(d!)).to.deep.equal(['disabled', 'locked', 'clickable']);
+    el.clickable = false;
+    b!.loading = false;
+    await el.updateComplete;
+    await Promise.all(stepsOf(el).map((step) => step.updateComplete));
+    expect(states(a!)).to.deep.equal(['active', 'completed']);
+    expect(states(b!)).to.deep.equal([]);
+  });
+});
+
+describe('lr-stepper upstream-compatible surface', () => {
+  const stepperStates = (el: LyraStepper): string[] =>
+    ['completed', 'loading', 'stacked'].filter((name) => el.matches(`:state(${name})`));
+
+  it('publishes completed, loading and stacked as :state() and follows child changes', async () => {
+    const el = await fixture<LyraStepper>(html`
+      <lr-stepper>
+        <lr-step name="a" completed>A</lr-step>
+        <lr-step name="b" completed loading>B</lr-step>
+      </lr-stepper>
+    `);
+    await el.updateComplete;
+    expect(stepperStates(el)).to.deep.equal(['completed', 'loading']);
+    const b = stepsOf(el)[1]!;
+    b.loading = false;
+    b.completed = false;
+    await waitUntil(() => stepperStates(el).length === 0);
+    el.orientation = 'vertical';
+    await el.updateComplete;
+    expect(stepperStates(el)).to.deep.equal(['stacked']);
+  });
+
+  it('reports completed in data mode only when every item is completed', async () => {
+    const el = await fixture<LyraStepper>(html`<lr-stepper
+      .steps=${[
+        { stepId: 'a', label: 'A', state: 'completed' },
+        { stepId: 'b', label: 'B', state: 'current' },
+      ]}
+    ></lr-stepper>`);
+    expect(el.matches(':state(completed)')).to.equal(false);
+    el.steps = [
+      { stepId: 'a', label: 'A', state: 'completed' },
+      { stepId: 'b', label: 'B', state: 'completed' },
+    ];
+    await el.updateComplete;
+    expect(el.matches(':state(completed)')).to.equal(true);
+    expect(el.matches(':state(loading)')).to.equal(false);
+  });
+
+  it('exposes the step list as both base and steps parts', async () => {
+    const el = await fixture<LyraStepper>(three());
+    const list = el.shadowRoot!.querySelector('[part~="steps"]')!;
+    expect(list.getAttribute('role')).to.equal('list');
+    expect(list.getAttribute('part')!.split(' ')).to.include('base');
+  });
+
+  it('reads the unprefixed custom properties, which win over the --lr-stepper-* tokens', async () => {
+    const el = await fixture<LyraStepper>(html`
+      <lr-stepper orientation="vertical" style="--lr-stepper-marker-size: 20px; --marker-size: 30px; --lr-stepper-connector-width: 1px; --connector-width: 5px; --gap: 17px; --connector-color: rgb(1, 2, 3)">
+        <lr-step name="a" completed style="--pulse-color: rgb(4, 5, 6); --connector-color-active: rgb(7, 8, 9)">A</lr-step>
+        <lr-step name="b" attention="pulse">B</lr-step>
+        <lr-step name="c">C</lr-step>
+      </lr-stepper>
+    `);
+    const [a, b, c] = stepsOf(el);
+    await Promise.all(stepsOf(el).map((step) => step.updateComplete));
+    await waitUntil(() => b!.vertical);
+    await b!.updateComplete;
+    const marker = getComputedStyle(b!.shadowRoot!.querySelector('[part="marker"]')!);
+    expect(marker.inlineSize).to.equal('30px');
+    const connectors = (step: LyraStep) =>
+      [...step.shadowRoot!.querySelectorAll<HTMLElement>('[part="connector"]')].map((node) => getComputedStyle(node));
+    expect(connectors(b!)[0]!.inlineSize).to.equal('5px');
+    expect(connectors(c!)[0]!.backgroundColor).to.equal('rgb(1, 2, 3)');
+    expect(connectors(a!)[1]!.backgroundColor).to.equal('rgb(7, 8, 9)');
+    expect(getComputedStyle(b!.shadowRoot!.querySelector('[part="step"]')!).paddingBlockStart).to.equal('17px');
+    a!.attention = 'pulse';
+    await a!.updateComplete;
+    expect(getComputedStyle(a!.shadowRoot!.querySelector('[part="marker"]')!).getPropertyValue('--_pulse').trim()).to.equal('rgb(4, 5, 6)');
+  });
+
+  it('keeps the --lr-stepper-* tokens when the unprefixed aliases are unset', async () => {
+    const el = await fixture<LyraStepper>(html`
+      <lr-stepper style="--lr-stepper-marker-size: 22px">
+        <lr-step name="a">A</lr-step><lr-step name="b">B</lr-step>
+      </lr-stepper>
+    `);
+    const [a] = stepsOf(el);
+    await a!.updateComplete;
+    expect(getComputedStyle(a!.shadowRoot!.querySelector('[part="marker"]')!).inlineSize).to.equal('22px');
+  });
+
+  it('emits change details carrying name, previousName, step and previousStep', async () => {
+    const el = await fixture<LyraStepper>(three());
+    await el.updateComplete;
+    const seen: LyraStepChangeDetail[] = [];
+    el.addEventListener('lr-step-change', (event) => seen.push((event as CustomEvent<LyraStepChangeDetail>).detail));
+    el.goTo('pay');
+    await waitUntil(() => seen.length === 1);
+    const [cart, , pay] = stepsOf(el);
+    expect(seen[0]!.name).to.equal('pay');
+    expect(seen[0]!.previousName).to.equal('cart');
+    expect(seen[0]!.step === pay).to.equal(true);
+    expect(seen[0]!.previousStep === cart).to.equal(true);
   });
 });

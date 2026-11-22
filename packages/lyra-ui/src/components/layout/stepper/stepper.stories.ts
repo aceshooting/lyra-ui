@@ -354,3 +354,24 @@ export const ChildStepsVertical: Story = {
     <lr-step name="c" variant="danger">Review<span slot="description">Needs attention</span></lr-step>
   </lr-stepper>`,
 };
+
+export const UnprefixedPropertiesAndStates: Story = {
+  name: "Unprefixed custom properties and custom states",
+  render: () => html`<style>
+      .story-states:state(completed) { outline: var(--lr-border-width-medium) solid var(--lr-color-success); }
+      .story-states lr-step:state(active) { font-weight: var(--lr-font-weight-semibold); }
+    </style>
+    <lr-stepper class="story-states" label="Release" orientation="vertical" style="--marker-size: 1.5rem; --connector-width: calc(var(--lr-border-width-medium) * 2); --gap: var(--lr-space-l);">
+      <lr-step name="build" completed>Build</lr-step>
+      <lr-step name="test" completed>Test</lr-step>
+      <lr-step name="ship" completed style="--pulse-color: var(--lr-color-warning);" attention="pulse">Ship</lr-step>
+    </lr-stepper>`,
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "`--marker-size`, `--connector-color`, `--connector-color-active`, `--connector-width`, `--connector-gap` and `--gap` alias the `--lr-stepper-*` properties, and `--pulse-color` aliases `--lr-step-pulse-color`. The stepper exposes `:state(completed)`, `:state(loading)` and `:state(stacked)`; each step exposes `:state(active)`, `:state(completed)`, `:state(loading)`, `:state(disabled)`, `:state(locked)` and `:state(clickable)`. The `steps` part names the step list.",
+      },
+    },
+  },
+};

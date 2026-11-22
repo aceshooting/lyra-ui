@@ -125,7 +125,7 @@ The entry points, then:
   or future exports. Prefer the owning entry for that component's complete contract and smaller
   bundles.
 
-- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 302
+- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 306
   root-included tags — everything **except** the 15 inventory-designated optional-peer-family tags:
   `lr-chart` and its 8 typed subclasses (`lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`,
   `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`,
@@ -544,7 +544,8 @@ Those nested detail fields are separate from deprecated event names and are not 
 - **`instanceof` narrowing: `@aceshooting/lyra-ui/event-classes`.** Every event a component dispatches
   is a `LyraEvent` (a bubbling, composed `CustomEvent`), and this subpath exports one class per event
   name — `lr-step-change` → `LyraStepChangeEvent` — whose `instanceof` is true for exactly those events
-  and narrows `detail`:
+  and narrows `detail`. Each constructor takes `(detail, options?)`, where the options record is
+  `LyraEventOptions { cancelable?: boolean }`:
 
   ```ts
   import { LyraChangeEvent } from "@aceshooting/lyra-ui/event-classes";
@@ -2833,6 +2834,43 @@ logical start inset, quiet markers). Disabled controls use `not-allowed`, every 
 shared focus ring, and `forced-colors: active` maps accents and bars to system colours. Dark mode
 follows the tokens.
 
+### Migrating Web Awesome and Shoelace classes and stylesheets
+
+`lyra-ui-migrate` (no `--origin`) rewrites the upstream utility and theme classes that have a Lyra
+counterpart, and only whole class tokens in class positions: `class`/`className` values,
+`:class`, `[class]` and `[ngClass]` bindings, `className={...}`, `classMap()`, `classList.add/remove/
+toggle/contains/replace()`, `.className =` and `setAttribute('class', ...)`. Selectors, prose, other
+attributes and `${}`/`{{}}` interpolations are never read. A name the tool does not list is left alone,
+because it is as likely your own class as an upstream one.
+
+| Upstream | Lyra |
+| -------- | ---- |
+| `wa-stack`, `wa-cluster`, `wa-flank`, `wa-split`, `wa-frame` (with `:end`, `:column`, `:square`, `:landscape`, `:portrait`) | `lr-stack`, `lr-cluster`, `lr-flank`/`lr-flank-end`, `lr-split`/`lr-split-column`, `lr-frame`/`lr-frame-*` |
+| `wa-grid`, `wa-span-grid` | `lr-grid-auto`, `lr-span-grid` |
+| `wa-gap-<step>` | `lr-gap-<step>`, mapped by resolved length: the two spacing scales are offset by one step, so `wa-gap-m` (1rem) is `lr-gap-l` |
+| `wa-align-items-*`, `wa-align-self-*`, `wa-justify-content-*`, `wa-flex-wrap`/`wa-flex-nowrap` | `lr-items-*`, `lr-self-*`, `lr-justify-*`, `lr-wrap`/`lr-nowrap` |
+| `wa-text-*`, `wa-font-weight-*`, `wa-color-text-quiet`, `wa-link-plain`, `wa-list-plain`, `wa-prose`, `wa-visually-hidden`, `wa-cloak`, `wa-placeholder`, `wa-scroll-lock` | the same helper under `lr-`; see the inventory above |
+| `wa-brand`, `wa-neutral`, `wa-success`, `wa-warning`, `wa-danger`, `wa-size-*` | `lr-brand`, `lr-neutral`, `lr-success`, `lr-warning`, `lr-danger`, `lr-size-*` |
+| `wa-dark`, `wa-light`, `sl-theme-dark`, `sl-theme-light` | `lr-dark`, `lr-light` |
+
+`wa-font-size-*`, `wa-body-*` and `wa-border-radius-s`/`-m` rewrite to the nearest class
+(`lr-text-*`, `lr-radius-*`) and report `UPSTREAM_CLASS_APPROXIMATE_REVIEW`: the type and radius scales
+are not value-aligned. `wa-heading-*`, `wa-caption-*`, `wa-longform-*`, the hue-pinned variants
+(`wa-brand-blue`), `wa-theme-*`, the `native.css` opt-ins (`wa-button`, `wa-zebra-rows`, ...), the
+`wa-form-control-*` classes and the gaps Lyra has no step for are reported as `UPSTREAM_CLASS_REVIEW`
+with the nearest alternative and are not rewritten.
+
+Stylesheet and loader imports (`import '...'` and CSS `@import`) map to real package subpaths:
+`dist/styles/webawesome.css` becomes `theme.css`, `native.css` and `utilities.css`;
+`styles/native.css`, `styles/utilities.css`, `styles/themes/default.css` and Shoelace
+`themes/light.css`/`dark.css` become the matching one. `native.css` styles only inside `.lr-native`, and
+`dark.css` is mode switching with `lr-dark`, so both carry an `UPSTREAM_ASSET_REVIEW` note. The
+self-starting loaders (`webawesome.loader.js`, `shoelace-autoloader.js`) become
+`@aceshooting/lyra-ui/autoloader-cdn.js` and, like the all-components entries (`webawesome.js`,
+`shoelace.js`), are rewritten only when the scanned files have no manual uses left. `setBasePath` and
+`utilities/base-path`, `layers.css`, the `awesome` and `shoelace` themes and the colour palettes have no
+Lyra counterpart and are reported as `UPSTREAM_ASSET_REVIEW`.
+
 ### Hue palette
 
 ```css
@@ -4290,9 +4328,10 @@ GroupByRecencyOptions<T>): RecencyBucket<T>[]`.
   `(root, options)` form never times out.
 - **`form` → `serialize(form): Record<string, FormDataEntryValue | FormDataEntryValue[]>`** — a
   form's successful controls as a plain object; a name that occurs more than once becomes an array
-  in document order (`serializeFormData(formData)` is the same fold over any `FormData`). The result
+  in document order (`serializeFormData(formData: FormData): Record<string, FormDataEntryValue |
+  FormDataEntryValue[]>` is the same fold over any `FormData`). The result
   has a `null` prototype, so a field named `__proto__` is just a key.
-- **`defined` → `allDefined(root?, options?): Promise<void>`** —- **`defined` → `allDefined(root?, options?): Promise<void>`** — iteratively waits for every
+- **`defined` → `allDefined(root?, options?): Promise<void>`** — iteratively waits for every
   currently rendered, inventory-known Lyra tag below a `Document`, `DocumentFragment`/open
   `ShadowRoot`, or `Element` to be defined in its owning/scoped registry. It also waits for each
   available `updateComplete`, then repeats so tags created by that first render are included. Open
@@ -4308,6 +4347,9 @@ GroupByRecencyOptions<T>): RecencyBucket<T>[]`.
   The exact options record is `AllDefinedOptions { readonly maxPasses?: number; readonly
 maxElements?: number; readonly maxRoots?: number; readonly maxDepth?: number; readonly maxWork?:
 number }`.
+  The options form takes `AllDefinedWaitOptions { readonly match?: (tagName: string) => boolean;
+  readonly additionalElements?: string | readonly string[]; readonly root?: LyraDefinitionRoot;
+  readonly timeout?: number }`.
 - **`css-length` → `resolveCssLength(value, options?)`** — resolves finite numbers and CSS
   `px`/`rem`/`em`/`%`/`vw`/`vh` lengths to pixels without allocating DOM. Supply `host` for live
   font and owner-realm context, `percentBase` for percentages, and an optional `viewportBasis` for
@@ -5769,6 +5811,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-control-group': LyraControlGroupReactProps;
   'lr-conversation-item': LyraConversationItemReactProps;
   'lr-copy-button': LyraCopyButtonReactProps;
+  'lr-counter': LyraCounterReactProps;
   'lr-country-picker': LyraCountryPickerReactProps;
   'lr-csv-viewer': LyraCsvViewerReactProps;
   'lr-currency-picker': LyraCurrencyPickerReactProps;
@@ -5849,6 +5892,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-knowledge-graph-explorer': LyraKnowledgeGraphExplorerReactProps;
   'lr-known-date': LyraKnownDateReactProps;
   'lr-lightbox': LyraLightboxReactProps;
+  'lr-lightbox-item': LyraLightboxItemReactProps;
   'lr-line-chart': LyraLineChartReactProps;
   'lr-lite-chart': LyraLiteChartReactProps;
   'lr-live-region': LyraLiveRegionReactProps;
@@ -5882,6 +5926,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-node-palette': LyraNodePaletteReactProps;
   'lr-notebook-viewer': LyraNotebookViewerReactProps;
   'lr-number-input': LyraNumberInputReactProps;
+  'lr-number-ticker': LyraNumberTickerReactProps;
   'lr-option': LyraOptionReactProps;
   'lr-otp-input': LyraOtpInputReactProps;
   'lr-page': LyraPageReactProps;
@@ -5951,6 +5996,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-spreadsheet-viewer': LyraSpreadsheetViewerReactProps;
   'lr-stack-trace': LyraStackTraceReactProps;
   'lr-stat': LyraStatReactProps;
+  'lr-step': LyraStepReactProps;
   'lr-stepper': LyraStepperReactProps;
   'lr-stream-status': LyraStreamStatusReactProps;
   'lr-streaming-text': LyraStreamingTextReactProps;
@@ -6217,6 +6263,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-control-group': LyraComponentTypeMap['lr-control-group']['element'];
   'lr-conversation-item': LyraComponentTypeMap['lr-conversation-item']['element'];
   'lr-copy-button': LyraComponentTypeMap['lr-copy-button']['element'];
+  'lr-counter': LyraComponentTypeMap['lr-counter']['element'];
   'lr-country-picker': LyraComponentTypeMap['lr-country-picker']['element'];
   'lr-csv-viewer': LyraComponentTypeMap['lr-csv-viewer']['element'];
   'lr-currency-picker': LyraComponentTypeMap['lr-currency-picker']['element'];
@@ -6297,6 +6344,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-knowledge-graph-explorer': LyraComponentTypeMap['lr-knowledge-graph-explorer']['element'];
   'lr-known-date': LyraComponentTypeMap['lr-known-date']['element'];
   'lr-lightbox': LyraComponentTypeMap['lr-lightbox']['element'];
+  'lr-lightbox-item': LyraComponentTypeMap['lr-lightbox-item']['element'];
   'lr-line-chart': LyraComponentTypeMap['lr-line-chart']['element'];
   'lr-lite-chart': LyraComponentTypeMap['lr-lite-chart']['element'];
   'lr-live-region': LyraComponentTypeMap['lr-live-region']['element'];
@@ -6330,6 +6378,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-node-palette': LyraComponentTypeMap['lr-node-palette']['element'];
   'lr-notebook-viewer': LyraComponentTypeMap['lr-notebook-viewer']['element'];
   'lr-number-input': LyraComponentTypeMap['lr-number-input']['element'];
+  'lr-number-ticker': LyraComponentTypeMap['lr-number-ticker']['element'];
   'lr-option': LyraComponentTypeMap['lr-option']['element'];
   'lr-otp-input': LyraComponentTypeMap['lr-otp-input']['element'];
   'lr-page': LyraComponentTypeMap['lr-page']['element'];
@@ -6399,6 +6448,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-spreadsheet-viewer': LyraComponentTypeMap['lr-spreadsheet-viewer']['element'];
   'lr-stack-trace': LyraComponentTypeMap['lr-stack-trace']['element'];
   'lr-stat': LyraComponentTypeMap['lr-stat']['element'];
+  'lr-step': LyraComponentTypeMap['lr-step']['element'];
   'lr-stepper': LyraComponentTypeMap['lr-stepper']['element'];
   'lr-stream-status': LyraComponentTypeMap['lr-stream-status']['element'];
   'lr-streaming-text': LyraComponentTypeMap['lr-streaming-text']['element'];
@@ -6536,6 +6586,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-control-group': LyraControlGroupSvelteProps;
   'lr-conversation-item': LyraConversationItemSvelteProps;
   'lr-copy-button': LyraCopyButtonSvelteProps;
+  'lr-counter': LyraCounterSvelteProps;
   'lr-country-picker': LyraCountryPickerSvelteProps;
   'lr-csv-viewer': LyraCsvViewerSvelteProps;
   'lr-currency-picker': LyraCurrencyPickerSvelteProps;
@@ -6616,6 +6667,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-knowledge-graph-explorer': LyraKnowledgeGraphExplorerSvelteProps;
   'lr-known-date': LyraKnownDateSvelteProps;
   'lr-lightbox': LyraLightboxSvelteProps;
+  'lr-lightbox-item': LyraLightboxItemSvelteProps;
   'lr-line-chart': LyraLineChartSvelteProps;
   'lr-lite-chart': LyraLiteChartSvelteProps;
   'lr-live-region': LyraLiveRegionSvelteProps;
@@ -6649,6 +6701,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-node-palette': LyraNodePaletteSvelteProps;
   'lr-notebook-viewer': LyraNotebookViewerSvelteProps;
   'lr-number-input': LyraNumberInputSvelteProps;
+  'lr-number-ticker': LyraNumberTickerSvelteProps;
   'lr-option': LyraOptionSvelteProps;
   'lr-otp-input': LyraOtpInputSvelteProps;
   'lr-page': LyraPageSvelteProps;
@@ -6718,6 +6771,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-spreadsheet-viewer': LyraSpreadsheetViewerSvelteProps;
   'lr-stack-trace': LyraStackTraceSvelteProps;
   'lr-stat': LyraStatSvelteProps;
+  'lr-step': LyraStepSvelteProps;
   'lr-stepper': LyraStepperSvelteProps;
   'lr-stream-status': LyraStreamStatusSvelteProps;
   'lr-streaming-text': LyraStreamingTextSvelteProps;
@@ -7014,6 +7068,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-control-group': LyraControlGroupVueProps;
   'lr-conversation-item': LyraConversationItemVueProps;
   'lr-copy-button': LyraCopyButtonVueProps;
+  'lr-counter': LyraCounterVueProps;
   'lr-country-picker': LyraCountryPickerVueProps;
   'lr-csv-viewer': LyraCsvViewerVueProps;
   'lr-currency-picker': LyraCurrencyPickerVueProps;
@@ -7094,6 +7149,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-knowledge-graph-explorer': LyraKnowledgeGraphExplorerVueProps;
   'lr-known-date': LyraKnownDateVueProps;
   'lr-lightbox': LyraLightboxVueProps;
+  'lr-lightbox-item': LyraLightboxItemVueProps;
   'lr-line-chart': LyraLineChartVueProps;
   'lr-lite-chart': LyraLiteChartVueProps;
   'lr-live-region': LyraLiveRegionVueProps;
@@ -7127,6 +7183,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-node-palette': LyraNodePaletteVueProps;
   'lr-notebook-viewer': LyraNotebookViewerVueProps;
   'lr-number-input': LyraNumberInputVueProps;
+  'lr-number-ticker': LyraNumberTickerVueProps;
   'lr-option': LyraOptionVueProps;
   'lr-otp-input': LyraOtpInputVueProps;
   'lr-page': LyraPageVueProps;
@@ -7196,6 +7253,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-spreadsheet-viewer': LyraSpreadsheetViewerVueProps;
   'lr-stack-trace': LyraStackTraceVueProps;
   'lr-stat': LyraStatVueProps;
+  'lr-step': LyraStepVueProps;
   'lr-stepper': LyraStepperVueProps;
   'lr-stream-status': LyraStreamStatusVueProps;
   'lr-streaming-text': LyraStreamingTextVueProps;

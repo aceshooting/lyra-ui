@@ -1,6 +1,6 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import '../../lr-combobox.js';
-import type { LyraCombobox, ComboboxSource } from '../../lr-combobox.js';
+import type { LyraCombobox, ComboboxSource, ComboboxRequest, ComboboxOptions } from '../../lr-combobox.js';
 import { rearmDevWarnings } from '../../../../test/expected-dev-warnings.js';
 
 beforeEach(() => rearmDevWarnings('lr-combobox-source-rejected'));
@@ -17,37 +17,93 @@ const silenced = async (run: () => Promise<void>): Promise<void> => {
 
 const rows = (query: string) => [{ value: query || 'a', label: query || 'Alpha' }];
 
-describe('lr-combobox dataSource alias', () => {
-  it('reads and writes the same function as source', async () => {
-    const source: ComboboxSource = async query => rows(query);
-    const el = await fixture<LyraCombobox>(html`<lr-combobox></lr-combobox>`);
+const optionTexts = (el: LyraCombobox): string[] =>
+  Array.from(el.shadowRoot!.querySelectorAll('[part~="option"]'), node => (node.textContent ?? '').trim());
+
+describe('lr-combobox dataSource', () => {
+  it('calls the provider with one { query, signal } request object', async () => {
+    const requests: ComboboxRequest[] = [];
+    const el = await fixture<LyraCombobox>(html`<lr-combobox source-delay="0"></lr-combobox>`);
     expect(el.dataSource).to.equal(null);
-    el.dataSource = source;
-    expect(el.source === source).to.equal(true);
-    const other: ComboboxSource = async () => [];
-    el.source = other;
-    expect(el.dataSource === other).to.equal(true);
+    const provider = (request: ComboboxRequest) => {
+      requests.push(request);
+      return rows(request.query);
+    };
+    el.dataSource = provider;
+    expect(el.dataSource === provider).to.equal(true);
+    el.open = true;
+    await waitUntil(() => optionTexts(el).length === 1, 'the synchronous result renders');
+    expect(requests.length).to.equal(1);
+    expect(requests[0]!.query).to.equal('');
+    expect(requests[0]!.signal instanceof AbortSignal).to.equal(true);
+    el.inputValue = 'be';
+    await waitUntil(() => requests.length === 2, 'the typed query reaches the provider');
+    expect(requests[1]!.query).to.equal('be');
+  });
+
+  it('accepts a promise of option objects, option elements, or option markup', async () => {
+    const element = document.createElement('lr-option');
+    element.setAttribute('value', 'el');
+    element.textContent = 'From element';
+    const results: Record<string, ComboboxOptions> = {
+      objects: [{ value: 'o', label: 'Object row', disabled: true }],
+      elements: [element],
+      markup: '<lr-option value="m1">Markup one</lr-option><lr-option value="m2" disabled>Markup two</lr-option>',
+    };
+    const el = await fixture<LyraCombobox>(html`<lr-combobox source-delay="0" open></lr-combobox>`);
+    el.dataSource = async ({ query }) => results[query] ?? [];
+    el.inputValue = 'objects';
+    await waitUntil(() => optionTexts(el).join() === 'Object row', 'object rows');
+    expect(el.shadowRoot!.querySelector('[part~="option"]')!.getAttribute('aria-disabled')).to.equal('true');
+    el.inputValue = 'elements';
+    await waitUntil(() => optionTexts(el).join() === 'From element', 'element rows');
+    expect(element.isConnected, 'a returned element is read, never adopted').to.equal(false);
+    el.inputValue = 'markup';
+    await waitUntil(() => optionTexts(el).join() === 'Markup one,Markup two', 'markup rows');
+    const options = el.shadowRoot!.querySelectorAll('[part~="option"]');
+    expect(options[1]!.getAttribute('aria-disabled')).to.equal('true');
+  });
+
+  it('never runs script or handlers from returned markup', async () => {
+    const win = window as unknown as { __comboboxMarkupRan?: boolean };
+    delete win.__comboboxMarkupRan;
+    const el = await fixture<LyraCombobox>(html`<lr-combobox source-delay="0" open></lr-combobox>`);
+    el.dataSource = () =>
+      '<lr-option value="x">Safe<img src="data:," onerror="window.__comboboxMarkupRan = true"></lr-option><script>window.__comboboxMarkupRan = true</script>';
+    await waitUntil(() => optionTexts(el).join() === 'Safe', 'only the text survives');
+    // wait-reason: asserting a would-be image error handler never fires (negative assertion)
+    await aTimeout(40);
+    expect(win.__comboboxMarkupRan).to.equal(undefined);
+    expect(el.shadowRoot!.querySelector('img, script') === null).to.equal(true);
+  });
+
+  it('replaces source and reads null once source is assigned', async () => {
+    const legacy: ComboboxSource = async () => [{ value: 'y', label: 'Legacy' }];
+    const el = await fixture<LyraCombobox>(html`<lr-combobox source-delay="0" open></lr-combobox>`);
+    el.dataSource = () => [{ value: 'x', label: 'Upstream' }];
+    await waitUntil(() => optionTexts(el).join() === 'Upstream', 'dataSource rows');
+    expect(typeof el.source).to.equal('function');
+    el.source = legacy;
+    expect(el.dataSource).to.equal(null);
+    await waitUntil(() => optionTexts(el).join() === 'Legacy', 'source rows replace them');
+    el.dataSource = () => [{ value: 'z', label: 'Again' }];
+    await waitUntil(() => optionTexts(el).join() === 'Again', 'dataSource replaces source');
     el.dataSource = null;
     expect(el.source).to.equal(null);
+    expect(el.dataSource).to.equal(null);
   });
 
-  it('drives the listbox exactly like source', async () => {
-    const queries: string[] = [];
-    const el = await fixture<LyraCombobox>(
-      html`<lr-combobox source-delay="0" open .dataSource=${async (query: string) => { queries.push(query); return rows(query); }}></lr-combobox>`
-    );
-    await waitUntil(() => el.shadowRoot!.querySelectorAll('[part~="option"]').length === 1, 'the row renders');
-    expect(queries).to.deep.equal(['']);
-  });
-
-  it('assigning dataSource replaces the previous provider and clears its rows', async () => {
-    const first: ComboboxSource = async () => [{ value: 'x', label: 'First' }];
-    const second: ComboboxSource = async () => [{ value: 'y', label: 'Second' }];
-    const el = await fixture<LyraCombobox>(html`<lr-combobox source-delay="0" open .dataSource=${first}></lr-combobox>`);
-    await waitUntil(() => el.shadowRoot!.textContent!.includes('First'), 'first rows');
-    el.dataSource = second;
-    await waitUntil(() => el.shadowRoot!.textContent!.includes('Second'), 'second rows');
-    expect(el.shadowRoot!.textContent).to.not.contain('First');
+  it('reports a provider rejection through the failed state and lr-options-error', async () => {
+    const failure = new Error('down');
+    const el = await fixture<LyraCombobox>(html`<lr-combobox source-delay="0" open></lr-combobox>`);
+    let error: unknown;
+    el.addEventListener('lr-options-error', event => { error = event.detail.error; });
+    await silenced(async () => {
+      el.dataSource = () => Promise.reject(failure);
+      await waitUntil(() => error !== undefined, 'the rejection is reported');
+    });
+    expect(error === failure).to.equal(true);
+    expect(el.shadowRoot!.querySelector('[part="source-error-row"]') !== null).to.equal(true);
   });
 });
 
@@ -192,7 +248,7 @@ describe('lr-combobox filter-debounce alias', () => {
 describe('lr-combobox async options accessibility', () => {
   it('stays accessible with a dataSource listbox open', async () => {
     const el = await fixture<LyraCombobox>(
-      html`<lr-combobox label="City" source-delay="0" open .dataSource=${async (query: string) => rows(query)}></lr-combobox>`
+      html`<lr-combobox label="City" source-delay="0" open .dataSource=${async ({ query }: ComboboxRequest) => rows(query)}></lr-combobox>`
     );
     await waitUntil(() => el.shadowRoot!.querySelectorAll('[part~="option"]').length === 1, 'rows render');
     await expect(el).to.be.accessible();

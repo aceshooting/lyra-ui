@@ -7,6 +7,7 @@ import '../../lr-dropdown-item.js';
 import '../../lr-menu.js';
 import { LyraDropdownItem } from './dropdown-item.class.js';
 import { resetMouse, sendMouse } from '../../../../test/wtr-mouse.js';
+import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 import '../../lr-dropdown.js';
 
@@ -734,5 +735,53 @@ describe('lr-dropdown-item link items name their internal anchor', () => {
     await item.updateComplete;
     await expect(menu).to.be.accessible();
     expect(accessibleName(anchorOf(item))).to.equal('Open');
+  });
+});
+
+describe('lr-dropdown-item custom states', () => {
+  const states = (item: Element): string[] =>
+    ['active', 'checked', 'disabled', 'has-submenu', 'link', 'submenu-open'].filter((name) =>
+      item.matches(`:state(${name})`)
+    );
+
+  it('publishes checked, disabled and link, and follows changes', async () => {
+    const menu = await fixture<HTMLElement>(html`
+      <lr-menu aria-label="Actions">
+        <lr-dropdown-item id="check" type="checkbox" checked>Bold</lr-dropdown-item>
+        <lr-dropdown-item id="off" disabled>Off</lr-dropdown-item>
+        <lr-dropdown-item id="link" href="https://example.com/">Docs</lr-dropdown-item>
+        <lr-dropdown-item id="bad" href="javascript:alert(1)">Unsafe</lr-dropdown-item>
+      </lr-menu>
+    `);
+    const [check, off, link, bad] = ['check', 'off', 'link', 'bad'].map(
+      (id) => menu.querySelector<LyraDropdownItem>(`#${id}`)!
+    );
+    await Promise.all([check, off, link, bad].map((item) => item!.updateComplete));
+    expect(states(check!)).to.deep.equal(['checked']);
+    expect(states(off!)).to.deep.equal(['disabled']);
+    expect(states(link!)).to.deep.equal(['link']);
+    expect(states(bad!)).to.deep.equal([]);
+    check!.checked = false;
+    off!.disabled = false;
+    await Promise.all([check!.updateComplete, off!.updateComplete]);
+    expect(states(check!)).to.deep.equal([]);
+    expect(states(off!)).to.deep.equal([]);
+  });
+
+  it('publishes active while focused, and has-submenu/submenu-open with the submenu', async () => {
+    const item = await submenuParent();
+    expect(states(item)).to.deep.equal(['has-submenu']);
+    await item.openSubmenu();
+    await waitForSubmenuState(item, true);
+    await item.updateComplete;
+    expect(states(item)).to.include('submenu-open');
+    await item.closeSubmenu();
+    await waitForSubmenuState(item, false);
+    await item.updateComplete;
+    expect(states(item)).to.not.include('submenu-open');
+    await focusByKeyboard(item);
+    expect(item.matches(':state(active)')).to.equal(true);
+    item.blur();
+    expect(item.matches(':state(active)')).to.equal(false);
   });
 });

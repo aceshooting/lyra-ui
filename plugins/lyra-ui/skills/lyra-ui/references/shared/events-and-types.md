@@ -81,7 +81,8 @@ Those nested detail fields are separate from deprecated event names and are not 
 - **`instanceof` narrowing: `@aceshooting/lyra-ui/event-classes`.** Every event a component dispatches
   is a `LyraEvent` (a bubbling, composed `CustomEvent`), and this subpath exports one class per event
   name — `lr-step-change` → `LyraStepChangeEvent` — whose `instanceof` is true for exactly those events
-  and narrows `detail`:
+  and narrows `detail`. Each constructor takes `(detail, options?)`, where the options record is
+  `LyraEventOptions { cancelable?: boolean }`:
 
   ```ts
   import { LyraChangeEvent } from "@aceshooting/lyra-ui/event-classes";
@@ -1158,6 +1159,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-control-group': LyraControlGroupReactProps;
   'lr-conversation-item': LyraConversationItemReactProps;
   'lr-copy-button': LyraCopyButtonReactProps;
+  'lr-counter': LyraCounterReactProps;
   'lr-country-picker': LyraCountryPickerReactProps;
   'lr-csv-viewer': LyraCsvViewerReactProps;
   'lr-currency-picker': LyraCurrencyPickerReactProps;
@@ -1238,6 +1240,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-knowledge-graph-explorer': LyraKnowledgeGraphExplorerReactProps;
   'lr-known-date': LyraKnownDateReactProps;
   'lr-lightbox': LyraLightboxReactProps;
+  'lr-lightbox-item': LyraLightboxItemReactProps;
   'lr-line-chart': LyraLineChartReactProps;
   'lr-lite-chart': LyraLiteChartReactProps;
   'lr-live-region': LyraLiveRegionReactProps;
@@ -1271,6 +1274,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-node-palette': LyraNodePaletteReactProps;
   'lr-notebook-viewer': LyraNotebookViewerReactProps;
   'lr-number-input': LyraNumberInputReactProps;
+  'lr-number-ticker': LyraNumberTickerReactProps;
   'lr-option': LyraOptionReactProps;
   'lr-otp-input': LyraOtpInputReactProps;
   'lr-page': LyraPageReactProps;
@@ -1340,6 +1344,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-spreadsheet-viewer': LyraSpreadsheetViewerReactProps;
   'lr-stack-trace': LyraStackTraceReactProps;
   'lr-stat': LyraStatReactProps;
+  'lr-step': LyraStepReactProps;
   'lr-stepper': LyraStepperReactProps;
   'lr-stream-status': LyraStreamStatusReactProps;
   'lr-streaming-text': LyraStreamingTextReactProps;
@@ -1606,6 +1611,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-control-group': LyraComponentTypeMap['lr-control-group']['element'];
   'lr-conversation-item': LyraComponentTypeMap['lr-conversation-item']['element'];
   'lr-copy-button': LyraComponentTypeMap['lr-copy-button']['element'];
+  'lr-counter': LyraComponentTypeMap['lr-counter']['element'];
   'lr-country-picker': LyraComponentTypeMap['lr-country-picker']['element'];
   'lr-csv-viewer': LyraComponentTypeMap['lr-csv-viewer']['element'];
   'lr-currency-picker': LyraComponentTypeMap['lr-currency-picker']['element'];
@@ -1686,6 +1692,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-knowledge-graph-explorer': LyraComponentTypeMap['lr-knowledge-graph-explorer']['element'];
   'lr-known-date': LyraComponentTypeMap['lr-known-date']['element'];
   'lr-lightbox': LyraComponentTypeMap['lr-lightbox']['element'];
+  'lr-lightbox-item': LyraComponentTypeMap['lr-lightbox-item']['element'];
   'lr-line-chart': LyraComponentTypeMap['lr-line-chart']['element'];
   'lr-lite-chart': LyraComponentTypeMap['lr-lite-chart']['element'];
   'lr-live-region': LyraComponentTypeMap['lr-live-region']['element'];
@@ -1719,6 +1726,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-node-palette': LyraComponentTypeMap['lr-node-palette']['element'];
   'lr-notebook-viewer': LyraComponentTypeMap['lr-notebook-viewer']['element'];
   'lr-number-input': LyraComponentTypeMap['lr-number-input']['element'];
+  'lr-number-ticker': LyraComponentTypeMap['lr-number-ticker']['element'];
   'lr-option': LyraComponentTypeMap['lr-option']['element'];
   'lr-otp-input': LyraComponentTypeMap['lr-otp-input']['element'];
   'lr-page': LyraComponentTypeMap['lr-page']['element'];
@@ -1788,6 +1796,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-spreadsheet-viewer': LyraComponentTypeMap['lr-spreadsheet-viewer']['element'];
   'lr-stack-trace': LyraComponentTypeMap['lr-stack-trace']['element'];
   'lr-stat': LyraComponentTypeMap['lr-stat']['element'];
+  'lr-step': LyraComponentTypeMap['lr-step']['element'];
   'lr-stepper': LyraComponentTypeMap['lr-stepper']['element'];
   'lr-stream-status': LyraComponentTypeMap['lr-stream-status']['element'];
   'lr-streaming-text': LyraComponentTypeMap['lr-streaming-text']['element'];
@@ -1925,6 +1934,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-control-group': LyraControlGroupSvelteProps;
   'lr-conversation-item': LyraConversationItemSvelteProps;
   'lr-copy-button': LyraCopyButtonSvelteProps;
+  'lr-counter': LyraCounterSvelteProps;
   'lr-country-picker': LyraCountryPickerSvelteProps;
   'lr-csv-viewer': LyraCsvViewerSvelteProps;
   'lr-currency-picker': LyraCurrencyPickerSvelteProps;
@@ -2005,6 +2015,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-knowledge-graph-explorer': LyraKnowledgeGraphExplorerSvelteProps;
   'lr-known-date': LyraKnownDateSvelteProps;
   'lr-lightbox': LyraLightboxSvelteProps;
+  'lr-lightbox-item': LyraLightboxItemSvelteProps;
   'lr-line-chart': LyraLineChartSvelteProps;
   'lr-lite-chart': LyraLiteChartSvelteProps;
   'lr-live-region': LyraLiveRegionSvelteProps;
@@ -2038,6 +2049,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-node-palette': LyraNodePaletteSvelteProps;
   'lr-notebook-viewer': LyraNotebookViewerSvelteProps;
   'lr-number-input': LyraNumberInputSvelteProps;
+  'lr-number-ticker': LyraNumberTickerSvelteProps;
   'lr-option': LyraOptionSvelteProps;
   'lr-otp-input': LyraOtpInputSvelteProps;
   'lr-page': LyraPageSvelteProps;
@@ -2107,6 +2119,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-spreadsheet-viewer': LyraSpreadsheetViewerSvelteProps;
   'lr-stack-trace': LyraStackTraceSvelteProps;
   'lr-stat': LyraStatSvelteProps;
+  'lr-step': LyraStepSvelteProps;
   'lr-stepper': LyraStepperSvelteProps;
   'lr-stream-status': LyraStreamStatusSvelteProps;
   'lr-streaming-text': LyraStreamingTextSvelteProps;
@@ -2403,6 +2416,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-control-group': LyraControlGroupVueProps;
   'lr-conversation-item': LyraConversationItemVueProps;
   'lr-copy-button': LyraCopyButtonVueProps;
+  'lr-counter': LyraCounterVueProps;
   'lr-country-picker': LyraCountryPickerVueProps;
   'lr-csv-viewer': LyraCsvViewerVueProps;
   'lr-currency-picker': LyraCurrencyPickerVueProps;
@@ -2483,6 +2497,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-knowledge-graph-explorer': LyraKnowledgeGraphExplorerVueProps;
   'lr-known-date': LyraKnownDateVueProps;
   'lr-lightbox': LyraLightboxVueProps;
+  'lr-lightbox-item': LyraLightboxItemVueProps;
   'lr-line-chart': LyraLineChartVueProps;
   'lr-lite-chart': LyraLiteChartVueProps;
   'lr-live-region': LyraLiveRegionVueProps;
@@ -2516,6 +2531,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-node-palette': LyraNodePaletteVueProps;
   'lr-notebook-viewer': LyraNotebookViewerVueProps;
   'lr-number-input': LyraNumberInputVueProps;
+  'lr-number-ticker': LyraNumberTickerVueProps;
   'lr-option': LyraOptionVueProps;
   'lr-otp-input': LyraOtpInputVueProps;
   'lr-page': LyraPageVueProps;
@@ -2585,6 +2601,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-spreadsheet-viewer': LyraSpreadsheetViewerVueProps;
   'lr-stack-trace': LyraStackTraceVueProps;
   'lr-stat': LyraStatVueProps;
+  'lr-step': LyraStepVueProps;
   'lr-stepper': LyraStepperVueProps;
   'lr-stream-status': LyraStreamStatusVueProps;
   'lr-streaming-text': LyraStreamingTextVueProps;

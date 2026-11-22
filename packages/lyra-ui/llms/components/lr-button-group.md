@@ -34,6 +34,8 @@ use `lr-toggle-group`.
 
 **CSS parts:** `base` (the `role="group"` flex wrapper; wraps within its allocation).
 
+Further CSS parts: `button-group`: Web Awesome-named alias on the same wrapper as `base`.
+
 **Themeable custom properties:** `--lr-button-group-gap` (default `var(--lr-space-2xs)`) — gap
 between slotted controls on both axes. `--lr-button-group-justify` (default `normal`) is the
 `justify-content` of a horizontal group: give the host a width (for example `display: flex` or

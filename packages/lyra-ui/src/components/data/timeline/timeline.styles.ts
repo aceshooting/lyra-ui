@@ -25,8 +25,8 @@ export const styles = css`
     --_lr-timeline-item-gap-inline-end: var(--lr-timeline-gap, var(--lr-space-l));
     --_lr-timeline-item-opposite-basis: auto; /* the opposite content sits above the marker */
     --_lr-timeline-item-opposite-align: start;
-    --_lr-timeline-item-rail-gap-block: 0px;
-    --_lr-timeline-item-rail-gap-inline: var(--lr-timeline-connector-gap, 0px);
+    --_lr-timeline-item-rail-gap-block: 0;
+    --_lr-timeline-item-rail-gap-inline: var(--lr-timeline-connector-gap, 0);
   }
 
   /* The frame is the container the allocation-driven layouts query. It only becomes one when a
@@ -35,9 +35,9 @@ export const styles = css`
     display: block;
     min-inline-size: 0;
   }
-  :host([orientation='auto']) .frame,
   :host([marker-placement='alternate']) .frame {
     container-type: inline-size;
+    contain-intrinsic-inline-size: var(--lr-size-20rem);
   }
 
   /* marker-placement="end": the marker follows the content. row-reverse is inline-logical, so the
@@ -55,7 +55,7 @@ export const styles = css`
     --_lr-timeline-item-rail-position: absolute;
     --_lr-timeline-item-rail-inline: 100%;
     --_lr-timeline-item-rail-block: auto;
-    --_lr-timeline-item-rail-gap-block: 0px;
+    --_lr-timeline-item-rail-gap-block: 0;
     --_lr-timeline-item-rail-bg: transparent;
     --_lr-timeline-item-rail-halves: '';
     --_lr-timeline-item-rail-visibility-center: visible;
@@ -75,37 +75,6 @@ export const styles = css`
       --_lr-timeline-alt-flip-opposite-col: 3;
       --_lr-timeline-alt-flip-content-align: end;
       --_lr-timeline-alt-flip-opposite-align: start;
-    }
-  }
-
-  /* orientation="auto": a column until the timeline has room for a row. */
-  @container (min-width: 40em) {
-    :host([orientation='auto']:not([scale='time'])) [part~='base'] {
-      flex-direction: row;
-      overflow-x: auto;
-      overflow-y: hidden;
-      padding: calc(var(--lr-space-2xs) + var(--lr-border-width-medium));
-      --_lr-timeline-item-direction: column;
-      --_lr-timeline-item-track-direction: row;
-      --_lr-timeline-item-gap-block-end: 0;
-      --_lr-timeline-item-gap-inline-end: var(--lr-timeline-gap, var(--lr-space-l));
-      --_lr-timeline-item-opposite-basis: auto;
-      --_lr-timeline-item-opposite-align: start;
-      --_lr-timeline-item-content-align: initial;
-      --_lr-timeline-item-rail-gap-block: 0px;
-      --_lr-timeline-item-rail-gap-inline: var(--lr-timeline-connector-gap, 0px);
-      --_lr-timeline-item-base-display: initial;
-      --_lr-timeline-item-track-col: initial;
-      --_lr-timeline-item-track-justify: initial;
-      --_lr-timeline-item-track-pad: initial;
-      --_lr-timeline-item-rail-position: initial;
-      --_lr-timeline-item-rail-inline: initial;
-      --_lr-timeline-item-rail-block: initial;
-      --_lr-timeline-item-rail-bg: initial;
-      --_lr-timeline-item-rail-halves: initial;
-      --_lr-timeline-item-rail-visibility-center: initial;
-      --_lr-timeline-alt-content-col: initial;
-      --_lr-timeline-alt-opposite-col: initial;
     }
   }
 

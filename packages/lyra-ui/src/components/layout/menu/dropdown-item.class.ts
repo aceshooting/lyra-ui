@@ -1,5 +1,7 @@
 import type { PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
+import { setCustomState } from '../../../internal/custom-states.js';
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { LyraMenuItem, type LyraMenuItemEventMap } from './menu-item.class.js';
 import type { MenuFocusTarget } from './menu-shared.js';
 
@@ -50,6 +52,12 @@ export interface LyraDropdownItemEventMap extends LyraMenuItemEventMap {
  * @csspart spinner-base - Second name for the loading spinner node.
  * @csspart submenu-icon - Submenu chevron wrapper.
  * @csspart submenu - Submenu panel/wrapper.
+ * @cssstate active - The item has focus, so it is the menu's current item.
+ * @cssstate checked - The item is `checked`.
+ * @cssstate disabled - The item is `disabled`.
+ * @cssstate has-submenu - Content is assigned to the `submenu` slot.
+ * @cssstate link - `href` resolves to a safe link, so the item renders as an anchor.
+ * @cssstate submenu-open - The item's submenu is open.
  * @cssprop --lr-overlay-surface - Shared floating-surface fill. Advertised here because this tag
  *   shares a stylesheet directory with `lr-menu`, whose surface reads it; a dropdown item is a row
  *   inside that surface and paints no surface of its own, so setting it here changes nothing.
@@ -69,6 +77,7 @@ export class LyraDropdownItem extends LyraMenuItem {
     return [...new Set([...super.observedAttributes, 'submenuopen'])];
   }
 
+  private readonly itemInternals = attachInternalsSafely(this);
   private pendingAuthoredOpen = false;
   private authoredOpenRequestPending = false;
   private syncingSubmenuAttributes = false;
@@ -169,8 +178,19 @@ export class LyraDropdownItem extends LyraMenuItem {
     );
   }
 
+  constructor() {
+    super();
+    this.addEventListener('focus', () => setCustomState(this.itemInternals, 'active', true));
+    this.addEventListener('blur', () => setCustomState(this.itemInternals, 'active', false));
+  }
+
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    setCustomState(this.itemInternals, 'checked', this.checked);
+    setCustomState(this.itemInternals, 'disabled', this.disabled);
+    setCustomState(this.itemInternals, 'has-submenu', this.hasSubmenu);
+    setCustomState(this.itemInternals, 'link', this.isLinkItem);
+    setCustomState(this.itemInternals, 'submenu-open', this.submenuOpen);
     // Attribute callbacks can run before slotted submenu content has connected. Retain either
     // authored spelling as the requested state and apply it once the panel exists.
     if (
@@ -197,6 +217,7 @@ export class LyraDropdownItem extends LyraMenuItem {
 
   override disconnectedCallback(): void {
     this.authoredOpenRequestPending = false;
+    setCustomState(this.itemInternals, 'active', false);
     super.disconnectedCallback();
     // Open submenu state is transient. Clear both reflections now so even a synchronous reparent
     // cannot present the normalized alias as a fresh request on reconnect.

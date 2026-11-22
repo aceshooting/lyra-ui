@@ -20,6 +20,9 @@ describe('authored boolean states while staging an element in an inert document'
       if (typeof property !== 'string' || declaration.type !== Boolean || declaration.attribute === false || declaration.state) continue;
       // This reflected table field reports measured overflow and is documented as read-only.
       if (name === 'lr-table' && property === 'hasHiddenPriorityColumns') continue;
+      // In the browser this reflected divider field follows slotted content (it is authored only on
+      // server-rendered markup), so an authored value is documented to be replaced.
+      if (name === 'lr-divider' && property === 'withLabel') continue;
       it(`${name}.${property} settles while staged and remains usable after adoption`, async () => {
         const staging = document.implementation.createHTMLDocument('State staging');
         const element = document.createElement(name) as LyraElement;

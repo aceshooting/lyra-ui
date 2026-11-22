@@ -161,16 +161,17 @@ const optionalPeerFamilyTags = componentInventory.components
 const rootHelperRegisteredTags = [];
 
 // Packed core/all.js includes every non-optional registration and every emitted chunk.
-// The shared component helpers and the library-wide accessibility, lifecycle and localization
-// repairs bring the complete graph to 5,830,768 bytes across 102 files. Rounding to the next
-// 64-byte boundary leaves 16 bytes. The opt-in Oniguruma entry measures its WASM separately.
+// The 32.1 additions (lr-step, lr-lightbox-item, lr-counter and lr-number-ticker, the lightbox,
+// timeline, stepper, code-block and popover parity surfaces, part aliases and runtime event
+// classes) bring the complete graph to 5,920,770 bytes across 152 files. Rounding to the next
+// 64-byte boundary leaves 62 bytes. The opt-in Oniguruma entry measures its WASM separately.
 // Prior reviewed baseline and allowance:
-// https://github.com/aceshooting/lyra-ui/blob/ad043b8e3479fcd9990cd6ecc36e4638b48cfcc4/scripts/check-packed-consumer.mjs
+// https://github.com/aceshooting/lyra-ui/blob/cd597ad2425cba24e215a21a226df08b77f44aa3/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'The complete core graph measures 5,830,768 raw bytes across 102 emitted files after the shared-helper consolidation and repairs. The raw ceiling is 5,830,784 bytes; optional peers remain lazy and no WASM is bundled.',
-  reviewedCoreMeasurementBytes: 5_830_768,
+  $comment: 'The complete core graph measures 5,920,770 raw bytes across 152 emitted files after the 32.1 component and parity additions. The raw ceiling is 5,920,832 bytes, the next 64-byte boundary; optional peers remain lazy and no WASM is bundled.',
+  reviewedCoreMeasurementBytes: 5_920_770,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 16,
+  selectedRegressionHeadroomBytes: 62,
 };
 
 /**

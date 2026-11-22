@@ -13,6 +13,7 @@ describe('<lr-number-ticker>', () => {
     el.addEventListener('lr-finish', () => finishes++);
     await waitUntil(() => el.matches(':state(counting)') || shownText(el) === '1,234', 'started', { timeout: 2000 });
     await waitUntil(() => shownText(el) === '1,234', 'settled', { timeout: 3000 });
+    // wait-reason: asserting no second lr-finish arrives after the run settles
     await aTimeout(300);
     expect(finishes).to.be.at.most(1);
     expect(el.matches(':state(counting)')).to.equal(false);
@@ -25,6 +26,7 @@ describe('<lr-number-ticker>', () => {
     let finishes = 0;
     el.addEventListener('lr-finish', () => finishes++);
     await waitUntil(() => finishes > 0, 'finish', { timeout: 3000 });
+    // wait-reason: asserting no second lr-finish arrives after the first
     await aTimeout(600);
     expect(finishes).to.equal(1);
   });
@@ -46,6 +48,7 @@ describe('<lr-number-ticker>', () => {
       html`<div><div style="block-size: 4000px"></div><lr-number-ticker value="80" duration="200"></lr-number-ticker></div>`,
     );
     const el = host.querySelector('lr-number-ticker') as LyraNumberTicker;
+    // wait-reason: asserting an off-screen ticker does not start counting
     await aTimeout(300);
     expect(shownText(el)).to.equal('0');
     el.scrollIntoView();
@@ -126,11 +129,13 @@ describe('<lr-number-ticker>', () => {
     let finishes = 0;
     el.addEventListener('lr-finish', () => finishes++);
     el.remove();
+    // wait-reason: asserting a disconnected ticker never finishes its run
     await aTimeout(1000);
     expect(finishes).to.equal(0);
     host.append(el);
     await oneEvent(el, 'lr-finish');
     expect(shownText(el)).to.equal('500');
+    // wait-reason: asserting reconnecting does not emit a second lr-finish
     await aTimeout(200);
     expect(finishes).to.equal(1);
   });

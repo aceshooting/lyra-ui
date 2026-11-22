@@ -365,6 +365,7 @@ function containsElement(container: Element | null, value: unknown): value is El
  *   unrecognized value falls back to `fixed`.
  * @cssprop [--lr-theme-scrollbar-color=auto] - Opt-in theme-level `scrollbar-color` (thumb then
  *   track) honored by the scrolling `column` lists; set on `:root` or any ancestor to retune every internal scroll container.
+ * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
  * @status stable
  * @since 4.0.0
  */

@@ -1,5 +1,6 @@
 import { activeFill, focusRing, focusRingInsetOffset, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { visuallyHidden } from '../../../internal/a11y.js';
 
 export const styles = css`
   :host {
@@ -159,6 +160,13 @@ export const styles = css`
      belongs on the native control, which is one shadow boundary deeper. */
   [part~='copy-button-text']::part(button) {
     padding: var(--lr-size-0-1875rem) var(--lr-space-xs);
+  }
+  .copy-glyph {
+    display: inline-flex;
+  }
+  /* aria-hidden mirror of the copy outcome; the control's own accessible name carries it. */
+  .copy-feedback {
+    ${visuallyHidden}
   }
   [part='toggle']:focus-visible {
     ${focusRing}
@@ -360,6 +368,30 @@ export const styles = css`
     color: var(--shiki-dark, inherit) !important;
     background-color: var(--shiki-dark-bg, transparent) !important;
   }
+  /* Syntax color overrides. codeBlockTokenTransformer classifies each highlighted token into one
+     data-token category and copies the light theme's color into --_lr-token-color. Each category
+     reads its public property into --_lr-syntax; unset, that reference is invalid, so the theme's
+     own light or dark color applies exactly as before. These rules repeat the selector weight of
+     the dark-theme rule above plus one attribute, so an override wins in both themes. */
+  [part='pre'] span[data-token] {
+    color: var(--_lr-syntax, var(--_lr-token-color, inherit)) !important;
+  }
+  [part='body'][data-dark-theme='true'] [part='pre'] span[data-token] {
+    color: var(--_lr-syntax, var(--shiki-dark, inherit)) !important;
+  }
+  [data-token='comment'] { --_lr-syntax: var(--comment-color); }
+  [data-token='keyword'] { --_lr-syntax: var(--keyword-color); }
+  [data-token='operator'] { --_lr-syntax: var(--operator-color); }
+  [data-token='string'] { --_lr-syntax: var(--string-color); }
+  [data-token='constant'] { --_lr-syntax: var(--constant-color); }
+  [data-token='function'] { --_lr-syntax: var(--function-color); }
+  [data-token='type'] { --_lr-syntax: var(--type-color); }
+  [data-token='variable'] { --_lr-syntax: var(--variable-color); }
+  [data-token='property'] { --_lr-syntax: var(--property-color); }
+  [data-token='tag'] { --_lr-syntax: var(--tag-color); }
+  [data-token='selector'] { --_lr-syntax: var(--selector-color); }
+  [data-token='inserted'] { --_lr-syntax: var(--inserted-color); }
+  [data-token='deleted'] { --_lr-syntax: var(--deleted-color); }
   [part='body'][data-dark-theme='true'] [part='pre'] .line-number,
   [part='body'][data-dark-theme='true'] [part='pre'] button.line-gutter {
     color: var(--lr-code-block-line-number-color, var(--lr-color-text-quiet)) !important;

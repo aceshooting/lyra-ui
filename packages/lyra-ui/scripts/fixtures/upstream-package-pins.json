@@ -5,11 +5,11 @@
   "packages": {
     "webawesome": {
       "name": "@awesome.me/webawesome",
-      "version": "3.11.0",
-      "tarballUrl": "https://registry.npmjs.org/@awesome.me/webawesome/-/webawesome-3.11.0.tgz",
-      "tarballIntegrity": "sha512-WM8kyP+AdAT3/zwNpc/YzN3Nu5pRD6ksREFZAct/DIn6KMnQs8lPVfiPbJrOpKMk8OaSnQX19iiwFGjoswXVXw==",
+      "version": "3.15.0",
+      "tarballUrl": "https://registry.npmjs.org/@awesome.me/webawesome/-/webawesome-3.15.0.tgz",
+      "tarballIntegrity": "sha512-r2RWOu/QAaTShbTy3QfpOw+j2Mc7z+iY/PA1rBbsmrWOm2DMv7K2wNYe4IXt6TgTswkrKuQM19RCGC5FJh7GFg==",
       "manifestPath": "package/dist/custom-elements.json",
-      "manifestSha256": "bdf206659b2fa5b2f10935ea90d7c452977017d8a9b21f5d3e415e07b368a11e"
+      "manifestSha256": "2b2582a50fe240c01b4448a7ba901df3341e4a75752534d6c371e0edb02caedf"
     },
     "shoelace": {
       "name": "@shoelace-style/shoelace",

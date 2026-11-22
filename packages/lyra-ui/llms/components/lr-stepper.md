@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 10 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `step`: `--lr-stepper-current-font-weight`; `step-check`: `--lr-stepper-check-color`; `step-index`: `--lr-stepper-current-index-bg`, `--lr-stepper-index-bg`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -64,10 +64,16 @@ step. A non-empty `steps` array always wins.
   any element click-drive the stepper with that `id`; inside a stepper the `<id>` may be omitted.
 - Events: `lr-before-step-change` (cancelable) and `lr-step-change`, both
   `detail: { name, previousName, step, previousStep }`. The new position ("Step 2 of 3") is announced politely.
-- Slot: default (`<lr-step>` elements). Extra parts: `stepper`, `summary` (visually hidden "Step X of Y").
+- Slot: default (`<lr-step>` elements). Extra parts: `stepper`, `summary` (visually hidden "Step X of Y"),
+  `steps` (the step list; the same node as `base`).
 - Custom properties for child mode: `--lr-stepper-marker-size`, `--lr-stepper-connector-color`,
-  `--lr-stepper-connector-color-active`, `--lr-stepper-connector-width`, `--lr-stepper-connector-gap`,
-  `--lr-stepper-step-gap`.
+  `--lr-stepper-connector-active-color`, `--lr-stepper-connector-width`, `--lr-stepper-connector-gap`,
+  `--lr-stepper-step-gap`, each also readable under its unprefixed name (`--marker-size`,
+  `--connector-color`, `--connector-color-active`, `--connector-width`, `--connector-gap`, and `--gap`
+  for the stacked step spacing), which wins when both are set.
+- Custom states: `:state(completed)` (every step completed, in either mode), `:state(loading)` (a child
+  step is loading) and `:state(stacked)` (the steps are laid out vertically, however that came about),
+  e.g. `lr-stepper:state(stacked) { --gap: 1.5rem; }`.
 - New string keys: `stepperSteps`, `stepperStepPosition` (`{current}`/`{total}`), `stepperStateLoading`,
   `stepperStateDisabled` (plus the existing completed/pending/locked keys for status text).
 
@@ -155,7 +161,10 @@ string; state: LyraStepState; disabled?: boolean; title?: string; icon?: unknown
 focused, on a non-`disabled` step. Never fired while `readonly`. It is non-cancelable because the
 component takes no default action to veto: it never mutates `steps`. `lr-stepper-orientation-change`
 (`detail: { orientation }`) — fired only when an enabled `orientationBreakpoint` actually changes
-`effectiveOrientation`.
+`effectiveOrientation`. In child mode, cancelable `lr-before-step-change`
+(`detail: { name, previousName, step, previousStep }`) fires before `active` changes —
+`preventDefault()` keeps the current step — and `lr-step-change` (same detail) fires after `active`
+changed and the steps re-rendered.
 
 **Slots:** none in data-driven mode; the default slot takes `<lr-step>` children in child mode.
 
@@ -168,6 +177,10 @@ rendered when the step has one, additionally to — never instead of — `step-i
 `step-index` (the numbered index chip, shown for `pending`/`current`/`error` steps), `step-check`
 (the completed-checkmark glyph, shown for `completed` steps instead of `step-index`), `step-label`
 (the step's label text).
+
+Further CSS parts: `stepper`: Child mode: the outer wrapper, a `<nav>` landmark while `clickable`,
+otherwise a labelled `role="group"`. `summary`: Child mode: visually hidden "Step X of Y" text for
+assistive technology.
 
 **Themeable custom properties:** `--lr-stepper-hover-bg` (default
 `var(--lr-color-brand-quiet)`) and `--lr-stepper-hover-color` (default

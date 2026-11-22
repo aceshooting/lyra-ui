@@ -222,6 +222,9 @@ while its range is the current value),
 day-cell/grid-column size; its private default follows the `size` tier — `2xs`/`xs`/`s`/`l`/`xl`;
 `m` keeps the default). An inherited or direct public value remains authoritative in every tier.
 
+More themeable custom properties: `--lr-form-control-label-line-height` (default `inherit`): Line
+height of the field label.
+
 **Optional peer deps:** none.
 
 ### `lr-date-input`
@@ -395,7 +398,20 @@ from outside — new in 11.1.0), `end`, `expand-button`,
 `input-wrapper`, `popup`, `range-separator`, `segment`, `segment-literal`, `start`, permanent
 compatibility name `base` (a nested wrapper inside `date-input`), and permanent compatibility name
 `label` (the inner label-content wrapper inside `form-control-label`). Lyra additionally retains
-`error`.
+`error`. Every nested `lr-date-picker` part is also forwarded under a `date-picker__` prefix, the
+names Web Awesome's date input exports, which exist only while the calendar is rendered:
+`date-picker__date-picker`, `date-picker__day`, `date-picker__day-disabled`,
+`date-picker__day-label`, `date-picker__day-outside`, `date-picker__day-placeholder`,
+`date-picker__day-range-end`, `date-picker__day-range-inner`, `date-picker__day-range-preview`,
+`date-picker__day-range-start`, `date-picker__day-selected`, `date-picker__day-today`,
+`date-picker__day-weekend`, `date-picker__footer`, `date-picker__grid`, `date-picker__header`,
+`date-picker__month`, `date-picker__month-label`, `date-picker__months`, `date-picker__next`,
+`date-picker__previous`, `date-picker__title`, `date-picker__view-cell`, `date-picker__view-grid`,
+`date-picker__view-item`, `date-picker__view-item-disabled`, `date-picker__view-item-selected`,
+`date-picker__view-item-today`, `date-picker__view-row`, `date-picker__weekday`,
+`date-picker__weekdays`, `date-picker__weeknumber`, `date-picker__weeknumbers`
+(`::part(date-picker__day-selected)`). `date-picker__date-picker` is the picker's own root, the
+replacement for Web Awesome's deprecated `date-picker__base`.
 
 On `lr-date-input`, `--lr-form-control-invalid-border-color` (default `var(--lr-color-danger)`) themes the resting border while the field matches `:state(user-invalid)`; a component-specific invalid border, where one exists, overrides it.
 

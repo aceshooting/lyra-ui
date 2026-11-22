@@ -18,6 +18,7 @@ import type { LyraCodeBlockCopyAppearance } from './code-block-shared.js';
 import { LyraCodeBlockBase, type LyraCodeBlockBaseEventMap } from './code-block-base.class.js';
 import { codeBlockPreSuppliedGrammar, codeBlockShowsSkeleton } from './code-block-shared.js';
 export type { LyraCodeBlockToggleDetail } from './code-block-shared.js';
+export type { LyraCodeBlockLoadDetail } from './code-block-base.class.js';
 import type {
   LyraAnchor,
   LyraHighlight,
@@ -104,7 +105,13 @@ export interface LyraCodeBlockEventMap extends LyraCodeBlockBaseEventMap {}
  * @customElement lr-code-block
  * @event lr-copy - The raw `code` was written to the clipboard. Frozen detail:
  *   `{ ok: true, text }`.
+ * @slot - The code to display, as text (or a `<script type="text/plain">` or `<template>`) when
+ *   `code` is empty. Read as source rather than projected; dedented unless `without-dedent`.
  * @event lr-error - Clipboard writing failed; generic no-detail notification.
+ * @event lr-load - Highlighting settled for the current `language`. `detail: { highlighted }` is
+ *   `true` when the grammar loaded and the code was highlighted (fired again each time new
+ *   highlighted output replaces the old), and `false` once when no grammar exists and the code
+ *   renders as plain text, alongside `:state(error)`.
  * @event lr-copy-error - Clipboard writing failed. Frozen detail:
  *   `{ ok: false, text, reason, error }`, where `reason` is
  *   `'unsupported' | 'denied' | 'failed'`.
@@ -133,6 +140,17 @@ export interface LyraCodeBlockEventMap extends LyraCodeBlockBaseEventMap {}
  * @csspart copy-button-icon - The copy control while `copyAppearance` is `'icon'`.
  * @csspart copy-button-control - The copy control's own native `<button>`, forwarded because the
  *   painted surface sits one shadow boundary deeper than `copy-button`.
+ * @csspart copy-button__button - Alias of `copy-button-control`.
+ * @csspart copy-button__copy-icon - The copy glyph at rest while `copyAppearance` is `'icon'`.
+ * @csspart copy-button__success-icon - The check glyph after a successful copy while
+ *   `copyAppearance` is `'icon'`.
+ * @csspart copy-button__error-icon - The error glyph after a failed copy while `copyAppearance` is
+ *   `'icon'`.
+ * @csspart copy-button__feedback - Visually hidden, `aria-hidden` mirror of the copy outcome text;
+ *   empty at rest.
+ * @cssstate loading - A `language` is set and its grammar (or the highlighter) is still loading.
+ * @cssstate error - No grammar exists for the current `language`; the code renders as plain text.
+ * @cssstate highlighted - The code is rendered with syntax highlighting.
  * @csspart header-actions - The wrapper around the `header-actions` slot, at the trailing end of
  *   the header row.
  * @slot header-actions - Extra controls for the header row, rendered after the copy control. Their
@@ -152,6 +170,19 @@ export interface LyraCodeBlockEventMap extends LyraCodeBlockBaseEventMap {}
  * @csspart line-button - A gutter line-number button, only rendered while `activatable-lines` and
  *   `line-numbers` are both set.
  * @cssprop [--lr-code-block-padding=var(--lr-space-s) var(--lr-space-m)] - Code padding.
+ * @cssprop --comment-color - Color of highlighted comments and quotes. Unset keeps the theme color.
+ * @cssprop --keyword-color - Color of highlighted keywords, storage modifiers, doctypes and headings. Unset keeps the theme color.
+ * @cssprop --operator-color - Color of highlighted operators and punctuation. Unset keeps the theme color.
+ * @cssprop --string-color - Color of highlighted strings, regular expressions, links and raw text. Unset keeps the theme color.
+ * @cssprop --constant-color - Color of highlighted numbers, booleans, constants and entities. Unset keeps the theme color.
+ * @cssprop --function-color - Color of highlighted functions and decorators. Unset keeps the theme color.
+ * @cssprop --type-color - Color of highlighted types, classes and built-ins. Unset keeps the theme color.
+ * @cssprop --variable-color - Color of highlighted variables and interpolations. Unset keeps the theme color.
+ * @cssprop --property-color - Color of highlighted properties, keys and attribute names. Unset keeps the theme color.
+ * @cssprop --tag-color - Color of highlighted markup tags. Unset keeps the theme color.
+ * @cssprop --selector-color - Color of highlighted CSS selectors. Unset keeps the theme color.
+ * @cssprop --inserted-color - Color of highlighted inserted diff lines. Unset keeps the theme color.
+ * @cssprop --deleted-color - Color of highlighted deleted diff lines. Unset keeps the theme color.
  * @cssprop [--lr-code-block-radius=var(--lr-radius)] - Frame corner radius.
  * @cssprop [--lr-code-block-border=var(--lr-border-width-thin) solid var(--lr-color-border-subtle)] -
  *   Frame border shorthand.
@@ -425,6 +456,7 @@ export class LyraCodeBlock extends LyraCodeBlockBase {
         const loaded = hl && await ensureShikiLanguageLoaded(hl, lang, source);
         if (token !== this.highlightToken || !this.isConnected) return;
         this.highlightedHtml = loaded && hl ? this.tokenize(hl, lang) : null;
+        this.grammarUnavailable = this.highlightedHtml === null;
       });
       return;
     }
@@ -432,10 +464,13 @@ export class LyraCodeBlock extends LyraCodeBlockBase {
     const hl = this.highlighter;
     if (!hl) {
       this.highlightedHtml = null;
+      // `null` (not `undefined`) means the optional peer failed to load: no grammar can exist.
+      if (hl === null) this.grammarUnavailable = true;
       return;
     }
     if (shikiHasLoadedLanguage(hl, lang)) {
       this.highlightedHtml = this.tokenize(hl, lang);
+      this.grammarUnavailable = this.highlightedHtml === null;
       return;
     }
     // Grammar not loaded yet -- show the plain-text fallback in the
@@ -446,6 +481,7 @@ export class LyraCodeBlock extends LyraCodeBlockBase {
       if (token !== this.highlightToken) return; // superseded by a newer code/language change
       if (!this.isConnected) return; // see the fine-grained branch above -- same first-update race
       this.highlightedHtml = ok ? this.tokenize(hl, lang) : null;
+      this.grammarUnavailable = this.highlightedHtml === null;
     });
   }
 

@@ -155,6 +155,7 @@ class LyraCodeEditorBase extends LyraElement<LyraCodeEditorEventMap> {}
  * `editor` scroll frame; see `--lr-theme-scrollbar-width`.
  * @cssprop [--lr-theme-scrollbar-color=auto] - Opt-in theme-level `scrollbar-color` (thumb then
  * track) honored by the `editor` scroll frame; see `--lr-theme-scrollbar-width`.
+ * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
  * @status stable
  * @since 4.0.0
  */

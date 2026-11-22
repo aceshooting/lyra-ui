@@ -270,7 +270,7 @@ accepted show or hide interrupted by disconnection resumes after reconnection an
 **Slots:** default (message), `icon`
 
 **CSS parts:** `toast-item`, `accent`, `icon`, `content`, `close-button`, `close-icon`,
-`close-icon__svg`, `progress-ring`, `progress-ring__base`, `progress-ring__indicator`,
+`close-icon__svg`, `progress-ring`, `progress-ring__base`, `progress-ring__progress-ring` (same SVG as `progress-ring__base`), `progress-ring__indicator`,
 `progress-ring__label`, `progress-ring__track`. The progress-ring tree is rendered for a finite,
 positive auto-dismiss duration and surrounds the close glyph; its indicator pauses alongside the
 auto-dismiss timer on hover or focus.
@@ -615,6 +615,8 @@ the slide animation are its own.
   from the drawer-specific `--size` CSS custom property below, which maps to this same panel's own
   `inline-size`/`block-size` for the active axis.
 
+More properties: `with-label`: see the component JSDoc.
+
 **Methods:** `show(): Promise<void>`, `hide(): Promise<void>`,
 `close(reason?: DialogCloseReason): Promise<void>` — inherited unchanged from `lr-dialog`; each
 promise settles after the matching `lr-after-*` event.
@@ -737,7 +739,7 @@ read, and neither is deprecated.
 - `label: string = ''` — mapped visible title. The richer `label` slot wins over it.
 - `withLabel: boolean = false` (attribute `with-label`) — server-rendering hint that a `label` slot
   child is provided, so the titled header is present before hydration; in the browser the real slot
-  content decides. Also on `lr-drawer`.
+  content decides, so `with-label` without a label never renders an empty heading. Also on `lr-drawer`.
 - `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — `1`–`6` expose
   the generated visible title (string property or rich `label` slot) at that semantic level;
   invalid untyped values retain level 3, while `none` keeps visual title text without heading
@@ -892,6 +894,9 @@ close control exactly as the background/color/radius tokens do. A component with
 border simply has no default to relay, which is different from border theming being broken. Size
 remains the one exception that does not cross this way: use `--lr-theme-icon-button-size`, never
 `--lr-icon-button-size`, as noted above.
+
+Further CSS parts: `close-button__button`: Web Awesome-named alias of `close-button-control`: the
+close button's own native control.
 
 **Themeable custom properties:** mapped aliases are `--backdrop-filter`, `--backdrop-color` (alias of `--lr-dialog-overlay-color`, which wins when both are set), `--width`, `--spacing`,
 `--header-spacing`, `--body-spacing`, `--footer-spacing`, `--show-duration`, and
@@ -1762,9 +1767,17 @@ If the import fails, leave the native disclosure visible and usable.
     if (row && card.forElement !== row) card.forElement = row;
   });
   ```
-- `anchor: Element | null = null` (property only) — positioning-only direct anchor, taking priority
-  over `for` and the interaction owner but never receiving click listeners or generated ARIA; a
-  `showAt()` virtual anchor still wins
+- `anchor: LyraPopoverAnchor | null = null` (property only; `LyraPopoverAnchor = Element |
+  VirtualAnchor`) — positioning-only direct anchor, taking priority over `for` and the interaction
+  owner but never receiving click listeners or generated ARIA; a `showAt()` virtual anchor still
+  wins. Besides an element it accepts a virtual element: any object with `getBoundingClientRect()`
+  and an optional `contextElement` (scroll, scale and direction context), such as a text-selection
+  range or a cursor point. Unlike `showAt()`, it persists across close and reopen until replaced;
+  assign a new object to move the popover. Clearing the sole anchor while open closes the popover;
+  a value with no callable `getBoundingClientRect` is ignored. The setter accepts
+  `LyraPopoverAnchor | null`; the getter is typed `Element | null` and returns the element anchor,
+  or `null` while a virtual element (or nothing) is assigned.
+  `popover.anchor = { getBoundingClientRect: () => range.getBoundingClientRect() };`
 - `interactionBoundary: Element | null = null` (property only) — additional light-dismiss
   containment for DOM anchoring. Pointer presses within this connected element and its composed
   descendants keep the popup open, so a collection's own activation handler can change `.anchor`
@@ -2917,8 +2930,8 @@ declarative content never flashes hidden for a frame.
 while empty), `dot` (the decorative status dot, rendered only while `dot` is set), `content` (the wrapper around the default slot — this is the part that truncates with
 an ellipsis, deliberately not `base`, so the tag's oversized remove hit target can overhang the
 compact surface without being clipped), and `remove-button` (`lr-tag` only, rendered only while
-`withRemove` / `removable`). The button also carries Shoelace's `remove-button__base` alias, so
-either part name styles the same native button.
+`withRemove` / `removable`). The button also carries Shoelace's `remove-button__base` alias and the
+upstream `remove-button__button` name, so any of the three part names styles the same native button.
 
 **Themeable custom properties.** Three layers, so a consumer can retune one without restating the
 others. Public hooks are consumed through private use-site defaults instead of being redeclared on

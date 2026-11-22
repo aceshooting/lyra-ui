@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 49 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 46 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `form-control-label`: `--lr-form-control-required-content`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -322,6 +322,9 @@ override documented on `<lr-popover>` each time it is positioned, falling back t
 `positioning-strategy` property; set the token on `:root`, a theme, or an ancestor to retune its
 listbox along with the other floating surfaces.
 
+More themeable custom properties: `--lr-form-control-label-line-height` (default `inherit`): Line
+height of the field label.
+
 **Optional peer deps:** none.
 
 ```html
@@ -356,12 +359,5 @@ listbox along with the other floating surfaces.
 - `hint`/`errorText` mirror `<lr-select>`'s identical chrome, including the `aria-describedby` wiring
   to the rendered `hint`/`error` ids — set on whichever element (`trigger` or `combobox-input`) owns
   `role="combobox"` for the active mode.
-
-Further custom properties:
-
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
-- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
-- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
-- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
 ---

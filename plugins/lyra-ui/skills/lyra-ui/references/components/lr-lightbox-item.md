@@ -9,6 +9,6 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 3 parts, 0 custom properties — see `lr-lightbox.md`
+- **Themeable via** 4 parts, 0 custom properties — see `lr-lightbox.md`
 - **Documented with** `lr-lightbox`: see [lr-lightbox.md](./lr-lightbox.md).
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

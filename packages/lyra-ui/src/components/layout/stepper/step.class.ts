@@ -2,6 +2,8 @@ import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { checkIcon, spinnerIcon } from '../../../internal/icons.js';
 import { declaredDefaultConverter } from '../../../internal/converters.js';
+import { setCustomState } from '../../../internal/custom-states.js';
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
 import { getNumberFormat } from '../../../internal/intl-cache.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
@@ -50,13 +52,20 @@ export type LyraStepAttention = 'none' | 'pulse' | 'bounce';
  * @csspart status - Visually hidden text telling assistive technology whether the step is
  *   completed, loading, unavailable, locked or not started.
  * @csspart description - The description.
+ * @cssstate active - The owning stepper's current step.
+ * @cssstate completed - Mirrors `completed`.
+ * @cssstate loading - Mirrors `loading`.
+ * @cssstate disabled - Mirrors `disabled`.
+ * @cssstate locked - A `linear` stepper cannot reach this step yet.
+ * @cssstate clickable - The owning stepper is `clickable`, so the step is a button.
  * @cssprop [--lr-step-pulse-color] - Color of the marker pulse drawn by `attention="pulse"`;
  *   defaults to the step's variant color.
+ * @cssprop [--pulse-color] - Alias of `--lr-step-pulse-color`; wins when both are set.
  * @cssprop [--lr-stepper-marker-size=var(--lr-size-2rem)] - Diameter of the marker. Set on the
  *   stepper or an ancestor.
  * @cssprop [--lr-stepper-connector-color=var(--lr-color-neutral-fill-normal)] - Color of the line
  *   after a step that is not completed.
- * @cssprop [--lr-stepper-connector-color-active] - Color of the line after a completed step;
+ * @cssprop [--lr-stepper-connector-active-color] - Color of the line after a completed step;
  *   unset, it follows the completed step's variant.
  * @cssprop [--lr-stepper-connector-width=var(--lr-border-width-medium)] - Thickness of the line.
  * @cssprop [--lr-stepper-connector-gap=var(--lr-size-0-35em)] - Gap between the marker edge and
@@ -84,6 +93,7 @@ export class LyraStep extends LyraElement {
   static override styles = [LyraElement.styles, stepStyles];
 
   private readonly slots = new SlotPresenceController(this);
+  private readonly stepInternals = attachInternalsSafely(this);
 
   /** Identifies the step. Matched against the stepper's `active` property and reported in its
    *  events. */
@@ -144,6 +154,12 @@ export class LyraStep extends LyraElement {
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
     if (changed.has('loading')) this.setAttribute('aria-busy', this.loading ? 'true' : 'false');
+    setCustomState(this.stepInternals, 'active', this.active);
+    setCustomState(this.stepInternals, 'completed', this.completed);
+    setCustomState(this.stepInternals, 'loading', this.loading);
+    setCustomState(this.stepInternals, 'disabled', this.disabled);
+    setCustomState(this.stepInternals, 'locked', this.locked);
+    setCustomState(this.stepInternals, 'clickable', this.clickable);
     if (changed.has('active') || changed.has('clickable')) {
       // aria-current belongs on whichever element takes focus: the inner button while clickable,
       // the list item otherwise.

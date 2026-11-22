@@ -2480,10 +2480,13 @@ describe('--backdrop-color alias and with-label', () => {
     });
   }
 
-  it('with-label renders the titled header before any label content is observed', async () => {
+  it('with-label is a server hint only: no label content means no empty heading in the browser', async () => {
     const el = (await fixture(html`<lr-dialog with-label open>body</lr-dialog>`)) as LyraDialog;
     expect(el.withLabel).to.be.true;
-    expect(el.shadowRoot!.querySelector('[part~="header"]')).to.exist;
+    expect(el.shadowRoot!.querySelector('[part~="heading"]') === null).to.equal(true);
+    expect(el.shadowRoot!.querySelector('[part~="panel"]')!.hasAttribute('aria-labelledby')).to.equal(false);
+    const slotted = (await fixture(html`<lr-dialog with-label open><span slot="label">Title</span>body</lr-dialog>`)) as LyraDialog;
+    expect(slotted.shadowRoot!.querySelector('[part~="heading"]')).to.exist;
     const plain = (await fixture(html`<lr-dialog open aria-label="Named">body</lr-dialog>`)) as LyraDialog;
     expect(plain.withLabel).to.be.false;
     expect(plain.shadowRoot!.querySelector('[part~="heading"]') === null).to.equal(true);

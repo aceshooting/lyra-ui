@@ -45,7 +45,7 @@ export class LyraButtonGroup extends LyraElement {
   }
 
   override render(): TemplateResult {
-    return renderLabeledGroup(this, 'button-group');
+    return renderLabeledGroup(this, 'base button-group');
   }
 }
 

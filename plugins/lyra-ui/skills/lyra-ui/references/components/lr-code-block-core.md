@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 16 parts, 29 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 21 parts, 42 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `body`: `--lr-code-block-max-height`, `--lr-theme-scrollbar-color`, `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-width`; `code`: `--lr-code-block-font`; `header`: `--lr-code-block-language-bg`; `language`: `--lr-code-block-language-bg`, `--lr-code-block-language-color`; `pre`: `--lr-code-block-font`, `--lr-code-block-tab-size`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -41,8 +41,10 @@ highlighted markup.
 
 A `language` value absent from `languages` always renders the plain `<pre><code>` fallback — there is
 no default/full-table highlighter here to fall back to, unlike `<lr-code-block>`'s dynamic-import
-path for an unmapped language. That fallback is the _default_ rendering path, not a degraded one,
-same as `<lr-code-block>`'s own plain-text fallback. Everything else — `code`/`language`/
+path for an unmapped language, and reports `:state(error)` with an `lr-load` whose `detail.highlighted` is `false`. That fallback is
+the _default_ rendering path, not a degraded one, same as `<lr-code-block>`'s own plain-text
+fallback. The custom states, `lr-load`, the `copy-button__*` parts and the syntax color properties
+behave as described for `<lr-code-block>`. Everything else — `code`/`language`/
 `filename`/`withoutCopyButton`/`collapsible`/`collapsed`/`maxHeight`, the copy button, the collapse header
 toggle, the loading-skeleton behavior while the fine-grained highlighter resolves — matches
 `<lr-code-block>` exactly, including its CSS parts, themeable custom properties, and stylesheet
@@ -103,6 +105,9 @@ The collapse control keeps the constant `codeBlockToggle` name (`Toggle code`) i
 reports its state through `aria-expanded`.
 A synchronous write to `collapsed` in an `lr-toggle-request` listener owns the state change.
 
+More properties: `without-copy`: see the component JSDoc. `without-dedent`: see the component JSDoc.
+`wrap`: see the component JSDoc.
+
 **Methods:** `scrollToAnchor(target)` — resolves a `line-range` anchor (or a `highlights` id string
 resolving to one) by scrolling its start line into view within `[part="body"]`; resolves `false`
 when the anchor isn't a `line-range`, the id isn't found, or the start line is out of bounds.
@@ -110,15 +115,22 @@ when the anchor isn't a `line-range`, the id isn't found, or the start line is o
 Identical behavior to `<lr-code-block>`'s own method.
 
 **Events:** the same fulfilled-only `lr-copy`, generic `lr-error`, full `lr-copy-error`, cancelable
-`lr-toggle-request`, committed `lr-toggle`, and `lr-line-activate` contracts as `<lr-code-block>`;
-`lr-text-select` (`detail: { text, anchor, rects }` — a text selection inside the code
-body ended; `anchor` is a `line-range` anchor covering the selected lines).
+`lr-toggle-request`, committed `lr-toggle`, `lr-load`, and `lr-line-activate` contracts as
+`<lr-code-block>` (`lr-load` carries `detail: { highlighted }` once highlighting settles for the
+current `language`); `lr-text-select` (`detail: { text, anchor, rects }` — a text selection inside
+the code body ended; `anchor` is a `line-range` anchor covering the selected lines).
 
 **Slots:** `header-actions` — identical to `<lr-code-block>`'s own slot.
 
 **CSS parts:** `base`, `header`, `filename`, `language`, `copy-button`, `copy-button-text`,
 `copy-button-icon`, `copy-button-control`, `header-actions`, `toggle`, `body`, `pre`, `code`, `line-highlight`, `line-button`, `limit` —
 identical set to `<lr-code-block>`.
+
+Further CSS parts: `copy-button__button`: Alias of `copy-button-control`. `copy-button__copy-icon`:
+The copy glyph at rest while `copyAppearance` is `'icon'`. `copy-button__error-icon`: The error
+glyph after a failed copy while `copyAppearance` is `'icon'`. `copy-button__feedback`: Visually
+hidden, `aria-hidden` mirror of the copy outcome text; empty at rest. `copy-button__success-icon`:
+The check glyph after a successful copy while `copyAppearance` is `'icon'`.
 
 **Themeable custom properties:** identical to `<lr-code-block>`, including `--lr-code-block-padding`,
 `--lr-code-block-radius`, `--lr-code-block-border`, `--lr-code-block-bg`,
@@ -138,6 +150,21 @@ declarations, so a page-, container-, or theme-level value reaches them; see `<l
 for the full rationale, including why `<lr-markdown>`/`<lr-markdown-core>` must declare the tab-size
 fallback separately. `base` is a flex column and `body` grows to fill whatever block space a
 explicitly sized host gives it too, identically to `<lr-code-block>` above.
+
+More themeable custom properties: `--comment-color`: Color of highlighted comments and quotes. Unset
+keeps the theme color. `--constant-color`: Color of highlighted numbers, booleans, constants and
+entities. Unset keeps the theme color. `--deleted-color`: Color of highlighted deleted diff lines.
+Unset keeps the theme color. `--function-color`: Color of highlighted functions and decorators.
+Unset keeps the theme color. `--inserted-color`: Color of highlighted inserted diff lines. Unset
+keeps the theme color. `--keyword-color`: Color of highlighted keywords, storage modifiers, doctypes
+and headings. Unset keeps the theme color. `--operator-color`: Color of highlighted operators and
+punctuation. Unset keeps the theme color. `--property-color`: Color of highlighted properties, keys
+and attribute names. Unset keeps the theme color. `--selector-color`: Color of highlighted CSS
+selectors. Unset keeps the theme color. `--string-color`: Color of highlighted strings, regular
+expressions, links and raw text. Unset keeps the theme color. `--tag-color`: Color of highlighted
+markup tags. Unset keeps the theme color. `--type-color`: Color of highlighted types, classes and
+built-ins. Unset keeps the theme color. `--variable-color`: Color of highlighted variables and
+interpolations. Unset keeps the theme color.
 
 **Optional peer deps:** `shiki` (specifically its `shiki/core`, `shiki/engine/javascript` (the default), and `shiki/themes/github-{light,dark}.mjs` subpaths — never
 `shiki`'s main entry point, which is what carries the ~200-language table this component exists to

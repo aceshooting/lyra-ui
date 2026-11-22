@@ -29,30 +29,30 @@ const chartDefaults = new Map([
 ]);
 
 const evidenceHashes = new Map([
-  ['wa-chart', '5165e2b004b5b1214a29aea843670e5b963ef5424cb27379c2b58b1611b8ee0e'],
-  ['wa-bar-chart', 'fe2969c238434c32679554cf9e36e66f32d2faf8aa2100b4efa491967e2f7d43'],
-  ['wa-bubble-chart', 'c18a710316888476a09008ce4f7ba0fa864f6a7c5d96ab7e972a50e492e46dbd'],
-  ['wa-doughnut-chart', 'f0537eda572288c36700e54917f6915d3970126bdfb7b9718d93e3a4d3bfec57'],
-  ['wa-line-chart', 'f318b950f8a0c7cdae1d436bd1d2cd2b02b8b678ef0164f86907309a87da54a2'],
-  ['wa-pie-chart', 'a5ebc5a5fb6cae11d7d602ca37f536db81267a6af54e1bc9d9bfaeaf442238ff'],
-  ['wa-polar-area-chart', 'b00297da3a51e7b5a5ce922cfe1f5c158a95b34669c3a55a53c8b47665b08ea5'],
-  ['wa-radar-chart', '5d54d45a9263bf16a2fde8a95e41e31c4fcfe428884d271cca537c1bc63bc53c'],
-  ['wa-scatter-chart', '1f5a3191e2895f28efc75aa5e441deb7eb1293d7ab48787c807c04ea93414a2a'],
-  ['wa-sparkline', 'f1ad77432edfdb1f5f45a2caf5a707187478d851295a66a4968c02fe78770516'],
-  ['wa-date-input', 'f02d777c5ea505c9eeafee76a0418647b83aeff513e2830915547937cda418b9'],
-  ['wa-date-picker', '9dc70a6ef8da5c99193cb82cb30887972f25133691f74963daf90f316678d6ff'],
-  ['wa-data-grid', '4712e4032ddfb07bf32bacf18733c478b7b939e0af766609826d04d836d8239e'],
-  ['wa-combobox', '878fceb16d17a6ced71602f22d51339958c16138a470858f5dccf2d8d6419ec3'],
-  ['wa-file-input', 'ce9311420d7f5e29ebfd736d8e99a61aeb412e36765729113fa23b84990a3b05'],
-  ['wa-video', '3823f6e9dbf7330a333dde9612e987b851f3fa8762b6cd007d93ccd1d71f6362'],
-  ['wa-video-playlist', 'bcb3e7ea61f1a5f5e3ced4b3be538e790c3ba8e1b22832576dbc44da0e1ef75a'],
+  ['wa-chart', '5c78200d98c215029b6cf85b8bad62f63f8eaad858491d7adb66ce10199e8f26'],
+  ['wa-bar-chart', '2730f0758c5a4702e6b03d6daa6ebb3fed4ad9ff45f0946c4e8c82303706127d'],
+  ['wa-bubble-chart', 'f54ed13586cc067bc83649c099ac778a5ea37d65951864a4308052845c076685'],
+  ['wa-doughnut-chart', '2b71e6183e611d464f893a276b7c6e985eb13755ac2268fe54796308620c54ab'],
+  ['wa-line-chart', '699b556b5110da06914b40515c582858c835479858e4e1981a2a425498c80d4a'],
+  ['wa-pie-chart', '2e8d6dce49d5f5191c0cba85286acd170af7187ded6b48fb461d00e551a2bbc7'],
+  ['wa-polar-area-chart', 'a75df22813254d3044933979b42d2136978594686c5abf70b99f56cf6ada49c2'],
+  ['wa-radar-chart', '807a084af346002fbd89b7a5f94ae9b5f7c47c8bb3096304f30c32ce5ae35596'],
+  ['wa-scatter-chart', '6fd92d62dc0da18ac31fb6774b23e4fd2cf7ffbb504b4f79346fe46152b5ccda'],
+  ['wa-sparkline', 'd9dff53cf50ab74307d515197c9b45ea7daad0743c3d6213e47691a296d39b1a'],
+  ['wa-date-input', 'd0d610f481abbcc34547d79870c52e90bcbd292088912779472c54883b66d4c3'],
+  ['wa-date-picker', 'c5c0adacd41ce1f1bddd91e034425c96f49f0b7656b0b5a92e29e4482a5dce74'],
+  ['wa-data-grid', '4cb061d23c1ba79b87a8e07b0d780373c70b7acbdbd8d6bc91dee8ebfb997d78'],
+  ['wa-combobox', 'b1f6fa105bdc60967afea41e7a6c99fb6be140dd615d153b7352c93f015020f2'],
+  ['wa-file-input', '441cff764812b348a1ba9ecc5b1cec1ae5d474ecf2e9fd6c6f5e527b49030588'],
+  ['wa-video', 'a8f47beaf656628f753f93fe5a2c5818a1ed05a430cb61ba59f6a09f865ebb3f'],
+  ['wa-video-playlist', '285a89f59365df4b8ebb9c7e526234c754bb9d6f836565290c25b148cb622660'],
 ]);
 
 function assertCompleteEvidence(review) {
   assert.equal(review.review.status, 'complete');
   assert.equal(review.review.source, 'official-public-documentation');
-  assert.equal(review.review.sourceVersion, '3.11.0');
-  assert.equal(review.review.reviewedAt, '2026-08-02');
+  assert.equal(review.review.sourceVersion, '3.15.0');
+  assert.equal(review.review.reviewedAt, '2026-11-22');
   assert.match(review.review.sourceUrl, /^https:\/\/webawesome\.com\/docs\/components\//);
   assert.equal(review.review.sourceSha256, evidenceHashes.get(review.tag));
   assert.equal(review.review.sourceHashNormalization, 'cloudflare-data-cfemail-v1');
@@ -148,7 +148,7 @@ test('reviewed Sparkline, Combobox, and File Input snapshots are member-complete
       combobox.surface.parts.length,
       combobox.surface.methods.length,
     ],
-    [30, 7, 11, 17, 7],
+    [35, 11, 13, 24, 8],
   );
   assert.equal(combobox.surface.events.find(({ name }) => name === 'wa-create').cancelable, 'always');
   assert.equal(
@@ -177,7 +177,7 @@ test('reviewed Sparkline, Combobox, and File Input snapshots are member-complete
       fileInput.surface.parts.length,
       fileInput.surface.methods.length,
     ],
-    [17, 3, 5, 17, 5],
+    [17, 3, 5, 19, 5],
   );
   assert.equal(fileInput.surface.properties.find(({ name }) => name === 'dragging').readonly, false);
   assert.equal(fileInput.surface.properties.find(({ name }) => name === 'dragging').attribute, null);
@@ -244,9 +244,9 @@ test('reviewed Date and Data Grid snapshots preserve every counted public member
       parts: dateInput.surface.parts.length,
       methods: dateInput.surface.methods.length,
     },
-    { properties: 42, slots: 10, events: 10, parts: 19, methods: 8 },
+    { properties: 42, slots: 10, events: 10, parts: 53, methods: 8 },
   );
-  assert.equal(dateInput.maturity.status, 'experimental');
+  assert.equal(dateInput.maturity.status, 'stable');
   assert.equal(dateInput.surface.events.find(({ name }) => name === 'wa-show').cancelable, 'always');
   assert.equal(dateInput.surface.events.find(({ name }) => name === 'wa-hide').cancelable, 'always');
   for (const review of [dateInput, datePicker]) {
@@ -280,9 +280,9 @@ test('reviewed Date and Data Grid snapshots preserve every counted public member
       parts: datePicker.surface.parts.length,
       methods: datePicker.surface.methods.length,
     },
-    { properties: 27, slots: 4, events: 4, parts: 35, methods: 4 },
+    { properties: 27, slots: 5, events: 4, parts: 35, methods: 4 },
   );
-  assert.equal(datePicker.maturity.status, 'experimental');
+  assert.equal(datePicker.maturity.status, 'stable');
   assert.equal(
     dateInput.surface.properties.find(({ name }) => name === 'isDateDisabled').type,
     '(date: Date) => boolean | undefined',
@@ -314,20 +314,20 @@ test('reviewed Date and Data Grid snapshots preserve every counted public member
     },
     { properties: 42, attributes: 25, slots: 3, events: 15, parts: 42, cssProperties: 18, methods: 26 },
   );
-  assert.equal(dataGrid.maturity.status, 'experimental');
+  assert.equal(dataGrid.maturity.status, 'stable');
   assert.equal(dataGrid.surface.events.find(({ name }) => name === 'wa-cell-contextmenu').cancelable, 'always');
   assert.ok(dataGrid.surface.methods.every(({ overloads }) =>
     overloads.every(({ returnType }) => returnType === 'unspecified-public-documentation')),
   );
 });
 
-test('reviewed Video and Video Playlist snapshots retain their complete experimental contracts', () => {
+test('reviewed Video and Video Playlist snapshots retain their complete stable contracts', () => {
   const video = reviewedWebAwesomeVideo();
   const playlist = reviewedWebAwesomeVideoPlaylist();
   for (const review of [video, playlist]) {
     assertCompleteEvidence(review);
     assertNoInventedMethodReturns(review);
-    assert.equal(review.maturity.status, 'experimental');
+    assert.equal(review.maturity.status, 'stable');
   }
   for (const name of ['ended', 'error', 'loadedmetadata', 'pause', 'play', 'timeupdate', 'volumechange']) {
     assertNativeContract(video, name, {

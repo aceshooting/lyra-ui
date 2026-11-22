@@ -2086,6 +2086,9 @@ The two height knobs work as a pair on `[part='field-input']`, the same way
   it. Because the component never declares it, it can be set inline, from an ancestor, or from an
   outer-tree rule.
 
+More themeable custom properties: `--lr-form-control-label-line-height` (default `inherit`): Line
+height of the field label.
+
 **Known gotchas:**
 
 - Field _order_ is derived from the locale by formatting a probe date (Jan 2 2026) with
@@ -2437,16 +2440,24 @@ These named interfaces and helper signatures are available to typed integrations
     // Inherited from LyraIconLibraryOptions.
     resolver: LyraIconLibraryResolver;
     mutator?: LyraIconLibraryMutator;
+    spriteSheet?: boolean;
   }`
   Import: `@aceshooting/lyra-ui/components/utility/icon/icon-library.js`.
   `LyraIconLibraryOptions {
     resolver: LyraIconLibraryResolver;
     mutator?: LyraIconLibraryMutator;
+    spriteSheet?: boolean;
   }`
   Import: `@aceshooting/lyra-ui/components/utility/icon/icon-library.js`.
   `registerIconLibrary(name: string, options: LyraIconLibraryOptions): void`
   Import: `@aceshooting/lyra-ui/components/utility/icon/icon-library.js`.
   `unregisterIconLibrary(name: string): void`
+  Import: `@aceshooting/lyra-ui/components/utility/icon/icon-library.js`.
+  `getDefaultIconFamily(): string`
+  Import: `@aceshooting/lyra-ui/components/utility/icon/icon-library.js`.
+  `getDefaultIconVariant(): string`
+  Import: `@aceshooting/lyra-ui/components/utility/icon/icon-library.js`.
+  `setDefaultIconFamily(family: string, variant?: string): void`
 
 - **`components-utility-known-date-known-date-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/utility/known-date/known-date.class.js`.

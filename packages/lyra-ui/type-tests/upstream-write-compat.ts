@@ -41,7 +41,7 @@ import type {
 } from '../src/lyra.js';
 
 // These assignments are the public TypeScript spellings exposed by the pinned Shoelace 2.20.1
-// and Web Awesome 3.11.0 manifests. Valid mirrored token spellings stay observable on read and
+// and Web Awesome 3.15.0 manifests. Valid mirrored token spellings stay observable on read and
 // reflection while resolving through Lyra's private rendering vocabulary.
 declare const breadcrumbItem: LyraBreadcrumbItem;
 breadcrumbItem.href = undefined;

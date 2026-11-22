@@ -4533,7 +4533,7 @@ describe("review remediation", () => {
       <lr-file-input multiple .files=${[makeFile("a.csv", "text/csv"), makeFile("b.csv", "text/csv")]}></lr-file-input>
     `)) as LyraFileInput;
     const removeButtons = (): HTMLButtonElement[] =>
-      [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part="remove-button"]')];
+      [...el.shadowRoot!.querySelectorAll<HTMLButtonElement>('[part~="remove-button"]')];
     await focusByKeyboard(removeButtons()[1]!);
     await sendKeys({ press: "Enter" });
     await waitUntil(() => el.shadowRoot!.activeElement === removeButtons()[0]);
@@ -4593,7 +4593,7 @@ it("a remove click ignores a row whose file was replaced after render", async ()
   const a = makeFile("a.csv", "text/csv"), b = makeFile("b.csv", "text/csv");
   el.files = [a, b];
   await el.updateComplete;
-  const button = el.shadowRoot!.querySelectorAll<HTMLElement>('[part="remove-button"]')[0]!;
+  const button = el.shadowRoot!.querySelectorAll<HTMLElement>('[part~="remove-button"]')[0]!;
   el.files = [b];
   button.click();
   expect(el.files.map((file) => file.name)).to.deep.equal(["b.csv"]);

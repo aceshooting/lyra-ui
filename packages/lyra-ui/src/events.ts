@@ -1840,19 +1840,20 @@ export type LyraLinkActivateEvent =
   | LyraStreamingTextEventMap['lr-link-activate'];
 
 /**
- * `lr-load` — dispatched by 21 components: `<lr-animated-image>`, `<lr-archive-viewer>`,
- * `<lr-av-player>`, `<lr-calendar-viewer>`, `<lr-contact-viewer>`, `<lr-csv-viewer>`,
- * `<lr-dataset-viewer>`, `<lr-document-viewer>`, `<lr-email-viewer>`, `<lr-geojson-viewer>`,
- * `<lr-html-viewer>`, `<lr-icon>`, `<lr-image-viewer>`, `<lr-include>`, `<lr-model-viewer>`,
- * `<lr-notebook-viewer>`, `<lr-pdf-viewer>`, `<lr-pptx-viewer>`, `<lr-spreadsheet-viewer>`,
- * `<lr-svg-viewer>`, `<lr-xml-viewer>`; detail union of 21, e.g.
- * `LyraAnimatedImageEventMap['lr-load']`.
+ * `lr-load` — dispatched by 23 components: `<lr-animated-image>`, `<lr-archive-viewer>`,
+ * `<lr-av-player>`, `<lr-calendar-viewer>`, `<lr-code-block-core>`, `<lr-code-block>`,
+ * `<lr-contact-viewer>`, `<lr-csv-viewer>`, `<lr-dataset-viewer>`, `<lr-document-viewer>`,
+ * `<lr-email-viewer>`, `<lr-geojson-viewer>`, `<lr-html-viewer>`, `<lr-icon>`,
+ * `<lr-image-viewer>`, `<lr-include>`, `<lr-model-viewer>`, `<lr-notebook-viewer>`,
+ * `<lr-pdf-viewer>`, `<lr-pptx-viewer>`, `<lr-spreadsheet-viewer>`, `<lr-svg-viewer>`,
+ * `<lr-xml-viewer>`; detail union of 22, e.g. `LyraAnimatedImageEventMap['lr-load']`.
  */
 export type LyraLoadEvent =
   | LyraAnimatedImageEventMap['lr-load']
   | LyraArchiveViewerEventMap['lr-load']
   | LyraAvPlayerEventMap['lr-load']
   | LyraCalendarViewerEventMap['lr-load']
+  | LyraCodeBlockBaseEventMap['lr-load']
   | LyraContactViewerEventMap['lr-load']
   | LyraCsvViewerEventMap['lr-load']
   | LyraDatasetViewerEventMap['lr-load']

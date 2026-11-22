@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 28 parts, 32 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 28 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -121,6 +121,9 @@ surface/text/brand/danger colors and hover/active mixes. They are inline `var()`
 longhand that consumes them, so an override on a parent themes every descendant builder without
 being shadowed by a declaration on the component host.
 
+More themeable custom properties: `--lr-form-control-label-line-height` (default `inherit`): Line
+height of the field label.
+
 **Additional API surface:**
 
 - `errorText` — Caller-supplied outer error text. Field-level validation remains on the affected controls. Type: `string`.
@@ -129,9 +132,3 @@ being shadowed by a declaration on the component host.
 - `hint` attribute — Supporting text rendered below the outer label.
 - `hint` slot — Supporting text for the complete form control.
 - `part="hint"` — Supporting text for the complete form control.
-
-Further custom properties:
-
-- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
-- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
-- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.

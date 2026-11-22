@@ -3,7 +3,7 @@ import '../../lr-lightbox.js';
 import '../../lr-lightbox-item.js';
 import type { LyraLightbox } from '../../lr-lightbox.js';
 import type { LyraLightboxItem } from '../../lr-lightbox-item.js';
-import { chooseSrcsetCandidate } from './lightbox-item.class.js';
+import { chooseSrcsetCandidate } from '../../../internal/srcset.js';
 
 const svg = (color: string): string =>
   `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="8" height="8"><rect width="8" height="8" fill="${color}"/></svg>`)}`;
@@ -53,7 +53,7 @@ describe('lr-lightbox slotted items', () => {
     expect(el.shadowRoot!.querySelector('[part="counter"]')!.textContent).to.contain('2');
     await el.close();
     expect(second.hasAttribute('data-active')).to.equal(false);
-    expect(el.hasAttribute('data-closing')).to.equal(false);
+    await waitUntil(() => !el.hasAttribute('data-closing'));
   });
 
   it('renders a real link per item that works without the lightbox, and a button for unsafe or missing URLs', async () => {
@@ -257,7 +257,7 @@ describe('lr-lightbox slotted items', () => {
     await el.updateComplete;
     expect(el.items).to.have.length(2);
     expect(el.shadowRoot!.querySelector('[part="counter"]')!.textContent).to.match(/1\D+1/);
-    expect(el.shadowRoot!.querySelector('[part="frame"]')!.getAttribute('alt')).to.equal('ok');
+    expect(el.shadowRoot!.querySelector('[part~="frame"]')!.getAttribute('alt')).to.equal('ok');
     el.open = false;
   });
 
@@ -305,7 +305,33 @@ describe('lr-lightbox slotted items', () => {
     el.next();
     await el.updateComplete;
     expect(seen).to.deep.equal(['index', 'item']);
+    el.index = 0;
+    await el.updateComplete;
+    expect(seen, 'a programmatic index write stays silent').to.deep.equal(['index', 'item']);
     el.open = false;
+  });
+
+  it('keeps the data-mode chrome and leaves stray children unrendered', async () => {
+    const el = await fixture<LyraLightbox>(html`<lr-lightbox open .images=${[{ src: svg('red') }, { src: svg('green') }]}><span id="stray">stray</span></lr-lightbox>`);
+    expect(el.shadowRoot!.querySelector('[part="zoom-button"]') === null).to.equal(true);
+    expect(el.querySelector('#stray')!.getBoundingClientRect().width).to.equal(0);
+    el.open = false;
+  });
+
+  it('keeps the after-show and after-hide timing while the open and close motion runs', async () => {
+    const el = await gallery();
+    el.style.setProperty('--show-duration', '400ms');
+    el.style.setProperty('--hide-duration', '400ms');
+    const seen: string[] = [];
+    el.addEventListener('lr-after-show', () => seen.push('after-show'));
+    el.addEventListener('lr-after-hide', () => seen.push('after-hide'));
+    el.open = true;
+    await el.updateComplete;
+    await Promise.resolve();
+    expect(seen).to.deep.equal(['after-show']);
+    await el.close();
+    expect(seen).to.deep.equal(['after-show', 'after-hide']);
+    await waitUntil(() => !el.hasAttribute('data-closing'), 'closing state clears after the exit motion');
   });
 
   it('clears its closing state after the exit animation and passes axe while open', async () => {
@@ -318,7 +344,7 @@ describe('lr-lightbox slotted items', () => {
     void el.close();
     expect(el.hasAttribute('data-closing')).to.equal(true);
     await hidden;
-    expect(el.hasAttribute('data-closing')).to.equal(false);
+    await waitUntil(() => !el.hasAttribute('data-closing'));
   });
 
   it('chooses the srcset candidate that covers the viewer, else the largest', () => {
@@ -328,5 +354,146 @@ describe('lr-lightbox slotted items', () => {
     expect(chooseSrcsetCandidate('a.jpg 400w, b.jpg 900w, c.jpg 1600w', '300px', view)).to.equal('a.jpg');
     expect(chooseSrcsetCandidate('a.jpg, b.jpg 2x', '', { devicePixelRatio: 2, innerWidth: 800 } as Window)).to.equal('b.jpg');
     expect(chooseSrcsetCandidate('', '', view)).to.equal('');
+  });
+
+  describe('upstream styling hooks', () => {
+    const hasState = (element: Element, name: string): boolean => element.matches(`:state(${name})`);
+
+    it('exposes the dialog, scroll-container, image and navigation-button part aliases', async () => {
+      const el = await gallery();
+      el.id = 'hooks';
+      const sheet = document.createElement('style');
+      sheet.textContent = [
+        '#hooks::part(dialog) { outline: 3px dotted rgb(1, 2, 3); }',
+        '#hooks::part(scroll-container) { outline: 3px dotted rgb(4, 5, 6); }',
+        '#hooks::part(image) { outline: 3px dotted rgb(7, 8, 9); }',
+        '#hooks::part(navigation-button) { outline: 3px dotted rgb(10, 11, 12); }',
+        '#hooks::part(navigation-button-next) { outline-color: rgb(13, 14, 15); }',
+      ].join('\n');
+      document.head.append(sheet);
+      try {
+        el.index = 1;
+        el.open = true;
+        await el.updateComplete;
+        const root = el.shadowRoot!;
+        const outline = (selector: string): string => getComputedStyle(root.querySelector(selector)!).outlineColor;
+        expect(outline('[part~="panel"]')).to.equal('rgb(1, 2, 3)');
+        expect(outline('[part~="stage"]')).to.equal('rgb(4, 5, 6)');
+        expect(outline('[part~="frame"]')).to.equal('rgb(7, 8, 9)');
+        expect(outline('[part~="previous-button"]')).to.equal('rgb(10, 11, 12)');
+        expect(outline('[part~="next-button"]')).to.equal('rgb(13, 14, 15)');
+      } finally {
+        sheet.remove();
+        el.open = false;
+      }
+    });
+
+    it('publishes the open and zoomed custom states', async () => {
+      const el = await gallery();
+      expect(hasState(el, 'open')).to.equal(false);
+      el.open = true;
+      await el.updateComplete;
+      expect(hasState(el, 'open')).to.equal(true);
+      expect(hasState(el, 'zoomed')).to.equal(false);
+      el.zoomIn();
+      await waitUntil(() => hasState(el, 'zoomed'), 'zoomed after zoomIn()');
+      el.next();
+      await el.updateComplete;
+      await waitUntil(() => !hasState(el, 'zoomed'), 'navigation resets the zoom');
+      await el.close();
+      await el.updateComplete;
+      expect(hasState(el, 'open')).to.equal(false);
+    });
+
+    it('publishes the item active, empty and morphing states', async () => {
+      const wrapper = await fixture<HTMLDivElement>(html`<div>
+        <lr-lightbox>
+          <lr-lightbox-item src=${svg('red')} alt="Red"><img src=${svg('red')} alt="Red" /></lr-lightbox-item>
+          <lr-lightbox-item src=${svg('green')} alt="Green"><img src=${svg('green')} alt="Green" /></lr-lightbox-item>
+          <lr-lightbox-item src=${svg('blue')} alt="Blue"> </lr-lightbox-item>
+        </lr-lightbox>
+      </div>`);
+      const el = wrapper.querySelector<LyraLightbox>('lr-lightbox')!;
+      await el.updateComplete;
+      const [first, second, empty] = el.items as LyraLightboxItem[];
+      await empty!.updateComplete;
+      await waitUntil(() => hasState(empty!, 'empty'), 'an item with nothing slotted is empty');
+      expect(hasState(first!, 'empty')).to.equal(false);
+      expect(getComputedStyle(empty!).display).to.equal('none');
+
+      el.style.setProperty('--show-duration', '400ms');
+      el.index = 1;
+      el.open = true;
+      await el.updateComplete;
+      expect(hasState(second!, 'active')).to.equal(true);
+      expect(hasState(first!, 'active')).to.equal(false);
+      const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      expect(hasState(second!, 'morphing'), 'morphing while the open motion runs').to.equal(!reduced);
+      expect(hasState(first!, 'morphing')).to.equal(false);
+      await waitUntil(() => !hasState(second!, 'morphing'), 'morphing clears once the motion ends');
+
+      el.next();
+      await el.updateComplete;
+      expect(hasState(second!, 'active')).to.equal(false);
+      expect(hasState(empty!, 'active')).to.equal(true);
+      await el.close();
+      await el.updateComplete;
+      expect(hasState(empty!, 'active')).to.equal(false);
+      await waitUntil(() => !el.hasAttribute('data-closing'));
+      expect(hasState(empty!, 'morphing')).to.equal(false);
+    });
+
+    it('maps the backdrop, controls and spacing properties onto the rendered viewer', async () => {
+      const el = await gallery();
+      el.style.setProperty('--backdrop-color', 'rgb(20, 30, 40)');
+      el.style.setProperty('--backdrop-filter', 'blur(4px)');
+      el.style.setProperty('--controls-background', 'rgb(50, 60, 70)');
+      el.style.setProperty('--controls-color', 'rgb(80, 90, 100)');
+      el.style.setProperty('--spacing', '17px');
+      el.open = true;
+      await el.updateComplete;
+      const root = el.shadowRoot!;
+      const backdrop = getComputedStyle(root.querySelector('[part="backdrop"]')!);
+      expect(backdrop.backgroundColor).to.equal('rgb(20, 30, 40)');
+      expect(backdrop.backdropFilter).to.equal('blur(4px)');
+      const close = getComputedStyle(root.querySelector('[part="close-button"]')!);
+      expect(close.backgroundColor).to.equal('rgb(50, 60, 70)');
+      expect(close.color).to.equal('rgb(80, 90, 100)');
+      expect(getComputedStyle(root.querySelector('[part="counter"]')!).color).to.equal('rgb(80, 90, 100)');
+      expect(getComputedStyle(root.querySelector('[part~="panel"]')!).rowGap).to.equal('17px');
+      el.style.setProperty('--lr-lightbox-control-bg', 'rgb(1, 1, 1)');
+      // The control transitions its background, so wait for the settled value.
+      await waitUntil(
+        () => getComputedStyle(root.querySelector('[part="close-button"]')!).backgroundColor === 'rgb(1, 1, 1)',
+        'the Lyra token wins over the alias',
+      );
+      el.open = false;
+    });
+
+    it('keeps the default backdrop filter and spacing when the aliases are unset', async () => {
+      const el = await gallery();
+      el.open = true;
+      await el.updateComplete;
+      const root = el.shadowRoot!;
+      expect(getComputedStyle(root.querySelector('[part="backdrop"]')!).backdropFilter).to.equal('none');
+      const probe = document.createElement('div');
+      probe.style.rowGap = 'var(--lr-space-s)';
+      document.body.append(probe);
+      try {
+        expect(getComputedStyle(root.querySelector('[part~="panel"]')!).rowGap).to.equal(getComputedStyle(probe).rowGap);
+      } finally {
+        probe.remove();
+        el.open = false;
+      }
+    });
+
+    it('reflects label but keeps without-counter unreflected, as published', async () => {
+      const el = await gallery();
+      el.label = 'Holiday';
+      el.withoutCounter = true;
+      await el.updateComplete;
+      expect(el.getAttribute('label')).to.equal('Holiday');
+      expect(el.hasAttribute('without-counter')).to.equal(false);
+    });
   });
 });

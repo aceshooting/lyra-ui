@@ -143,6 +143,7 @@ describe('<lr-counter>', () => {
     expect(event.bubbles).to.equal(true);
     expect(event.composed).to.equal(true);
     expect(el.matches(':state(finished)')).to.equal(true);
+    // wait-reason: asserting no second lr-finish fires once the countdown has finished
     await aTimeout(1300);
     expect(finishes).to.equal(1);
     expect(el.shadowRoot!.querySelector('[part="base"]') === null).to.equal(true);
@@ -153,6 +154,7 @@ describe('<lr-counter>', () => {
     const el = await fixture<LyraCounter>(html`<lr-counter .date=${new Date(Date.now() - 5000)}></lr-counter>`);
     let finishes = 0;
     el.addEventListener('lr-finish', () => finishes++);
+    // wait-reason: asserting an already-passed date never emits lr-finish
     await aTimeout(1200);
     expect(finishes).to.equal(0);
     expect(el.matches(':state(finished)')).to.equal(true);
@@ -164,6 +166,7 @@ describe('<lr-counter>', () => {
       html`<lr-counter paused without-labels .date=${new Date(Date.now() + 100_000)}></lr-counter>`,
     );
     const frozen = texts(el, 'value').join();
+    // wait-reason: asserting a paused counter keeps showing the same reading across a tick
     await aTimeout(1300);
     expect(texts(el, 'value').join()).to.equal(frozen);
     el.paused = false;
@@ -179,10 +182,12 @@ describe('<lr-counter>', () => {
     let finishes = 0;
     el.addEventListener('lr-finish', () => finishes++);
     el.remove();
+    // wait-reason: asserting a disconnected counter never finishes past its duration
     await aTimeout(1700);
     expect(finishes).to.equal(0);
     host.append(el);
     await oneEvent(el, 'lr-finish');
+    // wait-reason: asserting reconnecting does not emit a second lr-finish
     await aTimeout(300);
     expect(finishes).to.equal(1);
   });

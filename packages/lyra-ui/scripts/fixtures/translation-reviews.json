@@ -8,8 +8,8 @@
   },
   "upstreamLocaleBreadth": {
     "webAwesome": {
-      "version": "3.11.0",
-      "commit": "1d05f1a4468336de35d2c61282a953ef07da3bdf",
+      "version": "3.15.0",
+      "commit": "9166643c4f340cd3a4771cb25d41c645c58bc3c6",
       "locales": [
         "ar",
         "cs",
@@ -40,6 +40,7 @@
         "sv",
         "tr",
         "uk",
+        "uz",
         "zh-CN",
         "zh-TW"
       ]
@@ -109,6 +110,7 @@
       "sv",
       "tr",
       "uk",
+      "uz",
       "zh-CN",
       "zh-TW"
     ]
@@ -148,6 +150,7 @@
       "sv",
       "tr",
       "uk",
+      "uz",
       "zh-TW"
     ],
     "deferred": [
@@ -166,7 +169,8 @@
       "Bengali (bn), Greek (el), Tamil (ta), Urdu (ur) and Vietnamese (vi) are complete original catalogs with independent AI-assisted review and entry-specific English-identical rationales; no human or native-speaker certification is claimed.",
       "All 34 population-prioritized additions have complete original catalogs, independent AI-assisted review records tied to the current content, and entry-specific English-identical rationales. No human or native-speaker certification is claimed.",
       "British English (en-GB), Latin American Spanish (es-419), Canadian French (fr-CA) and Hong Kong Traditional Chinese (zh-HK) ship as small regional difference catalogs over the built-in English strings, es, fr and zh-TW respectively; each records AI-assisted review only and no human or native-speaker certification is claimed.",
-      "Slovak (sk), Bulgarian (bg), Lithuanian (lt), Latvian (lv), Estonian (et), Catalan (ca), Irish (ga), Maltese (mt) and Serbian in Cyrillic (sr) and Latin (sr-Latn) script are complete original catalogs with AI-assisted structural verification only: key coverage, placeholders, ICU syntax, pinned CLDR plural categories and entry-specific English-identical rationales. They await native-speaker review; no linguistic, human or native-speaker certification is claimed."
+      "Slovak (sk), Bulgarian (bg), Lithuanian (lt), Latvian (lv), Estonian (et), Catalan (ca), Irish (ga), Maltese (mt) and Serbian in Cyrillic (sr) and Latin (sr-Latn) script are complete original catalogs with AI-assisted structural verification only: key coverage, placeholders, ICU syntax, pinned CLDR plural categories and entry-specific English-identical rationales. They await native-speaker review; no linguistic, human or native-speaker certification is claimed.",
+      "Uzbek (uz) joined the pinned upstream union when Web Awesome 3.15.0 added its catalog; the existing complete original catalog and its review record are unchanged, so it moves from the additional catalogs into the pinned-union partition."
     ],
     "additionalCatalogs": [
       "am",
@@ -214,7 +218,6 @@
       "th",
       "tl",
       "ur",
-      "uz",
       "vi",
       "yo",
       "zh-HK",

@@ -45,7 +45,7 @@ async function waitForImage(
 
 it('renders the image frame and exposes a dialog when opened', async () => {
   const el = (await fixture(html`<lr-lightbox .images=${[image]}></lr-lightbox>`)) as LyraLightbox;
-  expect(el.shadowRoot!.querySelector('[part="frame"]') !== null).to.be.true;
+  expect(el.shadowRoot!.querySelector('[part~="frame"]') !== null).to.be.true;
   expect(el.shadowRoot!.querySelector('[part~="panel"]')!.getAttribute('role')).to.equal(null);
 
   el.open = true;
@@ -304,9 +304,11 @@ it('routes post-render open writes through the lifecycle but treats initial open
   el.addEventListener('lr-after-hide', () => lifecycle.push('after-hide'));
 
   el.open = true;
-  await waitUntil(() => lifecycle.includes('after-show'));
+  await el.updateComplete;
+  await Promise.resolve();
   el.open = false;
-  await waitUntil(() => lifecycle.includes('after-hide'));
+  await el.updateComplete;
+  await Promise.resolve();
 
   expect(lifecycle).to.deep.equal(['show', 'after-show', 'hide', 'close', 'after-hide']);
 });

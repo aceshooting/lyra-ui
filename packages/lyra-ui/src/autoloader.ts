@@ -773,8 +773,14 @@ export function stop(): void {
   clearAllPending(context);
 }
 
-/** Alias of {@link start}, for code migrating from another library's `startLoader()`. */
+/**
+ * Alias of {@link start}, for code migrating from another library's `startLoader()`.
+ * @alias
+ */
 export const startLoader: typeof start = start;
 
-/** Alias of {@link stop}, for code migrating from another library's `stopLoader()`. */
+/**
+ * Alias of {@link stop}, for code migrating from another library's `stopLoader()`.
+ * @alias
+ */
 export const stopLoader: typeof stop = stop;

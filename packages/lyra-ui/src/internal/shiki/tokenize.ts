@@ -16,12 +16,13 @@ export function highlightToHtml(
   code: string,
   language: string,
   transformers?: readonly ShikiTransformer[],
+  options: { readonly includeExplanation?: 'scopeName' } = {},
 ): string | null {
   if (code.length > SHIKI_SOURCE_MAX_CODE_UNITS) return null;
   try {
     const markup = highlighter.codeToHtml(code, transformers
-      ? { lang: language, themes: SHIKI_THEMES, transformers: [...transformers] }
-      : { lang: language, themes: SHIKI_THEMES });
+      ? { lang: language, themes: SHIKI_THEMES, transformers: [...transformers], ...options }
+      : { lang: language, themes: SHIKI_THEMES, ...options });
     return typeof markup === 'string' ? markup : null;
   } catch {
     return null;

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-segmented-track-bg`, `--lr-segmented-track-border-color`, `--lr-segmented-track-height`, `--lr-segmented-track-min-height`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -42,12 +42,6 @@ string; label: string; icon?: unknown; disabled?: boolean }`; `icon` renders as 
   action or accessible name. Input is read through a realm-neutral bounded schema snapshot (at most
   256 positions); malformed/hostile entries are skipped, later duplicate values use
   first-valid-value-wins, and the frozen returned array/records never alias caller-owned objects.
-- `iconPlacement: LyraSegmentedIconPlacement = 'start'` (attribute `icon-placement`, reflected once
-  set) — `'start' | 'end'`, the logical side of the label each item's `icon` renders on; unsupported
-  values normalize to `'start'`.
-- `fullWidth: boolean = false` (attribute `full-width`, reflected) — stretches the control across
-  its container and grows the segments to share the spare width, in every `layout`; a `'scroll'` row
-  whose segments no longer fit still scrolls.
 - `value: string = ''` — the currently selected item's `value`.
 - `label: string = ''` — field caption and accessible-name fallback. Property-only naming keeps
   its existing `aria-label` value on the internal `role="radiogroup"`.
@@ -121,8 +115,7 @@ label-click action, form association or validation API.
 **CSS parts:** `form-control` (caption, track and hint wrapper), `form-control-label` (caption),
 `hint` (supporting text), `base` (the `role="radiogroup"` root and horizontal scroll owner),
 `segment` (a single `role="radio"` button), `segment-icon` (an optional inert, `aria-hidden`
-decorative icon, before the label or after it with `icon-placement="end"`), `segment-label` (the
-segment's label text).
+decorative leading icon), `segment-label` (the segment's label text).
 
 **Themeable custom properties:** `--lr-scroll-fade-size` (default `2rem`) — width of the mask fade
 at each horizontal scroll edge of the track, painted only while the track actually overflows (a row
@@ -179,6 +172,9 @@ Otherwise shared tokens — `--lr-color-border`/`-surface`/`-text`/
 `--lr-opacity-disabled`, `--lr-focus-ring-*`, and the `--lr-form-control-*` knobs the `size` tier
 resolves.
 
+More themeable custom properties: `--lr-form-control-label-line-height` (default `inherit`): Line
+height of the field label.
+
 **Optional peer deps:** none.
 
 ```html
@@ -226,12 +222,5 @@ resolves.
   matching its own current absence of a background.
 - `--lr-segmented-track-border-color` — Border color of the `base` track, which previously read
   `--lr-color-border` as a literal with no override hook. Default: `var(--lr-color-border)`.
-
-Further custom properties:
-
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
-- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
-- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
-- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
 ---

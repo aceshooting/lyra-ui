@@ -246,3 +246,25 @@ export const FromNativeModal: Story = {
     <lr-page style="inline-size:320px;block-size:240px"><button slot="navigation">Apply</button><p>Application content</p></lr-page>
   </section>`,
 };
+
+export const DisableStickyProperty: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story: '`disableSticky` reflects to `disable-sticky`; here the header scrolls away while the subheader stays. `nonce` is accepted and reflected for migrated markup and changes nothing.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="block-size: 20rem; inline-size: min(100%, 24rem); overflow: auto">
+      <lr-page .disableSticky=${'header'} nonce="story">
+        <strong slot="header">Workspace</strong>
+        <div slot="subheader">Project settings</div>
+        <div style="min-block-size: 36rem">
+          <h2>Notifications</h2>
+          <p>Scroll to see the header leave while the subheader stays pinned.</p>
+        </div>
+      </lr-page>
+    </div>
+  `,
+};

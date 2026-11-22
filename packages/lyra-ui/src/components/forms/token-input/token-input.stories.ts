@@ -327,24 +327,35 @@ export const LabelPlacementStart: StoryObj = {
 };
 
 export const LimitsAndClear: Story = {
-  name: 'Limits, clear button and delimiter characters',
+  name: 'Limits and clear button',
   parameters: {
     docs: {
       description: {
         story:
-          'max-tags blocks further commits (the draft stays, removal still works), min-tags reports rangeUnderflow, with-clear / clearable adds a clear button, and every character of delimiter commits and splits a paste.',
+          'max-tags blocks further commits (the draft stays, removal still works), min-tags reports rangeUnderflow, and with-clear / clearable adds a clear button.',
       },
     },
   },
   render: () => html`
     <lr-token-input
       label="Up to four labels"
-      hint="Type a label and press Enter, comma or semicolon. Paste a;b,c to split on both."
-      delimiter=",;"
+      hint="Type a label and press Enter or comma."
       max-tags="4"
       min-tags="2"
       with-clear
       .value=${['alpha', 'beta']}
     ></lr-token-input>
+  `,
+};
+
+/** `with-label`/`with-hint` reserve the label and hint rows for server rendering, and the `value`
+ *  attribute accepts delimiter-separated text beside the JSON array form. */
+export const SsrHintsAndDelimitedValue: Story = {
+  name: 'with-label, with-hint and a delimited value attribute',
+  render: () => html`
+    <lr-token-input with-label with-hint delimiter=";" value="design; research; writing">
+      <span slot="label">Skills</span>
+      <span slot="hint">Separate entries with a semicolon.</span>
+    </lr-token-input>
   `,
 };

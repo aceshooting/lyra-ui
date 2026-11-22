@@ -25,7 +25,7 @@ import {
   topLayerPlacement,
 } from '../../../internal/anchored-overlay-runtime.js';
 import { hostAriaLabel, nextId, srOnly } from '../../../internal/a11y.js';
-import { chevronIcon, closeIcon } from '../../../internal/icons.js';
+import { chevronIcon, closeIcon, spinnerIcon } from '../../../internal/icons.js';
 import {
   VALIDITY_ANCHOR,
   type IntrinsicValidityMessage,
@@ -245,13 +245,89 @@ interface ComboboxSourceRequest {
    *  `typeof globalThis` half. A bare `Window` drops them and the `new owner.AbortController()`
    *  below stops compiling (TS2339). */
   readonly owner: Window & typeof globalThis;
-  readonly source: ComboboxSource;
+  /** `null` for a `server`-mode request, which only announces itself through `lr-options-request`. */
+  readonly source: ComboboxSource | null;
 }
 
 const MAX_SOURCE_ROWS = 2_000;
 const MAX_SOURCE_TEXT_UNITS = 250_000;
 const MAX_SOURCE_FIELD_UNITS = 4_096;
 const MAX_RENDER_ROWS = 1_000;
+
+/** The single argument a {@link LyraCombobox.dataSource} provider receives: the query text and an
+ *  `AbortSignal` that aborts when a newer request supersedes this one. */
+export interface ComboboxRequest {
+  readonly query: string;
+  readonly signal: AbortSignal;
+}
+
+/** One option object a `dataSource` provider may return. Every other `ComboboxSourceRow` field
+ *  is accepted too. */
+export interface ComboboxOption {
+  readonly value: string;
+  readonly label: string;
+  readonly disabled?: boolean;
+}
+
+/** What a `dataSource` provider may return: option objects, option elements, a `{ rows, total }`
+ *  envelope, or a string of option markup. Elements and markup are read for their `value`, label
+ *  text and `disabled` state only -- markup is parsed into an inert document and never inserted, so
+ *  nothing in it runs. */
+export type ComboboxOptions =
+  | readonly (ComboboxOption | ComboboxSourceRow | Element)[]
+  | ComboboxSourceResult
+  | string;
+
+/** An upstream-shaped async option provider: one `{ query, signal }` argument, options or a
+ *  promise of them back. */
+export type ComboboxDataSource = (
+  request: ComboboxRequest
+) => Promise<ComboboxOptions> | ComboboxOptions;
+
+const MAX_DATA_SOURCE_MARKUP_UNITS = MAX_SOURCE_TEXT_UNITS * 4;
+
+function isElementLike(value: unknown): value is Element {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (value as { nodeType?: unknown }).nodeType === 1 &&
+    typeof (value as { getAttribute?: unknown }).getAttribute === 'function'
+  );
+}
+
+/** Reads an option element as a plain row: its `value` attribute, a string `label` property or
+ *  attribute, else its trimmed text, and its `disabled` attribute. Nothing else is retained. */
+function rowFromOptionElement(element: Element): ComboboxOption {
+  const own = (element as { label?: unknown }).label;
+  const label =
+    typeof own === 'string' && own !== ''
+      ? own
+      : element.getAttribute('label') ?? (element.textContent ?? '').trim();
+  const value = element.getAttribute('value') ?? '';
+  return {
+    value,
+    label: label || value,
+    ...(element.hasAttribute('disabled') ? { disabled: true } : {}),
+  };
+}
+
+/** Converts a `dataSource` result into the row shape `normalizeSourceResult()` validates. */
+function dataSourceResultToRows(result: unknown, owner: Window & typeof globalThis): unknown {
+  if (typeof result === 'string') {
+    if (result.length > MAX_DATA_SOURCE_MARKUP_UNITS)
+      throw new TypeError('Combobox dataSource markup exceeds the size limit');
+    // A parsed document has no browsing context: scripts never run, handlers never fire and no
+    // resource loads. Only text and attributes are read back out of it.
+    const parsed = new owner.DOMParser().parseFromString(result, 'text/html');
+    // Only option elements (`<option>` or any `*-option` tag) become rows; other markup is dropped.
+    return Array.from(parsed.body.children)
+      .filter((element) => element.localName === 'option' || element.localName.endsWith('-option'))
+      .map(rowFromOptionElement);
+  }
+  if (Array.isArray(result))
+    return result.map((item: unknown) => (isElementLike(item) ? rowFromOptionElement(item) : item));
+  return result;
+}
 
 /** Whether Lit can render `value` as a child: text, a DOM node, a genuine template result, or a flat list of those. */
 function isRenderable(value: unknown, nested = false): boolean {
@@ -496,6 +572,12 @@ export type LyraComboboxSourceErrorEvent =
  *   expand icon — so consumer content never sits outboard of the dropdown chevron.
  * @slot clear-icon - Replaces the clear button's built-in icon.
  * @slot expand-icon - Replaces the dropdown indicator's built-in icon.
+ * @slot empty - Replaces the status row shown while no option is available and nothing has been
+ *   typed. Falls back to `empty-text`, else the localized `noMatches` copy.
+ * @slot no-results - Replaces the status row shown while the typed query matches nothing. Falls
+ *   back to `empty-text`, else the localized `noMatches` copy.
+ * @slot loading - Replaces the status row shown while options are loading. Falls back to
+ *   `loading-text`, else the localized `loading` copy.
  * @event {Event} input - Bubbling, composed, non-cancelable native input notification for filter
  * edits or selection changes.
  * @event {Event} change - Bubbling, composed, non-cancelable native notification that the user
@@ -523,7 +605,8 @@ export type LyraComboboxSourceErrorEvent =
  *   query, not necessarily `this.query`/`inputValue`, which may have moved on (or been cleared by
  *   closing the listbox) by the time the rejection settles. Not cancelable — the failure has
  *   already happened and the error row is already what rendered, so there is nothing to veto.
- * @event lr-options-request - A `source` call is about to be made, once per call and after the
+ * @event lr-options-request - A `source`/`dataSource` call is about to be made, or a `server`-mode
+ *   request starts, once per call and after the
  *   debounce. `detail: { query, signal }`; `signal` is the same `AbortSignal` the source receives and
  *   aborts when a newer request supersedes this one, when `source` is reassigned, or when the control
  *   is disconnected or adopted. Not cancelable. Emitted only while the call is still current.
@@ -533,7 +616,8 @@ export type LyraComboboxSourceErrorEvent =
  *   The failed-load state's `[part='retry-button']` was activated. Cancelable —
  *   the built-in action calls `refresh()`, and `preventDefault()` leaves the failure on screen for
  *   a host that owns its own retry timing.
- * @method reload - `reload(): void` -- alias of `refresh()`.
+ * @method reload - `reload(): void` -- alias of `refresh()`, which in `server` mode also
+ *   announces a fresh `lr-options-request`.
  * @method refresh - `refresh(): void` — re-runs the current `source` query without changing the
  *   source's identity, its debounce controller, or its delay. Queues for the next open when the
  *   listbox is closed; does not call a source while the query is below `minQueryLength`, and
@@ -624,12 +708,20 @@ export type LyraComboboxSourceErrorEvent =
  * @csspart tag__content - Compatibility wrapper around a selected tag's visible content.
  * @csspart tag__remove-button - A tag's remove button.
  * @csspart tag__remove-button__base - Compatibility name on a tag's remove button.
+ * @csspart tag__remove-button__button - Web Awesome-named alias on the same remove button.
  * @csspart tag-overflow - The "+N" indicator standing in for the selections past
  *   `max-options-visible`.
  * @csspart clear-button - The clear button.
  * @csspart expand-icon - The dropdown indicator.
  * @csspart error - Ordinary form-validation text referenced by the internal input; it is not a
  *   live region, avoiding a second announcement alongside native validation/focus feedback.
+ * @csspart status - The status row shown in place of options; it also carries `empty`,
+ *   `no-results` or `loading` naming which state it reports.
+ * @csspart empty - The status row shown while no option is available and nothing is typed.
+ * @csspart no-results - The status row shown while the typed query matches nothing.
+ * @csspart loading - The status row shown while options are loading.
+ * @csspart spinner - The decorative in-field spinner shown while options load and the listbox is
+ *   not showing its own loading row.
  * @csspart source-error-row - The listbox row holding the failed-`source` state.
  * @csspart source-error - The shared failed-load state itself, with `source-error-base`,
  *   `source-error-icon`, `source-error-heading`, `source-error-description` and
@@ -719,6 +811,10 @@ export type LyraComboboxSourceErrorEvent =
  * popup.
  * @cssstate blank - Matches while no value is selected.
  * @cssstate disabled - Matches while disabled directly or by an ancestor fieldset.
+ * @cssstate loading - Matches while options are loading: `loading` is set or a `source` or
+ *   `dataSource` request is in flight.
+ * @cssstate showing-loading-row - Matches while the open listbox shows its loading row, which is
+ *   when the in-field spinner is hidden.
  * @cssstate required - Matches while `required` is set, so a consumer can mark the field without
  *   duplicating that flag in their own markup.
  * @cssstate optional - Matches while `required` is not set (the complement of `required`).
@@ -741,6 +837,7 @@ export type LyraComboboxSourceErrorEvent =
  *   scrolling `listbox`; see `--lr-theme-scrollbar-width`.
  * @cssprop [--lr-theme-scrollbar-color=auto] - Opt-in theme-level `scrollbar-color` (thumb then
  *   track) honored by the scrolling `listbox`; see `--lr-theme-scrollbar-width`.
+ * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
  * @status stable
  * @since 4.0.0
  */
@@ -808,6 +905,7 @@ export class LyraCombobox<
     },
     maxRender: { converter: blankNumberConverter(200), attribute: 'max-render', noAccessor: true },
     sourceDelay: { converter: blankNumberConverter(200), attribute: 'source-delay', noAccessor: true },
+    // numeric-guard-exempt: alias that reads and writes sourceDelay, whose setter guards the value.
     filterDebounce: { converter: blankNumberConverter(200), attribute: 'filter-debounce', noAccessor: true },
     minQueryLength: { converter: blankNumberConverter(0), attribute: 'min-query-length', noAccessor: true },
   };
@@ -1060,13 +1158,89 @@ export class LyraCombobox<
   /** Optional bounded async row source. Receives `{ signal, limit: 2000 }`; may return a legacy
    * readonly row array or `{ rows, total? }`. Results are clone-normalized under row/text ceilings. */
   @property({ attribute: false }) source: ComboboxSource | null = null;
-  /** Alias of {@link source}; assigning either replaces the other. */
+  /**
+   * Async option provider in the single-argument call shape: it receives `{ query, signal }` and
+   * returns options, or a promise of them. Accepted results are option objects
+   * (`{ value, label, disabled? }`, plus any other `source` row field), option elements, a
+   * `{ rows, total }` envelope, or a string of option markup. Elements and markup contribute only
+   * their `value` attribute, label text and `disabled` state; markup is parsed into an inert
+   * document and is never inserted, so it cannot run script; only its top-level `<option>` or
+   * `*-option` elements become rows. Results then pass the same row and
+   * text ceilings as `source`.
+   *
+   * It drives the same async pipeline as {@link source} -- debounce, `lr-options-request`,
+   * cancellation, the loading and failed states -- and assigning either provider replaces the
+   * other: this property reads `null` once `source` is assigned. `source` keeps its own
+   * `(query, { signal, limit })` call shape.
+   * @default null
+   */
   @property({ attribute: false })
-  get dataSource(): ComboboxSource | null {
-    return this.source;
+  get dataSource(): ((request: ComboboxRequest) => Promise<ComboboxOptions> | ComboboxOptions) | null {
+    return this.dataSourceAdapter !== null && this.source === this.dataSourceAdapter
+      ? this._dataSource
+      : null;
   }
-  set dataSource(next: ComboboxSource | null) {
-    this.source = next;
+  set dataSource(next: ((request: ComboboxRequest) => Promise<ComboboxOptions> | ComboboxOptions) | null) {
+    if (typeof next !== 'function') {
+      if (this.dataSourceAdapter !== null && this.source === this.dataSourceAdapter) this.source = null;
+      this._dataSource = null;
+      this.dataSourceAdapter = null;
+      return;
+    }
+    const provider = next;
+    const adapter: ComboboxSource = (query, { signal }) => {
+      const owner = this.ownerDocument.defaultView ?? window;
+      return Promise.resolve(provider({ query, signal })).then(
+        (result) => dataSourceResultToRows(result, owner) as readonly ComboboxSourceRow[] | ComboboxSourceResult
+      );
+    };
+    this._dataSource = provider;
+    this.dataSourceAdapter = adapter;
+    this.source = adapter;
+  }
+  private _dataSource: ComboboxDataSource | null = null;
+  private dataSourceAdapter: ComboboxSource | null = null;
+  /**
+   * Server mode without a provider function: client-side filtering is switched off (`filter` is
+   * ignored and every `<lr-option>` child is shown), and each request is announced through
+   * `lr-options-request` instead. Typing requests after the `source-delay`/`filter-debounce`
+   * wait; opening the listbox and `reload()` request at once. Scheduling a request sets `loading`;
+   * the host replaces the `<lr-option>` children for `detail.query` and then sets `loading` back to
+   * `false`. A request whose `detail.signal` has aborted was superseded, so its answer should be
+   * dropped. While `loading` is set and options are already shown, they stay visible and the
+   * in-field `spinner` reports the request; the `loading` row appears only while no option is shown.
+   * A `source` or `dataSource` provider takes precedence over this flag.
+   * @default false
+   */
+  @property({ type: Boolean, reflect: true }) server = false;
+
+  /**
+   * The option the keyboard is currently on (the `aria-activedescendant` row), or `undefined`
+   * while no row is active, the listbox is closed, or the active row has no `<lr-option>` behind
+   * it -- an async `source`/`dataSource` row or a synthetic create/unknown-value row. It becomes
+   * `undefined` as soon as that option stops being available, for example when a response removes
+   * it, and Enter then does nothing to it.
+   *
+   * Assigning an option moves the keyboard highlight to its row while the listbox is open and the
+   * option is shown and available; assigning anything else, including `undefined`, clears the
+   * highlight. The write selects nothing and emits no event.
+   */
+  get currentOption(): LyraOption | undefined {
+    if (!this.open || this.activeIndex < 0 || !this.listboxRendered) return undefined;
+    const row = this.navigableRows(this.renderedRows.rows)[this.activeIndex];
+    return row && !row.createInput && row.unknownValue === undefined
+      ? this.sourceOptionsByRow.get(row)
+      : undefined;
+  }
+  set currentOption(next: LyraOption | undefined) {
+    const navigable =
+      this.open && this.listboxRendered && next ? this.navigableRows(this.renderedRows.rows) : [];
+    this.activeIndex = navigable.findIndex((row) => this.sourceOptionsByRow.get(row) === next);
+  }
+
+  /** Server mode without a provider: requests are announced, never answered here. */
+  private get serverRequests(): boolean {
+    return this.server && !this.source;
   }
 
   /** Web Awesome's boolean `autocorrect` IDL; its HTML attribute uses `on`/`off`. */
@@ -1090,7 +1264,7 @@ export class LyraCombobox<
     this.explicitInputValue = true;
     this.query = next ?? '';
     this.activeIndex = -1;
-    if (this.source) this.runSource(this.query);
+    if (this.source || this.serverRequests) this.runSource(this.query);
     this.requestUpdate();
   }
 
@@ -1421,7 +1595,7 @@ export class LyraCombobox<
     this.explicitInputValue = true;
     this.query = input.value;
     this.activeIndex = -1;
-    if (this.source) this.runSource(this.query);
+    if (this.source || this.serverRequests) this.runSource(this.query);
   }
 
   /** @internal */
@@ -1502,6 +1676,13 @@ export class LyraCombobox<
       this.closeCleanupPending = false;
     } else if (changed.has('open') && !this.open) {
       this.finalizeCloseState();
+    }
+    if (changed.has('server') && !this.source && changed.get('server') !== undefined) {
+      // Leaving or entering server mode retires any request the previous mode had in flight.
+      this.clearSourceTimer();
+      this.sourceAbort?.abort();
+      this.sourceAbort = undefined;
+      this.sourceToken++;
     }
     if (changed.has('source')) {
       this.clearSourceTimer();
@@ -1778,7 +1959,13 @@ export class LyraCombobox<
     this.requestUpdate('sourceDelay', old);
   }
 
-  /** Alias of {@link sourceDelay} (attribute `filter-debounce`). */
+  /**
+   * Alias of {@link sourceDelay} (attribute `filter-debounce`): the typing debounce before a
+   * `source`/`dataSource` call or a `server`-mode request. Its default stays `200`, this
+   * component's established typing debounce, where Web Awesome waits `250`; set
+   * `filter-debounce="250"` to match that timing exactly.
+   * @default 200
+   */
   get filterDebounce(): number {
     return this.sourceDelay;
   }
@@ -2027,6 +2214,15 @@ export class LyraCombobox<
     });
     setCustomState(this.internals, 'blank', this._selected.length === 0);
     setCustomState(this.internals, 'disabled', this.effectiveDisabled);
+    this.syncLoadingStates();
+  }
+
+  /** Whether the latest render showed the listbox's loading row (`showing-loading-row`). */
+  private loadingRowShown = false;
+
+  private syncLoadingStates(): void {
+    setCustomState(this.internals, 'loading', this.loading || this.sourceLoading);
+    setCustomState(this.internals, 'showing-loading-row', this.loadingRowShown);
   }
 
   private syncFormValue(): void {
@@ -2601,7 +2797,7 @@ export class LyraCombobox<
     const active = this.navigableRows(this.lastRenderedRows)[this.activeIndex]?.value;
     const result = this.memo.get('renderedRows', [this.callbackRefreshEpoch, this.options, this.asyncRows, this.source, this.query,
       this._selected, this.multiple, this.multiplePreferences, this.maxRender, this._sourceTotal, this.withUnknownOption,
-      this.allowCreate, this.filter, this.getUnknownLabel, this.loading, this.sourceEverSettled,
+      this.allowCreate, this.filter, this.server, this.getUnknownLabel, this.loading, this.sourceEverSettled,
       this.effectiveLocale, this.strings, active], () => this.computeRenderedRows(active));
     this.lastRenderedRows = result.rows;
     return result;
@@ -2642,6 +2838,8 @@ export class LyraCombobox<
   }
 
   private get filtered(): LyraOption[] {
+    // Server mode: the host already filtered the options it mounted for the current query.
+    if (this.server) return this.options;
     const locale = this.effectiveLocale;
     const q = this.filter ? this.query.trim().toLocaleLowerCase(locale) : prepareNeedle(this.query, locale);
     const selectedLabel = !this.multiple
@@ -2716,7 +2914,7 @@ export class LyraCombobox<
     const committedText = this._selected[0] ?? '';
     if (this.commitsText && !this.textEdited && !this.explicitInputValue && this.query !== committedText) {
       this.query = committedText;
-      if (this.source) this.runSource(this.query);
+      if (this.source || this.serverRequests) this.runSource(this.query);
     }
     if (!this.meetsMinimumQuery(this.query)) return Promise.resolve();
     const settled = this.popupController.wait(true);
@@ -2917,6 +3115,7 @@ export class LyraCombobox<
     super.updated(changed); // no-op in LyraElement/ReactiveElement today, but a future mixin's
     // updated() layered under this class must still run.
     this.syncExternalDescription();
+    this.syncLoadingStates();
     if (changed.has('visibleOptions') || changed.has('open') || changed.has('query') ||
         changed.has('options') || changed.has('asyncRows') || changed.has('maxRender') ||
         changed.has('value') || changed.has('listboxPositioned') || changed.has('strings') ||
@@ -2946,6 +3145,12 @@ export class LyraCombobox<
           this.runSource(this.query);
         } else if (this.source && this.asyncRows.length === 0) {
           this.runSource(this.query);
+        } else if (this.serverRequests) {
+          // Opening requests at once rather than after the typing debounce. Deferred a microtask
+          // because a server request writes `loading`, which would be a change-in-update here.
+          queueMicrotask(() => {
+            if (this.open && this.serverRequests) this.runSource(this.query, { immediate: true });
+          });
         }
       } else if (!this.open) {
         this.teardownListboxOverlay();
@@ -3157,7 +3362,7 @@ export class LyraCombobox<
     // own -- re-run `source` so the listbox (still open in multiple mode,
     // and whatever `asyncRows` holds for the next time it reopens in single
     // mode) matches the now-empty input instead of the stale prior query.
-    if (this.source) this.runSource(this.query);
+    if (this.source || this.serverRequests) this.runSource(this.query);
     if (changed) this.emitValueEvents();
     // Every activation of an available row reports, including the re-pick of the current selection
     // that `change`/`lr-change` are defined to stay silent for. See the class doc's `lr-activate`
@@ -3202,7 +3407,7 @@ export class LyraCombobox<
     this.query = '';
     this.explicitInputValue = false;
     this.textEdited = false;
-    if (this.source) this.runSource(this.query);
+    if (this.source || this.serverRequests) this.runSource(this.query);
     if (hadSelection) {
       this.emitValueEvents();
       this.emit('lr-clear');
@@ -3217,7 +3422,7 @@ export class LyraCombobox<
     this.query = (e.target as HTMLInputElement).value;
     this.activeIndex = -1;
     void this.show();
-    if (this.source) this.runSource(this.query);
+    if (this.source || this.serverRequests) this.runSource(this.query);
     // One of the two user-driven `query` writers that announce the new filter text (the other is
     // the clear button, via `clear()`) -- see the `query` declaration above.
     this.emit('lr-filter', { value: this.query });
@@ -3239,7 +3444,7 @@ export class LyraCombobox<
    * nothing at all -- local `<lr-option>` children are already live DOM.
    */
   refresh(): void {
-    if (!this.source) return;
+    if (!this.source && !this.serverRequests) return;
     if (!this.open) {
       this.refreshQueued = true;
       return;
@@ -3255,7 +3460,7 @@ export class LyraCombobox<
 
   private runSource(query: string, options?: { immediate?: boolean }): void {
     const source = this.source;
-    if (!source) return;
+    if (!source && !this.serverRequests) return;
     if (!this.meetsMinimumQuery(query) || !this.meetsMinimumQuery(this.query)) {
       this.enforceMinimumQuery(false);
       return;
@@ -3269,6 +3474,9 @@ export class LyraCombobox<
     const ownerWindow = this.ownerDocument.defaultView;
     if (!this.isConnected || !ownerWindow) return;
     const request = { query, token, owner: ownerWindow, source };
+    // Server mode reports a scheduled request straight away, debounce wait included; the host
+    // clears `loading` once it has replaced the options.
+    if (!source) this.loading = true;
     if (options?.immediate) {
       // Straight through the same settle callback the debounce would have called, so the token
       // guard, abort wiring and result handling stay in exactly one place.
@@ -3292,6 +3500,7 @@ export class LyraCombobox<
     const isCurrent = () =>
       token === this.sourceToken &&
       source === this.source &&
+      (source !== null || this.server) &&
       this.meetsMinimumQuery(query) &&
       this.meetsMinimumQuery(this.query) &&
       this.isConnected &&
@@ -3299,6 +3508,14 @@ export class LyraCombobox<
     if (!isCurrent()) return;
     const controller = new ownerWindow.AbortController();
     this.sourceAbort = controller;
+    if (!source) {
+      // Server mode: the host answers by replacing the light-DOM options, so there is no result
+      // to await -- only the announcement, from the same microtask a provider call would get.
+      void Promise.resolve().then(() => {
+        if (isCurrent()) this.emit('lr-options-request', { query, signal: controller.signal });
+      });
+      return;
+    }
     this.sourceLoading = true;
     this.sourceFailed = false;
     // `Promise.resolve().then(() => source(query, ...))` moves the call
@@ -3617,7 +3834,7 @@ export class LyraCombobox<
           : ''}</span
       >
       <button
-        part="tag__remove-button"
+        part="tag__remove-button tag__remove-button__button"
         type="button"
         ?disabled=${this.effectiveDisabled || this.readonly}
         aria-label=${this.localize('removeWithContext', undefined, { label })}
@@ -3690,6 +3907,11 @@ export class LyraCombobox<
       .join(' ');
     const invalid =
       supporting.hasError || (this.touched && !this.internals.validity.valid);
+    const pending = this.loading || this.sourceLoading;
+    // Server mode keeps the options it already shows while a request is pending; the in-field
+    // spinner reports it instead. Every other mode keeps its loading row.
+    const showLoadingRow = pending && !(this.serverRequests && rows.length > 0);
+    this.loadingRowShown = this.listboxRendered && this.open && showLoadingRow;
 
     return html`
       <div part="form-control">
@@ -3786,6 +4008,9 @@ export class LyraCombobox<
                   >
                 </button>`
               : ''}
+            ${pending && !this.loadingRowShown
+              ? html`<span part="spinner" aria-hidden="true" inert>${spinnerIcon()}</span>`
+              : ''}
             <span part="end" ?hidden=${!this.slotPresence.has('end')}>
               <slot name="end"></slot>
             </span>
@@ -3812,9 +4037,9 @@ export class LyraCombobox<
           <span class="glass-scroll-layer" aria-hidden="true"></span>
           ${!this.listboxRendered
             ? nothing
-            : this.loading || this.sourceLoading
-            ? html`<div class="loading" role="option" aria-selected="false" aria-disabled="true"
-                >${this.statusText('loading', this.loadingText)}</div
+            : showLoadingRow
+            ? html`<div class="loading" part="status loading" role="option" aria-selected="false" aria-disabled="true"
+                ><slot name="loading">${this.statusText('loading', this.loadingText)}</slot></div
               >`
             : this.sourceFailed
             ? html`<div class="source-error" part="source-error-row" role="presentation">
@@ -3842,9 +4067,13 @@ export class LyraCombobox<
                 )}
               </div>`
             : rows.length === 0
-            ? html`<div class="empty" role="option" aria-selected="false" aria-disabled="true"
-                >${this.statusText('noMatches', this.emptyText)}</div
-              >`
+            ? this.query === ''
+              ? html`<div class="empty" part="status empty" role="option" aria-selected="false" aria-disabled="true"
+                  ><slot name="empty">${this.statusText('noMatches', this.emptyText)}</slot></div
+                >`
+              : html`<div class="empty" part="status no-results" role="option" aria-selected="false" aria-disabled="true"
+                  ><slot name="no-results">${this.statusText('noMatches', this.emptyText)}</slot></div
+                >`
             : html`${this.renderRows(rows, activeId)}
               ${overflow > 0
                 ? html`<div part="option-overflow">${this.statusText(

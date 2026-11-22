@@ -96,3 +96,30 @@ it('exposes the header landmark only when the header has content or a mobile tog
   await waitUntil(() => el.view === 'mobile', 'mobile navigation appears');
   expect(header.getAttribute('role')).to.equal(null);
 });
+
+describe('lr-page disableSticky and nonce', () => {
+  it('keeps disableSticky and disable-sticky in sync, defaulting to null', async () => {
+    const el = await fixture<LyraPage>(html`<lr-page><nav slot="menu">M</nav>Main</lr-page>`);
+    expect(el.disableSticky).to.equal(null);
+    expect(el.hasAttribute('disable-sticky')).to.equal(false);
+    el.disableSticky = 'menu';
+    await el.updateComplete;
+    expect(el.getAttribute('disable-sticky')).to.equal('menu');
+    expect(getComputedStyle(part(el, 'menu')).backgroundColor).to.equal('rgba(0, 0, 0, 0)');
+    el.setAttribute('disable-sticky', 'header aside');
+    expect(el.disableSticky).to.equal('header aside');
+    el.disableSticky = null;
+    await el.updateComplete;
+    expect(el.hasAttribute('disable-sticky')).to.equal(false);
+    expect(getComputedStyle(part(el, 'menu')).backgroundColor).to.not.equal('rgba(0, 0, 0, 0)');
+  });
+
+  it('accepts and reflects nonce without injecting any element', async () => {
+    const el = await fixture<LyraPage>(html`<lr-page nonce="abc">Main</lr-page>`);
+    expect(el.nonce).to.equal('abc');
+    el.nonce = 'def';
+    await el.updateComplete;
+    expect(el.getAttribute('nonce')).to.equal('def');
+    expect(el.shadowRoot!.querySelectorAll('style, script').length).to.equal(0);
+  });
+});

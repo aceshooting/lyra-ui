@@ -210,6 +210,7 @@ class LyraTextareaBase extends LyraElement<LyraTextareaEventMap> {}
  * @cssprop [--lr-form-control-required-offset=0] - Inline space between the label text and the
  * marker.
  * @cssstate blank - The live value is empty.
+ * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
  * @status stable
  * @since 4.0.0
  */

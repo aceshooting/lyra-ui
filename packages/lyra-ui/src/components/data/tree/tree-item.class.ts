@@ -163,9 +163,11 @@ export interface LyraTreeItemEventMap {
  * @csspart expand-button - The disclosure button and lazy spinner container.
  * @csspart spinner - The lazy-loading spinner.
  * @csspart spinner__base - The spinner's base.
+ * @csspart spinner__spinner - Upstream name on the same node as `spinner__base`.
  * @csspart children - The nested-children container.
  * @csspart checkbox - The checkbox shown by `multiple` and `leaf-multiple` selection.
  * @csspart checkbox__base - The checkbox base.
+ * @csspart checkbox__checkbox - Upstream name on the same node as `checkbox__base`.
  * @csspart checkbox__control - The checkbox control.
  * @csspart checkbox__control--checked - The checked checkbox control.
  * @csspart checkbox__control--indeterminate - The indeterminate checkbox control.
@@ -943,7 +945,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
   }
 
   private renderSpinner(): TemplateResult {
-    return html`<span part="spinner" aria-hidden="true"><span part="spinner__base"></span></span>`;
+    return html`<span part="spinner" aria-hidden="true"><span part="spinner__base spinner__spinner"></span></span>`;
   }
 
   private renderCheckbox(): TemplateResult | typeof nothing {
@@ -964,7 +966,7 @@ export class LyraTreeItem extends LyraElement<LyraTreeItemEventMap> {  protected
           this.select();
         }}
       >
-        <span part="checkbox__base">
+        <span part="checkbox__base checkbox__checkbox">
           <span part=${controlParts}>
             <span part="checkbox__checked-icon" aria-hidden="true">✓</span>
             <span part="checkbox__indeterminate-icon" aria-hidden="true">−</span>

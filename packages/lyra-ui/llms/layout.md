@@ -997,6 +997,8 @@ use `lr-toggle-group`.
 
 **CSS parts:** `base` (the `role="group"` flex wrapper; wraps within its allocation).
 
+Further CSS parts: `button-group`: Web Awesome-named alias on the same wrapper as `base`.
+
 **Themeable custom properties:** `--lr-button-group-gap` (default `var(--lr-space-2xs)`) — gap
 between slotted controls on both axes. `--lr-button-group-justify` (default `normal`) is the
 `justify-content` of a horizontal group: give the host a width (for example `display: flex` or
@@ -1254,7 +1256,7 @@ projection slot a standalone `<lr-tab>` uses before a hydrated group assigns its
 panels; `nav` (the row wrapping the
 tablist together with the two overflow scroll controls; mirrors the upstream part of the same name),
 `tablist` and `tabs` (aliases on the `role="tablist"` row of tab buttons and scroll container),
-`body` (wrapper around all panels), `scroll-button` and `scroll-button__base` (aliases shared by
+`body` (wrapper around all panels), `scroll-button`, `scroll-button__base` and `scroll-button__button` (aliases shared by
 both overflow controls), `scroll-button-start`/`scroll-button--start` and
 `scroll-button-end`/`scroll-button--end` (aliases on the individual
 controls that scroll the tabs toward their inline start and end — under RTL "start" is the
@@ -1412,10 +1414,16 @@ step. A non-empty `steps` array always wins.
   any element click-drive the stepper with that `id`; inside a stepper the `<id>` may be omitted.
 - Events: `lr-before-step-change` (cancelable) and `lr-step-change`, both
   `detail: { name, previousName, step, previousStep }`. The new position ("Step 2 of 3") is announced politely.
-- Slot: default (`<lr-step>` elements). Extra parts: `stepper`, `summary` (visually hidden "Step X of Y").
+- Slot: default (`<lr-step>` elements). Extra parts: `stepper`, `summary` (visually hidden "Step X of Y"),
+  `steps` (the step list; the same node as `base`).
 - Custom properties for child mode: `--lr-stepper-marker-size`, `--lr-stepper-connector-color`,
-  `--lr-stepper-connector-color-active`, `--lr-stepper-connector-width`, `--lr-stepper-connector-gap`,
-  `--lr-stepper-step-gap`.
+  `--lr-stepper-connector-active-color`, `--lr-stepper-connector-width`, `--lr-stepper-connector-gap`,
+  `--lr-stepper-step-gap`, each also readable under its unprefixed name (`--marker-size`,
+  `--connector-color`, `--connector-color-active`, `--connector-width`, `--connector-gap`, and `--gap`
+  for the stacked step spacing), which wins when both are set.
+- Custom states: `:state(completed)` (every step completed, in either mode), `:state(loading)` (a child
+  step is loading) and `:state(stacked)` (the steps are laid out vertically, however that came about),
+  e.g. `lr-stepper:state(stacked) { --gap: 1.5rem; }`.
 - New string keys: `stepperSteps`, `stepperStepPosition` (`{current}`/`{total}`), `stepperStateLoading`,
   `stepperStateDisabled` (plus the existing completed/pending/locked keys for status text).
 
@@ -1503,7 +1511,10 @@ string; state: LyraStepState; disabled?: boolean; title?: string; icon?: unknown
 focused, on a non-`disabled` step. Never fired while `readonly`. It is non-cancelable because the
 component takes no default action to veto: it never mutates `steps`. `lr-stepper-orientation-change`
 (`detail: { orientation }`) — fired only when an enabled `orientationBreakpoint` actually changes
-`effectiveOrientation`.
+`effectiveOrientation`. In child mode, cancelable `lr-before-step-change`
+(`detail: { name, previousName, step, previousStep }`) fires before `active` changes —
+`preventDefault()` keeps the current step — and `lr-step-change` (same detail) fires after `active`
+changed and the steps re-rendered.
 
 **Slots:** none in data-driven mode; the default slot takes `<lr-step>` children in child mode.
 
@@ -1516,6 +1527,10 @@ rendered when the step has one, additionally to — never instead of — `step-i
 `step-index` (the numbered index chip, shown for `pending`/`current`/`error` steps), `step-check`
 (the completed-checkmark glyph, shown for `completed` steps instead of `step-index`), `step-label`
 (the step's label text).
+
+Further CSS parts: `stepper`: Child mode: the outer wrapper, a `<nav>` landmark while `clickable`,
+otherwise a labelled `role="group"`. `summary`: Child mode: visually hidden "Step X of Y" text for
+assistive technology.
 
 **Themeable custom properties:** `--lr-stepper-hover-bg` (default
 `var(--lr-color-brand-quiet)`) and `--lr-stepper-hover-color` (default
@@ -1708,11 +1723,18 @@ stepper is `clickable`) — booleans, reflected; `variant: 'neutral' | 'brand' |
 (server rendering hint). The stepper sets the step's number, `locked` state (a `linear` stepper) and
 `clickable`; nothing else needs setting by hand.
 
+More properties: `focus` (`focus()`): Focuses the step's button when the stepper is `clickable`.
+`withDescription` (attribute `with-description`, default `false`): Server rendering only: set it
+when a `description` is slotted so the server markup includes it before hydration.
+
 **Slots:** default (label), `description`, `icon` (replaces number/check/spinner).
 **CSS parts:** `step`, `connector` (both half lines), `button` (only while the stepper is `clickable`),
 `marker`, `spinner`, `content`, `label`, `status` (visually hidden: Completed, Loading, Unavailable,
-Locked or Not started), `description`. **Custom property:** `--lr-step-pulse-color`; layout hooks are the
-stepper's `--lr-stepper-*` properties. **Accessibility:** host `role="listitem"`; `aria-current="step"`
+Locked or Not started), `description`. **Custom property:** `--lr-step-pulse-color`, also spelled
+`--pulse-color` (the unprefixed name wins when both are set); layout hooks are the stepper's
+`--lr-stepper-*` properties and their unprefixed aliases. **Custom states:** `:state(active)`, `:state(completed)`,
+`:state(loading)`, `:state(disabled)`, `:state(locked)` and `:state(clickable)`, e.g.
+`lr-step:state(locked) { opacity: 0.6; }`. **Accessibility:** host `role="listitem"`; `aria-current="step"`
 sits on the focused element (the inner button while clickable, the host otherwise).
 
 ```html
@@ -1720,6 +1742,17 @@ sits on the focused element (the inner button while clickable, the host otherwis
 ```
 
 ---
+
+More themeable custom properties: `--lr-stepper-active-bg`: Background of a pressed, enabled
+clickable step. `--lr-stepper-connector-active-color`: Color of the line after a completed step;
+unset, it follows the completed step's variant. `--lr-stepper-connector-color` (default
+`var(--lr-color-neutral-fill-normal)`): Color of the line after a step that is not completed.
+`--lr-stepper-connector-gap` (default `var(--lr-size-0-35em)`): Gap between the marker edge and the
+line on both sides. `--lr-stepper-connector-width` (default `var(--lr-border-width-medium)`):
+Thickness of the line. `--lr-stepper-hover-bg`: Background of a hovered, enabled clickable step.
+`--lr-stepper-marker-size` (default `var(--lr-size-2rem)`): Diameter of the marker. Set on the
+stepper or an ancestor. `--lr-stepper-step-gap` (default `var(--lr-space-m)`): Block spacing between
+steps while the stepper is laid out vertically.
 
 ## `lr-tab-panel`
 
@@ -2119,6 +2152,9 @@ Otherwise shared tokens — `--lr-color-border`/`-surface`/`-text`/
 `-text-quiet`, `--lr-radius`, `--lr-font-weight-semibold`, `--lr-shadow-xs`,
 `--lr-opacity-disabled`, `--lr-focus-ring-*`, and the `--lr-form-control-*` knobs the `size` tier
 resolves.
+
+More themeable custom properties: `--lr-form-control-label-line-height` (default `inherit`): Line
+height of the field label.
 
 **Optional peer deps:** none.
 
@@ -4021,6 +4057,10 @@ the focusable host gains or loses focus, plus the shared menu-item events above.
 
 **CSS parts:** the shared menu-item parts, except that the loading spinner is `spinner-base` (beside
 `spinner`).
+
+**Custom states:** `:state(active)` (the item has focus), `:state(checked)`, `:state(disabled)`,
+`:state(has-submenu)` (content in the `submenu` slot), `:state(link)` (`href` resolves to a safe link)
+and `:state(submenu-open)`, e.g. `lr-dropdown-item:state(submenu-open) { font-weight: 600; }`.
 
 **Themeable custom properties:** every `<lr-menu-item>` hook above, including 16.0.0's
 `--lr-menu-item-hover-bg`, `--lr-menu-item-active-bg`, `--lr-menu-item-icon-color` and
@@ -5933,6 +5973,12 @@ and event listeners survive every breakpoint crossing.
 - `autoStickyOffsets: boolean = false` (attribute `auto-sticky-offsets`, reflected) — positions
   sticky regions below the measured banner, header, and subheader. Their height properties still
   set minimum sizes and provide offsets during server rendering and before measurement.
+- `disableSticky: string | null` (accessor over the `disable-sticky` attribute; reads `null` when absent, `null` removes it) — the
+  whitespace-separated regions whose sticky positioning is disabled (see below); `null` keeps every
+  region sticky.
+- `nonce` (reflected, no default) — accepted so migrated `wa-page` markup keeps it; it changes
+  nothing, because the Page injects no `<style>` or `<script>` element (its styles are constructable
+  stylesheets, which a `style-src` nonce does not govern).
 - `navigationPlacement: 'start' | 'end' = 'start'` (attribute `navigation-placement`, reflected) —
   a logical placement: `start` is left in LTR and right in RTL; `end` is the reverse.
 - `tabindex: string = '-1'` (reflected) — the host fragment target's native focusability. The Page
@@ -5948,7 +5994,7 @@ and event listeners survive every breakpoint crossing.
 `toggleNavigation(): void` update `navOpen`. `visiblePixelsInViewport(element: HTMLElement | null):
 number` returns the element's finite, viewport-clamped vertical intersection in CSS pixels (`0` for
 `null`, invalid geometry, no intersection, or an element in a detached document with no viewport).
-This is a deliberate owner-realm safety divergence from Web Awesome 3.11, whose method returns
+This is a deliberate owner-realm safety divergence from Web Awesome 3.15, whose method returns
 `null` for a null input and measures detached-document geometry against the ambient page viewport;
 code migrating from `wa-page` should treat Lyra's always-finite `number` result as canonical.
 
@@ -6637,6 +6683,13 @@ These named interfaces and helper signatures are available to typed integrations
   Import: `@aceshooting/lyra-ui/components/layout/stepper/stepper.class.js`.
   `LyraStepperOrientationChangeDetail {
     orientation: LyraOrientation;
+  }`
+  Import: `@aceshooting/lyra-ui/components/layout/stepper/stepper.class.js`.
+  `LyraStepChangeDetail {
+    name: string;
+    previousName: string | null;
+    step: LyraStep;
+    previousStep: LyraStep | null;
   }`
 
 - **`components-layout-tab-group-tab-group-contracts`** — Supporting data types and helpers for this component family.

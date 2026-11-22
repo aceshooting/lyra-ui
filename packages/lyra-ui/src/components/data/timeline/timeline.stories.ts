@@ -242,9 +242,9 @@ export const AlternatingWithOpposite: Story = {
   `,
 };
 
-export const CenteredMarkersAndAutoOrientation: Story = {
+export const CenteredMarkers: Story = {
   render: () => html`
-    <lr-timeline orientation="auto" marker-alignment="center" label="Release steps">
+    <lr-timeline marker-alignment="center" label="Release steps">
       <lr-timeline-item><span slot="icon">1</span>Plan</lr-timeline-item>
       <lr-timeline-item><span slot="icon">2</span>Build</lr-timeline-item>
       <lr-timeline-item><span slot="icon">3</span>Ship</lr-timeline-item>

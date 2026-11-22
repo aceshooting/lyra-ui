@@ -523,7 +523,7 @@ describe('lr-copy-button', () => {
     const [event, detailed] = await Promise.all([mappedError, detailedError]);
     await settle(el);
 
-    expect(event.constructor.name).to.equal('CustomEvent');
+    expect(event instanceof CustomEvent).to.be.true;
     expect(event.detail == null).to.be.true;
     expect(event.bubbles).to.be.true;
     expect(event.composed).to.be.true;

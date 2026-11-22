@@ -129,6 +129,7 @@ export interface LyraToastItemEventMap {
  * @csspart close-icon__svg - The close glyph's SVG element.
  * @csspart progress-ring - The auto-dismiss progress ring around the close glyph.
  * @csspart progress-ring__base - The progress ring's SVG element.
+ * @csspart progress-ring__progress-ring - Upstream name on the same SVG as `progress-ring__base`.
  * @csspart progress-ring__indicator - The elapsed-time indicator circle.
  * @csspart progress-ring__label - The ring's centered close-glyph container.
  * @csspart progress-ring__track - The progress ring's background circle.
@@ -1075,7 +1076,7 @@ export class LyraToastItem extends LyraElement<LyraToastItemEventMap> {
           this.progressRun,
           html`
             <svg
-              part="progress-ring__base"
+              part="progress-ring__base progress-ring__progress-ring"
               viewBox="0 0 20 20"
               focusable="false"
             >

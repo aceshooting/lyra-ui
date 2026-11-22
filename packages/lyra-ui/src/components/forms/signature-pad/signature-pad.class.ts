@@ -151,6 +151,7 @@ function pathData(stroke: SignatureStroke): string {
  * @cssstate invalid - Matches while it does not.
  * @cssstate user-valid - `valid` once the user has drawn, cleared, left the pad or tried to submit.
  * @cssstate user-invalid - `invalid` after that same interaction.
+ * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
  * @status experimental
  * @since 26.0.0
  */

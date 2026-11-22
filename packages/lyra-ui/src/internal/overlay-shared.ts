@@ -114,6 +114,25 @@ export function normalizeVirtualRect(rect: OverlayVirtualRect): OverlayVirtualRe
   };
 }
 
+/** Whether a direct `anchor` value is an element node (in any realm) rather than a virtual
+ *  element: an object with only `getBoundingClientRect()` and an optional `contextElement`. */
+function isElementAnchor(anchor: Element | VirtualAnchor): anchor is Element {
+  return (anchor as Partial<Element>).nodeType === 1;
+}
+
+/** Whether a direct `anchor` can position a surface right now: a connected element, or a virtual
+ *  element whose `getBoundingClientRect` is callable. Anything else is ignored, as if unset. */
+export function liveDirectAnchor(anchor: Element | VirtualAnchor | null | undefined): boolean {
+  if (!anchor || typeof anchor !== 'object') return false;
+  if (isElementAnchor(anchor)) return anchor.isConnected;
+  return typeof (anchor as Partial<VirtualAnchor>).getBoundingClientRect === 'function';
+}
+
+/** The element half of a direct `anchor`, for structural tracking; `null` for a virtual one. */
+export function directAnchorElement(anchor: Element | VirtualAnchor | null | undefined): Element | null {
+  return anchor && typeof anchor === 'object' && isElementAnchor(anchor) ? anchor : null;
+}
+
 /**
  * Resolves what a floating surface is positioned against, in the precedence both components
  * document: an explicit `showAt()` virtual anchor first, then the direct `anchor` element, then the
@@ -127,13 +146,13 @@ export function resolveOverlayAnchor(
   host: Node & { getRootNode(options?: GetRootNodeOptions): Node },
   sources: {
     virtualAnchor?: VirtualAnchor;
-    anchor?: Element | null;
+    anchor?: Element | VirtualAnchor | null;
     for?: string;
     trigger?: Element | null;
   },
 ): Element | VirtualAnchor | null {
   if (sources.virtualAnchor) return sources.virtualAnchor;
-  if (sources.anchor?.isConnected) return sources.anchor;
+  if (liveDirectAnchor(sources.anchor)) return sources.anchor ?? null;
   if (sources.for) {
     const root = host.getRootNode() as Document | ShadowRoot;
     const target = root.getElementById?.(sources.for) ?? null;
@@ -237,8 +256,8 @@ export class OverlayAnchorIdentity {
   }
 
   /** Whether an `anchor` property change dropped the connected anchor observed so far. */
-  lostAnchorProperty(changed: Map<PropertyKey, unknown>, current: Element | null): boolean {
+  lostAnchorProperty(changed: Map<PropertyKey, unknown>, current: Element | VirtualAnchor | null): boolean {
     return changed.has('anchor') && changed.get('anchor') === this.observed && this.wasConnected
-      && current?.isConnected !== true;
+      && !liveDirectAnchor(current);
   }
 }

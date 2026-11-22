@@ -26,9 +26,9 @@ item's `title`/`description` routinely hold focusable content, so wrapping the r
 would trip `nested-interactive`). The opt-in clustered time scale adds only native count-marker
 buttons; it does not make the individual rows interactive.
 
-**`wa-timeline` / `wa-timeline-item` parity.** `lr-timeline` accepts `orientation="auto"` (a column
-until the timeline is 40em wide, a row from there, by container query; flow scale only, `scale="time"`
-treats it as `vertical`), `marker-placement: 'start' | 'end' | 'alternate' = 'start'` (`alternate` swaps
+**`wa-timeline` / `wa-timeline-item` parity.** `lr-timeline` does not accept Web Awesome's
+`orientation="auto"` yet (it would widen the published `orientation` read type; an unrecognized value
+keeps `vertical`). It accepts `marker-placement: 'start' | 'end' | 'alternate' = 'start'` (`alternate` swaps
 sides on every other item around a central rail and falls back to `start` under 30em; sides follow the
 inline direction, so RTL mirrors), `marker-alignment: 'start' | 'center' = 'start'` (`center` centers the
 marker on the item's height with the rail running above and below it), and `label` (accessible name; a
@@ -167,6 +167,8 @@ removed on the last item, so marker alignment stays consistent), `content`, `hea
 wrapping `title` and `timestamp`; wraps at narrow widths rather than truncating), `title`,
 `timestamp` (hidden when there's nothing to show), `description`.
 
+Further CSS parts: `connector`: Alias of `rail`. `timeline-item`: Alias of `base`.
+
 **Themeable custom properties:** `--lr-timeline-gap` (default `var(--lr-space-l)`) — declared on
 `lr-timeline` but consumed inside each item via inheritance across the slot boundary; it is both the
 inter-item spacing and the length each rail bridges. `--lr-timeline-cluster-size` (default
@@ -195,3 +197,21 @@ Version 9 removes the legacy item `icon` slot; migrate marker glyphs to `slot="m
 Timeline orientation/rail coordination now uses private implementation-prefixed cross-shadow
 properties. The only supported spacing input remains `--lr-timeline-gap`; stop overriding the five
 former `--lr-timeline-item-*` plumbing names.
+
+More properties: `markerAlignment` (attribute `marker-alignment`, default `'start'`): Where the
+marker sits along its item while the timeline runs as a column. `'start'` (the default) pins it to
+the item's first line; `'center'` centers it on the item's full height and runs the rail through it
+as one line, which suits cards. Ignored while the timeline runs as a row. `markerPlacement`
+(attribute `marker-placement`, default `'start'`): Which side of its content each item's marker sits
+on while the timeline runs as a column. `'start'` (the default) puts the marker before the content,
+`'end'` after it, and `'alternate'` switches sides on every other item so the rail runs down the
+middle, with an item's `opposite` content on the far side. Sides follow the inline direction, so
+they mirror under RTL. An alternating timeline narrower than 30em lays every item out like `start`.
+Ignored while the timeline runs as a row.
+
+More properties: `withIcon` (attribute `with-icon`, default `false`): Server-render hint: set it
+when `icon`/`marker-icon` content is slotted so the marker renders as an icon marker before the
+element hydrates. Also forces the icon marker presentation. `withOpposite` (attribute
+`with-opposite`, default `false`): Server-render hint: set it when `opposite` content is slotted so
+the opposite column renders before the element hydrates. Also keeps the column even when the slot is
+empty.

@@ -454,3 +454,29 @@ export const WrappedLightDomSource: Story = {
       }
     </lr-code-block>`,
 };
+
+/** The unprefixed syntax color properties recolor highlighted tokens; unset ones keep the theme color. */
+export const SyntaxColors: Story = {
+  render: () => html`
+    <lr-code-block
+      language="typescript"
+      style="--keyword-color: var(--lr-color-brand); --string-color: var(--lr-color-success); --comment-color: var(--lr-color-text-quiet)"
+      .code=${'// Greets a user\nexport function greet(name: string): string {\n  return `Hello, ${name}!`;\n}'}
+    ></lr-code-block>
+  `,
+};
+
+/** :state(loading), :state(error) and :state(highlighted) style the block around its grammar load. */
+export const HighlightStates: Story = {
+  render: () => html`
+    <style>
+      .states lr-code-block:state(error)::part(base) { outline: var(--lr-border-width-medium) dashed var(--lr-color-warning); }
+      .states lr-code-block:state(highlighted)::part(base) { outline: var(--lr-border-width-thin) solid var(--lr-color-success); }
+    </style>
+    <div class="states" style="display:grid;gap:var(--lr-space-m)">
+      <lr-code-block language="json" code='{"highlighted": true}'></lr-code-block>
+      <lr-code-block language="no-such-language" code="No grammar: plain text and :state(error)"></lr-code-block>
+      <lr-code-block language="json" copy-appearance="icon" code='{"copy": "icon glyph swaps after copying"}'></lr-code-block>
+    </div>
+  `,
+};

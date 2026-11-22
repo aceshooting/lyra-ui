@@ -248,6 +248,7 @@ function addEventDetail<T extends Event>(
  * marker.
  * @cssstate blank - The composite value is empty or incomplete.
  * @cssstate disabled - The control is disabled directly or through an ancestor fieldset.
+ * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
  * @status stable
  * @since 4.0.0
  */

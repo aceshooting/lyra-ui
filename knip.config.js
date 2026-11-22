@@ -102,6 +102,8 @@ export default {
     },
     // Bundles lyra-ui's dist; the workspace dependency is read by path, never imported by name.
     'packages/lyra-cdn': {
+      // esbuild bundles this loader entry by path in scripts/build.mjs.
+      entry: ['scripts/lyra-ui.loader.mjs'],
       project: ['scripts/**/*.mjs'],
       ignoreDependencies: ['@aceshooting/lyra-ui'],
     },

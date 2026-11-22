@@ -227,6 +227,7 @@ function snapshotSegmentedItems(
  *   default, matching its own current absence of a background.
  * @cssprop [--lr-segmented-track-border-color=var(--lr-color-border)] - Border color of the `base`
  *   track, which previously read that token as a literal with no override hook.
+ * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
  * @status stable
  * @since 4.0.0
  */

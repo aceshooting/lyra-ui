@@ -121,8 +121,8 @@ declarative content never flashes hidden for a frame.
 while empty), `dot` (the decorative status dot, rendered only while `dot` is set), `content` (the wrapper around the default slot — this is the part that truncates with
 an ellipsis, deliberately not `base`, so the tag's oversized remove hit target can overhang the
 compact surface without being clipped), and `remove-button` (`lr-tag` only, rendered only while
-`withRemove` / `removable`). The button also carries Shoelace's `remove-button__base` alias, so
-either part name styles the same native button.
+`withRemove` / `removable`). The button also carries Shoelace's `remove-button__base` alias and the
+upstream `remove-button__button` name, so any of the three part names styles the same native button.
 
 **Themeable custom properties.** Three layers, so a consumer can retune one without restating the
 others. Public hooks are consumed through private use-site defaults instead of being redeclared on

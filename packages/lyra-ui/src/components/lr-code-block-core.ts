@@ -1,4 +1,4 @@
-export type { LyraCodeBlockBaseEventMap } from './conversation/code-block/code-block-base.class.js';
+export type { LyraCodeBlockBaseEventMap, LyraCodeBlockLoadDetail } from './conversation/code-block/code-block-base.class.js';
 export type { LyraCodeBlockCopyAppearance } from './conversation/code-block/code-block-shared.js';
 export type { LyraAnchor, LyraHighlight } from '../internal/document-anchors.js';
 export type { ShikiLanguageRegistration } from '../internal/shiki/core.js';

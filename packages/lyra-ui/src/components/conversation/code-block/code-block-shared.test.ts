@@ -389,7 +389,7 @@ describe("owner-realm line interactions", () => {
     }) as typeof body.scrollTo;
     return {
       host: {
-        code: "line one",
+        sourceCode: "line one",
         highlights: [],
         renderRoot: root,
         updateComplete: Promise.resolve(true),
@@ -559,6 +559,7 @@ describe("owner-realm line interactions", () => {
       renderRoot: root,
       updateComplete: Promise.resolve(true),
       code: 'first\nsecond',
+      sourceCode: 'first\nsecond',
       collapsed: false,
     });
     const code = document.createElement('code');
@@ -742,15 +743,15 @@ describe('line-range anchors that cannot be trusted', () => {
 
   it('declines to scroll to a line when the host has no code or the line is out of range', async () => {
     const host = {
-      code: undefined as unknown as string,
+      sourceCode: undefined as unknown as string,
       highlights: [] as readonly LyraHighlight[],
       renderRoot: document.createElement('div'),
       updateComplete: Promise.resolve(true),
     };
 
     expect(await scrollCodeBlockToAnchor(host, { kind: 'line-range', start: 99 })).to.equal(false);
-    expect(await scrollCodeBlockToAnchor({ ...host, code: 'one\ntwo' }, { kind: 'line-range', start: 0 })).to.equal(false);
-    expect(await scrollCodeBlockToAnchor({ ...host, code: 'one\ntwo' }, { kind: 'line-range', start: 3 })).to.equal(false);
+    expect(await scrollCodeBlockToAnchor({ ...host, sourceCode: 'one\ntwo' }, { kind: 'line-range', start: 0 })).to.equal(false);
+    expect(await scrollCodeBlockToAnchor({ ...host, sourceCode: 'one\ntwo' }, { kind: 'line-range', start: 3 })).to.equal(false);
   });
 });
 

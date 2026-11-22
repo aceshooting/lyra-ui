@@ -596,7 +596,7 @@ describe('spacing and type scale utilities', () => {
 
 describe('layout compositions', () => {
   it('wraps a flank and keeps the flank child at its own width', async () => {
-    const el = await fixture(html`
+    const el = await fixture<HTMLElement>(html`
       <div class="lr-flank" style="--lr-layout-gap: 0px; inline-size: 400px; --lr-flank-content-min-inline-size: 300px">
         <div id="side" style="inline-size: 100px">side</div><div id="main">main</div>
       </div>
@@ -649,7 +649,7 @@ describe('layout compositions', () => {
   });
 
   it('lets lr-span-grid take the whole row at every container width', async () => {
-    const el = await fixture(html`
+    const el = await fixture<HTMLElement>(html`
       <div id="g" class="lr-grid-12" style="inline-size: 1200px; --lr-layout-gap: 0px"><div id="all" class="lr-span-grid">all</div><div class="lr-span-3">x</div></div>
     `);
     const all = el.querySelector<HTMLElement>('#all')!;

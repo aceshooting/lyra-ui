@@ -6,7 +6,10 @@ import { playIcon } from '../../../internal/icons.js';
 import { tag } from '../../../internal/prefix.js';
 import { safeLinkHref, safeMediaSrc } from '../../../internal/safe-url.js';
 import { literalSetConverter } from '../../../internal/converters.js';
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
+import { setCustomState } from '../../../internal/custom-states.js';
 import { styles } from './lightbox-item.styles.js';
+import { chooseSrcsetCandidate } from '../../../internal/srcset.js';
 
 /** The kind of media an item shows in the lightbox. */
 export type LyraLightboxItemType = 'image' | 'video';
@@ -44,6 +47,11 @@ function dimension(value: unknown): number | undefined {
  * @csspart trigger - The link (or button-like anchor) that wraps the thumbnail and opens the lightbox.
  * @csspart thumbnail-image - The image rendered from `thumbnail` when nothing is slotted.
  * @csspart play-button - The play button shown over a video's thumbnail.
+ * @cssstate active - Present while this is the current item of an open lightbox.
+ * @cssstate empty - Present when nothing is slotted and no `thumbnail` is set; such an item is not
+ *   displayed on the page.
+ * @cssstate morphing - Present while the lightbox runs its open or close motion for this item.
+ * @csspart play-glyph - The default play glyph inside the `play-icon` slot.
  * @status stable
  * @since unreleased
  */
@@ -51,6 +59,7 @@ export class LyraLightboxItem extends LyraElement {
   static override styles = [LyraElement.styles, styles];
 
   @query('[part="trigger"]') private triggerEl?: HTMLAnchorElement;
+  private readonly itemInternals = attachInternalsSafely(this);
 
   /** The kind of media shown in the lightbox. A `video` item shows a play button over its thumbnail. */
   @property({ reflect: true, converter: literalSetConverter(ITEM_TYPES, 'image') })
@@ -111,6 +120,11 @@ export class LyraLightboxItem extends LyraElement {
     return safeMediaSrc(chosen) ?? '';
   }
 
+  /** @internal Called by the parent lightbox to publish its `active` and `morphing` states. */
+  setViewerState(name: 'active' | 'morphing', present: boolean): void {
+    setCustomState(this.itemInternals, name, present);
+  }
+
   /** Focuses the item's trigger. */
   override focus(options?: FocusOptions): void {
     if (this.deferFocusUntilRendered(options)) return;
@@ -144,6 +158,7 @@ export class LyraLightboxItem extends LyraElement {
       node.nodeType === Node.ELEMENT_NODE ? true : Boolean(node.textContent?.trim()),
     );
     this.toggleAttribute('data-empty', !hasContent && !this.thumbnail);
+    setCustomState(this.itemInternals, 'empty', !hasContent && !this.thumbnail);
     this.notifyLightbox();
   };
 
@@ -189,33 +204,6 @@ export class LyraLightboxItem extends LyraElement {
       </a>
     `;
   }
-}
-
-/** Largest-needed candidate of an `<img srcset>` list; blank when the list has no usable URL. */
-export function chooseSrcsetCandidate(srcset: string, sizes: string, view: Window | null): string {
-  const candidates: { url: string; width?: number; density?: number }[] = [];
-  for (const entry of srcset.split(',')) {
-    const [url, descriptor = ''] = entry.trim().split(/\s+/);
-    if (!url) continue;
-    const match = /^(\d+(?:\.\d+)?)([wx])$/.exec(descriptor);
-    candidates.push({
-      url,
-      width: match?.[2] === 'w' ? Number(match[1]) : undefined,
-      density: match?.[2] === 'x' ? Number(match[1]) : match ? undefined : 1,
-    });
-  }
-  if (candidates.length === 0) return '';
-  const ratio = view?.devicePixelRatio && Number.isFinite(view.devicePixelRatio) ? view.devicePixelRatio : 1;
-  const viewport = view?.innerWidth && Number.isFinite(view.innerWidth) ? view.innerWidth : 1024;
-  const length = /^\s*(\d+(?:\.\d+)?)(px|vw)\s*$/.exec(sizes);
-  const cssWidth = length ? (length[2] === 'vw' ? (viewport * Number(length[1])) / 100 : Number(length[1])) : viewport;
-  const sorted = [...candidates].sort(
-    (a, b) => (a.width ?? (a.density ?? 1) * 1000) - (b.width ?? (b.density ?? 1) * 1000),
-  );
-  const hasWidths = sorted.some((candidate) => candidate.width !== undefined);
-  const target = hasWidths ? cssWidth * ratio : ratio;
-  const covering = sorted.find((candidate) => (hasWidths ? (candidate.width ?? 0) : (candidate.density ?? 1)) >= target);
-  return (covering ?? sorted[sorted.length - 1]!).url;
 }
 
 declare global {

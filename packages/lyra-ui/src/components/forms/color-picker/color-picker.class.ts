@@ -452,6 +452,7 @@ class ColorPickerBase extends LyraElement<LyraColorPickerEventMap> {}
  *   (re)positioned. Set it once on `:root`, a theme, or one clipping ancestor to change every
  *   unset color picker beneath it instead of authoring `positioning-strategy`/`hoist` on each
  *   instance; an explicit value on the instance always wins over it.
+ * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
  * @status stable
  * @since 4.0.0
  */

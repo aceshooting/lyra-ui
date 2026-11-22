@@ -103,8 +103,6 @@ export interface LyraPageEventMap {
  * abandons it.
  *
  * @customElement lr-page
- * @attr {string} disable-sticky - Whitespace-separated Page regions whose sticky positioning is
- *   disabled: `banner`, `header`, `subheader`, `menu`, and `aside`.
  * @slot - Main content.
  * @slot aside - Complementary content beside the main region.
  * @slot banner - A page-wide notice above the header.
@@ -244,6 +242,22 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
    * Height tokens set the minima and supply offsets until measurement is available. */
   @property({ type: Boolean, attribute: 'auto-sticky-offsets', reflect: true })
   autoStickyOffsets = false;
+
+  /** Whitespace-separated Page regions whose sticky positioning is disabled: `banner`, `header`,
+   *  `subheader`, `menu`, and `aside`, in any order. `null` (the default) keeps every region
+   *  sticky. Reads and writes the `disable-sticky` attribute directly, which the styles key off. */
+  get disableSticky(): string | null {
+    return this.getAttribute('disable-sticky');
+  }
+  set disableSticky(value: string | null | undefined) {
+    if (value == null) this.removeAttribute('disable-sticky');
+    else this.setAttribute('disable-sticky', String(value));
+  }
+
+  /** Accepted for migrated markup and reflected to `nonce`; it changes nothing. The Page injects
+   *  no `<style>` or `<script>` element: its styles are constructable stylesheets, which a
+   *  `style-src` nonce does not govern. */
+  @property({ reflect: true }) override nonce!: string;
 
   /** Logical edge occupied by desktop navigation and the mobile drawer. */
   @property({ attribute: 'navigation-placement', reflect: true })
@@ -848,7 +862,7 @@ export class LyraPage extends LyraElement<LyraPageEventMap> {
   }
 
   /** Number of vertically visible CSS pixels for `element`, clamped to the current viewport. A
-   *  deliberate owner-realm safety divergence from Web Awesome 3.11's `wa-page` equivalent: this
+   *  deliberate owner-realm safety divergence from Web Awesome 3.15's `wa-page` equivalent: this
    *  always returns a finite `number` -- `0` for a `null` element, invalid geometry, no
    *  intersection, or an element in a detached document with no viewport -- where `wa-page`
    *  returns `null` for a `null` argument and measures detached-document geometry against the

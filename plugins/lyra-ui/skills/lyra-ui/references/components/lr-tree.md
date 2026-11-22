@@ -403,7 +403,8 @@ content is omitted from the spoken name. Host `aria-label` remains authoritative
 **CSS parts:** `base` and `tree-item` are aliases on the same outer wrapper around the row and child
 group; `row`, `toggle`, `icon`, `content`, `label`, `description`, `badge`, `group`, `item`,
 `item--disabled`, `item--expanded`, `item--indeterminate`, `item--selected`, `indentation`,
-`expand-button`, `spinner`, `spinner__base`, `children`, `checkbox`, `checkbox__base`,
+`expand-button`, `spinner`, `spinner__base`, `spinner__spinner` (same node as `spinner__base`), `children`, `checkbox`,
+`checkbox__base`, `checkbox__checkbox` (same node as `checkbox__base`),
 `checkbox__control`, `checkbox__control--checked`, `checkbox__control--indeterminate`,
 `checkbox__checked-icon`, `checkbox__indeterminate-icon`, and `checkbox__label`. `badge`
 is applied to every `item.badges` chip. The `reorder-handle` part is the touch drag grip shown

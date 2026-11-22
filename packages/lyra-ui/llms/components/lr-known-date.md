@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `field-input`: `--lr-known-date-field-padding-block`, `--lr-known-date-field-padding-inline`, `--lr-known-date-field-font-size`, `--lr-known-date-field-min-height`, `--lr-known-date-field-height`, `--lr-known-date-invalid-border-color`; `legend`: `--lr-form-control-required-content`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -187,6 +187,9 @@ The two height knobs work as a pair on `[part='field-input']`, the same way
   it. Because the component never declares it, it can be set inline, from an ancestor, or from an
   outer-tree rule.
 
+More themeable custom properties: `--lr-form-control-label-line-height` (default `inherit`): Line
+height of the field label.
+
 **Known gotchas:**
 
 - Field _order_ is derived from the locale by formatting a probe date (Jan 2 2026) with
@@ -213,9 +216,3 @@ The two height knobs work as a pair on `[part='field-input']`, the same way
 **Additional API surface:**
 
 - `click()` — Activates the first native field in locale order.
-
-Further custom properties:
-
-- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
-- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
-- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.

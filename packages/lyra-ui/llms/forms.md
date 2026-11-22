@@ -527,7 +527,7 @@ matches"` in the built-in English locale); any supplied string, including `''`, 
   A supplied template wins verbatim over `.strings`, including when it equals that English
   template or is empty; `{n}` is still replaced with the locale-formatted hidden count
 - `filter: OptionFilter | null = null` (attribute: false — `(option, query) => boolean`; default
-  matches `label`/`searchText` case-insensitively; ignored while `source` is set)
+  matches `label`/`searchText` case-insensitively; ignored while `source` is set or `server` is on)
 - `source: ComboboxSource | null = null` (attribute: false — `(query: string, options: { signal:
 AbortSignal; limit: number }) => Promise<readonly ComboboxSourceRow[] | { rows, total? }>`; when set, replaces the light-DOM `<lr-option>`
   list with an async lookup, debounced by `sourceDelay` ms after each keystroke and re-run on
@@ -548,11 +548,31 @@ AbortSignal; limit: number }) => Promise<readonly ComboboxSourceRow[] | { rows, 
   and the `source` call; `0` fires on every keystroke. Sanitized to a finite non-negative duration,
   falling back to `200` for a non-finite value). `filterDebounce` (attribute `filter-debounce`) is the
   same setting under its upstream name.
-- `dataSource` is an alias of `source`: reading or assigning either one reads or assigns the same
-  provider. Rows stay plain data (`value`, `label`, optional `description`/`badge`/`data`); a source
-  cannot return option HTML, because rendering remote markup would need an optional sanitizer inside the
-  combobox's hot path and a fail-closed fallback for it. `source` is always query-driven (the provider
-  filters), which is what the upstream `server` flag opts into, so there is no `server` attribute.
+  Unset, it stays `200`, where Web Awesome's `filter-debounce` defaults to `250`; write
+  `filter-debounce="250"` to match that timing.
+- `dataSource: ((request: ComboboxRequest) => Promise<ComboboxOptions> | ComboboxOptions) | null = null`
+  (attribute: false) — the single-argument provider shape: it receives `{ query, signal }` and returns
+  option objects (`{ value, label, disabled? }` plus any `source` row field), option elements, a
+  `{ rows, total }` envelope, or a string of option markup, directly or as a promise. Elements and
+  markup contribute only their `value` attribute, label text and `disabled` state; markup is parsed
+  into an inert document and never inserted, so nothing in it runs; only its top-level `<option>` or
+  `*-option` elements become rows. It drives the same pipeline as
+  `source` (debounce, `lr-options-request`, cancellation, loading and failed states, row ceilings).
+  Assigning either provider replaces the other, and `dataSource` reads `null` once `source` is
+  assigned; `source` keeps its `(query, { signal, limit })` shape.
+- `server: boolean = false` (attribute `server`, reflected) — server mode without a provider:
+  client-side filtering is off (`filter` is ignored and every `<lr-option>` child shows), and each
+  request is announced through `lr-options-request` instead. Typing requests after the
+  `source-delay`/`filter-debounce` wait; opening the listbox and `reload()` request at once.
+  Scheduling a request sets `loading`; the host replaces the `<lr-option>` children for
+  `detail.query`, then sets `loading = false`, and drops an answer whose `detail.signal` has aborted.
+  Options already shown stay visible while `loading` is set, with the in-field `spinner`; the
+  `loading` row appears only while no option is shown. A `source`/`dataSource` provider takes
+  precedence over the flag.
+- `currentOption: LyraOption | undefined` — the `<lr-option>` behind the keyboard-active
+  row, or `undefined` while none is active, the listbox is closed, or the active row is an async or
+  synthetic row with no option element. It clears as soon as that option stops being available. Assigning a shown, available option moves
+  the highlight to it (selecting nothing, emitting nothing); any other value clears the highlight.
 - `maxRender: number = 200` (attribute `max-render`) — ordinary suggestion-prefix size, retaining
   active and selected options within an absolute 1,000-row ceiling. The active option has priority;
   selections remain committed even when every selected row cannot mount. Zero omits the ordinary
@@ -621,7 +641,8 @@ minimum at zero when empty-query label lookup or immediate catalog browsing is r
 **Methods:** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and `setRangeText()`
 forward to the internal input. `setRangeText()` synchronizes the filter query and visible options.
 `show(): Promise<void>` and `hide(): Promise<void>` settle after `lr-after-show` and
-`lr-after-hide`, respectively. `reload(): void` is an alias of `refresh()`. `refresh(): void` re-runs the current `source` query without changing
+`lr-after-hide`, respectively. `reload(): void` is an alias of `refresh()`; in `server` mode both
+announce a fresh `lr-options-request`. `refresh(): void` re-runs the current `source` query without changing
 the source's identity, its debounce controller, or its delay. Reassigning `source` is a provider
 change and clears the fetched rows and pending-selection cache; `refresh()` does not. It queues for
 the next open while the listbox is closed, and is a no-op without a `source`. `resetValidity()`
@@ -726,7 +747,7 @@ never shows the raw error. A current request that rejects with `AbortError` (one
 not abort itself) is a failure like any other rejection; the previous query's results are not kept
 as its answer.
 Rejections from superseded or disconnected requests are ignored.
-`lr-options-request` fires before each `source` call (after the debounce, only while the call is still
+`lr-options-request` fires before each `source`/`dataSource` call and for each `server`-mode request (after the debounce, only while the call is still
 current): `detail: { query, signal }`, where `signal` is the `AbortSignal` the source receives, aborted
 when a newer request supersedes it, `source` is reassigned, or the control disconnects. It is bubbling,
 composed and not cancelable. `lr-options-error` fires with `lr-source-error` for the same rejection with
@@ -801,13 +822,17 @@ attribute when provided), plus two adornment slots:
 - `source-error` — replaces the built-in failed-`source` state, retry control included. Deliberately
   named apart from the form-control `error` slot: they are different failures and a field has to be
   able to show both.
+- `empty`, `no-results` and `loading` — replace the listbox status row shown while no option is
+  available and nothing is typed, while the typed query matches nothing, and while options load.
+  Each falls back to `empty-text`/`loading-text`, else the localized `noMatches`/`loading` copy.
 
 **CSS parts:** `form-control`, `form-control-label`, `label`, `form-control-input`, `combobox`,
 `start` and `end` (the two
 adornment-slot wrappers, each `hidden` while nothing is slotted into it), `tags`, `tag`,
 `tag-overflow` (the "+N" indicator, carried alongside `tag` past `max-options-visible`,
 mirroring `lr-select`'s identical two-part overflow chip), `tag-label`, `tag__content`,
-`tag__remove-button`, `tag__remove-button__base`, `combobox-input`,
+`tag__remove-button`, `tag__remove-button__base`, `tag__remove-button__button` (an alias on the
+same remove button), `combobox-input`,
 `clear-button`, `unknown-value` (the dashed/italic badge shown next to the closed single-select
 input, or on a `multiple`-mode tag, when the committed value matches no current option/row),
 `expand-icon`, `listbox` (the scrolling popup; it honors the theme-level
@@ -825,7 +850,13 @@ secondary line, when `sub` is set), `option-badge` (an async row's trailing meta
 `source-error-row` (the listbox row holding the failed-`source` state), `source-error` (the shared
 failed-load state itself, with `source-error-base`, `source-error-icon`, `source-error-heading`,
 `source-error-description` and `source-error-actions` forwarded from the composed `<lr-empty>`),
-`retry-button`, `error`, `hint`
+`retry-button`, `status` (the listbox status row, which also carries `empty`, `no-results` or
+`loading`), `empty`, `no-results`, `loading`, `spinner` (the decorative in-field spinner shown while
+options load and the listbox is not showing its loading row), `error`, `hint`
+
+**Custom states** add `:state(loading)` (`loading` is set or a `source`/`dataSource` request is in
+flight) and `:state(showing-loading-row)` (the open listbox shows its loading row, so the in-field
+spinner is hidden) to `blank`, `disabled` and the shared validity states.
 
 `--lr-form-control-invalid-border-color` (default `var(--lr-color-danger)`) themes the resting border while the field matches `:state(user-invalid)`; a component-specific invalid border, where one exists, overrides it.
 
@@ -923,6 +954,9 @@ default**, leaving `--lr-combobox-trigger-min-height` as a floor only and the ro
 see "exact-height hatches" under `lr-input` for why `auto` is not a way to opt back out. Intended
 for a single-row combobox: in `multiple` mode, a tag row long enough to wrap overflows the pinned
 box visibly (nothing is clipped or made unreachable), so leave it unset there.
+
+More themeable custom properties: `--lr-form-control-label-line-height` (default `inherit`): Line
+height of the field label.
 
 **CSS custom states:** `blank`, `disabled`, `required`, `optional`, `valid`, `invalid`,
 `user-valid`, and `user-invalid`.
@@ -1885,6 +1919,9 @@ while its range is the current value),
 day-cell/grid-column size; its private default follows the `size` tier — `2xs`/`xs`/`s`/`l`/`xl`;
 `m` keeps the default). An inherited or direct public value remains authoritative in every tier.
 
+More themeable custom properties: `--lr-form-control-label-line-height` (default `inherit`): Line
+height of the field label.
+
 **Optional peer deps:** none.
 
 ### `lr-date-input`
@@ -2058,7 +2095,20 @@ from outside — new in 11.1.0), `end`, `expand-button`,
 `input-wrapper`, `popup`, `range-separator`, `segment`, `segment-literal`, `start`, permanent
 compatibility name `base` (a nested wrapper inside `date-input`), and permanent compatibility name
 `label` (the inner label-content wrapper inside `form-control-label`). Lyra additionally retains
-`error`.
+`error`. Every nested `lr-date-picker` part is also forwarded under a `date-picker__` prefix, the
+names Web Awesome's date input exports, which exist only while the calendar is rendered:
+`date-picker__date-picker`, `date-picker__day`, `date-picker__day-disabled`,
+`date-picker__day-label`, `date-picker__day-outside`, `date-picker__day-placeholder`,
+`date-picker__day-range-end`, `date-picker__day-range-inner`, `date-picker__day-range-preview`,
+`date-picker__day-range-start`, `date-picker__day-selected`, `date-picker__day-today`,
+`date-picker__day-weekend`, `date-picker__footer`, `date-picker__grid`, `date-picker__header`,
+`date-picker__month`, `date-picker__month-label`, `date-picker__months`, `date-picker__next`,
+`date-picker__previous`, `date-picker__title`, `date-picker__view-cell`, `date-picker__view-grid`,
+`date-picker__view-item`, `date-picker__view-item-disabled`, `date-picker__view-item-selected`,
+`date-picker__view-item-today`, `date-picker__view-row`, `date-picker__weekday`,
+`date-picker__weekdays`, `date-picker__weeknumber`, `date-picker__weeknumbers`
+(`::part(date-picker__day-selected)`). `date-picker__date-picker` is the picker's own root, the
+replacement for Web Awesome's deprecated `date-picker__base`.
 
 On `lr-date-input`, `--lr-form-control-invalid-border-color` (default `var(--lr-color-danger)`) themes the resting border while the field matches `:state(user-invalid)`; a component-specific invalid border, where one exists, overrides it.
 
@@ -4392,6 +4442,9 @@ The native country selector's hover and press backgrounds are supplemented in fo
 with dashed/solid `Highlight` outlines, so those states do not collapse when the UA flattens the
 background tint to `Canvas`.
 
+More themeable custom properties: `--lr-form-control-label-line-height` (default `inherit`): Line
+height of the field label.
+
 **Optional peer deps:** `libphonenumber-js` is declared optional but never imported by Lyra itself.
 For full national parsing/formatting, install it in the consuming app and pass it through the
 consumer-supplied lazy loader below. Because the import expression lives in consumer code, no
@@ -6271,6 +6324,9 @@ Active and invalid states are independently themeable through
 
 `--lr-otp-input-hover-border-color` (default `var(--lr-color-brand)`) is the border of a hovered segment that is neither active nor invalid.
 
+More themeable custom properties: `--lr-form-control-label-line-height` (default `inherit`): Line
+height of the field label.
+
 **CSS custom states:** `blank` (the empty-value state every other Lyra text and date control
 publishes), `--blank` (the same, kept for compatibility), `--filled`, `disabled`, and `readonly`,
 plus the shared form-associated validity states. The host carries `data-invalid` while it is invalid
@@ -6621,8 +6677,12 @@ preserves the inline editor, its draft, and its focus. A changed sequence ends t
 property and the attribute are equivalent: `el.appearance = 'filled'` repaints the token row.
 
 **Properties:** live, non-reflecting `value`, reflected `defaultValue` (attribute `value`, encoded
-as a JSON string array), `customError` (`custom-error`), `label`, `hint`, `errorText`
-(`error-text`), `placeholder`, `name`,
+as a JSON string array; the attribute also accepts delimiter-separated text such as `value="a, b"`,
+split on `delimiter` like a string assignment, while a JSON array is used verbatim and never split),
+`customError` (`custom-error`), `label`, `hint`, `errorText`
+(`error-text`), `withLabel`/`withHint` (`with-label`/`with-hint`, default `false` — server-rendering
+hints that reserve the label and hint rows before slotted content is observed; an empty reserved
+label never replaces the fallback accessible name), `placeholder`, `name` (`null` removes it),
 `required`, `disabled`,
 `readonly: boolean = false` (reflected — forwards native read-only behavior to the draft input and
 the inline token editor, and blocks adding, removing or editing a token while leaving the draft
@@ -6642,7 +6702,7 @@ rounds the token row's corners by changing the private radius default to `--lr-r
 chips share the public `--lr-token-input-radius` hook with the row, and an inherited or direct
 value remains authoritative),
 `allowDuplicates`
-(`allow-duplicates`, default `false`), `editable` (reflected, default `false` — see below), and
+(`allow-duplicates`, not reflected, default `false`), `editable` (reflected, default `false` — see below), and
 `delimiter: string | null` (default `','` — see below).
 `maxTokensVisible: number = 200` (attribute `max-tokens-visible`) limits the number of mounted
 tokens. Omitting or removing the attribute, or supplying a non-finite limit, uses the 200-token
@@ -6650,10 +6710,19 @@ window; set `max-tokens-visible="0"` to keep mounting every token.
 The `previous-page` and `next-page` buttons page through the tokens, including in a read-only
 field. The `token-overflow` part shows how many tokens are outside the current window. The value
 array and form submission always include every token.
-The native text hints `autocomplete`, `inputmode` (`inputMode`), and `enterkeyhint`
-(`enterKeyHint`) go to both the draft input and the inline token editor. Empty values leave the
+The native text hints `autocomplete`, `inputmode` (`inputMode`; the lowercase `inputmode` property
+is an alias), and `enterkeyhint` (`enterKeyHint`, likewise aliased) go to both the draft input and the inline token editor. Empty values leave the
 optional native attributes unset. The default accessible name is localized as "Tokens" when the
 field has no label, accessible-name override, or nonblank placeholder.
+
+`resetValidity()` clears a `setCustomValidity()` message and recomputes the token constraints (a
+`required` list with no tokens stays `valueMissing`). The static `validators` getter returns the
+intrinsic validator catalog, reporting the current `required`/`min-tags`/`max-tags` validity under the
+native `ValidityState` keys.
+
+More properties: `withClear` (attribute `with-clear`, default `false`): Shows a button that removes
+every token while there is at least one and the control is neither disabled nor readonly. Same as
+`clearable`.
 
 **Slots:** `label`, `hint`, `error`, `start` (adornment before the tokens), `end` (adornment after
 the draft input) — both wrapped in a `hidden`-toggling span, mirroring `lr-combobox`'s identical
@@ -6674,6 +6743,11 @@ unchanged), and `lr-token-edit-request`
 cancelable; `preventDefault()` keeps the token in `value` unchanged and leaves the inline editor
 open with the user's edited text intact, rather than closing and discarding it).
 All three mutators share one veto contract.
+`lr-create` (`detail: { inputValue }` — cancelable) fires once per typed or pasted candidate
+before the batch-level `lr-token-add-request`; `preventDefault()` drops that one token, and when
+every candidate is rejected the draft text stays in the input. `lr-clear` (`detail: null`) fires
+after `input`/`change` when the clear button removed the tokens; each removal is first proposed
+through `lr-token-remove-request`, so a vetoed token stays.
 `lr-invalid` (`detail: null`) is emitted once as a bubbling/composed, cancelable alias when native
 validity fails. Calling `preventDefault()` also cancels the native `invalid` event and suppresses
 the browser’s validation bubble.
@@ -6737,19 +6811,19 @@ remove button from the tab order, never blocks `focus()`, and never excludes the
 `FormData` on submit — only `disabled` does that. Turning it on while a draft is half-typed or an
 inline editor is open discards that uncommitted state without moving focus.
 
-**`delimiter` is a set of characters and is nullable.** Every character of the string is its own
-delimiter: typing any of them commits the draft, and a commit or a real paste splits on all of them
-(`delimiter=";,"` accepts both). A paste that contains a delimiter character commits immediately; a
-paste without one is left to the browser. Setting it to `null` disables both splitting and the
-keystroke (Enter, Tab and blur still commit), so a token may contain the delimiter verbatim.
-`delimiter=""` already meant exactly this Enter-only mode and still does. **`delimiter="null"` does
-not work** — that is the four-character string `null`. Use `delimiter="none"`, `delimiter=""` (both of
-which the attribute converter maps to `null`), or a property binding (`.delimiter=${null}`). Removing
-the attribute restores the `,` default.
+**`delimiter` is nullable, and only a single character acts as a commit key.** It does two separate
+jobs: it splits a committed draft into several tokens, and — _only when it is exactly one
+character_ — it is the keystroke that commits the draft. A multi-character delimiter is matched as
+one literal sequence: it still splits a pasted or committed draft, but no keystroke can ever match
+it, so nothing commits on typing. Pasting never commits by itself; the pasted text joins the draft.
+Setting it to `null` disables both, so a token may contain the delimiter verbatim. **`delimiter="null"`
+does not work** — that is the four-character string `null`. Use `delimiter="none"`, `delimiter=""`
+(both of which the attribute converter maps to `null`), or a property binding
+(`.delimiter=${null}`). Removing the attribute restores the `,` default.
 
 **`max-tags` / `min-tags`** (`maxTags`/`minTags`, both `null` by default, so unset changes nothing).
-At the maximum, typed or pasted text cannot commit and stays in the field (a paste commits what fits and
-leaves the rest); removal, inline editing and clearing keep working. A programmatic `value` longer than
+At the maximum, typed or pasted text cannot commit and stays in the field (a split draft commits what fits
+and leaves the rest); removal, inline editing and clearing keep working. A programmatic `value` longer than
 `max-tags` reports `rangeOverflow`; a list shorter than `min-tags` reports `rangeUnderflow`, enforced only
 once at least one token exists (use `required` for the empty case). Messages are localized
 (`tokenInputTooFew`, `tokenInputTooMany`); disabled or readonly controls report neither.
@@ -6760,7 +6834,7 @@ and the control is neither disabled nor readonly. It proposes each removal throu
 `lr-clear`, and returns focus to the draft input.
 
 **`value` and `inputValue`.** The array stays canonical, but assigning a string to `value` (or
-`defaultValue`) splits it on the `delimiter` characters (comma when none) into trimmed, non-empty tokens;
+`defaultValue`) splits it on the `delimiter` sequence (comma when none) into trimmed, non-empty tokens;
 the reflected `value` attribute remains a JSON array. `inputValue` reads and writes the uncommitted draft
 without committing it.
 
@@ -6796,6 +6870,9 @@ clipping them; keyboard focus scrolls the destination token into view. `--lr-tok
 inline to `--lr-size-8rem`), `--lr-token-input-min-input-inline-size` (default `--lr-size-4rem`, the
 floor that input keeps once tokens have consumed the row), and `--lr-token-input-editor-inline-size`
 (default `--lr-size-6rem`, the inline size of the inline token editor opened by `editable`).
+
+More themeable custom properties: `--lr-form-control-label-line-height` (default `inherit`): Line
+height of the field label.
 
 **Additional API surface:**
 
@@ -6982,6 +7059,9 @@ The `editor` scroll frame also honors the opt-in theme-level
 of them on `:root` or any ancestor for one declaration to retheme every internal scroll container in
 the library, including `lr-table`,
 `lr-virtual-list`, `lr-scroller`, `lr-carousel`, and `lr-code-block`.
+
+More themeable custom properties: `--lr-form-control-label-line-height` (default `inherit`): Line
+height of the field label.
 
 **Known gotchas:**
 
@@ -7255,6 +7335,9 @@ above, not a copy of it, so `--lr-form-control-required-content`,
 here exactly as they do on `lr-input`. With no label text the part is hidden and no glyph is
 painted. Also `swatch-check` (the check-mark icon inside the selected swatch).
 
+Further CSS parts: `eyedropper-button__button`: Web Awesome-named alias on the same node as
+`eyedropper-button`.
+
 **Themeable custom properties:** `--lr-color-picker-swatch-size` sizes the centered visible swatch,
 not the button's minimum target. Its private default follows `size` (default `'m'` reads `2.25rem`,
 `'2xs'` reads `1.25rem`, etc.), matching the visual-density ladder `lr-input` uses. The trigger's
@@ -7313,6 +7396,9 @@ panel is (re)positioned. An explicit `positioning-strategy`/`hoist` on the insta
 over it; otherwise it wins over this control's own mirrored `absolute` default. One declaration on
 `:root`, a theme, or a single clipping ancestor changes every unset color picker beneath it instead
 of authoring `positioning-strategy`/`hoist` on each instance.
+
+More themeable custom properties: `--lr-form-control-label-line-height` (default `inherit`): Line
+height of the field label.
 
 **Additional API surface:**
 
@@ -7559,6 +7645,9 @@ The `grid` scroll container also honors the opt-in theme-level
 `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color` hooks
 (defaults `auto`/`stable`/`auto`, matching its previous unconditional `scrollbar-gutter: stable`) — set any of them on `:root` or any ancestor for
 one declaration to retheme every internal scroll container in the library.
+
+More themeable custom properties: `--lr-form-control-label-line-height` (default `inherit`): Line
+height of the field label.
 
 **Optional peer dependency:** install `emoji-picker-element-data` with
 `pnpm add emoji-picker-element-data` for the built-in auto-loaded default emoji set — omit it and
@@ -8001,6 +8090,9 @@ default when nothing is set. There is no per-instance `positioning-strategy` pro
 `<lr-locale-picker>`; set the custom property on `:root`, a theme, or one clipping ancestor to
 change every unset locale picker beneath it.
 
+More themeable custom properties: `--lr-form-control-label-line-height` (default `inherit`): Line
+height of the field label.
+
 **Optional peer deps:** none directly — each row's `<lr-flag>` degrades to an empty render (no
 peer warning duplication; `lr-flag` itself already logs one) when the optional
 `@aceshooting/lyra-flags` package isn't installed and `withoutFlags` is left off.
@@ -8155,6 +8247,17 @@ These named interfaces and helper signatures are available to typed integrations
     message: string;
     isValid: boolean;
     invalidKeys: Exclude<keyof ValidityState, 'valid'>[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/forms/combobox/combobox.class.js`.
+  `ComboboxOption {
+    readonly value: string;
+    readonly label: string;
+    readonly disabled?: boolean;
+  }`
+  Import: `@aceshooting/lyra-ui/components/forms/combobox/combobox.class.js`.
+  `ComboboxRequest {
+    readonly query: string;
+    readonly signal: AbortSignal;
   }`
 
 - **`components-forms-date-picker-date-input-contracts`** — Supporting data types and helpers for this component family.

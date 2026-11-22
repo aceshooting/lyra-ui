@@ -98,7 +98,7 @@ it('retains native fieldset-disabled remove paint while preserving enabled point
   const host = await fixture<HTMLFieldSetElement>(html`<fieldset disabled><lr-file-input data-lr-theme-scope .files=${[new File(['a'], 'report.txt')]} style="--lr-transition-fast: 0s;"></lr-file-input></fieldset>`);
   const el = host.querySelector('lr-file-input')!;
   await el.updateComplete;
-  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part="remove-button"]')!;
+  const button = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="remove-button"]')!;
   const read = (): string[] => { const style = getComputedStyle(button); return [style.backgroundColor, style.color]; };
   // Two frames is what turns "the press was correctly inert" into a real assertion; the shared
   // helper owns that wait so every must-not-paint read in the repo uses the same settle.

@@ -25,19 +25,24 @@ import './components/lr-tooltip.js';
 import './components/lr-progress-bar.js';
 import './components/lr-progress-ring.js';
 import './components/lr-rating.js';
+import './components/lr-button-group.js';
+import './components/lr-tab-panel.js';
 import './components/lr-spinner.js';
 import './components/lr-known-date.js';
 
 type TestElement = HTMLElement & { updateComplete?: Promise<unknown> };
 
 /**
- * Named outer-wrapper parts from Web Awesome 3.11.0's published custom-elements manifest, limited
- * to tags mapped by Lyra. `wa-page` is the one published wrapper omitted here because it has no
- * mapped Lyra tag yet. Keep the upstream tag in each row so a future pin update is reviewable.
+ * Named outer-wrapper parts from Web Awesome 3.15.0's published custom-elements manifest, limited
+ * to tags mapped by Lyra whose wrapper also carries `base`. `wa-page` is omitted because it has no
+ * mapped Lyra tag yet; `wa-step`, `wa-stepper` and `wa-tag-input` are omitted because their Lyra
+ * counterparts do not carry `base` on the component-named wrapper. Keep the upstream tag in each
+ * row so a future pin update is reviewable.
  */
 const mappedWrapperParts = [
   ['wa-accordion-item', 'lr-accordion-item', 'accordion-item'],
   ['wa-badge', 'lr-badge', 'badge'],
+  ['wa-button-group', 'lr-button-group', 'button-group'],
   ['wa-breadcrumb', 'lr-breadcrumb', 'breadcrumb'],
   ['wa-button', 'lr-button', 'button'],
   ['wa-carousel', 'lr-carousel', 'carousel'],
@@ -54,6 +59,7 @@ const mappedWrapperParts = [
   ['wa-switch', 'lr-switch', 'switch'],
   ['wa-tab', 'lr-tab', 'tab'],
   ['wa-tab-group', 'lr-tab-group', 'tab-group'],
+  ['wa-tab-panel', 'lr-tab-panel', 'tab-panel'],
   ['wa-time-input', 'lr-time-input', 'time-input'],
   ['wa-tooltip', 'lr-tooltip', 'tooltip'],
   ['wa-tree', 'lr-tree', 'tree'],

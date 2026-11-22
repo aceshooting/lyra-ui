@@ -330,6 +330,46 @@ export interface LyraDateInputEventMap {
 }
 class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
 
+/** The nested picker's quick-range parts under their own names, plus every picker part under the
+ *  `date-picker__` prefix Web Awesome's date input forwards. */
+const DATE_PICKER_EXPORT_PARTS = [
+  'presets',
+  'preset-button',
+  'date-picker:date-picker__date-picker',
+  'day:date-picker__day',
+  'day-disabled:date-picker__day-disabled',
+  'day-label:date-picker__day-label',
+  'day-outside:date-picker__day-outside',
+  'day-placeholder:date-picker__day-placeholder',
+  'day-range-end:date-picker__day-range-end',
+  'day-range-inner:date-picker__day-range-inner',
+  'day-range-preview:date-picker__day-range-preview',
+  'day-range-start:date-picker__day-range-start',
+  'day-selected:date-picker__day-selected',
+  'day-today:date-picker__day-today',
+  'day-weekend:date-picker__day-weekend',
+  'footer:date-picker__footer',
+  'grid:date-picker__grid',
+  'header:date-picker__header',
+  'month:date-picker__month',
+  'month-label:date-picker__month-label',
+  'months:date-picker__months',
+  'next:date-picker__next',
+  'previous:date-picker__previous',
+  'title:date-picker__title',
+  'view-cell:date-picker__view-cell',
+  'view-grid:date-picker__view-grid',
+  'view-item:date-picker__view-item',
+  'view-item-disabled:date-picker__view-item-disabled',
+  'view-item-selected:date-picker__view-item-selected',
+  'view-item-today:date-picker__view-item-today',
+  'view-row:date-picker__view-row',
+  'weekday:date-picker__weekday',
+  'weekdays:date-picker__weekdays',
+  'weeknumber:date-picker__weeknumber',
+  'weeknumbers:date-picker__weeknumbers',
+].join(', ');
+
 /**
  * `<lr-date-input>` — a date field with an attached calendar popover.
  * Mirrors the core `<wa-date-input>` API under `lr-`. Value is ISO 8601
@@ -420,6 +460,39 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * @csspart date-picker - The nested date picker, rendered only while the calendar is open or closing.
  * @csspart presets - The nested picker's quick-range row, forwarded from `<lr-date-picker>`.
  * @csspart preset-button - One quick-range button, forwarded from `<lr-date-picker>`.
+ * @csspart date-picker__date-picker - The nested picker's `date-picker` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__day - The nested picker's `day` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__day-disabled - The nested picker's `day-disabled` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__day-label - The nested picker's `day-label` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__day-outside - The nested picker's `day-outside` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__day-placeholder - The nested picker's `day-placeholder` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__day-range-end - The nested picker's `day-range-end` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__day-range-inner - The nested picker's `day-range-inner` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__day-range-preview - The nested picker's `day-range-preview` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__day-range-start - The nested picker's `day-range-start` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__day-selected - The nested picker's `day-selected` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__day-today - The nested picker's `day-today` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__day-weekend - The nested picker's `day-weekend` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__footer - The nested picker's `footer` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__grid - The nested picker's `grid` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__header - The nested picker's `header` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__month - The nested picker's `month` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__month-label - The nested picker's `month-label` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__months - The nested picker's `months` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__next - The nested picker's `next` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__previous - The nested picker's `previous` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__title - The nested picker's `title` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__view-cell - The nested picker's `view-cell` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__view-grid - The nested picker's `view-grid` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__view-item - The nested picker's `view-item` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__view-item-disabled - The nested picker's `view-item-disabled` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__view-item-selected - The nested picker's `view-item-selected` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__view-item-today - The nested picker's `view-item-today` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__view-row - The nested picker's `view-row` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__weekday - The nested picker's `weekday` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__weekdays - The nested picker's `weekdays` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__weeknumber - The nested picker's `weeknumber` part, forwarded under the Web Awesome name.
+ * @csspart date-picker__weeknumbers - The nested picker's `weeknumbers` part, forwarded under the Web Awesome name.
  * @csspart hint - The hint message.
  * @csspart error - The validation message.
  * @cssprop [--lr-date-input-color=inherit] - Trigger text color. Defaults to the inherited text
@@ -489,6 +562,7 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  *   popup's `fixed` default, read from computed style when it is (re)positioned. Set it once on
  *   `:root`, a theme, or one clipping ancestor to change every unset date input beneath it; an
  *   unrecognized value falls back to `fixed`.
+ * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
  * @status experimental
  * @since 4.0.0
  */
@@ -2217,7 +2291,7 @@ export class LyraDateInput extends FormAssociated(LyraDateInputBase) {
                 .firstDayOfWeek=${this.firstDayOfWeek}
                 .weekdayFormat=${normalizeWeekdayFormat(this.weekdayFormat)}
                 .presets=${this.presets}
-                exportparts="presets, preset-button"
+                exportparts=${DATE_PICKER_EXPORT_PARTS}
                 @lr-change-request=${(event: Event) => event.stopPropagation()}
                 @lr-input=${(event: Event) => event.stopPropagation()}
                 @lr-change=${(event: Event) => event.stopPropagation()}

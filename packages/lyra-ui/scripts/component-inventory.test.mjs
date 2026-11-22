@@ -763,9 +763,9 @@ test('callout accessibility review records optional grouping and post-mount anno
   );
 });
 
-test('checked-in accessibility profiles cover all 145 upstream mappings', () => {
+test('checked-in accessibility profiles cover all 153 upstream mappings', () => {
   const inventory = readJson('scripts', 'fixtures', 'component-inventory.json');
-  assert.equal(inventory.mappings.length, 145);
+  assert.equal(inventory.mappings.length, 153);
   assert.deepEqual(
     inventory.accessibilityProfiles,
     accessibilityProfileCatalog()
@@ -781,7 +781,7 @@ test('checked-in accessibility profiles cover all 145 upstream mappings', () => 
     inventory.mappings.filter(
       (mapping) => mapping.parity.accessibility.reviewStatus === 'complete'
     ).length,
-    145
+    153
   );
 });
 
@@ -2694,7 +2694,7 @@ test('the manual wa-video review records the complete public contract independen
   assert.equal(reviewed.surface.slots.length, 10);
   assert.equal(reviewed.surface.methods.length, 11);
   assert.equal(reviewed.surface.events.length, 7);
-  assert.equal(reviewed.surface.parts.length, 16);
+  assert.equal(reviewed.surface.parts.length, 15);
   assert.equal(reviewed.surface.cssProperties.length, 3);
   assert.equal(
     reviewed.surface.methods.find(({ name }) => name === 'getState')
@@ -6252,7 +6252,7 @@ test('C-576 wa-page records its reviewed method-edge sentinel divergence as migr
         },
       ],
       rationale:
-        'Lyra returns a finite 0 for null and for an element in a detached document with no viewport; Web Awesome 3.11 returns null for null and measures detached-document geometry against the ambient page viewport.',
+        'Lyra returns a finite 0 for null and for an element in a detached document with no viewport; Web Awesome 3.15 returns null for null and measures detached-document geometry against the ambient page viewport.',
     },
   ]);
 
@@ -7867,9 +7867,9 @@ test('checked-in inventory covers every pinned tag and every Lyra declaration', 
     .flatMap((module) => module.declarations ?? [])
     .filter((declaration) => declaration.customElement && declaration.tagName);
   assert.equal(inventory.components.length, declaredTags.length);
-  assert.equal(inventory.upstreams.webawesome.components.length, 87);
+  assert.equal(inventory.upstreams.webawesome.components.length, 95);
   assert.equal(inventory.upstreams.shoelace.components.length, 58);
-  assert.equal(inventory.mappings.length, 145);
+  assert.equal(inventory.mappings.length, 153);
   assert.deepEqual(
     inventory.accessibilityProfiles,
     accessibilityProfileCatalog()

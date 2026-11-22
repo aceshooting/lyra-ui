@@ -11,7 +11,7 @@ export const styles = css`
   [part='base'] {
     display: inline-flex;
     align-items: flex-start;
-    gap: var(--lr-counter-gap, 0.5em);
+    gap: var(--lr-counter-gap, var(--lr-size-0-5em));
     line-height: var(--lr-line-height-compact);
     min-inline-size: 0;
   }
@@ -29,7 +29,7 @@ export const styles = css`
   }
 
   [part='label'] {
-    font-size: max(0.5em, var(--lr-font-size-2xs));
+    font-size: max(var(--lr-size-0-5em), var(--lr-font-size-2xs));
   }
 
   /* A clock reads left to right even in a right-to-left page. */
@@ -58,7 +58,7 @@ export const styles = css`
   }
 
   [part='delimiter'] {
-    margin-inline: calc(var(--lr-counter-gap, 0.5em) * -0.5);
+    margin-inline: calc(var(--lr-counter-gap, var(--lr-size-0-5em)) * -0.5);
   }
 
   [part='finished'] {

@@ -77,7 +77,7 @@ function updateCompleteFor(element: Element): Promise<unknown> | undefined {
  * update-completion accessors throw is treated as unavailable without blocking valid siblings.
  */
 export function allDefined(
-  root?: LyraDefinitionRoot,
+  root?: LyraDefinitionRoot | undefined,
   options?: AllDefinedOptions,
 ): Promise<void>;
 /**
@@ -114,7 +114,7 @@ async function allDefinedWithOptions(
   }
   const work = (async () => {
     if (!opts.match) await allDefinedRoot(root, {});
-    if (registry) await Promise.all([...tags].map((tag) => whenDefined(registry, tag)));
+    if (registry) await Promise.all([...tags].map((tag) => whenDefined(registry, tag) ?? Promise.resolve()));
   })();
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timedOut = new Promise<void>((resolve) => {

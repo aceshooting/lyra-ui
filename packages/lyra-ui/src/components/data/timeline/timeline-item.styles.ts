@@ -119,8 +119,8 @@ export const styles = css`
     inset: 0;
     inline-size: var(--_lr-timeline-item-rail-inline, var(--_lr-timeline-rail-width));
     block-size: var(--_lr-timeline-item-rail-block, var(--_lr-timeline-rail-width));
-    margin-block: var(--_lr-timeline-item-rail-gap-block, var(--lr-timeline-connector-gap, 0px));
-    margin-inline: var(--_lr-timeline-item-rail-gap-inline, 0px);
+    margin-block: var(--_lr-timeline-item-rail-gap-block, var(--lr-timeline-connector-gap, 0));
+    margin-inline: var(--_lr-timeline-item-rail-gap-inline, 0);
     background: var(--_lr-timeline-item-rail-bg, var(--_lr-timeline-rail-color));
     /* Suppressed for the last item by <lr-timeline>'s own ::slotted(:last-child) rule; visibility,
        not display, keeps the layout box every other item's track has, so marker alignment stays

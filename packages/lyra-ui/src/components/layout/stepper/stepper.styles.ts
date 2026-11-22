@@ -9,7 +9,7 @@ export const styles = css`
   :host {
     ${blockHost}
   }
-  [part="base"] {
+  [part~="base"] {
     display: flex;
     min-inline-size: 0;
     max-inline-size: 100%;
@@ -31,13 +31,13 @@ export const styles = css`
      No :hover twin: a scroll container is not a pointer target -- it has no cursor: pointer and
      nothing of its own to light up -- and tinting the whole strip under the pointer would read as
      a selection it cannot make. */
-  [part="base"]:focus-visible {
+  [part~="base"]:focus-visible {
     ${focusRing}
   }
   [part="step-item"] {
     display: contents;
   }
-  :host([orientation="vertical"]) [part="base"] {
+  :host([orientation="vertical"]) [part~="base"] {
     flex-direction: column;
     overflow-x: visible;
     overflow-y: visible;
@@ -47,14 +47,14 @@ export const styles = css`
   /* orientationBreakpoint's live axis, present only while that feature is opted into (stepper.class.ts's
      updateEffectiveOrientation()), so it overrides the authored orientation rules above on source
      order alone at equal specificity whenever the effective axis diverges. */
-  :host([data-effective-orientation="vertical"]) [part="base"] {
+  :host([data-effective-orientation="vertical"]) [part~="base"] {
     flex-direction: column;
     overflow-x: visible;
     overflow-y: visible;
     -webkit-mask-image: none;
     mask-image: none;
   }
-  :host([data-effective-orientation="horizontal"]) [part="base"] {
+  :host([data-effective-orientation="horizontal"]) [part~="base"] {
     flex-direction: row;
     overflow-x: auto;
     overflow-y: hidden;
@@ -62,8 +62,8 @@ export const styles = css`
     mask-image: none;
   }
   ${scrollOverflowFade(
-    ':host([data-effective-orientation="horizontal"]) [part="base"][data-scroll-overflow]',
-    ':host(:dir(rtl)[data-effective-orientation="horizontal"]) [part="base"][data-scroll-overflow]',
+    ':host([data-effective-orientation="horizontal"]) [part~="base"][data-scroll-overflow]',
+    ':host(:dir(rtl)[data-effective-orientation="horizontal"]) [part~="base"][data-scroll-overflow]',
   )}
   [part="step"] {
     display: flex;
@@ -199,13 +199,13 @@ export const styles = css`
     overflow-wrap: normal;
   }
   @media (forced-colors: active) {
-    [part="base"],
-    [part="base"][data-scroll-overflow],
-    :host(:dir(rtl)) [part="base"][data-scroll-overflow],
+    [part~="base"],
+    [part~="base"][data-scroll-overflow],
+    :host(:dir(rtl)) [part~="base"][data-scroll-overflow],
     :host([data-effective-orientation="horizontal"])
-      [part="base"][data-scroll-overflow],
+      [part~="base"][data-scroll-overflow],
     :host(:dir(rtl)[data-effective-orientation="horizontal"])
-      [part="base"][data-scroll-overflow] {
+      [part~="base"][data-scroll-overflow] {
       -webkit-mask-image: none;
       mask-image: none;
     }
@@ -213,7 +213,7 @@ export const styles = css`
   /* Child mode (<lr-step> elements in the default slot): the steps share the row evenly, draw their
      own connectors across the former gap, and are never clipped, so a focus ring, a pulse or a bounce
      can paint past the strip. Declared last so it outranks the array-mode axis rules above. */
-  :host [part="base"].child-steps {
+  :host [part~="base"].child-steps {
     gap: 0;
     padding-inline: 0;
     overflow-x: visible;

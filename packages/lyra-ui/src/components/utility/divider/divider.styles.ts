@@ -39,7 +39,7 @@ export const styles = css`
   }
   :host([with-label][label-placement='start']) [part~='line-start'],
   :host([with-label][label-placement='end']) [part~='line-end'] {
-    flex: 0 0 var(--label-offset, 2em);
+    flex: 0 0 var(--label-offset, calc(var(--lr-size-1em) * 2));
   }
   :host([with-label]:where([orientation='vertical'], [vertical])) [part='base'] {
     flex-direction: column;

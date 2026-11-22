@@ -1,4 +1,5 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
+import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { property, state } from 'lit/decorators.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteCount } from '../../../internal/numbers.js';
@@ -123,6 +124,9 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     showMoreOverflowLabel: LYRA_DEFAULT_showMoreOverflowLabel,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override collectionSupport = eventCollectionSupport;
+  protected static override readonly immutableEventDetails = Object.freeze(['lr-change']);
 
   static override styles = [LyraElement.styles, styles];
 

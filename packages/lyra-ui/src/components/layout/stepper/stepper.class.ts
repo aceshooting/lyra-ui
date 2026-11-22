@@ -1,4 +1,5 @@
 import { finiteCount } from '../../../internal/numbers.js';
+import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import { declaredDefaultConverter } from '../../../internal/converters.js';
 import { checkIcon } from '../../../internal/icons.js';
 import { HostChildrenObserver, OwnedResizeObserver, readInlineSize } from '../../../internal/owned-observer.js';
@@ -30,6 +31,8 @@ import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js'
 import { restoreComposedFocus } from '../../../internal/focus-repair.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
+import { setCustomState } from '../../../internal/custom-states.js';
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_stepperStateCompleted, LYRA_DEFAULT_stepperStateError, LYRA_DEFAULT_stepperStateLocked, LYRA_DEFAULT_stepperStatePending, LYRA_DEFAULT_stepperStepPosition, LYRA_DEFAULT_stepperSteps } from '../../../internal/default-strings/layout.generated.js';
@@ -71,9 +74,13 @@ export type LyraStepperOrientation = LyraOrientation | 'auto';
 
 /** Payload of `lr-before-step-change` and `lr-step-change` in child-driven mode. */
 export interface LyraStepChangeDetail {
+  /** `name` of the step becoming current. */
   name: string;
+  /** `name` of the step that was current, or `null` when none was. */
   previousName: string | null;
+  /** The step becoming current. */
   step: LyraStep;
+  /** The step that was current, or `null` when none was. */
   previousStep: LyraStep | null;
 }
 
@@ -264,6 +271,7 @@ function snapshotSteps(value: unknown, reportOmitted: (count: number) => void): 
  * @csspart stepper - Child mode: the outer wrapper, a `<nav>` landmark while `clickable`, otherwise
  *   a labelled `role="group"`.
  * @csspart summary - Child mode: visually hidden "Step X of Y" text for assistive technology.
+ * @csspart steps - The list element that lays out the steps; the same node as `base`.
  * @csspart base - The root wrapper, and the horizontally scrolling track. Takes `tabindex="0"`
  *   only while `readonly` and genuinely overflowing, so an otherwise keyboard-unreachable
  *   read-only strip can still be scrolled; style that state with `::part(base):focus-visible`.
@@ -279,12 +287,30 @@ function snapshotSteps(value: unknown, reportOmitted: (count: number) => void): 
  * @cssprop [--lr-stepper-marker-size=var(--lr-size-2rem)] - Child mode: diameter of each step's marker.
  * @cssprop [--lr-stepper-connector-color=var(--lr-color-neutral-fill-normal)] - Child mode: color of the
  *   line after a step that is not completed.
- * @cssprop [--lr-stepper-connector-color-active] - Child mode: color of the line after a completed
+ * @cssprop [--lr-stepper-connector-active-color] - Child mode: color of the line after a completed
  *   step; unset, it follows that step's variant.
  * @cssprop [--lr-stepper-connector-width=var(--lr-border-width-medium)] - Child mode: line thickness.
  * @cssprop [--lr-stepper-connector-gap=var(--lr-size-0-35em)] - Child mode: gap between a marker and
  *   the line on both sides.
  * @cssprop [--lr-stepper-step-gap=var(--lr-space-m)] - Child mode: space between steps while stacked.
+ * @cssprop [--marker-size=var(--lr-stepper-marker-size,var(--lr-size-2rem))] - Child mode: alias of
+ *   `--lr-stepper-marker-size`; wins when both are set.
+ * @cssprop [--connector-color=var(--lr-stepper-connector-color,var(--lr-color-neutral-fill-normal))] -
+ *   Child mode: alias of `--lr-stepper-connector-color`; wins when both are set.
+ * @cssprop [--connector-color-active] - Child mode: alias of `--lr-stepper-connector-active-color`;
+ *   wins when both are set.
+ * @cssprop [--connector-width=var(--lr-stepper-connector-width,var(--lr-border-width-medium))] - Child
+ *   mode: alias of `--lr-stepper-connector-width`; wins when both are set.
+ * @cssprop [--connector-gap=var(--lr-stepper-connector-gap,var(--lr-size-0-35em))] - Child mode: alias
+ *   of `--lr-stepper-connector-gap`; wins when both are set.
+ * @cssprop [--gap=var(--lr-stepper-step-gap,var(--lr-space-m))] - Child mode: alias of
+ *   `--lr-stepper-step-gap`, the space between stacked steps; wins when both are set. In a row the
+ *   connectors span the space between steps, which share the width evenly.
+ * @cssstate completed - Every step is completed (child mode: every `<lr-step>` is `completed`; data
+ *   mode: every item's `state` is `completed`).
+ * @cssstate loading - Child mode: at least one `<lr-step>` is `loading`.
+ * @cssstate stacked - The steps are laid out vertically, by `orientation="vertical"`, an
+ *   `orientationBreakpoint` or an `auto` stepper too narrow for a row.
  * @cssprop [--lr-scroll-fade-size=2rem] - Width of each decorative horizontal overflow fade.
  * Pointer-state hooks use inline `var()` fallbacks rather than a `:host` declaration, so they
  * inherit from the stepper or any ancestor without retheming another state.
@@ -336,6 +362,16 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     stepperSteps: LYRA_DEFAULT_stepperSteps,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override collectionSupport = eventCollectionSupport;
+  protected static override readonly immutableEventDetails = Object.freeze([
+    'lr-before-step-change',
+    'lr-step-change',
+  ]);
+  protected static override readonly identityEventDetailProperties = Object.freeze({
+    'lr-before-step-change': Object.freeze(['step', 'previousStep']),
+    'lr-step-change': Object.freeze(['step', 'previousStep']),
+  });
 
   static override styles = [LyraElement.styles, scrollOverflowFadeStyles, styles];
 
@@ -461,6 +497,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   @property({ type: Boolean, reflect: true }) clickable = false;
 
   private childSteps: LyraStep[] = [];
+  private readonly stepperInternals = attachInternalsSafely(this);
   @state() private childCount = 0;
   private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
 
@@ -498,7 +535,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   });
   private readonlyFocusLost = false;
   private pendingStepFocus?: { stepId: string; index: number };
-  @query('[part="base"]') private baseEl?: HTMLElement;
+  @query('[part~="base"]') private baseEl?: HTMLElement;
   /** Container width seeded before the first render only when its orientation breakpoint
    *  consumes it, then refreshed on reconnect and by the allocation observer. */
   private measuredInlineSize = Number.POSITIVE_INFINITY;
@@ -659,6 +696,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    this.syncCustomStates();
     this.registerInvokers();
     // ARIA idrefs do not cross a shadow boundary -- a host-authored `aria-describedby` never
     // reaches `[part="base"]`'s own `role="list"` (which owns the accessible description) unless
@@ -682,7 +720,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
       restoreComposedFocus(
         this,
         true,
-        this.renderRoot.querySelector<HTMLElement>('[part="base"]')
+        this.renderRoot.querySelector<HTMLElement>('[part~="base"]')
       );
     }
     if (this.pendingStepFocus !== undefined) {
@@ -829,9 +867,21 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     this.childSteps = steps;
     this.childCount = steps.length;
     this.applyChildState();
+    this.syncCustomStates();
     // The step count feeds `orientation="auto"`, so a changed count re-derives the axis too.
     if (countChanged && this.orientation === 'auto')
       this.updateEffectiveOrientation(this.orientationInlineSize(), true);
+  }
+
+  /** Publishes the `completed`, `loading` and `stacked` custom states. */
+  private syncCustomStates(): void {
+    const child = this.childMode;
+    const completed = child
+      ? this.childSteps.every((step) => step.completed)
+      : this.steps.length > 0 && this.steps.every((step) => step.state === 'completed');
+    setCustomState(this.stepperInternals, 'completed', completed);
+    setCustomState(this.stepperInternals, 'loading', child && this.childSteps.some((step) => step.loading));
+    setCustomState(this.stepperInternals, 'stacked', this.effectiveOrientation === 'vertical');
   }
 
   /** The step `active` resolves to: the one it names, else the first. */
@@ -966,7 +1016,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
           total: format.format(this.childCount),
         })}</span
       >
-      <div part="base" class="child-steps" role="list"><slot></slot></div>
+      <div part="base steps" class="child-steps" role="list"><slot></slot></div>
     `;
     // A landmark earns its keep only when its steps are buttons to navigate between.
     return this.clickable

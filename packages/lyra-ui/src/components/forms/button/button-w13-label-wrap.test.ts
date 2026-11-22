@@ -15,7 +15,7 @@ describe('lr-button --lr-button-label-wrap', () => {
       <lr-button>A fairly long action label that must wrap</lr-button>
       <lr-button wrap>Attribute</lr-button>
     </div>`);
-    const [a, b] = Array.from(row.querySelectorAll<LyraButton>('lr-button'));
+    const [a, b] = Array.from(row.querySelectorAll<LyraButton>('lr-button')) as [LyraButton, LyraButton];
     expect(getComputedStyle(label(a)).whiteSpace).to.equal('normal');
     expect(getComputedStyle(label(b)).whiteSpace).to.equal('normal');
     expect(a.getBoundingClientRect().height).to.be.greaterThan(60);

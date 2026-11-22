@@ -33,7 +33,7 @@ it('reads only first, middle and final descriptors from a million indexed images
   expect(el.index).to.equal(999_999);
   expect(el.shadowRoot!.querySelector('[part="counter"]')!.textContent).to.equal('Image 1000000 of 1000000');
   expect(reads).to.equal(3);
-  expect(el.shadowRoot!.querySelectorAll('[part="frame"]').length).to.equal(1);
+  expect(el.shadowRoot!.querySelectorAll('[part~="frame"]').length).to.equal(1);
   el.loop = true; el.next(); await ready(el, 'Image 0');
   expect(el.index).to.equal(0);
   expect(reads).to.equal(3);
@@ -83,7 +83,7 @@ it('reads single-image ranges at first middle and final positions without prefet
   expect(offsets).to.deep.equal([0, 500_000, 999_999]);
   const window = (el as unknown as { sourceController: { window: { pages: Map<number, unknown> } } }).sourceController.window;
   expect(window.pages.size).to.equal(3);
-  recordScaleMeasurement('lr-lightbox', 'n=1000000 ranged first middle final', { descriptorReads: offsets.length, retainedDescriptors: window.pages.size, frameCount: el.shadowRoot!.querySelectorAll('[part="frame"]').length });
+  recordScaleMeasurement('lr-lightbox', 'n=1000000 ranged first middle final', { descriptorReads: offsets.length, retainedDescriptors: window.pages.size, frameCount: el.shadowRoot!.querySelectorAll('[part~="frame"]').length });
 });
 
 it('revokes the old range immediately and queues only the latest requested index', async () => {

@@ -381,6 +381,32 @@ export const styles = css`
   [part="expand-icon"] svg {
     transform: rotate(90deg);
   }
+  /* Decorative and aria-hidden: the listbox loading row and the busy request carry the meaning,
+     so the glyph takes no pointer feedback. */
+  [part="spinner"] {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--lr-size-1em);
+    block-size: var(--lr-size-1em);
+    color: var(--lr-color-text-quiet);
+    animation: lr-combobox-spin var(--lr-duration-ambient) var(--lr-easing-linear) infinite;
+  }
+  [part="spinner"] svg {
+    inline-size: 100%;
+    block-size: 100%;
+  }
+  @keyframes lr-combobox-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [part="spinner"] {
+      animation: none;
+    }
+  }
   /* Mirrors <lr-input>'s [part='clear-button']:hover -- the same quiet-to-full text token step, so
      mouse users get the feedback keyboard users get from the focus ring below. */
   [part="clear-button"]:hover {
@@ -396,16 +422,16 @@ export const styles = css`
   /* Mirrors <lr-chip>'s [part='remove-button']:hover -- a currentColor-derived tint rather than a
      fixed token, since this part's rest color is 'inherit' (the tag's text color), not a quiet
      token to darken. */
-  [part="tag__remove-button"]:hover {
+  [part~="tag__remove-button"]:hover {
     background: color-mix(in srgb, currentColor 16%, transparent);
   }
   /* Same currentColor idiom as the hover above, taken to the shared pressed strength -- 22% against
      the hover's 16%. */
-  [part="tag__remove-button"]:active {
+  [part~="tag__remove-button"]:active {
     background: ${activeTint('currentColor')};
   }
   [part="clear-button"]:focus-visible,
-  [part="tag__remove-button"]:focus-visible {
+  [part~="tag__remove-button"]:focus-visible {
     ${focusRing}
   }
 

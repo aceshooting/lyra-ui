@@ -10,7 +10,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `panel`: `--lr-tab-group-panel-hover-outline-color`, `--lr-tab-group-panel-hover-outline-offset`, `--lr-tab-group-panel-hover-outline-style`, `--lr-tab-group-panel-hover-outline-width`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -191,7 +191,7 @@ projection slot a standalone `<lr-tab>` uses before a hydrated group assigns its
 panels; `nav` (the row wrapping the
 tablist together with the two overflow scroll controls; mirrors the upstream part of the same name),
 `tablist` and `tabs` (aliases on the `role="tablist"` row of tab buttons and scroll container),
-`body` (wrapper around all panels), `scroll-button` and `scroll-button__base` (aliases shared by
+`body` (wrapper around all panels), `scroll-button`, `scroll-button__base` and `scroll-button__button` (aliases shared by
 both overflow controls), `scroll-button-start`/`scroll-button--start` and
 `scroll-button-end`/`scroll-button--end` (aliases on the individual
 controls that scroll the tabs toward their inline start and end — under RTL "start" is the

@@ -85,6 +85,8 @@ function isSourceLabelAvailable(node: Node): boolean {
  * @csspart remove-button - The remove affordance, only rendered while `withRemove`.
  * @csspart remove-button__base - Shoelace-compatible alias for `remove-button`; both names are on
  *   the same node.
+ * @csspart remove-button__button - Upstream name for the native remove button; on the same node as
+ *   `remove-button`.
  * @cssprop [--lr-tag-remove-radius=var(--lr-badge-radius)] - Corner radius of the remove button,
  * defaulting to the tag's own corner so retuning one retunes both.
  * @cssprop [--lr-tag-remove-hover-bg=color-mix(in srgb, currentColor 16%, transparent)] -
@@ -340,7 +342,7 @@ export class LyraTag extends LyraBadge<LyraTagEventMap, TagVariant> {
   protected override renderTrailing(): unknown {
     if (!this.withRemove) return nothing;
     return html`<button
-      part="remove-button remove-button__base"
+      part="remove-button remove-button__base remove-button__button"
       type="button"
       ?disabled=${this.disabled}
       aria-label=${this.accessibleRemoveLabel}

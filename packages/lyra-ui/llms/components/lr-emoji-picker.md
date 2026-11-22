@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `emoji-picker-element-data` — see `llms/peers.md`
-- **Themeable via** 19 parts, 37 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 19 parts, 35 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `form-control-label`: `--lr-form-control-required-content`; `grid`: `--lr-theme-scrollbar-color`; `search-wrapper`: `--lr-emoji-picker-search-clear-gap`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -192,6 +192,9 @@ The `grid` scroll container also honors the opt-in theme-level
 (defaults `auto`/`stable`/`auto`, matching its previous unconditional `scrollbar-gutter: stable`) — set any of them on `:root` or any ancestor for
 one declaration to retheme every internal scroll container in the library.
 
+More themeable custom properties: `--lr-form-control-label-line-height` (default `inherit`): Line
+height of the field label.
+
 **Optional peer dependency:** install `emoji-picker-element-data` with
 `pnpm add emoji-picker-element-data` for the built-in auto-loaded default emoji set — omit it and
 supply `groups` directly instead. The loader never throws; it leaves `groups` empty and logs one
@@ -226,9 +229,3 @@ those through `registerLyraLocale()` or `.strings`. An unknown future group id u
 - `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` on the search
   field while it is focused. One name for every field-shaped control in the library, so a halo is
   configured once instead of per component; additive to the existing focus outline. Default: `none`.
-
-Further custom properties:
-
-- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
-- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
-- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.

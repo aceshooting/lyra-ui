@@ -404,6 +404,7 @@ export interface LyraGraphQueryBuilderEventMap {
  * @cssprop --lr-icon-button-active-border - Pressed border of the icon-only saved-query delete buttons.
  * @cssprop --lr-icon-button-hover-color - Hover foreground of the icon-only saved-query delete buttons.
  * @cssprop --lr-icon-button-active-color - Pressed foreground of the icon-only saved-query delete buttons.
+ * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
  * @status stable
  * @since 4.1.0
  */

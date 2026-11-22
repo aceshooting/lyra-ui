@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 35 parts, 54 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 41 parts, 51 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `combobox`: `--lr-combobox-gap`, `--lr-combobox-radius`; `form-control-label`: `--lr-form-control-required-content`; `listbox`: `--lr-theme-scrollbar-color`, `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-width`; `option-badge`: `--lr-combobox-option-badge-bg`
 - **Documented with** `lr-option` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -311,7 +311,7 @@ matches"` in the built-in English locale); any supplied string, including `''`, 
   A supplied template wins verbatim over `.strings`, including when it equals that English
   template or is empty; `{n}` is still replaced with the locale-formatted hidden count
 - `filter: OptionFilter | null = null` (attribute: false — `(option, query) => boolean`; default
-  matches `label`/`searchText` case-insensitively; ignored while `source` is set)
+  matches `label`/`searchText` case-insensitively; ignored while `source` is set or `server` is on)
 - `source: ComboboxSource | null = null` (attribute: false — `(query: string, options: { signal:
 AbortSignal; limit: number }) => Promise<readonly ComboboxSourceRow[] | { rows, total? }>`; when set, replaces the light-DOM `<lr-option>`
   list with an async lookup, debounced by `sourceDelay` ms after each keystroke and re-run on
@@ -332,11 +332,31 @@ AbortSignal; limit: number }) => Promise<readonly ComboboxSourceRow[] | { rows, 
   and the `source` call; `0` fires on every keystroke. Sanitized to a finite non-negative duration,
   falling back to `200` for a non-finite value). `filterDebounce` (attribute `filter-debounce`) is the
   same setting under its upstream name.
-- `dataSource` is an alias of `source`: reading or assigning either one reads or assigns the same
-  provider. Rows stay plain data (`value`, `label`, optional `description`/`badge`/`data`); a source
-  cannot return option HTML, because rendering remote markup would need an optional sanitizer inside the
-  combobox's hot path and a fail-closed fallback for it. `source` is always query-driven (the provider
-  filters), which is what the upstream `server` flag opts into, so there is no `server` attribute.
+  Unset, it stays `200`, where Web Awesome's `filter-debounce` defaults to `250`; write
+  `filter-debounce="250"` to match that timing.
+- `dataSource: ((request: ComboboxRequest) => Promise<ComboboxOptions> | ComboboxOptions) | null = null`
+  (attribute: false) — the single-argument provider shape: it receives `{ query, signal }` and returns
+  option objects (`{ value, label, disabled? }` plus any `source` row field), option elements, a
+  `{ rows, total }` envelope, or a string of option markup, directly or as a promise. Elements and
+  markup contribute only their `value` attribute, label text and `disabled` state; markup is parsed
+  into an inert document and never inserted, so nothing in it runs; only its top-level `<option>` or
+  `*-option` elements become rows. It drives the same pipeline as
+  `source` (debounce, `lr-options-request`, cancellation, loading and failed states, row ceilings).
+  Assigning either provider replaces the other, and `dataSource` reads `null` once `source` is
+  assigned; `source` keeps its `(query, { signal, limit })` shape.
+- `server: boolean = false` (attribute `server`, reflected) — server mode without a provider:
+  client-side filtering is off (`filter` is ignored and every `<lr-option>` child shows), and each
+  request is announced through `lr-options-request` instead. Typing requests after the
+  `source-delay`/`filter-debounce` wait; opening the listbox and `reload()` request at once.
+  Scheduling a request sets `loading`; the host replaces the `<lr-option>` children for
+  `detail.query`, then sets `loading = false`, and drops an answer whose `detail.signal` has aborted.
+  Options already shown stay visible while `loading` is set, with the in-field `spinner`; the
+  `loading` row appears only while no option is shown. A `source`/`dataSource` provider takes
+  precedence over the flag.
+- `currentOption: LyraOption | undefined` — the `<lr-option>` behind the keyboard-active
+  row, or `undefined` while none is active, the listbox is closed, or the active row is an async or
+  synthetic row with no option element. It clears as soon as that option stops being available. Assigning a shown, available option moves
+  the highlight to it (selecting nothing, emitting nothing); any other value clears the highlight.
 - `maxRender: number = 200` (attribute `max-render`) — ordinary suggestion-prefix size, retaining
   active and selected options within an absolute 1,000-row ceiling. The active option has priority;
   selections remain committed even when every selected row cannot mount. Zero omits the ordinary
@@ -405,7 +425,8 @@ minimum at zero when empty-query label lookup or immediate catalog browsing is r
 **Methods:** `focus(options?)`, `blur()`, `select()`, `setSelectionRange()`, and `setRangeText()`
 forward to the internal input. `setRangeText()` synchronizes the filter query and visible options.
 `show(): Promise<void>` and `hide(): Promise<void>` settle after `lr-after-show` and
-`lr-after-hide`, respectively. `reload(): void` is an alias of `refresh()`. `refresh(): void` re-runs the current `source` query without changing
+`lr-after-hide`, respectively. `reload(): void` is an alias of `refresh()`; in `server` mode both
+announce a fresh `lr-options-request`. `refresh(): void` re-runs the current `source` query without changing
 the source's identity, its debounce controller, or its delay. Reassigning `source` is a provider
 change and clears the fetched rows and pending-selection cache; `refresh()` does not. It queues for
 the next open while the listbox is closed, and is a no-op without a `source`. `resetValidity()`
@@ -510,7 +531,7 @@ never shows the raw error. A current request that rejects with `AbortError` (one
 not abort itself) is a failure like any other rejection; the previous query's results are not kept
 as its answer.
 Rejections from superseded or disconnected requests are ignored.
-`lr-options-request` fires before each `source` call (after the debounce, only while the call is still
+`lr-options-request` fires before each `source`/`dataSource` call and for each `server`-mode request (after the debounce, only while the call is still
 current): `detail: { query, signal }`, where `signal` is the `AbortSignal` the source receives, aborted
 when a newer request supersedes it, `source` is reassigned, or the control disconnects. It is bubbling,
 composed and not cancelable. `lr-options-error` fires with `lr-source-error` for the same rejection with
@@ -585,13 +606,17 @@ attribute when provided), plus two adornment slots:
 - `source-error` — replaces the built-in failed-`source` state, retry control included. Deliberately
   named apart from the form-control `error` slot: they are different failures and a field has to be
   able to show both.
+- `empty`, `no-results` and `loading` — replace the listbox status row shown while no option is
+  available and nothing is typed, while the typed query matches nothing, and while options load.
+  Each falls back to `empty-text`/`loading-text`, else the localized `noMatches`/`loading` copy.
 
 **CSS parts:** `form-control`, `form-control-label`, `label`, `form-control-input`, `combobox`,
 `start` and `end` (the two
 adornment-slot wrappers, each `hidden` while nothing is slotted into it), `tags`, `tag`,
 `tag-overflow` (the "+N" indicator, carried alongside `tag` past `max-options-visible`,
 mirroring `lr-select`'s identical two-part overflow chip), `tag-label`, `tag__content`,
-`tag__remove-button`, `tag__remove-button__base`, `combobox-input`,
+`tag__remove-button`, `tag__remove-button__base`, `tag__remove-button__button` (an alias on the
+same remove button), `combobox-input`,
 `clear-button`, `unknown-value` (the dashed/italic badge shown next to the closed single-select
 input, or on a `multiple`-mode tag, when the committed value matches no current option/row),
 `expand-icon`, `listbox` (the scrolling popup; it honors the theme-level
@@ -609,7 +634,13 @@ secondary line, when `sub` is set), `option-badge` (an async row's trailing meta
 `source-error-row` (the listbox row holding the failed-`source` state), `source-error` (the shared
 failed-load state itself, with `source-error-base`, `source-error-icon`, `source-error-heading`,
 `source-error-description` and `source-error-actions` forwarded from the composed `<lr-empty>`),
-`retry-button`, `error`, `hint`
+`retry-button`, `status` (the listbox status row, which also carries `empty`, `no-results` or
+`loading`), `empty`, `no-results`, `loading`, `spinner` (the decorative in-field spinner shown while
+options load and the listbox is not showing its loading row), `error`, `hint`
+
+**Custom states** add `:state(loading)` (`loading` is set or a `source`/`dataSource` request is in
+flight) and `:state(showing-loading-row)` (the open listbox shows its loading row, so the in-field
+spinner is hidden) to `blank`, `disabled` and the shared validity states.
 
 `--lr-form-control-invalid-border-color` (default `var(--lr-color-danger)`) themes the resting border while the field matches `:state(user-invalid)`; a component-specific invalid border, where one exists, overrides it.
 
@@ -707,6 +738,9 @@ default**, leaving `--lr-combobox-trigger-min-height` as a floor only and the ro
 see "exact-height hatches" under `lr-input` for why `auto` is not a way to opt back out. Intended
 for a single-row combobox: in `multiple` mode, a tag row long enough to wrap overflows the pinned
 box visibly (nothing is clipped or made unreachable), so leave it unset there.
+
+More themeable custom properties: `--lr-form-control-label-line-height` (default `inherit`): Line
+height of the field label.
 
 **CSS custom states:** `blank`, `disabled`, `required`, `optional`, `valid`, `invalid`,
 `user-valid`, and `user-invalid`.
@@ -875,10 +909,3 @@ synchronous and fires no `input`/`change`/`lr-change` event.
 The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.
 
 `--lr-form-control-transition` (default `none`) is the shared opt-in `transition` for the field's border and halo; see the shared form-control tokens.
-
-Further custom properties:
-
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
-- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
-- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
-- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.

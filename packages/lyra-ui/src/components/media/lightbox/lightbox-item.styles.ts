@@ -1,5 +1,5 @@
 import { css } from 'lit';
-import { focusRingShorthand, iconHitTarget } from '../../../internal/interactive-control.styles.js';
+import { focusRing, focusRingShorthand, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 
 export const styles = css`
   :host {
@@ -22,12 +22,14 @@ export const styles = css`
   [part="trigger"]:hover {
     filter: brightness(1.08);
   }
+  [part="trigger"]:active {
+    filter: brightness(0.94);
+  }
   [part="trigger"]:focus-visible {
     ${focusRingShorthand}
   }
   :host([data-active]) [part="trigger"] {
-    outline: var(--lr-focus-ring-width) solid var(--lr-focus-ring-color);
-    outline-offset: var(--lr-focus-ring-offset);
+    ${focusRing}
   }
   ::slotted(img),
   [part="thumbnail-image"] {

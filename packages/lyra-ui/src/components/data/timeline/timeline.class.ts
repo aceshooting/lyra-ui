@@ -38,10 +38,8 @@ import { LYRA_DEFAULT_timeline, LYRA_DEFAULT_timelineClusterCount } from '../../
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 
-/** Layout direction of a timeline. `auto` runs a row when the allocation has room and a column otherwise. */
-export type LyraTimelineOrientation = LyraOrientation | 'auto';
 
-const TIMELINE_ORIENTATION = literalSetConverter<LyraTimelineOrientation>(['vertical', 'horizontal', 'auto'], 'vertical');
+const TIMELINE_ORIENTATION = literalSetConverter<LyraOrientation>(['vertical', 'horizontal'], 'vertical');
 
 /** Which side of its content an item's marker sits on; `alternate` swaps sides on every other item. */
 export type LyraTimelineMarkerPlacement = 'start' | 'end' | 'alternate';
@@ -127,7 +125,7 @@ function itemEpochMs(element: Element): number | null {
 /**
  * `<lr-timeline>` — an ordered, connected sequence of past-event rows (an audit trail, an agent
  * action history, a changelog) composed from `<lr-timeline-item>` light-DOM children, joined by a
- * continuous connecting rail. Mirrors `wa-timeline`: `orientation="auto"`, `marker-placement`,
+ * continuous connecting rail. Mirrors `wa-timeline`: `marker-placement`,
  * `marker-alignment`, `label`, the `timeline` part and the gap/marker/connector custom properties
  * are accepted next to this library's own `scale`, `collision`, `ordered` and range model.
  *
@@ -225,19 +223,18 @@ export class LyraTimeline extends LyraElement<LyraTimelineEventMap> {
 
   static override styles = [LyraElement.styles, scrollOverflowFadeStyles, styles];
 
-  private _orientation: LyraTimelineOrientation = 'vertical';
+  private _orientation: LyraOrientation = 'vertical';
   /** `'vertical'` (the default) lays items out in a column, the primary/most-common use case — an
    *  audit trail or agent history reads top-to-bottom. `'horizontal'` lays them out in a row.
-   *  `'auto'` is allocation-driven: a column until the timeline is at least 40em wide, a row from
-   *  there (a container query, so it follows the timeline's own width, not the viewport's). `auto`
-   *  applies to `scale="flow"`; with `scale="time"` it behaves as `vertical`.
+   *  Web Awesome's `orientation="auto"` is not accepted yet: it would widen the published read type
+   *  of this property, so an unrecognized value keeps the `'vertical'` default.
    *  Deliberately differs from `<lr-stepper>`'s `'horizontal'` default — don't copy that default by
    *  habit. */
   @property({ reflect: true, converter: TIMELINE_ORIENTATION })
-  get orientation(): LyraTimelineOrientation {
+  get orientation(): LyraOrientation {
     return this._orientation;
   }
-  set orientation(value: LyraTimelineOrientation) {
+  set orientation(value: LyraOrientation) {
     const normalized = TIMELINE_ORIENTATION.normalizeReflected(this, 'orientation', value);
     const previous = this._orientation;
     if (previous === normalized) return;

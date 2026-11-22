@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 27 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 33 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-lightbox-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -46,9 +46,8 @@ A lightbox opened outside an existing native `dialog.showModal()` stays interact
   logical index while its descriptor and image load.
 - `loop: boolean = false` (reflected) — wraps prev/next past the ends.
 - `lightDismiss: boolean = false` (attribute `light-dismiss`) — opt in to backdrop dismissal. Off by default, matching `lr-dialog`.
-- `withoutCounter: boolean = false` (attribute `without-counter`, **not reflected**) — hides the
-  visible `[part="counter"]`; the polite position announcement stays active. Nothing is ever
-  written back to the attribute — no stylesheet or selector keys off it.
+- `withoutCounter: boolean = false` (attribute `without-counter`, not reflected) — hides the
+  visible `[part="counter"]`; the polite position announcement stays active.
   Spoken position updates remain active when the counter is hidden: the shadow
   `[part="live-region"]` is only an `aria-hidden` text mirror, while announcements append to the
   shared light-DOM polite sink. Announcements stay silent when the lightbox or a composed ancestor
@@ -66,6 +65,13 @@ A lightbox opened outside an existing native `dialog.showModal()` stays interact
   changing the theme does not mutate the lightbox's zoom property.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — the dialog's accessible name.
   Blank labels use the localized `lightboxLabel` default.
+
+More properties: `withThumbnails` (attribute `with-thumbnails`, default `false`): Shows a strip of
+thumbnails for jumping between items (images or slotted items). Not available with `imageSource`,
+which only loads the current image. `withoutNavigation` (attribute `without-navigation`, default
+`false`): Hides the previous/next buttons. Swiping and the arrow keys still navigate. `withoutZoom`
+(attribute `without-zoom`, default `false`): Disables zooming and removes the zoom button and the
+embedded zoom controls.
 
 **Methods:** promise-based `show()`, `hide()`, and `close(reason?)`, plus `next()`, `previous()`, and
 `goTo(index)`. `show()`/`hide()` resolve after the successful rendered transition; a veto resolves
@@ -112,7 +118,9 @@ object. Use
 `unmount`. `lr-index-change` (`detail: { index }`, fired
 for internally-driven navigation — a button, a keyboard shortcut, or `next()`/`previous()`/
 `goTo()` — and when a shrinking active collection normalizes the index; **not** when a consumer sets
-`index` directly); `lr-zoom-change` (`detail: {
+`index` directly); `lr-item-change` (`detail: { index, previousIndex, item, previousItem }`, the
+items `null` in data mode) fires alongside `lr-index-change` for the same navigations and, like it,
+not when `index` is written directly; `lr-zoom-change` (`detail: {
 zoom }`) is not emitted by the lightbox itself — it bubbles up composed from the embedded frame.
 
 **Slots:** `actions` — extra toolbar buttons (download/share/delete), rendered in `[part="toolbar"]`
@@ -135,6 +143,19 @@ descriptor or native image loading is pending.
 Source loading and error messages use `--lr-lightbox-status-color`, falling back to
 `--lr-color-on-strong-overlay`. When the image collection shrinks, a listener for the resulting
 `lr-index-change` sees the newly rendered image.
+
+Further CSS parts: `navigation-button`: Both the previous and the next button.
+`navigation-button-next`: The same element as `next-button`. `navigation-button-previous`: The same
+element as `previous-button`. `scroll-container`: The same element as `stage`. `slide`: The wrapper
+around the current image or video. `surface`: The viewer's viewport layer. Only positioned and shown
+while open (slotted mode). `thumbnail`: One thumbnail button in the strip. `thumbnail-active`: Added
+to the current item's thumbnail. `thumbnails`: The thumbnail strip, rendered only with
+`with-thumbnails`. `video`: The current video of a `type="video"` item. `zoom-button`: Toolbar
+button that toggles between fitted and zoomed in. Rendered for slotted items only;
+`images`/`imageSource` galleries keep the embedded `frame-controls`.
+
+Each slotted `lr-lightbox-item` exposes its own `trigger`, `thumbnail-image`, `play-button` and
+`play-glyph` parts, described with the slotted items below.
 
 **Themeable custom properties:** `--lr-lightbox-overlay-color` (default
 `var(--lr-color-overlay-strong)` — the backdrop scrim), `--lr-lightbox-control-bg` (default
@@ -182,7 +203,7 @@ when set. With items the host stays inline and the viewer opens over the page.
 ```
 
 **`lr-lightbox-item`** — `type: 'image' | 'video' = 'image'` (reflected; video shows a play button),
-`src` (the link target, so the gallery works without JavaScript and opens in a new tab; a modified
+`src` (the link target, so the gallery works without JavaScript and can be opened in a new tab; a modified
 click is left to the browser), `srcset`/`sizes` (the lightbox loads the smallest candidate covering
 the viewport or a single `px`/`vw` `sizes` length, else the largest), `alt` (defaults to the slotted
 `img` alt), `caption`, `thumbnail` (strip image and the item's own image when nothing is slotted),
@@ -193,18 +214,31 @@ with `safeMediaSrc()`; a rejected `src` leaves a button-style trigger and the it
 An item with no `src` is activated with Enter/Space.
 
 **Lightbox additions** — `with-thumbnails` (thumbnail strip, not with `imageSource`), `without-navigation`
-(hides previous/next; arrow keys and swipe stay), `without-zoom` (no zoom button/controls), `label`
-(names the dialog; a host `aria-label` wins), `items` and `currentItem` getters, `zoomIn()`/`zoomOut()`.
+(hides previous/next; arrow keys and swipe stay), `without-zoom` (no zoom button/controls; the toolbar zoom button exists for slotted items only), `label`
+(reflected; names the dialog; a host `aria-label` wins), `items` and `currentItem` getters, `zoomIn()`/`zoomOut()`.
 `lr-item-change` fires with every `lr-index-change` and adds `{ index, previousIndex, item, previousItem }`
-(items are `null` in data mode). Touch and pen swipes (not mouse) navigate, reversed under RTL, and are
+(items are `null` in data mode); like `lr-index-change` it is not fired when `index` is written directly. Touch and pen swipes (not mouse) navigate, reversed under RTL, and are
 off while zoomed; `pointercancel` abandons a swipe. A `type="video"` item plays in a native `<video>`
 that pauses on slide change and close; zoom is unavailable for video. Slots `close-icon`,
 `previous-icon`, `next-icon`, `zoom-in-icon`, `zoom-out-icon`. Added part aliases: `dialog` (panel),
-`scroll-container` (stage), `navigation-button`/`navigation-button-previous`/`navigation-button-next`,
-plus `surface`, `slide`, `video`, `zoom-button`, `thumbnails`, `thumbnail`, `thumbnail-active`.
+`scroll-container` (stage), `image` (the zoomable `frame`),
+`navigation-button`/`navigation-button-previous`/`navigation-button-next`, plus `surface`, `slide`, `video`, `zoom-button`, `thumbnails`, `thumbnail`, `thumbnail-active`.
 Match them with `[part~="…"]` when querying.
 Motion: `--show-duration`/`--hide-duration` (or `--lr-lightbox-panel-duration`, default
 `--lr-duration-base`) drive the open/close and slide animations, which are flattened under
-`prefers-reduced-motion`; `lr-after-show`/`lr-after-hide` fire once the animation finishes.
+`prefers-reduced-motion`; `lr-after-show`/`lr-after-hide` keep their render-based timing and the motion
+runs on after them (the host stays painted with `data-closing` until the exit motion ends).
 `--slide-gap` (`--lr-lightbox-slide-gap`), `--thumbnail-size` (`--lr-lightbox-thumbnail-size`) and
 `--media-border-radius` (`--lr-lightbox-media-radius`) style slides and the strip.
+Upstream-named styling properties: `--backdrop-color` (scrim), `--backdrop-filter` (default `none`,
+e.g. `blur(1rem)`), `--controls-background` and `--controls-color` (controls, counter, caption) and
+`--spacing` (gap between toolbar, media, caption and strip; default `var(--lr-space-s)`); each
+`--lr-lightbox-*` token wins over its alias. Custom states: `lr-lightbox:state(open)`,
+`:state(zoomed)`; on items `lr-lightbox-item:state(active)` (current item while open),
+`:state(empty)` (nothing slotted, no `thumbnail`; hidden on the page) and `:state(morphing)` (while
+the open/close motion runs for that item).
+
+**CSS parts:** `trigger` (the link, or button-like anchor, that wraps the thumbnail and opens the
+lightbox), `thumbnail-image` (the image rendered from `thumbnail` when nothing is slotted),
+`play-button` (the play button shown over a video's thumbnail) and `play-glyph` (the default play
+glyph inside the `play-icon` slot).

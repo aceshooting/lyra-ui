@@ -72,7 +72,7 @@ describe('text controls leave modified and composing keys to the browser', () =>
 
   it('lr-token-input token buttons ignore them', async () => {
     const el = await fixture<LyraTokenInput>(html`<lr-token-input editable .value=${['alpha', 'beta']}></lr-token-input>`);
-    const token = el.shadowRoot!.querySelector<HTMLElement>('[part="token-label"]')!;
+    const token = el.shadowRoot!.querySelector<HTMLElement>('[part~="token-label"]')!;
     for (const init of MODIFIERS) {
       for (const key of ['Enter', ' ', 'F2', 'ArrowRight', 'ArrowLeft', 'Home', 'End']) {
         expect(press(token, key, init).defaultPrevented, `${key} ${JSON.stringify(init)}`).to.equal(false);

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -29,11 +29,18 @@ stepper is `clickable`) — booleans, reflected; `variant: 'neutral' | 'brand' |
 (server rendering hint). The stepper sets the step's number, `locked` state (a `linear` stepper) and
 `clickable`; nothing else needs setting by hand.
 
+More properties: `focus` (`focus()`): Focuses the step's button when the stepper is `clickable`.
+`withDescription` (attribute `with-description`, default `false`): Server rendering only: set it
+when a `description` is slotted so the server markup includes it before hydration.
+
 **Slots:** default (label), `description`, `icon` (replaces number/check/spinner).
 **CSS parts:** `step`, `connector` (both half lines), `button` (only while the stepper is `clickable`),
 `marker`, `spinner`, `content`, `label`, `status` (visually hidden: Completed, Loading, Unavailable,
-Locked or Not started), `description`. **Custom property:** `--lr-step-pulse-color`; layout hooks are the
-stepper's `--lr-stepper-*` properties. **Accessibility:** host `role="listitem"`; `aria-current="step"`
+Locked or Not started), `description`. **Custom property:** `--lr-step-pulse-color`, also spelled
+`--pulse-color` (the unprefixed name wins when both are set); layout hooks are the stepper's
+`--lr-stepper-*` properties and their unprefixed aliases. **Custom states:** `:state(active)`, `:state(completed)`,
+`:state(loading)`, `:state(disabled)`, `:state(locked)` and `:state(clickable)`, e.g.
+`lr-step:state(locked) { opacity: 0.6; }`. **Accessibility:** host `role="listitem"`; `aria-current="step"`
 sits on the focused element (the inner button while clickable, the host otherwise).
 
 ```html
@@ -41,3 +48,14 @@ sits on the focused element (the inner button while clickable, the host otherwis
 ```
 
 ---
+
+More themeable custom properties: `--lr-stepper-active-bg`: Background of a pressed, enabled
+clickable step. `--lr-stepper-connector-active-color`: Color of the line after a completed step;
+unset, it follows the completed step's variant. `--lr-stepper-connector-color` (default
+`var(--lr-color-neutral-fill-normal)`): Color of the line after a step that is not completed.
+`--lr-stepper-connector-gap` (default `var(--lr-size-0-35em)`): Gap between the marker edge and the
+line on both sides. `--lr-stepper-connector-width` (default `var(--lr-border-width-medium)`):
+Thickness of the line. `--lr-stepper-hover-bg`: Background of a hovered, enabled clickable step.
+`--lr-stepper-marker-size` (default `var(--lr-size-2rem)`): Diameter of the marker. Set on the
+stepper or an ancestor. `--lr-stepper-step-gap` (default `var(--lr-space-m)`): Block spacing between
+steps while the stepper is laid out vertically.

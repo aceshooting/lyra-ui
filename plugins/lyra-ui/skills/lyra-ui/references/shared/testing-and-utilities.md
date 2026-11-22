@@ -580,9 +580,10 @@ GroupByRecencyOptions<T>): RecencyBucket<T>[]`.
   `(root, options)` form never times out.
 - **`form` → `serialize(form): Record<string, FormDataEntryValue | FormDataEntryValue[]>`** — a
   form's successful controls as a plain object; a name that occurs more than once becomes an array
-  in document order (`serializeFormData(formData)` is the same fold over any `FormData`). The result
+  in document order (`serializeFormData(formData: FormData): Record<string, FormDataEntryValue |
+  FormDataEntryValue[]>` is the same fold over any `FormData`). The result
   has a `null` prototype, so a field named `__proto__` is just a key.
-- **`defined` → `allDefined(root?, options?): Promise<void>`** —- **`defined` → `allDefined(root?, options?): Promise<void>`** — iteratively waits for every
+- **`defined` → `allDefined(root?, options?): Promise<void>`** — iteratively waits for every
   currently rendered, inventory-known Lyra tag below a `Document`, `DocumentFragment`/open
   `ShadowRoot`, or `Element` to be defined in its owning/scoped registry. It also waits for each
   available `updateComplete`, then repeats so tags created by that first render are included. Open
@@ -598,6 +599,9 @@ GroupByRecencyOptions<T>): RecencyBucket<T>[]`.
   The exact options record is `AllDefinedOptions { readonly maxPasses?: number; readonly
 maxElements?: number; readonly maxRoots?: number; readonly maxDepth?: number; readonly maxWork?:
 number }`.
+  The options form takes `AllDefinedWaitOptions { readonly match?: (tagName: string) => boolean;
+  readonly additionalElements?: string | readonly string[]; readonly root?: LyraDefinitionRoot;
+  readonly timeout?: number }`.
 - **`css-length` → `resolveCssLength(value, options?)`** — resolves finite numbers and CSS
   `px`/`rem`/`em`/`%`/`vw`/`vh` lengths to pixels without allocating DOM. Supply `host` for live
   font and owner-realm context, `percentBase` for percentages, and an optional `viewportBasis` for

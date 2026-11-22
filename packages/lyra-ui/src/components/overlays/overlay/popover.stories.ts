@@ -156,6 +156,37 @@ export const ExternalAnchor: Story = {
   `,
 };
 
+export const VirtualElementAnchor: Story = {
+  name: 'Virtual element anchor',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`anchor` accepts a virtual element: any object with `getBoundingClientRect()` and an optional `contextElement`. Select some text in the paragraph to anchor the popover to the selection; the anchor persists until replaced.',
+      },
+    },
+  },
+  render: () => {
+    const onSelect = (event: Event): void => {
+      const root = (event.currentTarget as HTMLElement).parentElement!;
+      const popover = root.querySelector<LyraPopover>('lr-popover')!;
+      const selection = root.ownerDocument.getSelection();
+      if (!selection || selection.isCollapsed || selection.rangeCount === 0) return;
+      const range = selection.getRangeAt(0).cloneRange();
+      popover.anchor = { getBoundingClientRect: () => range.getBoundingClientRect(), contextElement: root };
+      void popover.show();
+    };
+    return html`
+      <div>
+        <p @mouseup=${onSelect} @keyup=${onSelect}>
+          Select any words in this sentence to show a popover above the selected text.
+        </p>
+        <lr-popover placement="top"><p>Anchored to the selection.</p></lr-popover>
+      </div>
+    `;
+  },
+};
+
 function onCollectionClick(event: MouseEvent): void {
   const boundary = event.currentTarget as HTMLElement;
   const target = (event.target as Element).closest('button');

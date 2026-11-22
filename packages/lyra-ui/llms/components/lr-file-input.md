@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 21 parts, 38 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 22 parts, 35 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `dropzone-icon`: `--lr-file-input-dropzone-icon-size`; `file`: `--lr-file-input-file-bg`, `--lr-file-input-file-border-color`, `--lr-file-input-file-radius`; `file-input`: `--lr-file-input-accept-bg`, `--lr-file-input-accept-border-color`, `--lr-file-input-compact-padding`, `--lr-file-input-dropzone-padding`, `--lr-file-input-radius`, `--lr-file-input-reject-bg`, `--lr-file-input-reject-border-color`; `file-thumbnail`: `--lr-file-input-thumbnail-size`; `form-control-label`: `--lr-form-control-required-content`; `remove-button`: `--lr-file-input-remove-hover-bg`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -264,6 +264,8 @@ What this changes for you:
 - **A `::part(rejection)[role]`-style selector never matched anyway** — an attribute selector
   cannot follow `::part()`. Nothing that worked before stopped working.
 
+Further CSS parts: `remove-button__button`: Web Awesome-named alias on the same remove button.
+
 **CSS custom states:** `blank` and `dragging`, plus the shared validity states `required`,
 `optional`, `valid`, `invalid`, `user-valid`, and `user-invalid`. As on every other form-associated
 control, `valid`/`invalid` and `user-valid`/`user-invalid` stop matching entirely while the control
@@ -317,6 +319,9 @@ tokens — `--lr-space-xs`, `--lr-space-l`,
 `--lr-focus-ring-width/-color/-offset` (`[part="file-input"]:focus-visible` outline),
 `--lr-opacity-disabled` (`:host([disabled])` dimming).
 
+More themeable custom properties: `--lr-form-control-label-line-height` (default `inherit`): Line
+height of the field label.
+
 **Optional peer deps:** none.
 
 ```html
@@ -368,12 +373,5 @@ an extension-only `accept` list.
   disabled, `aria-disabled`, Enter/Space handling).
 
 Use `--lr-file-input-dropzone-active-border-color` and `--lr-file-input-dropzone-active-bg` for the pressed field. `--lr-file-input-file-radius` sets the row radius, `--lr-file-input-file-bg` (default `var(--lr-color-surface-raised)`) and `--lr-file-input-file-border-color` (default `var(--lr-color-border-subtle)`) paint it, and `--lr-file-input-remove-hover-bg` (default `var(--lr-color-brand-quiet)`) / `--lr-file-input-remove-active-bg` tint its remove button. `--lr-file-input-thumbnail-size` and `--lr-file-input-thumbnail-radius` size and round its preview.
-
-Further custom properties:
-
-- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Gap between the label and the field.
-- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
-- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
-- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
 ---

@@ -1,4 +1,5 @@
 import { tag } from '../../../internal/prefix.js';
+import { eventCollectionSupport } from '../../../internal/collection-snapshot.js';
 import type { LyraLightboxImage, LyraLightboxSource } from './lightbox-types.js';
 export type { LyraLightboxImage, LyraLightboxSource } from './lightbox-types.js';
 import { NativeModalCarrier } from '../../../internal/native-modal-carrier.js';
@@ -32,6 +33,8 @@ import { isElement } from '../../../internal/rendered-tree-traversal.js';
 import { repairControlFocusOnUpdate } from '../../../internal/control-focus-repair.js';
 import { trackScrollRegions } from '../../../internal/scroll-region.js';
 import { blankNumberConverter } from '../../../internal/converters.js';
+import { attachInternalsSafely } from '../../../internal/element-internals.js';
+import { setCustomState } from '../../../internal/custom-states.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_imageViewerFailedToLoad, LYRA_DEFAULT_lightboxImagePosition, LYRA_DEFAULT_lightboxLabel } from '../../../internal/default-strings/media.generated.js';
@@ -114,9 +117,17 @@ interface LightboxItemRecord {
   readonly height?: number;
 }
 
+/** Sets an item's viewer-owned custom state; an element that has not upgraded yet is skipped. */
+function setItemViewerState(item: LyraLightboxItem, name: 'active' | 'morphing', present: boolean): void {
+  (item as Partial<LyraLightboxItem>).setViewerState?.(name, present);
+}
+
 const SWIPE_DISTANCE = 50;
 const SWIPE_SLOP = 10;
 const MAX_THUMBNAILS = 200;
+/** The documented opening and closing duration properties the surface animations read. */
+const SHOW_DURATION_PROPERTY = '--show-duration';
+const HIDE_DURATION_PROPERTY = '--hide-duration';
 
 export interface LyraLightboxEventMap {
   'lr-show': CustomEvent<null>;
@@ -226,7 +237,8 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
  *   and emits the requested index before asynchronous image resolution. `detail: { index }` is always the rendered
  *   integer index.
  * @event lr-item-change - Fired alongside `lr-index-change` for the same navigations, with
- *   `detail: { index, previousIndex, item, previousItem }` (items are `null` in data mode).
+ *   `detail: { index, previousIndex, item, previousItem }` (items are `null` in data mode). Like
+ *   `lr-index-change` it reports navigation, so writing `index` directly does not fire it.
  * @event lr-zoom-change - Not emitted by `LyraLightbox` itself -- see the interface doc above.
  *   `detail: { zoom }`.
  * @csspart surface - The viewer's viewport layer. Only positioned and shown while open (slotted mode).
@@ -234,6 +246,7 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
  * @csspart panel - Also exposed as `dialog`. `role="dialog"` while open, `aria-modal="true"`, `tabindex="-1"`. Fills the
  *   padded safe area -- unlike `<lr-dialog>`, it does not shrink-wrap to content, since
  *   maximizing image real estate is the point.
+ * @csspart dialog - The same element as `panel`.
  * @csspart toolbar - Top row: `counter` (start), the `actions` slot wrapper, `close-button` (end).
  * @csspart counter - Visible, localized "Image N of Total" text. Omitted entirely while
  *   `without-counter` is set.
@@ -249,16 +262,19 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
 
  * @csspart stage - Also exposed as `scroll-container`. Houses the embedded `<lr-pan-zoom>` plus the floating
  *   `previous-button`/`next-button`.
+ * @csspart scroll-container - The same element as `stage`.
  * @csspart source-loading - Source-mode loading message.
  * @csspart source-error - Source descriptor or image loading error.
  * @csspart source-retry - Retry the current source image after an error.
  * @csspart slide - The wrapper around the current image or video.
  * @csspart video - The current video of a `type="video"` item.
- * @csspart zoom-button - Toolbar button that toggles between fitted and zoomed in.
+ * @csspart zoom-button - Toolbar button that toggles between fitted and zoomed in. Rendered for
+ *   slotted items only; `images`/`imageSource` galleries keep the embedded `frame-controls`.
  * @csspart thumbnails - The thumbnail strip, rendered only with `with-thumbnails`.
  * @csspart thumbnail - One thumbnail button in the strip.
  * @csspart thumbnail-active - Added to the current item's thumbnail.
  * @csspart frame - The embedded `<lr-pan-zoom>` element itself.
+ * @csspart image - The same element as `frame`: the current full-size image's zoomable frame.
  * @csspart frame-viewport - The embedded pan-zoom's scrollable viewport.
  * @csspart frame-content - The embedded pan-zoom's transformed content wrapper.
  * @csspart frame-controls - The embedded pan-zoom's zoom controls.
@@ -267,11 +283,19 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
  * @csspart previous-glyph - The `chevronIcon()` inside `previous-button`, mirrored under RTL.
  * @csspart next-button - Symmetric to `previous-button` (`navigation-button navigation-button-next`).
  * @csspart next-glyph - Symmetric to `previous-glyph`.
+ * @csspart navigation-button - Both the previous and the next button.
+ * @csspart navigation-button-previous - The same element as `previous-button`.
+ * @csspart navigation-button-next - The same element as `next-button`.
  * @csspart caption - The current image's caption text. Only rendered when the current image's
  *   `caption` is non-empty. Its `id` is the `aria-describedby` target on `panel`.
  * @cssprop --lr-lightbox-overlay-color - The backdrop scrim color.
+ * @cssprop [--backdrop-color=var(--lr-color-overlay-strong)] - The backdrop scrim color; `--lr-lightbox-overlay-color` wins when both are set.
+ * @cssprop [--backdrop-filter=none] - A filter applied to the page behind the backdrop, e.g. `blur(1rem)`.
  * @cssprop --lr-lightbox-control-bg - Background for every floating/toolbar icon button.
  * @cssprop --lr-lightbox-control-color - Icon/text color paired with `--lr-lightbox-control-bg`.
+ * @cssprop [--controls-background=var(--lr-color-neutral)] - Background of the controls, counter and caption; `--lr-lightbox-control-bg` wins when both are set.
+ * @cssprop [--controls-color=var(--lr-color-on-neutral)] - Text and icon color of the controls, counter and caption; `--lr-lightbox-control-color` wins when both are set.
+ * @cssprop [--spacing=var(--lr-space-s)] - Space between the toolbar, the media, the caption and the thumbnail strip.
  * @cssprop --lr-lightbox-control-hover-bg - Hovered control background. Defaults to `--lr-color-brand-quiet`.
  * @cssprop --lr-lightbox-control-hover-color - Hovered control icon/text color. Defaults to `--lr-color-brand`.
  * @cssprop --lr-lightbox-control-active-bg - Pressed control background. Defaults to the hover background mixed toward `--lr-color-mix-partner`.
@@ -286,6 +310,8 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
  * @cssprop [--media-border-radius=var(--lr-lightbox-media-radius)] - Corner radius of the media.
  * @cssprop --lr-lightbox-media-radius - Public form of `--media-border-radius`. Defaults to `0`.
  * @cssprop --lr-lightbox-status-color - Color of the source-mode loading and error messages on the backdrop.
+ * @cssstate open - Present while the lightbox is open.
+ * @cssstate zoomed - Present while the current image is zoomed in.
  * @status stable
  * @since 4.0.0
  */
@@ -306,6 +332,12 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     zoomOut: LYRA_DEFAULT_zoomOut,
   };
   // GENERATED DEFAULT-STRING SLICE: END
+
+  protected static override collectionSupport = eventCollectionSupport;
+  protected static override readonly immutableEventDetails = Object.freeze(['lr-item-change']);
+  protected static override readonly identityEventDetailProperties = Object.freeze({
+    'lr-item-change': Object.freeze(['item', 'previousItem']),
+  });
 
   static override styles = [LyraElement.styles, nativeModalCarrierStyles, srOnly, styles];
   private readonly hostDescription = new HostDescriptionController(
@@ -427,8 +459,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
 
   /** Hides only the visible `part="counter"`. The accessibility `part="live-region"`
    *  announcement remains active so navigation is still conveyed when visual chrome is hidden.
-   *  Deliberately not reflected: nothing styles or queries it, so reflection would only churn
-   *  attributes on a modal that already churns them. */
+   *  Not reflected, matching the published contract. */
   @property({ type: Boolean, attribute: 'without-counter' }) withoutCounter = false;
 
   /** Shows a strip of thumbnails for jumping between items (images or slotted items). Not
@@ -442,8 +473,8 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   @property({ type: Boolean, reflect: true, attribute: 'without-zoom' }) withoutZoom = false;
 
   /** A label that names the viewer for assistive technology, e.g. "Vacation photos". A host
-   *  `aria-label` wins over it; blank falls back to the localized default. */
-  @property() label = '';
+   *  `aria-label` wins over it; blank falls back to the localized default. Reflected. */
+  @property({ reflect: true }) label = '';
 
   /** Base image sizing policy, using the same vocabulary as `<lr-image-viewer>`. `actual`
    * preserves the current natural-size behavior; `contain` fits the complete image inside the
@@ -487,6 +518,8 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   private firstUpdateDone = false;
   private swipe?: { id: number; x: number; y: number };
   private transitionAnimations: Animation[] = [];
+  private morphGeneration = 0;
+  private morphingItem?: LyraLightboxItem;
   private lastItemSignature = '';
 
   /** The slotted `<lr-lightbox-item>` elements in document order, including those without usable media. */
@@ -592,6 +625,8 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   };
 
   private pauseVideos(): void {
+    // Nothing has rendered yet, and server rendering has no render root to query.
+    if (!this.hasUpdated) return;
     for (const video of this.renderRoot.querySelectorAll('video')) video.pause();
   }
 
@@ -620,6 +655,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   @state() private liveText = '';
 
   @query(tag('pan-zoom')) private frameEl?: LyraPanZoom;
+  private readonly lightboxInternals = attachInternalsSafely(this);
 
   private overlay?: OverlayHandle;
   private readonly nativeModal = new NativeModalCarrier(this, {
@@ -700,7 +736,8 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     this.applyOpenState(true);
     const generation = ++this.transitionGeneration;
     await this.updateComplete;
-    await this.settleAnimations();
+    // The open animation keeps running after this point: `lr-after-show` keeps its rendered-open
+    // timing rather than waiting for the motion to finish.
     if (generation === this.transitionGeneration && this._open) this.emit('lr-after-show', null);
   }
 
@@ -744,11 +781,18 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     const generation = ++this.transitionGeneration;
     this.emit('lr-close', { reason });
     await this.updateComplete;
-    if (generation === this.transitionGeneration && !this._open) await this.playExit();
-    if (generation === this.transitionGeneration && !this._open) {
-      this.removeAttribute('data-closing');
-      this.emit('lr-after-hide', null);
-    } else if (this._open) this.removeAttribute('data-closing');
+    if (generation !== this.transitionGeneration || this._open) {
+      if (this._open) this.removeAttribute('data-closing');
+      return;
+    }
+    // The exit animation starts here and finishes after `lr-after-hide` (and after this promise),
+    // which both keep their rendered-closed timing; `data-closing` only keeps the fading surface
+    // painted meanwhile.
+    const exit = this.playExit();
+    this.emit('lr-after-hide', null);
+    void exit.then(() => {
+      if (generation === this.transitionGeneration && !this._open) this.removeAttribute('data-closing');
+    });
   }
 
   private cancelTransitionAnimations(): void {
@@ -773,7 +817,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
         : [{ opacity: 1 }, { opacity: 0 }];
     return {
       keyframes,
-      durationProperties: [showing ? '--show-duration' : '--hide-duration', '--lr-lightbox-panel-duration', '--lr-duration-base'],
+      durationProperties: [showing ? SHOW_DURATION_PROPERTY : HIDE_DURATION_PROPERTY, '--lr-lightbox-panel-duration', '--lr-duration-base'],
       easingProperties: ['--lr-easing-standard'],
     };
   }
@@ -792,6 +836,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     if (!this.isConnected || this.nativeModal.requested) return;
     this.cancelTransitionAnimations();
     this.transitionAnimations = this.startSurfaceAnimations(false);
+    this.markMorphing(this.renderedRecord?.element ?? this.currentItem, this.transitionAnimations);
     await this.settleAnimations();
   }
 
@@ -809,6 +854,21 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     const sign = forward ? 1 : -1;
     const animation = animateRegistered(this, slide, forward ? 'lightbox.slide.next' : 'lightbox.slide.previous', this.effectiveDirection, spec(sign));
     if (animation) void animation.finished.catch(() => undefined);
+  }
+
+  /** Publishes the item's `morphing` state while the open or close motion runs, then clears it. */
+  private markMorphing(item: LyraLightboxItem | undefined, animations: readonly Animation[]): void {
+    const generation = ++this.morphGeneration;
+    if (this.morphingItem) setItemViewerState(this.morphingItem, 'morphing', false);
+    this.morphingItem = undefined;
+    if (!item || animations.length === 0) return;
+    this.morphingItem = item;
+    setItemViewerState(item, 'morphing', true);
+    void Promise.all(animations.map((animation) => animation.finished.catch(() => undefined))).then(() => {
+      if (generation !== this.morphGeneration) return;
+      setItemViewerState(item, 'morphing', false);
+      this.morphingItem = undefined;
+    });
   }
 
   private applyOpenState(next: boolean): void {
@@ -936,8 +996,15 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     if (changed.has('open') && this.open && this.firstUpdateDone) {
       this.cancelTransitionAnimations();
       this.transitionAnimations = this.startSurfaceAnimations(true);
+      this.markMorphing(record?.element, this.transitionAnimations);
     }
-    for (const item of this.itemRecords) item.element.toggleAttribute('data-active', this.open && item === record);
+    for (const item of this.itemRecords) {
+      const active = this.open && item === record;
+      item.element.toggleAttribute('data-active', active);
+      setItemViewerState(item.element, 'active', active);
+    }
+    setCustomState(this.lightboxInternals, 'open', this.open);
+    setCustomState(this.lightboxInternals, 'zoomed', this.zoomLevel > 1);
     const intent = this.pendingIndexChange;
     this.pendingIndexChange = undefined;
     if (intent === this.navigationIntent) {
@@ -1096,7 +1163,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     // Next/previous disable at the ends without `loop`; focus stays inside the modal.
     repairControlFocusOnUpdate(this, () => [
       this.renderRoot.querySelector<HTMLElement>('[part="close-button"]'),
-      this.renderRoot.querySelector<HTMLElement>('[part="frame"]'),
+      this.renderRoot.querySelector<HTMLElement>('[part~="frame"]'),
     ]);
     // A capped caption takes a tab stop only while it has more text to scroll to.
     trackScrollRegions(this, () => {
@@ -1144,7 +1211,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     const sourceState = this.imageSource === undefined ? undefined : this.sourceController.state;
     const label = this.accessibleLabel?.trim()
       ? this.accessibleLabel
-      : this.label.trim() ? this.label : this.localize('lightboxLabel');
+      : (this.label ?? '').trim() ? this.label : this.localize('lightboxLabel');
     const hasCaption = Boolean(image?.caption);
     const formatter = getNumberFormat(this.effectiveLocale, {
       maximumFractionDigits: 0,
@@ -1158,7 +1225,9 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
         })
         : '';
     const zoomed = this.zoomLevel > 1;
-    const showZoom = !this.withoutZoom && !isVideo && count > 0;
+    // The toolbar zoom toggle belongs to the slotted-item viewer; data mode keeps its original
+    // chrome (the embedded pan-zoom controls) so existing galleries gain no new button.
+    const showZoom = this.itemMode && !this.withoutZoom && !isVideo && count > 0;
 
     return html`<slot></slot><div part="surface">${this.nativeModal.render(html`
       <div part="backdrop" @click=${this.onBackdropClick}></div>
@@ -1227,7 +1296,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
                 ></video>`)
               : nothing}
             <lr-pan-zoom
-              part="frame"
+              part="frame image"
               exportparts="viewport:frame-viewport,content:frame-content,controls:frame-controls"
               ?hidden=${isVideo}
               .src=${live(isVideo ? '' : image?.src ?? '')}

@@ -348,6 +348,10 @@ the focusable host gains or loses focus, plus the shared menu-item events above.
 **CSS parts:** the shared menu-item parts, except that the loading spinner is `spinner-base` (beside
 `spinner`).
 
+**Custom states:** `:state(active)` (the item has focus), `:state(checked)`, `:state(disabled)`,
+`:state(has-submenu)` (content in the `submenu` slot), `:state(link)` (`href` resolves to a safe link)
+and `:state(submenu-open)`, e.g. `lr-dropdown-item:state(submenu-open) { font-weight: 600; }`.
+
 **Themeable custom properties:** every `<lr-menu-item>` hook above, including 16.0.0's
 `--lr-menu-item-hover-bg`, `--lr-menu-item-active-bg`, `--lr-menu-item-icon-color` and
 `--lr-menu-item-min-height`.

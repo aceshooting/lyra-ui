@@ -43,10 +43,10 @@ describe('max-tags and min-tags', () => {
     expect(el.value).to.deep.equal(['b', 'c']);
   });
 
-  it('commits only what fits and keeps the rest of a paste in the draft', async function () {
-    if (!supportsSyntheticPaste()) this.skip();
+  it('commits only what fits and keeps the rest of a split draft', async () => {
     const el = await fixture<LyraTokenInput>(html`<lr-token-input max-tags="2"></lr-token-input>`);
-    paste(el, 'a,b,c,d');
+    typeInto(el, 'a,b,c,d');
+    press(el, 'Enter');
     expect(el.value).to.deep.equal(['a', 'b']);
     expect(el.inputValue).to.equal('c,d');
   });
@@ -178,44 +178,19 @@ describe('custom states', () => {
   });
 });
 
-describe('delimiter characters', () => {
-  it('commits on every delimiter character, not only the whole string', async () => {
+describe('delimiter', () => {
+  it('matches a multi-character delimiter as one literal sequence, as before', async () => {
     const el = await fixture<LyraTokenInput>(html`<lr-token-input delimiter=";,"></lr-token-input>`);
-    typeInto(el, 'a');
-    expect(press(el, ';').defaultPrevented).to.equal(true);
-    typeInto(el, 'b');
-    press(el, ',');
-    expect(el.value).to.deep.equal(['a', 'b']);
-    typeInto(el, 'c');
-    expect(press(el, '.').defaultPrevented).to.equal(false);
-    expect(el.value).to.deep.equal(['a', 'b']);
-  });
-
-  it('splits a paste on every delimiter character', async function () {
-    if (!supportsSyntheticPaste()) this.skip();
-    const el = await fixture<LyraTokenInput>(html`<lr-token-input delimiter=";,"></lr-token-input>`);
-    expect(paste(el, 'a;b, c').defaultPrevented).to.equal(true);
-    expect(el.value).to.deep.equal(['a', 'b', 'c']);
-    expect(el.inputValue).to.equal('');
-  });
-
-  it('leaves a paste without delimiter characters to the browser', async () => {
-    const el = await fixture<LyraTokenInput>(html`<lr-token-input></lr-token-input>`);
-    expect(paste(el, 'plain text').defaultPrevented).to.equal(false);
+    typeInto(el, 'a;b,c;,d');
+    expect(press(el, ';').defaultPrevented, 'no single keystroke matches a two-character delimiter').to.equal(false);
     expect(el.value).to.deep.equal([]);
+    press(el, 'Enter');
+    expect(el.value).to.deep.equal(['a;b,c', 'd']);
   });
 
-  it('splits at the caret and keeps the existing draft around the paste', async function () {
+  it('leaves a paste in the draft instead of committing it', async function () {
     if (!supportsSyntheticPaste()) this.skip();
     const el = await fixture<LyraTokenInput>(html`<lr-token-input></lr-token-input>`);
-    typeInto(el, 'xy');
-    field(el).setSelectionRange(1, 1);
-    paste(el, 'a,b');
-    expect(el.value).to.deep.equal(['xa', 'by']);
-  });
-
-  it('keeps pasting inert while readonly or disabled', async () => {
-    const el = await fixture<LyraTokenInput>(html`<lr-token-input readonly></lr-token-input>`);
     expect(paste(el, 'a,b').defaultPrevented).to.equal(false);
     expect(el.value).to.deep.equal([]);
   });
@@ -239,12 +214,12 @@ describe('delimiter characters', () => {
     expect(field(el).value).to.equal('ni');
   });
 
-  it('honors delimiter characters under rtl', async () => {
-    const el = await fixture<LyraTokenInput>(html`<lr-token-input dir="rtl" delimiter="؛،"></lr-token-input>`);
+  it('honors a single-character delimiter under rtl', async () => {
+    const el = await fixture<LyraTokenInput>(html`<lr-token-input dir="rtl" delimiter="،"></lr-token-input>`);
     typeInto(el, 'ا');
     press(el, '،');
     typeInto(el, 'ب');
-    press(el, '؛');
+    press(el, '،');
     expect(el.value).to.deep.equal(['ا', 'ب']);
   });
 });
@@ -258,6 +233,9 @@ describe('string values and inputValue', () => {
     expect(el.value).to.deep.equal(['x', 'y']);
     el.defaultValue = 'p;q';
     expect(el.defaultValue).to.deep.equal(['p', 'q']);
+    el.delimiter = ';,';
+    el.value = 'a;,b,c';
+    expect(el.value, 'a multi-character delimiter splits a string as one sequence').to.deep.equal(['a', 'b,c']);
   });
 
   it('splits a string on a comma when no delimiter is set', async () => {
@@ -342,5 +320,86 @@ describe('form integration and accessibility', () => {
   it('is accessible with the clear button and limits set', async () => {
     const el = await fixture<LyraTokenInput>(html`<lr-token-input label="Tags" with-clear max-tags="5" min-tags="1" .value=${['a', 'b']}></lr-token-input>`);
     await expect(el).to.be.accessible();
+  });
+});
+
+describe('upstream form-control members', () => {
+  it('leaves the label and hint hidden while with-label and with-hint are unset', async () => {
+    const el = await fixture<LyraTokenInput>(html`<lr-token-input></lr-token-input>`);
+    expect(el.withLabel).to.equal(false);
+    expect(el.withHint).to.equal(false);
+    expect(el.shadowRoot!.querySelector<HTMLElement>('[part="form-control-label"]')!.hidden).to.equal(true);
+    expect(el.shadowRoot!.querySelector<HTMLElement>('[part="hint"]')!.hidden).to.equal(true);
+  });
+
+  it('reserves the label and hint for with-label and with-hint and keeps the fallback name', async () => {
+    const el = await fixture<LyraTokenInput>(html`<lr-token-input with-label with-hint></lr-token-input>`);
+    expect(el.withLabel).to.equal(true);
+    expect(el.withHint).to.equal(true);
+    expect(el.shadowRoot!.querySelector<HTMLElement>('[part="form-control-label"]')!.hidden).to.equal(false);
+    expect(el.shadowRoot!.querySelector<HTMLElement>('[part="hint"]')!.hidden).to.equal(false);
+    expect(field(el).getAttribute('aria-label'), 'an empty reserved label never empties the name').to.equal('Tokens');
+    expect(field(el).hasAttribute('aria-labelledby')).to.equal(false);
+  });
+
+  it('aliases the lowercase inputmode and enterkeyhint properties onto the native spellings', async () => {
+    const el = await fixture<LyraTokenInput>(html`<lr-token-input></lr-token-input>`);
+    el.inputmode = 'email';
+    el.enterkeyhint = 'done';
+    await el.updateComplete;
+    expect(el.inputMode).to.equal('email');
+    expect(el.enterKeyHint).to.equal('done');
+    expect(field(el).getAttribute('inputmode')).to.equal('email');
+    expect(field(el).getAttribute('enterkeyhint')).to.equal('done');
+  });
+
+  it('keeps allow-duplicates unreflected, as published', async () => {
+    const el = await fixture<LyraTokenInput>(html`<lr-token-input></lr-token-input>`);
+    el.allowDuplicates = true;
+    await el.updateComplete;
+    expect(el.allowDuplicates).to.equal(true);
+    expect(el.hasAttribute('allow-duplicates')).to.equal(false);
+  });
+
+  it('accepts a null name as removal', async () => {
+    const el = await fixture<LyraTokenInput>(html`<lr-token-input name="tags"></lr-token-input>`);
+    el.name = null;
+    expect(el.name).to.equal('');
+    expect(el.hasAttribute('name')).to.equal(false);
+  });
+
+  it('resetValidity() clears a custom error but keeps the intrinsic constraint', async () => {
+    const el = await fixture<LyraTokenInput>(html`<lr-token-input required></lr-token-input>`);
+    el.setCustomValidity('Reserved');
+    expect(el.validity.customError).to.equal(true);
+    el.resetValidity();
+    expect(el.validity.customError).to.equal(false);
+    expect(el.validity.valueMissing).to.equal(true);
+    el.value = ['a'];
+    el.resetValidity();
+    expect(el.checkValidity()).to.equal(true);
+  });
+
+  it('publishes a static validators catalog that reads the current validity', async () => {
+    const el = await fixture<LyraTokenInput>(html`<lr-token-input required min-tags="2"></lr-token-input>`);
+    const ctor = el.constructor as typeof el.constructor & { validators: { observedAttributes?: string[]; checkValidity(e: LyraTokenInput): { isValid: boolean; invalidKeys: string[] } }[] };
+    expect(ctor.validators.length).to.equal(1);
+    const [validator] = ctor.validators;
+    expect(validator!.observedAttributes).to.include.members(['required', 'min-tags', 'max-tags']);
+    expect(validator!.checkValidity(el).invalidKeys).to.deep.equal(['valueMissing']);
+    el.value = ['a'];
+    expect(validator!.checkValidity(el).invalidKeys).to.deep.equal(['rangeUnderflow']);
+    el.value = ['a', 'b'];
+    expect(validator!.checkValidity(el).isValid).to.equal(true);
+  });
+
+  it('reads a delimiter-separated value attribute as the default, beside the JSON array form', async () => {
+    const comma = await fixture<LyraTokenInput>(html`<lr-token-input value="a, b"></lr-token-input>`);
+    expect(comma.defaultValue).to.deep.equal(['a', 'b']);
+    expect(comma.value).to.deep.equal(['a', 'b']);
+    const custom = await fixture<LyraTokenInput>(html`<lr-token-input delimiter=";" value="x,y; z"></lr-token-input>`);
+    expect(custom.value).to.deep.equal(['x,y', 'z']);
+    const json = await fixture<LyraTokenInput>(html`<lr-token-input value='["p,q"]'></lr-token-input>`);
+    expect(json.value, 'a JSON array still wins and is never split').to.deep.equal(['p,q']);
   });
 });

@@ -132,7 +132,7 @@ export class LyraNumberTicker extends LyraElement<LyraNumberTickerEventMap> {
       this.observer.observe(this);
     }
     this.stopMotionWatch = observeReducedMotion(this, reduced => {
-      if (reduced && this.animation) this.finish();
+      if (reduced && this.animation) void this.finish();
     });
     // An eager ticker that was interrupted resumes without waiting to be seen.
     if (this.eager && this.pending && this.hasUpdated) this.start();

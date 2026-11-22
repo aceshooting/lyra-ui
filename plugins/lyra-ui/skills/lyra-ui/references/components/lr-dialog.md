@@ -44,7 +44,7 @@ read, and neither is deprecated.
 - `label: string = ''` — mapped visible title. The richer `label` slot wins over it.
 - `withLabel: boolean = false` (attribute `with-label`) — server-rendering hint that a `label` slot
   child is provided, so the titled header is present before hydration; in the browser the real slot
-  content decides. Also on `lr-drawer`.
+  content decides, so `with-label` without a label never renders an empty heading. Also on `lr-drawer`.
 - `headingLevel: LyraHeadingLevel = '3'` (attribute `heading-level`, reflected) — `1`–`6` expose
   the generated visible title (string property or rich `label` slot) at that semantic level;
   invalid untyped values retain level 3, while `none` keeps visual title text without heading
@@ -199,6 +199,9 @@ close control exactly as the background/color/radius tokens do. A component with
 border simply has no default to relay, which is different from border theming being broken. Size
 remains the one exception that does not cross this way: use `--lr-theme-icon-button-size`, never
 `--lr-icon-button-size`, as noted above.
+
+Further CSS parts: `close-button__button`: Web Awesome-named alias of `close-button-control`: the
+close button's own native control.
 
 **Themeable custom properties:** mapped aliases are `--backdrop-filter`, `--backdrop-color` (alias of `--lr-dialog-overlay-color`, which wins when both are set), `--width`, `--spacing`,
 `--header-spacing`, `--body-spacing`, `--footer-spacing`, `--show-duration`, and

@@ -2879,3 +2879,219 @@ test('valued member rewrites report direct and aliased script uses', () => {
     assert.equal(result.content.includes('.canvas = wide'), false, input);
   }
 });
+
+// ---------------------------------------------------------------------------------------------
+// Utility/theme classes and asset specifiers
+// ---------------------------------------------------------------------------------------------
+
+import {
+  APPROXIMATE_CLASS_MAP,
+  EXACT_CLASS_MAP,
+  REVIEW_CLASS_MAP,
+  lookupUpstreamClass,
+  scanClassTokens,
+} from './migration-upstream-assets.mjs';
+
+const classTokens = (text) => scanClassTokens(text).map((entry) => entry.token);
+const migrateClasses = (input) => migrateText(input, contract, { file: 'classes.html' });
+
+test('class tables never claim a name twice and every exact target is a real Lyra class', () => {
+  const css = fs.readFileSync(path.join(path.dirname(scriptDir), 'src', 'styles', 'utilities.css'), 'utf8');
+  const theme = fs.readFileSync(path.join(path.dirname(scriptDir), 'src', 'theme.css'), 'utf8');
+  for (const table of [APPROXIMATE_CLASS_MAP, REVIEW_CLASS_MAP]) {
+    for (const name of Object.keys(table)) assert.equal(Object.hasOwn(EXACT_CLASS_MAP, name), false, name);
+  }
+  for (const name of Object.keys(APPROXIMATE_CLASS_MAP)) assert.equal(Object.hasOwn(REVIEW_CLASS_MAP, name), false, name);
+  for (const target of new Set([...Object.values(EXACT_CLASS_MAP), ...Object.values(APPROXIMATE_CLASS_MAP)])) {
+    assert.ok(css.includes(`.${target}`) || theme.includes(`.${target}`), `${target} is not defined by a Lyra stylesheet`);
+  }
+});
+
+test('layout, gap, alignment and distribution classes rewrite as whole tokens', () => {
+  const input =
+    '<div class="wa-stack wa-gap-m"><div class="wa-split:column wa-align-items-center"></div>' +
+    '<div class="wa-flank:end wa-gap-3xs"></div><p class="wa-frame:landscape wa-justify-content-space-between"></p>' +
+    '<div class="wa-grid wa-span-grid"></div></div>\n';
+  const result = migrateClasses(input);
+  assert.equal(
+    result.content,
+    '<div class="lr-stack lr-gap-l"><div class="lr-split-column lr-items-center"></div>' +
+      '<div class="lr-flank-end lr-gap-2xs"></div><p class="lr-frame-landscape lr-justify-between"></p>' +
+      '<div class="lr-grid-auto lr-span-grid"></div></div>\n',
+  );
+  assert.equal(result.warnings.length, 0);
+  assert.ok(result.changes.every((entry) => entry.action === 'rewrite-class' && entry.origin === 'webawesome'));
+});
+
+test('text, helper, variant, size and theme-mode classes rewrite; shoelace theme classes rewrite', () => {
+  const result = migrateClasses(
+    '<body class="wa-dark wa-cloak"><h1 class="wa-text-center wa-font-weight-bold wa-text-truncate wa-visually-hidden"></h1>' +
+      '<i class="wa-success wa-size-l wa-border-radius-pill wa-color-text-quiet"></i><html class="sl-theme-dark"></html></body>\n',
+  );
+  assert.equal(
+    result.content,
+    '<body class="lr-dark lr-cloak"><h1 class="lr-text-center lr-font-bold lr-truncate lr-visually-hidden"></h1>' +
+      '<i class="lr-success lr-size-l lr-radius-pill lr-text-quiet"></i><html class="lr-dark"></html></body>\n',
+  );
+  assert.deepEqual(
+    new Set(result.changes.map((entry) => entry.origin)),
+    new Set(['webawesome', 'shoelace']),
+  );
+});
+
+test('type-scale classes rewrite to the nearest class and warn; heading classes and gaps with no step only warn', () => {
+  const result = migrateClasses('<p class="wa-font-size-s wa-heading-l wa-gap-2xl wa-body-3xs"></p>\n');
+  assert.equal(result.content, '<p class="lr-text-sm wa-heading-l wa-gap-2xl wa-body-3xs"></p>\n');
+  assert.deepEqual(
+    result.warnings.map((entry) => [entry.upstreamMember, entry.warningCode]).sort(),
+    [
+      ['wa-body-3xs', 'UPSTREAM_CLASS_REVIEW'],
+      ['wa-font-size-s', 'UPSTREAM_CLASS_APPROXIMATE_REVIEW'],
+      ['wa-gap-2xl', 'UPSTREAM_CLASS_REVIEW'],
+      ['wa-heading-l', 'UPSTREAM_CLASS_REVIEW'],
+    ],
+  );
+});
+
+test('palette pairs and native.css opt-ins are reported, never rewritten; unlisted names are left alone', () => {
+  const input = '<div class="wa-brand-blue wa-zebra-rows wa-theme-default sl-mystery wa-mystery"></div>\n';
+  const result = migrateClasses(input);
+  assert.equal(result.content, input);
+  assert.equal(result.warnings.length, 3);
+  assert.ok(result.warnings.every((entry) => entry.warningCode === 'UPSTREAM_CLASS_REVIEW'));
+  assert.equal(lookupUpstreamClass('my-wa-stack'), null);
+  assert.equal(lookupUpstreamClass('stack'), null);
+});
+
+test('only whole class tokens in class positions are touched', () => {
+  const input = [
+    '<div class="wa-stackable my-wa-stack wa-stack-extra data-wa-stack"></div>',
+    '<div data-class="wa-stack" title="wa-stack" aria-label="wa-cluster"></div>',
+    "const label = 'wa-stack and wa-cluster';",
+    "document.querySelector('.wa-stack');",
+    '<!-- <div class="wa-stack"></div> -->',
+    '<div class="a wa-stack${x} ${y}wa-cluster ${z ? \'wa-flank\' : \'\'}"></div>',
+    '<div class="wa-stack"></div>',
+    '',
+  ].join('\n');
+  const result = migrateClasses(input);
+  const lines = result.content.split('\n');
+  assert.equal(lines[0], '<div class="wa-stackable my-wa-stack wa-stack-extra data-wa-stack"></div>');
+  assert.deepEqual(lines.slice(1, 5), input.split('\n').slice(1, 5));
+  assert.equal(lines[5], input.split('\n')[5]);
+  assert.equal(lines[6], '<div class="lr-stack"></div>');
+  assert.equal(result.warnings.length, 0);
+});
+
+test('class positions: className, JSX expressions, bindings, classList, classMap and assignments', () => {
+  assert.deepEqual(classTokens('<div className="wa-stack a"></div>'), ['wa-stack', 'a']);
+  assert.deepEqual(classTokens("<div className={'wa-stack ' + (x ? \"wa-cluster\" : 'b')}></div>"), ['wa-stack', 'wa-cluster', 'b']);
+  assert.deepEqual(classTokens(`<div :class="{ 'wa-stack': on, [dyn]: 1 }"></div>`), ['wa-stack']);
+  assert.deepEqual(classTokens(`<div [ngClass]="{'wa-flank': on}"></div>`), ['wa-flank']);
+  assert.deepEqual(classTokens(`<div :class="wa-stack"></div>`), []);
+  assert.deepEqual(classTokens(`el.classList.add('wa-stack', "wa-gap-s", name); el.classList.toggle('wa-dark', force);`), ['wa-stack', 'wa-gap-s', 'wa-dark']);
+  assert.deepEqual(classTokens(`el.classList.add(pick('wa-stack'));`), []);
+  assert.deepEqual(classTokens("el.className = 'wa-cluster x'; el.className += ' wa-split';"), ['wa-cluster', 'x', 'wa-split']);
+  assert.deepEqual(classTokens(`el.setAttribute('class', 'wa-stack'); el.setAttribute('id', 'wa-stack');`), ['wa-stack']);
+  assert.deepEqual(classTokens("html`<div class=${classMap({ 'wa-stack': true, 'wa-gap-m': big })}></div>`"), ['wa-stack', 'wa-gap-m']);
+  const migrated = migrateText(
+    "el.classList.replace('wa-dark', 'wa-light'); el.className = 'wa-cluster';\n",
+    contract,
+    { file: 'classes.ts' },
+  );
+  assert.equal(migrated.content, "el.classList.replace('lr-dark', 'lr-light'); el.className = 'lr-cluster';\n");
+});
+
+test('class rewriting is independent of text direction and attribute quoting', () => {
+  const rtl = migrateClasses('<div dir="rtl" class=\'wa-split wa-justify-content-start\'>مرحبا</div>\n');
+  assert.equal(rtl.content, '<div dir="rtl" class=\'lr-split lr-justify-start\'>مرحبا</div>\n');
+});
+
+const migrateAsset = (input, options = {}) =>
+  migrateText(input, contract, { file: 'assets.ts', ...options });
+
+test('theme, native and utility stylesheet imports map to Lyra stylesheets', () => {
+  const result = migrateAsset(
+    [
+      "import '@awesome.me/webawesome/dist/styles/webawesome.css';",
+      "import '@awesome.me/webawesome/dist/styles/utilities.css';",
+      "import '@awesome.me/webawesome/dist/styles/themes/default.css';",
+      "import '@shoelace-style/shoelace/dist/themes/light.css';",
+      '',
+    ].join('\n'),
+  );
+  assert.equal(
+    result.content,
+    [
+      "import '@aceshooting/lyra-ui/theme.css';",
+      "import '@aceshooting/lyra-ui/native.css';",
+      "import '@aceshooting/lyra-ui/utilities.css';",
+      "import '@aceshooting/lyra-ui/utilities.css';",
+      "import '@aceshooting/lyra-ui/theme.css';",
+      "import '@aceshooting/lyra-ui/theme.css';",
+      '',
+    ].join('\n'),
+  );
+  assert.deepEqual(result.warnings.map((entry) => entry.warningCode), ['UPSTREAM_ASSET_REVIEW']);
+  assert.match(result.warnings[0].message, /lr-native/);
+});
+
+test('CSS @import forms of the stylesheets are rewritten, with the same insertions', () => {
+  const result = migrateText(
+    "@import url('@awesome.me/webawesome/dist/styles/webawesome.css');\n@import '@awesome.me/webawesome/dist/styles/native.css';\n",
+    contract,
+    { file: 'app.css' },
+  );
+  assert.equal(
+    result.content,
+    "@import url('@aceshooting/lyra-ui/theme.css');\n@import url('@aceshooting/lyra-ui/native.css');\n@import url('@aceshooting/lyra-ui/utilities.css');\n@import '@aceshooting/lyra-ui/native.css';\n",
+  );
+});
+
+test('stylesheets and utilities with no Lyra counterpart are reported and left in place', () => {
+  const input = [
+    "import '@awesome.me/webawesome/dist/styles/themes/awesome.css';",
+    "import '@awesome.me/webawesome/dist/styles/color/palettes/bright.css';",
+    "import '@awesome.me/webawesome/dist/styles/layers.css';",
+    "import '@shoelace-style/shoelace/dist/themes/dark.css';",
+    "import { setBasePath } from '@shoelace-style/shoelace/dist/utilities/base-path.js';",
+    '',
+  ].join('\n');
+  const result = migrateAsset(input);
+  assert.equal(result.content.split('\n').slice(0, 3).join('\n'), input.split('\n').slice(0, 3).join('\n'));
+  assert.equal(result.content.split('\n')[3], "import '@aceshooting/lyra-ui/theme.css';");
+  assert.equal(result.content.split('\n')[4], input.split('\n')[4]);
+  assert.deepEqual(
+    result.warnings.map((entry) => entry.warningCode),
+    ['UPSTREAM_ASSET_REVIEW', 'UPSTREAM_ASSET_REVIEW', 'UPSTREAM_ASSET_REVIEW', 'UPSTREAM_ASSET_REVIEW', 'UPSTREAM_ASSET_REVIEW'],
+  );
+  assert.match(result.warnings[4].message, /setBasePath/);
+});
+
+test('loader and all-components entries follow the root registration rules', () => {
+  const loader = "import '@awesome.me/webawesome/dist/webawesome.loader.js';\nimport '@shoelace-style/shoelace/dist/shoelace-autoloader.js';\n";
+  assert.equal(
+    migrateAsset(loader, { rewriteBarePackages: new Set(['webawesome', 'shoelace']) }).content,
+    "import '@aceshooting/lyra-ui/autoloader-cdn.js';\nimport '@aceshooting/lyra-ui/autoloader-cdn.js';\n",
+  );
+  const blocked = migrateAsset(loader);
+  assert.equal(blocked.content, loader);
+  assert.deepEqual(blocked.warnings.map((entry) => entry.warningCode), ['PACKAGE_IMPORT_BLOCKED', 'PACKAGE_IMPORT_BLOCKED']);
+
+  const everything = "import '@awesome.me/webawesome/dist/webawesome.js';\n";
+  const kept = migrateAsset(everything);
+  assert.equal(kept.content, everything);
+  assert.deepEqual(kept.warnings.map((entry) => entry.warningCode), ['PACKAGE_IMPORT_BLOCKED']);
+});
+
+test('a binding import of an upstream stylesheet or an unrelated package is not rewritten', () => {
+  const input = [
+    "import sheet from '@awesome.me/webawesome/dist/styles/webawesome.css' with { type: 'css' };",
+    "import '@other/pkg/dist/styles/webawesome.css';",
+    "const note = '@awesome.me/webawesome/dist/styles/webawesome.css';",
+    '',
+  ].join('\n');
+  const result = migrateAsset(input);
+  assert.equal(result.content, input);
+  assert.deepEqual(result.warnings.map((entry) => entry.warningCode), ['IMPORT_BINDING_REVIEW_REQUIRED']);
+});

@@ -365,6 +365,7 @@ const emojiHaystacks = new WeakMap<EmojiPickerItem, { locale: string; value: str
  *   required marker.
  * @cssprop [--lr-theme-scrollbar-color=auto] - Opt-in theme-level `scrollbar-color` (thumb then
  *   track) honored by the `grid` scroll container; set on `:root` or any ancestor to retune every internal scroll container.
+ * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
  * @status stable
  * @since 4.0.0
  */
