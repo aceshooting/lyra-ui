@@ -444,6 +444,75 @@ describe('lr-map layout tokens', () => {
     for (const name of Object.keys(tokens)) element.style.removeProperty(name);
     expect(snapshot()).to.deep.equal(defaults);
   });
+
+  it('sizes the toggle and disclosure floors and weights and styles group headings from tokens', async () => {
+    const { element, root } = await mount('ltr', el => {
+      el.legend = [{ color: '#ff0000', label: 'Alpha', pattern: 'solid', group: 'One', value: 'a' }, { color: '#0000ff', label: 'Beta', pattern: 'solid', group: 'One', value: 'b' }];
+      el.legendInteractive = true; el.legendCollapsible = true;
+    });
+    const toggle = query(root, '[part~="legend-toggle"]'), disclosure = query(root, '[part="legend-disclosure"]');
+    const heading = query(root, '[part="legend-group-heading"]');
+    const iconButton = px(getComputedStyle(toggle).minInlineSize);
+    const snapshot = () => [getComputedStyle(toggle).minBlockSize, getComputedStyle(disclosure).minBlockSize,
+      getComputedStyle(toggle).fontWeight, getComputedStyle(disclosure).fontWeight, getComputedStyle(heading).paddingTop];
+    const defaults = snapshot();
+    expect(defaults.slice(0, 2).map(px)).to.deep.equal([iconButton, iconButton]);
+    expect(defaults[4]).to.equal('0px');
+    const tokens: Record<string, string> = {
+      '--lr-map-legend-toggle-min-height': '28px', '--lr-map-legend-disclosure-min-height': '12px',
+      '--lr-map-legend-toggle-font-weight': '700', '--lr-map-legend-disclosure-font-weight': '400',
+      '--lr-map-legend-group-heading-color': 'rgb(1, 2, 3)', '--lr-map-legend-group-heading-padding': '5px 7px',
+    };
+    for (const [name, value] of Object.entries(tokens)) element.style.setProperty(name, value);
+    expect(snapshot()).to.deep.equal(['28px', '24px', '700', '400', '5px']);
+    expect([getComputedStyle(heading).color, getComputedStyle(heading).paddingInlineStart]).to.deep.equal(['rgb(1, 2, 3)', '7px']);
+    for (const name of Object.keys(tokens)) element.style.removeProperty(name);
+    expect(snapshot()).to.deep.equal(defaults);
+  });
+
+  it('legendFlow="column" fills each column top to bottom under a heading spanning the columns', async () => {
+    const { element, root } = await mount('ltr', el => {
+      el.legend = ['A', 'B', 'C', 'D'].map((label) => ({ color: '#ff0000', label, pattern: 'solid' as const, group: 'G' }));
+      el.style.setProperty('--lr-map-legend-columns', '2');
+      el.style.setProperty('--lr-map-legend-max-inline-size', '320px');
+    });
+    expect(element.legendFlow).to.equal('row');
+    // The painted fragment: WebKit also reports an empty zero-height fragment for a row in a column box.
+    const rows = () => [...root.querySelectorAll('.legend-row')].map(row =>
+      [...row.getClientRects()].reduce((tallest, rect) => (rect.height > tallest.height ? rect : tallest)));
+    const heading = query(root, '[part="legend-group-heading"]');
+    element.legendFlow = 'column';
+    await element.updateComplete;
+    expect(element.getAttribute('legend-flow')).to.equal('column');
+    const [a, b, c, d] = rows();
+    expect(Math.abs(a!.left - b!.left), 'A and B share the first column').to.be.below(1);
+    expect(b!.top).to.be.above(a!.top);
+    expect(c!.left, 'C starts the second column').to.be.above(a!.right - 1);
+    expect(Math.abs(c!.top - a!.top), 'C tops the second column').to.be.below(1);
+    expect(Math.abs(d!.left - c!.left)).to.be.below(1);
+    const head = heading.getBoundingClientRect();
+    expect(head.width, 'the heading spans both columns').to.be.at.least(c!.right - a!.left - 1);
+    expect(head.bottom).to.be.at.most(a!.top + 0.5);
+    element.legendCollapsible = true;
+    element.legendOpen = false;
+    await element.updateComplete;
+    expect(getComputedStyle(query(root, '.legend-list')).display, 'a collapsed column list stays hidden').to.equal('none');
+    element.setAttribute('legend-flow', 'diagonal');
+    await element.updateComplete;
+    expect(element.legendFlow).to.equal('row');
+  });
+
+  it('offsets the attribution control through --lr-map-attribution-margin', async () => {
+    const { element, root } = await mount();
+    const attribution = query(root, '[part~="attribution"]');
+    const defaults = getComputedStyle(attribution).marginTop;
+    element.style.setProperty('--lr-map-attribution-margin', '11px 13px');
+    expect([getComputedStyle(attribution).marginTop, getComputedStyle(attribution).marginInlineEnd]).to.deep.equal(['11px', '13px']);
+    const group = query(root, '[part~="navigation"]');
+    expect(getComputedStyle(group).marginTop, 'other controls keep the shared gap').to.equal(defaults);
+    element.style.removeProperty('--lr-map-attribution-margin');
+    expect(getComputedStyle(attribution).marginTop).to.equal(defaults);
+  });
 });
 
 describe('lr-map control corners, avoidance and attribution tokens', () => {

@@ -38,6 +38,10 @@ export interface LyraSegmentedItem {
 export type LyraSegmentedLayout = 'scroll' | 'wrap' | 'grid';
 const SEGMENTED_LAYOUT = literalSetConverter<LyraSegmentedLayout>(['scroll', 'wrap', 'grid'], 'scroll');
 
+/** Which side of each segment's label its optional `icon` renders on. */
+export type LyraSegmentedIconPlacement = 'start' | 'end';
+const SEGMENTED_ICON_PLACEMENT = literalSetConverter<LyraSegmentedIconPlacement>(['start', 'end'], 'start');
+
 /** Detail of `lr-change-request`. */
 export interface LyraSegmentedChangeRequestDetail {
   /** Value of the segment the user is selecting. */
@@ -154,12 +158,18 @@ function snapshotSegmentedItems(
  * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=inherit] - Text color of the field label.
+ * @cssprop [--lr-form-control-label-block-gap=var(--lr-space-xs)] - Space between a label above
+ *   the field and the field, in top placement and once a `label-placement="start"` row collapses.
+ * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
+ * @cssprop [--lr-form-control-label-text-align=inherit] - Text alignment of the field label.
+ * @cssprop [--lr-form-control-label-text-transform=inherit] - Text transform of the field label.
  * @csspart form-control-label - The noninteractive field caption, visually hidden by default.
  * @csspart hint - Supporting text referenced by the radiogroup when supplied.
  * @csspart base - The `role="radiogroup"` root; the horizontal scroll owner in the default
  *   `layout="scroll"`, a wrapping row or a grid otherwise.
  * @csspart segment - A single `role="radio"` button with a 24×24 CSS pixel minimum box at every size tier.
- * @csspart segment-icon - Optional decorative leading visual supplied by the item's `icon` field.
+ * @csspart segment-icon - Optional decorative visual supplied by the item's `icon` field, before the
+ *   label or, with `icon-placement="end"`, after it.
  *   Content may have a natural aspect ratio and is not restricted to a square icon; it is inert and
  *   hidden from assistive technology, so it cannot provide an independent action or accessible name.
  * @csspart segment-label - The segment's label text.
@@ -328,6 +338,27 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     this.requestUpdate('layout', old);
   }
   private _layout: LyraSegmentedLayout = 'scroll';
+
+  /** Side of the label each item's `icon` renders on: `'start'` (default) before it, `'end'` after
+   *  it, both logical so they follow the writing direction. Unsupported values normalize to
+   *  `'start'`. Reflects as the `icon-placement` attribute. */
+  @property({ converter: SEGMENTED_ICON_PLACEMENT, attribute: 'icon-placement', reflect: true })
+  get iconPlacement(): LyraSegmentedIconPlacement {
+    return this._iconPlacement;
+  }
+  set iconPlacement(next: LyraSegmentedIconPlacement) {
+    const normalized = SEGMENTED_ICON_PLACEMENT.normalizeReflected(this, 'icon-placement', next);
+    const old = this._iconPlacement;
+    if (old === normalized) return;
+    this._iconPlacement = normalized;
+    this.requestUpdate('iconPlacement', old);
+  }
+  private _iconPlacement: LyraSegmentedIconPlacement = 'start';
+
+  /** Stretches the control across its container and grows the segments to share the spare width,
+   *  in every `layout`. A `'scroll'` row whose segments no longer fit still scrolls. Off by default,
+   *  so the control keeps its content width. Reflects as the `full-width` attribute. */
+  @property({ type: Boolean, attribute: 'full-width', reflect: true }) fullWidth = false;
 
   constructor() {
     super();
@@ -518,6 +549,12 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
     this.hostDescription.adopted();
   }
 
+  private renderSegmentIcon(item: Readonly<LyraSegmentedItem>): unknown {
+    return item.icon !== undefined
+      ? html`<span part="segment-icon" aria-hidden="true" inert>${item.icon}</span>`
+      : nothing;
+  }
+
   override render(): TemplateResult {
     const hostLabel = hostAriaLabel(this);
     const hasLabelSlot = this.hasNativeLabelAssignment || this.slotPresence.has('label');
@@ -572,11 +609,7 @@ export class LyraSegmented extends LyraElement<LyraSegmentedEventMap> {
               tabindex=${index === tabbableIndex ? '0' : '-1'}
               @click=${() => this.select(item)}
             >
-              ${item.icon !== undefined
-                ? html`<span part="segment-icon" aria-hidden="true" inert
-                    >${item.icon}</span
-                  >`
-                : nothing}<span part="segment-label">${item.label}</span>
+              ${this.iconPlacement === 'end' ? nothing : this.renderSegmentIcon(item)}<span part="segment-label">${item.label}</span>${this.iconPlacement === 'end' ? this.renderSegmentIcon(item) : nothing}
             </button>`
           )}
         </div>

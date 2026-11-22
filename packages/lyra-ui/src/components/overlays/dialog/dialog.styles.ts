@@ -169,8 +169,11 @@ export const styles = css`
        panel's internal boundaries too -- a header rule in the base border colour against a retinted
        panel edge is the asymmetry this family exists to remove. --lr-dialog-divider-color splits
        the two dividers from the edge when a design wants them to differ. */
-    border-block-end: var(--lr-border-width-thin) solid
-      var(--lr-dialog-divider-color, var(--lr-overlay-border, var(--lr-color-border-subtle)));
+    border-block-end: var(
+      --lr-dialog-header-border,
+      var(--lr-border-width-thin) solid
+        var(--lr-dialog-divider-color, var(--lr-overlay-border, var(--lr-color-border-subtle)))
+    );
   }
   [part~="heading"] {
     flex: 1 1 auto;
@@ -180,6 +183,7 @@ export const styles = css`
     font-size: var(--lr-dialog-heading-font-size, inherit);
     font-weight: var(--lr-dialog-heading-font-weight, var(--lr-font-weight-semibold));
     letter-spacing: var(--lr-dialog-heading-letter-spacing, normal);
+    line-height: var(--lr-dialog-heading-line-height, inherit);
     overflow: hidden;
     overflow-wrap: break-word;
     white-space: normal;
@@ -239,7 +243,7 @@ export const styles = css`
       --body-spacing,
       var(--spacing, var(--lr-dialog-spacing, var(--lr-space-l)))
     );
-    overflow: auto;
+    overflow: var(--lr-dialog-body-overflow, auto);
     overflow-wrap: anywhere;
   }
   /* fill-body: the body becomes a column flex container, so slotted content can take the block

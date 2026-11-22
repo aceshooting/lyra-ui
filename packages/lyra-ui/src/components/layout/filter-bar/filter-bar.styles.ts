@@ -17,6 +17,29 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
   }
+  /* One height and font size for every filter type and the reset button. The height replaces each
+     size tier's floor on the composed control's own ladder, whose unset fallback is the tier's own
+     theme-chained value, so an unset token changes nothing. */
+  [part='filter-control'],
+  .checkbox-menu lr-button,
+  [part='reset-button'] {
+    --lr-form-control-height-2xs: var(--lr-filter-bar-control-height, var(--lr-theme-form-control-height-2xs, var(--lr-size-1-25rem)));
+    --lr-form-control-height-xs: var(--lr-filter-bar-control-height, var(--lr-theme-form-control-height-xs, var(--lr-size-1-5rem)));
+    --lr-form-control-height-s: var(--lr-filter-bar-control-height, var(--lr-theme-form-control-height-s, var(--lr-size-2rem)));
+    --lr-form-control-height-m: var(--lr-filter-bar-control-height, var(--lr-theme-form-control-height-m, var(--lr-size-2-25rem)));
+    --lr-form-control-height-l: var(--lr-filter-bar-control-height, var(--lr-theme-form-control-height-l, var(--lr-size-2-5rem)));
+    --lr-form-control-height-xl: var(--lr-filter-bar-control-height, var(--lr-theme-form-control-height-xl, var(--lr-size-3-5rem)));
+    /* The field font size fills each control's private default tier, behind its own public font
+       token, so a value set on an ancestor through that token still wins and an unset token falls
+       back to the same shared form-control size the control reads itself. */
+    --_lr-button-font-size: var(--lr-filter-bar-control-font-size, var(--lr-form-control-font-size));
+  }
+  [part='filter-control'] {
+    --_lr-input-font-size-default: var(--lr-filter-bar-control-font-size, var(--lr-form-control-font-size));
+    --_lr-select-font-size: var(--lr-filter-bar-control-font-size, var(--lr-form-control-font-size));
+    --_lr-combobox-font-size: var(--lr-filter-bar-control-font-size, var(--lr-form-control-font-size));
+    --_lr-date-input-font-size: var(--lr-filter-bar-control-font-size, var(--lr-form-control-font-size));
+  }
   [part='base'] {
     display: flex;
     flex-direction: column;

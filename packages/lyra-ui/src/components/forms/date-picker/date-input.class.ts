@@ -389,6 +389,8 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  *   `label-placement="start"`.
  * @cssprop [--lr-form-control-label-gap=var(--lr-space-m)] - Space between the label column and
  *   the field while `label-placement="start"`.
+ * @cssprop [--lr-form-control-label-block-gap=var(--lr-space-xs)] - Space between a label above
+ *   the field and the field, in top placement and once a `label-placement="start"` row collapses.
  * @cssprop [--lr-form-control-label-collapse-inline-size=var(--lr-size-20rem)] - Control width
  *   below which `label-placement="start"` returns the label above the field.
  * @cssprop [--lr-form-control-invalid-border-color=var(--lr-color-danger)] - Resting border while the
@@ -398,6 +400,9 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=inherit] - Text color of the field label.
+ * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
+ * @cssprop [--lr-form-control-label-text-align=inherit] - Text alignment of the field label.
+ * @cssprop [--lr-form-control-label-text-transform=inherit] - Text transform of the field label.
  * @csspart form-control-label - The outer label wrapper.
  * @csspart label - Permanent compatibility name for the inner label-content wrapper.
  * @csspart form-control-input - The editable date surface.
@@ -427,6 +432,8 @@ class LyraDateInputBase extends LyraElement<LyraDateInputEventMap> {}
  * @cssprop [--lr-date-input-radius=var(--lr-radius)] - Input-row corner radius. `pill` changes its
  *   private default to `--lr-radius-pill`; an inherited or direct public value still wins.
  * @cssprop [--lr-date-input-focus-border-color=var(--lr-color-brand)] - Focused row border color.
+ * @cssprop [--lr-date-input-action-color=var(--lr-color-text-quiet)] - Resting color of the clear and
+ *   calendar (`expand-button`) actions; hover and press keep their own tokens.
  * @cssprop [--lr-date-input-action-hover-color=var(--lr-color-text)] - Clear/calendar action color on hover.
  * @cssprop [--lr-date-input-action-hover-bg=transparent] - Clear/calendar action background on hover.
  * @cssprop [--lr-date-input-action-hover-radius=var(--lr-date-input-radius)] - Clear/calendar action corner radius on hover.

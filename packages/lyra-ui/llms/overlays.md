@@ -441,7 +441,8 @@ attribute), `description` (rich description content, overrides the `description`
 
 **CSS parts:** `base`, `icon`, `heading`, `description`, `actions`
 
-**Themeable custom properties:** `--lr-empty-padding` (default `--lr-space-l` — padding at the
+**Themeable custom properties:** `--lr-empty-icon-color` (default `--lr-color-text-quiet`) colours
+the icon or illustration; `--lr-empty-padding` (default `--lr-space-l` — padding at the
 default density), `--lr-empty-gap` (default `--lr-space-s` — gap between the icon, heading, and
 description at the default density), `--lr-empty-icon-size` (default `--lr-font-size-3xl` — icon
 size at the default density), `--lr-empty-compact-icon-size` (default `--lr-font-size-m` — icon
@@ -701,6 +702,12 @@ slide too and the reduced-motion flattening of the shared `--lr-duration-*` toke
 
 The drawer inherits the dialog's opt-in `fullscreen-narrow` attribute (a viewport narrower than 40rem fills the screen) and the panel sizing tokens `--lr-dialog-max-height`, `--lr-dialog-viewport-inset` and `--lr-dialog-divider-color`, exactly as on `<lr-dialog>`.
 
+Further custom properties:
+
+- `--lr-dialog-body-overflow` (default `auto`): `overflow` of the body region, for example `hidden` when slotted content manages its own scrolling.
+- `--lr-dialog-header-border` (default `var(--lr-border-width-thin) solid var(--lr-dialog-divider-color)`): Border shorthand of the header's bottom rule; `none` removes it. The footer rule keeps `--lr-dialog-divider-color`.
+- `--lr-dialog-heading-line-height` (default `inherit`): Line height of the visible header title.
+
 ## `lr-dialog` / `confirm()`
 
 General-purpose modal/overlay plus a promise-based confirmation helper built on top of it.
@@ -920,7 +927,11 @@ still win, so `flex: none` keeps a heading or toolbar at its natural size. On `<
 `--lr-dialog-heading-font-size` (default `inherit`), `--lr-dialog-heading-font-weight` (default
 `var(--lr-font-weight-semibold)`), `--lr-dialog-heading-letter-spacing` (default `normal`) and
 `--lr-dialog-heading-font-family` (default `var(--lr-font-heading)`) style the visible header title (`[part~="heading"]`), including
-`confirm()`'s. `--lr-dialog-spacing` (default `var(--lr-space-l)` —
+`confirm()`'s, and `--lr-dialog-heading-line-height` (default `inherit`) sets its line height.
+`--lr-dialog-header-border` (default `var(--lr-border-width-thin) solid var(--lr-dialog-divider-color)`)
+is the header's bottom rule as a border shorthand (`none` removes it; the footer rule keeps
+`--lr-dialog-divider-color`), and `--lr-dialog-body-overflow` (default `auto`) is the body's
+`overflow`, for example `hidden` when slotted content manages its own scrolling. `--lr-dialog-spacing` (default `var(--lr-space-l)` —
 the padding inside `[part="body"]` and the _inline_ padding of the header and footer rows),
 `--lr-dialog-spacing-block` (default `var(--lr-space-m)` — the _block_ padding of the header and
 footer rows, which are tighter than the body by default), `--lr-dialog-panel-duration` (default

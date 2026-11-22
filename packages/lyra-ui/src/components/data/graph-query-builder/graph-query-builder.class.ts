@@ -327,6 +327,9 @@ export interface LyraGraphQueryBuilderEventMap {
  * @cssprop [--lr-form-control-label-font-size=inherit] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=inherit] - Text color of the field label.
+ * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
+ * @cssprop [--lr-form-control-label-text-align=inherit] - Text alignment of the field label.
+ * @cssprop [--lr-form-control-label-text-transform=inherit] - Text transform of the field label.
  * @csspart form-control-label - Visible label for the complete form control; shares the same
  *   node as the `label` compatibility alias.
  * @csspart label - Compatibility alias for `form-control-label`.

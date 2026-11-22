@@ -124,6 +124,13 @@ export interface StatRow {
  * @cssprop [--lr-stat-value-font-weight=var(--lr-font-weight-bold)] - Headline value weight. `prose` keeps its own weight.
  * @cssprop [--lr-stat-value-letter-spacing=normal] - Headline value letter spacing.
  * @cssprop [--lr-stat-value-line-height=inherit] - Headline value line height.
+ * @cssprop [--lr-stat-label-line-height=inherit] - Metric label line height.
+ * @cssprop [--lr-stat-align=normal] - Alignment of the vertical tile's stacked content: `center`
+ *   centres the label, value row, icon and trend chips and their text; `start` and `end` work too.
+ *   Unset, content stretches and text follows the inherited alignment.
+ * @cssprop [--lr-stat-border-color=var(--lr-color-border-subtle)] - Resting edge colour of the tile.
+ *   A linked tile's resting edge defaults to `--lr-color-border` instead; hover and press keep
+ *   their own `--lr-stat-link-*` tokens.
  * @cssprop [--lr-stat-value-margin=0] - Margin around the headline value inside its row.
  * @cssprop [--lr-stat-value-row-align=baseline] - Cross-axis alignment (`align-items`) of the value,
  *   unit and exact-value row.
@@ -281,6 +288,10 @@ export class LyraStat extends LyraElement {
    *  block end, so tiles in a grid row share one height and one caption baseline. Also stretches a
    *  `frame='plain'` stat. */
   @property({ type: Boolean, reflect: true }) fill = false;
+  /** Keeps the headline `value` on one line, ending it with an ellipsis when it does not fit. The
+   *  full text stays in the accessibility tree, and `exact-value` still describes it. Off by
+   *  default, so a long value wraps. Reflects as the `truncate` attribute. */
+  @property({ type: Boolean, reflect: true }) truncate = false;
 
   // Same fix `lr-empty` already established: `[part]:empty` never matches
   // because the part always contains a literal `<slot>` child. Track real

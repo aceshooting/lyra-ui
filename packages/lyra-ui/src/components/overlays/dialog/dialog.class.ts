@@ -283,6 +283,12 @@ const FULLSCREEN_NARROW_QUERY = '(max-width: 40rem)';
  * @cssprop [--lr-dialog-heading-font-weight=var(--lr-font-weight-semibold)] - Font weight of the
  *   visible header title.
  * @cssprop [--lr-dialog-heading-letter-spacing=normal] - Letter spacing of the visible header title.
+ * @cssprop [--lr-dialog-heading-line-height=inherit] - Line height of the visible header title.
+ * @cssprop [--lr-dialog-header-border=var(--lr-border-width-thin) solid var(--lr-dialog-divider-color)] -
+ *   Border shorthand of the header's bottom rule; `none` removes it. The footer rule keeps
+ *   `--lr-dialog-divider-color`.
+ * @cssprop [--lr-dialog-body-overflow=auto] - `overflow` of the body region, for example `hidden`
+ *   when slotted content manages its own scrolling.
  * @cssprop [--lr-dialog-spacing=var(--lr-space-l)] - Padding inside the body, and the inline
  *   padding of the header and footer rows.
  * @cssprop [--lr-dialog-spacing-block=var(--lr-space-m)] - Block padding of the header and footer

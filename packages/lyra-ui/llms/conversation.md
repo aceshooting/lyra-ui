@@ -294,6 +294,10 @@ browser scale — `--lr-markdown-heading-font-weight`
 and `--lr-markdown-link-hover-color` (default the link colour), `--lr-markdown-blockquote-border-color`
 (default `var(--lr-color-border-subtle)`), `--lr-markdown-blockquote-color` (default
 `var(--lr-color-text-quiet)`) and `--lr-markdown-list-indent` (default `var(--lr-size-2-5rem)`).
+`--lr-markdown-paragraph-gap` and `--lr-markdown-list-gap` (both default `--lr-markdown-block-gap`)
+split the space after paragraphs and after lists from the shared rhythm, and
+`--lr-markdown-font-size`, `--lr-markdown-line-height` and `--lr-markdown-color` (all default
+`inherit`) set the rendered prose's body type and colour without a host rule.
 The `code-block` and `inline-code` surfaces have `--lr-markdown-code-block-padding`,
 `--lr-markdown-code-block-radius`, `--lr-markdown-code-block-bg`, `--lr-markdown-code-padding`,
 `--lr-markdown-code-radius` and `--lr-markdown-code-bg` (all listed below);
@@ -635,6 +639,14 @@ keeps the box and list gutter aligned. Header hooks are `--lr-markdown-code-head
 (default `var(--lr-color-text-quiet)`).
 
 **Shared icon-button tokens:** the code-block action buttons read the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-border`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`, `--lr-icon-button-color`, `--lr-icon-button-hover-color`, `--lr-icon-button-active-color` and `--lr-icon-button-radius`. `--lr-markdown-code-copy-hover-bg` and `--lr-markdown-code-copy-active-bg` set the fenced copy button's hovered and pressed backgrounds. `--lr-markdown-code-copy-hover-color` (default `var(--lr-color-brand)`) and `--lr-markdown-code-copy-active-color` set its glyph color in those states, and `--lr-markdown-code-copy-success-color` / `--lr-markdown-code-copy-error-color` (defaults `var(--lr-color-success)` / `var(--lr-color-danger)`) its copy feedback.
+
+Further custom properties:
+
+- `--lr-markdown-color` (default `inherit`): Text color of the rendered content.
+- `--lr-markdown-font-size` (default `inherit`): Font size of the rendered content; headings and code scale from it.
+- `--lr-markdown-line-height` (default `var(--lr-line-height-loose)`): Line height of the rendered body text.
+- `--lr-markdown-list-gap` (default `var(--lr-markdown-block-gap)`): Space after each list.
+- `--lr-markdown-paragraph-gap` (default `var(--lr-markdown-block-gap)`): Space after each paragraph.
 
 ## `lr-chat-message`
 
@@ -1901,6 +1913,13 @@ listbox along with the other floating surfaces.
 - `hint`/`errorText` mirror `<lr-select>`'s identical chrome, including the `aria-describedby` wiring
   to the rendered `hint`/`error` ids — set on whichever element (`trigger` or `combobox-input`) owns
   `role="combobox"` for the active mode.
+
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
 ---
 
@@ -4611,6 +4630,13 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 - The preview button rests on `--lr-voice-picker-trigger-border-color` and `--lr-voice-picker-trigger-fill`, and takes `--lr-voice-picker-trigger-hover-border-color` on hover, so it follows the trigger beside it.
 - `--lr-voice-picker-preview-hover-bg` — Preview hover fill. Default: `var(--lr-color-brand-quiet)`.
 - `--lr-voice-picker-preview-hover-color` — Preview hover icon. Default: `var(--lr-color-brand)`.
+
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
 ## `lr-agent-workspace`
 

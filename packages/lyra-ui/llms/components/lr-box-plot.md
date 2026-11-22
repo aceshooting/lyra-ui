@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
 - **Deprecations** none
 - **Optional peers** `@sgratzl/chartjs-chart-boxplot`, `chart.js` — see `llms/peers.md`
-- **Themeable via** 12 parts, 45 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 47 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `canvas`: `--lr-chart-canvas-hover-outline-color`, `--lr-chart-canvas-hover-outline-width`; `legend-swatch`: `--lr-chart-pattern-step`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -215,5 +215,10 @@ loads are memoized per page.
   fails closed with a localized, neutral visible error part rather than leaving a blank canvas.
   The transition into that state is announced through the shared document-level light-DOM
   assertive sink.
+
+Further custom properties:
+
+- `--lr-chart-legend-item-line-height` (default `inherit`): Line height of each legend item.
+- `--lr-chart-legend-justify` (default `normal`): `justify-content` of the legend row, for example `center` or `flex-end`.
 
 ---

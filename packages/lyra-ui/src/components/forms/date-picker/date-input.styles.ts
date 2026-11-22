@@ -173,7 +173,7 @@ export const styles = css`
     border: none;
     background: none;
     cursor: pointer;
-    color: var(--lr-color-text-quiet);
+    color: var(--lr-date-input-action-color, var(--lr-color-text-quiet));
     padding: var(--lr-space-xs);
     /* Inline actions fit inside the selected control's border box. Keep a physical 24px floor
        even when the smallest tier, or an exact-height override, is shorter than that target. */

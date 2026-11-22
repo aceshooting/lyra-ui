@@ -39,7 +39,7 @@ export const styles = css`
   [part~='form-control-label'] {
     ${formControlLabelTypography()}
     ${blockHost}
-    margin-block-end: var(--lr-space-xs);
+    margin-block-end: var(--lr-form-control-label-block-gap, var(--lr-space-xs));
     overflow-wrap: anywhere;
   }
   [part~='form-control-label'][hidden] {

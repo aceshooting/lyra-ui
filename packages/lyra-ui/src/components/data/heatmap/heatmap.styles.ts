@@ -312,6 +312,11 @@ export const styles = css`
     flex-wrap: wrap;
     align-items: center;
     gap: var(--lr-heatmap-legend-gap, var(--lr-space-xs));
+    justify-content: var(--lr-heatmap-legend-justify, normal);
+    /* The base column already gaps the grid and legend by --lr-space-xs; the margin on the edge
+       facing the grid makes --lr-heatmap-legend-offset the whole distance. */
+    --_lr-heatmap-legend-offset: calc(var(--lr-heatmap-legend-offset, var(--lr-space-xs)) - var(--lr-space-xs));
+    margin-block-start: var(--_lr-heatmap-legend-offset);
     min-inline-size: 0;
     max-inline-size: 100%;
     box-sizing: border-box;
@@ -326,6 +331,7 @@ export const styles = css`
     border-block-start: var(--lr-heatmap-legend-divider, none);
   }
   :host([legend-placement="top"]) [part="legend"] {
+    margin-block: 0 var(--_lr-heatmap-legend-offset);
     border-block-start: none;
     border-block-end: var(--lr-heatmap-legend-divider, none);
   }
@@ -366,7 +372,7 @@ export const styles = css`
     flex: 0 0 auto;
     inline-size: var(--lr-heatmap-legend-swatch-size, var(--lr-size-0-6rem));
     block-size: var(--lr-heatmap-legend-swatch-size, var(--lr-size-0-6rem));
-    border-radius: var(--lr-radius-xs);
+    border-radius: var(--lr-heatmap-legend-swatch-radius, var(--lr-radius-xs));
   }
   [part="legend-stop-label"] {
     min-inline-size: 0;

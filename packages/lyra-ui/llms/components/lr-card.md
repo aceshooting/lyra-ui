@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-card-outlined-bg`, `--lr-card-shadow`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -150,6 +150,9 @@ var(--lr-transition-fast)`) replaces the hover transition. The `fill-body` attri
 (`fillBody: boolean = false`, reflected) makes `[part="body"]` a column flex box that fills the
 card's spare height, with `--lr-card-body-gap` (default `0`) between its children, so one child can
 pin itself to the bottom with `margin-block-start: auto` in an equal-height grid.
+`--lr-card-body-justify` and `--lr-card-body-align` (both default `normal`) are that column's
+`justify-content` and `align-items`, for example `center` to centre short content.
+`--lr-card-min-block-size` (default `auto`) floors the card surface, linked cards included.
 
 ```html
 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--lr-space-m)">

@@ -9,8 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 31 parts, 38 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `form-control-label`: `--lr-form-control-required-content`; `marks`: `--lr-slider-mark-bg`
+- **Themeable via** 31 parts, 44 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `form-control-label`: `--lr-form-control-required-content`; `marks`: `--lr-slider-mark-bg`; `value`: `--lr-slider-value-color`, `--lr-slider-value-font-family`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -258,7 +258,11 @@ than overriding this runtime value. `--lr-slider-track-bg` (default `var(--lr-co
 `--lr-slider-thumb-bg` (default `var(--lr-color-brand)`), `--lr-slider-thumb-border-color`
 (default `var(--lr-color-surface)`), `--lr-slider-thumb-hover-ring-color` (default
 `var(--lr-color-brand-quiet)`), and `--lr-slider-thumb-active-ring-color` (defaulting through the
-hover ring). Everything else is shared tokens —
+hover ring), plus `--lr-slider-thumb-border-width` (default `var(--lr-border-width-medium)`) and
+`--lr-slider-thumb-shadow` (default `var(--lr-shadow-s)`; the hover and active rings are appended to
+it, so flatten it with `0 0 transparent`, not `none`). The `value` readout takes
+`--lr-slider-value-color` (default `var(--lr-color-text-quiet)`) and `--lr-slider-value-font-family`
+(default `inherit`). Everything else is shared tokens —
 `--lr-space-s`, `--lr-color-border/-brand/-surface/-text-quiet`, `--lr-shadow`,
 `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
@@ -356,3 +360,8 @@ is present for upstream form-surface parity but adds no missing-value constraint
 ---
 
 `labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column, sized by `--lr-form-control-label-inline-size`, `--lr-form-control-label-gap` and `--lr-form-control-label-collapse-inline-size`; every form-control label also reads `--lr-form-control-label-line-height` (default `inherit`). See "Label beside the field: `label-placement`".
+
+Further custom properties:
+
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.

@@ -51,6 +51,7 @@ import { styles } from './empty.styles.js';
  * default density.
  * @cssprop [--lr-empty-icon-size=var(--lr-font-size-3xl)] - Font size of the icon/illustration
  * wrapper at the default density.
+ * @cssprop [--lr-empty-icon-color=var(--lr-color-text-quiet)] - Color of the icon/illustration glyph.
  * @cssprop [--lr-empty-compact-icon-size=var(--lr-font-size-m)] - Font size of the
  * icon/illustration wrapper at the compact density (`size="s"` and below).
  * @cssprop --lr-empty-compact-align - Cross-axis and text alignment used at the compact density

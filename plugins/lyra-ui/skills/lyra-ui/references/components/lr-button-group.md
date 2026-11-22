@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 2 parts, 1 custom property — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 2 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -35,7 +35,9 @@ use `lr-toggle-group`.
 **CSS parts:** `base` (the `role="group"` flex wrapper; wraps within its allocation).
 
 **Themeable custom properties:** `--lr-button-group-gap` (default `var(--lr-space-2xs)`) — gap
-between slotted controls on both axes.
+between slotted controls on both axes. `--lr-button-group-justify` (default `normal`) is the
+`justify-content` of a horizontal group: give the host a width (for example `display: flex` or
+`inline-size: 100%`) and set `space-between` or `space-evenly` to spread the buttons across it.
 
 **Sizing.** The group derives its width from its content and wraps within a constrained
 allocation. The host can shrink to fit the available space. Each control retains its own

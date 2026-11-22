@@ -31,6 +31,11 @@ export const Default: Story = {
   render: () => html`<lr-sequence-playback item-count="10" interval-ms="500"></lr-sequence-playback>`,
 };
 
+/** `full-width` stretches the control across its container and gives the spare width to the range. */
+export const FullWidth: Story = {
+  render: () => html`<lr-sequence-playback full-width with-value item-count="10" interval-ms="500"></lr-sequence-playback>`,
+};
+
 /** `focus()` targets the primary play/pause control; native and prefixed focus listeners each
  * receive exactly one notification. */
 export const ProgrammaticFocus: Story = {

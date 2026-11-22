@@ -85,6 +85,13 @@ Set `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, 
 `--lr-form-control-label-color` on a control or a containing form. These tokens override the label’s component defaults. For example, an input label uses
 `--lr-font-size-md-sm`, while checkbox-group and radio-group labels follow their control’s size tier.
 Set the three tokens on a form to give its field and group labels the same typography.
+`--lr-form-control-label-text-align` and `--lr-form-control-label-text-transform` (both default
+`inherit`) align and transform the same labels. A label above its field sits
+`--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`) from it in `lr-input`,
+`lr-textarea`, `lr-select`, `lr-combobox`, `lr-date-input`, `lr-time-input`, `lr-phone-input`,
+`lr-signature-pad`, `lr-locale-picker`, `lr-file-input` and the catalog pickers, including a
+`label-placement="start"` row once it collapses; `--lr-form-control-label-gap` stays the
+start-placement column gap.
 
 ## Hiding the label visually: `label-display`
 
@@ -1085,6 +1092,13 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 `--lr-form-control-transition` (default `none`) is the shared opt-in `transition` for the field's border and halo; see the shared form-control tokens.
 
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
+
 ## `lr-select`
 
 `labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in
@@ -1659,6 +1673,12 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 `--lr-form-control-focus-outline` (default the standard focus ring) replaces the trigger's keyboard outline, `--lr-form-control-transition` (default `none`) is the shared opt-in border and halo `transition`, `--lr-select-open-shadow` (default `--lr-form-control-focus-shadow`) is the halo while the listbox is open, and `--lr-form-control-label-line-height` (default `inherit`) sets the label line height.
 
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
+
 ## `lr-date-picker` / `lr-date-input` (+ `calendar-core.ts`)
 
 Style the `lr-date-input` label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
@@ -2075,6 +2095,7 @@ set. If it forces a row below its target size, the action overflows instead of s
 
 The mapped `--show-duration` and `--hide-duration` hooks independently retime the popup's enter
 and exit transitions; both default to `var(--lr-transition-fast)`. Clear and calendar action
+resting colour is `--lr-date-input-action-color` (default `var(--lr-color-text-quiet)`); their
 state hooks are `--lr-date-input-action-hover-color`, `--lr-date-input-action-hover-bg`, and
 `--lr-date-input-action-hover-radius` (defaults: text, transparent, and the input radius), plus
 `--lr-date-input-action-active-color`, `--lr-date-input-action-active-bg`, and
@@ -2213,6 +2234,13 @@ and `dateTimeFormat(locale, options)`.
   `var(--lr-color-border)`, or `transparent` under `filled`.
 - `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` while the row
   holds focus. Default: `none`. Additive — the focused brand border is never replaced by it.
+
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
 ---
 
@@ -2479,6 +2507,13 @@ including when that allocation shrinks after the content renders.
 
 The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.
 
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
+
 ## `lr-button`
 
 Renders a native `<button>` or, with a safe `href`, a native `<a>`. Submit/reset use the
@@ -2716,6 +2751,13 @@ hover and press. For removed historical tokens, see the [release history archive
 own width; override it to `auto` for a compact inline composition. `appearance="link"` shrinks to
 its text by default but honours an explicitly set `--lr-button-width`, so a full-width link-look
 row is `style="inline-size: 100%; --lr-button-width: 100%"` on the host.
+
+`--lr-button-line-height` (default `inherit`) sets the internal button's line height in every
+appearance. For `appearance="link"`, `--lr-button-link-text-decoration` (default `underline`) is the
+resting decoration and `--lr-button-link-hover-text-decoration` (default `underline`) the enabled
+hover one, so `--lr-button-link-text-decoration: none` alone gives an underline on hover only.
+`--lr-button-link-min-height` (default `0`) floors the link's block size, for example
+`var(--lr-size-24px)` for a tappable inline link.
 
 **Long labels.** Set `wrap` to let the label break onto several lines instead of overriding
 `::part(base)` or `::part(label)` white-space; without it the label stays on one line and
@@ -3102,7 +3144,7 @@ them leaves rendering unchanged.
 
 ## `lr-input`
 
-Field text can use tabular figures with `--lr-input-font-variant-numeric: tabular-nums` (default `inherit`); `lr-number-input` shares the sheet and honours it. Every form-control label also reads `--lr-form-control-label-line-height` (default `inherit`) beside the size, weight and colour tokens.
+Field text can use tabular figures with `--lr-input-font-variant-numeric: tabular-nums` (default `inherit`); `lr-number-input` shares the sheet and honours it. `--lr-input-line-height` (default `inherit`) sets the field text line height. Numeric content (`type="number"`, and `lr-number-input` in either form) renders left to right so digits and signs keep their order; `--lr-input-number-direction` (default `ltr`) changes that inline direction, for example `rtl` to start the number at the right edge of a right-to-left form. The component never sets `dir` itself. Every form-control label also reads `--lr-form-control-label-line-height` (default `inherit`) beside the size, weight and colour tokens.
 
 `labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in
 an inline-start column, sized by `--lr-form-control-label-inline-size` (default `30%`) and
@@ -3569,6 +3611,12 @@ first field's, referenced here by id.
 
 - `click()` — Activates the internal input.
 
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
+
 ## `lr-number-input`
 
 Inherits `lr-input`'s `label-placement` attribute and its label-column tokens
@@ -3769,6 +3817,14 @@ The exact-320px RTL story keeps long label/hint copy and both fixed-size stepper
 <a id="date-and-time-controls"></a>
 
 `--lr-form-control-label-line-height` (default `inherit`) sets the label line height, and `--lr-input-font-variant-numeric` (default `inherit`; for example `tabular-nums`) sets the field text's numeric figures, shared with `lr-input`.
+
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
+- `--lr-input-line-height` (default `inherit`): Line height of the native input text.
+- `--lr-input-number-direction` (default `ltr`): Inline direction of numeric content (`type="number"`), which renders left-to-right by default so digits and signs keep their order. Set `rtl` to start the number at the right edge in a right-to-left layout. Set `tabular-nums` so digits share one width and a column of values lines up; `lr-number-input` shares the same field styles and honours it too.
 
 ## `lr-time-input`
 
@@ -3980,6 +4036,13 @@ ancestor to change every unset time input beneath it.
 </script>
 ```
 
+Further custom properties:
+
+- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+
 ## `lr-native-time-input`
 
 Inherits `lr-input`'s `label-placement` attribute and its label-column tokens
@@ -4079,6 +4142,14 @@ entry for the flush and cancellation rules.
 ---
 
 `--lr-form-control-label-line-height` (default `inherit`) sets the label line height, and `--lr-input-font-variant-numeric` (default `inherit`; for example `tabular-nums`) sets the field text's numeric figures, shared with `lr-input`.
+
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
+- `--lr-input-line-height` (default `inherit`): Line height of the native input text.
+- `--lr-input-number-direction` (default `ltr`): Inline direction of numeric content (`type="number"`), which renders left-to-right by default so digits and signs keep their order. Set `rtl` to start the number at the right edge in a right-to-left layout. Set `tabular-nums` so digits share one width and a column of values lines up; `lr-number-input` shares the same field styles and honours it too.
 
 ## `lr-phone-input`
 
@@ -4403,6 +4474,13 @@ import "@aceshooting/lyra-ui/components/media/flag/flag-peer.js";
 <a id="time-range-controls"></a>
 
 The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.
+
+Further custom properties:
+
+- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
 
 ## `lr-time-range`
 
@@ -5650,7 +5728,11 @@ than overriding this runtime value. `--lr-slider-track-bg` (default `var(--lr-co
 `--lr-slider-thumb-bg` (default `var(--lr-color-brand)`), `--lr-slider-thumb-border-color`
 (default `var(--lr-color-surface)`), `--lr-slider-thumb-hover-ring-color` (default
 `var(--lr-color-brand-quiet)`), and `--lr-slider-thumb-active-ring-color` (defaulting through the
-hover ring). Everything else is shared tokens —
+hover ring), plus `--lr-slider-thumb-border-width` (default `var(--lr-border-width-medium)`) and
+`--lr-slider-thumb-shadow` (default `var(--lr-shadow-s)`; the hover and active rings are appended to
+it, so flatten it with `0 0 transparent`, not `none`). The `value` readout takes
+`--lr-slider-value-color` (default `var(--lr-color-text-quiet)`) and `--lr-slider-value-font-family`
+(default `inherit`). Everything else is shared tokens —
 `--lr-space-s`, `--lr-color-border/-brand/-surface/-text-quiet`, `--lr-shadow`,
 `--lr-focus-ring-width/-color/-offset`, `--lr-opacity-disabled`.
 
@@ -5748,6 +5830,11 @@ is present for upstream form-surface parity but adds no missing-value constraint
 ---
 
 `labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column, sized by `--lr-form-control-label-inline-size`, `--lr-form-control-label-gap` and `--lr-form-control-label-collapse-inline-size`; every form-control label also reads `--lr-form-control-label-line-height` (default `inherit`). See "Label beside the field: `label-placement`".
+
+Further custom properties:
+
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
 ## `lr-radio`
 
@@ -6227,6 +6314,13 @@ control cannot be edited and restores the current intrinsic result when editing 
 
 The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.
 
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
+
 ## `lr-radio-group`
 
 `label-placement="start"` (default `top`) puts the label in an inline-start column, shared with the other fields (see "Label beside the field"); the toolbar slot then follows the options.
@@ -6348,6 +6442,12 @@ group has no selected radio. `focus()` moves focus to the selected (or first ena
 fieldset disablement, so the group behaves like one native control.
 
 `labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column, sized by `--lr-form-control-label-inline-size`, `--lr-form-control-label-gap` and `--lr-form-control-label-collapse-inline-size`; every form-control label also reads `--lr-form-control-label-line-height` (default `inherit`). See "Label beside the field: `label-placement`".
+
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
 ## `lr-checkbox-group`
 
@@ -6477,6 +6577,12 @@ a `.value=${...}` binding on first render) is applied once they arrive.
   `['on']` cannot identify which default-valued occurrence was intended.
 
 `labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column, sized by `--lr-form-control-label-inline-size`, `--lr-form-control-label-gap` and `--lr-form-control-label-collapse-inline-size`; every form-control label also reads `--lr-form-control-label-line-height` (default `inherit`). See "Label beside the field: `label-placement`".
+
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
 ## `lr-token-input`
 
@@ -6720,6 +6826,13 @@ floor that input keeps once tokens have consumed the row), and `--lr-token-input
 
 The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.
 
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
+
 ## `lr-code-editor`
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
@@ -6885,6 +6998,13 @@ the library, including `lr-table`,
 **Additional API surface:** `click()` activates the internal editing surface.
 
 The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.
+
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
 ## `lr-color-picker`
 
@@ -7256,6 +7376,13 @@ of authoring `positioning-strategy`/`hoist` on each instance.
 
 The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.
 
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
+
 ## `lr-emoji-picker`
 
 Under a coarse pointer the editable text is floored at `--lr-form-control-touch-font-size-min`
@@ -7468,6 +7595,12 @@ those through `registerLyraLocale()` or `.strings`. An unknown future group id u
   field while it is focused. One name for every field-shaped control in the library, so a halo is
   configured once instead of per component; additive to the existing focus outline. Default: `none`.
 
+Further custom properties:
+
+- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
+
 ## `lr-rubric-form`
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
@@ -7596,9 +7729,19 @@ paint use `--lr-rubric-form-submit-hover-bg`, `--lr-rubric-form-submit-hover-bor
 and color-mix treatments as fallbacks. Disabled actions still dim through `--lr-opacity-disabled`,
 the same library-wide token every other disabled control reads.
 
+Further custom properties:
+
+- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
+
 ## `lr-locale-picker`
 
 `--lr-locale-picker-trigger-radius` rounds the trigger only; unset it follows `--lr-locale-picker-radius`, which keeps rounding the listbox and options.
+
+`--lr-locale-picker-listbox-min-inline-size` (default `var(--lr-size-12rem)`) is the options
+popover's minimum inline size, still capped by the viewport, the space beside the trigger and the
+popover's `28rem` maximum.
 
 Under a coarse pointer the editable text is floored at `--lr-form-control-touch-font-size-min`
 (default `16px`; `0px` opts out) so mobile Safari does not zoom on focus; see "Touch font floor".
@@ -7929,6 +8072,13 @@ only once it has registered the requested messages; it must not change the activ
 - `--lr-locale-picker-option-selected-color` — Selected option text. Default: `var(--lr-color-brand)`.
 
 The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.
+
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
 ## Consumer integration notes
 
@@ -8572,6 +8722,10 @@ preserve their shared part names and inherit shared form-control and surface tok
 <lr-currency-picker name="currency" label="Display currency" value="EUR"></lr-currency-picker>
 ```
 
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+
 ## Currency catalog and rate helpers
 
 - **`currency-helpers`** — Registration-free data helpers.
@@ -8758,6 +8912,10 @@ including RTL and dark themes. `--lr-form-control-invalid-border-color` themes t
 <lr-country-picker name="country" label="Country" searchable></lr-country-picker>
 ```
 
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+
 ## `lr-time-zone-picker`
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
@@ -8817,6 +8975,10 @@ in both modes, following the country picker's event contract.
 <lr-time-zone-picker name="zone" label="Time zone" value="UTC" searchable></lr-time-zone-picker>
 ```
 
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+
 ## `lr-unit-picker`
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
@@ -8873,6 +9035,10 @@ in both modes, following the country picker's event contract.
 </script>
 <lr-unit-picker name="unit" label="Measurement unit" value="meter" searchable></lr-unit-picker>
 ```
+
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
 
 ## Country, time-zone and unit catalog helpers
 
@@ -9049,3 +9215,10 @@ Color-picker's `lr-input` includes `{ value }`. Combobox filter typing keeps its
 contract; typed value events describe committed selections, not the filter query.
 
 The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.
+
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.

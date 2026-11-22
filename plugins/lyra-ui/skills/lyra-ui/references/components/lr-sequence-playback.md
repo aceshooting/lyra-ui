@@ -46,6 +46,8 @@ keeps its own purpose name. A whitespace-only or empty host label leaves the hos
   Mutating playback inside the callback discards its result without immediately retrying it.
 - `withValue: boolean = false` (attribute `with-value`) — show a non-live position readout below
   the range. Hidden by default; it duplicates the range's text and is `aria-hidden`.
+- `fullWidth: boolean = false` (attribute `full-width`, reflected) — stretches the control across its
+  container, the range taking the spare width; off by default, so it keeps its content width.
 - `hidden: boolean = false` (reflected; re-declared over the native IDL property so Lit's
   change-tracking sees it and auto-pauses on `hidden = true`)
 

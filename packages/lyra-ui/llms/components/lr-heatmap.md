@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 25 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 25 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -703,7 +703,10 @@ The legend row reads `--lr-heatmap-legend-font-size` (default `var(--lr-font-siz
 shorthand, default `none`; drawn on the legend edge facing the grid: its block start under the
 default bottom placement, its block end under `legendPlacement = 'top'`) and
 `--lr-heatmap-legend-swatch-size` (default `var(--lr-size-0-6rem)`, stop swatches and annotation
-rings); the continuous ramp reads `--lr-heatmap-legend-ramp-inline-size` (default
+rings), `--lr-heatmap-legend-swatch-radius` (default `var(--lr-radius-xs)`, a `legendStops` swatch's
+corners), `--lr-heatmap-legend-justify` (default `normal`, the row's `justify-content`) and
+`--lr-heatmap-legend-offset` (default `var(--lr-space-xs)`, the distance between the grid and the
+legend on whichever edge `legend-placement` puts it); the continuous ramp reads `--lr-heatmap-legend-ramp-inline-size` (default
 `var(--lr-size-6rem)`), `--lr-heatmap-legend-ramp-block-size` (default `var(--lr-size-0-5rem)`)
 and `--lr-heatmap-legend-ramp-radius` (default `var(--lr-size-2px)`). The suffixes match the chart
 and map legend tokens. Also consumes `--lr-color-text-quiet` (axis label

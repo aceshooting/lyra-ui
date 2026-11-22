@@ -109,6 +109,12 @@ export const styles = css`
     font-family: var(--lr-input-font-family, inherit);
     font-variant-numeric: var(--lr-input-font-variant-numeric, inherit);
     font-size: var(--lr-input-font-size, var(--_lr-input-font-size-default));
+    line-height: var(--lr-input-line-height, inherit);
+  }
+  /* Numeric content renders dir="ltr" so digits and signs keep their order; the token lets an
+     application choose the inline direction (and with it the start edge) of that content. */
+  [part='input'][dir='ltr'] {
+    direction: var(--lr-input-number-direction, ltr);
   }
   :host([dir='ltr' i]) [part='input'][dir='auto'] {
     direction: ltr;

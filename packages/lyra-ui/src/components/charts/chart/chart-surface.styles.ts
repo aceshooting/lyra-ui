@@ -56,6 +56,7 @@ export const chartSurfaceStyles = css`
     display: flex;
     flex-wrap: wrap;
     gap: var(--lr-chart-legend-gap, var(--lr-space-xs));
+    justify-content: var(--lr-chart-legend-justify, normal);
     min-inline-size: 0;
     max-inline-size: 100%;
     padding-block: var(--lr-chart-legend-padding, var(--lr-space-xs));
@@ -79,6 +80,7 @@ export const chartSurfaceStyles = css`
     background: transparent;
     color: var(--lr-chart-legend-color, var(--_lr-chart-legend-color));
     font: inherit;
+    line-height: var(--lr-chart-legend-item-line-height, inherit);
     text-align: start;
     overflow-wrap: anywhere;
     cursor: pointer;

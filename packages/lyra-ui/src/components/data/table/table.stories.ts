@@ -1101,3 +1101,37 @@ export const StackedOnNarrowAllocations: Story = {
     <lr-table aria-label="Accounts" stack="auto" .columns=${columns} .rows=${rows} .rowKey=${(r: DemoRow) => r.id}></lr-table>
   </div>`,
 };
+
+const statusColumns: TableColumn<DemoRow>[] = [
+  { key: 'name', label: 'Name', rowHeader: true, cell: (r) => r.name },
+  { key: 'score', label: 'Score', sortable: true, align: 'end', cell: (r) => r.score },
+];
+
+/** `stack-header="sortable"` keeps only the sortable headers above the cards; the caption spans them. */
+export const StackedWithCompactSortStrip: Story = {
+  render: () => html`<div style="inline-size: 390px">
+    <lr-table caption="Quarterly accounts" stack="always" stack-header="sortable"
+      .columns=${statusColumns} .rows=${rows} .rowKey=${(r: DemoRow) => r.id}></lr-table>
+  </div>`,
+};
+
+/** `rowHeader` names each row from its first cell, `without-header-row` drops the column headings,
+ *  and `rowAttributes` adds a `data-*` hook for row styling. */
+export const RowHeadersWithoutHeaderRow: Story = {
+  render: () => html`<lr-table caption="Account summary" without-header-row
+    .columns=${statusColumns} .rows=${rows} .rowKey=${(r: DemoRow) => r.id}
+    .rowAttributes=${(r: DemoRow) => ({ 'data-tier': r.score >= 80 ? 'high' : 'standard' })}></lr-table>`,
+};
+
+const wrapColumns: TableColumn<DemoRow>[] = [
+  { key: 'id', label: 'Reference', wrap: 'nowrap', cell: (r) => `ACC-2026-${r.id.toUpperCase()}-0001` },
+  { key: 'name', label: 'Notes', wrap: 'wrap', width: '8rem', cell: (r) => `${r.name}-account-review-notes-without-spaces` },
+  { key: 'score', label: 'Score', sortable: true, align: 'end', cell: (r) => r.score },
+];
+
+/** `columns[].wrap` per column, with the frame, line-height and sort-icon alignment tokens. */
+export const ColumnWrapAndFrameTokens: Story = {
+  render: () => html`<lr-table aria-label="Accounts" sort-key="score"
+    style="--lr-table-border: var(--lr-border-width-thin) solid var(--lr-color-border); --lr-table-cell-line-height: 1.3; --lr-table-sort-icon-vertical-align: text-bottom"
+    .columns=${wrapColumns} .rows=${rows} .rowKey=${(r: DemoRow) => r.id}></lr-table>`,
+};

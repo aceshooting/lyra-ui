@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -72,3 +72,7 @@ in both modes, following the country picker's event contract.
 </script>
 <lr-time-zone-picker name="zone" label="Time zone" value="UTC" searchable></lr-time-zone-picker>
 ```
+
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.

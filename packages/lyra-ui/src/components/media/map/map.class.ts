@@ -293,6 +293,9 @@ export type LyraMapLegendPlacement = 'top' | 'bottom' | 'start' | 'end' | 'top-s
 /** Which native control corners the legend clears: the whole top and bottom rows, only its own column's corners, or none (placed from the map edge). */
 export type LyraMapLegendClearance = 'row' | 'corner' | 'none';
 const LEGEND_CLEARANCE = literalSetConverter<LyraMapLegendClearance>(['row', 'corner', 'none'], 'row');
+/** Order legend rows fill the `--lr-map-legend-columns` columns: across each row, or down each column. */
+export type LyraMapLegendFlow = 'row' | 'column';
+const LEGEND_FLOW = literalSetConverter<LyraMapLegendFlow>(['row', 'column'], 'row');
 const LEGEND_PLACEMENT = literalSetConverter<LyraMapLegendPlacement>(['top', 'bottom', 'start', 'end', 'top-start', 'top-end', 'bottom-start', 'bottom-end'], 'bottom-start');
 
 const LEGEND_CONTROL_ROLE = literalSetConverter<LyraMapLegendControlRole>(
@@ -2242,6 +2245,8 @@ export interface LyraMapEventMap {
  * @cssprop [--lr-map-attribution-font-family=inherit] - Font family of the attribution text.
  * @cssprop [--lr-map-attribution-font-size=var(--lr-font-size-xs)] - Font size of the attribution text.
  * @cssprop [--lr-map-attribution-line-height=inherit] - Line height of the attribution text.
+ * @cssprop [--lr-map-attribution-margin=var(--lr-map-control-gap)] - Margin shorthand of the
+ *   attribution control, apart from the other controls' shared `--lr-map-control-gap`.
  * @cssprop [--lr-map-attribution-toggle-size=var(--lr-map-control-size)] - Block and inline size of
  *   the compact attribution toggle, and the room the compact control reserves for it. Unset, it
  *   follows `--lr-map-control-size`, then `--lr-icon-button-size`.
@@ -2445,6 +2450,16 @@ export interface LyraMapEventMap {
  *   interactive `legend-toggle` row. Its minimum box stays the `--lr-icon-button-size` hit area.
  * @cssprop [--lr-map-legend-disclosure-padding=var(--lr-size-2px) var(--lr-space-xs)] - Padding of
  *   the `legend-disclosure` button. Its minimum box stays the `--lr-icon-button-size` hit area.
+ * @cssprop [--lr-map-legend-toggle-min-height=var(--lr-icon-button-size)] - Minimum block size of an
+ *   interactive `legend-toggle` row, never below `--lr-size-24px` (the WCAG 2.5.8 target minimum).
+ * @cssprop [--lr-map-legend-disclosure-min-height=var(--lr-icon-button-size)] - Minimum block size
+ *   of the `legend-disclosure` button, never below `--lr-size-24px`.
+ * @cssprop [--lr-map-legend-toggle-font-weight=inherit] - Font weight of an interactive `legend-toggle` row.
+ * @cssprop [--lr-map-legend-disclosure-font-weight=var(--lr-font-weight-semibold)] - Font weight of
+ *   the `legend-disclosure` button.
+ * @cssprop [--lr-map-legend-group-heading-color=var(--lr-color-text-quiet)] - Text color of a
+ *   `legend-group-heading`.
+ * @cssprop [--lr-map-legend-group-heading-padding=0] - Padding shorthand of a `legend-group-heading`.
  * @cssprop [--lr-map-legend-radius=var(--lr-radius)] - Corner radius of the legend panel.
  * @cssprop [--lr-map-legend-bg=var(--lr-color-surface)] - Fill of the legend panel.
  * @cssprop [--lr-map-legend-shadow=var(--lr-shadow-m)] - Shadow of the legend panel.
@@ -3740,6 +3755,26 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.requestUpdate('legendClearance', old);
   }
   private _legendClearance: LyraMapLegendClearance = 'row';
+
+  /**
+   * Order the legend rows fill `--lr-map-legend-columns`. `'row'` (the default) places them across
+   * each row of an equal-column grid. `'column'` fills each column top to bottom before the next,
+   * so a sorted key reads down; each group heading then spans every column above its own rows,
+   * which continue the column flow. In `'column'` flow `--lr-map-legend-group-columns` does not
+   * apply. Unsupported values normalize to `'row'`. Reflects as the `legend-flow` attribute.
+   */
+  @property({ converter: LEGEND_FLOW, attribute: 'legend-flow', reflect: true })
+  get legendFlow(): LyraMapLegendFlow {
+    return this._legendFlow;
+  }
+  set legendFlow(next: LyraMapLegendFlow) {
+    const normalized = LEGEND_FLOW.normalizeReflected(this, 'legend-flow', next);
+    const old = this._legendFlow;
+    if (old === normalized) return;
+    this._legendFlow = normalized;
+    this.requestUpdate('legendFlow', old);
+  }
+  private _legendFlow: LyraMapLegendFlow = 'row';
 
   /**
    * Whether a `legendCollapsible` panel is expanded. Defaults **open**, so adding only

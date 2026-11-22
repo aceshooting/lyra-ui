@@ -998,7 +998,9 @@ use `lr-toggle-group`.
 **CSS parts:** `base` (the `role="group"` flex wrapper; wraps within its allocation).
 
 **Themeable custom properties:** `--lr-button-group-gap` (default `var(--lr-space-2xs)`) — gap
-between slotted controls on both axes.
+between slotted controls on both axes. `--lr-button-group-justify` (default `normal`) is the
+`justify-content` of a horizontal group: give the host a width (for example `display: flex` or
+`inline-size: 100%`) and set `space-between` or `space-evenly` to spread the buttons across it.
 
 **Sizing.** The group derives its width from its content and wraps within a constrained
 allocation. The host can shrink to fit the available space. Each control retains its own
@@ -1981,6 +1983,12 @@ string; label: string; icon?: unknown; disabled?: boolean }`; `icon` renders as 
   action or accessible name. Input is read through a realm-neutral bounded schema snapshot (at most
   256 positions); malformed/hostile entries are skipped, later duplicate values use
   first-valid-value-wins, and the frozen returned array/records never alias caller-owned objects.
+- `iconPlacement: LyraSegmentedIconPlacement = 'start'` (attribute `icon-placement`, reflected once
+  set) — `'start' | 'end'`, the logical side of the label each item's `icon` renders on; unsupported
+  values normalize to `'start'`.
+- `fullWidth: boolean = false` (attribute `full-width`, reflected) — stretches the control across
+  its container and grows the segments to share the spare width, in every `layout`; a `'scroll'` row
+  whose segments no longer fit still scrolls.
 - `value: string = ''` — the currently selected item's `value`.
 - `label: string = ''` — field caption and accessible-name fallback. Property-only naming keeps
   its existing `aria-label` value on the internal `role="radiogroup"`.
@@ -2054,7 +2062,8 @@ label-click action, form association or validation API.
 **CSS parts:** `form-control` (caption, track and hint wrapper), `form-control-label` (caption),
 `hint` (supporting text), `base` (the `role="radiogroup"` root and horizontal scroll owner),
 `segment` (a single `role="radio"` button), `segment-icon` (an optional inert, `aria-hidden`
-decorative leading icon), `segment-label` (the segment's label text).
+decorative icon, before the label or after it with `icon-placement="end"`), `segment-label` (the
+segment's label text).
 
 **Themeable custom properties:** `--lr-scroll-fade-size` (default `2rem`) — width of the mask fade
 at each horizontal scroll edge of the track, painted only while the track actually overflows (a row
@@ -2158,6 +2167,13 @@ resolves.
   matching its own current absence of a background.
 - `--lr-segmented-track-border-color` — Border color of the `base` track, which previously read
   `--lr-color-border` as a literal with no override hook. Default: `var(--lr-color-border)`.
+
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
 ---
 
@@ -3641,7 +3657,9 @@ window.
 
 The `lr-menu-label` styling hooks include `--lr-menu-label-color`, `--lr-menu-label-padding`, and
 `--lr-menu-label-font-size` (default `var(--lr-font-size-sm)`), `--lr-menu-label-font-weight`
-(default `var(--lr-font-weight-semibold)`) and `--lr-menu-label-letter-spacing` (default `normal`).
+(default `var(--lr-font-weight-semibold)`) and `--lr-menu-label-letter-spacing` (default `normal`),
+plus `--lr-menu-label-line-height` (default `var(--lr-line-height-snug)`),
+`--lr-menu-label-font-family` and `--lr-menu-label-text-transform` (both default `inherit`).
 
 A non-interactive section heading inside `<lr-menu>`'s default slot. Mirrors `sl-menu-label`.
 
@@ -4471,6 +4489,9 @@ var(--lr-transition-fast)`) replaces the hover transition. The `fill-body` attri
 (`fillBody: boolean = false`, reflected) makes `[part="body"]` a column flex box that fills the
 card's spare height, with `--lr-card-body-gap` (default `0`) between its children, so one child can
 pin itself to the bottom with `margin-block-start: auto` in an equal-height grid.
+`--lr-card-body-justify` and `--lr-card-body-align` (both default `normal`) are that column's
+`justify-content` and `align-items`, for example `center` to centre short content.
+`--lr-card-min-block-size` (default `auto`) floors the card surface, linked cards included.
 
 ```html
 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--lr-space-m)">
@@ -5034,6 +5055,9 @@ Summary interaction paint uses `--lr-details-summary-hover-bg` (default
 `color-mix(...)`); `--lr-details-summary-hover-color` (default `var(--lr-details-summary-color)`)
 recolors the summary text while hovered or pressed. All eight are inheritable inline-fallback hooks, so they isolate one disclosure
 theme without requiring shared-token changes or shadow-part selectors.
+`lr-details` also takes `--lr-details-icon-color` (default `inherit`, so the icon follows the summary
+text including its hover colour) and `--lr-details-icon-size` (default `var(--lr-size-1rem)`, the
+built-in chevron only; a slotted `expand-icon`/`collapse-icon` keeps its own size).
 
 ```html
 <lr-details summary="Advanced options">Panel content</lr-details>
@@ -5499,7 +5523,11 @@ baked-in label text is visible or screen-reader-only).
 flex-basis is themeable via `--lr-filter-bar-field-basis` (default `var(--lr-size-12rem)`).
 `--lr-filter-bar-gap` (default `var(--lr-space-s)`) themes the gap between filter fields, the
 `end` slot, the reset button, and the loading status in the `controls` row. Both are byte-identical
-to the previous hardcoded values when unset.
+to the previous hardcoded values when unset. `--lr-filter-bar-control-height` gives every filter
+type (select, combobox, date, text and checkbox-menu) and the reset button one control height at any
+`size`, and `--lr-filter-bar-control-font-size` one field font size; both are unset by default, so
+each control keeps its own tier and any value set on an ancestor through that control's own token. A
+control's own font token set on an ancestor still wins over `--lr-filter-bar-control-font-size`.
 
 The reset button and the `end` slot form one wrapping action group, and the `end` wrapper reserves the
 same trailing validation spacer as a field, so slotted end actions sit on the field frames' bottom

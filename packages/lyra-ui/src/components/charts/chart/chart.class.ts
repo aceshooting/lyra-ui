@@ -836,6 +836,9 @@ function isDenseChartSize(size: LyraSize): boolean {
  * @cssprop [--lr-chart-legend-item-padding=var(--lr-space-2xs)] - Padding of a legend visibility button.
  * @cssprop [--lr-chart-legend-swatch-size=var(--lr-space-s)] - Legend swatch inline and block size.
  * @cssprop [--lr-chart-legend-swatch-radius=var(--lr-radius-xs)] - Legend swatch corner radius.
+ * @cssprop [--lr-chart-legend-justify=normal] - `justify-content` of the legend row, for example
+ *   `center` or `flex-end`.
+ * @cssprop [--lr-chart-legend-item-line-height=inherit] - Line height of each legend item.
  * @cssprop [--lr-chart-band-opacity=0.2] - Fill alpha (0-1) of a `type: 'band'` series and its
  *   legend swatch. Resolved via `getComputedStyle` on every draw. A band's own `bandOpacity` wins.
  * @cssprop [--lr-chart-legend-item-hover-bg=var(--lr-color-brand-quiet)] - Hover background of a

@@ -9,8 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 19 parts, 52 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `canvas`: `--lr-chart-canvas-hover-outline-color`, `--lr-chart-canvas-hover-outline-width`; `legend-swatch`: `--lr-chart-pattern-step`
+- **Themeable via** 19 parts, 54 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `canvas`: `--lr-chart-canvas-hover-outline-color`, `--lr-chart-canvas-hover-outline-width`; `center`: `--lr-chart-legend-justify`; `legend-swatch`: `--lr-chart-pattern-step`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -822,9 +822,12 @@ padding, default `var(--lr-space-xs)`), `--lr-chart-legend-font-size` (default `
 `--lr-chart-legend-item-min-height` (default `var(--lr-icon-button-size)`; lowering it below the
 shared hit-area floor trades pointer target size for density), `--lr-chart-legend-item-padding`
 (default `var(--lr-space-2xs)`), `--lr-chart-legend-swatch-size` (default `var(--lr-space-s)`) and
-`--lr-chart-legend-swatch-radius` (default `var(--lr-radius-xs)`), shared by every chart rendering
+`--lr-chart-legend-swatch-radius` (default `var(--lr-radius-xs)`), `--lr-chart-legend-justify`
+(default `normal`, the legend row's `justify-content`) and `--lr-chart-legend-item-line-height`
+(default `inherit`), shared by every chart rendering
 this legend (`lr-chart`, its typed aliases such as `lr-doughnut-chart`, and `lr-box-plot`);
-`lr-lite-chart` honors the same gap, padding, font-size, swatch-size and swatch-radius names
+`lr-lite-chart` honors the same gap, padding, font-size, swatch-size, swatch-radius, justify
+(default `center`) and item line-height names
 with its own defaults (`var(--lr-space-s)` gap, `var(--lr-font-size-xs)` text, `var(--lr-size-0-7em)`
 swatch); `--lr-chart-band-opacity` (default `0.2`) sets the fill alpha of `type: 'band'` series;
 `--lr-chart-data-table-button-hover-bg` / `--lr-chart-data-table-button-active-bg`,

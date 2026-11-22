@@ -43,6 +43,7 @@ export const styles = css`
        word-cloud and context-meter; card.class.ts advertises clickable grid tiles. box-sizing
        keeps the border inside that height. */
     block-size: 100%;
+    min-block-size: var(--lr-card-min-block-size, auto);
     box-sizing: border-box;
     color: inherit;
     text-decoration: none;
@@ -93,6 +94,7 @@ export const styles = css`
     max-inline-size: 100%;
     flex-direction: column;
     block-size: 100%;
+    min-block-size: var(--lr-card-min-block-size, auto);
     box-sizing: border-box;
     color: inherit;
     text-decoration: none;
@@ -269,6 +271,8 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     gap: var(--lr-card-body-gap, 0);
+    justify-content: var(--lr-card-body-justify, normal);
+    align-items: var(--lr-card-body-align, normal);
     min-block-size: 0;
   }
   [part="footer"] {

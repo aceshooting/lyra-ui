@@ -165,7 +165,7 @@ export const styles = css`
     display: flex;
     flex-wrap: wrap;
     gap: var(--lr-chart-legend-gap, var(--lr-space-s));
-    justify-content: center;
+    justify-content: var(--lr-chart-legend-justify, center);
     flex: 0 0 auto;
     padding-block: var(--lr-chart-legend-padding, var(--lr-space-xs));
   }
@@ -177,6 +177,7 @@ export const styles = css`
     overflow-wrap: anywhere;
     gap: var(--lr-space-2xs);
     font-size: var(--lr-chart-legend-font-size, var(--lr-font-size-xs));
+    line-height: var(--lr-chart-legend-item-line-height, inherit);
     color: var(--lr-chart-legend-color, var(--_lr-chart-legend-color));
   }
   [part='legend-swatch'] {

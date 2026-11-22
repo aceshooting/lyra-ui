@@ -343,6 +343,8 @@ export type LyraSelectInputEvent<Multiple extends boolean = boolean> =
  *   `label-placement="start"`.
  * @cssprop [--lr-form-control-label-gap=var(--lr-space-m)] - Space between the label column and
  *   the field while `label-placement="start"`.
+ * @cssprop [--lr-form-control-label-block-gap=var(--lr-space-xs)] - Space between a label above
+ *   the field and the field, in top placement and once a `label-placement="start"` row collapses.
  * @cssprop [--lr-form-control-label-collapse-inline-size=var(--lr-size-20rem)] - Control width
  *   below which `label-placement="start"` returns the label above the field.
  * @cssprop [--lr-form-control-invalid-border-color=var(--lr-color-danger)] - Resting border while the
@@ -353,6 +355,8 @@ export type LyraSelectInputEvent<Multiple extends boolean = boolean> =
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=inherit] - Text color of the field label.
  * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
+ * @cssprop [--lr-form-control-label-text-align=inherit] - Text alignment of the field label.
+ * @cssprop [--lr-form-control-label-text-transform=inherit] - Text transform of the field label.
  * @csspart form-control-label - The `<label>` element.
  * @csspart label - Wrapper around the visible label content.
  * @csspart form-control-input - Compatibility name for the control wrapper.

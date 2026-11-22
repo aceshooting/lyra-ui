@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 44 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 47 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-stat-gap`, `--lr-stat-padding`; `row`: `--lr-stat-rows-gap`; `rows`: `--lr-stat-rows-gap`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -28,6 +28,14 @@ attributes itself.
 Removing `caption` or `sub` omits the attribute fallback without hiding assigned slot content.
 Removal retains `null` property readback; explicit empty strings remain empty and later supplied
 values render normally.
+
+`truncate: boolean = false` (reflected) keeps the value on one line and ellipsizes what does not
+fit; unset, a long value wraps. `--lr-stat-align` (default `normal`) aligns the vertical tile's
+stacked content: `center` centres the label, value row, icon and trend chips and their text, and
+`start`/`end` work too. `--lr-stat-border-color` (default `var(--lr-color-border-subtle)`, or
+`var(--lr-color-border)` on a linked tile) is the resting edge colour; hover and press keep their
+`--lr-stat-link-*` tokens. `--lr-stat-label-line-height` (default `inherit`) sets the label's line
+height.
 
 **Renamed in 8.0.0 — breaking:** `appearance` is now `frame`. Library-wide, `appearance` means only
 "how a control fills itself" and `frame` means "whether a container draws itself as a bounded card";

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 38 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 41 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `body`: `--lr-dialog-height`; `footer`: `--lr-dialog-height`; `header`: `--lr-dialog-height`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -143,3 +143,9 @@ slide too and the reduced-motion flattening of the shared `--lr-duration-*` toke
 ---
 
 The drawer inherits the dialog's opt-in `fullscreen-narrow` attribute (a viewport narrower than 40rem fills the screen) and the panel sizing tokens `--lr-dialog-max-height`, `--lr-dialog-viewport-inset` and `--lr-dialog-divider-color`, exactly as on `<lr-dialog>`.
+
+Further custom properties:
+
+- `--lr-dialog-body-overflow` (default `auto`): `overflow` of the body region, for example `hidden` when slotted content manages its own scrolling.
+- `--lr-dialog-header-border` (default `var(--lr-border-width-thin) solid var(--lr-dialog-divider-color)`): Border shorthand of the header's bottom rule; `none` removes it. The footer rule keeps `--lr-dialog-divider-color`.
+- `--lr-dialog-heading-line-height` (default `inherit`): Line height of the visible header title.

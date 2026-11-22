@@ -875,9 +875,12 @@ padding, default `var(--lr-space-xs)`), `--lr-chart-legend-font-size` (default `
 `--lr-chart-legend-item-min-height` (default `var(--lr-icon-button-size)`; lowering it below the
 shared hit-area floor trades pointer target size for density), `--lr-chart-legend-item-padding`
 (default `var(--lr-space-2xs)`), `--lr-chart-legend-swatch-size` (default `var(--lr-space-s)`) and
-`--lr-chart-legend-swatch-radius` (default `var(--lr-radius-xs)`), shared by every chart rendering
+`--lr-chart-legend-swatch-radius` (default `var(--lr-radius-xs)`), `--lr-chart-legend-justify`
+(default `normal`, the legend row's `justify-content`) and `--lr-chart-legend-item-line-height`
+(default `inherit`), shared by every chart rendering
 this legend (`lr-chart`, its typed aliases such as `lr-doughnut-chart`, and `lr-box-plot`);
-`lr-lite-chart` honors the same gap, padding, font-size, swatch-size and swatch-radius names
+`lr-lite-chart` honors the same gap, padding, font-size, swatch-size, swatch-radius, justify
+(default `center`) and item line-height names
 with its own defaults (`var(--lr-space-s)` gap, `var(--lr-font-size-xs)` text, `var(--lr-size-0-7em)`
 swatch); `--lr-chart-band-opacity` (default `0.2`) sets the fill alpha of `type: 'band'` series;
 `--lr-chart-data-table-button-hover-bg` / `--lr-chart-data-table-button-active-bg`,
@@ -1407,7 +1410,8 @@ without moving the library-wide ramp; `--lr-chart-legend-side-max` (default
 `--lr-chart-legend-gap` (default `var(--lr-space-s)`), `--lr-chart-legend-padding` (default
 `var(--lr-space-xs)`), `--lr-chart-legend-font-size` (default `var(--lr-font-size-xs)`),
 `--lr-chart-legend-swatch-size` (default `var(--lr-size-0-7em)`) and
-`--lr-chart-legend-swatch-radius` (default `var(--lr-radius-xs)`) restyle the legend without
+`--lr-chart-legend-swatch-radius` (default `var(--lr-radius-xs)`), `--lr-chart-legend-justify`
+(default `center`) and `--lr-chart-legend-item-line-height` (default `inherit`) restyle the legend without
 `::part()` rules; `--lr-lite-chart-selected-outline-color` (default
 `var(--lr-color-brand)`) — the stroke drawn on
 selected `[part='bar']` and `[part='point']` marks whose category index is in `selectedIndices`;
@@ -1579,6 +1583,11 @@ together. The mirrored hooks are `--border-color-1`,
   for bubble radius, and optional `label` for the point-level accessible/event/export label; no
   runtime cast is needed.
 
+Further custom properties:
+
+- `--lr-chart-legend-item-line-height` (default `inherit`): Line height of each legend item.
+- `--lr-chart-legend-justify` (default `normal`): `justify-content` of the legend row, for example `center` or `flex-end`.
+
 ---
 
 ## `lr-histogram`
@@ -1739,6 +1748,11 @@ their semantics, defaults, and gotchas.
   resolved `effectiveLocale`) with an omitted `locale` (or `'auto'`) now resolves to the page's
   active `setLyraLocale()` locale instead of a hardcoded `'en'`, matching `utilities/format.ts`'s
   helpers; an app that never calls `setLyraLocale()` sees no change, and an explicit tag still wins.
+
+Further custom properties:
+
+- `--lr-chart-legend-item-line-height` (default `inherit`): Line height of each legend item.
+- `--lr-chart-legend-justify` (default `normal`): `justify-content` of the legend row, for example `center` or `flex-end`.
 
 ---
 
@@ -1942,6 +1956,11 @@ loads are memoized per page.
   fails closed with a localized, neutral visible error part rather than leaving a blank canvas.
   The transition into that state is announced through the shared document-level light-DOM
   assertive sink.
+
+Further custom properties:
+
+- `--lr-chart-legend-item-line-height` (default `inherit`): Line height of each legend item.
+- `--lr-chart-legend-justify` (default `normal`): `justify-content` of the legend row, for example `center` or `flex-end`.
 
 ---
 

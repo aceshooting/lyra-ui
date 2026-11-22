@@ -168,11 +168,12 @@ export const styles = css`
     block-size: var(--_lr-slider-thumb-block);
     border-radius: 50%;
     background: var(--lr-slider-thumb-bg, var(--lr-color-brand));
-    border: var(--lr-border-width-medium) solid
+    border: var(--lr-slider-thumb-border-width, var(--lr-border-width-medium)) solid
       var(--lr-slider-thumb-border-color, var(--lr-color-surface));
     /* Resting chrome, not an overlay: a knob on its own track sits one step above it, not at the
-       anchored-panel tier. */
-    box-shadow: var(--lr-shadow-s);
+       anchored-panel tier. The hover and press rings below stack on the same elevation. */
+    --_lr-slider-thumb-shadow: var(--lr-slider-thumb-shadow, var(--lr-shadow-s));
+    box-shadow: var(--_lr-slider-thumb-shadow);
     transition: var(--lr-transition-interactive), box-shadow var(--lr-transition-fast);
     transform: translate(-50%, -50%);
     cursor: grab;
@@ -219,12 +220,12 @@ export const styles = css`
      disabled or read-only thumb shows no feedback for a gesture that changes nothing. */
   :host(:not(:disabled):not([readonly])) [part~="thumb"]:hover {
     /* Same elevation tier as the resting thumb -- hover adds the ring, not height. */
-    box-shadow: var(--lr-shadow-s),
+    box-shadow: var(--_lr-slider-thumb-shadow),
       0 0 0 var(--lr-slider-track-thickness, var(--_lr-slider-track-thickness))
         var(--lr-slider-thumb-hover-ring-color, var(--lr-color-brand-quiet));
   }
   :host(:not(:disabled):not([readonly])) [part~="thumb"]:active {
-    box-shadow: var(--lr-shadow-s),
+    box-shadow: var(--_lr-slider-thumb-shadow),
       0 0 0 var(--lr-slider-track-thickness, var(--_lr-slider-track-thickness))
         var(
           --lr-slider-thumb-active-ring-color,
@@ -450,7 +451,8 @@ export const styles = css`
   [part='value'] {
     flex: 0 0 auto;
     font-size: var(--lr-font-size-sm);
-    color: var(--lr-color-text-quiet);
+    font-family: var(--lr-slider-value-font-family, inherit);
+    color: var(--lr-slider-value-color, var(--lr-color-text-quiet));
     /* The readout ticks as the thumb moves; tabular-nums holds its inline-size stable instead of
        jittering the layout beside it. */
     font-variant-numeric: tabular-nums;

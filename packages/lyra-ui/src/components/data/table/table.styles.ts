@@ -1,6 +1,7 @@
 import { forcedColorsDivider } from '../../../internal/forced-colors.styles.js';
 import { activeFill, focusRing, focusRingInset, focusRingInsetOffset, hoverFill, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
+import { visuallyHidden } from '../../../internal/a11y.js';
 import { formControlTouchFontFloor } from '../../../internal/form-control/touch-font-floor.styles.js';
 import { raiseWhileOverlayOpen } from '../../../internal/open-overlay-raise.styles.js';
 import { dataStateRetryStyles, dataStateSurfaceStyles } from '../../../internal/data-state-renderer.styles.js';
@@ -28,7 +29,7 @@ export const styles = css`
     overflow: auto;
     max-block-size: var(--lr-table-max-height, none);
     /* Page flow below drops both; auto restores them only while inline content really overflows. */
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border: var(--lr-table-border, var(--lr-border-width-thin) solid var(--lr-color-border-subtle));
     border-radius: var(--lr-table-radius, var(--lr-radius-container));
     background: var(--lr-table-surface, var(--lr-color-surface));
     /* Opt-in theme-level scrollbar hooks -- each reads --lr-theme-scrollbar-* directly, with this
@@ -306,7 +307,7 @@ export const styles = css`
   [part~='sort-icon'] {
     display: inline-block;
     margin-inline-start: var(--lr-space-xs);
-    vertical-align: middle;
+    vertical-align: var(--lr-table-sort-icon-vertical-align, middle);
     transition: transform var(--lr-transition-fast);
   }
   [part~='sort-icon-inactive'] {
@@ -396,6 +397,16 @@ export const styles = css`
     padding: var(--lr-table-cell-padding, var(--lr-space-s));
     border-block-end: var(--lr-border-width-thin) solid var(--lr-table-cell-border-color, var(--lr-color-border-subtle));
     color: var(--lr-table-cell-color, inherit);
+    line-height: var(--lr-table-cell-line-height, inherit);
+  }
+  /* columns[].wrap: an explicit per-column choice for body and footer cells; unset columns keep
+     the inherited wrapping. */
+  [data-wrap='nowrap'] {
+    white-space: nowrap;
+  }
+  [data-wrap='wrap'] {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
   /* Rendered only for a column defining cellPart(row): a block box, so a consumer's line clamp,
      nowrap or ellipsis rule set through ::part() has a box to act on. */
@@ -533,6 +544,12 @@ export const styles = css`
       forced-color-adjust: none;
       color: ButtonText;
     }
+  }
+  /* A rowHeader column's cell is a th: drop the UA bold and centring so it matches its row unless
+     the weight token asks otherwise. The data-align rule below still wins for end alignment. */
+  th[part='cell'] {
+    font-weight: var(--lr-table-row-header-font-weight, inherit);
+    text-align: inherit;
   }
   [part='cell'][data-align='end'] {
     text-align: end;
@@ -780,9 +797,33 @@ export const styles = css`
     padding-inline-end: var(--lr-space-s);
     vertical-align: top;
   }
+  /* A card has no horizontal scroll, so a nowrap column wraps while stacked. */
+  [part='base'][data-stacked] [data-wrap='nowrap'] {
+    white-space: normal;
+  }
   [part='base'][data-stacked] [data-sticky] {
     position: static;
     box-shadow: none;
+  }
+  /* A block-level table turns its caption into an anonymous shrink-to-fit table, which wraps the
+     caption into a narrow column; as a block it spans the stacked cards. */
+  [part='base'][data-stacked] [part='caption'] {
+    display: block;
+  }
+  /* stack-header: a header left out of the strip stays in the accessibility tree (it still names
+     its column's cells) and is shown again while it holds focus. The base becomes the hidden
+     boxes' containing block so they never extend a scrolling ancestor. */
+  [part='base'][data-stack-header] {
+    position: relative;
+  }
+  [part='base'][data-stack-header='hidden'] [part='head']:not(:focus-within),
+  [part='base'][data-stack-header='sortable'] [part='head']:not(:has([data-sortable])):not(:focus-within),
+  [part='base'][data-stack-header='sortable'] [part='header-cell']:not([data-sortable]):not(:focus-within) {
+    ${visuallyHidden}
+  }
+  [part='base'][data-stack-header='sortable'] [part='head'] > tr {
+    gap: var(--lr-space-2xs);
+    padding-block: var(--lr-space-2xs);
   }
   ${dataStateSurfaceStyles('error')}
   ${dataStateRetryStyles}

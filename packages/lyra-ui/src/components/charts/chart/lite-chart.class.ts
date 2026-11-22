@@ -513,6 +513,9 @@ export interface LyraLiteChartEventMap {
  * @cssprop [--lr-chart-legend-font-size=var(--lr-font-size-xs)] - Legend label font size.
  * @cssprop [--lr-chart-legend-swatch-size=var(--lr-size-0-7em)] - Legend swatch inline and block size.
  * @cssprop [--lr-chart-legend-swatch-radius=var(--lr-radius-xs)] - Legend swatch corner radius.
+ * @cssprop [--lr-chart-legend-justify=center] - `justify-content` of the legend row, for example
+ *   `center` or `flex-end`.
+ * @cssprop [--lr-chart-legend-item-line-height=inherit] - Line height of each legend item.
  * @cssprop [--lr-chart-legend-side-max=var(--lr-size-15rem)] - Maximum side-legend track size.
  * @cssprop [--lr-chart-color-1=var(--lr-color-chart-1)] - First series color.
  * @cssprop [--lr-chart-color-2=var(--lr-color-chart-2)] - Second series color.

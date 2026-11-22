@@ -23,6 +23,9 @@ import { styles } from './menu-label.styles.js';
  * @cssprop [--lr-menu-label-font-size=var(--lr-font-size-sm)] - Font size of the heading row.
  * @cssprop [--lr-menu-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the heading row.
  * @cssprop [--lr-menu-label-letter-spacing=normal] - Letter spacing of the heading row.
+ * @cssprop [--lr-menu-label-line-height=var(--lr-line-height-snug)] - Line height of the heading row.
+ * @cssprop [--lr-menu-label-font-family=inherit] - Font family of the heading row.
+ * @cssprop [--lr-menu-label-text-transform=inherit] - Text transform of the heading row.
  * @status stable
  * @since 8.0.0
  */

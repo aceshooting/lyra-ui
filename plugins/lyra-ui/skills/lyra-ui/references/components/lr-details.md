@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-accordion`, `lr-accordion-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -344,6 +344,9 @@ Summary interaction paint uses `--lr-details-summary-hover-bg` (default
 `color-mix(...)`); `--lr-details-summary-hover-color` (default `var(--lr-details-summary-color)`)
 recolors the summary text while hovered or pressed. All eight are inheritable inline-fallback hooks, so they isolate one disclosure
 theme without requiring shared-token changes or shadow-part selectors.
+`lr-details` also takes `--lr-details-icon-color` (default `inherit`, so the icon follows the summary
+text including its hover colour) and `--lr-details-icon-size` (default `var(--lr-size-1rem)`, the
+built-in chevron only; a slotted `expand-icon`/`collapse-icon` keeps its own size).
 
 ```html
 <lr-details summary="Advanced options">Panel content</lr-details>

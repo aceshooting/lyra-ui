@@ -141,6 +141,10 @@ export interface LyraDetailsEventMap {
  *   padding, independently tunable from the summary's own padding. Same fallback chain as
  *   `--lr-details-summary-padding-block`.
  * @cssprop [--lr-details-gap=var(--lr-space-s)] - Gap between summary content and its icon.
+ * @cssprop [--lr-details-icon-color=inherit] - Color of the expand/collapse icon in every state;
+ *   unset, it follows the summary text, including its hover colour.
+ * @cssprop [--lr-details-icon-size=var(--lr-size-1rem)] - Size of the built-in chevron. A slotted
+ *   `expand-icon`/`collapse-icon` keeps its own size.
  * @cssprop [--lr-details-radius=var(--lr-radius-container)] - Disclosure surface corner radius.
  * @cssprop [--lr-details-outlined-bg=var(--lr-color-surface)] - Outlined surface background.
  * @cssprop [--lr-details-outlined-border-color=var(--lr-color-border)] - Outlined border color.

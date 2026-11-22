@@ -142,6 +142,7 @@ export const styles = css`
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
+    color: var(--lr-details-icon-color, inherit);
   }
   :host([icon-placement='start']) [part~='icon'] {
     order: -1;
@@ -157,8 +158,8 @@ export const styles = css`
     transition-duration: var(--_lr-motion-duration, var(--show-duration, var(--lr-duration-base)));
   }
   .icon-fallback svg {
-    inline-size: var(--lr-size-1rem);
-    block-size: var(--lr-size-1rem);
+    inline-size: var(--lr-details-icon-size, var(--lr-size-1rem));
+    block-size: var(--lr-details-icon-size, var(--lr-size-1rem));
   }
   :host([disabled]) [part='summary'] {
     ${disabledControl}

@@ -9,8 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 59 parts, 60 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-theme-scrollbar-color`, `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-width`; `caption`: `--lr-table-caption-color`, `--lr-table-caption-font-size`, `--lr-table-caption-font-weight`, `--lr-table-caption-padding`, `--lr-table-caption-text-align`; `header-cell`: `--lr-table-header-sorted-bg`; `row`: `--lr-table-row-selected-bg`
+- **Themeable via** 59 parts, 64 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-table-border`, `--lr-theme-scrollbar-color`, `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-width`; `caption`: `--lr-table-caption-color`, `--lr-table-caption-font-size`, `--lr-table-caption-font-weight`, `--lr-table-caption-padding`, `--lr-table-caption-text-align`; `header-cell`: `--lr-table-header-sorted-bg`; `row`: `--lr-table-row-selected-bg`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -51,7 +51,7 @@ unchanged.
   bounded to the first 10,000 source positions; blank keys and later duplicates are omitted first-wins
   before header, cell, sort, focus, and event paths; reassign to update) — `{ key, label, ariaLabel?,
 headerCell?, width?, minWidth?, maxWidth?,
-resizable?, sortable?, sortValue?, defaultSortDir?: 'asc'|'desc', align?: 'start'|'end',
+resizable?, sortable?, rowHeader?: boolean, wrap?: 'wrap'|'nowrap', sortValue?, defaultSortDir?: 'asc'|'desc', align?: 'start'|'end',
 priority?: 'medium'|'low',
 sticky?: 'start'|'end', editTrigger?: 'double-click'|'always', editValue?, editLabel?: (row) => string,
 editType?: 'text'|'number'|'select',
@@ -67,7 +67,15 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   `[part~='cell-content']` element that also carries every whitespace-separated name returned
   (non-string results are ignored; no wrapper renders when `cellPart` is omitted, and none inside
   an open inline editor), and a `part` attribute written inside a `cell()` template is equally a
-  part of the table. Prefix those names (`cell-…`) so they never collide with the table's own parts:
+  part of the table. Prefix those names (`cell-…`) so they never collide with the table's own parts.
+  **Reserved part names:** every part listed under Parts below — `cell`, `cell-content`,
+  `cell-label`, `cell-link`, `cell-editor`, `row`, `header-cell`, `empty-*`, `error-*`,
+  `pagination-*` and the rest — is the table's own. A `cellPart` result reusing one (for example
+  `cell-label`, which then also matches every `::part(cell-label)` rule for the stacked caption)
+  still applies, but a development build warns once per colliding name. For text layout
+  (`white-space`, line clamping, `text-overflow`) prefer `cellPart` plus a `::part()` rule over
+  `cellStyle`: the wrapper holds only the value, while `cellStyle` lands on the whole `<td>`, which
+  in stacked mode also holds the `cell-label` caption:
 
   ```ts
   columns = [{ key: 'name', label: 'Name',
@@ -147,6 +155,18 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   overrides that editor's accessible name — omit it and each editor takes the localized
   `tableEditCellInRow` name (`Edit {column}, row {row}`) instead, or `tableEditCell` while only one
   row renders (see the accessibility note under `editTrigger` below)
+  `rowHeader: true` renders that column's body cells as `<th scope="row" role="rowheader">` instead
+  of `<td role="gridcell">`, so screen readers announce the cell as the row's name while moving
+  across its other cells — usually the identifying column. The cell keeps `part="cell"`, gains
+  `[data-row-header]`, and looks like its row (`--lr-table-row-header-font-weight`, default
+  `inherit`, sets its weight); header clicks, sorting and header keyboard navigation never treat it
+  as a column header;
+  `wrap: 'wrap' | 'nowrap'` sets line wrapping for that column's body and footer cells (the header
+  keeps its single line): `'nowrap'` keeps each value on one line and widens the column instead
+  (ids, dates, amounts); `'wrap'` wraps and also breaks an unbroken token (a URL, a hash) inside a
+  narrow or fixed-width column. Omitted, values wrap at spaces exactly as before. While stacked, a
+  `'nowrap'` column wraps, since a card cannot scroll sideways. The cell carries `[data-wrap]`;
+  unknown values are ignored;
   `cellTitle(row) => string | undefined` is the `title` analogue of `cellStyle`, applied directly to
   the generated `<td>` — e.g. the untruncated text behind an ellipsized cell, or a formatted
   timestamp behind a relative one;
@@ -225,7 +245,46 @@ cell: (row) => unknown }` — `cell` is required for every `editTrigger` except 
   The grid/row/gridcell roles, sortable headers (wrapped into a strip above the cards), selection,
   activation, editing, expansion and `href` links keep working; `sticky` columns stop pinning while
   stacked. `--lr-table-stack-label-inline-size` (default `40%`) sets the caption's inline size. Unsupported
-  values normalize to `'never'`, which renders exactly the previous markup
+  values normalize to `'never'`, which renders exactly the previous markup. While stacked, the
+  `caption` spans the cards' full width.
+- `stackHeader: 'visible'|'sortable'|'hidden' = 'visible'` (`stack-header`, reflected) — what the
+  column header strip shows while rows are stacked; no effect on the grid. `'visible'` keeps every
+  header wrapped into a strip above the cards. `'sortable'` keeps only the sortable headers, as a
+  compact sort strip (no strip at all when no column is sortable); `'hidden'` keeps none, since each
+  card's `cell-label` captions already name its values. A header left out of the strip is visually
+  hidden, not removed: it still names its column's cells for assistive technology, and it is shown
+  again while it holds keyboard focus. Unsupported values normalize to `'visible'`.
+
+  ```html
+  <lr-table caption="Accounts" stack="auto" stack-header="sortable"></lr-table>
+  ```
+- `withoutHeaderRow: boolean = false` (`without-header-row`, reflected) — omits the `<thead>`
+  entirely, for a table whose columns need no headings (a key/value summary, ideally with a
+  `rowHeader` column). Header sorting, column resizing and header keyboard navigation have nothing
+  to act on; rows, selection, editing, expansion, sticky columns, priority hiding and the footer
+  keep working. Name the grid with `caption` or a host `aria-label`. Same spelling as
+  `lr-csv-viewer`'s `without-header-row`.
+- `rowAttributes?: (row, index) => Record<string, string | number | boolean | null | undefined> | undefined`
+  (property only) — extra attributes for each body `<tr part="row">`; `index` is the row's 0-based
+  position among the rows currently rendered (after sorting, filtering and pagination). Only
+  lowercase `data-*` names — except the table's own `data-row-key`/`data-stripe` and the
+  `data-lr-*` namespace — plus `aria-label`, `aria-description`, `aria-current` and `aria-rowindex`
+  are written. Event handlers (`on*`), `style`, `class`, `id`, `role`, `tabindex` and every other
+  name are dropped with a development-build warning. A string or finite number is written as text,
+  `true` as an empty attribute, `false`/`null`/`undefined` leave it off, and a name returned on one
+  render but not the next is removed. A throwing callback writes nothing for that row. Applied in
+  the browser, not in server-rendered markup.
+
+  ```ts
+  table.rowAttributes = (row) => ({ 'data-testid': `account-${row.id}`, 'data-overdue': row.overdue });
+  // A delegated listener reads them from the composed path:
+  table.addEventListener('click', (event) => {
+    const tr = event.composedPath().find((n) => n instanceof HTMLElement && n.localName === 'tr');
+    if (tr instanceof HTMLElement && tr.hasAttribute('data-overdue')) openReminder(tr.dataset.testid);
+  });
+  ```
+  Only pseudo-classes may follow `::part()`, so `lr-table::part(row)[data-overdue]` is not valid
+  CSS; style a row state through `cellPart` instead.
 - `layout: 'auto'|'fixed' = 'auto'` (reflected) — a **floor** on the `<table>`'s `table-layout`, not
   an override. `'fixed'` forces the fixed algorithm even when no column declares a `width`, so every
   column shares the available width evenly and long cell content is clipped/wrapped instead of
@@ -660,9 +719,14 @@ Every header cell at rest reads `--lr-table-header-color` (default `inherit`),
 `var(--lr-font-weight-semibold)`). `--lr-table-cell-border-color` (default
 `var(--lr-color-border-subtle)`) colors the rules between rows: the header cell's bottom rule, every
 body, group, total, expansion and footer cell rule, and the seam beside a `sticky` column; the outer
-frame keeps its own edge.
+frame keeps its own edge, drawn from `--lr-table-border` (a border shorthand, default
+`var(--lr-border-width-thin) solid var(--lr-color-border-subtle)`; `none` drops the frame).
+`--lr-table-cell-line-height` (default `inherit`) sets the line height of body cells only.
 The `sort-icon` part styles only the indicator; these tokens style the header cell. Use `::part(sort-icon-inactive)` and
 `::part(sort-icon-active)` to style the two indicator states without private selectors.
+`--lr-table-sort-icon-vertical-align` (default `middle`) moves the icon against the label text, for
+example `text-bottom` or `-0.125em`. Changing the icon's `display` (to `inline-flex`, say) does not
+change its alignment; this token does.
 `--lr-table-sticky-offset` (default `0`) is measured and written inline per column by the component
 so multiple `sticky` columns stack instead of overlapping; it is a read-out, not a knob you set.
 `--lr-table-heat-t` is likewise component-written (each `[data-heat]` cell's position on the ramp).

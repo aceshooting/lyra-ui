@@ -1082,6 +1082,12 @@ function cloneFilterValue(value: LyraFilterBarValue): LyraFilterBarValue {
  *   `field` wrapper, controlling how many fields fit per row before the row wraps.
  * @cssprop [--lr-filter-bar-gap=var(--lr-space-s)] - Gap between filter fields, the `end` slot,
  *   the reset button, and the loading status in the `controls` row.
+ * @cssprop --lr-filter-bar-control-height - One control height for every filter type (select,
+ *   combobox, date, text and checkbox-menu) and the reset button, at any `size`. Unset, each
+ *   control keeps its own size tier's height.
+ * @cssprop --lr-filter-bar-control-font-size - One field font size for every filter type and the
+ *   reset button. Unset, each control keeps its own font size. A value set on an ancestor through a
+ *   control's own font token still wins over this one.
  * @status stable
  * @since 4.1.0
  */

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 21 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 21 parts, 35 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `legend-swatch`: `--lr-chart-pattern-step`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -403,7 +403,8 @@ without moving the library-wide ramp; `--lr-chart-legend-side-max` (default
 `--lr-chart-legend-gap` (default `var(--lr-space-s)`), `--lr-chart-legend-padding` (default
 `var(--lr-space-xs)`), `--lr-chart-legend-font-size` (default `var(--lr-font-size-xs)`),
 `--lr-chart-legend-swatch-size` (default `var(--lr-size-0-7em)`) and
-`--lr-chart-legend-swatch-radius` (default `var(--lr-radius-xs)`) restyle the legend without
+`--lr-chart-legend-swatch-radius` (default `var(--lr-radius-xs)`), `--lr-chart-legend-justify`
+(default `center`) and `--lr-chart-legend-item-line-height` (default `inherit`) restyle the legend without
 `::part()` rules; `--lr-lite-chart-selected-outline-color` (default
 `var(--lr-color-brand)`) — the stroke drawn on
 selected `[part='bar']` and `[part='point']` marks whose category index is in `selectedIndices`;

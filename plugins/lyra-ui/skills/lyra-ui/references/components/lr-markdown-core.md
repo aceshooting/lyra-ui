@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 24 parts, 52 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 24 parts, 57 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `code-block`: `--lr-code-block-tab-size`, `--lr-markdown-code-bg`, `--lr-markdown-code-block-font-size`, `--lr-markdown-code-block-line-height`, `--lr-markdown-code-block-padding`, `--lr-markdown-code-block-radius`; `content`: `--lr-markdown-font-mono`, `--lr-markdown-max-height`; `table`: `--lr-markdown-table-header-bg`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -173,3 +173,11 @@ keeps the box and list gutter aligned. Header hooks are `--lr-markdown-code-head
 (default `var(--lr-color-text-quiet)`).
 
 **Shared icon-button tokens:** the code-block action buttons read the shared tokens `--lr-icon-button-bg`, `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-button-border`, `--lr-icon-button-hover-border`, `--lr-icon-button-active-border`, `--lr-icon-button-color`, `--lr-icon-button-hover-color`, `--lr-icon-button-active-color` and `--lr-icon-button-radius`. `--lr-markdown-code-copy-hover-bg` and `--lr-markdown-code-copy-active-bg` set the fenced copy button's hovered and pressed backgrounds. `--lr-markdown-code-copy-hover-color` (default `var(--lr-color-brand)`) and `--lr-markdown-code-copy-active-color` set its glyph color in those states, and `--lr-markdown-code-copy-success-color` / `--lr-markdown-code-copy-error-color` (defaults `var(--lr-color-success)` / `var(--lr-color-danger)`) its copy feedback.
+
+Further custom properties:
+
+- `--lr-markdown-color` (default `inherit`): Text color of the rendered content.
+- `--lr-markdown-font-size` (default `inherit`): Font size of the rendered content; headings and code scale from it.
+- `--lr-markdown-line-height` (default `var(--lr-line-height-loose)`): Line height of the rendered body text.
+- `--lr-markdown-list-gap` (default `var(--lr-markdown-block-gap)`): Space after each list.
+- `--lr-markdown-paragraph-gap` (default `var(--lr-markdown-block-gap)`): Space after each paragraph.

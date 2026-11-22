@@ -9,8 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `@aceshooting/lyra-map`, `dompurify`, `maplibre-gl` — see `llms/peers.md`
-- **Themeable via** 93 parts, 88 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `anchor-body`: `--lr-map-anchor-close-reservation`; `anchor-close`: `--lr-map-anchor-close-reservation`; `initialization-activate`: `--lr-map-initialization-activate-label-display`; `initialization-activate-label`: `--lr-map-initialization-activate-label-display`; `initialization-placeholder`: `--lr-map-initialization-placeholder-bg`; `initialization-skeleton`: `--lr-map-initialization-skeleton-display`; `legend-disclosure`: `--lr-map-legend-disclosure-padding`; `legend-toggle`: `--lr-map-legend-toggle-padding`; `popup-close-button`: `--lr-map-popup-close-button-active-bg`, `--lr-map-popup-close-button-active-color`, `--lr-map-popup-close-button-hover-bg`, `--lr-map-popup-close-button-hover-color`
+- **Themeable via** 93 parts, 95 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `anchor-body`: `--lr-map-anchor-close-reservation`; `anchor-close`: `--lr-map-anchor-close-reservation`; `initialization-activate`: `--lr-map-initialization-activate-label-display`; `initialization-activate-label`: `--lr-map-initialization-activate-label-display`; `initialization-placeholder`: `--lr-map-initialization-placeholder-bg`; `initialization-skeleton`: `--lr-map-initialization-skeleton-display`; `legend-disclosure`: `--lr-map-legend-disclosure-font-weight`, `--lr-map-legend-disclosure-min-height`, `--lr-map-legend-disclosure-padding`; `legend-group-heading`: `--lr-map-legend-group-heading-color`, `--lr-map-legend-group-heading-padding`; `legend-toggle`: `--lr-map-legend-toggle-font-weight`, `--lr-map-legend-toggle-min-height`, `--lr-map-legend-toggle-padding`; `popup-close-button`: `--lr-map-popup-close-button-active-bg`, `--lr-map-popup-close-button-active-color`, `--lr-map-popup-close-button-hover-bg`, `--lr-map-popup-close-button-hover-color`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -52,7 +52,8 @@ for exceptions. `--lr-map-control-size` sizes each button (unset: content size a
 shorthand), `--lr-map-control-shadow`, `--lr-map-control-bg` (resting fill under the shared glass
 treatment) and `--lr-map-control-color` shape control groups and outlines; `--lr-map-control-hover-bg`
 and `--lr-map-control-active-bg` paint pointer states in every state (the action tokens no longer reach native controls);
-`--lr-map-control-gap` is the margin around each control. The attribution control takes
+`--lr-map-control-gap` is the margin around each control; `--lr-map-attribution-margin` (default
+`--lr-map-control-gap`) gives the attribution control its own margin shorthand. The attribution control takes
 `--lr-map-attribution-radius`, `--lr-map-attribution-border`, `--lr-map-attribution-padding`
 (default `0 var(--lr-space-xs)`), `--lr-map-attribution-link-padding` (default `0`; each link keeps
 its `--lr-size-24px` minimum box), `--lr-map-attribution-max-inline-size` (default `100%`, never
@@ -977,7 +978,18 @@ omittedCount, truncatedLabelCount, truncated }` result for the latest assignment
   `--lr-map-legend-toggle-padding` and `--lr-map-legend-disclosure-padding` (both default
   `var(--lr-size-2px) var(--lr-space-xs)`) pad the interactive `legend-toggle` rows and the
   `legend-disclosure` button; their minimum box stays the `--lr-icon-button-size` hit area, so
-  shrink that floor through `--lr-icon-button-size-scope` rather than a part rule.
+  shrink that floor through `--lr-icon-button-size-scope` rather than a part rule, or set
+  `--lr-map-legend-toggle-min-height` and `--lr-map-legend-disclosure-min-height` (both default
+  `var(--lr-icon-button-size)`, never below `--lr-size-24px`). `--lr-map-legend-toggle-font-weight`
+  (default `inherit`) and `--lr-map-legend-disclosure-font-weight` (default
+  `var(--lr-font-weight-semibold)`) set their weight, and `--lr-map-legend-group-heading-color`
+  (default `var(--lr-color-text-quiet)`) and `--lr-map-legend-group-heading-padding` (default `0`)
+  style each `legend-group-heading`.
+- `legendFlow: LyraMapLegendFlow = 'row'` (attribute `legend-flow`, reflected) — `'row' | 'column'`,
+  the order legend rows fill `--lr-map-legend-columns`. `'row'` places them across each row of an
+  equal-column grid; `'column'` fills each column top to bottom before the next, so a sorted key
+  reads down, and each group heading spans every column above its own rows. In `'column'` flow
+  `--lr-map-legend-group-columns` does not apply; unsupported values normalize to `'row'`.
 - `legendClearance: LyraMapLegendClearance = 'row'` (attribute `legend-clearance`, reflected) — which
   native control corners the legend clears. `'row'` lifts it above the tallest corner of the top and
   bottom rows; `'corner'` clears only the corners in its own logical column, so a `bottom-start`

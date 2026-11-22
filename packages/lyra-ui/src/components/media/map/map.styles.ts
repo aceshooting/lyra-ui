@@ -535,6 +535,7 @@ export const styles = css`
     box-sizing: border-box;
     /* WCAG 2.5.8, matching the interactive legend rows above, in both axes. */
     ${iconHitTarget}
+    min-block-size: max(var(--lr-size-24px), var(--lr-map-legend-disclosure-min-height, var(--lr-icon-button-size)));
     max-inline-size: 100%;
     border: none;
     border-radius: var(--lr-radius-xs);
@@ -542,7 +543,7 @@ export const styles = css`
     background: transparent;
     color: inherit;
     font: inherit;
-    font-weight: var(--lr-font-weight-semibold);
+    font-weight: var(--lr-map-legend-disclosure-font-weight, var(--lr-font-weight-semibold));
     text-align: start;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
@@ -667,7 +668,8 @@ export const styles = css`
   }
   [part='legend-group-heading'] {
     min-inline-size: 0;
-    color: var(--lr-color-text-quiet);
+    padding: var(--lr-map-legend-group-heading-padding, 0);
+    color: var(--lr-map-legend-group-heading-color, var(--lr-color-text-quiet));
     font-weight: var(--lr-font-weight-semibold);
     overflow-wrap: anywhere;
   }
@@ -681,6 +683,25 @@ export const styles = css`
     min-inline-size: 0;
     overflow-wrap: anywhere;
   }
+  /* legendFlow='column': rows fill each of --lr-map-legend-columns top to bottom (multi-column
+     layout, so a grid's row-major placement no longer applies), and a group heading spans every
+     column above its rows. Margins stand in for the grid gaps a block flow does not have. */
+  :host([legend-flow='column']) .legend-list:not([hidden]) {
+    display: block;
+    columns: var(--lr-map-legend-columns, 1);
+    column-gap: var(--lr-map-legend-gap, var(--lr-space-xs));
+  }
+  :host([legend-flow='column']) :is(.legend-group, .legend-section-list) {
+    display: block;
+  }
+  :host([legend-flow='column']) .legend-row {
+    break-inside: avoid;
+    margin-block-end: var(--lr-map-legend-row-gap, var(--lr-map-legend-gap, var(--lr-space-xs)));
+  }
+  :host([legend-flow='column']) [part='legend-group-heading'] {
+    column-span: all;
+    margin-block-end: var(--lr-map-legend-gap, var(--lr-space-xs));
+  }
   /* The opt-in interactive legend row. A native button, so Enter/Space are the platform's own
      activation and no roving tabindex is involved. Every declaration is logical, so the row keeps
      its swatch at the inline start under RTL. */
@@ -693,6 +714,7 @@ export const styles = css`
        icon-button floor in both axes. The panel's own max-block-size + overflow:auto above
        contains the taller list. */
     ${iconHitTarget}
+    min-block-size: max(var(--lr-size-24px), var(--lr-map-legend-toggle-min-height, var(--lr-icon-button-size)));
     max-inline-size: 100%;
     border: none;
     border-radius: var(--lr-radius-xs);
@@ -700,6 +722,7 @@ export const styles = css`
     background: transparent;
     color: inherit;
     font: inherit;
+    font-weight: var(--lr-map-legend-toggle-font-weight, inherit);
     text-align: start;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
@@ -886,6 +909,7 @@ export const styles = css`
   }
   /* The shared control ceiling stays the outer bound, so a wide token never escapes the map. */
   .maplibregl-ctrl.maplibregl-ctrl-attrib {
+    margin: var(--lr-map-attribution-margin, var(--lr-map-control-gap, var(--lr-space-xs)));
     max-inline-size: min(var(--lr-map-attribution-max-inline-size, 100%), calc(100% - 2 * var(--lr-map-control-gap, var(--lr-space-xs))));
   }
   .maplibregl-ctrl-group {

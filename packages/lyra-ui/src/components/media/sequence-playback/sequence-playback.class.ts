@@ -127,6 +127,11 @@ export class LyraSequencePlayback extends LyraElement<LyraSequencePlaybackEventM
   /** Show a non-live position readout below the slider. Hidden by default. */
   @property({ type: Boolean, attribute: 'with-value' }) withValue = false;
 
+  /** Stretches the control across its container, the slider taking the width the play button and
+   *  readout leave. Off by default, so the control keeps its content width. Reflects as the
+   *  `full-width` attribute. */
+  @property({ type: Boolean, attribute: 'full-width', reflect: true }) fullWidth = false;
+
   /**
    * Re-declared as a Lit reactive property (shadowing the inherited plain
    * `HTMLElement.hidden` IDL property) so that setting `el.hidden = true` —

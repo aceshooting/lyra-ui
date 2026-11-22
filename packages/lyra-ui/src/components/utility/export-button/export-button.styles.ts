@@ -51,11 +51,15 @@ export const styles = css`
   }
   [part~='trigger'] {
     --_lr-export-button-icon-size: var(--lr-icon-button-size);
+    /* Trigger-only typography and inline padding: read here and by the size tiers below, which the
+       menu rows share, so the tokens never reach a menu row. */
+    --_lr-export-button-font-size: var(--lr-export-button-font-size);
+    --_lr-export-button-padding-inline: var(--lr-export-button-padding-inline);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: var(--lr-export-button-gap, var(--lr-space-xs));
-    padding: var(--lr-space-xs) var(--lr-space-m);
+    padding: var(--lr-space-xs) var(--_lr-export-button-padding-inline, var(--lr-space-m));
     border: var(--lr-border-width-thin) solid
       var(--lr-export-button-border, var(--_lr-export-button-border));
     border-radius: var(--lr-export-button-radius, var(--lr-radius));
@@ -65,6 +69,8 @@ export const styles = css`
     );
     color: var(--lr-export-button-color, var(--_lr-export-button-color));
     font: inherit;
+    font-size: var(--_lr-export-button-font-size, inherit);
+    font-weight: var(--lr-export-button-font-weight, inherit);
     ${iconHitTarget}
     cursor: pointer;
     ${interactiveTransition}
@@ -109,9 +115,9 @@ export const styles = css`
   :host([size='large']) [part='menu-item'],
   :host([size='xl']) [part='menu-item'] {
     --_lr-export-button-icon-size: max(var(--lr-icon-button-size), var(--lr-form-control-height));
-    font-size: var(--lr-form-control-font-size);
+    font-size: var(--_lr-export-button-font-size, var(--lr-form-control-font-size));
     padding-block: var(--lr-form-control-padding-block);
-    padding-inline: var(--lr-form-control-padding-inline);
+    padding-inline: var(--_lr-export-button-padding-inline, var(--lr-form-control-padding-inline));
     min-block-size: max(var(--lr-icon-button-size), var(--lr-form-control-height));
   }
   .trigger-icon {

@@ -1126,6 +1126,24 @@ export const SectionedLegend: Story = {
   ></lr-map>`,
 };
 
+/** `legend-flow="column"` fills each `--lr-map-legend-columns` column top to bottom, so a sorted
+ * key reads down; the group heading spans the columns above its rows. */
+export const ColumnFlowLegend: Story = {
+  render: () => html`<lr-map
+    label="Column flow legend"
+    legend-flow="column"
+    style="--lr-map-legend-columns: 2"
+    .mapStyle=${OFFLINE_RASTER_STYLE}
+    .zoom=${13}
+    .legend=${[
+      { color: storyColor('brand'), label: 'Bus', pattern: 'solid', group: 'Transit' },
+      { color: storyColor('success'), label: 'Ferry', pattern: 'solid', group: 'Transit' },
+      { color: storyColor('warning'), label: 'Metro', pattern: 'solid', group: 'Transit' },
+      { color: storyColor('danger'), label: 'Tram', pattern: 'solid', group: 'Transit' },
+    ] satisfies LyraMapLegendEntry[]}
+  ></lr-map>`,
+};
+
 /** An explicit source diff changes one stable feature without replacing the collection. */
 export const IncrementalSourceUpdate: Story = {
   render: () => {

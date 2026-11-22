@@ -237,6 +237,12 @@ export interface LyraMarkdownCoreEventMap extends LyraAnchorTargetEventMap {
  *   rendered `[part="table"]` header cell (`<th>`).
  * @cssprop [--lr-markdown-block-gap=var(--lr-space-s)] - Space after every rendered block
  *   (paragraph, list, heading, blockquote, code block, table).
+ * @cssprop [--lr-markdown-paragraph-gap=var(--lr-markdown-block-gap)] - Space after each paragraph.
+ * @cssprop [--lr-markdown-list-gap=var(--lr-markdown-block-gap)] - Space after each list.
+ * @cssprop [--lr-markdown-font-size=inherit] - Font size of the rendered content; headings and code
+ *   scale from it.
+ * @cssprop [--lr-markdown-line-height=var(--lr-line-height-loose)] - Line height of the rendered body text.
+ * @cssprop [--lr-markdown-color=inherit] - Text color of the rendered content.
  * @cssprop [--lr-markdown-heading-margin-block-start=var(--lr-space-l)] - Space before every heading;
  *   the space after it is `--lr-markdown-block-gap`, and a leading heading keeps no space before it.
  * @cssprop [--lr-markdown-heading-1-font-size=calc(var(--lr-size-1em) * 2)] - `<h1>` font size.

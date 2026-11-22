@@ -9,8 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 19 parts, 52 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `canvas`: `--lr-chart-canvas-hover-outline-color`, `--lr-chart-canvas-hover-outline-width`; `legend-swatch`: `--lr-chart-pattern-step`
+- **Themeable via** 19 parts, 54 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `canvas`: `--lr-chart-canvas-hover-outline-color`, `--lr-chart-canvas-hover-outline-width`; `center`: `--lr-chart-legend-justify`; `legend-swatch`: `--lr-chart-pattern-step`
 - **Documented with** `lr-bar-chart`, `lr-pie-chart`, `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`, `lr-scatter-chart` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -129,5 +129,10 @@ together. The mirrored hooks are `--border-color-1`,
 - `lr-bubble-chart` consumes the exported `LyraChartPoint` shape directly. Set `x`/`y`, optional `r`
   for bubble radius, and optional `label` for the point-level accessible/event/export label; no
   runtime cast is needed.
+
+Further custom properties:
+
+- `--lr-chart-legend-item-line-height` (default `inherit`): Line height of each legend item.
+- `--lr-chart-legend-justify` (default `normal`): `justify-content` of the legend row, for example `center` or `flex-end`.
 
 ---

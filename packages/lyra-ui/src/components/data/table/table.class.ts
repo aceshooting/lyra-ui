@@ -37,21 +37,22 @@ import {
 } from '../../../internal/converters.js';
 import { activeElementIn, shadowFocusTarget } from '../../../internal/active-element.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
-import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import { DEV_DIAGNOSTICS, devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
+import { rowAttributes as applyRowAttributes } from './table-row-attributes.js';
 import { optionalSizeConverter, type LyraSize } from '../../../internal/variants.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 import { requestThenCommit } from '../../../internal/request-commit.js';
 import { ColumnResizePointerSession, columnResizeAriaValues, columnResizeKeyboardWidth, columnResizePointerWidth, columnResizeWidth } from '../../../internal/column-resize.js';
 import { isRepeatedActivationKey, isRovingTargetAvailable, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { renderDataState } from '../../../internal/data-state-renderer.js';
-import { DEFAULT_SKELETON_ROWS, TABLE_OVERRIDE_MESSAGE_KEYS, MAX_SKELETON_ROWS, MAX_PAGE_SIZE, MAX_TABLE_COLLECTION_ENTRIES, MAX_TABLE_ROWS, TABLE_SCROLL_OVERFLOW_TOLERANCE_PX, DEFAULT_RESIZE_MIN_WIDTH_PX, MISSING_CELL_RENDERER_WARNING, MISSING_ACCESSIBLE_NAME_WARNING, INERT_PRIORITY_COLUMN_CONFIG_WARNING, frozenArray, keySet, storedKeySetFacade, isCompactEmptySize, TABLE_LAYOUT, TABLE_STACK, TABLE_PAGINATION_FORMAT, cellContentPartNames, stickyDirection, sanitizeCellStyle, normalizedEditTrigger, encodeKey, isImmutableSearchRow, createFilterStringifier, eventInteractiveTarget, type TableLoadingAppearance, type OwnedAnimationFrame, type TableResizeState, type TableRovingFocusSnapshot, type TableRowEntry, type TableSelectionMode, type TableExpansionMode, type TableSortMode, type TableSortIndicators, type TableScrollMode, type TableSortDirection, type TableStackMode, type TableColumn, type LyraTableEventMap } from './table-support.js';
+import { DEFAULT_SKELETON_ROWS, TABLE_OVERRIDE_MESSAGE_KEYS, MAX_SKELETON_ROWS, MAX_PAGE_SIZE, MAX_TABLE_COLLECTION_ENTRIES, MAX_TABLE_ROWS, TABLE_SCROLL_OVERFLOW_TOLERANCE_PX, DEFAULT_RESIZE_MIN_WIDTH_PX, MISSING_CELL_RENDERER_WARNING, MISSING_ACCESSIBLE_NAME_WARNING, INERT_PRIORITY_COLUMN_CONFIG_WARNING, RESERVED_CELL_PART_WARNING, REJECTED_ROW_ATTRIBUTE_WARNING, HEADER_CELL_SELECTOR, BODY_CELL_SELECTOR, reservedCellPartNames, normalizeRowAttributes, frozenArray, keySet, storedKeySetFacade, isCompactEmptySize, TABLE_LAYOUT, TABLE_STACK, TABLE_STACK_HEADER, TABLE_PAGINATION_FORMAT, cellContentPartNames, stickyDirection, columnWrap, sanitizeCellStyle, normalizedEditTrigger, encodeKey, isImmutableSearchRow, createFilterStringifier, eventInteractiveTarget, type TableLoadingAppearance, type OwnedAnimationFrame, type TableResizeState, type TableRovingFocusSnapshot, type TableRowEntry, type TableSelectionMode, type TableExpansionMode, type TableSortMode, type TableSortIndicators, type TableScrollMode, type TableSortDirection, type TableStackMode, type TableStackHeader, type TableRowAttributes, type TableColumn, type LyraTableEventMap } from './table-support.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_dataGridToggleRow, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableAdditionalColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableEditCellInRow, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoading, LYRA_DEFAULT_tableLoadingMore, LYRA_DEFAULT_tableRowLimit, LYRA_DEFAULT_tableRowTotal } from '../../../internal/default-strings/data.generated.js';
 import { LYRA_DEFAULT_clear, LYRA_DEFAULT_details, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_viewerSearchMatchCount } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-export type { TableLoadingAppearance, TableEdgeAlign, TableColumnEditTrigger, TableColumnEditOption, TableSelectionMode, TableExpansionMode, TableSortMode, TableSortIndicators, TableScrollMode, TableSortDirection, TableStackMode, TableSortRequestDetail, TableSortCommitDetail, TableSortDetail, TableColumn, LyraTableEventMap } from './table-support.js';
+export type { TableLoadingAppearance, TableEdgeAlign, TableColumnEditTrigger, TableColumnEditOption, TableSelectionMode, TableExpansionMode, TableSortMode, TableSortIndicators, TableScrollMode, TableSortDirection, TableStackMode, TableStackHeader, TableRowAttributes, TableRowAttributeValue, TableColumnWrap, TableSortRequestDetail, TableSortCommitDetail, TableSortDetail, TableColumn, LyraTableEventMap } from './table-support.js';
 /** Bounded client projection used by a bare table. Pagination keeps every row reachable while
  * avoiding an unbounded row-by-column DOM allocation. */
 const DEFAULT_PAGE_SIZE = 100;
@@ -124,18 +125,31 @@ const DEFAULT_PAGE_SIZE = 100;
  * @csspart base - The root wrapper around the `<table>` and its footer controls.
  * @csspart table - The `<table role="grid">` element.
  * @csspart caption - The `<caption>` element, rendered only when `caption` is set.
- * @csspart head - The `<thead>` element.
+ * @csspart head - The `<thead>` element; not rendered while `without-header-row` is set.
  * @csspart header-cell - Each `<th>` header cell.
  * @csspart resize-handle - The focusable separator used to resize a `resizable` column. Its
  *   numeric ARIA range remains in CSS pixels while `aria-valuetext` reports the current value
  *   through the effective locale.
  * @csspart row - Each body `<tr>`.
- * @csspart cell - Each body `<td>`. An `editTrigger: 'double-click'` column's resting (not
+ * @csspart cell - Each body `<td>`, or `<th scope="row">` for a `rowHeader` column (which also
+ *   carries `[data-row-header]`). An `editTrigger: 'double-click'` column's resting (not
  *   currently editing) cell additionally carries `[data-editable]` and its own `tabindex="-1"`
  *   roving-focus stop -- see the keyboard paragraph above.
  * @csspart cell-label - The visible column caption a stacked body cell shows before its value
  *   (`stack` is `always`, or `auto` below the breakpoint); hidden from assistive technology, which
  *   already reads the column header.
+ *
+ * Reserved part names: every `@csspart` listed here is the table's own, so a `cellPart(row)` result
+ * must not reuse one (`cell-label` included) -- a development build warns once per colliding name.
+ * Prefix your own names (`cell-archived`, `cell-muted`).
+ * @cssprop [--lr-table-row-header-font-weight=inherit] - Font weight of a `rowHeader` column's body cells.
+ * @cssprop [--lr-table-border=var(--lr-border-width-thin) solid var(--lr-color-border-subtle)] - Border
+ *   shorthand of the outer frame (`[part='base']`); `none` drops it. Row and header rules keep
+ *   their own colour tokens.
+ * @cssprop [--lr-table-cell-line-height=inherit] - Line height of body cells; header and footer cells
+ *   keep the inherited value.
+ * @cssprop [--lr-table-sort-icon-vertical-align=middle] - `vertical-align` of the header sort icon
+ *   against the label text, e.g. `text-bottom` or a length such as `-0.125em`.
  * @cssprop --lr-form-control-touch-font-size-min - Minimum font size of the inner text inputs under touch density.
  * @cssprop [--lr-table-stack-breakpoint=var(--lr-size-36rem)] - Allocation below which `stack="auto"` stacks rows.
  * @cssprop [--lr-table-stack-label-inline-size=40%] - Inline size of a stacked cell's caption; the value flows after it.
@@ -543,6 +557,32 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     this._stack = normalized;
     this.requestUpdate('stack', old);
   }
+  private _stackHeader: TableStackHeader = 'visible';
+  /** What the column header strip shows while rows are stacked (`stack` is `'always'`, or `'auto'`
+   *  below its breakpoint); it has no effect on the grid. `'visible'` (the default) keeps every
+   *  header wrapped into a strip above the cards. `'sortable'` keeps only the sortable headers, as a
+   *  compact sort strip, and `'hidden'` keeps none -- each card's `cell-label` captions already name
+   *  its values. A header left out of the strip is visually hidden rather than removed, so the
+   *  grid's column headers still name every cell for assistive technology, and it is shown again
+   *  while it holds keyboard focus. Unsupported values normalize to `'visible'`. */
+  @property({ attribute: 'stack-header', reflect: true, converter: TABLE_STACK_HEADER })
+  get stackHeader(): TableStackHeader {
+    return this._stackHeader;
+  }
+  set stackHeader(next: TableStackHeader) {
+    const normalized = TABLE_STACK_HEADER.normalizeReflected(this, 'stackHeader', next);
+    const old = this._stackHeader;
+    if (old === normalized) return;
+    this._stackHeader = normalized;
+    this.requestUpdate('stackHeader', old);
+  }
+  /** Omits the column header row (`<thead>`) entirely, for a table whose columns need no headings
+   *  -- a key/value summary, say, ideally with a `rowHeader` column. Sorting from a header, column
+   *  resizing and header keyboard navigation have nothing to act on while it is set; rows,
+   *  selection, editing, expansion and the footer keep working. Name the grid with `caption` or a
+   *  host `aria-label` (the development build warns when neither is set). Same spelling as
+   *  `<lr-csv-viewer>`'s `without-header-row`. */
+  @property({ type: Boolean, attribute: 'without-header-row', reflect: true }) withoutHeaderRow = false;
   /** Whether `stack='auto'` currently measures below its breakpoint. */
   @state() private autoStacked = false;
   private get stacked(): boolean {
@@ -804,6 +844,17 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  `footer(rows)` — does not assume addition, so a non-sum aggregate works identically. Omit for
    *  no trailing column at all (unchanged output). */
   @property({ attribute: false }) rowTotal?: (row: T) => unknown;
+  /** Extra attributes for each body row's `<tr part="row">`, from `row` and its 0-based position
+   *  among the rows currently rendered (after sorting, filtering and pagination) -- e.g. a
+   *  `data-status` hook for `lr-table::part(row)` rules, or a test id. Only lowercase `data-*` names
+   *  (except the table's own `data-row-key`/`data-stripe` markers and the `data-lr-*` namespace)
+   *  and `aria-label`, `aria-description`, `aria-current` and `aria-rowindex` are written; event
+   *  handlers, `style`, `class`, `id`, `role`, `tabindex` and every other name are dropped, with a
+   *  development-build warning. A string or finite number is written as text, `true` as an empty
+   *  attribute, and `false`/`null`/`undefined` leave it off; a name returned on one render and not
+   *  the next is removed. A throwing callback writes nothing for that row. Applied in the browser,
+   *  not in server-rendered markup. */
+  @property({ attribute: false }) rowAttributes?: (row: T, index: number) => TableRowAttributes | undefined;
   /** Renders the bottom-right cell (row-total column × footer row). Only rendered when both
    *  `rowTotal` is set **and** at least one column defines `footer` — otherwise there is no footer
    *  row for it to occupy, and this renders nothing. */
@@ -957,7 +1008,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   private get activeColKey(): string | null { return this._activeColKey; }
   private set activeColKey(value: string | null) {
     this._activeColKey = value;
-    this.patchRovingTabStop('th[data-col-key]', 'data-col-key', value);
+    this.patchRovingTabStop(HEADER_CELL_SELECTOR, 'data-col-key', value);
   }
   /** Roving-tabindex position among body rows; `null` until a row is
    *  clicked/navigated to, at which point `focusedRowKey()` falls back to
@@ -1156,7 +1207,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     if (resized !== undefined) return resized;
     const explicit = this.parsePixelLength(column.width);
     if (explicit !== undefined) return explicit;
-    const rendered = handle?.closest('th[data-col-key]')?.getBoundingClientRect().width;
+    const rendered = handle?.closest(HEADER_CELL_SELECTOR)?.getBoundingClientRect().width;
     return rendered && rendered > 0 ? rendered : this.minimumResizeWidth(column);
   }
 
@@ -1195,7 +1246,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     const handle = event.currentTarget as HTMLElement;
     const key = handle.dataset['colKey'];
     const column = key ? this.columnsByKey.get(key) : undefined;
-    const header = handle.closest('th[data-col-key]') as HTMLElement | null;
+    const header = handle.closest(HEADER_CELL_SELECTOR) as HTMLElement | null;
     if (!key || !column || !header || !this.ownerDocument.defaultView) return;
     const replacedStartWidth = this.resizeState?.key === key ? this.resizeState.startWidth : undefined;
     this.cancelResizeGesture();
@@ -1285,7 +1336,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
       if (!column || this.resizedColumnWidths.has(key) || this.parsePixelLength(column.width) !== undefined) {
         continue;
       }
-      const rendered = handle.closest('th[data-col-key]')?.getBoundingClientRect().width;
+      const rendered = handle.closest(HEADER_CELL_SELECTOR)?.getBoundingClientRect().width;
       if (rendered && rendered > 0) {
         const width = Math.round(rendered);
         measurements.push({ handle, width });
@@ -1505,7 +1556,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   private observeHeaders(): void {
     const headers = new Set<Element>(
       this.columns.some((column) => column.sticky || column.resizable)
-        ? this.renderRoot.querySelectorAll<HTMLElement>('th[data-col-key]')
+        ? this.renderRoot.querySelectorAll<HTMLElement>(HEADER_CELL_SELECTOR)
         : []
     );
     for (const header of this.observedHeaders) {
@@ -1525,7 +1576,17 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   /** Every currently-rendered `<th>` sharing `tier` -- usually one, but `columns` may declare more
    *  than one column at the same tier, and they hide/reveal together. */
   private priorityTierHeaders(tier: 'low' | 'medium'): HTMLElement[] {
-    return [...this.renderRoot.querySelectorAll<HTMLElement>(`th[data-priority="${tier}"]`)];
+    return this.columnMeasureCells(`[data-priority="${tier}"]`);
+  }
+
+  /** The cells that measure each column: the header strip's, or -- while `without-header-row`
+   *  omits it -- the first rendered body row's, which share the same column boxes. */
+  private columnMeasureCells(qualifier = ''): HTMLElement[] {
+    if (!this.withoutHeaderRow) {
+      return [...this.renderRoot.querySelectorAll<HTMLElement>(`${HEADER_CELL_SELECTOR}${qualifier}`)];
+    }
+    const row = this.renderRoot.querySelector('tbody > tr:has(> [data-col-key])');
+    return [...(row?.querySelectorAll<HTMLElement>(`:scope > [data-col-key]${qualifier}`) ?? [])];
   }
 
   /** Recomputes the measured-overflow priority-hide state from the live DOM: writes
@@ -1605,7 +1666,9 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     if (genuineOverflow) {
       // Structural columns have no data-col-key, but still consume width after priority columns
       // hide. Omitting them underestimates the full grid and can alternate hide/reveal indefinitely.
-      const alwaysHeaders = [...this.renderRoot.querySelectorAll<HTMLElement>('[part="head"] > tr > th')].filter(
+      const alwaysHeaders = [...(this.withoutHeaderRow
+        ? this.renderRoot.querySelector('tbody > tr:has(> [data-col-key])')?.querySelectorAll<HTMLElement>(':scope > *') ?? []
+        : this.renderRoot.querySelectorAll<HTMLElement>('[part="head"] > tr > th'))].filter(
         (header) => !header.hasAttribute('data-priority')
       );
       const alwaysWidth = alwaysHeaders.reduce((sum, header) => sum + header.getBoundingClientRect().width, 0);
@@ -2047,7 +2110,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     const HTMLElementCtor = this.ownerDocument?.defaultView?.HTMLElement;
     if (!HTMLElementCtor || !(active instanceof HTMLElementCtor)) return;
 
-    if (changed.has('columns') && active.matches('th[data-col-key]')) {
+    if (changed.has('columns') && active.matches(HEADER_CELL_SELECTOR)) {
       const headers = this.visibleHeaders();
       const key = active.dataset['colKey'];
       const index = headers.indexOf(active);
@@ -2183,7 +2246,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     // would be quadratic in column count. First cell wins on a duplicate key,
     // matching a first-match linear scan over document order.
     const headerWidths = new Map<string, number>();
-    for (const el of this.renderRoot.querySelectorAll<HTMLElement>('th[data-col-key]')) {
+    for (const el of this.columnMeasureCells()) {
       const key = el.dataset['colKey'];
       if (key !== undefined && !headerWidths.has(key)) headerWidths.set(key, el.offsetWidth);
     }
@@ -2554,7 +2617,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  closed (and its node removed) by the very updates this would restore focus across. */
   private onTableFocusIn = (event: FocusEvent): void => {
     const target = event.target as HTMLElement | null;
-    const cell = target?.closest?.('td[data-col-key]') as HTMLElement | null;
+    const cell = target?.closest?.(BODY_CELL_SELECTOR) as HTMLElement | null;
     const row = target?.closest?.('[data-row-key]') as HTMLElement | null;
     const columnKey = cell?.dataset['colKey'];
     const rowKey = row?.dataset['rowKey'];
@@ -2747,7 +2810,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   private cellElementForToken(token: string, columnKey: string): HTMLElement | null {
     const row = this.rowElementForToken(token);
     return (
-      [...(row?.querySelectorAll<HTMLElement>('td[data-col-key]') ?? [])].find(
+      [...(row?.querySelectorAll<HTMLElement>(BODY_CELL_SELECTOR) ?? [])].find(
         (el) => el.dataset['colKey'] === columnKey
       ) ?? null
     );
@@ -2761,7 +2824,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  now carry the same `data-col-key` attribute (for the sticky-offset
    *  measurement pass) but must never be treated as header cells here. */
   private visibleHeaders(): HTMLElement[] {
-    return [...(this.renderRoot?.querySelectorAll<HTMLElement>('th[data-col-key]') ?? [])].filter(
+    return [...(this.renderRoot?.querySelectorAll<HTMLElement>(HEADER_CELL_SELECTOR) ?? [])].filter(
       (el) => el.offsetParent !== null && isRovingTargetAvailable(el)
     );
   }
@@ -2819,7 +2882,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     // match the clicked cell itself and misroute a plain cell click to
     // column-sort activation instead of falling through to the row check
     // below.
-    const th = target.closest('th[data-col-key]') as HTMLElement | null;
+    const th = target.closest(HEADER_CELL_SELECTOR) as HTMLElement | null;
     if (th) return this.activateColumn(th.dataset['colKey']!);
     const tr = target.closest('[data-row-key]') as HTMLElement | null;
     if (tr) this.activateRow(tr.dataset['rowKey']!);
@@ -2837,7 +2900,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     // A held Enter/Space/F2 activates once; held arrows and paging keys keep moving focus.
     if (isRepeatedActivationKey(e) && (e.key === 'Enter' || e.key === ' ' || e.key === 'F2')) return;
     // Same th-scoping rationale as onTableClick above.
-    const th = target.closest('th[data-col-key]') as HTMLElement | null;
+    const th = target.closest(HEADER_CELL_SELECTOR) as HTMLElement | null;
     if (th) return this.onHeaderKeyDown(e, th);
     const tr = target.closest('[data-row-key]') as HTMLElement | null;
     if (tr) this.onRowKeyDown(e, tr);
@@ -2912,7 +2975,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  `e.target` on every keydown instead of tracked. */
   private editableCellFor(target: HTMLElement): { element: HTMLElement; columnKey: string } | null {
     const columnKey = target.dataset['colKey'];
-    if (target.tagName !== 'TD' || columnKey === undefined) return null;
+    if (!target.matches(BODY_CELL_SELECTOR) || columnKey === undefined) return null;
     return normalizedEditTrigger(this.columnsByKey.get(columnKey)?.editTrigger) === 'double-click'
       ? { element: target, columnKey }
       : null;
@@ -2923,7 +2986,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  `focus()` on silently (matching `lr-menu`'s `isNavigable()` shape) -- so ArrowLeft/ArrowRight
    *  below can never strand the cell-level focus stop on a target that cannot actually take it. */
   private editableCellsInRow(tr: HTMLElement): HTMLElement[] {
-    return [...tr.querySelectorAll<HTMLElement>('td[data-editable]')].filter(
+    return [...tr.querySelectorAll<HTMLElement>(':is(td, th[scope="row"])[data-editable]')].filter(
       (td) => td.offsetParent !== null && isRovingTargetAvailable(td)
     );
   }
@@ -3064,10 +3127,47 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
    *  `cellPart` -- see that member's doc. Without `cellPart` the output is unchanged. */
   private renderCellContent(col: TableColumn<T>, row: T): unknown {
     const value = this.renderCellValue(col, row);
-    const content = typeof col.cellPart === 'function'
-      ? html`<div part="cell-content ${cellContentPartNames(col.cellPart(row))}">${value}</div>`
-      : value;
+    let content = value;
+    if (typeof col.cellPart === 'function') {
+      const names = cellContentPartNames(col.cellPart(row));
+      if (DEV_DIAGNOSTICS && names) this.warnReservedCellParts(names);
+      content = html`<div part="cell-content ${names}">${value}</div>`;
+    }
     return this.renderCellLink(col, row, content);
+  }
+
+  /** Development diagnostic, once per name per page: a `cellPart` name equal to one of the table's
+   *  own parts (`TABLE_PART_NAMES`) is matched by every `::part()` rule for that part. */
+  private warnReservedCellParts(names: string): void {
+    for (const name of reservedCellPartNames(names)) {
+      devWarnOnce(
+        `${RESERVED_CELL_PART_WARNING}:${name}`,
+        `<lr-table>: a column's \`cellPart\` returned "${name}", which is one of the table's own part names, so ` +
+          `\`::part(${name})\` rules match both. Prefix your part names (for example "cell-${name}-value").`
+      );
+    }
+  }
+
+  /** The validated `rowAttributes(row, index)` result for one body row, or `undefined` when the
+   *  callback is unset, throws, or returns nothing writable. */
+  private rowAttributeMap(row: T, index: number): ReadonlyMap<string, string> | undefined {
+    if (typeof this.rowAttributes !== 'function') return undefined;
+    let value: unknown;
+    try {
+      value = this.rowAttributes(row, index);
+    } catch {
+      return undefined;
+    }
+    const { attributes, rejected } = normalizeRowAttributes(value);
+    if (DEV_DIAGNOSTICS && rejected) {
+      devWarnOnce(
+        REJECTED_ROW_ATTRIBUTE_WARNING,
+        '<lr-table>: `rowAttributes` returned an attribute that is not written. Only lowercase `data-*` names ' +
+          '(not `data-row-key`, `data-stripe` or `data-lr-*`) and `aria-label`, `aria-description`, `aria-current` ' +
+          'and `aria-rowindex` are allowed, with string, finite number or boolean values.'
+      );
+    }
+    return attributes.size > 0 ? attributes : undefined;
   }
 
   /** Wraps resting content in the guarded `[part='cell-link']` anchor while the column's `href`
@@ -3408,7 +3508,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
               )}
               ${hasRowTotal ? html`<col />` : nothing}
             </colgroup>
-            <thead part="head">
+            ${this.withoutHeaderRow ? nothing : html`<thead part="head">
               <tr role="row">
                 ${hasExpand ? html`<th part="header-cell" data-row-expand-toggle scope="col"><span class="sr-only">${this.localize('details')}</span></th>` : nothing}
                 ${this.columns.map((col) => {
@@ -3438,7 +3538,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
                 })}
                 ${hasRowTotal ? html`<th part="header-cell" data-row-total scope="col" aria-label=${this.localize('tableRowTotal')}></th>` : nothing}
               </tr>
-            </thead>
+            </thead>`}
             <tbody>
               ${skeletonLoading
                 ? this.renderSkeletonRows(hasExpand, hasRowTotal)
@@ -3474,6 +3574,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
                           ?data-stripe=${entryIndex % 2 === 0}
                           aria-selected=${this.selectionMode === 'none' ? nothing : selected ? 'true' : 'false'}
                           tabindex=${token === focusedRow ? '0' : '-1'}
+                          ${applyRowAttributes(this.rowAttributeMap(row, entryIndex))}
                         >
                           ${hasExpand
                             ? html`<td part="expand-toggle-cell">
@@ -3522,6 +3623,33 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
                             // `exactValue`). Suppressed while editing so the tooltip can't shadow the
                             // open `[part='cell-editor']`.
                             const cellTitle = editing ? undefined : col.cellTitle?.(row);
+                            // Bound flush to the cell: a cellStyle white-space that preserves breaks
+                            // would otherwise paint the template's indentation as a blank line.
+                            const label = stacked ? html`<span part="cell-label" aria-hidden="true">${col.label}</span>` : nothing;
+                            const body = editing
+                              ? this.renderCellEditor(row, col, token, alwaysOn, renderedEntries.length > 1 ? rowName : undefined)
+                              : this.renderCellContent(col, row);
+                            // A `rowHeader` column's cell is a real row header; every other attribute
+                            // matches the gridcell template below.
+                            if (col.rowHeader === true) {
+                              return html`<th
+                              part="cell"
+                              role="rowheader"
+                              scope="row"
+                              data-row-header
+                              data-col-key=${col.key}
+                              data-align=${col.align ?? 'start'}
+                              data-priority=${col.priority ?? nothing}
+                              data-sticky=${stickyDirection(col.sticky) ?? nothing}
+                              data-wrap=${columnWrap(col.wrap) ?? nothing}
+                              ?data-heat=${heatShare !== null}
+                              ?data-editable=${doubleClickEditable}
+                              tabindex=${doubleClickEditable ? '-1' : nothing}
+                              title=${cellTitle || nothing}
+                              style=${tintedStyle && Object.keys(tintedStyle).length ? styleMap(tintedStyle) : nothing}
+                              >${label}${body}</th
+                            >`;
+                            }
                             return html`<td
                               part="cell"
                               role="gridcell"
@@ -3529,14 +3657,14 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
                               data-align=${col.align ?? 'start'}
                               data-priority=${col.priority ?? nothing}
                               data-sticky=${stickyDirection(col.sticky) ?? nothing}
+                              data-wrap=${columnWrap(col.wrap) ?? nothing}
                               ?data-heat=${heatShare !== null}
                               ?data-editable=${doubleClickEditable}
                               tabindex=${doubleClickEditable ? '-1' : nothing}
                               title=${cellTitle || nothing}
                               style=${tintedStyle && Object.keys(tintedStyle).length ? styleMap(tintedStyle) : nothing}
-                            >
-                              ${stacked ? html`<span part="cell-label" aria-hidden="true">${col.label}</span>` : nothing}${editing ? this.renderCellEditor(row, col, token, alwaysOn, renderedEntries.length > 1 ? rowName : undefined) : this.renderCellContent(col, row)}
-                            </td>`;
+                              >${label}${body}</td
+                            >`;
                           })}
                           ${hasRowTotal ? html`<td part="row-total-cell">${this.rowTotal?.(row)}</td>` : nothing}
                         </tr>`,
@@ -3556,7 +3684,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
                   <tr part="footer-row">
                     ${hasExpand ? html`<td part="footer-cell" aria-hidden="true"></td>` : nothing}
                     ${this.columns.map(
-                      (col) => html`<td part="footer-cell" data-col-key=${col.key} data-priority=${col.priority ?? nothing} data-align=${col.align ?? 'start'}>
+                      (col) => html`<td part="footer-cell" data-col-key=${col.key} data-priority=${col.priority ?? nothing} data-align=${col.align ?? 'start'} data-wrap=${columnWrap(col.wrap) ?? nothing}>
                         ${this.aggregate(col.footer, col, col) ?? ''}
                       </td>`
                     )}
@@ -3572,7 +3700,8 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
 
     return html`
       ${this._stack === 'auto' ? html`<div class="stack-probe" aria-hidden="true"></div>` : nothing}
-      <div part="base" ?data-force-visible=${this.priorityColumnsVisible} ?data-stacked=${this.stacked} aria-busy=${skeletonLoading ? 'true' : 'false'}>
+      <div part="base" ?data-force-visible=${this.priorityColumnsVisible} ?data-stacked=${this.stacked}
+        data-stack-header=${this.stacked && this._stackHeader !== 'visible' ? this._stackHeader : nothing} aria-busy=${skeletonLoading ? 'true' : 'false'}>
         ${skeletonLoading
           ? html`<div part="loading" class="sr-only" aria-hidden="true">${this.loadingText()}</div>`
           : nothing}

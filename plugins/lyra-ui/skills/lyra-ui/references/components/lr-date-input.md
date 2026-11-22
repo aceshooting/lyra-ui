@@ -9,6 +9,6 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 22 parts, 38 custom properties — see `lr-date-picker.md`
+- **Themeable via** 22 parts, 43 custom properties — see `lr-date-picker.md`
 - **Documented with** `lr-date-picker`: see [lr-date-picker.md](./lr-date-picker.md).
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

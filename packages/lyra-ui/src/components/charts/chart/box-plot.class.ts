@@ -268,6 +268,9 @@ function summaryOf(point: LyraBoxPlotSummary): LyraBoxPlotSummary {
  * @cssprop [--lr-chart-legend-item-padding=var(--lr-space-2xs)] - Padding of a legend visibility button.
  * @cssprop [--lr-chart-legend-swatch-size=var(--lr-space-s)] - Legend swatch inline and block size.
  * @cssprop [--lr-chart-legend-swatch-radius=var(--lr-radius-xs)] - Legend swatch corner radius.
+ * @cssprop [--lr-chart-legend-justify=normal] - `justify-content` of the legend row, for example
+ *   `center` or `flex-end`.
+ * @cssprop [--lr-chart-legend-item-line-height=inherit] - Line height of each legend item.
  * @cssprop [--lr-chart-legend-item-hover-bg=var(--lr-color-brand-quiet)] - Legend-item hover background.
  * @cssprop --lr-chart-legend-item-active-bg - Legend-item pressed background.
  * @cssprop [--lr-chart-canvas-hover-outline-width=var(--lr-border-width-thin)] - Width of the

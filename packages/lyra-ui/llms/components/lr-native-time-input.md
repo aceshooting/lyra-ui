@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 35 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 40 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `input-wrapper`: `--lr-input-gap`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -114,3 +114,11 @@ entry for the flush and cancellation rules.
 ---
 
 `--lr-form-control-label-line-height` (default `inherit`) sets the label line height, and `--lr-input-font-variant-numeric` (default `inherit`; for example `tabular-nums`) sets the field text's numeric figures, shared with `lr-input`.
+
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
+- `--lr-input-line-height` (default `inherit`): Line height of the native input text.
+- `--lr-input-number-direction` (default `ltr`): Inline direction of numeric content (`type="number"`), which renders left-to-right by default so digits and signs keep their order. Set `rtl` to start the number at the right edge in a right-to-left layout. Set `tabular-nums` so digits share one width and a column of values lines up; `lr-number-input` shares the same field styles and honours it too.

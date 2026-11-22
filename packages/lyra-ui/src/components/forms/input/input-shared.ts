@@ -161,6 +161,8 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  *   `label-placement="start"`.
  * @cssprop [--lr-form-control-label-gap=var(--lr-space-m)] - Space between the label column and
  *   the field while `label-placement="start"`.
+ * @cssprop [--lr-form-control-label-block-gap=var(--lr-space-xs)] - Space between a label above
+ *   the field and the field, in top placement and once a `label-placement="start"` row collapses.
  * @cssprop [--lr-form-control-label-collapse-inline-size=var(--lr-size-20rem)] - Control width
  *   below which `label-placement="start"` returns the label above the field.
  * @cssprop [--lr-form-control-invalid-border-color=var(--lr-color-danger)] - Resting border while the
@@ -171,6 +173,8 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=inherit] - Text color of the field label.
  * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
+ * @cssprop [--lr-form-control-label-text-align=inherit] - Text alignment of the field label.
+ * @cssprop [--lr-form-control-label-text-transform=inherit] - Text transform of the field label.
  * @csspart form-control-label - The `<label>` element.
  * @csspart label - Wrapper around the visible label content.
  * @csspart base - Compatibility name for the control row; use `input-wrapper`.
@@ -208,6 +212,10 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * @cssprop [--lr-input-font-family=inherit] - Font family of the native input. It inherits the
  *   host's font by default; set it to restyle only the field text without touching the label or hint.
  * @cssprop [--lr-input-font-variant-numeric=inherit] - `font-variant-numeric` of the native input.
+ * @cssprop [--lr-input-line-height=inherit] - Line height of the native input text.
+ * @cssprop [--lr-input-number-direction=ltr] - Inline direction of numeric content
+ *   (`type="number"`), which renders left-to-right by default so digits and signs keep their order.
+ *   Set `rtl` to start the number at the right edge in a right-to-left layout.
  *   Set `tabular-nums` so digits share one width and a column of values lines up; `lr-number-input`
  *   shares the same field styles and honours it too.
  * @cssprop [--lr-input-gap=var(--lr-space-xs)] - Gap between the start/end adornments and the

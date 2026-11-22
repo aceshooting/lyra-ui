@@ -33,6 +33,9 @@ export const styles = css`
        spurious-scrollbar risk this rule guards against never returns for the capped case either. */
     overflow-block: hidden;
     overflow-wrap: anywhere;
+    font-size: var(--lr-markdown-font-size, inherit);
+    line-height: var(--lr-markdown-line-height, inherit);
+    color: var(--lr-markdown-color, inherit);
   }
   [part='content'][data-unsanitized] {
     /* Unsanitized content may carry positioned descendants; clip that trusted-content escape hatch
@@ -92,13 +95,12 @@ export const styles = css`
   h4[part='heading'] {
     font-size: var(--lr-markdown-heading-4-font-size, var(--lr-size-1em));
   }
-  [part='content'] p,
-  [part='content'] ul,
-  [part='content'] ol {
-    margin-block: 0 var(--lr-markdown-block-gap, var(--lr-space-s));
+  [part='content'] p {
+    margin-block: 0 var(--lr-markdown-paragraph-gap, var(--lr-markdown-block-gap, var(--lr-space-s)));
   }
   [part='content'] ul,
   [part='content'] ol {
+    margin-block: 0 var(--lr-markdown-list-gap, var(--lr-markdown-block-gap, var(--lr-space-s)));
     padding-inline-start: var(--lr-markdown-list-indent, var(--lr-size-2-5rem));
   }
   ul > [part~='task-item'] {

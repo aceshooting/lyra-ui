@@ -254,6 +254,15 @@ export interface LyraButtonEventMap {
  * @cssprop [--lr-button-padding-inline=var(--lr-form-control-padding-inline)] - Inline padding of
  * the internal button, from the active `size` tier. `appearance="link"` ignores it.
  * @cssprop [--lr-button-font-weight=var(--lr-font-weight-semibold)] - Font weight of the label.
+ * @cssprop [--lr-button-line-height=inherit] - Line height of the internal button, in every
+ *   appearance including `link`.
+ * @cssprop [--lr-button-link-text-decoration=underline] - `text-decoration` of `appearance="link"`
+ *   at rest; `none` drops the underline.
+ * @cssprop [--lr-button-link-hover-text-decoration=underline] - `text-decoration` of an enabled
+ *   `appearance="link"` under the pointer. Set the resting token to `none` and leave this one unset
+ *   to show the underline on hover only.
+ * @cssprop [--lr-button-link-min-height=0] - Minimum block size of `appearance="link"`, which
+ *   otherwise has no height floor (for example `var(--lr-size-24px)` for a tappable inline link).
  * @cssprop [--lr-button-font-size=var(--lr-form-control-font-size)] - Font size of the internal
  * button, from the active `size` tier. `appearance="link"` ignores it and inherits the ambient font
  * instead.

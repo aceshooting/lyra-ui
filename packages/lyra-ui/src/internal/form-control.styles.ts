@@ -174,8 +174,8 @@ export const formControlLabelDisplay = css`
 
 /**
  * Label typography shared by native field labels, legends and named group labels. Size, weight,
- * colour and line height each read a `--lr-form-control-label-*` token; an unset line height
- * inherits, so the default is unchanged.
+ * colour, line height, text alignment and text transform each read a `--lr-form-control-label-*`
+ * token; an unset line height, alignment or transform inherits, so the default is unchanged.
  */
 export function formControlLabelTypography({
   size = css`var(--lr-font-size-md-sm)`,
@@ -187,6 +187,8 @@ export function formControlLabelTypography({
     font-weight: var(--lr-form-control-label-font-weight, ${weight});
     color: var(--lr-form-control-label-color, ${color});
     line-height: var(--lr-form-control-label-line-height, inherit);
+    text-align: var(--lr-form-control-label-text-align, inherit);
+    text-transform: var(--lr-form-control-label-text-transform, inherit);
   `;
 }
 

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 23 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `trigger`: `--lr-export-button-radius`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -128,7 +128,10 @@ hover, `--lr-export-button-hover-bg`, `--lr-export-button-hover-color` and
 the current `appearance` resolves to and leaves the other paints alone, so they are also the way to
 keep `appearance="outlined"` chrome while returning its label to neutral text — `outlined` paints
 the label `--lr-color-brand` and, unlike `lr-button`, this component has no `variant` of its own to
-opt out.
+opt out. The trigger's type and padding take `--lr-export-button-font-size` (unset, it inherits the
+host font size or takes the `size` tier's), `--lr-export-button-font-weight` (default `inherit`) and
+`--lr-export-button-padding-inline` (default `var(--lr-space-m)`, also over the `size` tier's; an
+`icon-only` trigger stays a padding-free square). The menu rows keep their own.
 `--lr-export-button-gap` (default `var(--lr-space-xs)`, constant across the `size` ladder) and
 `--lr-export-button-radius` (default `var(--lr-radius)`) retune the trigger's icon/label gap and
 corner radius without a `::part(trigger)` rule. Plus shared

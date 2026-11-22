@@ -9,8 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md); family-wide breaking-change summaries: [charts](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-ui/llms/charts.md)
 - **Deprecations** none
 - **Optional peers** `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` — see `llms/peers.md`
-- **Themeable via** 19 parts, 52 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `canvas`: `--lr-chart-canvas-hover-outline-color`, `--lr-chart-canvas-hover-outline-width`; `legend-swatch`: `--lr-chart-pattern-step`
+- **Themeable via** 19 parts, 54 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `canvas`: `--lr-chart-canvas-hover-outline-color`, `--lr-chart-canvas-hover-outline-width`; `center`: `--lr-chart-legend-justify`; `legend-swatch`: `--lr-chart-pattern-step`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -173,5 +173,10 @@ their semantics, defaults, and gotchas.
   resolved `effectiveLocale`) with an omitted `locale` (or `'auto'`) now resolves to the page's
   active `setLyraLocale()` locale instead of a hardcoded `'en'`, matching `utilities/format.ts`'s
   helpers; an app that never calls `setLyraLocale()` sees no change, and an explicit tag still wins.
+
+Further custom properties:
+
+- `--lr-chart-legend-item-line-height` (default `inherit`): Line height of each legend item.
+- `--lr-chart-legend-justify` (default `normal`): `justify-content` of the legend row, for example `center` or `flex-end`.
 
 ---

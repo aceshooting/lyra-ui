@@ -298,6 +298,11 @@ export type { CalendarCellPos, HeatmapAnnotation, HeatmapCalendarData, HeatmapDa
  * @cssprop [--lr-heatmap-legend-bg=transparent] - Background of the legend row.
  * @cssprop [--lr-heatmap-legend-radius=0] - Corner radius of the legend row.
  * @cssprop [--lr-heatmap-legend-swatch-size=var(--lr-size-0-6rem)] - Size of a `legendStops` swatch and an annotation ring.
+ * @cssprop [--lr-heatmap-legend-swatch-radius=var(--lr-radius-xs)] - Corner radius of a `legendStops` swatch.
+ * @cssprop [--lr-heatmap-legend-justify=normal] - `justify-content` of the legend row, for example
+ *   `center` or `flex-end`.
+ * @cssprop [--lr-heatmap-legend-offset=var(--lr-space-xs)] - Distance between the grid and the
+ *   legend, on whichever edge `legend-placement` puts it.
  * @cssprop [--lr-heatmap-legend-ramp-inline-size=var(--lr-size-6rem)] - Length of the continuous legend ramp.
  * @cssprop [--lr-heatmap-legend-ramp-block-size=var(--lr-size-0-5rem)] - Thickness of the continuous legend ramp.
  * @cssprop [--lr-heatmap-legend-ramp-radius=var(--lr-size-2px)] - Corner radius of the continuous legend ramp.

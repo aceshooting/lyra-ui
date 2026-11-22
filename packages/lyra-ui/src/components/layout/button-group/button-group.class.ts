@@ -19,6 +19,9 @@ import { styles } from './button-group.styles.js';
  * @csspart base - The group wrapper.
  * @csspart button-group - Web Awesome-named alias on the same wrapper as `base`.
  * @cssprop [--lr-button-group-gap=var(--lr-space-2xs)] - Gap between grouped controls.
+ * @cssprop [--lr-button-group-justify=normal] - `justify-content` of a horizontal group. Give the
+ *   host a width (for example `display: flex` or `inline-size: 100%`) and set `space-between` or
+ *   `space-evenly` to spread the buttons across it.
  * @status stable
  * @since 4.0.0
  */

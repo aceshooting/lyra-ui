@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 30 parts, 2 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 30 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `controls`: `--lr-filter-bar-gap`; `end`: `--lr-filter-bar-gap`; `field`: `--lr-filter-bar-field-basis`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -200,7 +200,11 @@ baked-in label text is visible or screen-reader-only).
 flex-basis is themeable via `--lr-filter-bar-field-basis` (default `var(--lr-size-12rem)`).
 `--lr-filter-bar-gap` (default `var(--lr-space-s)`) themes the gap between filter fields, the
 `end` slot, the reset button, and the loading status in the `controls` row. Both are byte-identical
-to the previous hardcoded values when unset.
+to the previous hardcoded values when unset. `--lr-filter-bar-control-height` gives every filter
+type (select, combobox, date, text and checkbox-menu) and the reset button one control height at any
+`size`, and `--lr-filter-bar-control-font-size` one field font size; both are unset by default, so
+each control keeps its own tier and any value set on an ancestor through that control's own token. A
+control's own font token set on an ancestor still wins over `--lr-filter-bar-control-font-size`.
 
 The reset button and the `end` slot form one wrapping action group, and the `end` wrapper reserves the
 same trailing validation spacer as a field, so slotted end actions sit on the field frames' bottom

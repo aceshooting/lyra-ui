@@ -274,6 +274,9 @@ const emojiHaystacks = new WeakMap<EmojiPickerItem, { locale: string; value: str
  * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=inherit] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
+ * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
+ * @cssprop [--lr-form-control-label-text-align=inherit] - Text alignment of the field label.
+ * @cssprop [--lr-form-control-label-text-transform=inherit] - Text transform of the field label.
  * @csspart form-control-label - The visible label.
  * @csspart base - The wrapper around the search input and grid.
  * @csspart search - The search/filter `<input>` (`role="combobox"` over the grid).

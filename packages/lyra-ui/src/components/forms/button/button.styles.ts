@@ -189,6 +189,7 @@ export const styles = css`
     font-weight: var(--lr-button-font-weight, var(--lr-font-weight-semibold));
     /* After the "font" shorthand, which would otherwise reset font-size back to the inherited one. */
     font-size: var(--lr-button-font-size, var(--_lr-button-font-size));
+    line-height: var(--lr-button-line-height, inherit);
     /* In href mode the root is an <a>, which the UA stylesheet underlines while a native <button>
        is not, so every non-link appearance rendered an underline only as a link. appearance="link"
        re-declares its own underline further down. */
@@ -442,13 +443,15 @@ export const styles = css`
     inline-size: var(--lr-button-width, auto);
     padding: 0;
     border: 0;
-    min-block-size: 0;
+    /* Opt-in floor (a tappable inline link); unset, an inline link keeps no min-height. */
+    min-block-size: var(--lr-button-link-min-height, 0);
     block-size: auto;
     border-radius: 0;
     background: transparent;
     color: var(--lr-button-accent, var(--_lr-button-accent));
     font: inherit;
-    text-decoration: underline;
+    line-height: var(--lr-button-line-height, inherit);
+    text-decoration: var(--lr-button-link-text-decoration, underline);
     text-underline-offset: var(--lr-size-0-15rem);
     /* --lr-button-shadow paints on [part~='base'] regardless of appearance, so a shadow set for an
        elevated button elsewhere on the page would otherwise still render behind this zero-chrome
@@ -463,6 +466,7 @@ export const styles = css`
     [part~="base"]:not(:disabled, [aria-disabled="true"]):hover {
     background: transparent;
     color: ${hoverFill('var(--lr-button-accent, var(--_lr-button-accent))')};
+    text-decoration: var(--lr-button-link-hover-text-decoration, underline);
   }
   :host([appearance="link"])
     [part~="base"]:not(:disabled, [aria-disabled="true"]):active {

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 24 parts, 52 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 24 parts, 57 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `code-block`: `--lr-code-block-tab-size`, `--lr-markdown-code-bg`, `--lr-markdown-code-block-font-size`, `--lr-markdown-code-block-line-height`, `--lr-markdown-code-block-padding`, `--lr-markdown-code-block-radius`; `content`: `--lr-markdown-font-mono`, `--lr-markdown-max-height`; `table`: `--lr-markdown-table-header-bg`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -295,6 +295,10 @@ browser scale — `--lr-markdown-heading-font-weight`
 and `--lr-markdown-link-hover-color` (default the link colour), `--lr-markdown-blockquote-border-color`
 (default `var(--lr-color-border-subtle)`), `--lr-markdown-blockquote-color` (default
 `var(--lr-color-text-quiet)`) and `--lr-markdown-list-indent` (default `var(--lr-size-2-5rem)`).
+`--lr-markdown-paragraph-gap` and `--lr-markdown-list-gap` (both default `--lr-markdown-block-gap`)
+split the space after paragraphs and after lists from the shared rhythm, and
+`--lr-markdown-font-size`, `--lr-markdown-line-height` and `--lr-markdown-color` (all default
+`inherit`) set the rendered prose's body type and colour without a host rule.
 The `code-block` and `inline-code` surfaces have `--lr-markdown-code-block-padding`,
 `--lr-markdown-code-block-radius`, `--lr-markdown-code-block-bg`, `--lr-markdown-code-padding`,
 `--lr-markdown-code-radius` and `--lr-markdown-code-bg` (all listed below);

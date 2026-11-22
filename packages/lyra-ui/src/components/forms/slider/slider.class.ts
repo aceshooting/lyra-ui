@@ -179,6 +179,8 @@ class LyraSliderBase extends LyraFormControlElement<LyraSliderEventMap> {}
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
  * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
+ * @cssprop [--lr-form-control-label-text-align=inherit] - Text alignment of the field label.
+ * @cssprop [--lr-form-control-label-text-transform=inherit] - Text transform of the field label.
  * @cssprop [--lr-form-control-label-inline-size=30%] - Label column width while
  *   `label-placement="start"`.
  * @cssprop [--lr-form-control-label-gap=var(--lr-space-m)] - Space between the label column and
@@ -252,6 +254,12 @@ class LyraSliderBase extends LyraFormControlElement<LyraSliderEventMap> {}
  *   mark labels; a label closer than this to the previous one is thinned.
  * @cssprop [--lr-slider-thumb-bg=var(--lr-color-brand)] - Resting thumb background.
  * @cssprop [--lr-slider-thumb-border-color=var(--lr-color-surface)] - Resting thumb border.
+ * @cssprop [--lr-slider-thumb-border-width=var(--lr-border-width-medium)] - Thumb border width.
+ * @cssprop [--lr-slider-thumb-shadow=var(--lr-shadow-s)] - Thumb elevation in every state; the hover
+ *   and press rings are appended to it, so remove it with a transparent shadow (`0 0 transparent`)
+ *   rather than `none`.
+ * @cssprop [--lr-slider-value-color=var(--lr-color-text-quiet)] - Text color of the `value` readout.
+ * @cssprop [--lr-slider-value-font-family=inherit] - Font family of the `value` readout.
  * @cssprop [--lr-slider-thumb-hover-ring-color=var(--lr-color-brand-quiet)] - Thumb ring while
  * hovered.
  * @cssprop [--lr-slider-thumb-active-ring-color=var(--lr-slider-thumb-hover-ring-color)] - Thumb

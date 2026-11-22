@@ -50,6 +50,100 @@ export const DEFAULT_RESIZE_MIN_WIDTH_PX = 48; // used when --lr-table-resize-mi
 export const MISSING_CELL_RENDERER_WARNING = 'lyra-table-missing-cell-renderer';
 export const MISSING_ACCESSIBLE_NAME_WARNING = 'lyra-table-missing-accessible-name';
 export const INERT_PRIORITY_COLUMN_CONFIG_WARNING = 'lyra-table-inert-priority-column-config';
+/** Prefix of the per-name `cellPart` collision diagnostic key (`<prefix>:<part name>`). */
+export const RESERVED_CELL_PART_WARNING = 'lyra-table-reserved-cell-part';
+export const REJECTED_ROW_ATTRIBUTE_WARNING = 'lyra-table-rejected-row-attribute';
+
+/** Column header cells. Scoped by `scope="col"` so a `rowHeader` column's body `<th scope="row">`
+ *  never reads as a header-strip cell (sorting, resizing, header roving focus, measurement). */
+export const HEADER_CELL_SELECTOR = 'th[scope="col"][data-col-key]';
+/** Body cells, including a `rowHeader` column's `<th scope="row">`. */
+export const BODY_CELL_SELECTOR = ':is(td, th[scope="row"])[data-col-key]';
+
+/** Every CSS part name `<lr-table>` renders or forwards, so a `cellPart(row)` result can be checked
+ *  against them: a consumer name equal to one of these is styled by every
+ *  `lr-table::part(<name>)` rule the table's own part already receives, and vice versa. */
+export const TABLE_PART_NAMES: readonly string[] = Object.freeze([
+  'base', 'caption', 'cell', 'cell-content', 'cell-editor', 'cell-label', 'cell-link', 'empty',
+  'empty-actions', 'empty-base', 'empty-description', 'empty-heading', 'empty-icon', 'error',
+  'error-actions', 'error-base', 'error-cell', 'error-description', 'error-heading', 'error-icon',
+  'error-row', 'expanded-cell', 'expanded-row', 'expand-toggle-cell', 'filter', 'filter-clear',
+  'filter-label', 'foot', 'footer-cell', 'footer-row', 'group-cell', 'group-row', 'head',
+  'header-cell', 'loading', 'more-button', 'pagination', 'pagination-button', 'pagination-controls',
+  'pagination-page', 'pagination-page-count', 'pagination-page-current', 'pagination-page-field',
+  'pagination-page-input', 'pagination-pages', 'pagination-summary', 'resize-handle',
+  'retry-button', 'reveal-columns-button', 'row', 'row-expand-icon', 'row-expand-toggle',
+  'row-limit', 'row-total-cell', 'skeleton', 'sort-icon', 'sort-icon-active', 'sort-icon-inactive',
+  'table',
+]);
+const TABLE_PART_NAME_SET: ReadonlySet<string> = new Set(TABLE_PART_NAMES);
+
+/** The names in a normalized `cellPart` result (see `cellContentPartNames`) that collide with one
+ *  of the table's own parts. */
+export function reservedCellPartNames(names: string): string[] {
+  return names ? names.split(' ').filter((name) => TABLE_PART_NAME_SET.has(name)) : [];
+}
+
+/** One `rowAttributes(row, index)` value: a string or finite number is written as text, `true`
+ *  writes an empty (present) attribute, and `false`/`null`/`undefined` leave it absent. */
+export type TableRowAttributeValue = string | number | boolean | null | undefined;
+/** What `rowAttributes(row, index)` returns: attribute name to value, for one body row. */
+export type TableRowAttributes = Readonly<Record<string, TableRowAttributeValue>>;
+
+/** The ARIA attributes `rowAttributes` may set on a body row; everything else ARIA on the row
+ *  (`aria-selected`, the row role's state) is owned by the table. */
+export const TABLE_ROW_ARIA_ATTRIBUTES: readonly string[] = Object.freeze([
+  'aria-label',
+  'aria-description',
+  'aria-current',
+  'aria-rowindex',
+]);
+const TABLE_ROW_ARIA_SET: ReadonlySet<string> = new Set(TABLE_ROW_ARIA_ATTRIBUTES);
+/** `data-*` markers the table writes on its own rows; a consumer value would be overwritten or
+ *  would corrupt the delegated row lookup. */
+const RESERVED_ROW_DATA_ATTRIBUTES: ReadonlySet<string> = new Set([
+  'data-row-key',
+  'data-stripe',
+  'data-skeleton-row',
+  'data-expanded-row-key',
+]);
+const DATA_ATTRIBUTE_NAME = /^data-[a-z0-9_.-]+$/;
+
+/** Whether `name` is an attribute `rowAttributes` may set: a lowercase `data-*` name outside the
+ *  table's own row markers and the library's `data-lr-*` namespace, or one of
+ *  `TABLE_ROW_ARIA_ATTRIBUTES`. Event handlers (`on*`), `style`, `class`, `id`, `role`, `tabindex`
+ *  and every other attribute are refused. */
+export function isAllowedRowAttribute(name: string): boolean {
+  if (TABLE_ROW_ARIA_SET.has(name)) return true;
+  return DATA_ATTRIBUTE_NAME.test(name) && !name.startsWith('data-lr-') && !RESERVED_ROW_DATA_ATTRIBUTES.has(name);
+}
+
+/** Normalizes one `rowAttributes` result to the attributes to write. A non-object result, a
+ *  throwing getter or a refused name or value is skipped; `rejected` reports whether anything was. */
+export function normalizeRowAttributes(value: unknown): { attributes: Map<string, string>; rejected: boolean } {
+  const attributes = new Map<string, string>();
+  let rejected = false;
+  if (value === null || value === undefined) return { attributes, rejected };
+  if (typeof value !== 'object') return { attributes, rejected: true };
+  let entries: [string, unknown][];
+  try {
+    entries = Object.entries(value);
+  } catch {
+    return { attributes, rejected: true };
+  }
+  for (const [name, raw] of entries) {
+    if (!isAllowedRowAttribute(name)) {
+      rejected = true;
+      continue;
+    }
+    if (raw === false || raw === null || raw === undefined) continue;
+    if (raw === true) attributes.set(name, '');
+    else if (typeof raw === 'string') attributes.set(name, raw);
+    else if (typeof raw === 'number' && Number.isFinite(raw)) attributes.set(name, String(raw));
+    else rejected = true;
+  }
+  return { attributes, rejected };
+}
 
 export function frozenArray<Value>(values: Iterable<Value>, limit = MAX_TABLE_COLLECTION_ENTRIES): readonly Value[] {
   const snapshot: Value[] = [];
@@ -205,7 +299,19 @@ export const TABLE_LAYOUT = literalSetConverter<'auto' | 'fixed'>(['auto', 'fixe
  *  `--lr-table-stack-breakpoint` allocation. */
 export type TableStackMode = 'never' | 'auto' | 'always';
 export const TABLE_STACK = literalSetConverter<TableStackMode>(['never', 'auto', 'always'], 'never');
+/** What the column header strip shows while rows are stacked: `visible` keeps every header (the
+ *  default), `sortable` keeps only the sortable headers as a compact sort strip, `hidden` keeps none.
+ *  A header left out of the strip stays in the accessibility tree and is shown while it has focus. */
+export type TableStackHeader = 'visible' | 'sortable' | 'hidden';
+export const TABLE_STACK_HEADER = literalSetConverter<TableStackHeader>(['visible', 'sortable', 'hidden'], 'visible');
 export const TABLE_PAGINATION_FORMAT = literalSetConverter<LyraPaginationFormat>(['standard', 'compact'], 'compact');
+
+/** `columns[].wrap` values, named after the CSS `flex-wrap` keywords `--lr-table-filter-wrap` uses. */
+export type TableColumnWrap = 'wrap' | 'nowrap';
+/** Fails closed for untyped values outside the `columns[].wrap` vocabulary. */
+export function columnWrap(wrap: unknown): TableColumnWrap | undefined {
+  return wrap === 'wrap' || wrap === 'nowrap' ? wrap : undefined;
+}
 
 /** Canonical table sort direction. */
 export type TableSortDirection = 'asc' | 'desc';
@@ -257,6 +363,20 @@ interface TableColumnCommon<T> {
    *  drag-end or keyboard proposal can be vetoed with `lr-column-resize-request`. */
   resizable?: boolean;
   sortable?: boolean;
+  /** Renders this column's body cells as row headers -- `<th scope="row" role="rowheader">` in
+   *  place of `<td role="gridcell">` -- so assistive technology announces that cell's content as
+   *  the name of its row while moving across the row's other cells. Usually the one identifying
+   *  column (a name or id). The cell keeps `part="cell"` and every other column behaviour; it also
+   *  carries `data-row-header`, and `--lr-table-row-header-font-weight` (default `inherit`, so it
+   *  looks like any other cell) sets its weight. Omit for an ordinary data column. */
+  rowHeader?: boolean;
+  /** Line wrapping for this column's body and footer cells (the header keeps its own single
+   *  line). `'nowrap'` keeps each value on one line, widening the column instead -- e.g. an id,
+   *  date or amount; `'wrap'` lets long values wrap and also breaks an unbroken token (a URL, a
+   *  hash) so it stays inside a narrow or fixed-width column. Omit for the default: values wrap at
+   *  spaces as before. While rows are stacked a `'nowrap'` column wraps, since a card cannot
+   *  scroll sideways. The cell carries `[data-wrap]`; unknown values are ignored. */
+  wrap?: TableColumnWrap;
   /** This column's own initial sort direction the first time header activation makes it the active
    *  `sortKey` -- consulted before the element-level `defaultSortDir`, which remains the fallback
    *  when this is omitted. Lets a mixed text/numeric table give one column (e.g. a "last updated"
@@ -304,7 +424,11 @@ interface TableColumnCommon<T> {
    *  external stylesheet rule regardless of specificity, so a `background`/`backgroundColor`
    *  returned here silently and completely overrides this same column's `heatValue` tint (which is
    *  painted by a shadow-stylesheet rule, not inline) -- combine the two only when that override is
-   *  the intended effect. */
+   *  the intended effect.
+   *
+   *  For text layout -- `white-space`, line clamping, `text-overflow` -- prefer `cellPart` plus a
+   *  `::part()` rule: that wrapper holds only the value, while this style lands on the whole cell,
+   *  which in stacked mode also holds the `cell-label` caption. */
   cellStyle?(row: T): Record<string, string> | undefined;
   /** Applied as the generated `<td>`'s native `title`, symmetrical with `cellStyle` -- e.g. the
    *  untruncated text behind an ellipsized cell, or a formatted timestamp behind a relative one.
@@ -324,7 +448,11 @@ interface TableColumnCommon<T> {
    *  `display: block` element carrying `part="cell-content"` plus every whitespace-separated name
    *  returned here, so an outer scope can style it per row: `lr-table::part(cell-muted)`. Return
    *  `undefined` or an empty string for a plain `cell-content` wrapper; non-string results are
-   *  ignored. Prefix your names (e.g. `cell-`) so they cannot collide with the table's own parts.
+   *  ignored. Prefix your names (e.g. `cell-`) so they cannot collide with the table's own parts:
+   *  every name the table renders or forwards (`cell`, `cell-content`, `cell-label`, `cell-link`,
+   *  `cell-editor`, `row`, `header-cell`, ...; the full list is `@csspart` on `<lr-table>`) is
+   *  reserved, and a development build warns once per name when this returns one. The name is
+   *  still applied, so the warning is the only change.
    *  Not applied to an open inline editor. A `part` attribute written directly inside a `cell()`
    *  template is equally a part of this table. */
   cellPart?(row: T): string | undefined;

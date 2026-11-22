@@ -73,3 +73,30 @@ describe('chart legend tokens', () => {
     expect(defaults.gap).to.equal('8px');
   });
 });
+
+describe('chart legend justify and item line height tokens', () => {
+  const layout = (root: ShadowRoot) => ({
+    justify: getComputedStyle(root.querySelector('[part="legend"]')!).justifyContent,
+    lineHeight: getComputedStyle(root.querySelector('[part~="legend-item"]')!).lineHeight,
+  });
+  const THEMED = 'line-height: 15px; --lr-chart-legend-justify: space-between; --lr-chart-legend-item-line-height: 23px';
+
+  for (const tag of ['lr-chart', 'lr-doughnut-chart'] as const) {
+    it(`${tag} justifies the legend row and sets the item line height; unset it keeps normal and inherits`, async () => {
+      expect(layout(await mountCanvas(tag, THEMED))).to.deep.equal({ justify: 'space-between', lineHeight: '23px' });
+      expect(layout(await mountCanvas(tag, 'line-height: 15px'))).to.deep.equal({ justify: 'normal', lineHeight: '15px' });
+    });
+  }
+
+  it('lr-lite-chart keeps its centred legend unset and follows the same tokens', async () => {
+    const mount = async (style: string): Promise<ShadowRoot> => {
+      const host = await fixture<HTMLElement>(html`<div style=${style}><lr-lite-chart with-legend style="inline-size:320px"
+        .labels=${['A', 'B']} .datasets=${[{ label: 'First', data: [1, 2] }]}></lr-lite-chart></div>`);
+      const chart = host.firstElementChild as HTMLElement & { updateComplete: Promise<boolean> };
+      await chart.updateComplete;
+      return chart.shadowRoot!;
+    };
+    expect(layout(await mount(THEMED))).to.deep.equal({ justify: 'space-between', lineHeight: '23px' });
+    expect(layout(await mount('line-height: 15px'))).to.deep.equal({ justify: 'center', lineHeight: '15px' });
+  });
+});

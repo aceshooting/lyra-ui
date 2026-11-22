@@ -39,6 +39,13 @@ export const Gallery: Story = {
   `,
 };
 
+/** `truncate` keeps a long value on one ellipsized line; `--lr-stat-align: center` centres the tile. */
+export const TruncatedCentred: Story = {
+  render: () => html`
+    <lr-stat truncate label="Top customer" value="Northwind Trading Company Ltd" style="inline-size: 12rem; --lr-stat-align: center"></lr-stat>
+  `,
+};
+
 export const StartAndCaptionSlots: Story = {
   name: 'Leading icons and rich captions',
   parameters: {

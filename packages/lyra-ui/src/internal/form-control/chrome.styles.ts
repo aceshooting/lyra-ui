@@ -42,7 +42,7 @@ export const formControlLabelPlacement = css`
   :host([label-placement='start']) [part~='form-control'] > [part~='form-control-label'] {
     flex: 0 0 clamp(var(--_lr-label-column), (var(--_lr-label-collapse) - 100%) * 9999, 100%);
     box-sizing: border-box;
-    margin-block-end: clamp(0px, (var(--_lr-label-collapse) - 100%) * 9999, var(--lr-space-xs));
+    margin-block-end: clamp(0px, (var(--_lr-label-collapse) - 100%) * 9999, var(--lr-form-control-label-block-gap, var(--lr-space-xs)));
     padding-block-start: clamp(
       0px,
       (100% - var(--_lr-label-collapse)) * 9999,
@@ -64,11 +64,15 @@ export const formControlLabelPlacement = css`
   }
 `;
 
-/** Field label and supporting text; component-specific layout remains in the adopting sheet. */
+/**
+ * Field label and supporting text; component-specific layout remains in the adopting sheet. The
+ * space between a label above its field reads `--lr-form-control-label-block-gap` (default
+ * `--lr-space-xs`), also used once a `label-placement="start"` control collapses to a label above.
+ */
 export const formControlChrome = css`
   [part~='form-control-label'] {
     display: block;
-    margin-block-end: var(--lr-space-xs);
+    margin-block-end: var(--lr-form-control-label-block-gap, var(--lr-space-xs));
     ${formControlLabelTypography()}
   }
   [part~='form-control-label'][hidden] { display: none; }

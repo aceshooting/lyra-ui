@@ -432,6 +432,7 @@ set. If it forces a row below its target size, the action overflows instead of s
 
 The mapped `--show-duration` and `--hide-duration` hooks independently retime the popup's enter
 and exit transitions; both default to `var(--lr-transition-fast)`. Clear and calendar action
+resting colour is `--lr-date-input-action-color` (default `var(--lr-color-text-quiet)`); their
 state hooks are `--lr-date-input-action-hover-color`, `--lr-date-input-action-hover-bg`, and
 `--lr-date-input-action-hover-radius` (defaults: text, transparent, and the input radius), plus
 `--lr-date-input-action-active-color`, `--lr-date-input-action-active-bg`, and
@@ -570,5 +571,12 @@ and `dateTimeFormat(locale, options)`.
   `var(--lr-color-border)`, or `transparent` under `filled`.
 - `--lr-form-control-focus-shadow` — The shared field halo, painted as a `box-shadow` while the row
   holds focus. Default: `none`. Additive — the focused brand border is never replaced by it.
+
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Space between a label above the field and the field, in top placement and once a `label-placement="start"` row collapses.
+- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
 ---

@@ -282,6 +282,8 @@ keeps its own purpose name. A whitespace-only or empty host label leaves the hos
   Mutating playback inside the callback discards its result without immediately retrying it.
 - `withValue: boolean = false` (attribute `with-value`) — show a non-live position readout below
   the range. Hidden by default; it duplicates the range's text and is `aria-hidden`.
+- `fullWidth: boolean = false` (attribute `full-width`, reflected) — stretches the control across its
+  container, the range taking the spare width; off by default, so it keeps its content width.
 - `hidden: boolean = false` (reflected; re-declared over the native IDL property so Lit's
   change-tracking sees it and auto-pauses on `hidden = true`)
 
@@ -471,7 +473,8 @@ for exceptions. `--lr-map-control-size` sizes each button (unset: content size a
 shorthand), `--lr-map-control-shadow`, `--lr-map-control-bg` (resting fill under the shared glass
 treatment) and `--lr-map-control-color` shape control groups and outlines; `--lr-map-control-hover-bg`
 and `--lr-map-control-active-bg` paint pointer states in every state (the action tokens no longer reach native controls);
-`--lr-map-control-gap` is the margin around each control. The attribution control takes
+`--lr-map-control-gap` is the margin around each control; `--lr-map-attribution-margin` (default
+`--lr-map-control-gap`) gives the attribution control its own margin shorthand. The attribution control takes
 `--lr-map-attribution-radius`, `--lr-map-attribution-border`, `--lr-map-attribution-padding`
 (default `0 var(--lr-space-xs)`), `--lr-map-attribution-link-padding` (default `0`; each link keeps
 its `--lr-size-24px` minimum box), `--lr-map-attribution-max-inline-size` (default `100%`, never
@@ -1396,7 +1399,18 @@ omittedCount, truncatedLabelCount, truncated }` result for the latest assignment
   `--lr-map-legend-toggle-padding` and `--lr-map-legend-disclosure-padding` (both default
   `var(--lr-size-2px) var(--lr-space-xs)`) pad the interactive `legend-toggle` rows and the
   `legend-disclosure` button; their minimum box stays the `--lr-icon-button-size` hit area, so
-  shrink that floor through `--lr-icon-button-size-scope` rather than a part rule.
+  shrink that floor through `--lr-icon-button-size-scope` rather than a part rule, or set
+  `--lr-map-legend-toggle-min-height` and `--lr-map-legend-disclosure-min-height` (both default
+  `var(--lr-icon-button-size)`, never below `--lr-size-24px`). `--lr-map-legend-toggle-font-weight`
+  (default `inherit`) and `--lr-map-legend-disclosure-font-weight` (default
+  `var(--lr-font-weight-semibold)`) set their weight, and `--lr-map-legend-group-heading-color`
+  (default `var(--lr-color-text-quiet)`) and `--lr-map-legend-group-heading-padding` (default `0`)
+  style each `legend-group-heading`.
+- `legendFlow: LyraMapLegendFlow = 'row'` (attribute `legend-flow`, reflected) — `'row' | 'column'`,
+  the order legend rows fill `--lr-map-legend-columns`. `'row'` places them across each row of an
+  equal-column grid; `'column'` fills each column top to bottom before the next, so a sorted key
+  reads down, and each group heading spans every column above its own rows. In `'column'` flow
+  `--lr-map-legend-group-columns` does not apply; unsupported values normalize to `'row'`.
 - `legendClearance: LyraMapLegendClearance = 'row'` (attribute `legend-clearance`, reflected) — which
   native control corners the legend clears. `'row'` lifts it above the tallest corner of the top and
   bottom rows; `'corner'` clears only the corners in its own logical column, so a `bottom-start`
@@ -3713,6 +3727,13 @@ an extension-only `accept` list.
   disabled, `aria-disabled`, Enter/Space handling).
 
 Use `--lr-file-input-dropzone-active-border-color` and `--lr-file-input-dropzone-active-bg` for the pressed field. `--lr-file-input-file-radius` sets the row radius, `--lr-file-input-file-bg` (default `var(--lr-color-surface-raised)`) and `--lr-file-input-file-border-color` (default `var(--lr-color-border-subtle)`) paint it, and `--lr-file-input-remove-hover-bg` (default `var(--lr-color-brand-quiet)`) / `--lr-file-input-remove-active-bg` tint its remove button. `--lr-file-input-thumbnail-size` and `--lr-file-input-thumbnail-radius` size and round its preview.
+
+Further custom properties:
+
+- `--lr-form-control-label-block-gap` (default `var(--lr-space-xs)`): Gap between the label and the field.
+- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
 ---
 

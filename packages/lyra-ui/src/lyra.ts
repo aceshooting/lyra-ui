@@ -426,6 +426,7 @@ export type {
   TableColumn,
   TableColumnEditOption,
   TableColumnEditTrigger,
+  TableColumnWrap,
   TableEdgeAlign,
   TableExpansionMode,
   TableLoadingAppearance,
@@ -437,6 +438,9 @@ export type {
   TableSortIndicators,
   TableSortMode,
   TableSortRequestDetail,
+  TableRowAttributes,
+  TableRowAttributeValue,
+  TableStackHeader,
   TableStackMode,
 } from './components/data/table/table.class.js';
 export type {
@@ -740,6 +744,7 @@ export type {
   LyraMapLegendControlRole,
   LyraMapLegendPlacement,
   LyraMapLegendClearance,
+  LyraMapLegendFlow,
   LyraMapLegendProjection,
   LyraMapChoroplethLayer,
   LyraMapChoroplethNoData,
@@ -1350,6 +1355,7 @@ export type {
 export type {
   LyraSegmentedItem,
   LyraSegmentedLayout,
+  LyraSegmentedIconPlacement,
   LyraSegmentedChangeRequestDetail,
 } from './components/layout/segmented/segmented.class.js';
 export type {

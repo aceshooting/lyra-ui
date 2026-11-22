@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 37 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 41 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-button-gap`, `--lr-button-outlined-fill`, `--lr-button-padding-block`, `--lr-button-shadow`; `end`: `--lr-button-label-grow`; `label`: `--lr-button-label-grow`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -252,6 +252,13 @@ hover and press. For removed historical tokens, see the [release history archive
 own width; override it to `auto` for a compact inline composition. `appearance="link"` shrinks to
 its text by default but honours an explicitly set `--lr-button-width`, so a full-width link-look
 row is `style="inline-size: 100%; --lr-button-width: 100%"` on the host.
+
+`--lr-button-line-height` (default `inherit`) sets the internal button's line height in every
+appearance. For `appearance="link"`, `--lr-button-link-text-decoration` (default `underline`) is the
+resting decoration and `--lr-button-link-hover-text-decoration` (default `underline`) the enabled
+hover one, so `--lr-button-link-text-decoration: none` alone gives an underline on hover only.
+`--lr-button-link-min-height` (default `0`) floors the link's block size, for example
+`var(--lr-size-24px)` for a tappable inline link.
 
 **Long labels.** Set `wrap` to let the label break onto several lines instead of overriding
 `::part(base)` or `::part(label)` white-space; without it the label stays on one line and

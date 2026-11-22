@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -47,7 +47,8 @@ attribute), `description` (rich description content, overrides the `description`
 
 **CSS parts:** `base`, `icon`, `heading`, `description`, `actions`
 
-**Themeable custom properties:** `--lr-empty-padding` (default `--lr-space-l` — padding at the
+**Themeable custom properties:** `--lr-empty-icon-color` (default `--lr-color-text-quiet`) colours
+the icon or illustration; `--lr-empty-padding` (default `--lr-space-l` — padding at the
 default density), `--lr-empty-gap` (default `--lr-space-s` — gap between the icon, heading, and
 description at the default density), `--lr-empty-icon-size` (default `--lr-font-size-3xl` — icon
 size at the default density), `--lr-empty-compact-icon-size` (default `--lr-font-size-m` — icon

@@ -274,10 +274,15 @@ export interface LyraLocalePickerEventMap {
  * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=inherit] - Text color of the field label.
+ * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
+ * @cssprop [--lr-form-control-label-text-align=inherit] - Text alignment of the field label.
+ * @cssprop [--lr-form-control-label-text-transform=inherit] - Text transform of the field label.
  * @cssprop [--lr-form-control-label-inline-size=30%] - Label column width while
  *   `label-placement="start"`.
  * @cssprop [--lr-form-control-label-gap=var(--lr-space-m)] - Space between the label column and
  *   the field while `label-placement="start"`.
+ * @cssprop [--lr-form-control-label-block-gap=var(--lr-space-xs)] - Space between a label above
+ *   the field and the field, in top placement and once a `label-placement="start"` row collapses.
  * @cssprop [--lr-form-control-label-collapse-inline-size=var(--lr-size-20rem)] - Control width
  *   below which `label-placement="start"` returns the label above the field.
  * @csspart form-control-label - The `<label>` element (only rendered — and only contributes to
@@ -311,6 +316,9 @@ export interface LyraLocalePickerEventMap {
  * @cssprop [--lr-locale-picker-font-size=var(--lr-form-control-font-size)] - Trigger font size,
  *   from the shared form-control size ladder.
  * @cssprop --lr-locale-picker-expand-size - Decorative expand-icon box size, scaled by `size`.
+ * @cssprop [--lr-locale-picker-listbox-min-inline-size=var(--lr-size-12rem)] - Minimum inline size
+ *   of the options popover, still capped by the viewport, the space beside the trigger and the
+ *   popover's `28rem` maximum.
  * @cssprop [--lr-locale-picker-gap=var(--lr-space-xs)] - Trigger and option child gap.
  * @cssprop [--lr-locale-picker-radius=var(--lr-radius)] - Trigger/listbox/option corner radius.
  * @cssprop [--lr-locale-picker-trigger-radius=var(--lr-locale-picker-radius)] - Corner radius of the trigger

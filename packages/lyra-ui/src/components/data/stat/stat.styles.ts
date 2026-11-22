@@ -22,7 +22,7 @@ export const styles = css`
        [href] re-points the private edge to the control tier -- through a custom property rather
        than a border-color declaration, so the (0,1,0) hover and pressed rules below still win on
        source order. Same split as lr-card's passive and actionable edges. */
-    border: var(--lr-border-width-thin) solid var(--_lr-stat-edge, var(--lr-color-border-subtle));
+    border: var(--lr-border-width-thin) solid var(--_lr-stat-edge, var(--lr-stat-border-color, var(--lr-color-border-subtle)));
     border-radius: var(--lr-stat-radius, var(--lr-radius));
     /* The RESTING tile's own hook, alongside the padding/gap levers above and the pressed state's
        existing --lr-stat-link-active-bg -- the tier a dashboard actually sits at all day was the
@@ -39,6 +39,13 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
     block-size: 100%;
+  }
+  /* --lr-stat-align: one keyword (start, center, end) for the stacked tile's cross axis, its text,
+     the value row and the self-aligned icon and trend chips. */
+  [part='base'],
+  .linked-content {
+    align-items: var(--lr-stat-align, normal);
+    text-align: var(--lr-stat-align, inherit);
   }
   .linked-shell > [part='base'] {
     position: absolute;
@@ -66,7 +73,7 @@ export const styles = css`
     pointer-events: auto;
   }
   [part='base'][href] {
-    --_lr-stat-edge: var(--lr-color-border);
+    --_lr-stat-edge: var(--lr-stat-border-color, var(--lr-color-border));
     cursor: pointer;
     transition: border-color var(--lr-transition-fast), box-shadow var(--lr-transition-fast);
   }
@@ -103,7 +110,7 @@ export const styles = css`
      sized, tinted, rounded backdrop. flex-start keeps a painted chip hugging the glyph instead of
      stretching across the column. */
   [part='icon'] {
-    align-self: flex-start;
+    align-self: var(--lr-stat-align, flex-start);
     font-size: var(--lr-stat-icon-size, inherit);
     /* The chip's own box, separate from the glyph's font-size above. Unset, both axes stay auto and
        the chip hugs its glyph exactly as before. Set, border-box makes the token the painted outer
@@ -129,6 +136,7 @@ export const styles = css`
     font-weight: var(--lr-stat-label-font-weight, var(--lr-font-weight-semibold));
     text-transform: var(--lr-stat-label-text-transform, uppercase);
     letter-spacing: var(--lr-stat-label-letter-spacing, var(--lr-size-0-04em));
+    line-height: var(--lr-stat-label-line-height, inherit);
     color: var(--lr-stat-label-color, var(--lr-color-text-quiet));
   }
   /* An empty label part still takes [part='base']'s gap, leaving a blank line above the value --
@@ -165,6 +173,7 @@ export const styles = css`
     flex-wrap: wrap;
     min-inline-size: 0;
     align-items: var(--lr-stat-value-row-align, baseline);
+    justify-content: var(--lr-stat-align, normal);
     gap: var(--lr-space-xs);
   }
   /* The preformatted strings are first-strong bidi runs, so 2.4 MiB/s and -3.2% keep their
@@ -186,6 +195,11 @@ export const styles = css`
     margin: var(--lr-stat-value-margin, 0);
     /* The neutral headline's own colour; the variant, emphasis and prose rules below still win. */
     color: var(--lr-stat-value-color, inherit);
+  }
+  :host([truncate]) [part='value'] {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   /* [part='value']/[part='row-value'] take tabindex="0" whenever exactValue/row.exactValue is set
      (stat.class.ts), so they need their own visible focus ring. */
@@ -243,7 +257,7 @@ export const styles = css`
        rounding the vertical value up to xs would 5x the padding and blow out the compact chip,
        so both stay literal. */
     padding: var(--lr-size-0-05rem) var(--lr-size-0-4rem);
-    align-self: flex-start;
+    align-self: var(--lr-stat-align, flex-start);
   }
   [part='trend'][data-direction='up'] svg {
     transform: rotate(-90deg);

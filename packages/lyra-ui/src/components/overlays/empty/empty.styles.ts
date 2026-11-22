@@ -37,7 +37,7 @@ export const styles = css`
     font-size: var(--lr-empty-icon-size, var(--lr-font-size-3xl));
     line-height: var(--lr-line-height-none);
     /* The muted foreground role, not the border token: this is a glyph, not an edge. */
-    color: var(--lr-color-text-quiet);
+    color: var(--lr-empty-icon-color, var(--lr-color-text-quiet));
   }
   /* The compact density shrinks the illustration too, or a full-size glyph keeps the dense state
      nearly as tall as the spacious one. */

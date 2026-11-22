@@ -91,6 +91,18 @@ export const styles = css`
     block-size: var(--lr-size-1em);
     max-inline-size: var(--lr-size-2-5rem);
   }
+  :host([icon-placement='end']) [part="segment-icon"] {
+    margin-inline: var(--lr-space-xs) 0;
+  }
+  :host([full-width]) {
+    display: flex;
+  }
+  :host([full-width]) [part="form-control"] {
+    flex: 1 1 auto;
+  }
+  :host([full-width]) [part="segment"] {
+    flex: 1 0 auto;
+  }
   [part="segment"][aria-disabled="true"] {
     ${disabledControl}
   }

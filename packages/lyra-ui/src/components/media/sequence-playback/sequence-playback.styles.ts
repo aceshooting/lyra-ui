@@ -23,6 +23,14 @@ export const styles = css`
     min-inline-size: 0;
     max-inline-size: 100%;
   }
+  :host([full-width]) {
+    display: flex;
+  }
+  :host([full-width]) [part="base"],
+  :host([full-width]) [part="slider"] {
+    flex: 1 1 auto;
+    min-inline-size: 0;
+  }
   :where(.with-value) [part="slider"] {
     margin: 0;
     inline-size: 100%;

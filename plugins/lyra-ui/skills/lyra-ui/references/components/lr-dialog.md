@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 30 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `body`: `--lr-dialog-height`; `footer`: `--lr-dialog-height`; `header`: `--lr-dialog-height`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -234,7 +234,11 @@ still win, so `flex: none` keeps a heading or toolbar at its natural size. On `<
 `--lr-dialog-heading-font-size` (default `inherit`), `--lr-dialog-heading-font-weight` (default
 `var(--lr-font-weight-semibold)`), `--lr-dialog-heading-letter-spacing` (default `normal`) and
 `--lr-dialog-heading-font-family` (default `var(--lr-font-heading)`) style the visible header title (`[part~="heading"]`), including
-`confirm()`'s. `--lr-dialog-spacing` (default `var(--lr-space-l)` —
+`confirm()`'s, and `--lr-dialog-heading-line-height` (default `inherit`) sets its line height.
+`--lr-dialog-header-border` (default `var(--lr-border-width-thin) solid var(--lr-dialog-divider-color)`)
+is the header's bottom rule as a border shorthand (`none` removes it; the footer rule keeps
+`--lr-dialog-divider-color`), and `--lr-dialog-body-overflow` (default `auto`) is the body's
+`overflow`, for example `hidden` when slotted content manages its own scrolling. `--lr-dialog-spacing` (default `var(--lr-space-l)` —
 the padding inside `[part="body"]` and the _inline_ padding of the header and footer rows),
 `--lr-dialog-spacing-block` (default `var(--lr-space-m)` — the _block_ padding of the header and
 footer rows, which are tighter than the body by default), `--lr-dialog-panel-duration` (default

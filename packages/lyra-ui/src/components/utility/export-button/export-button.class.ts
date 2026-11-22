@@ -195,6 +195,11 @@ export interface LyraExportButtonEventMap {
  * @cssprop --lr-export-button-active-bg - Trigger fill while pressed.
  * @cssprop --lr-export-button-active-color - Trigger label and icon colour while pressed.
  * @cssprop --lr-export-button-active-border-color - Trigger edge colour while pressed.
+ * @cssprop --lr-export-button-font-size - Trigger font size. Unset, the trigger inherits the host
+ *   font size, or takes the `size` tier's when one is set; menu rows keep their own.
+ * @cssprop [--lr-export-button-font-weight=inherit] - Trigger font weight.
+ * @cssprop [--lr-export-button-padding-inline=var(--lr-space-m)] - Trigger inline padding, also over
+ *   the `size` tier's; an `icon-only` trigger stays a padding-free square.
  * @cssprop [--lr-export-button-gap=var(--lr-space-xs)] - Gap between the trigger's icon and label.
  *   Constant across the `size` ladder's tiers.
  * @cssprop [--lr-export-button-radius=var(--lr-radius)] - Trigger corner radius. Retune it without

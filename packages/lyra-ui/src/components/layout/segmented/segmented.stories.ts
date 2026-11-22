@@ -403,3 +403,20 @@ export const CompactLabels: Story = {
     ></lr-segmented>
   `,
 };
+
+/** `icon-placement="end"` renders each icon after its label; `full-width` stretches the track and
+ * shares the spare width between the segments. */
+export const TrailingIconsFullWidth: Story = {
+  render: () => html`
+    <lr-segmented
+      label="Sort"
+      icon-placement="end"
+      full-width
+      .items=${[
+        { value: 'asc', label: 'Ascending', icon: html`<span aria-hidden="true">↑</span>` },
+        { value: 'desc', label: 'Descending', icon: html`<span aria-hidden="true">↓</span>` },
+      ]}
+      value="asc"
+    ></lr-segmented>
+  `,
+};

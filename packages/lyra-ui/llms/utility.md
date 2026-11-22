@@ -111,7 +111,10 @@ hover, `--lr-export-button-hover-bg`, `--lr-export-button-hover-color` and
 the current `appearance` resolves to and leaves the other paints alone, so they are also the way to
 keep `appearance="outlined"` chrome while returning its label to neutral text — `outlined` paints
 the label `--lr-color-brand` and, unlike `lr-button`, this component has no `variant` of its own to
-opt out.
+opt out. The trigger's type and padding take `--lr-export-button-font-size` (unset, it inherits the
+host font size or takes the `size` tier's), `--lr-export-button-font-weight` (default `inherit`) and
+`--lr-export-button-padding-inline` (default `var(--lr-space-m)`, also over the `size` tier's; an
+`icon-only` trigger stays a padding-free square). The menu rows keep their own.
 `--lr-export-button-gap` (default `var(--lr-space-xs)`, constant across the `size` ladder) and
 `--lr-export-button-radius` (default `var(--lr-radius)`) retune the trigger's icon/label gap and
 corner radius without a `::part(trigger)` rule. Plus shared
@@ -2109,6 +2112,12 @@ The two height knobs work as a pair on `[part='field-input']`, the same way
 **Additional API surface:**
 
 - `click()` — Activates the first native field in locale order.
+
+Further custom properties:
+
+- `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
+- `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
+- `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
 ## `lr-random-content`
 

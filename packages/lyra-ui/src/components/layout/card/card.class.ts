@@ -129,6 +129,11 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  * @cssprop [--lr-card-transition=border-color var(--lr-transition-fast), box-shadow var(--lr-transition-fast), transform var(--lr-transition-fast)] -
  *   Transition of an `actionable`/linked card's hover paint.
  * @cssprop [--lr-card-body-gap=0] - Gap between the body's slotted children while `fill-body` is set.
+ * @cssprop [--lr-card-body-justify=normal] - `justify-content` of the body column while `fill-body`
+ *   is set, for example `center` to centre short content in an equal-height grid.
+ * @cssprop [--lr-card-body-align=normal] - `align-items` of the body's slotted children while
+ *   `fill-body` is set; `normal` stretches them across the body.
+ * @cssprop [--lr-card-min-block-size=auto] - Minimum block size of the card surface.
  * @status stable
  * @since 4.0.0
  */
