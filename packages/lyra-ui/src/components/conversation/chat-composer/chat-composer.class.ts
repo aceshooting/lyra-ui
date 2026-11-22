@@ -221,6 +221,16 @@ class LyraChatComposerBase extends LyraElement<LyraChatComposerEventMap> {}
  *   entirely to a consumer-drawn wrapper -- chosen over a third `frame` value, since every other
  *   piece of this card's paint (background/border-color/radius above) is already a cssprop hook
  *   rather than a `frame` variant, and `none` already reads naturally as "I'll draw my own".
+ * @cssstate required - Matches while `required` is set. Style with `lr-chat-composer:state(required)`.
+ * @cssstate optional - Matches while `required` is not set — the complement of `required`.
+ * @cssstate valid - Matches while the control satisfies its constraints, including any
+ * `setCustomValidity()` error. Never matches while disabled or readonly.
+ * @cssstate invalid - Matches while it does not — from the very first render, before the user has
+ * touched anything. Never matches while disabled or readonly.
+ * @cssstate user-valid - `valid`, but only after the user has interacted: an edit, a blur,
+ * `reportValidity()`, or a submission attempt.
+ * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
+ * rather than `invalid`, so a pristine required field is not painted red before the user acts.
  * @status stable
  * @since 4.0.0
  */

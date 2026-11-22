@@ -562,6 +562,16 @@ const DATE_PICKER_EXPORT_PARTS = [
  *   `:root`, a theme, or one clipping ancestor to change every unset date input beneath it; an
  *   unrecognized value falls back to `fixed`.
  * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
+ * @cssstate required - Matches while `required` is set. Style with `lr-date-input:state(required)`.
+ * @cssstate optional - Matches while `required` is not set — the complement of `required`.
+ * @cssstate valid - Matches while the control satisfies its constraints, including any
+ * `setCustomValidity()` error. Never matches while disabled or readonly.
+ * @cssstate invalid - Matches while it does not — from the very first render, before the user has
+ * touched anything. Never matches while disabled or readonly.
+ * @cssstate user-valid - `valid`, but only after the user has interacted: an edit, a blur,
+ * `reportValidity()`, or a submission attempt.
+ * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
+ * rather than `invalid`, so a pristine required field is not painted red before the user acts.
  * @status experimental
  * @since 4.0.0
  */

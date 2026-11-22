@@ -3352,3 +3352,17 @@ test('a deliberately unmirrored upstream tag reports its documented reason', () 
   assert.equal(result.warnings[0]?.message, reason);
 });
 
+
+test('Shoelace text-field validation attribute selectors rewrite to the states the shared form base publishes', () => {
+  const checkedContract = buildMigrationContract(checkedInventory);
+  const css = [
+    'sl-input[data-user-invalid] { border-color: red; }',
+    'sl-textarea[data-required]:not([data-valid]) { outline: 0; }',
+    '',
+  ].join('\n');
+  const result = migrateText(css, checkedContract, { file: 'app.css' });
+  const lines = result.content.split('\n');
+  assert.equal(lines[0], 'lr-input:state(user-invalid) { border-color: red; }');
+  assert.equal(lines[1], 'lr-textarea:state(required):not(:state(valid)) { outline: 0; }');
+  assert.ok(!result.warnings.some((entry) => entry.warningCode === 'VALIDATION_STATE_REVIEW'));
+});

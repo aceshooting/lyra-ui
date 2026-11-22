@@ -365,6 +365,16 @@ function containsElement(container: Element | null, value: unknown): value is El
  * @cssprop [--lr-theme-scrollbar-color=auto] - Opt-in theme-level `scrollbar-color` (thumb then
  *   track) honored by the scrolling `column` lists; set on `:root` or any ancestor to retune every internal scroll container.
  * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
+ * @cssstate required - Matches while `required` is set. Style with `lr-time-input:state(required)`.
+ * @cssstate optional - Matches while `required` is not set — the complement of `required`.
+ * @cssstate valid - Matches while the control satisfies its constraints, including any
+ * `setCustomValidity()` error. Never matches while disabled or readonly.
+ * @cssstate invalid - Matches while it does not — from the very first render, before the user has
+ * touched anything. Never matches while disabled or readonly.
+ * @cssstate user-valid - `valid`, but only after the user has interacted: an edit, a blur,
+ * `reportValidity()`, or a submission attempt.
+ * @cssstate user-invalid - `invalid` after that same interaction. Style validation errors with this
+ * rather than `invalid`, so a pristine required field is not painted red before the user acts.
  * @status stable
  * @since 4.0.0
  */
