@@ -43,7 +43,7 @@ describe('lr-popover virtualElement', () => {
     await el.updateComplete;
     await waitUntil(() => popupRect(el).top >= button.getBoundingClientRect().bottom - 1, 'moved under the element');
     expect(button.hasAttribute('aria-expanded')).to.equal(false);
-    expect(el.anchor).to.equal(button);
+    expect(el.anchor === button).to.equal(true);
     el.virtualElement = rectAnchor(50, 50);
     await el.updateComplete;
     await waitUntil(() => popupRect(el).top < 100, 'back on the virtual rect');
@@ -53,7 +53,7 @@ describe('lr-popover virtualElement', () => {
   it('closes when a sole virtual element is cleared, and ignores a value without getBoundingClientRect', async () => {
     const el = await fixture<LyraPopover>(html`<lr-popover style="--show-duration: 0ms; --hide-duration: 0ms"><p>Details</p></lr-popover>`);
     await openAt(el, rectAnchor(80, 80));
-    expect(el.anchor).to.equal(null);
+    expect(el.anchor === null).to.equal(true);
     el.virtualElement = null;
     await waitUntil(() => !el.open, 'cleared sole anchor closes');
     el.virtualElement = { x: 1 } as unknown as LyraPopoverVirtualElement;
