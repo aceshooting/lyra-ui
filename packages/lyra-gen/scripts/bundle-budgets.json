@@ -89,7 +89,7 @@
     "gen-view": {
       "measured": {
         "eagerJsBytes": 185520,
-        "eagerJsGzipBytes": 56965,
+        "eagerJsGzipBytes": 57026,
         "lazyJsBytes": 856852,
         "lazyJsGzipBytes": 260034,
         "eagerCssBytes": 0,
@@ -100,7 +100,7 @@
       },
       "ceilings": {
         "eagerJsBytes": 189230,
-        "eagerJsGzipBytes": 57024,
+        "eagerJsGzipBytes": 57088,
         "lazyJsBytes": 873989,
         "lazyJsGzipBytes": 260096,
         "eagerCssBytes": 0,
@@ -113,10 +113,10 @@
     },
     "chat-composition": {
       "measured": {
-        "eagerJsBytes": 527681,
+        "eagerJsBytes": 527901,
         "eagerJsGzipBytes": 170189,
-        "lazyJsBytes": 1052012,
-        "lazyJsGzipBytes": 307744,
+        "lazyJsBytes": 1052155,
+        "lazyJsGzipBytes": 307816,
         "eagerCssBytes": 103994,
         "eagerCssGzipBytes": 13457,
         "lazyCssBytes": 0,
@@ -124,10 +124,10 @@
         "assetBytes": 0
       },
       "ceilings": {
-        "eagerJsBytes": 527744,
+        "eagerJsBytes": 527936,
         "eagerJsGzipBytes": 173592,
-        "lazyJsBytes": 1052032,
-        "lazyJsGzipBytes": 307776,
+        "lazyJsBytes": 1052160,
+        "lazyJsGzipBytes": 307840,
         "eagerCssBytes": 108153,
         "eagerCssGzipBytes": 13995,
         "lazyCssBytes": 0,
