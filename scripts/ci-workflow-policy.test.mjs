@@ -603,7 +603,7 @@ test('generated UI has one browser and durable-host qualification per engine plu
   assert.match(visualArchive, /path: artifacts\/gen-recorded-visual/u);
   assert.equal(platform.split('pnpm --filter @aceshooting/lyra-gen test:visual').length - 1, 1);
   const staticJob = job(workflow, 'static-checks');
-  const tests = staticJob.indexOf("pnpm --filter '!@aceshooting/lyra-ui' -r test");
+  const tests = staticJob.indexOf("pnpm --filter '!@aceshooting/lyra-ui' --filter '!@aceshooting/lyra-cdn' -r test");
   assert.ok(tests >= 0);
   const assemble = staticJob.indexOf('pnpm --filter @aceshooting/lyra-translations assemble');
   assert.ok(assemble > staticJob.indexOf('path: packages/lyra-ui/dist') && assemble < tests, 'static type checks have built locale package exports');
@@ -696,7 +696,7 @@ test('each of the seven coverage flags owns one complete package report and a sc
   assert.match(local, /pnpm --filter "@aceshooting\/\$coverage_package" test:coverage/u);
   assert.match(local, /LYRA_MAP_COVERAGE_BROWSER=1 LYRA_3D_COVERAGE_BROWSER=1 pnpm/u);
   assert.match(local, /node scripts\/prepare-codecov-lcov\.mjs "\$coverage_package"/u);
-  assert.match(job(workflow, 'static-checks'), /pnpm --filter '!@aceshooting\/lyra-ui' -r test/u, 'ordinary companion test gates remain');
+  assert.match(job(workflow, 'static-checks'), /pnpm --filter '!@aceshooting\/lyra-ui' --filter '!@aceshooting\/lyra-cdn' -r test/u, 'ordinary companion test gates remain');
   const floors = JSON.parse(read('packages/lyra-ui/scripts/coverage-floors.json'));
   assert.ok(floors.lines >= 99.74 && floors.statements >= 99.74, 'the flagged UI report retains its coverage floor');
 });
