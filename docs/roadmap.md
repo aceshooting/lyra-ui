@@ -33,11 +33,11 @@ lyra-flags 2.x.
 | Version | Kind | Scope |
 |---|---|---|
 | **32.0.0** | major | Library-wide corrections and consolidation, direct contract corrections, removal of every remaining deprecated API, the consumer-study capabilities and the `lyra-v31` migration profile. Ships with **no deprecated API**. |
-| **32.1.0** | minor (next) | Consumer-application gap fixes (form, overlay, map, chart, table and layout tokens, `prompt()`, chip-group selection, label placement) and `lr-table` stacked headers, row headers and row attributes; upstream parity with Web Awesome 3.15 and Shoelace 2.20.1, a single-script-tag CDN distribution, upstream drift detection, editor-data discovery, runtime event classes and codemod rewrites. |
+| **32.1.0** | minor (next) | Consumer-application gap fixes (form, overlay, map, chart, table and layout tokens, `prompt()`, chip-group selection, label placement) and `lr-table` stacked headers, row headers and row attributes; upstream parity with Web Awesome 3.15 and Shoelace 2.20.1, a single-script-tag CDN distribution, upstream drift detection, runtime event classes and codemod rewrites; hydrated SSR fixture tests and the hydration fixes they found. |
 | **32.2.0** | minor | Footprint and robustness: per-component gzip audit and core form-control budgets, sanitized combobox option HTML, follow-ups for the new components, per-role accents, a Font Awesome preset, server-rendered test fixtures and the Node toolchain refresh. |
 | **32.3.0** | minor | Onboarding: a curated core-components guide, starter templates, a component picker and a design kit. |
 | **32.x** | minors | Geospatial scenes P2, lyra-3d visuals and scale, on-demand look, additional catalogs; Lyra Gen interoperability hooks. |
-| **33.0.0** | major | Removal of anything deprecated during 32.x once its window has passed; conditional removal of the lyra-ui document viewers once lyra-docs 1.0.0 has shipped. |
+| **33.0.0** | major | Removal of anything deprecated during 32.x once its window has passed; the contract and default corrections held back from 32.x; conditional removal of the lyra-ui document viewers once lyra-docs 1.0.0 has shipped. |
 
 ### 32.0.0 — corrections, consolidation and removals (major)
 
@@ -69,20 +69,27 @@ lyra-flags 2.x.
 - [Test health](roadmap/test-health.md): the Codecov full-hit goal, CI wall-clock under 15 minutes,
   and the remaining WebKit and Firefox lane hot spots.
 - **32.1.0 (next minor):** upstream parity with Web Awesome 3.15 and Shoelace 2.20.1, plus onboarding:
-  - the consumer-application gap fixes already on main, and the `lr-table` follow-up: a stacked-mode
-    header strip, row headers, a row-attributes callback and caption fixes;
+  - the consumer-application gap fixes already on main, and the `lr-table` follow-up: stacked-mode
+    header modes (`stack-header`), row headers, a header-less mode, a row-attributes callback,
+    per-column wrapping and caption fixes, plus about 60 further opt-in form, layout, overlay, data,
+    media, chart and markdown tokens;
+  - a hydrated server-rendered fixture mode for a curated cross-family subset of the browser suite
+    on all three engines (brought forward from 32.2.0), and the hydration fixes it found:
+    checked-control labels, the selected tab, server-locale formatting and the copy-button role;
   - child-element `lr-step` and `lr-lightbox-item`, timeline, tag-input and async combobox parity,
     new `lr-counter` and `lr-number-ticker`, divider labels, video aspect ratio, component-named
     part aliases, the extended spacing and type scale, native element styles, layout and utility
     classes, an opt-in hue palette, and the matching migration mappings;
-  - a single-script-tag CDN distribution (bundled dependencies, self-starting autoloader,
-    jsDelivr/unpkg entry);
+  - a single-script-tag CDN distribution as the new `@aceshooting/lyra-cdn` companion package
+    (bundled dependencies, self-starting autoloader, jsDelivr/unpkg entry);
+  - `lr-popover` and `lr-dropdown` keep the published `anchor`; virtual anchors use the new
+    `virtualElement` property;
   - scheduled upstream drift detection against the pinned upstream manifests;
-  - editor data discoverable from the main package (`customElements` field) without `lyra-ide`;
   - runtime event classes: what `emit()` dispatches is `instanceof` its `Lyra*Event` class;
   - codemod rewrites, not only warnings, for upstream utility classes, theme classes and
     stylesheet imports.
-- **32.2.0 and 32.3.0**, in order (items 1–7 in 32.2.0, items 8–9 in 32.3.0):
+- **32.2.0 and 32.3.0**, in order (items 1–8 in 32.2.0, items 9–10 in 32.3.0; item 6 shipped early
+  in 32.1.0):
   1. Per-component gzip audit against the upstream equivalents, with budgets for the core form
      controls (button, select, input) and shared-helper consolidation to recover size.
   2. Sanitized option HTML from a `lr-combobox` data source, failing closed.
@@ -91,11 +98,13 @@ lyra-flags 2.x.
      custom states; `lr-number-ticker` early settle.
   4. Declarative accent remapping for every semantic role, not only through `setLyraStyle()`.
   5. A Font Awesome resolver preset using the default icon family and variant.
-  6. A server-rendered fixture mode for a subset of the browser suite, so hydration regressions
-     fail CI.
-  7. A Node patch-release refresh of the pinned toolchain and the evidence recorded against it.
-  8. A curated core-components guide, starter templates and a component picker on the website.
-  9. A design kit for the components and tokens.
+  6. ~~A server-rendered fixture mode for a subset of the browser suite~~ (shipped in 32.1.0);
+     32.2.0 widens it to translated `localize()` text under an ancestor `lang`.
+  7. Editor data discoverable from the main package (a slim `customElements` manifest) without
+     `lyra-ide`.
+  8. A Node patch-release refresh of the pinned toolchain and the evidence recorded against it.
+  9. A curated core-components guide, starter templates and a component picker on the website.
+  10. A design kit for the components and tokens.
 
 ### 33.0.0 — deprecation removals (major)
 
@@ -103,6 +112,19 @@ lyra-flags 2.x.
   through the migration tool and the migrated fixture compiled and rendered before removal; dead
   code, types, CSS, manifest and editor entries and docs go in the same change.
 - Conditional: removal of the deprecated lyra-ui document viewers once lyra-docs 1.0.0 has shipped.
+- Corrections held back from 32.x because they change a published contract or default:
+  - `lr-table` `lr-page-change` detail: `pageSize` and `offset` become required (32.x sends both
+    but types them optional), matching `lr-before-page-change` and `lr-pagination`;
+  - `lr-slider` label size follows the form-control ladder (`--lr-font-size-md-sm`) instead of
+    `inherit`;
+  - `--lr-overlay-radius` is documented library-wide as `var(--lr-radius-container)`, which the
+    shared overlay surface already resolves (including the `lr-drawer` floating fallback);
+  - `lr-token-input`: a multi-character `delimiter` becomes a set of single-character delimiters,
+    matching the upstream semantics;
+  - `lr-lightbox`: `lr-after-show` / `lr-after-hide` fire after the animation finishes;
+  - form labels: `--lr-form-control-label-gap` also applies in top placement (folding in
+    `--lr-form-control-label-block-gap`), and a content-sized label column for
+    `label-placement="start"`.
 
 ### Independent companion programs
 
