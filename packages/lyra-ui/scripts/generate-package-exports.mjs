@@ -57,6 +57,7 @@ export const CURATED_COMPONENT_HELPER_MODULES = Object.freeze([
   // ~+69.5 kB gzip). This is their documented opt-out -- import it plus each composed control's own
   // registration entry for the filter `type`s actually declared (see this file's own header
   // comment) -- so it needs a real route, exactly like `icon-button-register.ts` above.
+  'src/components/conversation/code-block/code-grammar-registry.ts',
   'src/components/layout/dashboard-grid/dashboard-grid-register.ts',
   'src/components/layout/filter-bar/filter-bar-register.ts',
   'src/components/media/attachment-chip/file-size.ts',

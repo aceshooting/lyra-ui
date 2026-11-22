@@ -207,6 +207,7 @@
     "./components/conversation/checkpoint/checkpoint.class.js": "./dist/components/conversation/checkpoint/checkpoint.class.js",
     "./components/conversation/code-block/code-block-core.class.js": "./dist/components/conversation/code-block/code-block-core.class.js",
     "./components/conversation/code-block/code-block.class.js": "./dist/components/conversation/code-block/code-block.class.js",
+    "./components/conversation/code-block/code-grammar-registry.js": "./dist/components/conversation/code-block/code-grammar-registry.js",
     "./components/conversation/code-block/code-loader.js": "./dist/components/conversation/code-block/code-loader.js",
     "./components/conversation/code-block/shiki-oniguruma.js": "./dist/components/conversation/code-block/shiki-oniguruma.js",
     "./components/conversation/conversation-item/conversation-item.class.js": "./dist/components/conversation/conversation-item/conversation-item.class.js",

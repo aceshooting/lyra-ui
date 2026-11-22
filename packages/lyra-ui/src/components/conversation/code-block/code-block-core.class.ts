@@ -10,6 +10,7 @@ import {
   resolvedShikiLanguages,
   type ShikiLanguageSource,
 } from './shiki-types.js';
+import { withRegisteredCodeGrammars } from './code-grammar-registry.js';
 import { styles } from './code-block.styles.js';
 import type { LyraCodeBlockCopyAppearance } from './code-block-shared.js';
 import { LyraCodeBlockBase, type LyraCodeBlockBaseEventMap } from './code-block-base.class.js';
@@ -347,10 +348,15 @@ export class LyraCodeBlockCore extends LyraCodeBlockBase {
   private highlighterGeneration = 0;
   private activeLanguages?: Record<string, ShikiLanguageSource>;
 
+  // The element's own map plus the library-level registry (element entries win).
+  private effectiveLanguages(): Record<string, ShikiLanguageSource> {
+    return withRegisteredCodeGrammars(this.languages) as Record<string, ShikiLanguageSource>;
+  }
+
   override connectedCallback(): void {
     super.connectedCallback();
     if (this.resumedMove) return;
-    const languages = this.languages;
+    const languages = this.effectiveLanguages();
     const generation = this.activateLanguages(languages);
     if (!languages || Object.keys(languages).length === 0) return;
     void loadShikiHighlighterCore(resolvedShikiLanguages(languages)).then(() => {
@@ -363,7 +369,7 @@ export class LyraCodeBlockCore extends LyraCodeBlockBase {
       if (
         !this.isConnected ||
         generation !== this.highlighterGeneration ||
-        languages !== this.languages
+        languages !== this.effectiveLanguages()
       )
         return;
       this.shikiReady = true;
@@ -382,7 +388,7 @@ export class LyraCodeBlockCore extends LyraCodeBlockBase {
   // `willUpdate()`/`updated()`/`render()`/`syncHighlight()` so they all agree
   // on whether this language is highlightable at all.
   protected override preSuppliedGrammar(): ShikiLanguageSource | undefined {
-    return codeBlockPreSuppliedGrammar(this.languages, this.language ?? '');
+    return codeBlockPreSuppliedGrammar(this.effectiveLanguages(), this.language ?? '');
   }
 
   protected override grammarMayLoad(): boolean {
@@ -390,7 +396,7 @@ export class LyraCodeBlockCore extends LyraCodeBlockBase {
   }
 
   protected override beforeHighlightUpdate(changed: PropertyValues): void {
-    if (changed.has('languages')) this.activateLanguages(this.languages);
+    if (changed.has('languages')) this.activateLanguages(this.effectiveLanguages());
   }
 
 
@@ -427,7 +433,7 @@ export class LyraCodeBlockCore extends LyraCodeBlockBase {
     // call. Without this, a load kicked off by an older call can resolve
     // after a newer call has already rendered correct synchronous output,
     // and overwrite it with stale tokenization.
-    const languages = this.languages;
+    const languages = this.effectiveLanguages();
     const generation = this.activateLanguages(languages);
     const token = ++this.highlightToken;
     const lang = normalizeShikiLanguage(this.language ?? '');
@@ -461,7 +467,7 @@ export class LyraCodeBlockCore extends LyraCodeBlockBase {
       if (token !== this.highlightToken) return; // superseded by a newer code/language/languages change
       if (
         generation !== this.highlighterGeneration ||
-        languages !== this.languages
+        languages !== this.effectiveLanguages()
       )
         return;
       if (!hl) {
@@ -478,7 +484,7 @@ export class LyraCodeBlockCore extends LyraCodeBlockBase {
       if (token !== this.highlightToken) return; // superseded while the loader/loadLanguage() awaited
       if (
         generation !== this.highlighterGeneration ||
-        languages !== this.languages
+        languages !== this.effectiveLanguages()
       )
         return;
       // Lit's first update cycle (which is what calls syncHighlight() via

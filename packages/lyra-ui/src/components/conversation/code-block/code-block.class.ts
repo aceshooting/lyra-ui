@@ -1,5 +1,6 @@
 import { combineShikiLanguageSources } from '../../../internal/shiki-language-sources.js';
-import { resolvedShikiLanguages, ensureShikiLanguageLoaded, type ShikiLanguageInput, type ShikiLanguageLoader } from './shiki-types.js';
+import { resolvedShikiLanguages, ensureShikiLanguageLoaded, type ShikiLanguageInput, type ShikiLanguageLoader, type ShikiLanguageSource } from './shiki-types.js';
+import { withRegisteredCodeGrammars } from './code-grammar-registry.js';
 import { collectionSupport } from '../../../internal/collection-snapshot.js';
 import type { PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
@@ -361,7 +362,8 @@ export class LyraCodeBlock extends LyraCodeBlockBase {
   >>;
 
   /** Optional lazy grammar loaders, resolved only when their language is requested. Concrete
-   * `languages` entries take priority on duplicate keys. Unset preserves the default highlighter
+   * `languages` entries take priority on duplicate keys. Both maps win over grammars registered
+   * library-wide with `registerCodeGrammar()`. Unset preserves the default highlighter
    * and concrete-grammar paths. Assign a new map object after changing entries. */
   @property({ attribute: false }) languageLoaders?: Readonly<Record<string, ShikiLanguageLoader>>;
   private highlighter?: ShikiHighlighter | null;
@@ -407,10 +409,26 @@ export class LyraCodeBlock extends LyraCodeBlockBase {
     return codeBlockPreSuppliedGrammar(this.languages, this.language ?? '');
   }
 
+  // The element's own maps plus the library-level registry (element entries win).
+  private effectiveLanguages(): Readonly<Record<string, ShikiLanguageSource>> | undefined {
+    return withRegisteredCodeGrammars(combineShikiLanguageSources(this.languages, this.languageLoaders));
+  }
+
   protected override hasPreSuppliedGrammar(): boolean {
-    return Boolean(this.preSuppliedGrammar() || (this.languageLoaders && codeBlockPreSuppliedGrammar(
-      combineShikiLanguageSources(this.languages, this.languageLoaders), this.language ?? '',
-    )));
+    if (this.preSuppliedGrammar()) return true;
+    // Lazy loaders and registered grammars live only in the combined map, which is the element's
+    // own `languages` object when neither exists.
+    const effective = this.effectiveLanguages();
+    return effective !== this.languages && Boolean(codeBlockPreSuppliedGrammar(effective, this.language ?? ''));
+  }
+
+  protected override refreshRegisteredGrammar(): void {
+    this.ensureDefaultHighlighter();
+    if (this.hasPreSuppliedGrammar() || this.highlighter) this.syncHighlight();
+    else {
+      this.highlightToken++;
+      this.highlightedHtml = null;
+    }
   }
 
   protected override showsSkeleton(): boolean {
@@ -438,7 +456,7 @@ export class LyraCodeBlock extends LyraCodeBlockBase {
       return;
     }
 
-    const languages = combineShikiLanguageSources(this.languages, this.languageLoaders);
+    const languages = this.effectiveLanguages();
     const source = languages?.[lang] ?? languages?.[this.language];
     if (languages && source) {
       // Fine-grained opt-in path -- entirely separate from `this.highlighter`

@@ -544,7 +544,7 @@ const DECISION_OVERRIDES = new Map([
     {
       classification: 'warning-required',
       rationale:
-        'lr-code-block exposes its code as a named, focusable role="group" surface where wa-code-highlighter exposes a region landmark, so assistive-technology navigation that relies on the region landmark needs review. Highlighting also needs the optional shiki peer.',
+        'lr-code-block exposes its code as a named, focusable role="group" surface where wa-code-highlighter exposes a region landmark, so assistive-technology navigation that relies on the region landmark needs review. Highlighting also needs the optional shiki peer. A global registerCodeGrammar() call maps to registerCodeGrammar() from the root barrel or @aceshooting/lyra-ui/components/conversation/code-block/code-grammar-registry.js, which also accepts lazy loaders and aliases.',
       expectedDrift: [],
     },
   ],

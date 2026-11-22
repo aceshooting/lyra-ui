@@ -1528,6 +1528,12 @@ export type {
   LyraTokenInputEventMap,
 } from './components/forms/token-input/token-input.class.js';
 export {
+  registerCodeGrammar,
+  unregisterCodeGrammar,
+  getCodeGrammar,
+} from './components/conversation/code-block/code-grammar-registry.js';
+export type { LyraCodeGrammarOptions } from './components/conversation/code-block/code-grammar-registry.js';
+export {
   registerIconLibrary,
   unregisterIconLibrary,
   getIconLibrary,

@@ -2433,6 +2433,20 @@ through an activatable gutter reuses the source lines and updates the previous a
   is exported from the same entry and returns
   `Promise<ShikiLanguageInput | { default: ShikiLanguageInput }>`; assign new map objects after edits.
 
+- Global grammar registry — `registerCodeGrammar(name, grammarOrLoader, { aliases? })` and
+  `unregisterCodeGrammar(name)` (root barrel, or
+  `@aceshooting/lyra-ui/components/conversation/code-block/code-grammar-registry.js`) register a
+  Shiki grammar object or a lazy loader (`() => import('shiki/langs/rust.mjs')`) once for every
+  `lr-code-block` and `lr-code-block-core` on the page. A per-element `languages` or
+  `languageLoaders` entry wins for the same language. Names and aliases are case-insensitive; an
+  alias already held by another grammar moves to the new one, and `unregisterCodeGrammar()` removes
+  the name with its aliases. Blocks already showing that language re-highlight on register and
+  unregister (they subscribe while connected only), so registration may happen after render. A
+  rejected loader leaves the localized plain-text fallback with `:state(error)`. Invalid names
+  (1-64 characters of letters, digits and `. _ + # -`), aliases or sources throw `TypeError`.
+  Migrating a `wa-code-highlighter` app that calls the global `registerCodeGrammar()` is a call-site
+  rename of the import.
+
 - `copyAppearance: 'text' | 'icon' = 'text'` (attribute `copy-appearance`, reflected) — how the
   header's copy control presents itself. `'text'` is the labelled button this component has always
   rendered; `'icon'` swaps the visible label for a compact glyph and promotes the same localized
@@ -2713,7 +2727,9 @@ patch existing lines without retokenizing, and gutter navigation reuses the sour
   the displayed code. For a
   TypeScript annotation, use `import type { ShikiLanguageSource } from
 '@aceshooting/lyra-ui/components/lr-code-block-core.js'`; the type-only
-  granular import emits no registration side effect.
+  granular import emits no registration side effect. Grammars registered with
+  `registerCodeGrammar()` (see `<lr-code-block>`) also count as supplied here; an entry in this map
+  wins for the same language.
 - `copyAppearance: 'text' | 'icon' = 'text'` (attribute `copy-appearance`, reflected) — identical to
   `<lr-code-block>`'s own property: `'text'` is the labelled button, `'icon'` swaps the visible label
   for a compact glyph and promotes the same localized string to the control's accessible name

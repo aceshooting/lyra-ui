@@ -16,6 +16,7 @@ import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write
 import type { LyraHighlight, LyraAnchor, TextSelectRect } from '../../../internal/document-anchors.js';
 import { SHIKI_SOURCE_MAX_CODE_UNITS, type ShikiHighlighter } from './shiki-types.js';
 import { normalizeShikiLanguage } from '../../../internal/shiki/core.js';
+import { subscribeCodeGrammars } from './code-grammar-registry.js';
 import {
   CodeBlockHeaderActionsController,
   CodeBlockInteractionController,
@@ -256,15 +257,34 @@ export abstract class LyraCodeBlockBase extends LyraElement<LyraCodeBlockBaseEve
     }
     this.syncSlottedCode();
     this.resumedMove = this.teardown.cancel();
+    this.stopGrammarSubscription ??= subscribeCodeGrammars((keys) => this.handleCodeGrammarChange(keys));
   }
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.stopGrammarSubscription?.();
+    this.stopGrammarSubscription = undefined;
     this.teardown.schedule();
     this.headerActions.disconnect();
     this.interactions.disconnect();
     this.slottedObserver?.disconnect();
     this.slottedObserver = undefined;
+  }
+
+  private stopGrammarSubscription?: () => void;
+
+  /** A grammar was registered or removed in the library-level registry: re-highlight when it
+   *  concerns this block's language. */
+  private handleCodeGrammarChange(keys: ReadonlySet<string>): void {
+    if (!this.isConnected || !this.language) return;
+    if (!keys.has(normalizeShikiLanguage(this.language)) && !keys.has(this.language)) return;
+    this.grammarUnavailable = false;
+    this.refreshRegisteredGrammar();
+  }
+
+  /** Re-resolves the current language after the registry changed. */
+  protected refreshRegisteredGrammar(): void {
+    this.syncHighlight();
   }
 
   protected releaseHighlight(): void {
