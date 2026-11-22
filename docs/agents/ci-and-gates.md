@@ -233,7 +233,8 @@ real data dependencies, so a red check names the phase to reproduce:
    "components" number.
 3. **`build-and-coverage`** shares one build and fans out: `build_and_coverage_build` (`pnpm build`)
    uploads `dist/`; `_quality` (`check:component-quality:built`, `check:bundle-size`,
-   `codecov:bundle`), `_ssr` (`test:ssr`) and `_hydration` (`test:hydration`) consume it;
+   `codecov:bundle`), `_ssr` (`test:ssr`) and `_hydration` (`test:hydration`, then the three-engine
+   `test:hydration-fixtures`) consume it;
    `_coverage_shard` is an eight-leg matrix, each worker running
    `node scripts/coverage-shard-runner.mjs --shard N` in the pinned Playwright image and uploading one
    `coverage/shards/coverage-shard-N` artifact (`if-no-files-found: error`); `_coverage` runs with
@@ -535,7 +536,7 @@ per-commit equivalent, `test.sh` the pre-publish cross-browser sweep (not per co
 Five lanes (`chromium`, `firefox`, `webkit`, `visual`, `workspace`) run as parallel background
 processes after one shared `pnpm build`; `--serial` runs them one at a time. Lane steps keep their
 order (the `chromium` lane is `check:component-quality:built` -> `test:ssr` -> `test:hydration` ->
-`test:coverage` -> `check:coverage-floors`). Each lane logs to its own file (path printed at start)
+`test:hydration-fixtures` -> `test:coverage` -> `check:coverage-floors`). Each lane logs to its own file (path printed at start)
 and a failing lane's log is printed in full at the end.
 
 The `firefox`/`webkit` lanes run `test:full-engine-shard` with `WTR_SHARD_INDEX=1 WTR_SHARD_TOTAL=1`

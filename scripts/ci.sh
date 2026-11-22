@@ -480,6 +480,9 @@ pnpm --filter @aceshooting/lyra-ui test:ssr
 step "SSR hydration crawl"
 pnpm --filter @aceshooting/lyra-ui test:hydration
 
+step "hydrated SSR fixtures (chromium, firefox, webkit)"
+WTR_STRICT_CONSOLE=1 pnpm --filter @aceshooting/lyra-ui test:hydration-fixtures
+
 step "bundle-size budgets"
 pnpm --filter @aceshooting/lyra-ui check:bundle-size
 

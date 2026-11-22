@@ -231,6 +231,19 @@ describe('warnUnknownAttributes', () => {
     expect(warnStub.calls).to.have.length(0);
   });
 
+  it('exempts the Lit SSR hydration markers (defer-hydration, hydrate-internals-*)', () => {
+    withDevMode();
+    const host = document.createElement('lr-fake-tag');
+    host.setAttribute('defer-hydration', '');
+    host.setAttribute('hydrate-internals-role', 'group');
+    host.setAttribute('hydrate-internals-aria-label', 'Copy');
+    host.setAttribute('hydrate-internal-role', 'group');
+    warnUnknownAttributes(host, []);
+    expect(warnStub.calls.map((call) => call[0])).to.deep.equal([
+      "<lr-fake-tag>: unknown attribute 'hydrate-internal-role'",
+    ]);
+  });
+
   it('exempts Vue scoped-style markers (data-v-*) via the existing data-* prefix', () => {
     withDevMode();
     const host = document.createElement('lr-fake-tag');

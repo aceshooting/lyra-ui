@@ -92,6 +92,7 @@ import {
   recordLyraOwnerDocumentConnection,
   resolveLyraDirection,
   resolveLyraLocaleWithHostOverride,
+  resolveLyraServerLocale,
   resolveLyraStringWithLocale,
   resolveLyraLocale,
   snapshotLyraLocaleStrings,
@@ -213,6 +214,8 @@ export type LyraEmittedEvent<Events, K extends keyof Events & string> = [
 export const SEED_FIRST_RENDER_STATE = Symbol('lr-seed-first-render-state');
 /** Internal query used by slot-presence controllers while SSR light DOM is unknowable. */
 export const SLOT_PRESENCE_UNRESOLVED = Symbol('lr-slot-presence-unresolved');
+/** A deferred seed with no state of its own: queuing it only requests the post-hydration render. */
+const rerenderAfterHydration = (): void => {};
 
 const REACTIVE_HOST_ATTRIBUTES = [
   'aria-label',
@@ -926,7 +929,13 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
 
   /** The canonical, structurally valid locale used for locale-sensitive platform APIs. */
   protected get effectiveLocale(): string {
-    return resolveIntlLocale(this.effectiveMessageLocale);
+    const locale = resolveIntlLocale(this.effectiveMessageLocale);
+    // Hydration adopts server text without re-checking it, so a hydrating first render formats in
+    // the locale the server resolved; the post-hydration render then commits the inherited one.
+    if (this.hydratingServerShadow !== true || this.hasUpdated || this.locale) return locale;
+    const server = resolveIntlLocale(resolveLyraServerLocale(this));
+    if (server !== locale) this[SEED_FIRST_RENDER_STATE](rerenderAfterHydration);
+    return server;
   }
 
   /** Formats `value` in the effective locale through the shared formatter cache; non-finite prints as 0. */

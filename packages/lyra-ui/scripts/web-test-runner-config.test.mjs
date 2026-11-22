@@ -806,7 +806,7 @@ fi
 
 for (const serial of [false, true]) {
   const mode = serial ? 'serial' : 'parallel';
-  for (const failure of ['test:ssr', 'test:hydration', 'test:coverage']) {
+  for (const failure of ['test:ssr', 'test:hydration', 'test:hydration-fixtures', 'test:coverage']) {
     test(`the ${mode} full sweep preserves ${failure} failure before coverage floors`, () => {
       const result = runAggregateFixture('test.sh', serial, failure);
       assert.equal(result.status, 1, result.output);

@@ -68,9 +68,12 @@ const GLOBAL_ATTRIBUTE_EXEMPTIONS = new Set([
  * - Svelte's scoped-style mechanism writes a generated class (`svelte-<hash>`) onto `class`, never
  *   a new attribute, so there is nothing to exempt for it. Same for React, which manages custom
  *   element properties/attributes directly with no framework-owned attribute of its own.
+ * - `defer-hydration` / `hydrate-internals-*` -- Lit SSR's hydration protocol: the first defers a
+ *   nested element's hydration until its parent hydrates, the second marks an `ElementInternals`
+ *   ARIA value mirrored into markup, which hydration strips. Both are present on connect.
  */
-const FRAMEWORK_ATTRIBUTE_EXACT = new Set(['ng-version']);
-const FRAMEWORK_ATTRIBUTE_PREFIXES = ['_ngcontent-', '_nghost-', 'ng-reflect-'];
+const FRAMEWORK_ATTRIBUTE_EXACT = new Set(['ng-version', 'defer-hydration']);
+const FRAMEWORK_ATTRIBUTE_PREFIXES = ['_ngcontent-', '_nghost-', 'ng-reflect-', 'hydrate-internals-'];
 
 function isFrameworkOwnedAttribute(name: string): boolean {
   return (

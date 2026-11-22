@@ -16,6 +16,7 @@ import { failureReporter } from './scripts/wtr-failure-reporter.mjs';
 import { mcpAppSdkFixturePlugin } from './scripts/mcp-app-sdk-fixture.mjs';
 import { completeJunitReporter } from './scripts/wtr-junit-reporter.mjs';
 import { waitUntilPollIntervalPlugin } from './scripts/wait-until-poll-interval.mjs';
+import { ssrFixturePlugin } from './scripts/wtr-ssr-fixture-plugin.mjs';
 
 const require = createRequire(import.meta.url);
 
@@ -396,6 +397,7 @@ export function enforceStrictConsole(launcher) {
 
 const scaleRun = process.argv.some((arg, index, args) => arg === '--group=scale' || (arg === '--group' && args[index + 1] === 'scale'));
 if (scaleRun && (process.env.WTR_COVERAGE === '1' || browserProduct !== 'chromium')) throw new Error('Scale measurements require non-instrumented Chromium');
+const hydrationFixtureRun = process.argv.some((arg, index, args) => arg === '--group=hydration' || (arg === '--group' && args[index + 1] === 'hydration'));
 const collectCoverage = process.env.WTR_COVERAGE === '1';
 // Set only by scripts/coverage-shard-runner.mjs, one distinct value per shard sub-run, so each
 // shard's report lands in its own scratch directory instead of overwriting the others. Its
@@ -496,7 +498,12 @@ const testRunnerHtml = (testRunnerImport) => `
 </html>`;
 
 export default {
-  groups: scaleRun ? [{ name: 'scale', files: 'src/**/*-scale.test.ts' }] : [],
+  groups: [
+    ...(scaleRun ? [{ name: 'scale', files: 'src/**/*-scale.test.ts' }] : []),
+    // Server-rendered, hydrated fixtures over the built package (test/wtr-ssr-fixture.ts). Outside
+    // the default `files`, so ordinary and coverage runs never need dist; `--group hydration`.
+    ...(hydrationFixtureRun ? [{ name: 'hydration', files: 'test/hydration/*.hydration.test.ts' }] : []),
+  ],
   files: ['src/**/*.test.ts', '!src/**/*.native-scrollbar.test.ts'],
   // Parallel aggregate runs assign a port per lane. Without an explicit port, WTR's portfinder
   // probe releases the candidate before the server binds it, so two processes can select the
@@ -538,6 +545,7 @@ export default {
     sendKeysPlugin(),
     mouseCommandPlugin,
     mediaCommandPlugin,
+    ssrFixturePlugin(),
   ],
   testFramework: {
     // Mocha's default 2000ms per-test timeout is shorter than the wait

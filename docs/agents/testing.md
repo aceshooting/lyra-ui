@@ -335,3 +335,36 @@ component/scenario pair must be unique across the complete run. Assertions retai
 (retained records, disclosure, rendered cap); reviewable JSON ceilings enforce operation counts.
 `check:scale-budgets` fails when a recorded counter has no budget or a budget has no measurement.
 The complete run must succeed before its report can be checked or used to write budgets.
+
+## Hydrated SSR fixtures
+
+`test/hydration/*.hydration.test.ts` is a curated cross-family subset that runs server-rendered
+instead of client-rendered. ``ssrFixture(html`...`)`` (`test/wtr-ssr-fixture.ts`) serializes the
+template to a wtr plugin (`scripts/wtr-ssr-fixture-plugin.mjs`), whose worker renders it with
+`@lit-labs/ssr` and the built registrations; the browser parses the response with
+`Document.parseHTMLUnsafe()` so the engine itself attaches the declarative shadow roots, moves it
+into the page, hydrates it with `@lit-labs/ssr-client`, and returns the first element once every
+update has settled. Import the helper **first** in the file (it re-exports `html`): Lit's
+hydration support must load before anything evaluates `lit`, and the fixture rejects the wrong order.
+
+The fixture rejects, naming the cause, when hydration logs a warning or error, throws, or leaves a
+rejected update; an element keeps `defer-hydration` or never completes an update; a server node is
+re-created instead of adopted (a removed progressive fallback with no replacement is allowed); or
+the hydrated tree's outline differs from a client-only render of the same template. That last check
+catches what Lit accepts silently: hydration adopts a server text or boolean attribute without
+re-checking it, so a server/client state difference otherwise persists until the next change.
+Generated id values, server `<style>` blocks and SSR-serialized native `value`/`checked`
+attributes are normalized out; live form values are compared.
+
+Template values must be plain data, nested `html` templates or `nothing`; attach listeners after
+the fixture resolves. Use render-and-hydrate tags only (`getLyraSsrMode()`); a client-render tag
+is rejected. A reproduced but unfixed defect takes `knownDefect: { matches, reason }`: every problem
+must match and at least one must, so the allowance fails as soon as the fix lands. Remove it with
+the fix. `allowReplacedServerNodes` and `skipClientRenderComparison` likewise take a reason.
+
+Run `pnpm build` first, then `pnpm test:hydration-fixtures` (Chromium, Firefox and WebKit
+concurrently; `HYDRATION_FIXTURE_BROWSERS=webkit` narrows it) or
+`pnpm exec wtr --files test/hydration/<file>.hydration.test.ts` for one file on one engine. The
+group is outside the default `files`, so `pnpm test` and coverage shards never need `dist`. Add a
+component when it has SSR-relevant logic (slot presence, locale, property-bound models, form state,
+nested hosts); `test:hydration` remains the exhaustive single-engine inventory crawl.

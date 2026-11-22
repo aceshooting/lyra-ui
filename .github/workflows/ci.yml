@@ -391,6 +391,15 @@ jobs:
       - name: Hydration
         if: ${{ !cancelled() }}
         run: pnpm --filter @aceshooting/lyra-ui test:hydration
+      # Renders a curated cross-family subset with @lit-labs/ssr inside web-test-runner, hydrates
+      # it as real declarative shadow DOM in Chromium, Firefox and WebKit concurrently (this image
+      # ships all three), and fails on hydration warnings, replaced server nodes or divergence from
+      # a client render of the same template. About 15s of wall time on the dist already here.
+      - name: Hydrated fixtures
+        if: ${{ !cancelled() }}
+        env:
+          WTR_STRICT_CONSOLE: '1'
+        run: pnpm --filter @aceshooting/lyra-ui test:hydration-fixtures
 
   build_and_coverage_coverage_shard:
     name: build-and-coverage / coverage / shard ${{ matrix.shard }}/8

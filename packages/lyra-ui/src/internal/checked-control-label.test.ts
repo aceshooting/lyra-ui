@@ -25,6 +25,15 @@ class LabelHost extends LyraElement {
 }
 customElements.define('h3c-label-host', LabelHost);
 
+/** Keeps a parser-attached server shadow root as its render root, as Lit's hydration support does,
+ *  so the server's default slot is assigned (and signals `slotchange`) before the first update. */
+class ServerShadowLabelHost extends LabelHost {
+  protected override createRenderRoot() {
+    return this.shadowRoot ?? super.createRenderRoot();
+  }
+}
+customElements.define('h3c-server-shadow-label-host', ServerShadowLabelHost);
+
 class AllSlotsHost extends LitElement {
   samples = 0;
   readonly label = new CheckedControlLabelController(this, {
@@ -54,6 +63,17 @@ describe('CheckedControlLabelController', () => {
     expect([el.firstRenderLabel, el.label.present]).to.deep.equal([true, true]);
     const blank = await fixture<LabelHost>(fixtureHtml`<h3c-label-host>   <span slot="hint">Hint</span></h3c-label-host>`);
     expect([blank.firstRenderLabel, blank.label.present, blank.hasLabel]).to.deep.equal([false, false, false]);
+  });
+
+  it('defers every sample past a server-rendered first render, then reveals the label', async () => {
+    const container = await fixture<HTMLDivElement & { setHTMLUnsafe(value: string): void }>(fixtureHtml`<div></div>`);
+    container.setHTMLUnsafe('<h3c-server-shadow-label-host><template shadowrootmode="open">' +
+      '<span part="label" hidden><slot></slot></span></template>Accept terms</h3c-server-shadow-label-host>');
+    const el = container.firstElementChild as ServerShadowLabelHost;
+    await el.updateComplete;
+    expect(el.firstRenderLabel, 'the hydrating render matches the label-less server markup').to.equal(false);
+    await waitUntil(() => el.hasLabel, 'label revealed after hydration');
+    expect(el.label.present).to.equal(true);
   });
 
   it('follows slot assignment and projected text mutations, not hint content', async () => {

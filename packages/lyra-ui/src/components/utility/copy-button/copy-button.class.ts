@@ -340,6 +340,10 @@ export class LyraCopyButton extends LyraElement<LyraCopyButtonEventMap> {
     // Axe cannot yet see ElementInternals' default ARIA role in every engine, so expose the same
     // default through markup while still preserving any role the author supplied before connect.
     if (!this.hasAttribute('role')) this.setAttribute('role', 'group');
+    // Lit SSR mirrors the internals role as `role` plus a `hydrate-internals-role` marker, and
+    // hydration strips every marked attribute; dropping the marker keeps this same role fallback.
+    if (this.getAttribute('hydrate-internals-role') === this.getAttribute('role'))
+      this.removeAttribute('hydrate-internals-role');
     // Acquired on connect, not on the first outcome: assistive tech has to have been observing a
     // live region *before* text arrives for the change to be announced at all, and the first copy
     // can land in the same task this element is appended in.

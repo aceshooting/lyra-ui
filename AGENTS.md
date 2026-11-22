@@ -340,6 +340,8 @@ Full rules and incidents: **[docs/agents/testing.md](docs/agents/testing.md)**.
 - No `@sinonjs/fake-timers` under wtr; real timers with margins.
 - Save and restore any stubbed browser global.
 - A new opt-in property gets an explicit unset-regression test.
+- SSR-relevant behavior gets a hydrated case in `test/hydration/` via `ssrFixture()` (import it first;
+  `pnpm build` then `pnpm test:hydration-fixtures`, three engines); unfixed defects use `knownDefect`.
 
 ## Process for multi-step work
 

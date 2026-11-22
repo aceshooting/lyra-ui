@@ -160,6 +160,7 @@ lane_chromium() {
   pnpm --filter @aceshooting/lyra-ui check:component-quality:built
   pnpm --filter @aceshooting/lyra-ui test:ssr
   pnpm --filter @aceshooting/lyra-ui test:hydration
+  WTR_STRICT_CONSOLE=1 pnpm --filter @aceshooting/lyra-ui test:hydration-fixtures
   coverage_lane
   pnpm --filter @aceshooting/lyra-ui check:coverage-floors
   WTR_PORT="${WTR_LANE_PORTS[chromium]}" \

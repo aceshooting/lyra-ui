@@ -966,7 +966,8 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     // Assignment must settle before the initial active value or source SSR hints are repaired.
-    if (this.projectionPending) return;
+    // A server render and its hydrating first update cannot see the tabs yet, so neither repairs.
+    if (this.projectionPending || this.renderSlotPresence(false)) return;
     if (!changed.has('tabs') && !changed.has('active')) return;
     // A programmatic selection (a "Next" button inside the panel calling `show()`) hides the panel
     // that holds focus; capture it so `updated()` can hand focus to the newly selected tab.

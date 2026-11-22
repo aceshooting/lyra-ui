@@ -138,6 +138,12 @@ describe('lr-copy-button', () => {
     );
   });
 
+  it('keeps the markup role fallback when Lit SSR marked it as an internals mirror', async () => {
+    const el = (await fixture(html`<lr-copy-button role="group" hydrate-internals-role="group"></lr-copy-button>`)) as LyraCopyButton;
+    expect(el.getAttribute('role')).to.equal('group');
+    expect(el.hasAttribute('hydrate-internals-role')).to.equal(false);
+  });
+
   it('uses localized copy labels only when omitted and preserves explicit empty labels', async () => {
     const omitted = (await fixture(html`<lr-copy-button></lr-copy-button>`)) as LyraCopyButton;
     expect(omitted.copyLabel).to.equal(undefined);

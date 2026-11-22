@@ -20,6 +20,11 @@ import '../components/lr-token-input.js';
 import '../components/lr-avatar.js';
 import '../components/lr-kbd.js';
 import '../components/lr-icon.js';
+import '../components/lr-tab-group.js';
+import '../components/lr-tab.js';
+import '../components/lr-tab-panel.js';
+import '../components/lr-format-number.js';
+import '../components/lr-format-date.js';
 
 const TEST_FLAG_SRC = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3 2"%3E%3Cpath fill="%23005" d="M0 0h3v2H0z"/%3E%3Cpath fill="white" d="M1 0h1v2H1zM0 .5h3v1H0z"/%3E%3C/svg%3E';
 before(() => setFlagUrlResolver(async () => TEST_FLAG_SRC));
@@ -336,6 +341,38 @@ it('renders lr-code-editor hint exposed first, keeping authored content and coll
 
   await waitUntil(() => part(empty)?.hasAttribute('hidden'));
   expect(part(authored)?.hasAttribute('hidden')).to.be.false;
+});
+
+it('keeps the lr-tab-group server-selected tab through hydration instead of the first tab', async () => {
+  const el = await mountServerRendered<LyraElement & { active: string }>(
+    `<lr-tab-group active="preview">${SERVER_SHADOW}<lr-tab panel="input">Input</lr-tab>` +
+      '<lr-tab panel="preview">Preview</lr-tab><lr-tab-panel name="input">A</lr-tab-panel>' +
+      '<lr-tab-panel name="preview">B</lr-tab-panel></lr-tab-group>',
+  );
+  await el.updateComplete;
+  expect(el.active).to.equal('preview');
+  await waitUntil(() => el.shadowRoot?.querySelectorAll('[part="tab"]').length === 2);
+  await el.updateComplete;
+  expect(el.active).to.equal('preview');
+  expect(el.getAttribute('active')).to.equal('preview');
+});
+
+it('formats in the server locale first, then commits an ancestor lang after hydration', async () => {
+  const wrapper = await mountServerRendered(
+    `<p lang="de"><lr-format-number value="1234.5">${SERVER_SHADOW}</lr-format-number>` +
+      `<lr-format-date date="2024-03-05T12:00:00Z" month="long" time-zone="UTC">${SERVER_SHADOW}</lr-format-date></p>`,
+  );
+  const number = wrapper.querySelector<LyraElement>('lr-format-number')!;
+  const date = wrapper.querySelector<LyraElement>('lr-format-date')!;
+  await Promise.all([number.updateComplete, date.updateComplete]);
+  const text = (el: LyraElement) => el.shadowRoot!.textContent!.trim();
+  expect([text(number), text(date)]).to.deep.equal(['1,234.5', 'March']);
+
+  await waitUntil(() => text(number) === '1.234,5' && text(date) === 'März');
+  // An explicit host locale is visible to the server too, so it renders correctly at once.
+  const explicit = await mountServerRendered(`<lr-format-number lang="de" value="1234.5">${SERVER_SHADOW}</lr-format-number>`);
+  await explicit.updateComplete;
+  expect(text(explicit)).to.equal('1.234,5');
 });
 
 it('keeps lr-icon custom-content slot outside the svg so it survives HTML parsing', async () => {

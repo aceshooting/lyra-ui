@@ -1001,6 +1001,15 @@ function cachedLocale(host: Element, localeAttribute: string): string {
   return locale;
 }
 
+/**
+ * The locale a server render resolves for `host`. Lit's server DOM gives an element neither
+ * ancestors nor a document, so only the host's own `locale`/`lang` and the active locale reach it.
+ */
+export function resolveLyraServerLocale(host: Element): string {
+  const explicit = host.getAttribute('locale') || host.getAttribute('lang');
+  return explicit ? canonicalizeLyraLocale(explicit) : activeLocale || 'en';
+}
+
 /** Resolve a LyraElement's property-backed locale before its reflected attribute catches up. */
 export function resolveLyraLocaleWithHostOverride(
   host: Element,

@@ -49,8 +49,7 @@ export class CheckedControlLabelController implements ReactiveController {
   hostConnected(): void {
     this.host.addEventListener('slotchange', this.onSlotChange);
     // A reconnect is no longer a hydration boundary, so it samples the new tree at once.
-    if (this.host.hasUpdated || !this.host[SEED_FIRST_RENDER_STATE]) this.recompute();
-    else this.host[SEED_FIRST_RENDER_STATE](() => this.recompute());
+    this.recompute();
   }
 
   hostDisconnected(): void {
@@ -80,7 +79,14 @@ export class CheckedControlLabelController implements ReactiveController {
     this.refresh();
   };
 
+  /** Every sample source (connect, slot and text observers) waits out a server-shadow hydration's
+   *  first update, so the hydrating render reproduces the server's label-less markup. */
   private recompute(): void {
+    if (this.host.hasUpdated || !this.host[SEED_FIRST_RENDER_STATE]) this.sample();
+    else this.host[SEED_FIRST_RENDER_STATE](this.sample);
+  }
+
+  private readonly sample = (): void => {
     const root = this.host.renderRoot;
     if (!root) return;
     const slot = this.options.slot ? this.options.slot() : root.querySelector<HTMLSlotElement>('slot:not([name])');
@@ -97,5 +103,5 @@ export class CheckedControlLabelController implements ReactiveController {
           });
     this.presentValue = hasRealContent(nodes);
     this.options.changed(this.presentValue);
-  }
+  };
 }
