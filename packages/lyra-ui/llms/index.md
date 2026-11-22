@@ -38,7 +38,7 @@ and optional peers are excluded, so a second component usually costs much less t
 
 - `lr-combobox` · lr-combobox.js · `stable` since `4.0.0` · ~95 KiB gzip — a filterable single/multi select that combines a text input with a listbox.
 - `lr-option` · lr-option.js · `stable` since `4.0.0` · ~34 KiB gzip — a selectable option for `<lr-combobox>` and `<lr-select>`.
-- `lr-select` · lr-select.js · `stable` since `4.0.0` · ~85 KiB gzip — a plain closed-list dropdown: a direct `<lr-*>` counterpart to `<wa-select>`/`<wa-option>`.
+- `lr-select` · lr-select.js · `stable` since `4.0.0` · ~86 KiB gzip — a plain closed-list dropdown: a direct `<lr-*>` counterpart to `<wa-select>`/`<wa-option>`.
 - `lr-date-picker` · lr-date-picker.js · `experimental` since `4.0.0` · ~44 KiB gzip — an inline month-grid calendar for picking a single date or a date range.
 - `lr-date-input` · lr-date-input.js · `experimental` since `4.0.0` · ~90 KiB gzip — a date field with an attached calendar popover.
 - `lr-textarea` · lr-textarea.js · `stable` since `4.0.0` · ~46 KiB gzip — a multiline plain-text input primitive, form-associated via the `FormAssociated` mixin (see `<lr-chat-composer>`/`<lr-date-input>` for...
@@ -57,7 +57,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-radio` · lr-radio.js · `stable` since `4.0.0` · ~46 KiB gzip — a form-associated single-choice control.
 - `lr-radio-button` · lr-radio-button.js · `stable` since `8.0.0` · ~46 KiB gzip — a single-choice control rendered as a button rather than a circle.
 - `lr-otp-input` · lr-otp-input.js · `stable` since `8.0.0` · ~45 KiB gzip — a form-associated one-time-code field: several character segments that together hold one value.
-- `lr-radio-group` · lr-radio-group.js · `stable` since `4.0.0` · ~45 KiB gzip — a labeled, keyboard-navigable group of radios.
+- `lr-radio-group` · lr-radio-group.js · `stable` since `4.0.0` · ~46 KiB gzip — a labeled, keyboard-navigable group of radios.
 - `lr-checkbox-group` · lr-checkbox-group.js · `stable` since `4.0.0` · ~44 KiB gzip — a form-associated group of `<lr-checkbox>` elements.
 - `lr-token-input` · lr-token-input.js · `stable` since `4.0.0` · ~48 KiB gzip — an editable, form-associated list of removable tokens.
 - `lr-code-editor` · lr-code-editor.js · `stable` since `4.0.0` · ~45 KiB gzip — dependency-free multiline code editing surface with optional line numbers.
@@ -124,7 +124,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-reorder-list` · lr-reorder-list.js · `stable` since `6.0.0` · ~45 KiB gzip — a generic vertical list of `<lr-reorder-item>` rows, reorderable via per-row move-up/move-down buttons (always available) or...
 - `lr-reorder-item` · lr-reorder-item.js · `stable` since `6.0.0` · ~36 KiB gzip — one row inside `<lr-reorder-list>`.
 - `lr-segmented` · lr-segmented.js · `stable` since `4.0.0` · ~36 KiB gzip — a single-select button row with the WAI-ARIA APG `radiogroup` contract built in: `role="radiogroup"`/`role="radio"`, roving tabindex...
-- `lr-virtual-list` · lr-virtual-list.js · `stable` since `4.0.0` · ~43 KiB gzip — a generic windowed/virtualized list host.
+- `lr-virtual-list` · lr-virtual-list.js · `stable` since `4.0.0` · ~44 KiB gzip — a generic windowed/virtualized list host.
 - `lr-app-rail` · lr-app-rail.js · `stable` since `4.0.0` · ~79 KiB gzip — the library's application sidebar, a responsive navigation rail across three presentations as the *viewport* narrows (not this element's...
 - `lr-app-rail-item` · lr-app-rail-item.js · `stable` since `4.0.0` · ~56 KiB gzip — an explicit icon/label navigation item for `<lr-app-rail>`.
 - `lr-app-rail-group` · lr-app-rail-group.js · `experimental` since `16.0.0` · ~31 KiB gzip — a titled section of navigation items inside `<lr-app-rail>`.
@@ -133,7 +133,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-menu` · lr-menu.js · `stable` since `4.0.0` · ~66 KiB gzip — the inline semantic controller mapped from `<sl-menu>`.
 - `lr-menu-item` · lr-menu-item.js · `stable` since `4.0.0` · ~38 KiB gzip — a single action row inside `<lr-menu>`'s default slot.
 - `lr-dropdown-item` · lr-dropdown-item.js · `stable` since `4.0.0` · ~68 KiB gzip — the Web Awesome-compatible name for a menu item.
-- `lr-menubar` · lr-menubar.js · `experimental` since `21.0.0` · ~74 KiB gzip — Horizontal application menubar with roving focus, RTL-aware arrow navigation, typeahead and hover switching.
+- `lr-menubar` · lr-menubar.js · `experimental` since `21.0.0` · ~75 KiB gzip — Horizontal application menubar with roving focus, RTL-aware arrow navigation, typeahead and hover switching.
 - `lr-menubar-item` · lr-menubar-item.js · `experimental` since `21.0.0` · ~68 KiB gzip — A menu title or plain action in an application menubar.
 - `lr-dock-panel` · lr-dock-panel.js · `stable` since `4.0.0` · ~30 KiB gzip — a single panel docked to one edge of whatever contains it, resizable by dragging its inner edge.
 - `lr-card` · lr-card.js · `stable` since `4.0.0` · ~35 KiB gzip — a generic, styled bordered content container: the "small bordered surface with padding" idiom common to hero highlights, clickable grid...
@@ -180,11 +180,11 @@ and optional peers are excluded, so a second component usually costs much less t
 
 - `lr-export-button` · lr-export-button.js · `stable` since `4.0.0` · ~59 KiB gzip — a CSV/JSON download button, single-format or a format-choice menu.
 - `lr-copy-button` · lr-copy-button.js · `stable` since `4.0.0` · ~74 KiB gzip — a standalone icon-only copy-to-clipboard affordance for a plain single/multi-line text value in a layout the consumer controls (e.g.
-- `lr-resize-observer` · lr-resize-observer.js · `stable` since `4.0.0` · ~28 KiB gzip — observes the first-party or consumer-owned elements in its default slot and emits typed resize entries.
+- `lr-resize-observer` · lr-resize-observer.js · `stable` since `4.0.0` · ~29 KiB gzip — observes the first-party or consumer-owned elements in its default slot and emits typed resize entries.
 - `lr-intersection-observer` · lr-intersection-observer.js · `stable` since `4.0.0` · ~30 KiB gzip — observes slotted targets entering or leaving a viewport and emits the native intersection entries without adding layout or requiring...
 - `lr-mutation-observer` · lr-mutation-observer.js · `stable` since `4.0.0` · ~29 KiB gzip — observes element children in the default slot and forwards native mutation records as a composed event.
 - `lr-json-viewer` · lr-json-viewer.js · `stable` since `4.0.0` · ~69 KiB gzip — a collapsible, copyable tree view for an arbitrary JSON-serializable value (object/array/string/number/boolean/null/ undefined).
-- `lr-live-region` · lr-live-region.js · `stable` since `4.0.0` · ~27 KiB gzip — a visually-hidden ARIA live region that throttles and coalesces announcements instead of relaying every call verbatim.
+- `lr-live-region` · lr-live-region.js · `stable` since `4.0.0` · ~28 KiB gzip — a visually-hidden ARIA live region that throttles and coalesces announcements instead of relaying every call verbatim.
 - `lr-poll-status` · lr-poll-status.js · `stable` since `4.0.0` · ~31 KiB gzip — a "next scheduled refresh" countdown with a built-in pause control: a ticking `M:SS` display counting down to the next scheduled action...
 - `lr-mention-popover` · lr-mention-popover.js · `stable` since `4.0.0` · ~50 KiB gzip — a caret-anchored, keyboard-navigable popover for `@`-mention and `/`-slash-command autocomplete inside a plain-text...
 - `lr-diff-view` · lr-diff-view.js · `stable` since `4.0.0` · ~46 KiB gzip — a real two-string line diff (Hirschberg LCS alignment), rendered as interleaved unified-diff output -- not diff-flavored syntax...
@@ -215,7 +215,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-pan-zoom` · lr-pan-zoom.js · `stable` since `8.0.0` · ~34 KiB gzip — a scrollable frame for inspecting slotted or image content at a bounded zoom level.
 - `lr-attachment-chip` · lr-attachment-chip.js · `stable` since `4.0.0` · ~32 KiB gzip — a compact chip representing one file queued for (or already part of) a chat message: a composer's pre-send attachment tray, or a sent...
 - `lr-file-icon` · lr-file-icon.js · `stable` since `4.0.0` · ~29 KiB gzip — Displays a file-format badge from a MIME type: an unlocalized format token or generic glyph, with a localized accessible name.
-- `lr-media-card` · lr-media-card.js · `stable` since `4.0.0` · ~31 KiB gzip — a lightweight inline preview for one already-sent, already-available attachment inside a rendered chat message body (e.g.
+- `lr-media-card` · lr-media-card.js · `stable` since `4.0.0` · ~32 KiB gzip — a lightweight inline preview for one already-sent, already-available attachment inside a rendered chat message body (e.g.
 - `lr-attachment-trigger` · lr-attachment-trigger.js · `stable` since `4.0.0` · ~94 KiB gzip — a compact attach affordance designed for a chat composer's start slot (see `<lr-chat-composer>`'s own `start` slot, which this drops...
 - `lr-avatar` · lr-avatar.js · `stable` since `4.0.0` · ~26 KiB gzip — a small, fixed-size identity marker: an image, an `icon`-slotted fallback glyph, or an initials fallback, in that priority order.
 - `lr-animated-image` · lr-animated-image.js · `stable` since `4.0.0` · ~28 KiB gzip — - displays an animated GIF/APNG/WebP with a play/pause control, defaulting to a frozen first frame both at rest and automatically under...
@@ -241,7 +241,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-polar-area-chart` · lr-polar-area-chart.js · `stable` since `4.0.0` · ~97 KiB gzip — `<lr-chart>` with a `"polarArea"` default and the mirrored writable type.
 - `lr-bubble-chart` · lr-bubble-chart.js · `stable` since `4.0.0` · ~97 KiB gzip — `<lr-chart>` with a `"bubble"` default and the mirrored writable type.
 - `lr-scatter-chart` · lr-scatter-chart.js · `stable` since `4.0.0` · ~97 KiB gzip — `<lr-chart>` with a `"scatter"` default and the mirrored writable type.
-- `lr-histogram` · lr-histogram.js · `stable` since `4.0.0` · ~100 KiB gzip — bins `values` into `bins` equal-width buckets and renders them as a bar chart.
+- `lr-histogram` · lr-histogram.js · `stable` since `4.0.0` · ~101 KiB gzip — bins `values` into `bins` equal-width buckets and renders them as a bar chart.
 - `lr-box-plot` · lr-box-plot.js · `stable` since `4.0.0` · ~54 KiB gzip — a box-and-whisker chart from precomputed five-number summaries (no raw sample data is shipped to the browser).
 - `lr-chart-3d` · lr-chart-3d.js · `experimental` since `30.0.0` · ~45 KiB gzip — a bounded three-dimensional scatter, bubble or source-order line chart over immutable typed columns, with an always-available accessible...
 
@@ -253,7 +253,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-email-viewer` · lr-email-viewer.js · `stable` since `4.0.0` · ~59 KiB gzip — Parses `.eml` messages with the optional `postal-mime` peer and renders their HTML body only after DOMPurify sanitization and inside a...
 - `lr-calendar-viewer` · lr-calendar-viewer.js · `stable` since `4.0.0` · ~53 KiB gzip — Parses `.ics` calendars with the optional `ical.js` peer and renders each VEVENT as plain text, preserving summaries, DATE/DATE-TIME...
 - `lr-archive-viewer` · lr-archive-viewer.js · `stable` since `4.0.0` · ~72 KiB gzip — Lists names and declared uncompressed sizes in a ZIP archive without rendering entry contents or loading an archive parser.
-- `lr-ebook-viewer` · lr-ebook-viewer.js · `stable` since `4.0.0` · ~58 KiB gzip — Renders an EPUB with the optional `epubjs` peer.
+- `lr-ebook-viewer` · lr-ebook-viewer.js · `stable` since `4.0.0` · ~59 KiB gzip — Renders an EPUB with the optional `epubjs` peer.
 - `lr-pptx-viewer` · lr-pptx-viewer.js · `stable` since `4.0.0` · ~59 KiB gzip — Best-effort client-side PPTX viewer with optional `@aiden0z/pptx-renderer`.
 - `lr-svg-viewer` · lr-svg-viewer.js · `stable` since `4.0.0` · ~56 KiB gzip — Fetches and safely renders an inline SVG document.
 - `lr-html-viewer` · lr-html-viewer.js · `stable` since `4.0.0` · ~53 KiB gzip — Fetches and safely renders an inline HTML document.
@@ -261,7 +261,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-contact-viewer` · lr-contact-viewer.js · `stable` since `4.0.0` · ~55 KiB gzip — Fetches a vCard document and renders one accessible card per contact.
 - `lr-pdf-viewer` · lr-pdf-viewer.js · `stable` since `4.0.0` · ~76 KiB gzip — Fetches PDF bytes and renders their pages with the optional `pdfjs-dist` peer.
 - `lr-spreadsheet-viewer` · lr-spreadsheet-viewer.js · `stable` since `4.0.0` · ~92 KiB gzip — Fetches and renders `.xlsx` and legacy `.xls` workbooks with virtualized rows and sheet tabs.
-- `lr-csv-viewer` · lr-csv-viewer.js · `stable` since `4.0.0` · ~72 KiB gzip — Fetches CSV text, parses quoted fields with PapaParse, and virtualizes its rows.
+- `lr-csv-viewer` · lr-csv-viewer.js · `stable` since `4.0.0` · ~73 KiB gzip — Fetches CSV text, parses quoted fields with PapaParse, and virtualizes its rows.
 - `lr-include` · lr-include.js · `stable` since `4.0.0` · ~49 KiB gzip — `<lr-include>` loads an HTML fragment from `src` and transcludes it into the page as sanitized light-DOM content, so the fragment...
 - `lr-highlight-layer` · lr-highlight-layer.js · `stable` since `4.0.0` · ~33 KiB gzip — a presentational overlay that paints highlight rectangles (percent-of-box coordinates) over positioned content and owns their activation...
 - `lr-page-rail` · lr-page-rail.js · `stable` since `4.0.0` · ~58 KiB gzip — a virtualized vertical thumbnail rail for page-addressed documents, with per-page highlight heat markers.
@@ -282,7 +282,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-stream-status` · lr-stream-status.js · `stable` since `4.0.0` · ~46 KiB gzip — a compact status indicator for a single streaming connection (SSE, WebSocket, long-poll, …), with built-in heartbeat-aware stall detection.
 - `lr-conversation-item` · lr-conversation-item.js · `stable` since `4.0.0` · ~33 KiB gzip — a selectable row representing one chat session in a history sidebar list.
 - `lr-model-select` · lr-model-select.js · `stable` since `4.0.0` · ~74 KiB gzip — a provider/model picker that renders as a closed dropdown when a fixed `catalog` is available, or as a filterable free-text combobox when...
-- `lr-streaming-text` · lr-streaming-text.js · `stable` since `4.0.0` · ~79 KiB gzip — a token-coalescing incremental text renderer for streaming assistant output, with an optional blinking cursor and auto-detected Markdown...
+- `lr-streaming-text` · lr-streaming-text.js · `stable` since `4.0.0` · ~80 KiB gzip — a token-coalescing incremental text renderer for streaming assistant output, with an optional blinking cursor and auto-detected Markdown...
 - `lr-streaming-text-core` · lr-streaming-text-core.js · `experimental` since `16.0.0` · ~78 KiB gzip — a build-lean `<lr-streaming-text>` variant for a consumer whose `languages` map already covers every fenced-code language it will ever...
 - `lr-generation-metrics` · lr-generation-metrics.js · `stable` since `9.0.0` · ~27 KiB gzip — a compact, ticking status readout shown alongside an in-progress AI response: elapsed time, token count, and token-throughput, plus a...
 - `lr-code-block` · lr-code-block.js · `stable` since `4.0.0` · ~62 KiB gzip — fenced code display with optional lazy syntax highlighting and a copy button.
@@ -306,7 +306,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-message-parts` · lr-message-parts.js · `stable` since `7.0.0` · ~216 KiB gzip — renders ordered, interleavable provider-neutral AI message parts.
 - `lr-prompt-input` · lr-prompt-input.js · `stable` since `7.0.0` · ~173 KiB gzip — a composed AI prompt surface combining the chat composer with attachments, model and voice selection, retrieval sources, mentions, slash...
 - `lr-prompt-queue` · lr-prompt-queue.js · `stable` since `7.0.0` · ~64 KiB gzip — a controlled queue of follow-up prompts that can be edited, reordered, removed, or sent immediately while another agent turn is active.
-- `lr-selection-toolbar` · lr-selection-toolbar.js · `stable` since `7.0.0` · ~64 KiB gzip — a nonmodal action toolbar positioned above selected text.
+- `lr-selection-toolbar` · lr-selection-toolbar.js · `stable` since `7.0.0` · ~65 KiB gzip — a nonmodal action toolbar positioned above selected text.
 - `lr-realtime-session` · lr-realtime-session.js · `stable` since `7.0.0` · ~59 KiB gzip — a provider-neutral voice-session shell composing connection status, live activity, transcript, native capture, mute, interruption, and...
 
 ## Agent tooling, tool calls & evaluation — `components/agent-tools/` (44)
@@ -314,7 +314,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-tool-call-chip` · lr-tool-call-chip.js · `stable` since `4.0.0` · ~52 KiB gzip — a compact inline pill representing one tool/ function call an agent made mid-conversation, e.g.
 - `lr-tool-result-view` · lr-tool-result-view.js · `stable` since `4.0.0` · ~118 KiB gzip — renders a tool call's result via whichever custom renderer a host app has registered for it (see `registerToolRenderer()` in...
 - `lr-tool-result-dialog` · lr-tool-result-dialog.js · `stable` since `4.0.0` · ~44 KiB gzip — a full tool-call detail overlay: a status/ duration header plus a `body` slot where a consumer typically places a `<lr-tab-group>` with...
-- `lr-tool-select-dialog` · lr-tool-select-dialog.js · `stable` since `4.0.0` · ~74 KiB gzip — a category-grouped, filterable, searchable tool-enablement dialog for picking which agent tools are available in a conversation.
+- `lr-tool-select-dialog` · lr-tool-select-dialog.js · `stable` since `4.0.0` · ~75 KiB gzip — a category-grouped, filterable, searchable tool-enablement dialog for picking which agent tools are available in a conversation.
 - `lr-thinking-panel` · lr-thinking-panel.js · `stable` since `4.0.0` · ~30 KiB gzip — a collapsible panel for an AI agent's intermediate reasoning/"thinking" transcript, kept visually and semantically distinct from its...
 - `lr-stack-trace` · lr-stack-trace.js · `stable` since `4.0.0` · ~34 KiB gzip — parses common V8/JS-TS, Firefox/Safari, and Python stack traces into a leading message plus activatable frames, splitting...
 - `lr-tool-approval-dialog` · lr-tool-approval-dialog.js · `stable` since `4.0.0` · ~99 KiB gzip — a human-in-the-loop gate: presents one proposed tool/function call (`toolName` + `args`) and blocks an agent from executing it until a...
@@ -342,11 +342,11 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-tool-timeline` · lr-tool-timeline.js · `stable` since `4.1.0` · ~157 KiB gzip — a chronological list of an agent run's tool/function calls, each rendered through `<lr-tool-call-chip>` (name/status/duration) and...
 - `lr-agent-eval-dashboard` · lr-agent-eval-dashboard.js · `stable` since `6.2.0` · ~86 KiB gzip — a controlled evaluation overview with metric cards, a trend chart, and run-status history.
 - `lr-approval-queue` · lr-approval-queue.js · `stable` since `6.2.0` · ~109 KiB gzip — a controlled queue of tool calls that need human approval, with a keyboard-accessible request list and a single reused...
-- `lr-mcp-app` · lr-mcp-app.js · `stable` since `7.0.0` · ~38 KiB gzip — hosts an MCP App-style executable UI resource in a uniquely-origin sandbox.
+- `lr-mcp-app` · lr-mcp-app.js · `stable` since `7.0.0` · ~39 KiB gzip — hosts an MCP App-style executable UI resource in a uniquely-origin sandbox.
 - `lr-prompt-studio` · lr-prompt-studio.js · `stable` since `7.0.0` · ~42 KiB gzip — a provider-neutral prompt-development workbench for ordered role messages, `{{variable}}` substitution, version selection, preview, save...
 - `lr-json-schema-viewer` · lr-json-schema-viewer.js · `stable` since `9.0.0` · ~48 KiB gzip — a recursive, selectable JSON Schema inspector with required-state, constraints, composition branches, `$ref` display, validation issues...
 - `lr-subagent-panel` · lr-subagent-panel.js · `stable` since `7.0.0` · ~51 KiB gzip — a controlled hierarchy of nested agent runs with lifecycle status, task/model context, progress, selection, cancellation, and retry intents.
-- `lr-tool-call-block` · lr-tool-call-block.js · `experimental` since `21.0.0` · ~122 KiB gzip — one tool call shown inline as a collapsed-by-default disclosure.
+- `lr-tool-call-block` · lr-tool-call-block.js · `experimental` since `21.0.0` · ~123 KiB gzip — one tool call shown inline as a collapsed-by-default disclosure.
 - `lr-change-review` · lr-change-review.js · `experimental` since `22.0.0` · ~50 KiB gzip — Multi-file change review with host-owned per-hunk keep/discard decisions.
 - `lr-agent-question` · lr-agent-question.js · `experimental` since `22.0.0` · ~115 KiB gzip — A structured agent question with accept, decline and cancel responses compatible with MCP form elicitation actions.
 - `lr-permission-rules` · lr-permission-rules.js · `experimental` since `22.0.0` · ~31 KiB gzip — a controlled list of host-defined permission rules with a native keyboard-operable decision select for each rule.

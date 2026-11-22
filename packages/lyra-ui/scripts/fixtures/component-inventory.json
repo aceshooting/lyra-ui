@@ -112689,6 +112689,15 @@
             "default": false
           },
           {
+            "name": "disable-sticky",
+            "property": "disable-sticky",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "id",
             "property": "fragmentTargetId",
             "type": "| string | null",
@@ -120985,7 +120994,8 @@
             "readonly": false,
             "reflects": false,
             "deprecated": null,
-            "hasDefault": false
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "arrowPadding",
@@ -121176,6 +121186,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "click"
+          },
+          {
+            "name": "virtualElement",
+            "attribute": null,
+            "type": "LyraPopoverVirtualElement | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "withoutArrow",
@@ -248729,7 +248749,7 @@
       "upstreamTier": "free",
       "targetTag": "lr-page",
       "classification": "warning-required",
-      "rationale": "Lyra returns a finite 0 for null and for an element in a detached document with no viewport; Web Awesome 3.15 returns null for null and measures detached-document geometry against the ambient page viewport. Prefix substitution is not currently public-surface safe: 1 missing-attribute (disable-sticky).",
+      "rationale": "Lyra returns a finite 0 for null and for an element in a detached document with no viewport; Web Awesome 3.15 returns null for null and measures detached-document geometry against the ambient page viewport. Prefix substitution is not currently public-surface safe: 1 attribute-property-mismatch (disable-sticky); 1 default-mismatch (disable-sticky); 1 reflection-mismatch (disable-sticky); 1 type-mismatch (disable-sticky).",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -248891,9 +248911,32 @@
       },
       "drift": [
         {
-          "code": "missing-attribute",
+          "code": "attribute-property-mismatch",
           "section": "attributes",
-          "member": "disable-sticky"
+          "member": "disable-sticky",
+          "expected": "disableSticky",
+          "actual": "disable-sticky"
+        },
+        {
+          "code": "default-mismatch",
+          "section": "attributes",
+          "member": "disable-sticky",
+          "expected": null,
+          "actual": null
+        },
+        {
+          "code": "reflection-mismatch",
+          "section": "attributes",
+          "member": "disable-sticky",
+          "expected": true,
+          "actual": false
+        },
+        {
+          "code": "type-mismatch",
+          "section": "attributes",
+          "member": "disable-sticky",
+          "expected": "undefined | null | string",
+          "actual": "string"
         }
       ]
     },
@@ -249532,14 +249575,7 @@
             "target": ""
           }
         ],
-        "derivedDefaultEquivalences": [
-          {
-            "memberKind": "property",
-            "member": "anchor",
-            "upstream": null,
-            "target": "null until an anchor is assigned"
-          }
-        ],
+        "derivedDefaultEquivalences": [],
         "inferredAttributeSuppressions": [],
         "unknownMethodReturnTypes": [],
         "cancelabilityEquivalences": [],

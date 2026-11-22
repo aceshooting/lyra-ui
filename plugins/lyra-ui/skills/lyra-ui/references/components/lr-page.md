@@ -49,7 +49,7 @@ and event listeners survive every breakpoint crossing.
 - `autoStickyOffsets: boolean = false` (attribute `auto-sticky-offsets`, reflected) — positions
   sticky regions below the measured banner, header, and subheader. Their height properties still
   set minimum sizes and provide offsets during server rendering and before measurement.
-- `disableSticky: string | null` (accessor over the `disable-sticky` attribute; reads `null` when absent, `null` removes it) — the
+- `disableSticky: string | null` (accessor over the existing `disable-sticky` attribute; reads `null` when absent, `null` removes it) — the
   whitespace-separated regions whose sticky positioning is disabled (see below); `null` keeps every
   region sticky.
 - `nonce` (reflected, no default) — accepted so migrated `wa-page` markup keeps it; it changes

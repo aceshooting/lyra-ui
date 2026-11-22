@@ -15746,7 +15746,7 @@
           "evidence": [
             {
               "file": "src/components/utility/copy-button/copy-button.class.ts",
-              "line": 537,
+              "line": 541,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -20711,7 +20711,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1164,
+              "line": 1159,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -43504,7 +43504,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1164,
+              "line": 1159,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -62476,7 +62476,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1164,
+              "line": 1159,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

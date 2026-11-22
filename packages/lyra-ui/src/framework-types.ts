@@ -5618,6 +5618,7 @@ export interface LyraComponentTypeMap {
       | 'sync'
       | 'topLayer'
       | 'trigger'
+      | 'virtualElement'
       | 'withoutArrow',
       {}
     >;
@@ -10515,6 +10516,7 @@ export interface LyraComponentTypeMap {
       'aria-label'?: LyraPage['accessibleLabel'];
       'auto-sticky-offsets'?: LyraPage['autoStickyOffsets'];
       'disable-navigation-toggle'?: LyraPage['disableNavigationToggle'];
+      'disable-sticky'?: LyraAttributeValue<string>;
       'id'?: LyraAttributeValue<string | null>;
       'mobile-breakpoint'?: LyraPage['mobileBreakpoint'];
       'nav-open'?: LyraPage['navOpen'];
@@ -11261,6 +11263,7 @@ export interface LyraComponentTypeMap {
       | 'strings'
       | 'topLayer'
       | 'trigger'
+      | 'virtualElement'
       | 'withoutArrow',
       {}
     >;
