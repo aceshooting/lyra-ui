@@ -161,6 +161,8 @@ describe('lr-carousel interactions', () => {
 });
 
 it('lets a reader pause rotation until they explicitly resume', async () => {
+  // A pointer left over the fixture by an earlier test would hold rotation as pointer interaction.
+  await resetMouse();
   const el = await make(html`<lr-carousel autoplay loop><p>One</p><p>Two</p></lr-carousel>`);
   const timer = (): number | undefined => (el as unknown as { timer?: number }).timer;
   const toggle = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="autoplay-button"]');
