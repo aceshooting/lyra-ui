@@ -33,6 +33,9 @@ lyra-flags 2.x.
 | Version | Kind | Scope |
 |---|---|---|
 | **32.0.0** | major | Library-wide corrections and consolidation, direct contract corrections, removal of every remaining deprecated API, the consumer-study capabilities and the `lyra-v31` migration profile. Ships with **no deprecated API**. |
+| **32.1.0** | minor (next) | Consumer-application gap fixes (form, overlay, map, chart, table and layout tokens, `prompt()`, chip-group selection, label placement) and `lr-table` stacked headers, row headers and row attributes; upstream parity with Web Awesome 3.15 and Shoelace 2.20.1, a single-script-tag CDN distribution, upstream drift detection, editor-data discovery, runtime event classes and codemod rewrites. |
+| **32.2.0** | minor | Footprint and robustness: per-component gzip audit and core form-control budgets, sanitized combobox option HTML, follow-ups for the new components, per-role accents, a Font Awesome preset, server-rendered test fixtures and the Node toolchain refresh. |
+| **32.3.0** | minor | Onboarding: a curated core-components guide, starter templates, a component picker and a design kit. |
 | **32.x** | minors | Geospatial scenes P2, lyra-3d visuals and scale, on-demand look, additional catalogs; Lyra Gen interoperability hooks. |
 | **33.0.0** | major | Removal of anything deprecated during 32.x once its window has passed; conditional removal of the lyra-ui document viewers once lyra-docs 1.0.0 has shipped. |
 
@@ -65,6 +68,34 @@ lyra-flags 2.x.
   and Latin, about 1,600 messages each; Luxembourgish only when a reviewer and application demand exist.
 - [Test health](roadmap/test-health.md): the Codecov full-hit goal, CI wall-clock under 15 minutes,
   and the remaining WebKit and Firefox lane hot spots.
+- **32.1.0 (next minor):** upstream parity with Web Awesome 3.15 and Shoelace 2.20.1, plus onboarding:
+  - the consumer-application gap fixes already on main, and the `lr-table` follow-up: a stacked-mode
+    header strip, row headers, a row-attributes callback and caption fixes;
+  - child-element `lr-step` and `lr-lightbox-item`, timeline, tag-input and async combobox parity,
+    new `lr-counter` and `lr-number-ticker`, divider labels, video aspect ratio, component-named
+    part aliases, the extended spacing and type scale, native element styles, layout and utility
+    classes, an opt-in hue palette, and the matching migration mappings;
+  - a single-script-tag CDN distribution (bundled dependencies, self-starting autoloader,
+    jsDelivr/unpkg entry);
+  - scheduled upstream drift detection against the pinned upstream manifests;
+  - editor data discoverable from the main package (`customElements` field) without `lyra-ide`;
+  - runtime event classes: what `emit()` dispatches is `instanceof` its `Lyra*Event` class;
+  - codemod rewrites, not only warnings, for upstream utility classes, theme classes and
+    stylesheet imports.
+- **32.2.0 and 32.3.0**, in order (items 1–7 in 32.2.0, items 8–9 in 32.3.0):
+  1. Per-component gzip audit against the upstream equivalents, with budgets for the core form
+     controls (button, select, input) and shared-helper consolidation to recover size.
+  2. Sanitized option HTML from a `lr-combobox` data source, failing closed.
+  3. Follow-ups for the new components: `lr-lightbox` drag-following swipe, `<template>` slides,
+     thumbnails in `imageSource` mode and `lr-item-change` on a programmatic `index`; `lr-step`
+     custom states; `lr-number-ticker` early settle.
+  4. Declarative accent remapping for every semantic role, not only through `setLyraStyle()`.
+  5. A Font Awesome resolver preset using the default icon family and variant.
+  6. A server-rendered fixture mode for a subset of the browser suite, so hydration regressions
+     fail CI.
+  7. A Node patch-release refresh of the pinned toolchain and the evidence recorded against it.
+  8. A curated core-components guide, starter templates and a component picker on the website.
+  9. A design kit for the components and tokens.
 
 ### 33.0.0 — deprecation removals (major)
 
