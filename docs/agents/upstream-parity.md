@@ -143,6 +143,13 @@ while doing something else. The vocabulary rules apply to every component, mirro
   `scripts/check-provenance.mjs` catches the forbidden patterns but cannot detect a copied
   implementation, so the clean-room posture is enforced by you, not by a gate. No `wa-`/`sl-` prefix
   and no upstream branding, ever.
+- **Cross-check the Pro list by hand at every pin bump.** Pro tags ship in no public package, so
+  no manifest diff or drift issue reveals a new one: `webawesome.pro` in `upstream-tags.json` is
+  enumerated from upstream's docs alone. At each Web Awesome pin bump, compare it against the
+  release's changelog and the public components page, add every new Pro tag, and give each one a
+  mapping decision in the same change; a tag Lyra deliberately does not mirror gets a
+  `noCounterpart` reason, which `check:component-inventory --strict` and
+  `check-migration-coverage.mjs` accept in place of a member-level review and a target.
 - `scripts/generate-component-inventory.mjs` requires **both** `--webawesome-manifest` and
   `--shoelace-manifest` (it throws otherwise) — the upstream sections are always rebuilt from the
   two passed-in published `custom-elements.json` files, never carried over from the existing

@@ -28,15 +28,96 @@ import {
   scanLocalMigrationHazards,
   scanMarkupTags,
   serializeLocalDefault,
+  parseNamedModuleBindings,
+  stripTrailingModuleTrivia,
 } from './migration-analysis.mjs';
 import { migrateRenameText } from './migration-renames.mjs';
 import {
+  SHOELACE_VALIDATION_STATES,
+  UTILITY_SYMBOL_ROUTES,
+  isUpstreamUtilitySubpath,
   lookupUpstreamClass,
   resolveUpstreamAssetRoute,
   scanClassTokens,
   scanCssUrlImports,
 } from './migration-upstream-assets.mjs';
 import { lookupUpstreamToken, scanUpstreamTokenRoutes } from './migration-token-routes.mjs';
+
+const TRANSLATIONS_PACKAGE = '@aceshooting/lyra-translations';
+
+/**
+ * Body ranges `[start, end)` of every `css` tagged template outside a comment. The tag rewriter
+ * treats these bodies exactly like standalone CSS (and like `<style>` inside an `html` template),
+ * so a selector keyed on a mapped upstream tag is renamed instead of silently matching nothing.
+ */
+function cssTemplateRanges(text, ignoredRanges) {
+  const ranges = [];
+  for (const match of text.matchAll(/\bcss\s*`/g)) {
+    if (insideRanges(match.index, ignoredRanges)) continue;
+    const backtick = match.index + match[0].length - 1;
+    const quoted = quotedRangeContaining(text, backtick);
+    if (!quoted || quoted[0] !== backtick) continue;
+    ranges.push([backtick + 1, quoted[1] - 1]);
+  }
+  return ranges;
+}
+
+/** CSS comments inside the given template bodies, which `commentRanges()` reads as string text. */
+function templateCssCommentRanges(text, ranges) {
+  const comments = [];
+  for (const [start, end] of ranges) {
+    const body = text.slice(start, end);
+    for (const match of body.matchAll(/\/\*[\s\S]*?(?:\*\/|$)/g)) {
+      comments.push([start + match.index, start + match.index + match[0].length]);
+    }
+  }
+  return comments;
+}
+
+/** A tag in type-selector position: not part of a class, id, attribute value or longer name. */
+const TYPE_SELECTOR_TAG = /(?<![\w\-.#:=["'\\])(?<tag>(?:wa|sl)-[a-z][a-z0-9-]*)(?![\w-])/g;
+
+/**
+ * Element-scoped selector calls with a receiver (`el.closest('wa-dialog')`,
+ * `this.shadowRoot?.querySelectorAll('wa-tab-group > wa-tab')`). A bare or `document`-rooted call
+ * is the API-reference scanner's, which proves that `document`/`querySelector` is not a shadowing
+ * local binding; a member call on any other receiver is always a DOM query.
+ */
+const RECEIVER_SELECTOR_CALL =
+  /(?:\?\.|\.)\s*(?:querySelector|querySelectorAll|closest|matches)\s*(?:<[^>\n]+>)?\(\s*(?<quote>['"`])(?<selector>[^'"`$\\\n]*)\k<quote>/g;
+const DOCUMENT_RECEIVER = /(?<![\w$.])(?:(?:window|globalThis)\s*\.\s*)?document\s*[?!]?\s*$/;
+
+/**
+ * The validation-attribute selectors (`[data-user-invalid]`) attached to the compound selector that
+ * starts at `tagEnd` and stops at the first combinator, comma, block or pseudo-element at depth 0.
+ */
+function compoundValidationAttributes(text, tagEnd, limit) {
+  const found = [];
+  let depth = 0;
+  for (let index = tagEnd; index < limit; index += 1) {
+    const char = text[index];
+    if (char === '(') depth += 1;
+    else if (char === ')') {
+      if (depth === 0) break;
+      depth -= 1;
+    } else if (depth === 0 && (/[\s,>+~{]/.test(char) || text.startsWith('::', index))) break;
+    else if (char === '[') {
+      const close = text.indexOf(']', index);
+      if (close === -1 || close >= limit) break;
+      const match = /^\[\s*(?<attribute>data-[a-z-]+)\s*\]$/.exec(text.slice(index, close + 1));
+      if (match && Object.hasOwn(SHOELACE_VALIDATION_STATES, match.groups.attribute)) {
+        found.push({ start: index, end: close + 1, attribute: match.groups.attribute });
+      }
+      index = close;
+    }
+  }
+  return found;
+}
+
+/** The CSS custom state names a migration target documents. */
+function documentedStates(mapping) {
+  return new Set((mapping.target?.surface?.cssStates ?? []).map((state) => state.name));
+}
 
 /** Whether an import names the package itself or an entry that registers every component. */
 function isRegistrationRoot(imported) {
@@ -455,7 +536,8 @@ export function scanUnrewrittenUpstreamReferences(text) {
     seen.add(key);
     found.push({ offset, upstreamTag, member, code, target, message });
   };
-  const TAG = /(?<![\w-])(?<tag>(?:wa|sl)-[a-z][a-z0-9-]*)(?![\w-])/g;
+  // Type-selector position only, so an author's `.wa-card` class or `#wa-card` id is not a tag.
+  const TAG = TYPE_SELECTOR_TAG;
 
   // 1. Tag selectors inside a `css` tagged template. Lit is this library's own idiom, so
   //    `static styles = css\`\`` is exactly where a migrating consumer's tag selectors live --
@@ -464,7 +546,8 @@ export function scanUnrewrittenUpstreamReferences(text) {
     const bodyStart = block.index + block[0].length;
     const bodyEnd = text.indexOf('`', bodyStart);
     if (bodyEnd === -1) continue;
-    const body = text.slice(bodyStart, bodyEnd);
+    // CSS comments are prose, not selectors; blank them so their offsets stay aligned.
+    const body = text.slice(bodyStart, bodyEnd).replace(/\/\*[\s\S]*?(?:\*\/|$)/g, (comment) => ' '.repeat(comment.length));
     for (const match of body.matchAll(TAG)) {
       const tag = match.groups.tag;
       push(
@@ -553,6 +636,8 @@ export function migrateText(original, contract, options = {}) {
   const starts = lineStarts(original);
   const ignoredRanges = commentRanges(original);
   const htmlStyleRanges = htmlTemplateStyleRanges(original);
+  const cssTemplates = cssTemplateRanges(original, ignoredRanges);
+  const cssTemplateComments = templateCssCommentRanges(original, cssTemplates);
   const markupTokens = scanMarkupTags(original, ignoredRanges);
   const allOpeningTokens = scanAllOpeningTags(original, ignoredRanges);
   const apiReferences = scanApiTagReferences(original, ignoredRanges, options.domFactoryBindings);
@@ -610,6 +695,9 @@ export function migrateText(original, contract, options = {}) {
   const automaticMappings = new Set();
   const deepRegistrationMappings = new Set();
   const reportedOptionalPeers = new Set();
+  // Offsets a pass below already rewrote or reported, so the unrewritten-reference sweep at the end
+  // never adds a second, vaguer warning for the same tag.
+  const handledOffsets = new Set();
 
   const reportOrigin = (upstreamTag, origin) =>
     origin ?? (upstreamTag?.startsWith('wa-') ? 'webawesome' : upstreamTag?.startsWith('sl-') ? 'shoelace' : null);
@@ -706,6 +794,34 @@ export function migrateText(original, contract, options = {}) {
     registrationBlockedMappings.has(mapping.upstreamTag)
       ? 'REGISTRATION_CLOSURE_REQUIRED'
       : 'MAPPING_REVIEW_BLOCKED';
+  // Shoelace reflects validation as data attributes; Lyra publishes the same conditions as CSS
+  // custom states. Only a selector whose tag was just renamed is touched, and only to a state the
+  // target documents; anything else is reported because the attribute will never be set again.
+  const migrateValidationAttributes = (mapping, tagEnd, limit) => {
+    if (mapping.upstream !== 'shoelace') return;
+    const states = documentedStates(mapping);
+    for (const found of compoundValidationAttributes(original, tagEnd, limit)) {
+      const state = SHOELACE_VALIDATION_STATES[found.attribute];
+      if (states.has(state)) {
+        addEdit(found.start, found.end, `:state(${state})`, {
+          upstreamTag: mapping.upstreamTag,
+          upstreamMember: found.attribute,
+          action: 'rewrite-validation-state',
+          target: `:state(${state})`,
+          message: `Rewrite the [${found.attribute}] selector to the ${mapping.targetTag} :state(${state}) custom state.`,
+        });
+      } else {
+        warn(
+          found.start,
+          mapping.upstreamTag,
+          found.attribute,
+          'VALIDATION_STATE_REVIEW',
+          mapping.targetTag,
+          `${mapping.targetTag} documents no :state(${state}) custom state, so the [${found.attribute}] selector was left as-is and will not match after the migration; restyle this validation state by hand.`,
+        );
+      }
+    }
+  };
 
   for (const { mapping, uses } of aliasReviews.values()) {
     for (const use of uses) {
@@ -1010,14 +1126,16 @@ export function migrateText(original, contract, options = {}) {
     const selectorStart = match.index;
     const bodyStart = match.index + match[0].indexOf(match.groups.body);
     for (const mapping of contract.mappings.values()) {
-      const tagPattern = new RegExp(`(?<![a-z0-9-])${mapping.upstreamTag}(?![a-z0-9-])`, 'g');
+      // Type-selector position only: `.wa-card`, `#wa-card` and `[x=wa-card]` name the author's own
+      // class, id or value, which no rewrite of the markup's tag would keep in step.
+      const tagPattern = new RegExp(`(?<![\\w.#=\\["'\\\\-])${mapping.upstreamTag}(?![a-z0-9-])`, 'g');
       const selectorMatches = [...match.groups.selector.matchAll(tagPattern)].filter(
         (tagMatch) => {
           const offset = selectorStart + tagMatch.index;
-          if (insideRanges(offset, ignoredRanges)) return false;
+          if (insideRanges(offset, ignoredRanges) || insideRanges(offset, cssTemplateComments)) return false;
           const quoted = quotedRangeContaining(original, offset);
           if (!quoted) return true;
-          return insideRanges(offset, htmlStyleRanges)
+          return (insideRanges(offset, htmlStyleRanges) || insideRanges(offset, cssTemplates))
             && !insideTemplateExpression(original, quoted[0], offset);
         },
       );
@@ -1026,6 +1144,7 @@ export function migrateText(original, contract, options = {}) {
         usage[mapping.upstream].manual += selectorMatches.length;
         for (const tagMatch of selectorMatches) {
           const offset = selectorStart + tagMatch.index;
+          handledOffsets.add(offset);
           noteRuntimeRequirements(mapping, offset);
           warn(
             offset,
@@ -1063,6 +1182,11 @@ export function migrateText(original, contract, options = {}) {
           target: mapping.targetTag,
           message: `Rename ${mapping.upstreamTag} selector to ${mapping.targetTag}.`,
         });
+        migrateValidationAttributes(
+          mapping,
+          offset + mapping.upstreamTag.length,
+          selectorStart + match.groups.selector.length,
+        );
       }
       for (const rule of mapping.rewrites.parts) {
         const pattern = new RegExp(`(?<=::part\\()${rule.from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=\\))`, 'g');
@@ -1092,6 +1216,51 @@ export function migrateText(original, contract, options = {}) {
           });
         }
       }
+    }
+  }
+
+  // Tags inside selector strings passed to an element-scoped query (`this.querySelectorAll(...)`,
+  // `el.closest(...)`, `host.shadowRoot?.querySelector(...)`, `node.matches(...)`). A query keyed on
+  // a tag that no longer exists returns null instead of throwing, so a 1:1 mapping is renamed in
+  // place; a manual mapping is reported here, and an unknown tag is left to the sweep below.
+  const apiReferenceStarts = new Set(apiReferences.map((reference) => reference.start));
+  for (const call of original.matchAll(RECEIVER_SELECTOR_CALL)) {
+    if (insideRanges(call.index, ignoredRanges)) continue;
+    if (DOCUMENT_RECEIVER.test(original.slice(Math.max(0, call.index - 64), call.index))) continue;
+    const selectorStart = call.index + call[0].length - 1 - call.groups.selector.length;
+    const selectorEnd = selectorStart + call.groups.selector.length;
+    for (const inner of call.groups.selector.matchAll(TYPE_SELECTOR_TAG)) {
+      const tag = inner.groups.tag;
+      const offset = selectorStart + inner.index;
+      const mapping = contract.mappings.get(tag);
+      if (!mapping || apiReferenceStarts.has(offset)) continue;
+      handledOffsets.add(offset);
+      const ecosystem = ecosystemForTag(tag);
+      if (!isAutomatic(mapping)) {
+        noteRuntimeRequirements(mapping, offset);
+        usage[ecosystem].manual += 1;
+        warn(
+          offset,
+          tag,
+          'selector-string',
+          isBlockedAutomatic(mapping) ? blockedWarningCode(mapping) : warningCode(mapping),
+          mapping.targetTag,
+          isBlockedAutomatic(mapping) ? blockedMessage(mapping) : mappingMessage(mapping),
+          null,
+          mapping.parity?.behaviorReviewFlags,
+        );
+        continue;
+      }
+      usage[ecosystem].automatic += 1;
+      noteAutomatic(mapping, offset);
+      addEdit(offset, offset + tag.length, mapping.targetTag, {
+        upstreamTag: tag,
+        upstreamMember: 'selector-string',
+        action: 'rewrite-tag',
+        target: mapping.targetTag,
+        message: `Rename ${tag} to ${mapping.targetTag} in a DOM selector string.`,
+      });
+      migrateValidationAttributes(mapping, offset + tag.length, selectorEnd);
     }
   }
 
@@ -1160,6 +1329,52 @@ export function migrateText(original, contract, options = {}) {
 
   const reportAsset = (imported, route, code) =>
     warn(imported.start, null, 'module', code, null, route.note, imported.ecosystem);
+  const lineEnding = original.includes('\r\n') ? '\r\n' : '\n';
+  /** `[start, end)` of the whole statement owning a module specifier, or null when not provable. */
+  const importStatementStart = (imported) => {
+    const prefix = stripTrailingModuleTrivia(original.slice(0, imported.start - 1));
+    return /\bimport$/.test(prefix) ? prefix.length - 'import'.length : null;
+  };
+  /**
+   * Rewrites `import { a, b as c } from '<pkg>/dist/utilities/x.js'` symbol by symbol. Returns
+   * true when rewritten, a review message naming what blocked it, or false when not a utility.
+   */
+  const rewriteUtilityImport = (imported) => {
+    if (imported.kind !== 'binding' || !isUpstreamUtilitySubpath(imported.subpath)) return false;
+    const blocked = (names) =>
+      `No Lyra counterpart is recorded for ${names.join(', ')} from ${imported.specifier}; the import was left unchanged. Recorded utilities: ${Object.keys(UTILITY_SYMBOL_ROUTES).join(', ')}.`;
+    const clause = /\bimport\s*\{(?<bindings>[^{}]*)\}\s*from\s*$/.exec(original.slice(0, imported.start - 1));
+    if (!clause || insideRanges(clause.index, ignoredRanges)) return false;
+    const raw = clause.groups.bindings.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n\r]*/g, '');
+    const entries = raw.split(',').map((entry) => entry.trim()).filter(Boolean);
+    const bindings = parseNamedModuleBindings(clause.groups.bindings);
+    // A type-only entry, a default/namespace form or any unlisted name keeps the whole statement
+    // in manual review; a partial rewrite would leave a binding pointing at a module that is gone.
+    if (!bindings.length || bindings.length !== entries.length || entries.some((entry) => /^type\s/.test(entry))) return false;
+    const unknown = bindings.filter((binding) => !Object.hasOwn(UTILITY_SYMBOL_ROUTES, binding.imported));
+    if (unknown.length) return blocked(unknown.map((binding) => binding.imported));
+    const byTarget = new Map();
+    for (const binding of bindings) {
+      const { target } = UTILITY_SYMBOL_ROUTES[binding.imported];
+      const list = byTarget.get(target) ?? [];
+      list.push(binding.imported === binding.local ? binding.imported : `${binding.imported} as ${binding.local}`);
+      byTarget.set(target, list);
+    }
+    const semicolon = original[imported.statementEnd - 1] === ';' ? ';' : '';
+    const replacement = [...byTarget]
+      .map(([target, names]) => `import { ${names.join(', ')} } from ${imported.quote}${target}${imported.quote}${semicolon}`)
+      .join(lineEnding);
+    edits.push({ start: clause.index, end: imported.statementEnd, replacement });
+    for (const binding of bindings) {
+      const route = UTILITY_SYMBOL_ROUTES[binding.imported];
+      change(clause.index, null, binding.imported, 'rewrite-import', route.target,
+        `Import ${binding.imported} from its Lyra subpath ${route.target}.`, imported.ecosystem);
+      if (route.review) {
+        warn(clause.index, null, binding.imported, 'UTILITY_BEHAVIOR_REVIEW', route.target, route.review, imported.ecosystem);
+      }
+    }
+    return true;
+  };
   for (const imported of imports) {
     const { ecosystem } = imported;
     const route = imported.subpath ? resolveUpstreamAssetRoute(imported.subpath) : null;
@@ -1167,6 +1382,8 @@ export function migrateText(original, contract, options = {}) {
       reportAsset(imported, route, 'UPSTREAM_ASSET_REVIEW');
       continue;
     }
+    const utility = imported.sideEffect ? false : rewriteUtilityImport(imported);
+    if (utility === true) continue;
     if (!imported.sideEffect) {
       usage[ecosystem].manual += 1;
       warn(
@@ -1175,9 +1392,47 @@ export function migrateText(original, contract, options = {}) {
         'module',
         'IMPORT_BINDING_REVIEW_REQUIRED',
         null,
-        `The ${imported.kind} import has runtime/type bindings whose exported names cannot be inferred safely.`,
+        typeof utility === 'string'
+          ? utility
+          : `The ${imported.kind} import has runtime/type bindings whose exported names cannot be inferred safely.`,
         ecosystem,
       );
+      continue;
+    }
+    if (route?.kind === 'drop') {
+      const statementStart = importStatementStart(imported);
+      if (statementStart === null) {
+        reportAsset(imported, route, 'UPSTREAM_ASSET_REVIEW');
+        continue;
+      }
+      // Take the line with it when the statement is the only thing on that line.
+      const lineStart = original.lastIndexOf('\n', statementStart - 1) + 1;
+      const lineBreak = original.indexOf('\n', imported.statementEnd);
+      const lineEnd = lineBreak === -1 ? original.length : lineBreak + 1;
+      const alone = /^[ \t]*$/.test(original.slice(lineStart, statementStart)) &&
+        /^[ \t]*\r?\n?$/.test(original.slice(imported.statementEnd, lineEnd));
+      edits.push(alone
+        ? { start: lineStart, end: lineEnd, replacement: '' }
+        : { start: statementStart, end: imported.statementEnd, replacement: '' });
+      change(imported.start, null, 'module', 'remove-import', null, route.note, ecosystem);
+      continue;
+    }
+    if (route?.kind === 'translation') {
+      addEdit(imported.start, imported.end, route.targets[0], {
+        upstreamTag: null,
+        origin: ecosystem,
+        upstreamMember: 'module',
+        action: 'rewrite-import',
+        target: route.targets[0],
+        message: `Rewrite the ${imported.packageName} translation import to the Lyra ${route.locale} catalog.`,
+      });
+      if (route.note) reportAsset(imported, route, 'TRANSLATION_LOCALE_REVIEW');
+      if (!reportedOptionalPeers.has(TRANSLATIONS_PACKAGE)) {
+        reportedOptionalPeers.add(TRANSLATIONS_PACKAGE);
+        warn(imported.start, null, 'module', 'OPTIONAL_PEER_REQUIRED', TRANSLATIONS_PACKAGE,
+          `Lyra locale catalogs ship in the optional peer package ${TRANSLATIONS_PACKAGE}; install it at the same version as @aceshooting/lyra-ui.`,
+          ecosystem);
+      }
       continue;
     }
     if (route && route.kind !== 'registry') {
@@ -1203,7 +1458,6 @@ export function migrateText(original, contract, options = {}) {
           target: route.targets[0],
           message: `Rewrite the ${imported.packageName} ${route.kind === 'style' ? 'stylesheet' : 'loader'} import to its Lyra counterpart.`,
         });
-        const lineEnding = original.includes('\r\n') ? '\r\n' : '\n';
         for (const specifier of route.targets.slice(1).reverse()) {
           const quoted = `${imported.quote}${specifier}${imported.quote}`;
           edits.push({
@@ -1235,7 +1489,6 @@ export function migrateText(original, contract, options = {}) {
           target: closure[0],
           message: `Rewrite ${imported.packageName} root registration import to its proven Lyra registration closure.`,
         });
-        const lineEnding = original.includes('\r\n') ? '\r\n' : '\n';
         for (const specifier of closure.slice(1)) {
           edits.push({
             start: imported.statementEnd,
@@ -1384,7 +1637,7 @@ export function migrateText(original, contract, options = {}) {
   const wasRewritten = (offset) =>
     rewrittenRanges.some(([start, end]) => offset >= start && offset < end);
   for (const scan of scanUnrewrittenUpstreamReferences(original)) {
-    if (wasRewritten(scan.offset)) continue;
+    if (wasRewritten(scan.offset) || handledOffsets.has(scan.offset)) continue;
     warn(
       scan.offset,
       scan.upstreamTag,

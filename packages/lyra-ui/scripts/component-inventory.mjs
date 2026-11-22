@@ -3685,6 +3685,12 @@ export function validateInventory(inventory, { upstreamTags, lyraManifest, stric
     if (strict && component.maturity.status === 'unclassified') findings.push(`${component.tag}: maturity remains unclassified`);
   }
 
+  // A tag the library deliberately does not mirror carries its reason in `noCounterpart`; it needs
+  // neither a member-level review nor a target, so strict mode does not hold the release for it.
+  const deliberatelyUnmirrored = (tag) => {
+    const reason = upstreamTags.noCounterpart?.[tag];
+    return typeof reason === 'string' && reason.trim() !== '';
+  };
   const catalogs = {
     webawesome: [...upstreamTags.webawesome.free, ...upstreamTags.webawesome.pro].sort(),
     shoelace: [...upstreamTags.shoelace.tags].sort(),
@@ -3709,7 +3715,9 @@ export function validateInventory(inventory, { upstreamTags, lyraManifest, stric
       if (!component.review?.status || !Array.isArray(component.review.unreviewedSections)) {
         findings.push(`${component.tag}: missing surface review metadata`);
       }
-      if (strict && component.review.status !== 'complete') findings.push(`${component.tag}: public surface review is incomplete`);
+      if (strict && component.review.status !== 'complete' && !deliberatelyUnmirrored(component.tag)) {
+        findings.push(`${component.tag}: public surface review is incomplete`);
+      }
     }
     const expectedRuntimeEvidence = new Set();
     for (const observation of expectedPin.runtimeEventCancelability?.events ?? []) {
@@ -3846,7 +3854,9 @@ export function validateInventory(inventory, { upstreamTags, lyraManifest, stric
         `${mapping.upstreamTag}: static API review status is stale; expected ${expectedStaticApiReview}`,
       );
     }
-    if (strict && mapping.classification === 'unsupported') findings.push(`${mapping.upstreamTag}: unsupported release blocker remains`);
+    if (strict && mapping.classification === 'unsupported' && !deliberatelyUnmirrored(mapping.upstreamTag)) {
+      findings.push(`${mapping.upstreamTag}: unsupported release blocker remains`);
+    }
   }
   if (mappingByTag.size !== upstreamByTag.size) findings.push('not every upstream tag has exactly one mapping decision');
   for (const tag of upstreamByTag.keys()) if (!mappingByTag.has(tag)) findings.push(`${tag}: no mapping decision`);

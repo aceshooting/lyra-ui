@@ -167,6 +167,7 @@
       "wa-pie-chart",
       "wa-polar-area-chart",
       "wa-radar-chart",
+      "wa-rich-text-editor",
       "wa-scatter-chart",
       "wa-sparkline",
       "wa-video",
@@ -367,7 +368,9 @@
       "sl-visually-hidden"
     ]
   },
-  "noCounterpart": {},
+  "noCounterpart": {
+    "wa-rich-text-editor": "Lyra UI ships no rich-text editor. lr-docx-editor in @aceshooting/lyra-docs edits DOCX documents through a different public contract, so it is not a migration target for this tag; keep the upstream element or choose an editor by hand."
+  },
   "unaliasedEvents": {
     "wa-data-grid wa-data-request": "Lyra exposes the same server-request detail through the preferred `lr-request` event and retains `request` as a deprecated compatibility event. It does not dispatch `wa-data-request`.",
     "wa-stepper detail": "Web Awesome 3.15's published manifest lists the `WaStepChangeEvent` type of `wa-step-change` as an event named `detail`; no `detail` event is dispatched upstream, so Lyra has nothing to alias. The real event maps to `lr-step-change`."

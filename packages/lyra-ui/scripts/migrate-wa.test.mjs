@@ -2888,7 +2888,9 @@ test('valued member rewrites report direct and aliased script uses', () => {
 import {
   APPROXIMATE_CLASS_MAP,
   EXACT_CLASS_MAP,
+  LYRA_TRANSLATION_LOCALES,
   REVIEW_CLASS_MAP,
+  UTILITY_SYMBOL_ROUTES,
   lookupUpstreamClass,
   scanClassTokens,
 } from './migration-upstream-assets.mjs';
@@ -3107,3 +3109,237 @@ test('a binding import of an upstream stylesheet or an unrelated package is not 
   assert.equal(result.content, input);
   assert.deepEqual(result.warnings.map((entry) => entry.warningCode), ['IMPORT_BINDING_REVIEW_REQUIRED']);
 });
+
+// ---------------------------------------------------------------------------------------------
+// Translation imports, utility imports, CSS-in-JS and selector strings, validation states
+// ---------------------------------------------------------------------------------------------
+
+test('translation side-effect imports route to the shipped Lyra catalog, drop English, and report the rest', () => {
+  const input = [
+    "import '@shoelace-style/shoelace/dist/translations/de-ch.js';",
+    "import '@awesome.me/webawesome/dist/translations/zh-tw.js';",
+    "  import '@shoelace-style/shoelace/dist/translations/en.js';",
+    "import \"@awesome.me/webawesome/dist/translations/pt.js\";",
+    "import '@awesome.me/webawesome/dist/translations/xx.js';",
+    "import translation from '@shoelace-style/shoelace/dist/translations/fr.js';",
+    "const keep = 1;",
+    '',
+  ].join('\n');
+  const result = migrateAsset(input);
+  assert.equal(
+    result.content,
+    [
+      "import '@aceshooting/lyra-translations/de-CH.js';",
+      "import '@aceshooting/lyra-translations/zh-TW.js';",
+      'import "@aceshooting/lyra-translations/pt-BR.js";',
+      "import '@awesome.me/webawesome/dist/translations/xx.js';",
+      "import translation from '@shoelace-style/shoelace/dist/translations/fr.js';",
+      'const keep = 1;',
+      '',
+    ].join('\n'),
+  );
+  assert.deepEqual(
+    result.changes.map((entry) => [entry.line, entry.action, entry.target]),
+    [
+      [1, 'rewrite-import', '@aceshooting/lyra-translations/de-CH.js'],
+      [2, 'rewrite-import', '@aceshooting/lyra-translations/zh-TW.js'],
+      [3, 'remove-import', null],
+      [4, 'rewrite-import', '@aceshooting/lyra-translations/pt-BR.js'],
+    ],
+  );
+  assert.match(result.changes[2].message, /English is built into Lyra UI/);
+  assert.deepEqual(
+    result.warnings.map((entry) => [entry.line, entry.warningCode]),
+    [
+      [1, 'OPTIONAL_PEER_REQUIRED'],
+      [4, 'TRANSLATION_LOCALE_REVIEW'],
+      [5, 'UPSTREAM_ASSET_REVIEW'],
+      [6, 'IMPORT_BINDING_REVIEW_REQUIRED'],
+    ],
+  );
+  assert.equal(result.warnings[0].target, '@aceshooting/lyra-translations');
+  assert.match(result.warnings[1].message, /pt-PT/);
+  assert.match(result.warnings[2].message, /no "xx" catalog/);
+
+  // An English import that shares its line keeps the rest of that line.
+  const shared = migrateAsset("import '@awesome.me/webawesome/dist/translations/en.js'; const after = 1;\n");
+  assert.equal(shared.content, ' const after = 1;\n');
+  // Idempotent: a second pass has nothing left to do.
+  assert.equal(migrateAsset(result.content).changes.length, 0);
+});
+
+test('every translation route names a catalog @aceshooting/lyra-translations actually ships', () => {
+  const directory = path.join(scriptDir, '..', 'src', 'translations');
+  const shipped = fs.readdirSync(directory)
+    .filter((name) => name.endsWith('.ts') && !name.includes('.test.'))
+    .map((name) => name.slice(0, -'.ts'.length))
+    .sort();
+  assert.deepEqual([...LYRA_TRANSLATION_LOCALES].sort(), shipped);
+  assert.ok(!shipped.includes('en'), 'English is built in and must stay a drop, not a route');
+});
+
+test('named utility imports are rewritten per symbol to granular Lyra subpaths', () => {
+  const input = [
+    "import { serialize } from '@shoelace-style/shoelace/dist/utilities/form.js';",
+    "import { registerIconLibrary as register, unregisterIconLibrary, setDefaultIconFamily, getDefaultIconVariant } from '@awesome.me/webawesome/dist/utilities/icon-library.js'",
+    "import { allDefined, getAnimationNames, getEasingNames } from '@awesome.me/webawesome/dist/utilities/defined.js';",
+    "import { setDefaultAnimation, setAnimation, getAnimation } from '@shoelace-style/shoelace/dist/utilities/animation-registry.js';",
+    "import { serialize as toObject, mystery } from '@shoelace-style/shoelace/dist/utilities/form.js';",
+    "import type { IconLibrary } from '@shoelace-style/shoelace/dist/utilities/icon-library.js';",
+    "export { serialize } from '@shoelace-style/shoelace/dist/utilities/form.js';",
+    '',
+  ].join('\n');
+  const result = migrateAsset(input);
+  const lines = result.content.split('\n');
+  assert.deepEqual(lines.slice(0, 6), [
+    "import { serialize } from '@aceshooting/lyra-ui/utilities/form.js';",
+    "import { registerIconLibrary as register, unregisterIconLibrary, setDefaultIconFamily, getDefaultIconVariant } from '@aceshooting/lyra-ui/components/utility/icon/icon-library.js'",
+    "import { allDefined } from '@aceshooting/lyra-ui/utilities/defined.js';",
+    "import { getAnimationNames, getEasingNames } from '@aceshooting/lyra-ui/components/media/animation/animation.class.js';",
+    "import { setDefaultAnimation, setAnimation, getAnimation } from '@aceshooting/lyra-ui/utilities/animation-registry.js';",
+    "import { serialize as toObject, mystery } from '@shoelace-style/shoelace/dist/utilities/form.js';",
+  ]);
+  assert.deepEqual(lines.slice(6), input.split('\n').slice(5), 'type-only imports and re-exports stay manual');
+
+  const reviews = result.warnings.filter((entry) => entry.warningCode === 'IMPORT_BINDING_REVIEW_REQUIRED');
+  assert.equal(reviews.length, 3);
+  assert.match(reviews[0].message, /mystery/);
+  assert.doesNotMatch(reviews[0].message, /No Lyra counterpart is recorded for serialize/);
+  assert.deepEqual(
+    result.warnings.filter((entry) => entry.warningCode === 'UTILITY_BEHAVIOR_REVIEW').map((entry) => entry.upstreamMember),
+    ['setDefaultAnimation', 'setAnimation', 'getAnimation'],
+  );
+  assert.equal(result.changes.filter((entry) => entry.action === 'rewrite-import').length, 11);
+  assert.equal(migrateAsset(result.content).changes.length, 0, 'a second pass changes nothing');
+});
+
+test('every utility route targets an exported subpath whose module exports that name', () => {
+  const packageJson = JSON.parse(fs.readFileSync(path.join(scriptDir, '..', 'package.json'), 'utf8'));
+  for (const [name, { target }] of Object.entries(UTILITY_SYMBOL_ROUTES)) {
+    const subpath = `./${target.slice('@aceshooting/lyra-ui/'.length)}`;
+    const exported = packageJson.exports[subpath];
+    assert.ok(exported, `${subpath} must be a package export`);
+    assert.ok(!subpath.startsWith('./internal/'), `${subpath} must not reach into internal/`);
+    const source = fs.readFileSync(
+      path.join(scriptDir, '..', subpath.replace(/^\.\//, 'src/').replace(/\.js$/, '.ts')),
+      'utf8',
+    );
+    assert.match(
+      source,
+      new RegExp(`export\\s+(?:async\\s+)?function\\s+${name}\\b|export\\s*\\{[^}]*\\b${name}\\b[^}]*\\}`),
+      `${subpath} must export ${name}`,
+    );
+  }
+});
+
+test('mapped tags in css templates, ::slotted() and element-scoped selector strings are rewritten in place', () => {
+  const source = [
+    "import { LitElement, css } from 'lit';",
+    'export class A extends LitElement {',
+    '  static styles = css`',
+    '    wa-widget { padding: 1px; }',
+    '    ::slotted(wa-widget) { display: block; }',
+    '    .wa-widget, #wa-widget { margin: 0; }',
+    '    /* wa-widget in a comment */',
+    '    wa-include { color: red; }',
+    '  `;',
+    "  a() { return this.querySelectorAll('wa-widget'); }",
+    "  b(el) { return el?.closest('section > wa-widget.card'); }",
+    "  c() { return this.shadowRoot?.querySelector('wa-include'); }",
+    "  d(node) { return node.matches('wa-mystery'); }",
+    '}',
+  ].join('\n');
+  const result = migrateText(source, contract, { file: 'a.ts' });
+  assert.equal(
+    result.content,
+    source
+      .replace('    wa-widget { padding', '    lr-widget { padding')
+      .replace('::slotted(wa-widget)', '::slotted(lr-widget)')
+      .replace("querySelectorAll('wa-widget')", "querySelectorAll('lr-widget')")
+      .replace("'section > wa-widget.card'", "'section > lr-widget.card'"),
+  );
+  const leftBehind = ['CSS_IN_JS_SELECTOR_REVIEW', 'SLOTTED_SELECTOR_REVIEW', 'SELECTOR_STRING_REVIEW'];
+  assert.deepEqual(
+    result.warnings.filter((entry) => entry.upstreamTag === 'wa-widget').map((entry) => entry.warningCode),
+    [],
+    'a rewritten tag is never also reported as left behind',
+  );
+  // A manual mapping reports its own classification once, not a second generic warning.
+  for (const line of [8, 12]) {
+    const onLine = result.warnings.filter((entry) => entry.line === line);
+    assert.equal(onLine.length, 1, `line ${line} has exactly one warning`);
+    assert.equal(onLine[0].upstreamTag, 'wa-include');
+    assert.ok(!leftBehind.includes(onLine[0].warningCode));
+  }
+  assert.ok(!result.warnings.some((entry) => entry.line === 7), 'comment text is not a selector');
+  // An unknown tag has nothing to rename to; this-rooted queries keep their sweep warning.
+  assert.equal(result.warnings.filter((entry) => entry.line === 13).length, 0);
+  assert.equal(migrateText(result.content, contract, { file: 'a.ts' }).changes.length, 0);
+});
+
+test('Shoelace validation attribute selectors become the Lyra custom states the target documents', () => {
+  const checkedContract = buildMigrationContract(checkedInventory);
+  const states = (tag) => new Set(
+    (checkedInventory.components.find((component) => component.tag === tag)?.surface.cssStates ?? []).map((state) => state.name),
+  );
+  assert.ok(states('lr-select').has('user-invalid'), 'lr-select documents its validity states');
+  const undocumented = checkedInventory.mappings.find((mapping) =>
+    mapping.upstream === 'shoelace' && ['exact', 'rewritten'].includes(mapping.classification) &&
+    mapping.upstreamTag !== 'sl-select' && !states(mapping.targetTag).has('user-invalid'));
+  assert.ok(undocumented, 'fixture needs a Shoelace target without a documented user-invalid state');
+
+  const css = [
+    'sl-select[data-user-invalid]::part(combobox) { border-color: red; }',
+    'sl-select:not([data-valid]), sl-select[data-required][data-user-valid] { outline: 0; }',
+    'sl-select [data-invalid] { color: red; }',
+    `${undocumented.upstreamTag}[data-user-invalid] { color: red; }`,
+    'wa-select[data-user-invalid] { color: red; }',
+    '',
+  ].join('\n');
+  const result = migrateText(css, checkedContract, { file: 'app.css' });
+  const lines = result.content.split('\n');
+  assert.equal(lines[0], 'lr-select:state(user-invalid)::part(combobox) { border-color: red; }');
+  assert.equal(lines[1], 'lr-select:not(:state(valid)), lr-select:state(required):state(user-valid) { outline: 0; }');
+  assert.equal(lines[2], 'lr-select [data-invalid] { color: red; }', 'a descendant attribute is not the control state');
+  assert.equal(lines[3], `${undocumented.targetTag}[data-user-invalid] { color: red; }`);
+  assert.match(lines[4], /\[data-user-invalid\]/, 'Web Awesome selectors keep their attribute');
+  const review = result.warnings.find((entry) => entry.warningCode === 'VALIDATION_STATE_REVIEW');
+  assert.equal(review?.line, 4);
+  assert.equal(review?.upstreamMember, 'data-user-invalid');
+  assert.equal(result.changes.filter((entry) => entry.action === 'rewrite-validation-state').length, 4);
+
+  const script = "const el = host.querySelector('form sl-select[data-user-invalid]');\n";
+  assert.equal(
+    migrateText(script, checkedContract, { file: 'a.ts' }).content,
+    "const el = host.querySelector('form lr-select:state(user-invalid)');\n",
+  );
+});
+
+test('the packaged runtime keeps the validity states the selector rewrite needs', () => {
+  const runtimeInventory = createMigrationRuntimeInventory(checkedInventory, {
+    renameLedger: readRenameLedger(),
+    exportDeprecations: readExportDeprecations(),
+    compatibilityContext: checkedCompatibilityContext,
+  });
+  const select = runtimeInventory.components.find((component) => component.tag === 'lr-select');
+  assert.deepEqual(
+    select.surface.cssStates.map((state) => state.name).sort(),
+    ['invalid', 'optional', 'required', 'user-invalid', 'user-valid', 'valid'],
+  );
+  const runtimeContract = buildMigrationContract(runtimeInventory);
+  assert.equal(
+    migrateText('sl-select[data-user-invalid] { color: red; }\n', runtimeContract, { file: 'app.css' }).content,
+    'lr-select:state(user-invalid) { color: red; }\n',
+  );
+});
+
+test('a deliberately unmirrored upstream tag reports its documented reason', () => {
+  const checkedContract = buildMigrationContract(checkedInventory);
+  const reason = checkedUpstreamTags.noCounterpart['wa-rich-text-editor'];
+  assert.ok(checkedUpstreamTags.webawesome.pro.includes('wa-rich-text-editor'));
+  const input = '<wa-rich-text-editor></wa-rich-text-editor>\n';
+  const result = migrateText(input, checkedContract, { file: 'page.html' });
+  assert.equal(result.content, input);
+  assert.equal(result.warnings[0]?.message, reason);
+});
+

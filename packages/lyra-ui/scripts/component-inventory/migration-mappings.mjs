@@ -1259,6 +1259,7 @@ export function mappingDecisions({
       } else if (!target) {
         classification = 'unsupported';
         rationale =
+          fixture.noCounterpart?.[upstreamTag]?.trim() ||
           'The pinned upstream tag has no reviewed Lyra target; automatic migration is blocked.';
       } else if (component.review.status !== 'complete') {
         classification = 'unsupported';

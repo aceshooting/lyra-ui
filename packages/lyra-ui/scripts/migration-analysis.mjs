@@ -1488,7 +1488,7 @@ export function normalizedAttributeName(attribute) {
   return attribute.rawName.replace(/^(?:v-bind:|bind:|[.?:])/, '').toLowerCase();
 }
 
-function stripTrailingModuleTrivia(text) {
+export function stripTrailingModuleTrivia(text) {
   let value = text;
   while (true) {
     const next = value

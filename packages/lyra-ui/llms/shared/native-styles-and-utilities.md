@@ -485,6 +485,23 @@ self-starting loaders (`webawesome.loader.js`, `shoelace-autoloader.js`) become
 `utilities/base-path`, `layers.css`, the `awesome` and `shoelace` themes and the colour palettes have no
 Lyra counterpart and are reported as `UPSTREAM_ASSET_REVIEW`.
 
+Translation imports (`dist/translations/<lang>.js`) become the matching
+`@aceshooting/lyra-translations/<locale>.js` catalog with Lyra's casing (`de-ch` becomes `de-CH`)
+and report `OPTIONAL_PEER_REQUIRED` once, because that package is an optional peer. The `en` import is
+removed, because English is built in. A bare `pt` or `zh` loads `pt-BR` or `zh-CN`, the region CLDR
+resolves it to, and reports `TRANSLATION_LOCALE_REVIEW`. A locale Lyra does not ship stays unchanged
+and reports `UPSTREAM_ASSET_REVIEW`.
+
+Named imports from `dist/utilities/*.js` are rewritten symbol by symbol when every name has a Lyra
+export with the same call shape: `serialize` (`utilities/form.js`), `registerIconLibrary`,
+`unregisterIconLibrary`, `setDefaultIconFamily`, `getDefaultIconFamily` and `getDefaultIconVariant`
+(`components/utility/icon/icon-library.js`), `allDefined` (`utilities/defined.js`),
+`setDefaultAnimation`, `setAnimation` and `getAnimation` (`utilities/animation-registry.js`, with a
+`UTILITY_BEHAVIOR_REVIEW` note to check animation names), and `getAnimationNames` and
+`getEasingNames` (`components/media/animation/animation.class.js`). A statement that also imports
+an unlisted name, a type-only import or a re-export stays unchanged with
+`IMPORT_BINDING_REVIEW_REQUIRED`.
+
 ### Hue palette
 
 ```css

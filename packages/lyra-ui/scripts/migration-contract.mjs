@@ -1,6 +1,7 @@
 // Migration contract validation, projection, and adjacent runtime data discovery.
 import fs from 'node:fs';
 import { MIGRATION_CONTRACT_FILE, decodeMigrationContract } from './packed-migration-contract.mjs';
+import { SHOELACE_VALIDATION_STATES } from './migration-upstream-assets.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -522,6 +523,10 @@ export function createMigrationRuntimeInventory(inventory, { renameLedger, expor
           attributes: (component.surface?.attributes ?? [])
             .filter((attribute) => localAttributes.get(component.tag)?.has(attribute.name))
             .map((attribute) => ({ name: attribute.name, type: attribute.type })),
+          // Only the validity states a Shoelace validation-attribute selector can be rewritten to.
+          cssStates: (component.surface?.cssStates ?? [])
+            .filter((state) => Object.values(SHOELACE_VALIDATION_STATES).includes(state.name))
+            .map((state) => ({ name: state.name })),
         },
       })),
     localMigrations: structuredClone(inventory.localMigrations),

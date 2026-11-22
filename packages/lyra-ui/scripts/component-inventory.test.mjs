@@ -763,9 +763,9 @@ test('callout accessibility review records optional grouping and post-mount anno
   );
 });
 
-test('checked-in accessibility profiles cover all 153 upstream mappings', () => {
+test('checked-in accessibility profiles cover all 154 upstream mappings', () => {
   const inventory = readJson('scripts', 'fixtures', 'component-inventory.json');
-  assert.equal(inventory.mappings.length, 153);
+  assert.equal(inventory.mappings.length, 154);
   assert.deepEqual(
     inventory.accessibilityProfiles,
     accessibilityProfileCatalog()
@@ -781,7 +781,7 @@ test('checked-in accessibility profiles cover all 153 upstream mappings', () => 
     inventory.mappings.filter(
       (mapping) => mapping.parity.accessibility.reviewStatus === 'complete'
     ).length,
-    153
+    154
   );
 });
 
@@ -2579,6 +2579,8 @@ test('the CEM event projection preserves every concrete source EventMap schema',
   const eventDrift = [];
   const reviewedEventDrift = [];
   for (const mapping of inventory.mappings) {
+    // A deliberately unmirrored tag has no target surface to compare.
+    if (mapping.classification === 'unsupported' && mapping.targetTag === null) continue;
     const upstream = upstreamComponents.get(mapping.upstreamTag);
     const target = liveTargets.get(mapping.targetTag);
     assert.ok(
@@ -7867,9 +7869,9 @@ test('checked-in inventory covers every pinned tag and every Lyra declaration', 
     .flatMap((module) => module.declarations ?? [])
     .filter((declaration) => declaration.customElement && declaration.tagName);
   assert.equal(inventory.components.length, declaredTags.length);
-  assert.equal(inventory.upstreams.webawesome.components.length, 95);
+  assert.equal(inventory.upstreams.webawesome.components.length, 96);
   assert.equal(inventory.upstreams.shoelace.components.length, 58);
-  assert.equal(inventory.mappings.length, 153);
+  assert.equal(inventory.mappings.length, 154);
   assert.deepEqual(
     inventory.accessibilityProfiles,
     accessibilityProfileCatalog()
@@ -8184,6 +8186,28 @@ test('release completeness mode exposes staged reviews and unsupported mappings 
       finding.includes('unsupported release blocker remains')
     )
   );
+});
+
+test('release completeness mode exempts a deliberately unmirrored tag only while its noCounterpart reason stands', () => {
+  const inventory = readJson('scripts', 'fixtures', 'component-inventory.json');
+  const upstreamTags = structuredClone(readJson('scripts', 'fixtures', 'upstream-tags.json'));
+  const manifest = readJson('custom-elements.json');
+  const tag = 'wa-rich-text-editor';
+  const blockers = () =>
+    validateInventory(inventory, { upstreamTags, lyraManifest: manifest, strict: true })
+      .filter((finding) => finding.startsWith(`${tag}:`));
+
+  assert.ok(upstreamTags.webawesome.pro.includes(tag));
+  const mapping = inventory.mappings.find((entry) => entry.upstreamTag === tag);
+  assert.equal(mapping?.classification, 'unsupported');
+  assert.equal(mapping?.targetTag, null);
+  assert.equal(mapping?.rationale, upstreamTags.noCounterpart[tag]);
+  assert.deepEqual(blockers(), []);
+
+  upstreamTags.noCounterpart[tag] = '   ';
+  const findings = blockers();
+  assert.ok(findings.some((finding) => finding.includes('public surface review is incomplete')));
+  assert.ok(findings.some((finding) => finding.includes('unsupported release blocker remains')));
 });
 
 test('pinned-manifest drift validation compares normalized public data, not raw analyzer output', () => {

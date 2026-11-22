@@ -456,7 +456,111 @@ const ROUTES = Object.freeze([
 
 /** The route for a package subpath such as `/dist/styles/webawesome.css`, or null. */
 export function resolveUpstreamAssetRoute(subpath) {
-  return ROUTES.find((route) => route.pattern.test(subpath)) ?? null;
+  return resolveTranslationRoute(subpath) ?? ROUTES.find((route) => route.pattern.test(subpath)) ?? null;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Translation side-effect imports
+// ---------------------------------------------------------------------------------------------
+
+const TRANSLATIONS = '@aceshooting/lyra-translations';
+
+/**
+ * Every locale catalog `@aceshooting/lyra-translations` publishes as `<locale>.js` (English is built
+ * into Lyra UI and the pseudo-locales stay there). A test keeps this list equal to the catalogs in
+ * `src/translations/`, so a route can never name a file the package does not ship.
+ */
+export const LYRA_TRANSLATION_LOCALES = Object.freeze([
+  'am', 'ar', 'bg', 'bho', 'bn', 'ca', 'cs', 'da', 'de', 'de-CH', 'el', 'en-GB', 'es', 'es-419',
+  'et', 'fa', 'fa-AF', 'fi', 'fr', 'fr-CA', 'ga', 'gu', 'ha', 'he', 'hi', 'hr', 'hu', 'id', 'ig',
+  'it', 'ja', 'jv', 'kk', 'kn', 'ko', 'ln', 'lt', 'lv', 'ml', 'mr', 'ms', 'mt', 'my', 'nb', 'ne',
+  'nl', 'nn', 'om', 'or', 'pa', 'pcm', 'pl', 'pnb', 'ps', 'pt-BR', 'pt-PT', 'ro', 'ru', 'sd', 'sk',
+  'sl', 'sr', 'sr-Latn', 'su', 'sv', 'sw', 'ta', 'te', 'th', 'tl', 'tr', 'uk', 'ur', 'uz', 'vi',
+  'yo', 'zh-CN', 'zh-HK', 'zh-TW', 'zu',
+]);
+const LOCALE_BY_LOWERCASE = new Map(LYRA_TRANSLATION_LOCALES.map((locale) => [locale.toLowerCase(), locale]));
+
+/**
+ * Bare language codes Lyra ships only as regional catalogs. The region is the one CLDR resolves the
+ * bare language to (`pt` is Brazilian Portuguese, `zh` is Simplified Chinese as used in China), so
+ * the route is a best match that is always reported for review.
+ */
+const DEFAULT_TRANSLATION_REGIONS = Object.freeze({
+  pt: { locale: 'pt-BR', alternative: 'pt-PT' },
+  zh: { locale: 'zh-CN', alternative: 'zh-TW or zh-HK' },
+});
+
+/**
+ * Routes `/dist/translations/<lang>.js` (both upstreams register a locale on import, as Lyra's
+ * catalogs do) to `@aceshooting/lyra-translations/<locale>.js`. `kind`:
+ *  - `translation`: rewrite to `targets[0]`; a `note` asks for review
+ *  - `drop`:        the import has no Lyra counterpart because the locale is built in; remove it
+ *  - `none`:        Lyra ships no matching catalog; reported, never rewritten
+ * Returns null for any other subpath.
+ */
+export function resolveTranslationRoute(subpath) {
+  const match = /^\/dist\/translations\/(?<lang>[A-Za-z]{2,3}(?:[-_][A-Za-z0-9]{2,8})*)\.js$/.exec(subpath);
+  if (!match) return null;
+  const requested = match.groups.lang.replaceAll('_', '-');
+  const key = requested.toLowerCase();
+  if (key === 'en' || key === 'en-us') {
+    return {
+      kind: 'drop',
+      locale: requested,
+      note: 'English is built into Lyra UI, so this translation import has no counterpart and was removed.',
+    };
+  }
+  const exact = LOCALE_BY_LOWERCASE.get(key);
+  if (exact) return { kind: 'translation', locale: exact, targets: [`${TRANSLATIONS}/${exact}.js`] };
+  const regional = DEFAULT_TRANSLATION_REGIONS[key];
+  if (regional) {
+    return {
+      kind: 'translation',
+      locale: regional.locale,
+      targets: [`${TRANSLATIONS}/${regional.locale}.js`],
+      note: `Lyra ships no bare "${requested}" catalog, so this import now loads ${regional.locale}, the region CLDR resolves "${requested}" to. Switch to ${regional.alternative} if that is the audience, and check that the page lang still selects it.`,
+    };
+  }
+  return {
+    kind: 'none',
+    locale: requested,
+    note: `Lyra ships no "${requested}" catalog; pick the nearest locale from @aceshooting/lyra-ui/locales.json or register your own strings with registerLyraLocale().`,
+  };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Named utility imports
+// ---------------------------------------------------------------------------------------------
+
+const ICON_LIBRARY = `${LYRA}/components/utility/icon/icon-library.js`;
+const ANIMATION_REGISTRY = `${LYRA}/utilities/animation-registry.js`;
+const ANIMATION_NAME_REVIEW =
+  'Animation names are keyed by component (for example dialog.show); check each name you set or read against the Lyra component it targets, because an unknown name is ignored silently.';
+
+/**
+ * Per-symbol routes for named imports from the upstream `/dist/utilities/*.js` modules. Each
+ * target is a granular, side-effect-free Lyra subpath whose export has the same name and accepts
+ * the upstream call shape (Lyra may add optional arguments or a return value). A symbol not listed
+ * keeps the whole statement in manual review. `review` adds a manual-review note to the rewrite.
+ */
+export const UTILITY_SYMBOL_ROUTES = Object.freeze({
+  serialize: { target: `${LYRA}/utilities/form.js` },
+  registerIconLibrary: { target: ICON_LIBRARY },
+  unregisterIconLibrary: { target: ICON_LIBRARY },
+  setDefaultIconFamily: { target: ICON_LIBRARY },
+  getDefaultIconFamily: { target: ICON_LIBRARY },
+  getDefaultIconVariant: { target: ICON_LIBRARY },
+  allDefined: { target: `${LYRA}/utilities/defined.js` },
+  setDefaultAnimation: { target: ANIMATION_REGISTRY, review: ANIMATION_NAME_REVIEW },
+  setAnimation: { target: ANIMATION_REGISTRY, review: ANIMATION_NAME_REVIEW },
+  getAnimation: { target: ANIMATION_REGISTRY, review: ANIMATION_NAME_REVIEW },
+  getAnimationNames: { target: `${LYRA}/components/media/animation/animation.class.js` },
+  getEasingNames: { target: `${LYRA}/components/media/animation/animation.class.js` },
+});
+
+/** Whether a package subpath is one of the upstream utility modules the symbol table serves. */
+export function isUpstreamUtilitySubpath(subpath) {
+  return /^\/dist\/utilities\/[a-z][a-z0-9-]*\.js$/.test(subpath);
 }
 
 /**
@@ -500,3 +604,21 @@ export function scanCssUrlImports(text, contract, isIgnored = () => false) {
   }
   return imports;
 }
+
+// ---------------------------------------------------------------------------------------------
+// Shoelace validation attributes
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * The validation data attributes Shoelace form controls reflect, keyed by attribute, valued by the
+ * CSS custom state a Lyra form control publishes for the same condition. A selector rewrite uses a
+ * state only when the target component documents it in its manifest.
+ */
+export const SHOELACE_VALIDATION_STATES = Object.freeze({
+  'data-required': 'required',
+  'data-optional': 'optional',
+  'data-valid': 'valid',
+  'data-invalid': 'invalid',
+  'data-user-valid': 'user-valid',
+  'data-user-invalid': 'user-invalid',
+});

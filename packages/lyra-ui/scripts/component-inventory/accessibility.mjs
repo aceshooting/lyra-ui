@@ -273,6 +273,15 @@ const REVIEWED_ACCESSIBILITY_PROFILES = Object.freeze({
       announcements: ['character-count', 'validation-message'],
     }
   ),
+  'rich-text-editor': accessibilityProfile(
+    'A labelled rich-text editing surface exposes a focusable, editable text box.',
+    {
+      semantics: ['textbox'],
+      naming: ['visible-or-author-label'],
+      keyboard: ['native-editing'],
+      focus: ['native-focus'],
+    }
+  ),
   menu: accessibilityProfile(
     'A menu uses one roving tab stop with arrow, Home/End, and typeahead navigation.',
     {
@@ -1071,6 +1080,9 @@ assignAccessibility(
 assignAccessibility('step', ['wa-step'], 'step-target');
 assignAccessibility('stepper', ['wa-stepper'], 'stepper-target');
 assignAccessibility('tag-field', ['wa-tag-input'], 'tag-field-target');
+// Deliberately unmirrored (see upstream-tags.json#noCounterpart): no Lyra element claims this
+// behavior, so the comparison stays warning-required and the tag is never migrated automatically.
+assignAccessibility('rich-text-editor', ['wa-rich-text-editor'], 'no-tag-owned-behavior');
 
 assertAccessibilityProfilesReferenced(
   REVIEWED_ACCESSIBILITY_PROFILES,
