@@ -1195,6 +1195,17 @@ describe('allow, name and label', () => {
     expect(frameOf(el).getAttribute('sandbox')).to.equal('allow-same-origin');
   });
 
+  it('lets an allow fullscreen directive replace the native allowfullscreen attribute', async () => {
+    const el = await fixture<LyraZoomableFrame>(html`
+      <lr-zoomable-frame src="about:blank" allow="clipboard-write" allowfullscreen></lr-zoomable-frame>
+    `);
+    expect(frameOf(el).hasAttribute('allowfullscreen')).to.be.true;
+    el.allow = "fullscreen 'self'; clipboard-write";
+    await el.updateComplete;
+    expect(frameOf(el).hasAttribute('allowfullscreen')).to.be.false;
+    expect(frameOf(el).getAttribute('allow')).to.equal("fullscreen 'self'; clipboard-write");
+  });
+
   it('omits allow when nothing survives, and cannot widen the sandbox through it', async () => {
     const el = await fixture<LyraZoomableFrame>(html`
       <lr-zoomable-frame src="about:blank" allow="geolocation; microphone *" sandbox="allow-scripts allow-same-origin"></lr-zoomable-frame>

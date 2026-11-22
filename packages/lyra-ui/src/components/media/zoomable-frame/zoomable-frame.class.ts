@@ -180,6 +180,12 @@ function safeZoomableFrameAllow(value: unknown): string | null {
   return directives.length > 0 ? directives.join('; ') : null;
 }
 
+/** Whether a filtered `allow` list carries its own `fullscreen` directive, which the browser applies
+ * instead of `allowfullscreen`; forwarding both only logs a precedence warning. */
+function allowsFullscreen(allow: string | null): boolean {
+  return allow?.split('; ').some(directive => directive.split(' ')[0] === 'fullscreen') ?? false;
+}
+
 /** A browsing-context name, or `null` for blank or reserved (`_`-prefixed) keywords. */
 function safeFrameName(value: unknown): string | null {
   if (typeof value !== 'string') return null;
@@ -923,13 +929,14 @@ export class LyraZoomableFrame extends LyraElement<LyraZoomableFrameEventMap> {
     const referrerPolicy = safeReferrerPolicy(this.referrerpolicy);
     const label = resolveAccessibleName(this, this.label, this.localize('zoomableFrameLabel'))!;
     const zoom = this.safeZoom;
+    const allow = safeZoomableFrameAllow(this.allow);
     const frame = html`<iframe
       part="iframe"
       title=${label}
       src=${src ?? nothing}
       .srcdoc=${inline ? this.srcdoc : nothing}
-      ?allowfullscreen=${this.allowfullscreen}
-      allow=${safeZoomableFrameAllow(this.allow) ?? nothing}
+      ?allowfullscreen=${this.allowfullscreen && !allowsFullscreen(allow)}
+      allow=${allow ?? nothing}
       name=${safeFrameName(this.name) ?? nothing}
       loading=${safeLoading(this.loading)}
       referrerpolicy=${referrerPolicy ?? nothing}

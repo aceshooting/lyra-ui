@@ -77,9 +77,16 @@ describe('LYRA_SSR_STATIC_SAFETY', () => {
     const values = Object.values(LYRA_SSR_STATIC_SAFETY);
     const staticSafeCount = values.filter((value) => value === 'static-safe').length;
     const hydrationRequiredCount = values.filter((value) => value === 'hydration-required').length;
-    expect(staticSafeCount).to.equal(246);
-    expect(hydrationRequiredCount).to.equal(53);
+    expect(staticSafeCount).to.equal(249);
+    expect(hydrationRequiredCount).to.equal(54);
     expect(staticSafeCount + hydrationRequiredCount).to.equal(LYRA_SSR_RENDER_AND_HYDRATE_TAGS.length);
+  });
+
+  it('classifies the step, counter, lightbox item and number ticker additions', () => {
+    for (const tagName of ['lr-step', 'lr-counter', 'lr-lightbox-item']) {
+      expect(getLyraSsrStaticSafety(tagName)).to.equal('static-safe');
+    }
+    expect(getLyraSsrStaticSafety('lr-number-ticker')).to.equal('hydration-required');
   });
 
   it('classifies the currency picker as static-safe server-rendered form content', () => {

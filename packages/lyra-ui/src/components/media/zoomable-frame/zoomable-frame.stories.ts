@@ -122,7 +122,6 @@ export const NamedLabelledFrame: StoryObj = {
       name="preview"
       label="Document preview"
       allow="fullscreen; clipboard-write"
-      allowfullscreen
     ></lr-zoomable-frame>
   `,
 };
