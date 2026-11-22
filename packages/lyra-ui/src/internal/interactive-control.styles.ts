@@ -115,6 +115,16 @@ export function focusRingOutline(color: string, widthHook?: string): CSSResult {
 }
 
 /**
+ * The standard ring outline with a documented per-component replacement in front of it, so a
+ * consumer can swap the whole keyboard outline (for example for a halo) through one `--lr-*` token.
+ * `hook` is author-controlled, never user input. Pair it with a forced-colors rule that restores
+ * {@link focusRing}, so the replacement cannot remove a visible indicator there.
+ */
+export function focusRingOutlineFrom(hook: string): CSSResult {
+  return unsafeCSS(`outline: var(${hook}, var(--lr-focus-ring-width) solid var(--lr-focus-ring-color));`);
+}
+
+/**
  * The outer offset (or, with `placement: 'inward'`, its inward twin) with a documented per-component
  * override in front of it. `hook` is the `--lr-*` name a consumer may set; author-controlled,
  * never user input.

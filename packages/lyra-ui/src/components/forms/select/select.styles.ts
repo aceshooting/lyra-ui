@@ -1,5 +1,5 @@
 import { forcedColorsSelected } from '../../../internal/forced-colors.styles.js';
-import { activeFill, disabledControl, focusRing, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
+import { activeFill, disabledControl, focusRing, focusRingOutlineFrom, hoverFill, iconHitTarget, interactiveTransition } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { glassSurface } from '../../../internal/glass-surface.styles.js';
 import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.styles.js';
@@ -151,7 +151,7 @@ export const styles = css`
     ${focusRing}
     /* Opt-in replacement for the keyboard outline (for example with the shared halo). Forced
        colours below always restore the standard ring, so a visible indicator cannot be removed. */
-    outline: var(--lr-form-control-focus-outline, var(--lr-focus-ring-width) solid var(--lr-focus-ring-color));
+    ${focusRingOutlineFrom('--lr-form-control-focus-outline')}
   }
   @media (forced-colors: active) {
     [part="trigger"]:focus-visible {

@@ -1347,7 +1347,9 @@ no `.items` array prop).
 **Events:** `lr-overflow-toggle` (`detail: { expanded }` — the overflow indicator was activated,
 revealing or re-collapsing the excess children; fires only from that click, i.e. only when
 `max-visible` is actually causing an overflow state — never as a side effect of `max-visible`/
-children changing on their own)
+children changing on their own), `lr-change` (`detail: { value }` — a user press changed the
+selection while `selection` is `single` or `multiple`; a `string` in `single`, a `string[]` in
+`multiple`; assigning `value` never fires it)
 
 When collapse, `max-visible`, or controlled child removal hides the focused chip action, focus moves
 to the nearest enabled visible chip control, then the overflow disclosure, then the stable group

@@ -65,8 +65,8 @@ export const styles = css`
   /* App chrome that owns part of a map edge pushes every corner control stack inward by the same
      logical inset, before and after construction. */
   .initialization-controls, .maplibregl-control-container {
-    padding-block: var(--_lr-map-controls-inset-block-start, var(--lr-map-controls-inset-block-start, 0px)) var(--_lr-map-controls-inset-block-end, var(--lr-map-controls-inset-block-end, 0px));
-    padding-inline: var(--_lr-map-controls-inset-inline-start, var(--lr-map-controls-inset-inline-start, 0px)) var(--_lr-map-controls-inset-inline-end, var(--lr-map-controls-inset-inline-end, 0px));
+    padding-block: calc(var(--_lr-map-controls-inset-block-start, var(--lr-map-controls-inset-block-start, 0px))) calc(var(--_lr-map-controls-inset-block-end, var(--lr-map-controls-inset-block-end, 0px)));
+    padding-inline: calc(var(--_lr-map-controls-inset-inline-start, var(--lr-map-controls-inset-inline-start, 0px))) calc(var(--_lr-map-controls-inset-inline-end, var(--lr-map-controls-inset-inline-end, 0px)));
   }
   .initialization-row { display: grid; grid-template-columns: minmax(0, max-content) minmax(0, max-content); justify-content: space-between; min-inline-size: 0; }
   .initialization-row-top { grid-row: 1; }
@@ -177,7 +177,7 @@ export const styles = css`
     row-gap: var(--lr-space-xs);
     padding-block: calc(var(--lr-space-s) + var(--_lr-map-controls-top, 0px) + var(--_lr-map-controls-inset-block-start, var(--lr-map-controls-inset-block-start, 0px)))
       calc(var(--lr-space-s) + var(--_lr-map-controls-bottom, 0px) + var(--_lr-map-controls-inset-block-end, var(--lr-map-controls-inset-block-end, 0px)));
-    padding-inline: var(--_lr-map-controls-inset-inline-start, var(--lr-map-controls-inset-inline-start, 0px)) var(--_lr-map-controls-inset-inline-end, var(--lr-map-controls-inset-inline-end, 0px));
+    padding-inline: calc(var(--_lr-map-controls-inset-inline-start, var(--lr-map-controls-inset-inline-start, 0px))) calc(var(--_lr-map-controls-inset-inline-end, var(--lr-map-controls-inset-inline-end, 0px)));
   }
   [part='base']:has(> :is([part='pick-controls'], [part='drawing-controls'], [part='scene-panel']))
     > :is([part='legend'], [part='scene-panel']) {
@@ -842,20 +842,20 @@ export const styles = css`
   /* One corner's own inset, from its row edge and its column's map edge, before and after
      construction. The left corners are the start corners (mirrored under RTL). */
   :is(.maplibregl-ctrl-top-left, .initialization-row-top .initialization-corner-left) {
-    padding-block-start: var(--lr-map-controls-top-left-inset-block, 0px);
-    padding-inline-start: var(--lr-map-controls-top-left-inset-inline, 0px);
+    padding-block-start: calc(var(--lr-map-controls-top-left-inset-block, 0px));
+    padding-inline-start: calc(var(--lr-map-controls-top-left-inset-inline, 0px));
   }
   :is(.maplibregl-ctrl-top-right, .initialization-row-top .initialization-corner-right) {
-    padding-block-start: var(--lr-map-controls-top-right-inset-block, 0px);
-    padding-inline-end: var(--lr-map-controls-top-right-inset-inline, 0px);
+    padding-block-start: calc(var(--lr-map-controls-top-right-inset-block, 0px));
+    padding-inline-end: calc(var(--lr-map-controls-top-right-inset-inline, 0px));
   }
   :is(.maplibregl-ctrl-bottom-left, .initialization-row-bottom .initialization-corner-left) {
-    padding-block-end: var(--lr-map-controls-bottom-left-inset-block, 0px);
-    padding-inline-start: var(--lr-map-controls-bottom-left-inset-inline, 0px);
+    padding-block-end: calc(var(--lr-map-controls-bottom-left-inset-block, 0px));
+    padding-inline-start: calc(var(--lr-map-controls-bottom-left-inset-inline, 0px));
   }
   :is(.maplibregl-ctrl-bottom-right, .initialization-row-bottom .initialization-corner-right) {
-    padding-block-end: var(--lr-map-controls-bottom-right-inset-block, 0px);
-    padding-inline-end: var(--lr-map-controls-bottom-right-inset-inline, 0px);
+    padding-block-end: calc(var(--lr-map-controls-bottom-right-inset-block, 0px));
+    padding-inline-end: calc(var(--lr-map-controls-bottom-right-inset-inline, 0px));
   }
   .maplibregl-ctrl-top-left { grid-column: 1; }
   .maplibregl-ctrl-top-right { grid-column: 2; }

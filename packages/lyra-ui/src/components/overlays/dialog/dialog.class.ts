@@ -481,7 +481,8 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   private syncFullscreenQuery(): void {
     this.releaseFullscreenQuery?.();
     this.releaseFullscreenQuery = undefined;
-    const view = this.ownerDocument.defaultView;
+    // Server rendering has no owner document or viewport; the breakpoint is evaluated on the client.
+    const view = this.ownerDocument?.defaultView;
     if (!this.fullscreenNarrow || !this.isConnected || typeof view?.matchMedia !== 'function') {
       this.removeAttribute('data-fullscreen');
       return;
