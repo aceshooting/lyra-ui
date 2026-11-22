@@ -9,6 +9,7 @@ import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
 import { optionalPeerNames } from '../../lyra-ui/scripts/guard-optional-peer-imports.mjs';
+import { isMainModule } from '../../lyra-ui/scripts/is-main-module.mjs';
 
 const packageDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const uiDir = join(dirname(packageDir), 'lyra-ui');
@@ -105,7 +106,7 @@ export async function buildCdn(root = packageDir, ui = uiDir) {
   return { outdir, chunks, bytes: await totalBytes(outdir), relative: relative(root, outdir) };
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isMainModule(import.meta.url)) {
   const { chunks, bytes } = await buildCdn();
   console.log(`Single-script CDN build: ${chunks} JavaScript files, ${bytes.toLocaleString('en')} bytes in dist.`);
 }

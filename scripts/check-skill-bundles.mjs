@@ -7,8 +7,8 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { pathToFileURL } from 'node:url';
 import { inflateRawSync } from 'node:zlib';
+import { isMainModule } from '../packages/lyra-ui/scripts/is-main-module.mjs';
 
 const EOCD = 0x06054b50;
 const CENTRAL = 0x02014b50;
@@ -74,4 +74,4 @@ function main(paths, ref = 'HEAD') {
   if (failed) process.exit(1);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main(process.argv.slice(2));
+if (isMainModule(import.meta.url)) main(process.argv.slice(2));
