@@ -125,7 +125,7 @@ function job(text, name) {
 
 test('qualification and release Node setup never restores package-manager caches', () => {
   const workflows = new Map([
-    ['ci.yml', 21],
+    ['ci.yml', 22],
     ['full-engine.yml', 2],
     ['test-all-browsers.yml', 2],
     ['quality-tools.yml', 4],
