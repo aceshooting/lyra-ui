@@ -33,6 +33,7 @@ import {
   isAccessibilitySubtreeExcluded,
 } from '../../../internal/accessibility-visibility.js';
 import { closeIcon } from '../../../internal/icons.js';
+import { registerDeclarativeOverlay } from '../../../internal/declarative-overlay-action.js';
 import {
   animateRegistered,
   type RegisteredAnimationSpec,
@@ -49,7 +50,9 @@ const HEADING_SELECTOR = 'h1, h2, h3, h4, h5, h6, [role="heading"]';
  * Reason a dialog was dismissed, forwarded as the `lr-close` event
  * detail. `'escape'` and `'backdrop'` are emitted by the dialog's own built-in
  * dismiss triggers; `'close-button'` by the built-in header close button
- * (rendered unless `without-close-button` is set); `'unmount'` is emitted when the dialog is
+ * (rendered unless `without-close-button` is set); `'close-action'` by an activated descendant
+ * carrying the declarative close attribute (`data-dialog="close"`, or `data-drawer="close"` inside
+ * `<lr-drawer>`); `'unmount'` is emitted when the dialog is
  * removed from the DOM while still open by something other than its own
  * `close()` (e.g. a consumer's own cleanup code, or a parent re-render that
  * drops it); any other string is whatever a caller passes to `close()` (e.g. a
@@ -154,6 +157,18 @@ const FULLSCREEN_NARROW_QUERY = '(max-width: 40rem)';
  * A close (X) button renders in the header row by default (creating one, with no heading text, if
  * neither `heading` nor the `label` slot is set) and closes the dialog via the same `close()` path
  * as Escape/backdrop-dismiss, with reason `'close-button'`; `without-close-button` removes it.
+ *
+ * Declarative actions open and close the dialog from markup alone. Activating any element with
+ * `data-dialog="open <id>"` (a click, so keyboard activation of a button counts) opens the
+ * `<lr-dialog>` with that `id`, looked up in the trigger's own shadow root or document first and
+ * then in its document; an `id` that matches nothing, or matches something other than a dialog,
+ * is ignored. Activating a descendant with `data-dialog="close"` -- including one inside a
+ * descendant's open shadow root -- closes the nearest owning dialog with reason `'close-action'`
+ * and the action as the `lr-hide` `source`; a nested dialog consumes its own close action. Both run
+ * the ordinary `show()`/close lifecycle, so `lr-show`, `lr-hide` and `lr-close-request` can veto
+ * them. A disabled, `aria-disabled="true"` or inert action does nothing, as does a click whose
+ * default was already prevented. One delegated document listener serves every dialog and drawer
+ * and is removed once the last of them disconnects.
  *
  * The `body` part is the element that scrolls, so it carries `tabindex="0"` only while it
  * actually overflows; a short body keeps `tabindex="-1"`. A dialog holding only prose, a table,
@@ -491,6 +506,13 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     return true;
   }
 
+  /** The `data-*` attribute that addresses this overlay declaratively; drawer answers `'drawer'`. */
+  protected get declarativeKind(): 'dialog' | 'drawer' {
+    return 'dialog';
+  }
+
+  private releaseDeclarativeActions?: () => void;
+
   /** Follows the `fullscreen-narrow` breakpoint while connected, mirroring the match onto the
    *  internal `data-fullscreen` host attribute the stylesheet keys off. */
   private syncFullscreenQuery(): void {
@@ -581,6 +603,12 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.releaseDeclarativeActions?.();
+    this.releaseDeclarativeActions = registerDeclarativeOverlay(this, {
+      kind: () => this.declarativeKind,
+      open: () => void this.show(),
+      close: (source) => void this.closeFrom('close-action', source),
+    });
     this.syncFullscreenQuery();
     this.armHeadingObserver();
     this.syncBodyTabIndex();
@@ -609,6 +637,8 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.releaseDeclarativeActions?.();
+    this.releaseDeclarativeActions = undefined;
     this.releaseFullscreenQuery?.();
     this.releaseFullscreenQuery = undefined;
     this.removeAttribute('data-fullscreen');

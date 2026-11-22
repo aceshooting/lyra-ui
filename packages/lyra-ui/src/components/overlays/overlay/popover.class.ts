@@ -1,4 +1,5 @@
 import { AnchoredDisclosureController } from '../../../internal/anchored-disclosure-controller.js';
+import { findDeclarativeAction, isDeclarativeActionInert } from '../../../internal/declarative-overlay-action.js';
 import { DocumentPointerListener } from '../../../internal/document-pointer.js';
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import {
@@ -1493,24 +1494,12 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
     const path = event.composedPath();
     const hostIndex = path.indexOf(this);
     if (hostIndex < 0) return;
-    const closeAction = path.slice(0, hostIndex).find(
-      (target): target is HTMLElement =>
-        (target as Node).nodeType === 1
-        && (target as HTMLElement).getAttribute('data-popover') === 'close',
-    );
+    const closeAction = findDeclarativeAction(path, 'data-popover', hostIndex, (value) => value === 'close');
     if (!closeAction) return;
     // The closest owning surface consumes the declarative action even when its own hide is vetoed;
     // an ancestor popover must never interpret the same activation as its close request.
     event.stopPropagation();
-    const state = closeAction as HTMLElement & { disabled?: boolean; effectiveDisabled?: boolean };
-    if (
-      state.effectiveDisabled === true
-      || state.disabled === true
-      || closeAction.hasAttribute('disabled')
-      || closeAction.getAttribute('aria-disabled')?.trim().toLowerCase() === 'true'
-      || closeAction.hasAttribute('inert')
-      || closeAction.closest('[inert]')
-    ) return;
+    if (isDeclarativeActionInert(closeAction)) return;
     void this.hide();
   };
   private onDocumentPointer = (event: PointerEvent): void => {

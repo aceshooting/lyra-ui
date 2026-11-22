@@ -20,6 +20,12 @@ export type LyraDrawerPlacement = 'start' | 'end' | 'top' | 'bottom';
  * `showBottom`/`hideBottom`, and `showStart`/`hideStart`; the scrim uses
  * `drawer.overlay.show`/`drawer.overlay.hide`.
  *
+ * Declarative actions use `data-drawer` instead of `data-dialog`: activating any element with
+ * `data-drawer="open <id>"` opens the `<lr-drawer>` with that `id`, and activating a descendant
+ * with `data-drawer="close"` closes the nearest owning drawer with reason `'close-action'`. Every
+ * other rule -- lookup scope, nesting, vetoes, disabled and inert actions -- is `<lr-dialog>`'s.
+ * `data-dialog` never addresses a drawer, and `data-drawer` never addresses a dialog.
+ *
  * @customElement lr-drawer
  * @slot - The drawer body.
  * @slot label - Rich header content, inherited from `<lr-dialog>`.
@@ -99,6 +105,10 @@ export class LyraDrawer extends LyraDialog {
 
   protected override get modalSurface(): boolean {
     return !this.contained;
+  }
+
+  protected override get declarativeKind(): 'dialog' | 'drawer' {
+    return 'drawer';
   }
 
   /** A mapped drawer's hide request is cancelable on every path, including external removal. */

@@ -132,3 +132,21 @@ export const Floating: Story = {
     </lr-drawer>
   `,
 };
+
+export const DeclarativeOpenAndClose: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`data-drawer="open <id>"` opens the drawer with that `id`, and `data-drawer="close"` on a descendant closes the nearest owning drawer. `data-dialog` never addresses a drawer.',
+      },
+    },
+  },
+  render: () => html`
+    <button type="button" data-drawer="open declarative-drawer">Open drawer</button>
+    <lr-drawer id="declarative-drawer" label="Filters">
+      <p>Opened and closed from markup alone.</p>
+      <div slot="footer"><button type="button" data-drawer="close">Done</button></div>
+    </lr-drawer>
+  `,
+};

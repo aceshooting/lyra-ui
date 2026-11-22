@@ -651,6 +651,37 @@ test('the checked-in inventory is executable and carries its explicit event-pref
   assert.match(result.warnings[0].message, /prefers-reduced-motion/u);
 });
 
+test('declarative data-dialog and data-drawer actions survive migration untouched and unflagged', () => {
+  const checkedContract = buildMigrationContract(checkedInventory, {
+    compatibilityContext: checkedCompatibilityContext,
+  });
+  const input = [
+    '<wa-button data-dialog="open edit-user">Edit</wa-button>',
+    '<wa-dialog id="edit-user" label="Edit user">',
+    '  <wa-button slot="footer" data-dialog="close">Cancel</wa-button>',
+    '</wa-dialog>',
+    '<button data-drawer="open filters">Filters</button>',
+    '<wa-drawer id="filters" label="Filters">',
+    '  <button data-drawer="close">Done</button>',
+    '</wa-drawer>',
+    '',
+  ].join('\n');
+  const result = migrateText(input, checkedContract, { file: 'declarative.html' });
+  for (const kept of [
+    '<lr-button data-dialog="open edit-user">',
+    'data-dialog="close"',
+    '<button data-drawer="open filters">',
+    'data-drawer="close"',
+  ]) {
+    assert.ok(result.content.includes(kept), `${kept} is preserved`);
+  }
+  assert.match(result.content, /<lr-dialog\b[^>]*\bid="edit-user"/u);
+  assert.match(result.content, /<lr-drawer\b[^>]*\bid="filters"/u);
+  assert.equal(result.content.includes('wa-'), false);
+  const flagged = result.warnings.filter((entry) => /data-(?:dialog|drawer)/u.test(JSON.stringify(entry)));
+  assert.deepEqual(flagged, []);
+});
+
 test('imperative construction requiring unassigned inserted defaults is blocked at the tag literal', () => {
   const checkedContract = buildMigrationContract(checkedInventory);
   const input = [

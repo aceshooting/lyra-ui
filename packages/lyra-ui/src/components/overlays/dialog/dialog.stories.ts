@@ -501,3 +501,25 @@ export const HeadingLetterSpacing: Story = {
     </lr-dialog>
   `,
 };
+
+export const DeclarativeOpenAndClose: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'No script: `data-dialog="open <id>"` on any element opens the dialog with that `id`, and `data-dialog="close"` on a descendant closes the nearest owning dialog with reason `close-action`. Both run the ordinary cancelable lifecycle.',
+      },
+    },
+  },
+  render: () => html`
+    <div>
+      <button type="button" data-dialog="open declarative-dialog">Open dialog</button>
+      <lr-dialog id="declarative-dialog" label="Declarative dialog">
+        <p style="margin: 0;">Opened and closed from markup alone.</p>
+        <div slot="footer">
+          <button type="button" data-dialog="close">Close</button>
+        </div>
+      </lr-dialog>
+    </div>
+  `,
+};
