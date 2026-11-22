@@ -343,8 +343,10 @@ const bundleEntries = {
     // and slot helpers it loads grew since, and its pager now carries the page-size selector;
     // graph's own code shrank. Reviewed exception for 32.0.0; the ceiling is the next 64-byte
     // boundary. Contained pager request events and the queued-focus cancellation bring it to
-    // 478,965 raw bytes; the ceiling advances to the next 64-byte boundary.
-    maxRawBytes: 478_976,
+    // 478,965 raw bytes; the ceiling advances to the next 64-byte boundary. The 32.1.0 shared
+    // overlay and helper changes bring it to 480,036 raw bytes; the ceiling advances to the
+    // next 64-byte boundary.
+    maxRawBytes: 480_064,
   },
 };
 
