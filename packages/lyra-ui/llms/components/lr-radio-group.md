@@ -10,13 +10,15 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 12 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `form-control-label`: `--lr-form-control-required-content`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-radio-group`
+
+`label-placement="start"` (default `top`) puts the label in an inline-start column, shared with the other fields (see "Label beside the field"); the toolbar slot then follows the options.
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`. The default label size follows `--lr-form-control-font-size`.
@@ -133,3 +135,5 @@ group has no selected radio. `focus()` moves focus to the selected (or first ena
 `blur()` releases whichever owned radio currently contains deep focus, and `click()` mirrors
 `focus()` by activating the selected/first enabled radio. All three are inert under direct or
 fieldset disablement, so the group behaves like one native control.
+
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column, sized by `--lr-form-control-label-inline-size`, `--lr-form-control-label-gap` and `--lr-form-control-label-collapse-inline-size`; every form-control label also reads `--lr-form-control-label-line-height` (default `inherit`). See "Label beside the field: `label-placement`".

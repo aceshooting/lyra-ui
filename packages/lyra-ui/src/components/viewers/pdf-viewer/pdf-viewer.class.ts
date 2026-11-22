@@ -448,7 +448,7 @@ class LyraPdfViewerBase extends LyraElement<LyraPdfViewerEventMap> {}
  *   document-level assertive region.
  * @csspart spinner - The shared loading treatment; transitions announce through the shared
  *   document-level polite region.
- * @cssprop [--lr-pdf-viewer-height=var(--lr-size-24rem)] - Block size of the virtualized page list.
+ * @cssprop [--lr-pdf-viewer-height=var(--lr-size-24rem)] - Block size of the virtualized page list. Ignored while `fill` is set.
  *   Also settable via the `max-height` property, which sets this fixed height (not a cap).
  * @cssprop [--lr-pdf-viewer-toolbar-bg=var(--lr-color-brand-quiet)] - Background of the `toolbar`
  *   part, independent of the shared `--lr-color-brand-quiet` token.
@@ -512,6 +512,15 @@ export class LyraPdfViewer extends DocumentAnchorTarget(LyraPdfViewerBase) {
    *  consumer to set the differently-named CSS custom property inline. Unlike those siblings it
    *  sets a fixed height, not a cap. Invalid values are ignored. */
   @property({ attribute: 'max-height' }) maxHeight = '';
+  /**
+   * Fills a parent with a definite block size (a dialog body, a sized flex column, a grid cell):
+   * the host takes `block-size: 100%`, the toolbar keeps its own height, and the virtualized page
+   * list takes the rest and becomes the single scroller. It replaces the fixed
+   * `--lr-pdf-viewer-height` / `max-height` page-list size while set. Without it the page list keeps
+   * that fixed size and the viewer sits at its content height. Needs a definite parent height:
+   * like any percentage, `block-size: 100%` resolves to `auto` against an auto-height parent.
+   */
+  @property({ type: Boolean, reflect: true }) fill = false;
   /** URL of the `pdfjs-dist` web worker chunk (`pdfjs-dist/build/pdf.worker.min.mjs`) as emitted by
    *  the consuming application's own bundler. PDF.js rejects every `getDocument()` call with
    *  `No "GlobalWorkerOptions.workerSrc" specified.` until a worker is configured, and a bare package

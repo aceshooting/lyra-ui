@@ -620,3 +620,14 @@ export const FilledPanel: Story = {
     </lr-tab-group>
   `,
 };
+
+/** Tab metrics and the track are group tokens, because the group renders the real tab buttons. */
+export const TabMetricsTokens: Story = {
+  render: () => html`
+    <lr-tab-group
+      style="--lr-tab-group-tab-padding: var(--lr-space-m) var(--lr-space-l); --lr-tab-group-tab-font-size: var(--lr-font-size-lg); --lr-tab-group-tab-min-block-size: 3rem; --lr-tab-group-track-width: var(--lr-border-width-medium)"
+    >
+      ${standardTabs()}
+    </lr-tab-group>
+  `,
+};

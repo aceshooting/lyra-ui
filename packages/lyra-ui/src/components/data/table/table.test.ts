@@ -1487,7 +1487,7 @@ describe('lr-table page proposal', () => {
     const request = await proposal;
     expect(request.detail).to.deep.equal({ page: 2, pageSize: 1, offset: 1 });
     expect(Object.isFrozen(request.detail)).to.equal(true);
-    expect((await committed).detail).to.deep.equal({ page: 2 });
+    expect({ ...(await committed).detail }).to.deep.equal({ page: 2, pageSize: 1, offset: 1 });
     await el.updateComplete;
     expect(el.page).to.equal(2);
   });

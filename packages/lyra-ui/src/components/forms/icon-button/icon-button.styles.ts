@@ -19,6 +19,12 @@ export const styles = css`
      button at exactly its hit-area floor; a short text label (a currency or unit code) opts into
      breathing room through the public property instead of a part rule. */
   [part~='button'] { padding-inline: var(--lr-icon-button-padding-inline, 0); }
+  /* line-height: 1 restores what font: inherit above takes away. A glyph slotted inside an inline
+     wrapper (a span or an icon element around an svg) is laid out in a line box, and that box is
+     never shorter than the inherited line-height: at a 200% root size under a page line-height of
+     1.6 it measured 51px and broke the exact-square recipe at a 44px --lr-icon-button-size. A
+     one-glyph or short-code label needs no leading; the min-block-size floor still pads it. */
+  [part~='button'] { line-height: 1; }
   /* The hover fallback was once var(--lr-color-surface), the PAGE background, so hovering on a
      default page changed nothing. Mixing that surface toward --lr-color-mix-partner (the text
      colour) always moves, and the way the surface needs: darker on a light page, lighter on a dark

@@ -280,6 +280,7 @@ const CHART_SERIES_PROPERTIES = [
   'fill',
   'width',
   'dash',
+  'bandOpacity',
   'noTooltip',
   'axis',
   'stack',
@@ -325,7 +326,8 @@ export function projectChartSeries(value: unknown): LyraChartSeries | undefined 
     color?: string | readonly string[];
     fill?: boolean;
     width?: number;
-    dash?: boolean;
+    dash?: boolean | readonly number[];
+    bandOpacity?: number;
     noTooltip?: boolean;
     axis?: 'y' | 'y2';
     stack?: string;
@@ -371,6 +373,10 @@ export function projectChartSeries(value: unknown): LyraChartSeries | undefined 
   if (typeof width === 'number' && Number.isFinite(width))
     output.width = width;
   if (typeof dash === 'boolean') output.dash = dash;
+  else {
+    const pattern = projectChartDash(dash);
+    if (pattern !== undefined) output.dash = pattern;
+  }
   if (typeof noTooltip === 'boolean') output.noTooltip = noTooltip;
   if (axis === 'y' || axis === 'y2') output.axis = axis;
   if (typeof stack === 'string') output.stack = stack;
@@ -384,6 +390,8 @@ export function projectChartSeries(value: unknown): LyraChartSeries | undefined 
   if (segmentColors) output.segmentColors = segmentColors;
   if (type === 'line' || type === 'bar' || type === 'band') output.type = type;
   if (type === 'band') {
+    const bandOpacity = valueAt('bandOpacity');
+    if (typeof bandOpacity === 'number' && Number.isFinite(bandOpacity)) output.bandOpacity = Math.min(1, Math.max(0, bandOpacity));
     const band = projectChartBand(valueAt('lower'), valueAt('upper'), output);
     const series = Object.freeze(output) as LyraChartSeries;
     retainChartInputLimit(band.rawLower, series);
@@ -399,6 +407,20 @@ export function projectChartSeries(value: unknown): LyraChartSeries | undefined 
     ...(points ? { points } : {}),
   });
   return series;
+}
+
+/** Longest custom `dash` pattern admitted; a longer one falls back to the default dash. */
+const MAX_CHART_DASH_ENTRIES = 16;
+
+/** Copies a custom `dash` pattern, or returns `true` (the default dash) for an invalid one. */
+function projectChartDash(value: unknown): readonly number[] | true | undefined {
+  const admission = admitSnapshotArray(value);
+  if (!admission) return undefined;
+  if (admission.length > MAX_CHART_DASH_ENTRIES) return true;
+  const pattern = projectSnapshotArray(admission,
+    entry => typeof entry === 'number' && Number.isFinite(entry) && entry >= 0 ? entry : Number.NaN,
+    { missing: Number.NaN });
+  return pattern && pattern.every(entry => !Number.isNaN(entry)) ? pattern : true;
 }
 
 /**

@@ -283,7 +283,9 @@ The `streaming-tail` part marks the stable text node used by progressive streami
 
 Prefer tokens over part rules for routine prose and code styling: `--lr-markdown-block-gap`
 (default `var(--lr-space-s)` — space after every paragraph, list, heading, blockquote, code block
-and table), `--lr-markdown-heading-1-font-size` (default `calc(var(--lr-size-1em) * 2)`),
+and table), `--lr-markdown-heading-margin-block-start` (default `var(--lr-space-l)` — space before
+every heading; a leading heading keeps none), `--lr-markdown-heading-1-font-size` (default
+`calc(var(--lr-size-1em) * 2)`),
 `--lr-markdown-heading-2-font-size` (default `var(--lr-size-1-5em)`),
 `--lr-markdown-heading-3-font-size` (default `calc(var(--lr-size-1em) * 1.17)`) and
 `--lr-markdown-heading-4-font-size` (default `var(--lr-size-1em)`) — together these restate the
@@ -294,7 +296,10 @@ and `--lr-markdown-link-hover-color` (default the link colour), `--lr-markdown-b
 `var(--lr-color-text-quiet)`) and `--lr-markdown-list-indent` (default `var(--lr-size-2-5rem)`).
 The `code-block` and `inline-code` surfaces have `--lr-markdown-code-block-padding`,
 `--lr-markdown-code-block-radius`, `--lr-markdown-code-block-bg`, `--lr-markdown-code-padding`,
-`--lr-markdown-code-radius` and `--lr-markdown-code-bg` (all listed below). Every token inherits, so
+`--lr-markdown-code-radius` and `--lr-markdown-code-bg` (all listed below);
+`--lr-markdown-code-block-font-size` (default `var(--lr-font-size-sm)`) and
+`--lr-markdown-code-block-line-height` (default `var(--lr-line-height-normal)`) set the fenced code's
+type. Every token inherits, so
 a chat bubble with a filled background sets `--lr-markdown-link-color` once on that bubble:
 
 ```css
@@ -563,7 +568,8 @@ anchor-jump message), `content` (respects `max-height`), `heading`, `paragraph`,
 
 **Themeable custom properties:** identical to `<lr-markdown>`'s own tokens, including
 `--lr-markdown-content-min-size`, the three `--lr-markdown-code-copy-bg*` state tokens and the prose
-tokens (`--lr-markdown-block-gap`, `--lr-markdown-heading-1-font-size`,
+tokens (`--lr-markdown-block-gap`, `--lr-markdown-heading-margin-block-start`,
+`--lr-markdown-heading-1-font-size`,
 `--lr-markdown-heading-2-font-size`, `--lr-markdown-heading-3-font-size`,
 `--lr-markdown-heading-4-font-size`,
 `--lr-markdown-heading-font-weight`, `--lr-markdown-link-color`, `--lr-markdown-link-hover-color`,
@@ -576,7 +582,9 @@ fenced `code-block` surface), `--lr-markdown-code-padding`/`--lr-markdown-code-r
 `code` span padding/radius, defaulting to `var(--lr-size-0-125rem) var(--lr-size-0-3125rem)`/
 `calc(var(--lr-radius) * 0.5)`), and `--lr-markdown-code-block-padding`/
 `--lr-markdown-code-block-radius` (the fenced `code-block` surface's padding/radius, defaulting to
-`var(--lr-space-s) var(--lr-space-m)`/`var(--lr-radius)`) — plus `--lr-code-block-tab-size` (default
+`var(--lr-space-s) var(--lr-space-m)`/`var(--lr-radius)`), `--lr-markdown-code-block-font-size`/
+`--lr-markdown-code-block-line-height` (the fenced code's type, defaulting to
+`var(--lr-font-size-sm)`/`var(--lr-line-height-normal)`) — plus `--lr-code-block-tab-size` (default
 `2` — tab width inside a rendered fenced or indented `code-block`), with exactly the mechanics
 described under `<lr-markdown>` above: the same property name and default that
 `<lr-code-block>`/`<lr-code-editor>` read, declared as a `var()` fallback at the point of use rather
@@ -2456,6 +2464,11 @@ remains the one exception that does not cross this way: use `--lr-theme-icon-but
 **Themeable custom properties:** `--lr-code-block-padding` controls code padding, `--lr-code-block-radius`
 controls the frame corners, and `--lr-code-block-header-bg`, `--lr-code-block-header-color` and
 `--lr-code-block-line-number-color` set the header background, filename color and gutter color.
+`--lr-code-block-border` (default `var(--lr-border-width-thin) solid var(--lr-color-border-subtle)`)
+and `--lr-code-block-bg` (default `var(--lr-color-surface)`; highlighted code paints its theme
+background over it) style the frame; `--lr-code-block-header-padding` (default `var(--lr-space-xs)
+var(--lr-space-s)`) and `--lr-code-block-header-border` (default `var(--lr-border-width-thin) solid
+var(--lr-color-border-subtle)`, the rule under the header) style the header.
 `--lr-code-block-toggle-bg`, `--lr-code-block-toggle-hover-bg`, and `--lr-code-block-toggle-active-bg`
 style the disclosure. `--lr-code-block-gutter-bg`, `--lr-code-block-gutter-hover-bg`, and
 `--lr-code-block-gutter-active-bg` style the line buttons. Each token applies to its own state.
@@ -2669,8 +2682,9 @@ body ended; `anchor` is a `line-range` anchor covering the selected lines).
 identical set to `<lr-code-block>`.
 
 **Themeable custom properties:** identical to `<lr-code-block>`, including `--lr-code-block-padding`,
-`--lr-code-block-radius`, `--lr-code-block-header-bg`, `--lr-code-block-header-color` and
-`--lr-code-block-line-number-color`, and the `--lr-code-block-toggle-bg*` and
+`--lr-code-block-radius`, `--lr-code-block-border`, `--lr-code-block-bg`,
+`--lr-code-block-header-bg`, `--lr-code-block-header-padding`, `--lr-code-block-header-border`,
+`--lr-code-block-header-color` and `--lr-code-block-line-number-color`, and the `--lr-code-block-toggle-bg*` and
 `--lr-code-block-gutter-bg*` state tokens. `--lr-code-block-max-height`
 (independently settable; an authored `max-height` attribute wins inline),
 `--lr-code-block-font`, `--lr-code-block-tab-size` (default `2`, applied to `[part='pre']`),
@@ -3525,7 +3539,8 @@ every line, the wrapped final one included, which styling `::part(base)` as a ce
 cannot do (once the chips wrap, the row fills the available inline size and each line packs to the
 start). `--lr-suggestion-chips-hover-bg` (default `var(--lr-color-brand-quiet)`) — a `chip`'s
 background on hover. `--lr-suggestion-chips-hover-border-color` (default `var(--lr-color-brand)`) — a
-`chip`'s border color on hover. All three are declared as `var()` fallbacks at the point of use, not
+`chip`'s border color on hover. `--lr-suggestion-chips-hover-color` (default the chip's
+`--lr-suggestion-chips-chip-color`) — a `chip`'s text color on hover and press. All of these are declared as `var()` fallbacks at the point of use, not
 on `:host`. `--lr-suggestion-chips-disabled-opacity` (default `var(--lr-opacity-disabled)`) — opacity of a chip whose
 suggestion sets `disabled`. `--lr-suggestion-chips-label-lines` (default `1`; `3` when `wrap` is
 set) — how many lines a `chip-label` shows before it is clamped with an ellipsis, so full-question
@@ -3942,7 +3957,9 @@ resolves them to that tier's shared form-control height and font size.
 `--lr-thread-list-search-padding-block` (default `var(--lr-space-xs)`) and
 `--lr-thread-list-search-radius` (default `var(--lr-radius)`) are replaced by the tier's shared
 form-control values when `size` is set. `--lr-thread-list-search-clear-size` (default
-`var(--lr-icon-button-size)`) is the clear button's box; it never follows `size`, because that button is
+`var(--lr-icon-button-size)`) is the clear button's box; `--lr-thread-list-search-bg` (default
+`var(--lr-color-surface)`), `--lr-thread-list-search-border-color` (default `var(--lr-color-border)`)
+and `--lr-thread-list-search-color` (default `var(--lr-color-text)`) paint the search field; it never follows `size`, because that button is
 a tap target floored at `--lr-icon-button-size` rather than a text box, so only a larger value changes it. Every one of these wins over
 the tier, so a consumer can take a tier and then move one value.
 `--lr-thread-list-search-hover-border-color` (default `var(--lr-color-brand)`) is the hovered search

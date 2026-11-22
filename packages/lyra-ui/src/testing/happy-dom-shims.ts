@@ -420,7 +420,37 @@ function installHappyDomDirectionShim(): void {
   happyDomDirectionStyles.set(document, style);
 }
 
-/** Installs the feature-detected Happy DOM form, focus, ARIA, CSS layer, stylesheet and direction fixes. */
+interface BytesBody {
+  arrayBuffer(): Promise<ArrayBuffer>;
+  bytes?: () => Promise<Uint8Array>;
+}
+
+/**
+ * Adds `Response.prototype.bytes()` where the environment lacks it (Happy DOM 21), reading
+ * through the prototype's own `arrayBuffer()`. Shiki's inlined Oniguruma engine, which
+ * `lr-code-block` loads on demand, calls `new Response(...).bytes()` as its module evaluates, so
+ * without it every highlighter load leaves an unhandled rejection. No-op wherever `bytes()`
+ * already exists (every current browser and Node) or there is no `Response`; returns a function
+ * that removes the method again. `proto` defaults to the global `Response.prototype`.
+ */
+export function installHappyDomResponseBytesShim(
+  proto: BytesBody | undefined = globalThis.Response?.prototype as BytesBody | undefined,
+): () => void {
+  if (!proto || typeof proto.arrayBuffer !== 'function' || typeof proto.bytes === 'function') return () => {};
+  Object.defineProperty(proto, 'bytes', {
+    configurable: true,
+    enumerable: false,
+    writable: true,
+    value: async function bytes(this: BytesBody): Promise<Uint8Array> {
+      return new Uint8Array(await this.arrayBuffer());
+    },
+  });
+  return () => {
+    delete proto.bytes;
+  };
+}
+
+/** Installs the feature-detected Happy DOM form, focus, ARIA, CSS layer, stylesheet, direction and `Response.bytes()` fixes. */
 export function installHappyDomShims(): void {
   installHappyDomFormAssociatedShims();
   installHappyDomShadowFocusShim();
@@ -428,6 +458,7 @@ export function installHappyDomShims(): void {
   installHappyDomCascadeLayerShim();
   installHappyDomShadowStyleSheetsShim();
   installHappyDomDirectionShim();
+  installHappyDomResponseBytesShim();
 }
 
 /** Test-only: returns a fresh stub `ElementInternals`-shaped object, independent of whether

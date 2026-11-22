@@ -70,7 +70,7 @@ export const CenteredUnderEmptyState: Story = {
       <p style="margin-block-start:0;color:var(--lr-color-text-quiet);">Pick a prompt, or type your own.</p>
       <lr-suggestion-chips
         wrap
-        style="--lr-suggestion-chips-justify: center;"
+        style="--lr-suggestion-chips-justify: center; --lr-suggestion-chips-hover-color: var(--lr-color-brand);"
         .suggestions=${[
           { suggestionId: '1', label: 'Summarize this document' },
           { suggestionId: '2', label: 'Find action items' },

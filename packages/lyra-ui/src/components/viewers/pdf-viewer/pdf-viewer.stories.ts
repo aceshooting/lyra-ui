@@ -16,6 +16,12 @@ const SAMPLE_PDF_URL = '/fixtures/sample.pdf';
 
 export const Default: Story = { render: () => html`<lr-pdf-viewer src=${SAMPLE_PDF_URL} name="sample.pdf"></lr-pdf-viewer>` };
 export const NoSrc: Story = { render: () => html`<lr-pdf-viewer></lr-pdf-viewer>` };
+/** `fill` takes the sized parent's height; the page list, not the parent, scrolls. */
+export const FillSizedParent: Story = {
+  render: () => html`<div style="block-size: 28rem; display: flex; flex-direction: column">
+    <lr-pdf-viewer fill src=${SAMPLE_PDF_URL} name="sample.pdf"></lr-pdf-viewer>
+  </div>`,
+};
 export const ZoomedIn: Story = { render: () => html`<lr-pdf-viewer src=${SAMPLE_PDF_URL} name="sample.pdf" zoom="2"></lr-pdf-viewer>` };
 
 // PDF.js opens nothing until GlobalWorkerOptions.workerSrc is set, and a bare `pdfjs-dist/build/...`

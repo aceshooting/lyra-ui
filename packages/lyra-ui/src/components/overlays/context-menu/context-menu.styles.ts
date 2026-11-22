@@ -22,6 +22,10 @@ export const styles = css`
      host display so it never becomes a flex or grid item of the host's parent. */
   .shell {
     display: contents;
+    /* The menu's own floor, ahead of the shared --lr-overlay-min-inline-size the composed popup
+       reads. Declared as a bare var() so that, while the public token is unset, the private
+       property is guaranteed-invalid and the popup falls through to the shared floor. */
+    --_lr-popup-min-inline-size: var(--lr-context-menu-min-inline-size);
   }
 
   /* The shell has no trigger; its empty trigger wrapper must not produce a line box. */

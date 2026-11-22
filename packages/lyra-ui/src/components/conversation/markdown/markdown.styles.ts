@@ -76,7 +76,7 @@ export const styles = css`
   }
   [part='heading'] {
     line-height: var(--lr-line-height-compact);
-    margin-block: var(--lr-space-l) var(--lr-markdown-block-gap, var(--lr-space-s));
+    margin-block: var(--lr-markdown-heading-margin-block-start, var(--lr-space-l)) var(--lr-markdown-block-gap, var(--lr-space-s));
     font-weight: var(--lr-markdown-heading-font-weight, var(--lr-font-weight-bold));
   }
   /* The heading-size fallbacks restate the browser's own h1-h4 scale, so an unset token keeps it. */
@@ -151,7 +151,7 @@ export const styles = css`
   }
   [part='code-block'] {
     font-family: var(--lr-markdown-font-mono, var(--lr-font-mono));
-    line-height: var(--lr-line-height-normal);
+    line-height: var(--lr-markdown-code-block-line-height, var(--lr-line-height-normal));
     margin-block: 0 var(--lr-markdown-block-gap, var(--lr-space-s));
     padding: var(--lr-markdown-code-block-padding, var(--lr-space-s) var(--lr-space-m));
     border-radius: var(--lr-markdown-code-block-radius, var(--lr-radius));
@@ -189,8 +189,8 @@ export const styles = css`
   [part='code-block'] code {
     padding: 0;
     background: none;
-    font-size: var(--lr-font-size-sm);
-    line-height: var(--lr-line-height-normal);
+    font-size: var(--lr-markdown-code-block-font-size, var(--lr-font-size-sm));
+    line-height: var(--lr-markdown-code-block-line-height, var(--lr-line-height-normal));
   }
   /*
    * Activates shiki's dual-themes dark variant for highlighted fenced blocks, as

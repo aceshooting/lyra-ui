@@ -31,10 +31,13 @@ export const styles = css`
   }
   [part="value"] {
     grid-column: 2;
-    min-inline-size: 0;
+    min-inline-size: var(--lr-sequence-playback-value-min-width, 0);
     overflow-wrap: anywhere;
     unicode-bidi: plaintext;
-    font-size: var(--lr-font-size-sm);
+    font-family: var(--lr-sequence-playback-value-font-family, inherit);
+    font-size: var(--lr-sequence-playback-value-font-size, var(--lr-font-size-sm));
+    font-weight: var(--lr-sequence-playback-value-font-weight, inherit);
+    text-align: var(--lr-sequence-playback-value-text-align, inherit);
     color: var(--lr-color-text);
   }
   [part="play-button"] {

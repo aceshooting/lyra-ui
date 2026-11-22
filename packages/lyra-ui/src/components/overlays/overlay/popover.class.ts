@@ -264,6 +264,12 @@ export interface LyraPopoverEventMap {
  * @cssprop [--max-width=var(--lr-overlay-max-inline-size,var(--lr-size-20rem))] - Maximum inline
  * size of the popup.
  * @cssprop --lr-overlay-max-inline-size - Retained Lyra fallback for `--max-width`.
+ * @cssprop [--lr-overlay-inline-size=auto] - Assertive inline size of the popup. Left at `auto` the
+ *   popup shrink-wraps to its content. With it set and no maximum given, the maximum falls back to
+ *   this width instead of `20rem`; the available viewport space is always a hard limit.
+ * @cssprop [--lr-overlay-min-inline-size=0px] - Minimum inline size of the popup, capped by the
+ *   available viewport space.
+ * @cssprop [--lr-overlay-content-padding=var(--lr-space-m)] - Padding of the `content` part.
  * @cssprop [--arrow-size=var(--lr-overlay-arrow-size,var(--lr-size-0-375rem))] - Half-width of the
  * arrow square.
  * @cssprop --lr-overlay-arrow-size - Retained Lyra fallback for `--arrow-size`.
@@ -429,6 +435,12 @@ export class LyraPopover<Events extends LyraPopoverEventMap = LyraPopoverEventMa
   @property({ attribute: 'arrow-placement' }) arrowPlacement: LyraArrowPlacement = 'anchor';
   /** Keeps the arrow this far from the popup's corners, in pixels. */
   @property({ converter: blankNumberConverter(0), attribute: 'arrow-padding' }) arrowPadding = 0;
+  /** Lays the trigger out at full width: the host becomes a block box and the `trigger` part and
+   *  the slotted trigger element stretch to the host's inline size, for a trigger that sits in a
+   *  form column or a sidebar like a block-level field. Off by default, which keeps the
+   *  `inline-block` trigger. Positioning is unaffected; set `--lr-overlay-inline-size` or the
+   *  dropdown's `sync` to size the popup as well. */
+  @property({ type: Boolean, attribute: 'full-width-trigger', reflect: true }) fullWidthTrigger = false;
   private _trigger = 'click';
   /**
    * Space-separated list of the interactions that open the popover -- see

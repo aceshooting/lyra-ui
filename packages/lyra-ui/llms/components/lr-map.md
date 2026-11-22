@@ -9,8 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `@aceshooting/lyra-map`, `dompurify`, `maplibre-gl` — see `llms/peers.md`
-- **Themeable via** 93 parts, 52 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `anchor-body`: `--lr-map-anchor-close-reservation`; `anchor-close`: `--lr-map-anchor-close-reservation`; `popup-close-button`: `--lr-map-popup-close-button-active-bg`, `--lr-map-popup-close-button-active-color`, `--lr-map-popup-close-button-hover-bg`, `--lr-map-popup-close-button-hover-color`
+- **Themeable via** 93 parts, 88 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `anchor-body`: `--lr-map-anchor-close-reservation`; `anchor-close`: `--lr-map-anchor-close-reservation`; `initialization-activate`: `--lr-map-initialization-activate-label-display`; `initialization-activate-label`: `--lr-map-initialization-activate-label-display`; `initialization-placeholder`: `--lr-map-initialization-placeholder-bg`; `initialization-skeleton`: `--lr-map-initialization-skeleton-display`; `legend-disclosure`: `--lr-map-legend-disclosure-padding`; `legend-toggle`: `--lr-map-legend-toggle-padding`; `popup-close-button`: `--lr-map-popup-close-button-active-bg`, `--lr-map-popup-close-button-active-color`, `--lr-map-popup-close-button-hover-bg`, `--lr-map-popup-close-button-hover-color`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -53,7 +53,27 @@ shorthand), `--lr-map-control-shadow`, `--lr-map-control-bg` (resting fill under
 treatment) and `--lr-map-control-color` shape control groups and outlines; `--lr-map-control-hover-bg`
 and `--lr-map-control-active-bg` paint pointer states in every state (the action tokens no longer reach native controls);
 `--lr-map-control-gap` is the margin around each control. The attribution control takes
-`--lr-map-attribution-radius` and `--lr-map-attribution-border`.
+`--lr-map-attribution-radius`, `--lr-map-attribution-border`, `--lr-map-attribution-padding`
+(default `0 var(--lr-space-xs)`), `--lr-map-attribution-link-padding` (default `0`; each link keeps
+its `--lr-size-24px` minimum box), `--lr-map-attribution-max-inline-size` (default `100%`, never
+wider than the map less the control gaps), `--lr-map-attribution-font-family` (default `inherit`),
+`--lr-map-attribution-font-size` (default `var(--lr-font-size-xs)`) and
+`--lr-map-attribution-line-height` (default `inherit`). Its compact toggle takes
+`--lr-map-attribution-toggle-size` (default `--lr-map-control-size`, then `--lr-icon-button-size`;
+the compact control reserves the same room), `--lr-map-attribution-toggle-radius` (default
+`--lr-map-control-radius`, then a pill) and `--lr-map-attribution-toggle-icon-size` (default
+`var(--lr-size-1rem)`). A grouped zoom, compass or
+geolocate stack takes group-level tokens on top: `--lr-map-control-group-radius` and
+`--lr-map-control-group-border` (defaults: `--lr-map-control-radius` and `--lr-map-control-border`)
+shape the group's outer edge, `--lr-map-control-button-radius` (default `inherit`, the group radius)
+sets the buttons' own corners while the first and last button keep the group's outer corners, and
+`--lr-map-control-divider` (border shorthand, default `var(--lr-border-width-thin) solid
+var(--lr-color-border)`; `none` removes it) draws the line between buttons. The scale takes
+`--lr-map-scale-bg` (default `--lr-map-control-bg`), `--lr-map-scale-radius` (default `0`),
+`--lr-map-scale-border` (default `none`), `--lr-map-scale-padding-block` (default
+`var(--lr-space-2xs)`; the block end adds the ruler's height), `--lr-map-scale-padding-inline`
+(default `var(--lr-space-xs)`), `--lr-map-scale-font-size` (default `var(--lr-font-size-xs)`) and
+`--lr-map-scale-color` (default `var(--lr-color-text)`).
 
 ```css
 lr-map.branded {
@@ -61,6 +81,14 @@ lr-map.branded {
   --lr-map-control-radius: var(--lr-radius-pill);
   --lr-map-control-border: none;
   --lr-map-control-hover-bg: var(--lr-color-brand-quiet);
+}
+/* One pill per group: rounded outer ends, square inner corners, a quiet divider. */
+lr-map.pill-groups {
+  --lr-map-control-group-radius: var(--lr-radius-pill);
+  --lr-map-control-button-radius: 0;
+  --lr-map-control-divider: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+  --lr-map-scale-radius: var(--lr-radius-pill);
+  --lr-map-scale-padding-inline: var(--lr-space-s);
 }
 ```
 
@@ -70,6 +98,30 @@ header) owns part of a map edge, set `--lr-map-controls-inset-block-start`,
 `--lr-map-controls-inset-inline-end` (each default `0px`) instead of measuring it. They push the native and initialization
 control stacks inward on that logical edge (`inline-start` is the right edge under RTL), and the
 legend and the pick, drawing and scene bars clear the same space.
+
+One corner alone takes `--lr-map-controls-<corner>-inset-block` and
+`--lr-map-controls-<corner>-inset-inline` (`<corner>` is `top-left`, `top-right`, `bottom-left` or
+`bottom-right`, the control position vocabulary; each default `0px`; that is `--lr-map-controls-top-left-inset-block`, `--lr-map-controls-top-left-inset-inline`, `--lr-map-controls-top-right-inset-block`, `--lr-map-controls-top-right-inset-inline`, `--lr-map-controls-bottom-left-inset-block`, `--lr-map-controls-bottom-left-inset-inline`, `--lr-map-controls-bottom-right-inset-block` and `--lr-map-controls-bottom-right-inset-inline`), before and after
+construction. The block inset offsets the corner from its row's edge and the inline inset from its
+column's edge; the left corners are the inline-start corners, so they sit at the right under RTL.
+The control row grows with the corner, so the legend (also under `legendClearance = 'corner'`) and
+the pick, drawing and scene bars keep clearing it.
+
+```css
+/* Only the zoom stack moves down past an application search card. */
+lr-map { --lr-map-controls-top-right-inset-block: 4rem; }
+```
+
+`controlsAvoid?: readonly Element[]` (property only) measures that chrome instead: it is observed
+like `anchorAvoid` (size, page scrolling, visual viewport, once per animation frame), each
+element's overlap with the map is reserved on its cheapest logical edge and added to that edge's
+`--lr-map-controls-inset-*`, so every corner stack, the legend and the bars clear it; the authored
+inset then acts as the gap beyond the element. Clearing it, removing an element or disconnecting
+the map releases the observers.
+
+```ts
+map.controlsAvoid = [document.querySelector('.floating-search')!];
+```
 
 **Large spatial sources:** a catalog of a million logical geospatial records can stay in a
 host-owned spatial service. Supply a hosted vector style URL, or a style object with vector tile
@@ -587,10 +639,16 @@ implicitly reopen it unless `drawingCompleteBehavior = 'edit'` (attribute
 `drawing-complete-behavior`, reflected, default `'clear'`; an unsupported value normalizes to
 `'clear'`) is set: then the completed shape stays on the map as
 an edit session, opened synchronously right after `lr-map-draw-complete`, and finishing that edit
-commits and clears it. `drawingSticky = false` (reflected attribute `drawing-sticky`) set to `true`
+commits and clears it. `drawingFinishBehavior = 'clear'` (attribute `drawing-finish-behavior`,
+reflected; an unsupported value normalizes to `'clear'`) set to `'keep'` makes Finish
+(`completeDrawing()`) on any edit session commit (`lr-map-draw-complete`) and keep the edit open,
+so the committed shape stays visible and editable and each later Finish commits again; cancel,
+Escape or `cancelDrawing()` ends it. `drawingSticky = false` (reflected attribute `drawing-sticky`) set to `true`
 keeps `drawMode` armed after a completion or a user cancel (cancel action, Escape,
-`cancelDrawing()`), or re-arms it when the edit opened by `'edit'` ends, so the next shape starts at
-once without listeners re-assigning `drawMode`. Pick mode, disabling and mode changes still disarm. Before the drawing runtime has loaded it returns `false` without reading the
+`cancelDrawing()`), or re-arms it when the edit opened by `'edit'` ends (under `'keep'`, only once
+it is cancelled), so the next shape starts at once without listeners re-assigning `drawMode`. The
+sticky flag is read when that edit ends: clearing it while the edit is open leaves `drawMode` at
+`'none'`. Pick mode, disabling and mode changes still disarm. Before the drawing runtime has loaded it returns `false` without reading the
 snapshot and starts the load; await `whenIdle()` and call it again. Keyboard vertex handles and
 pointer edits update the same session. Arrow keys move a focused vertex in screen direction in both
 LTR and RTL, because the map canvas is never mirrored.
@@ -635,7 +693,24 @@ consumer that moves `anchor-close` to the header corner through `::part(anchor-c
 `--lr-map-anchor-close-reservation` to pad that logical edge of `anchor-body`. For a rich card with
 a fixed header and scrolling details, prefer an `lr-map-anchor` child: its close button owns its own
 column at the block-start, inline-end corner, so the header never runs under it, and its `body`
-scrolls.
+scrolls. To keep such a card in the `anchor` slot, set `anchorFill = false` (attribute `anchor-fill`,
+reflected) to `true`: `anchor-body` stops scrolling and becomes a column that shrinks the slotted
+card to the panel, so the card's own details region (`flex: 1 1 auto; min-block-size: 0;
+overflow: auto`) scrolls with no wrapper. The body then reserves no close room; the slotted content
+inherits `--lr-map-anchor-close-reservation`, so the card pads only its header with it:
+
+```html
+<lr-map anchor-closable anchor-fill style="--lr-map-anchor-close-reservation: 2.5rem">
+  <article slot="anchor" style="display: flex; flex-direction: column; min-block-size: 0">
+    <h3 style="padding-inline-end: var(--lr-map-anchor-close-reservation)">Station 12</h3>
+    <div style="flex: 1 1 auto; min-block-size: 0; overflow: auto">Long details</div>
+  </article>
+</lr-map>
+```
+
+Move the close action into the reserved header corner with
+`lr-map::part(anchor-close) { position: absolute; inset-block-start: 0; inset-inline-end: 0; }`;
+the positioned `anchor` panel is its containing block.
 
 `anchorAvoid?: readonly Element[]` (property only) keeps anchors clear of application chrome
 without measuring it: the map observes each element's size, page scrolling and the visual
@@ -643,7 +718,9 @@ viewport (once per animation frame), intersects each with the map and reserves t
 cheapest logical edge (a full-width header reserves `blockStart`, a full-height side sheet its
 inline edge). The result is folded into `anchorSafeArea` edge by edge, the larger inset winning,
 for the `anchor` slot and every `lr-map-anchor` child without its own `safeArea`. Clearing it,
-removing an element or disconnecting the map releases the observers.
+removing an element or disconnecting the map releases the observers. `anchorAvoidGap` (attribute
+`anchor-avoid-gap`, CSS pixels, default `0`) keeps that much extra room beyond each edge an
+obstacle reserves, so a panel never sits flush against it; edges no obstacle reserves stay zero.
 
 ```ts
 map.anchorAvoid = [document.querySelector('header.app-bar')!, document.querySelector('.search')!];
@@ -891,9 +968,27 @@ omittedCount, truncatedLabelCount, truncated }` result for the latest assignment
   drawing or scene bars share the map. An unsupported value normalizes to `'bottom-start'`. Size and type it with
   `--lr-map-legend-inset-block`, `--lr-map-legend-inset-inline`, `--lr-map-legend-max-inline-size`,
   `--lr-map-legend-max-block-size`, `--lr-map-legend-columns` (equal row columns, default 1),
-  `--lr-map-legend-font-size`, `--lr-map-legend-gap`, `--lr-map-legend-padding`,
+  `--lr-map-legend-font-size`, `--lr-map-legend-gap`, `--lr-map-legend-row-gap` (rows of one list or
+  section only, default `--lr-map-legend-gap`), `--lr-map-legend-group-columns` (equal columns the
+  rows of one group flow into, default 1), `--lr-map-legend-padding`, `--lr-map-legend-border`
+  (border shorthand, default `var(--lr-border-width-thin) solid var(--lr-color-border-subtle)`),
   `--lr-map-legend-radius`, `--lr-map-legend-bg`, `--lr-map-legend-shadow`, `--lr-map-legend-color`
   and `--lr-map-legend-swatch-size` — the same suffixes `lr-heatmap` and `lr-chart` use.
+  `--lr-map-legend-toggle-padding` and `--lr-map-legend-disclosure-padding` (both default
+  `var(--lr-size-2px) var(--lr-space-xs)`) pad the interactive `legend-toggle` rows and the
+  `legend-disclosure` button; their minimum box stays the `--lr-icon-button-size` hit area, so
+  shrink that floor through `--lr-icon-button-size-scope` rather than a part rule.
+- `legendClearance: LyraMapLegendClearance = 'row'` (attribute `legend-clearance`, reflected) — which
+  native control corners the legend clears. `'row'` lifts it above the tallest corner of the top and
+  bottom rows; `'corner'` clears only the corners in its own logical column, so a `bottom-start`
+  legend sits just above the bottom-start controls even when a tall zoom and geolocate stack fills
+  the bottom-end corner. Centred `top` and `bottom` placements always clear the whole row. Keep a
+  `'corner'` legend narrow enough (`--lr-map-legend-max-inline-size`) not to reach the other column.
+  `'none'` reserves nothing for the controls: `--lr-map-legend-inset-block` and
+  `--lr-map-legend-inset-inline` measure from the map edge alone (no control rows, no
+  `--lr-map-controls-inset-*`), so `legend-clearance="none"` with
+  `--lr-map-legend-inset-block: 48px` keeps the panel in a 48px footer lane; the panel may then
+  overlap native controls. An unsupported value normalizes to `'row'`.
 - `legendOpen: boolean = true` (attribute `legend-open`, reflected) — whether a `legendCollapsible`
   panel is expanded. It defaults **open**, so adding only `legendCollapsible` never hides an existing
   key, and it does nothing at all while `legendCollapsible` is unset. Because it is a
@@ -1723,7 +1818,11 @@ control installed or one failed; a later `controls` change replaces them and dis
 Already installed controls gain no outline. Outlines paint with the same glass or solid surface material
 as the installed controls, so the swap does not change their fill. For `initialization="interaction"`,
 `initialization-activate` starts the map and `initialization-activate-label` styles its visible label.
-Hiding that label retains the button's localized accessible name. Pick mode renders `pick-controls` with
+Hiding that label retains the button's localized accessible name. Three tokens cover the same
+without part rules: `--lr-map-initialization-placeholder-bg` (default `transparent`) fills the
+placeholder, `--lr-map-initialization-skeleton-display: none` suppresses the skeleton (default
+`inline-block`), and `--lr-map-initialization-activate-label-display: none` hides the visible prompt
+(default `inline`) while the covering button keeps its name. Pick mode renders `pick-controls` with
 `pick-center` and `pick-cancel`; draw mode renders `drawing-controls` with `drawing-add`,
 `drawing-undo`, `drawing-complete`, `drawing-cancel` and the `drawing-status` vertex count (plus
 `drawing-summary` with `drawingMeasurements`; after the controls first render, later changes to

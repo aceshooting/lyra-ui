@@ -9,8 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `dompurify`, `katex`, `marked`, `shiki` — see `llms/peers.md`
-- **Themeable via** 24 parts, 49 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `code-block`: `--lr-code-block-tab-size`, `--lr-markdown-code-bg`, `--lr-markdown-code-block-padding`, `--lr-markdown-code-block-radius`; `content`: `--lr-markdown-font-mono`, `--lr-markdown-max-height`; `table`: `--lr-markdown-table-header-bg`
+- **Themeable via** 24 parts, 52 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `code-block`: `--lr-code-block-tab-size`, `--lr-markdown-code-bg`, `--lr-markdown-code-block-font-size`, `--lr-markdown-code-block-line-height`, `--lr-markdown-code-block-padding`, `--lr-markdown-code-block-radius`; `content`: `--lr-markdown-font-mono`, `--lr-markdown-max-height`; `table`: `--lr-markdown-table-header-bg`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -284,7 +284,9 @@ The `streaming-tail` part marks the stable text node used by progressive streami
 
 Prefer tokens over part rules for routine prose and code styling: `--lr-markdown-block-gap`
 (default `var(--lr-space-s)` — space after every paragraph, list, heading, blockquote, code block
-and table), `--lr-markdown-heading-1-font-size` (default `calc(var(--lr-size-1em) * 2)`),
+and table), `--lr-markdown-heading-margin-block-start` (default `var(--lr-space-l)` — space before
+every heading; a leading heading keeps none), `--lr-markdown-heading-1-font-size` (default
+`calc(var(--lr-size-1em) * 2)`),
 `--lr-markdown-heading-2-font-size` (default `var(--lr-size-1-5em)`),
 `--lr-markdown-heading-3-font-size` (default `calc(var(--lr-size-1em) * 1.17)`) and
 `--lr-markdown-heading-4-font-size` (default `var(--lr-size-1em)`) — together these restate the
@@ -295,7 +297,10 @@ and `--lr-markdown-link-hover-color` (default the link colour), `--lr-markdown-b
 `var(--lr-color-text-quiet)`) and `--lr-markdown-list-indent` (default `var(--lr-size-2-5rem)`).
 The `code-block` and `inline-code` surfaces have `--lr-markdown-code-block-padding`,
 `--lr-markdown-code-block-radius`, `--lr-markdown-code-block-bg`, `--lr-markdown-code-padding`,
-`--lr-markdown-code-radius` and `--lr-markdown-code-bg` (all listed below). Every token inherits, so
+`--lr-markdown-code-radius` and `--lr-markdown-code-bg` (all listed below);
+`--lr-markdown-code-block-font-size` (default `var(--lr-font-size-sm)`) and
+`--lr-markdown-code-block-line-height` (default `var(--lr-line-height-normal)`) set the fenced code's
+type. Every token inherits, so
 a chat bubble with a filled background sets `--lr-markdown-link-color` once on that bubble:
 
 ```css

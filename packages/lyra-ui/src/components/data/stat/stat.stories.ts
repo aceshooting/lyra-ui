@@ -360,7 +360,9 @@ export const ThemedEqualHeightTiles: Story = {
         --lr-stat-label-font-size: var(--lr-font-size-sm); --lr-stat-value-font-size: var(--lr-font-size-xl);
         --lr-stat-value-font-weight: var(--lr-font-weight-semibold); --lr-stat-caption-font-size: var(--lr-font-size-xs);
         --lr-stat-icon-bg: var(--lr-color-brand-quiet); --lr-stat-icon-color: var(--lr-color-brand);
-        --lr-stat-icon-padding: var(--lr-space-xs); --lr-stat-icon-radius: var(--lr-radius)"
+        --lr-stat-icon-padding: var(--lr-space-xs); --lr-stat-icon-radius: var(--lr-radius);
+        --lr-stat-icon-box-size: var(--lr-size-2-5rem); --lr-stat-value-letter-spacing: var(--lr-size-0-04em);
+        --lr-stat-rows-gap: var(--lr-space-2xs)"
     >
       <lr-stat fill label="Revenue" value="12.4" unit="k€" delta-percent="3.2" caption="Last 30 days">
         <svg slot="start" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">

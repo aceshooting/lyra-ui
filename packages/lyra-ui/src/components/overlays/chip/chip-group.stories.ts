@@ -37,3 +37,15 @@ export const NarrowRtlLongContent: StoryObj = {
     `;
   },
 };
+
+/** Opt-in selection: `selection="multiple"` plus an "all" chip that clears the selection. */
+export const SelectionWithAll: StoryObj = {
+  render: () => html`
+    <lr-chip-group aria-label="Status" selection="multiple" all-value="all" value="open">
+      <lr-chip value="all">All</lr-chip>
+      <lr-chip value="open">Open</lr-chip>
+      <lr-chip value="blocked">Blocked</lr-chip>
+      <lr-chip value="done">Done</lr-chip>
+    </lr-chip-group>
+  `,
+};

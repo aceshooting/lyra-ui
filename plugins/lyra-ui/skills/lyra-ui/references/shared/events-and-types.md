@@ -2160,6 +2160,7 @@ These named interfaces and helper signatures are available to typed integrations
   `flattenCascadeLayers(css: string): string`
   `installHappyDomAriaControlsShim(proto: object | undefined = globalThis.Element?.prototype): void`
   `installHappyDomCascadeLayerShim(proto: SheetTextMethods | undefined = globalThis.CSSStyleSheet?.prototype, misbehaves: () => boolean = cascadeLayerRulesDropped): () => void`
+  `installHappyDomResponseBytesShim(proto: BytesBody | undefined = globalThis.Response?.prototype as BytesBody | undefined): () => void`
   `installHappyDomShims(): void`
   `installStubInternalsForTest(host: Element): StubElementInternals`
 

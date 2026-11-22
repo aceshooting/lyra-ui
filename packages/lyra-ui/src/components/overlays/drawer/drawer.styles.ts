@@ -47,7 +47,18 @@ export const styles = css`
        no-op and unset rendering is unchanged. */
     max-inline-size: min(var(--lr-dialog-max-width, var(--_lr-dialog-max-width)), 100%);
     max-block-size: 100%;
-    border-radius: 0;
+    /* Square by default: an edge-mounted sheet is flush with the viewport. --lr-drawer-radius rounds
+       it explicitly; floating (below) supplies --lr-overlay-radius as the private default. */
+    border-radius: var(--lr-drawer-radius, var(--_lr-drawer-radius, 0));
+    /* The panel-only fill hook, ahead of lr-dialog's own --lr-dialog-panel-bg arm, which a drawer
+       still honours. Neither reaches popups opened inside the drawer. */
+    --_lr-dialog-panel-fill: var(
+      --lr-drawer-panel-bg,
+      var(
+        --lr-dialog-panel-bg,
+        var(--lr-overlay-surface, var(--_lr-overlay-surface, var(--lr-color-surface-container-highest)))
+      )
+    );
     /* Modal layer, one step below lr-dialog's --lr-overlay-shadow-modal default: an edge-anchored
        sheet is flush with three viewport edges, so only the inward edge casts anything. Only the
        default steps down; a consumer --lr-overlay-shadow-modal still reaches every modal panel.
@@ -99,6 +110,24 @@ export const styles = css`
   }
   :host([placement="bottom"]) [part~="panel"] {
     --_lr-drawer-enter-y: var(--lr-size-1rem);
+  }
+  /* floating: the panel detaches from the viewport edges by --lr-drawer-inset (a viewport-mounted
+     drawer still keeps clear of the device safe areas) and rounds every corner with the shared
+     overlay radius. The host carries the gap, so the panel drops its own safe-area padding. */
+  :host([floating]) {
+    --_lr-drawer-radius: var(--lr-overlay-radius, var(--lr-radius-container));
+  }
+  :host([floating]:not([contained])) {
+    padding-block-start: max(var(--lr-drawer-inset, var(--lr-space-s)), var(--lr-safe-area-top));
+    padding-block-end: max(var(--lr-drawer-inset, var(--lr-space-s)), var(--lr-safe-area-bottom));
+    padding-inline-start: max(var(--lr-drawer-inset, var(--lr-space-s)), var(--lr-safe-area-inline-start));
+    padding-inline-end: max(var(--lr-drawer-inset, var(--lr-space-s)), var(--lr-safe-area-inline-end));
+  }
+  :host([floating][contained]) {
+    padding: var(--lr-drawer-inset, var(--lr-space-s));
+  }
+  :host([floating]:not([contained])) [part~="panel"] {
+    padding: 0;
   }
   /* Opts out of lr-dialog's inherited [part="body"] { flex: 1 1 auto } fill-height chain. On
      lr-dialog that rule is a no-op until a consumer opts in with --lr-dialog-height, because the

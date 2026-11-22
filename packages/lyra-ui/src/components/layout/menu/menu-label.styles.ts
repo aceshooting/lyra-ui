@@ -7,7 +7,8 @@ export const styles = css`
   [part='base'] {
     padding: var(--lr-menu-label-padding, var(--lr-space-xs) var(--lr-space-s));
     font-size: var(--lr-menu-label-font-size, var(--lr-font-size-sm));
-    font-weight: var(--lr-font-weight-semibold);
+    font-weight: var(--lr-menu-label-font-weight, var(--lr-font-weight-semibold));
+    letter-spacing: var(--lr-menu-label-letter-spacing, normal);
     line-height: var(--lr-line-height-snug);
     color: var(--lr-menu-label-color, var(--lr-color-text-quiet));
     /* A group heading is not an action: no pointer cursor, no hover/active feedback, and it is

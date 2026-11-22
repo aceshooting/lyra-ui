@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 36 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 37 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-button-gap`, `--lr-button-outlined-fill`, `--lr-button-padding-block`, `--lr-button-shadow`; `end`: `--lr-button-label-grow`; `label`: `--lr-button-label-grow`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -313,6 +313,9 @@ the label no longer growing, this is what positions the icon+label pair inside a
 `flex-start` packs it against the leading edge, `space-between` pushes the adornments apart.
 `--lr-button-label-grow` (default `0`) is the `flex-grow` of `[part="label"]`; `1` fills spare
 space, and an explicit value overrides the grow applied by `with-caret`/`end` adornments.
+`--lr-button-label-wrap` (default `nowrap`) is inherited, so a container can make every button label in an
+action row wrap: set `--lr-button-label-wrap: normal` on the row. The per-button `wrap` attribute stays and
+wins.
 
 **Retuning one `size` tier's geometry, without a `::part(base)` rule.** Four more properties carry
 the active tier's geometry. Every `:host([size='…'])` rule changes only private defaults — no

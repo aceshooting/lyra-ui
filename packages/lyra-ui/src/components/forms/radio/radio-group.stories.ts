@@ -185,3 +185,8 @@ export const ConfirmBeforeSwitching: StoryObj = {
     </div>
   `,
 };
+
+/** The label sits in an inline-start column beside the options, like the other fields. */
+export const LabelPlacementStart: StoryObj = {
+  render: () => html`<lr-radio-group label="Size" hint="Pick one" label-placement="start" style="max-inline-size: 36rem"><lr-radio value="small">Small</lr-radio><lr-radio value="large">Large</lr-radio></lr-radio-group>`,
+};

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -250,6 +250,15 @@ With no label text the part is hidden and no glyph is painted.
 - `--lr-form-control-focus-shadow` (default `none`) — the shared field halo, painted as a
   `box-shadow` while the field holds focus. One name for every field-shaped control in the library,
   so a halo is configured once instead of per component; additive to the brand border.
+- `--lr-form-control-transition` (default `none`) — opt-in `transition` for the field's border and halo
+  (for example `border-color 150ms, box-shadow 150ms`), honoured by `lr-input`, `lr-textarea`,
+  `lr-combobox` and `lr-select` (the textarea default stays its border-color ease); always off under `prefers-reduced-motion: reduce`.
+- `--lr-form-control-focus-outline` (`lr-select` trigger; default the standard focus ring) — opt-in
+  `outline` shorthand that replaces the keyboard outline so an app's own halo can stand in. Pair it with
+  `--lr-form-control-focus-shadow` or a border colour that still marks focus: a visible indicator is the
+  accessibility contract, and forced colours always restores the standard ring.
+- `--lr-select-open-shadow` (`lr-select`; default `--lr-form-control-focus-shadow`) — the halo while the
+  listbox is open.
 
 `<lr-textarea>` fills an explicitly sized host: give the host a block size (`block-size: 100%`
 inside a container with a resolved block size, a pixel size, or a flex/grid allocation) and the

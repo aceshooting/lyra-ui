@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 29 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `body`: `--lr-dialog-height`; `footer`: `--lr-dialog-height`; `header`: `--lr-dialog-height`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -60,6 +60,11 @@ read, and neither is deprecated.
   panel) leaves it.
 - `withFooter: boolean = false` (attribute `with-footer`, reflected) — keeps the footer wrapper
   rendered as an SSR/hydration presence hint even before assigned slot content is observable
+- `fullscreenNarrow: boolean = false` (attribute `fullscreen-narrow`, reflected) — opt-in
+  full-screen layout below a `40rem` viewport width: the panel drops the viewport inset, corner
+  radius and size caps, fills the viewport and pads itself with the `--lr-safe-area-*` insets. At
+  wider viewports it renders exactly as without the attribute. The `(max-width: 40rem)` breakpoint
+  is evaluated with `matchMedia()` and followed live while the dialog is connected.
 - `size: LyraSize = 'm'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
   'large'`. Panel-width tier, on the shared six-step ladder: `20rem` (`2xs`), `24rem` (`xs`), `28rem`
   (`s`/`small`), `32rem` (`m`/`medium`), `38rem`
@@ -207,7 +212,12 @@ the private `--_lr-dialog-max-width` is the `size` property's own tier value (`3
 default, unchanged); when
 `--lr-dialog-width` is set but `--lr-dialog-max-width` is left at its default, the cap falls back to
 the requested width itself — not the tier default — so an assertive width isn't silently clipped;
-the viewport is still a hard limit either way), `--lr-dialog-height` (default `auto` — the panel
+the viewport is still a hard limit either way), `--lr-dialog-max-height` (default `100%` — the
+panel's max-block-size cap, the block-axis twin of `--lr-dialog-max-width`, applied as
+`min(var(--lr-dialog-max-height, 100%), 100%)` so the viewport stays a hard limit),
+`--lr-dialog-viewport-inset` (default `var(--lr-space-l)` — the gap between the viewport edges and
+the panel on all four sides; the `--lr-safe-area-*` insets still win where larger; replaces the
+`::part(dialog) { max-block-size }`-style overrides), `--lr-dialog-height` (default `auto` — the panel
 shrink-wraps to content on the block axis; always capped at
 `100%`, i.e. the viewport, like every other panel dimension). With it set, `[part="body"]`'s own
 `flex: 1 1 auto` is what actually gives slotted content a definite, fillable block size:
@@ -219,8 +229,8 @@ preview or editor fills the dialog without a `::part(body)` rule; light-DOM rule
 still win, so `flex: none` keeps a heading or toolbar at its natural size. On `<lr-drawer>`,
 `fill-body` also restores the body growth the drawer otherwise opts out of.
 `--lr-dialog-heading-font-size` (default `inherit`), `--lr-dialog-heading-font-weight` (default
-`var(--lr-font-weight-semibold)`) and `--lr-dialog-heading-font-family` (default
-`var(--lr-font-heading)`) style the visible header title (`[part~="heading"]`), including
+`var(--lr-font-weight-semibold)`), `--lr-dialog-heading-letter-spacing` (default `normal`) and
+`--lr-dialog-heading-font-family` (default `var(--lr-font-heading)`) style the visible header title (`[part~="heading"]`), including
 `confirm()`'s. `--lr-dialog-spacing` (default `var(--lr-space-l)` —
 the padding inside `[part="body"]` and the _inline_ padding of the header and footer rows),
 `--lr-dialog-spacing-block` (default `var(--lr-space-m)` — the _block_ padding of the header and
@@ -230,10 +240,14 @@ footer rows, which are tighter than the body by default), `--lr-dialog-panel-dur
 The panel paints from the **shared overlay-surface family** (16.0.0), not from the page-surface
 tokens this entry previously named: `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`
 — the panel fill), `--lr-overlay-border` (default `var(--lr-color-border-subtle)` — the panel edge and the
-header's and footer's dividing rules), `--lr-overlay-radius` (default `var(--lr-radius)` — the panel
+header's and footer's dividing rules unless `--lr-dialog-divider-color` is set), `--lr-overlay-radius` (default `var(--lr-radius)` — the panel
 corner and the close button's) and `--lr-overlay-shadow-modal` (default `var(--lr-shadow-xl)` — the
 panel's elevation). None is declared on `:host`, so one declaration on `:root` (or on any ancestor,
-to scope it) retints the dialog together with every popup opened from it. The modal tier is a
+to scope it) retints the dialog together with every popup opened from it. Two dialog-scoped hooks
+split the panel from that family: `--lr-dialog-panel-bg` (default: the `--lr-overlay-surface` chain)
+fills this panel only, so popups, menus and listboxes opened inside the dialog keep the overlay
+surface, and `--lr-dialog-divider-color` (default: the `--lr-overlay-border` chain) colours the
+header's and footer's dividing rules apart from the panel edge. The modal tier is a
 separate name from `--lr-overlay-shadow-anchored`, which anchored popups read, so raising popups
 never raises dialogs.
 
@@ -409,5 +423,45 @@ with `className`:
 - Importing `confirm` is side-effect free and does not register `<lr-dialog>` or `<lr-button>`.
   Invoking the helper synchronously registers both classes before mounting the transient element;
   consumers do not need a separate registration import for helper-created dialogs.
+
+### `prompt()`
+
+A drop-in async replacement for `window.prompt()`, and the text-entry sibling of `confirm()`, with
+the same module conventions.
+
+```ts
+import { prompt } from "@aceshooting/lyra-ui/components/overlays/dialog/prompt.js";
+
+const name = await prompt({
+  title: "Rename conversation",
+  label: "Name",
+  value: conversation.name,
+  validate: (value) => (value.trim() ? null : "Enter a name"),
+});
+if (name !== null) renameConversation(name);
+```
+
+`prompt(options: PromptOptions): Promise<string | null>` where
+`PromptOptions = { title: string; label: string; description?: string; value?: string /* = '' */; placeholder?: string; validate?: (value: string) => string | null | undefined; confirmLabel?: string /* = 'Confirm' */; cancelLabel?: string /* = 'Cancel' */; size?: LyraSize /* = 'm' */; headingLevel?: LyraHeadingLevel /* = '2' */; className?: string }`.
+
+Resolves the submitted string when the confirm button is pressed or Enter is pressed in the field,
+and `null` on Escape, a backdrop click, the cancel button or removal. The body holds one labelled
+`<lr-input data-lr-prompt-field>` (`label` names it) that starts with `value` and takes focus when
+the dialog opens, through the dialog's own `lr-initial-focus` hand-off. Submitting runs
+`validate(value)` first: a returned non-empty message becomes the field's `errorText` (announced
+and `aria-invalid="true"`), the field keeps focus and the dialog stays open; typing clears it, and
+`null`, `undefined` or `''` accepts the value. The message is rendered as given, so localize it in
+the caller. The default action labels resolve the shared `'confirm'` and `'cancel'` messages
+through the active locale, exactly as `confirm()`'s do.
+
+Everything else matches `confirm()`: a transient `<lr-dialog>` on `document.body` with
+`lightDismiss` on and no header close button, removed after its exit animation; `title` is the
+header title at `headingLevel`; `size` and `className` are forwarded; dismissal funnels through
+`close()`/`lr-close`, so a `lr-hide` or `lr-close-request` veto keeps it open; focus returns to the
+opener once it settles. Actions are `<lr-button>` elements in the `footer` slot carrying
+`data-lr-prompt-action="cancel" | "confirm"`, and `description` becomes a zero-specificity
+`<p data-lr-prompt-description>` above the field, so `--lr-dialog-*`, `--lr-input-*` and
+`--lr-button-*` tokens scoped through `className` all apply. Importing `prompt` is side-effect
+free; invoking it registers `<lr-dialog>`, `<lr-input>` and `<lr-button>`.
 
 ---

@@ -9,8 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 59 parts, 41 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-theme-scrollbar-color`, `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-width`; `header-cell`: `--lr-table-header-sorted-bg`; `row`: `--lr-table-row-selected-bg`
+- **Themeable via** 59 parts, 60 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-theme-scrollbar-color`, `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-width`; `caption`: `--lr-table-caption-color`, `--lr-table-caption-font-size`, `--lr-table-caption-font-weight`, `--lr-table-caption-padding`, `--lr-table-caption-text-align`; `header-cell`: `--lr-table-header-sorted-bg`; `row`: `--lr-table-row-selected-bg`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -520,7 +520,7 @@ enabled — fired both from a row activation and from a `selectionMode` flip to 
 an existing multi-row selection down to one key (skipped on the very first render, since an
 already-inconsistent initial `selectionMode`/`selectedRowKeys` pairing is a starting state, not a
 live transition), `lr-filter-change`
-(frozen readonly `detail: { filterText }`), and `lr-page-change` (frozen readonly `detail: { page }`) from the
+(frozen readonly `detail: { filterText }`), and `lr-page-change` (frozen readonly `detail: { page, pageSize, offset }`) from the
 filter/pagination surfaces, and `lr-cell-edit` (`detail: { row, columnKey, value }`) for editable
 columns, and `lr-column-resize` (`detail: { columnKey, width }`, `width` in CSS pixels) on every pointer or
 keyboard resize step. These notifications are non-cancelable. A final pointer width or keyboard step
@@ -609,7 +609,22 @@ continue to determine row height. Cell content can always grow a row beyond the 
 `--lr-table-cell-link-hover-color` — an anchor returned from a column's `cell(row)` renders inside
 the component's shadow root, where page CSS cannot reach it and `::part()` cannot select past the
 first compound selector to reach it either, so without these it computes to the UA default link
-blue; set `revert` for the UA default. `--lr-table-cell-padding` (default `var(--lr-space-s)`) sets
+blue; set `revert` for the UA default. `--lr-table-cell-link-font-weight` (default `inherit`) and
+`--lr-table-cell-link-text-decoration` (default `revert`, the UA underline; `none` removes it) restyle
+that anchor at rest, and `--lr-table-cell-link-hover-font-weight` /
+`--lr-table-cell-link-hover-text-decoration` (each falling back to its resting twin) restyle it on hover,
+`:focus-visible` and press. The built-in `filterable` field takes `--lr-table-filter-height` (default
+`var(--lr-input-control-min-height, auto)`, so it lines up with `lr-input`) and
+`--lr-table-filter-font-size` (default `inherit`); `--lr-table-filter-wrap: wrap` with a
+`--lr-table-filter-basis` (for example `12rem`) stacks the field under its label text once the row is too
+narrow for both. The `caption` takes `--lr-table-caption-font-size`, `--lr-table-caption-font-weight`, `--lr-table-caption-color`,
+`--lr-table-caption-text-align` (default `revert`: the UA centring; `start` aligns with the first column) and `--lr-table-caption-padding`.
+`--lr-table-reveal-columns-min-size` (default `0`) sets the minimum inline and block size of the
+reveal-columns button for a larger touch target. `--lr-table-header-bg` fills header cells (the sorted header's `--lr-table-header-sorted-bg` still wins),
+`--lr-table-header-border-color` colours the rule under the header apart from the body rules
+(default `--lr-table-cell-border-color`), `--lr-table-group-bg` fills group cells, and
+`--lr-table-more-button-bg` / `--lr-table-reveal-columns-bg` set the resting fill of those two buttons
+(default none; hover and press keep their own fills). `--lr-table-cell-padding` (default `var(--lr-space-s)`) sets
 the padding of a header cell, a body cell, and the row-total cell; `--lr-table-cell-padding-compact`
 (default `var(--lr-space-xs) var(--lr-space-s)`) is the same hook for the group-header cell and the
 footer cell, which default to a tighter block/inline shorthand rather than sharing the first token

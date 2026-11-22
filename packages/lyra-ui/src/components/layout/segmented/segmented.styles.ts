@@ -65,8 +65,8 @@ export const styles = css`
     gap: var(--lr-segmented-track-gap, var(--lr-size-0-125rem));
   }
   [part="segment"] {
-    min-inline-size: var(--lr-size-24px);
-    min-block-size: var(--lr-size-24px);
+    min-inline-size: var(--lr-segmented-segment-min-size, var(--lr-size-24px));
+    min-block-size: var(--lr-segmented-segment-min-size, var(--lr-size-24px));
     border: none;
     border-radius: var(
       --lr-segmented-segment-radius,

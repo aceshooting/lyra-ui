@@ -1663,6 +1663,7 @@
     "./components/overlays/context-menu/context-menu.class.js": "./dist/components/overlays/context-menu/context-menu.class.js",
     "./components/overlays/dialog/confirm.js": "./dist/components/overlays/dialog/confirm.js",
     "./components/overlays/dialog/dialog.class.js": "./dist/components/overlays/dialog/dialog.class.js",
+    "./components/overlays/dialog/prompt.js": "./dist/components/overlays/dialog/prompt.js",
     "./components/overlays/drawer/drawer.class.js": "./dist/components/overlays/drawer/drawer.class.js",
     "./components/overlays/empty/empty.class.js": "./dist/components/overlays/empty/empty.class.js",
     "./components/overlays/help/help.class.js": "./dist/components/overlays/help/help.class.js",

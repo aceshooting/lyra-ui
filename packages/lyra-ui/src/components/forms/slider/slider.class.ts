@@ -22,7 +22,7 @@ import { VALIDITY_ANCHOR } from '../../../internal/anchored-validity.js';
 import { setCustomState, syncValidityStates } from '../../../internal/custom-states.js';
 import { falseDefaultBooleanConverter, literalSetConverter, blankNumberConverter } from '../../../internal/converters.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraLabelDisplay, LyraSize } from '../../../internal/variants.js';
+import type { LyraLabelDisplay, LyraLabelPlacement, LyraSize } from '../../../internal/variants.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import {
   finiteInterpolate,
@@ -174,9 +174,16 @@ class LyraSliderBase extends LyraFormControlElement<LyraSliderEventMap> {}
  * @csspart base - Compatibility name on the interactive track row; use `slider`.
  * @csspart slider - Interactive track row. It is the same node as `base`.
  * @csspart form-control - Shoelace-compatible name on the same interactive row.
- * @cssprop [--lr-form-control-label-font-size=inherit] - Font size of the field label.
+ * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
+ * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
+ * @cssprop [--lr-form-control-label-inline-size=30%] - Label column width while
+ *   `label-placement="start"`.
+ * @cssprop [--lr-form-control-label-gap=var(--lr-space-m)] - Space between the label column and
+ *   the field while `label-placement="start"`.
+ * @cssprop [--lr-form-control-label-collapse-inline-size=var(--lr-size-20rem)] - Control width
+ *   below which `label-placement="start"` returns the label above the field.
  * @csspart form-control-label - Shoelace-compatible name on the visible label.
  * @csspart form-control-input - Shoelace-compatible name on the interactive track row.
  * @csspart form-control-help-text - Shoelace-compatible name on the hint region.
@@ -640,6 +647,15 @@ export class LyraSlider extends LyraSliderBase {
    * @attr label-display
    */
   @property({ attribute: 'label-display', reflect: true }) labelDisplay: LyraLabelDisplay = 'visible';
+  /**
+   * Where the label sits: `top` (default) above the field, or `start` in an inline-start column of
+   * `--lr-form-control-label-inline-size`, with hint and error aligned under the field. Below
+   * `--lr-form-control-label-collapse-inline-size` the label returns above the field. The label
+   * association is unchanged. Reflected so `[label-placement]` selectors match.
+   * Horizontal sliders only: a vertical slider keeps the label above.
+   * @attr label-placement
+   */
+  @property({ attribute: 'label-placement', reflect: true, useDefault: true }) labelPlacement: LyraLabelPlacement = 'top';
 
   /** Plain-text description of what the slider controls, rendered below the track and wired to
    *  every handle through `aria-describedby`. Use the `hint` slot instead for rich content. */

@@ -28,7 +28,7 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     border: var(--border-width, var(--lr-border-width-thin)) solid
-      var(--border-color, var(--lr-color-border-subtle));
+      var(--lr-card-border-color, var(--border-color, var(--lr-color-border-subtle)));
     border-radius: var(--_lr-card-radius);
     /* The DEFAULT (outlined) tier's own hook, alongside the filled tiers' existing ones -- the
        tier most cards render was the only one with no card-specific lever, so retinting one
@@ -136,7 +136,7 @@ export const styles = css`
     );
   }
   [part="base"][data-actionable="true"] {
-    border-color: var(--border-color, var(--lr-color-border));
+    border-color: var(--lr-card-border-color, var(--border-color, var(--lr-color-border)));
     cursor: pointer;
   }
   [part="base"][data-actionable="true"]:not([data-disabled]):hover,
@@ -258,7 +258,7 @@ export const styles = css`
     display: none;
   }
   [part="body"] {
-    padding: var(--spacing, var(--padding, var(--lr-space-m)));
+    padding: var(--lr-card-body-padding, var(--spacing, var(--padding, var(--lr-space-m))));
     flex: 1 1 auto;
     min-inline-size: 0;
     overflow-wrap: break-word;

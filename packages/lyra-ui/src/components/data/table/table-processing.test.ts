@@ -176,7 +176,7 @@ it('paginates client-side rows, updates its page, and emits page changes', async
   const eventPromise = oneEvent(el, 'lr-page-change');
   next.click();
   const event = await eventPromise;
-  expect(event.detail).to.deep.equal({ page: 2 });
+  expect({ ...event.detail }).to.deep.equal({ page: 2, pageSize: 1, offset: 1 });
   expect(el.page).to.equal(2);
   await el.updateComplete;
   expect(el.shadowRoot!.querySelector('[part="row"]')!.textContent).to.contain('Beta');
@@ -234,7 +234,7 @@ it('accepts has-next="false" as a plain-HTML attribute string, not just a proper
   expect(nextButton.disabled).to.equal(true);
 });
 
-it('re-emits lr-page-change with the same { page } contract under unknown-total server pagination', async () => {
+it('re-emits lr-page-change with the same { page, pageSize, offset } contract under unknown-total server pagination', async () => {
   const el = (await fixture(
     html`<lr-table pagination-mode="server" unknown-total page-size="1" total-items="-1"></lr-table>`
   )) as LyraTable<Row>;
@@ -249,7 +249,7 @@ it('re-emits lr-page-change with the same { page } contract under unknown-total 
   const eventPromise = oneEvent(el, 'lr-page-change');
   nextButton.click();
   const event = await eventPromise;
-  expect(event.detail).to.deep.equal({ page: 2 });
+  expect({ ...event.detail }).to.deep.equal({ page: 2, pageSize: 1, offset: 1 });
   // Server mode leaves `page` controlled -- the table never mutates it itself.
   expect(el.page).to.equal(1);
 });

@@ -415,3 +415,8 @@ export const LabelledMarks: Story = {
       style="max-inline-size:var(--lr-size-30rem)"></lr-slider>
   `,
 };
+
+/** The label sits in an inline-start column beside a horizontal track, like the other fields. */
+export const LabelPlacementStart: Story = {
+  render: () => html`<lr-slider label="Volume" hint="Master level" label-placement="start" with-value value="40" style="max-inline-size: 36rem"></lr-slider>`,
+};

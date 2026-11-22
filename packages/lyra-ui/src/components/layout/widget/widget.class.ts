@@ -257,6 +257,7 @@ export interface LyraWidgetEventMap {
  *   fullscreen panel.
  * @cssprop [--lr-widget-border-color=var(--lr-color-border-subtle)] - Docked border color.
  * @cssprop [--lr-widget-radius=var(--lr-radius)] - Docked corner radius.
+ * @cssprop [--lr-widget-header-divider=var(--lr-border-width-thin) solid var(--lr-color-border-subtle)] - Border shorthand of the rule under the header; set `none` to remove it.
  * @cssprop [--lr-widget-gap=var(--lr-space-s)] - Gap between header contents, defaulting to the size tier.
  * @cssprop [--lr-widget-header-padding=var(--lr-space-s) var(--lr-space-m)] - Header padding, defaulting to the size tier.
  * @cssprop [--lr-widget-body-padding=var(--lr-space-m)] - Body padding, defaulting to the size tier.

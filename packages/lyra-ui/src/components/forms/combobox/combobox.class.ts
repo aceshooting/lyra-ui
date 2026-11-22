@@ -682,6 +682,8 @@ export type LyraComboboxSourceErrorEvent =
  * `box-shadow` while this control is focused. One name for every field-shaped control in the
  * library, so a halo is configured once rather than per component. Additive: the focus outline and
  * border cue are the accessibility answer to focus and are never replaced by it.
+ * @cssprop [--lr-form-control-transition=none] - Opt-in `transition` for this field's border and halo (for
+ * example `border-color 150ms, box-shadow 150ms`). Unset, nothing animates; reduced motion always disables it.
  * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to
  * `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any
  * other quoted string (`' (required)'`, a localized word) to replace it.
@@ -843,8 +845,8 @@ export class LyraCombobox<
    * option's label into `value` (so the form value is the text) and reports the option's `data` in
    * the `lr-change` detail, typed text is committed on Enter or when focus leaves, and the text is
    * kept after blur and is editable in place when the list reopens. `'text'` already accepts any
-   * text, so it needs no `allow-custom-value`. Ignored while `multiple` is set. Unsupported values
-   * normalize to `'value'`.
+   * text, so it needs no `allow-custom-value`. An empty-string `value` is no value in this mode.
+   * Ignored while `multiple` is set. Unsupported values normalize to `'value'`.
    * @default 'value'
    */
   @property({ converter: COMBOBOX_COMMIT, reflect: true })
@@ -856,6 +858,7 @@ export class LyraCombobox<
     const old = this._commit;
     if (old === normalized) return;
     this._commit = normalized;
+    if (this.commitsText && this._selected.includes('')) this.setValue([], false);
     this.requestUpdate('commit', old);
   }
   private _commit: LyraComboboxCommit = 'value';
@@ -1623,7 +1626,9 @@ export class LyraCombobox<
    *  Every string, including `''`, is instead a candidate value: `<lr-option value="">` (or a
    *  matching async row) is a legitimate row, and assigning `''` selects it when present,
    *  mirroring what picking that row already did. A `''`/string assignment that matches nothing
-   *  still commits, exactly like any other unmatched string -- see `isUnknownValue()`.
+   *  still commits, exactly like any other unmatched string -- see `isUnknownValue()`. Under
+   *  `commit="text"` (a free-text field) `''` means no value instead, as clearing the text does:
+   *  the placeholder shows and `required` reports `valueMissing`.
    *
    *  `LyraPickerValue<Multiple>` narrows to `string` on a `LyraCombobox<false>` and `string[]` on a
    *  `LyraCombobox<true>`; the unnarrowed default resolves to the published union below, which is
@@ -1674,7 +1679,10 @@ export class LyraCombobox<
       this._restoredStateActive = false;
       this._valueDirty = true;
     }
-    this._selected = normalizeSelectionValues(next);
+    // A free-text field has no empty-string "selection": commitText() already commits '' as [],
+    // and a programmatic '' must agree, or the placeholder hides and `required` is satisfied.
+    const values = normalizeSelectionValues(next);
+    this._selected = this.commitsText ? values.filter((value) => value !== '') : values;
     this.multiplePreferences = multiplePreferences;
     const selected = new Set(this._selected);
     if (selected.size > 0) {

@@ -41,7 +41,7 @@ export const styles = css`
     min-inline-size: 0;
     gap: var(--lr-widget-gap, var(--lr-space-s));
     padding: var(--lr-widget-header-padding, var(--lr-space-s) var(--lr-space-m));
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border-block-end: var(--lr-widget-header-divider, var(--lr-border-width-thin) solid var(--lr-color-border-subtle));
   }
   [part="title"] {
     display: flex;

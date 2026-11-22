@@ -79,4 +79,25 @@ describe('lr-pagination offset', () => {
     expect(el.offset).to.equal(undefined);
     expect(el.page).to.equal(4);
   });
+
+  it('carries page, pageSize and offset on every lr-page-change path: numbered, prev/next, page jump', async () => {
+    const el = await fixture<LyraPagination>(html`<lr-pagination total="200" page-size="20" page="3"></lr-pagination>`);
+    const seen: Array<Record<string, number>> = [];
+    el.addEventListener('lr-page-change', (event) => seen.push({ ...(event as CustomEvent).detail }));
+    el.shadowRoot!.querySelector<HTMLElement>('[part~="next-button"]')!.click();
+    el.shadowRoot!.querySelector<HTMLElement>('[part~="previous-button"]')!.click();
+    pageButton(el, 5).click();
+    const compact = await fixture<LyraPagination>(html`<lr-pagination format="compact" total="200" page-size="20"></lr-pagination>`);
+    compact.addEventListener('lr-page-change', (event) => seen.push({ ...(event as CustomEvent).detail }));
+    const input = compact.shadowRoot!.querySelector<HTMLInputElement>('[part~="page-input"]')!;
+    input.value = '7';
+    input.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, composed: true, cancelable: true }));
+    expect(seen).to.deep.equal([
+      { page: 4, pageSize: 20, offset: 60 },
+      { page: 2, pageSize: 20, offset: 20 },
+      { page: 5, pageSize: 20, offset: 80 },
+      { page: 7, pageSize: 20, offset: 120 },
+    ]);
+  });
 });

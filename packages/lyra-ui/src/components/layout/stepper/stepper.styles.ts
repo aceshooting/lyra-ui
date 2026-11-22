@@ -154,6 +154,8 @@ export const styles = css`
     justify-content: center;
     inline-size: var(--lr-size-1-5rem);
     block-size: var(--lr-size-1-5rem);
+    box-sizing: border-box;
+    border: var(--lr-stepper-index-border, none);
     border-radius: var(--lr-radius-pill);
     background: var(--lr-stepper-index-bg, var(--lr-color-neutral-fill-normal));
     color: var(--lr-stepper-index-color, var(--lr-color-neutral-on-normal));
@@ -161,10 +163,12 @@ export const styles = css`
     flex: 0 0 auto;
   }
   [part="step"][data-state="current"] [part="step-index"] {
+    border: var(--lr-stepper-current-index-border, var(--lr-stepper-index-border, none));
     background: var(--lr-stepper-current-index-bg, var(--lr-color-brand));
     color: var(--lr-stepper-current-index-color, var(--lr-color-on-brand));
   }
   [part="step"][data-state="error"] [part="step-index"] {
+    border: var(--lr-stepper-error-index-border, var(--lr-stepper-index-border, none));
     background: var(--lr-stepper-error-index-bg, var(--lr-color-neutral-fill-normal));
     color: var(--lr-stepper-error-index-color, var(--lr-color-neutral-on-normal));
   }

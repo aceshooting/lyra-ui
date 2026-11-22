@@ -244,7 +244,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/details.class.ts",
-              "line": 475,
+              "line": 477,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -283,6 +283,7 @@
           "src/components/layout/details/details-coverage.test.ts",
           "src/components/layout/details/details-interaction.test.ts",
           "src/components/layout/details/details-lifecycle-edges.test.ts",
+          "src/components/layout/details/details-summary-hover-color.test.ts",
           "src/components/layout/details/details.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -459,7 +460,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/details.class.ts",
-              "line": 475,
+              "line": 477,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -498,6 +499,7 @@
           "src/components/layout/details/details-coverage.test.ts",
           "src/components/layout/details/details-interaction.test.ts",
           "src/components/layout/details/details-lifecycle-edges.test.ts",
+          "src/components/layout/details/details-summary-hover-color.test.ts",
           "src/components/layout/details/details.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -2495,6 +2497,7 @@
         "tests": [
           "src/components/layout/app-rail/app-rail-auto-hide.test.ts",
           "src/components/layout/app-rail/app-rail-focus-return.test.ts",
+          "src/components/layout/app-rail/app-rail-frame-border.test.ts",
           "src/components/layout/app-rail/app-rail-item-row-layout.test.ts",
           "src/components/layout/app-rail/app-rail-item-top-layer.test.ts",
           "src/components/layout/app-rail/app-rail-item.test.ts",
@@ -2954,6 +2957,7 @@
         "tests": [
           "src/components/layout/app-rail/app-rail-auto-hide.test.ts",
           "src/components/layout/app-rail/app-rail-focus-return.test.ts",
+          "src/components/layout/app-rail/app-rail-frame-border.test.ts",
           "src/components/layout/app-rail/app-rail-item-row-layout.test.ts",
           "src/components/layout/app-rail/app-rail-item-top-layer.test.ts",
           "src/components/layout/app-rail/app-rail-item.test.ts",
@@ -5052,6 +5056,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/overlays/badge/badge-w13-type-tokens.test.ts",
           "src/components/overlays/badge/badge.test.ts",
           "src/components/overlays/badge/tag.test.ts"
         ],
@@ -6879,7 +6884,7 @@
           "evidence": [
             {
               "file": "src/components/agent-tools/budget-meter/budget-meter.class.ts",
-              "line": 120,
+              "line": 121,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -6918,6 +6923,7 @@
         "tests": [
           "src/components/agent-tools/budget-meter/budget-meter-contracts.test.ts",
           "src/components/agent-tools/budget-meter/budget-meter-formatter.test.ts",
+          "src/components/agent-tools/budget-meter/budget-meter-w13b-value-color.test.ts",
           "src/components/agent-tools/budget-meter/budget-meter.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -7198,6 +7204,7 @@
           "src/components/forms/button/button-loading.test.ts",
           "src/components/forms/button/button-remediation.test.ts",
           "src/components/forms/button/button-state-restoration.test.ts",
+          "src/components/forms/button/button-w13-label-wrap.test.ts",
           "src/components/forms/button/button.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -8194,6 +8201,8 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/layout/card/card-interaction.test.ts",
+          "src/components/layout/card/card-w13-border-color.test.ts",
+          "src/components/layout/card/card-w13b-body-padding.test.ts",
           "src/components/layout/card/card.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -10832,6 +10841,7 @@
           "src/components/overlays/chip/chip-coverage.test.ts",
           "src/components/overlays/chip/chip-group-coverage.test.ts",
           "src/components/overlays/chip/chip-group-focus-loss.test.ts",
+          "src/components/overlays/chip/chip-group-selection.test.ts",
           "src/components/overlays/chip/chip-group.test.ts",
           "src/components/overlays/chip/chip-label-observation-scale.test.ts",
           "src/components/overlays/chip/chip-remediation.test.ts",
@@ -11013,6 +11023,7 @@
           "src/components/overlays/chip/chip-coverage.test.ts",
           "src/components/overlays/chip/chip-group-coverage.test.ts",
           "src/components/overlays/chip/chip-group-focus-loss.test.ts",
+          "src/components/overlays/chip/chip-group-selection.test.ts",
           "src/components/overlays/chip/chip-group.test.ts",
           "src/components/overlays/chip/chip-label-observation-scale.test.ts",
           "src/components/overlays/chip/chip-remediation.test.ts",
@@ -12121,7 +12132,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.class.ts",
-              "line": 320,
+              "line": 327,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -12161,6 +12172,7 @@
           "src/components/conversation/code-block/code-block-composition.test.ts",
           "src/components/conversation/code-block/code-block-controlled-navigation.test.ts",
           "src/components/conversation/code-block/code-block-core.test.ts",
+          "src/components/conversation/code-block/code-block-frame-tokens.test.ts",
           "src/components/conversation/code-block/code-block-line-state.test.ts",
           "src/components/conversation/code-block/code-block-remediation.test.ts",
           "src/components/conversation/code-block/code-block-scale.test.ts",
@@ -12334,7 +12346,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/code-block/code-block-core.class.ts",
-              "line": 320,
+              "line": 327,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -12374,6 +12386,7 @@
           "src/components/conversation/code-block/code-block-composition.test.ts",
           "src/components/conversation/code-block/code-block-controlled-navigation.test.ts",
           "src/components/conversation/code-block/code-block-core.test.ts",
+          "src/components/conversation/code-block/code-block-frame-tokens.test.ts",
           "src/components/conversation/code-block/code-block-line-state.test.ts",
           "src/components/conversation/code-block/code-block-remediation.test.ts",
           "src/components/conversation/code-block/code-block-scale.test.ts",
@@ -13019,7 +13032,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2778,
+              "line": 2786,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -14945,6 +14958,7 @@
         "tests": [
           "src/components/overlays/context-menu/context-menu-anchor-lifecycle.test.ts",
           "src/components/overlays/context-menu/context-menu-gesture-edges.test.ts",
+          "src/components/overlays/context-menu/context-menu-min-inline-size.test.ts",
           "src/components/overlays/context-menu/context-menu-no-resize-observer.test.ts",
           "src/components/overlays/context-menu/context-menu-resize-anchor.test.ts",
           "src/components/overlays/context-menu/context-menu-stable-anchor.test.ts",
@@ -17624,7 +17638,7 @@
           "evidence": [
             {
               "file": "src/components/layout/details/details.class.ts",
-              "line": 475,
+              "line": 477,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -17663,6 +17677,7 @@
           "src/components/layout/details/details-coverage.test.ts",
           "src/components/layout/details/details-interaction.test.ts",
           "src/components/layout/details/details-lifecycle-edges.test.ts",
+          "src/components/layout/details/details-summary-hover-color.test.ts",
           "src/components/layout/details/details.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -17811,8 +17826,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/overlays/dialog/dialog.test.ts",
-              "test": "contains RTL unbroken body and footer content in a 320px overlay allocation",
+              "file": "src/components/overlays/dialog/dialog-sizing-tokens.test.ts",
+              "test": "follows a live viewport resize across the breakpoint and stops listening once removed",
               "kind": "320px allocation test signal"
             }
           ]
@@ -17920,11 +17935,14 @@
           "src/components/overlays/dialog/dialog-close-composition.test.ts",
           "src/components/overlays/dialog/dialog-content-boundaries.test.ts",
           "src/components/overlays/dialog/dialog-exit-layering.test.ts",
+          "src/components/overlays/dialog/dialog-heading-letter-spacing.test.ts",
           "src/components/overlays/dialog/dialog-remediation.test.ts",
           "src/components/overlays/dialog/dialog-reparent-layering.test.ts",
+          "src/components/overlays/dialog/dialog-sizing-tokens.test.ts",
           "src/components/overlays/dialog/dialog-tooltip-tab.test.ts",
           "src/components/overlays/dialog/dialog.test.ts",
-          "src/components/overlays/dialog/native-modal.test.ts"
+          "src/components/overlays/dialog/native-modal.test.ts",
+          "src/components/overlays/dialog/prompt.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"
@@ -19932,6 +19950,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/overlays/drawer/drawer-floating.test.ts",
           "src/components/overlays/drawer/drawer-heading-boundaries.test.ts",
           "src/components/overlays/drawer/drawer.test.ts"
         ],
@@ -20494,7 +20513,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1122,
+              "line": 1134,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -20542,6 +20561,7 @@
           "src/components/overlays/overlay/popover-dom-boundary.test.ts",
           "src/components/overlays/overlay/popover-hover-card.test.ts",
           "src/components/overlays/overlay/popover-reveal-barrier.test.ts",
+          "src/components/overlays/overlay/popover-sizing-tokens.test.ts",
           "src/components/overlays/overlay/popover-trigger.test.ts",
           "src/components/overlays/overlay/popover-virtual-boundary.test.ts",
           "src/components/overlays/overlay/popover.test.ts",
@@ -20779,9 +20799,11 @@
           "src/components/layout/menu/menu-coverage.test.ts",
           "src/components/layout/menu/menu-density-tokens.test.ts",
           "src/components/layout/menu/menu-edge-interactions.test.ts",
+          "src/components/layout/menu/menu-item-color-token.test.ts",
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
+          "src/components/layout/menu/menu-max-block-size.test.ts",
           "src/components/layout/menu/menu-popup-tab-stops.test.ts",
           "src/components/layout/menu/menu-reconcile-cost.test.ts",
           "src/components/layout/menu/menu-remediation.test.ts",
@@ -30002,7 +30024,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input-shared.ts",
-              "line": 893,
+              "line": 897,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -32829,7 +32851,7 @@
           "evidence": [
             {
               "file": "src/components/forms/locale-picker/locale-picker.class.ts",
-              "line": 1023,
+              "line": 1025,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -35309,9 +35331,11 @@
           "src/components/layout/menu/menu-coverage.test.ts",
           "src/components/layout/menu/menu-density-tokens.test.ts",
           "src/components/layout/menu/menu-edge-interactions.test.ts",
+          "src/components/layout/menu/menu-item-color-token.test.ts",
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
+          "src/components/layout/menu/menu-max-block-size.test.ts",
           "src/components/layout/menu/menu-popup-tab-stops.test.ts",
           "src/components/layout/menu/menu-reconcile-cost.test.ts",
           "src/components/layout/menu/menu-remediation.test.ts",
@@ -35567,9 +35591,11 @@
           "src/components/layout/menu/menu-coverage.test.ts",
           "src/components/layout/menu/menu-density-tokens.test.ts",
           "src/components/layout/menu/menu-edge-interactions.test.ts",
+          "src/components/layout/menu/menu-item-color-token.test.ts",
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
+          "src/components/layout/menu/menu-max-block-size.test.ts",
           "src/components/layout/menu/menu-popup-tab-stops.test.ts",
           "src/components/layout/menu/menu-reconcile-cost.test.ts",
           "src/components/layout/menu/menu-remediation.test.ts",
@@ -35769,9 +35795,11 @@
           "src/components/layout/menu/menu-coverage.test.ts",
           "src/components/layout/menu/menu-density-tokens.test.ts",
           "src/components/layout/menu/menu-edge-interactions.test.ts",
+          "src/components/layout/menu/menu-item-color-token.test.ts",
           "src/components/layout/menu/menu-item-text-zoom.test.ts",
           "src/components/layout/menu/menu-item.test.ts",
           "src/components/layout/menu/menu-label.test.ts",
+          "src/components/layout/menu/menu-max-block-size.test.ts",
           "src/components/layout/menu/menu-popup-tab-stops.test.ts",
           "src/components/layout/menu/menu-reconcile-cost.test.ts",
           "src/components/layout/menu/menu-remediation.test.ts",
@@ -38216,7 +38244,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input-shared.ts",
-              "line": 893,
+              "line": 897,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39462,7 +39490,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input-shared.ts",
-              "line": 893,
+              "line": 897,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -39694,7 +39722,7 @@
           "evidence": [
             {
               "file": "src/components/forms/combobox/combobox.class.ts",
-              "line": 2778,
+              "line": 2786,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -40448,8 +40476,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/data/pagination/pagination-page-jump.test.ts",
-              "test": "commits only on Enter and leaves other keys to the native field",
+              "file": "src/components/data/pagination/pagination-offset.test.ts",
+              "test": "carries page, pageSize and offset on every lr-page-change path: numbered, prev/next, page jump",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -41115,7 +41143,7 @@
           "evidence": [
             {
               "file": "src/components/viewers/pdf-viewer/pdf-viewer.class.ts",
-              "line": 1687,
+              "line": 1696,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -42897,7 +42925,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1122,
+              "line": 1134,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -42945,6 +42973,7 @@
           "src/components/overlays/overlay/popover-dom-boundary.test.ts",
           "src/components/overlays/overlay/popover-hover-card.test.ts",
           "src/components/overlays/overlay/popover-reveal-barrier.test.ts",
+          "src/components/overlays/overlay/popover-sizing-tokens.test.ts",
           "src/components/overlays/overlay/popover-trigger.test.ts",
           "src/components/overlays/overlay/popover-virtual-boundary.test.ts",
           "src/components/overlays/overlay/popover.test.ts",
@@ -50012,6 +50041,7 @@
           "src/components/layout/segmented/segmented-items-replacement.test.ts",
           "src/components/layout/segmented/segmented-layout.test.ts",
           "src/components/layout/segmented/segmented-select-request.test.ts",
+          "src/components/layout/segmented/segmented-w13-min-size.test.ts",
           "src/components/layout/segmented/segmented.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -50289,6 +50319,7 @@
           "src/components/forms/select/select-scale.test.ts",
           "src/components/forms/select/select-slot-observation.test.ts",
           "src/components/forms/select/select-validation-accessibility.test.ts",
+          "src/components/forms/select/select-w13b-field-tokens.test.ts",
           "src/components/forms/select/select.test.ts",
           "src/components/forms/select/select.viewport.test.ts",
           "src/components/forms/select/top-layer.test.ts",
@@ -50629,7 +50660,7 @@
           "evidence": [
             {
               "file": "src/components/media/sequence-playback/sequence-playback.class.ts",
-              "line": 220,
+              "line": 225,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -50667,6 +50698,7 @@
         "tests": [
           "src/components/media/sequence-playback/sequence-playback-position.test.ts",
           "src/components/media/sequence-playback/sequence-playback-remediation.test.ts",
+          "src/components/media/sequence-playback/sequence-playback-w13-value-tokens.test.ts",
           "src/components/media/sequence-playback/sequence-playback.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -51445,7 +51477,7 @@
           "evidence": [
             {
               "file": "src/components/forms/slider/slider.class.ts",
-              "line": 860,
+              "line": 876,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -53411,6 +53443,7 @@
           "src/components/data/stat/stat-remediation-b09.test.ts",
           "src/components/data/stat/stat-remediation.test.ts",
           "src/components/data/stat/stat-value-font.test.ts",
+          "src/components/data/stat/stat-w13-radius.test.ts",
           "src/components/data/stat/stat.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -53623,6 +53656,7 @@
           "src/components/layout/stepper/stepper-coverage.test.ts",
           "src/components/layout/stepper/stepper-input-and-reconnect.test.ts",
           "src/components/layout/stepper/stepper-state-text.test.ts",
+          "src/components/layout/stepper/stepper-w13b-index-border.test.ts",
           "src/components/layout/stepper/stepper.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -54695,7 +54729,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/suggestion-chips/suggestion-chips.class.ts",
-              "line": 231,
+              "line": 232,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -54732,6 +54766,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/conversation/suggestion-chips/suggestion-chips-hover-color.test.ts",
           "src/components/conversation/suggestion-chips/suggestion-chips.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -55345,6 +55380,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/forms/switch/focus-ring-target.test.ts",
+          "src/components/forms/switch/switch-checked-label-weight.test.ts",
           "src/components/forms/switch/switch-remediation.test.ts",
           "src/components/forms/switch/switch.test.ts"
         ],
@@ -55546,7 +55582,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.class.ts",
-              "line": 533,
+              "line": 541,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -55590,6 +55626,7 @@
           "src/components/layout/tab-group/tab-group-reconcile-cost.test.ts",
           "src/components/layout/tab-group/tab-group-remediation.test.ts",
           "src/components/layout/tab-group/tab-group-select-request.test.ts",
+          "src/components/layout/tab-group/tab-group-tab-tokens.test.ts",
           "src/components/layout/tab-group/tab-group.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -55807,7 +55844,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.class.ts",
-              "line": 533,
+              "line": 541,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -55851,6 +55888,7 @@
           "src/components/layout/tab-group/tab-group-reconcile-cost.test.ts",
           "src/components/layout/tab-group/tab-group-remediation.test.ts",
           "src/components/layout/tab-group/tab-group-select-request.test.ts",
+          "src/components/layout/tab-group/tab-group-tab-tokens.test.ts",
           "src/components/layout/tab-group/tab-group.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -56063,7 +56101,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.class.ts",
-              "line": 533,
+              "line": 541,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -56107,6 +56145,7 @@
           "src/components/layout/tab-group/tab-group-reconcile-cost.test.ts",
           "src/components/layout/tab-group/tab-group-remediation.test.ts",
           "src/components/layout/tab-group/tab-group-select-request.test.ts",
+          "src/components/layout/tab-group/tab-group-tab-tokens.test.ts",
           "src/components/layout/tab-group/tab-group.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -56441,6 +56480,8 @@
           "src/components/data/table/table-stack.test.ts",
           "src/components/data/table/table-sticky-overlay.test.ts",
           "src/components/data/table/table-theme-tokens.test.ts",
+          "src/components/data/table/table-w13-tokens.test.ts",
+          "src/components/data/table/table-w13b-tokens.test.ts",
           "src/components/data/table/table.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
@@ -56628,6 +56669,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/overlays/badge/badge-w13-type-tokens.test.ts",
           "src/components/overlays/badge/badge.test.ts",
           "src/components/overlays/badge/tag.test.ts"
         ],
@@ -57398,7 +57440,7 @@
           "evidence": [
             {
               "file": "src/components/forms/textarea/textarea.class.ts",
-              "line": 725,
+              "line": 727,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -57848,7 +57890,7 @@
           "evidence": [
             {
               "file": "src/components/conversation/thread-list/thread-list.class.ts",
-              "line": 889,
+              "line": 892,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -57895,6 +57937,7 @@
           "src/components/conversation/thread-list/thread-list-remediation.test.ts",
           "src/components/conversation/thread-list/thread-list-scale.test.ts",
           "src/components/conversation/thread-list/thread-list-search-size.test.ts",
+          "src/components/conversation/thread-list/thread-list-search-surface.test.ts",
           "src/components/conversation/thread-list/thread-list-source-admission.test.ts",
           "src/components/conversation/thread-list/thread-list-source-page-clamp.test.ts",
           "src/components/conversation/thread-list/thread-list-source-scale.test.ts",
@@ -58059,7 +58102,7 @@
           "evidence": [
             {
               "file": "src/components/forms/input/input-shared.ts",
-              "line": 893,
+              "line": 897,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -59117,6 +59160,7 @@
           "src/components/overlays/toast/toast-item-focus-return.test.ts",
           "src/components/overlays/toast/toast-item.test.ts",
           "src/components/overlays/toast/toast-region-first.test.ts",
+          "src/components/overlays/toast/toast-region-inset.test.ts",
           "src/components/overlays/toast/toast.test.ts",
           "src/components/overlays/toast/toaster-retry.test.ts",
           "src/components/overlays/toast/toaster.test.ts"
@@ -59305,6 +59349,7 @@
           "src/components/overlays/toast/toast-item-focus-return.test.ts",
           "src/components/overlays/toast/toast-item.test.ts",
           "src/components/overlays/toast/toast-region-first.test.ts",
+          "src/components/overlays/toast/toast-region-inset.test.ts",
           "src/components/overlays/toast/toast.test.ts",
           "src/components/overlays/toast/toaster-retry.test.ts",
           "src/components/overlays/toast/toaster.test.ts"
@@ -61574,7 +61619,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/overlay/popover.class.ts",
-              "line": 1122,
+              "line": 1134,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -61622,6 +61667,7 @@
           "src/components/overlays/overlay/popover-dom-boundary.test.ts",
           "src/components/overlays/overlay/popover-hover-card.test.ts",
           "src/components/overlays/overlay/popover-reveal-barrier.test.ts",
+          "src/components/overlays/overlay/popover-sizing-tokens.test.ts",
           "src/components/overlays/overlay/popover-trigger.test.ts",
           "src/components/overlays/overlay/popover-virtual-boundary.test.ts",
           "src/components/overlays/overlay/popover.test.ts",
@@ -64749,6 +64795,7 @@
           "src/components/layout/widget/widget-interaction.test.ts",
           "src/components/layout/widget/widget-remediation.test.ts",
           "src/components/layout/widget/widget-views-normalization.test.ts",
+          "src/components/layout/widget/widget-w13b-header-divider.test.ts",
           "src/components/layout/widget/widget.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",

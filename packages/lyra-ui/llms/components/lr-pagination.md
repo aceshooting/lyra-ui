@@ -75,6 +75,24 @@ The pager revalidates the requested page after `lr-before-page-change` returns. 
     pager.offset = detail.offset;
   });
   ```
+
+  **Migrating a page-first pager to offset-first.** `lr-page-change.detail` is `{ page, pageSize, offset }`
+  on every path of `<lr-pagination>` (numbered buttons, previous/next/first/last, the compact page jump) and
+  of `<lr-table>`'s built-in pager; `lr-page-size-change` carries the same triple for a size change. `page`
+  is one-based and `offset = (page - 1) * pageSize`, so the conversion lives in the component:
+
+  ```js
+  // before: page-first, converting by hand
+  pager.addEventListener('lr-page-change', ({ detail }) => load({ page: detail.page, size: pager.pageSize }));
+  pager.page = state.page;
+  // after: offset-first, nothing to convert
+  pager.addEventListener('lr-page-change', ({ detail }) => load({ offset: detail.offset, limit: detail.pageSize }));
+  pager.pageSize = state.limit;
+  pager.offset = state.offset; // derives page = floor(offset / pageSize) + 1
+  ```
+
+  Drop the manual `(page - 1) * size` and `Math.floor(offset / size) + 1` conversions. `<lr-data-grid>` is
+  already offset-first with a zero-based `page`.
 - `total: number = 0` (attribute `total`) — total item count; finite values are truncated
   to a non-negative integer for display and page-count calculations, except for the exact sentinel
   `-1`, which enters indeterminate mode (see below) instead of clamping to the ordinary empty state.

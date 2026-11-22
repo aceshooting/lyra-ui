@@ -143,6 +143,32 @@ describe('lr-chart range band series', () => {
     await waitUntil(() => bandCells() === '2 to 8|2 to 8|2 to 8|No data', 'the streamed band row is a gap', { timeout: 3000 });
   });
 
+  it('fills and swatches one band at its own bandOpacity over the shared token', async () => {
+    const el = await mount([{ ...BAND, bandOpacity: 0.5 }, { ...BAND, label: 'Wide', lower: [9, 9, 9, 9], upper: [12, 12, 12, 12], color: 'rgb(0, 0, 255)' }]);
+    const chart = runtime(el);
+    expect([chart.data.datasets[0]!['lyraBandOpacity'], 'lyraBandOpacity' in chart.data.datasets[1]!]).to.deep.equal([0.5, false]);
+    const x = (chart.scales['x']!.getPixelForValue(0) + chart.scales['x']!.getPixelForValue(1)) / 2;
+    const own = pixelAt(el, x, chart.scales['y']!.getPixelForValue(5)), shared = pixelAt(el, x, chart.scales['y']!.getPixelForValue(10.5));
+    expect(own[3]!, 'the band paints at its own alpha').to.be.closeTo(128, 3);
+    expect(shared[3], 'a band without one keeps the shared token').to.equal(255);
+    const [half, full] = [...el.shadowRoot!.querySelectorAll<HTMLElement>('[part="legend-swatch"]')];
+    expect(half!.style.getPropertyValue('--_lr-chart-swatch-opacity')).to.equal('0.5');
+    expect(full!.style.getPropertyValue('--_lr-chart-swatch-opacity')).to.equal('');
+    const alpha = (node: HTMLElement): number => {
+      const probe = document.createElement('canvas').getContext('2d')!;
+      probe.fillStyle = getComputedStyle(node).backgroundColor; probe.fillRect(0, 0, 1, 1);
+      return probe.getImageData(0, 0, 1, 1).data[3]!;
+    };
+    expect(alpha(half!)).to.be.closeTo(128, 3);
+    expect(alpha(full!)).to.equal(255);
+  });
+
+  it('admits bandOpacity on band series only and clamps it', async () => {
+    const el = await mount([{ ...BAND, bandOpacity: 3 }, { ...BAND, label: 'NaN', bandOpacity: Number.NaN }, { label: 'Line', data: [1, 2, 3, 4], bandOpacity: 0.4 }]);
+    expect(el.datasets.map(series => series.bandOpacity)).to.deep.equal([1, undefined, undefined]);
+    expect('lyraBandOpacity' in runtime(el).data.datasets[2]!).to.equal(false);
+  });
+
   it('reads the band opacity token and tolerates a missing context', () => {
     expect(chartBandOpacity('')).to.equal(0.2);
     expect(chartBandOpacity('0.5')).to.equal(0.5);

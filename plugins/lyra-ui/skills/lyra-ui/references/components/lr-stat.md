@@ -9,8 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 36 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-stat-gap`, `--lr-stat-padding`
+- **Themeable via** 16 parts, 44 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-stat-gap`, `--lr-stat-padding`; `row`: `--lr-stat-rows-gap`; `rows`: `--lr-stat-rows-gap`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -135,18 +135,21 @@ and includes the unit in its name. Values without a label or unit remain plain t
 `[part="base"]`'s RESTING background — the tier a dashboard sits at all day, and the companion to
 the linked card's existing pressed `--lr-stat-link-active-bg` (whose own default now mixes from
 `--lr-stat-bg`, so one override retints both); `frame="plain"` still drops the fill entirely.
-`--lr-stat-padding` (default `var(--lr-space-m)`) and
+`--lr-stat-radius` (default `var(--lr-radius)`) sets the card's corner radius. `--lr-stat-padding` (default `var(--lr-space-m)`) and
 `--lr-stat-gap` (default `var(--lr-space-xs)`) control `[part="base"]`'s padding and gap in every
 rendering path — the default card, the compact density (`size="s"` and below; own defaults `var(--lr-space-s)` /
 `var(--lr-size-0-125rem)`), `frame="plain"` (own default `0` for padding), and the internal
 `.linked-content` wrapper used when `href` is set, so one override reaches a linked and an
-unlinked stat identically. `--lr-stat-trend-good-color` (default `var(--lr-color-success)`)
+unlinked stat identically; that gap is also the space between the caption, sub, spark and rows
+sections. `--lr-stat-rows-gap` (default `var(--lr-size-0-125rem)`) spaces the breakdown rows inside
+`[part="rows"]`. `--lr-stat-trend-good-color` (default `var(--lr-color-success)`)
 and `--lr-stat-trend-good-bg` (default `color-mix(in srgb, var(--lr-color-success) 8%,
 transparent)`) — text/background of `[part="trend"]` when its polarity (per `goodDirection`) is
 "good"; `--lr-stat-trend-bad-color` (default `var(--lr-color-danger)`) and `--lr-stat-trend-bad-bg`
 (default `color-mix(in srgb, var(--lr-color-danger) 8%, transparent)`) — the "bad"-polarity
 counterparts. All four are independent of the headline value's `variant="success"`/`"danger"` tint,
 so retinting the trend pill doesn't also recolor the value, and vice versa.
+`--lr-stat-value-color` (default `inherit`) colors a neutral headline value;
 `--lr-stat-value-brand-color` (default `var(--lr-color-brand)`),
 `--lr-stat-value-success-color` (default `var(--lr-color-success)`),
 `--lr-stat-value-warning-color` (default `var(--lr-color-warning)`), and
@@ -162,6 +165,9 @@ counterparts), and `--lr-stat-link-active-bg` (defaulting to the existing active
 are point-of-use fallbacks, so values inherit from a theme ancestor and a value on `lr-stat` wins.
 Typography follows the application type scale through `--lr-stat-value-font-size` (default
 `var(--lr-font-size-2xl)`), `--lr-stat-value-font-weight` (default `var(--lr-font-weight-bold)`),
+`--lr-stat-value-letter-spacing` (default `normal`), `--lr-stat-value-line-height` (default
+`inherit`), `--lr-stat-value-margin` (default `0`), `--lr-stat-value-row-align` (default `baseline`,
+the value row's `align-items`),
 `--lr-stat-label-font-size` (default `var(--lr-font-size-xs)`), `--lr-stat-label-font-weight`
 (default `var(--lr-font-weight-semibold)`), `--lr-stat-label-color` (default
 `var(--lr-color-text-quiet)`), `--lr-stat-label-letter-spacing` (default `var(--lr-size-0-04em)`),
@@ -170,7 +176,8 @@ Typography follows the application type scale through `--lr-stat-value-font-size
 `--lr-stat-caption-font-size` (default `var(--lr-font-size-sm)`) and `--lr-stat-caption-color`
 (default `var(--lr-color-text-quiet)`); `prose` keeps its own smaller value style. The `start` icon
 container becomes a chip through `--lr-stat-icon-size` (default `inherit`, its font size),
-`--lr-stat-icon-padding` (default `0`), `--lr-stat-icon-radius` (default `0`), `--lr-stat-icon-bg`
+`--lr-stat-icon-box-size` (default `auto`; the chip's inline and block size, padding included, with
+the glyph's line box centred in it), `--lr-stat-icon-padding` (default `0`), `--lr-stat-icon-radius` (default `0`), `--lr-stat-icon-bg`
 (default `transparent`) and `--lr-stat-icon-color` (default `var(--lr-color-text-quiet)`).
 
 **Optional peer deps:** none.

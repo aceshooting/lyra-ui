@@ -2,6 +2,7 @@ import { visuallyHidden } from '../../../internal/a11y.js';
 import { css } from 'lit';
 import {
   formControlFocusHalo,
+  formControlFieldTransition,
   formControlInvalidBorder,
   formControlRequiredMarker,
   formControlTextWrap,
@@ -34,6 +35,7 @@ export const styles = css`
        declared; the PUBLIC name stays undeclared, so a value set on :root or any ancestor still
        reaches this field. */
     --_lr-form-control-focus-shadow: var(--lr-form-control-focus-shadow, none);
+    --_lr-form-control-transition: var(--lr-form-control-transition, border-color var(--lr-transition-fast));
   }
   /* Changes the private radius default rather than declaring border-radius on [part='textarea'],
      keeping one consumption point below and leaving a --lr-textarea-radius override
@@ -99,6 +101,14 @@ export const styles = css`
       --lr-textarea-max-block-size,
       var(--_lr-textarea-max-block-size)
     );
+  }
+  [part="textarea"] {
+    ${formControlFieldTransition}
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :host {
+      --_lr-form-control-transition: none;
+    }
   }
   /* Brand edge plus the opt-in halo; :focus so a pointer focus reads too. */
   [part="textarea"]:focus {

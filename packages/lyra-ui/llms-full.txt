@@ -3625,6 +3625,12 @@ An existing platform collection is never replaced, and plain Node remains unchan
 `Element.part` (Happy DOM), rendering does not throw, and highlighted lines keep their
 `line-highlight` part wherever CSS parts exist. `installHappyDomShims()` does not install one.
 
+`installHappyDomShims()` also calls `installHappyDomResponseBytesShim()`, which adds
+`Response.prototype.bytes()` (read through `arrayBuffer()`) where Happy DOM 21 lacks it. Shiki's
+inlined Oniguruma engine, which `lr-code-block` loads on demand, calls `bytes()` as it imports, so
+without it each highlighter load leaves an unhandled rejection. It is a no-op where `bytes()`
+exists, takes an optional prototype, and returns a function that removes the method again.
+
 When Happy DOM lacks the HTML `dir="ltr"`/`dir="rtl"` presentational hints,
 `installHappyDomShims()` adds zero-specificity direction rules to the document head. This restores
 computed direction and inherited component direction while preserving explicit author CSS.
@@ -6682,6 +6688,7 @@ These named interfaces and helper signatures are available to typed integrations
   `flattenCascadeLayers(css: string): string`
   `installHappyDomAriaControlsShim(proto: object | undefined = globalThis.Element?.prototype): void`
   `installHappyDomCascadeLayerShim(proto: SheetTextMethods | undefined = globalThis.CSSStyleSheet?.prototype, misbehaves: () => boolean = cascadeLayerRulesDropped): () => void`
+  `installHappyDomResponseBytesShim(proto: BytesBody | undefined = globalThis.Response?.prototype as BytesBody | undefined): () => void`
   `installHappyDomShims(): void`
   `installStubInternalsForTest(host: Element): StubElementInternals`
 
@@ -7815,10 +7822,10 @@ label column: `lr-input` (and `lr-number-input`, `lr-native-time-input`), `lr-te
 `lr-select`, `lr-combobox`, `lr-date-input`, `lr-time-input`, `lr-phone-input`, `lr-token-input`,
 `lr-otp-input`, `lr-code-editor`, `lr-signature-pad`, `lr-color-picker`, `lr-locale-picker`, the
 catalog pickers (`lr-country-picker`, `lr-currency-picker`, `lr-time-zone-picker`,
-`lr-unit-picker`) and, in the conversation family, `lr-model-select` and `lr-voice-picker`. Group
-controls whose label is a legend over several choices (`lr-checkbox-group`, `lr-radio-group`,
-`lr-segmented`) and `lr-slider`, whose label row can carry the value readout, keep the label
-above. The label sits in an inline-start column of `--lr-form-control-label-inline-size` (default `30%`), `--lr-form-control-label-gap`
+`lr-unit-picker`), `lr-slider` (horizontal only; with `value-placement="label"` the label and
+readout row take the column), the legend-style groups `lr-checkbox-group` and `lr-radio-group` (their
+toolbar slot moves below the options) and, in the conversation family, `lr-model-select` and
+`lr-voice-picker`. `lr-segmented` keeps the label above. The label sits in an inline-start column of `--lr-form-control-label-inline-size` (default `30%`), `--lr-form-control-label-gap`
 (default `var(--lr-space-m)`) from the field, and the hint and error stay aligned under the field.
 The label is top-aligned, level with the first line of the field, so it stays beside the first line
 of a tall field (`lr-textarea`, `lr-code-editor`, `lr-signature-pad`) instead of centring on it. With
@@ -8082,6 +8089,8 @@ zoom on focus; see "Touch font floor".
   otherwise followed by implicit form submission) and when focus leaves; the text stays after blur,
   and reopening edits it in place instead of blanking the field. Escape closes the list and drops
   an uncommitted edit. No `allow-custom-value` is needed, and no unknown-value badge is shown.
+  `value = ''` means no value here, like clearing the text: the placeholder shows and `required`
+  reports `valueMissing`.
   The list opens on focus in every mode, and a press on the already-focused input reopens it:
 
   ```html
@@ -8770,6 +8779,8 @@ synchronous and fires no `input`/`change`/`lr-change` event.
 
 The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.
 
+`--lr-form-control-transition` (default `none`) is the shared opt-in `transition` for the field's border and halo; see the shared form-control tokens.
+
 ## `lr-select`
 
 `labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in
@@ -9341,6 +9352,8 @@ state mixes from this same token. Scoped independently of `--lr-select-trigger-h
 <a id="date-and-range-controls"></a>
 
 The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.
+
+`--lr-form-control-focus-outline` (default the standard focus ring) replaces the trigger's keyboard outline, `--lr-form-control-transition` (default `none`) is the shared opt-in border and halo `transition`, `--lr-select-open-shadow` (default `--lr-form-control-focus-shadow`) is the halo while the listbox is open, and `--lr-form-control-label-line-height` (default `inherit`) sets the label line height.
 
 ## `lr-date-picker` / `lr-date-input` (+ `calendar-core.ts`)
 
@@ -10135,6 +10148,15 @@ With no label text the part is hidden and no glyph is painted.
 - `--lr-form-control-focus-shadow` (default `none`) — the shared field halo, painted as a
   `box-shadow` while the field holds focus. One name for every field-shaped control in the library,
   so a halo is configured once instead of per component; additive to the brand border.
+- `--lr-form-control-transition` (default `none`) — opt-in `transition` for the field's border and halo
+  (for example `border-color 150ms, box-shadow 150ms`), honoured by `lr-input`, `lr-textarea`,
+  `lr-combobox` and `lr-select` (the textarea default stays its border-color ease); always off under `prefers-reduced-motion: reduce`.
+- `--lr-form-control-focus-outline` (`lr-select` trigger; default the standard focus ring) — opt-in
+  `outline` shorthand that replaces the keyboard outline so an app's own halo can stand in. Pair it with
+  `--lr-form-control-focus-shadow` or a border colour that still marks focus: a visible indicator is the
+  accessibility contract, and forced colours always restores the standard ring.
+- `--lr-select-open-shadow` (`lr-select`; default `--lr-form-control-focus-shadow`) — the halo while the
+  listbox is open.
 
 `<lr-textarea>` fills an explicitly sized host: give the host a block size (`block-size: 100%`
 inside a container with a resolved block size, a pixel size, or a flex/grid allocation) and the
@@ -10451,6 +10473,9 @@ the label no longer growing, this is what positions the icon+label pair inside a
 `flex-start` packs it against the leading edge, `space-between` pushes the adornments apart.
 `--lr-button-label-grow` (default `0`) is the `flex-grow` of `[part="label"]`; `1` fills spare
 space, and an explicit value overrides the grow applied by `with-caret`/`end` adornments.
+`--lr-button-label-wrap` (default `nowrap`) is inherited, so a container can make every button label in an
+action row wrap: set `--lr-button-label-wrap: normal` on the row. The per-button `wrap` attribute stays and
+wins.
 
 **Retuning one `size` tier's geometry, without a `::part(base)` rule.** Four more properties carry
 the active tier's geometry. Every `:host([size='…'])` rule changes only private defaults — no
@@ -10679,7 +10704,9 @@ no appearance attribute or reset rules to sit quietly in a toolbar.
 the floor makes the button exactly `--lr-icon-button-size` on both axes; no `::part(button)`
 width/height rule is needed. Set the size on the element for one button, or
 `--lr-icon-button-size-scope` on a wrapper for a toolbar, and keep the slotted glyph (or
-`--lr-icon-size`) at or below it:
+`--lr-icon-size`) at or below it. The native button sets `line-height: 1`, so a glyph wrapped in an
+inline element (a `<span>` around an `<svg>`) does not grow the box to the page's line-height at a
+large root font size:
 
 ```html
 <lr-icon-button icon="info-circle" label="Details" style="--lr-icon-button-size: 2rem"></lr-icon-button>
@@ -10770,6 +10797,8 @@ them leaves rendering unchanged.
 ```
 
 ## `lr-input`
+
+Field text can use tabular figures with `--lr-input-font-variant-numeric: tabular-nums` (default `inherit`); `lr-number-input` shares the sheet and honours it. Every form-control label also reads `--lr-form-control-label-line-height` (default `inherit`) beside the size, weight and colour tokens.
 
 `labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in
 an inline-start column, sized by `--lr-form-control-label-inline-size` (default `30%`) and
@@ -11435,6 +11464,8 @@ The exact-320px RTL story keeps long label/hint copy and both fixed-size stepper
 
 <a id="date-and-time-controls"></a>
 
+`--lr-form-control-label-line-height` (default `inherit`) sets the label line height, and `--lr-input-font-variant-numeric` (default `inherit`; for example `tabular-nums`) sets the field text's numeric figures, shared with `lr-input`.
+
 ## `lr-time-input`
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
@@ -11742,6 +11773,8 @@ entry for the flush and cancellation rules.
 ```
 
 ---
+
+`--lr-form-control-label-line-height` (default `inherit`) sets the label line height, and `--lr-input-font-variant-numeric` (default `inherit`; for example `tabular-nums`) sets the field text's numeric figures, shared with `lr-input`.
 
 ## `lr-phone-input`
 
@@ -13028,7 +13061,8 @@ unchecked thumb untouched.
 `--lr-switch-label-font-size` (default `var(--lr-font-size-md-sm)`) sets `[part='label']`'s text size.
 `--lr-switch-label-color` (default `var(--lr-color-text)`) controls `[part='label']`'s text color,
 and is also the checked-state fallback. `--lr-switch-checked-label-color` (default
-`var(--lr-switch-label-color)`) independently retints the label only while checked. Both label hooks
+`var(--lr-switch-label-color)`) independently retints the label only while checked, and
+`--lr-switch-checked-label-font-weight` (default `inherit`) weights it. The checked label hooks
 read the switch's **live** checked state (the same `:state(checked)` custom state the class doc's
 `@cssstate checked` documents), not the `checked` *attribute* — which instead reflects
 `defaultChecked`, the form-reset value — so the checked-state hook tracks user interaction correctly
@@ -13070,6 +13104,8 @@ checkbox and does not emit `lr-change`.
 <a id="range-controls"></a>
 
 ## `lr-slider`
+
+**Label and readout.** The label defaults to the shared form-control label size (`--lr-font-size-md-sm`, like `lr-input`/`lr-select`), no longer `inherit`; `--lr-form-control-label-font-size` still retunes it. `label-placement="start"` (see "Label beside the field") puts the label in a column beside a horizontal track. `with-value` shows the **localized number** by default, even when a `valueFormatter` is set and even with `value-placement="label"`; the formatter feeds `aria-valuetext` and the tooltip only. Set `value-display="formatted"` to show the formatter's text in the readout. This is deliberate: a formatter written for assistive text (`"40 percent"`) would otherwise change the visible readout of every existing slider.
 
 Labelled `marks` render in the `marks` part: one `mark` per tick, a `mark-label` per label, and
 `mark-label-thinned` on a label hidden for overlapping its neighbour.
@@ -13406,6 +13442,8 @@ is present for upstream form-surface parity but adds no missing-value constraint
   takes up no layout space.
 
 ---
+
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column, sized by `--lr-form-control-label-inline-size`, `--lr-form-control-label-gap` and `--lr-form-control-label-collapse-inline-size`; every form-control label also reads `--lr-form-control-label-line-height` (default `inherit`). See "Label beside the field: `label-placement`".
 
 ## `lr-radio`
 
@@ -13887,6 +13925,8 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 ## `lr-radio-group`
 
+`label-placement="start"` (default `top`) puts the label in an inline-start column, shared with the other fields (see "Label beside the field"); the toolbar slot then follows the options.
+
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`. The default label size follows `--lr-form-control-font-size`.
 
@@ -14003,7 +14043,11 @@ group has no selected radio. `focus()` moves focus to the selected (or first ena
 `focus()` by activating the selected/first enabled radio. All three are inert under direct or
 fieldset disablement, so the group behaves like one native control.
 
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column, sized by `--lr-form-control-label-inline-size`, `--lr-form-control-label-gap` and `--lr-form-control-label-collapse-inline-size`; every form-control label also reads `--lr-form-control-label-line-height` (default `inherit`). See "Label beside the field: `label-placement`".
+
 ## `lr-checkbox-group`
+
+`label-placement="start"` (default `top`) puts the legend in an inline-start column, shared with the other fields (see "Label beside the field"); the toolbar slot then follows the options. Wrapped options take separate gaps: `--lr-checkbox-group-option-row-gap` (between rows) and `--lr-checkbox-group-option-column-gap` (between options in a row), each defaulting to `--lr-checkbox-group-option-gap` (and `--gap`), so unset renders as before.
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`. The default label size follows `--lr-form-control-font-size`.
@@ -14127,6 +14171,8 @@ a `.value=${...}` binding on first render) is applied once they arrive.
   cannot say which one was checked. The group warns once per duplicated value when it sees this.
 - Assignments migrate to writes on the intended children's `checked` state; a host value such as
   `['on']` cannot identify which default-valued occurrence was intended.
+
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column, sized by `--lr-form-control-label-inline-size`, `--lr-form-control-label-gap` and `--lr-form-control-label-collapse-inline-size`; every form-control label also reads `--lr-form-control-label-line-height` (default `inherit`). See "Label beside the field: `label-placement`".
 
 ## `lr-token-input`
 
@@ -15219,6 +15265,8 @@ and color-mix treatments as fallbacks. Disabled actions still dim through `--lr-
 the same library-wide token every other disabled control reads.
 
 ## `lr-locale-picker`
+
+`--lr-locale-picker-trigger-radius` rounds the trigger only; unset it follows `--lr-locale-picker-radius`, which keeps rounding the listbox and options.
 
 Under a coarse pointer the editable text is floored at `--lr-form-control-touch-font-size-min`
 (default `16px`; `0px` opts out) so mobile Safari does not zoom on focus; see "Touch font floor".
@@ -16913,18 +16961,21 @@ and includes the unit in its name. Values without a label or unit remain plain t
 `[part="base"]`'s RESTING background — the tier a dashboard sits at all day, and the companion to
 the linked card's existing pressed `--lr-stat-link-active-bg` (whose own default now mixes from
 `--lr-stat-bg`, so one override retints both); `frame="plain"` still drops the fill entirely.
-`--lr-stat-padding` (default `var(--lr-space-m)`) and
+`--lr-stat-radius` (default `var(--lr-radius)`) sets the card's corner radius. `--lr-stat-padding` (default `var(--lr-space-m)`) and
 `--lr-stat-gap` (default `var(--lr-space-xs)`) control `[part="base"]`'s padding and gap in every
 rendering path — the default card, the compact density (`size="s"` and below; own defaults `var(--lr-space-s)` /
 `var(--lr-size-0-125rem)`), `frame="plain"` (own default `0` for padding), and the internal
 `.linked-content` wrapper used when `href` is set, so one override reaches a linked and an
-unlinked stat identically. `--lr-stat-trend-good-color` (default `var(--lr-color-success)`)
+unlinked stat identically; that gap is also the space between the caption, sub, spark and rows
+sections. `--lr-stat-rows-gap` (default `var(--lr-size-0-125rem)`) spaces the breakdown rows inside
+`[part="rows"]`. `--lr-stat-trend-good-color` (default `var(--lr-color-success)`)
 and `--lr-stat-trend-good-bg` (default `color-mix(in srgb, var(--lr-color-success) 8%,
 transparent)`) — text/background of `[part="trend"]` when its polarity (per `goodDirection`) is
 "good"; `--lr-stat-trend-bad-color` (default `var(--lr-color-danger)`) and `--lr-stat-trend-bad-bg`
 (default `color-mix(in srgb, var(--lr-color-danger) 8%, transparent)`) — the "bad"-polarity
 counterparts. All four are independent of the headline value's `variant="success"`/`"danger"` tint,
 so retinting the trend pill doesn't also recolor the value, and vice versa.
+`--lr-stat-value-color` (default `inherit`) colors a neutral headline value;
 `--lr-stat-value-brand-color` (default `var(--lr-color-brand)`),
 `--lr-stat-value-success-color` (default `var(--lr-color-success)`),
 `--lr-stat-value-warning-color` (default `var(--lr-color-warning)`), and
@@ -16940,6 +16991,9 @@ counterparts), and `--lr-stat-link-active-bg` (defaulting to the existing active
 are point-of-use fallbacks, so values inherit from a theme ancestor and a value on `lr-stat` wins.
 Typography follows the application type scale through `--lr-stat-value-font-size` (default
 `var(--lr-font-size-2xl)`), `--lr-stat-value-font-weight` (default `var(--lr-font-weight-bold)`),
+`--lr-stat-value-letter-spacing` (default `normal`), `--lr-stat-value-line-height` (default
+`inherit`), `--lr-stat-value-margin` (default `0`), `--lr-stat-value-row-align` (default `baseline`,
+the value row's `align-items`),
 `--lr-stat-label-font-size` (default `var(--lr-font-size-xs)`), `--lr-stat-label-font-weight`
 (default `var(--lr-font-weight-semibold)`), `--lr-stat-label-color` (default
 `var(--lr-color-text-quiet)`), `--lr-stat-label-letter-spacing` (default `var(--lr-size-0-04em)`),
@@ -16948,7 +17002,8 @@ Typography follows the application type scale through `--lr-stat-value-font-size
 `--lr-stat-caption-font-size` (default `var(--lr-font-size-sm)`) and `--lr-stat-caption-color`
 (default `var(--lr-color-text-quiet)`); `prose` keeps its own smaller value style. The `start` icon
 container becomes a chip through `--lr-stat-icon-size` (default `inherit`, its font size),
-`--lr-stat-icon-padding` (default `0`), `--lr-stat-icon-radius` (default `0`), `--lr-stat-icon-bg`
+`--lr-stat-icon-box-size` (default `auto`; the chip's inline and block size, padding included, with
+the glyph's line box centred in it), `--lr-stat-icon-padding` (default `0`), `--lr-stat-icon-radius` (default `0`), `--lr-stat-icon-bg`
 (default `transparent`) and `--lr-stat-icon-color` (default `var(--lr-color-text-quiet)`).
 
 **Optional peer deps:** none.
@@ -17864,7 +17919,7 @@ enabled — fired both from a row activation and from a `selectionMode` flip to 
 an existing multi-row selection down to one key (skipped on the very first render, since an
 already-inconsistent initial `selectionMode`/`selectedRowKeys` pairing is a starting state, not a
 live transition), `lr-filter-change`
-(frozen readonly `detail: { filterText }`), and `lr-page-change` (frozen readonly `detail: { page }`) from the
+(frozen readonly `detail: { filterText }`), and `lr-page-change` (frozen readonly `detail: { page, pageSize, offset }`) from the
 filter/pagination surfaces, and `lr-cell-edit` (`detail: { row, columnKey, value }`) for editable
 columns, and `lr-column-resize` (`detail: { columnKey, width }`, `width` in CSS pixels) on every pointer or
 keyboard resize step. These notifications are non-cancelable. A final pointer width or keyboard step
@@ -17953,7 +18008,22 @@ continue to determine row height. Cell content can always grow a row beyond the 
 `--lr-table-cell-link-hover-color` — an anchor returned from a column's `cell(row)` renders inside
 the component's shadow root, where page CSS cannot reach it and `::part()` cannot select past the
 first compound selector to reach it either, so without these it computes to the UA default link
-blue; set `revert` for the UA default. `--lr-table-cell-padding` (default `var(--lr-space-s)`) sets
+blue; set `revert` for the UA default. `--lr-table-cell-link-font-weight` (default `inherit`) and
+`--lr-table-cell-link-text-decoration` (default `revert`, the UA underline; `none` removes it) restyle
+that anchor at rest, and `--lr-table-cell-link-hover-font-weight` /
+`--lr-table-cell-link-hover-text-decoration` (each falling back to its resting twin) restyle it on hover,
+`:focus-visible` and press. The built-in `filterable` field takes `--lr-table-filter-height` (default
+`var(--lr-input-control-min-height, auto)`, so it lines up with `lr-input`) and
+`--lr-table-filter-font-size` (default `inherit`); `--lr-table-filter-wrap: wrap` with a
+`--lr-table-filter-basis` (for example `12rem`) stacks the field under its label text once the row is too
+narrow for both. The `caption` takes `--lr-table-caption-font-size`, `--lr-table-caption-font-weight`, `--lr-table-caption-color`,
+`--lr-table-caption-text-align` (default `revert`: the UA centring; `start` aligns with the first column) and `--lr-table-caption-padding`.
+`--lr-table-reveal-columns-min-size` (default `0`) sets the minimum inline and block size of the
+reveal-columns button for a larger touch target. `--lr-table-header-bg` fills header cells (the sorted header's `--lr-table-header-sorted-bg` still wins),
+`--lr-table-header-border-color` colours the rule under the header apart from the body rules
+(default `--lr-table-cell-border-color`), `--lr-table-group-bg` fills group cells, and
+`--lr-table-more-button-bg` / `--lr-table-reveal-columns-bg` set the resting fill of those two buttons
+(default none; hover and press keep their own fills). `--lr-table-cell-padding` (default `var(--lr-space-s)`) sets
 the padding of a header cell, a body cell, and the row-total cell; `--lr-table-cell-padding-compact`
 (default `var(--lr-space-xs) var(--lr-space-s)`) is the same hook for the group-header cell and the
 footer cell, which default to a tighter block/inline shorthand rather than sharing the first token
@@ -18150,6 +18220,24 @@ The pager revalidates the requested page after `lr-before-page-change` returns. 
     pager.offset = detail.offset;
   });
   ```
+
+  **Migrating a page-first pager to offset-first.** `lr-page-change.detail` is `{ page, pageSize, offset }`
+  on every path of `<lr-pagination>` (numbered buttons, previous/next/first/last, the compact page jump) and
+  of `<lr-table>`'s built-in pager; `lr-page-size-change` carries the same triple for a size change. `page`
+  is one-based and `offset = (page - 1) * pageSize`, so the conversion lives in the component:
+
+  ```js
+  // before: page-first, converting by hand
+  pager.addEventListener('lr-page-change', ({ detail }) => load({ page: detail.page, size: pager.pageSize }));
+  pager.page = state.page;
+  // after: offset-first, nothing to convert
+  pager.addEventListener('lr-page-change', ({ detail }) => load({ offset: detail.offset, limit: detail.pageSize }));
+  pager.pageSize = state.limit;
+  pager.offset = state.offset; // derives page = floor(offset / pageSize) + 1
+  ```
+
+  Drop the manual `(page - 1) * size` and `Math.floor(offset / size) + 1` conversions. `<lr-data-grid>` is
+  already offset-first with a zero-based `page`.
 - `total: number = 0` (attribute `total`) — total item count; finite values are truncated
   to a non-negative integer for display and page-count calculations, except for the exact sentinel
   `-1`, which enters indeterminate mode (see below) instead of clamping to the ordinary empty state.
@@ -19342,6 +19430,17 @@ weekdayLabelWidth?: number|'auto'; weekdayLabelText?: (jsWeekday:number)=>string
   label bands keep working instead of an outer container scrolling the whole component. Percentage
   trap: without `fill`, `--lr-heatmap-grid-max-block-size: 100%` resolves to `none`, because the
   base is auto-height; and `fill` itself needs a definite parent height, like any percentage.
+- `fitBlock: boolean = false` (attribute `fit-block`, reflected) — fits the heatmap within the
+  host's own `max-block-size` with no definite parent height: the heatmap takes its content height
+  up to that ceiling and, in matrix mode, the grid renders inside the `[part="grid"]` scrollport
+  (as under `fill`), which takes the block size the legend leaves and becomes the single scroller.
+  A short matrix stays as tall as its content; calendar mode is unchanged. Set the ceiling on the
+  element itself; a percentage ceiling only resolves against a definite parent. Without a ceiling
+  it changes nothing visible.
+
+  ```html
+  <lr-heatmap fit-block sticky-labels="cols" style="max-block-size: 24rem"></lr-heatmap>
+  ```
 - `scale: 'linear' | 'sqrt' = 'linear'` — governs both modes: in matrix mode, `'sqrt'` compresses the
   color ramp via `sqrtStep()` instead of mapping linearly; in calendar mode, the default `'linear'`
   still buckets by quartile (`quartileBucket()`, unchanged), while `'sqrt'` instead compresses via the
@@ -19644,7 +19743,10 @@ that real DOM element; set it to give a frozen column band vertical scrolling to
 The legend row reads `--lr-heatmap-legend-font-size` (default `var(--lr-font-size-xs)`),
 `--lr-heatmap-legend-color` (default `var(--lr-color-text-quiet)`), `--lr-heatmap-legend-gap`
 (default `var(--lr-space-xs)`), `--lr-heatmap-legend-padding` (default `0`),
-`--lr-heatmap-legend-bg` (default `transparent`), `--lr-heatmap-legend-radius` (default `0`) and
+`--lr-heatmap-legend-bg` (default `transparent`), `--lr-heatmap-legend-radius` (default `0`),
+`--lr-heatmap-legend-font-family` (default `inherit`), `--lr-heatmap-legend-divider` (border
+shorthand, default `none`; drawn on the legend edge facing the grid: its block start under the
+default bottom placement, its block end under `legendPlacement = 'top'`) and
 `--lr-heatmap-legend-swatch-size` (default `var(--lr-size-0-6rem)`, stop swatches and annotation
 rings); the continuous ramp reads `--lr-heatmap-legend-ramp-inline-size` (default
 `var(--lr-size-6rem)`), `--lr-heatmap-legend-ramp-block-size` (default `var(--lr-size-0-5rem)`)
@@ -24040,7 +24142,7 @@ body is the block-axis scroll owner whenever the widget receives a constrained h
 header remains fixed while deep body content scrolls.
 
 For the docked frame, `--lr-widget-bg`, `--lr-widget-border-color` and `--lr-widget-radius`
-control the fill, border and corners. `--lr-widget-header-padding`, `--lr-widget-body-padding`
+control the fill, border and corners. `--lr-widget-header-divider` (default `var(--lr-border-width-thin) solid var(--lr-color-border-subtle)`) is the header's bottom rule as a border shorthand; `none` removes it. `--lr-widget-header-padding`, `--lr-widget-body-padding`
 and `--lr-widget-gap` override the size tier's padding and header gap. The selected view has a
 visible outline in forced colors. Collapsing a body that held focus returns focus to its toggle.
 
@@ -24654,7 +24756,14 @@ an attribute selector after `::part()`), which previously left overriding the li
 repainting everything else that reads them. Unset, each falls back to the token its rule used
 before, so rendering is unchanged. The upstream hooks `--indicator-color` (selected indicator),
 `--track-color` (resting strip rule), and `--track-width` (resting strip-rule thickness) are read
-first, with the Lyra/token values as fallbacks. `--lr-tab-group-vertical-nav-max-inline-size`
+first, with the Lyra/token values as fallbacks; `--lr-tab-group-track-width` (default
+`var(--lr-border-width-thin)`) is the Lyra-prefixed strip-rule thickness behind `--track-width`, on
+whichever edge `placement` puts the rule, and the selected underline keeps overlapping it exactly.
+The tab buttons themselves take `--lr-tab-group-tab-padding` (default
+`var(--lr-space-s) var(--lr-space-xs)`), `--lr-tab-group-tab-font-size` (default `inherit`) and
+`--lr-tab-group-tab-min-block-size` (default `auto`, for a taller touch-friendly strip); because the
+group renders the real tab button, these are set on the group or an ancestor, not on `<lr-tab>`.
+`--lr-tab-group-vertical-nav-max-inline-size`
 (default `var(--lr-size-12rem)`) caps a `start`/`end` nav's logical inline size while still allowing
 it to shrink in a constrained allocation. Its inline fallback means it can be set on the group or
 an ancestor; long single-line tab labels ellipsize within the cap rather than expanding the group or
@@ -24852,7 +24961,7 @@ text color of an `error` step. `--lr-stepper-current-index-bg` (default `var(--l
 `--lr-stepper-current-index-color` (default `var(--lr-color-on-brand)`) — background and text color
 of the `current` step's numbered `step-index` chip. The text color reads the dedicated on-brand
 foreground token, not `--lr-color-surface`, so the chip stays legible in dark mode and under forced
-colors, where surface and on-brand diverge. `--lr-stepper-index-bg` / `--lr-stepper-index-color`
+colors, where surface and on-brand diverge. `--lr-stepper-index-border` (default `none`; `--lr-stepper-current-index-border` and `--lr-stepper-error-index-border` fall back to it) draws a border on the index circle without resizing it. `--lr-stepper-index-bg` / `--lr-stepper-index-color`
 (defaults `var(--lr-color-neutral-fill-normal)` / `var(--lr-color-neutral-on-normal)`) paint every
 other step's index, `--lr-stepper-error-index-bg` / `--lr-stepper-error-index-color` (same defaults)
 an `error` step's index, and `--lr-stepper-check-color` (default `var(--lr-color-success)`) the
@@ -25443,6 +25552,7 @@ resolves.
 
 **Additional API surface:**
 
+- `--lr-segmented-segment-min-size` — Minimum inline and block size of each segment's hit area. Default: `var(--lr-size-24px)`.
 - `--lr-segmented-track-gap` — Gap between segments. Default: `var(--lr-size-0-125rem)`.
 - `--lr-segmented-track-radius` — Track corner radius. Default: `var(--lr-radius)`.
 - `--lr-segmented-segment-radius` — Each segment's own corner radius, independent of the track's.
@@ -26210,7 +26320,9 @@ presentations is on screen, for magnifier and braille users, rather than announc
 
 **Themeable custom properties:**
 `--lr-app-rail-frame-gap` (default `var(--lr-space-s)`), `--lr-app-rail-frame-radius` (default
-`var(--lr-radius)`), and `--lr-app-rail-frame-shadow` (default `var(--lr-shadow-s)`) customize a
+`var(--lr-radius)`), `--lr-app-rail-frame-border` (default `var(--lr-border-width-thin) solid
+var(--lr-color-border-subtle)`, every side; `--lr-app-rail-edge-border` still wins on the inline
+end), and `--lr-app-rail-frame-shadow` (default `var(--lr-shadow-s)`) customize a
 card frame. The card host uses `display: flow-root` to contain its margins; a consumer overriding
 host `display` owns that formatting context. Plain frames default to a transparent background,
 while an explicit `--lr-app-rail-bg` still wins. Forced colors restores the plain frame's
@@ -26932,7 +27044,8 @@ window.
 ## `lr-menu-label`
 
 The `lr-menu-label` styling hooks include `--lr-menu-label-color`, `--lr-menu-label-padding`, and
-`--lr-menu-label-font-size` (default `var(--lr-font-size-sm)`).
+`--lr-menu-label-font-size` (default `var(--lr-font-size-sm)`), `--lr-menu-label-font-weight`
+(default `var(--lr-font-weight-semibold)`) and `--lr-menu-label-letter-spacing` (default `normal`).
 
 A non-interactive section heading inside `<lr-menu>`'s default slot. Mirrors `sl-menu-label`.
 
@@ -27049,7 +27162,12 @@ Row chrome is controlled through the menu-item properties listed below.
 List density: `--lr-menu-padding` (default `var(--lr-space-xs)`) pads `[part="list"]` and
 `--lr-menu-gap` (default `0`) spaces its rows. Both apply inside `lr-dropdown` too and are read only
 through `var()` fallbacks, so one declaration on the menu or an ancestor retunes the list without a
-`::part(list)` rule. The scrolling list also honors the theme-level
+`::part(list)` rule. `--lr-menu-max-block-size` (default `var(--lr-size-20rem)`) is the list's
+block-size ceiling, past which it scrolls; it also caps a submenu's surface. Inside `lr-dropdown`
+the positioned available space still caps it, and a standalone menu can be raised above `20rem`.
+To widen a dropdown's menu, set `--lr-overlay-min-inline-size` or `--lr-overlay-inline-size` on the
+`lr-dropdown`, not a width on the `lr-menu`: a contained menu is `display: contents`, so its list
+lays out directly in the popup and fills whatever width the popup takes. The scrolling list also honors the theme-level
 `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color` hooks
 (defaults `auto`/`auto`/`auto`), like every other internal scroll container.
 
@@ -27187,7 +27305,9 @@ expanding the popup.
 **Themeable custom properties:** `--lr-menu-item-gap`, `--lr-menu-item-radius`,
 `--lr-menu-item-danger-color`, `--lr-menu-item-danger-hover-bg`,
 `--lr-menu-item-danger-active-bg`, `--lr-menu-item-checked-bg` (default `transparent`),
-`--lr-menu-item-checked-color` (default `inherit`), `--lr-menu-item-checked-font-weight` (default
+`--lr-menu-item-color` (default `inherit`; a resting row's text, which danger, disabled and checked
+rows override), `--lr-menu-item-checked-color` (default `var(--lr-menu-item-color)`),
+`--lr-menu-item-checked-font-weight` (default
 `inherit`), and `--submenu-offset`, plus shared size/focus/color/spacing tokens. The checked hooks
 apply to a `type="checkbox" checked` or `type="radio" checked` row's `[part="base"]`, matching the
 checked/selected-state hooks `<lr-option>`, `<lr-select>`, `<lr-combobox>`, and `<lr-tree-item>`
@@ -27211,8 +27331,12 @@ itself.
 Row density hooks, also inline fallbacks: `--lr-menu-item-padding-block` (default
 `var(--lr-form-control-padding-block)`), `--lr-menu-item-padding-inline` (default
 `var(--lr-form-control-padding-inline)`), `--lr-menu-item-font-size` (default
-`var(--lr-form-control-font-size)`) and `--lr-menu-item-icon-size` (default `inherit`), the font
-size of `[part="icon"]`, which sizes a slotted `lr-icon` or any `1em` glyph.
+`var(--lr-form-control-font-size)`), `--lr-menu-item-font-weight` (default `inherit`),
+`--lr-menu-item-letter-spacing` (default `normal`), `--lr-menu-item-details-font-size` (default
+`var(--lr-font-size-sm)`) and `--lr-menu-item-details-color` (default `var(--lr-color-text-quiet)`)
+for `[part="details"]`, and `--lr-menu-item-icon-size` (default `inherit`), the font
+size of `[part="icon"]`, which sizes a slotted `lr-icon` or any `1em` glyph. `lr-dropdown-item`
+reads the same row tokens.
 
 ```html
 <lr-menu style="--lr-menu-padding: 2px; --lr-menu-item-padding-block: 2px; --lr-menu-item-font-size: var(--lr-font-size-sm); --lr-menu-item-icon-size: 14px;">
@@ -27731,6 +27855,13 @@ restating a surface — defaults to `var(--lr-color-surface)`, mirroring `<lr-de
 `--lr-card-interactive-hover-border-color`, `--lr-card-interactive-active-border-color`, and
 `--lr-card-interactive-active-overlay`. They inherit from ancestors and fall back to the exact
 former brand and active-mix values when unset.
+`--lr-card-body-padding` pads the body alone (`--spacing` also moves the header, footer and gaps). `--lr-card-border-color` colours the OUTER border only (falling back to `--border-color`, then the
+tiers above): `--border-color` also recolours the header and footer dividers and, being inherited,
+reaches a nested `lr-data-grid`, which `--lr-card-border-color` does not. A card inside a wrapping
+router link (`<a href="/x"><lr-card>`) is not `actionable` and paints no hover of its own; drive it
+from the link instead, for example `a:hover > lr-card { --lr-card-border-color: var(--lr-color-brand);
+--lr-card-shadow: var(--lr-shadow-s); }`. Prefer the card's own `href` where the router can
+intercept clicks, since it owns hover, press and focus without a nested interactive wrapper.
 `--lr-card-shadow` is **undeclared by default**, so `box-shadow` falls back to `none`,
 mirroring `--lr-button-shadow`'s pattern; set it
 for a raised card without a `::part(base)` rule. `--lr-card-interactive-hover-shadow` styles an
@@ -28304,7 +28435,8 @@ Details surface paint uses `--lr-details-outlined-bg` / `--lr-details-outlined-b
 respectively the existing surface/border, brand-quiet/transparent, and brand-quiet/border values.
 Summary interaction paint uses `--lr-details-summary-hover-bg` (default
 `var(--lr-color-brand-quiet)`) and `--lr-details-summary-active-bg` (default the existing active
-`color-mix(...)`). All eight are inheritable inline-fallback hooks, so they isolate one disclosure
+`color-mix(...)`); `--lr-details-summary-hover-color` (default `var(--lr-details-summary-color)`)
+recolors the summary text while hovered or pressed. All eight are inheritable inline-fallback hooks, so they isolate one disclosure
 theme without requiring shared-token changes or shadow-part selectors.
 
 ```html
@@ -30407,6 +30539,11 @@ promise/result contract.
 
 **Themeable custom properties:** `--lr-toast-gap` (default `var(--lr-space-s)`),
 `--lr-toast-width` (default `var(--lr-size-28rem)`) — set directly on the `<lr-toast>` element.
+`--lr-toast-inset-block` and `--lr-toast-inset-inline` (both default `var(--lr-space-l)`) set the
+region's distance from the viewport's block (top/bottom) and inline (start/end) edges; the
+`--lr-safe-area-*` insets still win wherever they are larger. Each placement is its own region
+element, so scope either token to one region with a placement selector, for example
+`lr-toast[placement^='bottom'] { --lr-toast-inset-block: var(--lr-space-m); }`.
 The mapped `--gap` and `--width` names are compatibility aliases for those two Lyra-prefixed
 properties; an explicitly set Lyra-prefixed property continues to take precedence.
 Every `<lr-toast-item>` property below is also documented on the region, because custom properties
@@ -30768,6 +30905,11 @@ the slide animation are its own.
 - `contained: boolean = false` (attribute `contained`, reflected) — position within the nearest
   containing block without a backdrop, page inerting, focus trap, scroll lock, top-layer
   promotion, or global Escape ownership
+- `floating: boolean = false` (attribute `floating`, reflected) — an inset, floating sheet: the
+  panel keeps a `--lr-drawer-inset` gap (default `var(--lr-space-s)`) from every viewport edge
+  (from the containing block's edges with `contained`; the safe-area insets still win where
+  larger) and rounds its corners with `--lr-overlay-radius` (default `var(--lr-radius-container)`).
+  Off by default, so the drawer stays square and edge-flush.
 - `heading?: string`, `label: string`,
   `withoutCloseButton: boolean = false` (attribute `without-close-button`, reflected),
   `noHeader: boolean = false` (attribute `no-header`, Shoelace's spelling, reflected),
@@ -30831,14 +30973,18 @@ used by `placement="top"|"bottom"`), `--lr-drawer-enter-x` / `--lr-drawer-enter-
 slide translate offset, used for both the enter and the exit keyframes — `-x` for start/end, `-y`
 for top/bottom; both default to `±var(--lr-size-1rem)` and are set per `placement`, with `-x`
 explicitly flipped under `:dir(rtl)` since `translateX` is physical. Override to lengthen/shorten
-the slide). It also inherits every `<lr-dialog>` token — `--lr-dialog-overlay-color`,
+the slide), `--lr-drawer-panel-bg` (the panel's own fill, ahead of the inherited
+`--lr-dialog-panel-bg` and the shared `--lr-overlay-surface`; unlike the shared token it does not
+retint popups opened inside the drawer), `--lr-drawer-radius` (default `0`, or
+`--lr-overlay-radius` while `floating` is set; an explicit value wins either way) and
+`--lr-drawer-inset` (default `var(--lr-space-s)`; the `floating` gap, ignored otherwise). It also inherits every `<lr-dialog>` token — `--lr-dialog-overlay-color`,
 `--lr-dialog-backdrop-filter`, `--lr-dialog-width`, `--lr-dialog-max-width`, `--lr-dialog-spacing`,
 `--lr-dialog-spacing-block`, `--lr-dialog-panel-duration` and `--lr-dialog-backdrop-duration` —
 since `LyraDrawer` extends `LyraDialog`, including the shared overlay-surface family the panel
 paints from: `--lr-overlay-surface`, `--lr-overlay-border`, `--lr-overlay-radius` and
 `--lr-overlay-shadow-modal`. The drawer's own `[part~="panel"]` rule squares the corners and steps
 the default elevation down to `var(--lr-shadow-l)` — three of its edges are flush with the viewport —
-so on this tag `--lr-overlay-radius` is overridden, while the fill, edge colour and a consumer
+so on this tag `--lr-overlay-radius` is overridden unless `floating` is set, while the fill, edge colour and a consumer
 `--lr-overlay-shadow-modal` still take effect. `--lr-dialog-height` is deliberately **not** among the
 inherited tokens above: `<lr-drawer>`'s own `[part~="panel"]` rule unconditionally sets its own
 `block-size` for every placement (`100%` for `start`/`end`, a `--lr-drawer-height`-driven `min()`
@@ -30851,8 +30997,8 @@ override `body` would always stretch and push `footer` to the panel's far edge. 
 `[part="body"]` rule restores the natural content size instead, so `footer` follows immediately
 after a short body. Set the inherited `fill-body` attribute to opt back in: `body` then grows to the
 panel and becomes a column flex container whose slotted children fill it. The inherited
-`--lr-dialog-heading-font-size`, `--lr-dialog-heading-font-weight` and
-`--lr-dialog-heading-font-family` tokens style the drawer's header title exactly as on
+`--lr-dialog-heading-font-size`, `--lr-dialog-heading-font-weight`,
+`--lr-dialog-heading-letter-spacing` and `--lr-dialog-heading-font-family` tokens style the drawer's header title exactly as on
 `<lr-dialog>`. The drawer's own
 size/width/height tokens take precedence
 for its panel, and only the animation _name_ is overridden, so `--lr-dialog-panel-duration` retunes the
@@ -30867,6 +31013,8 @@ slide too and the reduced-motion flattening of the shared `--lr-duration-*` toke
 ```
 
 ---
+
+The drawer inherits the dialog's opt-in `fullscreen-narrow` attribute (a viewport narrower than 40rem fills the screen) and the panel sizing tokens `--lr-dialog-max-height`, `--lr-dialog-viewport-inset` and `--lr-dialog-divider-color`, exactly as on `<lr-dialog>`.
 
 ## `lr-dialog` / `confirm()`
 
@@ -30913,6 +31061,11 @@ read, and neither is deprecated.
   panel) leaves it.
 - `withFooter: boolean = false` (attribute `with-footer`, reflected) — keeps the footer wrapper
   rendered as an SSR/hydration presence hint even before assigned slot content is observable
+- `fullscreenNarrow: boolean = false` (attribute `fullscreen-narrow`, reflected) — opt-in
+  full-screen layout below a `40rem` viewport width: the panel drops the viewport inset, corner
+  radius and size caps, fills the viewport and pads itself with the `--lr-safe-area-*` insets. At
+  wider viewports it renders exactly as without the attribute. The `(max-width: 40rem)` breakpoint
+  is evaluated with `matchMedia()` and followed live while the dialog is connected.
 - `size: LyraSize = 'm'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
   'large'`. Panel-width tier, on the shared six-step ladder: `20rem` (`2xs`), `24rem` (`xs`), `28rem`
   (`s`/`small`), `32rem` (`m`/`medium`), `38rem`
@@ -31060,7 +31213,12 @@ the private `--_lr-dialog-max-width` is the `size` property's own tier value (`3
 default, unchanged); when
 `--lr-dialog-width` is set but `--lr-dialog-max-width` is left at its default, the cap falls back to
 the requested width itself — not the tier default — so an assertive width isn't silently clipped;
-the viewport is still a hard limit either way), `--lr-dialog-height` (default `auto` — the panel
+the viewport is still a hard limit either way), `--lr-dialog-max-height` (default `100%` — the
+panel's max-block-size cap, the block-axis twin of `--lr-dialog-max-width`, applied as
+`min(var(--lr-dialog-max-height, 100%), 100%)` so the viewport stays a hard limit),
+`--lr-dialog-viewport-inset` (default `var(--lr-space-l)` — the gap between the viewport edges and
+the panel on all four sides; the `--lr-safe-area-*` insets still win where larger; replaces the
+`::part(dialog) { max-block-size }`-style overrides), `--lr-dialog-height` (default `auto` — the panel
 shrink-wraps to content on the block axis; always capped at
 `100%`, i.e. the viewport, like every other panel dimension). With it set, `[part="body"]`'s own
 `flex: 1 1 auto` is what actually gives slotted content a definite, fillable block size:
@@ -31072,8 +31230,8 @@ preview or editor fills the dialog without a `::part(body)` rule; light-DOM rule
 still win, so `flex: none` keeps a heading or toolbar at its natural size. On `<lr-drawer>`,
 `fill-body` also restores the body growth the drawer otherwise opts out of.
 `--lr-dialog-heading-font-size` (default `inherit`), `--lr-dialog-heading-font-weight` (default
-`var(--lr-font-weight-semibold)`) and `--lr-dialog-heading-font-family` (default
-`var(--lr-font-heading)`) style the visible header title (`[part~="heading"]`), including
+`var(--lr-font-weight-semibold)`), `--lr-dialog-heading-letter-spacing` (default `normal`) and
+`--lr-dialog-heading-font-family` (default `var(--lr-font-heading)`) style the visible header title (`[part~="heading"]`), including
 `confirm()`'s. `--lr-dialog-spacing` (default `var(--lr-space-l)` —
 the padding inside `[part="body"]` and the _inline_ padding of the header and footer rows),
 `--lr-dialog-spacing-block` (default `var(--lr-space-m)` — the _block_ padding of the header and
@@ -31083,10 +31241,14 @@ footer rows, which are tighter than the body by default), `--lr-dialog-panel-dur
 The panel paints from the **shared overlay-surface family** (16.0.0), not from the page-surface
 tokens this entry previously named: `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`
 — the panel fill), `--lr-overlay-border` (default `var(--lr-color-border-subtle)` — the panel edge and the
-header's and footer's dividing rules), `--lr-overlay-radius` (default `var(--lr-radius)` — the panel
+header's and footer's dividing rules unless `--lr-dialog-divider-color` is set), `--lr-overlay-radius` (default `var(--lr-radius)` — the panel
 corner and the close button's) and `--lr-overlay-shadow-modal` (default `var(--lr-shadow-xl)` — the
 panel's elevation). None is declared on `:host`, so one declaration on `:root` (or on any ancestor,
-to scope it) retints the dialog together with every popup opened from it. The modal tier is a
+to scope it) retints the dialog together with every popup opened from it. Two dialog-scoped hooks
+split the panel from that family: `--lr-dialog-panel-bg` (default: the `--lr-overlay-surface` chain)
+fills this panel only, so popups, menus and listboxes opened inside the dialog keep the overlay
+surface, and `--lr-dialog-divider-color` (default: the `--lr-overlay-border` chain) colours the
+header's and footer's dividing rules apart from the panel edge. The modal tier is a
 separate name from `--lr-overlay-shadow-anchored`, which anchored popups read, so raising popups
 never raises dialogs.
 
@@ -31263,6 +31425,46 @@ with `className`:
   Invoking the helper synchronously registers both classes before mounting the transient element;
   consumers do not need a separate registration import for helper-created dialogs.
 
+### `prompt()`
+
+A drop-in async replacement for `window.prompt()`, and the text-entry sibling of `confirm()`, with
+the same module conventions.
+
+```ts
+import { prompt } from "@aceshooting/lyra-ui/components/overlays/dialog/prompt.js";
+
+const name = await prompt({
+  title: "Rename conversation",
+  label: "Name",
+  value: conversation.name,
+  validate: (value) => (value.trim() ? null : "Enter a name"),
+});
+if (name !== null) renameConversation(name);
+```
+
+`prompt(options: PromptOptions): Promise<string | null>` where
+`PromptOptions = { title: string; label: string; description?: string; value?: string /* = '' */; placeholder?: string; validate?: (value: string) => string | null | undefined; confirmLabel?: string /* = 'Confirm' */; cancelLabel?: string /* = 'Cancel' */; size?: LyraSize /* = 'm' */; headingLevel?: LyraHeadingLevel /* = '2' */; className?: string }`.
+
+Resolves the submitted string when the confirm button is pressed or Enter is pressed in the field,
+and `null` on Escape, a backdrop click, the cancel button or removal. The body holds one labelled
+`<lr-input data-lr-prompt-field>` (`label` names it) that starts with `value` and takes focus when
+the dialog opens, through the dialog's own `lr-initial-focus` hand-off. Submitting runs
+`validate(value)` first: a returned non-empty message becomes the field's `errorText` (announced
+and `aria-invalid="true"`), the field keeps focus and the dialog stays open; typing clears it, and
+`null`, `undefined` or `''` accepts the value. The message is rendered as given, so localize it in
+the caller. The default action labels resolve the shared `'confirm'` and `'cancel'` messages
+through the active locale, exactly as `confirm()`'s do.
+
+Everything else matches `confirm()`: a transient `<lr-dialog>` on `document.body` with
+`lightDismiss` on and no header close button, removed after its exit animation; `title` is the
+header title at `headingLevel`; `size` and `className` are forwarded; dismissal funnels through
+`close()`/`lr-close`, so a `lr-hide` or `lr-close-request` veto keeps it open; focus returns to the
+opener once it settles. Actions are `<lr-button>` elements in the `footer` slot carrying
+`data-lr-prompt-action="cancel" | "confirm"`, and `description` becomes a zero-specificity
+`<p data-lr-prompt-description>` above the field, so `--lr-dialog-*`, `--lr-input-*` and
+`--lr-button-*` tokens scoped through `className` all apply. Importing `prompt` is side-effect
+free; invoking it registers `<lr-dialog>`, `<lr-input>` and `<lr-button>`.
+
 ---
 
 ## `lr-chip` / `lr-chip-group`
@@ -31434,6 +31636,14 @@ The collapsed overflow button shows `showMoreCollapsed` (`+2`). Its accessible n
 A flex-wrap container for a set of `<lr-chip>` children — plain light-DOM composition, direct
 children are the chips (the same shape `<lr-multi-split>`'s panels / `<lr-source-list>`'s cards take,
 no `.items` array prop).
+
+**Selection (opt-in).** `selection="single|multiple"` (default `none`: the group manages nothing) makes the group own the pressed state of every direct `<lr-chip>` child that has a `value`: it sets them `toggleable` and presses the ones in `value`. In `single` pressing a chip releases the others; pressing a pressed chip releases it, so the selection can be empty. `value` is a string in `single` and a `string[]` in `multiple` (as an attribute, comma-separated in `multiple`); assigning it is silent. `lr-change` (`detail: { value }`, same shape) fires only from a user press. `all-value="all"` (property `allValue`) marks the child chip whose `value` is `all` as the "all" chip: pressed while the selection is empty, pressing it clears the selection, and it cannot be un-pressed; it is never part of `value`. Chips without a `value` are left alone.
+
+```html
+<lr-chip-group aria-label="Status" selection="multiple" all-value="all" value="open,blocked">
+  <lr-chip value="all">All</lr-chip><lr-chip value="open">Open</lr-chip><lr-chip value="blocked">Blocked</lr-chip>
+</lr-chip-group>
+```
 
 **Properties:**
 
@@ -31873,6 +32083,11 @@ If the import fails, leave the native disclosure visible and usable.
   middle of the edge regardless of where the anchor is
 - `arrowPadding: number = 0` (attribute `arrow-padding`) — keeps the arrow this many px from the
   popup's corners
+- `fullWidthTrigger: boolean = false` (attribute `full-width-trigger`, reflected) — lays the
+  trigger out at full width: the host becomes `display: block` and the `trigger` part and the
+  slotted trigger element stretch to the host's inline size (a trigger in a form column or
+  sidebar). Unset, the host and trigger stay `inline-block`. It does not size the popup; pair it
+  with `--lr-overlay-inline-size` (or `lr-dropdown`'s `sync`) for that.
 - `accessibleLabel: string = ''` (attribute **`aria-label`**) — names the popup. An authored host
   attribute wins by presence, including `aria-label=""` (whitespace-only is ignored); otherwise the property
   or localized "Popover" ("Menu" when `popupRole` is `menu`) fallback apply
@@ -31998,7 +32213,12 @@ match; the state is in the part name.
 
 **Themeable custom properties:** mapped `--max-width`, `--arrow-size`, `--show-duration`, and
 `--hide-duration`, with retained `--lr-overlay-max-inline-size` and `--lr-overlay-arrow-size`
-fallbacks. Arrow size is half the square's width. Rendering the arrow switches `[part~="popup"]` to
+fallbacks. Arrow size is half the square's width. `--lr-overlay-inline-size` (default `auto`, the
+popup shrink-wraps) is an assertive popup width; with it set and no maximum given, the maximum
+falls back to that width instead of `20rem`, and the available viewport space is always a hard
+limit. `--lr-overlay-min-inline-size` (default `0px`) floors the popup for short content, itself
+capped by the available space. `--lr-overlay-content-padding` (default `var(--lr-space-m)`) pads
+`[part~="content"]`. Rendering the arrow switches `[part~="popup"]` to
 `overflow: visible` so it is not clipped, moving the scroll container onto `[part~="content"]`.
 
 The popup and its arrow paint from the **shared overlay-surface family** (16.0.0):
@@ -32387,8 +32607,8 @@ its surface.
   light-dismiss handling.
 - `withoutArrow: boolean = false` (attribute `without-arrow`, reflected) — suppresses the
   pointer. Set `without-arrow` to preserve the previous omitted-arrow appearance.
-- `arrowPlacement`, `arrowPadding`, and `accessibleLabel` (`aria-label`) are inherited from
-  `lr-popover`.
+- `arrowPlacement`, `arrowPadding`, `fullWidthTrigger` (`full-width-trigger`), and
+  `accessibleLabel` (`aria-label`) are inherited from `lr-popover`.
 - `popupRole: 'menu'` (attribute `popup-role`) is the narrowed inherited surface. Dropdowns cannot
   be changed into dialogs; use `lr-popover popup-role="dialog"` for arbitrary dialog-like content.
 
@@ -32429,7 +32649,10 @@ default; style it only to debug the travel region.
 
 **Themeable custom properties:** `--show-duration` and `--hide-duration` (both default
 `var(--lr-transition-fast)`), mapped `--max-width` and `--arrow-size`, plus retained
-`--lr-overlay-max-inline-size` and `--lr-overlay-arrow-size` fallbacks. The popup surface is
+`--lr-overlay-max-inline-size` and `--lr-overlay-arrow-size` fallbacks, and the inherited
+`--lr-overlay-inline-size` / `--lr-overlay-min-inline-size` popup width hooks (a `top-layer` popup
+honours them too). The menu keeps its own compact `var(--lr-space-xs)` content padding, so
+`--lr-overlay-content-padding` does not reach it. The popup surface is
 `lr-popover`'s, so the whole overlay-surface family reaches it unchanged: `--lr-overlay-surface`,
 `--lr-overlay-border`, `--lr-overlay-radius`, `--lr-overlay-shadow-anchored`, and the cascading
 `--lr-positioning-strategy` override documented on `<lr-popover>`
@@ -32630,8 +32853,10 @@ parent; set `lr-context-menu { display: block }` to get a box.
 (`var(--lr-overlay-max-inline-size, var(--lr-size-20rem))`), `--lr-overlay-surface`
 (`var(--lr-color-surface-overlay)`), `--lr-overlay-border` (`var(--lr-color-border-subtle)`),
 `--lr-overlay-radius` (`var(--lr-radius)`), `--lr-overlay-shadow-anchored` (`var(--lr-shadow-m)`),
-`--lr-overlay-max-inline-size` (`var(--lr-size-20rem)`), and `--show-duration` / `--hide-duration`
-(`var(--lr-transition-fast)`). Row styling uses the `--lr-menu-item-*` properties on your rows.
+`--lr-overlay-max-inline-size` (`var(--lr-size-20rem)`), `--lr-context-menu-min-inline-size`
+(the menu's minimum inline size, capped by the available space; it wins over the shared
+`--lr-overlay-min-inline-size`, default `0px`, which it falls back to while unset), and
+`--show-duration` / `--hide-duration` (`var(--lr-transition-fast)`). Row styling uses the `--lr-menu-item-*` properties on your rows.
 The popup always uses fixed positioning (the anchor is a viewport point), so the cascading
 `--lr-positioning-strategy` is not consulted. Like `lr-dropdown`, it is promoted to the top layer
 only when a transformed, filtered or contained ancestor (such as an `lr-virtual-list` row) would
@@ -33022,7 +33247,7 @@ _Surface — what `appearance` routes onto the box_: `--lr-badge-fill` (default
 palette.
 
 _Density and shape:_ `--lr-badge-font-size` (default `var(--lr-font-size-sm)`),
-`--lr-badge-padding-inline` (default `var(--lr-space-s)`) and `--lr-badge-min-height` (default
+`--lr-badge-font-weight` (default `var(--lr-font-weight-medium)`) and `--lr-badge-line-height` (default `var(--lr-line-height-compact)`) set the label's weight and line height; `--lr-badge-padding-inline` (default `var(--lr-space-s)`) and `--lr-badge-min-height` (default
 `var(--lr-size-1-25rem)`) — the trio each private effective-size rule rewrites to that step's font size,
 inline padding and minimum block size; the `m` defaults above exactly reproduce the pre-`size` fixed
 badge treatment. `--lr-badge-gap` (default `var(--lr-space-2xs)`) is the space between
@@ -33547,6 +33772,10 @@ These named interfaces and helper signatures are available to typed integrations
   `ChipGroupOverflowToggleDetail {
     expanded: boolean;
   }`
+  Import: `@aceshooting/lyra-ui/components/overlays/chip/chip-group.class.js`.
+  `ChipGroupChangeDetail {
+    value: string | string[];
+  }`
 
 - **`components-overlays-chip-chip-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/overlays/chip/chip.class.js`.
@@ -33586,6 +33815,24 @@ These named interfaces and helper signatures are available to typed integrations
     confirmLabel?: string;
     cancelLabel?: string;
     variant?: 'neutral' | 'danger';
+    size?: LyraSize;
+    headingLevel?: LyraHeadingLevel;
+    className?: string;
+  }`
+
+- **`components-overlays-dialog-prompt-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/overlays/dialog/prompt.js`.
+  `prompt(options: PromptOptions): Promise<string | null>`
+  Import: `@aceshooting/lyra-ui/components/overlays/dialog/prompt.js`.
+  `PromptOptions {
+    title: string;
+    label: string;
+    description?: string;
+    value?: string;
+    placeholder?: string;
+    validate?: (value: string) => string | null | undefined;
+    confirmLabel?: string;
+    cancelLabel?: string;
     size?: LyraSize;
     headingLevel?: LyraHeadingLevel;
     className?: string;
@@ -36572,7 +36819,10 @@ date, or state instead; enable `with-value` when sighted users also need that te
 called at most once per render and both presentations share its result. The visible text wraps at narrow
 allocations and is not a live region, avoiding unsolicited announcements on every timer tick.
 
-**Themeable custom properties:** `--lr-sequence-playback-icon-size` (default
+**Themeable custom properties:** the `with-value` readout takes `--lr-sequence-playback-value-font-family`
+(default `inherit`), `--lr-sequence-playback-value-font-size` (default `var(--lr-font-size-sm)`), `--lr-sequence-playback-value-font-weight` (default `inherit`),
+`--lr-sequence-playback-value-min-width` (default `0`; reserve room so a changing number does not shift the slider) and `--lr-sequence-playback-value-text-align`
+(default `inherit`). `--lr-sequence-playback-icon-size` (default
 `calc(var(--lr-icon-button-size) * 0.35)` — the play/pause glyph's size; applied as the button's
 `font-size`, and the inline SVG renders at `1em`).
 `--lr-sequence-playback-play-button-active-bg` (default
@@ -36716,7 +36966,27 @@ shorthand), `--lr-map-control-shadow`, `--lr-map-control-bg` (resting fill under
 treatment) and `--lr-map-control-color` shape control groups and outlines; `--lr-map-control-hover-bg`
 and `--lr-map-control-active-bg` paint pointer states in every state (the action tokens no longer reach native controls);
 `--lr-map-control-gap` is the margin around each control. The attribution control takes
-`--lr-map-attribution-radius` and `--lr-map-attribution-border`.
+`--lr-map-attribution-radius`, `--lr-map-attribution-border`, `--lr-map-attribution-padding`
+(default `0 var(--lr-space-xs)`), `--lr-map-attribution-link-padding` (default `0`; each link keeps
+its `--lr-size-24px` minimum box), `--lr-map-attribution-max-inline-size` (default `100%`, never
+wider than the map less the control gaps), `--lr-map-attribution-font-family` (default `inherit`),
+`--lr-map-attribution-font-size` (default `var(--lr-font-size-xs)`) and
+`--lr-map-attribution-line-height` (default `inherit`). Its compact toggle takes
+`--lr-map-attribution-toggle-size` (default `--lr-map-control-size`, then `--lr-icon-button-size`;
+the compact control reserves the same room), `--lr-map-attribution-toggle-radius` (default
+`--lr-map-control-radius`, then a pill) and `--lr-map-attribution-toggle-icon-size` (default
+`var(--lr-size-1rem)`). A grouped zoom, compass or
+geolocate stack takes group-level tokens on top: `--lr-map-control-group-radius` and
+`--lr-map-control-group-border` (defaults: `--lr-map-control-radius` and `--lr-map-control-border`)
+shape the group's outer edge, `--lr-map-control-button-radius` (default `inherit`, the group radius)
+sets the buttons' own corners while the first and last button keep the group's outer corners, and
+`--lr-map-control-divider` (border shorthand, default `var(--lr-border-width-thin) solid
+var(--lr-color-border)`; `none` removes it) draws the line between buttons. The scale takes
+`--lr-map-scale-bg` (default `--lr-map-control-bg`), `--lr-map-scale-radius` (default `0`),
+`--lr-map-scale-border` (default `none`), `--lr-map-scale-padding-block` (default
+`var(--lr-space-2xs)`; the block end adds the ruler's height), `--lr-map-scale-padding-inline`
+(default `var(--lr-space-xs)`), `--lr-map-scale-font-size` (default `var(--lr-font-size-xs)`) and
+`--lr-map-scale-color` (default `var(--lr-color-text)`).
 
 ```css
 lr-map.branded {
@@ -36724,6 +36994,14 @@ lr-map.branded {
   --lr-map-control-radius: var(--lr-radius-pill);
   --lr-map-control-border: none;
   --lr-map-control-hover-bg: var(--lr-color-brand-quiet);
+}
+/* One pill per group: rounded outer ends, square inner corners, a quiet divider. */
+lr-map.pill-groups {
+  --lr-map-control-group-radius: var(--lr-radius-pill);
+  --lr-map-control-button-radius: 0;
+  --lr-map-control-divider: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+  --lr-map-scale-radius: var(--lr-radius-pill);
+  --lr-map-scale-padding-inline: var(--lr-space-s);
 }
 ```
 
@@ -36733,6 +37011,30 @@ header) owns part of a map edge, set `--lr-map-controls-inset-block-start`,
 `--lr-map-controls-inset-inline-end` (each default `0px`) instead of measuring it. They push the native and initialization
 control stacks inward on that logical edge (`inline-start` is the right edge under RTL), and the
 legend and the pick, drawing and scene bars clear the same space.
+
+One corner alone takes `--lr-map-controls-<corner>-inset-block` and
+`--lr-map-controls-<corner>-inset-inline` (`<corner>` is `top-left`, `top-right`, `bottom-left` or
+`bottom-right`, the control position vocabulary; each default `0px`; that is `--lr-map-controls-top-left-inset-block`, `--lr-map-controls-top-left-inset-inline`, `--lr-map-controls-top-right-inset-block`, `--lr-map-controls-top-right-inset-inline`, `--lr-map-controls-bottom-left-inset-block`, `--lr-map-controls-bottom-left-inset-inline`, `--lr-map-controls-bottom-right-inset-block` and `--lr-map-controls-bottom-right-inset-inline`), before and after
+construction. The block inset offsets the corner from its row's edge and the inline inset from its
+column's edge; the left corners are the inline-start corners, so they sit at the right under RTL.
+The control row grows with the corner, so the legend (also under `legendClearance = 'corner'`) and
+the pick, drawing and scene bars keep clearing it.
+
+```css
+/* Only the zoom stack moves down past an application search card. */
+lr-map { --lr-map-controls-top-right-inset-block: 4rem; }
+```
+
+`controlsAvoid?: readonly Element[]` (property only) measures that chrome instead: it is observed
+like `anchorAvoid` (size, page scrolling, visual viewport, once per animation frame), each
+element's overlap with the map is reserved on its cheapest logical edge and added to that edge's
+`--lr-map-controls-inset-*`, so every corner stack, the legend and the bars clear it; the authored
+inset then acts as the gap beyond the element. Clearing it, removing an element or disconnecting
+the map releases the observers.
+
+```ts
+map.controlsAvoid = [document.querySelector('.floating-search')!];
+```
 
 **Large spatial sources:** a catalog of a million logical geospatial records can stay in a
 host-owned spatial service. Supply a hosted vector style URL, or a style object with vector tile
@@ -37249,10 +37551,16 @@ implicitly reopen it unless `drawingCompleteBehavior = 'edit'` (attribute
 `drawing-complete-behavior`, reflected, default `'clear'`; an unsupported value normalizes to
 `'clear'`) is set: then the completed shape stays on the map as
 an edit session, opened synchronously right after `lr-map-draw-complete`, and finishing that edit
-commits and clears it. `drawingSticky = false` (reflected attribute `drawing-sticky`) set to `true`
+commits and clears it. `drawingFinishBehavior = 'clear'` (attribute `drawing-finish-behavior`,
+reflected; an unsupported value normalizes to `'clear'`) set to `'keep'` makes Finish
+(`completeDrawing()`) on any edit session commit (`lr-map-draw-complete`) and keep the edit open,
+so the committed shape stays visible and editable and each later Finish commits again; cancel,
+Escape or `cancelDrawing()` ends it. `drawingSticky = false` (reflected attribute `drawing-sticky`) set to `true`
 keeps `drawMode` armed after a completion or a user cancel (cancel action, Escape,
-`cancelDrawing()`), or re-arms it when the edit opened by `'edit'` ends, so the next shape starts at
-once without listeners re-assigning `drawMode`. Pick mode, disabling and mode changes still disarm. Before the drawing runtime has loaded it returns `false` without reading the
+`cancelDrawing()`), or re-arms it when the edit opened by `'edit'` ends (under `'keep'`, only once
+it is cancelled), so the next shape starts at once without listeners re-assigning `drawMode`. The
+sticky flag is read when that edit ends: clearing it while the edit is open leaves `drawMode` at
+`'none'`. Pick mode, disabling and mode changes still disarm. Before the drawing runtime has loaded it returns `false` without reading the
 snapshot and starts the load; await `whenIdle()` and call it again. Keyboard vertex handles and
 pointer edits update the same session. Arrow keys move a focused vertex in screen direction in both
 LTR and RTL, because the map canvas is never mirrored.
@@ -37297,7 +37605,24 @@ consumer that moves `anchor-close` to the header corner through `::part(anchor-c
 `--lr-map-anchor-close-reservation` to pad that logical edge of `anchor-body`. For a rich card with
 a fixed header and scrolling details, prefer an `lr-map-anchor` child: its close button owns its own
 column at the block-start, inline-end corner, so the header never runs under it, and its `body`
-scrolls.
+scrolls. To keep such a card in the `anchor` slot, set `anchorFill = false` (attribute `anchor-fill`,
+reflected) to `true`: `anchor-body` stops scrolling and becomes a column that shrinks the slotted
+card to the panel, so the card's own details region (`flex: 1 1 auto; min-block-size: 0;
+overflow: auto`) scrolls with no wrapper. The body then reserves no close room; the slotted content
+inherits `--lr-map-anchor-close-reservation`, so the card pads only its header with it:
+
+```html
+<lr-map anchor-closable anchor-fill style="--lr-map-anchor-close-reservation: 2.5rem">
+  <article slot="anchor" style="display: flex; flex-direction: column; min-block-size: 0">
+    <h3 style="padding-inline-end: var(--lr-map-anchor-close-reservation)">Station 12</h3>
+    <div style="flex: 1 1 auto; min-block-size: 0; overflow: auto">Long details</div>
+  </article>
+</lr-map>
+```
+
+Move the close action into the reserved header corner with
+`lr-map::part(anchor-close) { position: absolute; inset-block-start: 0; inset-inline-end: 0; }`;
+the positioned `anchor` panel is its containing block.
 
 `anchorAvoid?: readonly Element[]` (property only) keeps anchors clear of application chrome
 without measuring it: the map observes each element's size, page scrolling and the visual
@@ -37305,7 +37630,9 @@ viewport (once per animation frame), intersects each with the map and reserves t
 cheapest logical edge (a full-width header reserves `blockStart`, a full-height side sheet its
 inline edge). The result is folded into `anchorSafeArea` edge by edge, the larger inset winning,
 for the `anchor` slot and every `lr-map-anchor` child without its own `safeArea`. Clearing it,
-removing an element or disconnecting the map releases the observers.
+removing an element or disconnecting the map releases the observers. `anchorAvoidGap` (attribute
+`anchor-avoid-gap`, CSS pixels, default `0`) keeps that much extra room beyond each edge an
+obstacle reserves, so a panel never sits flush against it; edges no obstacle reserves stay zero.
 
 ```ts
 map.anchorAvoid = [document.querySelector('header.app-bar')!, document.querySelector('.search')!];
@@ -37553,9 +37880,27 @@ omittedCount, truncatedLabelCount, truncated }` result for the latest assignment
   drawing or scene bars share the map. An unsupported value normalizes to `'bottom-start'`. Size and type it with
   `--lr-map-legend-inset-block`, `--lr-map-legend-inset-inline`, `--lr-map-legend-max-inline-size`,
   `--lr-map-legend-max-block-size`, `--lr-map-legend-columns` (equal row columns, default 1),
-  `--lr-map-legend-font-size`, `--lr-map-legend-gap`, `--lr-map-legend-padding`,
+  `--lr-map-legend-font-size`, `--lr-map-legend-gap`, `--lr-map-legend-row-gap` (rows of one list or
+  section only, default `--lr-map-legend-gap`), `--lr-map-legend-group-columns` (equal columns the
+  rows of one group flow into, default 1), `--lr-map-legend-padding`, `--lr-map-legend-border`
+  (border shorthand, default `var(--lr-border-width-thin) solid var(--lr-color-border-subtle)`),
   `--lr-map-legend-radius`, `--lr-map-legend-bg`, `--lr-map-legend-shadow`, `--lr-map-legend-color`
   and `--lr-map-legend-swatch-size` — the same suffixes `lr-heatmap` and `lr-chart` use.
+  `--lr-map-legend-toggle-padding` and `--lr-map-legend-disclosure-padding` (both default
+  `var(--lr-size-2px) var(--lr-space-xs)`) pad the interactive `legend-toggle` rows and the
+  `legend-disclosure` button; their minimum box stays the `--lr-icon-button-size` hit area, so
+  shrink that floor through `--lr-icon-button-size-scope` rather than a part rule.
+- `legendClearance: LyraMapLegendClearance = 'row'` (attribute `legend-clearance`, reflected) — which
+  native control corners the legend clears. `'row'` lifts it above the tallest corner of the top and
+  bottom rows; `'corner'` clears only the corners in its own logical column, so a `bottom-start`
+  legend sits just above the bottom-start controls even when a tall zoom and geolocate stack fills
+  the bottom-end corner. Centred `top` and `bottom` placements always clear the whole row. Keep a
+  `'corner'` legend narrow enough (`--lr-map-legend-max-inline-size`) not to reach the other column.
+  `'none'` reserves nothing for the controls: `--lr-map-legend-inset-block` and
+  `--lr-map-legend-inset-inline` measure from the map edge alone (no control rows, no
+  `--lr-map-controls-inset-*`), so `legend-clearance="none"` with
+  `--lr-map-legend-inset-block: 48px` keeps the panel in a 48px footer lane; the panel may then
+  overlap native controls. An unsupported value normalizes to `'row'`.
 - `legendOpen: boolean = true` (attribute `legend-open`, reflected) — whether a `legendCollapsible`
   panel is expanded. It defaults **open**, so adding only `legendCollapsible` never hides an existing
   key, and it does nothing at all while `legendCollapsible` is unset. Because it is a
@@ -38385,7 +38730,11 @@ control installed or one failed; a later `controls` change replaces them and dis
 Already installed controls gain no outline. Outlines paint with the same glass or solid surface material
 as the installed controls, so the swap does not change their fill. For `initialization="interaction"`,
 `initialization-activate` starts the map and `initialization-activate-label` styles its visible label.
-Hiding that label retains the button's localized accessible name. Pick mode renders `pick-controls` with
+Hiding that label retains the button's localized accessible name. Three tokens cover the same
+without part rules: `--lr-map-initialization-placeholder-bg` (default `transparent`) fills the
+placeholder, `--lr-map-initialization-skeleton-display: none` suppresses the skeleton (default
+`inline-block`), and `--lr-map-initialization-activate-label-display: none` hides the visible prompt
+(default `inline`) while the covering button keeps its name. Pick mode renders `pick-controls` with
 `pick-center` and `pick-cancel`; draw mode renders `drawing-controls` with `drawing-add`,
 `drawing-undo`, `drawing-complete`, `drawing-cancel` and the `drawing-status` vertex count (plus
 `drawing-summary` with `drawingMeasurements`; after the controls first render, later changes to
@@ -43509,6 +43858,13 @@ canvas capability becomes available.
     length that sizes each point independently — passed straight through to Chart.js, which
     supports both natively. Useful for emphasizing a single outlier or the latest reading without
     splitting the series in two.
+  - `dash` dashes a line-type series' stroke: `true` draws the default `[4, 4]` dash, and an
+    array is a custom canvas `setLineDash()` pattern in CSS pixels (`[8, 3, 2, 3]` for dash-dot,
+    `[1, 3]` for dots), copied on admission. An empty array draws solid; an array with a negative
+    or non-finite entry, or with more than 16 entries, falls back to the default dash. An authored
+    dash wins over the forced-colors dash cycle. Every Chart.js-backed line or area chart
+    (`lr-chart`, `lr-line-chart`, a mixed-type line series) honors it; `lr-lite-chart` series have
+    no dash option.
   - `segmentColors` colors each *segment* (the line drawn between two consecutive points) by the
     segment's **starting** point index, so `['red', 'green']` over 3 points paints the first
     segment red and the second green; a shorter array cycles. When rows are sampled, each
@@ -43520,7 +43876,8 @@ canvas capability becomes available.
   - `type: 'band'` with `lower` and `upper` (one bound per category) draws a filled range — a
     confidence interval, a p10–p90 envelope or a min/max range — beneath every line on `line` and
     `bar` charts; `data` is ignored. The fill is the series color at `--lr-chart-band-opacity`
-    (default `0.2`), the value scale widens to the lower bounds unless `min`/`max` are configured,
+    (default `0.2`), or at the band's own `bandOpacity` (0-1, clamped; a non-finite value is
+    ignored, and other series types ignore it), which also sets that band's legend swatch. The value scale widens to the lower bounds unless `min`/`max` are configured,
     and a band never stacks. Mismatched `lower`/`upper` lengths clamp to the shorter one with a
     development warning; a row missing either bound is a gap, and reversed bounds are reordered.
     The tooltip, generated table cell and keyboard announcement read the localized
@@ -43537,7 +43894,9 @@ canvas capability becomes available.
       chart.labels = ['Mon', 'Tue', 'Wed', 'Thu'];
       chart.datasets = [
         { label: 'p10–p90', type: 'band', lower: [8, 9, 11, 10], upper: [14, 16, 18, 17] },
+        { label: 'p25–p75', type: 'band', lower: [10, 11, 13, 12], upper: [12, 14, 16, 15], bandOpacity: 0.35 },
         { label: 'Median', data: [11, 12, 14, 13] },
+        { label: 'Target', data: [12, 12, 12, 12], dash: [8, 3, 2, 3] },
       ];
     </script>
     ```
@@ -45777,7 +46136,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly color?: string | readonly string[];
     readonly fill?: boolean;
     readonly width?: number;
-    readonly dash?: boolean;
+    readonly dash?: boolean | readonly number[];
     readonly noTooltip?: boolean;
     readonly axis?: 'y' | 'y2';
     readonly stack?: string;
@@ -45787,6 +46146,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly type?: 'line' | 'bar' | 'band';
     readonly lower?: readonly (number | null)[];
     readonly upper?: readonly (number | null)[];
+    readonly bandOpacity?: number;
   }`
 
 - **`components-charts-chart-histogram-bin-contracts`** — Supporting data types and helpers for this component family.
@@ -47394,7 +47754,12 @@ current page and
 `zoom: number = 1` is clamped to `0.25`–`4`. `maxHeight: string = ''` (attribute `max-height`) is a
 CSS length that, once set, overrides `--lr-pdf-viewer-height` — the block size of the virtualized
 page list — declaratively, writing it inline on `[part="base"]`; invalid CSS `max-height` values,
-declaration breaks, and `url()` are ignored. `workerSrc: string = ''` (attribute `worker-src`) is the
+declaration breaks, and `url()` are ignored. `fill: boolean = false` (reflected) fills a parent with
+a definite block size, such as a dialog body or a sized flex column: the host takes
+`block-size: 100%`, the toolbar keeps its row, and the page list takes the rest and becomes the
+single scroller, replacing the fixed `--lr-pdf-viewer-height` / `max-height` size while set.
+Against an auto-height parent `100%` resolves to `auto`, so give the parent a height.
+`workerSrc: string = ''` (attribute `worker-src`) is the
 URL of the PDF.js web worker chunk — see **Configuring the PDF.js worker** below.
 `anchorKinds: readonly LyraAnchorKind[] = ['page',
 'text-quote', 'region']` (this viewer's supported `LyraAnchor.kind` values for the shared
@@ -49792,7 +50157,9 @@ The `streaming-tail` part marks the stable text node used by progressive streami
 
 Prefer tokens over part rules for routine prose and code styling: `--lr-markdown-block-gap`
 (default `var(--lr-space-s)` — space after every paragraph, list, heading, blockquote, code block
-and table), `--lr-markdown-heading-1-font-size` (default `calc(var(--lr-size-1em) * 2)`),
+and table), `--lr-markdown-heading-margin-block-start` (default `var(--lr-space-l)` — space before
+every heading; a leading heading keeps none), `--lr-markdown-heading-1-font-size` (default
+`calc(var(--lr-size-1em) * 2)`),
 `--lr-markdown-heading-2-font-size` (default `var(--lr-size-1-5em)`),
 `--lr-markdown-heading-3-font-size` (default `calc(var(--lr-size-1em) * 1.17)`) and
 `--lr-markdown-heading-4-font-size` (default `var(--lr-size-1em)`) — together these restate the
@@ -49803,7 +50170,10 @@ and `--lr-markdown-link-hover-color` (default the link colour), `--lr-markdown-b
 `var(--lr-color-text-quiet)`) and `--lr-markdown-list-indent` (default `var(--lr-size-2-5rem)`).
 The `code-block` and `inline-code` surfaces have `--lr-markdown-code-block-padding`,
 `--lr-markdown-code-block-radius`, `--lr-markdown-code-block-bg`, `--lr-markdown-code-padding`,
-`--lr-markdown-code-radius` and `--lr-markdown-code-bg` (all listed below). Every token inherits, so
+`--lr-markdown-code-radius` and `--lr-markdown-code-bg` (all listed below);
+`--lr-markdown-code-block-font-size` (default `var(--lr-font-size-sm)`) and
+`--lr-markdown-code-block-line-height` (default `var(--lr-line-height-normal)`) set the fenced code's
+type. Every token inherits, so
 a chat bubble with a filled background sets `--lr-markdown-link-color` once on that bubble:
 
 ```css
@@ -50072,7 +50442,8 @@ anchor-jump message), `content` (respects `max-height`), `heading`, `paragraph`,
 
 **Themeable custom properties:** identical to `<lr-markdown>`'s own tokens, including
 `--lr-markdown-content-min-size`, the three `--lr-markdown-code-copy-bg*` state tokens and the prose
-tokens (`--lr-markdown-block-gap`, `--lr-markdown-heading-1-font-size`,
+tokens (`--lr-markdown-block-gap`, `--lr-markdown-heading-margin-block-start`,
+`--lr-markdown-heading-1-font-size`,
 `--lr-markdown-heading-2-font-size`, `--lr-markdown-heading-3-font-size`,
 `--lr-markdown-heading-4-font-size`,
 `--lr-markdown-heading-font-weight`, `--lr-markdown-link-color`, `--lr-markdown-link-hover-color`,
@@ -50085,7 +50456,9 @@ fenced `code-block` surface), `--lr-markdown-code-padding`/`--lr-markdown-code-r
 `code` span padding/radius, defaulting to `var(--lr-size-0-125rem) var(--lr-size-0-3125rem)`/
 `calc(var(--lr-radius) * 0.5)`), and `--lr-markdown-code-block-padding`/
 `--lr-markdown-code-block-radius` (the fenced `code-block` surface's padding/radius, defaulting to
-`var(--lr-space-s) var(--lr-space-m)`/`var(--lr-radius)`) — plus `--lr-code-block-tab-size` (default
+`var(--lr-space-s) var(--lr-space-m)`/`var(--lr-radius)`), `--lr-markdown-code-block-font-size`/
+`--lr-markdown-code-block-line-height` (the fenced code's type, defaulting to
+`var(--lr-font-size-sm)`/`var(--lr-line-height-normal)`) — plus `--lr-code-block-tab-size` (default
 `2` — tab width inside a rendered fenced or indented `code-block`), with exactly the mechanics
 described under `<lr-markdown>` above: the same property name and default that
 `<lr-code-block>`/`<lr-code-editor>` read, declared as a `var()` fallback at the point of use rather
@@ -51965,6 +52338,11 @@ remains the one exception that does not cross this way: use `--lr-theme-icon-but
 **Themeable custom properties:** `--lr-code-block-padding` controls code padding, `--lr-code-block-radius`
 controls the frame corners, and `--lr-code-block-header-bg`, `--lr-code-block-header-color` and
 `--lr-code-block-line-number-color` set the header background, filename color and gutter color.
+`--lr-code-block-border` (default `var(--lr-border-width-thin) solid var(--lr-color-border-subtle)`)
+and `--lr-code-block-bg` (default `var(--lr-color-surface)`; highlighted code paints its theme
+background over it) style the frame; `--lr-code-block-header-padding` (default `var(--lr-space-xs)
+var(--lr-space-s)`) and `--lr-code-block-header-border` (default `var(--lr-border-width-thin) solid
+var(--lr-color-border-subtle)`, the rule under the header) style the header.
 `--lr-code-block-toggle-bg`, `--lr-code-block-toggle-hover-bg`, and `--lr-code-block-toggle-active-bg`
 style the disclosure. `--lr-code-block-gutter-bg`, `--lr-code-block-gutter-hover-bg`, and
 `--lr-code-block-gutter-active-bg` style the line buttons. Each token applies to its own state.
@@ -52178,8 +52556,9 @@ body ended; `anchor` is a `line-range` anchor covering the selected lines).
 identical set to `<lr-code-block>`.
 
 **Themeable custom properties:** identical to `<lr-code-block>`, including `--lr-code-block-padding`,
-`--lr-code-block-radius`, `--lr-code-block-header-bg`, `--lr-code-block-header-color` and
-`--lr-code-block-line-number-color`, and the `--lr-code-block-toggle-bg*` and
+`--lr-code-block-radius`, `--lr-code-block-border`, `--lr-code-block-bg`,
+`--lr-code-block-header-bg`, `--lr-code-block-header-padding`, `--lr-code-block-header-border`,
+`--lr-code-block-header-color` and `--lr-code-block-line-number-color`, and the `--lr-code-block-toggle-bg*` and
 `--lr-code-block-gutter-bg*` state tokens. `--lr-code-block-max-height`
 (independently settable; an authored `max-height` attribute wins inline),
 `--lr-code-block-font`, `--lr-code-block-tab-size` (default `2`, applied to `[part='pre']`),
@@ -53034,7 +53413,8 @@ every line, the wrapped final one included, which styling `::part(base)` as a ce
 cannot do (once the chips wrap, the row fills the available inline size and each line packs to the
 start). `--lr-suggestion-chips-hover-bg` (default `var(--lr-color-brand-quiet)`) — a `chip`'s
 background on hover. `--lr-suggestion-chips-hover-border-color` (default `var(--lr-color-brand)`) — a
-`chip`'s border color on hover. All three are declared as `var()` fallbacks at the point of use, not
+`chip`'s border color on hover. `--lr-suggestion-chips-hover-color` (default the chip's
+`--lr-suggestion-chips-chip-color`) — a `chip`'s text color on hover and press. All of these are declared as `var()` fallbacks at the point of use, not
 on `:host`. `--lr-suggestion-chips-disabled-opacity` (default `var(--lr-opacity-disabled)`) — opacity of a chip whose
 suggestion sets `disabled`. `--lr-suggestion-chips-label-lines` (default `1`; `3` when `wrap` is
 set) — how many lines a `chip-label` shows before it is clamped with an ellipsis, so full-question
@@ -53451,7 +53831,9 @@ resolves them to that tier's shared form-control height and font size.
 `--lr-thread-list-search-padding-block` (default `var(--lr-space-xs)`) and
 `--lr-thread-list-search-radius` (default `var(--lr-radius)`) are replaced by the tier's shared
 form-control values when `size` is set. `--lr-thread-list-search-clear-size` (default
-`var(--lr-icon-button-size)`) is the clear button's box; it never follows `size`, because that button is
+`var(--lr-icon-button-size)`) is the clear button's box; `--lr-thread-list-search-bg` (default
+`var(--lr-color-surface)`), `--lr-thread-list-search-border-color` (default `var(--lr-color-border)`)
+and `--lr-thread-list-search-color` (default `var(--lr-color-text)`) paint the search field; it never follows `size`, because that button is
 a tap target floored at `--lr-icon-button-size` rather than a text box, so only a larger value changes it. Every one of these wins over
 the tier, so a consumer can take a tier and then move one value.
 `--lr-thread-list-search-hover-border-color` (default `var(--lr-color-brand)`) is the hovered search
@@ -60783,7 +61165,7 @@ element.addEventListener('lr-run-cancel', (event) => {
 
 `lr-budget-meter` presents host-supplied `used`, `limit`, and optional `unit` values. The visible
 text preserves the actual quantities while the fill clamps at the limit. A zero or invalid limit
-shows an unavailable state; usage above the limit shows an exceeded state. The component does not
+shows an unavailable state; usage above the limit shows an exceeded state. `--lr-budget-meter-value-color` (default `var(--lr-color-text-quiet)`) colours the used-of-limit readout. The component does not
 price usage or enforce a budget. Assign `used`, `limit`, `unit`, and `label` as properties when
 values are not plain attribute strings. A host `aria-label` names the group and its meter. Hiding the heading with `label=""` preserves
 the localized meter name. Percentages near zero or full capacity retain fractional precision.

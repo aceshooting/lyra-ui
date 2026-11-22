@@ -10,13 +10,15 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `form-control-label`: `--lr-form-control-required-content`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-checkbox-group`
+
+`label-placement="start"` (default `top`) puts the legend in an inline-start column, shared with the other fields (see "Label beside the field"); the toolbar slot then follows the options. Wrapped options take separate gaps: `--lr-checkbox-group-option-row-gap` (between rows) and `--lr-checkbox-group-option-column-gap` (between options in a row), each defaulting to `--lr-checkbox-group-option-gap` (and `--gap`), so unset renders as before.
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`. The default label size follows `--lr-form-control-font-size`.
@@ -140,3 +142,5 @@ a `.value=${...}` binding on first render) is applied once they arrive.
   cannot say which one was checked. The group warns once per duplicated value when it sees this.
 - Assignments migrate to writes on the intended children's `checked` state; a host value such as
   `['on']` cannot identify which default-valued occurrence was intended.
+
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column, sized by `--lr-form-control-label-inline-size`, `--lr-form-control-label-gap` and `--lr-form-control-label-collapse-inline-size`; every form-control label also reads `--lr-form-control-label-line-height` (default `inherit`). See "Label beside the field: `label-placement`".

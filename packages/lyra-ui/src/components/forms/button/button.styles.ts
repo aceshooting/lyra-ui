@@ -330,7 +330,11 @@ export const styles = css`
        keyword, not left, so RTL is right by construction. */
     text-align: start;
     text-overflow: ellipsis;
-    white-space: nowrap;
+    /* Inherited hook: a container sets --lr-button-label-wrap: normal to let every button label
+       inside it wrap, without touching each button's wrap attribute. Unset it is nowrap, byte for
+       byte the single-line rule. overflow-wrap only matters once wrapping is allowed. */
+    white-space: var(--lr-button-label-wrap, nowrap);
+    overflow-wrap: anywhere;
   }
   /* Conditional grow. A caret or an end adornment is a trailing-edge affordance -- a dropdown
      chevron that floats next to the label instead of sitting at the edge reads as a detached

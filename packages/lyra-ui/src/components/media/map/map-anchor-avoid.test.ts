@@ -59,6 +59,24 @@ describe('lr-map anchorAvoid', () => {
     });
   }
 
+  it('keeps the anchor-avoid-gap beyond each reserved edge only', async () => {
+    const { map } = await mount();
+    map.anchorAvoid = [];
+    await placed(map);
+    map.setAttribute('anchor-avoid-gap', '24');
+    await map.updateComplete;
+    expect(map.anchorAvoidGap).to.equal(24);
+    map.anchorAvoid = [document.querySelector<HTMLElement>('lr-map + div')!];
+    await waitUntil(() => top(map) >= 80 + 24, 'the anchor keeps the gap below the header');
+    const area = (map as unknown as { anchorAvoidance: { area?: Record<string, number> } }).anchorAvoidance.area;
+    expect(area, 'free edges stay zero').to.deep.equal({ blockStart: 104, blockEnd: 0, inlineStart: 0, inlineEnd: 0 });
+    map.anchorAvoidGap = 0;
+    await waitUntil(() => (map as unknown as { anchorAvoidance: { area?: Record<string, number> } }).anchorAvoidance.area?.['blockStart'] === 80, 'a gap change re-measures');
+    map.anchorAvoidGap = -5;
+    await map.updateComplete; await new Promise(resolve => requestAnimationFrame(resolve));
+    expect((map as unknown as { anchorAvoidance: { area?: Record<string, number> } }).anchorAvoidance.area?.['blockStart'], 'a negative gap is none').to.equal(80);
+  });
+
   it('applies the avoided area to child anchors without their own safe area and stops observing on disconnect', async () => {
     const { map, header, wrapper } = await mount();
     map.anchorLngLat = null;

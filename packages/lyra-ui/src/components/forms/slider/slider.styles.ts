@@ -427,7 +427,7 @@ export const styles = css`
     overflow-wrap: break-word;
   }
   [part~="label"] {
-    ${formControlLabelTypography({ size: css`inherit`, color: css`var(--lr-color-text)` })}
+    ${formControlLabelTypography({ color: css`var(--lr-color-text)` })}
   }
   [part="references"] {
     font-size: var(--lr-font-size-sm);
@@ -489,6 +489,31 @@ export const styles = css`
   [part="error"][hidden],
   [part~="hint"][hidden] {
     display: none;
+  }
+  /* label-placement="start": the shared label-column arithmetic (internal/form-control/chrome.styles.ts)
+     applied to the host's own flex row, since the slider has no wrapper element. Horizontal only. */
+  :host([label-placement='start']:not([orientation='vertical'])) {
+    --_lr-label-column: var(--lr-form-control-label-inline-size, 30%);
+    --_lr-label-gap: var(--lr-form-control-label-gap, var(--lr-space-m));
+    --_lr-label-collapse: var(--lr-form-control-label-collapse-inline-size, var(--lr-size-20rem));
+    column-gap: var(--_lr-label-gap);
+  }
+  :host([label-placement='start']:not([orientation='vertical'])) > :is([part~='label'], [part='label-row']) {
+    flex: 0 0 clamp(var(--_lr-label-column), (var(--_lr-label-collapse) - 100%) * 9999, 100%);
+    box-sizing: border-box;
+  }
+  :host([label-placement='start']:not([orientation='vertical'])) > [part='references'] {
+    flex: 0 0 100%;
+    box-sizing: border-box;
+  }
+  :host([label-placement='start']:not([orientation='vertical'], [label-display='hidden']))
+    > :is([part~='label']:not([hidden]), [part='label-row']) ~ :is([part='references'], [part='error'], [part~='hint']) {
+    padding-inline-start: clamp(
+      0px,
+      (100% - var(--_lr-label-collapse)) * 9999,
+      var(--_lr-label-column) + var(--_lr-label-gap)
+    );
+    box-sizing: border-box;
   }
   /* Vertical orientation, declared after every horizontal rule so the shared :host(:dir(rtl))
      transforms above never win by source order. The value axis moves to the block axis with the

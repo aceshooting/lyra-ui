@@ -67,6 +67,10 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
 
+  [part='value'] {
+    color: var(--lr-budget-meter-value-color, var(--lr-color-text-quiet));
+  }
+
   [part='exceeded'] {
     color: var(--lr-color-danger);
   }

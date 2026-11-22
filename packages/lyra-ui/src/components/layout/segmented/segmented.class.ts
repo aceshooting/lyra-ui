@@ -205,6 +205,8 @@ function snapshotSegmentedItems(
  * @cssprop [--lr-segmented-font-size=var(--lr-form-control-font-size)] - Each segment's font size,
  *   taken from the `size` tier's shared control font size.
  * @cssprop [--lr-segmented-track-gap=var(--lr-size-0-125rem)] - Gap between segments.
+ * @cssprop [--lr-segmented-segment-min-size=var(--lr-size-24px)] - Minimum inline and block size of each
+ *   segment's hit area. Raise it for a touch target; it never goes below the default.
  * @cssprop [--lr-segmented-columns=3] - Column count of `layout="grid"`. Columns share the track
  *   width equally.
  * @cssprop [--lr-segmented-track-radius=var(--lr-radius)] - Track corner radius.

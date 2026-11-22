@@ -352,6 +352,7 @@ export type LyraSelectInputEvent<Multiple extends boolean = boolean> =
  * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=inherit] - Text color of the field label.
+ * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
  * @csspart form-control-label - The `<label>` element.
  * @csspart label - Wrapper around the visible label content.
  * @csspart form-control-input - Compatibility name for the control wrapper.
@@ -470,6 +471,13 @@ export type LyraSelectInputEvent<Multiple extends boolean = boolean> =
  * `box-shadow` while this control is focused. One name for every field-shaped control in the
  * library, so a halo is configured once rather than per component. Additive: the focus outline and
  * border cue are the accessibility answer to focus and are never replaced by it.
+ * @cssprop [--lr-form-control-transition=none] - Opt-in `transition` for this field's border and halo (for
+ * example `border-color 150ms, box-shadow 150ms`). Unset, nothing animates; reduced motion always disables it.
+ * @cssprop [--lr-form-control-focus-outline=var(--lr-focus-ring-width) solid var(--lr-focus-ring-color)] - Opt-in
+ * replacement for the trigger's keyboard focus outline, an `outline` shorthand, for use with
+ * `--lr-form-control-focus-shadow` or a border colour that still marks focus. Forced colours always
+ * restores the standard ring.
+ * @cssprop [--lr-select-open-shadow=var(--lr-form-control-focus-shadow)] - Halo painted while the listbox is open.
  * @cssprop [--lr-form-control-required-content=' *'] - The required marker appended to
  * `form-control-label` while `required` is set. Set it to `''` to suppress the marker, or to any
  * other quoted string (`' (required)'`, a localized word) to replace it.

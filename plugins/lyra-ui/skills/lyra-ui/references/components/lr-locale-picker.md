@@ -9,12 +9,14 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 18 parts, 35 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 18 parts, 36 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-locale-picker`
+
+`--lr-locale-picker-trigger-radius` rounds the trigger only; unset it follows `--lr-locale-picker-radius`, which keeps rounding the listbox and options.
 
 Under a coarse pointer the editable text is floored at `--lr-form-control-touch-font-size-min`
 (default `16px`; `0px` opts out) so mobile Safari does not zoom on focus; see "Touch font floor".

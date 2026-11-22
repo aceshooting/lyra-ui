@@ -1667,6 +1667,44 @@ export const StickyDrawingWithEdit: Story = {
     <p>Finish a polygon to refine it at once; finishing the edit re-arms polygon drawing.</p>`,
 };
 
+export const StickyDrawingKeepOnFinish: Story = {
+  render: () => html`<lr-map label="Sticky polygon drawing that keeps the finished shape" style="block-size: 22rem" draw-mode="polygon"
+    drawing-sticky drawing-complete-behavior="edit" drawing-finish-behavior="keep" .mapStyle=${LYRA_MAP_EMPTY_STYLE}></lr-map>
+    <p>Finish commits the edit and keeps the shape on the map; cancel or Escape ends it and re-arms polygon drawing.</p>`,
+};
+
+export const GroupedControlPillAndScale: Story = {
+  render: () => html`<lr-map label="Pill-shaped control groups and scale" style="block-size: 22rem;
+      --lr-map-control-group-radius: var(--lr-radius-pill); --lr-map-control-button-radius: 0;
+      --lr-map-control-divider: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+      --lr-map-scale-radius: var(--lr-radius-pill); --lr-map-scale-padding-inline: var(--lr-space-s);
+      --lr-map-scale-border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle)"
+    .mapStyle=${LYRA_MAP_EMPTY_STYLE} .controls=${{ navigation: true, geolocate: true, scale: true }}></lr-map>`,
+};
+
+export const CornerLegendClearance: Story = {
+  render: () => html`<lr-map label="A start-corner legend beside a tall end control column" style="block-size: 22rem;
+      --lr-map-legend-max-inline-size: 60%; --lr-map-legend-row-gap: var(--lr-space-2xs)" legend-clearance="corner"
+    .mapStyle=${LYRA_MAP_EMPTY_STYLE} .controls=${{ navigation: true, geolocate: true }} .legend=${legend()}></lr-map>`,
+};
+
+export const FooterLaneLegend: Story = {
+  render: () => html`<lr-map label="A legend in a footer lane placed from the map edge" style="block-size: 22rem;
+      --lr-map-legend-inset-block: 3rem; --lr-map-legend-group-columns: 2; --lr-map-legend-border: none" legend-clearance="none"
+    .mapStyle=${LYRA_MAP_EMPTY_STYLE} .controls=${{ navigation: true, geolocate: true }} .legend=${legend()}></lr-map>`,
+};
+
+export const AnchorFillCard: Story = {
+  render: () => html`<lr-map label="An anchored card with its own scrolling details" style="block-size: 22rem;
+      --lr-map-anchor-close-reservation: 2.75rem" anchor-closable anchor-fill .mapStyle=${LYRA_MAP_EMPTY_STYLE}
+    ${ref(node => { const map = node as LyraMap | undefined; if (map) map.anchorLngLat = [0, 0]; })}>
+    <article slot="anchor" style="display: flex; flex-direction: column; min-block-size: 0; max-inline-size: 18rem">
+      <h3 style="margin: 0; padding-inline-end: var(--lr-map-anchor-close-reservation)">Station 12</h3>
+      <div style="flex: 1 1 auto; min-block-size: 0; overflow: auto">${Array.from({ length: 30 }, (_, i) => html`<p>Reading ${i + 1}</p>`)}</div>
+    </article>
+  </lr-map>`,
+};
+
 export const OverlayGroupsAndAvoidedChrome: Story = {
   render: () => {
     const header = (node?: Element) => node as HTMLElement | undefined;
@@ -1686,6 +1724,34 @@ export const OverlayGroupsAndAvoidedChrome: Story = {
         })}><div slot="anchor">Anchored below the header</div></lr-map>
     </div>`;
   },
+};
+
+export const ControlsAvoidAndCornerInset: Story = {
+  render: () => {
+    let card: HTMLElement | undefined;
+    return html`<div style="position: relative">
+      <div ${ref(node => { card = node as HTMLElement | undefined; })} style="position: absolute; inset-block-start: 0.5rem; inset-inline-start: 0.5rem;
+        z-index: 2; inline-size: 12rem; block-size: calc(100% - 1rem); padding: 0.75rem; background: var(--lr-color-surface-raised)">Floating side card</div>
+      <lr-map label="Controls clear a side card and the zoom corner moves down" style="block-size: 22rem;
+          --lr-map-controls-inset-inline-start: var(--lr-space-xs); --lr-map-controls-top-right-inset-block: 2.5rem"
+        anchor-avoid-gap="12" .mapStyle=${LYRA_MAP_EMPTY_STYLE} .controls=${{ navigation: { position: 'top-right' }, scale: { position: 'bottom-left' } }}
+        ${ref(node => {
+          const map = node as LyraMap | undefined;
+          if (!map) return;
+          map.controlsAvoid = card ? [card] : [];
+          map.anchorAvoid = card ? [card] : [];
+          map.anchorLngLat = [0, 0];
+        })}><div slot="anchor">Kept 12px clear of the card</div></lr-map>
+    </div>`;
+  },
+};
+
+export const AttributionAndInitializationTokens: Story = {
+  render: () => html`<lr-map label="Compact attribution and a plain deferred surface" style="block-size: 22rem;
+      --lr-map-attribution-padding: var(--lr-space-2xs) var(--lr-space-s); --lr-map-attribution-font-size: var(--lr-font-size-2xs);
+      --lr-map-attribution-max-inline-size: 16rem; --lr-map-attribution-toggle-size: 2rem; --lr-map-attribution-toggle-radius: var(--lr-radius-xs);
+      --lr-map-initialization-placeholder-bg: var(--lr-color-surface-raised); --lr-map-initialization-skeleton-display: none"
+    initialization="interaction" .mapStyle=${LYRA_MAP_EMPTY_STYLE} .controls=${{ navigation: true, attribution: { compact: true } }}></lr-map>`,
 };
 
 export const AnchorBoundaryAndFocus: Story = {

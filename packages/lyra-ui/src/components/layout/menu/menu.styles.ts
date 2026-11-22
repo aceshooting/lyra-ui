@@ -78,9 +78,11 @@ export const styles = css`
       var(--_lr-menu-max-inline-size),
       var(--lr-positioner-available-inline-size, 100vw)
     );
+    /* Same block-size cap as the list below, so a raised --lr-menu-max-block-size is not clipped
+       by the submenu's own surface. */
     max-block-size: min(
-      var(--lr-size-20rem),
-      var(--lr-positioner-available-block-size, var(--lr-size-20rem))
+      var(--lr-menu-max-block-size, var(--lr-size-20rem)),
+      var(--lr-positioner-available-block-size, var(--lr-menu-max-block-size, var(--lr-size-20rem)))
     );
     ${overlaySurface}
     /* Anchored overlay: a positioner-placed submenu floating over page content, on the same
@@ -139,9 +141,12 @@ export const styles = css`
        min-block-size:0 lets it shrink below its content height inside the popup's own column. */
     flex: 0 1 auto;
     min-block-size: 0;
+    /* --lr-menu-max-block-size moves the 20rem cap; the positioned available space (a dropdown's
+       or submenu's) stays a hard limit on top. A standalone menu has no positioner, so that arm
+       falls back to the token itself rather than to 20rem. */
     max-block-size: min(
-      var(--lr-size-20rem),
-      var(--lr-positioner-available-block-size, var(--lr-size-20rem))
+      var(--lr-menu-max-block-size, var(--lr-size-20rem)),
+      var(--lr-positioner-available-block-size, var(--lr-menu-max-block-size, var(--lr-size-20rem)))
     );
     overflow-x: hidden;
     overflow-y: auto;

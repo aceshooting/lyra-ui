@@ -89,6 +89,12 @@ export interface LyraToastEventMap {
  * @csspart stack - The fl-column container holding the items.
  * @cssprop --gap - Mapped alias for `--lr-toast-gap`.
  * @cssprop --width - Mapped alias for `--lr-toast-width`.
+ * @cssprop [--lr-toast-inset-block=var(--lr-space-l)] - Distance between the region and the
+ *   viewport's top and bottom edges. Each placement is its own region element, so
+ *   `lr-toast[placement^='bottom']` scopes it to one region. The device safe-area insets still win
+ *   wherever they are larger.
+ * @cssprop [--lr-toast-inset-inline=var(--lr-space-l)] - Distance between the region and the
+ *   viewport's inline-start and inline-end edges, scoped per region the same way.
  * @cssprop [--lr-toast-gap=var(--lr-space-s)] - Gap between stacked items.
  * @cssprop [--lr-toast-width=var(--lr-size-28rem)] - Inline size of the stack, capped by the
  *   usable logical safe-area rectangle.

@@ -734,6 +734,7 @@ export type {
   LyraMapLegendPattern,
   LyraMapLegendControlRole,
   LyraMapLegendPlacement,
+  LyraMapLegendClearance,
   LyraMapLegendProjection,
   LyraMapChoroplethLayer,
   LyraMapChoroplethNoData,
@@ -785,6 +786,7 @@ export type {
   LyraMapDrawingMetrics,
   LyraMapDrawingMode,
   LyraMapDrawingCompleteBehavior,
+  LyraMapDrawingFinishBehavior,
   LyraMapDrawingSnapshot,
   LyraMapExternalDataLayer,
   LyraMapExternalDataLayerOptions,
@@ -905,6 +907,8 @@ export type {
 } from './components/overlays/dialog/dialog.class.js';
 export { confirm } from './components/overlays/dialog/confirm.js';
 export type { ConfirmOptions } from './components/overlays/dialog/confirm.js';
+export { prompt } from './components/overlays/dialog/prompt.js';
+export type { PromptOptions } from './components/overlays/dialog/prompt.js';
 export type {
   LyraTabGroupPlacement,
   LyraTabGroupActivation,
@@ -1186,7 +1190,7 @@ export type {
   ChipSize,
   ChipVariant,
 } from './components/overlays/chip/chip.class.js';
-export type { ChipGroupOverflowToggleDetail } from './components/overlays/chip/chip-group.class.js';
+export type { ChipGroupChangeDetail, ChipGroupOverflowToggleDetail, LyraChipGroupSelection } from './components/overlays/chip/chip-group.class.js';
 export type {
   ModelSettingsPanelLayout,
   ModelSettingsChangeDetail,

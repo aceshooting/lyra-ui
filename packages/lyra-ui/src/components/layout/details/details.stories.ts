@@ -256,3 +256,25 @@ export const CompactRoundedSummary: StoryObj = {
     </lr-details>
   `,
 };
+
+export const SummaryHoverColor: StoryObj = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-details-summary-hover-color` recolors the summary text on hover and press without touching its resting `--lr-details-summary-color`; it falls back to the resting colour when unset.',
+      },
+    },
+  },
+  render: () => html`
+    <lr-details
+      summary="Hover the summary"
+      style="
+        --lr-details-summary-color: var(--lr-color-text-quiet);
+        --lr-details-summary-hover-color: var(--lr-color-brand);
+      "
+    >
+      The summary text turns brand-coloured on hover.
+    </lr-details>
+  `,
+};

@@ -235,10 +235,16 @@ export interface LyraMarkdownEventMap extends LyraAnchorTargetEventMap {
  *   fenced `code-block` surface.
  * @cssprop [--lr-markdown-code-block-radius=var(--lr-radius)] - Border radius of the fenced
  *   `code-block` surface.
+ * @cssprop [--lr-markdown-code-block-font-size=var(--lr-font-size-sm)] - Font size of the code
+ *   inside a fenced `code-block`.
+ * @cssprop [--lr-markdown-code-block-line-height=var(--lr-line-height-normal)] - Line height of a
+ *   fenced `code-block` and the code inside it.
  * @cssprop [--lr-markdown-table-header-bg=var(--lr-color-brand-quiet)] - Background of every
  *   rendered `[part="table"]` header cell (`<th>`).
  * @cssprop [--lr-markdown-block-gap=var(--lr-space-s)] - Space after every rendered block
  *   (paragraph, list, heading, blockquote, code block, table).
+ * @cssprop [--lr-markdown-heading-margin-block-start=var(--lr-space-l)] - Space before every heading;
+ *   the space after it is `--lr-markdown-block-gap`, and a leading heading keeps no space before it.
  * @cssprop [--lr-markdown-heading-1-font-size=calc(var(--lr-size-1em) * 2)] - `<h1>` font size.
  * @cssprop [--lr-markdown-heading-2-font-size=var(--lr-size-1-5em)] - `<h2>` font size.
  * @cssprop [--lr-markdown-heading-3-font-size=calc(var(--lr-size-1em) * 1.17)] - `<h3>` font size.

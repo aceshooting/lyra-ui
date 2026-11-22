@@ -58,14 +58,15 @@ export const styles = css`
     ${focusRing}
   }
   :is([part='scene-toggle'], button[part='scene-item'], [part='scene-pagination'] button):where(:disabled) { ${disabledControl} }
-  [part='initialization-placeholder'] { position: absolute; inset: 0; pointer-events: none; }
-  .initialization-skeleton { inline-size: 100%; block-size: 100%; }
+  [part='initialization-placeholder'] { position: absolute; inset: 0; pointer-events: none; background: var(--lr-map-initialization-placeholder-bg, transparent); }
+  /* lr-skeleton's own host display is inline-block; the token only takes it out of the layout. */
+  .initialization-skeleton { display: var(--lr-map-initialization-skeleton-display, inline-block); inline-size: 100%; block-size: 100%; }
   .initialization-controls { position: absolute; inset: 0; box-sizing: border-box; display: grid; grid-template-rows: auto 1fr auto; pointer-events: none; }
   /* App chrome that owns part of a map edge pushes every corner control stack inward by the same
      logical inset, before and after construction. */
   .initialization-controls, .maplibregl-control-container {
-    padding-block: var(--lr-map-controls-inset-block-start, 0) var(--lr-map-controls-inset-block-end, 0);
-    padding-inline: var(--lr-map-controls-inset-inline-start, 0) var(--lr-map-controls-inset-inline-end, 0);
+    padding-block: var(--_lr-map-controls-inset-block-start, var(--lr-map-controls-inset-block-start, 0px)) var(--_lr-map-controls-inset-block-end, var(--lr-map-controls-inset-block-end, 0px));
+    padding-inline: var(--_lr-map-controls-inset-inline-start, var(--lr-map-controls-inset-inline-start, 0px)) var(--_lr-map-controls-inset-inline-end, var(--lr-map-controls-inset-inline-end, 0px));
   }
   .initialization-row { display: grid; grid-template-columns: minmax(0, max-content) minmax(0, max-content); justify-content: space-between; min-inline-size: 0; }
   .initialization-row-top { grid-row: 1; }
@@ -93,7 +94,8 @@ export const styles = css`
     opacity: 1; background: ${activeFill('transparent')};
   }
   [part='initialization-activate']:focus-visible { ${focusRingInset} }
-  .activate-label { position: relative; padding: var(--lr-space-xs) var(--lr-space-s); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius-button); background: var(--lr-color-surface); }
+  /* Hiding the visible prompt keeps the covering button and its localized accessible name. */
+  .activate-label { display: var(--lr-map-initialization-activate-label-display, inline); position: relative; padding: var(--lr-space-xs) var(--lr-space-s); border: var(--lr-border-width-thin) solid var(--lr-color-border); border-radius: var(--lr-radius-button); background: var(--lr-color-surface); }
   /* The fill comes from the shared control material below, so loading and installed controls match. */
   [part~='initialization-control'] {
     position: relative; flex-shrink: 0; margin: var(--lr-map-control-gap, var(--lr-space-xs));
@@ -173,9 +175,9 @@ export const styles = css`
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr) fit-content(60%) auto;
     row-gap: var(--lr-space-xs);
-    padding-block: calc(var(--lr-space-s) + var(--_lr-map-controls-top, 0px) + var(--lr-map-controls-inset-block-start, 0px))
-      calc(var(--lr-space-s) + var(--_lr-map-controls-bottom, 0px) + var(--lr-map-controls-inset-block-end, 0px));
-    padding-inline: var(--lr-map-controls-inset-inline-start, 0) var(--lr-map-controls-inset-inline-end, 0);
+    padding-block: calc(var(--lr-space-s) + var(--_lr-map-controls-top, 0px) + var(--_lr-map-controls-inset-block-start, var(--lr-map-controls-inset-block-start, 0px)))
+      calc(var(--lr-space-s) + var(--_lr-map-controls-bottom, 0px) + var(--_lr-map-controls-inset-block-end, var(--lr-map-controls-inset-block-end, 0px)));
+    padding-inline: var(--_lr-map-controls-inset-inline-start, var(--lr-map-controls-inset-inline-start, 0px)) var(--_lr-map-controls-inset-inline-end, var(--lr-map-controls-inset-inline-end, 0px));
   }
   [part='base']:has(> :is([part='pick-controls'], [part='drawing-controls'], [part='scene-panel']))
     > :is([part='legend'], [part='scene-panel']) {
@@ -431,15 +433,27 @@ export const styles = css`
     overscroll-behavior: contain;
     padding-inline-end: var(--lr-map-anchor-close-reservation, 0);
   }
+  /* anchorFill: the body stops scrolling and shrinks the slotted content to the panel, so a card
+     owns its own scroll region; the close reservation is left to the card's header. */
+  :host([anchor-fill]) [part='anchor-body'] {
+    display: flex;
+    flex-direction: column;
+    overflow: clip;
+    padding-inline-end: 0;
+  }
+  :host([anchor-fill]) [part='anchor-body'] ::slotted(*) {
+    flex: 1 1 auto;
+    min-block-size: 0;
+  }
   /* Placement and close state must survive consumer display rules on the public part. */
   [part='anchor']:where([hidden]) { display: none !important; }
   [part='legend'] {
     /* Each edge offset folds the panel inset, the measured native control rows and the authored
        control insets together, so the panel clears the controls in every placement. */
-    --_lr-map-legend-block-start: calc(var(--lr-map-legend-inset-block, var(--lr-space-s)) + var(--_lr-map-controls-top, 0px) + var(--lr-map-controls-inset-block-start, 0px));
-    --_lr-map-legend-block-end: calc(var(--lr-map-legend-inset-block, var(--lr-space-s)) + var(--_lr-map-controls-bottom, 0px) + var(--lr-map-controls-inset-block-end, 0px));
-    --_lr-map-legend-inline-start: calc(var(--lr-map-legend-inset-inline, var(--lr-space-s)) + var(--lr-map-controls-inset-inline-start, 0px));
-    --_lr-map-legend-inline-end: calc(var(--lr-map-legend-inset-inline, var(--lr-space-s)) + var(--lr-map-controls-inset-inline-end, 0px));
+    --_lr-map-legend-block-start: calc(var(--lr-map-legend-inset-block, var(--lr-space-s)) + var(--_lr-map-legend-controls-top, var(--_lr-map-controls-top, 0px)) + var(--_lr-map-controls-inset-block-start, var(--lr-map-controls-inset-block-start, 0px)));
+    --_lr-map-legend-block-end: calc(var(--lr-map-legend-inset-block, var(--lr-space-s)) + var(--_lr-map-legend-controls-bottom, var(--_lr-map-controls-bottom, 0px)) + var(--_lr-map-controls-inset-block-end, var(--lr-map-controls-inset-block-end, 0px)));
+    --_lr-map-legend-inline-start: calc(var(--lr-map-legend-inset-inline, var(--lr-space-s)) + var(--_lr-map-controls-inset-inline-start, var(--lr-map-controls-inset-inline-start, 0px)));
+    --_lr-map-legend-inline-end: calc(var(--lr-map-legend-inset-inline, var(--lr-space-s)) + var(--_lr-map-controls-inset-inline-end, var(--lr-map-controls-inset-inline-end, 0px)));
     position: absolute;
     grid-row: 1;
     justify-self: start;
@@ -460,12 +474,31 @@ export const styles = css`
     padding: var(--lr-map-legend-padding, var(--lr-space-xs) var(--lr-space-s));
     background: var(--lr-map-legend-bg, var(--lr-color-surface));
     color: var(--lr-map-legend-color, var(--lr-color-text));
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border: var(--lr-map-legend-border, var(--lr-border-width-thin) solid var(--lr-color-border-subtle));
     border-radius: var(--lr-map-legend-radius, var(--lr-radius));
     /* The legend is pinned over the tiles, so it reads as a layer above the map, not a panel
        beside it. */
     box-shadow: var(--lr-map-legend-shadow, var(--lr-shadow-m));
     font-size: var(--lr-map-legend-font-size, var(--lr-font-size-xs));
+  }
+  /* legendClearance='corner': a corner or side placement clears only the control corners in its
+     own logical column (the left corners are the start corners, mirrored under RTL); the centred
+     top and bottom placements keep clearing the whole row. */
+  [part='legend']:where([data-clearance='corner']):where([data-placement$='start']) {
+    --_lr-map-legend-controls-top: calc(var(--_lr-map-controls-top-left, 0px) + var(--lr-map-controls-top-left-inset-block, 0px));
+    --_lr-map-legend-controls-bottom: calc(var(--_lr-map-controls-bottom-left, 0px) + var(--lr-map-controls-bottom-left-inset-block, 0px));
+  }
+  [part='legend']:where([data-clearance='corner']):where([data-placement$='end']) {
+    --_lr-map-legend-controls-top: calc(var(--_lr-map-controls-top-right, 0px) + var(--lr-map-controls-top-right-inset-block, 0px));
+    --_lr-map-legend-controls-bottom: calc(var(--_lr-map-controls-bottom-right, 0px) + var(--lr-map-controls-bottom-right-inset-block, 0px));
+  }
+  /* legendClearance='none': the legend insets alone place the panel from the map edge, with no
+     measured control rows and no authored control insets folded in. */
+  [part='legend']:where([data-clearance='none']) {
+    --_lr-map-legend-block-start: var(--lr-map-legend-inset-block, var(--lr-space-s));
+    --_lr-map-legend-block-end: var(--lr-map-legend-inset-block, var(--lr-space-s));
+    --_lr-map-legend-inline-start: var(--lr-map-legend-inset-inline, var(--lr-space-s));
+    --_lr-map-legend-inline-end: var(--lr-map-legend-inset-inline, var(--lr-space-s));
   }
   [part='legend']:where([data-placement^='top']) { inset-block-start: var(--_lr-map-legend-block-start); inset-block-end: auto; }
   [part='legend']:where([data-placement$='-end'], [data-placement='end']) { inset-inline-start: auto; inset-inline-end: var(--_lr-map-legend-inline-end); }
@@ -480,7 +513,7 @@ export const styles = css`
   .legend-list {
     display: grid;
     grid-template-columns: repeat(var(--lr-map-legend-columns, 1), minmax(0, 1fr));
-    gap: var(--lr-map-legend-gap, var(--lr-space-xs));
+    gap: var(--lr-map-legend-row-gap, var(--lr-map-legend-gap, var(--lr-space-xs))) var(--lr-map-legend-gap, var(--lr-space-xs));
     min-inline-size: 0;
   }
   /* A collapsed panel hides its gradient, rows, limit summary and trailing slot with the plain
@@ -505,7 +538,7 @@ export const styles = css`
     max-inline-size: 100%;
     border: none;
     border-radius: var(--lr-radius-xs);
-    padding: var(--lr-size-2px) var(--lr-space-xs);
+    padding: var(--lr-map-legend-disclosure-padding, var(--lr-size-2px) var(--lr-space-xs));
     background: transparent;
     color: inherit;
     font: inherit;
@@ -625,6 +658,13 @@ export const styles = css`
     gap: var(--lr-map-legend-gap, var(--lr-space-xs));
     min-inline-size: 0;
   }
+  /* Rows inside one section follow the row gap and flow into the group columns; the
+     heading-to-rows gap stays on the panel gap. */
+  .legend-section-list {
+    display: grid;
+    grid-template-columns: repeat(var(--lr-map-legend-group-columns, 1), minmax(0, 1fr));
+    gap: var(--lr-map-legend-row-gap, var(--lr-map-legend-gap, var(--lr-space-xs))) var(--lr-map-legend-gap, var(--lr-space-xs));
+  }
   [part='legend-group-heading'] {
     min-inline-size: 0;
     color: var(--lr-color-text-quiet);
@@ -656,7 +696,7 @@ export const styles = css`
     max-inline-size: 100%;
     border: none;
     border-radius: var(--lr-radius-xs);
-    padding: var(--lr-size-2px) var(--lr-space-xs);
+    padding: var(--lr-map-legend-toggle-padding, var(--lr-size-2px) var(--lr-space-xs));
     background: transparent;
     color: inherit;
     font: inherit;
@@ -799,6 +839,24 @@ export const styles = css`
   .maplibregl-ctrl-bottom-right {
     align-items: flex-end;
   }
+  /* One corner's own inset, from its row edge and its column's map edge, before and after
+     construction. The left corners are the start corners (mirrored under RTL). */
+  :is(.maplibregl-ctrl-top-left, .initialization-row-top .initialization-corner-left) {
+    padding-block-start: var(--lr-map-controls-top-left-inset-block, 0px);
+    padding-inline-start: var(--lr-map-controls-top-left-inset-inline, 0px);
+  }
+  :is(.maplibregl-ctrl-top-right, .initialization-row-top .initialization-corner-right) {
+    padding-block-start: var(--lr-map-controls-top-right-inset-block, 0px);
+    padding-inline-end: var(--lr-map-controls-top-right-inset-inline, 0px);
+  }
+  :is(.maplibregl-ctrl-bottom-left, .initialization-row-bottom .initialization-corner-left) {
+    padding-block-end: var(--lr-map-controls-bottom-left-inset-block, 0px);
+    padding-inline-start: var(--lr-map-controls-bottom-left-inset-inline, 0px);
+  }
+  :is(.maplibregl-ctrl-bottom-right, .initialization-row-bottom .initialization-corner-right) {
+    padding-block-end: var(--lr-map-controls-bottom-right-inset-block, 0px);
+    padding-inline-end: var(--lr-map-controls-bottom-right-inset-inline, 0px);
+  }
   .maplibregl-ctrl-top-left { grid-column: 1; }
   .maplibregl-ctrl-top-right { grid-column: 2; }
   .maplibregl-ctrl-bottom-left { grid-column: 1; justify-content: flex-end; }
@@ -817,20 +875,26 @@ export const styles = css`
   }
   .maplibregl-ctrl-attrib {
     position: relative;
-    padding: 0 var(--lr-space-xs);
+    padding: var(--lr-map-attribution-padding, 0 var(--lr-space-xs));
     border: var(--lr-map-attribution-border, none);
     border-radius: var(--lr-map-attribution-radius, var(--lr-radius));
     background: var(--lr-color-surface);
     color: var(--lr-color-text-quiet);
-    font-size: var(--lr-font-size-xs);
+    font-family: var(--lr-map-attribution-font-family, inherit);
+    font-size: var(--lr-map-attribution-font-size, var(--lr-font-size-xs));
+    line-height: var(--lr-map-attribution-line-height, inherit);
+  }
+  /* The shared control ceiling stays the outer bound, so a wide token never escapes the map. */
+  .maplibregl-ctrl.maplibregl-ctrl-attrib {
+    max-inline-size: min(var(--lr-map-attribution-max-inline-size, 100%), calc(100% - 2 * var(--lr-map-control-gap, var(--lr-space-xs))));
   }
   .maplibregl-ctrl-group {
     position: relative;
     display: flex;
     flex-direction: column;
     inline-size: fit-content;
-    border: var(--lr-map-control-border, var(--lr-border-width-thin) solid var(--lr-color-border));
-    border-radius: var(--lr-map-control-radius, var(--lr-radius));
+    border: var(--lr-map-control-group-border, var(--lr-map-control-border, var(--lr-border-width-thin) solid var(--lr-color-border)));
+    border-radius: var(--lr-map-control-group-radius, var(--lr-map-control-radius, var(--lr-radius)));
     box-shadow: var(--lr-map-control-shadow, var(--lr-shadow));
     color: var(--lr-map-control-color, var(--lr-color-text));
   }
@@ -842,15 +906,25 @@ export const styles = css`
     block-size: var(--lr-map-control-size, auto);
     padding: var(--lr-space-xs);
     border: 0;
-    border-radius: inherit;
+    border-radius: var(--lr-map-control-button-radius, inherit);
     background: transparent;
     color: inherit;
     font: inherit;
     cursor: pointer;
     transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
   }
+  /* The group's outer corners stay on its first and last buttons, so a fill never squares the end
+     of a pill whose inner corners --lr-map-control-button-radius has squared. */
+  .maplibregl-ctrl-group button:where(:first-child) {
+    border-start-start-radius: inherit;
+    border-start-end-radius: inherit;
+  }
+  .maplibregl-ctrl-group button:where(:last-child) {
+    border-end-start-radius: inherit;
+    border-end-end-radius: inherit;
+  }
   .maplibregl-ctrl-group button:where(:not(:first-child)) {
-    border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+    border-block-start: var(--lr-map-control-divider, var(--lr-border-width-thin) solid var(--lr-color-border));
   }
   /* The native controls own their pointer tokens; the action tokens style scene, pick and drawing actions only. */
   .maplibregl-ctrl-group button:hover:where(:not(:disabled)) {
@@ -925,12 +999,16 @@ export const styles = css`
     position: relative;
     box-sizing: border-box;
     min-inline-size: max-content;
-    padding: var(--lr-space-2xs) var(--lr-space-xs);
-    padding-block-end: calc(var(--lr-space-2xs) + var(--lr-space-xs));
+    /* The block end always adds the scale bar's own height, so a padding token never covers it. */
+    padding-block: var(--lr-map-scale-padding-block, var(--lr-space-2xs));
+    padding-inline: var(--lr-map-scale-padding-inline, var(--lr-space-xs));
+    padding-block-end: calc(var(--lr-map-scale-padding-block, var(--lr-space-2xs)) + var(--lr-space-xs));
+    border: var(--lr-map-scale-border, none);
+    border-radius: var(--lr-map-scale-radius, 0);
     background: var(--lr-color-surface);
-    color: var(--lr-color-text);
+    color: var(--lr-map-scale-color, var(--lr-color-text));
     font-family: var(--lr-font);
-    font-size: var(--lr-font-size-xs);
+    font-size: var(--lr-map-scale-font-size, var(--lr-font-size-xs));
     text-align: center;
     white-space: nowrap;
   }
@@ -952,6 +1030,7 @@ export const styles = css`
     align-items: center;
     min-inline-size: var(--lr-size-24px);
     min-block-size: var(--lr-size-24px);
+    padding: var(--lr-map-attribution-link-padding, 0);
     color: var(--lr-color-text-quiet);
     text-decoration: none;
   }
@@ -969,11 +1048,11 @@ export const styles = css`
     position: absolute;
     inset-block-start: 0;
     inset-inline-end: 0;
-    inline-size: var(--lr-map-control-size, var(--lr-icon-button-size));
-    block-size: var(--lr-map-control-size, var(--lr-icon-button-size));
+    inline-size: var(--lr-map-attribution-toggle-size, var(--lr-map-control-size, var(--lr-icon-button-size)));
+    block-size: var(--lr-map-attribution-toggle-size, var(--lr-map-control-size, var(--lr-icon-button-size)));
     padding: 0;
     border: 0;
-    border-radius: var(--lr-map-control-radius, var(--lr-radius-pill));
+    border-radius: var(--lr-map-attribution-toggle-radius, var(--lr-map-control-radius, var(--lr-radius-pill)));
     background: transparent;
     color: var(--lr-map-control-color, var(--lr-color-text));
     cursor: pointer;
@@ -983,15 +1062,15 @@ export const styles = css`
   .maplibregl-ctrl-attrib-button::before {
     content: '';
     display: block;
-    inline-size: var(--lr-size-1rem);
-    block-size: var(--lr-size-1rem);
+    inline-size: var(--lr-map-attribution-toggle-icon-size, var(--lr-size-1rem));
+    block-size: var(--lr-map-attribution-toggle-icon-size, var(--lr-size-1rem));
     background: currentColor;
     mask: url('data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"%3E%3Ccircle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/%3E%3Cpath d="M12 10v7m0-10v.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/%3E%3C/svg%3E') center / contain no-repeat;
   }
   .maplibregl-ctrl-attrib.maplibregl-compact {
     position: relative;
-    min-block-size: var(--lr-map-control-size, var(--lr-icon-button-size));
-    padding-inline-end: var(--lr-map-control-size, var(--lr-icon-button-size));
+    min-block-size: var(--lr-map-attribution-toggle-size, var(--lr-map-control-size, var(--lr-icon-button-size)));
+    padding-inline-end: var(--lr-map-attribution-toggle-size, var(--lr-map-control-size, var(--lr-icon-button-size)));
   }
   .maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-inner {
     display: none;
@@ -1037,6 +1116,9 @@ export const styles = css`
   /* Only the control chrome reads the public control fill; actions keep the action fill. */
   .maplibregl-ctrl-group, .maplibregl-ctrl-scale, .maplibregl-ctrl-attrib, [part~='initialization-control'] {
     --_lr-map-control-fill: var(--lr-map-control-bg, var(--lr-color-surface));
+  }
+  .maplibregl-ctrl-scale {
+    --_lr-map-control-fill: var(--lr-map-scale-bg, var(--lr-map-control-bg, var(--lr-color-surface)));
   }
   [part='anchor-close']:where(:hover) {
     --_lr-map-action-fill: var(--lr-map-popup-close-button-hover-bg, var(--lr-map-action-hover-bg, var(--lr-color-brand-quiet)));

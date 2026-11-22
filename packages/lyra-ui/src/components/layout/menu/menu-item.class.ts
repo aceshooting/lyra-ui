@@ -204,7 +204,9 @@ export interface LyraMenuItemEventMap {
  * unless a consumer sets one.
  * @cssprop [--lr-menu-item-checked-bg=transparent] - Background of a checked (`type="checkbox"
  * checked` or `type="radio" checked`) row.
- * @cssprop [--lr-menu-item-checked-color=inherit] - Foreground of a checked row.
+ * @cssprop [--lr-menu-item-color=inherit] - Foreground of a resting row; danger, disabled and
+ *   checked rows keep their own colors.
+ * @cssprop [--lr-menu-item-checked-color=var(--lr-menu-item-color)] - Foreground of a checked row.
  * @cssprop [--lr-menu-item-checked-font-weight=inherit] - Font weight of a checked row.
  * @cssprop [--lr-menu-item-hover-bg=var(--lr-color-brand-quiet)] - Background of an enabled row
  * under the pointer. The pressed state mixes from this same value, so a retuned hover fill keeps
@@ -222,6 +224,11 @@ export interface LyraMenuItemEventMap {
  * @cssprop [--lr-menu-item-padding-inline=var(--lr-form-control-padding-inline)] - Inline padding of
  * the visual row. Unset it follows the shared form-control size tier.
  * @cssprop [--lr-menu-item-font-size=var(--lr-form-control-font-size)] - Font size of the visual row.
+ * @cssprop [--lr-menu-item-font-weight=inherit] - Font weight of a resting row; a checked row's
+ *   `--lr-menu-item-checked-font-weight` still wins.
+ * @cssprop [--lr-menu-item-letter-spacing=normal] - Letter spacing of the visual row.
+ * @cssprop [--lr-menu-item-details-font-size=var(--lr-font-size-sm)] - Font size of `[part="details"]`.
+ * @cssprop [--lr-menu-item-details-color=var(--lr-color-text-quiet)] - Text color of `[part="details"]`.
  * @cssprop [--lr-menu-item-icon-size=inherit] - Font size of `[part="icon"]`, which sizes a slotted
  * `lr-icon` or any `1em` glyph. Unset the icon follows the row's font size.
  * @method click - Activates the visual row, including checkbox and submenu behavior; no-op while

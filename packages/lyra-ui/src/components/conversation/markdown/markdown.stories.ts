@@ -330,10 +330,10 @@ export const LazyLanguageGrammar: Story = {
     .content=${'```json\n{"loaded": "on demand"}\n```'}></lr-markdown>`,
 };
 
-/** Dense prose for a chat bubble: block spacing, heading scale, link and blockquote tokens. */
+/** Dense prose for a chat bubble: block spacing, heading scale, link, blockquote and code tokens. */
 export const DenseProseTokens: Story = {
   render: () => html`<lr-markdown
-    style="max-inline-size: 28rem; --lr-markdown-block-gap: var(--lr-space-2xs); --lr-markdown-heading-1-font-size: var(--lr-font-size-lg); --lr-markdown-heading-2-font-size: var(--lr-font-size-m); --lr-markdown-heading-font-weight: var(--lr-font-weight-semibold); --lr-markdown-link-color: var(--lr-color-text); --lr-markdown-link-hover-color: var(--lr-color-brand); --lr-markdown-blockquote-border-color: var(--lr-color-brand); --lr-markdown-list-indent: var(--lr-space-l);"
-    .content=${sample}
+    style="max-inline-size: 28rem; --lr-markdown-block-gap: var(--lr-space-2xs); --lr-markdown-heading-1-font-size: var(--lr-font-size-lg); --lr-markdown-heading-2-font-size: var(--lr-font-size-m); --lr-markdown-heading-font-weight: var(--lr-font-weight-semibold); --lr-markdown-link-color: var(--lr-color-text); --lr-markdown-link-hover-color: var(--lr-color-brand); --lr-markdown-blockquote-border-color: var(--lr-color-brand); --lr-markdown-list-indent: var(--lr-space-l); --lr-markdown-heading-margin-block-start: var(--lr-space-s); --lr-markdown-code-block-font-size: var(--lr-font-size-xs); --lr-markdown-code-block-line-height: var(--lr-line-height-compact);"
+    .content=${`${sample}\n${codeSample}`}
   ></lr-markdown>`,
 };

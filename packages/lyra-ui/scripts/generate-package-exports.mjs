@@ -66,6 +66,7 @@ export const CURATED_COMPONENT_HELPER_MODULES = Object.freeze([
   'src/components/media/flag/language-map.ts',
   'src/components/media/map/map-loader.ts',
   'src/components/overlays/dialog/confirm.ts',
+  'src/components/overlays/dialog/prompt.ts',
   'src/components/overlays/toast/toaster.ts',
   'src/components/retrieval/graph/graph-loader.ts',
   'src/components/utility/export-button/csv.ts',

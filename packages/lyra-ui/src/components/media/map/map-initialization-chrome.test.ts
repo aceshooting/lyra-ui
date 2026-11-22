@@ -68,6 +68,29 @@ describe('lr-map deferred initialization chrome', () => {
     expect(part(h.root, 'initialization-activate-label').textContent).to.equal('Show interactive map');
     expect(h.constructions()).to.equal(0);
   });
+  it('paints the placeholder fill and suppresses the skeleton and visible prompt from tokens', async () => {
+    const h = await mount(element => { element.controls = { navigation: { position: 'bottom-left' } }; });
+    const placeholder = part(h.root, 'initialization-placeholder'), skeleton = part(h.root, 'initialization-skeleton');
+    const label = part(h.root, 'initialization-activate-label'), button = part<HTMLButtonElement>(h.root, 'initialization-activate');
+    const corner = part(h.root, 'controls-bottom-left');
+    const snapshot = () => [getComputedStyle(placeholder).backgroundColor, getComputedStyle(skeleton).display, getComputedStyle(label).display,
+      getComputedStyle(corner).paddingBottom, getComputedStyle(corner).paddingInlineStart];
+    const defaults = snapshot();
+    expect(defaults.slice(0, 2)).to.deep.equal(['rgba(0, 0, 0, 0)', 'inline-block']);
+    expect(label.getBoundingClientRect().width, 'the prompt is visible by default').to.be.above(0);
+    const tokens: Record<string, string> = {
+      '--lr-map-initialization-placeholder-bg': 'rgb(12, 34, 56)', '--lr-map-initialization-skeleton-display': 'none',
+      '--lr-map-initialization-activate-label-display': 'none',
+      '--lr-map-controls-bottom-left-inset-block': '11px', '--lr-map-controls-bottom-left-inset-inline': '13px',
+    };
+    for (const [name, value] of Object.entries(tokens)) h.element.style.setProperty(name, value);
+    expect(snapshot()).to.deep.equal(['rgb(12, 34, 56)', 'none', 'none', '11px', '13px']);
+    expect(label.getBoundingClientRect().width, 'the prompt leaves the layout').to.equal(0);
+    expect([button.getAttribute('aria-label'), button.getBoundingClientRect().width > 0], 'the activation button keeps its name and box')
+      .to.deep.equal(['Show interactive map', true]);
+    for (const name of Object.keys(tokens)) h.element.style.removeProperty(name);
+    expect(snapshot()).to.deep.equal(defaults);
+  });
   it('places admitted controls by corner and ascending order with stable ties, then updates them', async () => {
     const h = await mount(element => { element.controls = {
       navigation: { position: 'top-left', order: 2 }, geolocate: { position: 'top-left', order: -1 },

@@ -115,10 +115,10 @@ label column: `lr-input` (and `lr-number-input`, `lr-native-time-input`), `lr-te
 `lr-select`, `lr-combobox`, `lr-date-input`, `lr-time-input`, `lr-phone-input`, `lr-token-input`,
 `lr-otp-input`, `lr-code-editor`, `lr-signature-pad`, `lr-color-picker`, `lr-locale-picker`, the
 catalog pickers (`lr-country-picker`, `lr-currency-picker`, `lr-time-zone-picker`,
-`lr-unit-picker`) and, in the conversation family, `lr-model-select` and `lr-voice-picker`. Group
-controls whose label is a legend over several choices (`lr-checkbox-group`, `lr-radio-group`,
-`lr-segmented`) and `lr-slider`, whose label row can carry the value readout, keep the label
-above. The label sits in an inline-start column of `--lr-form-control-label-inline-size` (default `30%`), `--lr-form-control-label-gap`
+`lr-unit-picker`), `lr-slider` (horizontal only; with `value-placement="label"` the label and
+readout row take the column), the legend-style groups `lr-checkbox-group` and `lr-radio-group` (their
+toolbar slot moves below the options) and, in the conversation family, `lr-model-select` and
+`lr-voice-picker`. `lr-segmented` keeps the label above. The label sits in an inline-start column of `--lr-form-control-label-inline-size` (default `30%`), `--lr-form-control-label-gap`
 (default `var(--lr-space-m)`) from the field, and the hint and error stay aligned under the field.
 The label is top-aligned, level with the first line of the field, so it stays beside the first line
 of a tall field (`lr-textarea`, `lr-code-editor`, `lr-signature-pad`) instead of centring on it. With
@@ -382,6 +382,8 @@ zoom on focus; see "Touch font floor".
   otherwise followed by implicit form submission) and when focus leaves; the text stays after blur,
   and reopening edits it in place instead of blanking the field. Escape closes the list and drops
   an uncommitted edit. No `allow-custom-value` is needed, and no unknown-value badge is shown.
+  `value = ''` means no value here, like clearing the text: the placeholder shows and `required`
+  reports `valueMissing`.
   The list opens on focus in every mode, and a press on the already-focused input reopens it:
 
   ```html
@@ -1070,6 +1072,8 @@ synchronous and fires no `input`/`change`/`lr-change` event.
 
 The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.
 
+`--lr-form-control-transition` (default `none`) is the shared opt-in `transition` for the field's border and halo; see the shared form-control tokens.
+
 ## `lr-select`
 
 `labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in
@@ -1641,6 +1645,8 @@ state mixes from this same token. Scoped independently of `--lr-select-trigger-h
 <a id="date-and-range-controls"></a>
 
 The start-placed label aligns to the first line of the field, measured with `--lr-form-control-height`.
+
+`--lr-form-control-focus-outline` (default the standard focus ring) replaces the trigger's keyboard outline, `--lr-form-control-transition` (default `none`) is the shared opt-in border and halo `transition`, `--lr-select-open-shadow` (default `--lr-form-control-focus-shadow`) is the halo while the listbox is open, and `--lr-form-control-label-line-height` (default `inherit`) sets the label line height.
 
 ## `lr-date-picker` / `lr-date-input` (+ `calendar-core.ts`)
 
@@ -2435,6 +2441,15 @@ With no label text the part is hidden and no glyph is painted.
 - `--lr-form-control-focus-shadow` (default `none`) — the shared field halo, painted as a
   `box-shadow` while the field holds focus. One name for every field-shaped control in the library,
   so a halo is configured once instead of per component; additive to the brand border.
+- `--lr-form-control-transition` (default `none`) — opt-in `transition` for the field's border and halo
+  (for example `border-color 150ms, box-shadow 150ms`), honoured by `lr-input`, `lr-textarea`,
+  `lr-combobox` and `lr-select` (the textarea default stays its border-color ease); always off under `prefers-reduced-motion: reduce`.
+- `--lr-form-control-focus-outline` (`lr-select` trigger; default the standard focus ring) — opt-in
+  `outline` shorthand that replaces the keyboard outline so an app's own halo can stand in. Pair it with
+  `--lr-form-control-focus-shadow` or a border colour that still marks focus: a visible indicator is the
+  accessibility contract, and forced colours always restores the standard ring.
+- `--lr-select-open-shadow` (`lr-select`; default `--lr-form-control-focus-shadow`) — the halo while the
+  listbox is open.
 
 `<lr-textarea>` fills an explicitly sized host: give the host a block size (`block-size: 100%`
 inside a container with a resolved block size, a pixel size, or a flex/grid allocation) and the
@@ -2751,6 +2766,9 @@ the label no longer growing, this is what positions the icon+label pair inside a
 `flex-start` packs it against the leading edge, `space-between` pushes the adornments apart.
 `--lr-button-label-grow` (default `0`) is the `flex-grow` of `[part="label"]`; `1` fills spare
 space, and an explicit value overrides the grow applied by `with-caret`/`end` adornments.
+`--lr-button-label-wrap` (default `nowrap`) is inherited, so a container can make every button label in an
+action row wrap: set `--lr-button-label-wrap: normal` on the row. The per-button `wrap` attribute stays and
+wins.
 
 **Retuning one `size` tier's geometry, without a `::part(base)` rule.** Four more properties carry
 the active tier's geometry. Every `:host([size='…'])` rule changes only private defaults — no
@@ -2979,7 +2997,9 @@ no appearance attribute or reset rules to sit quietly in a toolbar.
 the floor makes the button exactly `--lr-icon-button-size` on both axes; no `::part(button)`
 width/height rule is needed. Set the size on the element for one button, or
 `--lr-icon-button-size-scope` on a wrapper for a toolbar, and keep the slotted glyph (or
-`--lr-icon-size`) at or below it:
+`--lr-icon-size`) at or below it. The native button sets `line-height: 1`, so a glyph wrapped in an
+inline element (a `<span>` around an `<svg>`) does not grow the box to the page's line-height at a
+large root font size:
 
 ```html
 <lr-icon-button icon="info-circle" label="Details" style="--lr-icon-button-size: 2rem"></lr-icon-button>
@@ -3070,6 +3090,8 @@ them leaves rendering unchanged.
 ```
 
 ## `lr-input`
+
+Field text can use tabular figures with `--lr-input-font-variant-numeric: tabular-nums` (default `inherit`); `lr-number-input` shares the sheet and honours it. Every form-control label also reads `--lr-form-control-label-line-height` (default `inherit`) beside the size, weight and colour tokens.
 
 `labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in
 an inline-start column, sized by `--lr-form-control-label-inline-size` (default `30%`) and
@@ -3735,6 +3757,8 @@ The exact-320px RTL story keeps long label/hint copy and both fixed-size stepper
 
 <a id="date-and-time-controls"></a>
 
+`--lr-form-control-label-line-height` (default `inherit`) sets the label line height, and `--lr-input-font-variant-numeric` (default `inherit`; for example `tabular-nums`) sets the field text's numeric figures, shared with `lr-input`.
+
 ## `lr-time-input`
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
@@ -4042,6 +4066,8 @@ entry for the flush and cancellation rules.
 ```
 
 ---
+
+`--lr-form-control-label-line-height` (default `inherit`) sets the label line height, and `--lr-input-font-variant-numeric` (default `inherit`; for example `tabular-nums`) sets the field text's numeric figures, shared with `lr-input`.
 
 ## `lr-phone-input`
 
@@ -5328,7 +5354,8 @@ unchecked thumb untouched.
 `--lr-switch-label-font-size` (default `var(--lr-font-size-md-sm)`) sets `[part='label']`'s text size.
 `--lr-switch-label-color` (default `var(--lr-color-text)`) controls `[part='label']`'s text color,
 and is also the checked-state fallback. `--lr-switch-checked-label-color` (default
-`var(--lr-switch-label-color)`) independently retints the label only while checked. Both label hooks
+`var(--lr-switch-label-color)`) independently retints the label only while checked, and
+`--lr-switch-checked-label-font-weight` (default `inherit`) weights it. The checked label hooks
 read the switch's **live** checked state (the same `:state(checked)` custom state the class doc's
 `@cssstate checked` documents), not the `checked` *attribute* — which instead reflects
 `defaultChecked`, the form-reset value — so the checked-state hook tracks user interaction correctly
@@ -5370,6 +5397,8 @@ checkbox and does not emit `lr-change`.
 <a id="range-controls"></a>
 
 ## `lr-slider`
+
+**Label and readout.** The label defaults to the shared form-control label size (`--lr-font-size-md-sm`, like `lr-input`/`lr-select`), no longer `inherit`; `--lr-form-control-label-font-size` still retunes it. `label-placement="start"` (see "Label beside the field") puts the label in a column beside a horizontal track. `with-value` shows the **localized number** by default, even when a `valueFormatter` is set and even with `value-placement="label"`; the formatter feeds `aria-valuetext` and the tooltip only. Set `value-display="formatted"` to show the formatter's text in the readout. This is deliberate: a formatter written for assistive text (`"40 percent"`) would otherwise change the visible readout of every existing slider.
 
 Labelled `marks` render in the `marks` part: one `mark` per tick, a `mark-label` per label, and
 `mark-label-thinned` on a label hidden for overlapping its neighbour.
@@ -5706,6 +5735,8 @@ is present for upstream form-surface parity but adds no missing-value constraint
   takes up no layout space.
 
 ---
+
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column, sized by `--lr-form-control-label-inline-size`, `--lr-form-control-label-gap` and `--lr-form-control-label-collapse-inline-size`; every form-control label also reads `--lr-form-control-label-line-height` (default `inherit`). See "Label beside the field: `label-placement`".
 
 ## `lr-radio`
 
@@ -6187,6 +6218,8 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 ## `lr-radio-group`
 
+`label-placement="start"` (default `top`) puts the label in an inline-start column, shared with the other fields (see "Label beside the field"); the toolbar slot then follows the options.
+
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`. The default label size follows `--lr-form-control-font-size`.
 
@@ -6303,7 +6336,11 @@ group has no selected radio. `focus()` moves focus to the selected (or first ena
 `focus()` by activating the selected/first enabled radio. All three are inert under direct or
 fieldset disablement, so the group behaves like one native control.
 
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column, sized by `--lr-form-control-label-inline-size`, `--lr-form-control-label-gap` and `--lr-form-control-label-collapse-inline-size`; every form-control label also reads `--lr-form-control-label-line-height` (default `inherit`). See "Label beside the field: `label-placement`".
+
 ## `lr-checkbox-group`
+
+`label-placement="start"` (default `top`) puts the legend in an inline-start column, shared with the other fields (see "Label beside the field"); the toolbar slot then follows the options. Wrapped options take separate gaps: `--lr-checkbox-group-option-row-gap` (between rows) and `--lr-checkbox-group-option-column-gap` (between options in a row), each defaulting to `--lr-checkbox-group-option-gap` (and `--gap`), so unset renders as before.
 
 Style the label with `--lr-form-control-label-font-size`, `--lr-form-control-label-font-weight`, and
 `--lr-form-control-label-color`. The default label size follows `--lr-form-control-font-size`.
@@ -6427,6 +6464,8 @@ a `.value=${...}` binding on first render) is applied once they arrive.
   cannot say which one was checked. The group warns once per duplicated value when it sees this.
 - Assignments migrate to writes on the intended children's `checked` state; a host value such as
   `['on']` cannot identify which default-valued occurrence was intended.
+
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column, sized by `--lr-form-control-label-inline-size`, `--lr-form-control-label-gap` and `--lr-form-control-label-collapse-inline-size`; every form-control label also reads `--lr-form-control-label-line-height` (default `inherit`). See "Label beside the field: `label-placement`".
 
 ## `lr-token-input`
 
@@ -7519,6 +7558,8 @@ and color-mix treatments as fallbacks. Disabled actions still dim through `--lr-
 the same library-wide token every other disabled control reads.
 
 ## `lr-locale-picker`
+
+`--lr-locale-picker-trigger-radius` rounds the trigger only; unset it follows `--lr-locale-picker-radius`, which keeps rounding the listbox and options.
 
 Under a coarse pointer the editable text is floored at `--lr-form-control-touch-font-size-min`
 (default `16px`; `0px` opts out) so mobile Safari does not zoom on focus; see "Touch font floor".

@@ -563,7 +563,7 @@ export interface LyraTableEventMap<T = unknown, K extends string | number = stri
   'lr-filter-change': CustomEvent<Readonly<{ filterText: string }>>;
   /** One-based `page`; `offset` is `(page - 1) * pageSize`. */
   'lr-before-page-change': CustomEvent<Readonly<{ page: number; pageSize: number; offset: number }>>;
-  'lr-page-change': CustomEvent<Readonly<{ page: number }>>;
+  'lr-page-change': CustomEvent<Readonly<{ page: number; pageSize: number; offset: number }>>;
   'lr-cell-edit': CustomEvent<Readonly<{ row: T; columnKey: string; value: string | number }>>;
   'lr-column-resize-request': CustomEvent<Readonly<{ columnKey: string; width: number }>>;
   'lr-column-resize': CustomEvent<Readonly<{ columnKey: string; width: number }>>;

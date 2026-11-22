@@ -60,6 +60,16 @@ export type LyraDrawerPlacement = 'start' | 'end' | 'top' | 'bottom';
  * @cssprop --hide-duration - Closing slide duration.
  * @cssprop --lr-drawer-width - Inline size for start/end drawers.
  * @cssprop --lr-drawer-height - Block size for top/bottom drawers.
+ * @cssprop [--lr-drawer-panel-bg=var(--lr-dialog-panel-bg)] - Fill of this drawer's panel only.
+ *   Wins over the inherited `--lr-dialog-panel-bg`; neither reaches popups opened inside the
+ *   drawer, unlike `--lr-overlay-surface`.
+ * @cssprop [--lr-drawer-radius=0] - Corner radius of the panel. Square by default; `floating`
+ *   changes the default to `--lr-overlay-radius`, and an explicit value here wins either way.
+ * @cssprop [--lr-drawer-inset=var(--lr-space-s)] - Gap between a `floating` panel and the viewport
+ *   (or, with `contained`, its containing block) on every side. The device safe-area insets still
+ *   win wherever they are larger. Ignored unless `floating` is set.
+ * @cssprop [--lr-overlay-radius=var(--lr-radius-container)] - Shared floating-surface corner
+ *   radius, read by the panel only when `floating` is set.
  * @cssprop [--lr-drawer-enter-x=calc(-1 * var(--lr-size-1rem))] - Horizontal offset the panel
  *   slides in from, and back out to, for start/end drawers. Its private default changes per
  *   placement (and flips under RTL); an inherited or direct public value remains authoritative.
@@ -80,6 +90,12 @@ export class LyraDrawer extends LyraDialog {
   /** Positions inside the nearest containing block without modal inerting, focus trapping,
    * scroll locking, top-layer promotion, backdrop, or Escape dismissal. */
   @property({ type: Boolean, reflect: true }) contained = false;
+
+  /** Detaches the panel from the viewport edges as an inset, floating sheet: a
+   *  `--lr-drawer-inset` gap on every side (default `var(--lr-space-s)`) and corners rounded with
+   *  `--lr-overlay-radius`. Off by default, so the drawer stays square and edge-flush. Combines
+   *  with `contained`, where the gap is measured from the containing block. */
+  @property({ type: Boolean, reflect: true }) floating = false;
 
   protected override get modalSurface(): boolean {
     return !this.contained;

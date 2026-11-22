@@ -9,7 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 4 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 4 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `value`: `--lr-sequence-playback-value-font-family`, `--lr-sequence-playback-value-font-size`, `--lr-sequence-playback-value-font-weight`, `--lr-sequence-playback-value-min-width`, `--lr-sequence-playback-value-text-align`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -88,7 +89,10 @@ date, or state instead; enable `with-value` when sighted users also need that te
 called at most once per render and both presentations share its result. The visible text wraps at narrow
 allocations and is not a live region, avoiding unsolicited announcements on every timer tick.
 
-**Themeable custom properties:** `--lr-sequence-playback-icon-size` (default
+**Themeable custom properties:** the `with-value` readout takes `--lr-sequence-playback-value-font-family`
+(default `inherit`), `--lr-sequence-playback-value-font-size` (default `var(--lr-font-size-sm)`), `--lr-sequence-playback-value-font-weight` (default `inherit`),
+`--lr-sequence-playback-value-min-width` (default `0`; reserve room so a changing number does not shift the slider) and `--lr-sequence-playback-value-text-align`
+(default `inherit`). `--lr-sequence-playback-icon-size` (default
 `calc(var(--lr-icon-button-size) * 0.35)` — the play/pause glyph's size; applied as the button's
 `font-size`, and the inline SVG renders at `1em`).
 `--lr-sequence-playback-play-button-active-bg` (default

@@ -10,7 +10,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 16 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `panel`: `--lr-tab-group-panel-hover-outline-color`, `--lr-tab-group-panel-hover-outline-offset`, `--lr-tab-group-panel-hover-outline-style`, `--lr-tab-group-panel-hover-outline-width`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -219,7 +219,14 @@ an attribute selector after `::part()`), which previously left overriding the li
 repainting everything else that reads them. Unset, each falls back to the token its rule used
 before, so rendering is unchanged. The upstream hooks `--indicator-color` (selected indicator),
 `--track-color` (resting strip rule), and `--track-width` (resting strip-rule thickness) are read
-first, with the Lyra/token values as fallbacks. `--lr-tab-group-vertical-nav-max-inline-size`
+first, with the Lyra/token values as fallbacks; `--lr-tab-group-track-width` (default
+`var(--lr-border-width-thin)`) is the Lyra-prefixed strip-rule thickness behind `--track-width`, on
+whichever edge `placement` puts the rule, and the selected underline keeps overlapping it exactly.
+The tab buttons themselves take `--lr-tab-group-tab-padding` (default
+`var(--lr-space-s) var(--lr-space-xs)`), `--lr-tab-group-tab-font-size` (default `inherit`) and
+`--lr-tab-group-tab-min-block-size` (default `auto`, for a taller touch-friendly strip); because the
+group renders the real tab button, these are set on the group or an ancestor, not on `<lr-tab>`.
+`--lr-tab-group-vertical-nav-max-inline-size`
 (default `var(--lr-size-12rem)`) caps a `start`/`end` nav's logical inline size while still allowing
 it to shrink in a constrained allocation. Its inline fallback means it can be set on the group or
 an ancestor; long single-line tab labels ellipsize within the cap rather than expanding the group or

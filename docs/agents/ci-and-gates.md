@@ -109,7 +109,7 @@ Two steps are deliberately **not** in `regen` and run afterwards, in this order:
    that writes into `src/` (for example `default-string-slices` rewrites class files).
 2. **`./package.sh`.** It regenerates `packages/lyra-ui/llms/` itself, then repackages
    `plugins/lyra-ui/skills/lyra-ui/references/` and the `skills/*.skill` archives. CI's
-   `static-checks` diffs them.
+   `static-checks` diffs the text outputs and compares the archives by content.
 
 Rules that follow from `component-quality`'s inputs:
 
@@ -945,8 +945,12 @@ first because its entrypoint tests import `dist/`; package-local forms exist und
 `./package.sh` regenerates `packages/lyra-ui/llms/` itself before packaging, so after a doc change
 run it directly rather than `pnpm run llms` then `./package.sh`: `pnpm lint` checks `llms/` but not the
 packaged copy under `plugins/`. CI's `static-checks` runs it and `git diff --exit-code`s
-`plugins/lyra-ui/skills/lyra-ui/CHANGELOG.md`, `plugins/lyra-ui/skills/lyra-ui/references/`,
-`skills/lyra-ui.skill` and `skills/compose-lyra-interfaces.skill`. Those paths are GENERATED; never
+`plugins/lyra-ui/skills/lyra-ui/CHANGELOG.md`, `plugins/lyra-ui/skills/lyra-ui/references/` and
+`packages/lyra-ui/skills/`, then runs `scripts/check-skill-bundles.mjs` on `skills/lyra-ui.skill` and
+`skills/compose-lyra-interfaces.skill`, which compares each rebuilt archive with its `HEAD` blob by
+sorted entry names plus a sha256 per entry, never by bytes: deflate output depends on the zlib build
+(Python linked against zlib-ng writes different bytes than stock zlib for identical content), so a
+byte diff failed on a runner whose zlib differed from the committer's. Those paths are GENERATED; never
 hand-edit them. `packages/lyra-ui/llms-full.txt` is the GENERATED concatenation of the authored
 `llms/<family>.md`, `llms/shared/*.md` (through the generated `llms/shared.md` compatibility
 assembly) and `llms/00-*.md` sources (`pnpm run llms`); it is a repository archive, not an npm package

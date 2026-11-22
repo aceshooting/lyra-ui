@@ -72,6 +72,20 @@ export const styles = css`
     flex: 1 1 auto;
     min-block-size: 0;
   }
+  /* fit-block: no definite parent needed. The base inherits the host's own max-block-size, so the
+     heatmap takes its content height up to that ceiling and the scrollport shrinks to what the
+     legend leaves inside it. */
+  :host([fit-block]) {
+    min-block-size: 0;
+  }
+  :host([fit-block]) [part="base"] {
+    max-block-size: inherit;
+    box-sizing: border-box;
+  }
+  :host([fit-block]) [part="grid"] {
+    flex: 1 1 auto;
+    min-block-size: 0;
+  }
   [part="base"]:where([data-fit-frame-contained]) {
     overflow: clip;
   }
@@ -304,9 +318,16 @@ export const styles = css`
     padding: var(--lr-heatmap-legend-padding, 0);
     border-radius: var(--lr-heatmap-legend-radius, 0);
     background: var(--lr-heatmap-legend-bg, transparent);
+    font-family: var(--lr-heatmap-legend-font-family, inherit);
     font-size: var(--lr-heatmap-legend-font-size, var(--lr-font-size-xs));
     color: var(--lr-heatmap-legend-color, var(--lr-color-text-quiet));
     overflow-wrap: anywhere;
+    /* The divider sits on the edge facing the grid: above a bottom legend, below a top one. */
+    border-block-start: var(--lr-heatmap-legend-divider, none);
+  }
+  :host([legend-placement="top"]) [part="legend"] {
+    border-block-start: none;
+    border-block-end: var(--lr-heatmap-legend-divider, none);
   }
   [part="legend"] .bar {
     flex: 0 1 var(--lr-heatmap-legend-ramp-inline-size, var(--lr-size-6rem));

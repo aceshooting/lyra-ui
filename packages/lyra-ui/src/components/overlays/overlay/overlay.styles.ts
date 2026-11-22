@@ -10,6 +10,14 @@ import {
 export const styles = css`
   :host { display: inline-block; }
   [part='trigger'] { display: inline-block; }
+  /* full-width-trigger: the host, the trigger wrapper and the slotted trigger all take the full
+     inline size of the host's container, for a trigger laid out as a block-level field. */
+  :host([full-width-trigger]) { display: block; }
+  :host([full-width-trigger]) [part='trigger'] { display: block; }
+  :host([full-width-trigger]) slot[name='trigger']::slotted(*) {
+    box-sizing: border-box;
+    inline-size: 100%;
+  }
   [part~='popup'] {
     /* Fixed from the start, not only once JS positions it on open, so the closed popup -- sized to
        its full slotted content -- never occupies a box in normal flow; otherwise it inflates its
@@ -28,7 +36,20 @@ export const styles = css`
        resolution would discard the JS-written left (see above). */
     left: 0;
     z-index: var(--lr-overlay-stack-index, var(--lr-layer-popover));
-    max-inline-size: min(var(--max-width, var(--lr-overlay-max-inline-size, var(--lr-size-20rem))), var(--lr-positioner-available-inline-size, var(--lr-size-20rem)));
+    /* --lr-overlay-inline-size is an assertive width (auto, shrink-to-fit, while unset). With it set
+       and no explicit maximum, the cap falls back to the requested width rather than the 20rem
+       default, so an assertive width is not silently clipped; the available space stays a hard
+       limit either way. */
+    inline-size: var(--lr-overlay-inline-size, auto);
+    max-inline-size: min(var(--max-width, var(--lr-overlay-max-inline-size, var(--lr-overlay-inline-size, var(--lr-size-20rem)))), var(--lr-positioner-available-inline-size, var(--lr-size-20rem)));
+    /* A floor for short content, itself capped by the available space so it never pushes the popup
+       off-screen. The private arm lets a composing component (lr-context-menu) put its own
+       component-scoped floor ahead of the shared one; it is only declared while that component's
+       token is set. 0px is the used value of the initial auto here. */
+    min-inline-size: min(
+      var(--_lr-popup-min-inline-size, var(--lr-overlay-min-inline-size, 0px)),
+      var(--lr-positioner-available-inline-size, 100vw)
+    );
     max-block-size: var(--lr-positioner-available-block-size, var(--lr-size-20rem));
     overflow: auto;
     /* The shared overlay-surface family (internal/overlay-surface.styles.ts), not the page-surface
@@ -60,7 +81,7 @@ export const styles = css`
   }
   [part~='popup'] { --_lr-popup-exit-transform: translateY(var(--lr-size-neg-0-25rem)); }
   ${anchoredPopupSettle}
-  [part~='content'] { padding: var(--lr-space-m); }
+  [part~='content'] { padding: var(--lr-overlay-content-padding, var(--lr-space-m)); }
   /* An arrow protrudes past the popup's edge, so the scroll container moves inwards for it -- an
      overflow: auto popup would clip the arrow away entirely. Scoped to the arrow case so an
      arrowless popover keeps its box model exactly. */

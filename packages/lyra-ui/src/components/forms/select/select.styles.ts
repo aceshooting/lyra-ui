@@ -6,6 +6,7 @@ import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.sty
 import { glassIndependentRootStyles } from '../../../internal/glass-independent-root.styles.js';
 import {
   formControlFocusHalo,
+  formControlFieldTransition,
   formControlInvalidBorder,
   formControlRequiredMarker,
   formControlTextWrap,
@@ -49,6 +50,7 @@ export const styles = css`
        ancestor still reaches this trigger, while the halo itself is painted in one place for every
        field-shaped control in the library. */
     --_lr-form-control-focus-shadow: var(--lr-form-control-focus-shadow, none);
+    --_lr-form-control-transition: var(--lr-form-control-transition, none);
     /* --lr-select-trigger-height is deliberately undeclared: it is read only through the two var()
        fallbacks on [part='trigger'] below, so any declared value (even auto) dead-arms them -- how
        --lr-select-trigger-min-height became dead code. The per-tier floor then falls out of the
@@ -137,8 +139,24 @@ export const styles = css`
     text-align: start;
     cursor: pointer;
   }
+  [part="trigger"] {
+    ${formControlFieldTransition}
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :host {
+      --_lr-form-control-transition: none;
+    }
+  }
   [part="trigger"]:focus-visible {
     ${focusRing}
+    /* Opt-in replacement for the keyboard outline (for example with the shared halo). Forced
+       colours below always restore the standard ring, so a visible indicator cannot be removed. */
+    outline: var(--lr-form-control-focus-outline, var(--lr-focus-ring-width) solid var(--lr-focus-ring-color));
+  }
+  @media (forced-colors: active) {
+    [part="trigger"]:focus-visible {
+      ${focusRing}
+    }
   }
   /* The opt-in focus halo, on :focus rather than :focus-visible: the outline above is the
      accessibility answer to KEYBOARD focus and stays exactly as it was, while a halo a consumer
@@ -264,7 +282,7 @@ export const styles = css`
   }
   :host([open]) [part="trigger"] {
     border-color: var(--lr-select-open-border-color, var(--lr-color-brand));
-    ${formControlFocusHalo}
+    box-shadow: var(--lr-select-open-shadow, var(--_lr-form-control-focus-shadow, none));
   }
   :host(:disabled) [part="trigger"] {
     /* Shared library-wide disabled-state token -- see lr-combobox. */

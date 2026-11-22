@@ -222,7 +222,15 @@ export interface LyraTabGroupEventMap {
  * @csspart active-tab-indicator - Indicator inside the active tab.
  * @cssprop --indicator-color - Upstream alias for the active indicator color.
  * @cssprop --track-color - Upstream track color.
- * @cssprop --track-width - Upstream track width.
+ * @cssprop --track-width - Upstream track width. Wins over `--lr-tab-group-track-width`.
+ * @cssprop [--lr-tab-group-track-width=var(--lr-border-width-thin)] - Width of the track rule along
+ *   the tab strip, on whichever edge `placement` puts it. The selected underline overlaps it
+ *   exactly.
+ * @cssprop [--lr-tab-group-tab-padding=var(--lr-space-s) var(--lr-space-xs)] - Padding of each tab
+ *   button.
+ * @cssprop [--lr-tab-group-tab-font-size=inherit] - Font size of each tab button.
+ * @cssprop [--lr-tab-group-tab-min-block-size=auto] - Minimum block size of each tab button, for a
+ *   taller touch-friendly strip.
  * @cssprop [--lr-scroll-fade-size=2rem] - Width of the fade at each horizontal scroll edge. The
  *   fade is applied only while the tablist actually overflows, so a row that fits is never dimmed.
  * @cssprop [--lr-tab-group-selected-color=var(--lr-color-brand)] - Text color of the selected tab.

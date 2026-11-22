@@ -6,6 +6,7 @@ import { glassScrollLayerStyles } from '../../../internal/glass-scroll-layer.sty
 import { glassIndependentRootStyles } from '../../../internal/glass-independent-root.styles.js';
 import {
   formControlFocusHalo,
+  formControlFieldTransition,
   formControlInvalidBorder,
   formControlRequiredMarker,
   formControlTextWrap,
@@ -61,6 +62,7 @@ export const styles = css`
        declared; the PUBLIC name stays undeclared, so a value set on :root or any ancestor still
        reaches this row. */
     --_lr-form-control-focus-shadow: var(--lr-form-control-focus-shadow, none);
+    --_lr-form-control-transition: var(--lr-form-control-transition, none);
     /* --lr-combobox-trigger-height is deliberately undeclared: read only through the two var()
        fallbacks on [part='combobox'] below, so any declared value (even 'auto') dead-arms them and
        makes --lr-combobox-trigger-min-height dead code. The per-tier floor then falls out of the
@@ -186,6 +188,14 @@ export const styles = css`
     color: var(--lr-combobox-color, var(--_lr-combobox-text-color));
     font-size: var(--lr-combobox-font-size, var(--_lr-combobox-font-size));
     cursor: text;
+  }
+  [part="combobox"] {
+    ${formControlFieldTransition}
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :host {
+      --_lr-form-control-transition: none;
+    }
   }
   [part="combobox"]:focus-within {
     /* The open/focused edge, now a real hook rather than a hardcoded brand token -- the one state

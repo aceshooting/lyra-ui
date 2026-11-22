@@ -249,3 +249,24 @@ export const NativeModal: Story = {
     </div>
   `,
 };
+
+export const RegionInsets: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-toast-inset-block` and `--lr-toast-inset-inline` move a region away from the viewport edges. Each placement is its own region, so a placement selector scopes them to one.',
+      },
+    },
+  },
+  render: () => html`
+    <style>
+      lr-toast[placement^='bottom'] {
+        --lr-toast-inset-block: var(--lr-space-2xl);
+        --lr-toast-inset-inline: var(--lr-space-2xl);
+      }
+    </style>
+    <button @click=${() => toast({ message: 'Inset bottom region', placement: 'bottom-end' })}>bottom-end, inset</button>
+    <button @click=${() => toast({ message: 'Default top region', placement: 'top-end' })}>top-end, default</button>
+  `,
+};

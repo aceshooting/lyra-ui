@@ -1567,3 +1567,70 @@ it('isolates the caller label under an RTL host', async () => {
   const node = el.shadowRoot!.querySelector('[part="label"] > bdi');
   expect(node ? `${node.getAttribute('dir')}:${node.textContent}` : null).to.equal('auto:C++ (beta)');
 });
+
+describe('icon chip box, value letter-spacing and rows gap tokens', () => {
+  const glyph = html`<span slot="start" style="display:inline-block;inline-size:16px;block-size:16px"></span>`;
+  const rows = [{ label: 'North', value: '1' }, { label: 'South', value: '2' }];
+
+  it('sizes the icon chip box from --lr-stat-icon-box-size and centers the glyph in it', async () => {
+    const el = await fixture<LyraStat>(html`<lr-stat label="Load" value="12"
+      style="--lr-stat-icon-box-size: 40px; --lr-stat-icon-padding: 4px">${glyph}</lr-stat>`);
+    const chip = el.shadowRoot!.querySelector<HTMLElement>('[part="icon"]')!.getBoundingClientRect();
+    const inner = el.querySelector<HTMLElement>('[slot="start"]')!.getBoundingClientRect();
+    expect([chip.width, chip.height]).to.deep.equal([40, 40]);
+    expect(Math.abs(inner.left + inner.width / 2 - (chip.left + chip.width / 2))).to.be.below(1);
+    // The glyph's line box is what centres, so an inline glyph sits on its baseline inside it.
+    expect(inner.top).to.be.at.least(chip.top);
+    expect(inner.bottom).to.be.at.most(chip.bottom);
+    expect(Math.abs(inner.top + inner.height / 2 - (chip.top + chip.height / 2))).to.be.below(5);
+  });
+
+  it('leaves the icon chip hugging its glyph while --lr-stat-icon-box-size is unset', async () => {
+    const el = await fixture<LyraStat>(html`<lr-stat label="Load" value="12">${glyph}</lr-stat>`);
+    const chip = el.shadowRoot!.querySelector<HTMLElement>('[part="icon"]')!;
+    expect(chip.getBoundingClientRect().width).to.equal(16);
+  });
+
+  it('applies --lr-stat-value-letter-spacing to the headline value, normal while unset', async () => {
+    const plain = await fixture<LyraStat>(html`<lr-stat label="Load" value="12"></lr-stat>`);
+    const value = (el: LyraStat) => getComputedStyle(el.shadowRoot!.querySelector('[part="value"]')!).letterSpacing;
+    expect(value(plain)).to.equal('normal');
+    const spaced = await fixture<LyraStat>(html`<lr-stat label="Load" value="12" style="--lr-stat-value-letter-spacing: 2px"></lr-stat>`);
+    expect(value(spaced)).to.equal('2px');
+  });
+
+  it('spaces breakdown rows by --lr-stat-rows-gap, 0.125rem while unset', async () => {
+    const gap = (el: LyraStat) => getComputedStyle(el.shadowRoot!.querySelector('[part="rows"]')!).rowGap;
+    const plain = await fixture<LyraStat>(html`<lr-stat label="Load" value="12" .rows=${rows}></lr-stat>`);
+    expect(gap(plain)).to.equal('2px');
+    const spaced = await fixture<LyraStat>(html`<lr-stat label="Load" value="12" .rows=${rows} style="--lr-stat-rows-gap: 10px"></lr-stat>`);
+    expect(gap(spaced)).to.equal('10px');
+  });
+});
+
+it('colours a neutral headline from --lr-stat-value-color while variants keep their own token', async () => {
+  const value = (el: LyraStat) => getComputedStyle(el.shadowRoot!.querySelector('[part="value"]')!).color;
+  const wrapper = await fixture<HTMLElement>(html`<div>
+    <lr-stat label="A" value="1"></lr-stat>
+    <lr-stat label="B" value="2" style="--lr-stat-value-color: rgb(10, 20, 30)"></lr-stat>
+    <lr-stat label="C" value="3" variant="danger" style="--lr-stat-value-color: rgb(10, 20, 30); --lr-stat-value-danger-color: rgb(40, 50, 60)"></lr-stat>
+  </div>`);
+  const stats = [...wrapper.querySelectorAll<LyraStat>('lr-stat')];
+  await Promise.all(stats.map((stat) => stat.updateComplete));
+  // Unset, the value inherits the host's own text colour.
+  expect(JSON.stringify(stats.map(value))).to.equal(JSON.stringify([getComputedStyle(stats[0]!).color, 'rgb(10, 20, 30)', 'rgb(40, 50, 60)']));
+});
+
+it('aligns the value row and sets the value line height and margin from tokens, keeping defaults unset', async () => {
+  const read = (el: LyraStat) => {
+    const row = getComputedStyle(el.shadowRoot!.querySelector('[part="value-row"]')!);
+    const value = getComputedStyle(el.shadowRoot!.querySelector('[part="value"]')!);
+    return [row.alignItems, value.marginInlineStart, value.lineHeight];
+  };
+  const plain = await fixture<LyraStat>(html`<lr-stat label="A" value="1" unit="ms"></lr-stat>`);
+  const defaults = read(plain);
+  expect(defaults.slice(0, 2)).to.deep.equal(['baseline', '0px']);
+  const tuned = await fixture<LyraStat>(html`<lr-stat label="A" value="1" unit="ms"
+    style="--lr-stat-value-row-align: center; --lr-stat-value-margin: 0 4px; --lr-stat-value-line-height: 30px"></lr-stat>`);
+  expect(read(tuned)).to.deep.equal(['center', '4px', '30px']);
+});

@@ -25,7 +25,7 @@ import {
 } from '../../../internal/aria-controls.js';
 import { devWarnOnce } from '../../../internal/dev-mode-attribute-warning.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraLabelDisplay, LyraSize } from '../../../internal/variants.js';
+import type { LyraLabelDisplay, LyraLabelPlacement, LyraSize } from '../../../internal/variants.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { styles } from './checkbox-group.styles.js';
 import type { LyraCheckbox } from '../checkbox/checkbox.class.js';
@@ -133,7 +133,14 @@ export type CheckboxGroupOrientation = LyraOrientation;
  * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
+ * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
  * @csspart form-control-label - Label.
+ * @cssprop [--lr-form-control-label-inline-size=30%] - Label column width while
+ *   `label-placement="start"`.
+ * @cssprop [--lr-form-control-label-gap=var(--lr-space-m)] - Space between the label column and
+ *   the field while `label-placement="start"`.
+ * @cssprop [--lr-form-control-label-collapse-inline-size=var(--lr-size-20rem)] - Control width
+ *   below which `label-placement="start"` returns the label above the field.
  * @csspart toolbar - Container for the supplementary controls.
  * @csspart options - Checkbox collection.
  * @csspart form-control-input - WA name for the same checkbox collection.
@@ -144,6 +151,10 @@ export type CheckboxGroupOrientation = LyraOrientation;
  * between the group's label, options and messages, scaled by `size`.
  * @cssprop [--lr-checkbox-group-option-gap=calc(var(--lr-form-control-height) * 0.2)] - Gap between
  * adjacent options, scaled by `size`.
+ * @cssprop [--lr-checkbox-group-option-row-gap=var(--lr-checkbox-group-option-gap)] - Block-axis gap
+ * between wrapped option rows (`orientation="horizontal"`) or stacked options; wins over `--gap`.
+ * @cssprop [--lr-checkbox-group-option-column-gap=var(--lr-checkbox-group-option-gap)] - Inline-axis
+ * gap between options sharing a row; wins over `--gap`.
  * @cssprop [--lr-checkbox-group-invalid-border-color=var(--lr-color-danger)] - Border around the option
  * collection while invalid chrome is visible.
  * @cssprop [--gap=var(--lr-checkbox-group-option-gap)] - WA-compatible option gap.
@@ -213,6 +224,16 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
   @property() label = '';
   /** Visually hide the group label while preserving its accessible name. */
   @property({ attribute: 'label-display', reflect: true, useDefault: true }) labelDisplay: LyraLabelDisplay = 'visible';
+  /**
+   * Where the label sits: `top` (default) above the field, or `start` in an inline-start column of
+   * `--lr-form-control-label-inline-size`, with hint and error aligned under the field. Below
+   * `--lr-form-control-label-collapse-inline-size` the label returns above the field. The label
+   * association is unchanged. Reflected so `[label-placement]` selectors match.
+   * With `start` the toolbar moves below the options, and a plain element named through
+   * `aria-labelledby` replaces the legend (the accessible name is unchanged).
+   * @attr label-placement
+   */
+  @property({ attribute: 'label-placement', reflect: true, useDefault: true }) labelPlacement: LyraLabelPlacement = 'top';
   @property() hint = '';
   /** Supporting text used when the hint property is empty. */
   @property({ attribute: 'help-text' }) helpText = '';
@@ -909,6 +930,10 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
 
   override render(): TemplateResult {
     const hasLabel = this.hasLabelSlot || Boolean(this.label) || this.withLabel;
+    // A fieldset's rendered legend is not a flex item, and engines disagree on whether floating it
+    // frees it. In the label-beside layout a plain element named through aria-labelledby takes its
+    // place, which keeps the same accessible name.
+    const start = this.labelPlacement === 'start';
     const supporting = formControlSupportingState({
       presence: this.slotPresence, idPrefix: this.supportingId, hint: this.hint,
       errorText: this.errorText, withHint: this.withHint, helpText: this.helpText,
@@ -919,10 +944,13 @@ export class LyraCheckboxGroup extends LyraFormControlElement<LyraCheckboxGroupE
       part="form-control"
       ?disabled=${this.effectiveDisabled}
       aria-label=${hostAriaLabel(this) ?? nothing}
+      aria-labelledby=${start && hasLabel && hostAriaLabel(this) == null ? this.labelId : nothing}
       aria-describedby=${describedBy ?? nothing}
       aria-invalid=${invalid ? 'true' : 'false'}
     >
-      <legend part="form-control-label" id=${this.labelId} ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot></legend>
+      ${start
+        ? html`<div part="form-control-label" id=${this.labelId} ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot></div>`
+        : html`<legend part="form-control-label" id=${this.labelId} ?hidden=${!hasLabel}>${this.label}<slot name="label" @slotchange=${this.onSlotChange}></slot></legend>`}
       <div part="toolbar" ?hidden=${!this.slotPresence.has('toolbar')}><slot name="toolbar"></slot></div>
       <div part="options form-control-input">
         <slot @slotchange=${this.onSlotChange}></slot>

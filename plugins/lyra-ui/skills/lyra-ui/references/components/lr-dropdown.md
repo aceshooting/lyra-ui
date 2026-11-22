@@ -9,7 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `content`: `--lr-overlay-content-padding`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -103,8 +104,8 @@ its surface.
   light-dismiss handling.
 - `withoutArrow: boolean = false` (attribute `without-arrow`, reflected) — suppresses the
   pointer. Set `without-arrow` to preserve the previous omitted-arrow appearance.
-- `arrowPlacement`, `arrowPadding`, and `accessibleLabel` (`aria-label`) are inherited from
-  `lr-popover`.
+- `arrowPlacement`, `arrowPadding`, `fullWidthTrigger` (`full-width-trigger`), and
+  `accessibleLabel` (`aria-label`) are inherited from `lr-popover`.
 - `popupRole: 'menu'` (attribute `popup-role`) is the narrowed inherited surface. Dropdowns cannot
   be changed into dialogs; use `lr-popover popup-role="dialog"` for arbitrary dialog-like content.
 
@@ -145,7 +146,10 @@ default; style it only to debug the travel region.
 
 **Themeable custom properties:** `--show-duration` and `--hide-duration` (both default
 `var(--lr-transition-fast)`), mapped `--max-width` and `--arrow-size`, plus retained
-`--lr-overlay-max-inline-size` and `--lr-overlay-arrow-size` fallbacks. The popup surface is
+`--lr-overlay-max-inline-size` and `--lr-overlay-arrow-size` fallbacks, and the inherited
+`--lr-overlay-inline-size` / `--lr-overlay-min-inline-size` popup width hooks (a `top-layer` popup
+honours them too). The menu keeps its own compact `var(--lr-space-xs)` content padding, so
+`--lr-overlay-content-padding` does not reach it. The popup surface is
 `lr-popover`'s, so the whole overlay-surface family reaches it unchanged: `--lr-overlay-surface`,
 `--lr-overlay-border`, `--lr-overlay-radius`, `--lr-overlay-shadow-anchored`, and the cascading
 `--lr-positioning-strategy` override documented on `<lr-popover>`

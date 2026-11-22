@@ -1,0 +1,5 @@
+---
+'@aceshooting/lyra-ui': minor
+---
+
+`lr-map` adds `anchorAvoidGap` (attribute `anchor-avoid-gap`: extra room kept beyond each edge an `anchorAvoid` obstacle reserves), `controlsAvoid` (observed application chrome whose overlap is added to `--lr-map-controls-inset-*`, so the control corners, legend and bars clear it), the single-corner insets `--lr-map-controls-<corner>-inset-block` and `--lr-map-controls-<corner>-inset-inline` for `top-left`, `top-right`, `bottom-left` and `bottom-right`, the attribution tokens `--lr-map-attribution-padding`, `--lr-map-attribution-link-padding`, `--lr-map-attribution-max-inline-size`, `--lr-map-attribution-font-family`, `--lr-map-attribution-font-size`, `--lr-map-attribution-line-height`, `--lr-map-attribution-toggle-size`, `--lr-map-attribution-toggle-radius` and `--lr-map-attribution-toggle-icon-size`, and the deferred-initialization tokens `--lr-map-initialization-placeholder-bg`, `--lr-map-initialization-skeleton-display` and `--lr-map-initialization-activate-label-display`. Defaults are unchanged.

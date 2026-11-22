@@ -93,6 +93,18 @@ export const formControlFocusHalo = css`
 `;
 
 /**
+ * Opt-in border/halo transition for a field surface, so a design system's eased focus ring reads on
+ * the library's fields too. `--lr-form-control-transition` is a `transition` value (for example
+ * `border-color 150ms, box-shadow 150ms`); unset, the field has no transition, exactly as before.
+ * Same two-step adoption as {@link formControlFocusHalo}: the adopting sheet resolves
+ * `--_lr-form-control-transition: var(--lr-form-control-transition, none);` on `:host` (and `none`
+ * again under `prefers-reduced-motion: reduce`), then interpolates this on the field surface.
+ */
+export const formControlFieldTransition = css`
+  transition: var(--_lr-form-control-transition, none);
+`;
+
+/**
  * The one resting invalid border every field-shaped form control paints.
  *
  * Matches `:state(user-invalid)` — invalid after the user has interacted with the control, after
@@ -160,7 +172,11 @@ export const formControlLabelDisplay = css`
   }
 `;
 
-/** Label typography shared by native field labels, legends and named group labels. */
+/**
+ * Label typography shared by native field labels, legends and named group labels. Size, weight,
+ * colour and line height each read a `--lr-form-control-label-*` token; an unset line height
+ * inherits, so the default is unchanged.
+ */
 export function formControlLabelTypography({
   size = css`var(--lr-font-size-md-sm)`,
   weight = css`var(--lr-font-weight-semibold)`,
@@ -170,6 +186,7 @@ export function formControlLabelTypography({
     font-size: var(--lr-form-control-label-font-size, ${size});
     font-weight: var(--lr-form-control-label-font-weight, ${weight});
     color: var(--lr-form-control-label-color, ${color});
+    line-height: var(--lr-form-control-label-line-height, inherit);
   `;
 }
 

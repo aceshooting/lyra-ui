@@ -9,8 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 12 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `label`: `--lr-switch-label-font-size`, `--lr-switch-label-color`, `--lr-switch-checked-label-color`; `track`: `--lr-switch-invalid-border-color`, `--lr-switch-track-fill`, `--lr-switch-track-border`, `--lr-switch-checked-track-border`
+- **Themeable via** 12 parts, 20 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `label`: `--lr-switch-label-font-size`, `--lr-switch-label-color`, `--lr-switch-checked-label-color`, `--lr-switch-checked-label-font-weight`; `track`: `--lr-switch-invalid-border-color`, `--lr-switch-track-fill`, `--lr-switch-track-border`, `--lr-switch-checked-track-border`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -161,7 +161,8 @@ unchecked thumb untouched.
 `--lr-switch-label-font-size` (default `var(--lr-font-size-md-sm)`) sets `[part='label']`'s text size.
 `--lr-switch-label-color` (default `var(--lr-color-text)`) controls `[part='label']`'s text color,
 and is also the checked-state fallback. `--lr-switch-checked-label-color` (default
-`var(--lr-switch-label-color)`) independently retints the label only while checked. Both label hooks
+`var(--lr-switch-label-color)`) independently retints the label only while checked, and
+`--lr-switch-checked-label-font-weight` (default `inherit`) weights it. The checked label hooks
 read the switch's **live** checked state (the same `:state(checked)` custom state the class doc's
 `@cssstate checked` documents), not the `checked` *attribute* — which instead reflects
 `defaultChecked`, the form-reset value — so the checked-state hook tracks user interaction correctly

@@ -146,7 +146,14 @@ export interface LyraCodeBlockEventMap extends LyraCodeBlockBaseEventMap {}
  *   `line-numbers` are both set.
  * @cssprop [--lr-code-block-padding=var(--lr-space-s) var(--lr-space-m)] - Code padding.
  * @cssprop [--lr-code-block-radius=var(--lr-radius)] - Frame corner radius.
+ * @cssprop [--lr-code-block-border=var(--lr-border-width-thin) solid var(--lr-color-border-subtle)] -
+ *   Frame border shorthand.
+ * @cssprop [--lr-code-block-bg=var(--lr-color-surface)] - Frame and plain-code fill; highlighted
+ *   code paints its theme background over it.
  * @cssprop [--lr-code-block-header-bg=var(--lr-color-surface)] - Header background.
+ * @cssprop [--lr-code-block-header-padding=var(--lr-space-xs) var(--lr-space-s)] - Header padding.
+ * @cssprop [--lr-code-block-header-border=var(--lr-border-width-thin) solid var(--lr-color-border-subtle)] -
+ *   Rule between the header and the code (shorthand).
  * @cssprop [--lr-code-block-header-color=var(--lr-color-text)] - Filename color.
  * @cssprop [--lr-code-block-toggle-bg=transparent] - Disclosure control background at rest.
  * @cssprop [--lr-code-block-toggle-hover-bg=var(--lr-color-brand-quiet)] - Disclosure control hover background.

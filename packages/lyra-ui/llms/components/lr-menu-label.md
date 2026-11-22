@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 1 part, 3 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 1 part, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -17,7 +17,8 @@
 ## `lr-menu-label`
 
 The `lr-menu-label` styling hooks include `--lr-menu-label-color`, `--lr-menu-label-padding`, and
-`--lr-menu-label-font-size` (default `var(--lr-font-size-sm)`).
+`--lr-menu-label-font-size` (default `var(--lr-font-size-sm)`), `--lr-menu-label-font-weight`
+(default `var(--lr-font-weight-semibold)`) and `--lr-menu-label-letter-spacing` (default `normal`).
 
 A non-interactive section heading inside `<lr-menu>`'s default slot. Mirrors `sl-menu-label`.
 

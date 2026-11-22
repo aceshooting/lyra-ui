@@ -186,6 +186,14 @@ A flex-wrap container for a set of `<lr-chip>` children — plain light-DOM comp
 children are the chips (the same shape `<lr-multi-split>`'s panels / `<lr-source-list>`'s cards take,
 no `.items` array prop).
 
+**Selection (opt-in).** `selection="single|multiple"` (default `none`: the group manages nothing) makes the group own the pressed state of every direct `<lr-chip>` child that has a `value`: it sets them `toggleable` and presses the ones in `value`. In `single` pressing a chip releases the others; pressing a pressed chip releases it, so the selection can be empty. `value` is a string in `single` and a `string[]` in `multiple` (as an attribute, comma-separated in `multiple`); assigning it is silent. `lr-change` (`detail: { value }`, same shape) fires only from a user press. `all-value="all"` (property `allValue`) marks the child chip whose `value` is `all` as the "all" chip: pressed while the selection is empty, pressing it clears the selection, and it cannot be un-pressed; it is never part of `value`. Chips without a `value` are left alone.
+
+```html
+<lr-chip-group aria-label="Status" selection="multiple" all-value="all" value="open,blocked">
+  <lr-chip value="all">All</lr-chip><lr-chip value="open">Open</lr-chip><lr-chip value="blocked">Blocked</lr-chip>
+</lr-chip-group>
+```
+
 **Properties:**
 
 - `accessibleLabel: string = ''` (attribute `aria-label`) — accessible name for the group,

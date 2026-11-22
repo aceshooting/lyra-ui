@@ -108,3 +108,27 @@ export const Lifecycle: Story = {
     </div>
   `,
 };
+
+export const Floating: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`floating` detaches the panel from the viewport edges by `--lr-drawer-inset` and rounds it with `--lr-overlay-radius`; `--lr-drawer-panel-bg` fills this panel only. The default drawer stays square and edge-flush.',
+      },
+    },
+  },
+  render: () => html`
+    <button
+      @click=${(event: Event) => {
+        void ((event.currentTarget as HTMLElement).nextElementSibling as LyraDrawer).show();
+      }}
+    >
+      Open floating drawer
+    </button>
+    <lr-drawer floating label="Filters" style="--lr-drawer-inset: var(--lr-space-m); --lr-drawer-panel-bg: var(--lr-color-surface-raised)">
+      <p>An inset sheet with rounded corners.</p>
+      <div slot="footer"><button type="button">Apply</button></div>
+    </lr-drawer>
+  `,
+};

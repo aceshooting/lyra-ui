@@ -9,6 +9,6 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 26 custom properties — see `lr-badge.md`
+- **Themeable via** 8 parts, 28 custom properties — see `lr-badge.md`
 - **Documented with** `lr-badge`: see [lr-badge.md](./lr-badge.md).
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`

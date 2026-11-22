@@ -367,3 +367,26 @@ export const TopLayer: Story = {
     </div>
   `,
 };
+
+export const SizingAndFullWidthTrigger: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`full-width-trigger` stretches the trigger to the column. `--lr-overlay-inline-size` sets an assertive popup width, `--lr-overlay-min-inline-size` floors it, and `--lr-overlay-content-padding` pads the content.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="inline-size: min(100%, 20rem)">
+      <lr-popover
+        full-width-trigger
+        placement="bottom"
+        style="--lr-overlay-inline-size: 20rem; --lr-overlay-min-inline-size: 12rem; --lr-overlay-content-padding: var(--lr-space-s)"
+      >
+        <button slot="trigger">Choose a workspace</button>
+        <p>The popup matches the column width.</p>
+      </lr-popover>
+    </div>
+  `,
+};

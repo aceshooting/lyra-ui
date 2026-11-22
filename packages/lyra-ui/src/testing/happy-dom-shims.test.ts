@@ -6,6 +6,7 @@ import {
   installHappyDomAriaControlsShim,
   installHappyDomCascadeLayerShim,
   installHappyDomFormAssociatedShims,
+  installHappyDomResponseBytesShim,
   installHappyDomShadowFocusShim,
   installHappyDomShims,
   installStubInternalsForTest,
@@ -504,5 +505,33 @@ describe('Happy DOM shims installed over missing native APIs', () => {
 
   it('keeps layer-like text inside strings and comments within a layer block', () => {
     expect(flattenCascadeLayers('@layer a{q{content:"}"} /* } */ r{s:t}}')).to.equal('q{content:"}"} /* } */ r{s:t}');
+  });
+});
+
+describe('installHappyDomResponseBytesShim', () => {
+  it('adds bytes() from arrayBuffer() where the Response prototype lacks it, and restores it', async () => {
+    class FakeResponse {
+      constructor(private readonly payload: Uint8Array) {}
+      arrayBuffer(): Promise<ArrayBuffer> {
+        return Promise.resolve(this.payload.slice().buffer);
+      }
+    }
+    const proto = FakeResponse.prototype as FakeResponse & { bytes?: () => Promise<Uint8Array> };
+    const restore = installHappyDomResponseBytesShim(proto);
+    const bytes = await (new FakeResponse(new Uint8Array([1, 2, 3])) as typeof proto).bytes!();
+    expect(bytes).to.be.instanceOf(Uint8Array);
+    expect([...bytes]).to.deep.equal([1, 2, 3]);
+    expect(Object.getOwnPropertyDescriptor(proto, 'bytes')?.enumerable).to.equal(false);
+    restore();
+    expect('bytes' in proto).to.equal(false);
+  });
+
+  it('leaves a native bytes() untouched and is a no-op without a Response prototype', () => {
+    const native = Response.prototype.bytes;
+    const restore = installHappyDomResponseBytesShim();
+    expect(Response.prototype.bytes).to.equal(native);
+    restore();
+    expect(Response.prototype.bytes).to.equal(native);
+    expect(() => installHappyDomResponseBytesShim(undefined)()).to.not.throw();
   });
 });

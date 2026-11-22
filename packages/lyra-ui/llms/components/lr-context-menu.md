@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 2 parts, 8 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 2 parts, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -187,8 +187,10 @@ parent; set `lr-context-menu { display: block }` to get a box.
 (`var(--lr-overlay-max-inline-size, var(--lr-size-20rem))`), `--lr-overlay-surface`
 (`var(--lr-color-surface-overlay)`), `--lr-overlay-border` (`var(--lr-color-border-subtle)`),
 `--lr-overlay-radius` (`var(--lr-radius)`), `--lr-overlay-shadow-anchored` (`var(--lr-shadow-m)`),
-`--lr-overlay-max-inline-size` (`var(--lr-size-20rem)`), and `--show-duration` / `--hide-duration`
-(`var(--lr-transition-fast)`). Row styling uses the `--lr-menu-item-*` properties on your rows.
+`--lr-overlay-max-inline-size` (`var(--lr-size-20rem)`), `--lr-context-menu-min-inline-size`
+(the menu's minimum inline size, capped by the available space; it wins over the shared
+`--lr-overlay-min-inline-size`, default `0px`, which it falls back to while unset), and
+`--show-duration` / `--hide-duration` (`var(--lr-transition-fast)`). Row styling uses the `--lr-menu-item-*` properties on your rows.
 The popup always uses fixed positioning (the anchor is a viewport point), so the cascading
 `--lr-positioning-strategy` is not consulted. Like `lr-dropdown`, it is promoted to the top layer
 only when a transformed, filtered or contained ancestor (such as an `lr-virtual-list` row) would

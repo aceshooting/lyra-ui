@@ -144,7 +144,9 @@ no appearance attribute or reset rules to sit quietly in a toolbar.
 the floor makes the button exactly `--lr-icon-button-size` on both axes; no `::part(button)`
 width/height rule is needed. Set the size on the element for one button, or
 `--lr-icon-button-size-scope` on a wrapper for a toolbar, and keep the slotted glyph (or
-`--lr-icon-size`) at or below it:
+`--lr-icon-size`) at or below it. The native button sets `line-height: 1`, so a glyph wrapped in an
+inline element (a `<span>` around an `<svg>`) does not grow the box to the page's line-height at a
+large root font size:
 
 ```html
 <lr-icon-button icon="info-circle" label="Details" style="--lr-icon-button-size: 2rem"></lr-icon-button>

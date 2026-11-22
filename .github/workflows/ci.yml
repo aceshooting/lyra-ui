@@ -183,7 +183,9 @@ jobs:
       # Other generated artifacts: lint's check:* forms and the attw package job's prepack + git diff.
       - run: pnpm readme:check
       - run: ./package.sh
-      - run: git diff --exit-code -- plugins/lyra-ui/skills/lyra-ui/CHANGELOG.md plugins/lyra-ui/skills/lyra-ui/references/ packages/lyra-ui/skills/ skills/lyra-ui.skill skills/compose-lyra-interfaces.skill
+      - run: git diff --exit-code -- plugins/lyra-ui/skills/lyra-ui/CHANGELOG.md plugins/lyra-ui/skills/lyra-ui/references/ packages/lyra-ui/skills/
+      # The .skill archives are compared by content: deflate output depends on the zlib build.
+      - run: node scripts/check-skill-bundles.mjs skills/lyra-ui.skill skills/compose-lyra-interfaces.skill
       - run: pnpm skill:check
       - run: pnpm storybook:check-theme
 

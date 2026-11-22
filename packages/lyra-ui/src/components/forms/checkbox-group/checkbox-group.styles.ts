@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { formControlLabelPlacement } from '../../../internal/form-control/chrome.styles.js';
 import { formControlLabelDisplay, formControlLabelTypography, formControlRequiredMarker, formControlSupportingTone } from '../../../internal/form-control.styles.js';
 
 export const styles = css`
@@ -34,10 +35,12 @@ export const styles = css`
   [part~='options'] {
     display: flex;
     flex-direction: column;
-    gap: var(
+    --_lr-checkbox-group-gap: var(
       --gap,
       var(--lr-checkbox-group-option-gap, var(--_lr-checkbox-group-option-gap))
     );
+    row-gap: var(--lr-checkbox-group-option-row-gap, var(--_lr-checkbox-group-gap));
+    column-gap: var(--lr-checkbox-group-option-column-gap, var(--_lr-checkbox-group-gap));
   }
   :host([orientation="horizontal"]) [part~="options"] {
     flex-direction: row;
@@ -45,6 +48,26 @@ export const styles = css`
     align-items: center;
   }
   ${formControlSupportingTone}
+  ${formControlLabelPlacement}
+  /* label-placement="start": the toolbar leaves the label row and follows the options. (The label is
+     a plain element in this mode; see render().) */
+  :host([label-placement='start']) [part='toolbar'],
+  :host([label-placement='start']) [part='form-control'] > [part~='hint'],
+  :host([label-placement='start']) [part='form-control'] > [part='error'] { order: 2; }
+  :host([label-placement='start']) [part='toolbar'] {
+    order: 1;
+    flex: 0 0 100%;
+    box-sizing: border-box;
+  }
+  :host([label-placement='start']:not([label-display='hidden']))
+    [part='form-control']:has(> [part~='form-control-label']:not([hidden]))
+    > [part='toolbar'] {
+    padding-inline-start: clamp(
+      0px,
+      (100% - var(--_lr-label-collapse)) * 9999,
+      var(--_lr-label-column) + var(--_lr-label-gap)
+    );
+  }
   :host([data-invalid]) [part~="options"] {
     outline: var(--lr-border-width-thin) solid
       var(--lr-checkbox-group-invalid-border-color, var(--lr-form-control-invalid-border-color, var(--lr-color-danger)));

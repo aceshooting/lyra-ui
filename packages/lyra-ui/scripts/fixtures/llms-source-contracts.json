@@ -3429,7 +3429,7 @@
       "module": "src/components/charts/chart/chart-types.ts",
       "exportName": "LyraChartSeries",
       "kind": "interface",
-      "fingerprint": "ea819f57418bbcd4cec3",
+      "fingerprint": "db98ac6aacc87cce6f4b",
       "routes": [
         "src/all.ts",
         "src/components/charts/chart/chart.class.ts",
@@ -14302,7 +14302,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "aa125144188089601521",
+      "fingerprint": "5355cde9615e46ed7c72",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15984,7 +15984,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "e0a38802a8f57f83ecd6",
+      "fingerprint": "a7e62d92a75e0b35db34",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16000,7 +16000,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "dc17215ba2fa146aba9d",
+      "fingerprint": "08654f55938ac324674f",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16016,7 +16016,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "4be21bfc5baeba62093b",
+      "fingerprint": "6eb6f0302803459560fe",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16560,7 +16560,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "1cbe2f0d215450801847",
+      "fingerprint": "749e9a04ee1c33ef1ef1",
       "routes": [
         "src/vue.ts"
       ],
@@ -16952,7 +16952,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "f802730f200cce780396",
+      "fingerprint": "bb9606faa8bd2432dc9f",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -22887,6 +22887,81 @@
         "kind": "utility",
         "name": "plain-click",
         "declaration": "isPlainPrimaryClick"
+      }
+    },
+    {
+      "module": "src/testing/happy-dom-shims.ts",
+      "exportName": "installHappyDomResponseBytesShim",
+      "kind": "function",
+      "fingerprint": "1cf9350a6122bf04c5a4",
+      "routes": [
+        "src/testing/index.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "testing-happy-dom-shims-contracts",
+        "declaration": "installHappyDomResponseBytesShim"
+      }
+    },
+    {
+      "module": "src/components/overlays/chip/chip-group.class.ts",
+      "exportName": "ChipGroupChangeDetail",
+      "kind": "interface",
+      "fingerprint": "542d5e6124abc4314aab",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-chip-group.ts",
+        "src/components/overlays/chip/chip-group.class.ts",
+        "src/components/overlays/index.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/overlays.md",
+      "family": "overlays",
+      "locator": {
+        "kind": "utility",
+        "name": "components-overlays-chip-chip-group-contracts",
+        "declaration": "ChipGroupChangeDetail"
+      }
+    },
+    {
+      "module": "src/components/overlays/dialog/prompt.ts",
+      "exportName": "prompt",
+      "kind": "function",
+      "fingerprint": "6bbb50ee5905009333cd",
+      "routes": [
+        "src/all.ts",
+        "src/components/overlays/dialog/prompt.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/overlays.md",
+      "family": "overlays",
+      "locator": {
+        "kind": "utility",
+        "name": "components-overlays-dialog-prompt-contracts",
+        "declaration": "prompt"
+      }
+    },
+    {
+      "module": "src/components/overlays/dialog/prompt.ts",
+      "exportName": "PromptOptions",
+      "kind": "interface",
+      "fingerprint": "8756128ef77f2419f4d7",
+      "routes": [
+        "src/all.ts",
+        "src/components/overlays/dialog/prompt.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/overlays.md",
+      "family": "overlays",
+      "locator": {
+        "kind": "utility",
+        "name": "components-overlays-dialog-prompt-contracts",
+        "declaration": "PromptOptions"
       }
     }
   ],

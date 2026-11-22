@@ -28,6 +28,7 @@ export interface MapDrawingHost {
     readonly drawingMeasurements: boolean;
     readonly drawingCompleteBehavior: 'clear' | 'edit';
     readonly drawingSticky: boolean;
+    readonly drawingFinishBehavior: 'clear' | 'keep';
     project(lngLat: readonly [number, number]): readonly [number, number] | undefined;
     unproject(point: readonly [number, number]): readonly [number, number] | undefined;
   };
@@ -216,13 +217,16 @@ export class MapDrawingController {
     finally { this.dispatchingState = false; this.completing = undefined; }
     if (this.session !== session) return true;
     const element = this.host.element, resume = this.resumeMode, mode = result.state.mode;
+    // A kept edit stays open with its resources and resume intent; only its end clears it.
+    if (editing && element.drawingFinishBehavior === 'keep') return true;
     const edit = !editing && element.drawingCompleteBehavior === 'edit';
     const sticky = !editing && !edit && element.drawingSticky;
     this.clear(sticky);
     if (edit) {
       if (this.edit(result.state) && element.drawingSticky) this.resumeMode = mode;
     } else if (sticky) this.sync();
-    else if (resume) this.host.rearm(resume);
+    // The sticky intent is read when the edit ends, not when it opened.
+    else if (resume && element.drawingSticky) this.host.rearm(resume);
     return true;
   }
 
@@ -237,7 +241,7 @@ export class MapDrawingController {
     this.clear(keepMode || sticky);
     if (state) this.host.emitCancel(Object.freeze({ ...state, reason } satisfies LyraMapDrawingCancelDetail));
     if (sticky) this.sync();
-    else if (user && resume) this.host.rearm(resume);
+    else if (user && resume && this.host.element.drawingSticky) this.host.rearm(resume);
     return true;
   }
 

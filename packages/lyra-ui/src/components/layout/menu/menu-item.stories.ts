@@ -276,3 +276,36 @@ export const NarrowLongContent: StoryObj = {
     </div>
   `,
 };
+
+export const ThemedRowTypography: StoryObj = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Row foreground, checked foreground, weights, letter spacing and the `details` readout are retuned from the wrapper through `--lr-menu-item-*` and `--lr-menu-label-*`, with no `::part()` rule.',
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="
+        inline-size: 18rem;
+        --lr-menu-item-color: var(--lr-color-text-quiet);
+        --lr-menu-item-checked-color: var(--lr-color-brand);
+        --lr-menu-item-font-weight: var(--lr-font-weight-medium);
+        --lr-menu-item-checked-font-weight: var(--lr-font-weight-bold);
+        --lr-menu-item-letter-spacing: var(--lr-size-0-04em);
+        --lr-menu-item-details-font-size: var(--lr-font-size-xs);
+        --lr-menu-item-details-color: var(--lr-color-brand);
+        --lr-menu-label-font-weight: var(--lr-font-weight-bold);
+        --lr-menu-label-letter-spacing: var(--lr-size-0-04em);
+      "
+    >
+      <lr-menu label="Themed rows">
+        <lr-menu-label>View</lr-menu-label>
+        <lr-menu-item type="checkbox" checked value="grid">Grid<span slot="details">G</span></lr-menu-item>
+        <lr-menu-item type="checkbox" value="list">List<span slot="details">L</span></lr-menu-item>
+      </lr-menu>
+    </div>
+  `,
+};

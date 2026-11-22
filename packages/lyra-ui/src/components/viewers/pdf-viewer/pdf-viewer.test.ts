@@ -6809,3 +6809,60 @@ describe('lr-pdf-viewer remediation', () => {
     }
   });
 });
+
+describe("fill", () => {
+  it("defaults to false and reflects", async () => {
+    const el = (await fixture(html`<lr-pdf-viewer></lr-pdf-viewer>`)) as LyraPdfViewer;
+    expect(el.fill).to.equal(false);
+    el.fill = true;
+    await el.updateComplete;
+    expect(el.hasAttribute("fill")).to.equal(true);
+  });
+
+  it("takes a definite parent's block size and makes the page list the single scroller", async () => {
+    const wrapper = await fixture<HTMLElement>(
+      html`<div style="block-size: 500px; display: flex; flex-direction: column"><div style="flex: 1 1 auto; min-block-size: 0; overflow: auto"><lr-pdf-viewer fill></lr-pdf-viewer></div></div>`
+    );
+    const body = wrapper.firstElementChild as HTMLElement;
+    const el = wrapper.querySelector("lr-pdf-viewer") as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(12));
+    const restore = stubFetch();
+    try {
+      el.src = "https://example.test/report.pdf";
+      await waitFor(el, '[part="pages"]');
+      await twoFrames();
+      const toolbar = el.shadowRoot!.querySelector('[part="toolbar"]') as HTMLElement;
+      const list = el.shadowRoot!.querySelector("lr-virtual-list") as LyraVirtualList;
+      const scroller = list.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      expect(Math.round(el.getBoundingClientRect().height)).to.equal(500);
+      // The toolbar keeps its row and the page list takes the rest, down to the host's block end.
+      expect(Math.round(list.getBoundingClientRect().top)).to.equal(Math.round(toolbar.getBoundingClientRect().bottom));
+      // Within the base's own border.
+      expect(list.getBoundingClientRect().bottom).to.be.closeTo(el.getBoundingClientRect().bottom, 2);
+      expect(scroller.getBoundingClientRect().height).to.be.greaterThan(400);
+      expect(body.scrollHeight).to.be.at.most(body.clientHeight);
+      expect(scroller.scrollHeight).to.be.greaterThan(scroller.clientHeight);
+    } finally {
+      restore();
+    }
+  });
+
+  it("keeps the fixed --lr-pdf-viewer-height page list while fill is unset", async () => {
+    const wrapper = await fixture<HTMLElement>(
+      html`<div style="block-size: 900px"><lr-pdf-viewer style="--lr-pdf-viewer-height: 120px"></lr-pdf-viewer></div>`
+    );
+    const el = wrapper.querySelector("lr-pdf-viewer") as LyraPdfViewer;
+    installFakeLoader(el, fakeDocument(3));
+    const restore = stubFetch();
+    try {
+      el.src = "https://example.test/report.pdf";
+      await waitFor(el, '[part="pages"]');
+      const list = el.shadowRoot!.querySelector("lr-virtual-list") as LyraVirtualList;
+      const scroller = list.shadowRoot!.querySelector('[part="base"]') as HTMLElement;
+      expect(scroller.getBoundingClientRect().height).to.equal(120);
+      expect(el.getBoundingClientRect().height).to.be.below(900);
+    } finally {
+      restore();
+    }
+  });
+});

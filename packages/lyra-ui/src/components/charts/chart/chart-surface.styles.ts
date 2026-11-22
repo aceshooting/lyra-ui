@@ -112,7 +112,7 @@ export const chartSurfaceStyles = css`
   [part='legend-swatch']:where([data-band]) {
     background-color: color-mix(
       in srgb,
-      var(--_lr-chart-swatch-color) calc(var(--lr-chart-band-opacity, 0.2) * 100%),
+      var(--_lr-chart-swatch-color) calc(var(--_lr-chart-swatch-opacity, var(--lr-chart-band-opacity, 0.2)) * 100%),
       transparent
     );
     box-shadow: inset 0 0 0 var(--lr-border-width-thin) var(--_lr-chart-swatch-color);

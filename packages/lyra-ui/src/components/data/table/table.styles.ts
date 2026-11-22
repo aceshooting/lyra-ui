@@ -58,8 +58,20 @@ export const styles = css`
   :host([scroll-mode='auto']) [part='base']:not([data-scroll-overflow]) {
     overflow: clip;
   }
+  /* The caption is the table's visible title; every value falls back to what the UA paints today
+     (centred, inherited type and colour, no padding). */
+  [part='caption'] {
+    text-align: var(--lr-table-caption-text-align, revert);
+    font-size: var(--lr-table-caption-font-size, inherit);
+    font-weight: var(--lr-table-caption-font-weight, inherit);
+    color: var(--lr-table-caption-color, inherit);
+    padding: var(--lr-table-caption-padding, 0);
+  }
   [part='filter-label'] {
     display: flex;
+    /* Opt-in stacked label: --lr-table-filter-wrap: wrap with a --lr-table-filter-basis lets the
+       field drop under its label text once the row is too narrow for both. */
+    flex-wrap: var(--lr-table-filter-wrap, nowrap);
     align-items: center;
     gap: var(--lr-space-s);
     padding: var(--lr-space-s);
@@ -69,13 +81,15 @@ export const styles = css`
   }
   [part='filter'] {
     min-inline-size: 0;
-    flex: 1;
+    flex: 1 1 var(--lr-table-filter-basis, 0%);
+    min-block-size: var(--lr-table-filter-height, var(--lr-input-control-min-height, auto));
     padding: var(--lr-space-xs) var(--lr-space-s);
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
     border-radius: var(--lr-radius-xs);
     background: var(--lr-color-surface);
     color: var(--lr-color-text);
     font: inherit;
+    font-size: var(--lr-table-filter-font-size, inherit);
   }
   [part='filter']:focus-visible {
     ${focusRing}
@@ -189,13 +203,13 @@ export const styles = css`
        --_lr-table-row-bg/[part='row'] pattern for body rows) -- reading it here, instead of a plain
        background: var(--lr-color-surface), lets the sorted fill still reach a header cell even when
        the sticky-header rule further below is the one that wins the cascade for 'background'. */
-    background: var(--_lr-table-header-bg, var(--lr-table-surface, var(--lr-color-surface)));
+    background: var(--_lr-table-header-bg, var(--lr-table-header-bg, var(--lr-table-surface, var(--lr-color-surface))));
     text-align: start;
     font-size: var(--lr-table-header-font-size, inherit);
     font-weight: var(--lr-table-header-font-weight, var(--lr-font-weight-semibold));
     color: var(--lr-table-header-color, inherit);
     padding: var(--lr-table-cell-padding, var(--lr-space-s));
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-table-cell-border-color, var(--lr-color-border-subtle));
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-table-header-border-color, var(--lr-table-cell-border-color, var(--lr-color-border-subtle)));
     cursor: default;
     white-space: nowrap;
   }
@@ -264,7 +278,7 @@ export const styles = css`
     /* Surface fill, not transparent: the cell is position: sticky, so a transparent default lets
        body rows scroll visibly through the sorted column's header in a height-capped table. The
        sticky-column rules below keep it for the same reason. */
-    --_lr-table-header-bg: var(--lr-table-header-sorted-bg, var(--lr-table-surface, var(--lr-color-surface)));
+    --_lr-table-header-bg: var(--lr-table-header-sorted-bg, var(--lr-table-header-bg, var(--lr-table-surface, var(--lr-color-surface))));
     background: var(--_lr-table-header-bg);
     color: var(--lr-table-header-sorted-color, var(--lr-table-header-color, inherit));
   }
@@ -370,7 +384,7 @@ export const styles = css`
        lose that distinction or force every ordinary cell to adopt the tighter block spacing. */
     padding: var(--lr-table-cell-padding-compact, var(--lr-space-xs) var(--lr-space-s));
     border-block-end: var(--lr-border-width-thin) solid var(--lr-table-cell-border-color, var(--lr-color-border-subtle));
-    background: var(--lr-color-surface-raised);
+    background: var(--lr-table-group-bg, var(--lr-color-surface-raised));
     color: var(--lr-color-text-quiet);
     font-weight: var(--lr-font-weight-semibold);
     text-align: start;
@@ -419,6 +433,8 @@ export const styles = css`
      so an inline style still wins; --lr-table-cell-link-color: revert restores the UA default. */
   [part='cell'] a:where(:any-link) {
     color: var(--lr-table-cell-link-color, var(--lr-color-brand));
+    font-weight: var(--lr-table-cell-link-font-weight, inherit);
+    text-decoration: var(--lr-table-cell-link-text-decoration, revert);
   }
   [part='cell'] a:where(:any-link):hover,
   [part='cell'] a:where(:any-link):focus-visible,
@@ -426,6 +442,14 @@ export const styles = css`
     color: var(
       --lr-table-cell-link-hover-color,
       var(--lr-table-cell-link-color, var(--lr-color-brand))
+    );
+    font-weight: var(
+      --lr-table-cell-link-hover-font-weight,
+      var(--lr-table-cell-link-font-weight, inherit)
+    );
+    text-decoration: var(
+      --lr-table-cell-link-hover-text-decoration,
+      var(--lr-table-cell-link-text-decoration, revert)
     );
     text-decoration-thickness: var(--lr-border-width-medium);
   }
@@ -607,7 +631,7 @@ export const styles = css`
      own 'background' declaration (0,1,0), regardless of source order. A sticky header cell that is
      not sorted still falls back to the plain surface color, unchanged from before. */
   [part='header-cell'][data-sticky] {
-    background: var(--_lr-table-header-bg, var(--lr-table-surface, var(--lr-color-surface)));
+    background: var(--_lr-table-header-bg, var(--lr-table-header-bg, var(--lr-table-surface, var(--lr-color-surface))));
   }
   [part='header-cell'][data-sticky='end'],
   [part='cell'][data-sticky='end'] {
@@ -659,10 +683,19 @@ export const styles = css`
     color: var(--lr-color-brand);
     font: inherit;
     cursor: pointer;
+    min-block-size: var(--lr-table-reveal-columns-min-size, 0);
+    min-inline-size: var(--lr-table-reveal-columns-min-size, 0);
     /* The control tier, not --lr-color-border-subtle: this rule is the only edge the full-width
        button draws, and under a monochrome theme its brand-coloured label no longer sets it apart
        from the data rows above. */
     border-block-start: var(--lr-border-width-thin) solid var(--lr-color-border);
+  }
+  /* Resting fills; the hover and pressed rules below out-rank these (0,2,0 vs 0,1,0). */
+  [part='more-button'] {
+    background: var(--lr-table-more-button-bg, none);
+  }
+  [part='reveal-columns-button'] {
+    background: var(--lr-table-reveal-columns-bg, none);
   }
   [part='more-button']:hover:where(:not([aria-disabled='true'])),
   [part='reveal-columns-button']:hover {

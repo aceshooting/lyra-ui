@@ -234,3 +234,16 @@ export const WithToolbar: StoryObj = {
     </lr-checkbox-group>
   `,
 };
+
+/** The legend sits in an inline-start column; wrapped options take separate row and column gaps. */
+export const LabelPlacementStart: Story = {
+  render: () => html`
+    <lr-checkbox-group label="Topics" hint="Choose any" label-placement="start" orientation="horizontal"
+      style="max-inline-size: 28rem; --lr-checkbox-group-option-row-gap: var(--lr-space-xs); --lr-checkbox-group-option-column-gap: var(--lr-space-l)">
+      <lr-checkbox value="news">News</lr-checkbox>
+      <lr-checkbox value="product">Product updates</lr-checkbox>
+      <lr-checkbox value="events">Events</lr-checkbox>
+      <lr-checkbox value="security">Security advisories</lr-checkbox>
+    </lr-checkbox-group>
+  `,
+};

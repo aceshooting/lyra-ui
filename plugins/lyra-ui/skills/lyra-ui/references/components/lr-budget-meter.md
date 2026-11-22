@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 5 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -18,7 +18,7 @@
 
 `lr-budget-meter` presents host-supplied `used`, `limit`, and optional `unit` values. The visible
 text preserves the actual quantities while the fill clamps at the limit. A zero or invalid limit
-shows an unavailable state; usage above the limit shows an exceeded state. The component does not
+shows an unavailable state; usage above the limit shows an exceeded state. `--lr-budget-meter-value-color` (default `var(--lr-color-text-quiet)`) colours the used-of-limit readout. The component does not
 price usage or enforce a budget. Assign `used`, `limit`, `unit`, and `label` as properties when
 values are not plain attribute strings. A host `aria-label` names the group and its meter. Hiding the heading with `label=""` preserves
 the localized meter name. Percentages near zero or full capacity retain fractional precision.

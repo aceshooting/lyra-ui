@@ -3,6 +3,7 @@ import { html } from 'lit';
 import '../../lr-dialog.js';
 import type { LyraDialog } from '../../lr-dialog.js';
 import { confirm } from './confirm.js';
+import { prompt } from './prompt.js';
 import '../../lr-popover.js';
 
 export const GlassAndSolid = {
@@ -420,5 +421,83 @@ export const AboveNativeModal: Story = {
         }}>Done</button>
       </lr-dialog>
     </div>
+  `,
+};
+
+export const PromptHelper: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`prompt()` asks for one line of text and resolves the submitted string, or `null` when dismissed. Focus lands in the field; Enter submits; a `validate()` message keeps the dialog open.',
+      },
+    },
+  },
+  render: () => html`
+    <button
+      @click=${async () => {
+        const name = await prompt({
+          title: 'Rename conversation',
+          label: 'Name',
+          value: 'Quarterly review',
+          validate: (value) => (value.trim() ? null : 'Enter a name'),
+        });
+        alert(name === null ? 'Cancelled' : `Renamed to ${name}`);
+      }}
+    >
+      prompt()
+    </button>
+  `,
+};
+
+export const SizingAndPanelTokens: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`fullscreen-narrow` fills a viewport narrower than 40rem. `--lr-dialog-max-height` and `--lr-dialog-viewport-inset` size the panel, `--lr-dialog-panel-bg` fills only the panel (the popover inside keeps the overlay surface), and `--lr-dialog-divider-color` colours the header and footer rules.',
+      },
+    },
+  },
+  render: () => html`
+    <button
+      @click=${(event: Event) => {
+        void ((event.currentTarget as HTMLElement).nextElementSibling as LyraDialog).show();
+      }}
+    >
+      Open sized dialog
+    </button>
+    <lr-dialog
+      fullscreen-narrow
+      label="Sizing and panel tokens"
+      style="--lr-dialog-max-height: 24rem; --lr-dialog-viewport-inset: var(--lr-space-s); --lr-dialog-panel-bg: var(--lr-color-surface-raised); --lr-dialog-divider-color: var(--lr-color-brand)"
+    >
+      <lr-popover><button slot="trigger">Popover keeps the overlay surface</button><p>Floating content.</p></lr-popover>
+      <div style="min-block-size: 40rem"><p>Scroll the body inside the capped panel.</p></div>
+      <button slot="footer" @click=${(event: Event) => {
+        void ((event.currentTarget as HTMLElement).closest('lr-dialog') as LyraDialog).hide();
+      }}>Done</button>
+    </lr-dialog>
+  `,
+};
+
+export const HeadingLetterSpacing: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`--lr-dialog-heading-letter-spacing` sets the letter spacing of the visible header title; unset, the title keeps `normal`.',
+      },
+    },
+  },
+  render: (_args, context) => html`
+    <lr-dialog
+      .open=${context.viewMode !== 'docs'}
+      heading="Spaced heading"
+      heading-level="2"
+      style="--lr-dialog-heading-letter-spacing: var(--lr-size-0-04em);"
+    >
+      <p style="margin: 0;">The header title is tracked out through the heading token.</p>
+    </lr-dialog>
   `,
 };

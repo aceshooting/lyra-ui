@@ -176,6 +176,8 @@ class LyraSwitchBase extends LyraElement<LyraSwitchEventMap> {}
  *   the checked-state fallback when `--lr-switch-checked-label-color` is unset.
  * @cssprop [--lr-switch-checked-label-color=var(--lr-switch-label-color)] - Text color of
  *   `[part='label']` while checked, independently themeable from the unchecked color.
+ * @cssprop [--lr-switch-checked-label-font-weight=inherit] - Font weight of `[part='label']` while
+ *   checked.
  * @status stable
  * @since 4.0.0
  */

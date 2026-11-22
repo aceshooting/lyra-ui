@@ -170,6 +170,7 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  * @cssprop [--lr-form-control-label-font-size=var(--lr-font-size-md-sm)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=inherit] - Text color of the field label.
+ * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
  * @csspart form-control-label - The `<label>` element.
  * @csspart label - Wrapper around the visible label content.
  * @csspart base - Compatibility name for the control row; use `input-wrapper`.
@@ -206,6 +207,9 @@ class LyraInputBase extends LyraElement<LyraInputEventMap> {}
  *   from the active `size` tier.
  * @cssprop [--lr-input-font-family=inherit] - Font family of the native input. It inherits the
  *   host's font by default; set it to restyle only the field text without touching the label or hint.
+ * @cssprop [--lr-input-font-variant-numeric=inherit] - `font-variant-numeric` of the native input.
+ *   Set `tabular-nums` so digits share one width and a column of values lines up; `lr-number-input`
+ *   shares the same field styles and honours it too.
  * @cssprop [--lr-input-gap=var(--lr-space-xs)] - Gap between the start/end adornments and the
  * native input in the control row. Unlike the size knobs above it does not vary by `size` tier.
  * Override it to retune without a `::part(input-wrapper)` rule.

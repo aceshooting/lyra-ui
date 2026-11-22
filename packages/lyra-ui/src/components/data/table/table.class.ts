@@ -110,7 +110,8 @@ const DEFAULT_PAGE_SIZE = 100;
  *   the zero-based index of the page's first row. The nested pager's own event of this name stops
  *   inside the shadow root, so one page action reaches a document listener once, targeted at the
  *   table. Vetoing it keeps `page` and suppresses `lr-page-change`.
- * @event lr-page-change - A pagination control requested a page. Frozen readonly `detail: { page }`.
+ * @event lr-page-change - A pagination control requested a page. Frozen readonly `detail: { page, pageSize, offset }`;
+ *   `page` is one-based and `offset` is `(page - 1) * pageSize`.
  * @event lr-cell-edit - An inline editor committed a value. `detail: { row, columnKey, value }`.
  * @event lr-column-resize-request - Cancelable proposal before accepting a keyboard resize or
  *   final pointer drag width. `detail: { columnKey, width }`. Vetoing discards the proposal or drag preview.
@@ -259,6 +260,36 @@ const DEFAULT_PAGE_SIZE = 100;
  *   default.
  * @cssprop [--lr-table-cell-link-hover-color=var(--lr-table-cell-link-color,var(--lr-color-brand))] -
  *   Colour of that anchor on hover and `:focus-visible`, which also thicken its underline.
+ * @cssprop [--lr-table-cell-link-font-weight=inherit] - Font weight of that anchor.
+ * @cssprop [--lr-table-cell-link-text-decoration=revert] - `text-decoration` of that anchor; `revert`
+ *   keeps the UA underline, `none` removes it.
+ * @cssprop [--lr-table-cell-link-hover-font-weight=var(--lr-table-cell-link-font-weight,inherit)] - Font
+ *   weight of that anchor on hover, `:focus-visible` and press.
+ * @cssprop [--lr-table-cell-link-hover-text-decoration=var(--lr-table-cell-link-text-decoration,revert)] -
+ *   `text-decoration` of that anchor on hover, `:focus-visible` and press (the underline still thickens).
+ * @cssprop [--lr-table-filter-height=var(--lr-input-control-min-height,auto)] - Minimum block size of the
+ *   built-in `filterable` field; honours `--lr-input-control-min-height` so it lines up with `lr-input`.
+ * @cssprop [--lr-table-filter-font-size=inherit] - Font size of the built-in filter field.
+ * @cssprop [--lr-table-filter-wrap=nowrap] - `flex-wrap` of the filter row. Set `wrap` with
+ *   `--lr-table-filter-basis` to stack the field under its label text at narrow widths.
+ * @cssprop [--lr-table-filter-basis=0%] - Preferred inline size of the filter field (its flex basis);
+ *   the point at which a `wrap` row drops the field onto its own line.
+ * @cssprop [--lr-table-caption-font-size=inherit] - Font size of the `caption`.
+ * @cssprop [--lr-table-caption-font-weight=inherit] - Font weight of the `caption`.
+ * @cssprop [--lr-table-caption-color=inherit] - Text colour of the `caption`.
+ * @cssprop [--lr-table-caption-text-align=revert] - Alignment of the `caption`; `revert` keeps the UA
+ *   centring, `start` aligns it with the first column.
+ * @cssprop [--lr-table-caption-padding=0] - Padding of the `caption`.
+ * @cssprop [--lr-table-reveal-columns-min-size=0] - Minimum inline and block size of the
+ *   reveal-columns button, for a larger touch target.
+ * @cssprop [--lr-table-header-bg=var(--lr-table-surface,var(--lr-color-surface))] - Background of a header
+ *   cell, including a sticky one. The sorted header's own `--lr-table-header-sorted-bg` still wins.
+ * @cssprop [--lr-table-header-border-color=var(--lr-table-cell-border-color,var(--lr-color-border-subtle))] -
+ *   Colour of the rule under a header cell, distinct from the body-row rules.
+ * @cssprop [--lr-table-group-bg=var(--lr-color-surface-raised)] - Background of a group-header cell.
+ * @cssprop [--lr-table-more-button-bg=none] - Resting fill of the "load more" button; hover and press
+ *   keep their own fills.
+ * @cssprop [--lr-table-reveal-columns-bg=none] - Resting fill of the reveal-columns button.
  * @cssprop [--lr-table-cell-padding=var(--lr-space-s)] - Padding of a header cell, a body cell, and
  *   the row-total cell.
  * @cssprop [--lr-table-cell-padding-compact=var(--lr-space-xs) var(--lr-space-s)] - Padding of a
@@ -1940,11 +1971,11 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   private onPaginationChange = (event: Event): void => {
     event.stopPropagation();
     const { page } = (event as CustomEvent<{ page: number; pageSize?: number }>).detail;
-    // Table's pagination contract carries only the requested page. The
-    // nested pagination component has a wider `{ page, pageSize }` payload in v8; do not leak that
-    // implementation detail into Table's independently documented event surface.
+    const size = this.normalizedPageSize;
     if (this.paginationMode === 'client') this.page = page;
-    this.emit('lr-page-change', Object.freeze({ page }));
+    // Same `{ page, pageSize, offset }` shape as the nested pager and `lr-before-page-change`, so an
+    // offset/limit back end reads `detail.offset` without converting page numbers by hand.
+    this.emit('lr-page-change', Object.freeze({ page, pageSize: size, offset: (page - 1) * size }));
   };
 
   /** The header cell that currently owns `tabindex="0"`. */

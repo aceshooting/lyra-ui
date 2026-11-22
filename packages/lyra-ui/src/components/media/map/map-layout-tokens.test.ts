@@ -262,4 +262,288 @@ describe('lr-map layout tokens', () => {
       expect(reserved).to.be.closeTo(40, 0.5);
     });
   }
+  it('shapes a grouped control as one pill from the group radius, border and divider tokens', async () => {
+    const { element, root } = await mount();
+    const group = query(root, '[part~="navigation"]'), zoomIn = query(root, '[part~="zoom-in"]'), compass = query(root, '[part~="compass"]');
+    const geolocate = query(root, '.maplibregl-ctrl-geolocate');
+    const snapshot = () => [group, zoomIn, compass, geolocate].flatMap(node => {
+      const style = getComputedStyle(node);
+      return [style.borderTopLeftRadius, style.borderBottomRightRadius, style.borderTopWidth, style.borderTopStyle, style.borderTopColor];
+    });
+    const defaults = snapshot();
+    expect(getComputedStyle(zoomIn).borderBottomLeftRadius, 'buttons follow the group radius by default').to.equal(getComputedStyle(group).borderTopLeftRadius);
+    const tokens: Record<string, string> = {
+      '--lr-map-control-group-radius': '20px', '--lr-map-control-group-border': '3px solid rgb(7, 7, 7)',
+      '--lr-map-control-button-radius': '0px', '--lr-map-control-divider': '2px dashed rgb(1, 2, 3)',
+    };
+    for (const [name, value] of Object.entries(tokens)) element.style.setProperty(name, value);
+    const groupStyle = getComputedStyle(group), first = getComputedStyle(zoomIn), last = getComputedStyle(compass);
+    expect([groupStyle.borderTopLeftRadius, groupStyle.borderTopWidth, groupStyle.borderTopColor]).to.deep.equal(['20px', '3px', 'rgb(7, 7, 7)']);
+    expect([first.borderTopLeftRadius, first.borderTopRightRadius, first.borderBottomLeftRadius, first.borderBottomRightRadius], 'outer corners only')
+      .to.deep.equal(['20px', '20px', '0px', '0px']);
+    expect([last.borderTopLeftRadius, last.borderBottomLeftRadius, last.borderBottomRightRadius]).to.deep.equal(['0px', '20px', '20px']);
+    expect([last.borderTopWidth, last.borderTopStyle, last.borderTopColor], 'divider between buttons').to.deep.equal(['2px', 'dashed', 'rgb(1, 2, 3)']);
+    expect(first.borderTopWidth, 'no divider above the first button').to.equal('0px');
+    expect(getComputedStyle(geolocate).borderBottomRightRadius, 'a single-button group keeps all four corners').to.equal('20px');
+    element.style.setProperty('--lr-map-control-radius', '6px');
+    expect(getComputedStyle(group).borderTopLeftRadius, 'the group token wins over the shared radius').to.equal('20px');
+    for (const name of [...Object.keys(tokens), '--lr-map-control-radius']) element.style.removeProperty(name);
+    expect(snapshot()).to.deep.equal(defaults);
+  });
+
+  it('styles the scale pill from its own tokens and restores the defaults when unset', async () => {
+    const { element, root } = await mount();
+    const scale = query(root, '.maplibregl-ctrl-scale');
+    const snapshot = () => {
+      const style = getComputedStyle(scale);
+      return [rgb(style.backgroundColor), style.borderTopLeftRadius, style.borderTopStyle, style.paddingTop, style.paddingBottom, style.paddingLeft, style.fontSize, style.color];
+    };
+    const defaults = snapshot();
+    expect(defaults.slice(1, 3), 'square and borderless by default').to.deep.equal(['0px', 'none']);
+    const tokens: Record<string, string> = {
+      '--lr-map-scale-bg': 'rgb(10, 20, 30)', '--lr-map-scale-radius': '999px', '--lr-map-scale-border': '1px solid rgb(4, 4, 4)',
+      '--lr-map-scale-padding-block': '3px', '--lr-map-scale-padding-inline': '9px', '--lr-map-scale-font-size': '15px', '--lr-map-scale-color': 'rgb(40, 50, 60)',
+    };
+    for (const [name, value] of Object.entries(tokens)) element.style.setProperty(name, value);
+    const style = getComputedStyle(scale), bar = px(getComputedStyle(scale, '::after').blockSize);
+    expect([rgb(style.backgroundColor), style.borderTopLeftRadius, style.borderTopStyle, style.borderTopColor, style.paddingTop, style.paddingLeft, style.fontSize, style.color])
+      .to.deep.equal(['rgb(10, 20, 30)', '999px', 'solid', 'rgb(4, 4, 4)', '3px', '9px', '15px', 'rgb(40, 50, 60)']);
+    expect(px(style.paddingBottom), 'the block end still reserves the bar').to.be.closeTo(3 + bar, 0.5);
+    element.style.setProperty('--lr-map-control-bg', 'rgb(1, 1, 1)');
+    expect(rgb(getComputedStyle(scale).backgroundColor), 'the scale token wins over the shared control fill').to.equal('rgb(10, 20, 30)');
+    for (const name of [...Object.keys(tokens), '--lr-map-control-bg']) element.style.removeProperty(name);
+    expect(snapshot()).to.deep.equal(defaults);
+  });
+
+  it('spaces legend rows from the row-gap token without moving sections or slotted cards', async () => {
+    const { element, root } = await mount('ltr', el => {
+      el.legend = [{ color: '#ff0000', label: 'Alpha', pattern: 'solid', group: 'One' }, { color: '#0000ff', label: 'Beta', pattern: 'solid', group: 'One' },
+        { color: '#00ff00', label: 'Gamma', pattern: 'solid', group: 'Two' }];
+    });
+    const legend = query(root, '[part="legend"]'), group = query(root, '[part="legend-group"]'), list = query(root, '.legend-section-list');
+    const before = [getComputedStyle(list).rowGap, getComputedStyle(group).rowGap, getComputedStyle(legend).rowGap];
+    expect(before).to.deep.equal(['4px', '4px', '4px']);
+    element.style.setProperty('--lr-map-legend-row-gap', '1px');
+    await frame();
+    const rows = [...list.querySelectorAll<HTMLElement>('.legend-row')].map(row => row.getBoundingClientRect());
+    expect(rows[1]!.top - rows[0]!.bottom).to.be.closeTo(1, 0.5);
+    expect([getComputedStyle(group).rowGap, getComputedStyle(legend).rowGap], 'heading and panel gaps keep --lr-map-legend-gap').to.deep.equal(['4px', '4px']);
+    element.style.setProperty('--lr-map-legend-gap', '9px');
+    expect(getComputedStyle(list).rowGap, 'the row gap token wins').to.equal('1px');
+    element.style.removeProperty('--lr-map-legend-row-gap');
+    expect(getComputedStyle(list).rowGap, 'unset, rows follow --lr-map-legend-gap').to.equal('9px');
+  });
+
+  for (const direction of ['ltr', 'rtl'] as const) {
+    it(`lets a filled anchor card own its scrolling and reserve the close room on its header in ${direction}`, async () => {
+      const { element, root } = await mount(direction, el => {
+        const card = document.createElement('div'); card.slot = 'anchor';
+        card.style.cssText = 'display:flex;flex-direction:column;min-block-size:0';
+        card.innerHTML = '<h3 style="margin:0;padding-inline-end:var(--lr-map-anchor-close-reservation)">Header</h3><div class="details" style="flex:1 1 auto;min-block-size:0;overflow:auto"><div style="block-size:900px">Details</div></div>';
+        el.append(card); el.anchorClosable = true; el.anchorFill = true; el.anchorLngLat = [0, 0];
+        el.style.setProperty('--lr-map-anchor-close-reservation', '40px');
+      });
+      expect(element.hasAttribute('anchor-fill'), 'reflects').to.equal(true);
+      const panel = query(root, '[part="anchor"]'), body = query(root, '[part="anchor-body"]');
+      await waitUntil(() => !panel.hidden && panel.style.left !== '' && getComputedStyle(panel).visibility !== 'hidden', 'anchor placed', { timeout: 4000 });
+      const details = query(element, '.details'), header = query(element, 'h3');
+      expect(body.scrollHeight - body.clientHeight, 'the body does not scroll').to.be.at.most(1);
+      expect(details.scrollHeight > details.clientHeight, 'the card details scroll').to.equal(true);
+      expect(getComputedStyle(body).paddingInlineEnd, 'the body edge carries no reservation').to.equal('0px');
+      const bodyBox = body.getBoundingClientRect(), detailsBox = details.getBoundingClientRect(), headerBox = header.getBoundingClientRect();
+      expect(detailsBox.bottom).to.be.at.most(bodyBox.bottom + 0.5);
+      const detailsEnd = direction === 'ltr' ? bodyBox.right - detailsBox.right : detailsBox.left - bodyBox.left;
+      expect(detailsEnd, 'details reach the body edge').to.be.closeTo(0, 0.5);
+      expect(getComputedStyle(header).paddingInlineEnd, 'the header reads the reservation').to.equal('40px');
+      expect(headerBox.height).to.be.above(0);
+      element.anchorFill = false; await element.updateComplete;
+      expect([getComputedStyle(body).overflowY, getComputedStyle(body).paddingInlineEnd], 'unset restores the scrolling body').to.deep.equal(['auto', '40px']);
+    });
+  }
+  for (const direction of ['ltr', 'rtl'] as const) {
+    it(`clears only its own column's control corners with legend-clearance="corner" in ${direction}`, async () => {
+      const { element, root, base } = await mount(direction);
+      const legend = query(root, '[part="legend"]');
+      const fromBottom = () => Math.round(base.getBoundingClientRect().bottom - legend.getBoundingClientRect().bottom);
+      // Both corners of the row stretch to the taller one, so measure what each corner renders.
+      const span = (selector: string) => {
+        const boxes = [...query(root, selector).children].map(child => {
+          const box = child.getBoundingClientRect(), style = getComputedStyle(child);
+          return [box.top - px(style.marginTop), box.bottom + px(style.marginBottom)] as const;
+        });
+        return Math.round(Math.max(...boxes.map(b => b[1])) - Math.min(...boxes.map(b => b[0])));
+      };
+      const startSpan = span('.maplibregl-ctrl-bottom-left'), endSpan = span('.maplibregl-ctrl-bottom-right');
+      expect(endSpan, 'the fixture end column is the taller one').to.be.above(startSpan + 20);
+      const row = fromBottom();
+      expect(row, 'the default clears the tallest corner').to.be.closeTo(8 + endSpan, 1);
+      element.legendClearance = 'corner'; await element.updateComplete;
+      expect(element.getAttribute('legend-clearance')).to.equal('corner');
+      expect(fromBottom(), 'bottom-start clears only the start corner').to.be.closeTo(8 + startSpan, 1);
+      element.legendPlacement = 'bottom-end'; await element.updateComplete;
+      expect(fromBottom(), 'bottom-end still clears its own tall corner').to.equal(row);
+      element.legendPlacement = 'bottom'; await element.updateComplete;
+      expect(fromBottom(), 'a centred legend keeps clearing the row').to.equal(row);
+      element.legendClearance = 'bogus' as 'row'; element.legendPlacement = 'bottom-start'; await element.updateComplete;
+      expect([element.legendClearance, element.getAttribute('legend-clearance'), fromBottom()]).to.deep.equal(['row', 'row', row]);
+    });
+  }
+  for (const direction of ['ltr', 'rtl'] as const) {
+    it(`places the legend from the map edge alone with legend-clearance="none" in ${direction}`, async () => {
+      const { element, root, base } = await mount(direction, el => { el.legendClearance = 'none'; });
+      const legend = query(root, '[part="legend"]');
+      expect(element.getAttribute('legend-clearance')).to.equal('none');
+      const edges = () => {
+        const box = legend.getBoundingClientRect(), map = base.getBoundingClientRect();
+        return [Math.round(map.bottom - box.bottom), Math.round(direction === 'ltr' ? box.left - map.left : map.right - box.right)];
+      };
+      expect(edges(), 'the default insets measure from the edge').to.deep.equal([8, 8]);
+      element.style.setProperty('--lr-map-controls-inset-block-end', '30px');
+      element.style.setProperty('--lr-map-controls-inset-inline-start', '20px');
+      element.style.setProperty('--lr-map-legend-inset-block', '48px');
+      expect(edges(), 'a footer lane: no control rows or control insets stack on the inset').to.deep.equal([48, 8]);
+      element.legendPlacement = 'top-end'; await element.updateComplete;
+      const box = legend.getBoundingClientRect(), map = base.getBoundingClientRect();
+      expect(Math.round(box.top - map.top), 'the top edge too').to.equal(48);
+      element.legendClearance = 'row'; element.legendPlacement = 'bottom-start'; await element.updateComplete;
+      expect(edges()[0], 'row clearance stacks the inset on the rows again').to.be.above(48 + 30);
+    });
+  }
+
+  it('sizes the legend border, group columns and toggle and disclosure padding from tokens', async () => {
+    const { element, root } = await mount('ltr', el => {
+      el.legend = [{ color: '#ff0000', label: 'Alpha', pattern: 'solid', group: 'One', value: 'a' }, { color: '#0000ff', label: 'Beta', pattern: 'solid', group: 'One', value: 'b' },
+        { color: '#00ff00', label: 'Gamma', pattern: 'solid', group: 'One', value: 'c' }];
+      el.legendInteractive = true; el.legendCollapsible = true;
+    });
+    const legend = query(root, '[part="legend"]'), list = query(root, '.legend-section-list');
+    const toggle = query(root, '[part~="legend-toggle"]'), disclosure = query(root, '[part="legend-disclosure"]');
+    const rows = () => [...list.children].map(row => row.getBoundingClientRect());
+    const snapshot = () => {
+      const panel = getComputedStyle(legend), button = getComputedStyle(toggle), summary = getComputedStyle(disclosure);
+      return [panel.borderTopWidth, panel.borderTopStyle, button.paddingTop, button.paddingInlineStart, summary.paddingTop, summary.paddingInlineStart];
+    };
+    const defaults = snapshot();
+    const stacked = rows(), listBox = list.getBoundingClientRect();
+    expect(stacked.every(row => Math.abs(row.width - listBox.width) < 0.5), 'rows span the group by default').to.equal(true);
+    expect(stacked[1]!.top).to.be.above(stacked[0]!.bottom - 0.5);
+    const floor = toggle.getBoundingClientRect().height;
+    const tokens: Record<string, string> = {
+      '--lr-map-legend-border': '3px dashed rgb(9, 9, 9)', '--lr-map-legend-group-columns': '2',
+      '--lr-map-legend-toggle-padding': '6px 10px', '--lr-map-legend-disclosure-padding': '5px 11px',
+    };
+    for (const [name, value] of Object.entries(tokens)) element.style.setProperty(name, value);
+    const panel = getComputedStyle(legend);
+    expect([panel.borderTopWidth, panel.borderTopStyle, panel.borderTopColor]).to.deep.equal(['3px', 'dashed', 'rgb(9, 9, 9)']);
+    expect(snapshot().slice(2)).to.deep.equal(['6px', '10px', '5px', '11px']);
+    expect(toggle.getBoundingClientRect().height, 'the hit-area floor holds').to.be.at.least(floor - 0.5);
+    const columns = rows();
+    expect(Math.round(columns[0]!.top), 'two rows share the first line').to.equal(Math.round(columns[1]!.top));
+    expect(columns[1]!.left).to.be.above(columns[0]!.right - 0.5);
+    expect(columns[2]!.top, 'the third row wraps').to.be.above(columns[0]!.bottom - 0.5);
+    for (const name of Object.keys(tokens)) element.style.removeProperty(name);
+    expect(snapshot()).to.deep.equal(defaults);
+  });
+});
+
+describe('lr-map control corners, avoidance and attribution tokens', () => {
+  beforeEach(async () => {
+    ChromeMap.initialReady = true;
+    Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: undefined });
+    HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, id: string, ...rest: unknown[]) {
+      return id === 'webgl2' ? {} : originalContext.call(this, id as never, ...(rest as []));
+    } as typeof originalContext;
+  });
+  afterEach(() => {
+    fixtureCleanup(); HTMLCanvasElement.prototype.getContext = originalContext;
+    if (originalObserver) Object.defineProperty(window, 'IntersectionObserver', originalObserver);
+    else Reflect.deleteProperty(window, 'IntersectionObserver');
+  });
+
+  for (const direction of ['ltr', 'rtl'] as const) {
+    it(`insets one control corner alone and keeps the legend clear of it in ${direction}`, async () => {
+      const { element, root, base } = await mount(direction, el => { el.legendClearance = 'corner'; });
+      const scale = query(root, '.maplibregl-ctrl-scale'), group = query(root, '[part~="navigation"]'), legend = query(root, '[part="legend"]');
+      const map = () => base.getBoundingClientRect();
+      const startGap = (box: DOMRect) => direction === 'ltr' ? box.left - map().left : map().right - box.right;
+      const before = { scaleBottom: scale.getBoundingClientRect().bottom, scaleStart: startGap(scale.getBoundingClientRect()),
+        group: group.getBoundingClientRect().toJSON() as DOMRect, legend: legend.getBoundingClientRect().bottom };
+      element.style.setProperty('--lr-map-controls-bottom-left-inset-block', '12px');
+      element.style.setProperty('--lr-map-controls-bottom-left-inset-inline', '14px');
+      expect(before.scaleBottom - scale.getBoundingClientRect().bottom, 'the start corner rises').to.be.closeTo(12, 0.5);
+      expect(startGap(scale.getBoundingClientRect()) - before.scaleStart, 'and moves in from its edge').to.be.closeTo(14, 0.5);
+      const moved = group.getBoundingClientRect();
+      expect([moved.top, moved.left], 'the other corner stays').to.deep.equal([before.group.top, before.group.left]);
+      await waitUntil(() => Math.abs(before.legend - legend.getBoundingClientRect().bottom - 12) < 1, 'the corner legend clears the inset corner');
+      for (const name of ['--lr-map-controls-bottom-left-inset-block', '--lr-map-controls-bottom-left-inset-inline']) element.style.removeProperty(name);
+      await waitUntil(() => Math.abs(legend.getBoundingClientRect().bottom - before.legend) < 1, 'unset restores the legend');
+    });
+  }
+
+  for (const direction of ['ltr', 'rtl'] as const) {
+    it(`keeps the control corners clear of observed controlsAvoid chrome in ${direction}`, async () => {
+      const { element, root } = await mount(direction);
+      const scale = query(root, '.maplibregl-ctrl-scale'), group = query(root, '[part~="navigation"]'), legend = query(root, '[part="legend"]');
+      const hostBox = element.getBoundingClientRect();
+      const before = { scale: scale.getBoundingClientRect(), group: group.getBoundingClientRect(), legend: legend.getBoundingClientRect() };
+      // A full-height side sheet over the physical left 60px: the inline start in LTR, the inline end in RTL.
+      const sheet = document.createElement('div');
+      sheet.style.cssText = `position:fixed;left:${hostBox.left}px;top:${hostBox.top}px;width:60px;height:${hostBox.height}px`;
+      document.body.append(sheet);
+      try {
+        element.controlsAvoid = [sheet];
+        if (direction === 'ltr') {
+          await waitUntil(() => Math.abs(scale.getBoundingClientRect().left - before.scale.left - 60) < 1, 'the start corner clears the sheet');
+          expect(legend.getBoundingClientRect().left - before.legend.left, 'the legend clears it too').to.be.closeTo(60, 1);
+          expect(group.getBoundingClientRect().right).to.be.closeTo(before.group.right, 0.5);
+        } else {
+          await waitUntil(() => Math.abs(group.getBoundingClientRect().left - before.group.left - 60) < 1, 'the end corner clears the sheet');
+          expect(scale.getBoundingClientRect().right).to.be.closeTo(before.scale.right, 0.5);
+        }
+        element.style.setProperty('--lr-map-controls-inset-inline-start', '10px');
+        element.style.setProperty('--lr-map-controls-inset-inline-end', '10px');
+        const shifted = direction === 'ltr' ? scale.getBoundingClientRect().left - before.scale.left : group.getBoundingClientRect().left - before.group.left;
+        expect(shifted, 'the authored inset adds the gap beyond the sheet').to.be.closeTo(70, 1);
+        sheet.style.width = '90px';
+        await waitUntil(() => Math.abs((direction === 'ltr' ? scale.getBoundingClientRect().left - before.scale.left : group.getBoundingClientRect().left - before.group.left)
+          - 100) < 1, 'a resize re-measures');
+        element.style.removeProperty('--lr-map-controls-inset-inline-start'); element.style.removeProperty('--lr-map-controls-inset-inline-end');
+        element.controlsAvoid = [];
+        await element.updateComplete;
+        expect(scale.getBoundingClientRect().left).to.be.closeTo(before.scale.left, 0.5);
+        expect(group.getBoundingClientRect().left).to.be.closeTo(before.group.left, 0.5);
+        expect(query(root, '[part="base"]').style.getPropertyValue('--_lr-map-controls-inset-inline-start'), 'no avoid, no private edge').to.equal('');
+      } finally { sheet.remove(); }
+    });
+  }
+
+  it('restyles the attribution control, its links and the compact toggle from tokens', async () => {
+    const { element, root } = await mount();
+    const attribution = query(root, '[part~="attribution"]'), toggle = query(root, '[part~="attribution-toggle"]'), link = query(root, '.maplibregl-ctrl-attrib a');
+    const snapshot = () => {
+      const box = getComputedStyle(attribution), button = getComputedStyle(toggle), anchor = getComputedStyle(link);
+      return [box.paddingTop, box.paddingLeft, box.paddingRight, box.fontFamily, box.fontSize, box.lineHeight, anchor.paddingLeft, anchor.paddingTop,
+        button.blockSize, button.inlineSize, button.borderTopLeftRadius, getComputedStyle(toggle, '::before').blockSize];
+    };
+    const defaults = snapshot();
+    const tokens: Record<string, string> = {
+      '--lr-map-attribution-padding': '3px 7px', '--lr-map-attribution-link-padding': '2px 5px', '--lr-map-attribution-font-family': 'monospace',
+      '--lr-map-attribution-font-size': '15px', '--lr-map-attribution-line-height': '21px', '--lr-map-attribution-toggle-size': '30px',
+      '--lr-map-attribution-toggle-radius': '4px', '--lr-map-attribution-toggle-icon-size': '12px', '--lr-map-attribution-max-inline-size': '120px',
+    };
+    for (const [name, value] of Object.entries(tokens)) element.style.setProperty(name, value);
+    const box = getComputedStyle(attribution);
+    expect([box.paddingTop, box.paddingLeft, box.fontFamily, box.fontSize, box.lineHeight]).to.deep.equal(['3px', '7px', 'monospace', '15px', '21px']);
+    expect(box.paddingRight, 'the compact control reserves the toggle size').to.equal('30px');
+    expect([getComputedStyle(link).paddingTop, getComputedStyle(link).paddingLeft]).to.deep.equal(['2px', '5px']);
+    const button = getComputedStyle(toggle);
+    expect([button.blockSize, button.inlineSize, button.borderTopLeftRadius, getComputedStyle(toggle, '::before').blockSize]).to.deep.equal(['30px', '30px', '4px', '12px']);
+    attribution.setAttribute('open', ''); attribution.classList.add('maplibregl-compact-show');
+    await frame();
+    expect(attribution.getBoundingClientRect().width, 'the inline ceiling holds').to.be.at.most(120.5);
+    element.style.setProperty('--lr-map-attribution-max-inline-size', '4000px');
+    expect(attribution.getBoundingClientRect().width, 'never wider than the map').to.be.at.most(element.getBoundingClientRect().width);
+    for (const name of Object.keys(tokens)) element.style.removeProperty(name);
+    expect(snapshot()).to.deep.equal(defaults);
+  });
 });

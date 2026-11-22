@@ -1060,3 +1060,19 @@ it('renders an exact square at --lr-icon-button-size when the glyph fits, with n
   const rect = el.shadowRoot!.querySelector<HTMLElement>('[part~="button"]')!.getBoundingClientRect();
   expect([rect.width, rect.height]).to.deep.equal([32, 32]);
 });
+
+it('keeps the exact square when a wrapped inline glyph sits under a tall inherited line-height at 200% root size', async () => {
+  const root = document.documentElement;
+  const previous = root.style.fontSize;
+  root.style.fontSize = '200%';
+  try {
+    const wrapper = await fixture<HTMLElement>(html`<div style="line-height: 1.6">
+      <lr-icon-button label="Details" style="--lr-icon-button-size: 44px"><span><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M2 2h8v8H2z"></path></svg></span></lr-icon-button>
+    </div>`);
+    const el = wrapper.querySelector('lr-icon-button')!;
+    const rect = el.shadowRoot!.querySelector<HTMLElement>('[part~="button"]')!.getBoundingClientRect();
+    expect([rect.width, rect.height]).to.deep.equal([44, 44]);
+  } finally {
+    root.style.fontSize = previous;
+  }
+});

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 13 parts, 56 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 13 parts, 57 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `backdrop`: `--lr-app-rail-panel-inset-block-start`; `base`: `--lr-app-rail-bg`; `footer`: `--lr-app-rail-footer-padding`; `header`: `--lr-app-rail-header-min-block-size`, `--lr-app-rail-header-padding`; `nav`: `--lr-app-rail-nav-gap`, `--lr-app-rail-nav-padding`; `panel`: `--lr-app-rail-panel-bg`, `--lr-app-rail-panel-inset-block-start`, `--lr-app-rail-panel-overflow-block`, `--lr-app-rail-panel-overflow-inline`, `--lr-app-rail-panel-radius`, `--lr-app-rail-panel-radius-end-end`, `--lr-app-rail-panel-radius-end-start`, `--lr-app-rail-panel-radius-start-end`, `--lr-app-rail-panel-radius-start-start`, `--lr-app-rail-panel-shadow`; `toggle`: `--lr-app-rail-collapse-toggle-active-bg`
 - **Documented with** `lr-app-rail-item`, `lr-app-rail-group` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
@@ -329,7 +329,9 @@ presentations is on screen, for magnifier and braille users, rather than announc
 
 **Themeable custom properties:**
 `--lr-app-rail-frame-gap` (default `var(--lr-space-s)`), `--lr-app-rail-frame-radius` (default
-`var(--lr-radius)`), and `--lr-app-rail-frame-shadow` (default `var(--lr-shadow-s)`) customize a
+`var(--lr-radius)`), `--lr-app-rail-frame-border` (default `var(--lr-border-width-thin) solid
+var(--lr-color-border-subtle)`, every side; `--lr-app-rail-edge-border` still wins on the inline
+end), and `--lr-app-rail-frame-shadow` (default `var(--lr-shadow-s)`) customize a
 card frame. The card host uses `display: flow-root` to contain its margins; a consumer overriding
 host `display` owns that formatting context. Plain frames default to a transparent background,
 while an explicit `--lr-app-rail-bg` still wins. Forced colors restores the plain frame's

@@ -3,6 +3,7 @@ export {
   installHappyDomAriaControlsShim,
   installHappyDomCascadeLayerShim,
   installHappyDomFormAssociatedShims,
+  installHappyDomResponseBytesShim,
   installHappyDomShadowFocusShim,
   installHappyDomShims,
   installStubInternalsForTest,

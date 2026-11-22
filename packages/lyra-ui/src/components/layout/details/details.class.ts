@@ -161,6 +161,8 @@ export interface LyraDetailsEventMap {
  *   is clamped to it.
  * @cssprop [--lr-details-summary-hover-bg=var(--lr-color-brand-quiet)] - Summary hover background.
  * @cssprop [--lr-details-summary-active-bg=color-mix(...)] - Summary pressed background.
+ * @cssprop [--lr-details-summary-hover-color=var(--lr-details-summary-color)] - Summary text colour
+ *   while hovered or pressed.
  * @cssprop --spacing - Upstream-compatible spacing override for the summary and content.
  * @cssprop [--show-duration=var(--lr-duration-base)] - Expand-icon transition duration.
  * @cssprop [--hide-duration=var(--lr-duration-base)] - Collapse-icon transition duration.

@@ -587,9 +587,9 @@ step "plugin reference sync"
 freshness_diff "plugin skill package (./package.sh)" \
   plugins/lyra-ui/skills/lyra-ui/CHANGELOG.md \
   plugins/lyra-ui/skills/lyra-ui/references/ \
-  packages/lyra-ui/skills/ \
-  skills/lyra-ui.skill \
-  skills/compose-lyra-interfaces.skill
+  packages/lyra-ui/skills/
+# The archives are compared by content: deflate output depends on the zlib build.
+node scripts/check-skill-bundles.mjs skills/lyra-ui.skill skills/compose-lyra-interfaces.skill
 
 step "skill:check"
 pnpm skill:check

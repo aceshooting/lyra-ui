@@ -63,6 +63,28 @@ export const styles = css`
   lr-virtual-list::part(base) {
     overflow-x: auto;
   }
+  /* fill: the host and base take a definite parent's block size; the toolbar keeps its own row and
+     the page list flexes into the rest. A flexed item's size is definite, so the list's own 100%
+     viewport resolves against it and the list -- not an outer container -- scrolls. */
+  :host([fill]) {
+    block-size: 100%;
+    min-block-size: 0;
+  }
+  :host([fill]) [part="base"] {
+    display: flex;
+    flex-direction: column;
+    block-size: 100%;
+    min-block-size: 0;
+    box-sizing: border-box;
+  }
+  :host([fill]) [part="toolbar"] {
+    flex: none;
+  }
+  :host([fill]) [part="pages"] {
+    flex: 1 1 0;
+    min-block-size: 0;
+    --lr-virtual-list-height: 100%;
+  }
   /* Everything below renders through <lr-virtual-list>'s renderItem, into that element's own
      shadow root, so a bare [part='x'] can never reach across the boundary and every page-level
      rule goes through ::part(). ::part() also takes no descendant combinator, hence the canvas and

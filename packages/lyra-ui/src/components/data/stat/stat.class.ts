@@ -82,6 +82,7 @@ export interface StatRow {
  * @cssprop [--lr-stat-bg=var(--lr-color-surface)] - Resting background of the card. The pressed
  *   fill of a linked card mixes from this value too, so one override retints both. `frame="plain"`
  *   still paints transparent.
+ * @cssprop [--lr-stat-radius=var(--lr-radius)] - Corner radius of the card.
  * @cssprop [--lr-stat-padding=var(--lr-space-m)] - Padding of the card, read by both `[part="base"]`
  *   and the linked-card content wrapper so a linked and unlinked stat never drift. The compact
  *   density (`size="s"` and below) and `frame="plain"` read the same property with their own
@@ -90,6 +91,8 @@ export interface StatRow {
  * @cssprop [--lr-stat-gap=var(--lr-space-xs)] - Gap between the card's stacked parts, read by both
  *   `[part="base"]` and the linked-card content wrapper. The compact density reads the same
  *   property with its own current default (`var(--lr-size-0-125rem)`) as its fallback.
+ * @cssprop [--lr-stat-rows-gap=var(--lr-size-0-125rem)] - Gap between the breakdown `row`s inside
+ *   `[part="rows"]`; the space between sections (caption, sub, spark, rows) is `--lr-stat-gap`.
  * @cssprop [--lr-stat-trend-good-color=var(--lr-color-success)] - Text color of the trend pill
  *   when its polarity is "good". Independent of the headline value's `variant="success"` tint,
  *   which reads the shared `--lr-color-success` token directly.
@@ -100,6 +103,8 @@ export interface StatRow {
  *   reads the shared `--lr-color-danger` token directly.
  * @cssprop [--lr-stat-trend-bad-bg=color-mix(in srgb, var(--lr-color-danger) 8%, transparent)] -
  *   Background of the trend pill when its polarity is "bad".
+ * @cssprop [--lr-stat-value-color=inherit] - Headline value color for the neutral variant; the
+ *   status variants, `emphasis` and `prose` keep their own colors.
  * @cssprop [--lr-stat-value-brand-color=var(--lr-color-brand)] - Headline value color for the
  *   `brand` variant.
  * @cssprop [--lr-stat-value-success-color=var(--lr-color-success)] - Headline value color for the
@@ -117,6 +122,11 @@ export interface StatRow {
  *   tabular, so numbers align without a monospace face that lacks non-Latin glyphs.
  * @cssprop [--lr-stat-value-font-size=var(--lr-font-size-2xl)] - Headline value size. `prose` keeps its own smaller size.
  * @cssprop [--lr-stat-value-font-weight=var(--lr-font-weight-bold)] - Headline value weight. `prose` keeps its own weight.
+ * @cssprop [--lr-stat-value-letter-spacing=normal] - Headline value letter spacing.
+ * @cssprop [--lr-stat-value-line-height=inherit] - Headline value line height.
+ * @cssprop [--lr-stat-value-margin=0] - Margin around the headline value inside its row.
+ * @cssprop [--lr-stat-value-row-align=baseline] - Cross-axis alignment (`align-items`) of the value,
+ *   unit and exact-value row.
  * @cssprop [--lr-stat-label-font-size=var(--lr-font-size-xs)] - Metric label size.
  * @cssprop [--lr-stat-label-font-weight=var(--lr-font-weight-semibold)] - Metric label weight.
  * @cssprop [--lr-stat-label-color=var(--lr-color-text-quiet)] - Metric label color.
@@ -128,6 +138,8 @@ export interface StatRow {
  * @cssprop [--lr-stat-caption-color=var(--lr-color-text-quiet)] - Caption color.
  * @cssprop [--lr-stat-icon-size=inherit] - Font size of the icon container; `lr-icon` and
  *   `1em`-sized glyphs in the `start` slot follow it.
+ * @cssprop [--lr-stat-icon-box-size=auto] - Inline and block size of the icon chip box, padding
+ *   included; the glyph's line box centres in it. Unset, the chip hugs its glyph.
  * @cssprop [--lr-stat-icon-padding=0] - Inset of the icon chip around its glyph.
  * @cssprop [--lr-stat-icon-radius=0] - Corner radius of the icon chip.
  * @cssprop [--lr-stat-icon-bg=transparent] - Background of the icon chip.

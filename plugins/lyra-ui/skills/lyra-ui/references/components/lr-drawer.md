@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 15 parts, 29 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 15 parts, 37 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `body`: `--lr-dialog-height`; `footer`: `--lr-dialog-height`; `header`: `--lr-dialog-height`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -33,6 +33,11 @@ the slide animation are its own.
 - `contained: boolean = false` (attribute `contained`, reflected) — position within the nearest
   containing block without a backdrop, page inerting, focus trap, scroll lock, top-layer
   promotion, or global Escape ownership
+- `floating: boolean = false` (attribute `floating`, reflected) — an inset, floating sheet: the
+  panel keeps a `--lr-drawer-inset` gap (default `var(--lr-space-s)`) from every viewport edge
+  (from the containing block's edges with `contained`; the safe-area insets still win where
+  larger) and rounds its corners with `--lr-overlay-radius` (default `var(--lr-radius-container)`).
+  Off by default, so the drawer stays square and edge-flush.
 - `heading?: string`, `label: string`,
   `withoutCloseButton: boolean = false` (attribute `without-close-button`, reflected),
   `noHeader: boolean = false` (attribute `no-header`, Shoelace's spelling, reflected),
@@ -96,14 +101,18 @@ used by `placement="top"|"bottom"`), `--lr-drawer-enter-x` / `--lr-drawer-enter-
 slide translate offset, used for both the enter and the exit keyframes — `-x` for start/end, `-y`
 for top/bottom; both default to `±var(--lr-size-1rem)` and are set per `placement`, with `-x`
 explicitly flipped under `:dir(rtl)` since `translateX` is physical. Override to lengthen/shorten
-the slide). It also inherits every `<lr-dialog>` token — `--lr-dialog-overlay-color`,
+the slide), `--lr-drawer-panel-bg` (the panel's own fill, ahead of the inherited
+`--lr-dialog-panel-bg` and the shared `--lr-overlay-surface`; unlike the shared token it does not
+retint popups opened inside the drawer), `--lr-drawer-radius` (default `0`, or
+`--lr-overlay-radius` while `floating` is set; an explicit value wins either way) and
+`--lr-drawer-inset` (default `var(--lr-space-s)`; the `floating` gap, ignored otherwise). It also inherits every `<lr-dialog>` token — `--lr-dialog-overlay-color`,
 `--lr-dialog-backdrop-filter`, `--lr-dialog-width`, `--lr-dialog-max-width`, `--lr-dialog-spacing`,
 `--lr-dialog-spacing-block`, `--lr-dialog-panel-duration` and `--lr-dialog-backdrop-duration` —
 since `LyraDrawer` extends `LyraDialog`, including the shared overlay-surface family the panel
 paints from: `--lr-overlay-surface`, `--lr-overlay-border`, `--lr-overlay-radius` and
 `--lr-overlay-shadow-modal`. The drawer's own `[part~="panel"]` rule squares the corners and steps
 the default elevation down to `var(--lr-shadow-l)` — three of its edges are flush with the viewport —
-so on this tag `--lr-overlay-radius` is overridden, while the fill, edge colour and a consumer
+so on this tag `--lr-overlay-radius` is overridden unless `floating` is set, while the fill, edge colour and a consumer
 `--lr-overlay-shadow-modal` still take effect. `--lr-dialog-height` is deliberately **not** among the
 inherited tokens above: `<lr-drawer>`'s own `[part~="panel"]` rule unconditionally sets its own
 `block-size` for every placement (`100%` for `start`/`end`, a `--lr-drawer-height`-driven `min()`
@@ -116,8 +125,8 @@ override `body` would always stretch and push `footer` to the panel's far edge. 
 `[part="body"]` rule restores the natural content size instead, so `footer` follows immediately
 after a short body. Set the inherited `fill-body` attribute to opt back in: `body` then grows to the
 panel and becomes a column flex container whose slotted children fill it. The inherited
-`--lr-dialog-heading-font-size`, `--lr-dialog-heading-font-weight` and
-`--lr-dialog-heading-font-family` tokens style the drawer's header title exactly as on
+`--lr-dialog-heading-font-size`, `--lr-dialog-heading-font-weight`,
+`--lr-dialog-heading-letter-spacing` and `--lr-dialog-heading-font-family` tokens style the drawer's header title exactly as on
 `<lr-dialog>`. The drawer's own
 size/width/height tokens take precedence
 for its panel, and only the animation _name_ is overridden, so `--lr-dialog-panel-duration` retunes the
@@ -132,3 +141,5 @@ slide too and the reduced-motion flattening of the shared `--lr-duration-*` toke
 ```
 
 ---
+
+The drawer inherits the dialog's opt-in `fullscreen-narrow` attribute (a viewport narrower than 40rem fills the screen) and the panel sizing tokens `--lr-dialog-max-height`, `--lr-dialog-viewport-inset` and `--lr-dialog-divider-color`, exactly as on `<lr-dialog>`.

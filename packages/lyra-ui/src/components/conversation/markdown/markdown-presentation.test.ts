@@ -114,6 +114,30 @@ describe('markdown presentation', () => {
         }
       });
 
+      it('applies the heading block-start and code-block font-size and line-height tokens and keeps the defaults unset', async () => {
+        await loadMarkdownDeps();
+        const { el } = await createMarkdown(tagName, 'Intro\n\n## Section\n\n```\nconst a = 1;\n```\n');
+        await waitUntil(() => el.shadowRoot?.querySelector('[part="code-block"] code') != null);
+        const root = el.shadowRoot!;
+        el.style.fontSize = '16px';
+        const read = () => {
+          const heading = getComputedStyle(root.querySelector('[part="heading"]')!);
+          const pre = getComputedStyle(root.querySelector('[part="code-block"]')!);
+          const code = getComputedStyle(root.querySelector('[part="code-block"] code')!);
+          return { headingStart: heading.marginBlockStart, preLine: pre.lineHeight, codeSize: code.fontSize, codeLine: code.lineHeight };
+        };
+        const defaults = read();
+        const tokens = getComputedStyle(el);
+        const px = (value: string) => `${Number.parseFloat(value) * (value.endsWith('rem') ? Number.parseFloat(getComputedStyle(document.documentElement).fontSize) : 1)}px`;
+        expect(defaults.headingStart).to.equal(px(tokens.getPropertyValue('--lr-space-l').trim()));
+        expect(defaults.codeSize).to.equal(px(tokens.getPropertyValue('--lr-font-size-sm').trim()));
+
+        el.style.setProperty('--lr-markdown-heading-margin-block-start', '7px');
+        el.style.setProperty('--lr-markdown-code-block-font-size', '11px');
+        el.style.setProperty('--lr-markdown-code-block-line-height', '1.25');
+        expect(read()).to.deep.equal({ headingStart: '7px', preLine: '20px', codeSize: '11px', codeLine: '13.75px' });
+      });
+
       it('marks task items, removes their list markers, and styles read-only checkboxes in both themes', async () => {
         await loadMarkdownDeps();
         const { el } = await createMarkdown(tagName, '- [ ] An open task has enough words to wrap onto a second line while its checkbox stays at the start.\n- [x] Done item');

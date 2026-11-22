@@ -204,6 +204,10 @@ function snapshotSteps(value: unknown, reportOmitted: (count: number) => void): 
  * @cssprop [--lr-stepper-error-color=var(--lr-color-danger)] - Text color of an `error` step.
  * @cssprop [--lr-stepper-index-bg=var(--lr-color-neutral-fill-normal)] - Background of a step's
  *   `[part='step-index']` outside the current and error states.
+ * @cssprop [--lr-stepper-index-border=none] - Border shorthand of a step's index circle (for example
+ *   `2px solid currentColor`); the circle keeps its size.
+ * @cssprop [--lr-stepper-current-index-border=var(--lr-stepper-index-border,none)] - Border of the `current` step's index.
+ * @cssprop [--lr-stepper-error-index-border=var(--lr-stepper-index-border,none)] - Border of an `error` step's index.
  * @cssprop [--lr-stepper-index-color=var(--lr-color-neutral-on-normal)] - Text color of that index.
  * @cssprop [--lr-stepper-error-index-bg=var(--lr-color-neutral-fill-normal)] - Background of an
  *   `error` step's index.

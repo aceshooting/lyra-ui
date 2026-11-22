@@ -509,10 +509,10 @@ export const styles = css`
   :host([frame="card"]) [part="base"] {
     margin: var(--_lr-app-rail-frame-gap);
     block-size: calc(100% - 2 * var(--_lr-app-rail-frame-gap));
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border: var(--lr-app-rail-frame-border, var(--lr-border-width-thin) solid var(--lr-color-border-subtle));
     border-inline-end: var(
       --lr-app-rail-edge-border,
-      var(--lr-border-width-thin) solid var(--lr-color-border-subtle)
+      var(--lr-app-rail-frame-border, var(--lr-border-width-thin) solid var(--lr-color-border-subtle))
     );
     border-radius: var(--lr-app-rail-frame-radius, var(--lr-radius));
     box-shadow: var(--lr-app-rail-frame-shadow, var(--lr-shadow-s));

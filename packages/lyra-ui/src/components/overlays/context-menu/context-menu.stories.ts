@@ -225,3 +225,13 @@ export const MapOrCanvas: StoryObj = {
     `;
   },
 };
+
+/** `--lr-context-menu-min-inline-size` floors the menu without widening other popups. */
+export const MinInlineSize: StoryObj = {
+  render: () => html`
+    <lr-context-menu label="File actions" style="--lr-context-menu-min-inline-size: 16rem">
+      <div slot="trigger" tabindex="0" style=${regionStyle}>Right-click for a wider menu</div>
+      ${rows()}
+    </lr-context-menu>
+  `,
+};

@@ -17,7 +17,7 @@ import { LyraFormControlElement } from '../../../internal/form-control-element.j
 import { hostAriaLabel, nextId } from '../../../internal/a11y.js';
 import { tag } from '../../../internal/prefix.js';
 import { sizes } from '../../../internal/sizes.styles.js';
-import type { LyraLabelDisplay, LyraSize } from '../../../internal/variants.js';
+import type { LyraLabelDisplay, LyraLabelPlacement, LyraSize } from '../../../internal/variants.js';
 import type { LyraOrientation } from '../../../internal/shared-unions.js';
 import { groupStyles } from './radio-group.styles.js';
 import type { LyraRadio } from './radio.class.js';
@@ -148,6 +148,13 @@ const RADIO_GROUP_ORIENTATION = literalSetConverter<RadioGroupOrientation>(
  * @cssprop [--lr-form-control-label-font-size=var(--lr-form-control-font-size)] - Font size of the field label.
  * @cssprop [--lr-form-control-label-font-weight=var(--lr-font-weight-semibold)] - Font weight of the field label.
  * @cssprop [--lr-form-control-label-color=var(--lr-color-text)] - Text color of the field label.
+ * @cssprop [--lr-form-control-label-line-height=inherit] - Line height of the field label.
+ * @cssprop [--lr-form-control-label-inline-size=30%] - Label column width while
+ *   `label-placement="start"`.
+ * @cssprop [--lr-form-control-label-gap=var(--lr-space-m)] - Space between the label column and
+ *   the field while `label-placement="start"`.
+ * @cssprop [--lr-form-control-label-collapse-inline-size=var(--lr-size-20rem)] - Control width
+ *   below which `label-placement="start"` returns the label above the field.
  * @csspart form-control-label - Mapped name on the same group label.
  * @csspart toolbar - Container for the supplementary controls.
  * @csspart radios - WA option collection.
@@ -233,6 +240,15 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
   @property() label = '';
   /** Visually hide the group label while preserving its accessible name. */
   @property({ attribute: 'label-display', reflect: true, useDefault: true }) labelDisplay: LyraLabelDisplay = 'visible';
+  /**
+   * Where the label sits: `top` (default) above the field, or `start` in an inline-start column of
+   * `--lr-form-control-label-inline-size`, with hint and error aligned under the field. Below
+   * `--lr-form-control-label-collapse-inline-size` the label returns above the field. The label
+   * association is unchanged. Reflected so `[label-placement]` selectors match.
+   * With `start` the toolbar moves below the options.
+   * @attr label-placement
+   */
+  @property({ attribute: 'label-placement', reflect: true, useDefault: true }) labelPlacement: LyraLabelPlacement = 'top';
   @property() hint = '';
   /** Shoelace alias for {@link hint}. `hint` wins when both are supplied. */
   @property({ attribute: 'help-text' }) helpText = '';

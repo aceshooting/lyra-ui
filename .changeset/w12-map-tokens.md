@@ -1,0 +1,5 @@
+---
+'@aceshooting/lyra-ui': minor
+---
+
+`lr-map` adds `drawingFinishBehavior` (`'clear'` default, or `'keep'` to commit on Finish and keep the edit on the map, so a sticky mode re-arms only after cancel or Escape), `legendClearance` (`'row'` default, `'corner'` to clear only the control corners in the legend's own column, or `'none'` to place the legend from the map edge with its insets alone), `anchorFill` (the `anchor-body` stops scrolling and shrinks the slotted card to the panel, leaving `--lr-map-anchor-close-reservation` to the card's header), the control-group tokens `--lr-map-control-group-radius`, `--lr-map-control-group-border`, `--lr-map-control-button-radius` and `--lr-map-control-divider`, the scale tokens `--lr-map-scale-bg`, `--lr-map-scale-radius`, `--lr-map-scale-border`, `--lr-map-scale-padding-block`, `--lr-map-scale-padding-inline`, `--lr-map-scale-font-size` and `--lr-map-scale-color`, and the legend tokens `--lr-map-legend-row-gap`, `--lr-map-legend-group-columns`, `--lr-map-legend-border`, `--lr-map-legend-toggle-padding` and `--lr-map-legend-disclosure-padding`. Defaults are unchanged.

@@ -37,6 +37,10 @@ export interface LyraTabEventMap {
  * noncancelable `lr-close` notification without selecting or removing the tab; the owning
  * application decides whether and when to remove the matching tab and panel.
  *
+ * The real tab button belongs to the group, so its padding, font size and minimum block size are
+ * the group's `--lr-tab-group-tab-padding`, `--lr-tab-group-tab-font-size` and
+ * `--lr-tab-group-tab-min-block-size` tokens; set them on the group or an ancestor.
+ *
  * @customElement lr-tab
  * @slot - The tab's visual label content. Its direct default-slot element roots are inert while the
  *   owning group projects them; their accessibility-exposed flattened text names the real tab button.

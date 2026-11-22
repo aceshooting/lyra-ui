@@ -620,8 +620,8 @@ export type LyraCellMoveEvent = LyraDashboardGridEventMap['lr-cell-move'];
 export type LyraCellResizeEvent = LyraDashboardGridEventMap['lr-cell-resize'];
 
 /**
- * `lr-change` — dispatched by 48 components: `<lr-chat-composer>`, `<lr-checkbox-group>`,
- * `<lr-checkbox>`, `<lr-code-editor>`, `<lr-color-picker>`, `<lr-combobox>`,
+ * `lr-change` — dispatched by 49 components: `<lr-chat-composer>`, `<lr-checkbox-group>`,
+ * `<lr-checkbox>`, `<lr-chip-group>`, `<lr-code-editor>`, `<lr-color-picker>`, `<lr-combobox>`,
  * `<lr-country-picker>`, `<lr-currency-picker>`, `<lr-date-input>`, `<lr-date-picker>`,
  * `<lr-emoji-picker>`, `<lr-file-input>`, `<lr-graph-query-builder>`, `<lr-image-comparer>`,
  * `<lr-input>`, `<lr-known-date>`, `<lr-locale-picker>`, `<lr-model-select>`,
@@ -631,7 +631,7 @@ export type LyraCellResizeEvent = LyraDashboardGridEventMap['lr-cell-resize'];
  * `<lr-select>`, `<lr-signature-pad>`, `<lr-slider>`, `<lr-style-panel>`, `<lr-swatch-picker>`,
  * `<lr-switch>`, `<lr-textarea>`, `<lr-time-input>`, `<lr-time-range>`, `<lr-time-zone-picker>`,
  * `<lr-toggle-group>`, `<lr-toggle>`, `<lr-token-input>`, `<lr-tool-param-form>`,
- * `<lr-tool-select-dialog>`, `<lr-unit-picker>`, `<lr-voice-picker>`; detail union of 42, e.g.
+ * `<lr-tool-select-dialog>`, `<lr-unit-picker>`, `<lr-voice-picker>`; detail union of 43, e.g.
  * `LyraCatalogPickerEventMap['lr-change']`.
  */
 export type LyraChangeEvent =
@@ -639,6 +639,7 @@ export type LyraChangeEvent =
   | LyraChatComposerEventMap['lr-change']
   | LyraCheckboxEventMap['lr-change']
   | LyraCheckboxGroupEventMap['lr-change']
+  | LyraChipGroupEventMap['lr-change']
   | LyraCodeEditorEventMap['lr-change']
   | LyraColorPickerEventMap['lr-change']
   | LyraComboboxEventMap['lr-change']

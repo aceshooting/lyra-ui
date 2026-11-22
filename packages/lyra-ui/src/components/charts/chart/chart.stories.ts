@@ -641,6 +641,21 @@ export const RangeBand: Story = {
   },
 };
 
+/** Nested bands with their own `bandOpacity`, and a dash-dot target line from a custom `dash` pattern. */
+export const BandOpacityAndDashPattern: Story = {
+  name: 'Per-band opacity and dash pattern',
+  render: () => {
+    const series: LyraChartSeries[] = [
+      { label: 'p10–p90', type: 'band', lower: [8, 9, 11, 10, 12, 13], upper: [14, 16, 18, 17, 19, 21], bandOpacity: 0.15 },
+      { label: 'p25–p75', type: 'band', lower: [10, 11, 13, 12, 14, 15], upper: [12, 14, 16, 15, 17, 19], bandOpacity: 0.4 },
+      { label: 'Median', data: [11, 12, 14, 13, 15, 17] },
+      { label: 'Target', data: [13, 13, 13, 13, 13, 13], dash: [8, 3, 2, 3] },
+    ];
+    return html`<lr-chart type="line" style="width: 28rem"
+      .labels=${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']} .datasets=${series}></lr-chart>`;
+  },
+};
+
 /** Dense legend layout through the shared legend tokens instead of `::part()` rules. */
 export const DenseLegendTokens: Story = {
   render: () => {

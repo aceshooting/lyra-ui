@@ -719,3 +719,20 @@ export const DenseRail: Story = {
     .threads=${threads}
   ></lr-thread-list>`,
 };
+
+/** The search field takes its fill, border and text colour from `--lr-thread-list-search-*`. */
+export const ThemedSearchField: Story = {
+  name: 'Themed search field',
+  render: () => html`
+    <div
+      style="
+        block-size:400px;inline-size:320px;border:1px solid var(--lr-color-border);
+        --lr-thread-list-search-bg: var(--lr-color-brand-quiet);
+        --lr-thread-list-search-border-color: var(--lr-color-brand);
+        --lr-thread-list-search-color: var(--lr-color-brand);
+      "
+    >
+      <lr-thread-list searchable active-conversation-id="2" .threads=${threads}></lr-thread-list>
+    </div>
+  `,
+};

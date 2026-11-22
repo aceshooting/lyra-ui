@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 15 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 18 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `step`: `--lr-stepper-current-font-weight`; `step-check`: `--lr-stepper-check-color`; `step-index`: `--lr-stepper-current-index-bg`, `--lr-stepper-index-bg`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -139,7 +139,7 @@ text color of an `error` step. `--lr-stepper-current-index-bg` (default `var(--l
 `--lr-stepper-current-index-color` (default `var(--lr-color-on-brand)`) — background and text color
 of the `current` step's numbered `step-index` chip. The text color reads the dedicated on-brand
 foreground token, not `--lr-color-surface`, so the chip stays legible in dark mode and under forced
-colors, where surface and on-brand diverge. `--lr-stepper-index-bg` / `--lr-stepper-index-color`
+colors, where surface and on-brand diverge. `--lr-stepper-index-border` (default `none`; `--lr-stepper-current-index-border` and `--lr-stepper-error-index-border` fall back to it) draws a border on the index circle without resizing it. `--lr-stepper-index-bg` / `--lr-stepper-index-color`
 (defaults `var(--lr-color-neutral-fill-normal)` / `var(--lr-color-neutral-on-normal)`) paint every
 other step's index, `--lr-stepper-error-index-bg` / `--lr-stepper-error-index-color` (same defaults)
 an `error` step's index, and `--lr-stepper-check-color` (default `var(--lr-color-success)`) the

@@ -2,6 +2,7 @@ import { activeFill, disabledControl, focusRing, focusRingOffset, focusRingOutli
 import { css } from 'lit';
 import {
   formControlFocusHalo,
+  formControlFieldTransition,
   formControlInvalidBorder,
   formControlRequiredMarker,
   formControlTextWrap,
@@ -40,6 +41,7 @@ export const styles = css`
        declared; the PUBLIC name stays undeclared, so a value set on :root or any ancestor still
        reaches this field. */
     --_lr-form-control-focus-shadow: var(--lr-form-control-focus-shadow, none);
+    --_lr-form-control-transition: var(--lr-form-control-transition, none);
   }
   ${formControlAppearance}
   :host([pill]) {
@@ -63,6 +65,14 @@ export const styles = css`
     border: var(--lr-border-width-thin) solid var(--lr-input-border-color, var(--_lr-input-border-color-default));
     border-radius: var(--lr-input-radius, var(--_lr-input-radius-default));
     background: var(--lr-input-fill, var(--_lr-input-fill-default));
+  }
+  [part~='input-wrapper'] {
+    ${formControlFieldTransition}
+  }
+  @media (prefers-reduced-motion: reduce) {
+    :host {
+      --_lr-form-control-transition: none;
+    }
   }
   [part~='input-wrapper']:focus-within {
     border-color: var(--lr-input-focus-border-color, var(--lr-color-brand));
@@ -97,6 +107,7 @@ export const styles = css`
     color: var(--lr-color-text);
     font: inherit;
     font-family: var(--lr-input-font-family, inherit);
+    font-variant-numeric: var(--lr-input-font-variant-numeric, inherit);
     font-size: var(--lr-input-font-size, var(--_lr-input-font-size-default));
   }
   :host([dir='ltr' i]) [part='input'][dir='auto'] {

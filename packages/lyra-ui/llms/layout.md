@@ -666,7 +666,7 @@ body is the block-axis scroll owner whenever the widget receives a constrained h
 header remains fixed while deep body content scrolls.
 
 For the docked frame, `--lr-widget-bg`, `--lr-widget-border-color` and `--lr-widget-radius`
-control the fill, border and corners. `--lr-widget-header-padding`, `--lr-widget-body-padding`
+control the fill, border and corners. `--lr-widget-header-divider` (default `var(--lr-border-width-thin) solid var(--lr-color-border-subtle)`) is the header's bottom rule as a border shorthand; `none` removes it. `--lr-widget-header-padding`, `--lr-widget-body-padding`
 and `--lr-widget-gap` override the size tier's padding and header gap. The selected view has a
 visible outline in forced colors. Collapsing a body that held focus returns focus to its toggle.
 
@@ -1280,7 +1280,14 @@ an attribute selector after `::part()`), which previously left overriding the li
 repainting everything else that reads them. Unset, each falls back to the token its rule used
 before, so rendering is unchanged. The upstream hooks `--indicator-color` (selected indicator),
 `--track-color` (resting strip rule), and `--track-width` (resting strip-rule thickness) are read
-first, with the Lyra/token values as fallbacks. `--lr-tab-group-vertical-nav-max-inline-size`
+first, with the Lyra/token values as fallbacks; `--lr-tab-group-track-width` (default
+`var(--lr-border-width-thin)`) is the Lyra-prefixed strip-rule thickness behind `--track-width`, on
+whichever edge `placement` puts the rule, and the selected underline keeps overlapping it exactly.
+The tab buttons themselves take `--lr-tab-group-tab-padding` (default
+`var(--lr-space-s) var(--lr-space-xs)`), `--lr-tab-group-tab-font-size` (default `inherit`) and
+`--lr-tab-group-tab-min-block-size` (default `auto`, for a taller touch-friendly strip); because the
+group renders the real tab button, these are set on the group or an ancestor, not on `<lr-tab>`.
+`--lr-tab-group-vertical-nav-max-inline-size`
 (default `var(--lr-size-12rem)`) caps a `start`/`end` nav's logical inline size while still allowing
 it to shrink in a constrained allocation. Its inline fallback means it can be set on the group or
 an ancestor; long single-line tab labels ellipsize within the cap rather than expanding the group or
@@ -1478,7 +1485,7 @@ text color of an `error` step. `--lr-stepper-current-index-bg` (default `var(--l
 `--lr-stepper-current-index-color` (default `var(--lr-color-on-brand)`) — background and text color
 of the `current` step's numbered `step-index` chip. The text color reads the dedicated on-brand
 foreground token, not `--lr-color-surface`, so the chip stays legible in dark mode and under forced
-colors, where surface and on-brand diverge. `--lr-stepper-index-bg` / `--lr-stepper-index-color`
+colors, where surface and on-brand diverge. `--lr-stepper-index-border` (default `none`; `--lr-stepper-current-index-border` and `--lr-stepper-error-index-border` fall back to it) draws a border on the index circle without resizing it. `--lr-stepper-index-bg` / `--lr-stepper-index-color`
 (defaults `var(--lr-color-neutral-fill-normal)` / `var(--lr-color-neutral-on-normal)`) paint every
 other step's index, `--lr-stepper-error-index-bg` / `--lr-stepper-error-index-color` (same defaults)
 an `error` step's index, and `--lr-stepper-check-color` (default `var(--lr-color-success)`) the
@@ -2070,6 +2077,7 @@ resolves.
 
 **Additional API surface:**
 
+- `--lr-segmented-segment-min-size` — Minimum inline and block size of each segment's hit area. Default: `var(--lr-size-24px)`.
 - `--lr-segmented-track-gap` — Gap between segments. Default: `var(--lr-size-0-125rem)`.
 - `--lr-segmented-track-radius` — Track corner radius. Default: `var(--lr-radius)`.
 - `--lr-segmented-segment-radius` — Each segment's own corner radius, independent of the track's.
@@ -2837,7 +2845,9 @@ presentations is on screen, for magnifier and braille users, rather than announc
 
 **Themeable custom properties:**
 `--lr-app-rail-frame-gap` (default `var(--lr-space-s)`), `--lr-app-rail-frame-radius` (default
-`var(--lr-radius)`), and `--lr-app-rail-frame-shadow` (default `var(--lr-shadow-s)`) customize a
+`var(--lr-radius)`), `--lr-app-rail-frame-border` (default `var(--lr-border-width-thin) solid
+var(--lr-color-border-subtle)`, every side; `--lr-app-rail-edge-border` still wins on the inline
+end), and `--lr-app-rail-frame-shadow` (default `var(--lr-shadow-s)`) customize a
 card frame. The card host uses `display: flow-root` to contain its margins; a consumer overriding
 host `display` owns that formatting context. Plain frames default to a transparent background,
 while an explicit `--lr-app-rail-bg` still wins. Forced colors restores the plain frame's
@@ -3559,7 +3569,8 @@ window.
 ## `lr-menu-label`
 
 The `lr-menu-label` styling hooks include `--lr-menu-label-color`, `--lr-menu-label-padding`, and
-`--lr-menu-label-font-size` (default `var(--lr-font-size-sm)`).
+`--lr-menu-label-font-size` (default `var(--lr-font-size-sm)`), `--lr-menu-label-font-weight`
+(default `var(--lr-font-weight-semibold)`) and `--lr-menu-label-letter-spacing` (default `normal`).
 
 A non-interactive section heading inside `<lr-menu>`'s default slot. Mirrors `sl-menu-label`.
 
@@ -3676,7 +3687,12 @@ Row chrome is controlled through the menu-item properties listed below.
 List density: `--lr-menu-padding` (default `var(--lr-space-xs)`) pads `[part="list"]` and
 `--lr-menu-gap` (default `0`) spaces its rows. Both apply inside `lr-dropdown` too and are read only
 through `var()` fallbacks, so one declaration on the menu or an ancestor retunes the list without a
-`::part(list)` rule. The scrolling list also honors the theme-level
+`::part(list)` rule. `--lr-menu-max-block-size` (default `var(--lr-size-20rem)`) is the list's
+block-size ceiling, past which it scrolls; it also caps a submenu's surface. Inside `lr-dropdown`
+the positioned available space still caps it, and a standalone menu can be raised above `20rem`.
+To widen a dropdown's menu, set `--lr-overlay-min-inline-size` or `--lr-overlay-inline-size` on the
+`lr-dropdown`, not a width on the `lr-menu`: a contained menu is `display: contents`, so its list
+lays out directly in the popup and fills whatever width the popup takes. The scrolling list also honors the theme-level
 `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color` hooks
 (defaults `auto`/`auto`/`auto`), like every other internal scroll container.
 
@@ -3814,7 +3830,9 @@ expanding the popup.
 **Themeable custom properties:** `--lr-menu-item-gap`, `--lr-menu-item-radius`,
 `--lr-menu-item-danger-color`, `--lr-menu-item-danger-hover-bg`,
 `--lr-menu-item-danger-active-bg`, `--lr-menu-item-checked-bg` (default `transparent`),
-`--lr-menu-item-checked-color` (default `inherit`), `--lr-menu-item-checked-font-weight` (default
+`--lr-menu-item-color` (default `inherit`; a resting row's text, which danger, disabled and checked
+rows override), `--lr-menu-item-checked-color` (default `var(--lr-menu-item-color)`),
+`--lr-menu-item-checked-font-weight` (default
 `inherit`), and `--submenu-offset`, plus shared size/focus/color/spacing tokens. The checked hooks
 apply to a `type="checkbox" checked` or `type="radio" checked` row's `[part="base"]`, matching the
 checked/selected-state hooks `<lr-option>`, `<lr-select>`, `<lr-combobox>`, and `<lr-tree-item>`
@@ -3838,8 +3856,12 @@ itself.
 Row density hooks, also inline fallbacks: `--lr-menu-item-padding-block` (default
 `var(--lr-form-control-padding-block)`), `--lr-menu-item-padding-inline` (default
 `var(--lr-form-control-padding-inline)`), `--lr-menu-item-font-size` (default
-`var(--lr-form-control-font-size)`) and `--lr-menu-item-icon-size` (default `inherit`), the font
-size of `[part="icon"]`, which sizes a slotted `lr-icon` or any `1em` glyph.
+`var(--lr-form-control-font-size)`), `--lr-menu-item-font-weight` (default `inherit`),
+`--lr-menu-item-letter-spacing` (default `normal`), `--lr-menu-item-details-font-size` (default
+`var(--lr-font-size-sm)`) and `--lr-menu-item-details-color` (default `var(--lr-color-text-quiet)`)
+for `[part="details"]`, and `--lr-menu-item-icon-size` (default `inherit`), the font
+size of `[part="icon"]`, which sizes a slotted `lr-icon` or any `1em` glyph. `lr-dropdown-item`
+reads the same row tokens.
 
 ```html
 <lr-menu style="--lr-menu-padding: 2px; --lr-menu-item-padding-block: 2px; --lr-menu-item-font-size: var(--lr-font-size-sm); --lr-menu-item-icon-size: 14px;">
@@ -4358,6 +4380,13 @@ restating a surface — defaults to `var(--lr-color-surface)`, mirroring `<lr-de
 `--lr-card-interactive-hover-border-color`, `--lr-card-interactive-active-border-color`, and
 `--lr-card-interactive-active-overlay`. They inherit from ancestors and fall back to the exact
 former brand and active-mix values when unset.
+`--lr-card-body-padding` pads the body alone (`--spacing` also moves the header, footer and gaps). `--lr-card-border-color` colours the OUTER border only (falling back to `--border-color`, then the
+tiers above): `--border-color` also recolours the header and footer dividers and, being inherited,
+reaches a nested `lr-data-grid`, which `--lr-card-border-color` does not. A card inside a wrapping
+router link (`<a href="/x"><lr-card>`) is not `actionable` and paints no hover of its own; drive it
+from the link instead, for example `a:hover > lr-card { --lr-card-border-color: var(--lr-color-brand);
+--lr-card-shadow: var(--lr-shadow-s); }`. Prefer the card's own `href` where the router can
+intercept clicks, since it owns hover, press and focus without a nested interactive wrapper.
 `--lr-card-shadow` is **undeclared by default**, so `box-shadow` falls back to `none`,
 mirroring `--lr-button-shadow`'s pattern; set it
 for a raised card without a `::part(base)` rule. `--lr-card-interactive-hover-shadow` styles an
@@ -4931,7 +4960,8 @@ Details surface paint uses `--lr-details-outlined-bg` / `--lr-details-outlined-b
 respectively the existing surface/border, brand-quiet/transparent, and brand-quiet/border values.
 Summary interaction paint uses `--lr-details-summary-hover-bg` (default
 `var(--lr-color-brand-quiet)`) and `--lr-details-summary-active-bg` (default the existing active
-`color-mix(...)`). All eight are inheritable inline-fallback hooks, so they isolate one disclosure
+`color-mix(...)`); `--lr-details-summary-hover-color` (default `var(--lr-details-summary-color)`)
+recolors the summary text while hovered or pressed. All eight are inheritable inline-fallback hooks, so they isolate one disclosure
 theme without requiring shared-token changes or shadow-part selectors.
 
 ```html

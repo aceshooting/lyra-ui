@@ -24,7 +24,14 @@ export interface LyraChartSeries {
   readonly color?: string | readonly string[];
   readonly fill?: boolean;
   readonly width?: number;
-  readonly dash?: boolean;
+  /**
+   * Dashes a line-type series' stroke. `true` draws the default `[4, 4]` dash; an array is a
+   * custom canvas `setLineDash()` pattern in CSS pixels (`[8, 3, 2, 3]` for dash-dot), copied on
+   * admission. An empty array draws solid; an array with a negative or non-finite entry, or with
+   * more than 16 entries, falls back to the default dash. An authored dash wins over the
+   * forced-colors dash cycle.
+   */
+  readonly dash?: boolean | readonly number[];
   readonly noTooltip?: boolean;
   readonly axis?: 'y' | 'y2';
   /**
@@ -66,6 +73,12 @@ export interface LyraChartSeries {
   readonly lower?: readonly (number | null)[];
   /** Upper bound per category for a `type: 'band'` series; see `lower`. */
   readonly upper?: readonly (number | null)[];
+  /**
+   * Fill alpha (0-1) of this `type: 'band'` series and its legend swatch, overriding the shared
+   * `--lr-chart-band-opacity` for this band alone. Values outside 0-1 clamp; a non-finite value
+   * is ignored. Ignored by every other series type.
+   */
+  readonly bandOpacity?: number;
 }
 
 

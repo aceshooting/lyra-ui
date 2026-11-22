@@ -5,6 +5,8 @@ export interface MapAnchorAvoidHost {
   readonly element: HTMLElement;
   direction(): 'ltr' | 'rtl';
   changed(): void;
+  /** Extra CSS pixels added to every edge an obstacle reserves; edges it leaves free stay zero. */
+  gap?(): number;
 }
 
 type Edges = { top: number; right: number; bottom: number; left: number };
@@ -105,6 +107,9 @@ export class MapAnchorAvoidance {
       if (!overlap) continue;
       for (const key of ['top', 'right', 'bottom', 'left'] as const) edges[key] = Math.max(edges[key], overlap[key]);
     }
+    const rawGap = this.host.gap?.() ?? 0;
+    const gap = Number.isFinite(rawGap) && rawGap > 0 ? rawGap : 0;
+    if (gap) for (const key of ['top', 'right', 'bottom', 'left'] as const) if (edges[key] > 0) edges[key] += gap;
     const rtl = this.host.direction() === 'rtl';
     const area = edges.top || edges.right || edges.bottom || edges.left
       ? Object.freeze({ blockStart: edges.top, blockEnd: edges.bottom, inlineStart: rtl ? edges.right : edges.left, inlineEnd: rtl ? edges.left : edges.right })

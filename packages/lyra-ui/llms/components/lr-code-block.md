@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** `shiki` — see `llms/peers.md`
-- **Themeable via** 16 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 16 parts, 29 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `body`: `--lr-code-block-max-height`, `--lr-theme-scrollbar-color`, `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-width`; `code`: `--lr-code-block-font`; `header`: `--lr-code-block-language-bg`; `language`: `--lr-code-block-language-bg`, `--lr-code-block-language-color`; `pre`: `--lr-code-block-font`, `--lr-code-block-language-color`, `--lr-code-block-tab-size`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -169,6 +169,11 @@ remains the one exception that does not cross this way: use `--lr-theme-icon-but
 **Themeable custom properties:** `--lr-code-block-padding` controls code padding, `--lr-code-block-radius`
 controls the frame corners, and `--lr-code-block-header-bg`, `--lr-code-block-header-color` and
 `--lr-code-block-line-number-color` set the header background, filename color and gutter color.
+`--lr-code-block-border` (default `var(--lr-border-width-thin) solid var(--lr-color-border-subtle)`)
+and `--lr-code-block-bg` (default `var(--lr-color-surface)`; highlighted code paints its theme
+background over it) style the frame; `--lr-code-block-header-padding` (default `var(--lr-space-xs)
+var(--lr-space-s)`) and `--lr-code-block-header-border` (default `var(--lr-border-width-thin) solid
+var(--lr-color-border-subtle)`, the rule under the header) style the header.
 `--lr-code-block-toggle-bg`, `--lr-code-block-toggle-hover-bg`, and `--lr-code-block-toggle-active-bg`
 style the disclosure. `--lr-code-block-gutter-bg`, `--lr-code-block-gutter-hover-bg`, and
 `--lr-code-block-gutter-active-bg` style the line buttons. Each token applies to its own state.

@@ -33,6 +33,7 @@ export type BudgetMeterValueFormatter = (value: number, context: BudgetMeterForm
  * @customElement lr-budget-meter
  * @cssprop [--lr-budget-meter-border-color] - Card border color.
  * @cssprop [--lr-budget-meter-radius] - Card and track corner radius.
+ * @cssprop [--lr-budget-meter-value-color=var(--lr-color-text-quiet)] - Text color of the used-of-limit value.
  * @cssprop [--lr-budget-meter-track-bg] - Track background.
  * @cssprop [--lr-budget-meter-fill] - Fill within budget.
  * @cssprop [--lr-budget-meter-exceeded-fill] - Over-budget fill.

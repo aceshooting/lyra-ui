@@ -40,6 +40,19 @@ export const styles = css`
     --_lr-dialog-close-radius: var(--lr-overlay-radius, var(--lr-radius));
     ${modalHostStyles}
     ${dialogChrome}
+    /* Restates dialogChrome's frame with this dialog's own viewport-inset hook: the shared fragment
+       stays token-free for the other modal hosts, and the unset default is the same --lr-space-l
+       gap. The safe-area insets still win wherever they are larger. */
+    padding-block-start: max(var(--lr-dialog-viewport-inset, var(--lr-space-l)), var(--lr-safe-area-top));
+    padding-block-end: max(var(--lr-dialog-viewport-inset, var(--lr-space-l)), var(--lr-safe-area-bottom));
+    padding-inline-start: max(
+      var(--lr-dialog-viewport-inset, var(--lr-space-l)),
+      var(--lr-safe-area-inline-start)
+    );
+    padding-inline-end: max(
+      var(--lr-dialog-viewport-inset, var(--lr-space-l)),
+      var(--lr-safe-area-inline-end)
+    );
   }
   ${dialogOpenHost}
   /* Keeps the panel rendered after open flips to false, through the exit animation: the component
@@ -108,7 +121,9 @@ export const styles = css`
        size: [part="header"] and [part="footer"] keep their natural size and only the body grows or
        shrinks to the remaining space. */
     block-size: var(--lr-dialog-height, auto);
-    max-block-size: 100%;
+    /* --lr-dialog-max-height caps the panel's block size per instance, the block-axis twin of
+       --lr-dialog-max-width; the viewport (100%) stays a hard limit on top. */
+    max-block-size: min(var(--lr-dialog-max-height, 100%), 100%);
     /* The shared overlay-surface family (internal/overlay-surface.styles.ts). Its fill default is
        still the modal-panel surface this rule read directly before, NOT the page surface: in dark
        mode --lr-color-surface is the same near-black as the page behind the scrim, so a dialog
@@ -116,6 +131,14 @@ export const styles = css`
        resolves to the page surface. Anchored popups now share that default, so one family retints
        every floating surface. */
     --_lr-overlay-surface: var(--lr-color-surface-container-highest);
+    /* The panel's own fill: --lr-dialog-panel-bg retints this panel alone, while
+       --lr-overlay-surface keeps retinting it together with every popup opened inside it. Read by
+       the glass treatment at the end of this sheet, which owns the painted background. lr-drawer
+       redeclares it with its own outer arm. */
+    --_lr-dialog-panel-fill: var(
+      --lr-dialog-panel-bg,
+      var(--lr-overlay-surface, var(--_lr-overlay-surface, var(--lr-color-surface-container-highest)))
+    );
     ${overlaySurface}
     /* Top step of the elevation scale: a centered dialog floats free on all four edges over a
        scrim. A tier of its own rather than the anchored one, so raising popups never raises
@@ -139,11 +162,12 @@ export const styles = css`
           var(--lr-dialog-spacing, var(--lr-space-l))
       )
     );
-    /* The panel's own edge, so a retinted overlay border reaches the rules that draw the panel's
-       internal boundaries too -- a header rule in the base border colour against a retinted panel
-       edge is the asymmetry this family exists to remove. */
+    /* The panel's own edge by default, so a retinted overlay border reaches the rules that draw the
+       panel's internal boundaries too -- a header rule in the base border colour against a retinted
+       panel edge is the asymmetry this family exists to remove. --lr-dialog-divider-color splits
+       the two dividers from the edge when a design wants them to differ. */
     border-block-end: var(--lr-border-width-thin) solid
-      var(--lr-overlay-border, var(--lr-color-border-subtle));
+      var(--lr-dialog-divider-color, var(--lr-overlay-border, var(--lr-color-border-subtle)));
   }
   [part~="heading"] {
     flex: 1 1 auto;
@@ -152,6 +176,7 @@ export const styles = css`
     font-family: var(--lr-dialog-heading-font-family, var(--lr-font-heading));
     font-size: var(--lr-dialog-heading-font-size, inherit);
     font-weight: var(--lr-dialog-heading-font-weight, var(--lr-font-weight-semibold));
+    letter-spacing: var(--lr-dialog-heading-letter-spacing, normal);
     overflow: hidden;
     overflow-wrap: break-word;
     white-space: normal;
@@ -259,7 +284,7 @@ export const styles = css`
     /* The exact mirror of the header rule above, and repointed with it: two panel-edge rules that
        disagree about which border token they read is a visible defect the moment either is set. */
     border-block-start: var(--lr-border-width-thin) solid
-      var(--lr-overlay-border, var(--lr-color-border-subtle));
+      var(--lr-dialog-divider-color, var(--lr-overlay-border, var(--lr-color-border-subtle)));
     overflow-wrap: anywhere;
   }
   /* Footer content is consumer-owned light DOM, which the wrapper's responsive rules do not select
@@ -273,8 +298,26 @@ export const styles = css`
   [part="footer"][hidden] {
     display: none;
   }
+  /* fullscreen-narrow: below a 40rem viewport the panel drops its frame and fills the viewport,
+     carrying the safe-area insets itself. The component evaluates the breakpoint with matchMedia()
+     and writes data-fullscreen while it matches: an @media block in a shadow stylesheet is not
+     reliably re-evaluated by every engine after the viewport resizes, and the rule has to reach the
+     host's own padding, which no container query on the host can restyle. */
+  :host([fullscreen-narrow][data-fullscreen]) {
+    padding: 0;
+  }
+  :host([fullscreen-narrow][data-fullscreen]) [part~="panel"] {
+    box-sizing: border-box;
+    inline-size: 100%;
+    max-inline-size: 100%;
+    block-size: 100%;
+    max-block-size: 100%;
+    border-radius: 0;
+    padding-block: var(--lr-safe-area-top) var(--lr-safe-area-bottom);
+    padding-inline: var(--lr-safe-area-inline-start) var(--lr-safe-area-inline-end);
+  }
 
   ${glassScrollLayerStyles}
   ${glassIndependentRootStyles}
-  ${glassSurface('[part~="panel"]', css`var(--lr-overlay-surface, var(--_lr-overlay-surface, var(--lr-color-surface-container-highest)))`, undefined, true)}
+  ${glassSurface('[part~="panel"]', css`var(--_lr-dialog-panel-fill, var(--lr-overlay-surface, var(--_lr-overlay-surface, var(--lr-color-surface-container-highest))))`, undefined, true)}
 `;

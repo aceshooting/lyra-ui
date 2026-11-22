@@ -166,6 +166,9 @@ export interface LyraAppRailEventMap {
  * @cssprop [--lr-app-rail-pin-pressed-bg] - Pin pressed background override.
  * @cssprop [--lr-app-rail-frame-gap=var(--lr-space-s)] - Margin around a card frame.
  * @cssprop [--lr-app-rail-frame-radius=var(--lr-radius)] - Card-frame corner radius.
+ * @cssprop [--lr-app-rail-frame-border=var(--lr-border-width-thin) solid var(--lr-color-border-subtle)] -
+ *   Card-frame border shorthand on every side; `--lr-app-rail-edge-border` still wins on the
+ *   inline-end edge.
  * @cssprop [--lr-app-rail-frame-shadow=var(--lr-shadow-s)] - Card-frame elevation.
  * @customElement lr-app-rail
  * Opt in to `auto-hide` for a desktop sidebar that rests as the `'icon-only'` strip, temporarily

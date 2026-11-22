@@ -51,7 +51,9 @@ export const styles = css`
     text-decoration: none;
     font: inherit;
     font-size: var(--lr-menu-item-font-size, var(--lr-form-control-font-size));
-    color: inherit;
+    font-weight: var(--lr-menu-item-font-weight, inherit);
+    letter-spacing: var(--lr-menu-item-letter-spacing, normal);
+    color: var(--lr-menu-item-color, inherit);
     line-height: var(--lr-line-height-snug);
     /* Hover/active/checked below only ever repaint background, so background-color is all this
        needs; without it this row's fill snaps while lr-button/lr-icon-button/lr-app-rail-item ease.
@@ -72,7 +74,7 @@ export const styles = css`
      a checked row keeps normal pointer feedback. */
   :host(:where([checked])) [part='base'] {
     background: var(--lr-menu-item-checked-bg, transparent);
-    color: var(--lr-menu-item-checked-color, inherit);
+    color: var(--lr-menu-item-checked-color, var(--lr-menu-item-color, inherit));
     font-weight: var(--lr-menu-item-checked-font-weight, inherit);
   }
   /* The row's own hover fill, an inline var() fallback like every other row-chrome hook here, so
@@ -174,6 +176,11 @@ export const styles = css`
        order stays fixed, matching the OS. Same mechanism as toast-item.styles.ts's and
        alert.styles.ts's [part="content"]/[part="message"] rules. */
     unicode-bidi: plaintext;
+  }
+  /* The details hint's own size and colour; the suffix keeps the shared values above. */
+  [part='details'] {
+    color: var(--lr-menu-item-details-color, var(--lr-color-text-quiet));
+    font-size: var(--lr-menu-item-details-font-size, var(--lr-font-size-sm));
   }
   [part='details'] ::slotted(*),
   [part='suffix'] ::slotted(*) {

@@ -231,3 +231,34 @@ describe('lr-combobox commit="text"', () => {
     expect([el.commit, el.getAttribute('commit')]).to.deep.equal(['value', 'value']);
   });
 });
+
+describe('lr-combobox commit="text" empty value', () => {
+  it('treats an empty-string value as no value: the placeholder shows and required reports valueMissing', async () => {
+    const el = await fixture<LyraCombobox>(html`
+      <lr-combobox label="Description" commit="text" placeholder="Describe the part" required>
+        <lr-option value="art-1">Steel bracket</lr-option>
+      </lr-combobox>
+    `);
+    el.value = 'Steel bracket';
+    await el.updateComplete;
+    expect(inputOf(el).placeholder).to.equal('');
+    el.value = '';
+    await el.updateComplete;
+    expect(el.value).to.equal('');
+    expect(inputOf(el).placeholder).to.equal('Describe the part');
+    expect(el.validity.valueMissing).to.equal(true);
+    el.defaultValue = '';
+    el.formResetCallback();
+    await el.updateComplete;
+    expect(inputOf(el).placeholder).to.equal('Describe the part');
+  });
+
+  it('drops an empty value written before commit="text" is set', async () => {
+    const el = await fixture<LyraCombobox>(html`
+      <lr-combobox label="Description" placeholder="Describe the part" .value=${''}></lr-combobox>
+    `);
+    el.commit = 'text';
+    await el.updateComplete;
+    expect(inputOf(el).placeholder).to.equal('Describe the part');
+  });
+});

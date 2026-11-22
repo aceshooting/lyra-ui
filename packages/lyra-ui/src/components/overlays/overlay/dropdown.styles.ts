@@ -17,7 +17,9 @@ export const styles = css`
     bottom: auto;
     margin: 0;
     padding: 0;
-    inline-size: auto;
+    /* Restates the base popup's assertive-width hook, which the UA popover reset above would
+       otherwise override. */
+    inline-size: var(--lr-overlay-inline-size, auto);
     block-size: auto;
   }
   /* Let the list shrink within the popup's height limit, with header/footer controls kept in

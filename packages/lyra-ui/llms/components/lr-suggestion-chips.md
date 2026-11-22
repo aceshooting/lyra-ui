@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 6 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-suggestion-chips-justify`; `chip-label`: `--lr-suggestion-chips-label-lines`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -65,7 +65,8 @@ every line, the wrapped final one included, which styling `::part(base)` as a ce
 cannot do (once the chips wrap, the row fills the available inline size and each line packs to the
 start). `--lr-suggestion-chips-hover-bg` (default `var(--lr-color-brand-quiet)`) — a `chip`'s
 background on hover. `--lr-suggestion-chips-hover-border-color` (default `var(--lr-color-brand)`) — a
-`chip`'s border color on hover. All three are declared as `var()` fallbacks at the point of use, not
+`chip`'s border color on hover. `--lr-suggestion-chips-hover-color` (default the chip's
+`--lr-suggestion-chips-chip-color`) — a `chip`'s text color on hover and press. All of these are declared as `var()` fallbacks at the point of use, not
 on `:host`. `--lr-suggestion-chips-disabled-opacity` (default `var(--lr-opacity-disabled)`) — opacity of a chip whose
 suggestion sets `disabled`. `--lr-suggestion-chips-label-lines` (default `1`; `3` when `wrap` is
 set) — how many lines a `chip-label` shows before it is clamped with an ellipsis, so full-question

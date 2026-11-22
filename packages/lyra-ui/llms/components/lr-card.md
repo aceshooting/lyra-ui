@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 17 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 19 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-card-outlined-bg`, `--lr-card-shadow`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -130,6 +130,13 @@ restating a surface — defaults to `var(--lr-color-surface)`, mirroring `<lr-de
 `--lr-card-interactive-hover-border-color`, `--lr-card-interactive-active-border-color`, and
 `--lr-card-interactive-active-overlay`. They inherit from ancestors and fall back to the exact
 former brand and active-mix values when unset.
+`--lr-card-body-padding` pads the body alone (`--spacing` also moves the header, footer and gaps). `--lr-card-border-color` colours the OUTER border only (falling back to `--border-color`, then the
+tiers above): `--border-color` also recolours the header and footer dividers and, being inherited,
+reaches a nested `lr-data-grid`, which `--lr-card-border-color` does not. A card inside a wrapping
+router link (`<a href="/x"><lr-card>`) is not `actionable` and paints no hover of its own; drive it
+from the link instead, for example `a:hover > lr-card { --lr-card-border-color: var(--lr-color-brand);
+--lr-card-shadow: var(--lr-shadow-s); }`. Prefer the card's own `href` where the router can
+intercept clicks, since it owns hover, press and focus without a nested interactive wrapper.
 `--lr-card-shadow` is **undeclared by default**, so `box-shadow` falls back to `none`,
 mirroring `--lr-button-shadow`'s pattern; set it
 for a raised card without a `::part(base)` rule. `--lr-card-interactive-hover-shadow` styles an

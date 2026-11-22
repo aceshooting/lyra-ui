@@ -23,7 +23,7 @@ export const styles = css`
        than a border-color declaration, so the (0,1,0) hover and pressed rules below still win on
        source order. Same split as lr-card's passive and actionable edges. */
     border: var(--lr-border-width-thin) solid var(--_lr-stat-edge, var(--lr-color-border-subtle));
-    border-radius: var(--lr-radius);
+    border-radius: var(--lr-stat-radius, var(--lr-radius));
     /* The RESTING tile's own hook, alongside the padding/gap levers above and the pressed state's
        existing --lr-stat-link-active-bg -- the tier a dashboard actually sits at all day was the
        only one with no lever, so retinting one board meant a ::part(base) rule or an app-wide
@@ -105,6 +105,15 @@ export const styles = css`
   [part='icon'] {
     align-self: flex-start;
     font-size: var(--lr-stat-icon-size, inherit);
+    /* The chip's own box, separate from the glyph's font-size above. Unset, both axes stay auto and
+       the chip hugs its glyph exactly as before. Set, border-box makes the token the painted outer
+       size, padding included, and align-content/text-align centre the glyph's line box in it;
+       both are inert at the auto default, where the box is exactly as large as its content. */
+    inline-size: var(--lr-stat-icon-box-size, auto);
+    block-size: var(--lr-stat-icon-box-size, auto);
+    box-sizing: border-box;
+    align-content: center;
+    text-align: center;
     padding: var(--lr-stat-icon-padding, 0);
     border-radius: var(--lr-stat-icon-radius, 0);
     background: var(--lr-stat-icon-bg, transparent);
@@ -155,7 +164,7 @@ export const styles = css`
     display: flex;
     flex-wrap: wrap;
     min-inline-size: 0;
-    align-items: baseline;
+    align-items: var(--lr-stat-value-row-align, baseline);
     gap: var(--lr-space-xs);
   }
   /* The preformatted strings are first-strong bidi runs, so 2.4 MiB/s and -3.2% keep their
@@ -172,6 +181,11 @@ export const styles = css`
     font-weight: var(--lr-stat-value-font-weight, var(--lr-font-weight-bold));
     font-family: var(--lr-stat-value-font-family, inherit);
     font-variant-numeric: tabular-nums;
+    letter-spacing: var(--lr-stat-value-letter-spacing, normal);
+    line-height: var(--lr-stat-value-line-height, inherit);
+    margin: var(--lr-stat-value-margin, 0);
+    /* The neutral headline's own colour; the variant, emphasis and prose rules below still win. */
+    color: var(--lr-stat-value-color, inherit);
   }
   /* [part='value']/[part='row-value'] take tabindex="0" whenever exactValue/row.exactValue is set
      (stat.class.ts), so they need their own visible focus ring. */
@@ -291,7 +305,7 @@ export const styles = css`
     flex-direction: column;
     /* Tighter than the card's own --lr-space-xs gap so the breakdown list reads as one nested
        group, not siblings of equal weight with label/value/caption. */
-    gap: var(--lr-size-0-125rem);
+    gap: var(--lr-stat-rows-gap, var(--lr-size-0-125rem));
   }
   [part='rows'][hidden] {
     display: none;

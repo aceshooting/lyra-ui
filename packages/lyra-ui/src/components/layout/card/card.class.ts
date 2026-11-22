@@ -90,7 +90,16 @@ function isElementNode(value: EventTarget | undefined): value is Element {
  * can keep its own action buttons.
  * @cssprop [--spacing=var(--lr-space-m)] - Space around and between card sections.
  * @cssprop [--padding=var(--spacing,var(--lr-space-m))] - Shoelace-compatible section padding.
- * @cssprop [--border-color=var(--lr-color-border-subtle)] - Shoelace-compatible border color.
+ * @cssprop [--border-color=var(--lr-color-border-subtle)] - Shoelace-compatible border color. Also
+ *   recolours the header and footer dividers, and inherits into slotted content such as a nested
+ *   `lr-data-grid`; use `--lr-card-border-color` to colour the outer border alone.
+ * @cssprop [--lr-card-body-padding=var(--spacing,var(--padding,var(--lr-space-m)))] - Padding of the body
+ *   only; `--spacing` also moves the header, footer and the gaps.
+ * @cssprop [--lr-card-border-color=var(--border-color,var(--lr-color-border-subtle))] - Colour of the
+ *   card's outer border only (the control-grade `--lr-color-border` while `actionable` or linked).
+ *   Does not touch the header/footer dividers and does not inherit into slotted content. Wins over
+ *   `--border-color`; the transparent `filled`, `accent` and `plain` edges and the interactive
+ *   hover/pressed colours still apply.
  *   Unset, an `actionable` or linked (`href`) card's outer edge falls back to `--lr-color-border`
  *   instead: that edge is then the whole-card control's only visible boundary.
  * @cssprop [--border-radius=var(--lr-radius-container)] - Shoelace-compatible corner radius.

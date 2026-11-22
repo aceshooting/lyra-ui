@@ -114,3 +114,55 @@ describe('lr-heatmap fill', () => {
     expect(el.shadowRoot!.querySelector('[part="grid"]') === null).to.equal(true);
   });
 });
+
+describe('lr-heatmap legend font and divider tokens', () => {
+  it('sets the legend font family and draws the divider on the edge facing the grid', async () => {
+    const el = await fixture<LyraHeatmap>(html`<lr-heatmap label="Load" .data=${small}></lr-heatmap>`);
+    const legend = () => shadow(el, '[part="legend"]');
+    const edges = () => { const style = getComputedStyle(legend()); return [style.borderTopStyle, style.borderBottomStyle]; };
+    const defaultFamily = getComputedStyle(legend()).fontFamily;
+    expect(edges(), 'no divider by default').to.deep.equal(['none', 'none']);
+    el.style.setProperty('--lr-heatmap-legend-font-family', 'monospace');
+    el.style.setProperty('--lr-heatmap-legend-divider', '2px dashed rgb(1, 2, 3)');
+    expect(getComputedStyle(legend()).fontFamily).to.equal('monospace');
+    expect([getComputedStyle(legend()).borderTopWidth, getComputedStyle(legend()).borderTopColor, ...edges()])
+      .to.deep.equal(['2px', 'rgb(1, 2, 3)', 'dashed', 'none']);
+    el.legendPlacement = 'top';
+    await el.updateComplete;
+    expect(edges(), 'a top legend divides on its block end').to.deep.equal(['none', 'dashed']);
+    el.style.removeProperty('--lr-heatmap-legend-font-family');
+    el.style.removeProperty('--lr-heatmap-legend-divider');
+    expect([getComputedStyle(legend()).fontFamily, ...edges()]).to.deep.equal([defaultFamily, 'none', 'none']);
+  });
+});
+
+describe('lr-heatmap fit-block', () => {
+  it('fits within its own max-block-size inside an auto-height parent and scrolls the grid', async () => {
+    const wrap = await fixture<HTMLElement>(html`<div><lr-heatmap fit-block label="Tall" style="max-block-size: 240px" .data=${tall}></lr-heatmap></div>`);
+    const el = wrap.querySelector<LyraHeatmap>('lr-heatmap')!;
+    await el.updateComplete;
+    expect(el.fitBlock).to.equal(true);
+    const grid = shadow(el, '[part="grid"]');
+    await waitUntil(() => grid.scrollHeight > grid.clientHeight, 'the grid scrolls its own content');
+    expect(Math.round(el.getBoundingClientRect().height)).to.equal(240);
+    const legend = shadow(el, '[part="legend"]').getBoundingClientRect();
+    expect(legend.height).to.be.above(0);
+    expect(legend.bottom, 'the legend stays inside the ceiling').to.be.at.most(el.getBoundingClientRect().bottom + 0.5);
+    el.fitBlock = false;
+    await el.updateComplete;
+    expect(el.hasAttribute('fit-block')).to.equal(false);
+    expect(el.shadowRoot!.querySelector('[part="grid"]') === null, 'unset removes the scrollport').to.equal(true);
+  });
+
+  it('keeps a short matrix at its content height and a calendar unchanged', async () => {
+    const el = await fixture<LyraHeatmap>(html`<lr-heatmap fit-block label="Small" style="max-block-size: 600px" .data=${small}></lr-heatmap>`);
+    const grid = shadow(el, '[part="grid"]');
+    const canvasHeight = shadow(el, '[part="canvas"]').getBoundingClientRect().height;
+    expect(grid.scrollHeight).to.be.at.most(grid.clientHeight);
+    expect(grid.getBoundingClientRect().height).to.be.closeTo(canvasHeight, 1);
+    expect(el.getBoundingClientRect().height).to.be.below(600);
+    el.data = { kind: 'calendar', days: [{ date: '2024-01-01', value: 1 }] };
+    await el.updateComplete;
+    expect(el.shadowRoot!.querySelector('[part="grid"]') === null).to.equal(true);
+  });
+});

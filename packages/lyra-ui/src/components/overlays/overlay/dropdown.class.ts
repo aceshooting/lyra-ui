@@ -81,6 +81,10 @@ interface ConsumerMenuSnapshot {
  * @cssprop [--arrow-size=var(--lr-overlay-arrow-size,var(--lr-size-0-375rem))] - Arrow half-width
  *   inherited from the popover surface.
  * @cssprop --lr-overlay-max-inline-size - Maximum inline size of the popup.
+ * @cssprop [--lr-overlay-inline-size=auto] - Assertive inline size of the popup, inherited from the
+ *   popover surface; also honoured by a `top-layer` popup.
+ * @cssprop [--lr-overlay-min-inline-size=0px] - Minimum inline size of the popup, inherited from the
+ *   popover surface and capped by the available viewport space.
  * @cssprop --lr-overlay-arrow-size - Retained Lyra arrow-size fallback.
  * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-high)] - Shared floating-surface fill,
  *   inherited from the popover surface.

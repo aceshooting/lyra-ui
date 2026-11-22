@@ -9,7 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 9 parts, 11 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 9 parts, 14 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `content`: `--lr-overlay-content-padding`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -168,6 +169,11 @@ If the import fails, leave the native disclosure visible and usable.
   middle of the edge regardless of where the anchor is
 - `arrowPadding: number = 0` (attribute `arrow-padding`) — keeps the arrow this many px from the
   popup's corners
+- `fullWidthTrigger: boolean = false` (attribute `full-width-trigger`, reflected) — lays the
+  trigger out at full width: the host becomes `display: block` and the `trigger` part and the
+  slotted trigger element stretch to the host's inline size (a trigger in a form column or
+  sidebar). Unset, the host and trigger stay `inline-block`. It does not size the popup; pair it
+  with `--lr-overlay-inline-size` (or `lr-dropdown`'s `sync`) for that.
 - `accessibleLabel: string = ''` (attribute **`aria-label`**) — names the popup. An authored host
   attribute wins by presence, including `aria-label=""` (whitespace-only is ignored); otherwise the property
   or localized "Popover" ("Menu" when `popupRole` is `menu`) fallback apply
@@ -293,7 +299,12 @@ match; the state is in the part name.
 
 **Themeable custom properties:** mapped `--max-width`, `--arrow-size`, `--show-duration`, and
 `--hide-duration`, with retained `--lr-overlay-max-inline-size` and `--lr-overlay-arrow-size`
-fallbacks. Arrow size is half the square's width. Rendering the arrow switches `[part~="popup"]` to
+fallbacks. Arrow size is half the square's width. `--lr-overlay-inline-size` (default `auto`, the
+popup shrink-wraps) is an assertive popup width; with it set and no maximum given, the maximum
+falls back to that width instead of `20rem`, and the available viewport space is always a hard
+limit. `--lr-overlay-min-inline-size` (default `0px`) floors the popup for short content, itself
+capped by the available space. `--lr-overlay-content-padding` (default `var(--lr-space-m)`) pads
+`[part~="content"]`. Rendering the arrow switches `[part~="popup"]` to
 `overflow: visible` so it is not clipped, moving the scroll container onto `[part~="content"]`.
 
 The popup and its arrow paint from the **shared overlay-surface family** (16.0.0):

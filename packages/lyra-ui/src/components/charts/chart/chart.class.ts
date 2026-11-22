@@ -77,7 +77,7 @@ import { csvRow } from '../../../internal/csv.js';
 import { finiteAdd, finiteNumber } from '../../../internal/numbers.js';
 import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import { showChartActiveDatum } from './chart-active-datum.js';
-import { CHART_BAND_LOWER_KEY, chartBandLowerValues, chartBandOpacity, drawChartBands, extendChartBandLimits } from './chart-band.js';
+import { CHART_BAND_LOWER_KEY, CHART_BAND_OPACITY_KEY, chartBandLowerValues, chartBandOpacity, chartBandSwatchOpacity, drawChartBands, extendChartBandLimits } from './chart-band.js';
 
 import { readOwnDataValue, MISSING_OWN_DATA_DESCRIPTOR, UNSAFE_OWN_DATA_DESCRIPTOR } from '../../../internal/data-descriptors.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
@@ -837,7 +837,7 @@ function isDenseChartSize(size: LyraSize): boolean {
  * @cssprop [--lr-chart-legend-swatch-size=var(--lr-space-s)] - Legend swatch inline and block size.
  * @cssprop [--lr-chart-legend-swatch-radius=var(--lr-radius-xs)] - Legend swatch corner radius.
  * @cssprop [--lr-chart-band-opacity=0.2] - Fill alpha (0-1) of a `type: 'band'` series and its
- *   legend swatch. Resolved via `getComputedStyle` on every draw.
+ *   legend swatch. Resolved via `getComputedStyle` on every draw. A band's own `bandOpacity` wins.
  * @cssprop [--lr-chart-legend-item-hover-bg=var(--lr-color-brand-quiet)] - Hover background of a
  *   legend visibility button.
  * @cssprop --lr-chart-legend-item-active-bg - Pressed background of a legend visibility button;
@@ -2935,7 +2935,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
             // uses the line-weight default too, not the thinner generic border default.
             connectedStroke ? chartStyle.lineBorderWidth : chartStyle.borderWidth
           ) }),
-      borderDash: series.dash ? [4, 4] : chartStyle.forcedColors ? [...encoding.dash] : undefined,
+      borderDash: Array.isArray(series.dash) ? [...series.dash as readonly number[]] : series.dash ? [4, 4] : chartStyle.forcedColors ? [...encoding.dash] : undefined,
       pointStyle: chartStyle.forcedColors ? encoding.pointStyle : undefined,
       backgroundColor: encodedBackgroundColor,
       borderColor: (sourceColors?.length && !connectedStroke ? colors : colors?.[0]) ?? sliceBorderColors ?? borderFallback,
@@ -2994,6 +2994,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
       // A band never accumulates into a stack of lines.
       stack: series.stack ?? `lr-band-${index}`,
       [CHART_BAND_LOWER_KEY]: rowIndexes ? rowIndexes.map(row => lower[row] ?? null) : lower,
+      ...(series.bandOpacity !== undefined ? { [CHART_BAND_OPACITY_KEY]: series.bandOpacity } : {}),
     };
   }
 
@@ -5742,7 +5743,7 @@ export class LyraChart extends LyraElement<LyraChartEventMap> {
                   palette,
                   datumMode ? index : undefined,
                   colorCache,
-                )}"
+                )}${!datumMode && chartBandLowerValues.has(dataset) ? chartBandSwatchOpacity((dataset as { readonly bandOpacity?: unknown }).bandOpacity) : ''}"
               ></span>
               <span>${this.legendTextContent(
                 label,

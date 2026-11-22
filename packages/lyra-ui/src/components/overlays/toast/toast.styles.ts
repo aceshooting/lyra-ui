@@ -3,13 +3,16 @@ import { css } from 'lit';
 export const styles = css`
   :host {
     position: fixed;
-    inset-block-start: max(var(--lr-space-l), var(--lr-safe-area-top));
-    inset-block-end: max(var(--lr-space-l), var(--lr-safe-area-bottom));
+    /* The region's distance from the viewport edges. Each placement is its own region element, so
+       a selector such as lr-toast[placement^='bottom'] scopes either token to one region. The
+       device safe-area insets still win wherever they are larger. */
+    inset-block-start: max(var(--lr-toast-inset-block, var(--lr-space-l)), var(--lr-safe-area-top));
+    inset-block-end: max(var(--lr-toast-inset-block, var(--lr-space-l)), var(--lr-safe-area-bottom));
     inset-inline-start: max(
-      var(--lr-space-l),
+      var(--lr-toast-inset-inline, var(--lr-space-l)),
       var(--lr-safe-area-inline-start)
     );
-    inset-inline-end: max(var(--lr-space-l), var(--lr-safe-area-inline-end));
+    inset-inline-end: max(var(--lr-toast-inset-inline, var(--lr-space-l)), var(--lr-safe-area-inline-end));
     z-index: var(--lr-layer-toast);
     display: grid;
     --_lr-toast-gap: var(--gap, var(--lr-space-s));

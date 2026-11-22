@@ -224,6 +224,11 @@ promise/result contract.
 
 **Themeable custom properties:** `--lr-toast-gap` (default `var(--lr-space-s)`),
 `--lr-toast-width` (default `var(--lr-size-28rem)`) — set directly on the `<lr-toast>` element.
+`--lr-toast-inset-block` and `--lr-toast-inset-inline` (both default `var(--lr-space-l)`) set the
+region's distance from the viewport's block (top/bottom) and inline (start/end) edges; the
+`--lr-safe-area-*` insets still win wherever they are larger. Each placement is its own region
+element, so scope either token to one region with a placement selector, for example
+`lr-toast[placement^='bottom'] { --lr-toast-inset-block: var(--lr-space-m); }`.
 The mapped `--gap` and `--width` names are compatibility aliases for those two Lyra-prefixed
 properties; an explicitly set Lyra-prefixed property continues to take precedence.
 Every `<lr-toast-item>` property below is also documented on the region, because custom properties
@@ -585,6 +590,11 @@ the slide animation are its own.
 - `contained: boolean = false` (attribute `contained`, reflected) — position within the nearest
   containing block without a backdrop, page inerting, focus trap, scroll lock, top-layer
   promotion, or global Escape ownership
+- `floating: boolean = false` (attribute `floating`, reflected) — an inset, floating sheet: the
+  panel keeps a `--lr-drawer-inset` gap (default `var(--lr-space-s)`) from every viewport edge
+  (from the containing block's edges with `contained`; the safe-area insets still win where
+  larger) and rounds its corners with `--lr-overlay-radius` (default `var(--lr-radius-container)`).
+  Off by default, so the drawer stays square and edge-flush.
 - `heading?: string`, `label: string`,
   `withoutCloseButton: boolean = false` (attribute `without-close-button`, reflected),
   `noHeader: boolean = false` (attribute `no-header`, Shoelace's spelling, reflected),
@@ -648,14 +658,18 @@ used by `placement="top"|"bottom"`), `--lr-drawer-enter-x` / `--lr-drawer-enter-
 slide translate offset, used for both the enter and the exit keyframes — `-x` for start/end, `-y`
 for top/bottom; both default to `±var(--lr-size-1rem)` and are set per `placement`, with `-x`
 explicitly flipped under `:dir(rtl)` since `translateX` is physical. Override to lengthen/shorten
-the slide). It also inherits every `<lr-dialog>` token — `--lr-dialog-overlay-color`,
+the slide), `--lr-drawer-panel-bg` (the panel's own fill, ahead of the inherited
+`--lr-dialog-panel-bg` and the shared `--lr-overlay-surface`; unlike the shared token it does not
+retint popups opened inside the drawer), `--lr-drawer-radius` (default `0`, or
+`--lr-overlay-radius` while `floating` is set; an explicit value wins either way) and
+`--lr-drawer-inset` (default `var(--lr-space-s)`; the `floating` gap, ignored otherwise). It also inherits every `<lr-dialog>` token — `--lr-dialog-overlay-color`,
 `--lr-dialog-backdrop-filter`, `--lr-dialog-width`, `--lr-dialog-max-width`, `--lr-dialog-spacing`,
 `--lr-dialog-spacing-block`, `--lr-dialog-panel-duration` and `--lr-dialog-backdrop-duration` —
 since `LyraDrawer` extends `LyraDialog`, including the shared overlay-surface family the panel
 paints from: `--lr-overlay-surface`, `--lr-overlay-border`, `--lr-overlay-radius` and
 `--lr-overlay-shadow-modal`. The drawer's own `[part~="panel"]` rule squares the corners and steps
 the default elevation down to `var(--lr-shadow-l)` — three of its edges are flush with the viewport —
-so on this tag `--lr-overlay-radius` is overridden, while the fill, edge colour and a consumer
+so on this tag `--lr-overlay-radius` is overridden unless `floating` is set, while the fill, edge colour and a consumer
 `--lr-overlay-shadow-modal` still take effect. `--lr-dialog-height` is deliberately **not** among the
 inherited tokens above: `<lr-drawer>`'s own `[part~="panel"]` rule unconditionally sets its own
 `block-size` for every placement (`100%` for `start`/`end`, a `--lr-drawer-height`-driven `min()`
@@ -668,8 +682,8 @@ override `body` would always stretch and push `footer` to the panel's far edge. 
 `[part="body"]` rule restores the natural content size instead, so `footer` follows immediately
 after a short body. Set the inherited `fill-body` attribute to opt back in: `body` then grows to the
 panel and becomes a column flex container whose slotted children fill it. The inherited
-`--lr-dialog-heading-font-size`, `--lr-dialog-heading-font-weight` and
-`--lr-dialog-heading-font-family` tokens style the drawer's header title exactly as on
+`--lr-dialog-heading-font-size`, `--lr-dialog-heading-font-weight`,
+`--lr-dialog-heading-letter-spacing` and `--lr-dialog-heading-font-family` tokens style the drawer's header title exactly as on
 `<lr-dialog>`. The drawer's own
 size/width/height tokens take precedence
 for its panel, and only the animation _name_ is overridden, so `--lr-dialog-panel-duration` retunes the
@@ -684,6 +698,8 @@ slide too and the reduced-motion flattening of the shared `--lr-duration-*` toke
 ```
 
 ---
+
+The drawer inherits the dialog's opt-in `fullscreen-narrow` attribute (a viewport narrower than 40rem fills the screen) and the panel sizing tokens `--lr-dialog-max-height`, `--lr-dialog-viewport-inset` and `--lr-dialog-divider-color`, exactly as on `<lr-dialog>`.
 
 ## `lr-dialog` / `confirm()`
 
@@ -730,6 +746,11 @@ read, and neither is deprecated.
   panel) leaves it.
 - `withFooter: boolean = false` (attribute `with-footer`, reflected) — keeps the footer wrapper
   rendered as an SSR/hydration presence hint even before assigned slot content is observable
+- `fullscreenNarrow: boolean = false` (attribute `fullscreen-narrow`, reflected) — opt-in
+  full-screen layout below a `40rem` viewport width: the panel drops the viewport inset, corner
+  radius and size caps, fills the viewport and pads itself with the `--lr-safe-area-*` insets. At
+  wider viewports it renders exactly as without the attribute. The `(max-width: 40rem)` breakpoint
+  is evaluated with `matchMedia()` and followed live while the dialog is connected.
 - `size: LyraSize = 'm'` (reflected) — `'2xs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'small' | 'medium' |
   'large'`. Panel-width tier, on the shared six-step ladder: `20rem` (`2xs`), `24rem` (`xs`), `28rem`
   (`s`/`small`), `32rem` (`m`/`medium`), `38rem`
@@ -877,7 +898,12 @@ the private `--_lr-dialog-max-width` is the `size` property's own tier value (`3
 default, unchanged); when
 `--lr-dialog-width` is set but `--lr-dialog-max-width` is left at its default, the cap falls back to
 the requested width itself — not the tier default — so an assertive width isn't silently clipped;
-the viewport is still a hard limit either way), `--lr-dialog-height` (default `auto` — the panel
+the viewport is still a hard limit either way), `--lr-dialog-max-height` (default `100%` — the
+panel's max-block-size cap, the block-axis twin of `--lr-dialog-max-width`, applied as
+`min(var(--lr-dialog-max-height, 100%), 100%)` so the viewport stays a hard limit),
+`--lr-dialog-viewport-inset` (default `var(--lr-space-l)` — the gap between the viewport edges and
+the panel on all four sides; the `--lr-safe-area-*` insets still win where larger; replaces the
+`::part(dialog) { max-block-size }`-style overrides), `--lr-dialog-height` (default `auto` — the panel
 shrink-wraps to content on the block axis; always capped at
 `100%`, i.e. the viewport, like every other panel dimension). With it set, `[part="body"]`'s own
 `flex: 1 1 auto` is what actually gives slotted content a definite, fillable block size:
@@ -889,8 +915,8 @@ preview or editor fills the dialog without a `::part(body)` rule; light-DOM rule
 still win, so `flex: none` keeps a heading or toolbar at its natural size. On `<lr-drawer>`,
 `fill-body` also restores the body growth the drawer otherwise opts out of.
 `--lr-dialog-heading-font-size` (default `inherit`), `--lr-dialog-heading-font-weight` (default
-`var(--lr-font-weight-semibold)`) and `--lr-dialog-heading-font-family` (default
-`var(--lr-font-heading)`) style the visible header title (`[part~="heading"]`), including
+`var(--lr-font-weight-semibold)`), `--lr-dialog-heading-letter-spacing` (default `normal`) and
+`--lr-dialog-heading-font-family` (default `var(--lr-font-heading)`) style the visible header title (`[part~="heading"]`), including
 `confirm()`'s. `--lr-dialog-spacing` (default `var(--lr-space-l)` —
 the padding inside `[part="body"]` and the _inline_ padding of the header and footer rows),
 `--lr-dialog-spacing-block` (default `var(--lr-space-m)` — the _block_ padding of the header and
@@ -900,10 +926,14 @@ footer rows, which are tighter than the body by default), `--lr-dialog-panel-dur
 The panel paints from the **shared overlay-surface family** (16.0.0), not from the page-surface
 tokens this entry previously named: `--lr-overlay-surface` (default `var(--lr-color-surface-overlay)`
 — the panel fill), `--lr-overlay-border` (default `var(--lr-color-border-subtle)` — the panel edge and the
-header's and footer's dividing rules), `--lr-overlay-radius` (default `var(--lr-radius)` — the panel
+header's and footer's dividing rules unless `--lr-dialog-divider-color` is set), `--lr-overlay-radius` (default `var(--lr-radius)` — the panel
 corner and the close button's) and `--lr-overlay-shadow-modal` (default `var(--lr-shadow-xl)` — the
 panel's elevation). None is declared on `:host`, so one declaration on `:root` (or on any ancestor,
-to scope it) retints the dialog together with every popup opened from it. The modal tier is a
+to scope it) retints the dialog together with every popup opened from it. Two dialog-scoped hooks
+split the panel from that family: `--lr-dialog-panel-bg` (default: the `--lr-overlay-surface` chain)
+fills this panel only, so popups, menus and listboxes opened inside the dialog keep the overlay
+surface, and `--lr-dialog-divider-color` (default: the `--lr-overlay-border` chain) colours the
+header's and footer's dividing rules apart from the panel edge. The modal tier is a
 separate name from `--lr-overlay-shadow-anchored`, which anchored popups read, so raising popups
 never raises dialogs.
 
@@ -1080,6 +1110,46 @@ with `className`:
   Invoking the helper synchronously registers both classes before mounting the transient element;
   consumers do not need a separate registration import for helper-created dialogs.
 
+### `prompt()`
+
+A drop-in async replacement for `window.prompt()`, and the text-entry sibling of `confirm()`, with
+the same module conventions.
+
+```ts
+import { prompt } from "@aceshooting/lyra-ui/components/overlays/dialog/prompt.js";
+
+const name = await prompt({
+  title: "Rename conversation",
+  label: "Name",
+  value: conversation.name,
+  validate: (value) => (value.trim() ? null : "Enter a name"),
+});
+if (name !== null) renameConversation(name);
+```
+
+`prompt(options: PromptOptions): Promise<string | null>` where
+`PromptOptions = { title: string; label: string; description?: string; value?: string /* = '' */; placeholder?: string; validate?: (value: string) => string | null | undefined; confirmLabel?: string /* = 'Confirm' */; cancelLabel?: string /* = 'Cancel' */; size?: LyraSize /* = 'm' */; headingLevel?: LyraHeadingLevel /* = '2' */; className?: string }`.
+
+Resolves the submitted string when the confirm button is pressed or Enter is pressed in the field,
+and `null` on Escape, a backdrop click, the cancel button or removal. The body holds one labelled
+`<lr-input data-lr-prompt-field>` (`label` names it) that starts with `value` and takes focus when
+the dialog opens, through the dialog's own `lr-initial-focus` hand-off. Submitting runs
+`validate(value)` first: a returned non-empty message becomes the field's `errorText` (announced
+and `aria-invalid="true"`), the field keeps focus and the dialog stays open; typing clears it, and
+`null`, `undefined` or `''` accepts the value. The message is rendered as given, so localize it in
+the caller. The default action labels resolve the shared `'confirm'` and `'cancel'` messages
+through the active locale, exactly as `confirm()`'s do.
+
+Everything else matches `confirm()`: a transient `<lr-dialog>` on `document.body` with
+`lightDismiss` on and no header close button, removed after its exit animation; `title` is the
+header title at `headingLevel`; `size` and `className` are forwarded; dismissal funnels through
+`close()`/`lr-close`, so a `lr-hide` or `lr-close-request` veto keeps it open; focus returns to the
+opener once it settles. Actions are `<lr-button>` elements in the `footer` slot carrying
+`data-lr-prompt-action="cancel" | "confirm"`, and `description` becomes a zero-specificity
+`<p data-lr-prompt-description>` above the field, so `--lr-dialog-*`, `--lr-input-*` and
+`--lr-button-*` tokens scoped through `className` all apply. Importing `prompt` is side-effect
+free; invoking it registers `<lr-dialog>`, `<lr-input>` and `<lr-button>`.
+
 ---
 
 ## `lr-chip` / `lr-chip-group`
@@ -1251,6 +1321,14 @@ The collapsed overflow button shows `showMoreCollapsed` (`+2`). Its accessible n
 A flex-wrap container for a set of `<lr-chip>` children — plain light-DOM composition, direct
 children are the chips (the same shape `<lr-multi-split>`'s panels / `<lr-source-list>`'s cards take,
 no `.items` array prop).
+
+**Selection (opt-in).** `selection="single|multiple"` (default `none`: the group manages nothing) makes the group own the pressed state of every direct `<lr-chip>` child that has a `value`: it sets them `toggleable` and presses the ones in `value`. In `single` pressing a chip releases the others; pressing a pressed chip releases it, so the selection can be empty. `value` is a string in `single` and a `string[]` in `multiple` (as an attribute, comma-separated in `multiple`); assigning it is silent. `lr-change` (`detail: { value }`, same shape) fires only from a user press. `all-value="all"` (property `allValue`) marks the child chip whose `value` is `all` as the "all" chip: pressed while the selection is empty, pressing it clears the selection, and it cannot be un-pressed; it is never part of `value`. Chips without a `value` are left alone.
+
+```html
+<lr-chip-group aria-label="Status" selection="multiple" all-value="all" value="open,blocked">
+  <lr-chip value="all">All</lr-chip><lr-chip value="open">Open</lr-chip><lr-chip value="blocked">Blocked</lr-chip>
+</lr-chip-group>
+```
 
 **Properties:**
 
@@ -1690,6 +1768,11 @@ If the import fails, leave the native disclosure visible and usable.
   middle of the edge regardless of where the anchor is
 - `arrowPadding: number = 0` (attribute `arrow-padding`) — keeps the arrow this many px from the
   popup's corners
+- `fullWidthTrigger: boolean = false` (attribute `full-width-trigger`, reflected) — lays the
+  trigger out at full width: the host becomes `display: block` and the `trigger` part and the
+  slotted trigger element stretch to the host's inline size (a trigger in a form column or
+  sidebar). Unset, the host and trigger stay `inline-block`. It does not size the popup; pair it
+  with `--lr-overlay-inline-size` (or `lr-dropdown`'s `sync`) for that.
 - `accessibleLabel: string = ''` (attribute **`aria-label`**) — names the popup. An authored host
   attribute wins by presence, including `aria-label=""` (whitespace-only is ignored); otherwise the property
   or localized "Popover" ("Menu" when `popupRole` is `menu`) fallback apply
@@ -1815,7 +1898,12 @@ match; the state is in the part name.
 
 **Themeable custom properties:** mapped `--max-width`, `--arrow-size`, `--show-duration`, and
 `--hide-duration`, with retained `--lr-overlay-max-inline-size` and `--lr-overlay-arrow-size`
-fallbacks. Arrow size is half the square's width. Rendering the arrow switches `[part~="popup"]` to
+fallbacks. Arrow size is half the square's width. `--lr-overlay-inline-size` (default `auto`, the
+popup shrink-wraps) is an assertive popup width; with it set and no maximum given, the maximum
+falls back to that width instead of `20rem`, and the available viewport space is always a hard
+limit. `--lr-overlay-min-inline-size` (default `0px`) floors the popup for short content, itself
+capped by the available space. `--lr-overlay-content-padding` (default `var(--lr-space-m)`) pads
+`[part~="content"]`. Rendering the arrow switches `[part~="popup"]` to
 `overflow: visible` so it is not clipped, moving the scroll container onto `[part~="content"]`.
 
 The popup and its arrow paint from the **shared overlay-surface family** (16.0.0):
@@ -2204,8 +2292,8 @@ its surface.
   light-dismiss handling.
 - `withoutArrow: boolean = false` (attribute `without-arrow`, reflected) — suppresses the
   pointer. Set `without-arrow` to preserve the previous omitted-arrow appearance.
-- `arrowPlacement`, `arrowPadding`, and `accessibleLabel` (`aria-label`) are inherited from
-  `lr-popover`.
+- `arrowPlacement`, `arrowPadding`, `fullWidthTrigger` (`full-width-trigger`), and
+  `accessibleLabel` (`aria-label`) are inherited from `lr-popover`.
 - `popupRole: 'menu'` (attribute `popup-role`) is the narrowed inherited surface. Dropdowns cannot
   be changed into dialogs; use `lr-popover popup-role="dialog"` for arbitrary dialog-like content.
 
@@ -2246,7 +2334,10 @@ default; style it only to debug the travel region.
 
 **Themeable custom properties:** `--show-duration` and `--hide-duration` (both default
 `var(--lr-transition-fast)`), mapped `--max-width` and `--arrow-size`, plus retained
-`--lr-overlay-max-inline-size` and `--lr-overlay-arrow-size` fallbacks. The popup surface is
+`--lr-overlay-max-inline-size` and `--lr-overlay-arrow-size` fallbacks, and the inherited
+`--lr-overlay-inline-size` / `--lr-overlay-min-inline-size` popup width hooks (a `top-layer` popup
+honours them too). The menu keeps its own compact `var(--lr-space-xs)` content padding, so
+`--lr-overlay-content-padding` does not reach it. The popup surface is
 `lr-popover`'s, so the whole overlay-surface family reaches it unchanged: `--lr-overlay-surface`,
 `--lr-overlay-border`, `--lr-overlay-radius`, `--lr-overlay-shadow-anchored`, and the cascading
 `--lr-positioning-strategy` override documented on `<lr-popover>`
@@ -2447,8 +2538,10 @@ parent; set `lr-context-menu { display: block }` to get a box.
 (`var(--lr-overlay-max-inline-size, var(--lr-size-20rem))`), `--lr-overlay-surface`
 (`var(--lr-color-surface-overlay)`), `--lr-overlay-border` (`var(--lr-color-border-subtle)`),
 `--lr-overlay-radius` (`var(--lr-radius)`), `--lr-overlay-shadow-anchored` (`var(--lr-shadow-m)`),
-`--lr-overlay-max-inline-size` (`var(--lr-size-20rem)`), and `--show-duration` / `--hide-duration`
-(`var(--lr-transition-fast)`). Row styling uses the `--lr-menu-item-*` properties on your rows.
+`--lr-overlay-max-inline-size` (`var(--lr-size-20rem)`), `--lr-context-menu-min-inline-size`
+(the menu's minimum inline size, capped by the available space; it wins over the shared
+`--lr-overlay-min-inline-size`, default `0px`, which it falls back to while unset), and
+`--show-duration` / `--hide-duration` (`var(--lr-transition-fast)`). Row styling uses the `--lr-menu-item-*` properties on your rows.
 The popup always uses fixed positioning (the anchor is a viewport point), so the cascading
 `--lr-positioning-strategy` is not consulted. Like `lr-dropdown`, it is promoted to the top layer
 only when a transformed, filtered or contained ancestor (such as an `lr-virtual-list` row) would
@@ -2839,7 +2932,7 @@ _Surface — what `appearance` routes onto the box_: `--lr-badge-fill` (default
 palette.
 
 _Density and shape:_ `--lr-badge-font-size` (default `var(--lr-font-size-sm)`),
-`--lr-badge-padding-inline` (default `var(--lr-space-s)`) and `--lr-badge-min-height` (default
+`--lr-badge-font-weight` (default `var(--lr-font-weight-medium)`) and `--lr-badge-line-height` (default `var(--lr-line-height-compact)`) set the label's weight and line height; `--lr-badge-padding-inline` (default `var(--lr-space-s)`) and `--lr-badge-min-height` (default
 `var(--lr-size-1-25rem)`) — the trio each private effective-size rule rewrites to that step's font size,
 inline padding and minimum block size; the `m` defaults above exactly reproduce the pre-`size` fixed
 badge treatment. `--lr-badge-gap` (default `var(--lr-space-2xs)`) is the space between
@@ -3364,6 +3457,10 @@ These named interfaces and helper signatures are available to typed integrations
   `ChipGroupOverflowToggleDetail {
     expanded: boolean;
   }`
+  Import: `@aceshooting/lyra-ui/components/overlays/chip/chip-group.class.js`.
+  `ChipGroupChangeDetail {
+    value: string | string[];
+  }`
 
 - **`components-overlays-chip-chip-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/overlays/chip/chip.class.js`.
@@ -3403,6 +3500,24 @@ These named interfaces and helper signatures are available to typed integrations
     confirmLabel?: string;
     cancelLabel?: string;
     variant?: 'neutral' | 'danger';
+    size?: LyraSize;
+    headingLevel?: LyraHeadingLevel;
+    className?: string;
+  }`
+
+- **`components-overlays-dialog-prompt-contracts`** — Supporting data types and helpers for this component family.
+  Import: `@aceshooting/lyra-ui/components/overlays/dialog/prompt.js`.
+  `prompt(options: PromptOptions): Promise<string | null>`
+  Import: `@aceshooting/lyra-ui/components/overlays/dialog/prompt.js`.
+  `PromptOptions {
+    title: string;
+    label: string;
+    description?: string;
+    value?: string;
+    placeholder?: string;
+    validate?: (value: string) => string | null | undefined;
+    confirmLabel?: string;
+    cancelLabel?: string;
     size?: LyraSize;
     headingLevel?: LyraHeadingLevel;
     className?: string;

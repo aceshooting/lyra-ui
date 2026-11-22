@@ -247,7 +247,7 @@ export type { CalendarCellPos, HeatmapAnnotation, HeatmapCalendarData, HeatmapDa
  * @csspart base - The heatmap wrapper.
  * @csspart canvas - The heatmap canvas.
  * @csspart grid - The scrollport wrapping the canvas while `stickyLabels` freezes an axis or a
- *   matrix-mode `fill` heatmap scrolls inside its parent; absent otherwise.
+ *   matrix-mode `fill` or `fitBlock` heatmap scrolls inside its parent or its own ceiling; absent otherwise.
  * @csspart row-labels - The frozen row-label gutter, rendered while `stickyLabels` is `rows` or `both`.
  * @csspart col-labels - The frozen column-label band, rendered while `stickyLabels` is `cols` or `both`.
  * @csspart cells - The opt-in per-cell accessibility overlay.
@@ -289,6 +289,10 @@ export type { CalendarCellPos, HeatmapAnnotation, HeatmapCalendarData, HeatmapDa
  * @cssprop [--lr-heatmap-grid-max-block-size=none] - Block-size ceiling of the `stickyLabels` scrollport. A frozen column band only stays behind once the grid actually scrolls vertically. A percentage only resolves against a definite block size; set `fill` to let the grid take what its parent leaves.
  * @cssprop [--lr-heatmap-legend-font-size=var(--lr-font-size-xs)] - Legend text size.
  * @cssprop [--lr-heatmap-legend-color=var(--lr-color-text-quiet)] - Legend text color.
+ * @cssprop [--lr-heatmap-legend-font-family=inherit] - Legend font family.
+ * @cssprop [--lr-heatmap-legend-divider=none] - Border shorthand of a divider on the legend edge
+ *   facing the grid: its block start under the default bottom placement, its block end under
+ *   `legendPlacement = 'top'`. Pair it with `--lr-heatmap-legend-padding` for room beside the line.
  * @cssprop [--lr-heatmap-legend-gap=var(--lr-space-xs)] - Gap between legend entries.
  * @cssprop [--lr-heatmap-legend-padding=0] - Padding of the legend row.
  * @cssprop [--lr-heatmap-legend-bg=transparent] - Background of the legend row.
@@ -967,6 +971,17 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
    * like any percentage, `block-size: 100%` resolves to `auto` against an auto-height parent.
    */
   @property({ type: Boolean, reflect: true }) fill = false;
+
+  /**
+   * Fits the heatmap within the host's own `max-block-size` without a definite parent height:
+   * the heatmap takes its content height up to that ceiling, and in matrix mode the grid renders
+   * inside the `[part="grid"]` scrollport (as under `fill`), which takes the block size the legend
+   * leaves and becomes the single scroller. A short matrix stays as tall as its content. Set the
+   * ceiling on the element itself (`lr-heatmap { max-block-size: 24rem }`); a percentage ceiling
+   * only resolves against a definite parent, like any percentage. Without a ceiling it changes
+   * nothing visible. Default `false`. Reflects as the `fit-block` attribute.
+   */
+  @property({ type: Boolean, attribute: 'fit-block', reflect: true }) fitBlock = false;
 
   private _axisSelection: LyraHeatmapAxisSelection = 'none';
   /**
@@ -2215,8 +2230,9 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
         // Toggling this replaces the canvas element (the frozen modes wrap it in a scrollport), so
         // the new, blank canvas needs a full repaint -- and the bands need their first one.
         'stickyLabels',
-        // Same for a matrix-mode fill, which wraps the canvas in the scrollport too.
+        // Same for a matrix-mode fill or fitBlock, which wrap the canvas in the scrollport too.
         'fill',
+        'fitBlock',
       ].some((name) => changed.has(name)) || localeChanged
     ) {
       const focusOnly =
@@ -4381,12 +4397,12 @@ export class LyraHeatmap extends LyraElement<LyraHeatmapEventMap> {
   }
 
   /** Whether render wraps the grid in the `[part="grid"]` scrollport: a frozen `stickyLabels` axis
-   *  needs one to stick to, and a matrix-mode `fill` heatmap scrolls inside it. */
+   *  needs one to stick to, and a matrix-mode `fill` or `fitBlock` heatmap scrolls inside it. */
   private get gridScrollportRendered(): boolean {
-    return this.effectiveStickyLabels !== 'none' || (this.fill && this.effectiveMode === 'matrix');
+    return this.effectiveStickyLabels !== 'none' || ((this.fill || this.fitBlock) && this.effectiveMode === 'matrix');
   }
 
-  /** The `stickyLabels` or `fill` scrollport, or `null` in the default render, which has none. */
+  /** The `stickyLabels`, `fill` or `fitBlock` scrollport, or `null` in the default render, which has none. */
   private get gridScrollport(): HTMLElement | null {
     return this.shadowRoot?.querySelector<HTMLElement>('[part="grid"]') ?? null;
   }

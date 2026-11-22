@@ -45,7 +45,7 @@ export const styles = css`
     display: flex;
     align-items: stretch;
     gap: var(--lr-space-m);
-    border-block-end: var(--track-width, var(--lr-border-width-thin)) solid
+    border-block-end: var(--track-width, var(--lr-tab-group-track-width, var(--lr-border-width-thin))) solid
       var(--track-color, var(--lr-color-border-subtle));
     overflow-x: auto;
     overflow-y: hidden;
@@ -140,9 +140,11 @@ export const styles = css`
     /* Sits over the tablist's own border-block-end so the selected accent underline replaces it
        pixel for pixel. */
     border-block-end: var(--lr-border-width-medium) solid transparent;
-    margin-block-end: calc(-1 * var(--track-width, var(--lr-border-width-thin)));
-    padding: var(--lr-space-s) var(--lr-space-xs);
+    margin-block-end: calc(-1 * var(--track-width, var(--lr-tab-group-track-width, var(--lr-border-width-thin))));
+    padding: var(--lr-tab-group-tab-padding, var(--lr-space-s) var(--lr-space-xs));
+    min-block-size: var(--lr-tab-group-tab-min-block-size, auto);
     font: inherit;
+    font-size: var(--lr-tab-group-tab-font-size, inherit);
     font-weight: var(--lr-font-weight-medium);
     color: var(--lr-color-text-quiet);
     cursor: pointer;
@@ -273,7 +275,7 @@ export const styles = css`
   :host([placement="bottom"]) [part~="tablist"],
   :host([placement="bottom"]) [part~="scroll-button"] {
     border-block-end: none;
-    border-block-start: var(--track-width, var(--lr-border-width-thin)) solid
+    border-block-start: var(--track-width, var(--lr-tab-group-track-width, var(--lr-border-width-thin))) solid
       var(--track-color, var(--lr-color-border-subtle));
   }
   :host([placement="bottom"]) [part="tab"][aria-selected="true"] {
@@ -337,11 +339,11 @@ export const styles = css`
     white-space: nowrap;
   }
   :host([placement="start"]) [part~="tablist"] {
-    border-inline-end: var(--track-width, var(--lr-border-width-thin)) solid
+    border-inline-end: var(--track-width, var(--lr-tab-group-track-width, var(--lr-border-width-thin))) solid
       var(--track-color, var(--lr-color-border-subtle));
   }
   :host([placement="end"]) [part~="tablist"] {
-    border-inline-start: var(--track-width, var(--lr-border-width-thin)) solid
+    border-inline-start: var(--track-width, var(--lr-tab-group-track-width, var(--lr-border-width-thin))) solid
       var(--track-color, var(--lr-color-border-subtle));
   }
   /* The edge fade measures inline overflow; a vertical strip scrolls in block, so the mask would

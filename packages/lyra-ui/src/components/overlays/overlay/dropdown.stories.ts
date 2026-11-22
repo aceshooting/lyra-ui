@@ -173,3 +173,23 @@ export const WithoutArrow: StoryObj = {
     <lr-dropdown-item>Archive</lr-dropdown-item>
   </lr-dropdown>`,
 };
+
+export const FullWidthTrigger: StoryObj = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          '`full-width-trigger` lays the trigger out at the column width; `--lr-overlay-min-inline-size` floors the menu.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="inline-size: min(100%, 18rem)">
+      <lr-dropdown aria-label="Sort" full-width-trigger style="--lr-overlay-min-inline-size: 14rem">
+        <button slot="trigger">Sort by</button>
+        <lr-dropdown-item value="name">Name</lr-dropdown-item>
+        <lr-dropdown-item value="date">Date</lr-dropdown-item>
+      </lr-dropdown>
+    </div>
+  `,
+};

@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 7 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 7 parts, 26 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `base`: `--lr-segmented-track-bg`, `--lr-segmented-track-border-color`, `--lr-segmented-track-height`, `--lr-segmented-track-min-height`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -209,6 +209,7 @@ resolves.
 
 **Additional API surface:**
 
+- `--lr-segmented-segment-min-size` — Minimum inline and block size of each segment's hit area. Default: `var(--lr-size-24px)`.
 - `--lr-segmented-track-gap` — Gap between segments. Default: `var(--lr-size-0-125rem)`.
 - `--lr-segmented-track-radius` — Track corner radius. Default: `var(--lr-radius)`.
 - `--lr-segmented-segment-radius` — Each segment's own corner radius, independent of the track's.

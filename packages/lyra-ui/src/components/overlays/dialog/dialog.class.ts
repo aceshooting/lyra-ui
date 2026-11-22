@@ -97,6 +97,10 @@ export interface LyraDialogEventMap {
   'lr-close-request': CustomEvent<LyraDialogCloseDetail>;
   'lr-close': CustomEvent<LyraDialogCloseDetail>;
 }
+
+/** The viewport breakpoint `fullscreen-narrow` switches at. */
+const FULLSCREEN_NARROW_QUERY = '(max-width: 40rem)';
+
 /**
  * `<lr-dialog>` — a general-purpose modal/overlay. `role="dialog"`,
  * focus-trapped while open, dismissible via Escape or (opt-in) a backdrop click, and
@@ -259,11 +263,22 @@ export interface LyraDialogEventMap {
  *   slotted content a definite, fillable block size -- `header` and `footer` keep their natural
  *   size and only `body` grows or shrinks into the remaining space. Add `fill-body` to make `body` a
  *   column flex container whose slotted children fill that space.
+ * @cssprop [--lr-dialog-max-height=100%] - Cap on the panel's block size, the block-axis twin of
+ *   `--lr-dialog-max-width`. The viewport (`100%`) stays a hard limit on top, so a value larger
+ *   than the viewport is a no-op.
+ * @cssprop [--lr-dialog-viewport-inset=var(--lr-space-l)] - Gap between the viewport edges and the
+ *   panel, on all four sides. The device safe-area insets still win wherever they are larger.
+ * @cssprop [--lr-dialog-panel-bg=var(--lr-overlay-surface)] - Fill of this panel only. Unlike
+ *   `--lr-overlay-surface`, it does not reach the popups, menus and listboxes opened inside the
+ *   dialog. The glass surface treatment applies to it in the same way.
+ * @cssprop [--lr-dialog-divider-color=var(--lr-overlay-border)] - Colour of the header's and footer's
+ *   dividing rules. Left unset they follow the panel edge colour.
  * @cssprop [--lr-dialog-heading-font-family=var(--lr-font-heading)] - Font family of the visible
  *   header title.
  * @cssprop [--lr-dialog-heading-font-size=inherit] - Font size of the visible header title.
  * @cssprop [--lr-dialog-heading-font-weight=var(--lr-font-weight-semibold)] - Font weight of the
  *   visible header title.
+ * @cssprop [--lr-dialog-heading-letter-spacing=normal] - Letter spacing of the visible header title.
  * @cssprop [--lr-dialog-spacing=var(--lr-space-l)] - Padding inside the body, and the inline
  *   padding of the header and footer rows.
  * @cssprop [--lr-dialog-spacing-block=var(--lr-space-m)] - Block padding of the header and footer
@@ -274,9 +289,10 @@ export interface LyraDialogEventMap {
  *   fade.
  * @cssprop [--lr-overlay-surface=var(--lr-color-surface-container-highest)] - Shared floating-surface fill,
  *   on the panel. The same family every anchored popup now reads, so one declaration retints the
- *   dialog and the popups opened from it together.
+ *   dialog and the popups opened from it together; `--lr-dialog-panel-bg` retints the panel alone.
  * @cssprop [--lr-overlay-border=var(--lr-color-border-subtle)] - Shared floating-surface edge
- *   colour, on the panel and on the header's and footer's dividing rules.
+ *   colour, on the panel and, unless `--lr-dialog-divider-color` is set, on the header's and
+ *   footer's dividing rules.
  * @cssprop [--lr-overlay-radius=var(--lr-radius)] - Shared floating-surface corner radius, on the
  *   panel and on the close button.
  * @cssprop [--lr-overlay-shadow-modal=var(--lr-shadow-xl)] - Elevation of a modal panel. A separate
@@ -362,6 +378,13 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
    *  natural size. */
   @property({ type: Boolean, attribute: 'fill-body', reflect: true }) fillBody = false;
 
+  /** Opt-in full-screen layout for narrow viewports. While the viewport is at most `40rem` wide
+   *  the panel drops its viewport inset, corner radius and size caps and fills the viewport,
+   *  carrying the device safe-area insets as its own padding; at wider viewports it renders exactly
+   *  as without the attribute. The breakpoint is evaluated with `matchMedia()` and followed live
+   *  while the dialog is connected. */
+  @property({ type: Boolean, attribute: 'fullscreen-narrow', reflect: true }) fullscreenNarrow = false;
+
   /** SSR hint that keeps the footer wrapper rendered before slot assignment is observable. */
   @property({ type: Boolean, attribute: 'with-footer', reflect: true }) withFooter = false;
 
@@ -386,6 +409,9 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
    *  behaviour of every migrated dialog. A rename that changes what the markup does with nothing
    *  to warn on is worse than no rename at all, so the polarity now matches upstream exactly. */
   @property({ type: Boolean, attribute: 'light-dismiss' }) lightDismiss = false;
+
+  /** Releases the `fullscreen-narrow` breakpoint listener; set only while one is attached. */
+  private releaseFullscreenQuery?: () => void;
 
   @state() private hasFooterSlot = false;
   @state() private hasLabelSlot = false;
@@ -450,8 +476,28 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
     return true;
   }
 
+  /** Follows the `fullscreen-narrow` breakpoint while connected, mirroring the match onto the
+   *  internal `data-fullscreen` host attribute the stylesheet keys off. */
+  private syncFullscreenQuery(): void {
+    this.releaseFullscreenQuery?.();
+    this.releaseFullscreenQuery = undefined;
+    const view = this.ownerDocument.defaultView;
+    if (!this.fullscreenNarrow || !this.isConnected || typeof view?.matchMedia !== 'function') {
+      this.removeAttribute('data-fullscreen');
+      return;
+    }
+    const query = view.matchMedia(FULLSCREEN_NARROW_QUERY);
+    const apply = (): void => {
+      this.toggleAttribute('data-fullscreen', query.matches);
+    };
+    query.addEventListener('change', apply);
+    this.releaseFullscreenQuery = () => query.removeEventListener('change', apply);
+    apply();
+  }
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
+    if (changed.has('fullscreenNarrow')) this.syncFullscreenQuery();
     if (!this.hasUpdated || (changed.has('open') && this.open)) {
       this.hasFooterSlot = Array.from(this.children).some((el) => el.getAttribute('slot') === 'footer');
       this.detectLightDomChrome();
@@ -519,6 +565,7 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
 
   override connectedCallback(): void {
     super.connectedCallback();
+    this.syncFullscreenQuery();
     this.armHeadingObserver();
     this.syncBodyTabIndex();
     this.armBodyOverflowObserver();
@@ -546,6 +593,9 @@ export class LyraDialog extends LyraElement<LyraDialogEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.releaseFullscreenQuery?.();
+    this.releaseFullscreenQuery = undefined;
+    this.removeAttribute('data-fullscreen');
     this.resetHeadingObserver();
     this.resetBodyOverflowObserver();
     super.disconnectedCallback();

@@ -189,6 +189,11 @@ function isContextMenuKey(event: KeyboardEvent): boolean {
  * @cssprop [--lr-overlay-shadow-anchored=var(--lr-shadow-m)] - Elevation of the anchored popup.
  * @cssprop [--lr-overlay-max-inline-size=var(--lr-size-20rem)] - Maximum inline size fallback of
  *   the popup.
+ * @cssprop [--lr-context-menu-min-inline-size=var(--lr-overlay-min-inline-size, 0px)] - Minimum
+ *   inline size of the menu, capped by the available viewport space. Wins over the shared
+ *   `--lr-overlay-min-inline-size`, so a menu can be floored without widening other popups.
+ * @cssprop [--lr-overlay-min-inline-size=0px] - Shared minimum inline size of anchored popups,
+ *   read when `--lr-context-menu-min-inline-size` is unset.
  * @status experimental
  * @since 21.0.0
  */

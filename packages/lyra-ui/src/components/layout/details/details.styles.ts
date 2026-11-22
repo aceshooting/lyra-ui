@@ -125,12 +125,14 @@ export const styles = css`
   }
   :host(:where(:not([disabled]))) [part='summary']:hover {
     background: var(--lr-details-summary-hover-bg, var(--lr-color-brand-quiet));
+    color: var(--lr-details-summary-hover-color, var(--lr-details-summary-color, var(--lr-color-text)));
   }
   :host(:where(:not([disabled]))) [part='summary']:active {
     background: var(
       --lr-details-summary-active-bg,
       ${activeFill('var(--lr-color-brand-quiet)')}
     );
+    color: var(--lr-details-summary-hover-color, var(--lr-details-summary-color, var(--lr-color-text)));
   }
   [part='summary']:focus-visible {
     ${focusRingInset}

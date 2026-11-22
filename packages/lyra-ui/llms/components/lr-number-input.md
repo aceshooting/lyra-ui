@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 23 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 23 parts, 35 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `input-wrapper`: `--lr-input-gap`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -213,3 +213,5 @@ The exact-320px RTL story keeps long label/hint copy and both fixed-size stepper
   element is not reverted — use `lr-input` when the type has to change.
 
 <a id="date-and-time-controls"></a>
+
+`--lr-form-control-label-line-height` (default `inherit`) sets the label line height, and `--lr-input-font-variant-numeric` (default `inherit`; for example `tabular-nums`) sets the field text's numeric figures, shared with `lr-input`.

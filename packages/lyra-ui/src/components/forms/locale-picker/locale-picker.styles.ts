@@ -91,7 +91,10 @@ export const styles = css`
        :root value still wins -- the same quartet lr-input/lr-textarea already publish. */
     border: var(--lr-border-width-thin) solid
       var(--lr-locale-picker-trigger-border-color, var(--lr-color-border));
-    border-radius: var(--lr-locale-picker-radius, var(--_lr-locale-picker-radius-default));
+    border-radius: var(
+      --lr-locale-picker-trigger-radius,
+      var(--lr-locale-picker-radius, var(--_lr-locale-picker-radius-default))
+    );
     background: var(--lr-locale-picker-trigger-fill, var(--lr-color-surface));
     color: inherit;
     font: inherit;

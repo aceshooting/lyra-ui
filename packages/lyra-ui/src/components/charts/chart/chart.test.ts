@@ -3595,6 +3595,25 @@ it('sets a dashed borderDash for a series with dash: true', async () => {
   expect(ds.borderDash).to.deep.equal([4, 4]);
 });
 
+it('copies a custom dash pattern and falls back to the default dash for an invalid one', async () => {
+  const el = (await fixture(html`<lr-chart></lr-chart>`)) as LyraChart;
+  el.type = 'line';
+  el.labels = ['A', 'B'];
+  const pattern = [8, 3, 2, 3];
+  el.datasets = [
+    { label: 'dash-dot', data: [1, 2], dash: pattern },
+    { label: 'solid', data: [1, 2], dash: [] },
+    { label: 'negative', data: [1, 2], dash: [4, -1] },
+    { label: 'long', data: [1, 2], dash: Array.from({ length: 17 }, () => 1) },
+    { label: 'off', data: [1, 2], dash: false },
+  ];
+  await el.updateComplete;
+  pattern[0] = 99;
+  expect(el.datasets[0]!.dash, 'admission copies the caller array').to.deep.equal([8, 3, 2, 3]);
+  const datasets = (el as any).buildConfig().data.datasets as { borderDash?: number[] }[];
+  expect(datasets.map(ds => ds.borderDash)).to.deep.equal([[8, 3, 2, 3], [], [4, 4], [4, 4], undefined]);
+});
+
 // --- handlePointClick(): fail-closed dangling index -----------------------------------------------
 
 it('does not emit when a resolved click carries an index with no backing data', async () => {

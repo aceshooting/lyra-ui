@@ -9,8 +9,8 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 3 parts, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
-- **Tokens by part** (prefer these over a `::part()` rule) `list`: `--lr-menu-gap`, `--lr-menu-padding`, `--lr-theme-scrollbar-color`, `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-width`
+- **Themeable via** 3 parts, 13 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Tokens by part** (prefer these over a `::part()` rule) `list`: `--lr-menu-gap`, `--lr-menu-max-block-size`, `--lr-menu-padding`, `--lr-theme-scrollbar-color`, `--lr-theme-scrollbar-gutter`, `--lr-theme-scrollbar-width`
 - **Documented with** `lr-menu-item`, `lr-dropdown-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -102,7 +102,12 @@ Row chrome is controlled through the menu-item properties listed below.
 List density: `--lr-menu-padding` (default `var(--lr-space-xs)`) pads `[part="list"]` and
 `--lr-menu-gap` (default `0`) spaces its rows. Both apply inside `lr-dropdown` too and are read only
 through `var()` fallbacks, so one declaration on the menu or an ancestor retunes the list without a
-`::part(list)` rule. The scrolling list also honors the theme-level
+`::part(list)` rule. `--lr-menu-max-block-size` (default `var(--lr-size-20rem)`) is the list's
+block-size ceiling, past which it scrolls; it also caps a submenu's surface. Inside `lr-dropdown`
+the positioned available space still caps it, and a standalone menu can be raised above `20rem`.
+To widen a dropdown's menu, set `--lr-overlay-min-inline-size` or `--lr-overlay-inline-size` on the
+`lr-dropdown`, not a width on the `lr-menu`: a contained menu is `display: contents`, so its list
+lays out directly in the popup and fills whatever width the popup takes. The scrolling list also honors the theme-level
 `--lr-theme-scrollbar-width`/`--lr-theme-scrollbar-gutter`/`--lr-theme-scrollbar-color` hooks
 (defaults `auto`/`auto`/`auto`), like every other internal scroll container.
 
@@ -240,7 +245,9 @@ expanding the popup.
 **Themeable custom properties:** `--lr-menu-item-gap`, `--lr-menu-item-radius`,
 `--lr-menu-item-danger-color`, `--lr-menu-item-danger-hover-bg`,
 `--lr-menu-item-danger-active-bg`, `--lr-menu-item-checked-bg` (default `transparent`),
-`--lr-menu-item-checked-color` (default `inherit`), `--lr-menu-item-checked-font-weight` (default
+`--lr-menu-item-color` (default `inherit`; a resting row's text, which danger, disabled and checked
+rows override), `--lr-menu-item-checked-color` (default `var(--lr-menu-item-color)`),
+`--lr-menu-item-checked-font-weight` (default
 `inherit`), and `--submenu-offset`, plus shared size/focus/color/spacing tokens. The checked hooks
 apply to a `type="checkbox" checked` or `type="radio" checked` row's `[part="base"]`, matching the
 checked/selected-state hooks `<lr-option>`, `<lr-select>`, `<lr-combobox>`, and `<lr-tree-item>`
@@ -264,8 +271,12 @@ itself.
 Row density hooks, also inline fallbacks: `--lr-menu-item-padding-block` (default
 `var(--lr-form-control-padding-block)`), `--lr-menu-item-padding-inline` (default
 `var(--lr-form-control-padding-inline)`), `--lr-menu-item-font-size` (default
-`var(--lr-form-control-font-size)`) and `--lr-menu-item-icon-size` (default `inherit`), the font
-size of `[part="icon"]`, which sizes a slotted `lr-icon` or any `1em` glyph.
+`var(--lr-form-control-font-size)`), `--lr-menu-item-font-weight` (default `inherit`),
+`--lr-menu-item-letter-spacing` (default `normal`), `--lr-menu-item-details-font-size` (default
+`var(--lr-font-size-sm)`) and `--lr-menu-item-details-color` (default `var(--lr-color-text-quiet)`)
+for `[part="details"]`, and `--lr-menu-item-icon-size` (default `inherit`), the font
+size of `[part="icon"]`, which sizes a slotted `lr-icon` or any `1em` glyph. `lr-dropdown-item`
+reads the same row tokens.
 
 ```html
 <lr-menu style="--lr-menu-padding: 2px; --lr-menu-item-padding-block: 2px; --lr-menu-item-font-size: var(--lr-font-size-sm); --lr-menu-item-icon-size: 14px;">

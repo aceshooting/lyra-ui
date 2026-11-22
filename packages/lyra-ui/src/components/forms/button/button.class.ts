@@ -173,6 +173,10 @@ export interface LyraButtonEventMap {
  * @csspart suffix - Shoelace alias for `end`; both names are on the same wrapper.
  * @csspart caret - The decorative dropdown chevron, present only while `withCaret` is `true`.
  * @csspart spinner - The loading spinner, present only while `loading` is `true`.
+ * @cssprop [--lr-button-label-wrap=nowrap] - Inherited label wrapping, so a container can make every button
+ *   in an action row wrap: set `normal` on the row. The default `nowrap` keeps the single-line,
+ *   ellipsized label. The per-button `wrap` attribute still wins and additionally lets a glow
+ *   overflow the label box.
  * @cssprop [--lr-button-width=100%] - Inline size of the internal button. The host
  * defaults it to `100%` so the native button follows the host's own width; override to
  * `auto` (or any other value) for a compact inline composition. `appearance="link"` defaults

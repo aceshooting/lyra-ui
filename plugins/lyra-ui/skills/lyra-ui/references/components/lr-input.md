@@ -9,13 +9,15 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 33 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 17 parts, 35 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `input-wrapper`: `--lr-input-gap`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-input`
+
+Field text can use tabular figures with `--lr-input-font-variant-numeric: tabular-nums` (default `inherit`); `lr-number-input` shares the sheet and honours it. Every form-control label also reads `--lr-form-control-label-line-height` (default `inherit`) beside the size, weight and colour tokens.
 
 `labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in
 an inline-start column, sized by `--lr-form-control-label-inline-size` (default `30%`) and

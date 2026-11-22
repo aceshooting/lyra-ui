@@ -9,13 +9,15 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 30 parts, 34 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 30 parts, 38 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `form-control-label`: `--lr-form-control-required-content`; `marks`: `--lr-slider-mark-bg`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
 
 ## `lr-slider`
+
+**Label and readout.** The label defaults to the shared form-control label size (`--lr-font-size-md-sm`, like `lr-input`/`lr-select`), no longer `inherit`; `--lr-form-control-label-font-size` still retunes it. `label-placement="start"` (see "Label beside the field") puts the label in a column beside a horizontal track. `with-value` shows the **localized number** by default, even when a `valueFormatter` is set and even with `value-placement="label"`; the formatter feeds `aria-valuetext` and the tooltip only. Set `value-display="formatted"` to show the formatter's text in the readout. This is deliberate: a formatter written for assistive text (`"40 percent"`) would otherwise change the visible readout of every existing slider.
 
 Labelled `marks` render in the `marks` part: one `mark` per tick, a `mark-label` per label, and
 `mark-label-thinned` on a label hidden for overlapping its neighbour.
@@ -352,3 +354,5 @@ is present for upstream form-surface parity but adds no missing-value constraint
   takes up no layout space.
 
 ---
+
+`labelPlacement: 'top' | 'start' = 'top'` (attribute `label-placement`, reflected) puts the label in an inline-start column, sized by `--lr-form-control-label-inline-size`, `--lr-form-control-label-gap` and `--lr-form-control-label-collapse-inline-size`; every form-control label also reads `--lr-form-control-label-line-height` (default `inherit`). See "Label beside the field: `label-placement`".

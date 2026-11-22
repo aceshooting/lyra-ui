@@ -12,7 +12,7 @@ import {
 } from '../../../internal/focus-navigation.js';
 import { composedContains } from '../../../internal/overlay-manager.js';
 import { styles } from './chip-group.styles.js';
-import { blankNumberConverter } from '../../../internal/converters.js';
+import { blankNumberConverter, literalSetConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_showLess, LYRA_DEFAULT_showMoreCollapsed, LYRA_DEFAULT_showMoreOverflowLabel } from '../../../internal/default-strings/shared.generated.js';
@@ -23,9 +23,20 @@ export interface ChipGroupOverflowToggleDetail {
   expanded: boolean;
 }
 
+/** How a chip group manages its toggleable chips: `none` (default) leaves them alone. */
+export type LyraChipGroupSelection = 'none' | 'single' | 'multiple';
+
+export interface ChipGroupChangeDetail {
+  /** The new selection: a string (empty when nothing is selected) in `single`, an array in `multiple`. */
+  value: string | string[];
+}
+
 export interface LyraChipGroupEventMap {
   'lr-overflow-toggle': CustomEvent<ChipGroupOverflowToggleDetail>;
+  'lr-change': CustomEvent<ChipGroupChangeDetail>;
 }
+
+const SELECTION = literalSetConverter<LyraChipGroupSelection>(['none', 'single', 'multiple'], 'none');
 
 interface TrackedChipFocus {
   child: HTMLElement;
@@ -58,11 +69,24 @@ interface TrackedChipFocus {
  *
  * Collapsed groups reapply max-visible when assigned children are replaced or reordered at the same count, preserving authored hidden/inert state and releasing departed visibility leases.
  *
+ * An opt-in selection model turns the group into a filter bar. `selection="single"` or `"multiple"`
+ * makes the group own the pressed state of every direct `<lr-chip>` child that has a `value`: it
+ * sets them `toggleable`, presses the ones named by `value`, and, in `single`, releases the others
+ * when one is pressed. Pressing a pressed chip releases it, so the selection may be empty. A chip
+ * without a `value` is left alone. `value` is a string in `single` and an array in `multiple`; as an
+ * attribute it is the string, comma-separated in `multiple`. An unknown value is kept (it simply
+ * presses no chip). Setting `value` is silent; `lr-change` fires only from a user press.
+ * `all-value` names an optional "all" chip, the child whose `value` equals it: it is pressed while
+ * the selection is empty, pressing it clears the selection, and it cannot be un-pressed. It is never
+ * part of `value`. With `selection` unset the group behaves exactly as before.
+ *
  * @customElement lr-chip-group
  * @slot - `<lr-chip>` elements (or any content, though the chip pairing is
  * the intended usage).
  * @event lr-overflow-toggle - The overflow indicator was activated,
  * revealing or re-collapsing the excess children. `detail: { expanded }`.
+ * @event lr-change - A user press changed the selection (`selection` is `single` or `multiple`).
+ * `detail: { value }`.
  * @csspart base - The flex-wrap container (holds both the slot and the overflow indicator).
  *   Carries `role="group"` and the accessible name when one is supplied -- see `accessibleLabel`.
  * @csspart overflow-indicator - The "+N" / "Show less" toggle button. Only rendered while `max-visible` is actively causing an overflow.
@@ -118,6 +142,51 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     this._maxVisible = next == null ? undefined : finiteCount(next);
     this.requestUpdate('maxVisible', old);
   }
+
+  private _selection: LyraChipGroupSelection = 'none';
+  /** `none` (default): the group does not manage chip state. `single` allows zero or one pressed
+   *  chip, `multiple` any number. Unsupported values fall back to `none`. */
+  @property({ reflect: true, useDefault: true, converter: SELECTION })
+  get selection(): LyraChipGroupSelection {
+    return this._selection;
+  }
+  set selection(next: LyraChipGroupSelection) {
+    const normalized = SELECTION.normalizeReflected(this, 'selection', next);
+    const old = this._selection;
+    if (old === normalized) return;
+    this._selection = normalized;
+    // An attribute set before `selection` (value="a,b" selection="multiple") was read in the old
+    // mode; read the author's raw assignment again in the new one.
+    this.selectedValues = this.parseSelection(this.rawValue);
+    this.requestUpdate('selection', old);
+  }
+
+  private selectedValues: string[] = [];
+  private rawValue: string | readonly string[] | null | undefined;
+
+  private parseSelection(next: string | readonly string[] | null | undefined): string[] {
+    const list = next == null ? [] : typeof next === 'string' ? (this.selection === 'multiple' ? next.split(',') : [next]) : [...next];
+    const cleaned = [...new Set(list.map((entry) => String(entry).trim()).filter((entry) => entry !== ''))];
+    return this.selection === 'multiple' ? cleaned : cleaned.slice(0, 1);
+  }
+
+  /** The pressed chips' values: a string in `single` (empty when none), an array otherwise. In
+   *  `single` an array assignment keeps its first entry; in `multiple` a string is read as a
+   *  comma-separated list. `null`/`undefined` clears. Silent: never fires `lr-change`.
+   *  @default '' */
+  @property()
+  get value(): string | string[] {
+    return this.selection === 'multiple' ? [...this.selectedValues] : (this.selectedValues[0] ?? '');
+  }
+  set value(next: string | readonly string[] | null | undefined) {
+    const old = this.value;
+    this.rawValue = next;
+    this.selectedValues = this.parseSelection(next);
+    this.requestUpdate('value', old);
+  }
+
+  /** The `value` of the optional "all" chip (selection mode only). Unset means no all chip. */
+  @property({ attribute: 'all-value' }) allValue?: string;
 
   /**
    * Accessible name for the group, forwarded to `[part="base"]`.
@@ -214,6 +283,7 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
 
   protected override updated(changed: PropertyValues<this>): void {
     super.updated(changed);
+    this.syncSelectedChips();
     const overflowRepair = this.overflowFocusRepair;
     this.overflowFocusRepair = undefined;
     this.reconcileChildVisibilityAndFocus(overflowRepair);
@@ -486,6 +556,48 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
     });
   };
 
+  /** The chips this group owns while a selection mode is active: valued, in the assigned slot. */
+  private managedChips(): (Element & { value?: string; selected: boolean; toggleable: boolean })[] {
+    if (this.selection === 'none') return [];
+    return this.assignedChildren().filter(
+      (child): child is Element & { value?: string; selected: boolean; toggleable: boolean } =>
+        'toggleable' in child && 'selected' in child && typeof (child as { value?: unknown }).value === 'string',
+    );
+  }
+
+  private isAllChip(chip: { value?: string }): boolean {
+    return this.allValue != null && chip.value === this.allValue;
+  }
+
+  /** Writes the selection onto the chips. Idempotent; a no-op while `selection` is `none`. */
+  private syncSelectedChips(): void {
+    const chosen = new Set(this.selectedValues);
+    for (const chip of this.managedChips()) {
+      if (!chip.toggleable) chip.toggleable = true;
+      const pressed = this.isAllChip(chip) ? chosen.size === 0 : chosen.has(chip.value as string);
+      if (chip.selected !== pressed) chip.selected = pressed;
+    }
+  }
+
+  private onChipToggleRequest = (event: Event): void => {
+    const chip = event.target as Element & { value?: string; selected: boolean };
+    // The "all" chip reads as a radio that is already on: it cannot be released by pressing it.
+    if (this.managedChips().includes(chip as never) && this.isAllChip(chip) && chip.selected) event.preventDefault();
+  };
+
+  private onChipChange = (event: Event): void => {
+    const chip = event.target as Element & { value?: string; selected: boolean };
+    if (!this.managedChips().includes(chip as never)) return;
+    const value = chip.value as string;
+    if (this.isAllChip(chip)) this.selectedValues = [];
+    else if (chip.selected) this.selectedValues = this.selection === 'single' ? [value] : [...this.selectedValues, value];
+    else this.selectedValues = this.selectedValues.filter((entry) => entry !== value);
+    this.rawValue = [...this.selectedValues];
+    this.syncSelectedChips();
+    this.requestUpdate('value');
+    this.emit('lr-change', { value: this.value });
+  };
+
   private onToggleOverflow = (): void => {
     this.expanded = !this.expanded;
     this.emit('lr-overflow-toggle', { expanded: this.expanded });
@@ -510,6 +622,8 @@ export class LyraChipGroup extends LyraElement<LyraChipGroupEventMap> {
         aria-label=${hasAccessibleLabel ? this.accessibleLabel : nothing}
         @focusin=${this.onFocusIn}
         @focusout=${this.onFocusOut}
+        @lr-chip-toggle-request=${this.onChipToggleRequest}
+        @lr-chip-change=${this.onChipChange}
       >
         <slot @slotchange=${this.onSlotChange}></slot>
         ${overflowing

@@ -325,6 +325,69 @@ describe('lr-map drawing integration', () => {
     expect(element.cancelDrawing()).to.equal(true); await settle(element, peer);
     expect(element.drawMode).to.equal('line');
   });
+  it('does not re-arm when drawing-sticky is cleared while the completion edit is open', async () => {
+    for (const end of ['cancel', 'finish'] as const) {
+      const { element, peer } = await drawing('polygon', el => { el.drawingSticky = true; el.drawingCompleteBehavior = 'edit'; });
+      for (const [lng, lat] of [[0, 0], [1, 0], [0, 1]]) await vertex(element, peer, lng!, lat!);
+      expect(element.completeDrawing()).to.equal(true); await settle(element, peer);
+      element.drawingSticky = false; element.drawingCompleteBehavior = 'clear'; await element.updateComplete;
+      expect(end === 'cancel' ? element.cancelDrawing() : element.completeDrawing()).to.equal(true); await settle(element, peer);
+      expect([end, element.drawMode, peer.sources.size]).to.deep.equal([end, 'none', 0]);
+      fixtureCleanup();
+    }
+  });
+  it('never re-arms a cancelled edit session when drawing-sticky was never set', async () => {
+    for (const open of ['complete-edit', 'listener-edit', 'explicit-edit'] as const) {
+      const { element, peer } = await drawing('polygon', el => { if (open === 'complete-edit') el.drawingCompleteBehavior = 'edit'; });
+      if (open === 'listener-edit') {
+        element.addEventListener('lr-map-draw-complete', event => {
+          element.editDrawing((event as CustomEvent<LyraMapDrawingSnapshot>).detail);
+        }, { once: true });
+      }
+      if (open === 'explicit-edit') {
+        element.drawMode = 'none'; await settle(element, peer); await editSurface(element, peer);
+        expect(element.editDrawing(completed('polygon'))).to.equal(true); await settle(element, peer);
+      } else {
+        for (const [lng, lat] of [[0, 0], [1, 0], [0, 1]]) await vertex(element, peer, lng!, lat!);
+        expect(element.completeDrawing()).to.equal(true); await settle(element, peer);
+      }
+      element.drawingCompleteBehavior = 'clear'; await element.updateComplete;
+      const controls = element.shadowRoot!.querySelector('[part="drawing-controls"]') !== null;
+      expect([open, controls, element.drawMode, peer.sources.size], 'an edit session is open').to.deep.equal([open, true, 'none', 1]);
+      expect(element.cancelDrawing()).to.equal(true); await settle(element, peer);
+      expect([open, element.drawMode, element.drawingSticky, peer.sources.size]).to.deep.equal([open, 'none', false, 0]);
+      fixtureCleanup();
+    }
+  });
+  it('keeps a finished edit on the map with drawing-finish-behavior="keep" and re-arms only once it is cancelled', async () => {
+    const { element, peer } = await drawing('polygon', el => {
+      el.drawingSticky = true; el.drawingCompleteBehavior = 'edit'; el.setAttribute('drawing-finish-behavior', 'keep');
+    });
+    expect(element.drawingFinishBehavior).to.equal('keep');
+    const completes = capture(element, 'lr-map-draw-complete'), cancels = capture(element, 'lr-map-draw-cancel');
+    for (const [lng, lat] of [[0, 0], [1, 0], [0, 1]]) await vertex(element, peer, lng!, lat!);
+    expect(element.completeDrawing()).to.equal(true); await settle(element, peer);
+    expect(element.completeDrawing(), 'finishing commits').to.equal(true); await settle(element, peer);
+    expect([completes.length, element.drawMode, peer.sources.size], 'the committed edit stays on the map').to.deep.equal([2, 'none', 1]);
+    expect(element.shadowRoot!.querySelector('[part="drawing-controls"]') === null).to.equal(false);
+    expect(element.completeDrawing(), 'a kept edit commits again').to.equal(true); await settle(element, peer);
+    expect(completes.length).to.equal(3);
+    expect(element.cancelDrawing()).to.equal(true); await settle(element, peer);
+    expect([cancels.length, element.drawMode, peer.sources.size], 'cancel ends the edit and re-arms').to.deep.equal([1, 'polygon', 0]);
+    element.drawingFinishBehavior = 'bogus' as 'clear'; await element.updateComplete;
+    expect([element.drawingFinishBehavior, element.getAttribute('drawing-finish-behavior')], 'normalizes and reflects').to.deep.equal(['clear', 'clear']);
+  });
+  it('keeps the default finish behavior clearing an explicit edit', async () => {
+    const { element, peer } = await mount(); await editSurface(element, peer);
+    expect([element.drawingFinishBehavior, element.drawingCompleteBehavior]).to.deep.equal(['clear', 'clear']);
+    expect(element.editDrawing(completed())).to.equal(true); await settle(element, peer);
+    expect(element.completeDrawing()).to.equal(true); await settle(element, peer);
+    expect(peer.sources.size).to.equal(0);
+    element.drawingFinishBehavior = 'keep'; await element.updateComplete;
+    expect(element.editDrawing(completed())).to.equal(true); await settle(element, peer);
+    expect(element.completeDrawing()).to.equal(true); await settle(element, peer);
+    expect(peer.sources.size, 'keep applies to an explicit edit too').to.equal(1);
+  });
   it('keeps ordinary caller-owned sources after drawing completion and cleans only temporary resources', async () => {
     const geojson = { type: 'FeatureCollection' as const, features: [] };
     const { element, peer } = await drawing('line', el => { el.dataLayers = [{ sourceId: 'keep', geojson }]; }); const kept = [...peer.sources.keys()];

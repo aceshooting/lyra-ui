@@ -638,3 +638,27 @@ export const FromNativeModal: Story = {
     <lr-app-rail mobile-breakpoint="2000px" label="Tools"><button slot="header" style="margin-block-start:4rem">Apply</button></lr-app-rail>
   </section>`,
 };
+
+export const FrameAndEdgeBorders: Story = {
+  name: "Frame and edge borders",
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "`--lr-app-rail-frame-border` is the card-frame border shorthand on every side of a framed rail; `--lr-app-rail-edge-border` still wins on the docked inline-end edge.",
+      },
+    },
+  },
+  render: () => html`
+    <div
+      style="
+        --lr-app-rail-frame-border: var(--lr-border-width-thin) solid ${storyColor("brand")};
+        --lr-app-rail-edge-border: var(--lr-border-width-thick) solid ${storyColor("success")};
+        inline-size: var(--lr-size-18rem);
+        block-size: var(--lr-size-10rem);
+      "
+    >
+      <lr-app-rail force-mode="full" frame="card" style="block-size: 100%;"></lr-app-rail>
+    </div>
+  `,
+};

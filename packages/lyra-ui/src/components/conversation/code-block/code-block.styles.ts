@@ -34,9 +34,9 @@ export const styles = css`
        same reasoning file-input.styles.ts's own bordered [part~="base"] documents. */
     box-sizing: border-box;
     block-size: 100%;
-    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border: var(--lr-code-block-border, var(--lr-border-width-thin) solid var(--lr-color-border-subtle));
     border-radius: var(--lr-code-block-radius, var(--lr-radius));
-    background: var(--lr-color-surface);
+    background: var(--lr-code-block-bg, var(--lr-color-surface));
     overflow: hidden;
   }
   [part='header'] {
@@ -44,8 +44,8 @@ export const styles = css`
     min-inline-size: 0;
     align-items: center;
     gap: var(--lr-space-xs);
-    padding: var(--lr-space-xs) var(--lr-space-s);
-    border-block-end: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    padding: var(--lr-code-block-header-padding, var(--lr-space-xs) var(--lr-space-s));
+    border-block-end: var(--lr-code-block-header-border, var(--lr-border-width-thin) solid var(--lr-color-border-subtle));
     /* --lr-color-surface, not -brand-quiet: --lr-color-text-quiet (the toggle/copy-button color
        below) fails WCAG AA against --lr-color-brand-quiet in this palette. -surface is the same
        header background lr-json-viewer's toolbar uses with that same text color. */
@@ -233,7 +233,7 @@ export const styles = css`
        inline background-color (the generated-token-colors exception documented in code-block.class.ts's
        tokenize()) overrides it the moment highlighting succeeds, since a style attribute always
        beats an external rule at equal or lower specificity. */
-    background: var(--lr-color-surface);
+    background: var(--lr-code-block-bg, var(--lr-color-surface));
     font-family: var(--lr-code-block-font, var(--lr-font-mono));
     font-size: inherit;
     line-height: var(--lr-line-height-normal);

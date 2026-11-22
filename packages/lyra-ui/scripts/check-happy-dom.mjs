@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { Window } from 'happy-dom';
 
-const { installHappyDomShims } = await import('../dist/testing/index.js');
+const { installHappyDomShims, installHappyDomResponseBytesShim } = await import('../dist/testing/index.js');
 installHappyDomShims();
 assert.equal(typeof globalThis.ShadowRoot, 'undefined', 'plain Node gains no DOM globals');
 
@@ -108,6 +108,13 @@ try {
   assert.equal(getComputedStyle(directionCard).direction, 'rtl', 'HTML direction values are case-insensitive');
   directionCard.dir = 'ltr';
   assert.equal(getComputedStyle(directionCard).direction, 'ltr', 'a child direction hint overrides inherited direction');
+  // Node keeps its own global Response here, so exercise Happy DOM's directly: Shiki's inlined
+  // Oniguruma engine calls bytes() at import.
+  const HappyResponse = window.Response;
+  const removeBytes = installHappyDomResponseBytesShim(HappyResponse.prototype);
+  const bytes = await new HappyResponse('ok').bytes();
+  assert.ok(bytes instanceof Uint8Array && bytes.length === 2, 'Response.bytes() resolves the body as a Uint8Array');
+  removeBytes();
   await new Promise((resolve) => setTimeout(resolve, 0));
   assert.deepEqual(errors.map(String), [], 'no synchronous or deferred Happy DOM errors');
   console.log('check-happy-dom: public shims support live shadow stylesheet lists and marked token scopes.');

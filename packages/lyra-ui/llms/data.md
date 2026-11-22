@@ -239,18 +239,21 @@ and includes the unit in its name. Values without a label or unit remain plain t
 `[part="base"]`'s RESTING background — the tier a dashboard sits at all day, and the companion to
 the linked card's existing pressed `--lr-stat-link-active-bg` (whose own default now mixes from
 `--lr-stat-bg`, so one override retints both); `frame="plain"` still drops the fill entirely.
-`--lr-stat-padding` (default `var(--lr-space-m)`) and
+`--lr-stat-radius` (default `var(--lr-radius)`) sets the card's corner radius. `--lr-stat-padding` (default `var(--lr-space-m)`) and
 `--lr-stat-gap` (default `var(--lr-space-xs)`) control `[part="base"]`'s padding and gap in every
 rendering path — the default card, the compact density (`size="s"` and below; own defaults `var(--lr-space-s)` /
 `var(--lr-size-0-125rem)`), `frame="plain"` (own default `0` for padding), and the internal
 `.linked-content` wrapper used when `href` is set, so one override reaches a linked and an
-unlinked stat identically. `--lr-stat-trend-good-color` (default `var(--lr-color-success)`)
+unlinked stat identically; that gap is also the space between the caption, sub, spark and rows
+sections. `--lr-stat-rows-gap` (default `var(--lr-size-0-125rem)`) spaces the breakdown rows inside
+`[part="rows"]`. `--lr-stat-trend-good-color` (default `var(--lr-color-success)`)
 and `--lr-stat-trend-good-bg` (default `color-mix(in srgb, var(--lr-color-success) 8%,
 transparent)`) — text/background of `[part="trend"]` when its polarity (per `goodDirection`) is
 "good"; `--lr-stat-trend-bad-color` (default `var(--lr-color-danger)`) and `--lr-stat-trend-bad-bg`
 (default `color-mix(in srgb, var(--lr-color-danger) 8%, transparent)`) — the "bad"-polarity
 counterparts. All four are independent of the headline value's `variant="success"`/`"danger"` tint,
 so retinting the trend pill doesn't also recolor the value, and vice versa.
+`--lr-stat-value-color` (default `inherit`) colors a neutral headline value;
 `--lr-stat-value-brand-color` (default `var(--lr-color-brand)`),
 `--lr-stat-value-success-color` (default `var(--lr-color-success)`),
 `--lr-stat-value-warning-color` (default `var(--lr-color-warning)`), and
@@ -266,6 +269,9 @@ counterparts), and `--lr-stat-link-active-bg` (defaulting to the existing active
 are point-of-use fallbacks, so values inherit from a theme ancestor and a value on `lr-stat` wins.
 Typography follows the application type scale through `--lr-stat-value-font-size` (default
 `var(--lr-font-size-2xl)`), `--lr-stat-value-font-weight` (default `var(--lr-font-weight-bold)`),
+`--lr-stat-value-letter-spacing` (default `normal`), `--lr-stat-value-line-height` (default
+`inherit`), `--lr-stat-value-margin` (default `0`), `--lr-stat-value-row-align` (default `baseline`,
+the value row's `align-items`),
 `--lr-stat-label-font-size` (default `var(--lr-font-size-xs)`), `--lr-stat-label-font-weight`
 (default `var(--lr-font-weight-semibold)`), `--lr-stat-label-color` (default
 `var(--lr-color-text-quiet)`), `--lr-stat-label-letter-spacing` (default `var(--lr-size-0-04em)`),
@@ -274,7 +280,8 @@ Typography follows the application type scale through `--lr-stat-value-font-size
 `--lr-stat-caption-font-size` (default `var(--lr-font-size-sm)`) and `--lr-stat-caption-color`
 (default `var(--lr-color-text-quiet)`); `prose` keeps its own smaller value style. The `start` icon
 container becomes a chip through `--lr-stat-icon-size` (default `inherit`, its font size),
-`--lr-stat-icon-padding` (default `0`), `--lr-stat-icon-radius` (default `0`), `--lr-stat-icon-bg`
+`--lr-stat-icon-box-size` (default `auto`; the chip's inline and block size, padding included, with
+the glyph's line box centred in it), `--lr-stat-icon-padding` (default `0`), `--lr-stat-icon-radius` (default `0`), `--lr-stat-icon-bg`
 (default `transparent`) and `--lr-stat-icon-color` (default `var(--lr-color-text-quiet)`).
 
 **Optional peer deps:** none.
@@ -1190,7 +1197,7 @@ enabled — fired both from a row activation and from a `selectionMode` flip to 
 an existing multi-row selection down to one key (skipped on the very first render, since an
 already-inconsistent initial `selectionMode`/`selectedRowKeys` pairing is a starting state, not a
 live transition), `lr-filter-change`
-(frozen readonly `detail: { filterText }`), and `lr-page-change` (frozen readonly `detail: { page }`) from the
+(frozen readonly `detail: { filterText }`), and `lr-page-change` (frozen readonly `detail: { page, pageSize, offset }`) from the
 filter/pagination surfaces, and `lr-cell-edit` (`detail: { row, columnKey, value }`) for editable
 columns, and `lr-column-resize` (`detail: { columnKey, width }`, `width` in CSS pixels) on every pointer or
 keyboard resize step. These notifications are non-cancelable. A final pointer width or keyboard step
@@ -1279,7 +1286,22 @@ continue to determine row height. Cell content can always grow a row beyond the 
 `--lr-table-cell-link-hover-color` — an anchor returned from a column's `cell(row)` renders inside
 the component's shadow root, where page CSS cannot reach it and `::part()` cannot select past the
 first compound selector to reach it either, so without these it computes to the UA default link
-blue; set `revert` for the UA default. `--lr-table-cell-padding` (default `var(--lr-space-s)`) sets
+blue; set `revert` for the UA default. `--lr-table-cell-link-font-weight` (default `inherit`) and
+`--lr-table-cell-link-text-decoration` (default `revert`, the UA underline; `none` removes it) restyle
+that anchor at rest, and `--lr-table-cell-link-hover-font-weight` /
+`--lr-table-cell-link-hover-text-decoration` (each falling back to its resting twin) restyle it on hover,
+`:focus-visible` and press. The built-in `filterable` field takes `--lr-table-filter-height` (default
+`var(--lr-input-control-min-height, auto)`, so it lines up with `lr-input`) and
+`--lr-table-filter-font-size` (default `inherit`); `--lr-table-filter-wrap: wrap` with a
+`--lr-table-filter-basis` (for example `12rem`) stacks the field under its label text once the row is too
+narrow for both. The `caption` takes `--lr-table-caption-font-size`, `--lr-table-caption-font-weight`, `--lr-table-caption-color`,
+`--lr-table-caption-text-align` (default `revert`: the UA centring; `start` aligns with the first column) and `--lr-table-caption-padding`.
+`--lr-table-reveal-columns-min-size` (default `0`) sets the minimum inline and block size of the
+reveal-columns button for a larger touch target. `--lr-table-header-bg` fills header cells (the sorted header's `--lr-table-header-sorted-bg` still wins),
+`--lr-table-header-border-color` colours the rule under the header apart from the body rules
+(default `--lr-table-cell-border-color`), `--lr-table-group-bg` fills group cells, and
+`--lr-table-more-button-bg` / `--lr-table-reveal-columns-bg` set the resting fill of those two buttons
+(default none; hover and press keep their own fills). `--lr-table-cell-padding` (default `var(--lr-space-s)`) sets
 the padding of a header cell, a body cell, and the row-total cell; `--lr-table-cell-padding-compact`
 (default `var(--lr-space-xs) var(--lr-space-s)`) is the same hook for the group-header cell and the
 footer cell, which default to a tighter block/inline shorthand rather than sharing the first token
@@ -1476,6 +1498,24 @@ The pager revalidates the requested page after `lr-before-page-change` returns. 
     pager.offset = detail.offset;
   });
   ```
+
+  **Migrating a page-first pager to offset-first.** `lr-page-change.detail` is `{ page, pageSize, offset }`
+  on every path of `<lr-pagination>` (numbered buttons, previous/next/first/last, the compact page jump) and
+  of `<lr-table>`'s built-in pager; `lr-page-size-change` carries the same triple for a size change. `page`
+  is one-based and `offset = (page - 1) * pageSize`, so the conversion lives in the component:
+
+  ```js
+  // before: page-first, converting by hand
+  pager.addEventListener('lr-page-change', ({ detail }) => load({ page: detail.page, size: pager.pageSize }));
+  pager.page = state.page;
+  // after: offset-first, nothing to convert
+  pager.addEventListener('lr-page-change', ({ detail }) => load({ offset: detail.offset, limit: detail.pageSize }));
+  pager.pageSize = state.limit;
+  pager.offset = state.offset; // derives page = floor(offset / pageSize) + 1
+  ```
+
+  Drop the manual `(page - 1) * size` and `Math.floor(offset / size) + 1` conversions. `<lr-data-grid>` is
+  already offset-first with a zero-based `page`.
 - `total: number = 0` (attribute `total`) — total item count; finite values are truncated
   to a non-negative integer for display and page-count calculations, except for the exact sentinel
   `-1`, which enters indeterminate mode (see below) instead of clamping to the ordinary empty state.
@@ -2668,6 +2708,17 @@ weekdayLabelWidth?: number|'auto'; weekdayLabelText?: (jsWeekday:number)=>string
   label bands keep working instead of an outer container scrolling the whole component. Percentage
   trap: without `fill`, `--lr-heatmap-grid-max-block-size: 100%` resolves to `none`, because the
   base is auto-height; and `fill` itself needs a definite parent height, like any percentage.
+- `fitBlock: boolean = false` (attribute `fit-block`, reflected) — fits the heatmap within the
+  host's own `max-block-size` with no definite parent height: the heatmap takes its content height
+  up to that ceiling and, in matrix mode, the grid renders inside the `[part="grid"]` scrollport
+  (as under `fill`), which takes the block size the legend leaves and becomes the single scroller.
+  A short matrix stays as tall as its content; calendar mode is unchanged. Set the ceiling on the
+  element itself; a percentage ceiling only resolves against a definite parent. Without a ceiling
+  it changes nothing visible.
+
+  ```html
+  <lr-heatmap fit-block sticky-labels="cols" style="max-block-size: 24rem"></lr-heatmap>
+  ```
 - `scale: 'linear' | 'sqrt' = 'linear'` — governs both modes: in matrix mode, `'sqrt'` compresses the
   color ramp via `sqrtStep()` instead of mapping linearly; in calendar mode, the default `'linear'`
   still buckets by quartile (`quartileBucket()`, unchanged), while `'sqrt'` instead compresses via the
@@ -2970,7 +3021,10 @@ that real DOM element; set it to give a frozen column band vertical scrolling to
 The legend row reads `--lr-heatmap-legend-font-size` (default `var(--lr-font-size-xs)`),
 `--lr-heatmap-legend-color` (default `var(--lr-color-text-quiet)`), `--lr-heatmap-legend-gap`
 (default `var(--lr-space-xs)`), `--lr-heatmap-legend-padding` (default `0`),
-`--lr-heatmap-legend-bg` (default `transparent`), `--lr-heatmap-legend-radius` (default `0`) and
+`--lr-heatmap-legend-bg` (default `transparent`), `--lr-heatmap-legend-radius` (default `0`),
+`--lr-heatmap-legend-font-family` (default `inherit`), `--lr-heatmap-legend-divider` (border
+shorthand, default `none`; drawn on the legend edge facing the grid: its block start under the
+default bottom placement, its block end under `legendPlacement = 'top'`) and
 `--lr-heatmap-legend-swatch-size` (default `var(--lr-size-0-6rem)`, stop swatches and annotation
 rings); the continuous ramp reads `--lr-heatmap-legend-ramp-inline-size` (default
 `var(--lr-size-6rem)`), `--lr-heatmap-legend-ramp-block-size` (default `var(--lr-size-0-5rem)`)

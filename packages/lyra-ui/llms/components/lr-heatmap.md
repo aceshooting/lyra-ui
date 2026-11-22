@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 25 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 25 parts, 27 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
 ---
@@ -385,6 +385,17 @@ weekdayLabelWidth?: number|'auto'; weekdayLabelText?: (jsWeekday:number)=>string
   label bands keep working instead of an outer container scrolling the whole component. Percentage
   trap: without `fill`, `--lr-heatmap-grid-max-block-size: 100%` resolves to `none`, because the
   base is auto-height; and `fill` itself needs a definite parent height, like any percentage.
+- `fitBlock: boolean = false` (attribute `fit-block`, reflected) — fits the heatmap within the
+  host's own `max-block-size` with no definite parent height: the heatmap takes its content height
+  up to that ceiling and, in matrix mode, the grid renders inside the `[part="grid"]` scrollport
+  (as under `fill`), which takes the block size the legend leaves and becomes the single scroller.
+  A short matrix stays as tall as its content; calendar mode is unchanged. Set the ceiling on the
+  element itself; a percentage ceiling only resolves against a definite parent. Without a ceiling
+  it changes nothing visible.
+
+  ```html
+  <lr-heatmap fit-block sticky-labels="cols" style="max-block-size: 24rem"></lr-heatmap>
+  ```
 - `scale: 'linear' | 'sqrt' = 'linear'` — governs both modes: in matrix mode, `'sqrt'` compresses the
   color ramp via `sqrtStep()` instead of mapping linearly; in calendar mode, the default `'linear'`
   still buckets by quartile (`quartileBucket()`, unchanged), while `'sqrt'` instead compresses via the
@@ -687,7 +698,10 @@ that real DOM element; set it to give a frozen column band vertical scrolling to
 The legend row reads `--lr-heatmap-legend-font-size` (default `var(--lr-font-size-xs)`),
 `--lr-heatmap-legend-color` (default `var(--lr-color-text-quiet)`), `--lr-heatmap-legend-gap`
 (default `var(--lr-space-xs)`), `--lr-heatmap-legend-padding` (default `0`),
-`--lr-heatmap-legend-bg` (default `transparent`), `--lr-heatmap-legend-radius` (default `0`) and
+`--lr-heatmap-legend-bg` (default `transparent`), `--lr-heatmap-legend-radius` (default `0`),
+`--lr-heatmap-legend-font-family` (default `inherit`), `--lr-heatmap-legend-divider` (border
+shorthand, default `none`; drawn on the legend edge facing the grid: its block start under the
+default bottom placement, its block end under `legendPlacement = 'top'`) and
 `--lr-heatmap-legend-swatch-size` (default `var(--lr-size-0-6rem)`, stop swatches and annotation
 rings); the continuous ramp reads `--lr-heatmap-legend-ramp-inline-size` (default
 `var(--lr-size-6rem)`), `--lr-heatmap-legend-ramp-block-size` (default `var(--lr-size-0-5rem)`)

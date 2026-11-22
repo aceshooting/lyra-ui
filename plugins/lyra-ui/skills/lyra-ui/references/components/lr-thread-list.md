@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 46 parts, 37 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 46 parts, 40 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `search-input`: `--lr-thread-list-search-hover-border-color`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -391,7 +391,9 @@ resolves them to that tier's shared form-control height and font size.
 `--lr-thread-list-search-padding-block` (default `var(--lr-space-xs)`) and
 `--lr-thread-list-search-radius` (default `var(--lr-radius)`) are replaced by the tier's shared
 form-control values when `size` is set. `--lr-thread-list-search-clear-size` (default
-`var(--lr-icon-button-size)`) is the clear button's box; it never follows `size`, because that button is
+`var(--lr-icon-button-size)`) is the clear button's box; `--lr-thread-list-search-bg` (default
+`var(--lr-color-surface)`), `--lr-thread-list-search-border-color` (default `var(--lr-color-border)`)
+and `--lr-thread-list-search-color` (default `var(--lr-color-text)`) paint the search field; it never follows `size`, because that button is
 a tap target floored at `--lr-icon-button-size` rather than a text box, so only a larger value changes it. Every one of these wins over
 the tier, so a consumer can take a tier and then move one value.
 `--lr-thread-list-search-hover-border-color` (default `var(--lr-color-brand)`) is the hovered search

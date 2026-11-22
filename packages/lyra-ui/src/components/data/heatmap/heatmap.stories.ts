@@ -804,6 +804,23 @@ export const FillWithLegendOnTop: Story = {
   },
 };
 
+/** A tall matrix capped by its own max-block-size in an auto-height page, with a divided legend. */
+export const FitBlockWithDividedLegend: Story = {
+  render: () => {
+    const rowLabels = Array.from({ length: 60 }, (_value, index) => `Sensor ${index + 1}`);
+    const colLabels = Array.from({ length: 24 }, (_value, index) => `${index}h`);
+    const values = rowLabels.map((_row, r) => colLabels.map((_col, c) => (r * 5 + c * 2) % 11));
+    return html`<lr-heatmap
+      fit-block
+      sticky-labels="cols"
+      value-label="readings"
+      style="max-block-size: 20rem; --lr-heatmap-legend-divider: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+        --lr-heatmap-legend-padding: var(--lr-space-xs) 0 0; --lr-heatmap-legend-font-family: var(--lr-font-mono)"
+      .data=${{ kind: 'matrix', rowLabels, colLabels, values }}
+    ></lr-heatmap>`;
+  },
+};
+
 /** Day-by-hour picker: clicking a weekday or an hour label toggles that whole row or column. */
 export const AxisLabelSelection: Story = {
   render: () => {

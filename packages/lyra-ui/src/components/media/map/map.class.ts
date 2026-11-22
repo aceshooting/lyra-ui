@@ -101,6 +101,9 @@ const DRAW_MODE = literalSetConverter<LyraMapDrawingMode>(['none', 'line', 'poly
 /** What a completed drawing becomes: cleared (the default) or an edit session of the same shape. */
 export type LyraMapDrawingCompleteBehavior = 'clear' | 'edit';
 const DRAWING_COMPLETE_BEHAVIOR = literalSetConverter<LyraMapDrawingCompleteBehavior>(['clear', 'edit'], 'clear');
+/** What finishing an edit session does: `'clear'` commits and clears it, `'keep'` commits and keeps it open. */
+export type LyraMapDrawingFinishBehavior = 'clear' | 'keep';
+const DRAWING_FINISH_BEHAVIOR = literalSetConverter<LyraMapDrawingFinishBehavior>(['clear', 'keep'], 'clear');
 /** URL fragment form that `hash` reads and writes: a `key=` field, or the engine's unnamed token. */
 export type LyraMapHashFormat = 'named' | 'unnamed';
 const HASH_FORMAT = literalSetConverter<LyraMapHashFormat>(['named', 'unnamed'], 'named');
@@ -287,6 +290,9 @@ export type LyraMapLegendControlRole = 'button' | 'checkbox';
 
 /** Where the legend panel sits over the map: a logical corner, or centred on one logical edge. */
 export type LyraMapLegendPlacement = 'top' | 'bottom' | 'start' | 'end' | 'top-start' | 'top-end' | 'bottom-start' | 'bottom-end';
+/** Which native control corners the legend clears: the whole top and bottom rows, only its own column's corners, or none (placed from the map edge). */
+export type LyraMapLegendClearance = 'row' | 'corner' | 'none';
+const LEGEND_CLEARANCE = literalSetConverter<LyraMapLegendClearance>(['row', 'corner', 'none'], 'row');
 const LEGEND_PLACEMENT = literalSetConverter<LyraMapLegendPlacement>(['top', 'bottom', 'start', 'end', 'top-start', 'top-end', 'bottom-start', 'bottom-end'], 'bottom-start');
 
 const LEGEND_CONTROL_ROLE = literalSetConverter<LyraMapLegendControlRole>(
@@ -2129,6 +2135,12 @@ export interface LyraMapEventMap {
  * @csspart initialization-terrain - Decorative terrain control placeholder.
  * @csspart initialization-skeleton - Decorative map skeleton before construction.
  * @csspart initialization-activate-label - Visible activation prompt; hiding it preserves the button's localized accessible name.
+ * @cssprop [--lr-map-initialization-placeholder-bg=transparent] - Fill of `initialization-placeholder`
+ *   under its skeleton; pair it with `--lr-map-initialization-skeleton-display: none` for a plain surface.
+ * @cssprop [--lr-map-initialization-skeleton-display=inline-block] - Display of `initialization-skeleton`; `none` suppresses it.
+ * @cssprop [--lr-map-initialization-activate-label-display=inline] - Display of
+ *   `initialization-activate-label`; `none` hides the visible prompt while the covering
+ *   `initialization-activate` button keeps its localized accessible name.
  * @csspart initialization-controls - Decorative requested controls, also exposing controls. After construction it
  *   remains only while requested controls are pending, `aria-hidden`, inert and without pointer events.
  * @csspart initialization-corner - Decorative control corner, also exposing its controls-top-left, controls-top-right, controls-bottom-left or controls-bottom-right token.
@@ -2204,6 +2216,13 @@ export interface LyraMapEventMap {
  *   the attribution toggle (default pill) and initialization outlines (default `--lr-radius-button`).
  * @cssprop [--lr-map-control-border=var(--lr-border-width-thin) solid var(--lr-color-border)] -
  *   Border shorthand of native control groups and initialization outlines.
+ * @cssprop [--lr-map-control-group-radius=var(--lr-map-control-radius)] - Outer corner radius of a
+ *   native control group (zoom, compass, geolocate). Its first and last buttons keep these outer corners.
+ * @cssprop [--lr-map-control-group-border=var(--lr-map-control-border)] - Outer border shorthand of a native control group.
+ * @cssprop [--lr-map-control-button-radius=inherit] - Corner radius of the buttons inside a native
+ *   control group; `0` squares the inner corners of a grouped pill. Unset, every button follows the group radius.
+ * @cssprop [--lr-map-control-divider=var(--lr-border-width-thin) solid var(--lr-color-border)] -
+ *   Border shorthand of the divider between the buttons of a native control group; `none` removes it.
  * @cssprop [--lr-map-control-shadow=var(--lr-shadow)] - Shadow of native control groups; initialization outlines default to none.
  * @cssprop [--lr-map-control-bg=var(--lr-color-surface)] - Resting fill of control groups, the
  *   scale, attribution and initialization outlines, under the shared glass treatment.
@@ -2215,11 +2234,38 @@ export interface LyraMapEventMap {
  * @cssprop [--lr-map-control-gap=var(--lr-space-xs)] - Margin around each native control and initialization outline.
  * @cssprop [--lr-map-attribution-radius=var(--lr-radius)] - Corner radius of the attribution control.
  * @cssprop [--lr-map-attribution-border=none] - Border shorthand of the attribution control.
+ * @cssprop [--lr-map-attribution-padding=0 var(--lr-space-xs)] - Padding shorthand of the attribution control.
+ * @cssprop [--lr-map-attribution-link-padding=0] - Padding shorthand of each attribution link; its
+ *   `--lr-size-24px` minimum box stays.
+ * @cssprop [--lr-map-attribution-max-inline-size=100%] - Maximum inline size of the attribution
+ *   control, so long credits wrap sooner; never wider than the map less the control gaps.
+ * @cssprop [--lr-map-attribution-font-family=inherit] - Font family of the attribution text.
+ * @cssprop [--lr-map-attribution-font-size=var(--lr-font-size-xs)] - Font size of the attribution text.
+ * @cssprop [--lr-map-attribution-line-height=inherit] - Line height of the attribution text.
+ * @cssprop [--lr-map-attribution-toggle-size=var(--lr-map-control-size)] - Block and inline size of
+ *   the compact attribution toggle, and the room the compact control reserves for it. Unset, it
+ *   follows `--lr-map-control-size`, then `--lr-icon-button-size`.
+ * @cssprop [--lr-map-attribution-toggle-radius=var(--lr-map-control-radius)] - Corner radius of the
+ *   compact attribution toggle; unset, a pill.
+ * @cssprop [--lr-map-attribution-toggle-icon-size=var(--lr-size-1rem)] - Size of the toggle's information glyph.
  * @cssprop [--lr-map-controls-inset-block-start=0px] - Extra space kept free above the top
  *   control rows, for application chrome on that edge; the legend and the pick, drawing and scene bars clear it too.
  * @cssprop [--lr-map-controls-inset-block-end=0px] - The same reservation below the bottom control rows.
  * @cssprop [--lr-map-controls-inset-inline-start=0px] - The same reservation at the inline-start edge (the right under RTL).
  * @cssprop [--lr-map-controls-inset-inline-end=0px] - The same reservation at the inline-end edge.
+ *   `controlsAvoid` adds each observed overlap to these four, so they then act as the gap beyond it.
+ * @cssprop [--lr-map-controls-top-left-inset-block=0px] - Block offset of the top-left control
+ *   corner alone from the top edge, before and after construction. The left corners are the
+ *   inline-start corners, so under RTL this corner sits at the right. The row grows with it, so
+ *   the legend and the pick, drawing and scene bars still clear the corner.
+ * @cssprop [--lr-map-controls-top-left-inset-inline=0px] - Inline offset of the top-left corner
+ *   alone from its inline-start edge.
+ * @cssprop [--lr-map-controls-top-right-inset-block=0px] - Block offset of the top-right corner alone.
+ * @cssprop [--lr-map-controls-top-right-inset-inline=0px] - Inline offset of the top-right corner alone from its inline-end edge.
+ * @cssprop [--lr-map-controls-bottom-left-inset-block=0px] - Block offset of the bottom-left corner alone from the bottom edge.
+ * @cssprop [--lr-map-controls-bottom-left-inset-inline=0px] - Inline offset of the bottom-left corner alone.
+ * @cssprop [--lr-map-controls-bottom-right-inset-block=0px] - Block offset of the bottom-right corner alone.
+ * @cssprop [--lr-map-controls-bottom-right-inset-inline=0px] - Inline offset of the bottom-right corner alone.
  * @cssprop [--lr-map-marker-hover-halo-color=var(--lr-color-brand)] - Halo color of a hovered or
  *   pressed interactive marker.
  * @cssprop [--lr-map-drawing-fill-opacity=0.2] - Temporary polygon fill opacity, from zero to one.
@@ -2292,9 +2338,12 @@ export interface LyraMapEventMap {
  * @csspart anchor - The positioned wrapper of the `anchor` slot: a column holding `anchor-body`
  *   and, when `anchorClosable`, `anchor-close`, which stays visible while the body scrolls.
  * @csspart anchor-body - The scrolling wrapper of the slotted anchor content (`min-block-size: 0`),
- *   so a card with a fixed header and long details scrolls inside the panel.
+ *   so a card with a fixed header and long details scrolls inside the panel. Under `anchorFill` it
+ *   does not scroll and shrinks the slotted content to the panel instead.
  * @cssprop [--lr-map-anchor-close-reservation=0px] - Inline-end padding of `anchor-body`, reserving
  *   room for an `anchor-close` button moved to the header corner through `::part(anchor-close)`.
+ *   Under `anchorFill` the body takes none; slotted content inherits the token, so a card header
+ *   can pad only itself with it.
  *   Logical, so it pads the left edge under RTL. For rich cards prefer `lr-map-anchor`, whose close
  *   button already owns its own column.
  * @slot anchors - `lr-map-anchor` children: independently opened and closed panels anchored to
@@ -2358,6 +2407,14 @@ export interface LyraMapEventMap {
  * @csspart compass-icon - Decorative native compass span; native bearing transforms remain on this node.
  * @csspart scale - Standard peer ScaleControl bar. Units and updates remain owned by MapLibre.
  * @cssprop [--lr-map-scale-bar-display=block] - Display of the decorative scale ruler; set to none for a text-only scale.
+ * @cssprop [--lr-map-scale-bg=var(--lr-map-control-bg)] - Resting fill of the scale, under the shared glass treatment.
+ * @cssprop [--lr-map-scale-radius=0] - Corner radius of the scale; a large value gives a pill.
+ * @cssprop [--lr-map-scale-border=none] - Border shorthand of the scale.
+ * @cssprop [--lr-map-scale-padding-block=var(--lr-space-2xs)] - Block padding of the scale; the
+ *   block end adds the ruler's own height to it.
+ * @cssprop [--lr-map-scale-padding-inline=var(--lr-space-xs)] - Inline padding of the scale.
+ * @cssprop [--lr-map-scale-font-size=var(--lr-font-size-xs)] - Font size of the scale label.
+ * @cssprop [--lr-map-scale-color=var(--lr-color-text)] - Text and ruler color of the scale.
  * @csspart error - Visible localized message shown instead of `container` when `mapStyle` is
  *   missing, the optional peer is unavailable, WebGL2 cannot be created, or map initialization
  *   fails; the transition is announced through the shared light-DOM assertive region.
@@ -2369,7 +2426,8 @@ export interface LyraMapEventMap {
  * @cssprop [--lr-map-hidden-category-opacity=0.15] - Opacity a hidden category's points, point
  *   strokes and point icons are muted to in the rendered MapLibre paint. Read from the resolved
  *   cascade on every paint, because MapLibre draws to a WebGL canvas the CSS cascade never reaches.
- * @cssprop [--lr-map-legend-inset-block=var(--lr-space-s)] - Block offset of the legend panel from the control rows.
+ * @cssprop [--lr-map-legend-inset-block=var(--lr-space-s)] - Block offset of the legend panel from the
+ *   control rows, or from the map edge under `legendClearance = 'none'`.
  * @cssprop [--lr-map-legend-inset-inline=var(--lr-space-s)] - Inline offset of the legend panel from the map edge.
  * @cssprop [--lr-map-legend-max-inline-size] - Maximum inline size of the legend panel; defaults to the space between the inline insets.
  * @cssprop [--lr-map-legend-max-block-size] - Maximum block size of the legend panel; defaults to
@@ -2377,7 +2435,16 @@ export interface LyraMapEventMap {
  * @cssprop [--lr-map-legend-columns=1] - Number of equal columns the legend rows flow into.
  * @cssprop [--lr-map-legend-font-size=var(--lr-font-size-xs)] - Legend text size.
  * @cssprop [--lr-map-legend-gap=var(--lr-space-xs)] - Gap between legend sections, rows and stacked slotted cards.
+ * @cssprop [--lr-map-legend-row-gap=var(--lr-map-legend-gap)] - Gap between the rows of one legend
+ *   list or section only; headings, sections and slotted cards keep `--lr-map-legend-gap`.
+ * @cssprop [--lr-map-legend-group-columns=1] - Number of equal columns the rows of one legend group flow into.
  * @cssprop [--lr-map-legend-padding=var(--lr-space-xs) var(--lr-space-s)] - Padding of the legend panel.
+ * @cssprop [--lr-map-legend-border=var(--lr-border-width-thin) solid var(--lr-color-border-subtle)] -
+ *   Border shorthand of the legend panel; `none` removes it.
+ * @cssprop [--lr-map-legend-toggle-padding=var(--lr-size-2px) var(--lr-space-xs)] - Padding of an
+ *   interactive `legend-toggle` row. Its minimum box stays the `--lr-icon-button-size` hit area.
+ * @cssprop [--lr-map-legend-disclosure-padding=var(--lr-size-2px) var(--lr-space-xs)] - Padding of
+ *   the `legend-disclosure` button. Its minimum box stays the `--lr-icon-button-size` hit area.
  * @cssprop [--lr-map-legend-radius=var(--lr-radius)] - Corner radius of the legend panel.
  * @cssprop [--lr-map-legend-bg=var(--lr-color-surface)] - Fill of the legend panel.
  * @cssprop [--lr-map-legend-shadow=var(--lr-shadow-m)] - Shadow of the legend panel.
@@ -3298,6 +3365,27 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * `lr-map-anchor` child without its own `safeArea`. Property only; the array is not retained
    * beyond its elements, and removing them or disconnecting the map stops every observer. */
   @property({ attribute: false }) anchorAvoid?: readonly Element[];
+  /** Extra CSS pixels kept free beyond each `anchorAvoid` obstacle, so an anchor never sits flush
+   * against the chrome it avoids. Added only to the edges an obstacle actually reserves; a free
+   * edge stays zero. Nonnegative and finite; anything else is `0`. Default `0`. Set from the
+   * `anchor-avoid-gap` attribute. */
+  @property({ converter: blankNumberConverter(0), attribute: 'anchor-avoid-gap' }) anchorAvoidGap = 0;
+  /** Application chrome the native and initialization control corners keep clear of, instead of a
+   * hand-measured `--lr-map-controls-inset-*`: a floating search card, a side sheet, a toolbar
+   * overlaid on the map. Measured like `anchorAvoid` (each element's size, page scrolling and the
+   * visual viewport, once per animation frame): each element's overlap with the map is reserved on
+   * its cheapest logical edge and added to that edge's `--lr-map-controls-inset-*`, so every
+   * corner stack, the legend and the pick, drawing and scene bars clear it, and the authored inset
+   * then works as the gap beyond it. Property only; the array is not retained beyond its elements,
+   * and removing them or disconnecting the map stops every observer. */
+  @property({ attribute: false }) controlsAvoid?: readonly Element[];
+  private controlsAvoidance?: MapAnchorAvoidance;
+  private syncControlsAvoidance(): void {
+    if (!this.controlsAvoid?.length && !this.controlsAvoidance) return;
+    this.controlsAvoidance ??= new MapAnchorAvoidance({ element: this, direction: () => this.effectiveDirection, changed: () => { this.applyControlsAvoid(); } });
+    this.controlsAvoidance.observe(this.isConnected ? this.controlsAvoid : undefined);
+    this.applyControlsAvoid();
+  }
   private anchorAvoidance?: MapAnchorAvoidance;
   private mergedSafeArea?: { readonly authored: LyraMapAnchorSafeArea | undefined; readonly avoid: LyraMapAnchorSafeArea | undefined; readonly value: LyraMapAnchorSafeArea | undefined };
   /** `anchorSafeArea` with the observed `anchorAvoid` overlap folded in; stable while neither changes. */
@@ -3310,11 +3398,16 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
   private syncAnchorAvoidance(): void {
     if (!this.anchorAvoid?.length && !this.anchorAvoidance) return;
-    this.anchorAvoidance ??= new MapAnchorAvoidance({ element: this, direction: () => this.effectiveDirection, changed: () => { this.scheduleAnchorSync(); } });
+    this.anchorAvoidance ??= new MapAnchorAvoidance({ element: this, direction: () => this.effectiveDirection, changed: () => { this.scheduleAnchorSync(); }, gap: () => Math.max(0, finiteNumber(this.anchorAvoidGap, 0)) });
     this.anchorAvoidance.observe(this.isConnected ? this.anchorAvoid : undefined);
   }
   /** Adds a localized close action and nonmodal Escape ownership. Opening never moves focus. */
   @property({ type: Boolean, attribute: 'anchor-closable' }) anchorClosable = false;
+  /** Stops `anchor-body` scrolling: it becomes a column that shrinks the slotted content to the
+   * panel, so a card with a fixed header can scroll its own details region with no wrapper. The
+   * body then reserves no close room; the card's header reads `--lr-map-anchor-close-reservation`
+   * itself. Default `false`. Reflects as the `anchor-fill` attribute. */
+  @property({ type: Boolean, attribute: 'anchor-fill', reflect: true }) anchorFill = false;
   /** Defers native construction until visible (default), browser idle time (`idle`), immediate
    * admission (`eager`), or the first user input on the element (`interaction`): a pointer press,
    * touch, wheel, key press or click anywhere on it. Until then an `interaction` map shows its
@@ -3621,6 +3714,32 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.requestUpdate('legendPlacement', old);
   }
   private _legendPlacement: LyraMapLegendPlacement = 'bottom-start';
+
+  /**
+   * Which native control corners the legend panel clears. `'row'` (the default) lifts it above
+   * the tallest corner of the top and bottom control rows, whichever corner that is. `'corner'`
+   * clears only the corners in the panel's own logical column: a `bottom-start` legend sits just
+   * above the bottom-start controls even when a tall zoom and geolocate column fills the
+   * bottom-end corner. The centred `top` and `bottom` placements always clear the whole row. Keep
+   * a `'corner'` legend narrow enough (`--lr-map-legend-max-inline-size`) not to reach the other
+   * column. `'none'` reserves nothing for the controls: `--lr-map-legend-inset-block` and
+   * `--lr-map-legend-inset-inline` then measure from the map edge alone (no control rows, no
+   * `--lr-map-controls-inset-*`), for a legend in an application-owned footer lane; it may then
+   * overlap native controls. Unsupported values normalize to `'row'`. Reflects as the
+   * `legend-clearance` attribute.
+   */
+  @property({ converter: LEGEND_CLEARANCE, attribute: 'legend-clearance', reflect: true })
+  get legendClearance(): LyraMapLegendClearance {
+    return this._legendClearance;
+  }
+  set legendClearance(next: LyraMapLegendClearance) {
+    const normalized = LEGEND_CLEARANCE.normalizeReflected(this, 'legend-clearance', next);
+    const old = this._legendClearance;
+    if (old === normalized) return;
+    this._legendClearance = normalized;
+    this.requestUpdate('legendClearance', old);
+  }
+  private _legendClearance: LyraMapLegendClearance = 'row';
 
   /**
    * Whether a `legendCollapsible` panel is expanded. Defaults **open**, so adding only
@@ -4195,10 +4314,31 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.requestUpdate('drawingCompleteBehavior', old);
   }
   private _drawingCompleteBehavior: LyraMapDrawingCompleteBehavior = 'clear';
+  /** What finishing an edit session (Finish, `completeDrawing()`) does after its
+   * `lr-map-draw-complete`. `'clear'` (default) commits and clears the edit, and a sticky mode
+   * re-arms. `'keep'` commits and keeps the edit open on the map, so the committed shape stays
+   * visible and editable and every later Finish commits again; cancel, Escape or
+   * `cancelDrawing()` ends it, and only then does a `drawingSticky` mode re-arm. Applies to edits
+   * opened by `drawingCompleteBehavior = 'edit'` and by `editDrawing()`. Unsupported values
+   * normalize to `'clear'`. Reflects as the `drawing-finish-behavior` attribute. */
+  @property({ attribute: 'drawing-finish-behavior', converter: DRAWING_FINISH_BEHAVIOR, reflect: true })
+  get drawingFinishBehavior(): LyraMapDrawingFinishBehavior {
+    return this._drawingFinishBehavior;
+  }
+  set drawingFinishBehavior(next: LyraMapDrawingFinishBehavior) {
+    const normalized = DRAWING_FINISH_BEHAVIOR.normalizeReflected(this, 'drawing-finish-behavior', next);
+    const old = this._drawingFinishBehavior;
+    if (old === normalized) return;
+    this._drawingFinishBehavior = normalized;
+    this.requestUpdate('drawingFinishBehavior', old);
+  }
+  private _drawingFinishBehavior: LyraMapDrawingFinishBehavior = 'clear';
   /** Keeps `drawMode` armed after a drawing completes or is cancelled by the user (cancel action,
    * Escape or `cancelDrawing()`), so the next shape can start at once. With
-   * `drawingCompleteBehavior = 'edit'`, the mode re-arms when that edit is finished or cancelled.
-   * Pick mode, disabling, a mode change or a style failure still disarm. Default `false`. */
+   * `drawingCompleteBehavior = 'edit'`, the mode re-arms when that edit is finished or cancelled
+   * (with `drawingFinishBehavior = 'keep'`, only once it is cancelled). Clearing it while that edit
+   * is open means the edit's end no longer re-arms. Pick mode, disabling, a mode change or a style
+   * failure still disarm. Default `false`. */
   @property({ type: Boolean, attribute: 'drawing-sticky', reflect: true }) drawingSticky = false;
   @state() private drawingIssue?: MapDrawingError;
   /** Bumped whenever a rendered value owned by the drawing controller changes. */
@@ -5640,6 +5780,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const generation = ++this._connectGeneration;
     this.observeMapInteractionState();
     this.syncAnchorAvoidance();
+    this.syncControlsAvoidance();
     this.unregisterCameraSession?.();
     this.unregisterCameraSession = registerMapCameraSession(this, { acquire: callbacks => this.acquireCameraSession(callbacks) });
     this.unregisterCustomLayers?.();
@@ -5746,6 +5887,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   /** A genuine disconnect's teardown; a same-task DOM move cancels it. */
   private releaseConnection(): void {
     this.anchorAvoidance?.disconnect();
+    this.controlsAvoidance?.disconnect();
     for (const announcer of this.drawingProgressAnnouncers) announcer.cancel();
     this.drawingProgressState = [undefined, undefined];
     this.releaseCanvasAllocation();
@@ -6435,7 +6577,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (this._map && (this.anchorSyncRequested || ['anchorLngLat', 'anchorBoundary', 'anchorSafeArea', 'anchorClosable', 'dir', 'strings', 'lang', 'locale'].some(name => changed.has(name)))) { this.anchorSyncRequested = false; this.syncAnchor(); }
     if (changed.has('markers') && this._map) this.applyMarkers();
     if (changed.has('anchorAvoid')) this.syncAnchorAvoidance();
-    else if (changed.has('dir') && this.anchorAvoidance) this.anchorAvoidance.refresh();
+    else if ((changed.has('dir') || changed.has('anchorAvoidGap')) && this.anchorAvoidance) this.anchorAvoidance.refresh();
+    if (changed.has('controlsAvoid')) this.syncControlsAvoidance();
+    else if (changed.has('dir') && this.controlsAvoidance) this.controlsAvoidance.refresh();
     if (this.semanticsStale) {
       this.semanticsStale = false;
       this.syncMapSemantics(this.markerSemanticsStale);
@@ -8986,7 +9130,31 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       const name = `--_lr-map-controls-${edge}`;
       const value = `${height}px`;
       if (base && base.style.getPropertyValue(name) !== value) base.style.setProperty(name, value);
+      // Per corner as well, for legendClearance = 'corner'. Both corners of a row stretch to the
+      // taller one, so a corner's own extent is the margin-box span of its rendered controls.
+      for (const side of ['left', 'right']) {
+        const corner = container.querySelector<HTMLElement>(`.maplibregl-ctrl-${edge}-${side}`);
+        const cornerName = `--_lr-map-controls-${edge}-${side}`, cornerValue = `${corner ? this.cornerContentHeight(corner) : 0}px`;
+        if (base && base.style.getPropertyValue(cornerName) !== cornerValue) base.style.setProperty(cornerName, cornerValue);
+      }
     }
+  }
+
+  /** The layout-pixel span of a control corner's rendered children, margins included. Its own
+   * inset padding is left out; the legend's corner clearance adds that token in CSS, because a
+   * padding change on a stretched corner resizes nothing an observer could see. */
+  private cornerContentHeight(corner: HTMLElement): number {
+    const view = corner.ownerDocument.defaultView;
+    let start = Infinity, end = -Infinity;
+    for (const node of corner.children) {
+      // offsetParent also skips undisplayed controls; an SVG child has none. Realm-safe, unlike instanceof.
+      const child = node as HTMLElement;
+      if (!view || child.offsetParent !== corner) continue;
+      const style = view.getComputedStyle(child);
+      start = Math.min(start, child.offsetTop - (Number.parseFloat(style.marginTop) || 0));
+      end = Math.max(end, child.offsetTop + child.offsetHeight + (Number.parseFloat(style.marginBottom) || 0));
+    }
+    return end > start ? Math.round(end - start) : 0;
   }
 
   /** Projects stable Lyra parts onto peer-owned nodes without erasing existing part tokens. */
@@ -9078,9 +9246,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (ResizeObserverCtor) {
       const observer = new ResizeObserverCtor(() => this.schedulePeerControlInsets(observer, container));
       this.peerControlsResizeObserver = observer;
+      // The border box, so a corner inset token that only changes padding is measured too.
       for (const corner of container.querySelectorAll<HTMLElement>(
         '.maplibregl-ctrl-top-left, .maplibregl-ctrl-top-right, .maplibregl-ctrl-bottom-left, .maplibregl-ctrl-bottom-right',
-      )) this.peerControlsResizeObserver.observe(corner);
+      )) this.peerControlsResizeObserver.observe(corner, { box: 'border-box' });
     }
     this.measurePeerControlInsets(container);
     const observer = new MutationObserverCtor((records) => {
@@ -9454,6 +9623,20 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     </div>`;
   }
 
+  /** Writes the observed `controlsAvoid` overlap onto `[part="base"]` as private inset edges that
+   * fold the authored `--lr-map-controls-inset-*` in; a free edge is removed, so the public token
+   * alone applies exactly as before. Re-run after the first render. */
+  private applyControlsAvoid(): void {
+    const base = this.shadowRoot?.querySelector<HTMLElement>('[part="base"]');
+    if (!base) return;
+    const area = this.controlsAvoidance?.area;
+    for (const [key, edge] of [['blockStart', 'block-start'], ['blockEnd', 'block-end'], ['inlineStart', 'inline-start'], ['inlineEnd', 'inline-end']] as const) {
+      const name = `--_lr-map-controls-inset-${edge}`, value = area?.[key];
+      if (value) base.style.setProperty(name, `calc(var(--lr-map-controls-inset-${edge}, 0px) + ${value}px)`);
+      else base.style.removeProperty(name);
+    }
+  }
+
   override render(): TemplateResult {
     const drawing = this.drawingController;
     const placeholder = !this.failure && !this.loading && !this._map;
@@ -9556,6 +9739,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
               aria-controls=${this.failure || this.loading ? nothing : 'map-container'}
               data-truncated=${String(this.legendProjection.truncated)}
               data-placement=${this.legendPlacement}
+              data-clearance=${this.legendClearance}
             >
               <slot name="legend-start" @slotchange=${this.onLegendSlotChange}></slot>
               <div class="glass-scroll-layer" aria-hidden="true"></div>

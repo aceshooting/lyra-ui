@@ -8,6 +8,25 @@
 /** Chart.js dataset key carrying a band's lower bounds, aligned with the dataset's `data`. */
 export const CHART_BAND_LOWER_KEY = 'lyraBandLower';
 
+/** Chart.js dataset key carrying one band's own fill alpha (0-1), when its series sets `bandOpacity`. */
+export const CHART_BAND_OPACITY_KEY = 'lyraBandOpacity';
+
+/** An admitted 0-1 alpha, or `undefined` to follow `--lr-chart-band-opacity`. */
+function ownOpacity(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : undefined;
+}
+
+/** A Chart.js band dataset's own alpha, from its private key. */
+function bandOwnOpacity(dataset: object): number | undefined {
+  return ownOpacity((dataset as Record<string, unknown>)[CHART_BAND_OPACITY_KEY]);
+}
+
+/** Inline declaration giving a band's legend swatch its series' own `bandOpacity`, or `''` for the shared token. */
+export function chartBandSwatchOpacity(bandOpacity: unknown): string {
+  const own = ownOpacity(bandOpacity);
+  return own === undefined ? '' : `;--_lr-chart-swatch-opacity:${own}`;
+}
+
 /** Default `--lr-chart-band-opacity`. */
 const DEFAULT_CHART_BAND_OPACITY = 0.2;
 
@@ -100,7 +119,7 @@ export function drawChartBands(chart: BandChart, opacity: () => number): void {
       ctx.rect(area.left, area.top, area.right - area.left, area.bottom - area.top);
       ctx.clip();
     }
-    ctx.globalAlpha = alpha ??= opacity();
+    ctx.globalAlpha = bandOwnOpacity(dataset) ?? (alpha ??= opacity());
     ctx.fillStyle = (fill ?? 'transparent') as string | CanvasPattern;
     for (const points of runs) {
       ctx.beginPath();

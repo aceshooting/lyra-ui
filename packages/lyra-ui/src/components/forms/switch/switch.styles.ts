@@ -208,6 +208,7 @@ export const styles = css`
      to today, where the label never varies by checked state at all. */
   :host(:state(checked)) [part="label"] {
     color: var(--lr-switch-checked-label-color, var(--lr-switch-label-color, var(--lr-color-text)));
+    font-weight: var(--lr-switch-checked-label-font-weight, inherit);
   }
 
   ${formControlSupportingText}

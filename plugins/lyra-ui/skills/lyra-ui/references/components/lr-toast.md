@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 1 part, 10 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 1 part, 12 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-toast-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -69,6 +69,11 @@ promise/result contract.
 
 **Themeable custom properties:** `--lr-toast-gap` (default `var(--lr-space-s)`),
 `--lr-toast-width` (default `var(--lr-size-28rem)`) — set directly on the `<lr-toast>` element.
+`--lr-toast-inset-block` and `--lr-toast-inset-inline` (both default `var(--lr-space-l)`) set the
+region's distance from the viewport's block (top/bottom) and inline (start/end) edges; the
+`--lr-safe-area-*` insets still win wherever they are larger. Each placement is its own region
+element, so scope either token to one region with a placement selector, for example
+`lr-toast[placement^='bottom'] { --lr-toast-inset-block: var(--lr-space-m); }`.
 The mapped `--gap` and `--width` names are compatibility aliases for those two Lyra-prefixed
 properties; an explicitly set Lyra-prefixed property continues to take precedence.
 Every `<lr-toast-item>` property below is also documented on the region, because custom properties

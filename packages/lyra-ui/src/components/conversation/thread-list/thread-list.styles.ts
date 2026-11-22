@@ -66,6 +66,10 @@ export const styles = css`
       var(--_lr-thread-list-search-padding-block)
     );
     ${nativeControlSurface}
+    /* After the shared surface, so each falls back to exactly the value it sets. */
+    border-color: var(--lr-thread-list-search-border-color, var(--lr-color-border));
+    background: var(--lr-thread-list-search-bg, var(--lr-color-surface));
+    color: var(--lr-thread-list-search-color, var(--lr-color-text));
     border-radius: var(
       --lr-thread-list-search-radius,
       var(--_lr-thread-list-search-radius)

@@ -136,6 +136,13 @@ canvas capability becomes available.
     length that sizes each point independently — passed straight through to Chart.js, which
     supports both natively. Useful for emphasizing a single outlier or the latest reading without
     splitting the series in two.
+  - `dash` dashes a line-type series' stroke: `true` draws the default `[4, 4]` dash, and an
+    array is a custom canvas `setLineDash()` pattern in CSS pixels (`[8, 3, 2, 3]` for dash-dot,
+    `[1, 3]` for dots), copied on admission. An empty array draws solid; an array with a negative
+    or non-finite entry, or with more than 16 entries, falls back to the default dash. An authored
+    dash wins over the forced-colors dash cycle. Every Chart.js-backed line or area chart
+    (`lr-chart`, `lr-line-chart`, a mixed-type line series) honors it; `lr-lite-chart` series have
+    no dash option.
   - `segmentColors` colors each *segment* (the line drawn between two consecutive points) by the
     segment's **starting** point index, so `['red', 'green']` over 3 points paints the first
     segment red and the second green; a shorter array cycles. When rows are sampled, each
@@ -147,7 +154,8 @@ canvas capability becomes available.
   - `type: 'band'` with `lower` and `upper` (one bound per category) draws a filled range — a
     confidence interval, a p10–p90 envelope or a min/max range — beneath every line on `line` and
     `bar` charts; `data` is ignored. The fill is the series color at `--lr-chart-band-opacity`
-    (default `0.2`), the value scale widens to the lower bounds unless `min`/`max` are configured,
+    (default `0.2`), or at the band's own `bandOpacity` (0-1, clamped; a non-finite value is
+    ignored, and other series types ignore it), which also sets that band's legend swatch. The value scale widens to the lower bounds unless `min`/`max` are configured,
     and a band never stacks. Mismatched `lower`/`upper` lengths clamp to the shorter one with a
     development warning; a row missing either bound is a gap, and reversed bounds are reordered.
     The tooltip, generated table cell and keyboard announcement read the localized
@@ -164,7 +172,9 @@ canvas capability becomes available.
       chart.labels = ['Mon', 'Tue', 'Wed', 'Thu'];
       chart.datasets = [
         { label: 'p10–p90', type: 'band', lower: [8, 9, 11, 10], upper: [14, 16, 18, 17] },
+        { label: 'p25–p75', type: 'band', lower: [10, 11, 13, 12], upper: [12, 14, 16, 15], bandOpacity: 0.35 },
         { label: 'Median', data: [11, 12, 14, 13] },
+        { label: 'Target', data: [12, 12, 12, 12], dash: [8, 3, 2, 3] },
       ];
     </script>
     ```

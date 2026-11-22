@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 8 parts, 24 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 8 parts, 25 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-accordion`, `lr-accordion-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -341,7 +341,8 @@ Details surface paint uses `--lr-details-outlined-bg` / `--lr-details-outlined-b
 respectively the existing surface/border, brand-quiet/transparent, and brand-quiet/border values.
 Summary interaction paint uses `--lr-details-summary-hover-bg` (default
 `var(--lr-color-brand-quiet)`) and `--lr-details-summary-active-bg` (default the existing active
-`color-mix(...)`). All eight are inheritable inline-fallback hooks, so they isolate one disclosure
+`color-mix(...)`); `--lr-details-summary-hover-color` (default `var(--lr-details-summary-color)`)
+recolors the summary text while hovered or pressed. All eight are inheritable inline-fallback hooks, so they isolate one disclosure
 theme without requiring shared-token changes or shadow-part selectors.
 
 ```html

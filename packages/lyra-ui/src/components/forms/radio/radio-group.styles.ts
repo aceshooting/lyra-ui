@@ -1,4 +1,5 @@
 import { css } from 'lit';
+import { formControlLabelPlacement } from '../../../internal/form-control/chrome.styles.js';
 import { formControlLabelDisplay, formControlLabelTypography, formControlRequiredMarker, formControlSupportingTone } from '../../../internal/form-control.styles.js';
 
 export const groupStyles = css`
@@ -39,6 +40,23 @@ export const groupStyles = css`
     align-items: center;
   }
   ${formControlSupportingTone}
+  ${formControlLabelPlacement}
+  /* label-placement="start": the toolbar leaves the label row and follows the options. */
+  :host([label-placement='start']) [part='toolbar'] {
+    order: 1;
+    flex: 0 0 100%;
+    box-sizing: border-box;
+  }
+  :host([label-placement='start']) [part='form-control'] > :is([part~='hint'], [part='error']) { order: 2; }
+  :host([label-placement='start']:not([label-display='hidden']))
+    [part='form-control']:has(> [part~='label']:not([hidden]))
+    > [part='toolbar'] {
+    padding-inline-start: clamp(
+      0px,
+      (100% - var(--_lr-label-collapse)) * 9999,
+      var(--_lr-label-column) + var(--_lr-label-gap)
+    );
+  }
   :host(:state(user-invalid)) [part~="radios"] {
     outline: var(--lr-border-width-thin) solid
       var(--lr-radio-group-invalid-border-color, var(--lr-form-control-invalid-border-color, var(--lr-color-danger)));

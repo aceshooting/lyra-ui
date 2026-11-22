@@ -319,6 +319,9 @@ const THREADS_AND_SLOTTED_CONTENT_WARNING =
  *   field. A `size` tier replaces the default with that tier's shared form-control block gutter.
  * @cssprop [--lr-thread-list-search-radius=var(--lr-radius)] - Corner radius of the search field. A
  *   `size` tier replaces the default with that tier's shared form-control radius.
+ * @cssprop [--lr-thread-list-search-bg=var(--lr-color-surface)] - Fill of the search field.
+ * @cssprop [--lr-thread-list-search-border-color=var(--lr-color-border)] - Border color of the search field.
+ * @cssprop [--lr-thread-list-search-color=var(--lr-color-text)] - Text color of the search field.
  * @cssprop [--lr-thread-list-search-clear-size=var(--lr-icon-button-size)] - Box size of the search
  *   field's clear button. Deliberately not tiered by `size`: it is a tap target floored at
  *   `--lr-icon-button-size`, not a text box, so only a larger value changes it.

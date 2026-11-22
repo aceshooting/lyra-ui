@@ -47,6 +47,12 @@ An existing platform collection is never replaced, and plain Node remains unchan
 `Element.part` (Happy DOM), rendering does not throw, and highlighted lines keep their
 `line-highlight` part wherever CSS parts exist. `installHappyDomShims()` does not install one.
 
+`installHappyDomShims()` also calls `installHappyDomResponseBytesShim()`, which adds
+`Response.prototype.bytes()` (read through `arrayBuffer()`) where Happy DOM 21 lacks it. Shiki's
+inlined Oniguruma engine, which `lr-code-block` loads on demand, calls `bytes()` as it imports, so
+without it each highlighter load leaves an unhandled rejection. It is a no-op where `bytes()`
+exists, takes an optional prototype, and returns a function that removes the method again.
+
 When Happy DOM lacks the HTML `dir="ltr"`/`dir="rtl"` presentational hints,
 `installHappyDomShims()` adds zero-specificity direction rules to the document head. This restores
 computed direction and inherited component direction while preserving explicit author CSS.

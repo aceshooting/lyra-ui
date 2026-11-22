@@ -1499,7 +1499,12 @@ current page and
 `zoom: number = 1` is clamped to `0.25`–`4`. `maxHeight: string = ''` (attribute `max-height`) is a
 CSS length that, once set, overrides `--lr-pdf-viewer-height` — the block size of the virtualized
 page list — declaratively, writing it inline on `[part="base"]`; invalid CSS `max-height` values,
-declaration breaks, and `url()` are ignored. `workerSrc: string = ''` (attribute `worker-src`) is the
+declaration breaks, and `url()` are ignored. `fill: boolean = false` (reflected) fills a parent with
+a definite block size, such as a dialog body or a sized flex column: the host takes
+`block-size: 100%`, the toolbar keeps its row, and the page list takes the rest and becomes the
+single scroller, replacing the fixed `--lr-pdf-viewer-height` / `max-height` size while set.
+Against an auto-height parent `100%` resolves to `auto`, so give the parent a height.
+`workerSrc: string = ''` (attribute `worker-src`) is the
 URL of the PDF.js web worker chunk — see **Configuring the PDF.js worker** below.
 `anchorKinds: readonly LyraAnchorKind[] = ['page',
 'text-quote', 'region']` (this viewer's supported `LyraAnchor.kind` values for the shared
