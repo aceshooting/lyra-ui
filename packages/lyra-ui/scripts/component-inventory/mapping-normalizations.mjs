@@ -1144,6 +1144,10 @@ const REVIEWED_TYPE_EQUIVALENCE_GROUPS = new Map([
       // An unset `nonce` reads `undefined` on both; the DOM typings declare HTMLElement#nonce as
       // `string`, so the override cannot spell the `undefined` half.
       ['attribute', ['nonce'], 'string | undefined', 'string'],
+      // lr-page keeps the 32.0.0-published `disable-sticky` attribute record (a whitespace
+      // token list typed `string`). A null write through `disableSticky` removes the attribute,
+      // so the attribute itself is only ever a string or absent.
+      ['attribute', ['disable-sticky'], 'undefined | null | string', 'string'],
     ],
   ],
   [
@@ -2473,6 +2477,10 @@ const REVIEWED_ATTRIBUTE_PROPERTY_EQUIVALENCE_GROUPS = new Map([
       ],
     ]
   ),
+  // lr-page keeps the 32.0.0-published class-level `disable-sticky` record, which has no
+  // `fieldName`; adding one now is a breaking manifest change. The `disableSticky` accessor reads
+  // and writes that attribute directly, so both spellings name the same member.
+  ['wa-page', [['disable-sticky', 'disableSticky', 'disable-sticky']]],
 ]);
 
 // Reflection differences are serialized-DOM differences even when the target only adds a mirror.
@@ -2650,6 +2658,10 @@ const REVIEWED_REFLECTION_EQUIVALENCE_GROUPS = new Map([
       ['property', ['form'], false, true],
     ],
   ],
+  // The `disableSticky` accessor has no manifest attribute link (see the attribute-property entry),
+  // so the analyzer cannot see the mirror; at runtime the accessor is the attribute, which the
+  // page tests pin, so serialized DOM matches upstream's reflected property.
+  ['wa-page', [['attribute', ['disable-sticky'], true, false]]],
   [
     'wa-pagination',
     [
@@ -3828,6 +3840,16 @@ const REVIEWED_MAPPING_NORMALIZATIONS = new Map([
   [
     'wa-otp-input',
     { defaultEquivalences: [reviewedDefaultEquivalence('name', null, '')] },
+  ],
+  [
+    'wa-page',
+    {
+      // Unset `disable-sticky` is absence (`null`) on both; the 32.0.0-published attribute
+      // record carries no default and adding one is a breaking manifest change.
+      derivedDefaultEquivalences: [
+        { memberKind: 'attribute', member: 'disable-sticky', upstream: null, target: 'absent attribute' },
+      ],
+    },
   ],
   [
     'wa-popover',

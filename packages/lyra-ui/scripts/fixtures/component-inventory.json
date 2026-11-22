@@ -248749,7 +248749,7 @@
       "upstreamTier": "free",
       "targetTag": "lr-page",
       "classification": "warning-required",
-      "rationale": "Lyra returns a finite 0 for null and for an element in a detached document with no viewport; Web Awesome 3.15 returns null for null and measures detached-document geometry against the ambient page viewport. Prefix substitution is not currently public-surface safe: 1 attribute-property-mismatch (disable-sticky); 1 default-mismatch (disable-sticky); 1 reflection-mismatch (disable-sticky); 1 type-mismatch (disable-sticky).",
+      "rationale": "Lyra returns a finite 0 for null and for an element in a detached document with no viewport; Web Awesome 3.15 returns null for null and measures detached-document geometry against the ambient page viewport.",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -248848,18 +248848,44 @@
             "member": "nonce",
             "upstream": "string | undefined",
             "target": "string"
+          },
+          {
+            "memberKind": "attribute",
+            "member": "disable-sticky",
+            "upstream": "undefined | null | string",
+            "target": "string"
           }
         ],
         "structuralTypeAliases": [],
         "methodParameterTypeEquivalences": [],
         "defaultEquivalences": [],
-        "derivedDefaultEquivalences": [],
+        "derivedDefaultEquivalences": [
+          {
+            "memberKind": "attribute",
+            "member": "disable-sticky",
+            "upstream": null,
+            "target": "absent attribute"
+          }
+        ],
         "inferredAttributeSuppressions": [],
         "unknownMethodReturnTypes": [],
         "cancelabilityEquivalences": [],
         "cancelabilityPathAdditions": [],
-        "attributePropertyEquivalences": [],
-        "reflectionEquivalences": [],
+        "attributePropertyEquivalences": [
+          {
+            "attribute": "disable-sticky",
+            "upstream": "disableSticky",
+            "target": "disable-sticky"
+          }
+        ],
+        "reflectionEquivalences": [
+          {
+            "memberKind": "attribute",
+            "member": "disable-sticky",
+            "upstream": true,
+            "target": false
+          }
+        ],
         "cssDefaultEquivalences": [
           {
             "member": "--aside-width",
@@ -248909,36 +248935,7 @@
           }
         ]
       },
-      "drift": [
-        {
-          "code": "attribute-property-mismatch",
-          "section": "attributes",
-          "member": "disable-sticky",
-          "expected": "disableSticky",
-          "actual": "disable-sticky"
-        },
-        {
-          "code": "default-mismatch",
-          "section": "attributes",
-          "member": "disable-sticky",
-          "expected": null,
-          "actual": null
-        },
-        {
-          "code": "reflection-mismatch",
-          "section": "attributes",
-          "member": "disable-sticky",
-          "expected": true,
-          "actual": false
-        },
-        {
-          "code": "type-mismatch",
-          "section": "attributes",
-          "member": "disable-sticky",
-          "expected": "undefined | null | string",
-          "actual": "string"
-        }
-      ]
+      "drift": []
     },
     {
       "upstream": "webawesome",
