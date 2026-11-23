@@ -115,6 +115,13 @@ export const EXACT_CLASS_MAP = Object.freeze({
   'wa-warning': 'lr-warning',
   'wa-danger': 'lr-danger',
   ...Object.fromEntries(SIZE_STEPS.map((step) => [`wa-size-${step}`, `lr-size-${step}`])),
+  // native.css opt-in button look and appearances (utilities.css lr-button)
+  'wa-button': 'lr-button',
+  'wa-accent': 'lr-accent',
+  'wa-filled': 'lr-filled',
+  'wa-outlined': 'lr-outlined',
+  'wa-plain': 'lr-plain',
+  'wa-pill': 'lr-radius-pill',
   // Theme mode scopes
   'wa-dark': 'lr-dark',
   'wa-light': 'lr-light',
@@ -170,13 +177,7 @@ export const REVIEW_CLASS_MAP = Object.freeze({
   'wa-theme-default': 'no class; load @aceshooting/lyra-ui/theme.css (the default theme) once',
   'wa-theme-awesome': 'no equivalent theme; see the look and accent stylesheets (looks/*.css, accents.css)',
   'wa-theme-shoelace': 'no equivalent theme; see the look and accent stylesheets (looks/*.css, accents.css)',
-  // native.css opt-in classes
-  'wa-button': 'wrap the region in .lr-native, which styles native buttons, or use <lr-button>',
-  'wa-filled': 'no equivalent; use <lr-button appearance> or a native control inside .lr-native',
-  'wa-outlined': 'no equivalent; use <lr-button appearance> or a native control inside .lr-native',
-  'wa-plain': 'no equivalent; use <lr-button appearance> or a native control inside .lr-native',
-  'wa-pill': 'lr-radius-pill',
-  'wa-accent': 'no equivalent; use the lr-brand variant class on the scope',
+  // native.css opt-in classes without a counterpart
   'wa-valid': 'no equivalent; native validity styling comes from .lr-native',
   'wa-invalid': 'no equivalent; native validity styling comes from .lr-native',
   // Shoelace

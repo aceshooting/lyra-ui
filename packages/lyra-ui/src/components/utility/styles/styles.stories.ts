@@ -187,6 +187,50 @@ export const LayoutAndProse: Story = {
   `,
 };
 
+export const ComponentLooks: Story = {
+  name: "Button and card looks without hydration",
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "`utilities.css` gives a plain `<a href>` or `<button>` the look of `lr-button` with `lr-button`, an `lr-<variant>` class, an `lr-size-<step>` class and an appearance class (`lr-accent`, `lr-filled`, `lr-outlined`, `lr-filled-outlined`, `lr-plain`), and gives any element the surface of `lr-card` with `lr-card`. Each row pairs the class with the component it mirrors; both read the same `--lr-button-*` and `--lr-card-*` hooks and tokens, so nothing has to hydrate on a prerendered page.",
+      },
+    },
+  },
+  render: () => html`
+    <link rel="stylesheet" href=${tokensRoot} />
+    <link rel="stylesheet" href=${utilities} />
+    <div class="lr-stack" style="--lr-layout-gap: var(--lr-space-l)">
+      ${(["accent", "filled", "outlined", "filled-outlined", "plain"] as const).map(
+        (appearance) => html`
+          <div class="lr-cluster" style="--lr-layout-gap: var(--lr-space-s)">
+            ${(["neutral", "brand", "success", "warning", "danger"] as const).map(
+              (variant) => html`<a class="lr-button lr-${variant} lr-${appearance}" href="#looks">${variant}</a>`
+            )}
+            <lr-button variant="brand" appearance=${appearance}>component</lr-button>
+          </div>
+        `
+      )}
+      <div class="lr-cluster lr-items-center" style="--lr-layout-gap: var(--lr-space-s)">
+        ${(["2xs", "xs", "s", "m", "l", "xl"] as const).map(
+          (size) => html`<button class="lr-button lr-brand lr-size-${size}" type="button">${size}</button>`
+        )}
+        <button class="lr-button lr-brand" type="button" disabled>Disabled</button>
+        <a class="lr-button lr-brand lr-outlined" aria-disabled="true">Disabled link</a>
+      </div>
+      <div class="lr-grid-auto" style="--lr-grid-min-inline-size: var(--lr-size-14rem)">
+        <a class="lr-card" href="#looks">
+          <strong>Linked card</strong>
+          <p>A whole-card link with the hover edge and inset focus ring.</p>
+        </a>
+        <div class="lr-card lr-accent">Accent stripe on the inline start edge.</div>
+        <div class="lr-card lr-filled">Filled surface.</div>
+        <lr-card>The component, for comparison.</lr-card>
+      </div>
+    </div>
+  `,
+};
+
 export const ResolvedTokensAtRoot: Story = {
   name: "Resolved tokens for your own components",
   parameters: {

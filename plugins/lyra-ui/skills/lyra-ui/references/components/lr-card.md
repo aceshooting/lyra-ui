@@ -20,6 +20,8 @@
 A generic, styled bordered content container — the "small bordered surface with padding" idiom common
 to hero highlights, clickable grid tiles, and management-list items. A direct `<lr-*>` counterpart
 to `<wa-card>`'s contract, staying slot-compatible with `lr-result-card` where they overlap.
+The `utilities.css` class `lr-card` gives any light-DOM element, including a whole-card link, the same
+surface without hydration. See [component looks without hydration](../shared/native-styles-and-utilities.md#component-looks-without-hydration-lr-button-and-lr-card).
 
 **Properties:**
 

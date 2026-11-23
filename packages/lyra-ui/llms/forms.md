@@ -2614,6 +2614,10 @@ The icon and label stay centered under `--lr-button-justify`, separated by `--lr
 `with-caret` or an `end`/`suffix` adornment makes the label grow to pin trailing content; use
 `--lr-button-label-grow: 1` to opt into that stretch or `0` to opt out.
 
+A prerendered link or native button can take this look without hydration: the `utilities.css` class
+`lr-button` (with `lr-<variant>`, `lr-size-<step>` and an appearance class) reads the same
+`--lr-button-*` hooks and tokens. See [component looks without hydration](./shared/native-styles-and-utilities.md#component-looks-without-hydration-lr-button-and-lr-card).
+
 **Properties:**
 
 - `href?: string` — when set to a safe link URL (`http:`/`https:`/`blob:`/`mailto:`/`tel:`/`sms:`/

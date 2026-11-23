@@ -2511,6 +2511,7 @@ the first connected Lyra element would otherwise adopt, available before any com
 | Plain-element helpers       | `lr-link-plain`, `lr-list-plain`, `lr-placeholder`, `lr-scroll-lock`, `lr-cloak`                                                                                  |
 | Radius and case             | `lr-radius-none`, `lr-radius-xs`, `lr-radius-m`, `lr-radius-container`, `lr-radius-pill`, `lr-radius-circle`, `lr-uppercase`, `lr-lowercase`, `lr-capitalize`, `lr-normal-case` |
 | Variant and size            | `lr-neutral`, `lr-brand`, `lr-success`, `lr-warning`, `lr-danger`; `lr-size-2xs`, `lr-size-xs`, `lr-size-s`, `lr-size-m`, `lr-size-l`, `lr-size-xl` (`lr-size-full` stays the 100% box) |
+| Component looks             | `lr-button`, `lr-card`; appearances `lr-accent`, `lr-filled`, `lr-outlined`, `lr-filled-outlined`, `lr-plain` (only with `lr-button` or `lr-card`) |
 | Logical sizing              | `lr-inline-full`, `lr-block-full`, `lr-size-full`, `lr-min-inline-0`, `lr-min-block-0`, `lr-max-inline-full`, `lr-max-inline-prose`, `lr-center`                  |
 | Overflow                    | `lr-overflow-auto`, `lr-overflow-hidden`                                                                                                                          |
 | Text alignment and size     | `lr-text-start`, `lr-text-center`, `lr-text-end`, `lr-text-justify`, `lr-text-xs`, `lr-text-sm`, `lr-text-base`, `lr-text-lg`, `lr-text-xl`, `lr-text-2xl` – `lr-text-5xl`, `lr-text-quiet`                         |
@@ -2560,8 +2561,8 @@ All spacing here reads `--lr-layout-gap` (default `--lr-space-m`).
   `lr-lowercase`, `lr-capitalize`, `lr-normal-case`** set `text-transform`.
 - **Variants** `lr-neutral|brand|success|warning|danger` (the `variant` vocabulary) colour the
   element's text and native-control accent with that tone's loud fill and publish
-  `--lr-variant-fill-quiet`, `--lr-variant-fill-loud`, `--lr-variant-on-quiet` and
-  `--lr-variant-border` for your own rules. **Sizes** `lr-size-2xs … lr-size-xl` (the `size` ladder;
+  `--lr-variant-fill-quiet`, `--lr-variant-fill-loud`, `--lr-variant-on-quiet`, `--lr-variant-on-loud`
+  and `--lr-variant-border` for your own rules. **Sizes** `lr-size-2xs … lr-size-xl` (the `size` ladder;
   `small`/`medium`/`large` spellings are not classes) set the type size and scale the native control
   block size and padding that `.lr-native` reads.
 - **`lr-scroll-lock`** is pure CSS (`overflow: hidden`, `overscroll-behavior: contain`, plus a stable
@@ -2582,6 +2583,52 @@ focus or when a descendant receives focus, making it suitable for skip links.
 The Page helpers key off the reflected `view` state of their containing `<lr-page>`:
 `lr-page-mobile-only` is hidden for `view="desktop"`, and `lr-page-desktop-only` is hidden for
 `view="mobile"`. Page derives that state from its own allocated inline size, not the viewport.
+
+### Component looks without hydration: `lr-button` and `lr-card`
+
+`lr-button` gives a light-DOM `<a href>` or `<button>` the look of `<lr-button>`, and `lr-card` gives
+any element the surface of `<lr-card>`. Nothing has to upgrade or hydrate, so a prerendered page can
+ship its calls to action as real links. Both classes read the same hooks as the components
+(`--lr-button-*`, `--lr-card-*`) and the same theme tokens, so a retheme, a dark scope or a look
+sheet moves the class and the component together.
+
+```html
+<a class="lr-button lr-brand lr-size-l" href="/signup">Start free</a>
+<a class="lr-button lr-neutral lr-outlined" href="/pricing">See pricing</a>
+<button class="lr-button lr-danger lr-filled lr-size-s" type="button">Delete</button>
+
+<a class="lr-card" href="/guide">
+  <h3>Getting started</h3>
+  <p>A whole-card link with the card's hover edge and focus ring.</p>
+</a>
+<div class="lr-card lr-accent">A passive card with the accent stripe.</div>
+```
+
+- **Variant** comes from `lr-neutral` (default), `lr-brand`, `lr-success`, `lr-warning` or
+  `lr-danger`, and **size** from `lr-size-2xs` … `lr-size-xl` (default `m`). Either can sit on the
+  element or on an ancestor, so one `lr-size-s` on a toolbar sizes every button in it.
+- **Appearance** sits on the element itself: `lr-accent` (default for `lr-button`), `lr-filled`,
+  `lr-outlined`, `lr-filled-outlined` or `lr-plain`. A card without an appearance class is the
+  outlined card. These classes do nothing on an element without `lr-button` or `lr-card`.
+- **States.** Hover and press mix the fill as `<lr-button>` does, press scales by
+  `--lr-button-active-scale` (not under `prefers-reduced-motion: reduce`), and keyboard focus shows
+  the shared focus ring. `:disabled` and `aria-disabled="true"` dim the element and remove pointer
+  feedback; drop the `href` from a disabled link as well, because `aria-disabled` alone does not stop
+  navigation. The block size never falls below the size step, and a short label is never narrower
+  than it is tall.
+- **Cards.** A card on an `<a href>` or `<button>` is one whole-card control: it takes the
+  control-grade edge, the brand hover and press edge, `--lr-card-interactive-hover-shadow`,
+  `--lr-card-interactive-hover-transform` and an inset focus ring. Content is padded by
+  `--lr-card-body-padding` (default `--lr-space-m`). The accent stripe is on the inline start
+  edge, so it moves to the right under `dir="rtl"`.
+- **Type comes from the tokens.** Both use the Lyra font as the components do, and a button takes
+  its type size from the size step and weight from `--lr-button-font-weight`, so `lr-text-*` and
+  `lr-font-*` do not change it. `lr-radius-*` and the case classes still apply on top.
+- Load `theme.css` or `tokens-root.css` with `utilities.css` so the tokens resolve before any
+  component connects; every value also has a fallback.
+- The slotted structure of the components (header, footer, media, start and end slots, caret,
+  loading spinner, `appearance="link"` and `"quiet"`) has no class. Use the components where you need
+  it.
 
 ### Typography
 
@@ -2916,12 +2963,13 @@ because it is as likely your own class as an upstream one.
 | `wa-align-items-*`, `wa-align-self-*`, `wa-justify-content-*`, `wa-flex-wrap`/`wa-flex-nowrap` | `lr-items-*`, `lr-self-*`, `lr-justify-*`, `lr-wrap`/`lr-nowrap` |
 | `wa-text-*`, `wa-font-weight-*`, `wa-color-text-quiet`, `wa-link-plain`, `wa-list-plain`, `wa-prose`, `wa-visually-hidden`, `wa-cloak`, `wa-placeholder`, `wa-scroll-lock` | the same helper under `lr-`; see the inventory above |
 | `wa-brand`, `wa-neutral`, `wa-success`, `wa-warning`, `wa-danger`, `wa-size-*` | `lr-brand`, `lr-neutral`, `lr-success`, `lr-warning`, `lr-danger`, `lr-size-*` |
+| `wa-button`, `wa-accent`, `wa-filled`, `wa-outlined`, `wa-plain`, `wa-pill` | `lr-button`, `lr-accent`, `lr-filled`, `lr-outlined`, `lr-plain`, `lr-radius-pill` |
 | `wa-dark`, `wa-light`, `sl-theme-dark`, `sl-theme-light` | `lr-dark`, `lr-light` |
 
 `wa-font-size-*`, `wa-body-*` and `wa-border-radius-s`/`-m` rewrite to the nearest class
 (`lr-text-*`, `lr-radius-*`) and report `UPSTREAM_CLASS_APPROXIMATE_REVIEW`: the type and radius scales
 are not value-aligned. `wa-heading-*`, `wa-caption-*`, `wa-longform-*`, the hue-pinned variants
-(`wa-brand-blue`), `wa-theme-*`, the `native.css` opt-ins (`wa-button`, `wa-zebra-rows`, ...), the
+(`wa-brand-blue`), `wa-theme-*`, the `native.css` validity opt-ins (`wa-valid`, `wa-invalid`), the
 `wa-form-control-*` classes and the gaps Lyra has no step for are reported as `UPSTREAM_CLASS_REVIEW`
 with the nearest alternative and are not rewritten.
 

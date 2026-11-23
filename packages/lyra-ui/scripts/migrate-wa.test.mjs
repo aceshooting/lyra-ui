@@ -2996,6 +2996,20 @@ test('type-scale classes rewrite to the nearest class and warn; heading classes 
   );
 });
 
+test('native.css button opt-ins rewrite to the utilities.css lr-button look', () => {
+  const result = migrateClasses(
+    '<a class="wa-button wa-brand wa-outlined wa-size-s" href="/go"></a><button class="wa-button wa-accent wa-pill"></button>' +
+      '<button class="wa-button wa-filled wa-plain"></button><input class="wa-valid">\n',
+  );
+  assert.equal(
+    result.content,
+    '<a class="lr-button lr-brand lr-outlined lr-size-s" href="/go"></a><button class="lr-button lr-accent lr-radius-pill"></button>' +
+      '<button class="lr-button lr-filled lr-plain"></button><input class="wa-valid">\n',
+  );
+  assert.deepEqual(result.warnings.map((entry) => [entry.upstreamMember, entry.warningCode]), [['wa-valid', 'UPSTREAM_CLASS_REVIEW']]);
+  assert.deepEqual(lookupUpstreamClass('wa-button'), { kind: 'exact', target: 'lr-button' });
+});
+
 test('palette pairs and native.css opt-ins are reported, never rewritten; unlisted names are left alone', () => {
   const input = '<div class="wa-brand-blue wa-invert wa-theme-default sl-mystery wa-mystery"></div>\n';
   const result = migrateClasses(input);
