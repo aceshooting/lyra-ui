@@ -52,8 +52,8 @@ export function runtimeModuleSpecifiers(source, file = 'component.ts') {
 
 // A composed child lends an optional peer to its parent only when the parent forwards the
 // author-settable property that reaches it: a registered icon resolver routes `src`/`library`
-// through the sanitized fetch path, and each optional 3D renderer loads only once its owning
-// element enables it.
+// through the sanitized fetch path, each optional 3D renderer loads only once its owning element
+// enables it, and a combobox sanitizes option html only from rows its `source` returns.
 const CAPABILITY_GATES = [
   {
     modules: [
@@ -77,6 +77,13 @@ const CAPABILITY_GATES = [
     modules: ['src/components/retrieval/embedding-explorer/embedding-explorer-engine.ts'],
     tags: ['embedding-explorer'],
     attributes: ['engine'],
+  },
+  {
+    // Option html arrives only through rows a `source` returns; a composite that never forwards
+    // one cannot hand the combobox markup to sanitize.
+    modules: ['src/components/forms/combobox/combobox-option-html.ts'],
+    tags: ['combobox'],
+    attributes: ['source'],
   },
 ].map(({ modules, tags, attributes }) => ({
   modules: new Set(modules.map((module) => path.join(packageDir, module))),

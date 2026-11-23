@@ -61,7 +61,7 @@ describe('lr-combobox option html', () => {
     const option = options(el)[0]!;
     expect(option.hasAttribute('aria-label')).to.equal(false);
     expect(option.querySelector('.sr-only')?.textContent).to.equal('Plain label');
-    expect(fallbackNote(el)).to.equal(null);
+    expect(fallbackNote(el) === null).to.equal(true);
   });
 
   it('keeps the label as the name, filter text and committed text', async () => {
@@ -120,7 +120,7 @@ describe('lr-combobox option html', () => {
       __setDompurifyImporterForTesting(undefined);
       el.dataSource = () => [{ value: 'y', label: 'Next', html: '<i>Recovered</i>' }];
       await waitUntil(() => richParts(el)[0]?.querySelector('i')?.textContent === 'Recovered', 'recovery renders markup');
-      expect(fallbackNote(el)).to.equal(null);
+      expect(fallbackNote(el) === null).to.equal(true);
     });
   }
 

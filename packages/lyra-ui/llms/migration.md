@@ -21,7 +21,15 @@ The supported upstream identities are `@awesome.me/webawesome` and `@awesome.me/
 for Web Awesome, plus `@shoelace-style/shoelace`. The tool scans HTML, standalone CSS,
 JavaScript, TypeScript, JSX, Vue, Svelte, MDX, and Markdown. It rewrites inventory-declared
 tags, members, defaults, and supported side-effect registration imports.
-Imports with bindings remain manual because exported names cannot be inferred safely. An
+Tag selectors in standalone CSS, `<style>` blocks, `css` tagged templates and `::slotted()`, and
+tags in selector strings passed to an element-scoped `querySelector()`, `querySelectorAll()`,
+`closest()` or `matches()`, are renamed when the mapping is automatic. On a renamed Shoelace form
+control, the validation attribute selectors (`[data-user-invalid]`, `[data-invalid]`,
+`[data-user-valid]`, `[data-valid]`, `[data-required]`, `[data-optional]`) become the matching
+`:state()` when the Lyra target documents it, and report `VALIDATION_STATE_REVIEW` when it does not.
+Translation side-effect imports and recognized named utility imports are routed to Lyra
+subpaths; see the utility migration notes in `llms/shared/native-styles-and-utilities.md`.
+Other imports with bindings remain manual because exported names cannot be inferred safely. An
 aliased component value that uses a rewritten member blocks that mapping across the scanned
 target set, preventing a registration import from changing while an old member remains. A root
 Web Awesome or Shoelace registration import changes only when that package identity and tier
@@ -38,7 +46,10 @@ dependency-free default library contains only `add`, `check`, `close`, `search`,
 Replace other names explicitly or provide their vocabulary with
 `registerIconLibrary('default', { resolver })`. Web Awesome's Font Awesome names keep working
 after `registerFontAwesomeIconLibrary({ name: 'default' })` from
-`components/utility/icon/icon-library-font-awesome.js` (add `kitCode` for Pro families).
+`components/utility/icon/icon-library-font-awesome.js` (add `kitCode` for Pro families), and
+Shoelace's Bootstrap Icons names after `registerBootstrapIconLibrary({ name: 'default' })` from
+`components/utility/icon/icon-library-bootstrap.js` (add `basePath` to self-host). Each review
+message names the preset for its upstream.
 Re-running the tool is idempotent; comments, prose, partial strings, and unrelated packages are
 left alone.
 
@@ -1936,6 +1947,8 @@ hydration compares template strings.
 
 | Component | Property | Semantic change in Lyra 33 (reported, never rewritten) |
 |---|---|---|
+| `<lr-copy-button>` | `feedbackDuration` | An omitted feedback-duration now shows the copied or failed feedback for 1000 ms instead of 1500 ms, matching Web Awesome and Shoelace; set feedback-duration="1500" to keep the longer feedback. |
+| `<lr-timeline>` | `orientation` | orientation="auto" is now accepted instead of falling back to vertical: an auto timeline runs as a row while its measured inline size gives every item about 10em, and the property's type includes 'auto', so review code that switches over orientation (read effectiveOrientation for the axis in effect). |
 | `<lr-token-input>` | `delimiter` | Each character of delimiter is now a separate delimiter (";," splits at every semicolon and every comma, and typing either commits); a multi-character value no longer matches only as one whole string, so review a delimiter longer than one character. |
 
 Entries no component owns. A module specifier is rewritten where it is provably an import, re-export,
@@ -1960,11 +1973,11 @@ For `lr-icon`, the retired `auto-width` attribute migrates to `canvas="auto"`. R
 
 | Ecosystem | Exact | Rewritten | Warning required | Conceptual only | Unsupported | Automatic | Manual |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| Web Awesome | 30 | 44 | 21 | 0 | 0 | 74 | 21 |
+| Web Awesome | 30 | 44 | 21 | 0 | 1 | 74 | 22 |
 | Shoelace | 18 | 28 | 12 | 0 | 0 | 46 | 12 |
-| **Total** | **48** | **72** | **33** | **0** | **0** | **120** | **33** |
+| **Total** | **48** | **72** | **33** | **0** | **1** | **120** | **34** |
 
-## Web Awesome (95)
+## Web Awesome (96)
 
 The pinned Web Awesome manifest is authoritative for this inventory; only rows marked automatic are codemod inputs.
 
@@ -1989,11 +2002,11 @@ The pinned Web Awesome manifest is authoritative for this inventory; only rows m
 | `<wa-chart>` | `<lr-chart>` | `exact` | Automatic: tag and supported side-effect registration import. Core Chart.js wrapper (`LyraChartSeries`-based, plus raw `config` passthrough) with bounded `appendData()` streaming and `exportData('csv'. |
 | `<wa-checkbox>` | `<lr-checkbox>` | `rewritten` | Automatic: tag/import plus events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
 | `<wa-checkbox-group>` | `<lr-checkbox-group>` | `exact` | Automatic: tag and supported side-effect registration import. Form-associated group of checkboxes with array values and group validation. |
-| `<wa-code-highlighter>` | `<lr-code-block>` | `warning-required` | Manual: lr-code-block exposes its code as a named, focusable role="group" surface where wa-code-highlighter exposes a region landmark, so assistive-technology navigation that relies on the region landmark needs review. Highlighting also needs the optional shiki peer. |
+| `<wa-code-highlighter>` | `<lr-code-block>` | `warning-required` | Manual: lr-code-block exposes its code as a named, focusable role="group" surface where wa-code-highlighter exposes a region landmark, so assistive-technology navigation that relies on the region landmark needs review. Highlighting also needs the optional shiki peer. A global registerCodeGrammar() call maps to registerCodeGrammar() from the root barrel or @aceshooting/lyra-ui/components/conversation/code-block/code-grammar-registry.js, which also accepts lazy loaders and aliases. |
 | `<wa-color-picker>` | `<lr-color-picker>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-hide → lr-hide; events: wa-invalid → lr-invalid; events: wa-show → lr-show; parts: base → color-picker; parts: eyedropper-button__base → eyedropper-button__button; parts: format-button__base → format-button__button. Equivalent surface representation: name defaults null ≡ ; no source rewrite. |
 | `<wa-combobox>` | `<lr-combobox>` | `warning-required` | Manual: Native input/change notifications on lr-combobox are bubbling, composed Event instances without a detail payload. Its lr-input/lr-change aliases carry the frozen readonly value, previousValue and row data, narrowed by the picker value generic; migrated handlers reading or mutating upstream CustomEvent detail must use the prefixed aliases and review the narrower single-select type. Its appearance also accepts the full shared LyraAppearance vocabulary (accent and plain in addition to the three upstream values) since 20.0.0; every upstream value keeps its meaning, so only exhaustive TypeScript switches over the narrower upstream union need review. |
 | `<wa-comparison>` | `<lr-image-comparer>` | `exact` | Automatic: tag and supported side-effect registration import. Before/after slotted surfaces with a keyboard-accessible range divider. |
-| `<wa-copy-button>` | `<lr-copy-button>` | `rewritten` | Automatic: tag/import plus events: wa-copy → lr-copy; events: wa-error → lr-error; insert feedback-duration=1000. Equivalent surface representation: feedbackDuration defaults 1000 ≡ 1500; no source rewrite. |
+| `<wa-copy-button>` | `<lr-copy-button>` | `rewritten` | Automatic: tag/import plus events: wa-copy → lr-copy; events: wa-error → lr-error. |
 | `<wa-counter>` | `<lr-counter>` | `rewritten` | Automatic: tag/import plus events: wa-finish → lr-finish. |
 | `<wa-data-grid>` | `<lr-data-grid>` | `warning-required` | Manual: Lyra snapshots collection inputs and event details synchronously into frozen readonly values, removes the redundant wa-data-request alias, and deprecates the unprefixed request event in favor of lr-request. Migrated code that mutates arrays or event details in place, assigns derived collections, listens for the removed alias, or relies on the unprefixed request event must be reviewed. |
 | `<wa-date-input>` | `<lr-date-input>` | `warning-required` | Manual: Since 20.0.0 lr-date-input accepts the full shared LyraAppearance vocabulary (accent and plain in addition to the three upstream values). Every upstream value keeps its meaning, so migrated markup is unaffected; only exhaustive TypeScript switches over the narrower upstream union need review. Its lr-hide is cancelable except when disabling the field or making it readonly closes an open popup, which a listener cannot veto; handlers that rely on vetoing every hide need review. |
@@ -2039,6 +2052,7 @@ The pinned Web Awesome manifest is authoritative for this inventory; only rows m
 | `<wa-rating>` | `<lr-rating>` | `rewritten` | Automatic: tag/import plus events: wa-hover → lr-hover; events: wa-invalid → lr-invalid. Equivalent surface representation: name defaults null ≡ ; getSymbol is analyzer-inferred for property-only getSymbol; no source rewrite. |
 | `<wa-relative-time>` | `<lr-relative-time>` | `exact` | Automatic: tag and supported side-effect registration import. Locale-aware formatting primitives. |
 | `<wa-resize-observer>` | `<lr-resize-observer>` | `warning-required` | Manual: Lyra freezes the entries array into an immutable snapshot at dispatch time; migrated code that mutates the array in place must create its own copy. |
+| `<wa-rich-text-editor>` | — | `unsupported` | Manual: Lyra UI ships no rich-text editor. lr-docx-editor in @aceshooting/lyra-docs edits DOCX documents through a different public contract, so it is not a migration target for this tag; keep the upstream element or choose an editor by hand. |
 | `<wa-scatter-chart>` | `<lr-scatter-chart>` | `exact` | Automatic: tag and supported side-effect registration import. Typed `<lr-chart>` subclasses with tag-specific defaults and the full writable `LyraChartType` vocabulary — same optional peer deps as `<lr-chart>`. |
 | `<wa-scroller>` | `<lr-scroller>` | `exact` | Automatic: tag and supported side-effect registration import. Responsive overflow surface with optional navigation controls. |
 | `<wa-select>` | `<lr-select>` | `rewritten` | Automatic: tag/import plus events: wa-after-hide → lr-after-hide; events: wa-after-show → lr-after-show; events: wa-clear → lr-clear; events: wa-hide → lr-hide; events: wa-invalid → lr-invalid; events: wa-show → lr-show; parts: label → form-control-label; parts: tag__remove-button__base → tag__remove-button__button. |
@@ -2086,7 +2100,7 @@ Shoelace relationships are classified independently; a same-suffix tag is never 
 | `<sl-carousel-item>` | `<lr-carousel-item>` | `exact` | Automatic: tag and supported side-effect registration import. Optional semantic slide wrapper for carousel content. |
 | `<sl-checkbox>` | `<lr-checkbox>` | `warning-required` | Manual: Lyra uses the checked attribute as the reset default while Shoelace reflects the live checked state; migration leaves the use unchanged and reports the reflection-sensitive CSS, observer, serialization, and property-write difference. |
 | `<sl-color-picker>` | `<lr-color-picker>` | `rewritten` | Automatic: tag/import plus events: sl-blur → blur; events: sl-change → lr-change; events: sl-focus → focus; events: sl-input → lr-input; events: sl-invalid → lr-invalid. Equivalent surface representation: form defaults  ≡ null; size defaults medium ≡ m; no source rewrite. |
-| `<sl-copy-button>` | `<lr-copy-button>` | `rewritten` | Automatic: tag/import plus events: sl-copy → lr-copy; events: sl-error → lr-error; insert feedback-duration=1000. Equivalent surface representation: feedbackDuration defaults 1000 ≡ 1500; no source rewrite. |
+| `<sl-copy-button>` | `<lr-copy-button>` | `rewritten` | Automatic: tag/import plus events: sl-copy → lr-copy; events: sl-error → lr-error. |
 | `<sl-details>` | `<lr-details>` | `rewritten` | Automatic: tag/import plus events: sl-after-hide → lr-after-hide; events: sl-after-show → lr-after-show; events: sl-hide → lr-hide; events: sl-show → lr-show. |
 | `<sl-dialog>` | `<lr-dialog>` | `warning-required` | Manual: Pinned runtime evidence shows Shoelace emits non-cancelable state-change lifecycle notifications while Lyra provides synchronous pre-state veto events; automatic migration therefore requires review of listener timing and preventDefault() behavior. |
 | `<sl-divider>` | `<lr-divider>` | `exact` | Automatic: tag and supported side-effect registration import. Horizontal or vertical semantic separator. |

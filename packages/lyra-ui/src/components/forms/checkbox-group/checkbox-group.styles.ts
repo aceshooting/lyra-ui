@@ -30,7 +30,7 @@ export const styles = css`
   [part~="form-control-label"] {
     ${formControlLabelTypography({ size: css`var(--lr-form-control-font-size)`, color: css`var(--lr-color-text)` })}
     /* The rendered legend sits outside the flex gap, so the label gap is its whole margin. */
-    margin-block-end: var(--lr-form-control-label-gap, 0px);
+    margin-block-end: var(--lr-form-control-label-gap, 0);
   }
   ${formControlLabelDisplay}
   ${formControlRequiredMarker}

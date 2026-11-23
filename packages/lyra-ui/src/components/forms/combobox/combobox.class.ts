@@ -15,7 +15,7 @@ import { acquireNativeControlDescription, type NativeControlDescriptionLease } f
 import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
-import { loadDompurify } from '../../../internal/dompurify-loader.js';
+import { sanitizeComboboxOptionHtml } from './combobox-option-html.js';
 import {
   LyraElement,
   type LyraEventDetailSnapshot,
@@ -3620,23 +3620,9 @@ export class LyraCombobox<
     const isStale = () => !isCurrent() || this.asyncRows !== rows;
     let next: Map<ComboboxSourceRow, string> | null = null;
     try {
-      const [sanitizer, passive] = await Promise.all([
-        loadDompurify(),
-        import('../../../internal/passive-markup.js'),
-      ]);
-      if (isStale()) return;
-      if (sanitizer) {
-        next = new Map();
-        const holder = this.ownerDocument.createElement('template');
-        for (const row of pending) {
-          holder.content.replaceChildren(
-            passive.sanitizePassiveMarkupFragment(sanitizer, row.html!, this.ownerDocument, 'passive-document')
-          );
-          const clean = holder.innerHTML;
-          // Markup that sanitizes to nothing visible keeps the plain label rather than a blank row.
-          if (clean.trim() !== '') next.set(row, clean);
-        }
-      }
+      const result = await sanitizeComboboxOptionHtml(pending, this.ownerDocument, isStale);
+      if (result === 'stale') return;
+      next = result;
     } catch {
       next = null;
     }

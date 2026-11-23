@@ -51,7 +51,7 @@ for the page.
 | `d3-force` | `^3.0.1` | `lr-graph`, `lr-knowledge-graph-explorer` |
 | `d3-selection` | `^3.0.1` | `lr-graph`, `lr-knowledge-graph-explorer` |
 | `d3-zoom` | `^3.0.1` | `lr-graph`, `lr-knowledge-graph-explorer` |
-| `dompurify` | `^3.4.14` | `lr-agent-workspace`, `lr-combobox`, `lr-condition-builder`, `lr-country-picker`, `lr-currency-picker`, `lr-dashboard-grid`, `lr-document-library`, `lr-docx-viewer`, `lr-email-viewer`, `lr-eval-run`, `lr-filter-bar`, `lr-geojson-viewer`, `lr-html-viewer`, `lr-icon`, `lr-icon-button`, `lr-include`, `lr-map`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-streaming-text-core`, `lr-svg-viewer`, `lr-time-zone-picker`, `lr-unit-picker`, `lr-video`, `lr-video-playlist`, `lr-widget-renderer` |
+| `dompurify` | `^3.4.14` | `lr-agent-workspace`, `lr-combobox`, `lr-dashboard-grid`, `lr-docx-viewer`, `lr-email-viewer`, `lr-eval-run`, `lr-geojson-viewer`, `lr-html-viewer`, `lr-icon`, `lr-icon-button`, `lr-include`, `lr-map`, `lr-markdown`, `lr-markdown-core`, `lr-message-parts`, `lr-notebook-viewer`, `lr-rag-answer`, `lr-streaming-text`, `lr-streaming-text-core`, `lr-svg-viewer`, `lr-video`, `lr-video-playlist`, `lr-widget-renderer` |
 | `emoji-picker-element-data` | `^1.8.0` | `lr-emoji-picker` |
 | `epubjs` | `^0.3.93` | `lr-ebook-viewer` |
 | `ical.js` | `^2.2.1` | `lr-calendar-viewer` |

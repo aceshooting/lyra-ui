@@ -63,6 +63,12 @@ More properties: `with-label`: see the component JSDoc.
 `close(reason?: DialogCloseReason): Promise<void>` — inherited unchanged from `lr-dialog`; each
 promise settles after the matching `lr-after-*` event.
 
+**Declarative open and close:** `data-drawer="open <id>"` on any element opens the `<lr-drawer>`
+with that `id`, and `data-drawer="close"` on a descendant closes the nearest owning drawer with
+reason `'close-action'`. Lookup, nesting, vetoes and disabled/inert handling follow `lr-dialog`'s
+declarative rules; `data-dialog` never addresses a drawer and `data-drawer` never addresses a
+dialog.
+
 **Events:** `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), `lr-after-hide`, and
 `lr-initial-focus` (cancelable), `lr-request-close` (cancelable, detail source), and `lr-close`
 (`detail: { reason: DialogCloseReason }`, non-cancelable), plus cancelable `lr-close-request`

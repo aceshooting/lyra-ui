@@ -8,7 +8,7 @@
 - **Status** `experimental` since `25.5.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
-- **Optional peers** `dompurify` — see `llms/peers.md`
+- **Optional peers** none
 - **Themeable via** 15 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
@@ -73,4 +73,4 @@ in both modes, following the country picker's event contract.
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.

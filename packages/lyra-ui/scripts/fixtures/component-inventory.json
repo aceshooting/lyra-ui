@@ -582,6 +582,24 @@
       ],
       "motion": []
     },
+    "rich-text-editor": {
+      "description": "A labelled rich-text editing surface exposes a focusable, editable text box.",
+      "semantics": [
+        "textbox"
+      ],
+      "naming": [
+        "visible-or-author-label"
+      ],
+      "keyboard": [
+        "native-editing"
+      ],
+      "focus": [
+        "native-focus"
+      ],
+      "states": [],
+      "announcements": [],
+      "motion": []
+    },
     "menu": {
       "description": "A menu uses one roving tab stop with arrow, Home/End, and typeahead navigation.",
       "semantics": [
@@ -24851,7 +24869,32 @@
             "default": "none"
           }
         ],
-        "cssStates": [],
+        "cssStates": [
+          {
+            "name": "invalid",
+            "deprecated": null
+          },
+          {
+            "name": "optional",
+            "deprecated": null
+          },
+          {
+            "name": "required",
+            "deprecated": null
+          },
+          {
+            "name": "user-invalid",
+            "deprecated": null
+          },
+          {
+            "name": "user-valid",
+            "deprecated": null
+          },
+          {
+            "name": "valid",
+            "deprecated": null
+          }
+        ],
         "methods": [
           {
             "name": "blur",
@@ -33222,7 +33265,32 @@
             "default": "auto"
           }
         ],
-        "cssStates": [],
+        "cssStates": [
+          {
+            "name": "invalid",
+            "deprecated": null
+          },
+          {
+            "name": "optional",
+            "deprecated": null
+          },
+          {
+            "name": "required",
+            "deprecated": null
+          },
+          {
+            "name": "user-invalid",
+            "deprecated": null
+          },
+          {
+            "name": "user-valid",
+            "deprecated": null
+          },
+          {
+            "name": "valid",
+            "deprecated": null
+          }
+        ],
         "methods": [
           {
             "name": "blur",
@@ -34684,7 +34752,32 @@
             "hasDefault": false
           }
         ],
-        "cssStates": [],
+        "cssStates": [
+          {
+            "name": "invalid",
+            "deprecated": null
+          },
+          {
+            "name": "optional",
+            "deprecated": null
+          },
+          {
+            "name": "required",
+            "deprecated": null
+          },
+          {
+            "name": "user-invalid",
+            "deprecated": null
+          },
+          {
+            "name": "user-valid",
+            "deprecated": null
+          },
+          {
+            "name": "valid",
+            "deprecated": null
+          }
+        ],
         "methods": [
           {
             "name": "blur",
@@ -38593,9 +38686,7 @@
       "registrationModule": "src/components/lr-condition-builder.ts",
       "rootIncluded": true,
       "rootExclusion": null,
-      "optionalPeers": [
-        "dompurify"
-      ],
+      "optionalPeers": [],
       "maturity": {
         "status": "stable",
         "since": "9.0.0",
@@ -41783,7 +41874,7 @@
             "inferred": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": 1500
+            "default": 1000
           },
           {
             "name": "from",
@@ -41911,7 +42002,7 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": true,
-            "default": 1500
+            "default": 1000
           },
           {
             "name": "from",
@@ -42567,9 +42658,7 @@
       "registrationModule": "src/components/lr-country-picker.ts",
       "rootIncluded": true,
       "rootExclusion": null,
-      "optionalPeers": [
-        "dompurify"
-      ],
+      "optionalPeers": [],
       "maturity": {
         "status": "experimental",
         "since": "25.5.0",
@@ -43394,7 +43483,32 @@
             "default": "30%"
           }
         ],
-        "cssStates": [],
+        "cssStates": [
+          {
+            "name": "invalid",
+            "deprecated": null
+          },
+          {
+            "name": "optional",
+            "deprecated": null
+          },
+          {
+            "name": "required",
+            "deprecated": null
+          },
+          {
+            "name": "user-invalid",
+            "deprecated": null
+          },
+          {
+            "name": "user-valid",
+            "deprecated": null
+          },
+          {
+            "name": "valid",
+            "deprecated": null
+          }
+        ],
         "methods": [
           {
             "name": "blur",
@@ -44058,9 +44172,7 @@
       "registrationModule": "src/components/lr-currency-picker.ts",
       "rootIncluded": true,
       "rootExclusion": null,
-      "optionalPeers": [
-        "dompurify"
-      ],
+      "optionalPeers": [],
       "maturity": {
         "status": "experimental",
         "since": "25.5.0",
@@ -44861,7 +44973,32 @@
             "default": "30%"
           }
         ],
-        "cssStates": [],
+        "cssStates": [
+          {
+            "name": "invalid",
+            "deprecated": null
+          },
+          {
+            "name": "optional",
+            "deprecated": null
+          },
+          {
+            "name": "required",
+            "deprecated": null
+          },
+          {
+            "name": "user-invalid",
+            "deprecated": null
+          },
+          {
+            "name": "user-valid",
+            "deprecated": null
+          },
+          {
+            "name": "valid",
+            "deprecated": null
+          }
+        ],
         "methods": [
           {
             "name": "blur",
@@ -49747,11 +49884,35 @@
             "deprecated": null
           },
           {
+            "name": "invalid",
+            "deprecated": null
+          },
+          {
             "name": "open",
             "deprecated": null
           },
           {
+            "name": "optional",
+            "deprecated": null
+          },
+          {
             "name": "range",
+            "deprecated": null
+          },
+          {
+            "name": "required",
+            "deprecated": null
+          },
+          {
+            "name": "user-invalid",
+            "deprecated": null
+          },
+          {
+            "name": "user-valid",
+            "deprecated": null
+          },
+          {
+            "name": "valid",
             "deprecated": null
           }
         ],
@@ -54213,9 +54374,7 @@
       "registrationModule": "src/components/lr-document-library.ts",
       "rootIncluded": true,
       "rootExclusion": null,
-      "optionalPeers": [
-        "dompurify"
-      ],
+      "optionalPeers": [],
       "maturity": {
         "status": "stable",
         "since": "4.1.0",
@@ -62531,7 +62690,32 @@
             "default": "auto"
           }
         ],
-        "cssStates": [],
+        "cssStates": [
+          {
+            "name": "invalid",
+            "deprecated": null
+          },
+          {
+            "name": "optional",
+            "deprecated": null
+          },
+          {
+            "name": "required",
+            "deprecated": null
+          },
+          {
+            "name": "user-invalid",
+            "deprecated": null
+          },
+          {
+            "name": "user-valid",
+            "deprecated": null
+          },
+          {
+            "name": "valid",
+            "deprecated": null
+          }
+        ],
         "methods": [
           {
             "name": "blur",
@@ -67786,9 +67970,7 @@
       "registrationModule": "src/components/lr-filter-bar.ts",
       "rootIncluded": true,
       "rootExclusion": null,
-      "optionalPeers": [
-        "dompurify"
-      ],
+      "optionalPeers": [],
       "maturity": {
         "status": "stable",
         "since": "4.1.0",
@@ -83190,6 +83372,30 @@
           {
             "name": "blank",
             "deprecated": null
+          },
+          {
+            "name": "invalid",
+            "deprecated": null
+          },
+          {
+            "name": "optional",
+            "deprecated": null
+          },
+          {
+            "name": "required",
+            "deprecated": null
+          },
+          {
+            "name": "user-invalid",
+            "deprecated": null
+          },
+          {
+            "name": "user-valid",
+            "deprecated": null
+          },
+          {
+            "name": "valid",
+            "deprecated": null
           }
         ],
         "methods": [
@@ -87168,6 +87374,30 @@
           },
           {
             "name": "disabled",
+            "deprecated": null
+          },
+          {
+            "name": "invalid",
+            "deprecated": null
+          },
+          {
+            "name": "optional",
+            "deprecated": null
+          },
+          {
+            "name": "required",
+            "deprecated": null
+          },
+          {
+            "name": "user-invalid",
+            "deprecated": null
+          },
+          {
+            "name": "user-valid",
+            "deprecated": null
+          },
+          {
+            "name": "valid",
             "deprecated": null
           }
         ],
@@ -106216,6 +106446,30 @@
           {
             "name": "blank",
             "deprecated": null
+          },
+          {
+            "name": "invalid",
+            "deprecated": null
+          },
+          {
+            "name": "optional",
+            "deprecated": null
+          },
+          {
+            "name": "required",
+            "deprecated": null
+          },
+          {
+            "name": "user-invalid",
+            "deprecated": null
+          },
+          {
+            "name": "user-valid",
+            "deprecated": null
+          },
+          {
+            "name": "valid",
+            "deprecated": null
           }
         ],
         "methods": [
@@ -110112,6 +110366,30 @@
           },
           {
             "name": "focused",
+            "deprecated": null
+          },
+          {
+            "name": "invalid",
+            "deprecated": null
+          },
+          {
+            "name": "optional",
+            "deprecated": null
+          },
+          {
+            "name": "required",
+            "deprecated": null
+          },
+          {
+            "name": "user-invalid",
+            "deprecated": null
+          },
+          {
+            "name": "user-valid",
+            "deprecated": null
+          },
+          {
+            "name": "valid",
             "deprecated": null
           }
         ],
@@ -117442,7 +117720,32 @@
             "default": "var(--lr-radius)"
           }
         ],
-        "cssStates": [],
+        "cssStates": [
+          {
+            "name": "invalid",
+            "deprecated": null
+          },
+          {
+            "name": "optional",
+            "deprecated": null
+          },
+          {
+            "name": "required",
+            "deprecated": null
+          },
+          {
+            "name": "user-invalid",
+            "deprecated": null
+          },
+          {
+            "name": "user-valid",
+            "deprecated": null
+          },
+          {
+            "name": "valid",
+            "deprecated": null
+          }
+        ],
         "methods": [
           {
             "name": "blur",
@@ -159471,6 +159774,30 @@
           {
             "name": "blank",
             "deprecated": null
+          },
+          {
+            "name": "invalid",
+            "deprecated": null
+          },
+          {
+            "name": "optional",
+            "deprecated": null
+          },
+          {
+            "name": "required",
+            "deprecated": null
+          },
+          {
+            "name": "user-invalid",
+            "deprecated": null
+          },
+          {
+            "name": "user-valid",
+            "deprecated": null
+          },
+          {
+            "name": "valid",
+            "deprecated": null
           }
         ],
         "methods": [
@@ -162396,7 +162723,31 @@
             "deprecated": null
           },
           {
+            "name": "invalid",
+            "deprecated": null
+          },
+          {
             "name": "open",
+            "deprecated": null
+          },
+          {
+            "name": "optional",
+            "deprecated": null
+          },
+          {
+            "name": "required",
+            "deprecated": null
+          },
+          {
+            "name": "user-invalid",
+            "deprecated": null
+          },
+          {
+            "name": "user-valid",
+            "deprecated": null
+          },
+          {
+            "name": "valid",
             "deprecated": null
           }
         ],
@@ -163300,9 +163651,7 @@
       "registrationModule": "src/components/lr-time-zone-picker.ts",
       "rootIncluded": true,
       "rootExclusion": null,
-      "optionalPeers": [
-        "dompurify"
-      ],
+      "optionalPeers": [],
       "maturity": {
         "status": "experimental",
         "since": "25.5.0",
@@ -164103,7 +164452,32 @@
             "default": "30%"
           }
         ],
-        "cssStates": [],
+        "cssStates": [
+          {
+            "name": "invalid",
+            "deprecated": null
+          },
+          {
+            "name": "optional",
+            "deprecated": null
+          },
+          {
+            "name": "required",
+            "deprecated": null
+          },
+          {
+            "name": "user-invalid",
+            "deprecated": null
+          },
+          {
+            "name": "user-valid",
+            "deprecated": null
+          },
+          {
+            "name": "valid",
+            "deprecated": null
+          }
+        ],
         "methods": [
           {
             "name": "blur",
@@ -164364,7 +164738,7 @@
           {
             "name": "orientation",
             "property": "orientation",
-            "type": "LyraOrientation",
+            "type": "LyraTimelineOrientation",
             "reflects": true,
             "inferred": false,
             "deprecated": null,
@@ -164412,6 +164786,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "overlap"
+          },
+          {
+            "name": "effectiveOrientation",
+            "attribute": null,
+            "type": "LyraOrientation",
+            "readonly": true,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "itemCount",
@@ -164475,7 +164858,7 @@
           {
             "name": "orientation",
             "attribute": "orientation",
-            "type": "LyraOrientation",
+            "type": "LyraTimelineOrientation",
             "readonly": false,
             "reflects": true,
             "deprecated": null,
@@ -175550,9 +175933,7 @@
       "registrationModule": "src/components/lr-unit-picker.ts",
       "rootIncluded": true,
       "rootExclusion": null,
-      "optionalPeers": [
-        "dompurify"
-      ],
+      "optionalPeers": [],
       "maturity": {
         "status": "experimental",
         "since": "25.5.0",
@@ -176353,7 +176734,32 @@
             "default": "30%"
           }
         ],
-        "cssStates": [],
+        "cssStates": [
+          {
+            "name": "invalid",
+            "deprecated": null
+          },
+          {
+            "name": "optional",
+            "deprecated": null
+          },
+          {
+            "name": "required",
+            "deprecated": null
+          },
+          {
+            "name": "user-invalid",
+            "deprecated": null
+          },
+          {
+            "name": "user-valid",
+            "deprecated": null
+          },
+          {
+            "name": "valid",
+            "deprecated": null
+          }
+        ],
         "methods": [
           {
             "name": "blur",
@@ -211571,6 +211977,57 @@
           }
         },
         {
+          "tag": "wa-rich-text-editor",
+          "module": null,
+          "tier": "pro",
+          "maturity": {
+            "status": "unreviewed",
+            "since": null,
+            "deprecated": null
+          },
+          "surface": {
+            "attributes": [],
+            "properties": [],
+            "slots": [],
+            "events": [],
+            "parts": [],
+            "cssProperties": [],
+            "cssStates": [],
+            "methods": [],
+            "staticProperties": [],
+            "staticMethods": [],
+            "moduleExports": [],
+            "form": {
+              "associated": false,
+              "properties": [],
+              "methods": []
+            },
+            "native": {
+              "forwardedEvents": [],
+              "delegatedMethods": []
+            }
+          },
+          "review": {
+            "status": "tag-only",
+            "source": "pinned-public-tag-catalog",
+            "unreviewedSections": [
+              "attributes",
+              "properties",
+              "slots",
+              "events",
+              "parts",
+              "cssProperties",
+              "cssStates",
+              "methods",
+              "staticProperties",
+              "staticMethods",
+              "moduleExports",
+              "form",
+              "native"
+            ]
+          }
+        },
+        {
           "tag": "wa-scatter-chart",
           "module": null,
           "tier": "pro",
@@ -237303,14 +237760,7 @@
         "parts": [],
         "cssProperties": [],
         "methods": [],
-        "defaults": [
-          {
-            "memberKind": "attribute",
-            "member": "feedback-duration",
-            "action": "insert-if-absent",
-            "value": 1000
-          }
-        ]
+        "defaults": []
       },
       "normalizations": {
         "typeEquivalences": [
@@ -237323,14 +237773,7 @@
         ],
         "structuralTypeAliases": [],
         "methodParameterTypeEquivalences": [],
-        "defaultEquivalences": [
-          {
-            "memberKind": "property",
-            "member": "feedbackDuration",
-            "upstream": 1000,
-            "target": 1500
-          }
-        ],
+        "defaultEquivalences": [],
         "derivedDefaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -243645,7 +244088,7 @@
       "upstreamTier": "free",
       "targetTag": "lr-code-block",
       "classification": "warning-required",
-      "rationale": "lr-code-block exposes its code as a named, focusable role=\"group\" surface where wa-code-highlighter exposes a region landmark, so assistive-technology navigation that relies on the region landmark needs review. Highlighting also needs the optional shiki peer.",
+      "rationale": "lr-code-block exposes its code as a named, focusable role=\"group\" surface where wa-code-highlighter exposes a region landmark, so assistive-technology navigation that relies on the region landmark needs review. Highlighting also needs the optional shiki peer. A global registerCodeGrammar() call maps to registerCodeGrammar() from the root barrel or @aceshooting/lyra-ui/components/conversation/code-block/code-grammar-registry.js, which also accepts lazy loaders and aliases.",
       "decisionSource": "derived",
       "parity": {
         "staticApi": "reviewed",
@@ -244422,14 +244865,7 @@
         "parts": [],
         "cssProperties": [],
         "methods": [],
-        "defaults": [
-          {
-            "memberKind": "attribute",
-            "member": "feedback-duration",
-            "action": "insert-if-absent",
-            "value": 1000
-          }
-        ]
+        "defaults": []
       },
       "normalizations": {
         "typeEquivalences": [
@@ -244448,14 +244884,7 @@
         ],
         "structuralTypeAliases": [],
         "methodParameterTypeEquivalences": [],
-        "defaultEquivalences": [
-          {
-            "memberKind": "property",
-            "member": "feedbackDuration",
-            "upstream": 1000,
-            "target": 1500
-          }
-        ],
+        "defaultEquivalences": [],
         "derivedDefaultEquivalences": [
           {
             "memberKind": "attribute",
@@ -250868,6 +251297,72 @@
           "actual": "CustomEvent< Readonly<{ entries: readonly ResizeObserverEntry[] }> >"
         }
       ]
+    },
+    {
+      "upstream": "webawesome",
+      "upstreamTag": "wa-rich-text-editor",
+      "upstreamTier": "pro",
+      "targetTag": null,
+      "classification": "unsupported",
+      "rationale": "Lyra UI ships no rich-text editor. lr-docx-editor in @aceshooting/lyra-docs edits DOCX documents through a different public contract, so it is not a migration target for this tag; keep the upstream element or choose an editor by hand.",
+      "decisionSource": "derived",
+      "parity": {
+        "staticApi": "tag-only",
+        "lightDom": "not-applicable",
+        "runtime": {
+          "registration": "unavailable",
+          "optionalPeers": []
+        },
+        "accessibility": {
+          "reviewStatus": "complete",
+          "upstreamProfile": "rich-text-editor",
+          "targetProfile": "no-tag-owned-behavior",
+          "evidence": {
+            "upstream": "pinned-public-contract",
+            "target": "lyra-authored-contract-and-automated-tests"
+          },
+          "comparison": {
+            "status": "warning-required",
+            "missing": [
+              "focus:native-focus",
+              "keyboard:native-editing",
+              "naming:visible-or-author-label",
+              "semantics:textbox"
+            ],
+            "additions": []
+          },
+          "rationale": "no Lyra target does not claim focus:native-focus, keyboard:native-editing, naming:visible-or-author-label, semantics:textbox from wa-rich-text-editor; the mapping requires manual accessibility review."
+        },
+        "behaviorReviewFlags": [
+          "unsupported-mapping"
+        ]
+      },
+      "rewrites": {
+        "attributes": [],
+        "properties": [],
+        "events": [],
+        "slots": [],
+        "parts": [],
+        "cssProperties": [],
+        "methods": [],
+        "defaults": []
+      },
+      "normalizations": {
+        "typeEquivalences": [],
+        "structuralTypeAliases": [],
+        "methodParameterTypeEquivalences": [],
+        "defaultEquivalences": [],
+        "derivedDefaultEquivalences": [],
+        "inferredAttributeSuppressions": [],
+        "unknownMethodReturnTypes": [],
+        "cancelabilityEquivalences": [],
+        "cancelabilityPathAdditions": [],
+        "attributePropertyEquivalences": [],
+        "reflectionEquivalences": [],
+        "cssDefaultEquivalences": [],
+        "deprecationEquivalences": []
+      },
+      "drift": []
     },
     {
       "upstream": "webawesome",

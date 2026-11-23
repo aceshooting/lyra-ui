@@ -269,7 +269,7 @@ describe('lr-lightbox slotted items', () => {
       expect(slide.style.transform).to.equal('');
       const incoming = slide.getAnimations().find((animation) => animation.id === 'lightbox.slide.next');
       expect(incoming !== undefined).to.equal(true);
-      expect(String((incoming!.effect as KeyframeEffect).getKeyframes()[0]!.transform)).to.contain('-80px');
+      expect(String((incoming!.effect as KeyframeEffect).getKeyframes()[0]!['transform'])).to.contain('-80px');
       el.open = false;
       await el.updateComplete;
 
@@ -365,7 +365,7 @@ describe('lr-lightbox slotted items', () => {
       const el = await mixed();
       expect(el.items).to.have.length(3);
       expect(el.items[1]!.matches(':state(empty)')).to.equal(false);
-      expect(copy(el)).to.equal(null);
+      expect(copy(el) === null).to.equal(true);
       el.index = 1;
       await el.show();
       const shown = copy(el)!;
@@ -377,21 +377,21 @@ describe('lr-lightbox slotted items', () => {
       const box = shown.getBoundingClientRect();
       if (box.height > 0) expect(box.width / box.height).to.be.closeTo(2, 0.05);
       expect(el.shadowRoot!.querySelector<HTMLElement>('lr-pan-zoom')!.hidden).to.equal(true);
-      expect(el.shadowRoot!.querySelector('[part="zoom-button"]')).to.equal(null);
-      expect(el.shadowRoot!.querySelector('[part="caption"]')).to.equal(null);
+      expect(el.shadowRoot!.querySelector('[part="zoom-button"]') === null).to.equal(true);
+      expect(el.shadowRoot!.querySelector('[part="caption"]') === null).to.equal(true);
       // The copied button keeps its own arrow keys.
       shown.querySelector('button')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true, cancelable: true }));
       await el.updateComplete;
       expect(el.index).to.equal(1);
       el.next();
       await el.updateComplete;
-      expect(copy(el)).to.equal(null);
+      expect(copy(el) === null).to.equal(true);
       el.previous();
       await el.updateComplete;
       expect(copy(el) !== null && copy(el) !== shown).to.equal(true);
       await el.close();
       await waitUntil(() => !el.hasAttribute('data-closing'), 'exit motion done');
-      expect(copy(el)).to.equal(null);
+      expect(copy(el) === null).to.equal(true);
     });
 
     it('uses the item thumbnail in the strip and is not collected from inside its own copy', async () => {

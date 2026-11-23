@@ -498,7 +498,7 @@ const DEFAULT_TRANSLATION_REGIONS = Object.freeze({
  *  - `none`:        Lyra ships no matching catalog; reported, never rewritten
  * Returns null for any other subpath.
  */
-export function resolveTranslationRoute(subpath) {
+function resolveTranslationRoute(subpath) {
   const match = /^\/dist\/translations\/(?<lang>[A-Za-z]{2,3}(?:[-_][A-Za-z0-9]{2,8})*)\.js$/.exec(subpath);
   if (!match) return null;
   const requested = match.groups.lang.replaceAll('_', '-');

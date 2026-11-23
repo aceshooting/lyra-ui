@@ -218,7 +218,7 @@ The exact-320px RTL story keeps long label/hint copy and both fixed-size stepper
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 - `--lr-input-line-height` (default `inherit`): Line height of the native input text.

@@ -39,9 +39,9 @@ the first connected Lyra element would otherwise adopt, available before any com
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Display and composition     | `lr-block`, `lr-inline-block`, `lr-flex`, `lr-inline-flex`, `lr-grid`, `lr-flow-root`, `lr-stack`, `lr-cluster`, `lr-grid-auto`                                   |
 | Static 12-column grid       | `lr-grid-12`, `lr-span-1` – `lr-span-12`, `lr-row-span-2` – `lr-row-span-4`                                                                                         |
-| Flex direction and wrapping | `lr-row`, `lr-column`, `lr-wrap`, `lr-nowrap`, `lr-grow`, `lr-grow-0`, `lr-shrink`, `lr-shrink-0`                                                                 |
-| Item alignment              | `lr-items-start`, `lr-items-center`, `lr-items-end`, `lr-items-stretch`, `lr-items-baseline`, `lr-self-start`, `lr-self-center`, `lr-self-end`, `lr-self-stretch` |
-| Distribution                | `lr-justify-start`, `lr-justify-center`, `lr-justify-end`, `lr-justify-between`, `lr-justify-around`                                                              |
+| Flex direction and wrapping | `lr-row`, `lr-column`, `lr-wrap`, `lr-wrap-reverse`, `lr-nowrap`, `lr-grow`, `lr-grow-0`, `lr-shrink`, `lr-shrink-0`                                                                 |
+| Item alignment              | `lr-items-start`, `lr-items-center`, `lr-items-end`, `lr-items-stretch`, `lr-items-baseline`, `lr-self-baseline`, `lr-self-start`, `lr-self-center`, `lr-self-end`, `lr-self-stretch` |
+| Distribution                | `lr-justify-start`, `lr-justify-center`, `lr-justify-end`, `lr-justify-between`, `lr-justify-around`, `lr-justify-evenly`                                                              |
 | Gaps                        | `lr-gap-0`, `lr-gap-2xs`, `lr-gap-xs`, `lr-gap-s`, `lr-gap-m`, `lr-gap-l`, `lr-gap-xl`, `lr-gap-2xl`, `lr-gap-3xl`, `lr-gap-4xl`                                  |
 | Compositions                | `lr-flank`, `lr-flank-end`, `lr-split`, `lr-split-column`, `lr-frame`, `lr-frame-square`, `lr-frame-landscape`, `lr-frame-portrait`, `lr-span-grid`, `lr-container` |
 | Plain-element helpers       | `lr-link-plain`, `lr-list-plain`, `lr-placeholder`, `lr-scroll-lock`, `lr-cloak`                                                                                  |
@@ -49,8 +49,9 @@ the first connected Lyra element would otherwise adopt, available before any com
 | Variant and size            | `lr-neutral`, `lr-brand`, `lr-success`, `lr-warning`, `lr-danger`; `lr-size-2xs`, `lr-size-xs`, `lr-size-s`, `lr-size-m`, `lr-size-l`, `lr-size-xl` (`lr-size-full` stays the 100% box) |
 | Logical sizing              | `lr-inline-full`, `lr-block-full`, `lr-size-full`, `lr-min-inline-0`, `lr-min-block-0`, `lr-max-inline-full`, `lr-max-inline-prose`, `lr-center`                  |
 | Overflow                    | `lr-overflow-auto`, `lr-overflow-hidden`                                                                                                                          |
-| Text alignment and size     | `lr-text-start`, `lr-text-center`, `lr-text-end`, `lr-text-xs`, `lr-text-sm`, `lr-text-base`, `lr-text-lg`, `lr-text-xl`, `lr-text-2xl` – `lr-text-5xl`, `lr-text-quiet`                         |
-| Font                        | `lr-font-normal`, `lr-font-medium`, `lr-font-semibold`, `lr-font-bold`, `lr-font-mono`                                                                            |
+| Text alignment and size     | `lr-text-start`, `lr-text-center`, `lr-text-end`, `lr-text-justify`, `lr-text-xs`, `lr-text-sm`, `lr-text-base`, `lr-text-lg`, `lr-text-xl`, `lr-text-2xl` – `lr-text-5xl`, `lr-text-quiet`                         |
+| Font                        | `lr-font-normal`, `lr-font-medium`, `lr-font-light`, `lr-font-semibold`, `lr-font-bold`, `lr-font-mono`, `lr-tabular-nums`                                                                            |
+| Table rows                  | `lr-zebra-rows`, `lr-hover-rows` (on the `table`; tint `tbody` rows from `--lr-color-text` and `--lr-color-mix-hover`)                                          |
 | Text flow                   | `lr-text-break`, `lr-text-nowrap`, `lr-truncate`, `lr-text-balance`, `lr-text-pretty`, `lr-prose`                                                                 |
 | Typography                  | `lr-typography`, `lr-not-typography`, `lr-heading-1`, `lr-heading-2`, `lr-heading-3`, `lr-heading-4`, `lr-heading-5`, `lr-heading-6`, `lr-inline-code`                                           |
 | Visibility and focus        | `lr-visually-hidden`, `lr-visually-hidden-focusable`, `lr-fouce-hidden`, `lr-hidden`                                                                              |
@@ -462,6 +463,17 @@ are not value-aligned. `wa-heading-*`, `wa-caption-*`, `wa-longform-*`, the hue-
 `wa-form-control-*` classes and the gaps Lyra has no step for are reported as `UPSTREAM_CLASS_REVIEW`
 with the nearest alternative and are not rewritten.
 
+Design-token references (`var(--wa-*)`, `var(--sl-*)`) follow a reviewed route table, matched by role
+and resolved value rather than by name, and every target is a document-layer token. Semantic colours
+(`--wa-color-brand-fill-loud` becomes `--lr-color-brand-fill-loud`; surface, text, border, overlay,
+shadow and focus colours likewise), border widths, font families and weights, and spacing steps
+with the same length (`--wa-space-m` and `--sl-spacing-medium`, both 1rem, become `--lr-space-l`) are
+rewritten silently. Type sizes, radii, line heights, shadows, durations, easing and the Shoelace
+`-600` palette steps rewrite to the nearest role and report `UPSTREAM_TOKEN_APPROXIMATE_REVIEW`.
+A token with no equivalent (`--wa-space-2xl` at 2.5rem, numbered and hue palettes) stays as-is and is
+reported as `UPSTREAM_TOKEN_REVIEW` with the nearest alternatives. A token the file declares itself
+(`--wa-space-m: 2rem`) is treated as its own property and left alone.
+
 Stylesheet and loader imports (`import '...'` and CSS `@import`) map to real package subpaths:
 `dist/styles/webawesome.css` becomes `theme.css`, `native.css` and `utilities.css`;
 `styles/native.css`, `styles/utilities.css`, `styles/themes/default.css` and Shoelace
@@ -472,6 +484,23 @@ self-starting loaders (`webawesome.loader.js`, `shoelace-autoloader.js`) become
 `shoelace.js`), are rewritten only when the scanned files have no manual uses left. `setBasePath` and
 `utilities/base-path`, `layers.css`, the `awesome` and `shoelace` themes and the colour palettes have no
 Lyra counterpart and are reported as `UPSTREAM_ASSET_REVIEW`.
+
+Translation imports (`dist/translations/<lang>.js`) become the matching
+`@aceshooting/lyra-translations/<locale>.js` catalog with Lyra's casing (`de-ch` becomes `de-CH`)
+and report `OPTIONAL_PEER_REQUIRED` once, because that package is an optional peer. The `en` import is
+removed, because English is built in. A bare `pt` or `zh` loads `pt-BR` or `zh-CN`, the region CLDR
+resolves it to, and reports `TRANSLATION_LOCALE_REVIEW`. A locale Lyra does not ship stays unchanged
+and reports `UPSTREAM_ASSET_REVIEW`.
+
+Named imports from `dist/utilities/*.js` are rewritten symbol by symbol when every name has a Lyra
+export with the same call shape: `serialize` (`utilities/form.js`), `registerIconLibrary`,
+`unregisterIconLibrary`, `setDefaultIconFamily`, `getDefaultIconFamily` and `getDefaultIconVariant`
+(`components/utility/icon/icon-library.js`), `allDefined` (`utilities/defined.js`),
+`setDefaultAnimation`, `setAnimation` and `getAnimation` (`utilities/animation-registry.js`, with a
+`UTILITY_BEHAVIOR_REVIEW` note to check animation names), and `getAnimationNames` and
+`getEasingNames` (`components/media/animation/animation.class.js`). A statement that also imports
+an unlisted name, a type-only import or a re-export stays unchanged with
+`IMPORT_BINDING_REVIEW_REQUIRED`.
 
 ### Hue palette
 

@@ -1155,7 +1155,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -1736,7 +1736,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
@@ -2314,7 +2314,7 @@ and `dateTimeFormat(locale, options)`.
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -2586,7 +2586,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -3690,7 +3690,7 @@ first field's, referenced here by id.
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
@@ -3897,7 +3897,7 @@ The exact-320px RTL story keeps long label/hint copy and both fixed-size stepper
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 - `--lr-input-line-height` (default `inherit`): Line height of the native input text.
@@ -4118,7 +4118,7 @@ Further custom properties:
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 
 ## `lr-native-time-input`
 
@@ -4222,7 +4222,7 @@ entry for the flush and cancellation rules.
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 - `--lr-input-line-height` (default `inherit`): Line height of the native input text.
@@ -4560,7 +4560,7 @@ Further custom properties:
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 
 ## `lr-time-range`
 
@@ -6399,7 +6399,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -6528,7 +6528,7 @@ fieldset disablement, so the group behaves like one native control.
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
@@ -6663,7 +6663,7 @@ a `.value=${...}` binding on first render) is applied once they arrive.
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
@@ -6933,7 +6933,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -7109,7 +7109,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -7492,7 +7492,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -8195,7 +8195,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -8253,6 +8253,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly value: string;
     readonly label: string;
     readonly sub?: string;
+    readonly html?: string;
     readonly icon?: unknown;
     readonly start?: unknown;
     readonly end?: unknown;
@@ -8280,6 +8281,7 @@ These named interfaces and helper signatures are available to typed integrations
   `ComboboxOption {
     readonly value: string;
     readonly label: string;
+    readonly html?: string;
     readonly disabled?: boolean;
   }`
   Import: `@aceshooting/lyra-ui/components/forms/combobox/combobox.class.js`.
@@ -8855,7 +8857,7 @@ preserve their shared part names and inherit shared form-control and surface tok
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 
 ## Currency catalog and rate helpers
 
@@ -9045,7 +9047,7 @@ including RTL and dark themes. `--lr-form-control-invalid-border-color` themes t
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 
 ## `lr-time-zone-picker`
 
@@ -9108,7 +9110,7 @@ in both modes, following the country picker's event contract.
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 
 ## `lr-unit-picker`
 
@@ -9169,7 +9171,7 @@ in both modes, following the country picker's event contract.
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 
 ## Country, time-zone and unit catalog helpers
 
@@ -9349,7 +9351,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.

@@ -269,3 +269,42 @@ setDefaultIconFamily("sharp", "light"); // used by icons whose family/variant ar
   throws `RangeError` on unknown input). `fontAwesomeIconMutator` is exported too.
 - Font Awesome's icons are licensed separately (Free: CC BY 4.0); a kit code is a public,
   domain-restricted token, so restrict it to your domains in Font Awesome's kit settings.
+
+### Bootstrap Icons preset
+
+Bootstrap Icons (MIT) is the vocabulary Shoelace's `<sl-icon>` resolves by default. Its opt-in
+preset lives at its own side-effect-free subpath and follows the same rules as the Font Awesome
+preset: importing registers and fetches nothing, and every request runs the pipeline above.
+
+```ts
+import "@aceshooting/lyra-ui/components/lr-icon.js";
+import { registerBootstrapIconLibrary } from "@aceshooting/lyra-ui/components/utility/icon/icon-library-bootstrap.js";
+
+const unregister = registerBootstrapIconLibrary(); // library name "bi", pinned jsDelivr release
+// Migrated Shoelace markup: own every icon that sets no library, from a self-hosted copy.
+registerBootstrapIconLibrary({ name: "default", basePath: "/assets/bootstrap-icons" });
+```
+
+```html
+<lr-icon library="bi" name="gear" label="Settings"></lr-icon>
+<lr-icon name="house-fill"></lr-icon>
+```
+
+- Options (`LyraBootstrapIconLibraryOptions`): `name` (default `'bi'`; `'default'` matches
+  Shoelace's default library), `basePath` (the package's `icons/` folder; icons resolve to
+  `<basePath>/<name>.svg`) and `version` (exact `major.minor.patch`, default
+  `BOOTSTRAP_ICONS_DEFAULT_VERSION` = `1.13.2`; ignored with `basePath`). Malformed options throw
+  at the call site. The function returns an unregister callback that only removes its own
+  registration.
+- Bootstrap Icons has no families or variants, so `family`/`variant` are ignored; a filled glyph is
+  its own name (`house-fill`).
+- The resolver fails closed **before any request** for a name other than lowercase kebab-case (the
+  copy-pasted `bi-house` class form is accepted), with the localized `iconLoadError` alert and
+  `lr-error`. A 404, an oversized file or a missing sanitizer fails as described above.
+- The preset mutator only adds `fill="currentColor"` to SVGs that declare no fill; the published
+  files already paint with `currentColor`.
+- Helpers for custom resolvers: `createBootstrapIconResolver(options)` (the same validated resolver)
+  and `bootstrapIconMutator`.
+- `lyra-ui-migrate` reports migrated `sl-icon`/`sl-icon-button` tags with
+  `BEHAVIOR_REVIEW_REQUIRED` and names this preset as the remedy; registering it is left to the
+  application, which chooses the CDN or a self-hosted copy.

@@ -26,9 +26,9 @@ item's `title`/`description` routinely hold focusable content, so wrapping the r
 would trip `nested-interactive`). The opt-in clustered time scale adds only native count-marker
 buttons; it does not make the individual rows interactive.
 
-**`wa-timeline` / `wa-timeline-item` parity.** `lr-timeline` does not accept Web Awesome's
-`orientation="auto"` yet (it would widen the published `orientation` read type; an unrecognized value
-keeps `vertical`). It accepts `marker-placement: 'start' | 'end' | 'alternate' = 'start'` (`alternate` swaps
+**`wa-timeline` / `wa-timeline-item` parity.** `lr-timeline` accepts Web Awesome's
+`orientation="auto"` (see the properties below; an unrecognized value keeps `vertical`). It accepts
+`marker-placement: 'start' | 'end' | 'alternate' = 'start'` (`alternate` swaps
 sides on every other item around a central rail and falls back to `start` under 30em; sides follow the
 inline direction, so RTL mirrors), `marker-alignment: 'start' | 'center' = 'start'` (`center` centers the
 marker on the item's height with the rail running above and below it), and `label` (accessible name; a
@@ -57,8 +57,15 @@ horizontal scrolling retains clipping on the cross axis. Cluster mode keeps its 
 behavior. Vertical time layouts keep the `--lr-timeline-time-extent` axis and reserve room after it
 for the latest item, which sits at the axis end, so it never overlaps the content that follows.
 
-**`lr-timeline` properties:** `orientation: 'vertical' | 'horizontal' = 'vertical'` — note the
-opposite default from `lr-stepper`; `horizontal` makes `[part='base']` a horizontally scrollable row.
+**`lr-timeline` properties:** `orientation: 'vertical' | 'horizontal' | 'auto' = 'vertical'` (type
+`LyraTimelineOrientation`) — note the opposite default from `lr-stepper`; `horizontal` makes
+`[part='base']` a horizontally scrollable row. `auto` measures the timeline's own inline size with a
+`ResizeObserver` and runs it as a row while every item gets about 10em (in the timeline's computed
+font size), as a column otherwise, so a 320px phone or a narrow pane stacks with no breakpoint to
+author; it renders as a column until measured (server-rendered markup included). Read-only
+`effectiveOrientation: 'vertical' | 'horizontal'` reports the axis in effect, and while `auto` the
+host carries a matching `data-effective-orientation` attribute. RTL mirrors the row like
+`horizontal`.
 `accessibleLabel?: string` (attribute `aria-label`) overrides the localized `"Timeline"` name —
 omitting it reads back `undefined` and falls back to that default, while an explicitly empty
 `aria-label` stays empty

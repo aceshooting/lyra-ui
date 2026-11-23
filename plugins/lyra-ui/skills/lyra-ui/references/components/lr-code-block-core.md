@@ -96,7 +96,9 @@ patch existing lines without retokenizing, and gutter navigation reuses the sour
   the displayed code. For a
   TypeScript annotation, use `import type { ShikiLanguageSource } from
 '@aceshooting/lyra-ui/components/lr-code-block-core.js'`; the type-only
-  granular import emits no registration side effect.
+  granular import emits no registration side effect. Grammars registered with
+  `registerCodeGrammar()` (see `<lr-code-block>`) also count as supplied here; an entry in this map
+  wins for the same language.
 - `copyAppearance: 'text' | 'icon' = 'text'` (attribute `copy-appearance`, reflected) — identical to
   `<lr-code-block>`'s own property: `'text'` is the labelled button, `'icon'` swaps the visible label
   for a compact glyph and promotes the same localized string to the control's accessible name

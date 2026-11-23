@@ -8,7 +8,7 @@
 - **Status** `experimental` since `25.5.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
-- **Optional peers** `dompurify` — see `llms/peers.md`
+- **Optional peers** none
 - **Themeable via** 16 parts, 7 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -142,4 +142,4 @@ including RTL and dark themes. `--lr-form-control-invalid-border-color` themes t
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.

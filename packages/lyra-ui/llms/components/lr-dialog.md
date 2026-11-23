@@ -98,7 +98,8 @@ chrome remains visible. The fallback order appears below.
   `DialogCloseReason = 'escape' | 'backdrop' | 'close-button' | 'api' | 'unmount' | string` —
   `'escape'`/`'backdrop'` are emitted by the dialog's own built-in dismiss triggers;
   `'close-button'` by the built-in header close button (rendered unless `without-close-button` is
-  set); `'api'`
+  set); `'close-action'` by a declarative `data-dialog="close"` (or, in a drawer,
+  `data-drawer="close"`) action; `'api'`
   covers `close()` with no argument, `hide()`, and `open = false`; `'unmount'` is emitted
   automatically if the dialog is removed from the DOM while still `open` by anything other than its
   own `close()` (a consumer's own cleanup code, a parent re-render that drops it); any other string
@@ -125,6 +126,33 @@ chrome remains visible. The fallback order appears below.
   Filter by event target to distinguish the owning dialog from nested component dismissals.
 
 The two `lr-after-*` events are never cancelable.
+
+**Declarative open and close:** markup alone can drive a dialog, with the same attribute Web
+Awesome documents, so migrated markup keeps working:
+
+```html
+<button data-dialog="open edit-user">Edit user</button>
+<lr-dialog id="edit-user" label="Edit user">
+  <p>Form fields</p>
+  <button slot="footer" data-dialog="close">Cancel</button>
+</lr-dialog>
+```
+
+- Activating any element with `data-dialog="open <id>"` calls `show()` on the `<lr-dialog>` with
+  that `id`. The id is looked up in the trigger's own tree (its shadow root or document) first, then
+  in its document. An id that matches nothing, or matches something other than a dialog, is ignored.
+- Activating a descendant with `data-dialog="close"` (including one inside a descendant's open
+  shadow root) closes the nearest owning dialog with reason `'close-action'`; `lr-hide`'s
+  `detail.source` is the action element. A nested dialog consumes its own close action, so its
+  parent stays open. `lr-request-close` is not emitted.
+- Both use the ordinary lifecycle, so `lr-show`, `lr-hide` and `lr-close-request` can veto them.
+- Activation is a `click`, so Enter/Space on a native or custom button counts. A `disabled`,
+  `aria-disabled="true"` or inert action does nothing, and so does a click whose default was already
+  prevented.
+- Dialogs register themselves, so a dialog defined under another tag name works the same. One
+  delegated document listener serves every dialog and drawer; it is installed when the first one
+  connects and removed when the last one disconnects.
+- `<lr-drawer>` uses `data-drawer` instead; `data-dialog` never addresses a drawer.
 
 The open sequence is `lr-show` → `lr-initial-focus` (when focus would move) → `lr-after-show`; the
 direct close sequence is `lr-hide` → `lr-close-request` → state change → `lr-close` → `lr-after-hide`.

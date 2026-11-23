@@ -18,7 +18,7 @@ import { asciiWhitespaceTokens } from './ascii-whitespace.js';
  */
 
 /** The `data-*` attribute vocabulary: `'dialog'` reads `data-dialog`, `'drawer'` reads `data-drawer`. */
-export type DeclarativeOverlayKind = 'dialog' | 'drawer';
+type DeclarativeOverlayKind = 'dialog' | 'drawer';
 
 /** What a registered overlay does when one of its declarative actions is activated. */
 export interface DeclarativeOverlayTarget {

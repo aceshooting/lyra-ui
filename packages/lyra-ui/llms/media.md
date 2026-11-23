@@ -6281,6 +6281,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly src: string;
     readonly alt?: string;
     readonly caption?: string;
+    readonly thumbnail?: string;
   }`
   Import: `@aceshooting/lyra-ui/components/media/lightbox/lightbox.class.js`.
   `LyraLightboxSource {

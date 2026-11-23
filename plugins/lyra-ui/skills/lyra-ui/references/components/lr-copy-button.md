@@ -60,9 +60,10 @@ buttons.
   `xl` ladder; `small`/`medium`/`large` alias `s`/`m`/`l`. Scales the minimum hit area, glyph font
   and corner radius. Unset preserves the established icon-button footprint and inherited font;
   custom default-slot triggers keep their own geometry.
-- `feedbackDuration: number = 1500` (attribute `feedback-duration`) — milliseconds before the
-  confirmation **or** the failure state returns to the copy icon. A non-finite value falls back to
-  `1500` rather than leaving the state stuck; a negative one clamps to `0`.
+- `feedbackDuration: number = 1000` (attribute `feedback-duration`) — milliseconds before the
+  confirmation **or** the failure state returns to the copy icon; the default matches
+  `wa-copy-button` and `sl-copy-button`. A non-finite value falls back to `1000` rather than
+  leaving the state stuck; a negative one clamps to `0`.
 
 **Methods:** `focus(options?)`, `blur()` and `click()` forward to the active built-in or custom
 trigger. `getToolbarActions(): readonly LyraToolbarAction[]` implements the public logical-toolbar

@@ -1718,6 +1718,23 @@ test('chart optional-peer attribution follows only reachable loader capabilities
   );
 });
 
+test('combobox option-html sanitizer reaches only composites that forward a source', () => {
+  const packageJson = readJson('package.json');
+  const peersFor = (registrationModule) =>
+    optionalPeersForComponent({ registrationModule }, packageJson);
+
+  assert.ok(
+    peersFor('src/components/lr-combobox.ts').includes('dompurify'),
+    'the combobox itself sanitizes source rows carrying html through the optional dompurify peer'
+  );
+  for (const tag of ['lr-condition-builder', 'lr-filter-bar', 'lr-country-picker']) {
+    assert.ok(
+      !peersFor(`src/components/${tag}.ts`).includes('dompurify'),
+      `${tag} composes a combobox without forwarding a source, so it cannot reach its sanitizer`
+    );
+  }
+});
+
 test('comment examples do not create optional-peer prerequisites', () => {
   const packageJson = readJson('package.json');
   const peersFor = (registrationModule) =>

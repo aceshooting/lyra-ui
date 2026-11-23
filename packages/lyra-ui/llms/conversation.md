@@ -1919,7 +1919,7 @@ height of the field label.
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -4705,7 +4705,7 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -5526,6 +5526,18 @@ These named interfaces and helper signatures are available to typed integrations
     expanded: boolean;
   }`
   The `lr-toggle-request`/`lr-toggle` detail of `<lr-code-block>` and `<lr-code-block-core>`.
+
+- **`components-conversation-code-block-code-grammar-registry-contracts`** — The library-level code grammar registry that `<lr-code-block>` consults.
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-grammar-registry.js`.
+  `LyraCodeGrammarOptions {
+    aliases?: readonly string[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-grammar-registry.js`.
+  `registerCodeGrammar(name: string, grammarOrLoader: ShikiLanguageSource, options?: LyraCodeGrammarOptions): void`
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-grammar-registry.js`.
+  `unregisterCodeGrammar(name: string): void`
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-grammar-registry.js`.
+  `getCodeGrammar(name: string): ShikiLanguageSource | undefined`
 
 - **`components-conversation-code-block-code-loader-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-loader.js`.

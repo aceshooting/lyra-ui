@@ -28,8 +28,8 @@
       "published23Utf8Bytes": 43687,
       "reviewedCheckpointUtf8Bytes": 44244,
       "reviewedCheckpointProxyTokens": 10573,
-      "ceilingUtf8Bytes": 49251,
-      "$comment": "The 32.1.0 additions (the lyra-cdn single-script route, event classes and hydrated SSR fixture guidance) bring the route to 49,251 UTF-8 bytes; the ceiling advances to that exact measurement."
+      "ceilingUtf8Bytes": 50016,
+      "$comment": "The 32.1.0 additions (the lyra-cdn single-script route, event classes and hydrated SSR fixture guidance) bring the route to 49,251 UTF-8 bytes; the ceiling advances to that exact measurement. The 33.0.0 additions (the slim discovery manifest, hydration locale guidance and new root exports) bring it to 50,016 UTF-8 bytes; the ceiling advances to that exact measurement."
     },
     "look-composition": {
       "published23Utf8Bytes": 14858,

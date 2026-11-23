@@ -2544,9 +2544,9 @@ the first connected Lyra element would otherwise adopt, available before any com
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Display and composition     | `lr-block`, `lr-inline-block`, `lr-flex`, `lr-inline-flex`, `lr-grid`, `lr-flow-root`, `lr-stack`, `lr-cluster`, `lr-grid-auto`                                   |
 | Static 12-column grid       | `lr-grid-12`, `lr-span-1` – `lr-span-12`, `lr-row-span-2` – `lr-row-span-4`                                                                                         |
-| Flex direction and wrapping | `lr-row`, `lr-column`, `lr-wrap`, `lr-nowrap`, `lr-grow`, `lr-grow-0`, `lr-shrink`, `lr-shrink-0`                                                                 |
-| Item alignment              | `lr-items-start`, `lr-items-center`, `lr-items-end`, `lr-items-stretch`, `lr-items-baseline`, `lr-self-start`, `lr-self-center`, `lr-self-end`, `lr-self-stretch` |
-| Distribution                | `lr-justify-start`, `lr-justify-center`, `lr-justify-end`, `lr-justify-between`, `lr-justify-around`                                                              |
+| Flex direction and wrapping | `lr-row`, `lr-column`, `lr-wrap`, `lr-wrap-reverse`, `lr-nowrap`, `lr-grow`, `lr-grow-0`, `lr-shrink`, `lr-shrink-0`                                                                 |
+| Item alignment              | `lr-items-start`, `lr-items-center`, `lr-items-end`, `lr-items-stretch`, `lr-items-baseline`, `lr-self-baseline`, `lr-self-start`, `lr-self-center`, `lr-self-end`, `lr-self-stretch` |
+| Distribution                | `lr-justify-start`, `lr-justify-center`, `lr-justify-end`, `lr-justify-between`, `lr-justify-around`, `lr-justify-evenly`                                                              |
 | Gaps                        | `lr-gap-0`, `lr-gap-2xs`, `lr-gap-xs`, `lr-gap-s`, `lr-gap-m`, `lr-gap-l`, `lr-gap-xl`, `lr-gap-2xl`, `lr-gap-3xl`, `lr-gap-4xl`                                  |
 | Compositions                | `lr-flank`, `lr-flank-end`, `lr-split`, `lr-split-column`, `lr-frame`, `lr-frame-square`, `lr-frame-landscape`, `lr-frame-portrait`, `lr-span-grid`, `lr-container` |
 | Plain-element helpers       | `lr-link-plain`, `lr-list-plain`, `lr-placeholder`, `lr-scroll-lock`, `lr-cloak`                                                                                  |
@@ -2554,8 +2554,9 @@ the first connected Lyra element would otherwise adopt, available before any com
 | Variant and size            | `lr-neutral`, `lr-brand`, `lr-success`, `lr-warning`, `lr-danger`; `lr-size-2xs`, `lr-size-xs`, `lr-size-s`, `lr-size-m`, `lr-size-l`, `lr-size-xl` (`lr-size-full` stays the 100% box) |
 | Logical sizing              | `lr-inline-full`, `lr-block-full`, `lr-size-full`, `lr-min-inline-0`, `lr-min-block-0`, `lr-max-inline-full`, `lr-max-inline-prose`, `lr-center`                  |
 | Overflow                    | `lr-overflow-auto`, `lr-overflow-hidden`                                                                                                                          |
-| Text alignment and size     | `lr-text-start`, `lr-text-center`, `lr-text-end`, `lr-text-xs`, `lr-text-sm`, `lr-text-base`, `lr-text-lg`, `lr-text-xl`, `lr-text-2xl` – `lr-text-5xl`, `lr-text-quiet`                         |
-| Font                        | `lr-font-normal`, `lr-font-medium`, `lr-font-semibold`, `lr-font-bold`, `lr-font-mono`                                                                            |
+| Text alignment and size     | `lr-text-start`, `lr-text-center`, `lr-text-end`, `lr-text-justify`, `lr-text-xs`, `lr-text-sm`, `lr-text-base`, `lr-text-lg`, `lr-text-xl`, `lr-text-2xl` – `lr-text-5xl`, `lr-text-quiet`                         |
+| Font                        | `lr-font-normal`, `lr-font-medium`, `lr-font-light`, `lr-font-semibold`, `lr-font-bold`, `lr-font-mono`, `lr-tabular-nums`                                                                            |
+| Table rows                  | `lr-zebra-rows`, `lr-hover-rows` (on the `table`; tint `tbody` rows from `--lr-color-text` and `--lr-color-mix-hover`)                                          |
 | Text flow                   | `lr-text-break`, `lr-text-nowrap`, `lr-truncate`, `lr-text-balance`, `lr-text-pretty`, `lr-prose`                                                                 |
 | Typography                  | `lr-typography`, `lr-not-typography`, `lr-heading-1`, `lr-heading-2`, `lr-heading-3`, `lr-heading-4`, `lr-heading-5`, `lr-heading-6`, `lr-inline-code`                                           |
 | Visibility and focus        | `lr-visually-hidden`, `lr-visually-hidden-focusable`, `lr-fouce-hidden`, `lr-hidden`                                                                              |
@@ -2965,6 +2966,17 @@ are not value-aligned. `wa-heading-*`, `wa-caption-*`, `wa-longform-*`, the hue-
 `wa-form-control-*` classes and the gaps Lyra has no step for are reported as `UPSTREAM_CLASS_REVIEW`
 with the nearest alternative and are not rewritten.
 
+Design-token references (`var(--wa-*)`, `var(--sl-*)`) follow a reviewed route table, matched by role
+and resolved value rather than by name, and every target is a document-layer token. Semantic colours
+(`--wa-color-brand-fill-loud` becomes `--lr-color-brand-fill-loud`; surface, text, border, overlay,
+shadow and focus colours likewise), border widths, font families and weights, and spacing steps
+with the same length (`--wa-space-m` and `--sl-spacing-medium`, both 1rem, become `--lr-space-l`) are
+rewritten silently. Type sizes, radii, line heights, shadows, durations, easing and the Shoelace
+`-600` palette steps rewrite to the nearest role and report `UPSTREAM_TOKEN_APPROXIMATE_REVIEW`.
+A token with no equivalent (`--wa-space-2xl` at 2.5rem, numbered and hue palettes) stays as-is and is
+reported as `UPSTREAM_TOKEN_REVIEW` with the nearest alternatives. A token the file declares itself
+(`--wa-space-m: 2rem`) is treated as its own property and left alone.
+
 Stylesheet and loader imports (`import '...'` and CSS `@import`) map to real package subpaths:
 `dist/styles/webawesome.css` becomes `theme.css`, `native.css` and `utilities.css`;
 `styles/native.css`, `styles/utilities.css`, `styles/themes/default.css` and Shoelace
@@ -2975,6 +2987,23 @@ self-starting loaders (`webawesome.loader.js`, `shoelace-autoloader.js`) become
 `shoelace.js`), are rewritten only when the scanned files have no manual uses left. `setBasePath` and
 `utilities/base-path`, `layers.css`, the `awesome` and `shoelace` themes and the colour palettes have no
 Lyra counterpart and are reported as `UPSTREAM_ASSET_REVIEW`.
+
+Translation imports (`dist/translations/<lang>.js`) become the matching
+`@aceshooting/lyra-translations/<locale>.js` catalog with Lyra's casing (`de-ch` becomes `de-CH`)
+and report `OPTIONAL_PEER_REQUIRED` once, because that package is an optional peer. The `en` import is
+removed, because English is built in. A bare `pt` or `zh` loads `pt-BR` or `zh-CN`, the region CLDR
+resolves it to, and reports `TRANSLATION_LOCALE_REVIEW`. A locale Lyra does not ship stays unchanged
+and reports `UPSTREAM_ASSET_REVIEW`.
+
+Named imports from `dist/utilities/*.js` are rewritten symbol by symbol when every name has a Lyra
+export with the same call shape: `serialize` (`utilities/form.js`), `registerIconLibrary`,
+`unregisterIconLibrary`, `setDefaultIconFamily`, `getDefaultIconFamily` and `getDefaultIconVariant`
+(`components/utility/icon/icon-library.js`), `allDefined` (`utilities/defined.js`),
+`setDefaultAnimation`, `setAnimation` and `getAnimation` (`utilities/animation-registry.js`, with a
+`UTILITY_BEHAVIOR_REVIEW` note to check animation names), and `getAnimationNames` and
+`getEasingNames` (`components/media/animation/animation.class.js`). A statement that also imports
+an unlisted name, a type-only import or a re-export stays unchanged with
+`IMPORT_BINDING_REVIEW_REQUIRED`.
 
 ### Hue palette
 
@@ -9144,7 +9173,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -9725,7 +9754,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
@@ -10303,7 +10332,7 @@ and `dateTimeFormat(locale, options)`.
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -10575,7 +10604,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -11679,7 +11708,7 @@ first field's, referenced here by id.
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
@@ -11886,7 +11915,7 @@ The exact-320px RTL story keeps long label/hint copy and both fixed-size stepper
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 - `--lr-input-line-height` (default `inherit`): Line height of the native input text.
@@ -12107,7 +12136,7 @@ Further custom properties:
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 
 ## `lr-native-time-input`
 
@@ -12211,7 +12240,7 @@ entry for the flush and cancellation rules.
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 - `--lr-input-line-height` (default `inherit`): Line height of the native input text.
@@ -12549,7 +12578,7 @@ Further custom properties:
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 
 ## `lr-time-range`
 
@@ -14388,7 +14417,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -14517,7 +14546,7 @@ fieldset disablement, so the group behaves like one native control.
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
@@ -14652,7 +14681,7 @@ a `.value=${...}` binding on first render) is applied once they arrive.
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
 
@@ -14922,7 +14951,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -15098,7 +15127,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -15481,7 +15510,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -16184,7 +16213,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -16242,6 +16271,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly value: string;
     readonly label: string;
     readonly sub?: string;
+    readonly html?: string;
     readonly icon?: unknown;
     readonly start?: unknown;
     readonly end?: unknown;
@@ -16269,6 +16299,7 @@ These named interfaces and helper signatures are available to typed integrations
   `ComboboxOption {
     readonly value: string;
     readonly label: string;
+    readonly html?: string;
     readonly disabled?: boolean;
   }`
   Import: `@aceshooting/lyra-ui/components/forms/combobox/combobox.class.js`.
@@ -16844,7 +16875,7 @@ preserve their shared part names and inherit shared form-control and surface tok
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 
 ## Currency catalog and rate helpers
 
@@ -17034,7 +17065,7 @@ including RTL and dark themes. `--lr-form-control-invalid-border-color` themes t
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 
 ## `lr-time-zone-picker`
 
@@ -17097,7 +17128,7 @@ in both modes, following the country picker's event contract.
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 
 ## `lr-unit-picker`
 
@@ -17158,7 +17189,7 @@ in both modes, following the country picker's event contract.
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 
 ## Country, time-zone and unit catalog helpers
 
@@ -17338,7 +17369,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -22392,9 +22423,9 @@ item's `title`/`description` routinely hold focusable content, so wrapping the r
 would trip `nested-interactive`). The opt-in clustered time scale adds only native count-marker
 buttons; it does not make the individual rows interactive.
 
-**`wa-timeline` / `wa-timeline-item` parity.** `lr-timeline` does not accept Web Awesome's
-`orientation="auto"` yet (it would widen the published `orientation` read type; an unrecognized value
-keeps `vertical`). It accepts `marker-placement: 'start' | 'end' | 'alternate' = 'start'` (`alternate` swaps
+**`wa-timeline` / `wa-timeline-item` parity.** `lr-timeline` accepts Web Awesome's
+`orientation="auto"` (see the properties below; an unrecognized value keeps `vertical`). It accepts
+`marker-placement: 'start' | 'end' | 'alternate' = 'start'` (`alternate` swaps
 sides on every other item around a central rail and falls back to `start` under 30em; sides follow the
 inline direction, so RTL mirrors), `marker-alignment: 'start' | 'center' = 'start'` (`center` centers the
 marker on the item's height with the rail running above and below it), and `label` (accessible name; a
@@ -22423,8 +22454,15 @@ horizontal scrolling retains clipping on the cross axis. Cluster mode keeps its 
 behavior. Vertical time layouts keep the `--lr-timeline-time-extent` axis and reserve room after it
 for the latest item, which sits at the axis end, so it never overlaps the content that follows.
 
-**`lr-timeline` properties:** `orientation: 'vertical' | 'horizontal' = 'vertical'` — note the
-opposite default from `lr-stepper`; `horizontal` makes `[part='base']` a horizontally scrollable row.
+**`lr-timeline` properties:** `orientation: 'vertical' | 'horizontal' | 'auto' = 'vertical'` (type
+`LyraTimelineOrientation`) — note the opposite default from `lr-stepper`; `horizontal` makes
+`[part='base']` a horizontally scrollable row. `auto` measures the timeline's own inline size with a
+`ResizeObserver` and runs it as a row while every item gets about 10em (in the timeline's computed
+font size), as a column otherwise, so a 320px phone or a narrow pane stacks with no breakpoint to
+author; it renders as a column until measured (server-rendered markup included). Read-only
+`effectiveOrientation: 'vertical' | 'horizontal'` reports the axis in effect, and while `auto` the
+host carries a matching `data-effective-orientation` attribute. RTL mirrors the row like
+`horizontal`.
 `accessibleLabel?: string` (attribute `aria-label`) overrides the localized `"Timeline"` name —
 omitting it reads back `undefined` and falls back to that default, while an explicitly empty
 `aria-label` stays empty
@@ -31841,6 +31879,12 @@ More properties: `with-label`: see the component JSDoc.
 `close(reason?: DialogCloseReason): Promise<void>` — inherited unchanged from `lr-dialog`; each
 promise settles after the matching `lr-after-*` event.
 
+**Declarative open and close:** `data-drawer="open <id>"` on any element opens the `<lr-drawer>`
+with that `id`, and `data-drawer="close"` on a descendant closes the nearest owning drawer with
+reason `'close-action'`. Lookup, nesting, vetoes and disabled/inert handling follow `lr-dialog`'s
+declarative rules; `data-dialog` never addresses a drawer and `data-drawer` never addresses a
+dialog.
+
 **Events:** `lr-show` (cancelable), `lr-after-show`, `lr-hide` (cancelable), `lr-after-hide`, and
 `lr-initial-focus` (cancelable), `lr-request-close` (cancelable, detail source), and `lr-close`
 (`detail: { reason: DialogCloseReason }`, non-cancelable), plus cancelable `lr-close-request`
@@ -32013,7 +32057,8 @@ chrome remains visible. The fallback order appears below.
   `DialogCloseReason = 'escape' | 'backdrop' | 'close-button' | 'api' | 'unmount' | string` —
   `'escape'`/`'backdrop'` are emitted by the dialog's own built-in dismiss triggers;
   `'close-button'` by the built-in header close button (rendered unless `without-close-button` is
-  set); `'api'`
+  set); `'close-action'` by a declarative `data-dialog="close"` (or, in a drawer,
+  `data-drawer="close"`) action; `'api'`
   covers `close()` with no argument, `hide()`, and `open = false`; `'unmount'` is emitted
   automatically if the dialog is removed from the DOM while still `open` by anything other than its
   own `close()` (a consumer's own cleanup code, a parent re-render that drops it); any other string
@@ -32040,6 +32085,33 @@ chrome remains visible. The fallback order appears below.
   Filter by event target to distinguish the owning dialog from nested component dismissals.
 
 The two `lr-after-*` events are never cancelable.
+
+**Declarative open and close:** markup alone can drive a dialog, with the same attribute Web
+Awesome documents, so migrated markup keeps working:
+
+```html
+<button data-dialog="open edit-user">Edit user</button>
+<lr-dialog id="edit-user" label="Edit user">
+  <p>Form fields</p>
+  <button slot="footer" data-dialog="close">Cancel</button>
+</lr-dialog>
+```
+
+- Activating any element with `data-dialog="open <id>"` calls `show()` on the `<lr-dialog>` with
+  that `id`. The id is looked up in the trigger's own tree (its shadow root or document) first, then
+  in its document. An id that matches nothing, or matches something other than a dialog, is ignored.
+- Activating a descendant with `data-dialog="close"` (including one inside a descendant's open
+  shadow root) closes the nearest owning dialog with reason `'close-action'`; `lr-hide`'s
+  `detail.source` is the action element. A nested dialog consumes its own close action, so its
+  parent stays open. `lr-request-close` is not emitted.
+- Both use the ordinary lifecycle, so `lr-show`, `lr-hide` and `lr-close-request` can veto them.
+- Activation is a `click`, so Enter/Space on a native or custom button counts. A `disabled`,
+  `aria-disabled="true"` or inert action does nothing, and so does a click whose default was already
+  prevented.
+- Dialogs register themselves, so a dialog defined under another tag name works the same. One
+  delegated document listener serves every dialog and drawer; it is installed when the first one
+  connects and removed when the last one disconnects.
+- `<lr-drawer>` uses `data-drawer` instead; `data-dialog` never addresses a drawer.
 
 The open sequence is `lr-show` → `lr-initial-focus` (when focus would move) → `lr-after-show`; the
 direct close sequence is `lr-hide` → `lr-close-request` → state change → `lr-close` → `lr-after-hide`.
@@ -35151,9 +35223,10 @@ buttons.
   `xl` ladder; `small`/`medium`/`large` alias `s`/`m`/`l`. Scales the minimum hit area, glyph font
   and corner radius. Unset preserves the established icon-button footprint and inherited font;
   custom default-slot triggers keep their own geometry.
-- `feedbackDuration: number = 1500` (attribute `feedback-duration`) — milliseconds before the
-  confirmation **or** the failure state returns to the copy icon. A non-finite value falls back to
-  `1500` rather than leaving the state stuck; a negative one clamps to `0`.
+- `feedbackDuration: number = 1000` (attribute `feedback-duration`) — milliseconds before the
+  confirmation **or** the failure state returns to the copy icon; the default matches
+  `wa-copy-button` and `sl-copy-button`. A non-finite value falls back to `1000` rather than
+  leaving the state stuck; a negative one clamps to `0`.
 
 **Methods:** `focus(options?)`, `blur()` and `click()` forward to the active built-in or custom
 trigger. `getToolbarActions(): readonly LyraToolbarAction[]` implements the public logical-toolbar
@@ -36663,6 +36736,45 @@ setDefaultIconFamily("sharp", "light"); // used by icons whose family/variant ar
 - Font Awesome's icons are licensed separately (Free: CC BY 4.0); a kit code is a public,
   domain-restricted token, so restrict it to your domains in Font Awesome's kit settings.
 
+### Bootstrap Icons preset
+
+Bootstrap Icons (MIT) is the vocabulary Shoelace's `<sl-icon>` resolves by default. Its opt-in
+preset lives at its own side-effect-free subpath and follows the same rules as the Font Awesome
+preset: importing registers and fetches nothing, and every request runs the pipeline above.
+
+```ts
+import "@aceshooting/lyra-ui/components/lr-icon.js";
+import { registerBootstrapIconLibrary } from "@aceshooting/lyra-ui/components/utility/icon/icon-library-bootstrap.js";
+
+const unregister = registerBootstrapIconLibrary(); // library name "bi", pinned jsDelivr release
+// Migrated Shoelace markup: own every icon that sets no library, from a self-hosted copy.
+registerBootstrapIconLibrary({ name: "default", basePath: "/assets/bootstrap-icons" });
+```
+
+```html
+<lr-icon library="bi" name="gear" label="Settings"></lr-icon>
+<lr-icon name="house-fill"></lr-icon>
+```
+
+- Options (`LyraBootstrapIconLibraryOptions`): `name` (default `'bi'`; `'default'` matches
+  Shoelace's default library), `basePath` (the package's `icons/` folder; icons resolve to
+  `<basePath>/<name>.svg`) and `version` (exact `major.minor.patch`, default
+  `BOOTSTRAP_ICONS_DEFAULT_VERSION` = `1.13.2`; ignored with `basePath`). Malformed options throw
+  at the call site. The function returns an unregister callback that only removes its own
+  registration.
+- Bootstrap Icons has no families or variants, so `family`/`variant` are ignored; a filled glyph is
+  its own name (`house-fill`).
+- The resolver fails closed **before any request** for a name other than lowercase kebab-case (the
+  copy-pasted `bi-house` class form is accepted), with the localized `iconLoadError` alert and
+  `lr-error`. A 404, an oversized file or a missing sanitizer fails as described above.
+- The preset mutator only adds `fill="currentColor"` to SVGs that declare no fill; the published
+  files already paint with `currentColor`.
+- Helpers for custom resolvers: `createBootstrapIconResolver(options)` (the same validated resolver)
+  and `bootstrapIconMutator`.
+- `lyra-ui-migrate` reports migrated `sl-icon`/`sl-icon-button` tags with
+  `BEHAVIOR_REVIEW_REQUIRED` and names this preset as the remedy; registering it is left to the
+  application, which chooses the CDN or a self-hosted copy.
+
 ## `lr-visually-hidden`
 
 Hides its slotted content from sight while leaving it in the accessibility tree, so a screen reader
@@ -37394,6 +37506,39 @@ These named interfaces and helper signatures are available to typed integrations
   `getDefaultIconVariant(): string`
   Import: `@aceshooting/lyra-ui/components/utility/icon/icon-library.js`.
   `setDefaultIconFamily(family: string, variant?: string): void`
+
+- **`components-utility-icon-icon-library-bootstrap-contracts`** — The opt-in Bootstrap Icons preset.
+  Import: `@aceshooting/lyra-ui/components/utility/icon/icon-library-bootstrap.js`.
+  `LyraBootstrapIconLibraryOptions {
+    name?: string;
+    basePath?: string;
+    version?: string;
+  }`
+  Import: `@aceshooting/lyra-ui/components/utility/icon/icon-library-bootstrap.js`.
+  `registerBootstrapIconLibrary(options?: LyraBootstrapIconLibraryOptions): () => void`
+  Import: `@aceshooting/lyra-ui/components/utility/icon/icon-library-bootstrap.js`.
+  `createBootstrapIconResolver(options?: LyraBootstrapIconLibraryOptions): LyraIconLibraryResolver`
+  Import: `@aceshooting/lyra-ui/components/utility/icon/icon-library-bootstrap.js`.
+  `bootstrapIconMutator(svg: SVGElement): void`
+
+- **`components-utility-icon-icon-library-font-awesome-contracts`** — The opt-in Font Awesome preset.
+  Import: `@aceshooting/lyra-ui/components/utility/icon/icon-library-font-awesome.js`.
+  `LyraFontAwesomeIconLibraryOptions {
+    name?: string;
+    kitCode?: string;
+    basePath?: string;
+    version?: string;
+    defaultFamily?: LyraFontAwesomeFamily;
+    defaultVariant?: LyraFontAwesomeVariant;
+  }`
+  Import: `@aceshooting/lyra-ui/components/utility/icon/icon-library-font-awesome.js`.
+  `registerFontAwesomeIconLibrary(options?: LyraFontAwesomeIconLibraryOptions): () => void`
+  Import: `@aceshooting/lyra-ui/components/utility/icon/icon-library-font-awesome.js`.
+  `createFontAwesomeIconResolver(options?: LyraFontAwesomeIconLibraryOptions): LyraIconLibraryResolver`
+  Import: `@aceshooting/lyra-ui/components/utility/icon/icon-library-font-awesome.js`.
+  `fontAwesomeIconFolder(family: string, variant?: string): string`
+  Import: `@aceshooting/lyra-ui/components/utility/icon/icon-library-font-awesome.js`.
+  `fontAwesomeIconMutator(svg: SVGElement): void`
 
 - **`components-utility-known-date-known-date-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/utility/known-date/known-date.class.js`.
@@ -43894,6 +44039,7 @@ These named interfaces and helper signatures are available to typed integrations
     readonly src: string;
     readonly alt?: string;
     readonly caption?: string;
+    readonly thumbnail?: string;
   }`
   Import: `@aceshooting/lyra-ui/components/media/lightbox/lightbox.class.js`.
   `LyraLightboxSource {
@@ -53081,7 +53227,7 @@ height of the field label.
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -53595,6 +53741,20 @@ through an activatable gutter reuses the source lines and updates the previous a
   is exported from the same entry and returns
   `Promise<ShikiLanguageInput | { default: ShikiLanguageInput }>`; assign new map objects after edits.
 
+- Global grammar registry — `registerCodeGrammar(name, grammarOrLoader, { aliases? })` and
+  `unregisterCodeGrammar(name)` (root barrel, or
+  `@aceshooting/lyra-ui/components/conversation/code-block/code-grammar-registry.js`) register a
+  Shiki grammar object or a lazy loader (`() => import('shiki/langs/rust.mjs')`) once for every
+  `lr-code-block` and `lr-code-block-core` on the page. A per-element `languages` or
+  `languageLoaders` entry wins for the same language. Names and aliases are case-insensitive; an
+  alias already held by another grammar moves to the new one, and `unregisterCodeGrammar()` removes
+  the name with its aliases. Blocks already showing that language re-highlight on register and
+  unregister (they subscribe while connected only), so registration may happen after render. A
+  rejected loader leaves the localized plain-text fallback with `:state(error)`. Invalid names
+  (1-64 characters of letters, digits and `. _ + # -`), aliases or sources throw `TypeError`.
+  Migrating a `wa-code-highlighter` app that calls the global `registerCodeGrammar()` is a call-site
+  rename of the import.
+
 - `copyAppearance: 'text' | 'icon' = 'text'` (attribute `copy-appearance`, reflected) — how the
   header's copy control presents itself. `'text'` is the labelled button this component has always
   rendered; `'icon'` swaps the visible label for a compact glyph and promotes the same localized
@@ -53875,7 +54035,9 @@ patch existing lines without retokenizing, and gutter navigation reuses the sour
   the displayed code. For a
   TypeScript annotation, use `import type { ShikiLanguageSource } from
 '@aceshooting/lyra-ui/components/lr-code-block-core.js'`; the type-only
-  granular import emits no registration side effect.
+  granular import emits no registration side effect. Grammars registered with
+  `registerCodeGrammar()` (see `<lr-code-block>`) also count as supplied here; an entry in this map
+  wins for the same language.
 - `copyAppearance: 'text' | 'icon' = 'text'` (attribute `copy-appearance`, reflected) — identical to
   `<lr-code-block>`'s own property: `'text'` is the labelled button, `'icon'` swaps the visible label
   for a compact glyph and promotes the same localized string to the control's accessible name
@@ -55851,7 +56013,7 @@ trigger), `expand-icon`, `empty`, `hint`, `error`.
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.
@@ -56671,6 +56833,18 @@ These named interfaces and helper signatures are available to typed integrations
     expanded: boolean;
   }`
   The `lr-toggle-request`/`lr-toggle` detail of `<lr-code-block>` and `<lr-code-block-core>`.
+
+- **`components-conversation-code-block-code-grammar-registry-contracts`** — The library-level code grammar registry that `<lr-code-block>` consults.
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-grammar-registry.js`.
+  `LyraCodeGrammarOptions {
+    aliases?: readonly string[];
+  }`
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-grammar-registry.js`.
+  `registerCodeGrammar(name: string, grammarOrLoader: ShikiLanguageSource, options?: LyraCodeGrammarOptions): void`
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-grammar-registry.js`.
+  `unregisterCodeGrammar(name: string): void`
+  Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-grammar-registry.js`.
+  `getCodeGrammar(name: string): ShikiLanguageSource | undefined`
 
 - **`components-conversation-code-block-code-loader-contracts`** — Supporting data types and helpers for this component family.
   Import: `@aceshooting/lyra-ui/components/conversation/code-block/code-loader.js`.

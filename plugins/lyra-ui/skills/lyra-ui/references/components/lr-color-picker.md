@@ -392,7 +392,7 @@ The start-placed label aligns to the first line of the field, measured with `--l
 
 Further custom properties:
 
-- `--lr-form-control-label-gap` also spaces a label above the field (see "Field and group label typography" in `llms/forms.md`).
+- `--lr-form-control-label-gap` also spaces a label above the field.
 - `--lr-form-control-label-line-height` (default `inherit`): Line height of the field label.
 - `--lr-form-control-label-text-align` (default `inherit`): Text alignment of the field label.
 - `--lr-form-control-label-text-transform` (default `inherit`): Text transform of the field label.

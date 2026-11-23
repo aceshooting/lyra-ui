@@ -454,9 +454,9 @@ const reviewedCeilingKeys = Object.keys(budgets)
   .sort();
 test('combobox minimum-query admission retains its reviewed initial-route ceiling', () => {
   const entry = 'dist/components/lr-combobox.js';
-  const measurement = 40_478;
+  const measurement = 42_283;
   const ceiling = budgetKilobytesToBytes(initialBudgets.$marginalGzipKb[entry], entry);
-  assert.equal(ceiling, 40_512);
+  assert.equal(ceiling, 42_304);
   assert.equal(ceiling, Math.ceil(measurement / 64) * 64,
     'only the exceeded initial-route ceiling advances to the next 64-byte boundary');
 });
@@ -464,9 +464,9 @@ test('combobox minimum-query admission retains its reviewed initial-route ceilin
 // The core form controls (button, select, input) keep dedicated standalone canaries at the next
 // 64-byte boundary above their reviewed measurements; growth needs a reviewed measurement change.
 for (const [entry, measurement, reviewedCeiling] of [
-  ['dist/components/lr-button.js', 38_323, 38_336],
-  ['dist/components/lr-select.js', 87_607, 87_616],
-  ['dist/components/lr-input.js', 47_491, 47_552],
+  ['dist/components/lr-button.js', 38_407, 38_464],
+  ['dist/components/lr-select.js', 87_676, 87_680],
+  ['dist/components/lr-input.js', 47_581, 47_616],
 ]) {
   test(`${entry} retains its reviewed gzip measurement and tight core-control canary`, () => {
     const ceiling = budgetKilobytesToBytes(budgets[entry], entry);

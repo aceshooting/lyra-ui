@@ -14,7 +14,7 @@ const REVIEW = new Map(Object.entries(table.review));
 const REVIEW_PATTERNS = table.reviewPatterns.map(({ pattern, note }) => ({ pattern: new RegExp(pattern), note }));
 
 /** The whole upstream custom-property name at an offset; never a prefix of a longer name. */
-export const UPSTREAM_TOKEN_REFERENCE = /(?<![\w-])--(?<ecosystem>wa|sl)-[a-z0-9-]+(?![\w-])/g;
+const UPSTREAM_TOKEN_REFERENCE = /(?<![\w-])--(?<ecosystem>wa|sl)-[a-z0-9-]+(?![\w-])/g;
 
 /**
  * Looks up one upstream token name.
@@ -41,7 +41,7 @@ export function lookupUpstreamToken(token) {
  * @param {string} text
  * @returns {Set<string>}
  */
-export function declaredUpstreamTokens(text) {
+function declaredUpstreamTokens(text) {
   return new Set([...text.matchAll(/(--(?:wa|sl)-[a-z0-9-]+)\s*:/g)].map((match) => match[1]));
 }
 

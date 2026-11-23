@@ -5,6 +5,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { generate } from './generate-framework-types.mjs';
+import { SLIM_MANIFEST_FILE } from './slim-manifest.mjs';
 
 const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const problems = [];
@@ -40,8 +41,13 @@ if (
 ) {
   problems.push('package.json root export must pair ./dist/lyra.d.ts with the existing ./dist/lyra.js runtime.');
 }
-if (pkg.exports?.['./custom-elements.json'] !== undefined || pkg.customElements !== undefined) {
-  problems.push('package.json must not carry the custom-elements manifest metadata; @aceshooting/lyra-ide ships it.');
+// The full manifest ships in @aceshooting/lyra-ide; the main package's `customElements` field may
+// point only at the slim, prose-free discovery manifest.
+if (pkg.exports?.['./custom-elements.json'] !== undefined) {
+  problems.push('package.json must not export the full custom-elements manifest; @aceshooting/lyra-ide ships it.');
+}
+if (pkg.customElements !== undefined && pkg.customElements !== SLIM_MANIFEST_FILE) {
+  problems.push(`package.json "customElements" may only name the slim discovery manifest (${SLIM_MANIFEST_FILE}).`);
 }
 for (const [subpath, stem] of [
   ['./framework-types', 'framework-types'],
