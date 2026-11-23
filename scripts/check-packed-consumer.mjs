@@ -168,10 +168,10 @@ const rootHelperRegisteredTags = [];
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/cd597ad2425cba24e215a21a226df08b77f44aa3/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'The complete core graph measures 5,946,968 raw bytes across 154 emitted files after the 33.0 corrections, presets and declarative overlay actions. The raw ceiling is 5,947,008 bytes, the next 64-byte boundary; optional peers remain lazy and no WASM is bundled.',
-  reviewedCoreMeasurementBytes: 5_946_968,
+  $comment: 'The complete core graph measures 5,948,749 raw bytes across 156 emitted files after the 33.0 corrections, presets, declarative overlay actions and the lazy token-layer, locale-chain and label-association chunks. The raw ceiling is 5,948,800 bytes, the next 64-byte boundary; optional peers remain lazy and no WASM is bundled.',
+  reviewedCoreMeasurementBytes: 5_948_749,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 40,
+  selectedRegressionHeadroomBytes: 51,
 };
 
 /**

@@ -5,9 +5,10 @@
    WHAT IT IS. Since 28.0.0 the resolved --lr-* output layer (--lr-color-*, --lr-space-*,
    --lr-radius*, --lr-shadow-*, --lr-font*, motion, focus) is declared once per document instead of
    on every component's shadow :host. theme.css ends with this exact layer, so a page that imports
-   theme.css needs nothing else; without a static copy, registering the first Lyra element adopts
-   the same text as a constructed stylesheet. Link this file instead of theme.css (never both) when
-   a page does not use theme.css and the layer must apply before any Lyra element is registered:
+   theme.css needs nothing else; without a static copy, registering the first Lyra element loads
+   the same text as a separate script and adopts it as a constructed stylesheet. Link this file
+   instead of theme.css (never both) when a page does not use theme.css, so components need no
+   script for the layer, and always when it must apply before any Lyra element is registered:
      - server-rendered pages (declarative shadow roots no longer carry the layer), for a correct
        first paint before hydration;
      - application elements that read --lr-* outputs before Lyra loads;

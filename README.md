@@ -111,6 +111,7 @@ npm install @aceshooting/lyra-ui
 ```
 
 ```js
+import '@aceshooting/lyra-ui/theme.css'; // the token stylesheet first (or tokens-root.css, or a <link>)
 import '@aceshooting/lyra-ui/components/lr-combobox.js';
 import '@aceshooting/lyra-ui/components/lr-option.js';
 ```

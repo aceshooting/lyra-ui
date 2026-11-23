@@ -33,8 +33,12 @@ test('the adopted layer and tokens-root.css are byte-identical, and the runtime 
   const tokensRoot = read('src/styles/tokens-root.css');
   assert.ok(tokensRoot.endsWith(`\n\n${layerCss}`), 'tokens-root.css ends with the generated layer text');
   const module = read('src/internal/document-tokens.generated.ts');
+  const textModule = read('src/internal/document-token-css.generated.ts');
   const literal = `'${layerCss.replaceAll('\\', '\\\\').replaceAll("'", "\\'").replaceAll('\n', '\\n')}'`;
-  assert.ok(module.includes(`export const DOCUMENT_TOKEN_CSS = ${literal};`));
+  assert.ok(textModule.includes(`export const DOCUMENT_TOKEN_CSS = ${literal};`));
+  assert.doesNotMatch(textModule, /^(?:import\b|export .* from )/m, 'the text module stands alone, so its dynamic import adds nothing else');
+  // Components import the identity statically and the text only dynamically: keep them apart.
+  assert.ok(!module.includes('DOCUMENT_TOKEN_CSS'), 'the statically imported module never carries the layer text');
   assert.ok(module.includes(`export const DOCUMENT_TOKEN_LAYER_ID = '${documentLayerIdOf(layerCss)}';`));
 });
 

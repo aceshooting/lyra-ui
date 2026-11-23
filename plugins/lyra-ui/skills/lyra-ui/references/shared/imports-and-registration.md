@@ -78,12 +78,19 @@ cross-shadow-selection gap and conditions for dropping a `@supports` fallback:
 ## Importing and registering components
 
 Every component has a stable, tag-shaped side-effect entry point that registers its own tag. Use
-`components/<tag>.js`; this public boundary stays unchanged if the internal family folders move:
+`components/<tag>.js`; this public boundary stays unchanged if the internal family folders move.
+Load the token stylesheet first — `theme.css`, or `tokens-root.css` (the document token layer
+alone) when the page does not use `theme.css` — with a `<link>` in `<head>` or a bundler CSS import:
 
 ```js
+import "@aceshooting/lyra-ui/theme.css"; // or tokens-root.css; once per page, before any component
 import "@aceshooting/lyra-ui/components/lr-combobox.js"; // registers <lr-combobox>
 import "@aceshooting/lyra-ui/components/lr-table.js"; // registers <lr-table>
 ```
+
+Without either stylesheet, the first registration loads the layer as a separate script on demand
+and components hold their first render until it arrives, so a missed import still renders
+correctly, one request later.
 
 Family barrels register their family. Registration-free `.class.js` entries retain the owning
 family/component path, exposing source organization.

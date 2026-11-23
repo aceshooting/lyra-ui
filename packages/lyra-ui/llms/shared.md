@@ -77,12 +77,19 @@ cross-shadow-selection gap and conditions for dropping a `@supports` fallback:
 ## Importing and registering components
 
 Every component has a stable, tag-shaped side-effect entry point that registers its own tag. Use
-`components/<tag>.js`; this public boundary stays unchanged if the internal family folders move:
+`components/<tag>.js`; this public boundary stays unchanged if the internal family folders move.
+Load the token stylesheet first — `theme.css`, or `tokens-root.css` (the document token layer
+alone) when the page does not use `theme.css` — with a `<link>` in `<head>` or a bundler CSS import:
 
 ```js
+import "@aceshooting/lyra-ui/theme.css"; // or tokens-root.css; once per page, before any component
 import "@aceshooting/lyra-ui/components/lr-combobox.js"; // registers <lr-combobox>
 import "@aceshooting/lyra-ui/components/lr-table.js"; // registers <lr-table>
 ```
+
+Without either stylesheet, the first registration loads the layer as a separate script on demand
+and components hold their first render until it arrives, so a missed import still renders
+correctly, one request later.
 
 Family barrels register their family. Registration-free `.class.js` entries retain the owning
 family/component path, exposing source organization.
@@ -1190,8 +1197,9 @@ Three layers, and **which one you set decides how far the override reaches**:
 **Layer 2 (`--lr-*`) is declared once per document, not on each component**. The
 _document token layer_ declares every shared output on `:root` and re-derives it only at
 [theme scopes](#theme-scopes). `theme.css` carries it, so a page that imports `theme.css` has it from
-first paint; on a page without `theme.css`, registering the first `lr-*` element adopts the same text
-as a constructed stylesheet. Components inherit the result, and so do your own elements —
+first paint; on a page without `theme.css` or `tokens-root.css`, registering the first `lr-*` element
+loads the same text on demand and adopts it as a constructed stylesheet, and components hold their
+first render until it arrives. Components inherit the result, and so do your own elements —
 `body { color: var(--lr-color-text) }` resolves everywhere the layer applies.
 [`tokens-root.css`](#reading-the-resolved-tokens-from-your-own-components--tokens-rootcss) is the
 layer alone, for pages that do not use `theme.css`. Retheme through layer 1 (`--lr-theme-*`) **on a theme scope**: `:root`, a
@@ -1399,8 +1407,11 @@ component does: `var(--lr-color-border)` inside **your** component resolves wher
 applies. `theme.css` carries the layer, so importing `theme.css` is enough, including for
 server-rendered pages and for application elements that paint before any Lyra element exists.
 `tokens-root.css` is the same layer alone, as a static stylesheet, for pages that do not use
-`theme.css`:
+`theme.css`. Link one of them on every page: the layer then costs components no JavaScript.
 
+- **Every page, for size.** Component modules do not bundle the layer. Without a static copy, the
+  first registration imports it as a separate module (about 4 KB gzip) and adopts it; with
+  `theme.css` or `tokens-root.css` present, that module is never requested.
 - **Server-rendered pages.** See
   [SSR and declarative shadow DOM](./shared/frameworks-and-ssr.md#ssr-and-declarative-shadow-dom) and
   [Theme scopes](#theme-scopes) for application shadow roots.
@@ -3730,7 +3741,7 @@ page that does not use `theme.css` links `styles/tokens-root.css`, the layer alo
 <link rel="stylesheet" href="/node_modules/@aceshooting/lyra-ui/dist/theme.css" />
 ```
 
-Hydration then skips the constructed copy. An application's **own** declarative shadow roots that
+Hydration then skips the constructed copy and never requests the layer's script. An application's **own** declarative shadow roots that
 contain theme scopes (for example a `.lr-dark` region or a `data-lr-theme-scope` wrapper) include the
 same `<link rel="stylesheet" href="…/tokens-root.css">` inside their template: document styles do not
 reach into a shadow root until hydration adopts the layer there. Without any link and without

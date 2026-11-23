@@ -137,9 +137,11 @@ bundlers: [MapLibre's ESM guide](https://maplibre.org/maplibre-gl-js/docs/#esm))
 
 ## Usage
 
-Register components from granular entry points; the tag-shaped path is the canonical, stable import:
+Load the token stylesheet once, then register components from granular entry points; the tag-shaped path is the
+canonical, stable import:
 
 ```js
+import "@aceshooting/lyra-ui/theme.css"; // or tokens-root.css, the token layer alone; or a <link> in <head>
 import "@aceshooting/lyra-ui/components/lr-combobox.js";
 import "@aceshooting/lyra-ui/components/lr-option.js";
 ```
@@ -159,6 +161,9 @@ import "@aceshooting/lyra-ui/components/lr-option.js";
   tags (`<lr-chart>` and typed subclasses, `<lr-box-plot>`, `<lr-histogram>`, `<lr-map>`, `<lr-graph>`,
   `<lr-knowledge-graph-explorer>`, `<lr-geojson-viewer>`), which need their own subpath import.
   `<lr-flag>` with `country`/`language` also needs `@aceshooting/lyra-ui/components/media/flag/flag-peer.js` once.
+
+Without the stylesheet, components still render correctly: the first registration loads the token layer as a separate
+script and holds their first render until it arrives.
 
 > **Registration is explicit.** The package root is side-effect-free and exports helpers and types, not
 > component classes; an unregistered tag stays inert even when the import and build succeed.

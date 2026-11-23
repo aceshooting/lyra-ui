@@ -1,5 +1,4 @@
 import {
-  DOCUMENT_TOKEN_CSS,
   DOCUMENT_TOKEN_LAYER_ID,
   DOCUMENT_TOKEN_SCOPE_SELECTOR,
   DOCUMENT_TOKEN_SENTINEL,
@@ -37,6 +36,13 @@ import { isRegisteredLyraElement } from './prefix.js';
  * around that slot, so its assigned slot's tree is checked too (once more after the next microtask
  * when the host has not rendered its slots yet, as Lit components do). Library components' own
  * roots never receive it: none of their templates contains a scope.
+ *
+ * **Layer text.** This module carries the layer's identity, not its text. The text
+ * (`document-token-css.generated.ts`, byte-identical to `tokens-root.css`'s body) is imported
+ * dynamically the first time this copy constructs a sheet, so a page whose stylesheet provides the
+ * layer never downloads it. The constructed sheet is created and adopted synchronously as before,
+ * empty, and filled when the text arrives; `LyraElement` holds its first update until then, so a
+ * component never paints without its tokens. Once loaded, sheets are filled synchronously.
  *
  * **Several copies of Lyra.** A copy whose layer has the same content hash reuses whichever provider
  * is present. A copy with a different layer adopts its own sheet, which comes later and wins where
@@ -83,6 +89,52 @@ const LAYER_NAME = 'lr-theme';
 /** Slot hops followed from one connecting element (nested slot forwarding). */
 const MAX_SLOT_HOPS = 8;
 const mediaLists = new WeakMap<Window, Map<string, MediaQueryList>>();
+/** `var()` references to the inputs the layer reads (see {@link rootKeySheet}). */
+const INPUT_REFERENCE = /var\((--(?:lr-theme-|_lr-)[\w-]+)/g;
+
+/** The layer text, once its module has loaded. */
+let layerCss: string | undefined;
+/** The pending load of the layer text; cleared when it fails, so the next connect asks again. */
+let layerCssLoad: Promise<void> | undefined;
+/** Constructed sheets waiting for the layer text, each with the text it derives from it. */
+const unfilled: [CSSStyleSheet, (css: string) => string][] = [];
+
+function fill(sheet: CSSStyleSheet, derive: (css: string) => string, css: string): void {
+  try {
+    sheet.replaceSync(derive(css));
+  } catch {
+    // A sheet whose document lost its browsing context cannot be filled; it no longer applies.
+  }
+}
+
+function requestLayerCss(): void {
+  layerCssLoad ??= import('./document-token-css.generated.js').then((module) => {
+    layerCss = module.DOCUMENT_TOKEN_CSS;
+    for (const [sheet, derive] of unfilled.splice(0)) fill(sheet, derive, layerCss);
+  }, () => {
+    layerCssLoad = undefined;
+  });
+}
+
+/** Fills one of this copy's sheets with text derived from the layer, now or once it has loaded. */
+function fillFromLayer(sheet: CSSStyleSheet, derive: (css: string) => string): void {
+  if (layerCss !== undefined) {
+    fill(sheet, derive, layerCss);
+    return;
+  }
+  unfilled.push([sheet, derive]);
+  requestLayerCss();
+}
+
+/**
+ * Settles once the layer text has loaded (or failed to), while one of this copy's adopted sheets
+ * waits for it; `undefined` otherwise, which is always the case beside a static provider.
+ *
+ * @internal Awaited by `LyraElement` before its first update.
+ */
+export function lyraTokenLayerPending(): Promise<void> | undefined {
+  return layerCss === undefined ? layerCssLoad : undefined;
+}
 
 function onceSinceCheckpoint(scope: Document | ShadowRoot): boolean {
   if (verifiedSinceCheckpoint.has(scope)) return false;
@@ -281,7 +333,7 @@ function layerSheet(doc: Document, state: DocumentLayerState): CSSStyleSheet {
     // Constructed through the document's own realm: a sheet made in another document cannot be
     // adopted, and an element moved into an iframe has to get the iframe's own copy.
     const sheet = new doc.defaultView!.CSSStyleSheet();
-    sheet.replaceSync(DOCUMENT_TOKEN_CSS);
+    fillFromLayer(sheet, (css) => css);
     carrierCache.set(sheet, true);
     state.sheet = sheet;
   }
@@ -323,7 +375,7 @@ function shadowRootLayerCss(css: string): string {
 function rootLayerSheet(doc: Document, state: DocumentLayerState): CSSStyleSheet {
   if (!state.rootSheet) {
     const sheet = new doc.defaultView!.CSSStyleSheet();
-    sheet.replaceSync(shadowRootLayerCss(DOCUMENT_TOKEN_CSS));
+    fillFromLayer(sheet, shadowRootLayerCss);
     carrierCache.set(sheet, true);
     state.rootSheet = sheet;
   }
@@ -366,6 +418,9 @@ function withdraw(root: Document | ShadowRoot, sheet: CSSStyleSheet | undefined)
  * re-derives the root too, but is not watched (a media listener per document would be observable
  * to the application); it costs only the comparison the key would have saved.
  * It goes in at once with this copy's layer sheet, which restyles every element anyway.
+ *
+ * Its text is derived when it first goes in: from the static provider's own rules beside one (so the
+ * layer text is never downloaded for it), otherwise from the layer text.
  */
 function rootKeySheet(doc: Document, state: DocumentLayerState): CSSStyleSheet | null {
   if (state.rootKey === undefined) {
@@ -373,15 +428,48 @@ function rootKeySheet(doc: Document, state: DocumentLayerState): CSSStyleSheet |
     const brands = (view.navigator as Navigator & { userAgentData?: { brands?: readonly { brand: string }[] } }).userAgentData?.brands;
     state.rootKey = null;
     if (brands?.some((entry) => entry.brand === 'Chromium')) {
-      const names = new Set(Array.from(DOCUMENT_TOKEN_CSS.matchAll(/var\((--(?:lr-theme-|_lr-)[\w-]+)/g), (match) => match[1]));
-      const sheet = new view.CSSStyleSheet();
-      sheet.replaceSync(`:root{--_lr-root-inputs:${Array.from(names, (name) => `var(${name},0)`).join('')}}`);
-      state.rootKey = sheet;
+      state.rootKey = new view.CSSStyleSheet();
+      const sheet = state.rootKey;
       // Without an existing provider the key is adopted immediately with the layer below.
       if (state.provider || state.unreadableProvider) awaitRootChange(doc, state, sheet);
     }
   }
   return state.rootKey;
+}
+
+/** The key's text: every input referenced in `text`, concatenated. */
+function rootKeyCss(text: string): string {
+  const names = new Set(Array.from(text.matchAll(INPUT_REFERENCE), (match) => match[1]));
+  return `:root{--_lr-root-inputs:${Array.from(names, (name) => `var(${name},0)`).join('')}}`;
+}
+
+/** The serialized rules of a sheet and its imports, or `undefined` when they cannot be read. */
+function sheetText(sheet: CSSStyleSheet, depth = 0): string | undefined {
+  let rules: CSSRuleList;
+  try {
+    rules = sheet.cssRules;
+  } catch {
+    return undefined;
+  }
+  let text = '';
+  for (let index = 0; index < rules.length; index++) {
+    const rule = rules[index]!;
+    const imported = (rule as CSSImportRule).styleSheet;
+    if (!imported) text += rule.cssText;
+    else if (depth < 3) text += sheetText(imported, depth + 1) ?? '';
+  }
+  return text;
+}
+
+const filledKeys = new WeakSet<CSSStyleSheet>();
+
+/** Gives the key its text once, from the readable provider or else from the layer text. */
+function fillRootKey(state: DocumentLayerState, key: CSSStyleSheet): void {
+  if (filledKeys.has(key)) return;
+  filledKeys.add(key);
+  const text = state.provider && sheetText(state.provider);
+  if (text) fill(key, rootKeyCss, text);
+  else fillFromLayer(key, rootKeyCss);
 }
 
 /** Adopts the key at the first change that re-derives the root (see {@link rootKeySheet}). */
@@ -396,6 +484,7 @@ function awaitRootChange(doc: Document, state: DocumentLayerState, key: CSSStyle
     observer.disconnect();
     if (state.rootKeyLive) return;
     state.rootKeyLive = true;
+    fillRootKey(state, key);
     adopt(doc, key);
   });
   observer.observe(root, { attributes: true });
@@ -424,6 +513,7 @@ function verifyDocument(doc: Document, state: DocumentLayerState, check: Documen
     // Only a static stylesheet that applied late is worth a warning; an application that adopts
     // theme.css as a constructed sheet after registering Lyra chose that order.
     if (withdraw(doc, state.sheet) && topSheet(state.provider).ownerNode) state.arrivedLate = true;
+    if (key && keyNow.length) fillRootKey(state, key);
     adopt(doc, ...keyNow);
     return;
   }
@@ -432,12 +522,16 @@ function verifyDocument(doc: Document, state: DocumentLayerState, check: Documen
     // check: a shadow root that needed this copy's sheet says nothing about the document's provider.
     // Explicit adoption re-reads the sentinel (this copy's sheet is not in the document meanwhile).
     if (check !== 'explicit' || resolvedSentinel(doc) === DOCUMENT_TOKEN_LAYER_ID) {
+      if (key && keyNow.length) fillRootKey(state, key);
       adopt(doc, ...keyNow);
       return;
     }
     state.unreadableProvider = false;
   }
-  if (key) state.rootKeyLive = true;
+  if (key) {
+    state.rootKeyLive = true;
+    fillRootKey(state, key);
+  }
   adopt(doc, layerSheet(doc, state), ...(key ? [key] : []));
 }
 
@@ -473,6 +567,8 @@ function isLibraryRoot(root: ShadowRoot): boolean {
  */
 export function ensureLyraTokens(element: Element): void {
   shareAdopter();
+  // A load that failed (a missing chunk) is retried while a sheet still waits for the text.
+  if (unfilled.length) requestLayerCss();
   const doc = element.ownerDocument;
   const state = layerState(doc);
   if (!state) return;

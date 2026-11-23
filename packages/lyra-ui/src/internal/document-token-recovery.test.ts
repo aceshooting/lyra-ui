@@ -1,6 +1,6 @@
 import { expect } from '@open-wc/testing';
-import { adoptLyraTokens, hasLyraTokens } from './document-tokens.js';
-import { DOCUMENT_TOKEN_CSS } from './document-tokens.generated.js';
+import { adoptLyraTokens, hasLyraTokens, lyraTokenLayerPending } from './document-tokens.js';
+import { DOCUMENT_TOKEN_CSS } from './document-token-css.generated.js';
 
 function frame() {
   const element = document.createElement('iframe');
@@ -16,6 +16,12 @@ function space(doc: Document): string {
 }
 
 describe('document token capability recovery', () => {
+  // The first constructed copy loads the layer text; once loaded, later copies fill synchronously.
+  before(() => {
+    adoptLyraTokens(document);
+    return lyraTokenLayerPending();
+  });
+
   it('leaves a parsed document untouched and provides tokens when its content moves into a browsing context', () => {
     const parsed = new DOMParser().parseFromString('<main>Content</main>', 'text/html');
     expect(hasLyraTokens(parsed)).to.equal(false);

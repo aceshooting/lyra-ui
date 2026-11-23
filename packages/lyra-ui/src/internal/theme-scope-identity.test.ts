@@ -1,5 +1,6 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import { DOCUMENT_TOKEN_CSS, LAYER_CONSUMED_INPUTS } from './document-tokens.generated.js';
+import { DOCUMENT_TOKEN_CSS } from './document-token-css.generated.js';
+import { LAYER_CONSUMED_INPUTS } from './document-tokens.generated.js';
 import { adoptLyraTokens } from '../utilities/tokens.js';
 import { resetLyraStyle, setLyraStyle } from '../theme/theme.js';
 import { setColorScheme } from '../../test/wtr-media.js';

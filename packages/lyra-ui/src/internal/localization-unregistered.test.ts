@@ -61,13 +61,13 @@ describe('localization before any catalog is registered', () => {
     const before = lyraLocaleCatalogVersion('pt');
 
     // `pt-BR` is reached from `pt` only through the regional-fallback half of the expanded chain.
-    registerLyraLocale('pt-BR', { probeTitle: 'Título', probeItems: { one: '{count} item', other: '{count} itens' } });
+    registerLyraLocale('pt-BR', { probeTitle: 'Título', probeItems: { one: '{count} item', other: '{count} elementos' } });
     await probe.updateComplete;
     expect(text(probe)).to.equal('Título|1 item');
     probe.count = 3;
     probe.requestUpdate();
     await probe.updateComplete;
-    expect(text(probe)).to.equal('Título|3 itens');
+    expect(text(probe)).to.equal('Título|3 elementos');
     expect(lyraLocaleCatalogVersion('pt')).to.not.equal(before);
     expect(lyraLocaleCatalogVersion('en')).to.equal('');
   });

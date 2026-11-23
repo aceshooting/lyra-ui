@@ -2,9 +2,9 @@ import { expect, fixture, html, waitUntil } from '@open-wc/testing';
 import { css } from 'lit';
 import { LyraElement } from './lyra-element.js';
 import { tag } from './prefix.js';
-import { hasLyraTokens } from './document-tokens.js';
+import { hasLyraTokens, lyraTokenLayerPending } from './document-tokens.js';
+import { DOCUMENT_TOKEN_CSS } from './document-token-css.generated.js';
 import {
-  DOCUMENT_TOKEN_CSS,
   DOCUMENT_TOKEN_LAYER_ID,
   DOCUMENT_TOKEN_SENTINEL,
   HOST_TOKEN_CSS,
@@ -20,6 +20,9 @@ import { toRgba } from '../../test/color-contrast.js';
 import '../components/lr-card.js';
 // Mode-attribute fixtures without theme.css exercise the missing-resolver diagnostic on purpose.
 expectDevWarning('lyra-style:resolver');
+// Registration below requested the layer text; these cases cover the loaded layer, filled
+// synchronously (document-token-fallback.test.ts covers the wait).
+before(() => lyraTokenLayerPending());
 
 // A library-shaped probe: registered through customElements.define, so like a consumer subclass of
 // the public LyraElement it is NOT a registered library component, and its shadow root is an

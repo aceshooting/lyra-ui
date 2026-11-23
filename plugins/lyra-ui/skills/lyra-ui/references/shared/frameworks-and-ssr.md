@@ -60,7 +60,7 @@ page that does not use `theme.css` links `styles/tokens-root.css`, the layer alo
 <link rel="stylesheet" href="/node_modules/@aceshooting/lyra-ui/dist/theme.css" />
 ```
 
-Hydration then skips the constructed copy. An application's **own** declarative shadow roots that
+Hydration then skips the constructed copy and never requests the layer's script. An application's **own** declarative shadow roots that
 contain theme scopes (for example a `.lr-dark` region or a `data-lr-theme-scope` wrapper) include the
 same `<link rel="stylesheet" href="…/tokens-root.css">` inside their template: document styles do not
 reach into a shadow root until hydration adopts the layer there. Without any link and without

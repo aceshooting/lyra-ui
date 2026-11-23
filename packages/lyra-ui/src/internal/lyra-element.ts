@@ -7,7 +7,7 @@ import {
 } from 'lit';
 import { property } from 'lit/decorators.js';
 import { hostTokens } from './host-tokens.styles.js';
-import { ensureLyraTokens, primeLyraTokens } from './document-tokens.js';
+import { ensureLyraTokens, lyraTokenLayerPending, primeLyraTokens } from './document-tokens.js';
 import { DOCUMENT_TOKEN_SCOPE_ATTRIBUTES } from './document-tokens.generated.js';
 import { resolveIntlLocale } from './intl-cache.js';
 import { formatLocaleNumber } from './locale-number.js';
@@ -544,6 +544,17 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
       this.pendingLoadInterrupted = false;
       this.resumeInterruptedLoad();
     }
+  }
+
+  /**
+   * Holds the first update while this copy's fallback token sheet waits for the layer text (no
+   * `theme.css` or `tokens-root.css` on the page), so a component never paints without its tokens.
+   * Beside a static provider nothing is pending and the update runs synchronously, as before.
+   */
+  protected override scheduleUpdate(): void | Promise<unknown> {
+    const pending = this.hasUpdated ? undefined : lyraTokenLayerPending();
+    if (pending) return pending.then(() => super.scheduleUpdate());
+    return super.scheduleUpdate();
   }
 
   override disconnectedCallback(): void {
