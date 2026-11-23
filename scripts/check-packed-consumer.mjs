@@ -333,8 +333,10 @@ const bundleEntries = {
     // the next 64-byte boundary. The 32.0.0 map control, legend and drawing hooks bring it to
     // 2,608,588 raw bytes; the ceiling advances to the next 64-byte boundary. The 32.1.0
     // overlay virtual-anchor and shared helper changes bring it to 2,618,805 raw bytes; the
-    // ceiling advances to the next 64-byte boundary.
-    maxRawBytes: 2_618_816,
+    // ceiling advances to the next 64-byte boundary. The 33.0.0 declarative overlay actions
+    // and shared overlay helpers bring it to 2,619,675 raw bytes; the ceiling advances to the
+    // next 64-byte boundary.
+    maxRawBytes: 2_619_712,
   },
   graph: {
     fixture: 'optional',
