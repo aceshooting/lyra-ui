@@ -347,8 +347,9 @@ const bundleEntries = {
     // boundary. Contained pager request events and the queued-focus cancellation bring it to
     // 478,965 raw bytes; the ceiling advances to the next 64-byte boundary. The 32.1.0 shared
     // overlay and helper changes bring it to 480,036 raw bytes; the ceiling advances to the
-    // next 64-byte boundary.
-    maxRawBytes: 480_064,
+    // next 64-byte boundary. The 33.0.0 declarative overlay actions and shared helpers bring it
+    // to 480,906 raw bytes; the ceiling advances to the next 64-byte boundary.
+    maxRawBytes: 480_960,
   },
 };
 
