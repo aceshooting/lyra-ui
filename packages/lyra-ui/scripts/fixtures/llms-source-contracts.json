@@ -6773,7 +6773,7 @@
       "module": "src/components/forms/combobox/combobox.class.ts",
       "exportName": "ComboboxSourceResult",
       "kind": "interface",
-      "fingerprint": "ce446663e368ab7e417f",
+      "fingerprint": "061b783cd1e8ed022aa3",
       "routes": [
         "src/all.ts",
         "src/components/forms/combobox/combobox.class.ts",
@@ -6794,7 +6794,7 @@
       "module": "src/components/forms/combobox/combobox.class.ts",
       "exportName": "ComboboxSourceRow",
       "kind": "interface",
-      "fingerprint": "b25a8c515b58e99fbc88",
+      "fingerprint": "04ba1f1a0001a3fd3728",
       "routes": [
         "src/all.ts",
         "src/components/forms/combobox/combobox.class.ts",
@@ -9624,7 +9624,7 @@
       "module": "src/components/media/lightbox/lightbox-types.ts",
       "exportName": "LyraLightboxImage",
       "kind": "interface",
-      "fingerprint": "70c46365e506d8bb87a0",
+      "fingerprint": "52046abf0e7b1996f9c1",
       "routes": [
         "src/all.ts",
         "src/components/lr-lightbox.ts",
@@ -14446,7 +14446,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "7598deae53aa01505d5e",
+      "fingerprint": "99eb3d6b41a9d057fb09",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15392,7 +15392,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "bd3a48c77c76919e5899",
+      "fingerprint": "c1cce7f3e5fae01a4b10",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15526,7 +15526,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "1789274d931c94939658",
+      "fingerprint": "9d3f78d5f4d41ef67922",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -16128,7 +16128,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "96e9024b2015e6ec01c6",
+      "fingerprint": "d8d8a551338bfca08d50",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16144,7 +16144,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "dfeebd02844001f9f80e",
+      "fingerprint": "0544369e981eaade740d",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16160,7 +16160,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "5041d6a60121135d770d",
+      "fingerprint": "9bab660f2d48773b97aa",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16687,7 +16687,7 @@
       "module": "src/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "52237bd6de83f53011df",
+      "fingerprint": "0b1b394bac6ad046d359",
       "routes": [
         "src/localization.ts",
         "src/utilities/index.ts"
@@ -16704,7 +16704,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "ef7cef610200a5ef73ca",
+      "fingerprint": "9fa29960e0978b5f035d",
       "routes": [
         "src/vue.ts"
       ],
@@ -17096,7 +17096,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "d5a51abe2d8efc35195f",
+      "fingerprint": "3149efe809859721e022",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -17121,7 +17121,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocaleDelta",
       "kind": "function",
-      "fingerprint": "d194f363601dda9295b8",
+      "fingerprint": "a812a5155c979b90a25b",
       "routes": [
         "src/localization.ts"
       ],
@@ -19045,7 +19045,7 @@
       "module": "src/components/media/lightbox/lightbox-types.ts",
       "exportName": "LyraLightboxSource",
       "kind": "interface",
-      "fingerprint": "0b551953675fb1088eec",
+      "fingerprint": "0599b8da1bf1197c030c",
       "routes": [
         "src/all.ts",
         "src/components/lr-lightbox.ts",
@@ -23001,7 +23001,7 @@
       "module": "src/theme/theme.ts",
       "exportName": "LyraLookEntry",
       "kind": "interface",
-      "fingerprint": "c17124c979b6a07fa2e8",
+      "fingerprint": "d8abbd52bb32f1283c67",
       "routes": [
         "src/all.ts",
         "src/lyra.ts",
@@ -23129,7 +23129,7 @@
       "module": "src/components/forms/combobox/combobox.class.ts",
       "exportName": "ComboboxOption",
       "kind": "interface",
-      "fingerprint": "1d0bbb2da7e3480096ff",
+      "fingerprint": "ba7ae4537ba61242faa3",
       "routes": [
         "src/all.ts",
         "src/components/forms/combobox/combobox.class.ts",
@@ -23337,6 +23337,82 @@
         "kind": "utility",
         "name": "form",
         "declaration": "serializeFormData"
+      }
+    },
+    {
+      "module": "src/components/conversation/code-block/code-grammar-registry.ts",
+      "exportName": "getCodeGrammar",
+      "kind": "function",
+      "fingerprint": "d72bc68a713276088c52",
+      "routes": [
+        "src/all.ts",
+        "src/components/conversation/code-block/code-grammar-registry.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/conversation.md",
+      "family": "conversation",
+      "locator": {
+        "kind": "utility",
+        "name": "components-conversation-code-block-code-grammar-registry-contracts",
+        "declaration": "getCodeGrammar"
+      }
+    },
+    {
+      "module": "src/components/conversation/code-block/code-grammar-registry.ts",
+      "exportName": "LyraCodeGrammarOptions",
+      "kind": "interface",
+      "fingerprint": "0a203f70ffcc441a897f",
+      "routes": [
+        "src/all.ts",
+        "src/components/conversation/code-block/code-grammar-registry.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/conversation.md",
+      "family": "conversation",
+      "locator": {
+        "kind": "utility",
+        "name": "components-conversation-code-block-code-grammar-registry-contracts",
+        "declaration": "LyraCodeGrammarOptions"
+      }
+    },
+    {
+      "module": "src/components/conversation/code-block/code-grammar-registry.ts",
+      "exportName": "registerCodeGrammar",
+      "kind": "function",
+      "fingerprint": "b630f4c5aecb2bed557d",
+      "routes": [
+        "src/all.ts",
+        "src/components/conversation/code-block/code-grammar-registry.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/conversation.md",
+      "family": "conversation",
+      "locator": {
+        "kind": "utility",
+        "name": "components-conversation-code-block-code-grammar-registry-contracts",
+        "declaration": "registerCodeGrammar"
+      }
+    },
+    {
+      "module": "src/components/conversation/code-block/code-grammar-registry.ts",
+      "exportName": "unregisterCodeGrammar",
+      "kind": "function",
+      "fingerprint": "bb946c6c956ec2b10fa6",
+      "routes": [
+        "src/all.ts",
+        "src/components/conversation/code-block/code-grammar-registry.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/conversation.md",
+      "family": "conversation",
+      "locator": {
+        "kind": "utility",
+        "name": "components-conversation-code-block-code-grammar-registry-contracts",
+        "declaration": "unregisterCodeGrammar"
       }
     }
   ],
