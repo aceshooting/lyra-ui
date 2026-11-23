@@ -27,7 +27,10 @@ export default {
       },
     },
     esbuildPlugin({ ts: true, json: true, target: 'es2022', tsconfig: 'tsconfig.json' }),
-    ...uiConfig.plugins.filter(plugin => plugin.name !== 'esbuild'),
+    // lyra-ui's fixture-settle rewrite is scoped to lyra-ui's own suite: generated-view hosts here
+    // connect to <lr-gen-view> right after the fixture returns, and these tests are reviewed
+    // against the helpers' unmodified elementUpdated().
+    ...uiConfig.plugins.filter(plugin => plugin.name !== 'esbuild' && plugin.name !== 'lyra-fixture-settle-descendants'),
   ],
   coverage: false,
 };
