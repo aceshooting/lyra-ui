@@ -1,5 +1,40 @@
 # @aceshooting/lyra-ide
 
+## 33.0.0
+
+### Patch Changes
+
+- Updated dependencies [d02b1b6]
+- Updated dependencies [22a4f2f]
+- Updated dependencies [6dc25b2]
+- Updated dependencies [53802fc]
+- Updated dependencies [5b4d9ac]
+- Updated dependencies [6dc25b2]
+- Updated dependencies [3cbc444]
+- Updated dependencies [6dc25b2]
+- Updated dependencies [6dc25b2]
+- Updated dependencies [e4f09a0]
+- Updated dependencies [7f10f6e]
+- Updated dependencies [6dc25b2]
+- Updated dependencies [6dc25b2]
+- Updated dependencies [6756f15]
+- Updated dependencies [6dc25b2]
+- Updated dependencies [6dc25b2]
+- Updated dependencies [6dc25b2]
+- Updated dependencies [599ae22]
+- Updated dependencies [e2ef760]
+- Updated dependencies [1fa99d5]
+- Updated dependencies [91a6b10]
+- Updated dependencies [52a9ecf]
+- Updated dependencies [6dc25b2]
+- Updated dependencies [6dc25b2]
+- Updated dependencies [6dc25b2]
+- Updated dependencies [52a9ecf]
+- Updated dependencies [6dc25b2]
+- Updated dependencies [f920ad2]
+- Updated dependencies [72f11d6]
+  - @aceshooting/lyra-ui@33.0.0
+
 ## 32.1.0
 
 No changes in this release.

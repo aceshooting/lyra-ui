@@ -40,7 +40,7 @@ for the page.
 | `@aceshooting/lyra-3d` | `^1.2.0` | `lr-chart-3d`, `lr-embedding-explorer`, `lr-graph`, `lr-image-viewer`, `lr-knowledge-graph-explorer`, `lr-model-viewer`, `lr-video` |
 | `@aceshooting/lyra-flags` | `^2.3.1` | opt-in `lr-flag` entries `./components/media/flag/flag-peer-bulk-standard.js`, `./components/media/flag/flag-peer-bulk.js`, `./components/media/flag/flag-peer.js` |
 | `@aceshooting/lyra-map` | `^1.5.2 \|\| ^2.0.0` | `lr-geojson-viewer`, `lr-map` |
-| `@aceshooting/lyra-translations` | `^32.1.0` | _(not referenced by any component)_ |
+| `@aceshooting/lyra-translations` | `^33.0.0` | _(not referenced by any component)_ |
 | `@aiden0z/pptx-renderer` | `^1.4.0` | `lr-pptx-viewer` |
 | `@sgratzl/chartjs-chart-boxplot` | `^4.0.0` | `lr-box-plot` |
 | `chart.js` | `^4.0.1` | `lr-bar-chart`, `lr-box-plot`, `lr-bubble-chart`, `lr-chart`, `lr-doughnut-chart`, `lr-histogram`, `lr-line-chart`, `lr-pie-chart`, `lr-polar-area-chart`, `lr-radar-chart`, `lr-scatter-chart` |

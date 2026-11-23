@@ -1,5 +1,11 @@
 # @aceshooting/lyra-cdn
 
+## 33.0.0
+
+### Minor Changes
+
+- 6dc25b2: Ship the opt-in `accent-roles.css` stylesheet (per-role `data-lr-accent-*` remapping) alongside the other CDN stylesheets, exported as `@aceshooting/lyra-cdn/accent-roles.css`.
+
 ## 32.1.0
 
 ### Minor Changes
