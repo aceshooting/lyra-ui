@@ -33,7 +33,7 @@ export const LyraIconButtonTrigger: Story = {
  *  ellipsizes and the tooltip carries the full text. */
 export const FullWidthTrigger: Story = {
   render: () => html`
-    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 12rem)); gap: var(--lr-space-sm)">
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 12rem)); gap: var(--lr-space-s)">
       <lr-tooltip full-width-trigger show-delay="0" content="Summarize the quarterly revenue report by region">
         <button slot="trigger" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">
           Summarize the quarterly revenue report by region
