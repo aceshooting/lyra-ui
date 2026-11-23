@@ -162,7 +162,7 @@ const fs = require("node:fs");
 const lockPath = "packages/lyra-docs/scripts/engine-source.lock.json";
 const lock = JSON.parse(fs.readFileSync(lockPath, "utf8"));
 lock.toolchain.pnpm = JSON.parse(fs.readFileSync("package.json", "utf8")).packageManager.replace(/^pnpm@/u, "");
-fs.writeFileSync(lockPath, `${JSON.stringify(lock, null, 2)}\n`);
+fs.writeFileSync(lockPath, JSON.stringify(lock, null, 2) + "\n");
 '
 
 echo
