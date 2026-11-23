@@ -119,7 +119,7 @@ function authorityFixture() {
       vue: '3.5.45',
     },
     packageManagers: {
-      npm: '10.9.8',
+      npm: '10.9.9',
       pnpm: '12.4.2',
     },
     profiles: Object.entries(PROFILE_FLOOR_PEERS).map(([id, floorPeers]) => ({
@@ -2581,7 +2581,7 @@ test('exports isolated strict npm/pnpm command plans and validates both exact au
   );
 
   const versionByCommand = new Map([
-    ['npm', '10.9.8'],
+    ['npm', '10.9.9'],
     ['pnpm', '12.4.2'],
   ]);
   await assertExecutionToolchain({
@@ -2606,7 +2606,7 @@ test('exports isolated strict npm/pnpm command plans and validates both exact au
       nvmrcText: '22.23.2\n',
       rootManifest: { packageManager: 'pnpm@12.4.2' },
     }),
-    /requires npm 10\.9\.8.*10\.9\.7/iu,
+    /requires npm 10\.9\.9.*10\.9\.7/iu,
   );
   await assert.rejects(
     assertExecutionToolchain({

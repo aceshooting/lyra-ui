@@ -3,7 +3,7 @@
   "reviewed": true,
   "identity": {
     "fixtureHash": "ea06d42b4e1de3fcd66bc2a5c2c2edc5c7e4806c1c242c79880769628c978b83",
-    "node": "22.23.2",
+    "node": "22.23.5",
     "playwright": "1.65.1",
     "browser": "chromium",
     "browserVersion": "159.0.8154.6",

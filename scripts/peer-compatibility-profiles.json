@@ -37,7 +37,7 @@
     "vue": "3.5.46"
   },
   "packageManagers": {
-    "npm": "10.9.8",
+    "npm": "10.9.9",
     "pnpm": "12.21.0"
   },
   "profiles": [
