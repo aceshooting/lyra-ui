@@ -418,6 +418,11 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
   @property({ attribute: 'arrow-placement' }) arrowPlacement: LyraArrowPlacement = 'anchor';
   /** Keeps the arrow this far from the popup's corners, in pixels. */
   @property({ converter: blankNumberConverter(0), attribute: 'arrow-padding' }) arrowPadding = 0;
+  /** Lays the trigger out at full width, as on `lr-popover`: the host becomes a block box and the
+   *  `trigger` part and the slotted trigger element stretch to the host's inline size, so a block
+   *  trigger such as a card in a grid cell fills its column. Off by default, which keeps the
+   *  `inline-block` trigger. Positioning is unaffected. */
+  @property({ type: Boolean, attribute: 'full-width-trigger', reflect: true }) fullWidthTrigger = false;
   /** Plain-text tooltip content, painted when the active content slot carries nothing of its own.
    *  Whitespace-only text there (template indentation around a `slot="trigger"` element) counts as
    *  nothing, so this text still paints and describes the trigger. */

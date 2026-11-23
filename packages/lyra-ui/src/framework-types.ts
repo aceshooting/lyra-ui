@@ -15803,6 +15803,7 @@ export interface LyraComponentTypeMap {
       | 'disabled'
       | 'distance'
       | 'for'
+      | 'fullWidthTrigger'
       | 'hideDelay'
       | 'hoist'
       | 'labelMode'
@@ -15841,6 +15842,7 @@ export interface LyraComponentTypeMap {
       'aria-label'?: LyraTooltip['accessibleLabel'];
       'arrow-padding'?: LyraTooltip['arrowPadding'];
       'arrow-placement'?: LyraTooltip['arrowPlacement'];
+      'full-width-trigger'?: LyraTooltip['fullWidthTrigger'];
       'hide-delay'?: LyraTooltip['hideDelay'];
       'label-mode'?: LyraTooltip['labelMode'];
       'positioning-strategy'?: LyraTooltip['positioningStrategy'];

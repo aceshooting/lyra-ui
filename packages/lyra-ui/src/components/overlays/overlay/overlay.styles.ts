@@ -108,6 +108,13 @@ export const styles = css`
 export const tooltipStyles = css`
   :host { display: inline-block; }
   [part='trigger'] { display: inline-block; }
+  /* full-width-trigger: same block layout as the popover's, for a block trigger in a grid cell. */
+  :host([full-width-trigger]) { display: block; }
+  :host([full-width-trigger]) [part='trigger'] { display: block; }
+  :host([full-width-trigger]) slot[name='trigger']::slotted(*) {
+    box-sizing: border-box;
+    inline-size: 100%;
+  }
   /* position: absolute from the start, matching the mapped non-hoisted default. Physical top/left
      here too, for the same RTL over-constraint reason as the popover above. */
   /* policy-allow(physical-css): same physical property positioner.ts's place() writes; see above. */

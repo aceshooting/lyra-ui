@@ -29,6 +29,25 @@ export const LyraIconButtonTrigger: Story = {
   `,
 };
 
+/** `full-width-trigger` lets a block trigger fill its grid column, so a truncated one-line title
+ *  ellipsizes and the tooltip carries the full text. */
+export const FullWidthTrigger: Story = {
+  render: () => html`
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 12rem)); gap: var(--lr-space-sm)">
+      <lr-tooltip full-width-trigger show-delay="0" content="Summarize the quarterly revenue report by region">
+        <button slot="trigger" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">
+          Summarize the quarterly revenue report by region
+        </button>
+      </lr-tooltip>
+      <lr-tooltip full-width-trigger show-delay="0" content="Draft a reply to the latest support ticket">
+        <button slot="trigger" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">
+          Draft a reply to the latest support ticket
+        </button>
+      </lr-tooltip>
+    </div>
+  `,
+};
+
 /** `content` beside a named trigger written across lines: the indentation left in the default
  *  slot is whitespace only, so it counts as nothing slotted and `content` paints and describes. */
 export const ContentWithNamedTrigger: Story = {

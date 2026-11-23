@@ -172321,6 +172321,16 @@
             "default": ""
           },
           {
+            "name": "full-width-trigger",
+            "property": "fullWidthTrigger",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "hide-delay",
             "property": "hideDelay",
             "type": "number",
@@ -172531,6 +172541,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "fullWidthTrigger",
+            "attribute": "full-width-trigger",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "hideDelay",

@@ -2109,6 +2109,11 @@ later text renders normally.
   `arrowPlacement: 'anchor'|'start'|'end'|'center' = 'anchor'` (attribute `arrow-placement`) and
   `arrowPadding: number = 0` (attribute `arrow-padding`) — the same arrow trio `<lr-popover>`
   documents (`llms/components/lr-popover.md`).
+- `fullWidthTrigger: boolean = false` (attribute `full-width-trigger`, reflected) — lays the
+  trigger out at full width, as on `<lr-popover>`: the host becomes a block box and the `trigger`
+  part and the slotted trigger stretch to the host's inline size, so a block trigger such as an
+  actionable card in a grid cell fills its column (and a truncated title inside it can ellipsize).
+  Off by default, which keeps the `inline-block` trigger. Positioning is unaffected.
 - `content: string = ''` — plain-text tooltip content, used when nothing is slotted. Whitespace-only
   text in the content slot (template indentation around a `slot="trigger"` element) counts as
   nothing, so `content` still supplies the tooltip text.
