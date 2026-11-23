@@ -28,8 +28,8 @@
       "published23Utf8Bytes": 43687,
       "reviewedCheckpointUtf8Bytes": 44244,
       "reviewedCheckpointProxyTokens": 10573,
-      "ceilingUtf8Bytes": 50571,
-      "$comment": "The 32.1.0 additions (the lyra-cdn single-script route, event classes and hydrated SSR fixture guidance) bring the route to 49,251 UTF-8 bytes; the ceiling advances to that exact measurement. The 33.0.0 additions (the slim discovery manifest, hydration locale guidance and new root exports) bring it to 50,016 UTF-8 bytes; the ceiling advances to that exact measurement. The stylesheet-first token-layer guidance (load theme.css or tokens-root.css first; the lazy fallback otherwise) brings it to 50,571 UTF-8 bytes; the ceiling advances to that exact measurement."
+      "ceilingUtf8Bytes": 52429,
+      "$comment": "The 32.1.0 additions (the lyra-cdn single-script route, event classes and hydrated SSR fixture guidance) bring the route to 49,251 UTF-8 bytes; the ceiling advances to that exact measurement. The 33.0.0 additions (the slim discovery manifest, hydration locale guidance and new root exports) bring it to 50,016 UTF-8 bytes; the ceiling advances to that exact measurement. The stylesheet-first token-layer guidance (load theme.css or tokens-root.css first; the lazy fallback otherwise) brings it to 50,571 UTF-8 bytes; the ceiling advances to that exact measurement. The code-split hydration-order guidance (keep hydration.js ahead of a shared Lit chunk) brings it to 52,429 UTF-8 bytes; the ceiling advances to that exact measurement."
     },
     "look-composition": {
       "published23Utf8Bytes": 14858,

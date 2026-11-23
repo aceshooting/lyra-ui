@@ -73,6 +73,27 @@ describe('LyraElement without Lit hydrate support', () => {
     expect(warnings[0]).to.contain(`<${name}>`);
   });
 
+  it('keeps the server nodes readable until the first update, so server state can seed it', async () => {
+    const name = nextName();
+    const container = parseServerMarkup(name);
+    const host = container.querySelector(name) as LyraElement & { label: string };
+    class DemoSeeded extends LyraElement {
+      @property() label = 'Client';
+      override willUpdate(): void {
+        if (!this.hasUpdated) this.label = this.renderRoot.querySelector('button')?.textContent ?? this.label;
+      }
+      override render() {
+        return html`<button part="base">${this.label}</button>`;
+      }
+    }
+    await captureDevWarnings(async () => {
+      customElements.define(name, DemoSeeded);
+      await host.updateComplete;
+    });
+    const buttons = [...host.shadowRoot!.querySelectorAll('button')].map((button) => button.textContent);
+    expect(buttons).to.deep.equal(['Server']);
+  });
+
   it('warns once per page however many unhydrated hosts upgrade', async () => {
     const name = nextName();
     const hosts = [parseServerMarkup(name), parseServerMarkup(name)].map((container) => container.querySelector(name) as LyraElement);

@@ -168,10 +168,10 @@ const rootHelperRegisteredTags = [];
 // Prior reviewed baseline and allowance:
 // https://github.com/aceshooting/lyra-ui/blob/cd597ad2425cba24e215a21a226df08b77f44aa3/scripts/check-packed-consumer.mjs
 const coreRawBudget = {
-  $comment: 'The complete core graph measures 5,948,865 raw bytes across 156 emitted files after the 33.0 corrections, presets, declarative overlay actions and the lazy token-layer, locale-chain and label-association chunks. The raw ceiling is 5,948,928 bytes, the next 64-byte boundary; optional peers remain lazy and no WASM is bundled.',
-  reviewedCoreMeasurementBytes: 5_948_865,
+  $comment: 'The complete core graph measures 5,949,255 raw bytes across 156 emitted files after the 33.0 corrections, presets, declarative overlay actions, the lazy token-layer, locale-chain and label-association chunks and the unpatched-hydration self-heal. The raw ceiling is 5,949,312 bytes, the next 64-byte boundary; optional peers remain lazy and no WASM is bundled.',
+  reviewedCoreMeasurementBytes: 5_949_255,
   reviewedRequiredShikiAssetBytes: 466_610,
-  selectedRegressionHeadroomBytes: 63,
+  selectedRegressionHeadroomBytes: 57,
 };
 
 /**
@@ -335,8 +335,10 @@ const bundleEntries = {
     // overlay virtual-anchor and shared helper changes bring it to 2,618,805 raw bytes; the
     // ceiling advances to the next 64-byte boundary. The 33.0.0 declarative overlay actions
     // and shared overlay helpers bring it to 2,619,675 raw bytes; the ceiling advances to the
-    // next 64-byte boundary.
-    maxRawBytes: 2_619_712,
+    // next 64-byte boundary. Per-obstacle anchor sides and the unpatched-hydration self-heal
+    // bring it to 2,622,125 raw bytes across 42 files; the ceiling advances to the next 64-byte
+    // boundary.
+    maxRawBytes: 2_622_144,
   },
   graph: {
     fixture: 'optional',

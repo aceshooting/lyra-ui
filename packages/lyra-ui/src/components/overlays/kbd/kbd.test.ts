@@ -2,6 +2,7 @@ import { fixture, expect, html } from '@open-wc/testing';
 import '../../lr-kbd.js';
 import type { LyraKbd } from '../../lr-kbd.js';
 import { shortcutTokenLabel, parseShortcut } from '../../lr-kbd.js';
+import { expectDevWarning } from '../../../../test/expected-dev-warnings.js';
 
 describe('shortcutTokenLabel (pure, parameterized on isMac)', () => {
   it('resolves "mod" to the Mac glyph on macOS and to "Ctrl" elsewhere', () => {
@@ -227,6 +228,9 @@ describe('<lr-kbd> rendering', () => {
   });
 
   it('adopts a server-serialized effective platform on a hydration-shaped first update', async () => {
+    // This page never installs Lit's hydrate support, so the server root is re-rendered (and warned
+    // about) rather than hydrated; its serialized state must still seed that first render.
+    expectDevWarning('lyra-hydration:unpatched');
     const el = document.createElement('lr-kbd') as LyraKbd;
     el.keys = 'mod+k';
     el.attachShadow({ mode: 'open' }).innerHTML =
@@ -239,6 +243,7 @@ describe('<lr-kbd> rendering', () => {
       expect(
         Array.from(el.shadowRoot!.querySelectorAll('[part="key"]')).map((key) => key.textContent),
       ).to.deep.equal(['⌘', 'K']);
+      expect(el.shadowRoot!.querySelectorAll('[part="base"]').length, 'no duplicate server tree').to.equal(1);
     } finally {
       el.remove();
     }

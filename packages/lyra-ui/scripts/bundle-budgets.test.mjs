@@ -464,9 +464,9 @@ test('combobox minimum-query admission retains its reviewed initial-route ceilin
 // The core form controls (button, select, input) keep dedicated standalone canaries at the next
 // 64-byte boundary above their reviewed measurements; growth needs a reviewed measurement change.
 for (const [entry, measurement, reviewedCeiling] of [
-  ['dist/components/lr-button.js', 39_371, 39_424],
-  ['dist/components/lr-select.js', 88_599, 88_640],
-  ['dist/components/lr-input.js', 48_552, 48_576],
+  ['dist/components/lr-button.js', 39_486, 39_488],
+  ['dist/components/lr-select.js', 88_721, 88_768],
+  ['dist/components/lr-input.js', 48_671, 48_704],
 ]) {
   test(`${entry} retains its reviewed gzip measurement and tight core-control canary`, () => {
     const ceiling = budgetKilobytesToBytes(budgets[entry], entry);
