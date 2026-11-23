@@ -4,6 +4,7 @@ import { render } from 'lit';
 import '../../lr-tree.js';
 import type { LyraTree, LyraTreeNodeData } from '../../lr-tree.js';
 import type { LyraTreeItem } from '../../lr-tree-item.js';
+import { lyraTokenLayerPending } from '../../../internal/document-tokens.js';
 
 // Hosts rarely await `<lr-tree>`'s `updateComplete`: a framework renders the tree, the user clicks
 // or presses keys, and the browser paints. Every case below therefore uses `fixtureSync()` and
@@ -36,6 +37,12 @@ const branch: LyraTreeNodeData[] = [
 ];
 
 describe('tree hierarchy context without awaiting the tree', () => {
+  // The page links no Lyra stylesheet, so the first render on it waits for the lazy token layer;
+  // these cases measure the tree's own lifecycle, so let that one-time load finish first.
+  before(async () => {
+    await lyraTokenLayerPending();
+  });
+
   it('gives data-model children their level, set position and indentation after a toggle click', async () => {
     const el = fixtureSync<LyraTree>(html`<lr-tree label="Files" .data=${branch}></lr-tree>`);
     await settle();
