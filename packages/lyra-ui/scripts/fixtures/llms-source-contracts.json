@@ -9645,7 +9645,7 @@
       "module": "src/components/media/map/map-anchor-options.ts",
       "exportName": "LyraMapAnchorAvoidObstacle",
       "kind": "interface",
-      "fingerprint": "be85cfc5f227af03b265",
+      "fingerprint": "80aff3e580db141e0b5c",
       "routes": [
         "src/all.ts",
         "src/components/lr-map-anchor.ts",
@@ -14468,7 +14468,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "cbf5db29d7091298c47b",
+      "fingerprint": "8a4043479c9cd01061c4",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -16150,7 +16150,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "800ce86dec72410f648e",
+      "fingerprint": "e116f70bc940b5feaa02",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16166,7 +16166,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "b504cd773dd56a953a18",
+      "fingerprint": "af70dabc4431cbea0879",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16726,7 +16726,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "f49b8bf6675ea30a4e45",
+      "fingerprint": "077e162b4e4de4331c91",
       "routes": [
         "src/vue.ts"
       ],
@@ -17118,7 +17118,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "2ee15d515b39ef41853a",
+      "fingerprint": "6ff1bee60b45a889838d",
       "routes": [
         "src/framework-types.ts"
       ],

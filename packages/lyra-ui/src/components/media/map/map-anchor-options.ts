@@ -11,18 +11,17 @@ export interface LyraMapAnchorSafeArea {
 }
 export type LyraMapAnchorBoundary = Element | readonly Element[];
 /**
- * Which side of an `anchorAvoid` obstacle anchors stay on, in logical terms that follow the map's
- * reading direction: `block-end` keeps them below it, `inline-start` before it in the reading
- * direction. `auto` reserves whichever edge of the map clears the obstacle's overlap most cheaply.
+ * Which side of an `anchorAvoidSides` obstacle anchors stay on, in logical terms that follow the
+ * map's reading direction: `block-end` keeps them below it, `inline-start` before it in the reading
+ * direction. `auto` reserves whichever edge of the map clears the obstacle's overlap most cheaply,
+ * as for a plain `anchorAvoid` element.
  */
 export type LyraMapAnchorAvoidSide = 'auto' | 'block-start' | 'block-end' | 'inline-start' | 'inline-end';
-/** An `anchorAvoid` obstacle with the side anchors must stay on. A missing or unknown `side` is `auto`. */
+/** An `anchorAvoidSides` obstacle with the side anchors must stay on. An unknown `side` is `auto`. */
 export interface LyraMapAnchorAvoidObstacle {
   readonly element: Element;
-  readonly side?: LyraMapAnchorAvoidSide;
+  readonly side: LyraMapAnchorAvoidSide;
 }
-/** One `anchorAvoid` entry: an element (cheapest edge) or an element with an explicit side. */
-export type LyraMapAnchorAvoidEntry = Element | LyraMapAnchorAvoidObstacle;
 /** How an open anchor was closed: by `closeAnchor()`, its close button or Escape. */
 export type LyraMapAnchorCloseReason = 'api' | 'close-button' | 'escape';
 export interface LyraMapAnchorCloseDetail { readonly reason: LyraMapAnchorCloseReason; }

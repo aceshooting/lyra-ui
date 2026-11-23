@@ -63,11 +63,11 @@ import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
-import type { LyraMapAnchorAvoidEntry, LyraMapAnchorBoundary, LyraMapAnchorCloseDetail, LyraMapAnchorSafeArea } from './map-anchor-options.js';
+import type { LyraMapAnchorAvoidObstacle, LyraMapAnchorBoundary, LyraMapAnchorCloseDetail, LyraMapAnchorSafeArea } from './map-anchor-options.js';
 import type { MapAnchorChildren, MapAnchorController, MapAnchorHost, MapAnchorMapHost } from './map-anchor-controller.js';
 import { MAP_ANCHOR_SEAM, type MapAnchorChild, type MapAnchorOwnerOperation } from './map-anchor-seam.js';
 import { tag } from '../../../internal/prefix.js';
-export type { LyraMapAnchorAvoidEntry, LyraMapAnchorAvoidObstacle, LyraMapAnchorAvoidSide, LyraMapAnchorBoundary, LyraMapAnchorSafeArea, LyraMapAnchorCloseReason, LyraMapAnchorCloseDetail } from './map-anchor-options.js';
+export type { LyraMapAnchorAvoidObstacle, LyraMapAnchorAvoidSide, LyraMapAnchorBoundary, LyraMapAnchorSafeArea, LyraMapAnchorCloseReason, LyraMapAnchorCloseDetail } from './map-anchor-options.js';
 import {
   loadMapControl,
   loadMaplibre,
@@ -3375,18 +3375,25 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * floating header, a search bar, a side sheet. The map observes each element's size, page
    * scrolling and the visual viewport (once per animation frame), intersects each element with the
    * map and reserves its overlap on the cheapest logical edge: a full-width header reserves
-   * `blockStart`, a full-height side panel its inline edge. An entry may instead be
-   * `{ element, side }` naming the side of the obstacle anchors stay on (`'block-end'` keeps them
-   * below it, `'inline-start'`/`'inline-end'` follow the reading direction, `'auto'` or an unknown
-   * side is the cheapest edge), for chrome whose cheapest edge changes with its size, such as a
-   * search bar whose results list opens. Obstacles that are not rendered (detached, zero-size,
-   * `display: none` or `visibility: hidden`, also when inherited) reserve nothing; a change to an
-   * obstacle's own `style`, `class` or `hidden` attribute re-measures. The result is folded into
-   * `anchorSafeArea` edge by edge (the larger inset wins) for the `anchor` slot and every
-   * `lr-map-anchor` child without its own `safeArea`. Property only; entries are read once on
-   * assignment (assign a new array to change a side), the array is not retained beyond its
-   * elements, and removing them or disconnecting the map stops every observer. */
-  @property({ attribute: false }) anchorAvoid?: readonly LyraMapAnchorAvoidEntry[];
+   * `blockStart`, a full-height side panel its inline edge. Use `anchorAvoidSides` to name the side
+   * of an obstacle instead. Obstacles that are not rendered (detached, zero-size, `display: none`
+   * or `visibility: hidden`, also when inherited) reserve nothing; a change to an obstacle's own
+   * `style`, `class` or `hidden` attribute re-measures. The result is folded into `anchorSafeArea`
+   * edge by edge (the larger inset wins) for the `anchor` slot and every `lr-map-anchor` child
+   * without its own `safeArea`. Property only; the array is not retained beyond its elements, and
+   * removing them or disconnecting the map stops every observer. */
+  @property({ attribute: false }) anchorAvoid?: readonly Element[];
+  /** Obstacles to keep anchors on a named side of, for chrome whose cheapest edge changes with its
+   * size: a floating search bar whose results list opens becomes taller than it is wide, and the
+   * cheapest edge would then squeeze the panel into a column beside it. Each `{ element, side }`
+   * entry is observed and measured like an `anchorAvoid` element, but reserves the map edge that
+   * keeps anchors on `side` of it: `'block-end'` below it, `'block-start'` above it,
+   * `'inline-start'`/`'inline-end'` before or after it in the map's reading direction (they swap
+   * under RTL), `'auto'` (also for an unknown side) the cheapest edge. A separate list rather than
+   * richer `anchorAvoid` entries keeps `anchorAvoid` a plain element array for existing readers;
+   * an element in both lists takes its side from here, and one only here is added. Entries are
+   * read once on assignment, so assign a new array to change a side. Property only. */
+  @property({ attribute: false }) anchorAvoidSides?: readonly LyraMapAnchorAvoidObstacle[];
   /** Extra CSS pixels kept free beyond each `anchorAvoid` obstacle, so an anchor never sits flush
    * against the chrome it avoids. Added only to the edges an obstacle actually reserves; a free
    * edge stays zero. Nonnegative and finite; anything else is `0`. Default `0`. Set from the
@@ -3419,9 +3426,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     return value;
   }
   private syncAnchorAvoidance(): void {
-    if (!this.anchorAvoid?.length && !this.anchorAvoidance) return;
+    if (!this.anchorAvoid?.length && !this.anchorAvoidSides?.length && !this.anchorAvoidance) return;
     this.anchorAvoidance ??= new MapAnchorAvoidance({ element: this, direction: () => this.effectiveDirection, changed: () => { this.scheduleAnchorSync(); }, gap: () => Math.max(0, finiteNumber(this.anchorAvoidGap, 0)) });
-    this.anchorAvoidance.observe(this.isConnected ? this.anchorAvoid : undefined);
+    if (this.isConnected) this.anchorAvoidance.observe(this.anchorAvoid, this.anchorAvoidSides);
+    else this.anchorAvoidance.observe(undefined);
   }
   /** Adds a localized close action and nonmodal Escape ownership. Opening never moves focus. */
   @property({ type: Boolean, attribute: 'anchor-closable' }) anchorClosable = false;
@@ -6618,7 +6626,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (changed.has('hash') || changed.has('hashFormat')) { this.syncHash(); this.applyHash(); }
     if (this._map && (this.anchorSyncRequested || ['anchorLngLat', 'anchorBoundary', 'anchorSafeArea', 'anchorClosable', 'dir', 'strings', 'lang', 'locale'].some(name => changed.has(name)))) { this.anchorSyncRequested = false; this.syncAnchor(); }
     if (changed.has('markers') && this._map) this.applyMarkers();
-    if (changed.has('anchorAvoid')) this.syncAnchorAvoidance();
+    if (changed.has('anchorAvoid') || changed.has('anchorAvoidSides')) this.syncAnchorAvoidance();
     else if ((changed.has('dir') || changed.has('anchorAvoidGap')) && this.anchorAvoidance) this.anchorAvoidance.refresh();
     if (changed.has('controlsAvoid')) this.syncControlsAvoidance();
     else if (changed.has('dir') && this.controlsAvoidance) this.controlsAvoidance.refresh();

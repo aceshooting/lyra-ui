@@ -92773,7 +92773,7 @@
           {
             "name": "anchorAvoid",
             "attribute": null,
-            "type": "readonly LyraMapAnchorAvoidEntry[] | undefined",
+            "type": "readonly Element[] | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,
@@ -92788,6 +92788,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0
+          },
+          {
+            "name": "anchorAvoidSides",
+            "attribute": null,
+            "type": "readonly LyraMapAnchorAvoidObstacle[] | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "anchorBoundary",

@@ -1757,7 +1757,7 @@ export const AnchorAvoidExplicitSide: Story = {
         ${ref(node => {
           const map = node as LyraMap | undefined;
           if (!map) return;
-          map.anchorAvoid = search ? [{ element: search, side: 'block-end' }] : [];
+          map.anchorAvoidSides = search ? [{ element: search, side: 'block-end' }] : [];
           map.anchorLngLat = [0, 0];
         })}><div slot="anchor">Kept below the search results, not beside them</div></lr-map>
     </div>`;

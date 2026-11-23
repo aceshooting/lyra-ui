@@ -8628,6 +8628,7 @@ export interface LyraComponentTypeMap {
       LyraMap,
       | 'anchorAvoid'
       | 'anchorAvoidGap'
+      | 'anchorAvoidSides'
       | 'anchorBoundary'
       | 'anchorClosable'
       | 'anchorFill'

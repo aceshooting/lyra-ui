@@ -1134,32 +1134,33 @@ Move the close action into the reserved header corner with
 `lr-map::part(anchor-close) { position: absolute; inset-block-start: 0; inset-inline-end: 0; }`;
 the positioned `anchor` panel is its containing block.
 
-`anchorAvoid?: readonly LyraMapAnchorAvoidEntry[]` (property only) keeps anchors clear of
-application chrome without measuring it: the map observes each element's size, page scrolling and
-the visual viewport (once per animation frame), intersects each with the map and reserves the
-overlap on its cheapest logical edge (a full-width header reserves `blockStart`, a full-height side
-sheet its inline edge). The result is folded into `anchorSafeArea` edge by edge, the larger inset
-winning, for the `anchor` slot and every `lr-map-anchor` child without its own `safeArea`. Clearing
-it, removing an element or disconnecting the map releases the observers. `anchorAvoidGap`
-(attribute `anchor-avoid-gap`, CSS pixels, default `0`) keeps that much extra room beyond each edge
-an obstacle reserves, so a panel never sits flush against it; edges no obstacle reserves stay zero.
+`anchorAvoid?: readonly Element[]` (property only) keeps anchors clear of application chrome
+without measuring it: the map observes each element's size, page scrolling and the visual
+viewport (once per animation frame), intersects each with the map and reserves the overlap on its
+cheapest logical edge (a full-width header reserves `blockStart`, a full-height side sheet its
+inline edge). The result is folded into `anchorSafeArea` edge by edge, the larger inset winning,
+for the `anchor` slot and every `lr-map-anchor` child without its own `safeArea`. Clearing it,
+removing an element or disconnecting the map releases the observers. `anchorAvoidGap` (attribute
+`anchor-avoid-gap`, CSS pixels, default `0`) keeps that much extra room beyond each edge an
+obstacle reserves, so a panel never sits flush against it; edges no obstacle reserves stay zero.
+Obstacles that are not rendered reserve nothing: detached, zero-size, `display: none` or
+`visibility: hidden` (also inherited). A change to an obstacle's own `style`, `class` or `hidden`
+attribute re-measures it.
 
-An entry is an `Element` or `{ element, side }` (`LyraMapAnchorAvoidObstacle`), where
-`side: LyraMapAnchorAvoidSide` names the side of the obstacle anchors stay on: `'block-end'`
-(below it), `'block-start'` (above it), `'inline-start'` or `'inline-end'` (before or after it in
-the map's reading direction, so they swap under RTL), or `'auto'`, the cheapest edge (also used for
-a missing or unknown side). Name a side for chrome whose cheapest edge changes with its size: a
-floating search bar whose results list opens becomes taller than it is wide, and `auto` would then
-squeeze the panel into a column beside it. Entries are read once on assignment; assign a new array
-to change a side. Obstacles that are not rendered reserve nothing: detached, zero-size,
-`display: none` or `visibility: hidden` (also inherited). A change to an obstacle's own `style`,
-`class` or `hidden` attribute re-measures it.
+`anchorAvoidSides?: readonly LyraMapAnchorAvoidObstacle[]` (property only) names the side of an
+obstacle anchors stay on, for chrome whose cheapest edge changes with its size: a floating search
+bar whose results list opens becomes taller than it is wide, and the cheapest edge would then
+squeeze the panel into a column beside it. Each `{ element, side }` entry is observed like an
+`anchorAvoid` element; `side: LyraMapAnchorAvoidSide` is `'block-end'` (below it), `'block-start'`
+(above it), `'inline-start'` or `'inline-end'` (before or after it in the map's reading direction,
+so they swap under RTL), or `'auto'`, the cheapest edge (also used for an unknown side). An element
+in both lists takes its side from `anchorAvoidSides`; one listed only there is added. Entries are
+read once on assignment; assign a new array to change a side.
 
 ```ts
-map.anchorAvoid = [
-  document.querySelector('header.app-bar')!,
-  { element: document.querySelector('.search')!, side: 'block-end' },
-];
+const search = document.querySelector('.search')!;
+map.anchorAvoid = [document.querySelector('header.app-bar')!, search];
+map.anchorAvoidSides = [{ element: search, side: 'block-end' }];
 ```
 
 **Multiple anchored panels:** when several panels must be open at once, each opened and closed by
@@ -6810,7 +6811,7 @@ particular country. Representative language mappings also include `lb` (Luxembou
   coordinates use longitude/latitude pairs; length is in metres and area is in square metres.
   `LyraMapAnchorAvoidObstacle {
     readonly element: Element;
-    readonly side?: LyraMapAnchorAvoidSide;
+    readonly side: LyraMapAnchorAvoidSide;
   }`
   `LyraMapAnchorSafeArea {
     readonly blockStart?: number;

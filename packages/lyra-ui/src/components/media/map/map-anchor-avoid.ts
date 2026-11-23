@@ -1,4 +1,4 @@
-import type { LyraMapAnchorAvoidEntry, LyraMapAnchorAvoidSide, LyraMapAnchorSafeArea } from './map-anchor-options.js';
+import type { LyraMapAnchorAvoidObstacle, LyraMapAnchorAvoidSide, LyraMapAnchorSafeArea } from './map-anchor-options.js';
 
 /** What the avoidance needs from its map: the allocation, the reading direction and a change hook. */
 export interface MapAnchorAvoidHost {
@@ -44,13 +44,26 @@ export function obstacleEdges(map: DOMRectReadOnly, obstacle: DOMRectReadOnly, s
   return { top: 0, right: 0, bottom: 0, left: 0, [best[0]]: best[1] };
 }
 
-/** Normalizes one `anchorAvoid` entry, reading the caller's object once; anything else is dropped. */
+/** Normalizes one `anchorAvoidSides` entry, reading the caller's object once; anything else is dropped. */
 function toObstacle(entry: unknown): Obstacle | undefined {
-  if (entry instanceof Element) return { element: entry, side: 'auto' };
   if (entry === null || typeof entry !== 'object') return undefined;
   const { element, side } = entry as { element?: unknown; side?: unknown };
   if (!(element instanceof Element)) return undefined;
   return { element, side: typeof side === 'string' && SIDES.has(side) ? side as LyraMapAnchorAvoidSide : 'auto' };
+}
+
+/** Plain elements reserve their cheapest edge; a sided entry adds its element or overrides the
+ * side of the same element in the plain list (the last sided entry for an element wins). */
+function toObstacles(elements: readonly Element[] | undefined, sides: readonly LyraMapAnchorAvoidObstacle[] | undefined): Obstacle[] {
+  const list = new Map<Element, LyraMapAnchorAvoidSide>();
+  if (Array.isArray(elements)) for (const element of elements as readonly unknown[]) if (element instanceof Element) list.set(element, 'auto');
+  if (Array.isArray(sides)) {
+    for (const entry of sides as readonly unknown[]) {
+      const obstacle = toObstacle(entry);
+      if (obstacle) list.set(obstacle.element, obstacle.side);
+    }
+  }
+  return [...list].map(([element, side]) => ({ element, side }));
 }
 
 /** Whether an obstacle paints at all: connected, laid out and not `visibility: hidden`/`collapse`
@@ -102,10 +115,11 @@ export class MapAnchorAvoidance {
   /** The avoided overlap as logical edges, or `undefined` when nothing overlaps. */
   get area(): LyraMapAnchorSafeArea | undefined { return this.current; }
 
-  /** Observes these obstacles instead of the previous ones; an empty list stops observing. */
-  observe(entries: readonly LyraMapAnchorAvoidEntry[] | undefined): void {
+  /** Observes these obstacles instead of the previous ones: plain elements on their cheapest edge,
+   * plus sided entries that add an element or override its side. An empty list stops observing. */
+  observe(elements: readonly Element[] | undefined, sides?: readonly LyraMapAnchorAvoidObstacle[]): void {
     this.disconnect();
-    const list = Array.isArray(entries) ? (entries as readonly unknown[]).map(toObstacle).filter((entry): entry is Obstacle => entry !== undefined) : [];
+    const list = toObstacles(elements, sides);
     const view = this.host.element.ownerDocument.defaultView;
     if (!list.length || !view) { this.publish(undefined); return; }
     this.elements = list; this.view = view;

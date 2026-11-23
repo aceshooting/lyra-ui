@@ -123,7 +123,7 @@ async function mountSearch(direction: 'ltr' | 'rtl' = 'ltr') {
   return { map, bar };
 }
 
-describe('lr-map anchorAvoid sides and hidden obstacles', () => {
+describe('lr-map anchorAvoidSides and hidden obstacles', () => {
   beforeEach(() => {
     Object.defineProperty(window, 'IntersectionObserver', { configurable: true, value: undefined });
     HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, id: string, ...rest: unknown[]) {
@@ -143,14 +143,17 @@ describe('lr-map anchorAvoid sides and hidden obstacles', () => {
       await waitUntil(() => avoidArea(map) !== undefined, 'the bar is reserved');
       const inline = direction === 'rtl' ? 'inlineStart' : 'inlineEnd';
       expect(avoidArea(map), 'auto keeps the cheapest edge').to.deep.equal({ blockStart: 0, blockEnd: 0, inlineStart: 0, inlineEnd: 0, [inline]: 252 });
-      map.anchorAvoid = [{ element: bar, side: 'block-end' }];
-      await waitUntil(() => avoidArea(map)?.blockStart === 380, 'block-end reserves down to the bar bottom');
+      map.anchorAvoidSides = [{ element: bar, side: 'block-end' }];
+      await waitUntil(() => avoidArea(map)?.blockStart === 380, 'block-end overrides the side of the same anchorAvoid element');
       expect(avoidArea(map)).to.deep.equal({ blockStart: 380, blockEnd: 0, inlineStart: 0, inlineEnd: 0 });
       await placed(map);
       await waitUntil(() => top(map) >= 380, 'the anchor sits below the bar');
       expect(panel(map).getBoundingClientRect().width >= 120, 'the panel keeps its width').to.equal(true);
-      map.anchorAvoid = [{ element: bar, side: 'auto' }];
+      map.anchorAvoidSides = [{ element: bar, side: 'auto' }];
       await waitUntil(() => avoidArea(map)?.[inline] === 252, 'auto restores the cheapest edge');
+      map.anchorAvoidSides = undefined;
+      await map.updateComplete; await frame(); await frame();
+      expect(avoidArea(map)?.[inline], 'clearing the sides keeps the plain obstacle').to.equal(252);
     });
   }
 
@@ -161,25 +164,34 @@ describe('lr-map anchorAvoid sides and hidden obstacles', () => {
   ] as const) {
     it(`reserves the logical ${side} side in ${direction}`, async () => {
       const { map, bar } = await mountSearch(direction);
-      map.anchorAvoid = [{ element: bar, side }];
-      await waitUntil(() => avoidArea(map) !== undefined, 'reserved');
+      map.anchorAvoidSides = [{ element: bar, side }];
+      await waitUntil(() => avoidArea(map) !== undefined, 'a sided obstacle alone is observed');
       expect(avoidArea(map)).to.deep.equal({ blockStart: 0, blockEnd: 0, inlineStart: 0, inlineEnd: 0, ...expected });
     });
   }
 
   it('follows a direction change for a logical side and falls back to auto for an unknown side', async () => {
     const { map, bar } = await mountSearch('ltr');
-    map.anchorAvoid = [{ element: bar, side: 'inline-start' }];
+    map.anchorAvoidSides = [{ element: bar, side: 'inline-start' }];
     await waitUntil(() => avoidArea(map)?.inlineEnd === 252, 'ltr inline-start');
     map.dir = 'rtl';
     await waitUntil(() => avoidArea(map)?.inlineEnd === 304, 'rtl inline-start is the other physical side');
-    map.anchorAvoid = [{ element: bar, side: 'sideways' as never }, { element: 'nope' as never }, null as never];
+    map.anchorAvoidSides = [{ element: bar, side: 'sideways' as never }, { element: 'nope' as never } as never, null as never];
     await waitUntil(() => avoidArea(map)?.inlineStart === 252 && avoidArea(map)?.inlineEnd === 0, 'unknown side is auto; invalid entries are ignored');
+  });
+
+  it('keeps plain anchorAvoid on the cheapest edge, ignores non-elements and skips a hidden plain obstacle', async () => {
+    const { map, bar } = await mountSearch();
+    map.anchorAvoid = [{ element: bar, side: 'block-end' } as never, bar];
+    await waitUntil(() => avoidArea(map)?.inlineEnd === 252, 'a sided object in anchorAvoid is not an element');
+    expect(avoidArea(map)?.blockStart).to.equal(0);
+    bar.style.visibility = 'hidden';
+    await waitUntil(() => avoidArea(map) === undefined, 'a visibility:hidden plain obstacle is ignored');
   });
 
   it('ignores obstacles that are not rendered and re-measures when one is shown again', async () => {
     const { map, bar } = await mountSearch();
-    map.anchorAvoid = [{ element: bar, side: 'block-end' }];
+    map.anchorAvoidSides = [{ element: bar, side: 'block-end' }];
     await waitUntil(() => avoidArea(map)?.blockStart === 380, 'reserved');
     bar.style.visibility = 'hidden';
     await waitUntil(() => avoidArea(map) === undefined, 'a visibility:hidden obstacle is ignored');
