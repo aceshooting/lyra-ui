@@ -312,7 +312,7 @@ matrix per browser. The explicit `docx_browser` assignment runs Chromium DOCX on
 Firefox DOCX on Firefox shard 2 and WebKit DOCX on Firefox shard 1, using the image's bundled engines.
 Every DOCX engine keeps its own evidence artifact. Generated-view qualification stays on Chromium,
 Firefox shard 2 and Safari; their shared UI build download also covers the WebKit DOCX owner.
-Node 22 uses `package.json#packageManager` (`pnpm@12.21.0`).
+Node 22 uses `package.json#packageManager` (`pnpm@12.23.0`).
 
 ### Package coverage reporting
 
@@ -514,7 +514,7 @@ Codecov reports to check source ownership; it does not upload them.
   its automatic default and WebKit/Safari use the smaller of four pages or half the CPUs. The
   aggregate runner budgets shard pages from Firefox's one-page and WebKit's four-page allocations.
 - `./scripts/ci.sh --platform-matrix` (or `--all`) runs the primary aggregate and the same six
-  Node 22 browser/shard legs as CI. Node 22 needs pnpm 12.21.0.
+  Node 22 browser/shard legs as CI. Node 22 needs pnpm 12.23.0.
   Its 6 legs are source-derived: Node 22 runs Chromium (1 shard), Chrome (1 shard), Edge (1 shard), Firefox (2 shards), and Safari (1 shard).
   `CI_SH_NODE22_BIN` and `CI_SH_PNPM22_BIN` accept explicit executable paths; the selected Node
   must match the exact `.nvmrc` patch.

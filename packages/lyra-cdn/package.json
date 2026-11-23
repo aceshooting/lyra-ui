@@ -31,7 +31,7 @@
   "engines": {
     "node": ">=22"
   },
-  "packageManager": "pnpm@12.21.0",
+  "packageManager": "pnpm@12.23.0",
   "sideEffects": true,
   "jsdelivr": "./dist/lyra-ui.loader.js",
   "unpkg": "./dist/lyra-ui.loader.js",

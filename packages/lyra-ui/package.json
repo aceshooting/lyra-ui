@@ -2488,7 +2488,7 @@
     "mammoth": "^1.13.0",
     "maplibre-gl": "^6.19.0",
     "marked": "^18.2.1",
-    "oxc-parser": "^0.159.0",
+    "oxc-parser": "^0.160.0",
     "papaparse": "^5.7.1",
     "pdfjs-dist": "^6.5.438",
     "pixelmatch": "^8.0.0",
@@ -2504,5 +2504,5 @@
     "xlsx": "file:../../vendor/xlsx-0.20.3.tgz",
     "zod": "4.6.7"
   },
-  "packageManager": "pnpm@12.21.0"
+  "packageManager": "pnpm@12.23.0"
 }

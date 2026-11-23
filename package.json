@@ -94,7 +94,7 @@
     "knip": "^6.48.0",
     "lit": "^3.3.3",
     "maplibre-gl": "^6.19.0",
-    "oxlint": "1.94.0",
+    "oxlint": "1.95.0",
     "oxlint-tsgolint": "7.0.2008",
     "pdfjs-dist": "^6.5.438",
     "playwright": "^1.65.1",
@@ -116,6 +116,6 @@
       "maplibre-gl"
     ]
   },
-  "packageManager": "pnpm@12.21.0",
+  "packageManager": "pnpm@12.23.0",
   "customElements": "packages/lyra-ui/custom-elements.json"
 }
