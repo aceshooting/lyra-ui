@@ -115,8 +115,8 @@
       "measured": {
         "eagerJsBytes": 528771,
         "eagerJsGzipBytes": 170189,
-        "lazyJsBytes": 1052590,
-        "lazyJsGzipBytes": 307862,
+        "lazyJsBytes": 1052915,
+        "lazyJsGzipBytes": 307913,
         "eagerCssBytes": 103994,
         "eagerCssGzipBytes": 13457,
         "lazyCssBytes": 0,
@@ -126,8 +126,8 @@
       "ceilings": {
         "eagerJsBytes": 528832,
         "eagerJsGzipBytes": 173592,
-        "lazyJsBytes": 1052608,
-        "lazyJsGzipBytes": 307904,
+        "lazyJsBytes": 1052928,
+        "lazyJsGzipBytes": 307968,
         "eagerCssBytes": 108153,
         "eagerCssGzipBytes": 13995,
         "lazyCssBytes": 0,
