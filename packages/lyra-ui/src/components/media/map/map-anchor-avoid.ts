@@ -1,4 +1,4 @@
-import type { LyraMapAnchorSafeArea } from './map-anchor-options.js';
+import type { LyraMapAnchorAvoidEntry, LyraMapAnchorAvoidSide, LyraMapAnchorSafeArea } from './map-anchor-options.js';
 
 /** What the avoidance needs from its map: the allocation, the reading direction and a change hook. */
 export interface MapAnchorAvoidHost {
@@ -10,19 +10,55 @@ export interface MapAnchorAvoidHost {
 }
 
 type Edges = { top: number; right: number; bottom: number; left: number };
+type Obstacle = { readonly element: Element; readonly side: LyraMapAnchorAvoidSide };
+
+const SIDES: ReadonlySet<string> = new Set<LyraMapAnchorAvoidSide>(['auto', 'block-start', 'block-end', 'inline-start', 'inline-end']);
+
+/** The physical edge of the map an obstacle is reserved on so anchors stay on its `side`. */
+function reservedEdge(side: LyraMapAnchorAvoidSide, rtl: boolean): keyof Edges | undefined {
+  switch (side) {
+    case 'block-end': return 'top';
+    case 'block-start': return 'bottom';
+    // Staying before the obstacle in the reading direction reserves the map edge after it.
+    case 'inline-start': return rtl ? 'left' : 'right';
+    case 'inline-end': return rtl ? 'right' : 'left';
+    default: return undefined;
+  }
+}
 
 /**
- * Physical reservation that keeps an obstacle's overlap with the map clear: the cheapest edge the
- * overlap can be pushed back to, so a header reserves the top and a side panel its own side.
+ * Physical reservation that keeps an obstacle's overlap with the map clear. With `side` `auto`
+ * (the default) that is the cheapest edge the overlap can be pushed back to, so a header reserves
+ * the top and a side panel its own side; a logical side reserves the map edge that keeps anchors
+ * on that side of the obstacle in the given direction.
  */
-export function obstacleEdges(map: DOMRectReadOnly, obstacle: DOMRectReadOnly): Edges | undefined {
+export function obstacleEdges(map: DOMRectReadOnly, obstacle: DOMRectReadOnly, side: LyraMapAnchorAvoidSide = 'auto', rtl = false): Edges | undefined {
   const top = Math.max(map.top, obstacle.top), bottom = Math.min(map.bottom, obstacle.bottom);
   const left = Math.max(map.left, obstacle.left), right = Math.min(map.right, obstacle.right);
   if (!(bottom > top && right > left)) return undefined;
   const options: [keyof Edges, number][] = [['top', bottom - map.top], ['bottom', map.bottom - top], ['left', right - map.left], ['right', map.right - left]];
+  const edge = reservedEdge(side, rtl);
   let best = options[0]!;
-  for (const option of options) if (option[1] < best[1]) best = option;
+  if (edge) best = options.find(option => option[0] === edge)!;
+  else for (const option of options) if (option[1] < best[1]) best = option;
   return { top: 0, right: 0, bottom: 0, left: 0, [best[0]]: best[1] };
+}
+
+/** Normalizes one `anchorAvoid` entry, reading the caller's object once; anything else is dropped. */
+function toObstacle(entry: unknown): Obstacle | undefined {
+  if (entry instanceof Element) return { element: entry, side: 'auto' };
+  if (entry === null || typeof entry !== 'object') return undefined;
+  const { element, side } = entry as { element?: unknown; side?: unknown };
+  if (!(element instanceof Element)) return undefined;
+  return { element, side: typeof side === 'string' && SIDES.has(side) ? side as LyraMapAnchorAvoidSide : 'auto' };
+}
+
+/** Whether an obstacle paints at all: connected, laid out and not `visibility: hidden`/`collapse`
+ * (inherited). A zero-size or `display: none` box has no overlap and is left to the intersection. */
+function rendered(element: Element): boolean {
+  if (!element.isConnected) return false;
+  const view = element.ownerDocument.defaultView;
+  return !view || view.getComputedStyle(element).visibility === 'visible';
 }
 
 /** Merges an authored safe area with an avoidance area edge by edge, taking the larger inset. An
@@ -47,8 +83,9 @@ export function mergeSafeAreas(authored: LyraMapAnchorSafeArea | undefined, avoi
  * animation frame.
  */
 export class MapAnchorAvoidance {
-  private elements: readonly Element[] = [];
+  private elements: readonly Obstacle[] = [];
   private observer?: ResizeObserver;
+  private mutations?: MutationObserver;
   private frame?: { view: Window; handle: number };
   private view?: Window;
   private current?: LyraMapAnchorSafeArea;
@@ -66,14 +103,20 @@ export class MapAnchorAvoidance {
   get area(): LyraMapAnchorSafeArea | undefined { return this.current; }
 
   /** Observes these obstacles instead of the previous ones; an empty list stops observing. */
-  observe(elements: readonly Element[] | undefined): void {
+  observe(entries: readonly LyraMapAnchorAvoidEntry[] | undefined): void {
     this.disconnect();
-    const list = Array.isArray(elements) ? elements.filter((element): element is Element => element instanceof Element) : [];
+    const list = Array.isArray(entries) ? (entries as readonly unknown[]).map(toObstacle).filter((entry): entry is Obstacle => entry !== undefined) : [];
     const view = this.host.element.ownerDocument.defaultView;
     if (!list.length || !view) { this.publish(undefined); return; }
     this.elements = list; this.view = view;
     this.observer = new view.ResizeObserver(this.schedule);
-    for (const element of [this.host.element, ...list]) this.observer.observe(element);
+    // A visibility toggle changes no size, so the obstacles' own presentation attributes are watched too.
+    this.mutations = new view.MutationObserver(this.schedule);
+    this.observer.observe(this.host.element);
+    for (const { element } of list) {
+      this.observer.observe(element);
+      this.mutations.observe(element, { attributes: true, attributeFilter: ['style', 'class', 'hidden'] });
+    }
     view.addEventListener('scroll', this.schedule, { capture: true, passive: true });
     view.addEventListener('resize', this.schedule, { passive: true });
     view.visualViewport?.addEventListener('resize', this.schedule, { passive: true });
@@ -88,6 +131,7 @@ export class MapAnchorAvoidance {
   disconnect(): void {
     const view = this.view;
     this.observer?.disconnect(); this.observer = undefined;
+    this.mutations?.disconnect(); this.mutations = undefined;
     if (this.frame) { this.frame.view.cancelAnimationFrame(this.frame.handle); this.frame = undefined; }
     if (view) {
       view.removeEventListener('scroll', this.schedule, { capture: true });
@@ -100,17 +144,17 @@ export class MapAnchorAvoidance {
 
   private measure(): void {
     const map = this.host.element.getBoundingClientRect();
+    const rtl = this.host.direction() === 'rtl';
     const edges: Edges = { top: 0, right: 0, bottom: 0, left: 0 };
-    for (const element of this.elements) {
-      if (!element.isConnected) continue;
-      const overlap = obstacleEdges(map, element.getBoundingClientRect());
+    for (const { element, side } of this.elements) {
+      if (!rendered(element)) continue;
+      const overlap = obstacleEdges(map, element.getBoundingClientRect(), side, rtl);
       if (!overlap) continue;
       for (const key of ['top', 'right', 'bottom', 'left'] as const) edges[key] = Math.max(edges[key], overlap[key]);
     }
     const rawGap = this.host.gap?.() ?? 0;
     const gap = Number.isFinite(rawGap) && rawGap > 0 ? rawGap : 0;
     if (gap) for (const key of ['top', 'right', 'bottom', 'left'] as const) if (edges[key] > 0) edges[key] += gap;
-    const rtl = this.host.direction() === 'rtl';
     const area = edges.top || edges.right || edges.bottom || edges.left
       ? Object.freeze({ blockStart: edges.top, blockEnd: edges.bottom, inlineStart: rtl ? edges.right : edges.left, inlineEnd: rtl ? edges.left : edges.right })
       : undefined;

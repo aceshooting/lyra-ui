@@ -1744,6 +1744,26 @@ export const OverlayGroupsAndAvoidedChrome: Story = {
   },
 };
 
+export const AnchorAvoidExplicitSide: Story = {
+  render: () => {
+    let search: HTMLElement | undefined;
+    return html`<div style="position: relative; max-inline-size: 20rem">
+      <div ${ref(node => { search = node as HTMLElement | undefined; })} style="position: absolute; inset-block-start: 0.5rem;
+        inset-inline: 4rem 1rem; z-index: 2; padding: 0.5rem; background: var(--lr-color-surface-raised)">
+        <div>Search places</div>
+        <ul style="margin: 0; padding-inline-start: 1rem">${Array.from({ length: 8 }, (_, i) => html`<li>Result ${i + 1}</li>`)}</ul>
+      </div>
+      <lr-map label="An anchor kept below an open search list" style="block-size: 28rem" anchor-avoid-gap="8" .mapStyle=${LYRA_MAP_EMPTY_STYLE}
+        ${ref(node => {
+          const map = node as LyraMap | undefined;
+          if (!map) return;
+          map.anchorAvoid = search ? [{ element: search, side: 'block-end' }] : [];
+          map.anchorLngLat = [0, 0];
+        })}><div slot="anchor">Kept below the search results, not beside them</div></lr-map>
+    </div>`;
+  },
+};
+
 export const ControlsAvoidAndCornerInset: Story = {
   render: () => {
     let card: HTMLElement | undefined;

@@ -9643,6 +9643,28 @@
     },
     {
       "module": "src/components/media/map/map-anchor-options.ts",
+      "exportName": "LyraMapAnchorAvoidObstacle",
+      "kind": "interface",
+      "fingerprint": "be85cfc5f227af03b265",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-map-anchor.ts",
+        "src/components/lr-map.ts",
+        "src/components/media/index.ts",
+        "src/components/media/map/map.class.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/media.md",
+      "family": "media",
+      "locator": {
+        "kind": "utility",
+        "name": "components-media-map-owned-contracts",
+        "declaration": "LyraMapAnchorAvoidObstacle"
+      }
+    },
+    {
+      "module": "src/components/media/map/map-anchor-options.ts",
       "exportName": "LyraMapAnchorSafeArea",
       "kind": "interface",
       "fingerprint": "8f4707b1a1f7ce989fa8",

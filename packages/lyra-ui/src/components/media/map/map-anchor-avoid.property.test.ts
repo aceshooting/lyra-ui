@@ -21,6 +21,19 @@ describe('anchor obstacle properties', () => {
     }), propertyRuns());
   });
 
+  it('reserves the map edge that keeps anchors on an explicit logical side of the obstacle', () => {
+    const physical = { 'block-end': ['top', 'top'], 'block-start': ['bottom', 'bottom'], 'inline-start': ['right', 'left'], 'inline-end': ['left', 'right'] } as const;
+    fc.assert(fc.property(length, length, length, length, fc.constantFrom(...Object.keys(physical) as (keyof typeof physical)[]), fc.boolean(), (x, y, width, height, side, rtl) => {
+      const map = new DOMRect(0, 0, 400, 300), obstacle = new DOMRect(x, y, width, height);
+      const edges = obstacleEdges(map, obstacle, side, rtl);
+      if (!edges) { expect(obstacleEdges(map, obstacle), 'a side never creates an overlap').to.equal(undefined); return; }
+      const edge = physical[side][rtl ? 1 : 0];
+      const expected = { top: Math.min(300, y + height), bottom: 300 - Math.max(0, y), left: Math.min(400, x + width), right: 400 - Math.max(0, x) }[edge];
+      expect(edges, `${side} ${rtl ? 'rtl' : 'ltr'}`).to.deep.equal({ top: 0, right: 0, bottom: 0, left: 0, [edge]: expected });
+      expect(obstacleEdges(map, obstacle, 'auto', rtl), 'auto ignores the direction').to.deep.equal(obstacleEdges(map, obstacle));
+    }), propertyRuns());
+  });
+
   it('merges edge by edge with the larger inset and keeps an invalid authored area for fail-closed placement', () => {
     fc.assert(fc.property(fc.option(area, { nil: undefined }), fc.option(area, { nil: undefined }), (authored, avoid) => {
       const merged = mergeSafeAreas(authored, avoid);

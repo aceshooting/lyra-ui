@@ -217,6 +217,15 @@ export const SLOT_PRESENCE_UNRESOLVED = Symbol('lr-slot-presence-unresolved');
 /** A deferred seed with no state of its own: queuing it only requests the post-hydration render. */
 const rerenderAfterHydration = (): void => {};
 
+/** Host attribute prefix the SSR DOM shim uses to mark ARIA it reflected from ElementInternals. */
+const HYDRATE_INTERNALS_ATTRIBUTE_PREFIX = 'hydrate-internals-';
+
+/** Whether Lit's hydrate support patched this LitElement copy; fixed once Lit has evaluated. */
+let litHydrationPatched: boolean | undefined;
+function litHydrationInstalled(): boolean {
+  return litHydrationPatched ??= Object.prototype.hasOwnProperty.call(LitElement, 'observedAttributes');
+}
+
 const REACTIVE_HOST_ATTRIBUTES = [
   'aria-label',
   'aria-describedby',
@@ -445,13 +454,22 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
    * keeps the shared sheets.
    */
   protected override createRenderRoot(): HTMLElement | DocumentFragment {
+    const serverShadow = this.unhydratableServerShadow();
+    const renderBefore = this.renderOptions.renderBefore;
     try {
-      return super.createRenderRoot();
+      const renderRoot = super.createRenderRoot();
+      if (serverShadow && renderRoot === serverShadow) {
+        this.discardUnhydratableServerShadow(serverShadow);
+        // LitElement pointed `renderBefore` at the first server node just discarded.
+        this.renderOptions.renderBefore = renderBefore;
+      }
+      return renderRoot;
     } catch (error) {
       if (!isCrossDocumentStyleSheetRejection(error)) throw error;
       const constructor = this.constructor as typeof LyraElement;
       // The superclass attached the shadow root before the stylesheet assignment was rejected.
       const renderRoot = this.shadowRoot ?? this.attachShadow(constructor.shadowRootOptions);
+      if (serverShadow && renderRoot === serverShadow) this.discardUnhydratableServerShadow(serverShadow);
       const owner = this.ownerDocument;
       for (const style of constructor.elementStyles as readonly CSSResultOrNative[]) {
         const element = owner.createElement('style');
@@ -464,6 +482,45 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
       this.componentStylesAreInline = true;
       this.renderOptions.renderBefore ??= renderRoot.firstChild;
       return renderRoot;
+    }
+  }
+
+  /**
+   * A server-rendered (declarative) shadow root this Lit copy cannot hydrate, or `null`.
+   *
+   * `@lit-labs/ssr-client`'s hydrate support patches LitElement only if it ran before Lit's
+   * `lit-element` module evaluated; a bundler that moves Lit into a shared chunk the entry imports
+   * evaluates that chunk first, so the patch never applies. Unpatched, Lit renders a second copy of
+   * the template in front of the server's nodes. The patch is the only thing that defines an own
+   * `observedAttributes` on LitElement itself (to add `defer-hydration`), which identifies it in
+   * both Lit's development and minified builds.
+   */
+  private unhydratableServerShadow(): ShadowRoot | null {
+    const root = this.shadowRoot;
+    if (this.hasUpdated || !root?.hasChildNodes() || litHydrationInstalled()) return null;
+    return root;
+  }
+
+  /**
+   * Replaces what an unpatched Lit would duplicate: the server's nodes are discarded and the first
+   * render builds the shadow tree afresh in the same root. The element still renders the server's
+   * answer first (it stays on the hydrating path for browser-derived seeds), so the swap is not
+   * visible, but the result is a client render, not a hydration.
+   */
+  private discardUnhydratableServerShadow(root: ShadowRoot): void {
+    if (DEV_DIAGNOSTICS) {
+      devWarnOnce(
+        'lyra-hydration:unpatched',
+        `<${this.localName}> found a server-rendered shadow root, but Lit's hydration support was not installed before Lit loaded, so Lyra discarded the server markup and rendered it again instead of hydrating it. Make @aceshooting/lyra-ui/hydration.js evaluate before every module that imports Lit; when a bundler splits Lit into a shared chunk, group hydration.js with Lit in that chunk or load it as a separate first script.`
+      );
+    }
+    root.replaceChildren();
+    // The hydrate support removes the ARIA attributes the server's ElementInternals shim
+    // reflected onto the host; do the same so they cannot outlive the server render.
+    for (const name of this.getAttributeNames()) {
+      if (!name.startsWith(HYDRATE_INTERNALS_ATTRIBUTE_PREFIX)) continue;
+      this.removeAttribute(name.slice(HYDRATE_INTERNALS_ATTRIBUTE_PREFIX.length));
+      this.removeAttribute(name);
     }
   }
 

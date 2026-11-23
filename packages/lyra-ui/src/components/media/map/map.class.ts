@@ -63,11 +63,11 @@ import { hostAriaLabel, srOnly } from '../../../internal/a11y.js';
 import { normalizeLabel } from '../../../internal/accessible-name.js';
 import { ThemeWatcher } from '../../../internal/theme-watcher.js';
 import { SlotPresenceController } from '../../../internal/slot-presence-controller.js';
-import type { LyraMapAnchorBoundary, LyraMapAnchorCloseDetail, LyraMapAnchorSafeArea } from './map-anchor-options.js';
+import type { LyraMapAnchorAvoidEntry, LyraMapAnchorBoundary, LyraMapAnchorCloseDetail, LyraMapAnchorSafeArea } from './map-anchor-options.js';
 import type { MapAnchorChildren, MapAnchorController, MapAnchorHost, MapAnchorMapHost } from './map-anchor-controller.js';
 import { MAP_ANCHOR_SEAM, type MapAnchorChild, type MapAnchorOwnerOperation } from './map-anchor-seam.js';
 import { tag } from '../../../internal/prefix.js';
-export type { LyraMapAnchorBoundary, LyraMapAnchorSafeArea, LyraMapAnchorCloseReason, LyraMapAnchorCloseDetail } from './map-anchor-options.js';
+export type { LyraMapAnchorAvoidEntry, LyraMapAnchorAvoidObstacle, LyraMapAnchorAvoidSide, LyraMapAnchorBoundary, LyraMapAnchorSafeArea, LyraMapAnchorCloseReason, LyraMapAnchorCloseDetail } from './map-anchor-options.js';
 import {
   loadMapControl,
   loadMaplibre,
@@ -3375,11 +3375,18 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * floating header, a search bar, a side sheet. The map observes each element's size, page
    * scrolling and the visual viewport (once per animation frame), intersects each element with the
    * map and reserves its overlap on the cheapest logical edge: a full-width header reserves
-   * `blockStart`, a full-height side panel its inline edge. The result is folded into
+   * `blockStart`, a full-height side panel its inline edge. An entry may instead be
+   * `{ element, side }` naming the side of the obstacle anchors stay on (`'block-end'` keeps them
+   * below it, `'inline-start'`/`'inline-end'` follow the reading direction, `'auto'` or an unknown
+   * side is the cheapest edge), for chrome whose cheapest edge changes with its size, such as a
+   * search bar whose results list opens. Obstacles that are not rendered (detached, zero-size,
+   * `display: none` or `visibility: hidden`, also when inherited) reserve nothing; a change to an
+   * obstacle's own `style`, `class` or `hidden` attribute re-measures. The result is folded into
    * `anchorSafeArea` edge by edge (the larger inset wins) for the `anchor` slot and every
-   * `lr-map-anchor` child without its own `safeArea`. Property only; the array is not retained
-   * beyond its elements, and removing them or disconnecting the map stops every observer. */
-  @property({ attribute: false }) anchorAvoid?: readonly Element[];
+   * `lr-map-anchor` child without its own `safeArea`. Property only; entries are read once on
+   * assignment (assign a new array to change a side), the array is not retained beyond its
+   * elements, and removing them or disconnecting the map stops every observer. */
+  @property({ attribute: false }) anchorAvoid?: readonly LyraMapAnchorAvoidEntry[];
   /** Extra CSS pixels kept free beyond each `anchorAvoid` obstacle, so an anchor never sits flush
    * against the chrome it avoids. Added only to the edges an obstacle actually reserves; a free
    * edge stays zero. Nonnegative and finite; anything else is `0`. Default `0`. Set from the

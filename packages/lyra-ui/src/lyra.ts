@@ -781,6 +781,9 @@ export type {
   LyraMapFeatureRequirements,
 } from './components/media/map/map.class.js';
 export type {
+  LyraMapAnchorAvoidEntry,
+  LyraMapAnchorAvoidObstacle,
+  LyraMapAnchorAvoidSide,
   LyraMapAnchorBoundary,
   LyraMapAnchorCloseDetail,
   LyraMapAnchorCloseReason,

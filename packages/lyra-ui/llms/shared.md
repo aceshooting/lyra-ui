@@ -3818,6 +3818,43 @@ and a shadow root exists; it does not claim that server markup was observed or h
 diagnostic's separate `mode` to distinguish the declared `render-and-hydrate` and `client-render`
 tiers.
 
+**Code-split bundles must keep that order.** A bundler that splits page modules into chunks can
+move Lit (`lit`, `lit-html`, `lit-element`, `@lit/reactive-element`) into a shared chunk that the
+entry imports statically. An imported chunk evaluates before the importing chunk's own code, so Lit
+reads the hydrate-support hook before `hydration.js` sets it, even though the entry imports
+`hydration.js` first. Lyra detects that case: a host that finds a server-rendered shadow root while
+Lit has no hydrate support discards the server markup and renders into the same shadow root (never a
+second copy), and the development build warns once (`lyra-hydration:unpatched`). The page is then
+client-rendered rather than hydrated, so fix the order with one of these recipes:
+
+- Put the hydration entry and Lit in one chunk, where modules keep their import order. With Vite 8
+  (Rolldown):
+
+  ```ts
+  // vite.config.ts
+  export default defineConfig({
+    build: {
+      rolldownOptions: {
+        output: {
+          codeSplitting: {
+            groups: [{
+              name: 'lit',
+              test: /[\\/]node_modules[\\/](lit|lit-html|lit-element|@lit[\\/]reactive-element|@lit-labs[\\/]ssr-client)[\\/]|[\\/]@aceshooting[\\/]lyra-ui[\\/]dist[\\/]hydration\.js$/,
+            }],
+          },
+        },
+      },
+    },
+  });
+  ```
+
+  Rolldown's deprecated `advancedChunks` takes the same `groups`. With Rollup or Vite 7 and earlier,
+  return `'lit'` from `build.rollupOptions.output.manualChunks(id)` for the same module ids.
+- Or load hydration as its own first script, so its module graph finishes evaluating before the
+  application's starts: a separate entry containing only
+  `import '@aceshooting/lyra-ui/hydration.js';`, referenced by a `<script type="module">` placed
+  before the application's (module scripts without `async` run in document order).
+
 The loader preserves optional-peer isolation: import a root-excluded component's granular
 registration after the loader. A fallback cannot serialize JS property bindings, so put initial
 server state in attributes/light DOM or assign it client-side. A `render-and-hydrate` component

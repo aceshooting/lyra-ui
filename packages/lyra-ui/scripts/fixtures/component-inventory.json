@@ -92773,7 +92773,7 @@
           {
             "name": "anchorAvoid",
             "attribute": null,
-            "type": "readonly Element[] | undefined",
+            "type": "readonly LyraMapAnchorAvoidEntry[] | undefined",
             "readonly": false,
             "reflects": false,
             "deprecated": null,

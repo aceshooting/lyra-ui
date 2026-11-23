@@ -304,7 +304,9 @@ attributes and light DOM and create their shadow DOM on upgrade (`LYRA_SSR_SUPPO
 `elementRenderers: lyraSsrElementRenderers(LitElementRenderer)` to `@lit-labs/ssr`'s `render()`.
 
 In the browser, make `@aceshooting/lyra-ui/hydration.js` the first import that can reach Lit, then register tags;
-`diagnoseLyraHydration(document)` checks the result. A fallback renderer cannot serialize property bindings, so
+`diagnoseLyraHydration(document)` checks the result. A code-splitting bundler that moves Lit into a shared chunk
+breaks that order; group `hydration.js` with Lit or load it as a separate first script
+([bundler recipe](./llms/shared/frameworks-and-ssr.md#ssr-and-declarative-shadow-dom)). A fallback renderer cannot serialize property bindings, so
 pass initial state as attributes or light DOM. Measurement, observers, canvas and media start after hydration; remote
 content stays client-only ([details](./llms/shared/frameworks-and-ssr.md#ssr-and-declarative-shadow-dom)).
 Declarative shadow roots don't carry the token layer: link `@aceshooting/lyra-ui/theme.css` (which includes it) or,
