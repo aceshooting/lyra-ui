@@ -156,6 +156,14 @@ node scripts/check-peer-compatibility.mjs --check-managed-peer-rewrites "$peer_m
 echo
 echo "==> Synchronizing package-manager documentation"
 node scripts/sync-package-manager-docs.mjs --write
+# The lyra-docs engine lock records the pnpm that builds the engine; its test requires the root pin.
+node -e '
+const fs = require("node:fs");
+const lockPath = "packages/lyra-docs/scripts/engine-source.lock.json";
+const lock = JSON.parse(fs.readFileSync(lockPath, "utf8"));
+lock.toolchain.pnpm = JSON.parse(fs.readFileSync("package.json", "utf8")).packageManager.replace(/^pnpm@/u, "");
+fs.writeFileSync(lockPath, `${JSON.stringify(lock, null, 2)}\n`);
+'
 
 echo
 echo "==> Synchronizing Playwright container images"
