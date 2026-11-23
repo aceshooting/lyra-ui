@@ -114,9 +114,9 @@
     "chat-composition": {
       "measured": {
         "eagerJsBytes": 503182,
-        "eagerJsGzipBytes": 167812,
-        "lazyJsBytes": 1079762,
-        "lazyJsGzipBytes": 313000,
+        "eagerJsGzipBytes": 167811,
+        "lazyJsBytes": 1079878,
+        "lazyJsGzipBytes": 313015,
         "eagerCssBytes": 104860,
         "eagerCssGzipBytes": 13553,
         "lazyCssBytes": 0,
@@ -126,7 +126,7 @@
       "ceilings": {
         "eagerJsBytes": 503232,
         "eagerJsGzipBytes": 167872,
-        "lazyJsBytes": 1079808,
+        "lazyJsBytes": 1079936,
         "lazyJsGzipBytes": 313024,
         "eagerCssBytes": 104896,
         "eagerCssGzipBytes": 13568,

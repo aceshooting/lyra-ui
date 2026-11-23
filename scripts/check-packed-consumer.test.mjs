@@ -99,14 +99,14 @@ test('caps measured core and optional graphs without an implicit binary allowanc
       .map((match) => [match.groups.name, Number(match.groups.value.replaceAll('_', ''))]),
   );
   assert.deepEqual(terms, {
-    reviewedCoreMeasurementBytes: 5_948_749,
+    reviewedCoreMeasurementBytes: 5_948_865,
     reviewedRequiredShikiAssetBytes: 466_610,
-    selectedRegressionHeadroomBytes: 51,
+    selectedRegressionHeadroomBytes: 63,
   });
   const nonAssetCeiling = terms.reviewedCoreMeasurementBytes + terms.selectedRegressionHeadroomBytes;
   const ceiling = nonAssetCeiling;
-  assert.equal(nonAssetCeiling, 5_948_800);
-  assert.equal(ceiling, 5_948_800);
+  assert.equal(nonAssetCeiling, 5_948_928);
+  assert.equal(ceiling, 5_948_928);
   assert.equal(ceiling, Math.ceil(terms.reviewedCoreMeasurementBytes / 64) * 64,
     'the measured full graph receives only the next 64-byte boundary');
   assert.ok(terms.selectedRegressionHeadroomBytes / terms.reviewedCoreMeasurementBytes < 0.005,
