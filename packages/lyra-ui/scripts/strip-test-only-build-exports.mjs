@@ -20,6 +20,7 @@ const TEST_ONLY_EXPORTS = Object.freeze({
   'internal/delimited-data': ['parseDelimitedGrid', 'parseDelimitedRecords'],
   'internal/papaparse-loader': ['loadPapaParse'],
   'internal/dompurify-loader': ['__setDompurifyImporterForTesting'],
+  'internal/form-control-labels': ['__setExternalLabelAssociationLoaderForTesting', 'isExternalLabelAssociationIndexed'],
   'internal/lazy-hierarchy-source': ['__resetHierarchySourceRuntimeForTesting'],
   'internal/shiki/core': ['__resetShikiCoreEngineForTesting', '__setShikiHighlighterCoreLoaderForTesting'],
   'internal/shiki/full': ['__setShikiModuleLoaderForTesting'],

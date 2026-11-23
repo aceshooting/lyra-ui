@@ -1,6 +1,7 @@
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import { sendKeys } from '@web/test-runner-commands';
 import { fixture, expect, html, waitUntil } from "@open-wc/testing";
+import { loadExternalLabelAssociation } from '../../../internal/form-control-labels.js';
 import "../../lr-rating.js";
 import { LyraRating } from "../../lr-rating.js";
 import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from "../../../../test/wtr-mouse.js";
@@ -9,6 +10,10 @@ import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from "../../.
 // it incidentally touches (the generated accessible name) instead of tripping the partial-catalog
 // fallback warning.
 import "../../../translations/ar.js";
+
+// External-label timing below pins the indexed association observer; its lazy first load is
+// covered by internal/form-control-label-association-*.test.ts.
+before(() => loadExternalLabelAssociation());
 
 it("exposes fresh callable static validators that project live rating validity", async () => {
   const first = LyraRating.validators;

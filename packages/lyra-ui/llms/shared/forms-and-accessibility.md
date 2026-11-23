@@ -40,7 +40,10 @@ labels are inserted, removed, retargeted, or edited. A host `aria-label` always 
 controls such as `lr-tool-param-form`, `lr-rubric-form`, and `lr-time-range` put that aggregate name
 on an internal `role="group"` while retaining the more specific names of their fields/handles.
 Disabled controls, including controls disabled by an ancestor `<fieldset disabled>`, ignore label
-activation.
+activation. A label already associated when a control connects is applied in its first update. The
+indexed observer that tracks later association changes is a separate chunk under code splitting,
+loaded only once some control has a label or a mutation could give it one; changes made before it
+first arrives are replayed when it does, so pages that never use external labels never load it.
 
 - **Read `effectiveDisabled`, not `disabled`, for the merged state.** `effectiveDisabled` is own
   `disabled` OR an ancestor `<fieldset disabled>`'s cascaded state.

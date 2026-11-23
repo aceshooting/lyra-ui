@@ -1,10 +1,14 @@
 import { aTimeout, expect, fixture, html, waitUntil } from '@open-wc/testing';
 import {
-  ExternalLabelController, isCurrentlyAssociatedLabel, observeExternalLabelAssociations,
+  ExternalLabelController, isCurrentlyAssociatedLabel, loadExternalLabelAssociation, observeExternalLabelAssociations,
   resolveExternalLabels, resolveExternalLabelText,
 } from './form-control-labels.js';
 
 describe('external label association boundaries', () => {
+  // This file pins the indexed association observer; the lean path before it loads is covered by
+  // form-control-label-association-lazy.test.ts.
+  before(() => loadExternalLabelAssociation());
+
   it('resolves exact first-match IDs in a detached element tree without getElementById', () => {
     const fragment = document.createElement('div');
     const label = document.createElement('label');

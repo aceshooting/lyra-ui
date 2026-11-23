@@ -5,6 +5,7 @@ import {
   EXTERNAL_LABEL_HOST_SEMANTICS,
   ExternalLabelController,
   installFormControlLabelSupport,
+  loadExternalLabelAssociation,
   resolveExternalLabels,
   resolveExternalLabelText,
   type ExternalLabelHostSemanticOperation,
@@ -259,6 +260,10 @@ function mountFace(testCase: FaceCase, fieldsetDisabled = false): {
 }
 
 describe('external FACE label contract', () => {
+  // This file pins the indexed association observer; the lean path before it loads is covered by
+  // form-control-label-association-lazy.test.ts.
+  before(() => loadExternalLabelAssociation());
+
   it('keeps repeated support installation idempotent', async () => {
     installFormControlLabelSupport();
     installFormControlLabelSupport();

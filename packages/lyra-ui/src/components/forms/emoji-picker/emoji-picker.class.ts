@@ -38,7 +38,7 @@ import type { EmojiPickerItem, EmojiPickerGroup } from './emoji-types.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_emojiPickerEmpty, LYRA_DEFAULT_emojiPickerGridLabel, LYRA_DEFAULT_emojiPickerGroupActivities, LYRA_DEFAULT_emojiPickerGroupAnimalsNature, LYRA_DEFAULT_emojiPickerGroupComponent, LYRA_DEFAULT_emojiPickerGroupFlags, LYRA_DEFAULT_emojiPickerGroupFoodDrink, LYRA_DEFAULT_emojiPickerGroupObjects, LYRA_DEFAULT_emojiPickerGroupPeopleBody, LYRA_DEFAULT_emojiPickerGroupSmileysEmotion, LYRA_DEFAULT_emojiPickerGroupSymbols, LYRA_DEFAULT_emojiPickerGroupTravelPlaces, LYRA_DEFAULT_emojiPickerGroupUnknown, LYRA_DEFAULT_emojiPickerInputLimit, LYRA_DEFAULT_emojiPickerLoadError, LYRA_DEFAULT_emojiPickerPeerMissing, LYRA_DEFAULT_emojiPickerSearchLabel, LYRA_DEFAULT_emojiPickerSearchPlaceholder, LYRA_DEFAULT_item } from '../../../internal/default-strings/forms.generated.js';
-import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open, LYRA_DEFAULT_progress, LYRA_DEFAULT_restore, LYRA_DEFAULT_retry, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_clear, LYRA_DEFAULT_collapse, LYRA_DEFAULT_details, LYRA_DEFAULT_fieldRequired, LYRA_DEFAULT_loading, LYRA_DEFAULT_map, LYRA_DEFAULT_open, LYRA_DEFAULT_restore, LYRA_DEFAULT_retry, LYRA_DEFAULT_select } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { EmojiPickerItem, EmojiPickerGroup };
@@ -410,7 +410,6 @@ export class LyraEmojiPicker extends FormAssociated(EmojiPickerBase) {
     loading: LYRA_DEFAULT_loading,
     map: LYRA_DEFAULT_map,
     open: LYRA_DEFAULT_open,
-    progress: LYRA_DEFAULT_progress,
     restore: LYRA_DEFAULT_restore,
     retry: LYRA_DEFAULT_retry,
     select: LYRA_DEFAULT_select,

@@ -534,17 +534,32 @@ function functionSource(program, source, name) {
 }
 
 /**
+ * The source of the candidate-chain expansion that registration installs into `localeCandidates()`.
+ * The expansion lives in `expandedLocaleCandidates()` so an application that never registers a
+ * catalog does not ship it; it only counts when `registerLocale()` installs it and
+ * `localeCandidates()` consults the installed expansion.
+ */
+function candidateExpansionSource(localizationProgram, localizationSource) {
+  const lookup = functionSource(localizationProgram, localizationSource, 'localeCandidates');
+  const expansion = functionSource(localizationProgram, localizationSource, 'expandedLocaleCandidates');
+  const registration = functionSource(localizationProgram, localizationSource, 'registerLocale');
+  if (lookup === undefined || expansion === undefined || registration === undefined) return undefined;
+  if (!lookup.includes('expandLocaleCandidates(') || !registration.includes('expandedLocaleCandidates')) return undefined;
+  return expansion;
+}
+
+/**
  * Fails a regional-only catalog whose base tag would render English.
  *
  * Portuguese and Chinese ship only regional catalogs (`pt-BR`, `pt-PT`, `zh-CN`, `zh-TW`), so
  * `lang="pt"`, `lang="zh"`, `lang="zh-HK"` and `lang="zh-Hans-CN"` reach them only through the
- * base-language widening half of `localeCandidates()` -- the plain BCP-47 truncation walk can only
+ * base-language widening half of the expanded `localeCandidates()` chain -- the plain BCP-47 truncation walk can only
  * ever go from more specific to less specific, never sideways into a region. Deleting that half
  * type-checks, passes every test that uses a base-tag catalog (`fa`, `he`, `de`), and silently
  * renders English for a bare `pt` or `zh` and for every other Portuguese or Chinese tag whose
  * truncation walk misses the shipped regional tags; nothing else would notice.
  *
- * So: whenever a base language ships only regional catalogs, `localeCandidates()` must still
+ * So: whenever a base language ships only regional catalogs, `expandedLocaleCandidates()` must still
  * contain the widening step. The check costs nothing while every catalog is a bare base tag.
  */
 function checkRegionalReachability(tags, localizationProgram, localizationSource) {
@@ -559,13 +574,13 @@ function checkRegionalReachability(tags, localizationProgram, localizationSource
     .map(([language, group]) => `"${language}" (only ${group.join(', ')} ship)`);
   if (unreachable.length === 0) return [];
 
-  const candidates = functionSource(localizationProgram, localizationSource, 'localeCandidates');
+  const candidates = candidateExpansionSource(localizationProgram, localizationSource);
   if (candidates === undefined) {
-    return ['src/internal/localization-runtime.ts no longer declares localeCandidates(); locale lookup cannot be verified'];
+    return ['src/internal/localization-runtime.ts no longer installs expandedLocaleCandidates() into localeCandidates() on registration; locale lookup cannot be verified'];
   }
   if (candidates.includes('regionalFallbacks')) return [];
   return [
-    'src/internal/localization-runtime.ts: localeCandidates() dropped the base-language widening step ' +
+    'src/internal/localization-runtime.ts: expandedLocaleCandidates() dropped the base-language widening step ' +
       '(regionalFallbacks), so these base languages resolve to English despite a fully translated ' +
       `catalog being registered: ${unreachable.join('; ')}`,
   ];
@@ -577,11 +592,11 @@ function checkRegionalReachability(tags, localizationProgram, localizationSource
  * Serbian ships both `sr` (Cyrillic, the CLDR default) and `sr-Latn`. `lang="sr-ME"` is Latin by
  * CLDR likely subtags, yet its truncation walk is `sr-ME` -> `sr`, which lands on the Cyrillic
  * catalog before the base-language widening ever runs. Only the implied-script step of
- * `localeCandidates()` (`impliedScriptStep`) inserts `sr-Latn` ahead of `sr`; deleting it still
+ * `expandedLocaleCandidates()` (`impliedScriptStep`) inserts `sr-Latn` ahead of `sr`; deleting it still
  * type-checks and silently shows Montenegrin readers the other script.
  *
  * So: whenever a `language-Script` catalog ships beside its bare `language` catalog,
- * `localeCandidates()` must still contain that step.
+ * `expandedLocaleCandidates()` must still contain that step.
  */
 function checkScriptReachability(tags, localizationProgram, localizationSource) {
   const lowered = new Set(tags.map((tag) => tag.toLowerCase()));
@@ -590,13 +605,13 @@ function checkScriptReachability(tags, localizationProgram, localizationSource) 
     return /^[A-Za-z]{4}$/u.test(script ?? '') && lowered.has(language.toLowerCase());
   });
   if (shadowed.length === 0) return [];
-  const candidates = functionSource(localizationProgram, localizationSource, 'localeCandidates');
+  const candidates = candidateExpansionSource(localizationProgram, localizationSource);
   if (candidates === undefined) {
-    return ['src/internal/localization-runtime.ts no longer declares localeCandidates(); locale lookup cannot be verified'];
+    return ['src/internal/localization-runtime.ts no longer installs expandedLocaleCandidates() into localeCandidates() on registration; locale lookup cannot be verified'];
   }
   if (candidates.includes('impliedScriptStep(')) return [];
   return [
-    'src/internal/localization-runtime.ts: localeCandidates() dropped the implied-script step ' +
+    'src/internal/localization-runtime.ts: expandedLocaleCandidates() dropped the implied-script step ' +
       '(impliedScriptStep), so script-less tags whose likely script differs from the bare language ' +
       `stop at the base catalog written in the other script: ${shadowed.join(', ')}`,
   ];

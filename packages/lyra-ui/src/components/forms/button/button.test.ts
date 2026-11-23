@@ -3196,8 +3196,8 @@ it('tracks a late external label\'s text and releases it after reassociation', a
   label.htmlFor = el.id;
   label.textContent = 'Late label';
   container.prepend(label);
-  await new Promise<void>((resolve) => setTimeout(resolve, 0));
-  expect(base.getAttribute('aria-label')).to.equal('Late label');
+  // The first label a page ever gains after connect may wait for the association observer chunk.
+  await waitUntil(() => base.getAttribute('aria-label') === 'Late label', 'the late label names the button');
 
   label.textContent = 'Updated label';
   await new Promise<void>((resolve) => setTimeout(resolve, 0));

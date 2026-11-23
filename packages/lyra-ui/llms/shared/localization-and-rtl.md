@@ -80,6 +80,11 @@ writing direction remain live references: loading or extending the parent later 
 components. Ordinary `registerLyraLocale()` calls can extend the delta without discarding its
 parent. Self-references, cycles and parent chains beyond 32 edges reject before changing the outer
 registration. Delta catalogs do not become reverse fallbacks for another tag sharing the language.
+
+The full fallback chain (truncation, implied script, regional siblings and delta parents) is
+installed by the first registration. Until then every message is the built-in English default, so
+only the inherited tag itself is consulted, for plural selection and number formatting. Register
+catalogs before the first render, as usual, to render localized text without a re-render.
 The existing complete built-in regional catalogs retain their original messages.
 
 ```js

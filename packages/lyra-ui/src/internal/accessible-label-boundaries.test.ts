@@ -8,10 +8,13 @@ import { acquireAriaControls } from './aria-controls.js';
 import { resolveIdReferencesIn } from './aria-reflection.js';
 import {
   isCurrentlyAssociatedLabel,
+  loadExternalLabelAssociation,
   observeExternalLabelAssociations,
   resolveExternalLabels,
   resolveExternalLabelText,
 } from './form-control-labels.js';
+
+before(() => loadExternalLabelAssociation());
 
 describe('accessible label reference boundaries', () => {
   it('refreshes a dangling label when its ID arrives inside an inserted subtree', async () => {

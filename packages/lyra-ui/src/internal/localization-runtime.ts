@@ -290,17 +290,34 @@ function isPrefixOf(key: string, requestedKey: string): boolean {
  * tags reached from `fa-IR`/`he-IL` by truncation, while the Portuguese (`pt-BR`, `pt-PT`) and
  * Chinese (`zh-CN`, `zh-TW`) catalogs are regional-only and reachable from `pt`/`zh` only through
  * the fallback half.
+ *
+ * The expansion is installed by the first registration. Until a catalog exists every message
+ * resolves through the caller-supplied English defaults, so only the primary tag matters (plural
+ * rules and message number formats read it); an application that never registers a locale ships
+ * neither the likely-subtags ranking nor the parent walk.
  */
 function localeCandidates(locale: string): readonly string[] {
   const identity = localeIdentity(locale);
   const normalized = identity.lookupKey;
   if (!normalized) return ENGLISH_ONLY_CANDIDATES;
-  const cached =
-    normalized.length <= MAX_CACHEABLE_LOCALE_LENGTH
-      ? localeCandidateCache.get(normalized)
-      : undefined;
+  const cacheable = normalized.length <= MAX_CACHEABLE_LOCALE_LENGTH;
+  const cached = cacheable ? localeCandidateCache.get(normalized) : undefined;
   if (cached) return cached;
+  const candidates = expandLocaleCandidates
+    ? expandLocaleCandidates(identity)
+    : normalized === 'en' || !(identity.wellFormed || identity.candidateBounded)
+    ? ENGLISH_ONLY_CANDIDATES
+    : Object.freeze([normalized, 'en']);
+  if (cacheable) cacheBounded(localeCandidateCache, normalized, candidates);
+  return candidates;
+}
 
+/** Installed by {@link registerLocale}; see {@link localeCandidates}. */
+let expandLocaleCandidates: ((identity: LocaleIdentity) => readonly string[]) | undefined;
+
+/** The complete candidate chain once at least one catalog has been registered. */
+function expandedLocaleCandidates(identity: LocaleIdentity): readonly string[] {
+  const normalized = identity.lookupKey;
   const candidates: string[] = [];
   if (identity.wellFormed || identity.candidateBounded)
     candidates.push(normalized);
@@ -338,11 +355,7 @@ function localeCandidates(locale: string): readonly string[] {
     }
   }
   if (!seen.has('en')) expanded.push('en');
-  const frozen = Object.freeze(expanded);
-  if (normalized.length <= MAX_CACHEABLE_LOCALE_LENGTH) {
-    cacheBounded(localeCandidateCache, normalized, frozen);
-  }
-  return frozen;
+  return Object.freeze(expanded);
 }
 
 /**
@@ -353,9 +366,14 @@ function localeCandidates(locale: string): readonly string[] {
  * @internal
  */
 export function lyraLocaleCatalogVersion(locale: string): string {
-  return localeCandidates(locale)
-    .map((candidate) => localeCatalogRevisions.get(candidate) ?? 0)
-    .join(',');
+  // Unregistered candidates contribute nothing to resolved messages, so only registered revisions
+  // are listed; the signature is therefore independent of whether the chain has been expanded yet.
+  let version = '';
+  for (const candidate of localeCandidates(locale)) {
+    const revision = localeCatalogRevisions.get(candidate);
+    if (revision) version += `${revision},`;
+  }
+  return version;
 }
 
 /** Every locale with registered strings, plus 'en' (always available via DEFAULT_STRINGS even
@@ -652,6 +670,11 @@ function registerLocale(
   // Snapshot proxy traps may reenter registration, so validate against the final graph only
   // after all caller-owned values have been read and immediately before the first mutation.
   if (parentKey !== undefined) validateLocaleParent(key, parentKey);
+  if (!expandLocaleCandidates) {
+    // The first catalog: every chain memoized so far was the unexpanded English-only form.
+    expandLocaleCandidates = expandedLocaleCandidates;
+    localeCandidateCache.clear();
+  }
   const isNewLocale = !locales.has(key);
   const candidateTopologyChanged =
     isNewLocale ||
@@ -1189,7 +1212,7 @@ export function resolveLyraStringWithLocale(
   let locale: string | undefined;
   if (message === undefined) {
     locale = resolveLocale();
-    for (const candidate of localeCandidates(locale)) {
+    if (locales.size) for (const candidate of localeCandidates(locale)) {
       const registered = safeMessageAt(locales.get(candidate), key);
       if (registered !== undefined) {
         message = registered;
