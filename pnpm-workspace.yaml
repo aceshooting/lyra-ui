@@ -316,7 +316,7 @@ minimumReleaseAgeExclude:
   - '@rolldown/binding-win32-arm64-msvc@1.3.3'
   - '@rolldown/binding-win32-x64-msvc@1.3.3'
   - rolldown@1.3.3
-  - chartjs-plugin-zoom@3.0.0
+  - chartjs-plugin-zoom@3.0.0 || 3.0.1
 allowBuilds:
   esbuild: true
   rs-module-lexer: true

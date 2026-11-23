@@ -16,6 +16,7 @@ import { failureReporter } from './scripts/wtr-failure-reporter.mjs';
 import { mcpAppSdkFixturePlugin } from './scripts/mcp-app-sdk-fixture.mjs';
 import { completeJunitReporter } from './scripts/wtr-junit-reporter.mjs';
 import { waitUntilPollIntervalPlugin } from './scripts/wait-until-poll-interval.mjs';
+import { fixtureSettlePlugin } from './scripts/wtr-fixture-settle.mjs';
 import { ssrFixturePlugin } from './scripts/wtr-ssr-fixture-plugin.mjs';
 
 const require = createRequire(import.meta.url);
@@ -536,6 +537,7 @@ export default {
     esbuildPlugin({ ts: true, json: true, target: 'es2022', tsconfig: 'tsconfig.json' }),
     sourceDiagnosticsPlugin,
     waitUntilPollIntervalPlugin,
+    fixtureSettlePlugin,
     papaparseEsmInteropPlugin,
     mammothEsmInteropPlugin,
     jszipEsmInteropPlugin,

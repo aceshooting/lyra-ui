@@ -80,7 +80,7 @@
     "@tailwindcss/vite": "^4.3.5",
     "axe-core": "^4.14.1",
     "chart.js": "^4.6.1",
-    "chartjs-plugin-zoom": "^3.0.0",
+    "chartjs-plugin-zoom": "^3.0.1",
     "d3-drag": "^3.0.1",
     "d3-force": "^3.0.1",
     "d3-selection": "^3.0.1",

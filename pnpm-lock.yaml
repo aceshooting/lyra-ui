@@ -255,8 +255,8 @@ importers:
         specifier: ^4.6.1
         version: 4.6.1
       chartjs-plugin-zoom:
-        specifier: ^3.0.0
-        version: 3.0.0(chart.js@4.6.1)
+        specifier: ^3.0.1
+        version: 3.0.1(chart.js@4.6.1)
       d3-drag:
         specifier: ^3.0.1
         version: 3.0.1
@@ -665,8 +665,8 @@ importers:
         specifier: ^2.2.0
         version: 2.2.0(chart.js@4.6.1)
       chartjs-plugin-zoom:
-        specifier: ^3.0.0
-        version: 3.0.0(chart.js@4.6.1)
+        specifier: ^3.0.1
+        version: 3.0.1(chart.js@4.6.1)
       d3-drag:
         specifier: ^3.0.1
         version: 3.0.1
@@ -4296,8 +4296,8 @@ packages:
     peerDependencies:
       chart.js: '>=3.0.0'
 
-  chartjs-plugin-zoom@3.0.0:
-    resolution: {integrity: sha512-K+fibOqwCg72WxkEFEb/RJ3sPEwQ1Nk8Cl4qhC0VxdQe1LREQrEIPPu8S9gaxfCKrzZHVMUjSvvreLWYenVIQA==}
+  chartjs-plugin-zoom@3.0.1:
+    resolution: {integrity: sha512-rVk7ftybg0C9Xf0Z2chC8QC8sEqkELo7Nknn5UMO59FIobx31vnrDWFPUzICPiNmLfzUAVgYm/yM4lYXmHpxKQ==}
     peerDependencies:
       chart.js: '>=3.2.0'
 
@@ -6852,8 +6852,8 @@ packages:
     resolution: {integrity: sha512-LbBDqdIC5s8iROCUjMbW1f5dJQTEFB1+KO9ogbvlb3nm9n4YHa5p4KTvFPWvh2Hs8gZMBuiB1/8+pdfe/tDPug==}
     hasBin: true
 
-  unbash@6.0.4:
-    resolution: {integrity: sha512-t3OptUArewg9OpYGDskTSlxhyLDahfmZ4d36hE44Efb1y3HRLLpzsVqwH+AwBVymP4t7pP71xN+nnduudn2awA==}
+  unbash@6.0.5:
+    resolution: {integrity: sha512-5P8o+nYRueKpHxmemofYqZRZCSWAi+Tqy31MQS8l/sT54Z+Axn55N9CnWPo19BxxJD4wYYf6RqlcURhWkrFXew==}
     engines: {node: '>=14'}
 
   underscore@1.13.8:
@@ -10346,7 +10346,7 @@ snapshots:
     dependencies:
       chart.js: 4.6.1
 
-  chartjs-plugin-zoom@3.0.0(chart.js@4.6.1):
+  chartjs-plugin-zoom@3.0.1(chart.js@4.6.1):
     dependencies:
       chart.js: 4.6.1
 
@@ -11493,7 +11493,7 @@ snapshots:
       smol-toml: 1.9.1
       strip-json-comments: 5.0.3
       tinyglobby: 0.2.17
-      unbash: 6.0.4
+      unbash: 6.0.5
       yaml: 2.9.1
 
   koa-compose@4.1.0: {}
@@ -13302,7 +13302,7 @@ snapshots:
 
   ua-parser-js@1.0.41: {}
 
-  unbash@6.0.4: {}
+  unbash@6.0.5: {}
 
   underscore@1.13.8: {}
 

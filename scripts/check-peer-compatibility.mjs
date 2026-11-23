@@ -105,6 +105,7 @@ const REVIEWED_CHART_PACKAGE_PEER_RANGES = Object.freeze({
     '2.0.0': '>=3.2.0',
     '2.2.0': '>=3.2.0',
     '3.0.0': '>=3.2.0',
+    '3.0.1': '>=3.2.0',
   }),
 });
 const STABLE_VERSION_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/u;
