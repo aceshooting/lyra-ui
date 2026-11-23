@@ -622,7 +622,17 @@ export class LyraTooltip extends LyraElement<LyraTooltipEventMap> {
         // state on close so a later `open = true` with no fresh `showAt()` call reverts to plain
         // trigger-based behavior.
         if (this.open) {
-          this.updateInteractiveContent();
+          // Opened before its first render (an `open` attribute, or `open` set while that render
+          // was still pending): the content slot exists only now, so classify the content once
+          // this update settles instead of changing reactive state from inside `updated()`. Later
+          // opens were classified in willUpdate(), so refreshing here changes nothing reactive.
+          if (changed.get('open') === undefined) {
+            void this.updateComplete.then(() => {
+              if (this.open && this.isConnected) this.updateInteractiveContent();
+            });
+          } else {
+            this.updateInteractiveContent();
+          }
           if (this.isConnected && this.requiresOverlayManager) this.activateTooltipOverlay();
         } else {
           // `anchorPositioned` is reset in willUpdate(); `positionedAnchor` is not reactive.
