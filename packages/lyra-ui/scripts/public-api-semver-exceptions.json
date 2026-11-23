@@ -1,3 +1,24 @@
 {
-  "exceptions": []
+  "exceptions": [
+    {
+      "changeId": "subpath-export:./ssr.js:lyraSsrElementRenderers:contract",
+      "requiredBump": "major",
+      "allowedBump": "patch",
+      "before": "f8f0bf76d377b453a4fb8729ac7cdd6668611e0a1b889158437af097f39eb262",
+      "after": "d0cb004eb13919d3d26a0cf727f2ebdaf71d9d123f904ce2bef86e65c856ea82",
+      "reason": "The return type widens from a readonly tuple to the same mutable tuple. A mutable tuple is assignable everywhere the readonly one was, so every existing caller still compiles; the change only lets the documented call satisfy @lit-labs/ssr's mutable RenderInfo.elementRenderers.",
+      "reviewer": "maintainer",
+      "reviewedOn": "2026-11-23"
+    },
+    {
+      "changeId": "subpath-export:./ssr/all.js:lyraSsrElementRenderers:contract",
+      "requiredBump": "major",
+      "allowedBump": "patch",
+      "before": "f8f0bf76d377b453a4fb8729ac7cdd6668611e0a1b889158437af097f39eb262",
+      "after": "d0cb004eb13919d3d26a0cf727f2ebdaf71d9d123f904ce2bef86e65c856ea82",
+      "reason": "The return type widens from a readonly tuple to the same mutable tuple. A mutable tuple is assignable everywhere the readonly one was, so every existing caller still compiles; the change only lets the documented call satisfy @lit-labs/ssr's mutable RenderInfo.elementRenderers.",
+      "reviewer": "maintainer",
+      "reviewedOn": "2026-11-23"
+    }
+  ]
 }

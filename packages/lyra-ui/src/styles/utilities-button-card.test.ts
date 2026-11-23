@@ -71,6 +71,7 @@ async function settled(element: Element): Promise<string> {
   let current = getComputedStyle(element).backgroundColor;
   while (current !== previous) {
     previous = current;
+    // wait-reason: sample the computed background until two reads agree, so the color transition has settled
     await new Promise((resolve) => setTimeout(resolve, 250));
     current = getComputedStyle(element).backgroundColor;
   }
