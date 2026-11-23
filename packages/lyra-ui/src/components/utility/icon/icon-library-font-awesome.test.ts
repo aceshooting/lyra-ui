@@ -74,6 +74,7 @@ describe('Font Awesome folder and URL resolution', () => {
       `https://ka-p.fontawesome.com/releases/v${FONT_AWESOME_DEFAULT_VERSION}/svgs/sharp-duotone-light/house.svg?token=abc123`,
     );
     expect(resolve({ basePath: '/assets/fa/svgs/' }, 'house', 'thumbprint')).to.equal('/assets/fa/svgs/thumbprint-light/house.svg');
+    expect(resolve({ basePath: `/fa${'/'.repeat(50_000)}` }, 'house', 'thumbprint')).to.equal('/fa/thumbprint-light/house.svg');
     expect(resolve({ basePath: '/fa', kitCode: 'abc123' }, 'house', 'duotone')).to.equal('/fa/duotone/house.svg');
   });
 

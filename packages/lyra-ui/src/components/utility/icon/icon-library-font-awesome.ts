@@ -172,7 +172,7 @@ export function createFontAwesomeIconResolver(
 ): LyraIconLibraryResolver {
   validateOptions(options);
   const version = options.version ?? FONT_AWESOME_DEFAULT_VERSION;
-  const basePath = options.basePath?.replace(/\/+$/, '');
+  const basePath = options.basePath === undefined ? undefined : withoutTrailingSlashes(options.basePath);
   const kitCode = options.kitCode;
   return (name, family, variant) => {
     const iconName = name.startsWith('fa-') ? name.slice(3) : name;
@@ -212,4 +212,12 @@ export function registerFontAwesomeIconLibrary(options: LyraFontAwesomeIconLibra
   return () => {
     if (getIconLibrary(name)?.resolver === resolver) unregisterIconLibrary(name);
   };
+}
+
+/** Drops trailing `/` characters with a linear scan; a regex anchored at the end backtracks
+ *  quadratically on long runs of `/` in caller-supplied input. */
+function withoutTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47) end -= 1;
+  return value.slice(0, end);
 }

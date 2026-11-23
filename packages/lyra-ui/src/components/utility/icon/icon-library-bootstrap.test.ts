@@ -42,6 +42,8 @@ describe('Bootstrap Icons URL resolution', () => {
 
   it('resolves a self-hosted base path instead of the CDN', () => {
     expect(resolve({ basePath: '/assets/bootstrap-icons/' }, 'gear')).to.equal('/assets/bootstrap-icons/gear.svg');
+    expect(resolve({ basePath: '/assets/bi///' }, 'gear')).to.equal('/assets/bi/gear.svg');
+    expect(resolve({ basePath: `/bi${'/'.repeat(50_000)}` }, 'gear')).to.equal('/bi/gear.svg');
     expect(resolve({ basePath: 'https://static.example/bi', version: '1.0.0' }, 'x-lg')).to.equal('https://static.example/bi/x-lg.svg');
   });
 

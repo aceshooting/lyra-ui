@@ -63,7 +63,7 @@ function validateOptions(options: LyraBootstrapIconLibraryOptions): void {
 export function createBootstrapIconResolver(options: LyraBootstrapIconLibraryOptions = {}): LyraIconLibraryResolver {
   validateOptions(options);
   const version = options.version ?? BOOTSTRAP_ICONS_DEFAULT_VERSION;
-  const basePath = options.basePath?.replace(/\/+$/, '');
+  const basePath = options.basePath === undefined ? undefined : withoutTrailingSlashes(options.basePath);
   return (name) => {
     const iconName = name.startsWith('bi-') ? name.slice(3) : name;
     if (!ICON_NAME.test(iconName)) throw new RangeError(`Invalid Bootstrap Icons name: ${name}`);
@@ -92,4 +92,12 @@ export function registerBootstrapIconLibrary(options: LyraBootstrapIconLibraryOp
   return () => {
     if (getIconLibrary(name)?.resolver === resolver) unregisterIconLibrary(name);
   };
+}
+
+/** Drops trailing `/` characters with a linear scan; a regex anchored at the end backtracks
+ *  quadratically on long runs of `/` in caller-supplied input. */
+function withoutTrailingSlashes(value: string): string {
+  let end = value.length;
+  while (end > 0 && value.charCodeAt(end - 1) === 47) end -= 1;
+  return value.slice(0, end);
 }
