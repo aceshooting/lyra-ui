@@ -247,7 +247,8 @@ describe('typography role classes', () => {
       expect(margins, rule.selectorText).to.deep.equal([]);
     }
 
-    const hoverRules = rules.filter((rule) => rule.selectorText.includes('a[href]') && rule.selectorText.includes(':hover'));
+    const hoverRules = rules.filter((rule) =>
+      rule.selectorText.includes('.lr-typography') && rule.selectorText.includes('a[href]') && rule.selectorText.includes(':hover'));
     expect(hoverRules.length, 'one link hover rule').to.equal(1);
     expect([...hoverRules[0]!.style]).to.deep.equal(['text-decoration-thickness']);
 
