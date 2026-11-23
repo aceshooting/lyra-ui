@@ -19,7 +19,7 @@
     "chart.js": "4.6.1",
     "chartjs-plugin-annotation": "3.1.0",
     "chartjs-plugin-datalabels": "2.2.0",
-    "chartjs-plugin-zoom": "3.0.0",
+    "chartjs-plugin-zoom": "3.0.1",
     "dompurify": "3.5.0",
     "katex": "0.19.1",
     "mammoth": "1.13.0",
