@@ -1,6 +1,13 @@
 import { composedParentElement, deepActiveElementIn } from './active-element.js';
 import { asciiWhitespaceTokens } from './ascii-whitespace.js';
-import { cachedImageMapImageFor, isHtmlElement, isSvgElement, isShadowRootNode } from './dom-guards.js';
+import {
+  cachedImageMapImageFor,
+  consumeBoundedNodeWork as consumeFocusWork,
+  isClosedDetailsBranchBounded,
+  isHtmlElement,
+  isSvgElement,
+  isShadowRootNode,
+} from './dom-guards.js';
 import {
   hasFocusExcludingAttributes,
   isNativeAction,
@@ -279,15 +286,6 @@ function renderedElementState(
   };
 }
 
-function consumeFocusWork(context: FocusTraversalContext): boolean {
-  if (context.workUnits >= context.maxNodes) {
-    context.reasons.add('nodes');
-    return false;
-  }
-  context.workUnits += 1;
-  return true;
-}
-
 function cachedRenderedElementState(
   context: FocusTraversalContext,
   element: Element,
@@ -304,19 +302,6 @@ function cachedImageMapImage(context: FocusTraversalContext, element: Element): 
   return cachedImageMapImageFor(context.imageMapImages, element, () => consumeFocusWork(context));
 }
 
-function isClosedDetailsBranch(
-  details: Element,
-  branch: Element | null,
-  context: FocusTraversalContext,
-): boolean {
-  if (details.localName !== 'details' || details.hasAttribute('open') || branch === null) return false;
-  for (const child of details.children) {
-    if (!consumeFocusWork(context)) return true;
-    if (child.localName === 'summary') return child !== branch;
-  }
-  return true;
-}
-
 function composedAncestorsAvailable(
   element: Element,
   context: FocusTraversalContext,
@@ -327,7 +312,7 @@ function composedAncestorsAvailable(
   while (ancestor) {
     if (!consumeFocusWork(context)) return false;
     const state = cachedRenderedElementState(context, ancestor);
-    if (state.subtreeUnavailable || isClosedDetailsBranch(ancestor, branch, context)) return false;
+    if (state.subtreeUnavailable || isClosedDetailsBranchBounded(ancestor, branch, () => consumeFocusWork(context))) return false;
     depth += 1;
     if (depth > context.maxDepth) {
       context.reasons.add('depth');

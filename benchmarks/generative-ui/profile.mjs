@@ -51,7 +51,7 @@ export function validateCollectionManifest(manifest) {
   for (const key of ['runnerSha256', 'resultsSha256', 'measurementSha256', 'driverSha256', 'admissionSha256']) require(hash(manifest.harness?.[key]), `Missing actual harness ${key}.`);
   for (const key of ['bundleSha256', 'inputsSha256', 'hostSha256', 'recordingSha256']) require(hash(manifest.fixtureBuild?.[key]), `Missing actual fixture build ${key}.`);
   const environment = manifest.environment;
-  require(environment?.node === '22.23.2' && text(environment.os) && text(environment.arch) && text(environment.cpuModel)
+  require(environment?.node === '22.23.5' && text(environment.os) && text(environment.arch) && text(environment.cpuModel)
     && Number.isSafeInteger(environment.logicalCpus) && environment.logicalCpus > 0 && finite(environment.memoryBytes) && environment.memoryBytes > 0
     && text(environment.playwright) && text(environment.esbuild), 'Actual environment identity is required.');
   for (const engine of PROFILE_ENGINES) {

@@ -3,7 +3,12 @@ import { composedParentElement } from './active-element.js';
 import { assignedSlotOf } from './composed-tree.js';
 import { asciiWhitespaceTokens } from './ascii-whitespace.js';
 import { isAriaTrue } from './aria-values.js';
-import { cachedImageMapImageFor, imageMapImageFor } from './dom-guards.js';
+import {
+  cachedImageMapImageFor,
+  consumeBoundedNodeWork as consumeNodeWork,
+  imageMapImageFor,
+  isClosedDetailsBranchBounded,
+} from './dom-guards.js';
 import { subscribeInheritedAttributes, type InheritedAttributeRelease } from './inherited-attribute-hub.js';
 
 export { composedParentElement } from './active-element.js';
@@ -531,15 +536,6 @@ interface AccessibilityTextContext {
   workUnits: number;
 }
 
-function consumeNodeWork(context: AccessibilityTextContext): boolean {
-  if (context.workUnits >= context.maxNodes) {
-    context.reasons.add('nodes');
-    return false;
-  }
-  context.workUnits += 1;
-  return true;
-}
-
 function cachedElementState(
   context: AccessibilityTextContext,
   element: Element,
@@ -619,7 +615,7 @@ function composedAncestorState(
       firstAncestor = false;
     }
     const excluded = cachedSubtreeExcluded(context, ancestor);
-    if (excluded || isClosedDetailsContentBranchBounded(context, ancestor, branch)) {
+    if (excluded || isClosedDetailsBranchBounded(ancestor, branch, () => consumeNodeWork(context))) {
       return { available: false, inheritedTextVisible };
     }
     if (ancestor === context.ancestorBoundary) return { available: true, inheritedTextVisible };
@@ -1202,38 +1198,6 @@ export function composedAccessibleVisibleText(node: Node): string {
   return composedAccessibilityText(node);
 }
 
-/** Whether `branch` is pruned as non-summary content of a closed native details element. */
-function isClosedDetailsContentBranchWithin(
-  details: Element,
-  branch: Element | null,
-  consume: () => boolean,
-): boolean {
-  if (details.localName !== 'details' || details.hasAttribute('open') || branch === null) return false;
-
-  let summary: Element | null = null;
-  for (const child of details.children) {
-    if (!consume()) return true;
-    if (child.localName === 'summary') {
-      summary = child;
-      break;
-    }
-  }
-  return branch !== summary;
-}
-
-function isClosedDetailsContentBranchBounded(
-  context: AccessibilityTextContext,
-  details: Element,
-  branch: Element | null,
-): boolean {
-  if (details.localName !== 'details' || details.hasAttribute('open') || branch === null) return false;
-  for (const child of details.children) {
-    if (!consumeNodeWork(context)) return true;
-    if (child.localName === 'summary') return child !== branch;
-  }
-  return true;
-}
-
 /**
  * Whether an element is connected and exposed by its own state and every composed ancestor.
  *
@@ -1278,7 +1242,7 @@ export function isAccessibilityVisible(
     }
     if (!options.ignorePresentation?.(current)) {
       if (state.subtreeExcluded) return false;
-      if (isClosedDetailsContentBranchWithin(current, composedChild, consume)) return false;
+      if (isClosedDetailsBranchBounded(current, composedChild, consume)) return false;
       if (current === element && state.visibilityHidden) return false;
     }
     composedChild = current;
@@ -1301,7 +1265,7 @@ export function isAccessibilityVisible(
       if (current === renderedSource) targetState = state;
       if (!options.ignorePresentation?.(current)) {
         if (state.subtreeExcluded) return false;
-        if (isClosedDetailsContentBranchWithin(current, composedChild, consume)) return false;
+        if (isClosedDetailsBranchBounded(current, composedChild, consume)) return false;
         if (current === renderedSource && state.visibilityHidden) return false;
       }
       composedChild = current;

@@ -116,6 +116,38 @@ export function isShadowRoot(value: unknown): value is ShadowRoot {
   }
 }
 
+/** A bounded traversal's node budget: units spent, the ceiling, and why the walk stopped early. */
+export interface BoundedNodeWork {
+  workUnits: number;
+  readonly maxNodes: number;
+  readonly reasons: { add(reason: 'nodes'): unknown };
+}
+
+/** Charges one unit of traversal work; at the ceiling, records the `nodes` truncation and refuses. */
+export function consumeBoundedNodeWork(context: BoundedNodeWork): boolean {
+  if (context.workUnits >= context.maxNodes) {
+    context.reasons.add('nodes');
+    return false;
+  }
+  context.workUnits += 1;
+  return true;
+}
+
+/** Whether `branch` is a child of a closed `<details>` other than its first `<summary>`, charging
+ * `consume` per child read; an exhausted budget answers closed. */
+export function isClosedDetailsBranchBounded(
+  details: Element,
+  branch: Element | null,
+  consume: () => boolean,
+): boolean {
+  if (details.localName !== 'details' || details.hasAttribute('open') || branch === null) return false;
+  for (const child of details.children) {
+    if (!consume()) return true;
+    if (child.localName === 'summary') return child !== branch;
+  }
+  return true;
+}
+
 /** {@link imageMapImageFor} memoized in a per-traversal `cache`, charging `consume` for lookup work. */
 export function cachedImageMapImageFor(
   cache: Map<Element, HTMLImageElement | null>,

@@ -36,7 +36,7 @@ channel checks additionally need their respective installed browsers. See the
 qualification commands.
 
 The published package supports Node ≥ 22. Contributor, generation and release commands use the
-exact Node `22.23.2` in [`.nvmrc`](.nvmrc) (run `nvm use`); package-manager installs need
+exact Node `22.23.5` in [`.nvmrc`](.nvmrc) (run `nvm use`); package-manager installs need
 Node ≥ 22, `pnpm@12.21.0` (pinned via `packageManager` in `package.json`).
 
 ## Running things locally
@@ -65,7 +65,7 @@ Open Graph, structured-data and crawler URLs together. Official CI and Pages bui
 profile without needing the build environment. Deploy the qualified output unchanged. Storybook's
 query-based guide routes still share one HTML document and canonical URL.
 
-Under the exact Node `22.23.2` from `.nvmrc` with the repository-pinned pnpm, run
+Under the exact Node `22.23.5` from `.nvmrc` with the repository-pinned pnpm, run
 `./scripts/ci.sh` to reproduce the six primary CI jobs as one local aggregate. Use
 `./scripts/ci.sh --platform-matrix` to add the six Node 22 platform-contract legs: Chromium,
 Chrome, Edge, Firefox (two shards) and Safari. `.github/workflows/ci.yml` is the authoritative, up-to-date gate list;

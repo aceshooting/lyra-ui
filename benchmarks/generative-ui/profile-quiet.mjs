@@ -333,7 +333,7 @@ export async function readSnapshot(hz, observerConfig, { readFileSync: read = re
   }
 }
 export async function runMonitor({ collectionId, ownershipPath, reviewPath, observerConfigPath, output, signal }) {
-  require(process.platform === 'linux' && process.versions.node === '22.23.2', 'Use Linux and exact Node22.23.2.');
+  require(process.platform === 'linux' && process.versions.node === '22.23.5', 'Use Linux and exact Node22.23.5.');
   require(typeof collectionId === 'string' && /^[a-zA-Z0-9_-]{1,100}$/u.test(collectionId), 'Invalid collection identity.');
   const toolSha256 = digest(await readFile(new URL(import.meta.url))), admissionSha256 = digest(await readFile(new URL('./profile-admission.mjs', import.meta.url)));
   const ownershipBytes = await readFile(ownershipPath), ownership = JSON.parse(ownershipBytes), ownershipSha256 = digest(ownershipBytes);

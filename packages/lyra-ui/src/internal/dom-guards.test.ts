@@ -1,5 +1,16 @@
 import { expect, fixture, html } from '@open-wc/testing';
-import { cachedImageMapImageFor, imageMapImageFor, isDateObject, isShadowRootNode, isHtmlElement, isSvgElement, nodeContainsSlot, someListedNode } from './dom-guards.js';
+import {
+  cachedImageMapImageFor,
+  consumeBoundedNodeWork,
+  imageMapImageFor,
+  isClosedDetailsBranchBounded,
+  isDateObject,
+  isShadowRootNode,
+  isHtmlElement,
+  isSvgElement,
+  nodeContainsSlot,
+  someListedNode,
+} from './dom-guards.js';
 
 it('recognizes genuine HTML elements and Dates from another same-origin realm', async () => {
   const frame = await fixture<HTMLIFrameElement>(html`<iframe></iframe>`);
@@ -127,4 +138,35 @@ it('memoizes image-map lookups per traversal cache and charges work only on a mi
   expect(cachedImageMapImageFor(cache, area, consume) === image).to.equal(true);
   expect(work).to.equal(spent);
   expect(cachedImageMapImageFor(new Map(), area, () => false)).to.equal(null);
+});
+
+it('charges bounded node work until the ceiling, then records the nodes truncation', () => {
+  const context = { workUnits: 0, maxNodes: 2, reasons: new Set<string>() };
+  expect(consumeBoundedNodeWork(context)).to.equal(true);
+  expect(consumeBoundedNodeWork(context)).to.equal(true);
+  expect(context.reasons.size).to.equal(0);
+  expect(consumeBoundedNodeWork(context)).to.equal(false);
+  expect(context.workUnits).to.equal(2);
+  expect([...context.reasons]).to.deep.equal(['nodes']);
+});
+
+it('classifies closed details branches against the first summary under a work budget', async () => {
+  const details = await fixture<HTMLDetailsElement>(
+    html`<details><p id="before"></p><summary id="first"></summary><summary id="second"></summary></details>`,
+  );
+  const before = details.querySelector('#before')!;
+  const first = details.querySelector('#first')!;
+  const second = details.querySelector('#second')!;
+  const budget = (): (() => boolean) => () => true;
+  expect(isClosedDetailsBranchBounded(details, first, budget())).to.equal(false);
+  expect(isClosedDetailsBranchBounded(details, second, budget())).to.equal(true);
+  expect(isClosedDetailsBranchBounded(details, before, () => true)).to.equal(true);
+  expect(isClosedDetailsBranchBounded(details, null, budget())).to.equal(false);
+  expect(isClosedDetailsBranchBounded(details, first, () => false)).to.equal(true);
+  const exhausted = { workUnits: 1, maxNodes: 1, reasons: new Set<string>() };
+  expect(isClosedDetailsBranchBounded(details, first, () => consumeBoundedNodeWork(exhausted))).to.equal(true);
+  expect([...exhausted.reasons]).to.deep.equal(['nodes']);
+  details.open = true;
+  expect(isClosedDetailsBranchBounded(details, second, budget())).to.equal(false);
+  expect(isClosedDetailsBranchBounded(before, first, budget())).to.equal(false);
 });

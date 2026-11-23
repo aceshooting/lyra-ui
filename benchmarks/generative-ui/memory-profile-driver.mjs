@@ -86,7 +86,7 @@ export function createMemoryDriver(options, { functional = false } = {}) {
     async verify(manifest) {
       require(!owned && !prepared, 'Memory driver can verify once.');
       if (functional) validateMemorySmokeManifest(manifest); else validateMemoryManifest(manifest);
-      require(process.versions.node === '22.23.2', 'Use the pinned Node version.');
+      require(process.versions.node === '22.23.5', 'Use the pinned Node version.');
       require(same(await candidateIdentity(options), manifest.candidate) && await memoryProfileSourceIdentity() === manifest.sourceSha256, 'Memory source or candidate differs from authorization.');
       owned = structuredClone(manifest);
       if (owned.quietObserver) admissionSha256 = hash(await readFile(join(here, 'profile-admission.mjs')));

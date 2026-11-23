@@ -9,7 +9,7 @@ import {
 
 const example = () => ({
   schemaVersion: 1,
-  runtime: { node: '22.23.2', icu: '78.2', cldr: '48.0', unicode: '17.0' },
+  runtime: { node: '22.23.5', icu: '78.3', cldr: '48.0', unicode: '17.0' },
   source: 'Captured from the exact pinned cardinal plural rules implementation.',
   locales: { en: ['one', 'other'], fr: ['many', 'one', 'other'] },
 });

@@ -16,7 +16,7 @@ export function parseNvmrcVersion(source) {
   const match = canonicalNvmrc.exec(source);
   if (!match) {
     throw new Error(
-      '.nvmrc must contain exactly one canonical Node patch (for example, 22.23.2) followed by one LF or CRLF terminator',
+      '.nvmrc must contain exactly one canonical Node patch (for example, 22.23.5) followed by one LF or CRLF terminator',
     );
   }
   return match[1];

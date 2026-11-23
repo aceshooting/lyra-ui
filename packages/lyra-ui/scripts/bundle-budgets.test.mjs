@@ -454,9 +454,9 @@ const reviewedCeilingKeys = Object.keys(budgets)
   .sort();
 test('combobox minimum-query admission retains its reviewed initial-route ceiling', () => {
   const entry = 'dist/components/lr-combobox.js';
-  const measurement = 42_283;
+  const measurement = 42_365;
   const ceiling = budgetKilobytesToBytes(initialBudgets.$marginalGzipKb[entry], entry);
-  assert.equal(ceiling, 42_304);
+  assert.equal(ceiling, 42_368);
   assert.equal(ceiling, Math.ceil(measurement / 64) * 64,
     'only the exceeded initial-route ceiling advances to the next 64-byte boundary');
 });

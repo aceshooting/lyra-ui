@@ -8,6 +8,11 @@
  * stale entry therefore fails closed instead of silently becoming permanent configuration.
  */
 export const DEFAULT_STRING_SLICE_EXCLUSIONS = Object.freeze({
+  // Both classes resolve a computed key, so their graph keeps the conservative literal walk, and
+  // that walk reaches the closed-details traversal in dom-guards.ts. Its `details` element name and
+  // `open` attribute are DOM vocabulary there, never message keys either class resolves.
+  'src/components/conversation/generation-metrics/generation-metrics.class.ts': Object.freeze(['details', 'open']),
+
   // These pickers drive ElementInternals through non-mixin helpers from form-associated.ts. Its
   // unrelated FormAssociated export owns the fieldRequired lookup; none of these classes invokes it.
   'src/components/conversation/model-select/model-select.class.ts': Object.freeze(['fieldRequired']),
@@ -20,6 +25,10 @@ export const DEFAULT_STRING_SLICE_EXCLUSIONS = Object.freeze({
   'src/components/forms/radio/radio-button.class.ts': Object.freeze(['fieldRequired']),
   'src/components/forms/radio/radio-group.class.ts': Object.freeze(['fieldRequired']),
   'src/components/forms/radio/radio.class.ts': Object.freeze(['fieldRequired']),
+
+  // Same dom-guards.ts closed-details vocabulary as generation-metrics above; the panel's computed
+  // label keys keep its graph on the conservative walk.
+  'src/components/utility/style-panel/style-panel.class.ts': Object.freeze(['details', 'open']),
 
   // Not form-associated at all; form-associated.ts only reaches this graph transitively through
   // the composed form controls it renders, and each of those owns its own slice.

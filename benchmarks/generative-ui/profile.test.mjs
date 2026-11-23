@@ -50,7 +50,7 @@ function manifest() {
     candidate: { archiveSha256: 'b'.repeat(64), lockfileSha256: 'b'.repeat(64), buildSha256: 'b'.repeat(64) },
     harness: { runnerSha256: 'e'.repeat(64), resultsSha256: 'e'.repeat(64), measurementSha256: 'e'.repeat(64), driverSha256: 'e'.repeat(64), admissionSha256: '9'.repeat(64) },
     fixtureBuild: { bundleSha256: 'f'.repeat(64), inputsSha256: 'f'.repeat(64), hostSha256: 'f'.repeat(64), recordingSha256: 'f'.repeat(64) },
-    environment: { node: '22.23.2', os: 'synthetic', arch: 'synthetic', cpuModel: 'synthetic', logicalCpus: 1, memoryBytes: 1, playwright: 'test', esbuild: 'test',
+    environment: { node: '22.23.5', os: 'synthetic', arch: 'synthetic', cpuModel: 'synthetic', logicalCpus: 1, memoryBytes: 1, playwright: 'test', esbuild: 'test',
       browsers: Object.fromEntries(['chromium', 'firefox', 'webkit'].map(engine => [engine, { version: 'synthetic', executableSha256: 'c'.repeat(64) }])) },
     fixtures: Object.fromEntries(['T', 'C', 'L', 'V', 'X', 'D', 'S', 'R', 'A', 'K'].map(id => [id, fixture])),
     controls: Object.fromEntries(['chromium', 'firefox', 'webkit'].map(id => [id, capabilities])),

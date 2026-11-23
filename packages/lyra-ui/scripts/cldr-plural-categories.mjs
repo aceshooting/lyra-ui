@@ -1,13 +1,13 @@
 const CATEGORY_NAMES = Object.freeze(['few', 'many', 'one', 'other', 'two', 'zero']);
 const EXPECTED_RUNTIME = Object.freeze({
-  node: '22.23.2',
-  icu: '78.2',
+  node: '22.23.5',
+  icu: '78.3',
   cldr: '48.0',
   unicode: '17.0',
 });
 const LAHNDA_FALLBACK = Object.freeze({
   resolvedLocale: 'en-US',
-  reason: 'ICU 78.2 does not support lah (the canonical form of pnb). Preserve the existing runtime fallback category set; this is not Lahnda grammatical certification.',
+  reason: 'ICU 78.3 does not support lah (the canonical form of pnb). Preserve the existing runtime fallback category set; this is not Lahnda grammatical certification.',
 });
 
 function canonicalLocale(locale) {
@@ -19,7 +19,7 @@ export function pinnedPluralCategories(pin, locale) {
   if (!pin?.locales || !Object.hasOwn(pin.locales, canonical)) {
     throw new Error(
       `CLDR plural-category pin has no exact entry for ${JSON.stringify(locale)}; ` +
-        'update the reviewed pin with Node 22.23.2 before scaffolding or checking this locale',
+        'update the reviewed pin with Node 22.23.5 before scaffolding or checking this locale',
     );
   }
   const categories = pin.locales[canonical];

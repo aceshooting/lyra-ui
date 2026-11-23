@@ -18,7 +18,7 @@ import { isMainModule } from './is-main-module.mjs';
 //      CLDR plural category. A Russian catalog that authors only `{one, other}` -- the English
 //      shape -- silently widens `few`/`many` to `other` for every count from 2 upward, which is
 //      exactly the bug the plural rework existed to remove. The required category set is read
-//      from the reviewed CLDR48/ICU78.2 category pin. Contributor runtime updates cannot silently
+//      from the reviewed CLDR48/ICU78.3 category pin. Contributor runtime updates cannot silently
 //      change catalog requirements; updating the pin is an explicit review operation. Runtime
 //      Intl still selects categories and retains the documented other fallback.
 // Key ORDER is enforced too: catalogs are mechanically comparable only if they enumerate keys in

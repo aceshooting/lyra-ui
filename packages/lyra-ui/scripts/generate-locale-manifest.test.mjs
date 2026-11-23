@@ -7,7 +7,7 @@ import { analyzeLocaleInventory, artifactProblems, canonicalCatalogIdentities, c
 import { pinnedPluralCategories } from './cldr-plural-categories.mjs';
 import { validateTranslationReviews } from './translation-review.mjs';
 
-const pinnedRuntime = { node: '22.23.2', icu: '78.2', cldr: '48.0', unicode: '17.0' };
+const pinnedRuntime = { node: '22.23.5', icu: '78.3', cldr: '48.0', unicode: '17.0' };
 const packageDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
 test('coverage counts report untranslated source keys instead of claiming fallback completeness', () => {

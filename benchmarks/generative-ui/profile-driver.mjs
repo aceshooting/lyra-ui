@@ -310,7 +310,7 @@ export function createProfileDriver(options) {
       require(!owned && !scratch, 'Driver verification may run only once.');
       if (preflight) validatePreflightAuthorization(manifest);
       else if (functional) validateSmokeAuthorization(manifest); else validateCollectionManifest(manifest);
-      require(process.versions.node === '22.23.2', 'Use the pinned Node version.');
+      require(process.versions.node === '22.23.5', 'Use the pinned Node version.');
       owned = JSON.parse(JSON.stringify(manifest));
       const harness = await profileHarnessIdentity();
       if (!functional) hashesEqual(harness, owned.harness, 'Harness differs from the authorized manifest.');

@@ -83,7 +83,7 @@ treat a gap in any of them as a bug, not a missing feature.
 ## Pinned plural-category requirements
 
 `packages/lyra-ui/scripts/fixtures/cldr-plural-categories.json` records the catalog qualification
-categories captured with Node 22.23.2, ICU 78.2, CLDR 48.0 and Unicode 17.0. The translation
+categories captured with Node 22.23.5, ICU 78.3, CLDR 48.0 and Unicode 17.0. The translation
 checker and scaffold read this snapshot instead of deriving requirements from an arbitrary host's
 ICU. Normal generators never rewrite it, and a locale missing from the pin fails closed.
 
@@ -95,7 +95,7 @@ existing category set also requires checking every affected plural message; it i
 consequence of upgrading Node. Runtime message selection still uses the browser's `Intl` and its
 documented fallback behavior.
 
-Authored tags `tl` and `pnb` canonicalize to `fil` and `lah`. ICU 78.2 does not support `lah` plural
+Authored tags `tl` and `pnb` canonicalize to `fil` and `lah`. ICU 78.3 does not support `lah` plural
 rules, so that entry explicitly records the existing `en-US` fallback categories `one`/`other` in
 `runtimeFallbacks.lah`. This preserves the current runtime contract and does not certify Western
 Punjabi or Lahnda grammar. Do not generalize that exception to another unsupported locale or
