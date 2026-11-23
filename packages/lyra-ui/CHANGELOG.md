@@ -1,5 +1,35 @@
 # Changelog
 
+## 33.1.0
+
+### Minor Changes
+
+- 328e3cd: `lr-map` gains `anchorAvoidSides`, a list of `{ element, side }` obstacles that keeps anchors on a
+  named side of each: `'block-end'` (below it), `'block-start'`, `'inline-start'` or `'inline-end'`
+  (logical, so they follow RTL), or `'auto'`, the cheapest edge that `anchorAvoid` uses. Use it for
+  chrome whose cheapest edge changes with its size, such as a floating search bar whose results list
+  opens and would otherwise squeeze the anchored panel into a narrow column beside it. An element in
+  both `anchorAvoid` and `anchorAvoidSides` takes its side from the latter; `anchorAvoid` itself is
+  unchanged. The new `LyraMapAnchorAvoidObstacle` and `LyraMapAnchorAvoidSide` types are exported.
+  `anchorAvoid`, `anchorAvoidSides` and `controlsAvoid` also no longer reserve space for an obstacle
+  hidden with `visibility: hidden` (including an inherited one), and re-measure when an obstacle's own
+  `style`, `class` or `hidden` attribute changes.
+- 03bca9a: `utilities.css` adds `lr-button` and `lr-card`, light-DOM classes that give a plain `<a href>` or
+  `<button>` the look of `<lr-button>` and any element the surface of `<lr-card>`, with nothing to
+  hydrate. They read the same `--lr-button-*` and `--lr-card-*` hooks and theme tokens as the
+  components. Variant comes from `lr-neutral|brand|success|warning|danger` and size from
+  `lr-size-2xs` … `lr-size-xl`, on the element or an ancestor. Appearance comes from `lr-accent`,
+  `lr-filled`, `lr-outlined`, `lr-filled-outlined` or `lr-plain` on the element. Hover, press, keyboard
+  focus, `:disabled` and `aria-disabled="true"` states, RTL, dark scopes and reduced motion are covered.
+  The variant classes also publish `--lr-variant-on-loud`. `lyra-ui-migrate` now rewrites Web Awesome's
+  `wa-button`, `wa-accent`, `wa-filled`, `wa-outlined`, `wa-plain` and `wa-pill` classes to these
+  counterparts instead of only reporting them.
+
+### Patch Changes
+
+- 328e3cd: Server-rendered components no longer render a second copy of their template when Lit's hydration support was not installed in time. A code-splitting bundler can move Lit into a shared chunk that evaluates before `@aceshooting/lyra-ui/hydration.js`, which left the server's declarative shadow root in place with a duplicate tree rendered in front of it. A component now detects a server-rendered shadow root that Lit cannot hydrate, discards the server markup and renders into the same shadow root, and the development build warns once naming the cause. The SSR guide adds a bundler recipe (one shared chunk for Lit and `hydration.js`, or `hydration.js` as a separate first script) so such pages hydrate instead of re-rendering.
+- 29841f7: `lyraSsrElementRenderers()` now returns a fresh mutable array type instead of a readonly tuple, so the documented `render(template, { elementRenderers: lyraSsrElementRenderers(LitElementRenderer) })` call compiles under strict TypeScript against `@lit-labs/ssr`'s `RenderInfo` (it previously failed with TS4104). Each call returns a new array, so a caller that mutates it affects nobody else.
+
 ## 33.0.0
 
 ### Major Changes

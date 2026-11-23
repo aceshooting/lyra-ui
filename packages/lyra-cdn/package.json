@@ -1,6 +1,6 @@
 {
   "name": "@aceshooting/lyra-cdn",
-  "version": "33.0.0",
+  "version": "33.1.0",
   "description": "Single-script-tag build of @aceshooting/lyra-ui: lit, tslib and Floating UI bundled into lazy chunks, no build step and no import map.",
   "keywords": [
     "lyra-ui",

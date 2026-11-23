@@ -1,5 +1,9 @@
 # @aceshooting/lyra-ide
 
+## 33.1.0
+
+No changes in this release.
+
 ## 33.0.0
 
 ### Patch Changes
