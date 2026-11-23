@@ -13,3 +13,8 @@ layer as a separate module and adopts it as before, and each component holds its
 the layer has arrived, so nothing paints without its tokens. Later documents, iframes and
 application shadow roots are filled synchronously once it has loaded. The single-script CDN build
 emits the layer as its own chunk, fetched only when the page links no Lyra stylesheet.
+
+On such a page the first render therefore finishes one module request after connection rather than
+in the next microtask. Code that reads a component's shadow DOM, parts or rendered attributes must
+await the component's own `updateComplete` (a test fixture's wrapper element does not wait for its
+children); a page that loads the stylesheet first renders exactly as before.

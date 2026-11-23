@@ -52,6 +52,7 @@ it('honors an author minimum inline size inside a narrow scrollport', async () =
     <lr-word-cloud style="min-inline-size:256px" .words=${words}></lr-word-cloud>
   </div>`);
   const cloud = wrapper.querySelector('lr-word-cloud')!;
+  await cloud.updateComplete;
   expect(wrapper.clientWidth).to.equal(96);
   expect(svgOf(cloud).getBoundingClientRect().width).to.be.at.least(256);
   expect(wrapper.scrollWidth).to.be.at.least(256);

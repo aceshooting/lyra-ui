@@ -1,8 +1,5 @@
 import { expect, fixture, html, nextFrame, waitUntil } from '@open-wc/testing';
-import '../../lr-menu.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
-import '../../lr-menu-item.js';
-import '../../lr-dropdown-item.js';
 import type { LyraMenuItem } from './menu-item.class.js';
 
 describe('mounted menu text follows root text zoom after look changes', function () {
@@ -21,6 +18,11 @@ describe('mounted menu text follows root text zoom after look changes', function
       link.onerror = () => reject(new Error(`Missing look fixture: ${path}`));
       document.head.append(link);
     })));
+    // Register after the stylesheets apply, the order the documentation requires: registering first
+    // adopts a constructed token layer that the late stylesheet then replaces (a development warning).
+    await import('../../lr-menu.js');
+    await import('../../lr-menu-item.js');
+    await import('../../lr-dropdown-item.js');
   });
   after(() => { for (const link of links) link.remove(); });
 

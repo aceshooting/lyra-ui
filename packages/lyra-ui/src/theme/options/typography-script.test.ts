@@ -1,7 +1,5 @@
 import { expect, fixture, html, nextFrame } from '@open-wc/testing';
 import { applyLyraStyleScope, type LyraThemeTokens } from '../theme.js';
-import '../../components/lr-card.js';
-import '../../components/lr-textarea.js';
 import type { LyraCard } from '../../components/lr-card.js';
 import type { LyraTextarea } from '../../components/lr-textarea.js';
 
@@ -22,6 +20,10 @@ describe('script typography and line breaking', function () {
         sheets.push(sheet);
         document.head.append(sheet);
       })));
+    // Register after the stylesheets apply, the order the documentation requires: registering first
+    // adopts a constructed token layer that the late stylesheet then replaces (a development warning).
+    await import('../../components/lr-card.js');
+    await import('../../components/lr-textarea.js');
   });
   after(() => sheets.forEach(sheet => sheet.remove()));
 

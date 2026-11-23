@@ -31,7 +31,8 @@ describe('semantic variant vocabulary', () => {
         <lr-callout variant="primary"></lr-callout>
       </div>
     `);
-    const [alert, chip, badge, tag, callout] = [...host.children] as Array<HTMLElement & { variant: string }>;
+    const [alert, chip, badge, tag, callout] = [...host.children] as Array<HTMLElement & { variant: string; updateComplete: Promise<boolean> }>;
+    await Promise.all([alert, chip, badge, tag, callout].map((element) => element!.updateComplete));
     expect(alert!.variant).to.equal('brand');
     expect(chip!.variant).to.equal('primary');
     expect(badge!.getAttribute('data-effective-variant')).to.equal('brand');
