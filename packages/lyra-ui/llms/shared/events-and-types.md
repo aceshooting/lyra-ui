@@ -1530,7 +1530,7 @@ These named interfaces and helper signatures are available to typed integrations
   Return shape of `buildLyraSsrStaticSafety()`: `classification` holds one entry per classified tag
   (a tag absent from it was neither capability-bearing nor audited), and a non-empty `unaudited`
   means the check must fail closed.
-  `lyraSsrElementRenderers<T extends LyraLitElementRendererConstructor>(litElementRenderer: T): readonly [typeof LyraSsrFallbackRenderer, T]`
+  `lyraSsrElementRenderers<T extends LyraLitElementRendererConstructor>(litElementRenderer: T): [typeof LyraSsrFallbackRenderer, T]`
 
 - **`svelte-contracts`** — Framework integration type contracts, including the multi-split
   `for` launcher id and `trigger` element reference.

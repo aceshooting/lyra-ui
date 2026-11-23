@@ -792,7 +792,7 @@ function collectLyraHosts(root: ParentNode): Element[] {
  */
 export function lyraSsrElementRenderers<T extends LyraLitElementRendererConstructor>(
   litElementRenderer: T,
-): readonly [typeof LyraSsrFallbackRenderer, T] {
+): [typeof LyraSsrFallbackRenderer, T] {
   const parent = litElementRenderer.prototype as { connectedCallback?: () => void };
   // A class expression may only extend a type parameter whose construct signature is a single
   // rest parameter, which `LyraLitElementRendererConstructor`'s `new (tagName: string)` is not.
@@ -805,7 +805,7 @@ export function lyraSsrElementRenderers<T extends LyraLitElementRendererConstruc
       parent.connectedCallback?.call(this);
     }
   }
-  return [LyraSsrFallbackRenderer, LyraRenderAndHydrateRenderer as unknown as T] as const;
+  return [LyraSsrFallbackRenderer, LyraRenderAndHydrateRenderer as unknown as T];
 }
 
 /**
