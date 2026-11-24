@@ -16,7 +16,7 @@ const bridge = (limits?: Parameters<typeof options>[0]) => new LyraGenAiSdkBridg
 function options(limits?: { maxBytes?: number }) {
   return { messageId: 'answer', catalog, dataNames: ['view'], toolNames: ['show_view'], ...(limits ? { limits } : {}) };
 }
-function data(document: unknown, id = 'view-data'): MessagePart { return { id, type: 'data', name: 'view', data: document, state: 'complete' }; }
+function data(document: unknown, id = 'view-data', name = 'view'): MessagePart { return { id, type: 'data', name, data: document, state: 'complete' }; }
 
 // The exact ai devDependency builds snapshots from its public UIMessageChunk API.
 async function snapshots(chunks: UIMessageChunk[], previous?: UIMessage): Promise<UIMessage[]> {
@@ -243,4 +243,42 @@ test('combined retained content stays bounded and a rejected part cannot displac
   assert.equal(second?.status, 'error');
   assert.equal(second?.diagnostics[0]?.code, 'limit.bytes');
   assert.equal(selected.resolve(data(view(0, 'x'.repeat(140)), 'first'))?.document, first?.document);
+});
+
+test('data parts reconcile by name and id, as the SDK replaces parts with the same type and id', () => {
+  const selected = new LyraGenAiSdkBridge({ ...options(), dataNames: ['view', 'panel'] });
+  const first = selected.resolve(data(view(), 'shared'));
+  const other = selected.resolve(data({ ...view(), surfaceId: 'panel-view' }, 'shared', 'panel'));
+  assert.equal(first?.status, 'ready');
+  assert.equal(other?.status, 'ready');
+  assert.equal(selected.resolve(data(view(1, 'Next'), 'shared'))?.document?.revision, 1);
+  assert.equal(selected.resolve(data(view(2), 'shared', 'panel'))?.diagnostics[0]?.code, 'identity.conflict');
+});
+
+test('raw onData chunks: persistent chunks reconcile like parts; transient chunks advance without replacing history', () => {
+  const selected = bridge();
+  const persistent: UIMessageChunk = { type: 'data-view', id: 'view-data', data: view() };
+  const ready = selected.resolveData(persistent);
+  assert.equal(ready?.status, 'ready');
+  assert.equal(ready?.transient, undefined);
+  const live: UIMessageChunk = { type: 'data-view', id: 'view-data', data: view(3, 'Live'), transient: true };
+  const transient = selected.resolveData(live);
+  assert.equal(transient?.status, 'ready');
+  assert.equal(transient?.transient, true);
+  assert.equal(transient?.document?.revision, 3);
+  assert.equal(selected.resolveData({ ...live, data: view(2) })?.diagnostics[0]?.code, 'revision.conflict');
+  const anonymous = selected.resolveData({ type: 'data-view', data: view(4, 'Anonymous'), transient: true });
+  assert.equal(anonymous?.partId, 'view-data');
+  assert.equal(anonymous?.document?.revision, 4);
+  // Persisted history is reconciled against persisted parts only, so replaying it stays valid.
+  assert.equal(selected.resolve(data(view()))?.document, ready?.document);
+  assert.equal(selected.resolve(data(view(1, 'Persisted')))?.document?.revision, 1);
+  assert.equal(selected.resolveData({ type: 'data-view', id: 'intruder', data: view(9), transient: true })?.diagnostics[0]?.code, 'identity.conflict');
+  assert.equal(selected.resolveData({ type: 'data-view', data: view(9) })?.diagnostics[0]?.code, 'identity.invalid');
+  assert.equal(selected.resolveData({ type: 'data-view', id: 'view-data', data: { ...view(9), root: { id: 'x', type: 'script' } }, transient: true })?.status, 'error');
+  assert.equal(selected.resolveData({ type: 'data-other', id: 'x', data: view() }), undefined);
+  assert.equal(selected.resolveData({ type: 'text-delta', id: 'x', delta: 'x' }), undefined);
+  assert.equal(selected.resolveData(null), undefined);
+  selected.reset();
+  assert.equal(selected.resolveData({ ...live, data: view(2) })?.status, 'ready');
 });

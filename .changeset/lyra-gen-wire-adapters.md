@@ -1,0 +1,5 @@
+---
+"@aceshooting/lyra-gen": minor
+---
+
+Generated views can now be driven by any agent stack over standard wire formats. The new `@aceshooting/lyra-gen/adapters/json-patch.js` entry translates RFC 6902 JSON Patch operations addressed at node positions (for example `/root/children/1/props/title` or `/root/children/-`) into identity-addressed revision patches applied through `applyViewPatch`, so the revision, catalog, limit and identity guards all still apply, and `viewPatchToJsonPatch()` turns two view revisions back into RFC 6902 operations for clients that consume JSON Patch. The new `@aceshooting/lyra-gen/adapters/ag-ui.js` entry provides `createAgUiViewReducer()`, a synchronous reducer from AG-UI `STATE_SNAPSHOT`/`STATE_DELTA` (and optionally `ACTIVITY_SNAPSHOT`/`ACTIVITY_DELTA`) events to validated `view`, `liveData` and `bindingState` values that rejects invalid deltas with diagnostics while keeping the previous valid view. The AI SDK bridge now reconciles data parts by name and id as the SDK does, and its new `resolveData()` admits raw `onData` chunks, including transient view updates that advance the revision without replacing message history.

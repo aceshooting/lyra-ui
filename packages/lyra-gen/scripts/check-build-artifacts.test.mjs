@@ -2,12 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { findGenArtifactFindings } from './check-build-artifacts.mjs';
 
-const manifest = { sideEffects: ['./dist/gen-view.js', './dist/dashboard-binding.js'] };
+const manifest = { sideEffects: ['./dist/gen-view.js', './dist/dashboard-binding.js', './dist/devtools.js'] };
 const fixture = () => ({
   'dist/index.js': "export * from './runtime.js';",
   'dist/index.d.ts': '', 'dist/runtime.js': 'export const value = 1;', 'dist/runtime.d.ts': '',
   'dist/gen-view.js': "import '@aceshooting/lyra-ui/utilities/prefix.js';", 'dist/gen-view.d.ts': '',
   'dist/dashboard-binding.js': "import './gen-view.js';", 'dist/dashboard-binding.d.ts': '',
+  'dist/devtools.js': "import '@aceshooting/lyra-ui/utilities/prefix.js';", 'dist/devtools.d.ts': '',
 });
 const check = (files, metadata = manifest) => findGenArtifactFindings(Object.keys(files), file => files[file], metadata);
 test('pure roots may declare lazy catalog loaders without eagerly registering components', () => {

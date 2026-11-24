@@ -98,6 +98,16 @@ const proofRegions = { geojson: { type: 'FeatureCollection', features: ['north',
 const dashboard = mapCatalog(dashboardCatalog(), { mapStyle: { version: 8, sources: {}, layers: [] }, regions: proofRegions });
 /** Generated shapes a reviewed adapter rebuilds into the component type; proven by their adapter output below. */
 const adapterProperties = new Set(['map.choropleth']);
+/** Properties typed `unknown` that accept any JSON; the schema checks above already bound depth, keys, items and strings. */
+const jsonDataProperties = new Set(['json-viewer.data']);
+/** Generated-only inputs a reviewed adapter consumes and replaces with host properties; proven by running the adapter. */
+const adapterInputs = new Map([['slider.format', component => {
+  const prepared = component.prepareProperties({ label: 'Proof', value: 80, format: { style: 'unit', unit: 'percent' } }, { locale: 'en' });
+  assert.equal(Object.hasOwn(prepared, 'format'), false, 'slider.format: adapter must consume the generated format');
+  assert.equal(prepared.valueFormatter(80, 'value'), '80%', 'slider.format: adapter formats through Intl');
+  assert.throws(() => component.prepareProperties({ label: 'Proof', format: { style: 'currency' } }, { locale: 'en' }), 'slider.format: currency needs a currency');
+  return { property: 'slider.format', mode: 'adapter-input' };
+}]]);
 function verifyChoroplethAdapter(component) {
   const layer = component.prepareProperties({ label: 'Proof', choropleth: { values: { north: 1, south: 3 } } }).choropleth;
   assert.equal(typeof layer.sourceId, 'string', 'map.choropleth: adapter sourceId');
@@ -143,6 +153,13 @@ for (const [role, component, catalog] of proven) {
   }
   const classType = checker.getTypeAtLocation(classNode);
   for (const [key, schema] of Object.entries(component.properties)) {
+    if (jsonDataProperties.has(`${role}.${key}`)) {
+      const symbol = checker.getPropertyOfType(checker.getTypeAtLocation(classDeclarations.get(declaration.name)), key);
+      assert.ok(symbol, `${role}.${key}: component property type must resolve`);
+      assert.equal(checker.typeToString(checker.getTypeOfSymbolAtLocation(symbol, symbol.valueDeclaration?.resolve(project) ?? classNode)), 'unknown', `${role}.${key}: reviewed JSON data must target an unknown-typed property`);
+      typeProofs.push({ property: `${role}.${key}`, mode: 'bounded-json-data' }); properties++; verifiedTypes++; continue;
+    }
+    if (adapterInputs.has(`${role}.${key}`)) { typeProofs.push(adapterInputs.get(`${role}.${key}`)(component)); properties++; continue; }
     const member = fields.get(key);
     assert.ok(member, `${role}.${key}: not a public component property`);
     properties++;
@@ -190,7 +207,7 @@ for (const [role, component, catalog] of proven) {
   assert.ok(component.load.toString().includes(`@aceshooting/lyra-ui/components/${component.tag}.js`), `${role}: loader must reference its trusted granular entry`);
   await readFile(path.join(uiRoot, 'llms/components', `${component.tag}.md`), 'utf8');
 }
-for (const property of concreteProperties) assert.ok(typeProofs.some(proof => proof.property === property), `${property}: stale concrete proof`);
+for (const property of [...concreteProperties, ...adapterInputs.keys(), ...jsonDataProperties]) assert.ok(typeProofs.some(proof => proof.property === property), `${property}: stale concrete proof`);
 assert.equal(Object.hasOwn(initialCatalog.components.select.properties, 'multiple'), false, 'The select proof applies only to the single-selection catalog.');
 const adapterProof = verifyTableAdapter(initialCatalog.components.table, validateSchema);
 console.log(JSON.stringify({ roles: Object.keys(initialCatalog.components).length, overlayRoles: proven.length - Object.keys(initialCatalog.components).length, properties, verifiedTypes, enumValues, authoredDefaults, examples, usageGuides, typeProofs, adapterProof }, null, 2));

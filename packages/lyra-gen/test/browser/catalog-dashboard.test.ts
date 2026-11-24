@@ -3,10 +3,15 @@ import { setReducedMotion } from '../../../lyra-ui/test/wtr-media.js';
 import { dashboardCatalog, initialCatalog, liveDashboardCatalog, mapCatalog } from '../../src/catalog.js';
 import { LyraGenViewElement } from '../../src/gen-view.js';
 import type { LyraGenCatalog, LyraGenNode, LyraGenView } from '../../src/types.js';
+import { chartExtraRoles } from '../../src/catalogs/charts-extra.js';
+import { technicalAnswerRoles } from '../../src/catalogs/answers-technical.js';
+import { richAnswerRoles } from '../../src/catalogs/answers-rich.js';
 
 interface UpdatingElement extends HTMLElement { readonly updateComplete: Promise<boolean> }
 const overlay = dashboardCatalog();
-const overlayRoles = Object.keys(overlay.components).filter(role => !Object.hasOwn(initialCatalog.components, role));
+/** Chart, technical and rich roles have their own conformance suites, each asserting a scenario per role. */
+const ownSuites = new Set([...Object.keys(chartExtraRoles), ...Object.keys(technicalAnswerRoles), ...Object.keys(richAnswerRoles)]);
+const overlayRoles = Object.keys(overlay.components).filter(role => !Object.hasOwn(initialCatalog.components, role) && !ownSuites.has(role));
 
 /** Authored independently of the reviewed examples; every overlay role needs one (checked below). */
 const scenarios: Readonly<Record<string, LyraGenNode>> = {
@@ -45,6 +50,31 @@ const scenarios: Readonly<Record<string, LyraGenNode>> = {
   'data-grid': { id: 'subject', type: 'data-grid', props: { label: 'Open incidents', columns: [{ field: 'c0', label: 'Incident', sortable: true }, { field: 'c1', label: 'Severity' }, { field: 'c2', label: 'Age (h)', sortable: true, align: 'end' }], data: [{ c0: 'INC-12', c1: 'High', c2: 5 }, { c0: 'INC-13', c1: 'Low', c2: 30 }] } },
   'time-range': { id: 'subject', type: 'time-range', props: { min: 0, max: 30, start: 7, end: 14, step: 1, startLabel: 'First day', endLabel: 'Last day' } },
   'filter-bar': { id: 'subject', type: 'filter-bar', props: { label: 'Incident filters', filters: [{ filterId: 'severity', label: 'Severity', type: 'select', options: [{ value: 'high', label: 'High' }, { value: 'low', label: 'Low' }] }], value: { severity: 'high' } } },
+  'format-number': { id: 'subject', type: 'format-number', props: { value: 0.256, type: 'percent', maximumFractionDigits: 1 } },
+  'format-date': { id: 'subject', type: 'format-date', props: { date: '2026-11-20T14:30:00Z', dateStyle: 'long' } },
+  'relative-time': { id: 'subject', type: 'relative-time', props: { date: '2026-11-20T14:30:00Z', numeric: 'auto' } },
+  'format-bytes': { id: 'subject', type: 'format-bytes', props: { value: 3221225472, decimals: 1 } },
+  callout: { id: 'subject', type: 'callout', props: { heading: 'Data freshness', variant: 'warning' }, text: 'Billing figures lag by one day.' },
+  tag: { id: 'subject', type: 'tag', props: { variant: 'success' }, text: 'Healthy' },
+  chip: { id: 'subject', type: 'chip', props: { selected: true }, text: 'Team: Platform' },
+  rating: { id: 'subject', type: 'rating', props: { label: 'Customer satisfaction', value: 4, max: 5 } },
+  kbd: { id: 'subject', type: 'kbd', props: { keys: 'Shift+R' } },
+  divider: { id: 'subject', type: 'divider', props: { orientation: 'horizontal' } },
+  avatar: { id: 'subject', type: 'avatar', props: { label: 'Morgan Lee', initials: 'ML' } },
+  'avatar-group': { id: 'subject', type: 'avatar-group', props: { label: 'On-call engineers', max: 2 }, children: [
+    { id: 'a1', type: 'avatar', props: { label: 'Morgan Lee', initials: 'ML' } },
+    { id: 'a2', type: 'avatar', props: { label: 'Sam Ortiz', initials: 'SO' } },
+    { id: 'a3', type: 'avatar', props: { label: 'Kai Chen', initials: 'KC' } },
+  ] },
+  accordion: { id: 'subject', type: 'accordion', props: { mode: 'single-collapsible' }, children: [
+    { id: 'q1', type: 'accordion-item', props: { label: 'Why did costs rise?', expanded: true }, children: [{ id: 'q1-text', type: 'text', text: 'Storage grew after the backfill.' }] },
+    { id: 'q2', type: 'accordion-item', props: { label: 'What changes next month?' }, children: [{ id: 'q2-text', type: 'text', text: 'Reserved capacity starts.' }] },
+  ] },
+  'accordion-item': { id: 'item-parent', type: 'accordion', props: {}, children: [{ id: 'subject', type: 'accordion-item', props: { label: 'Assumptions', expanded: true }, children: [{ id: 'assumption', type: 'text', text: 'Prices fixed at list.' }] }] },
+  tree: { id: 'subject', type: 'tree', props: { label: 'Org units', data: [{ id: 'eng', label: 'Engineering', expanded: true, children: [{ id: 'web', label: 'Web', children: [{ id: 'web-ui', label: 'UI' }] }] }, { id: 'ops', label: 'Operations' }] } },
+  'box-plot': { id: 'subject', type: 'box-plot', props: { label: 'Build time by runner (min)', labels: ['Small', 'Large'], datasets: [{ label: 'Builds', data: [{ min: 4, q1: 6, median: 7, q3: 9, max: 15 }, { min: 2, q1: 3, median: 4, q3: 5, max: 8 }] }], withDataTable: true } },
+  histogram: { id: 'subject', type: 'histogram', props: { label: 'Response sizes (KB)', values: [2, 3, 3, 4, 8, 9, 9, 10, 15, 22], bins: 5, xLabel: 'KB', yLabel: 'Responses' } },
+  'scatter-chart': { id: 'subject', type: 'scatter-chart', props: { label: 'Queue depth against wait time', xLabel: 'Depth', yLabel: 'Wait (s)', datasets: [{ label: 'Workers', points: [{ x: 1, y: 0.5 }, { x: 4, y: 2.2 }, { x: 9, y: 6.1 }] }] } },
   'word-cloud': { id: 'subject', type: 'word-cloud', props: { words: [{ text: 'timeout', weight: 9 }, { text: 'billing', weight: 5 }, { text: 'login', weight: 3 }] } },
 };
 

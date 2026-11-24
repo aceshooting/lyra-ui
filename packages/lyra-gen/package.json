@@ -25,7 +25,8 @@
   ],
   "sideEffects": [
     "./dist/gen-view.js",
-    "./dist/dashboard-binding.js"
+    "./dist/dashboard-binding.js",
+    "./dist/devtools.js"
   ],
   "exports": {
     "./custom-elements.json": "./custom-elements.json",
@@ -76,6 +77,10 @@
     "./json-stream.js": {
       "types": "./dist/json-stream.d.ts",
       "default": "./dist/json-stream.js"
+    },
+    "./progressive.js": {
+      "types": "./dist/progressive.d.ts",
+      "default": "./dist/progressive.js"
     },
     "./authoring.js": {
       "types": "./dist/authoring.d.ts",
@@ -136,6 +141,38 @@
     "./live-data.js": {
       "types": "./dist/live-data.d.ts",
       "default": "./dist/live-data.js"
+    },
+    "./model-context.js": {
+      "types": "./dist/model-context.d.ts",
+      "default": "./dist/model-context.js"
+    },
+    "./data-export.js": {
+      "types": "./dist/data-export.d.ts",
+      "default": "./dist/data-export.js"
+    },
+    "./dashboard-copy.js": {
+      "types": "./dist/dashboard-copy.d.ts",
+      "default": "./dist/dashboard-copy.js"
+    },
+    "./dashboard-plan.js": {
+      "types": "./dist/dashboard-plan.d.ts",
+      "default": "./dist/dashboard-plan.js"
+    },
+    "./scripted-conversation.js": {
+      "types": "./dist/scripted-conversation.d.ts",
+      "default": "./dist/scripted-conversation.js"
+    },
+    "./devtools.js": {
+      "types": "./dist/devtools.d.ts",
+      "default": "./dist/devtools.js"
+    },
+    "./adapters/json-patch.js": {
+      "types": "./dist/adapters/json-patch.d.ts",
+      "default": "./dist/adapters/json-patch.js"
+    },
+    "./adapters/ag-ui.js": {
+      "types": "./dist/adapters/ag-ui.d.ts",
+      "default": "./dist/adapters/ag-ui.js"
     },
     "./persistence.js": {
       "types": "./dist/persistence.d.ts",

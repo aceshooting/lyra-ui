@@ -1,6 +1,6 @@
 {
   "revision": "409ded29ccac3eebc541979ae5320771703248e8",
-  "node": "v22.23.2",
+  "node": "v22.23.5",
   "compiler": {
     "name": "esbuild",
     "version": "0.28.2"
@@ -92,9 +92,9 @@
   },
   "consumerBundleSha256": "cec655d7b9e64d6dde648aa6f38a5dfcd40569110c68eac9623e4620dd13ef1d",
   "implementationHashes": {
-    "dist/catalog.js": "4fdcb4c57b890c12198e5706f70120e8075aec7dad1b16b7741cc597e717b05b",
+    "dist/catalog.js": "40b743f0955946ca8be00b958d333cc4e83c7ef253e01888aa8968f1a83a2717",
     "dist/adapters/a2ui.js": "719a3f867e7c32aba9ca8b17e6f8bbc1ee4d7aebe3d66257e2922e12a5e6e671",
-    "dist/adapters/a2ui-candidate.js": "3d780aa9bc34ce122940c3d8ce9f3165959d458465f43b8cd0abc2a64adb0f78",
+    "dist/adapters/a2ui-candidate.js": "905c7662fda8537863740798cd1cbd49c80fd831f480c7fb3c3d522739b3d00d",
     "scripts/catalog-export-cohort.mjs": "d27cde5439f012d3706dd463d952132d8ae46b188f5e2df995a31dd96a551854",
     "scripts/check-catalog-consumer.mjs": "d2b914cfe642f3c57e54912600887b0c936b9e63a5c278901144876367c9f257"
   },
@@ -102,7 +102,7 @@
     {
       "version": "v0.9.1",
       "catalogId": "https://github.com/aceshooting/lyra-ui/a2ui/v0.9.1/lyra-reviewed/1",
-      "artifactSha256": "09d07ada5d9e84d2c7ecfabfb943a71b534a91e291b892bb6bd1bcb7fd6e91ea",
+      "artifactSha256": "7b2e1a9bfb5106398ce2d79e7e88706c0575aeea4468ed0295db57723698c6cb",
       "components": 28,
       "cases": [
         {
@@ -477,7 +477,7 @@
     {
       "version": "v1.0-candidate",
       "catalogId": "https://github.com/aceshooting/lyra-ui/a2ui/v1.0-candidate/lyra-reviewed/1",
-      "artifactSha256": "4da380e2c5787b5490f0b72cfcfd6b7b1662b85faa7653ba8c9ae512ca8867e5",
+      "artifactSha256": "c25e0a945876edbe4ed2fd5bbb2123c4174708438f698903d467f0d912a3a0aa",
       "components": 28,
       "cases": [
         {

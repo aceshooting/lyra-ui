@@ -30,9 +30,21 @@ Terminal results are stable: subsequent pushes cannot update a completed, cancel
 stream. Create a new stream for a retry or a replacement generation. The host must also cancel
 its transport/provider work; cancelling this parser does not cancel a network request.
 
-This frontend accepts complete version-1 views, not arbitrary tool-call envelopes, JSON Patch,
-unframed concatenated documents or a protocol session. It intentionally exposes no partially
-validated controls. Model requests and any repair calls remain host-owned.
+This frontend accepts complete version-1 views, not arbitrary tool-call envelopes, JSON Patch
+(see `adapters/json-patch.js`), unframed concatenated documents or a protocol session. Model requests
+and any repair calls remain host-owned.
+
+Progressive previews are opt in: `createJsonViewStream({ catalog, progressive: true })` (or
+`{ minCodeUnits }`) and `createProgressiveMarkupParser({ catalog, surfaceId, revision, progressive })`
+(`@aceshooting/lyra-gen/progressive.js`) return a `partial` on some `incomplete` pushes. A partial holds
+the complete nodes received so far, with still-open containers closed and listed in `partialNodes`;
+an unfinished trailing node or member is left out, never guessed, and every partial passes strict
+`validateView`. Partials only grow: a shown node keeps its id and type. A partial carries the surface
+and revision the final commit will carry; assign it to `lr-gen-view.partial`, which renders it inert,
+fires no `lr-gen-ready` and marks open nodes with the `partial` part, until the committed `document`
+arrives. Clear it when the stream fails or is cancelled. A syntax defect stops partials, `finish()`
+returns exactly what a non-progressive stream returns, and attempts are spaced at least
+`minCodeUnits` (default 128) and a quarter of the consumed input apart, so validation stays linear.
 
 ## Keyed templates
 

@@ -1,6 +1,7 @@
 import { isSafeKey, resolveLimits, snapshotJson } from './schema.js';
 import { validateView } from './runtime.js';
-import type { LyraGenCatalog, LyraGenDiagnostic, LyraGenIsolation, LyraGenLimits, LyraGenRecoveryMode, LyraGenView } from './types.js';
+import { PartialViewTracker, type LyraGenPartialView, type LyraGenProgressiveOptions } from './partial-view.js';
+import type { LyraGenCatalog, LyraGenDiagnostic, LyraGenIsolation, LyraGenLimits, LyraGenNode, LyraGenRecoveryMode, LyraGenView } from './types.js';
 
 export interface JsonViewStreamOptions {
   readonly catalog: LyraGenCatalog;
@@ -9,6 +10,11 @@ export interface JsonViewStreamOptions {
   readonly normalize?: boolean;
   /** `'strict'` (default) rejects any validation error; `'isolate'` contains component-local defects in place. */
   readonly recovery?: LyraGenRecoveryMode;
+  /**
+   * Opt in to validated previews while the document streams (`true` uses the default interval).
+   * Off by default; the final result is identical either way.
+   */
+  readonly progressive?: boolean | LyraGenProgressiveOptions;
 }
 export interface JsonViewStreamResult {
   readonly status: 'incomplete' | 'complete' | 'error' | 'cancelled';
@@ -19,6 +25,12 @@ export interface JsonViewStreamResult {
   readonly isolated?: readonly LyraGenIsolation[];
   readonly receivedBytes: number;
   readonly receivedCodeUnits: number;
+  /**
+   * Progressive mode only: a new preview assembled by this `incomplete` push. It holds the complete
+   * nodes received so far, with still-open containers closed (listed in `partialNodes`) and the
+   * unfinished trailing node left out; it always passes strict `validateView`.
+   */
+  readonly partial?: LyraGenPartialView;
 }
 export interface JsonViewStream {
   push(chunk: string): JsonViewStreamResult;
@@ -28,6 +40,11 @@ export interface JsonViewStream {
 type Frame =
   | { kind: 'object'; state: 'key-or-end' | 'key' | 'colon' | 'value' | 'comma-or-end'; keys: Set<string> }
   | { kind: 'array'; state: 'value-or-end' | 'value' | 'comma-or-end'; count: number };
+/** Where a container sits in the view document; only `node` objects are preview candidates. */
+type Role = 'view' | 'node' | 'children' | 'other';
+type Built = { readonly value: Record<string, unknown> | unknown[]; readonly role: Role; key?: string };
+const isRecord = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
+const VIEW_MEMBERS = ['version', 'catalog', 'surfaceId', 'revision', 'root'];
 type Token = { kind: 'string' | 'number' | 'literal'; text: string; start: number; key: boolean; escaped: boolean; unicode: number };
 const isSpace = (code: number): boolean => code === 0x20 || code === 0x0a || code === 0x0d || code === 0x09;
 const isDigit = (code: number): boolean => code >= 0x30 && code <= 0x39;
@@ -46,14 +63,60 @@ export function createJsonViewStream(options: JsonViewStreamOptions): JsonViewSt
   let nodes = 0;
   let previousHighSurrogate = false;
   let terminal: JsonViewStreamResult | undefined;
+  // Progressive previews keep an incrementally built value tree beside the scanner state.
+  const tracker = options.progressive ? new PartialViewTracker(options.catalog, options.progressive === true ? {} : options.progressive, options.limits, options.normalize) : undefined;
+  const built: Built[] = [];
+  const closed = new WeakSet<object>();
+  let document: unknown;
+  let dirty = false;
 
-  const result = (status: JsonViewStreamResult['status'], diagnostics: readonly LyraGenDiagnostic[] = [], view?: LyraGenView, isolated?: readonly LyraGenIsolation[]): JsonViewStreamResult =>
-    Object.freeze({ status, diagnostics: Object.freeze([...diagnostics]), receivedBytes: bytes, receivedCodeUnits: offset, ...(view ? { view } : {}), ...(isolated ? { isolated } : {}) });
+  const result = (status: JsonViewStreamResult['status'], diagnostics: readonly LyraGenDiagnostic[] = [], view?: LyraGenView, isolated?: readonly LyraGenIsolation[], partial?: LyraGenPartialView): JsonViewStreamResult =>
+    Object.freeze({ status, diagnostics: Object.freeze([...diagnostics]), receivedBytes: bytes, receivedCodeUnits: offset, ...(view ? { view } : {}), ...(isolated ? { isolated } : {}), ...(partial ? { partial } : {}) });
+  const attach = (value: unknown): void => {
+    const parent = built.at(-1);
+    if (!parent) document = value;
+    else if (Array.isArray(parent.value)) parent.value.push(value);
+    else parent.value[parent.key!] = value;
+  };
+  const openContainer = (value: Record<string, unknown> | unknown[]): void => {
+    const parent = built.at(-1);
+    const array = Array.isArray(value);
+    const role: Role = !parent ? 'view'
+      : parent.role === 'view' && parent.key === 'root' && !array ? 'node'
+        : parent.role === 'node' && parent.key === 'children' && array ? 'children'
+          : parent.role === 'children' && !array ? 'node' : 'other';
+    attach(value);
+    built.push({ value, role });
+  };
+  /** The complete nodes so far, open containers closed; undefined until the view header and a first complete node exist. */
+  const candidate = (): { view: Omit<LyraGenView, 'root'> & { root: LyraGenNode }; open: Set<string> } | undefined => {
+    if (!isRecord(document) || Object.keys(document).some(key => !VIEW_MEMBERS.includes(key))) return undefined;
+    const { version, catalog, surfaceId, revision, root } = document;
+    if (version !== '1' || !isRecord(catalog) || !closed.has(catalog) || typeof surfaceId !== 'string' || typeof revision !== 'number') return undefined;
+    const open = new Set<string>();
+    const node = (value: unknown): LyraGenNode | undefined => {
+      if (!isRecord(value)) return undefined;
+      if (closed.has(value)) return value as unknown as LyraGenNode;
+      if (typeof value['id'] !== 'string' || typeof value['type'] !== 'string' || !Array.isArray(value['children'])) return undefined;
+      const children: LyraGenNode[] = [];
+      for (const child of value['children']) { const shown = node(child); if (!shown) break; children.push(shown); }
+      if (!children.length) return undefined;
+      const members: Record<string, unknown> = {};
+      // A member whose container is still open is left out rather than guessed.
+      for (const [key, member] of Object.entries(value)) if (key !== 'children' && !(member !== null && typeof member === 'object' && !closed.has(member))) members[key] = member;
+      open.add(value['id']);
+      return { ...members, children } as unknown as LyraGenNode;
+    };
+    const shownRoot = node(root);
+    return shownRoot ? { view: { version, catalog: catalog as unknown as LyraGenView['catalog'], surfaceId, revision, root: shownRoot }, open } : undefined;
+  };
   const fail = (code: string, message: string, start = offset, end = start + 1): void => {
     if (terminal) return;
     terminal = result('error', [{ code, message, path: '', severity: 'error', source: { start, end } }]);
     chunks.length = 0;
     frames.length = 0;
+    built.length = 0;
+    document = undefined;
     token = undefined;
   };
   const beginValue = (): boolean => {
@@ -79,10 +142,12 @@ export function createJsonViewStream(options: JsonViewStreamOptions): JsonViewSt
     if (completed.kind === 'number') {
       if (!number.test(completed.text)) fail('json.syntax', 'Invalid JSON number.', completed.start, offset);
       else if (!Number.isFinite(Number(completed.text))) fail('json.number', 'Numbers must be finite.', completed.start, offset);
+      else if (tracker) attach(Number(completed.text));
       return;
     }
     if (completed.kind === 'literal') {
       if (!['true', 'false', 'null'].includes(completed.text)) fail('json.syntax', 'Invalid JSON literal.', completed.start, offset);
+      else if (tracker) attach(completed.text === 'null' ? null : completed.text === 'true');
       return;
     }
     let value: unknown;
@@ -97,7 +162,8 @@ export function createJsonViewStream(options: JsonViewStreamOptions): JsonViewSt
       if (frame.keys.size >= limits.maxObjectKeys) { fail('limit.keys', 'Object exceeds the property limit.', completed.start, offset + 1); return; }
       frame.keys.add(value);
       frame.state = 'colon';
-    }
+      if (tracker) built.at(-1)!.key = value;
+    } else if (tracker) attach(value);
   };
   const consume = (character: string): void => {
     const code = character.charCodeAt(0);
@@ -133,7 +199,10 @@ export function createJsonViewStream(options: JsonViewStreamOptions): JsonViewSt
         ? frame?.kind === 'object' && (frame.state === 'key-or-end' || frame.state === 'comma-or-end')
         : frame?.kind === 'array' && (frame.state === 'value-or-end' || frame.state === 'comma-or-end');
       if (!valid) fail('json.syntax', 'Unexpected closing delimiter.');
-      else frames.pop();
+      else {
+        frames.pop();
+        if (tracker) { const done = built.pop()!; closed.add(done.value); if (done.role === 'node') dirty = true; }
+      }
       return;
     }
     if (character === ',') {
@@ -150,8 +219,8 @@ export function createJsonViewStream(options: JsonViewStreamOptions): JsonViewSt
     const key = frame?.kind === 'object' && (frame.state === 'key' || frame.state === 'key-or-end');
     if (key && character !== '"') { fail('json.syntax', 'Expected a quoted object key.'); return; }
     if (!key && !beginValue()) return;
-    if (character === '{') frames.push({ kind: 'object', state: 'key-or-end', keys: new Set() });
-    else if (character === '[') frames.push({ kind: 'array', state: 'value-or-end', count: 0 });
+    if (character === '{') { frames.push({ kind: 'object', state: 'key-or-end', keys: new Set() }); if (tracker) openContainer({}); }
+    else if (character === '[') { frames.push({ kind: 'array', state: 'value-or-end', count: 0 }); if (tracker) openContainer([]); }
     else if (character === '"') token = { kind: 'string', text: character, start: offset, key, escaped: false, unicode: 0 };
     else if (code === 0x2d || isDigit(code)) token = { kind: 'number', text: character, start: offset, key: false, escaped: false, unicode: 0 };
     else if ('tfn'.includes(character)) token = { kind: 'literal', text: character, start: offset, key: false, escaped: false, unicode: 0 };
@@ -181,7 +250,14 @@ export function createJsonViewStream(options: JsonViewStreamOptions): JsonViewSt
         if (!terminal && token?.kind === 'string' && !token.escaped && token.unicode === 0) plain = index + 1;
       }
       if (plain >= 0 && plain < chunk.length && token) token.text += chunk.slice(plain);
-      return terminal ?? result('incomplete');
+      if (terminal) return terminal;
+      if (tracker && dirty && tracker.due(offset)) {
+        dirty = false;
+        const next = candidate();
+        const partial = next && tracker.offer(next.view, next.open, offset);
+        if (partial) return result('incomplete', [], undefined, undefined, partial);
+      }
+      return result('incomplete');
     },
     finish(): JsonViewStreamResult {
       if (terminal) return terminal;
@@ -194,6 +270,8 @@ export function createJsonViewStream(options: JsonViewStreamOptions): JsonViewSt
       if (!started || frames.length > 0) { fail('json.incomplete', 'JSON ended before its value was complete.', offset, offset); return terminal!; }
       const source = chunks.join('');
       chunks.length = 0;
+      built.length = 0;
+      document = undefined;
       // The scanner already enforced syntax, depth, unsafe and duplicate keys, and the byte limit
       // (the same rules parseJson's preflight applies), so only the parse and the bounded snapshot remain.
       let parsed: ReturnType<typeof snapshotJson>;
@@ -204,7 +282,7 @@ export function createJsonViewStream(options: JsonViewStreamOptions): JsonViewSt
       return terminal;
     },
     cancel(): JsonViewStreamResult {
-      if (!terminal) { chunks.length = 0; frames.length = 0; token = undefined; terminal = result('cancelled'); }
+      if (!terminal) { chunks.length = 0; frames.length = 0; built.length = 0; document = undefined; token = undefined; terminal = result('cancelled'); }
       return terminal;
     }
   };

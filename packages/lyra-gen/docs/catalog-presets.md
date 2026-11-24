@@ -119,10 +119,17 @@ base already defines one of the added roles.
 | Structure | `tabs` with `tab` (slot `nav`, `panel`) and `tab-panel` (`name`), `details`, `timeline` with `timeline-item` (ISO `timestamp`) |
 | Charts | `series-chart` (`lr-chart`: up to 8 series over 200 categories, stacked, area, horizontal, pie, radar or a second axis), `treemap` (three levels), `sankey` (50 nodes, 200 links), `word-cloud` (200 words) |
 | Data and controls | `heatmap` (matrix up to 50 by 50), `data-grid` (16 columns `c0`-`c15`, 500 rows, client-side only), `time-range` (binds `start`/`end`), `filter-bar` (up to 12 select filters, binds `value`) |
+| Values and status | `format-number`, `format-date`, `relative-time`, `format-bytes` (raw values, reader-locale formatting), `callout`, `tag`, `chip`, read-only `rating`, `kbd`, `divider`, `avatar`, `avatar-group` (initials only; images are never generated) |
+| More charts | `donut-chart`, `radial-chart`, `radar-chart`, `horizontal-bar`, `bar-list` (orientation fixed by the trusted adapter), `bubble-chart`, `category-bar`, `tracker` (theme colour tokens only), `chord` |
+| Rich answers and controls | `markdown` (raw HTML shown as text, links and images as plain text), `context-meter`, `stream-status`, `generation-metrics`, bounded `graph` (200 nodes, 400 edges) and `mind-map`, and state-bound controls `segmented`, `toggle-group`, `checkbox-group`, `radio-group`, `number-input`, `date-input` |
+| Technical answers | `code-block`, `json-viewer` (bounded JSON), `diff-view`, `test-results`, `trace-tree`, `span-waterfall` (500 spans) |
+| Structure and statistics | `accordion` with `accordion-item`, read-only `tree` (three levels), `box-plot`, `histogram` (2000 values), `scatter-chart` (1000 points per series) |
 
 `liveDashboardCatalog` (id `lyra-reviewed+dashboard/live`) narrows the overlay to
 `liveDashboardRoles`: the common layout roles, `stat`, `table`, `chart`, the `slider`, `switch` and
-`select` controls and every dashboard role, with no actions. Controls drive other panels without a
+`select` controls and the dashboard metrics, structure, chart and control roles plus number and
+relative-time formatting, callouts and tags, with no actions. The full overlay is larger than one
+prompt budget; select a preset or `subsetCatalog()` it per request. Controls drive other panels without a
 new revision through `reads`, and host data streams reach them through `liveReads` and `.liveData`.
 
 `mapCatalog(base, { mapStyle })` adds a `map` role (`lr-map`) with id `${base.id}+map`. The host

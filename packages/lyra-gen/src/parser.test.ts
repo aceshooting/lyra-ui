@@ -84,9 +84,19 @@ test('mistyped untrusted source fails without throwing or publishing', () => {
 
 test('reserved markup attributes never shadow a declared property of any reviewed role', async () => {
   const { dashboardCatalog, initialCatalog, mapCatalog } = await import('./catalog.js');
-  const reserved = ['id', 'slot', 'text', 'bindings', 'reads', 'liveReads', 'action'];
+  const reserved = ['id', 'slot', 'text', 'bindings', 'reads', 'liveReads', 'dataQuery', 'repeat', 'itemReads', 'visible', 'checks', 'computes', 'a11y', 'action'];
   const regions = { geojson: { type: 'FeatureCollection' as const, features: [{ type: 'Feature' as const, properties: { code: 'a' }, geometry: null }] }, idProperty: 'code' };
   for (const catalog of [initialCatalog, mapCatalog(dashboardCatalog(), { mapStyle: 'https://tiles.example.com/style.json', regions })]) {
     for (const [role, component] of Object.entries(catalog.components)) for (const key of reserved) assert.equal(Object.hasOwn(component.properties, key), false, `${role}.${key} collides with a Markup node member`);
+  }
+});
+
+test('visible, checks, computes and a11y attributes become node members, never props', () => {
+  const parsed = parseMarkup('<text id="x" visible={{"op":"truthy","state":"/on"}} checks={[{"op":"truthy","state":"/ok"}]} computes={{"label":{"op":"concat"}}} a11y={{"label":"Total"}}/>', { catalog: { id: 'test', version: '1' }, surfaceId: 'surface', revision: 0 });
+  assert.equal(parsed.status, 'complete');
+  const root = parsed.view!.root;
+  assert.deepEqual(JSON.parse(JSON.stringify([root.visible, root.checks, root.computes, root.a11y, root.props ?? null])), [{ op: 'truthy', state: '/on' }, [{ op: 'truthy', state: '/ok' }], { label: { op: 'concat' } }, { label: 'Total' }, null]);
+  for (const [attribute, code] of [['visible={[1]}', 'invalid-visible'], ['checks={{}}', 'invalid-checks'], ['computes="x"', 'invalid-computes'], ['a11y={null}', 'invalid-a11y']]) {
+    assert.equal(parseMarkup(`<text id="x" ${attribute}/>`, { catalog: { id: 'test', version: '1' }, surfaceId: 'surface', revision: 0 }).diagnostics[0]?.code, code);
   }
 });

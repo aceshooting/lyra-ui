@@ -15,7 +15,7 @@ function categoryFor(code: string): LyraGenFailureCategory {
   if (code.startsWith('a11y.')) return 'accessibility';
   if (code.startsWith('revision.') || code === 'reference.stale' || code === 'cancelled' || code === 'stream-closed') return 'lifecycle';
   if (code.startsWith('json.') || ['source.incomplete', 'source.json', 'expected-token', 'invalid-name', 'invalid-entity', 'invalid-unicode', 'invalid-json-unicode', 'mismatched-tag', 'unclosed-tag', 'invalid-input', 'attribute-separator', 'duplicate-attribute', 'duplicate-json-key', 'duplicate-text', 'expected-attribute-value', 'expected-json-key', 'invalid-json', 'invalid-json-string', 'mismatched-close', 'mixed-content', 'nonfinite-number', 'raw-less-than', 'trailing-content', 'unfinished-attribute', 'unfinished-element', 'unfinished-json', 'unfinished-json-number', 'unfinished-json-string', 'unfinished-tag'].includes(code)) return 'syntax';
-  if (['invalid-action', 'invalid-bindings', 'invalid-reads', 'invalid-live-reads', 'invalid-slot', 'invalid-text', 'invalid-context'].includes(code)) return 'validation';
+  if (['invalid-action', 'invalid-bindings', 'invalid-reads', 'invalid-live-reads', 'invalid-data-query', 'invalid-repeat', 'invalid-item-reads', 'invalid-visible', 'invalid-checks', 'invalid-computes', 'invalid-a11y', 'invalid-slot', 'invalid-text', 'invalid-context'].includes(code)) return 'validation';
   if (['schema.', 'view.', 'node.', 'props.', 'children.', 'binding.', 'action.', 'state.', 'snapshot.', 'patch.', 'pointer.', 'repair.'].some(prefix => code.startsWith(prefix))) return 'validation';
   return 'internal';
 }

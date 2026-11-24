@@ -12,6 +12,9 @@ import { notifyFailureCategories, type LyraGenFailureCallback } from './diagnost
 import { LYRA_GEN_STRINGS } from './localization.js';
 import { LYRA_GEN_ISOLATED_TYPE } from './isolation.js';
 import { styles } from './gen-view.styles.js';
+import { createDefaultFunctions, type LyraGenFunctionRegistry } from './functions.js';
+import type { LyraGenPartialView } from './partial-view.js';
+import type { LyraGenCondition, LyraGenValueRef } from './types.js';
 import type { JsonValue, LyraGenAction, LyraGenCatalog, LyraGenComponent, LyraGenDiagnostic, LyraGenLimits, LyraGenNode, LyraGenRecoveryMode, LyraGenResult, LyraGenView } from './types.js';
 
 export type LyraGenViewStatus = 'empty' | 'loading' | 'ready' | 'error' | 'interrupted';
@@ -25,6 +28,16 @@ export interface LyraGenReady {
   readonly changes?: LyraGenViewChanges;
 }
 export type LyraGenConfirmation = (action: LyraGenAction, signal: AbortSignal) => boolean | Promise<boolean>;
+/** One host data query run; resolve with bounded JSON data. Respect `signal`: superseded runs are aborted. */
+export interface LyraGenQueryRequest {
+  readonly surfaceId: string;
+  readonly nodeId: string;
+  readonly name: string;
+  readonly params: JsonValue;
+  readonly signal: AbortSignal;
+}
+export type LyraGenQueryProvider = (request: LyraGenQueryRequest) => unknown;
+interface QueryRun { key: string; controller: AbortController; status: 'pending' | 'ready' | 'error'; value?: JsonValue }
 export interface LyraGenStateChange {
   readonly surfaceId: string;
   readonly revision: number;
@@ -48,7 +61,24 @@ interface RenderedNode {
   preparedInputs?: { readonly locale: string; readonly values: Readonly<Record<string, JsonValue>> };
   prepared?: Readonly<Record<string, unknown>>;
   text?: Text;
+  /** Whether the node's `visible` condition currently hides it. */
+  hidden?: boolean;
 }
+const defaultFunctions = /* @__PURE__ */ createDefaultFunctions();
+const compare = (left: JsonValue | undefined, condition: LyraGenCondition): boolean => {
+  const expected = condition.value;
+  switch (condition.op) {
+    case 'truthy': return left !== undefined && left !== null && left !== false && left !== 0 && left !== '' && !(Array.isArray(left) && left.length === 0);
+    case 'falsy': return !compare(left, { ...condition, op: 'truthy' });
+    case 'equals': return left === expected;
+    case 'notEquals': return left !== expected;
+    case 'in': return Array.isArray(expected) && expected.includes(left as JsonValue);
+    case 'gt': return typeof left === 'number' && typeof expected === 'number' && left > expected;
+    case 'gte': return typeof left === 'number' && typeof expected === 'number' && left >= expected;
+    case 'lt': return typeof left === 'number' && typeof expected === 'number' && left < expected;
+    case 'lte': return typeof left === 'number' && typeof expected === 'number' && left <= expected;
+  }
+};
 /** `data` marks an error caused by property preparation, which a later document may repair; module failures stay sticky. */
 interface LoadState { status: 'loading' | 'ready' | 'error'; generation: number; data?: boolean }
 const jsonEqual = (left: unknown, right: unknown): boolean => {
@@ -115,6 +145,9 @@ const RENDER_SLICE_MS = 4;
  * @csspart loading - A pending component's localized placeholder.
  * @csspart error - A localized failure message.
  * @csspart empty - Empty-document message.
+ * @csspart partial - A generated component whose subtree is still streaming in a `partial` preview.
+ * @csspart query-pending - A generated component whose data query is running; it keeps its last result.
+ * @csspart query-failed - A generated component whose latest data query failed; it keeps its last result.
  * @csspart changed - A generated component added or changed by the latest ready revision of the same surface; cleared at the next ready revision. Unstyled by default, so a host highlight (for example a short animation) is opt-in and should respect `prefers-reduced-motion`.
  * @csspart isolated - Non-interactive fallback that replaces one component contained by `recovery="isolate"`.
  * @cssprop --lr-gen-loading-block-size - Default reserved block size during loading.
@@ -147,6 +180,22 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
    * a value that is missing or violates its property schema leaves the node's own `props` value.
    */
   @property({ attribute: false }) liveData: JsonValue = {};
+  /**
+   * Host executor for catalog `queries` that generated nodes name through `dataQuery`. It runs once per
+   * distinct argument set; a parameter change aborts the superseded run. While a run is pending or
+   * after it fails, the node keeps its last result and carries the `query-pending` or `query-failed`
+   * part. Without a provider, query nodes show their own props.
+   */
+  @property({ attribute: false }) queryProvider?: LyraGenQueryProvider;
+  /** Host pure-function registry for generated `computes`; defaults to the built-in bounded functions (formatNumber, pluralCategory, sum, count). */
+  @property({ attribute: false }) functions?: LyraGenFunctionRegistry;
+  /**
+   * A streaming preview from a progressive parser. It renders until the committed `document` for the
+   * same surface and revision arrives: the surface is inert, no `lr-gen-ready` fires, state is not
+   * reconciled, and nodes whose subtree is still open carry the `partial` part and `aria-busy`. Clear
+   * it when the stream fails or is cancelled.
+   */
+  @property({ attribute: false }) partial?: LyraGenPartialView;
   /** Emit edit proposals and keep displaying bindingState until the host updates it. */
   @property({ type: Boolean }) controlled = false;
   /** Optional host allowlist that further narrows the catalog's action permissions. */
@@ -156,11 +205,20 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
 
   /** Current renderer state; a disconnected nonempty view is interrupted. */
   get status(): LyraGenViewStatus {
-    if (!this.document) return 'empty';
+    if (!this.viewSource) return 'empty';
     if (!this.isConnected) return 'interrupted';
-    if (this.document !== this.processedDocument || this.catalog !== this.processedCatalog || this.bindingState !== this.processedBindingState || this.limits !== this.processedLimits) return 'loading';
+    if (this.viewSource !== this.processedDocument || this.catalog !== this.processedCatalog || this.bindingState !== this.processedBindingState || this.limits !== this.processedLimits) return 'loading';
     return this.readinessStatus;
   }
+
+  /** The streaming preview while it is ahead of the committed document, otherwise the document. */
+  private get previewing(): boolean {
+    const partial = this.partial, document = this.document;
+    return !!partial && !(document && document.surfaceId === partial.view.surfaceId && document.revision >= partial.view.revision);
+  }
+  private get viewSource(): LyraGenView | undefined { return this.previewing ? this.partial!.view : this.document; }
+  private previewNodes: ReadonlySet<string> = new Set();
+  private acceptedPreview = false;
 
   /** Whether current document admission, module loading, or child rendering is pending. */
   get busy(): boolean { return this.status === 'loading'; }
@@ -176,6 +234,9 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
   private readinessTask?: AbortController;
   private emittedReady?: LyraGenReady;
   private readyView?: LyraGenView;
+  private readonly queryRuns = new Map<string, QueryRun>();
+  /** Current item of every rendered repeat-template node, rebuilt on each preparation. */
+  private itemValues = new Map<string, JsonValue>();
   private readinessErrorGeneration?: number;
   private accepted?: LyraGenView;
   private acceptedSource?: LyraGenView;
@@ -198,7 +259,7 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
   override connectedCallback(): void {
     super.connectedCallback();
     this.announcement = acquireAnnouncementSink('polite', { document: this.ownerDocument, source: this });
-    this.setReadiness(this.document ? 'loading' : 'empty');
+    this.setReadiness(this.viewSource ? 'loading' : 'empty');
     this.requestUpdate();
   }
 
@@ -209,8 +270,10 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
     this.renderTask = undefined;
     this.readinessTask?.abort();
     this.readinessTask = undefined;
-    this.setReadiness(this.document ? 'interrupted' : 'empty');
+    this.setReadiness(this.viewSource ? 'interrupted' : 'empty');
     this.cancelConfirmations();
+    for (const run of this.queryRuns.values()) run.controller.abort();
+    this.queryRuns.clear();
     this.announcement?.release();
     this.announcement = undefined;
     for (const [definition, state] of this.loads) if (state.status === 'loading') this.loads.delete(definition);
@@ -243,22 +306,24 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
     this.renderTask = undefined;
     this.readinessTask?.abort();
     this.readinessTask = undefined;
-    this.processedDocument = this.document;
+    this.processedDocument = this.viewSource;
     this.processedCatalog = this.catalog;
     this.processedBindingState = this.bindingState;
     this.processedLimits = this.limits;
-    this.setReadiness(this.document ? 'loading' : 'empty');
-    if (changed.has('document') || changed.has('catalog') || changed.has('limits') || changed.has('recovery')) {
+    this.setReadiness(this.viewSource ? 'loading' : 'empty');
+    if (changed.has('document') || changed.has('partial') || changed.has('catalog') || changed.has('limits') || changed.has('recovery')) {
       this.generation++;
       this.cancelConfirmations();
       for (const state of this.loads.values()) if (state.status === 'error' && state.data) { state.status = 'ready'; state.data = false; }
       if (changed.has('catalog')) { this.loads.clear(); this.nodes.clear(); }
-      if (!this.document) { this.accepted = undefined; this.localState = undefined; this.invalid = false; return; }
-      const result = validateCanonicalView(this.document, this.catalog, { limits: this.resolvedLimits, recovery: this.recovery === 'isolate' ? 'isolate' : 'strict' });
+      if (!this.viewSource) { this.accepted = undefined; this.localState = undefined; this.invalid = false; return; }
+      const result = validateCanonicalView(this.viewSource, this.catalog, { limits: this.resolvedLimits, recovery: this.recovery === 'isolate' ? 'isolate' : 'strict' });
       if (!result.ok) { this.rejectView(result.diagnostics); return; }
       if (result.isolated?.length && result.diagnostics.length) this.emitError(result.diagnostics);
       const previous = this.accepted;
-      if (conflictsWithRevision(previous, result.value)) {
+      const preview = this.previewing;
+      this.previewNodes = new Set(preview ? this.partial!.partialNodes : []);
+      if (!preview && !this.acceptedPreview && conflictsWithRevision(previous, result.value)) {
         this.rejectView([{ code: 'revision.conflict', path: '/revision', message: 'A view revision cannot move backwards.', severity: 'error' }]);
         return;
       }
@@ -273,10 +338,11 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
           this.localState = createSurfaceState(result.value, stateInput.value);
         }
         if (previous?.surfaceId !== result.value.surfaceId) this.nodes.clear();
-        if (this.snapshotRestore?.snapshot.view === this.document && this.snapshotRestore.catalog === this.catalog) this.localState = this.snapshotRestore.snapshot.state;
+        if (this.snapshotRestore?.snapshot.view === this.viewSource && this.snapshotRestore.catalog === this.catalog) this.localState = this.snapshotRestore.snapshot.state;
         this.snapshotRestore = undefined;
         this.accepted = result.value;
-        this.acceptedSource = this.document;
+        this.acceptedPreview = preview;
+        this.acceptedSource = this.viewSource;
         this.acceptedCatalog = this.catalog;
         this.retainLoads(result.value.root);
         this.invalid = false;
@@ -290,6 +356,56 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
       catch { this.rejectView([{ code: 'state.invalid', path: '', message: 'Initial state could not be admitted.', severity: 'error' }]); }
     }
     if (changed.has('enabledActions') || changed.has('confirmAction')) this.cancelConfirmations();
+    this.syncQueries(changed.has('queryProvider') || changed.has('catalog'));
+  }
+
+  /** Start, keep or abort one run per query node from the current view and state; never blocks rendering. */
+  private syncQueries(reset: boolean): void {
+    const view = this.invalid ? undefined : this.accepted;
+    const wanted = new Map<string, { readonly key: string; readonly name: string; readonly params: JsonValue }>();
+    if (view && this.queryProvider && this.isConnected) {
+      const visit = (node: LyraGenNode): void => {
+        const query = node.dataQuery;
+        const definition = query && this.catalog.queries?.[query.name];
+        if (query && definition) {
+          const params: Record<string, JsonValue> = { ...query.params };
+          for (const [key, pointer] of Object.entries(query.paramReads ?? {})) {
+            const value = readPointer(this.localState?.values ?? {}, pointer);
+            if (value.ok) params[key] = value.value;
+          }
+          const checked = validateSchema(params, definition.params, this.resolvedLimits);
+          if (checked.ok) wanted.set(node.id, { key: `${view.surfaceId}\u0000${query.name}\u0000${JSON.stringify(checked.value)}`, name: query.name, params: checked.value });
+        }
+        node.children?.forEach(visit);
+      };
+      visit(view.root);
+    }
+    for (const [nodeId, run] of this.queryRuns) {
+      if (reset || wanted.get(nodeId)?.key !== run.key) { run.controller.abort(); if (reset || !wanted.has(nodeId)) this.queryRuns.delete(nodeId); }
+    }
+    for (const [nodeId, request] of wanted) {
+      const previous = this.queryRuns.get(nodeId);
+      if (previous && previous.key === request.key && !previous.controller.signal.aborted) continue;
+      const controller = new AbortController();
+      const run: QueryRun = { key: request.key, controller, status: 'pending', ...(previous?.value !== undefined ? { value: previous.value } : {}) };
+      this.queryRuns.set(nodeId, run);
+      const provider = this.queryProvider!;
+      const definition = this.catalog.queries![request.name]!;
+      void Promise.resolve().then(() => provider({ surfaceId: view!.surfaceId, nodeId, name: request.name, params: request.params, signal: controller.signal })).then(result => {
+        if (controller.signal.aborted || this.queryRuns.get(nodeId) !== run) return;
+        const admitted = snapshotJson(result, this.resolvedLimits);
+        const valid = admitted.ok && (!definition.result || validateSchema(admitted.value, definition.result, this.resolvedLimits).ok);
+        if (!valid) throw new Error('Invalid query result.');
+        run.status = 'ready';
+        run.value = admitted.value;
+        this.requestUpdate();
+      }).catch(() => {
+        if (controller.signal.aborted || this.queryRuns.get(nodeId) !== run) return;
+        run.status = 'error';
+        this.report('genViewLoadFailed', 'query.failed');
+        this.requestUpdate();
+      });
+    }
   }
 
   protected override render() { return html`<div part="surface"></div>`; }
@@ -306,6 +422,7 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
       this.nodes.clear();
       this.setReadiness(this.invalid ? 'error' : 'empty');
     } else {
+      surface.inert = this.acceptedPreview;
       const task = new AbortController();
       this.renderTask = task;
       this.renderComplete = this.renderInSlices(surface, task);
@@ -322,13 +439,13 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
 
   private async renderInSlices(surface: HTMLElement, task: AbortController): Promise<void> {
     const accepted = this.accepted!;
-    const source = this.document;
+    const source = this.viewSource;
     const catalog = this.catalog;
     const state = this.localState;
     const bindings = this.bindingState;
     const limits = this.limits;
     const locale = this.effectiveLocale;
-    const current = (): boolean => this.effectiveLocale === locale && !task.signal.aborted && this.isConnected && !this.invalid && this.accepted === accepted && this.document === source && this.catalog === catalog && this.localState === state && this.bindingState === bindings && this.limits === limits;
+    const current = (): boolean => this.effectiveLocale === locale && !task.signal.aborted && this.isConnected && !this.invalid && this.accepted === accepted && this.viewSource === source && this.catalog === catalog && this.localState === state && this.bindingState === bindings && this.limits === limits;
     const preparation = this.prepareTree(accepted.root);
     try {
       while (current()) {
@@ -374,6 +491,7 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
     const records = new Map<string, RenderedNode>();
     const definitions = new Set<LyraGenComponent>();
     const ordered: PreparedNode[] = [];
+    this.itemValues = new Map();
     const pending: { nodes: readonly LyraGenNode[]; index: number; parent?: PreparedNode }[] = [{ nodes: [root], index: 0 }];
     while (pending.length) {
       const entry = pending[pending.length - 1]!;
@@ -385,7 +503,8 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
       ordered.push(prepared);
       records.set(node.id, prepared.record);
       definitions.add(prepared.next.definition);
-      if (prepared.next.ready && node.children?.length) pending.push({ nodes: node.children, index: 0, parent: prepared });
+      const children = node.repeat ? this.expandRepeat(node) : node.children;
+      if (prepared.next.ready && children?.length) pending.push({ nodes: children, index: 0, parent: prepared });
       yield;
     }
     const commits: PreparedNode[] = [];
@@ -403,6 +522,35 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
       yield;
     }
     return { root: ordered[0]!, records, definitions, commits };
+  }
+
+  /** Instantiate a repeat template once per keyed item; ids are `<template id>@<encoded key>`, which no declared id can equal. */
+  private expandRepeat(node: LyraGenNode): readonly LyraGenNode[] {
+    const repeat = node.repeat!;
+    const template = node.children?.[0];
+    if (!template) return [];
+    const source: JsonValue = repeat.from === 'state' ? this.localState?.values ?? {} : node.dataQuery ? this.queryRuns.get(node.id)?.value ?? {} : this.liveData ?? {};
+    const items = readPointer(source, repeat.items);
+    if (!items.ok || !Array.isArray(items.value)) return [];
+    const limit = Math.min(200, repeat.max ?? 200);
+    const seen = new Set<string>();
+    const expanded: LyraGenNode[] = [];
+    for (const item of items.value as readonly JsonValue[]) {
+      if (expanded.length >= limit) break;
+      const key = readPointer(item, repeat.key);
+      if (!key.ok) continue;
+      const value = key.value;
+      const encoded = typeof value === 'number' && Number.isSafeInteger(value) ? `n${value}` : typeof value === 'string' && value.length > 0 && value.length <= 64 ? `s${[...value].map(char => /[A-Za-z0-9.-]/u.test(char) ? char : `_${char.codePointAt(0)!.toString(16).padStart(4, '0')}`).join('')}` : undefined;
+      if (encoded === undefined || seen.has(encoded)) continue;
+      seen.add(encoded);
+      const clone = (child: LyraGenNode): LyraGenNode => {
+        const id = `${child.id}@${encoded}`;
+        this.itemValues.set(id, item);
+        return { ...child, id, ...(child.children ? { children: child.children.map(clone) } : {}) };
+      };
+      expanded.push(clone(template));
+    }
+    return expanded;
   }
 
   private commitRender(surface: HTMLElement, plan: RenderPlan): void {
@@ -425,7 +573,7 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
   }
 
   private setReadiness(status: LyraGenViewStatus): void {
-    const connectedStatus = !this.isConnected && this.document ? 'interrupted' : status;
+    const connectedStatus = !this.isConnected && this.viewSource ? 'interrupted' : status;
     this.readinessStatus = connectedStatus;
     this.setAttribute('aria-busy', connectedStatus === 'loading' ? 'true' : 'false');
   }
@@ -444,12 +592,12 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
     this.readinessTask = task;
     const generation = this.generation;
     const accepted = this.accepted;
-    const source = this.document;
+    const source = this.viewSource;
     const catalog = this.catalog;
     const bindingState = this.bindingState;
     const limits = this.limits;
     const records = [...this.nodes.values()];
-    const current = (): boolean => !task.signal.aborted && this.isConnected && this.generation === generation && this.accepted === accepted && this.document === source && this.catalog === catalog && this.bindingState === bindingState && this.limits === limits && !this.invalid;
+    const current = (): boolean => !task.signal.aborted && this.isConnected && this.generation === generation && this.accepted === accepted && this.viewSource === source && this.catalog === catalog && this.bindingState === bindingState && this.limits === limits && !this.invalid;
     const settled = Promise.all(records.map(async record => {
       try { await this.settleChild(record.element, task.signal); }
       catch (error: unknown) {
@@ -462,6 +610,7 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
     }));
     void settled.then(() => {
       if (!current()) return;
+      if (this.acceptedPreview) return;
       this.setReadiness('ready');
       if (this.emittedReady?.surfaceId === accepted.surfaceId && this.emittedReady.revision === accepted.revision) return;
       const previous = this.readyView?.surfaceId === accepted.surfaceId ? this.readyView : undefined;
@@ -555,11 +704,11 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
         if (!this.isConnected || this.catalog !== catalog || this.loads.get(definition) !== state) return;
         if (definition.tag.includes('-') && !this.ownerDocument.defaultView?.customElements.get(definition.tag)) throw new Error('Missing component registration.');
         state.status = 'ready';
-        if (!this.invalid && this.document === this.acceptedSource) this.requestUpdate();
+        if (!this.invalid && this.viewSource === this.acceptedSource) this.requestUpdate();
       }).catch(() => {
         if (!this.isConnected || this.catalog !== catalog || this.loads.get(definition) !== state) return;
         state.status = 'error';
-        if (this.invalid || this.document !== this.acceptedSource) return;
+        if (this.invalid || this.viewSource !== this.acceptedSource) return;
         this.setReadiness('error');
         this.report('genViewLoadFailed', 'component.load');
         this.requestUpdate();
@@ -610,10 +759,36 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
       const schema = definition.properties[propertyName];
       if (value.ok && schema && validateSchema(value.value, schema, this.resolvedLimits).ok) values[propertyName] = value.value;
     }
-    for (const [propertyName, pointer] of Object.entries(node.liveReads ?? {})) {
-      const value = readPointer(this.liveData ?? {}, pointer);
+    const item = this.itemValues.get(node.id);
+    if (item !== undefined) for (const [propertyName, pointer] of Object.entries(node.itemReads ?? {})) {
+      const value = readPointer(item, pointer);
       const schema = definition.properties[propertyName];
       if (value.ok && schema && validateSchema(value.value, schema, this.resolvedLimits).ok) values[propertyName] = value.value;
+    }
+    const queryRun = node.dataQuery ? this.queryRuns.get(node.id) : undefined;
+    const liveSource: JsonValue = node.dataQuery ? queryRun?.value ?? {} : this.liveData ?? {};
+    for (const [propertyName, pointer] of Object.entries(node.liveReads ?? {})) {
+      const value = readPointer(liveSource, pointer);
+      const schema = definition.properties[propertyName];
+      if (value.ok && schema && validateSchema(value.value, schema, this.resolvedLimits).ok) values[propertyName] = value.value;
+    }
+    const resolve = (ref: LyraGenValueRef): JsonValue | undefined => {
+      const source = ref.source === 'state' ? this.localState?.values ?? {} : ref.source === 'item' ? item : liveSource;
+      if (source === undefined) return undefined;
+      const read = readPointer(source, ref.pointer);
+      return read.ok ? read.value : undefined;
+    };
+    next.hidden = node.visible ? !compare(resolve(node.visible), node.visible) : false;
+    const nameProperty = node.a11y?.label !== undefined ? definition.accessibleName?.properties?.[0] : undefined;
+    if (nameProperty && (values[nameProperty] === undefined || values[nameProperty] === '')) values[nameProperty] = node.a11y!.label!;
+    if (node.checks?.some(check => !compare(resolve(check), check)) && Object.hasOwn(definition.properties, 'disabled')) values['disabled'] = true;
+    for (const [propertyName, computation] of Object.entries(node.computes ?? {})) {
+      const arg = computation.arg;
+      const argument: JsonValue | undefined = Array.isArray(arg) ? arg.map(entry => resolve(entry) ?? null) : 'value' in arg ? arg.value : resolve(arg as LyraGenValueRef);
+      if (argument === undefined) continue;
+      const result = (this.functions ?? defaultFunctions).call({ name: computation.fn, arguments: argument, locale: this.effectiveLocale }, this.resolvedLimits);
+      const schema = definition.properties[propertyName];
+      if (result.ok && schema && validateSchema(result.value, schema, this.resolvedLimits).ok) values[propertyName] = result.value;
     }
     const locale = this.effectiveLocale;
     if (next.preparedInputs?.locale !== locale || !jsonEqual(next.preparedInputs.values, values)) {
@@ -674,6 +849,17 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
       return;
     }
     element.dataset['genType'] = node.type;
+    if (record.hidden || node.visible) element.hidden = record.hidden === true;
+    const partial = this.previewNodes.has(node.id);
+    element.part.toggle('partial', partial);
+    if (partial) element.setAttribute('aria-busy', 'true'); else if (element.getAttribute('aria-busy') === 'true' && record.ready) element.removeAttribute('aria-busy');
+    const a11y = node.a11y;
+    if (a11y?.description) element.setAttribute('aria-description', a11y.description); else element.removeAttribute('aria-description');
+    if (a11y?.live) element.setAttribute('aria-live', a11y.live); else element.removeAttribute('aria-live');
+    if (a11y?.hidden) element.setAttribute('aria-hidden', 'true'); else element.removeAttribute('aria-hidden');
+    const run = node.dataQuery ? this.queryRuns.get(node.id) : undefined;
+    element.part.toggle('query-pending', run?.status === 'pending');
+    element.part.toggle('query-failed', run?.status === 'error');
     const target = element as unknown as Record<string, unknown>;
     const values = record.prepared ?? {};
     for (const propertyName of record.assigned) if (!Object.hasOwn(values, propertyName)) {
@@ -708,12 +894,12 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
       if (event.target !== record.element || this.nodes.get(record.node.id) !== record || !this.accepted || this.invalid || !this.isConnected || this.catalog !== this.acceptedCatalog) return;
       const target = record.element as unknown as Record<string, unknown>;
       if (target['disabled'] === true || target['effectiveDisabled'] === true || record.element.closest('[inert]')) return;
-      if ((name === 'reset' || name === 'submit') && (this.renderTask || this.committedSource !== this.document)) { event.preventDefault(); return; }
+      if ((name === 'reset' || name === 'submit') && (this.renderTask || this.committedSource !== this.viewSource)) { event.preventDefault(); return; }
       if (name === 'reset') {
         const source = this.committedSource, bindings = this.processedBindingState, generation = this.generation;
         const controlled = this.controlled;
         queueMicrotask(() => {
-          if (!event.defaultPrevented && this.generation === generation && this.document === source &&
+          if (!event.defaultPrevented && this.generation === generation && this.viewSource === source &&
             this.bindingState === bindings && this.catalog === this.acceptedCatalog && this.controlled === controlled) {
             this.resetState(record.node.id);
           }
@@ -742,7 +928,7 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
           this.requestUpdate();
         }
       }
-      if (!this.renderTask && this.committedSource === this.document && record.node.action && record.definition.events?.includes(name)) void this.requestAction(record, name === 'submit');
+      if (!this.renderTask && this.committedSource === this.viewSource && record.node.action && record.definition.events?.includes(name)) void this.requestAction(record, name === 'submit', event);
     });
   }
 
@@ -750,7 +936,7 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
     this.emit('lr-gen-state-change', { surfaceId: state.surfaceId, revision: state.revision, nodeId, values: state.values, dirty: state.dirty });
   }
 
-  private async requestAction(record: RenderedNode, submit: boolean): Promise<void> {
+  private async requestAction(record: RenderedNode, submit: boolean, event?: Event): Promise<void> {
     const view = this.accepted;
     const sourceDocument = this.document;
     const sourceCatalog = this.catalog;
@@ -759,7 +945,7 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
     const sourceState = this.bindingState;
     const sourceLocalState = this.localState;
     const name = record.node.action?.name;
-    if (!view || this.document !== this.acceptedSource || this.catalog !== this.acceptedCatalog || !name || (this.enabledActions && !this.enabledActions.includes(name))) { this.report('genViewActionDenied', 'action.denied'); return; }
+    if (!view || this.acceptedPreview || this.document !== this.acceptedSource || this.catalog !== this.acceptedCatalog || !name || (this.enabledActions && !this.enabledActions.includes(name))) { this.report('genViewActionDenied', 'action.denied'); return; }
     let payload: JsonValue | undefined;
     if (submit && record.node.action?.payload === undefined) {
       let complete = true;
@@ -773,6 +959,16 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
       const root = included(record.node);
       if (!complete) { this.report('genViewActionDenied', 'action.incomplete'); return; }
       payload = createSurfaceState({ ...view, root }, this.localState?.values).values;
+    }
+    if (!submit && event && record.definition.eventPayload) {
+      try {
+        const derived = record.definition.eventPayload(event);
+        if (derived !== undefined) {
+          const admitted = snapshotJson(derived, this.resolvedLimits);
+          if (!admitted.ok) { this.report('genViewActionDenied', 'action.payload'); return; }
+          payload = admitted.value;
+        }
+      } catch { this.report('genViewActionDenied', 'action.payload'); return; }
     }
     const action = createAction(view, record.node.id, this.catalog, payload);
     if (!action.ok) { this.emitError(action.diagnostics); return; }

@@ -51,15 +51,16 @@ test('a slider drives a gauge through reads in the live dashboard preset', () =>
     { id: 'gauge', type: 'gauge', props: { label: 'Limit preview', value: 40, max: 100 }, reads: { value: '/limit' } },
   ] };
   assert.ok(validateView(view(catalog, root), catalog).ok);
-  assert.ok(buildCatalogPrompt(catalog).length < buildCatalogPrompt(dashboardCatalog()).length);
+  // The full overlay is a pool; the preset must fit the default prompt budget with room to spare.
+  assert.ok(buildCatalogPrompt(catalog).length < 60000);
 });
 
 test('the map overlay keeps the basemap host-owned and bounds generated geography', async () => {
   const { mapCatalog } = await import('../catalog.js');
   assert.throws(() => mapCatalog(initialCatalog, { mapStyle: '' }), /mapStyle/u);
   const style = { version: 8, sources: {}, layers: [] };
-  const catalog = mapCatalog(dashboardCatalog(), { mapStyle: style });
-  assert.equal(catalog.id, `${initialCatalog.id}+dashboard+map`);
+  const catalog = mapCatalog(liveDashboardCatalog, { mapStyle: style });
+  assert.equal(catalog.id, `${initialCatalog.id}+dashboard/live+map`);
   assert.throws(() => mapCatalog(catalog, { mapStyle: style }), /already defines map/u);
   const map = catalog.components['map']!;
   assert.deepEqual(map.hostProperties, ['mapStyle']);

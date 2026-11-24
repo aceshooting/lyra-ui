@@ -99,7 +99,68 @@ export interface LyraGenNode {
    * publish or write live data. URL sinks cannot be live.
    */
   readonly liveReads?: Readonly<Record<string, string>>;
+  /**
+   * A host-declared catalog query this node displays. `params` are literal arguments and
+   * `paramReads` map argument names to owned local-state pointers (filters, selection, time range),
+   * so the query re-runs when they change. The node's `liveReads` then read from this query's
+   * result instead of `lr-gen-view.liveData`. The host executes queries; generated content never does.
+   */
+  readonly dataQuery?: LyraGenDataQuery;
+  /**
+   * Repeat this node's single child (the item template) once per item of an array: `items` points into
+   * host live data (or this node's `dataQuery` result) by default, or into owned local state with
+   * `from: 'state'`; `key` points inside each item to a string or safe-integer identity. Rendered
+   * items keep their elements and focus across updates and reorders; templates cannot bind state,
+   * start actions, run queries or repeat.
+   */
+  readonly repeat?: LyraGenRepeat;
+  /** Inside a repeat template: a declared, non-URL property shown from the current item (pointer relative to the item; '' is the item). */
+  readonly itemReads?: Readonly<Record<string, string>>;
+  /** Show this node only while the condition holds; a hidden node keeps its element, identity and state. */
+  readonly visible?: LyraGenCondition;
+  /** Every condition must hold, otherwise a role with a `disabled` property is rendered disabled (for example a submit button). */
+  readonly checks?: readonly LyraGenCondition[];
+  /** Declared, non-URL properties computed by a host-registered pure function from referenced values; a failure keeps `props`. */
+  readonly computes?: Readonly<Record<string, LyraGenComputation>>;
+  /**
+   * Per-node accessibility: `label` fills the role's own accessible-name property when the node does
+   * not set it, `description` becomes `aria-description`, and on non-interactive roles `live` sets a
+   * polite or off live region and `hidden` removes decorative content from the accessibility tree.
+   */
+  readonly a11y?: LyraGenNodeAccessibility;
   readonly action?: LyraGenActionBinding;
+}
+/** A value read from owned local state, host live data or the current repeat item. */
+export interface LyraGenValueRef { readonly source: 'state' | 'live' | 'item'; readonly pointer: string }
+export type LyraGenConditionOperator = 'truthy' | 'falsy' | 'equals' | 'notEquals' | 'in' | 'gt' | 'gte' | 'lt' | 'lte';
+export interface LyraGenCondition extends LyraGenValueRef {
+  readonly op: LyraGenConditionOperator;
+  /** Compared literal; `in` takes an array of at most 64 literals. */
+  readonly value?: JsonValue;
+}
+export interface LyraGenComputation {
+  /** Name of a function in the host registry (`lr-gen-view.functions`). */
+  readonly fn: string;
+  /** One argument reference, an array of references, or a literal `{ value }`. */
+  readonly arg: LyraGenValueRef | { readonly value: JsonValue } | readonly LyraGenValueRef[];
+}
+export interface LyraGenNodeAccessibility {
+  readonly label?: string;
+  readonly description?: string;
+  readonly live?: 'off' | 'polite';
+  readonly hidden?: boolean;
+}
+export interface LyraGenRepeat {
+  readonly items: string;
+  readonly key: string;
+  readonly from?: 'live' | 'state';
+  /** At most this many items render (default and ceiling 200). */
+  readonly max?: number;
+}
+export interface LyraGenDataQuery {
+  readonly name: string;
+  readonly params?: Readonly<Record<string, JsonValue>>;
+  readonly paramReads?: Readonly<Record<string, string>>;
 }
 export interface LyraGenCatalogReference { readonly id: string; readonly version: string }
 export interface LyraGenView {
@@ -169,6 +230,13 @@ export interface LyraGenComponent {
   readonly events?: readonly string[];
   readonly bindings?: Readonly<Record<string, LyraGenBindingDefinition>>;
   /**
+   * Trusted host adapter deriving an action payload from the event that initiated it (for example an
+   * embedded app's tool request). Its result replaces the node's generated payload and is validated
+   * against the action schema like any payload; returning `undefined` keeps the generated one, and a
+   * throw denies the action.
+   */
+  readonly eventPayload?: (event: Event) => JsonValue | undefined;
+  /**
    * Element properties only `prepareProperties` may supply, such as host callbacks or locale-bound
    * formatters. The view assigns them from the adapter's output, but they are never part of
    * `properties`: generated content cannot set or bind them, and `buildCatalogPrompt()`,
@@ -197,9 +265,19 @@ export interface LyraGenActionDefinition {
   readonly confirm?: boolean;
   readonly description?: string;
 }
+/** A host data query generated content may name; the host's query provider executes it. */
+export interface LyraGenQueryDefinition {
+  /** Object schema every resolved argument set must satisfy before the host is asked to run it. */
+  readonly params: LyraGenSchema;
+  /** Optional schema the result must satisfy before nodes may display it. */
+  readonly result?: LyraGenSchema;
+  readonly description?: string;
+}
 export interface LyraGenCatalog extends LyraGenCatalogReference {
   readonly components: Readonly<Record<string, LyraGenComponent>>;
   readonly actions?: Readonly<Record<string, LyraGenActionDefinition>>;
+  /** Host-allowlisted data queries; generated nodes reference them by name through `dataQuery`. */
+  readonly queries?: Readonly<Record<string, LyraGenQueryDefinition>>;
   readonly fieldPolicy?: LyraGenFieldPolicy;
 }
 export interface LyraGenAction {

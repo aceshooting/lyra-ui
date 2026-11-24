@@ -12,5 +12,6 @@ export const isolationCatalog: LyraGenCatalog = {
     button: { tag: 'button', properties: {}, text: true, events: ['click'] },
     form: { tag: 'form', properties: {}, children: true }
   },
-  actions: { save: { payload: { type: 'object', properties: { title: { type: 'string' } }, required: ['title'] } } }
+  actions: { save: { payload: { type: 'object', properties: { title: { type: 'string' } }, required: ['title'] } } },
+  queries: { metrics: { params: { type: 'object', properties: { scope: { type: 'string', maxLength: 32 } }, additionalProperties: false } } }
 };

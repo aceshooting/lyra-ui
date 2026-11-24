@@ -1,0 +1,5 @@
+---
+"@aceshooting/lyra-gen": minor
+---
+
+`@aceshooting/lyra-gen/adapters/a2ui-candidate.js` adds `A2uiV1Processor`, an opt-in processor for a declared A2UI v1.0 candidate profile that is separate from the stable v0.9.1 processor. It accepts `createSurface` with an initial component tree and data model, component replacement by id, data model updates with explicit-null deletion, and per-component `@catalogId` limited to host-registered catalogs built with `createA2uiV1Catalog()`. It enforces `allowedParents` and `allowedChildren` nesting and maps `@accessibility.label` onto the target role's accessible-name property. Each surface becomes a `validateView`-admitted lyra-gen view whose node identities stay stable across updates. Out-of-profile input is rejected with a v1.0 `error` message (`VALIDATION_FAILED`, `UNALLOWED_PARENT`, `UNALLOWED_CHILD`, `INTEGRITY_ERROR` or `INVALID_FUNCTION_CALL`) that the host can return to the model. `exportA2uiV1Catalog()` exports the catalog with its nesting rules, and `a2uiV1RendererCapabilities()` advertises nothing unless the host asserts qualification.

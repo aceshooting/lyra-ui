@@ -1,6 +1,11 @@
 import type { JsonObject, JsonValue, LyraGenCatalog } from '../types.js';
+import { A2UI_CANDIDATE_IDENTIFIER, a2uiCandidateComponentNames } from './a2ui-v1-names.js';
 
-/** Candidate schema artifacts do not qualify a renderer or a protocol processor. */
+/**
+ * Pinned candidate schema artifacts do not qualify a renderer or a protocol processor. The
+ * opt-in `A2uiV1Processor` (see `A2UI_V1_PROFILE`) follows the published specification page,
+ * whose component mixins differ from this pinned revision, so this artifact stays unprocessed.
+ */
 export const A2UI_CANDIDATE_PROFILE = Object.freeze({
   version: 'v1.0',
   revision: '409ded29ccac3eebc541979ae5320771703248e8',
@@ -13,17 +18,8 @@ export const A2UI_CANDIDATE_PROFILE = Object.freeze({
 /** Export a literal-property candidate catalog for schema experiments, never stable negotiation.
  * Candidate role names replace hyphens with underscores to satisfy v1 identifier rules. */
 export function exportA2uiCandidateCatalog(catalog: LyraGenCatalog, id = `https://github.com/aceshooting/lyra-ui/a2ui/v1.0-candidate/${encodeURIComponent(catalog.id)}/${encodeURIComponent(catalog.version)}`): JsonObject {
-  const identifier = /^[\p{XID_Start}_][\p{XID_Continue}]*$/u;
-  const names = new Map<string, string>();
-  const used = new Set<string>();
-  for (const name of Object.keys(catalog.components)) {
-    const wireName = name.replaceAll('-', '_');
-    if (!identifier.test(wireName)) throw new TypeError('Invalid candidate component identifier.');
-    if (wireName === 'Surface') throw new TypeError('Surface is reserved by the candidate protocol.');
-    if (used.has(wireName)) throw new TypeError('Candidate component identifier collision.');
-    used.add(wireName);
-    names.set(name, wireName);
-  }
+  const identifier = A2UI_CANDIDATE_IDENTIFIER;
+  const names = a2uiCandidateComponentNames(catalog);
   const components: Record<string, JsonValue> = Object.create(null) as Record<string, JsonValue>;
   for (const [name, definition] of Object.entries(catalog.components)) {
     const wireName = names.get(name)!;
@@ -53,3 +49,11 @@ export function exportA2uiCandidateCatalog(catalog: LyraGenCatalog, id = `https:
     $defs: { anyComponent: { oneOf: Object.keys(components).map(name => ({ $ref: `#/components/${name.replaceAll('~', '~0').replaceAll('/', '~1')}` })) }, anyFunction: { not: {} } }
   };
 }
+
+export {
+  A2UI_V1_PROFILE, A2uiV1Processor, a2uiV1RendererCapabilities, createA2uiV1Catalog, exportA2uiV1Catalog,
+} from './a2ui-v1.js';
+export type {
+  A2uiV1Catalog, A2uiV1CatalogOptions, A2uiV1ComponentDefinition, A2uiV1Error, A2uiV1ErrorCode, A2uiV1ErrorMessage,
+  A2uiV1ProcessContext, A2uiV1ProcessResult, A2uiV1ProcessorOptions, A2uiV1PropertyDefinition, A2uiV1Surface, A2uiV1ViewResult,
+} from './a2ui-v1.js';

@@ -288,6 +288,45 @@ Diagnostics have a stable code, a JSON Pointer path, severity and a safe explana
 source parsers can also provide original UTF-16 offsets. Keep diagnostics for developer review
 and present localized application recovery text to users.
 
+## Live dashboards
+
+`dashboardCatalog()` and the `liveDashboardCatalog` preset add reviewed dashboard roles (gauges,
+sparklines, progress, funnels, tabs, timelines, series charts, treemaps, sankeys, heatmaps, data grids,
+time ranges, filter bars, value formatting, callouts, tags, statistics charts and more); the full
+overlay is a reviewed pool, so prompt with a preset or a `subsetCatalog()` of it. `mapCatalog(base,
+{ mapStyle, regions? })` adds markers and choropleth regions over a host-owned basemap, and
+`mcpAppCatalog(base, { resources, tools })` embeds a sandboxed MCP App whose tool requests surface as
+a confirmed `mcp-tool-call` action for the host to authorize and run. See
+[catalog presets](docs/catalog-presets.md).
+
+Streams render progressively: with `progressive: true` the JSON stream and `createProgressiveMarkupParser()` yield validated, growing partial views, which `lr-gen-view.partial` previews (inert, open nodes marked `partial`) until the commit arrives. Data reaches panels without a new revision. A catalog declares host `queries`; a node names one in
+`dataQuery` (literal `params`, `paramReads` from filters, selection or a time range) and reads the
+result through `liveReads`, while `.queryProvider` runs each distinct argument set once, aborts
+superseded runs and keeps the last result (`query-pending`, `query-failed` parts). `repeat` renders one
+template child per keyed item of a live-data, query or state array (`itemReads` are item-relative), and
+`.liveData` streams host values into `liveReads`. `visible` and `checks` take conditions over owned state, live data or the current item, `computes` derives a property through a host pure-function registry (`.functions`), and `a11y` adds a label, description, polite live region or decorative hiding per node. `editDashboardLayout()` adds and removes panels.
+
+Interop and tooling: `@aceshooting/lyra-gen/adapters/json-patch.js` translates RFC 6902 operations to
+and from revision patches; `@aceshooting/lyra-gen/adapters/ag-ui.js` reduces AG-UI state snapshots and
+deltas into validated views; `bridge.resolveData(chunk)` reconciles AI SDK data parts by name and id.
+`createModelContext(view, state, { catalog, private })` (`model-context.js`) returns a bounded,
+deterministic summary of what the user sees and edited for the next model turn, never emitting private
+or sensitive-field values. `exportViewData()`, `toCsv()` and `exportPrintableHtml()` (`data-export.js`)
+export panel data and a script-free printable document; `copyDashboardPanel()` (`dashboard-copy.js`)
+copies a panel between views as a validated insertion. `planDashboard()` and `dryRunDashboard(view, catalog, { queryProvider })` (`dashboard-plan.js`) describe each panel's data sources and controls and run every bound query once, without actions or state changes, so a host can see which panels are ok, empty, failed or oversized before publishing. `import '@aceshooting/lyra-gen/devtools.js'`
+registers `<lr-gen-devtools>`, a read-only development inspector (`inspector.target = view`) that
+production bundles leave out when it is only imported in development builds.
+
+`@aceshooting/lyra-gen/scripted-conversation.js` drives a branching, no-model conversation on one
+generated surface: `createScriptedConversation()` takes a validated choice tree and a `buildStep()`
+returning each step's view or patch, owns the path, Back and Restart, gives every transition a new
+strictly increasing revision, never lands a superseded build and coalesces control edits;
+`connectScriptedConversation()` binds it to an `lr-gen-view`. See
+[guided demo](docs/guided-demo.md#build-a-branching-scripted-conversation).
+`@aceshooting/lyra-gen/adapters/a2ui-candidate.js` also exports `A2uiV1Processor`, an opt-in A2UI v1.0
+candidate processor (published wire shapes `"version": "1.0"`, `@catalogId`, `@accessibility`) with
+host-registered catalogs, nesting rules and coded v1.0 errors; see [A2UI](docs/a2ui.md#candidate-v10-processor).
+
 ## CLI and replay
 
 From a built repository checkout:

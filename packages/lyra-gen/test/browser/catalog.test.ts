@@ -354,3 +354,18 @@ describe('generated view style composition', () => {
     } finally { await setReducedMotion('no-preference'); }
   });
 });
+
+describe('generated slider value display', () => {
+  it('shows and announces the formatted value in the reader locale', async () => {
+    const document: LyraGenView = { version: '1', catalog: { id: initialCatalog.id, version: initialCatalog.version }, surfaceId: 'slider-format', revision: 0, root: { id: 'subject', type: 'slider', props: { label: 'Budget limit', min: 0, max: 500, step: 10, value: 200, withValue: true, format: { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 } } } };
+    const host = await fixture<LyraGenViewElement>(html`<lr-gen-view lang="en" .document=${document}></lr-gen-view>`);
+    await settled(host);
+    const subject = query<UpdatingElement>(host.shadowRoot!, '[data-gen-id="subject"]');
+    await subject.updateComplete;
+    expect(typeof Reflect.get(subject, 'valueFormatter')).to.equal('function');
+    expect(Reflect.get(subject, 'withValue')).to.equal(true);
+    const thumb = deepQuery(subject.shadowRoot!, '[role="slider"]');
+    expect(thumb.getAttribute('aria-valuetext')).to.equal('€200');
+    await expect(host).to.be.accessible();
+  });
+});

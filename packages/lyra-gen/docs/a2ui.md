@@ -98,8 +98,8 @@ view.
 It exports a **literal-property catalog artifact** against the pinned candidate
 `specification/v1_0/json/catalog_definition.json`. It has a separate Lyra identity,
 `protocolVersion: '1.0'`, no functions, and no dynamic expressions or action
-contract. There is no candidate message processor. The stable processor rejects
-`v1.0` envelopes, and candidate IDs are not included in stable capability metadata.
+contract. The stable processor rejects `v1.0` and `1.0` envelopes, and candidate IDs
+are not included in stable capability metadata.
 Direct candidate export rejects `__proto__`, `constructor` and `prototype` property
 keys regardless of case, matching `createCatalog()`.
 
@@ -107,6 +107,62 @@ Candidate schemas differ materially: they introduce `@call`, new function messag
 operations, an implicit `Surface`, initial data/components, and lifetime-unique
 surface identities. Relabeling a stable message would lose those semantics.
 Candidate artifacts and tests never count as stable conformance.
+
+## Candidate v1.0 processor
+
+The same entry point exports `A2uiV1Processor`, an opt-in processor for a declared
+subset of the published [v1.0 specification](https://a2ui.org/specification/v1.0-a2ui/)
+and its [catalog rules](https://a2ui.org/concepts/catalogs/), reviewed 2026-11-24.
+The published page differs from the pinned candidate schema revision above: envelopes
+carry `"version": "1.0"` and component mixins use the `@` sigil (`@catalogId`,
+`@accessibility`). This profile follows the published page and rejects the pinned
+revision's `"v1.0"` envelopes. It shares no state, results or capability metadata with
+the stable processor, and its cases never count as stable conformance.
+
+```ts
+import { A2uiV1Processor, createA2uiV1Catalog } from '@aceshooting/lyra-gen/adapters/a2ui-candidate.js';
+
+const layout = createA2uiV1Catalog(viewCatalog, {
+  catalogId: 'https://example.com/catalogs/layout/v1',
+  roles: ['stack', 'text', 'heading'],
+  allowedParents: { stack: ['Surface'], heading: ['stack'] },
+});
+const data = createA2uiV1Catalog(viewCatalog, { catalogId: 'https://example.com/catalogs/data/v1', roles: ['table', 'stat'] });
+const processor = new A2uiV1Processor({ viewCatalog, catalogs: [layout, data] });
+const result = processor.process(message, { ownerId: 'agent' });
+if (!result.ok) sendToAgent(result.error); // a v1.0 `error` message
+const view = processor.toView(surfaceId);   // admitted by validateView(view, viewCatalog)
+```
+
+| Capability | Declared behavior |
+| --- | --- |
+| Lifecycle | `createSurface` may carry `components` and `dataModel`; the data model applies first. Surface IDs are unique for the processor lifetime, so recreation after deletion is an `INTEGRITY_ERROR`. `theme` is rejected. |
+| Components | Updates replace a component definition by `id`. Forward references are buffered until `root` arrives and missing children render as pending. `Surface` is immutable, `root` is only the surface child, and cycles are rejected. |
+| Data | `updateDataModel` requires `value`. Explicit `null` deletes an object key and an omitted path or `/` replaces the whole object root. Deleting an array element with `null` is rejected rather than guessed; replace the array instead. |
+| Catalogs | Each component resolves `@catalogId`, then the surface `catalogId`. Only catalogs registered with the processor are admitted, with no fallback. All catalogs map onto one lyra-gen view catalog. |
+| Nesting | `allowedChildren` comes from the view catalog's `children`. `allowedParents` is a host option and may name `Surface`. Rules apply across catalogs and produce `UNALLOWED_CHILD` or `UNALLOWED_PARENT`. |
+| Accessibility | `@accessibility.label` sets the role's first declared accessible-name property and satisfies that property when it is required. A role without one, or a label alongside an explicit value for that property, is rejected. `description`, `live` other than `off`, and `hidden` other than `false` are rejected. |
+| Values | Literals and `{"@path": ...}` bindings, relative inside templates. Bound values must satisfy the property schema before an update commits. URL sinks accept only literals. |
+| Children | Static ID lists and `{componentId, path}` templates. Template instance identities follow the data index. |
+| Actions | `event` actions with literal or bound context become view actions, and `lr-gen-view` dispatches them through the view catalog's action policy. No outbound v1.0 action envelope is produced. |
+| Identity | View node IDs are opaque and stay stable while a component keeps the same ancestry and data scope across component and data updates. |
+| Out of profile | `@call` function calls, `@checks`, `functionCall` actions, `userMessage`, renderer function calls (answered with `INVALID_FUNCTION_CALL` and the `functionCallId`), agent function responses, two-way binding writes, `sendDataModel` metadata and inline catalogs. |
+
+Every rejection is transactional: committed state is unchanged. A failure returns a
+v1.0 `error` message (`{ version: '1.0', error: { code, message, surfaceId | functionCallId, path } }`).
+`VALIDATION_FAILED`, `UNALLOWED_PARENT` and `UNALLOWED_CHILD` carry the JSON Pointer
+of the failing member within the offending message. `INTEGRITY_ERROR` covers recreation,
+an unknown or foreign surface and a stale `expectedRevision`. A view that fails
+`validateView`, such as a required property bound to absent data, returns its
+diagnostics plus a `VALIDATION_FAILED` message whose path is
+`/components/<component id>/<member>`. Error messages never contain data-model values.
+`a2uiV1RendererCapabilities()` advertises an empty `supportedCatalogIds` list unless
+the host passes registered identities it has qualified.
+
+The authored cohort `test/fixtures/a2ui/v1.0-candidate/processor-cases.ts` pins the
+accepted mixed-catalog surface, its updates and every coded rejection.
+`test/browser/a2ui-v1.test.ts` renders it in `lr-gen-view`, which covers element
+identity across updates, keyboard action dispatch and an axe check.
 
 ## Evidence and maintenance
 
@@ -171,7 +227,7 @@ built-in qualification registry. Requalify a changed catalog, renderer or bindin
 before advertising its identity in your application.
 
 Full catalog coverage, reference-renderer DOM comparisons, broader AG-UI/A2A
-bindings, candidate rendering, and measured bundle/runtime cost remain separate
+bindings, candidate transport bindings, and measured bundle/runtime cost remain separate
 qualification work.
 
 Maintainers updating the profile must review the pinned official schema and
@@ -227,7 +283,7 @@ The test projection uses native button/section elements and explicit heading rol
 it is not a production basic-catalog implementation. Plain text is compared without
 claiming markdown or paragraph-element parity. Deletion leaves Lyra's empty-state
 message while the reference surface becomes empty. Pixel equivalence, full
-accessibility conformance and candidate rendering are not established.
+accessibility conformance and candidate reference comparisons are not established.
 
 Supply a clean checkout at the documented revision and a separately provisioned
 `node_modules` directory with the exact runtime pins in

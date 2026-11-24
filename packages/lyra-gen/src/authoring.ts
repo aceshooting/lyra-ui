@@ -32,12 +32,16 @@ export function emitMarkup(input: unknown, catalog: LyraGenCatalog, options: Emi
     if (node.slot !== undefined) attributes.push(`slot="${escapeMarkupText(node.slot)}"`);
     if (node.text !== undefined) attributes.push(`text="${escapeMarkupText(node.text)}"`);
     for (const key of Object.keys(node.props ?? {}).sort()) {
-      if (!/^[A-Za-z][A-Za-z0-9_-]*$/.test(key) || ['id', 'slot', 'text', 'bindings', 'reads', 'liveReads', 'action'].includes(key)) { invalidProperty = true; continue; }
+      if (!/^[A-Za-z][A-Za-z0-9_-]*$/.test(key) || ['id', 'slot', 'text', 'bindings', 'reads', 'liveReads', 'dataQuery', 'repeat', 'itemReads', 'visible', 'checks', 'computes', 'a11y', 'action'].includes(key)) { invalidProperty = true; continue; }
       attributes.push(`${key}={${stableJson(node.props![key]!)}}`);
     }
     if (node.bindings !== undefined) attributes.push(`bindings={${stableJson(node.bindings)}}`);
     if (node.reads !== undefined) attributes.push(`reads={${stableJson(node.reads)}}`);
     if (node.liveReads !== undefined) attributes.push(`liveReads={${stableJson(node.liveReads)}}`);
+    if (node.dataQuery !== undefined) attributes.push(`dataQuery={${stableJson(node.dataQuery as unknown as JsonValue)}}`);
+    if (node.repeat !== undefined) attributes.push(`repeat={${stableJson(node.repeat as unknown as JsonValue)}}`);
+    if (node.itemReads !== undefined) attributes.push(`itemReads={${stableJson(node.itemReads)}}`);
+    for (const member of ['visible', 'checks', 'computes', 'a11y'] as const) if (node[member] !== undefined) attributes.push(`${member}={${stableJson(node[member] as unknown as JsonValue)}}`);
     if (node.action !== undefined) attributes.push(`action={${stableJson(node.action as unknown as JsonValue)}}`);
     const open = `<${node.type} ${attributes.join(' ')}`;
     return node.children?.length ? `${open}>${node.children.map(emit).join('')}</${node.type}>` : `${open}/>`;

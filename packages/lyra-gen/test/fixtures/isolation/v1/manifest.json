@@ -403,6 +403,215 @@
       ],
       "code": "live.conflict",
       "note": ""
+    },
+    {
+      "name": "query-invalid",
+      "file": "query-invalid.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "query.invalid",
+      "note": ""
+    },
+    {
+      "name": "query-unknown",
+      "file": "query-unknown.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "query.unknown",
+      "note": ""
+    },
+    {
+      "name": "query-param",
+      "file": "query-param.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "query.param",
+      "note": ""
+    },
+    {
+      "name": "query-pointer",
+      "file": "query-pointer.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "query.pointer",
+      "note": ""
+    },
+    {
+      "name": "query-unowned",
+      "file": "query-unowned.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "query.unowned",
+      "note": ""
+    },
+    {
+      "name": "repeat-invalid",
+      "file": "repeat-invalid.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "repeat.invalid",
+      "note": ""
+    },
+    {
+      "name": "repeat-pointer",
+      "file": "repeat-pointer.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "repeat.pointer",
+      "note": ""
+    },
+    {
+      "name": "repeat-unowned",
+      "file": "repeat-unowned.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "repeat.unowned",
+      "note": ""
+    },
+    {
+      "name": "repeat-template",
+      "file": "repeat-template.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "tb"
+      ],
+      "code": "repeat.template",
+      "note": "The failing template node is contained, not its repeat container."
+    },
+    {
+      "name": "item-invalid",
+      "file": "item-invalid.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "ti"
+      ],
+      "code": "item.invalid",
+      "note": "The failing template node is contained, not its repeat container."
+    },
+    {
+      "name": "item-unknown",
+      "file": "item-unknown.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "ti"
+      ],
+      "code": "item.unknown",
+      "note": "The failing template node is contained, not its repeat container."
+    },
+    {
+      "name": "item-pointer",
+      "file": "item-pointer.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "ti"
+      ],
+      "code": "item.pointer",
+      "note": "The failing template node is contained, not its repeat container."
+    },
+    {
+      "name": "item-outside",
+      "file": "item-outside.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "item.outside",
+      "note": ""
+    },
+    {
+      "name": "condition-invalid",
+      "file": "condition-invalid.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "condition.invalid",
+      "note": ""
+    },
+    {
+      "name": "condition-unowned",
+      "file": "condition-unowned.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "condition.unowned",
+      "note": ""
+    },
+    {
+      "name": "compute-invalid",
+      "file": "compute-invalid.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "compute.invalid",
+      "note": ""
+    },
+    {
+      "name": "compute-unknown",
+      "file": "compute-unknown.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "compute.unknown",
+      "note": ""
+    },
+    {
+      "name": "a11y-invalid",
+      "file": "a11y-invalid.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "a11y.invalid",
+      "note": ""
+    },
+    {
+      "name": "a11y-interactive",
+      "file": "a11y-interactive.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "a11y.interactive",
+      "note": ""
     }
   ]
 }

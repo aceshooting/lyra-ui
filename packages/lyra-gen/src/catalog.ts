@@ -5,9 +5,13 @@ import type { LyraGenCatalogPresetName } from './catalogs/presets.js';
 export { catalogPresetNames, catalogPresetRoles } from './catalogs/presets.js';
 export type { LyraGenCatalogPresetName } from './catalogs/presets.js';
 import { answerBlockComponents } from './catalogs/blocks.js';
-import { dashboardComponents, dashboardRoleNames } from './catalogs/dashboard.js';
+import { dashboardComponents } from './catalogs/dashboard.js';
+export { dashboardRoleNames } from './catalogs/dashboard.js';
 import { mapComponents, type LyraGenMapOptions } from './catalogs/geo.js';
-export type { LyraGenMapOptions } from './catalogs/geo.js';
+import { mcpAppActions, mcpAppComponents, type LyraGenMcpAppOptions } from './catalogs/mcp.js';
+export type { LyraGenMcpAppOptions, LyraGenMcpAppResource } from './catalogs/mcp.js';
+export { mcpToolCallAction } from './catalogs/mcp.js';
+export type { LyraGenMapOptions, LyraGenMapRegions } from './catalogs/geo.js';
 
 /** Create a trusted host catalog. Generated content must never construct this definition. */
 export function createCatalog(definition: LyraGenCatalog): LyraGenCatalog {
@@ -39,7 +43,7 @@ export function subsetCatalog(catalog: LyraGenCatalog, roles: readonly string[],
     return false;
   }).map(name => [name, catalog.actions![name]!]));
   if (diagnostics.length) return { ok: false, diagnostics };
-  return { ok: true, value: createCatalog({ id: catalog.id, version: catalog.version, components, actions, ...(catalog.fieldPolicy ? { fieldPolicy: catalog.fieldPolicy } : {}) }), diagnostics: [] };
+  return { ok: true, value: createCatalog({ id: catalog.id, version: catalog.version, components, actions, ...(catalog.queries ? { queries: catalog.queries } : {}), ...(catalog.fieldPolicy ? { fieldPolicy: catalog.fieldPolicy } : {}) }), diagnostics: [] };
 }
 
 /** Select a reviewed request preset; action authority is empty unless the host names source actions. */
@@ -89,8 +93,17 @@ export function dashboardCatalog(base: LyraGenCatalog = initialCatalog): LyraGen
   return createCatalog({ ...base, id: `${base.id}+dashboard`, version: base.version, components: { ...base.components, ...dashboardComponents(base) } });
 }
 
-/** Layout, metric, chart and driving-control roles a live dashboard answer needs, with no actions. */
-export const liveDashboardRoles: readonly string[] = Object.freeze(['stack', 'row', 'text', 'heading', 'card', 'badge', 'alert', 'empty', 'skeleton', 'stat', 'table', 'chart', 'slider', 'switch', 'select', 'option', ...dashboardRoleNames]);
+/**
+ * Layout, metric, chart and driving-control roles a live dashboard answer needs, with no actions.
+ * The full overlay is a reviewed pool larger than one prompt budget; prompt with a preset like this
+ * one, or `subsetCatalog()` it to the roles a request needs.
+ */
+export const liveDashboardRoles: readonly string[] = Object.freeze([
+  'stack', 'row', 'text', 'heading', 'card', 'badge', 'alert', 'empty', 'skeleton', 'stat', 'table', 'chart', 'slider', 'switch', 'select', 'option',
+  'gauge', 'sparkline', 'progress-bar', 'progress-ring', 'budget-meter', 'number-ticker', 'funnel', 'poll-status',
+  'tabs', 'tab', 'tab-panel', 'details', 'series-chart', 'heatmap', 'data-grid', 'time-range', 'filter-bar',
+  'format-number', 'relative-time', 'callout', 'tag',
+]);
 
 /** The dashboard overlay narrowed to `liveDashboardRoles`; id `lyra-reviewed+dashboard/live`. */
 export const liveDashboardCatalog: LyraGenCatalog = /* @__PURE__ */ (() => {
@@ -108,4 +121,13 @@ export const liveDashboardCatalog: LyraGenCatalog = /* @__PURE__ */ (() => {
  */
 export function mapCatalog(base: LyraGenCatalog, options: LyraGenMapOptions): LyraGenCatalog {
   return createCatalog({ ...base, id: `${base.id}+map`, version: base.version, components: { ...base.components, ...mapComponents(base, options) } });
+}
+
+/**
+ * Opt-in overlay adding a sandboxed `mcp-app` role (id `<base id>+mcp-app`). The host reviews every
+ * resource, sandbox setting and allowed tool; generated content only picks a resource id, a label and
+ * bounded input, and app tool requests surface as a confirmed `mcp-tool-call` action for the host.
+ */
+export function mcpAppCatalog(base: LyraGenCatalog, options: LyraGenMcpAppOptions): LyraGenCatalog {
+  return createCatalog({ ...base, id: `${base.id}+mcp-app`, version: base.version, components: { ...base.components, ...mcpAppComponents(base, options) }, actions: { ...base.actions, ...mcpAppActions(options) } });
 }

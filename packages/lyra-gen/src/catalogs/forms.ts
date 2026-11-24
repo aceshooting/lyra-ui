@@ -1,5 +1,19 @@
-import type { LyraGenComponent } from '../types.js';
-import { appearance, boolean, choice, count, documentation, label, named, number, size, string, variant } from './shared.js';
+import type { JsonValue, LyraGenComponent, LyraGenSchema } from '../types.js';
+import { appearance, boolean, choice, count, documentation, label, named, number, object, size, string, variant } from './shared.js';
+
+/** Intl-sanctioned units a generated slider may show (Intl.supportedValuesOf('unit') subset). */
+const sliderUnits = ['percent', 'second', 'minute', 'hour', 'day', 'week', 'month', 'year', 'millisecond', 'byte', 'kilobyte', 'megabyte', 'gigabyte', 'terabyte', 'meter', 'kilometer', 'mile', 'kilogram', 'gram', 'celsius', 'fahrenheit', 'liter'] as const;
+/** Declarative value format; the trusted adapter turns it into a locale-bound `valueFormatter` that also drives aria-valuetext. */
+const sliderFormat: LyraGenSchema = object({ style: choice('decimal', 'currency', 'percent', 'unit'), currency: { type: 'string', minLength: 3, maxLength: 3 }, unit: choice(...sliderUnits), unitDisplay: choice('short', 'long', 'narrow'), minimumFractionDigits: count(20), maximumFractionDigits: count(20) }, ['style']);
+
+function sliderProperties(props: Readonly<Record<string, JsonValue>>, context?: { readonly locale: string }): Readonly<Record<string, unknown>> {
+  const { format, ...rest } = props;
+  if (format === undefined) return rest;
+  const spec = format as { readonly style: string; readonly currency?: string; readonly unit?: string; readonly unitDisplay?: string; readonly minimumFractionDigits?: number; readonly maximumFractionDigits?: number };
+  if ((spec.style === 'currency') !== (spec.currency !== undefined) || (spec.style === 'unit') !== (spec.unit !== undefined)) throw new TypeError('Currency formats need a currency and unit formats a unit.');
+  const formatter = new Intl.NumberFormat(context?.locale ?? 'und', { style: spec.style as Intl.NumberFormatOptions['style'], ...(spec.currency ? { currency: spec.currency } : {}), ...(spec.unit ? { unit: spec.unit, unitDisplay: (spec.unitDisplay ?? 'short') as Intl.NumberFormatOptions['unitDisplay'] } : {}), ...(spec.minimumFractionDigits !== undefined ? { minimumFractionDigits: spec.minimumFractionDigits } : {}), ...(spec.maximumFractionDigits !== undefined ? { maximumFractionDigits: Math.max(spec.maximumFractionDigits, spec.minimumFractionDigits ?? 0) } : {}) });
+  return { ...rest, valueFormatter: (value: number) => formatter.format(value) };
+}
 
 export const formComponents: Readonly<Record<string, LyraGenComponent>> = {
   form: { tag: 'form', properties: { ariaLabel: label }, children: true, events: ['submit'], accessibleName: { required: true, properties: ['ariaLabel'] }, description: 'A named form with native validation and submission.' },
@@ -10,5 +24,5 @@ export const formComponents: Readonly<Record<string, LyraGenComponent>> = {
   option: { tag: 'lr-option', properties: { value: string(256), label, disabled: boolean }, required: ['value'], text: true, load: () => import('@aceshooting/lyra-ui/components/lr-option.js'), documentation: documentation('lr-option') },
   checkbox: { tag: 'lr-checkbox', properties: { checked: boolean, disabled: boolean, required: boolean, name: string(128), value: string(256), hint: string(512), size }, text: true, interactive: true, accessibleName: { required: true, text: true }, bindings: { checked: { event: 'lr-change', property: 'checked' } }, load: () => import('@aceshooting/lyra-ui/components/lr-checkbox.js'), documentation: documentation('lr-checkbox') },
   switch: { tag: 'lr-switch', properties: { checked: boolean, disabled: boolean, name: string(128), value: string(256), hint: string(512), size }, text: true, interactive: true, accessibleName: { required: true, text: true }, bindings: { checked: { event: 'lr-change', property: 'checked' } }, load: () => import('@aceshooting/lyra-ui/components/lr-switch.js'), documentation: documentation('lr-switch') },
-  slider: { tag: 'lr-slider', properties: { label, hint: string(512), min: number, max: number, step: { type: 'number', minimum: 0.000001, maximum: 1e12 }, value: number, disabled: boolean, size }, interactive: true, accessibleName: { required: true, properties: ['label'] }, bindings: { value: { event: 'lr-input', property: 'value' } }, load: () => import('@aceshooting/lyra-ui/components/lr-slider.js'), documentation: documentation('lr-slider') },
+  slider: { tag: 'lr-slider', properties: { label, hint: string(512), min: number, max: number, step: { type: 'number', minimum: 0.000001, maximum: 1e12 }, value: number, disabled: boolean, size, withValue: boolean, withTooltip: boolean, tooltipPlacement: choice('top', 'right', 'bottom', 'left'), format: sliderFormat }, interactive: true, accessibleName: { required: true, properties: ['label'] }, bindings: { value: { event: 'lr-input', property: 'value' } }, hostProperties: ['valueFormatter'], prepareProperties: sliderProperties, load: () => import('@aceshooting/lyra-ui/components/lr-slider.js'), documentation: documentation('lr-slider') },
 };

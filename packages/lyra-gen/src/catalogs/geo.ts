@@ -2,7 +2,7 @@ import type { JsonValue, LyraGenCatalog, LyraGenComponent, LyraGenSchema } from 
 import { array, documentation, label, object, string } from './shared.js';
 
 /** A host-reviewed region set generated content may colour by id; geometry never comes from content. */
-interface LyraGenMapRegions {
+export interface LyraGenMapRegions {
   /** GeoJSON FeatureCollection of at most 1000 features, each carrying a unique string id. */
   readonly geojson: { readonly type: 'FeatureCollection'; readonly features: readonly { readonly type: 'Feature'; readonly properties?: Readonly<Record<string, unknown>> | null; readonly geometry: unknown }[] };
   /** Feature property holding each region's id. */

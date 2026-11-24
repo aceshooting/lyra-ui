@@ -167,7 +167,7 @@ const sameJson = (left: unknown, right: unknown): boolean => {
   const keys = Object.keys(a);
   return keys.length === Object.keys(b).length && keys.every(key => Object.hasOwn(b, key) && sameJson(a[key], b[key]));
 };
-const OWN_MEMBERS = ['type', 'props', 'text', 'slot', 'bindings', 'reads', 'liveReads', 'action'] as const;
+const OWN_MEMBERS = ['type', 'props', 'text', 'slot', 'bindings', 'reads', 'liveReads', 'dataQuery', 'repeat', 'itemReads', 'visible', 'checks', 'computes', 'a11y', 'action'] as const;
 const sameOwnMembers = (left: LyraGenNode, right: LyraGenNode): boolean => OWN_MEMBERS.every(key => sameJson(left[key], right[key]));
 const flatten = (root: LyraGenNode): LyraGenNode[] => {
   const nodes: LyraGenNode[] = [];

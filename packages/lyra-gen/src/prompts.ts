@@ -18,7 +18,7 @@ export function exportCatalogArtifact(catalog: LyraGenCatalog): JsonObject {
   // Host-only properties are adapter output, never generated content, so prompts never name them.
   const components = Object.fromEntries(Object.entries(catalog.components).map(([role, component]) =>
     [role, Object.fromEntries(Object.entries(component).filter(([key]) => key !== 'hostProperties'))]));
-  return stable({ format: 'lyra-gen-catalog', formatVersion: '1', id: catalog.id, version: catalog.version, components, actions: catalog.actions ?? {} }) as JsonObject;
+  return stable({ format: 'lyra-gen-catalog', formatVersion: '1', id: catalog.id, version: catalog.version, components, actions: catalog.actions ?? {}, ...(catalog.queries ? { queries: catalog.queries } : {}) }) as JsonObject;
 }
 
 function schema(value: LyraGenSchema): JsonObject {
@@ -54,6 +54,17 @@ export function exportCatalogJsonSchema(catalog: LyraGenCatalog): JsonObject {
     const bindings = Object.keys(component.bindings ?? {});
     if (bindings.length) properties['bindings'] = { type: 'object', additionalProperties: false, properties: Object.fromEntries(bindings.map(key => [key, { type: 'string', pattern: '^(?:/(?:[^~/]|~[01])*)+$' }])) };
     const readable = Object.keys(component.properties).filter(key => !isContentUrlProperty(key, component));
+    const pointer = { type: 'string', pattern: '^(?:/(?:[^~/]|~[01])*)*$' };
+    if (component.children) properties['repeat'] = { type: 'object', additionalProperties: false, required: ['items', 'key'], properties: { items: pointer, key: pointer, from: { enum: ['live', 'state'] }, max: { type: 'integer', minimum: 1, maximum: 200 } } };
+    const ref = { type: 'object', additionalProperties: false, required: ['source', 'pointer'], properties: { source: { enum: ['state', 'live', 'item'] }, pointer } };
+    const condition = { type: 'object', additionalProperties: false, required: ['source', 'pointer', 'op'], properties: { source: { enum: ['state', 'live', 'item'] }, pointer, op: { enum: ['truthy', 'falsy', 'equals', 'notEquals', 'in', 'gt', 'gte', 'lt', 'lte'] }, value: {} } };
+    properties['visible'] = condition;
+    properties['a11y'] = { type: 'object', additionalProperties: false, properties: { label: { type: 'string', minLength: 1, maxLength: 256 }, description: { type: 'string', minLength: 1, maxLength: 1024 }, ...(component.interactive || component.events?.length || Object.keys(component.bindings ?? {}).length ? {} : { live: { enum: ['off', 'polite'] }, hidden: { type: 'boolean' } }) } };
+    properties['checks'] = { type: 'array', minItems: 1, maxItems: 16, items: condition };
+    if (readable.length) properties['computes'] = { type: 'object', additionalProperties: false, properties: Object.fromEntries(readable.map(key => [key, { type: 'object', additionalProperties: false, required: ['fn', 'arg'], properties: { fn: { type: 'string', maxLength: 64 }, arg: { anyOf: [ref, { type: 'array', maxItems: 32, items: ref }, { type: 'object', required: ['value'], additionalProperties: false, properties: { value: {} } }] } } }])) } as JsonObject;
+    if (readable.length) properties['itemReads'] = { type: 'object', additionalProperties: false, properties: Object.fromEntries(readable.map(key => [key, pointer])) };
+    const queries = Object.entries(catalog.queries ?? {}).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0);
+    if (queries.length) properties['dataQuery'] = { anyOf: queries.map(([name, definition]): JsonObject => ({ type: 'object', additionalProperties: false, required: ['name'], properties: { name: { const: name }, params: schema(definition.params), paramReads: { type: 'object', additionalProperties: pointer } } })) };
     if (readable.length) properties['reads'] = properties['liveReads'] = { type: 'object', additionalProperties: false, properties: Object.fromEntries(readable.map(key => [key, { type: 'string', pattern: '^(?:/(?:[^~/]|~[01])*)+$' }])) };
     if (component.events?.length && action.length) properties['action'] = { anyOf: action };
     const definition: Record<string, JsonValue> = { type: 'object', additionalProperties: false, properties, required: ['id', 'type'] };
@@ -86,8 +97,8 @@ export function buildCatalogPrompt(catalog: LyraGenCatalog, options: LyraGenProm
   const artifact = exportCatalogArtifact(catalog);
   const prompt = [
     'Return one JSON LyraGenView: {version:"1",catalog:{id,version},surfaceId,revision,root}.',
-    'A node is {id,type,props?,text?,children?,slot?,bindings?,reads?,liveReads?,action?}. Use unique ids, explicit accessible names, approved properties and declared child slots only.',
-    'Use plain text. Never emit HTML, URLs, JavaScript, CSS, imports, handlers or invented component roles. Actions use host-declared names and payloads; bindings write and reads display local-state JSON Pointers; a read must address a path some binding in the view owns; liveReads shows a host-published live-data pointer the host documents.',
+    'A node is {id,type,props?,text?,children?,slot?,bindings?,reads?,liveReads?,dataQuery?,repeat?,itemReads?,visible?,checks?,computes?,a11y?,action?}. Use unique ids, explicit accessible names, approved properties and declared child slots only.',
+    'Use plain text. Never emit HTML, URLs, JavaScript, CSS, imports, handlers or invented component roles. Actions use host-declared names and payloads; bindings write and reads display local-state JSON Pointers; a read must address a path some binding in the view owns; liveReads shows a host-published live-data pointer the host documents; dataQuery names a declared query (paramReads take owned state) and liveReads then read its result; repeat renders its one child per item of an array with itemReads relative to the item; visible and checks are conditions {source: state|live|item, pointer, op, value}; computes calls a host function by name on referenced values.',
     'Keep source numbers as finite JSON numbers and dates as unambiguous ISO 8601 strings; the host locale formats display values. Never replace source numbers with locale-formatted strings. Write prose in the requested content language, which can differ from the host locale.',
     'Respect every schema bound. Request a supported subset when this catalog cannot express the task. Runtime validation remains required.',
     JSON.stringify(artifact),

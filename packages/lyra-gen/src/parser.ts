@@ -68,6 +68,16 @@ function checkUnicode(value: string, offset: number): void {
   }
 }
 
+/** An element's parsed start tag; identity and limits are already admitted. */
+export interface MarkupOpenTag {
+  readonly start: number;
+  readonly type: string;
+  readonly id: string;
+  readonly attrs: Readonly<Record<string, JsonValue>>;
+  readonly ranges: Readonly<Record<string, LyraGenSourceRange>>;
+  readonly selfClosing: boolean;
+}
+
 class Scanner {
   position = 0;
   nodes = 0;
@@ -75,7 +85,7 @@ class Scanner {
   readonly ids = new Set<string>();
   readonly sourceMap: Record<string, MarkupNodeSource> = Object.create(null) as Record<string, MarkupNodeSource>;
   readonly tags: Set<string>;
-  constructor(readonly source: string, readonly options: MarkupOptions, readonly limits: MarkupLimits) {
+  constructor(public source: string, readonly options: MarkupOptions, readonly limits: MarkupLimits) {
     this.tags = new Set(options.allowedTags ?? STRUCTURAL_TAGS);
   }
   error(code: string, start = this.position, incomplete = false): never {
@@ -193,7 +203,7 @@ class Scanner {
     if (!Number.isFinite(number)) this.error('nonfinite-number', start);
     return number;
   }
-  node(depth: number): LyraGenNode {
+  openTag(depth: number): MarkupOpenTag {
     if (depth > this.limits.maxDepth) this.error('depth-limit');
     if (++this.nodes > this.limits.maxNodes) this.error('node-limit');
     const start = this.position;
@@ -228,9 +238,14 @@ class Scanner {
     const id = attrs['id'];
     if (this.ids.has(id)) this.error('duplicate-id', start);
     this.ids.add(id);
+    return { start, type, id, attrs, ranges, selfClosing };
+  }
+  node(depth: number): LyraGenNode {
+    const open = this.openTag(depth);
+    const { start, type } = open;
     const children: LyraGenNode[] = [];
     let text = '';
-    if (!selfClosing) {
+    if (!open.selfClosing) {
       while (!this.source.startsWith('</', this.position)) {
         if (this.position === this.source.length) this.error('unfinished-element', start, true);
         if (this.source[this.position] === '<') children.push(this.node(depth + 1));
@@ -244,6 +259,13 @@ class Scanner {
       const close = this.name(); this.skip(); this.expect('>');
       if (close !== type) this.error('mismatched-close', start);
     }
+    const node = this.closeNode(open, children, text);
+    this.sourceMap[open.id] = { start, end: this.position, attributes: open.ranges };
+    return node;
+  }
+  /** Check an element's members and build its node from already parsed children and decoded text. */
+  closeNode(open: MarkupOpenTag, children: LyraGenNode[], text: string): LyraGenNode {
+    const { start, type, id, attrs, ranges } = open;
     if (children.length && !/^[ \t\r\n]*$/.test(text)) this.error('mixed-content', start);
     if (attrs['text'] !== undefined && typeof attrs['text'] !== 'string') this.error('invalid-text', ranges['text']!.start);
     if (attrs['text'] !== undefined && text.length && !children.length) this.error('duplicate-text', start);
@@ -254,6 +276,20 @@ class Scanner {
     const reads = attrs['reads'];
     if (reads !== undefined && (reads === null || Array.isArray(reads) || typeof reads !== 'object'
       || Object.entries(reads).some(([key, value]) => forbidden.has(key.toLowerCase()) || /^on/i.test(key) || typeof value !== 'string' || !value.startsWith('/') || /~(?![01])/u.test(value)))) this.error('invalid-reads', start);
+    const objectMember = (name: string): Readonly<Record<string, JsonValue>> | undefined => {
+      const member = attrs[name];
+      if (member === undefined) return undefined;
+      if (member === null || Array.isArray(member) || typeof member !== 'object') this.error(`invalid-${name === 'dataQuery' ? 'data-query' : name === 'itemReads' ? 'item-reads' : name}`, start);
+      return member as Readonly<Record<string, JsonValue>>;
+    };
+    const dataQuery = objectMember('dataQuery');
+    const repeat = objectMember('repeat');
+    const itemReads = objectMember('itemReads');
+    const visible = objectMember('visible');
+    const computes = objectMember('computes');
+    const a11y = objectMember('a11y');
+    const checks = attrs['checks'];
+    if (checks !== undefined && !Array.isArray(checks)) this.error('invalid-checks', start);
     const liveReads = attrs['liveReads'];
     if (liveReads !== undefined && (liveReads === null || Array.isArray(liveReads) || typeof liveReads !== 'object'
       || Object.entries(liveReads).some(([key, value]) => forbidden.has(key.toLowerCase()) || /^on/i.test(key) || typeof value !== 'string' || !value.startsWith('/') || /~(?![01])/u.test(value)))) this.error('invalid-live-reads', start);
@@ -261,7 +297,7 @@ class Scanner {
     if (action !== undefined && (action === null || Array.isArray(action) || typeof action !== 'object'
       || !('name' in action) || typeof action['name'] !== 'string' || !action['name'] || Object.keys(action).some(key => key !== 'name' && key !== 'payload'))) this.error('invalid-action', start);
     const props: Record<string, JsonValue> = Object.create(null) as Record<string, JsonValue>;
-    for (const [key, value] of Object.entries(attrs)) if (!['id', 'slot', 'text', 'bindings', 'reads', 'liveReads', 'action'].includes(key)) props[key] = value;
+    for (const [key, value] of Object.entries(attrs)) if (!['id', 'slot', 'text', 'bindings', 'reads', 'liveReads', 'dataQuery', 'repeat', 'itemReads', 'visible', 'checks', 'computes', 'a11y', 'action'].includes(key)) props[key] = value;
     const node: LyraGenNode = {
       id, type,
       ...(Object.keys(props).length ? { props } : {}),
@@ -270,10 +306,16 @@ class Scanner {
       ...(typeof attrs['slot'] === 'string' ? { slot: attrs['slot'] } : {}),
       ...(bindings !== undefined ? { bindings: bindings as Readonly<Record<string, string>> } : {}),
       ...(reads !== undefined ? { reads: reads as Readonly<Record<string, string>> } : {}),
+      ...(dataQuery !== undefined ? { dataQuery: dataQuery as unknown as LyraGenNode['dataQuery'] } : {}),
+      ...(repeat !== undefined ? { repeat: repeat as unknown as LyraGenNode['repeat'] } : {}),
+      ...(itemReads !== undefined ? { itemReads: itemReads as Readonly<Record<string, string>> } : {}),
+      ...(visible !== undefined ? { visible: visible as unknown as LyraGenNode['visible'] } : {}),
+      ...(checks !== undefined ? { checks: checks as unknown as LyraGenNode['checks'] } : {}),
+      ...(computes !== undefined ? { computes: computes as unknown as LyraGenNode['computes'] } : {}),
+      ...(a11y !== undefined ? { a11y: a11y as unknown as LyraGenNode['a11y'] } : {}),
       ...(liveReads !== undefined ? { liveReads: liveReads as Readonly<Record<string, string>> } : {}),
       ...(action !== undefined ? { action: action as unknown as LyraGenNode['action'] } : {})
     };
-    this.sourceMap[id] = { start, end: this.position, attributes: ranges };
     return node;
   }
 }
@@ -297,6 +339,28 @@ export function parseMarkup(source: string, options: MarkupOptions): MarkupResul
     if (error instanceof ParseFailure) return failed(error.code, error.start, error.end, error.incomplete ? 'incomplete' : 'error');
     return failed('invalid-input', scanner.position);
   }
+}
+
+/** Element primitives for an incremental reader; each `openTag` call receives one complete start tag. */
+export interface MarkupElementReader {
+  openTag(source: string, depth: number): MarkupOpenTag;
+  closeNode(open: MarkupOpenTag, children: LyraGenNode[], text: string): LyraGenNode;
+  decode(raw: string): string;
+}
+/** Shares identity, node, attribute and JSON-entry budgets across calls, like one batch parse. Failures throw. */
+export function createMarkupElementReader(options: MarkupOptions): MarkupElementReader {
+  const scanner = new Scanner('', options, limitsFor(options.limits));
+  return {
+    openTag(source, depth) {
+      checkUnicode(source, 0);
+      scanner.source = source; scanner.position = 0;
+      const open = scanner.openTag(depth);
+      if (scanner.position !== source.length) scanner.error('trailing-content');
+      return open;
+    },
+    closeNode: (open, children, text) => scanner.closeNode(open, children, text),
+    decode(raw) { checkUnicode(raw, 0); return scanner.decode(raw, 0); }
+  };
 }
 
 export interface MarkupParser {

@@ -6,7 +6,7 @@ import { parseProgram, visitAst } from '../../lyra-ui/scripts/lib/ast.mjs';
 import { isMainModule } from '../../lyra-ui/scripts/is-main-module.mjs';
 
 const packageDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const registrationEntries = ['dist/dashboard-binding.js', 'dist/gen-view.js'];
+const registrationEntries = ['dist/dashboard-binding.js', 'dist/devtools.js', 'dist/gen-view.js'];
 const normalize = file => file.replaceAll('\\', '/');
 
 /** Inspect emitted code, including its actual eager import graph, rather than compiler settings. */
@@ -38,7 +38,7 @@ export function findGenArtifactFindings(files, read, manifest) {
     graph.set(file, edges);
   }
   const declared = manifest.sideEffects;
-  if (!Array.isArray(declared) || JSON.stringify([...declared].map(value => value.replace(/^\.\//u, '')).sort()) !== JSON.stringify(registrationEntries)) findings.push('sideEffects must mark exactly the registration and dashboard binding entries');
+  if (!Array.isArray(declared) || JSON.stringify([...declared].map(value => value.replace(/^\.\//u, '')).sort()) !== JSON.stringify(registrationEntries)) findings.push('sideEffects must mark exactly the registration, devtools and dashboard binding entries');
   for (const entry of registrationEntries) if (!inventory.has(entry)) findings.push(`${entry}: registration entry is missing`);
   if (!inventory.has('dist/index.js')) findings.push('dist/index.js: root module is missing');
   const pending = ['dist/index.js'];
