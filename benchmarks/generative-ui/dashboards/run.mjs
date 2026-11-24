@@ -25,7 +25,7 @@ export const LIMITS = Object.freeze([
   'Offline and synthetic: every scenario is authored by hand, so no model is in the loop and nothing here measures how well any model writes these formats.',
   'Token counts come from the heuristic-v1 approximation (documented in tokens.mjs) and a bytes/4 baseline; they are not provider token counts and were not calibrated against any provider tokenizer.',
   'Times are single-process Node wall-clock samples of the consumer only (parse, partial materialization and validation); they exclude generation, network, rendering and browser work, and vary by machine.',
-  'Streaming is replayed in fixed-size chunks with no inter-chunk delay. The lyra-gen JSON and Markup parsers commit only at finish, so their first valid render equals completion by design; the patch and statement consumers are harness-local and admit partial trees.',
+  'Streaming is replayed in fixed-size chunks with no inter-chunk delay. The lyra-gen JSON and Markup parsers run in progressive mode and admit validated partial views; the patch and statement consumers are harness-local and admit partial trees.',
   'The statement-language and flat patch-stream encoders are minimal originals written for this comparison; they are not implementations of any third-party grammar and say nothing about those projects.',
   'Repair outcomes use an oracle replacement (the original node), which exercises lyra-gen repair plumbing and scope rules, not the ability of a model to produce a correct fix.',
   'Scenarios cover one catalog (dashboard overlay); results do not generalize to other catalogs, larger dashboards or other content.'

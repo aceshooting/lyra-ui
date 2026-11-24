@@ -10,8 +10,8 @@ grid, heatmap, sankey, tabs with charts, quota meters, and a refinement that add
 
 | Id | Encoding | Streaming consumer |
 |---|---|---|
-| `json` | lyra-gen JSON view, compact | `createJsonViewStream` (commits at finish) |
-| `markup` | Lyra Markup | `createMarkupParser` (commits at finish) |
+| `json` | lyra-gen JSON view, compact | `createJsonViewStream` with `progressive: true` |
+| `markup` | Lyra Markup | `createProgressiveMarkupParser` |
 | `json-patch` | RFC 6902 operations, one per line, over a flat `{ root, elements }` map | harness-local line consumer |
 | `statements` | one `name = Component(args)` line per node, positional arguments, forward references | harness-local line consumer |
 

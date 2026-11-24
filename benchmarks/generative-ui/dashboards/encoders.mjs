@@ -6,7 +6,7 @@
  * likewise a harness-local encoding in the style of RFC 6902 operations over `{ root, elements }`.
  */
 import { createJsonViewStream } from '../../../packages/lyra-gen/dist/json-stream.js';
-import { createMarkupParser } from '../../../packages/lyra-gen/dist/parser.js';
+import { createProgressiveMarkupParser } from '../../../packages/lyra-gen/dist/progressive.js';
 
 export const FORMATS = Object.freeze(['json', 'markup', 'json-patch', 'statements']);
 export const FORMAT_LABELS = Object.freeze({ json: 'lyra-gen JSON view', markup: 'Lyra Markup', 'json-patch': 'RFC 6902 patch stream (flat map)', statements: 'Statement language (OpenUI Lang style)' });
@@ -221,25 +221,25 @@ export function materializeStatements(definitions) {
 /**
  * A consumer accepts fixed-size text chunks. `push` returns `{ materialize }` after a complete line (call it
  * to build the partial tree; it is lazy so parse timing excludes it) or `{ failed }`; `finish` returns `{ view, status, codes }`. json and markup use the
- * lyra-gen parsers, which commit only at finish, so they never produce a partial tree.
+ * lyra-gen progressive parsers, whose validated partial views appear on some incomplete pushes.
  */
 export function createConsumer(format, context) {
   const { catalog, view: template } = context;
   const reference = { id: catalog.id, version: catalog.version };
   const frame = (root) => ({ version: '1', catalog: reference, surfaceId: template.surfaceId, revision: template.revision, root });
   if (format === 'json') {
-    const stream = createJsonViewStream({ catalog });
+    const stream = createJsonViewStream({ catalog, progressive: true });
     return {
-      partialSupport: false,
-      push: (chunk) => { const result = stream.push(chunk); return result.status === 'error' ? { failed: result.diagnostics[0]?.code } : {}; },
+      partialSupport: true,
+      push: (chunk) => { const result = stream.push(chunk); if (result.status === 'error') return { failed: result.diagnostics[0]?.code }; const partial = result.partial; return partial ? { materialize: () => partial.view } : {}; },
       finish: () => { const result = stream.finish(); return { view: result.view, status: result.status, codes: result.diagnostics.map(d => d.code), validatedInside: true }; }
     };
   }
   if (format === 'markup') {
-    const parser = createMarkupParser({ catalog: reference, surfaceId: template.surfaceId, revision: template.revision, allowedTags: Object.keys(catalog.components) });
+    const parser = createProgressiveMarkupParser({ catalog, surfaceId: template.surfaceId, revision: template.revision, allowedTags: Object.keys(catalog.components), progressive: {} });
     return {
-      partialSupport: false,
-      push: (chunk) => { const result = parser.push(chunk); return result.status === 'error' ? { failed: result.diagnostics[0]?.code } : {}; },
+      partialSupport: true,
+      push: (chunk) => { const result = parser.push(chunk); if (result.status === 'error') return { failed: result.diagnostics[0]?.code }; const partial = result.partial; return partial ? { materialize: () => partial.view } : {}; },
       finish: () => { const result = parser.finish(); return { view: result.view, status: result.status, codes: result.diagnostics.map(d => d.code), validatedInside: false }; }
     };
   }

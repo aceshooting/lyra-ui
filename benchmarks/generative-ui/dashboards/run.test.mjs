@@ -35,7 +35,7 @@ test('the harness reports every format for two scenarios and renders markdown', 
       assert.ok(Number.isFinite(entry.timing.firstValidRenderMs), `${scenario.id}/${format} first valid render`);
       assert.ok(entry.timing.firstValidByteFraction > 0 && entry.timing.firstValidByteFraction <= 1);
     }
-    assert.equal(scenario.formats.json.stream.partialRenderSupported, false);
+    assert.equal(scenario.formats.json.stream.partialRenderSupported, true);
     assert.equal(scenario.formats.statements.stream.partialRenderSupported, true);
     assert.ok(scenario.formats.statements.timing.firstValidByteFraction < 1, 'statement streams admit a partial tree early');
     assert.equal(scenario.viewCorruptions.length, 6);
