@@ -71,8 +71,19 @@ export function findNode(view: LyraGenView, nodeId: string): LyraGenNode | undef
   return undefined;
 }
 
-export type LyraGenPatchOperation = { readonly op: 'replace'; readonly nodeId: string; readonly node: LyraGenNode } | { readonly op: 'remove'; readonly nodeId: string };
+/**
+ * One scoped patch operation. `replace` and `remove` address an existing node by `nodeId`; `insert`
+ * adds a new node (whose id must not exist yet) under the existing `parentId`, immediately `before`
+ * or `after` one of its current children, or appended last when neither is given. Several inserts
+ * under one parent apply in operation order; untouched siblings keep their object identities.
+ */
+export type LyraGenPatchOperation =
+  | { readonly op: 'replace'; readonly nodeId: string; readonly node: LyraGenNode }
+  | { readonly op: 'remove'; readonly nodeId: string }
+  | { readonly op: 'insert'; readonly parentId: string; readonly node: LyraGenNode; readonly before?: string; readonly after?: string };
 export interface LyraGenPatch { readonly surfaceId: string; readonly expectedRevision: number; readonly operations: readonly LyraGenPatchOperation[] }
+type LyraGenInsertOperation = Extract<LyraGenPatchOperation, { readonly op: 'insert' }>;
+const OPERATION_MEMBERS: Readonly<Record<string, readonly string[]>> = { replace: ['op', 'nodeId', 'node'], remove: ['op', 'nodeId'], insert: ['op', 'parentId', 'node', 'before', 'after'] };
 
 /** Apply a single atomic revision. Untouched branches retain their object identities. */
 export function applyViewPatch(view: LyraGenView, patch: LyraGenPatch, catalog: LyraGenCatalog, options: LyraGenValidationOptions = {}): LyraGenValidationResult {
@@ -86,19 +97,50 @@ export function applyViewPatch(view: LyraGenView, patch: LyraGenPatch, catalog: 
   if (!object(admitted.value) || safe.surfaceId !== view.surfaceId || safe.expectedRevision !== view.revision || view.revision >= Number.MAX_SAFE_INTEGER) return failure('revision.conflict', 'The patch does not address the current surface revision.');
   if (Object.keys(safe).some(key => !['surfaceId', 'expectedRevision', 'operations'].includes(key)) || !Array.isArray(safe.operations) || safe.operations.length === 0 || safe.operations.length > 128) return failure('patch.invalid', 'Expected between one and 128 scoped operations.');
   const targets = new Map<string, LyraGenPatchOperation>();
+  const inserts = new Map<string, LyraGenInsertOperation[]>();
+  const insertedIds = new Set<string>();
   for (const operation of safe.operations) {
-    if (!object(operation) || typeof operation['op'] !== 'string' || !['replace', 'remove'].includes(operation['op']) || typeof operation['nodeId'] !== 'string' || Object.keys(operation).some(key => !['op', 'nodeId', ...(operation['op'] === 'replace' ? ['node'] : [])].includes(key))) return failure('patch.invalid', 'Invalid scoped operation.');
+    const members = object(operation) && typeof operation['op'] === 'string' && Object.hasOwn(OPERATION_MEMBERS, operation['op']) ? OPERATION_MEMBERS[operation['op']]! : undefined;
+    if (!object(operation) || !members || Object.keys(operation).some(key => !members.includes(key))) return failure('patch.invalid', 'Invalid scoped operation.');
+    if (operation['op'] === 'insert') {
+      const { parentId, node, before, after } = operation;
+      if (typeof parentId !== 'string' || !object(node) || typeof node['id'] !== 'string' || (before !== undefined && typeof before !== 'string') || (after !== undefined && typeof after !== 'string') || (before !== undefined && after !== undefined)) return failure('patch.invalid', 'An insert needs a parent, a node and at most one sibling anchor.');
+      const parent = findNode(view, parentId);
+      if (!parent) return failure('identity.conflict', 'Insert parents must exist.');
+      if (findNode(view, node['id']) || insertedIds.has(node['id'])) return failure('identity.conflict', 'Inserted nodes need a new identity.');
+      const anchor = before ?? after;
+      if (anchor !== undefined && !parent.children?.some(child => child.id === anchor)) return failure('identity.conflict', 'An insert anchor must be a current child of its parent.');
+      insertedIds.add(node['id']);
+      inserts.set(parentId, [...(inserts.get(parentId) ?? []), operation as unknown as LyraGenInsertOperation]);
+      continue;
+    }
+    if (typeof operation['nodeId'] !== 'string') return failure('patch.invalid', 'Invalid scoped operation.');
     if (targets.has(operation['nodeId']) || !findNode(view, operation['nodeId'])) return failure('identity.conflict', 'Patch targets must exist and be distinct.');
     if (operation['op'] === 'replace' && (!object(operation['node']) || operation['node']['id'] !== operation['nodeId'])) return failure('identity.conflict', 'Replacement must retain its target identity.');
     if (operation['op'] === 'remove' && operation['nodeId'] === view.root.id) return failure('patch.root', 'The root cannot be removed.');
     targets.set(operation['nodeId'], operation as unknown as LyraGenPatchOperation);
   }
   let conflict = false;
+  for (const list of inserts.values()) for (const insert of list) {
+    const anchor = insert.before ?? insert.after;
+    if (anchor !== undefined && targets.get(anchor)?.op === 'remove') conflict = true;
+  }
   const map = (node: LyraGenNode, ancestorTarget = false): LyraGenNode | undefined => {
     const operation = targets.get(node.id);
-    if (operation && ancestorTarget) conflict = true;
-    const children = node.children?.map(child => map(child, ancestorTarget || !!operation)).filter((child): child is LyraGenNode => child !== undefined);
+    const additions = inserts.get(node.id);
+    if ((operation || additions) && ancestorTarget) conflict = true;
+    if (additions && operation) conflict = true;
+    let children = node.children?.map(child => map(child, ancestorTarget || !!operation)).filter((child): child is LyraGenNode => child !== undefined);
     if (operation) return operation.op === 'remove' ? undefined : operation.node;
+    if (additions) {
+      const next = [...(children ?? [])];
+      for (const insert of additions) {
+        const anchor = insert.before ?? insert.after;
+        const index = anchor === undefined ? next.length : next.findIndex(child => child.id === anchor) + (insert.after !== undefined ? 1 : 0);
+        next.splice(index, 0, insert.node);
+      }
+      children = next;
+    }
     return children?.some((child, index) => child !== node.children?.[index]) || children?.length !== node.children?.length ? Object.freeze({ ...node, children: Object.freeze(children ?? []) }) : node;
   };
   const root = map(view.root)!;
@@ -107,6 +149,47 @@ export function applyViewPatch(view: LyraGenView, patch: LyraGenPatch, catalog: 
   const next: LyraGenView = Object.freeze({ ...view, root, revision: view.revision + 1 });
   // Markers already present in the base view stay; the patch itself can never add one (checked above).
   return validatePatchedView(next, view, catalog, options);
+}
+
+/** Node ids a revision added, changed or removed, each in document order. */
+export interface LyraGenViewChanges {
+  /** Ids present only in the next view. */
+  readonly added: readonly string[];
+  /** Ids present in both views whose own members (type, props, text, slot, bindings, reads, action) differ; child changes are reported on the children. */
+  readonly changed: readonly string[];
+  /** Ids present only in the previous view. */
+  readonly removed: readonly string[];
+}
+const sameJson = (left: unknown, right: unknown): boolean => {
+  if (Object.is(left, right)) return true;
+  if (left === null || right === null || typeof left !== 'object' || typeof right !== 'object' || Array.isArray(left) !== Array.isArray(right)) return false;
+  const a = left as Record<string, unknown>, b = right as Record<string, unknown>;
+  const keys = Object.keys(a);
+  return keys.length === Object.keys(b).length && keys.every(key => Object.hasOwn(b, key) && sameJson(a[key], b[key]));
+};
+const OWN_MEMBERS = ['type', 'props', 'text', 'slot', 'bindings', 'reads', 'action'] as const;
+const sameOwnMembers = (left: LyraGenNode, right: LyraGenNode): boolean => OWN_MEMBERS.every(key => sameJson(left[key], right[key]));
+const flatten = (root: LyraGenNode): LyraGenNode[] => {
+  const nodes: LyraGenNode[] = [];
+  const pending = [root];
+  while (pending.length) { const node = pending.pop()!; nodes.push(node); if (node.children) for (let index = node.children.length - 1; index >= 0; index--) pending.push(node.children[index]!); }
+  return nodes;
+};
+/** Compare two views of one surface by node identity; a reordered or reparented node is not changed. */
+export function diffViews(previous: LyraGenView, next: LyraGenView): LyraGenViewChanges {
+  const before = new Map(flatten(previous.root).map(node => [node.id, node]));
+  const after = flatten(next.root);
+  const seen = new Set<string>();
+  const added: string[] = [];
+  const changed: string[] = [];
+  for (const node of after) {
+    seen.add(node.id);
+    const old = before.get(node.id);
+    if (!old) added.push(node.id);
+    else if (old !== node && !sameOwnMembers(old, node)) changed.push(node.id);
+  }
+  const removed = [...before.keys()].filter(id => !seen.has(id));
+  return Object.freeze({ added: Object.freeze(added), changed: Object.freeze(changed), removed: Object.freeze(removed) });
 }
 const hasReservedType = (value: JsonValue): boolean => Array.isArray(value) ? value.some(hasReservedType) : object(value) && (value['type'] === LYRA_GEN_ISOLATED_TYPE || Object.values(value).some(hasReservedType));
 

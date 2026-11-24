@@ -3,7 +3,7 @@ import { formatTableValue, type TableValueFormat } from './catalogs/formatting.j
 import { initialCatalog } from './catalog.js';
 import { restoreSnapshot, type LyraGenSnapshot } from './runtime.js';
 import { readPointer } from './references.js';
-import { resolveLimits, snapshotJson } from './schema.js';
+import { resolveLimits, snapshotJson, validateSchema } from './schema.js';
 import type { JsonObject, JsonValue, LyraGenCatalog, LyraGenDiagnostic, LyraGenLimits, LyraGenNode, LyraGenResult } from './types.js';
 import type { LyraGenViewElement } from './gen-view.class.js';
 
@@ -39,6 +39,11 @@ const properties = (node: LyraGenNode, snapshot: LyraGenSnapshot): Record<string
   for (const [key, pointer] of Object.entries(node.bindings ?? {})) {
     const value = readPointer(snapshot.state.values, pointer);
     if (value.ok) values[key] = value.value;
+  }
+  for (const [key, pointer] of Object.entries(node.reads ?? {})) {
+    const value = readPointer(snapshot.state.values, pointer);
+    const schema = initialCatalog.components[node.type]?.properties[key];
+    if (value.ok && schema && validateSchema(value.value, schema).ok) values[key] = value.value;
   }
   return values;
 };

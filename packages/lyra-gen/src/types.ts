@@ -85,6 +85,13 @@ export interface LyraGenNode {
   readonly slot?: string;
   /** Component property to local-state JSON Pointer. */
   readonly bindings?: Readonly<Record<string, string>>;
+  /**
+   * Component property read from local state: property to the JSON Pointer of a state path that a
+   * binding in the same view owns (or a path inside it). The read value replaces `props[property]`
+   * while it exists and satisfies the property schema; otherwise `props[property]` applies. Reads
+   * never write state, and URL sinks cannot be read.
+   */
+  readonly reads?: Readonly<Record<string, string>>;
   readonly action?: LyraGenActionBinding;
 }
 export interface LyraGenCatalogReference { readonly id: string; readonly version: string }

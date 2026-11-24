@@ -19,7 +19,8 @@ export const LYRA_GEN_ISOLATED_TYPE = 'lyra-gen:isolated';
 export const ISOLATABLE_DIAGNOSTIC_CODES: readonly string[] = Object.freeze([
   'catalog.component', 'props.invalid', 'props.unknown', 'props.required',
   'node.text', 'node.slot', 'node.member',
-  'children.type', 'children.forbidden', 'a11y.name', 'block.invalid'
+  'children.type', 'children.forbidden', 'a11y.name', 'block.invalid',
+  'read.invalid', 'read.unknown', 'read.pointer', 'read.unowned', 'read.conflict'
 ]);
 
 /**
@@ -82,7 +83,7 @@ const markersIn = (root: JsonValue | undefined): { readonly nodeId: string; read
 const ownerPattern = /^\/root(?:\/children\/\d+)*/u;
 export const object = (value: unknown): value is Record<string, import('./types.js').JsonValue> => value !== null && typeof value === 'object' && !Array.isArray(value);
 
-const nodeMembers = new Set(['id', 'type', 'props', 'children', 'text', 'slot', 'bindings', 'action']);
+const nodeMembers = new Set(['id', 'type', 'props', 'children', 'text', 'slot', 'bindings', 'reads', 'action']);
 
 export const isNodeMember = (key: string): boolean => nodeMembers.has(key);
 export const isValidatedView = (view: import('./types.js').LyraGenView): boolean => validatedViews.has(view);
@@ -132,6 +133,7 @@ export function validateCanonicalView(input: unknown, catalog: import('./types.j
   let overflowed = false;
   const bindings = new Set<string>();
   const bindingAncestors = new Set<string>();
+  const reads: { readonly pointer: string; readonly path: string }[] = [];
   const issue = (code: string, path: string, message: string, hint?: string, boundary = false): void => {
     const diagnostic: LyraGenDiagnostic = { code, path, message, severity: 'error', ...(hint ? { hint } : {}) };
     errorCount++;
@@ -180,6 +182,17 @@ export function validateCanonicalView(input: unknown, catalog: import('./types.j
         const parsed = parsePointer(pointer);
         if (!parsed.ok || pointer === '') { issue('binding.pointer', bindingPath, 'Bindings need a safe non-root JSON Pointer.'); continue; }
         if (!registerBinding(bindings, bindingAncestors, pointer)) issue('identity.binding', bindingPath, 'State paths must have exactly one nonoverlapping owner.');
+      }
+    }
+    if (value['reads'] !== undefined) {
+      if (!object(value['reads'])) issue('read.invalid', `${path}/reads`, 'Reads must map properties to JSON Pointers.');
+      else for (const [property, pointer] of Object.entries(value['reads'])) {
+        const readPath = `${path}/reads/${escapePointerSegment(property)}`;
+        if (!Object.hasOwn(component.properties, property) || typeof pointer !== 'string') { issue('read.unknown', readPath, 'Read property is not declared by the catalog.'); continue; }
+        if (isContentUrlProperty(property, component)) { issue('content.url-binding', readPath, 'URL sinks cannot read state.'); continue; }
+        if (object(value['bindings']) && Object.hasOwn(value['bindings'], property)) { issue('read.conflict', readPath, 'A property cannot both write and read state.'); continue; }
+        if (!parsePointer(pointer).ok || pointer === '') { issue('read.pointer', readPath, 'Reads need a safe non-root JSON Pointer.'); continue; }
+        reads.push({ pointer, path: readPath });
       }
     }
     if (value['action'] !== undefined) {
@@ -232,6 +245,8 @@ export function validateCanonicalView(input: unknown, catalog: import('./types.j
     return visit(result, path, parent, inForm, true);
   };
   const root = visit(view['root'], '/root');
+  // A read addresses state some binding in this view owns: the owned path itself or a path inside it.
+  for (const read of reads) if (!ownedBy(bindings, read.pointer)) issue('read.unowned', read.path, 'Reads must address a state path owned by a binding in this view.');
   const finish = (finalRoot: JsonValue | undefined, warnings: readonly LyraGenDiagnostic[], contained: ReadonlyMap<string, readonly LyraGenDiagnostic[]>): LyraGenValidationResult => {
     const rewritten = finalRoot !== view['root'];
     const final = (rewritten ? Object.freeze({ ...view, root: finalRoot }) : view) as unknown as LyraGenView;
@@ -278,4 +293,10 @@ function registerBinding(owned: Set<string>, ancestors: Set<string>, pointer: st
     ancestors.add(ancestor);
   }
   return unique;
+}
+
+/** Whether a pointer is an owned binding path or lies inside one. */
+function ownedBy(owned: ReadonlySet<string>, pointer: string): boolean {
+  for (let current = pointer; current; current = current.slice(0, current.lastIndexOf('/'))) if (owned.has(current)) return true;
+  return false;
 }

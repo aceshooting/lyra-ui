@@ -251,11 +251,14 @@ class Scanner {
     const bindings = attrs['bindings'];
     if (bindings !== undefined && (bindings === null || Array.isArray(bindings) || typeof bindings !== 'object'
       || Object.entries(bindings).some(([key, value]) => forbidden.has(key.toLowerCase()) || /^on/i.test(key) || typeof value !== 'string' || (value !== '' && !value.startsWith('/')) || /~(?![01])/u.test(value)))) this.error('invalid-bindings', start);
+    const reads = attrs['reads'];
+    if (reads !== undefined && (reads === null || Array.isArray(reads) || typeof reads !== 'object'
+      || Object.entries(reads).some(([key, value]) => forbidden.has(key.toLowerCase()) || /^on/i.test(key) || typeof value !== 'string' || !value.startsWith('/') || /~(?![01])/u.test(value)))) this.error('invalid-reads', start);
     const action = attrs['action'];
     if (action !== undefined && (action === null || Array.isArray(action) || typeof action !== 'object'
       || !('name' in action) || typeof action['name'] !== 'string' || !action['name'] || Object.keys(action).some(key => key !== 'name' && key !== 'payload'))) this.error('invalid-action', start);
     const props: Record<string, JsonValue> = Object.create(null) as Record<string, JsonValue>;
-    for (const [key, value] of Object.entries(attrs)) if (!['id', 'slot', 'text', 'bindings', 'action'].includes(key)) props[key] = value;
+    for (const [key, value] of Object.entries(attrs)) if (!['id', 'slot', 'text', 'bindings', 'reads', 'action'].includes(key)) props[key] = value;
     const node: LyraGenNode = {
       id, type,
       ...(Object.keys(props).length ? { props } : {}),
@@ -263,6 +266,7 @@ class Scanner {
       ...(typeof attrs['text'] === 'string' ? { text: attrs['text'] } : !children.length && text.length && (!/^[ \t\r\n]*$/.test(text) || type === 'text' || type === 'heading') ? { text } : {}),
       ...(typeof attrs['slot'] === 'string' ? { slot: attrs['slot'] } : {}),
       ...(bindings !== undefined ? { bindings: bindings as Readonly<Record<string, string>> } : {}),
+      ...(reads !== undefined ? { reads: reads as Readonly<Record<string, string>> } : {}),
       ...(action !== undefined ? { action: action as unknown as LyraGenNode['action'] } : {})
     };
     this.sourceMap[id] = { start, end: this.position, attributes: ranges };

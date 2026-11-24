@@ -130,7 +130,7 @@ lyra-flags 2.x.
 
 | Program | Plan |
 |---|---|
-| [Lyra Gen](roadmap/generative-ui.md) | 1.x minors: interoperability, then [persistent dashboards](roadmap/generative-ui.md#saved-document-and-sharing-contract); [evaluation campaigns](roadmap/generative-ui-evaluation.md); [website and live generation](roadmap/generative-ui-website.md) last. Advanced capabilities after feasibility ([backlog](roadmap/generative-ui-backlog.md)). |
+| [Lyra Gen](roadmap/generative-ui.md) | 1.x minors: interoperability, then [persistent dashboards](roadmap/generative-ui.md#saved-document-and-sharing-contract) and the tiered [live dashboard catalog expansion](roadmap/generative-ui-backlog.md#live-dashboard-catalog-expansion) (KPI roles first, then structure and charts, then `lr-map` and adapter-backed data roles); [evaluation campaigns](roadmap/generative-ui-evaluation.md); [website and live generation](roadmap/generative-ui-website.md) last. Advanced capabilities after feasibility ([backlog](roadmap/generative-ui-backlog.md)). |
 | [lyra-docs](roadmap/document-editing.md) | Phases 4 to 8 (pagination and Word fidelity, agent operations, review and tracked changes, collaboration and history, export and final qualification) toward 1.0.0, which also consolidates document viewers and editors ([qualification record](roadmap/document-editing-feasibility.md)). |
 | [lyra-map](roadmap/map-adoption.md) | 2.x minors for geospatial scenes and open map requests. |
 | [lyra-3d](roadmap/lyra-3d.md) | 1.x minors as above. |

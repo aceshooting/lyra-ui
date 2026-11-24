@@ -234,7 +234,10 @@ formatting keeps raw source values intact.
 ## Browser contract
 
 Set `.document` to a `LyraGenView` and `.catalog` to its trusted catalog. `.bindingState` supplies
-JSON values for declared bindings. `.controlled` selects host-controlled state; listen for
+JSON values for declared bindings. A node's `reads` maps a declared, non-URL property to a state
+path that a binding in the same view owns, so a slider bound to `/limit` can drive a sibling
+gauge or stat live without a new revision; a read value applies only while it satisfies the
+property schema, otherwise the node's own `props` value stays. `.controlled` selects host-controlled state; listen for
 `lr-gen-state-change` and supply the accepted state. `.enabledActions` can restrict available
 catalog actions further. `.confirmAction(action, signal)` supplies host approval for catalog
 actions marked `confirm`. The [approval example](docs/approval.md) connects that callback to a
@@ -248,9 +251,16 @@ rendered native form state. Preserve surface and node identities when replacing 
 state belongs to the same logical controls.
 
 Read-only `.status` is `empty`, `loading`, `ready`, `error` or `interrupted`; `.busy` is true during
-loading and is reflected through host `aria-busy`. `lr-gen-ready` carries `{ surfaceId, revision }`
+loading and is reflected through host `aria-busy`. `lr-gen-ready` carries `{ surfaceId, revision, changes? }`
 once after that accepted revision's encountered modules and generated child updates settle.
-It does not certify remote resources fetched independently by a child. Readiness does not move
+`changes` (absent for a surface's first ready revision) lists the node ids `added`, `changed` and
+`removed` since the previous ready revision, as `diffViews(previous, next)` computes; the added
+and changed components also carry the unstyled `changed` part until the next ready revision, so a
+host can highlight a refinement with `lr-gen-view::part(changed)` (honor `prefers-reduced-motion`).
+It does not certify remote resources fetched independently by a child.
+`elementForNode(nodeId)` returns a node's rendered element in the current revision (or
+`undefined` while it is unknown, loading, failed or isolated); every rendered element also carries
+`data-gen-id` and `data-gen-type`, and keeps its identity across revisions and keyed reorders. Readiness does not move
 focus or announce completion automatically; the chat host decides its completion announcement.
 
 `createTypedCatalog()` from `typed-catalog.js` preserves action names and payload types from const

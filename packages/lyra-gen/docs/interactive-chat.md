@@ -70,7 +70,11 @@ document.body.append(transcript);
 
 Keep the same part id and generated element while sibling prose changes. For a refinement, update
 `.document` with the same `surfaceId`, stable logical node ids and a higher revision. Use
-`applyViewPatch()` for atomic identity-addressed replacements/removals with `expectedRevision`.
+`applyViewPatch()` for atomic identity-addressed replacements, removals and insertions with
+`expectedRevision`. An `insert` names an existing `parentId`, a node with a new id and optionally
+one current child as `before` or `after` (otherwise it appends), so a follow-up that adds a panel
+leaves every sibling untouched. After the refinement renders, `lr-gen-ready` reports the added,
+changed and removed ids in `changes`, and the `changed` part lets the host highlight them.
 Conflicts reject; they must not overwrite a newer user interaction or be retried against a guessed
 revision.
 

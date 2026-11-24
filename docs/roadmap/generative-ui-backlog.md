@@ -284,6 +284,32 @@ those fundamentals until dashboard delivery.
 | DASH-15 | 3 / P1 | Responsive layouts, panel lifecycle and accessible alternatives for rearrangement and resizing. | Keyboard-only, RTL, narrow-allocation and restored-layout fixtures retain logical focus and announce meaningful changes. | Qualified dashboard grid, composition accessibility and layout persistence |
 | DASH-16 | 3 / P1 | Shareable dashboard snapshots with explicit permissions, data redaction, schema migration and reproducible restore. | Cross-version fixtures reject unauthorized references and preserve the permitted presentation and state without replaying actions. | Versioned snapshots, catalog compatibility and host authorization |
 
+## Live dashboard catalog expansion
+
+The initial catalog deliberately started from about 25 qualified roles (CAT-03). Live dashboards
+need a wider, still reviewed set: every role remains an explicit overlay with bounded schemas,
+accessible-name rules, child and slot rules and lazy loading, never an automatic exposure of a
+library component. Expansion is ordered so the tooling that makes a role cheap to review lands
+first, plain-data roles follow, and roles that need adapters, host-owned resources or heavy
+peers come last. Roles are offered to a model through presets (`subsetCatalog()`), so a larger
+catalog does not grow every prompt; an unused role costs no bundle because it loads lazily.
+
+The patch `insert` operation, the `changes` detail and `changed` part of `lr-gen-ready`, and
+node `reads` from owned local state are delivered groundwork for this expansion.
+
+| ID | Tier / priority | Proposed deliverable | Acceptance evidence | Dependencies |
+|---|---|---|---|---|
+| CAT-13 | 0 / P0 | Role scaffold that drafts an overlay from the published component manifest, plus one shared role conformance suite | A drafted overlay bounds every scalar member, flags callbacks, element references and URL-like members for review, and cannot be registered unreviewed; every role passes the shared validation, populated render, axe, RTL and reduced-motion cases. | Catalog overlay contract (CAT-01) and catalog lint (CAT-09) |
+| CAT-14 | 0 / P0 | Dashboard and geo presets with per-role prompt-size budgets | Each preset produces a self-contained prompt and validator; adding a role reports its prompt-size delta against the preset budget. | Catalog subsets (CAT-04) |
+| CAT-15 | 1 / P1 | KPI and status roles: `lr-gauge` (including thresholds), `lr-sparkline` (numeric values), `lr-progress-bar`, `lr-progress-ring`, `lr-budget-meter`, `lr-number-ticker`, `lr-funnel` and `lr-poll-status` | Each role renders from plain bounded JSON only (host formatters stay host properties), composes with `reads` so a bound control updates it live, and passes the conformance suite. | CAT-13 |
+| CAT-16 | 2 / P1 | Structure and richer charts: `lr-tab-group` with `lr-tab-panel`, `lr-details`, `lr-timeline` with its items, a bounded `lr-chart` profile (area, stacked and dual-axis series without plugins or raw configuration), `lr-treemap`, `lr-sankey` and `lr-word-cloud` | Nesting rules reject misplaced children; chart profiles expose no executable or configuration escape hatch; every chart keeps its data-table alternative. | CAT-13, CAT-15 |
+| CAT-17 | 3 / P1 | Geo preset with `lr-map`: the host owns basemap, style, tiles, engine and image providers; generated content supplies only bounded markers, choropleth values keyed to a host-declared region set, camera and legend options | No generated value can select a URL, provider or style; marker and region ceilings hold; keyboard, legend and reduced-motion behavior pass the conformance suite; the map loads only when the preset is active. | CAT-13, CAT-14, URL sink policy (SEC) |
+| CAT-18 | 3 / P2 | Adapter-backed data roles: `lr-heatmap` (matrix data without generated reducers), a read-only client-mode `lr-data-grid` subset, and `lr-filter-bar`/`lr-time-range` as dashboard controls bound to shared state | Adapters build the component inputs from bounded JSON; no callback, server mode or row hook is reachable from generated content; controls drive linked panels through shared state. | CAT-13, DASH-09, DASH-12 |
+| DASH-25 | 1–2 / P0 | Host data streams written into owned state paths so read-bound panels update without a new revision | Burst and slow-consumer fixtures update values within frame budgets and never reorder or present stale values as current. | Node `reads`, DASH-11 |
+| DASH-26 | 1–2 / P1 | Per-panel freshness, stale, partial and refresh states, shown with `lr-poll-status` | Each panel shows its own source age and refresh state; a failed refresh keeps the last valid value with its visible age. | DASH-13, CAT-15 |
+| DASH-27 | 2 / P1 | Panel add and remove edits for generated dashboard layouts, using patch insertion | Adding or removing a panel keeps every other panel's identity, state and position; grid constraints and `maxPanels` still hold. | Patch `insert`, DASH-04 |
+| DASH-28 | 2 / P1 | Shared dashboard time range applied consistently to every time-based panel | One time-range change refreshes each dependent panel once, without loops, and restores with saved dashboards. | DASH-09, DASH-17 |
+
 ## Saved dashboards in applications
 
 Saved, shareable dashboards are committed stage 3 scope. The stage 0–1 schema and privacy

@@ -4,7 +4,7 @@ import { LyraElement } from '@aceshooting/lyra-ui/utilities/lyra-element.js';
 import { acquireAnnouncementSink, type AnnouncementSink } from '@aceshooting/lyra-ui/utilities/announcer.js';
 import { initialCatalog } from './catalogs/examples.js';
 import { validateContentProperties } from './content-policy.js';
-import { createAction, createSurfaceState, reconcileSurfaceState, setSurfaceState, restoreSnapshot as validateSnapshot, type LyraGenSnapshot, type LyraGenSurfaceState } from './runtime.js';
+import { createAction, createSurfaceState, diffViews, reconcileSurfaceState, setSurfaceState, restoreSnapshot as validateSnapshot, type LyraGenSnapshot, type LyraGenSurfaceState, type LyraGenViewChanges } from './runtime.js';
 import { validateCanonicalView } from './isolation.js';
 import { readPointer } from './references.js';
 import { resolveLimits, snapshotJson, validateSchema } from './schema.js';
@@ -15,7 +15,15 @@ import { styles } from './gen-view.styles.js';
 import type { JsonValue, LyraGenAction, LyraGenCatalog, LyraGenComponent, LyraGenDiagnostic, LyraGenLimits, LyraGenNode, LyraGenRecoveryMode, LyraGenResult, LyraGenView } from './types.js';
 
 export type LyraGenViewStatus = 'empty' | 'loading' | 'ready' | 'error' | 'interrupted';
-export interface LyraGenReady { readonly surfaceId: string; readonly revision: number }
+export interface LyraGenReady {
+  readonly surfaceId: string;
+  readonly revision: number;
+  /**
+   * Nodes this revision added, changed or removed relative to the previous ready revision of the
+   * same surface; absent for a surface's first ready revision.
+   */
+  readonly changes?: LyraGenViewChanges;
+}
 export type LyraGenConfirmation = (action: LyraGenAction, signal: AbortSignal) => boolean | Promise<boolean>;
 export interface LyraGenStateChange {
   readonly surfaceId: string;
@@ -94,7 +102,7 @@ const RENDER_SLICE_MS = 4;
  * have settled; it does not certify remote data or media loaded independently by a child.
  * Readiness never moves focus or announces completion automatically.
  *
- * @event {CustomEvent<LyraGenReady>} lr-gen-ready - Once per successfully rendered surface revision, after child updates settle.
+ * @event {CustomEvent<LyraGenReady>} lr-gen-ready - Once per successfully rendered surface revision, after child updates settle; `changes` lists the node ids added, changed or removed since the previous ready revision of the same surface.
  * @event {CustomEvent<LyraGenAction>} lr-gen-action - A validated host action request; no work is executed.
  * @event {CustomEvent<LyraGenStateChange>} lr-gen-state-change - User edit or reset proposal, including complete bound values.
  * @event {CustomEvent<{diagnostics: readonly LyraGenDiagnostic[]}>} lr-gen-error - Validation, loading, or action failure.
@@ -107,6 +115,7 @@ const RENDER_SLICE_MS = 4;
  * @csspart loading - A pending component's localized placeholder.
  * @csspart error - A localized failure message.
  * @csspart empty - Empty-document message.
+ * @csspart changed - A generated component added or changed by the latest ready revision of the same surface; cleared at the next ready revision. Unstyled by default, so a host highlight (for example a short animation) is opt-in and should respect `prefers-reduced-motion`.
  * @csspart isolated - Non-interactive fallback that replaces one component contained by `recovery="isolate"`.
  * @cssprop --lr-gen-loading-block-size - Default reserved block size during loading.
  */
@@ -160,6 +169,7 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
   private processedBindingState?: JsonValue;
   private readinessTask?: AbortController;
   private emittedReady?: LyraGenReady;
+  private readyView?: LyraGenView;
   private readinessErrorGeneration?: number;
   private accepted?: LyraGenView;
   private acceptedSource?: LyraGenView;
@@ -448,8 +458,13 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
       if (!current()) return;
       this.setReadiness('ready');
       if (this.emittedReady?.surfaceId === accepted.surfaceId && this.emittedReady.revision === accepted.revision) return;
-      const detail = { surfaceId: accepted.surfaceId, revision: accepted.revision };
+      const previous = this.readyView?.surfaceId === accepted.surfaceId ? this.readyView : undefined;
+      const changes = previous ? diffViews(previous, accepted) : undefined;
+      const marked = new Set([...(changes?.added ?? []), ...(changes?.changed ?? [])]);
+      for (const record of this.nodes.values()) if (record.ready && record.node.type !== LYRA_GEN_ISOLATED_TYPE) record.element.part.toggle('changed', marked.has(record.node.id));
+      const detail: LyraGenReady = changes ? { surfaceId: accepted.surfaceId, revision: accepted.revision, changes } : { surfaceId: accepted.surfaceId, revision: accepted.revision };
       this.emittedReady = detail;
+      this.readyView = accepted;
       this.emit('lr-gen-ready', detail);
     }).catch(() => {
       if (!current()) return;
@@ -582,6 +597,12 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
         const fallback = snapshotJson(next.defaults.get(propertyName));
         if (fallback.ok) values[propertyName] = fallback.value;
       }
+    }
+    // A read value replaces the generated property only while it exists and satisfies the property schema.
+    for (const [propertyName, pointer] of Object.entries(node.reads ?? {})) {
+      const value = readPointer(this.localState?.values ?? {}, pointer);
+      const schema = definition.properties[propertyName];
+      if (value.ok && schema && validateSchema(value.value, schema, this.resolvedLimits).ok) values[propertyName] = value.value;
     }
     const locale = this.effectiveLocale;
     if (next.preparedInputs?.locale !== locale || !jsonEqual(next.preparedInputs.values, values)) {
@@ -806,6 +827,18 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
     this.bindingState = restored.value.state.values;
     this.requestUpdate();
     return restored;
+  }
+
+  /**
+   * The rendered element of a generated node in the current committed revision, or `undefined`
+   * when the id is unknown, still loading, failed or isolated. Element identity is stable across
+   * revisions and keyed reorders while the node keeps its id and type; every rendered element also
+   * carries `data-gen-id` and `data-gen-type`. Use it to highlight, scroll to or annotate a node,
+   * never to change generated properties.
+   */
+  elementForNode(nodeId: string): HTMLElement | undefined {
+    const record = this.nodes.get(nodeId);
+    return record?.ready && record.node.type !== LYRA_GEN_ISOLATED_TYPE && record.element.isConnected ? record.element : undefined;
   }
 
   /** Reset generated native forms to their accepted defaults and publish state proposals. */

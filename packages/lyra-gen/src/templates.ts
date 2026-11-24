@@ -50,7 +50,7 @@ export function expandTemplate(template: LyraGenTemplate, rows: unknown, catalog
   const sourceNodes = new Map<string, Record<string, JsonValue>>();
   let sourceFailure = false;
   const inspect = (input: unknown): void => {
-    if (!object(input) || Object.keys(input).some(key => !['id', 'type', 'props', 'children', 'text', 'slot', 'bindings', 'action'].includes(key)) || typeof input['id'] !== 'string' || !identity.test(input['id']) || sourceIds.has(input['id']) || typeof input['type'] !== 'string' || !Object.hasOwn(catalog.components, input['type'])) { sourceFailure = true; return; }
+    if (!object(input) || Object.keys(input).some(key => !['id', 'type', 'props', 'children', 'text', 'slot', 'bindings', 'reads', 'action'].includes(key)) || typeof input['id'] !== 'string' || !identity.test(input['id']) || sourceIds.has(input['id']) || typeof input['type'] !== 'string' || !Object.hasOwn(catalog.components, input['type'])) { sourceFailure = true; return; }
     sourceIds.add(input['id']);
     sourceNodes.set(input['id'], input);
     if (input['children'] !== undefined) {
@@ -112,11 +112,17 @@ export function expandTemplate(template: LyraGenTemplate, rows: unknown, catalog
         if (typeof pointer !== 'string' || pointer === '' || !parsePointer(pointer).ok) mappingFailure = failure('template.binding', 'Template bindings need safe non-root local pointers.');
         else bindings[property] = `${scope}${pointer}`;
       }
+      const reads: Record<string, string> = {};
+      for (const [property, pointer] of Object.entries(node.reads ?? {})) {
+        if (typeof pointer !== 'string' || pointer === '' || !parsePointer(pointer).ok) mappingFailure = failure('template.binding', 'Template reads need safe non-root local pointers.');
+        else reads[property] = `${scope}${pointer}`;
+      }
       return {
         ...node, id,
         ...(node.props || mapping?.props ? { props } : {}),
         ...(text !== undefined ? { text } : {}),
         ...(node.bindings ? { bindings } : {}),
+        ...(node.reads ? { reads } : {}),
         ...(node.children ? { children: node.children.map(materialize) } : {})
       };
     };

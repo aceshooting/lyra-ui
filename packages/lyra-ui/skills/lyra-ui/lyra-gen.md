@@ -63,9 +63,15 @@ view, and isolate again on load.
 Bind `.document`, `.catalog` and JSON-valued `.bindingState` as properties. For `.controlled`
 edits, handle `lr-gen-state-change` and supply the accepted values. Keep a generated element stable
 across sibling prose updates; refinements retain logical ids and advance the same surface's
-revision. `applyViewPatch()` checks the expected revision. Reassigning `.bindingState` replaces
-local state, so do not replay an old value over newer edits. `lr-gen-ready` reports renderer/child
-update settlement, not remote-data completion; focus and completion announcements remain host-owned.
+revision. `applyViewPatch()` checks the expected revision; its operations are `replace`, `remove`
+and `insert` (`{ op: 'insert', parentId, node, before? | after? }`, appended when no anchor), so
+adding a panel never restates its siblings. Reassigning `.bindingState` replaces local state, so do
+not replay an old value over newer edits. A node's `reads` shows owned state in another node's
+property (slider value driving a gauge) without a new revision. `lr-gen-ready` reports renderer/child
+update settlement, not remote-data completion, and its `changes` lists added/changed/removed node
+ids since the previous ready revision (also marked by the `changed` part), and
+`elementForNode(id)` returns a node's stable rendered element for highlighting or scrolling; focus and completion
+announcements remain host-owned.
 
 Authorize every `lr-gen-action` at the actual effect boundary. Catalog `confirm` actions require
 `.confirmAction(action, signal)`; an absent callback denies them. Respect cancellation and stale

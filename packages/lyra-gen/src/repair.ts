@@ -65,7 +65,7 @@ export class LyraGenRepairSession {
       if (!admitted.ok) return admitted;
       base = admitted.value as unknown as LyraGenView;
       const replace = (node: LyraGenNode): LyraGenNode => {
-        const operation = scoped.operations.find(candidate => candidate.nodeId === node.id);
+        const operation = scoped.operations.find(candidate => candidate.op !== 'insert' && candidate.nodeId === node.id);
         if (operation?.op === 'replace') return operation.node;
         return node.children ? { ...node, children: node.children.map(replace) } : node;
       };

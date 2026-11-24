@@ -304,6 +304,61 @@
       "isolatedIds": [],
       "code": "catalog.component",
       "note": ""
+    },
+    {
+      "name": "read-invalid",
+      "file": "read-invalid.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "read.invalid",
+      "note": ""
+    },
+    {
+      "name": "read-unknown",
+      "file": "read-unknown.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "read.unknown",
+      "note": ""
+    },
+    {
+      "name": "read-pointer",
+      "file": "read-pointer.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "read.pointer",
+      "note": ""
+    },
+    {
+      "name": "read-unowned",
+      "file": "read-unowned.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "read.unowned",
+      "note": ""
+    },
+    {
+      "name": "read-conflict",
+      "file": "read-conflict.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "read.conflict",
+      "note": ""
     }
   ]
 }

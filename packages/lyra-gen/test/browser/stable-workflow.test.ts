@@ -9,7 +9,7 @@ import { sinkTexts } from '../../../lyra-ui/test/announcements.js';
 import { connectGeneratedApproval } from '../../examples/approval.js';
 import { createCatalog, initialCatalog } from '../../src/catalog.js';
 import { LyraGenViewElement } from '../../src/gen-view.js';
-import type { LyraGenStateChange } from '../../src/gen-view.class.js';
+import type { LyraGenReady, LyraGenStateChange } from '../../src/gen-view.class.js';
 import { createSnapshot, createSurfaceState } from '../../src/runtime.js';
 import type { LyraGenAction, LyraGenView } from '../../src/types.js';
 
@@ -140,7 +140,7 @@ for (const copy of scenarios) {
       expect(query<HTMLInputElement>(restored.shadowRoot!, '[data-gen-id="answer"]').value).to.equal(copy.value);
       const revisionReady = oneEvent(restored, 'lr-gen-ready');
       restored.document = documentFor(1, copy.heading);
-      expect((await revisionReady as CustomEvent<{ surfaceId: string; revision: number }>).detail).to.deep.equal({ surfaceId: document.surfaceId, revision: 1 });
+      expect((await revisionReady as CustomEvent<LyraGenReady>).detail).to.deep.equal({ surfaceId: document.surfaceId, revision: 1, changes: { added: [], changed: ['heading', 'answer'], removed: [] } });
       await ready(restored);
       expect(query(restored.shadowRoot!, '[data-gen-id="heading"]').textContent).to.equal(`${copy.heading} 1`);
       expect(query<HTMLInputElement>(restored.shadowRoot!, '[data-gen-id="answer"]').value, 'Restored dirty value wins over the next model default').to.equal(copy.value);

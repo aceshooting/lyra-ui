@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 5 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 6 parts, 6 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---

@@ -107,7 +107,7 @@ export function exportLyraTemplate(view: LyraGenView, catalog: LyraGenCatalog, p
     const text = node.text !== undefined && policy.allowText(node, node.text) ? `\${${expression(node.text)}}` : '';
     if (component.accessibleName?.required && !((component.accessibleName.text && node.text?.trim() && text) || component.accessibleName.properties?.some(name => exportedProperties.has(name) && typeof node.props?.[name] === 'string' && (node.props[name] as string).trim()))) return error(path, 'Accessible name cannot be exported after redaction.');
     if (node.text && !text) diagnostics.push({ code: 'export.redacted', path: `${path}/text`, message: 'Text omitted by export policy.', severity: 'warning' });
-    if (node.action || node.bindings) diagnostics.push({ code: 'export.effects-omitted', path, message: 'Host actions and runtime bindings require application wiring.', severity: 'warning' });
+    if (node.action || node.bindings || node.reads) diagnostics.push({ code: 'export.effects-omitted', path, message: 'Host actions and runtime bindings require application wiring.', severity: 'warning' });
     const children = (node.children ?? []).map((child, index) => render(child, `${path}/children/${index}`, depth + 1)).join('');
     ancestors.delete(node);
     const layout = ` data-gen-type=\${${expression(node.type)}}`;
