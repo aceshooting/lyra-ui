@@ -2,7 +2,7 @@ import type { LyraGenComponent, LyraGenNode, LyraGenSchema } from '../types.js';
 import { array, boolean, choice, count, documentation, label, number, object, string } from './shared.js';
 
 /**
- * Technical-answer roles (tier 4): code, JSON, diffs, test runs and traces. Content is plain text
+ * Technical-answer roles: code, JSON, diffs, test runs and traces. Content is plain text
  * or bounded JSON; copy-to-clipboard, search, editing, highlight anchors, remote sources and
  * callbacks stay host-owned.
  */

@@ -3,7 +3,7 @@ import type { LyraGenSchema } from '../types.js';
 import { appearance, array, boolean, choice, count, documentation, label, number, object, size, string, variant } from './shared.js';
 
 /**
- * Answer and analytics roles (tier 4). Values stay raw (numbers, ISO dates) and the component
+ * Answer and analytics roles. Values stay raw (numbers, ISO dates) and the component
  * formats them with the host locale; images, links, callbacks and editing stay host-owned.
  */
 const example = (id: string, type: string, props: Record<string, unknown>, extra: Partial<LyraGenNode> = {}): LyraGenNode => ({ id, type, props, ...extra } as LyraGenNode);
@@ -210,5 +210,5 @@ const statistics: Readonly<Record<string, LyraGenComponent>> = {
   },
 };
 
-/** Tier 4 roles, in a stable order. */
+/** Answer and analytics roles, in a stable order. */
 export const answerRoles: Readonly<Record<string, LyraGenComponent>> = { ...formatting, ...status, ...structure, ...statistics };

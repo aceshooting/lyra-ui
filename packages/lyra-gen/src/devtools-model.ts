@@ -17,7 +17,7 @@ export interface DevtoolsTreeRow {
 }
 
 /** Default cap on rendered tree rows, so a pathological view cannot freeze the inspector. */
-export const DEVTOOLS_MAX_ROWS = 2000;
+const DEVTOOLS_MAX_ROWS = 2000;
 
 /** Depth-first rows for the expanded part of a view tree, bounded to `maxRows`. */
 export function flattenTree(root: LyraGenNode, expanded: ReadonlySet<string>, maxRows = DEVTOOLS_MAX_ROWS): readonly DevtoolsTreeRow[] {
@@ -209,7 +209,7 @@ export function summarizeDetail(detail: unknown, state: JsonValue, pointers: Rea
   return formatJson(secrets.size ? maskCopies(current, secrets, mask) : current, 4000);
 }
 
-export interface DevtoolsRole {
+interface DevtoolsRole {
   readonly name: string;
   readonly tag: string;
   readonly fieldPurpose: LyraGenFieldPurpose | undefined;

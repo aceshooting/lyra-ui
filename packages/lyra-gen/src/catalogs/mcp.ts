@@ -66,7 +66,7 @@ function admit(options: LyraGenMcpAppOptions): Admitted {
 }
 
 /** The `mcp-app` role: a sandboxed host-allowlisted app plus bounded input; tool requests become actions. */
-export function mcpAppComponent(options: LyraGenMcpAppOptions): LyraGenComponent {
+function mcpAppComponent(options: LyraGenMcpAppOptions): LyraGenComponent {
   const { resources, descriptions, tools } = admit(options);
   const protocol = options.protocol === 'mcp-apps' ? 'mcp-apps' : 'legacy';
   const hostCapabilities = Object.freeze(structuredClone(options.hostCapabilities ?? {}));

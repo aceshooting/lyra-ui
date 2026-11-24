@@ -69,6 +69,7 @@ export default {
         'src/index.ts!', 'src/gen-view.ts!', 'src/gen-view.class.ts!',
         'src/dashboard-binding.ts!', 'src/ssr.ts!', 'src/adapters/a2ui.ts!',
         'src/adapters/a2ui-candidate.ts!', 'src/replay.ts!', 'src/evaluation.ts!',
+        'src/adapters/{json-patch,ag-ui}.ts!', 'src/{model-context,data-export,dashboard-copy,dashboard-plan,progressive,scripted-conversation,devtools}.ts!',
         'src/**/*.test.ts', 'test/**/*.{ts,mjs}', 'scripts/*.test.mjs',
         // Published examples and maintainer qualification CLIs are explicit runnable entries.
         'examples/chat.ts!', 'examples/dashboard.ts!', 'examples/answer-blocks.ts!', 'examples/saved-dashboard/{app.js,host.mjs}!',

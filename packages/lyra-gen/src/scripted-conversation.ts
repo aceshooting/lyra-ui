@@ -108,7 +108,7 @@ const record = (value: unknown): value is Record<string, unknown> => value !== n
 const freeze = <T>(value: T): T => Object.freeze(value);
 
 /** Validate a scripted choice tree: identities, targets, reachability, acyclicity and size bounds. */
-export function validateScriptedTree<TCopy>(input: LyraGenScriptedTree<TCopy> | unknown): LyraGenResult<LyraGenScriptedTree<TCopy>> {
+export function validateScriptedTree<TCopy>(input: unknown): LyraGenResult<LyraGenScriptedTree<TCopy>> {
   const diagnostics: LyraGenDiagnostic[] = [];
   if (!record(input) || !record(input['steps']) || typeof input['start'] !== 'string') return { ok: false, diagnostics: [issue('scripted.tree', '', 'Expected a start step and a steps record.')] };
   const steps = input['steps'];
