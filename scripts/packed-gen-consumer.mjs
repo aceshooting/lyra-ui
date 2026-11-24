@@ -99,7 +99,7 @@ export function validatePackedGenManifest(manifest, files, uiVersion) {
     for (const range of Object.values(manifest[section] ?? {})) assert.ok(!String(range).startsWith('workspace:'), 'lyra-gen leaks a workspace range');
   }
   assert.ok([uiVersion, `^${uiVersion}`].includes(manifest.peerDependencies?.['@aceshooting/lyra-ui']), 'lyra-gen must accept the packed public Lyra UI peer');
-  assert.deepEqual([...manifest.sideEffects].sort(), ['./dist/dashboard-binding.js', './dist/gen-view.js']);
+  assert.deepEqual([...manifest.sideEffects].sort(), ['./dist/dashboard-binding.js', './dist/devtools.js', './dist/gen-view.js']);
   for (const required of REQUIRED_GEN_FILES) assert.ok(files.includes(required), `lyra-gen tarball is missing ${required}`);
   for (const file of files) {
     assert.ok(!/^(?:src|test|scripts)\/|\.(?:test|stories)\.|\.map$/u.test(file), `lyra-gen tarball includes development artifact ${file}`);

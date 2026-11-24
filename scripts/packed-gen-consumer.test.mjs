@@ -8,7 +8,7 @@ import { checkPackedGenGuideLinks, copyPackedGuidedExamples, genTypedEntrypoints
 const manifest = () => ({
   name: '@aceshooting/lyra-gen', type: 'module', license: 'MIT',
   peerDependencies: { '@aceshooting/lyra-ui': '^30.2.0' },
-  sideEffects: ['./dist/gen-view.js', './dist/dashboard-binding.js'],
+  sideEffects: ['./dist/gen-view.js', './dist/dashboard-binding.js', './dist/devtools.js'],
   exports: { '.': { types: './dist/index.d.ts', default: './dist/index.js' }, './*.js': { types: './dist/*.d.ts', default: './dist/*.js' }, './package.json': './package.json' },
 });
 const files = [...REQUIRED_GEN_FILES, 'dist/runtime.js', 'dist/runtime.d.ts', 'dist/adapters/a2ui.js', 'dist/adapters/a2ui.d.ts', 'dist/dashboard-binding.js', 'dist/dashboard-binding.d.ts'];
