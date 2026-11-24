@@ -45,14 +45,14 @@
         "textarea"
       ],
       "actionNames": [],
-      "utf16CodeUnits": 24641,
-      "unicodeCodePoints": 24641,
-      "utf8Bytes": 24641,
+      "utf16CodeUnits": 24808,
+      "unicodeCodePoints": 24808,
+      "utf8Bytes": 24808,
       "bytesRemovedFromFull": 0,
-      "promptSha256": "3180c07920bf90743129df66af2d83f72cc1a7bfd142073f9a12cc24a9aea277",
-      "schemaUtf8Bytes": 28691,
-      "schemaSha256": "b310e2565672bfe9f88fe7a1ace5bbd2fb004a0914f4c50370f7c42c57c7b15c",
-      "promptAndSchemaUtf8Bytes": 53332
+      "promptSha256": "c0d8a801d7eefd6e5da34d070ff3ab94c257bb6bf4f7a22b78132abce1339001",
+      "schemaUtf8Bytes": 51395,
+      "schemaSha256": "002a7d22d31049430b09540495b78f5c539054f621d332dd49c1cf3e1af1ab4c",
+      "promptAndSchemaUtf8Bytes": 76203
     },
     "chat": {
       "catalog": {
@@ -78,14 +78,14 @@
         "text"
       ],
       "actionNames": [],
-      "utf16CodeUnits": 10514,
-      "unicodeCodePoints": 10514,
-      "utf8Bytes": 10514,
+      "utf16CodeUnits": 10681,
+      "unicodeCodePoints": 10681,
+      "utf8Bytes": 10681,
       "bytesRemovedFromFull": 14127,
-      "promptSha256": "8b1332396b58536b3b554fad125b6e075a3bd95c50d999699a8d57e1a61e5570",
-      "schemaUtf8Bytes": 12355,
-      "schemaSha256": "9c9671a9dec8c1b4ae91e4e5353fcc63ad952383cbdae4226ec4dba4db1110a9",
-      "promptAndSchemaUtf8Bytes": 22869
+      "promptSha256": "c07da4514d4c9b9b16978d5d6cb410a910d931adf7eab7703b445d5c38ff5a48",
+      "schemaUtf8Bytes": 20753,
+      "schemaSha256": "dd76a38f8ba73d2aacf1b68a69134ab9ef9ed30eca264203a922baa4e0fd4fe7",
+      "promptAndSchemaUtf8Bytes": 31434
     },
     "forms": {
       "catalog": {
@@ -113,14 +113,14 @@
         "textarea"
       ],
       "actionNames": [],
-      "utf16CodeUnits": 12452,
-      "unicodeCodePoints": 12452,
-      "utf8Bytes": 12452,
+      "utf16CodeUnits": 12619,
+      "unicodeCodePoints": 12619,
+      "utf8Bytes": 12619,
       "bytesRemovedFromFull": 12189,
-      "promptSha256": "c7388f485d7cb4d526cfb29d2ea1ad06c52f6c0ea880ddee0a209ba8884f788d",
-      "schemaUtf8Bytes": 15049,
-      "schemaSha256": "3b16a2b761ada6e4d55f15979b225996e5a08958f32c62a2eba1ab5f4fb56301",
-      "promptAndSchemaUtf8Bytes": 27501
+      "promptSha256": "368f13d24e64679cfa3b87a5ac8ad66ae239c5ea5107a8a6611644bad1c4c322",
+      "schemaUtf8Bytes": 27913,
+      "schemaSha256": "99b35a5a5ba06b24683358ca4ddd065578a0392c866e560f6066b706583839d2",
+      "promptAndSchemaUtf8Bytes": 40532
     },
     "data": {
       "catalog": {
@@ -143,14 +143,14 @@
         "text"
       ],
       "actionNames": [],
-      "utf16CodeUnits": 12077,
-      "unicodeCodePoints": 12077,
-      "utf8Bytes": 12077,
+      "utf16CodeUnits": 12244,
+      "unicodeCodePoints": 12244,
+      "utf8Bytes": 12244,
       "bytesRemovedFromFull": 12564,
-      "promptSha256": "4b23e1702edc1b8860586962cf64417f8a3c7fd70fa334ee9db4724e60692197",
-      "schemaUtf8Bytes": 13727,
-      "schemaSha256": "1dc2ab549e15e00582d0816d7bb5c3ccb9cf897d49d18580608558427752fd61",
-      "promptAndSchemaUtf8Bytes": 25804
+      "promptSha256": "2a8a5715a44ce202a44bd14c743bd570baf629557f7438b069b47be648614181",
+      "schemaUtf8Bytes": 21163,
+      "schemaSha256": "caf7b91cc9ffc516ee6e3f756c570adc9a25cc42ce0fc9d5caf99f2ab346532d",
+      "promptAndSchemaUtf8Bytes": 33407
     },
     "retrieval": {
       "catalog": {
@@ -174,14 +174,14 @@
         "text"
       ],
       "actionNames": [],
-      "utf16CodeUnits": 8879,
-      "unicodeCodePoints": 8879,
-      "utf8Bytes": 8879,
+      "utf16CodeUnits": 9046,
+      "unicodeCodePoints": 9046,
+      "utf8Bytes": 9046,
       "bytesRemovedFromFull": 15762,
-      "promptSha256": "42378e5426866195490739d16f89f249abb936b37009e66d42222940ade316a1",
-      "schemaUtf8Bytes": 10574,
-      "schemaSha256": "3974a7b616adbf6579cc4b20541072b39ec8b0a20be60bfc27a491541505db68",
-      "promptAndSchemaUtf8Bytes": 19453
+      "promptSha256": "9a77551bbdbb2e1af7a4eb1659b5ef5eca79d44f1f312be0d281c7eed3c41562",
+      "schemaUtf8Bytes": 17468,
+      "schemaSha256": "92d1f611cbed5ade154f28feac468d72523cd73cb64c51ae6363ef847d7ee8a5",
+      "promptAndSchemaUtf8Bytes": 26514
     },
     "agent-ops": {
       "catalog": {
@@ -205,14 +205,14 @@
         "text"
       ],
       "actionNames": [],
-      "utf16CodeUnits": 12870,
-      "unicodeCodePoints": 12870,
-      "utf8Bytes": 12870,
+      "utf16CodeUnits": 13037,
+      "unicodeCodePoints": 13037,
+      "utf8Bytes": 13037,
       "bytesRemovedFromFull": 11771,
-      "promptSha256": "33875fe18c59e5748bd9673ea56244cfd5ce2789d46629f901f6686d9f504c2a",
-      "schemaUtf8Bytes": 14609,
-      "schemaSha256": "b5c2268dd7514df3844c9ec2235228ef18077af4a22aa066580fcf2301eb913a",
-      "promptAndSchemaUtf8Bytes": 27479
+      "promptSha256": "9f0faf54353dbf72fb2a86fc91acaf11b1c0f5879ce65d0f83a219858971e0d7",
+      "schemaUtf8Bytes": 22861,
+      "schemaSha256": "99fc7814a35d8b4ea28f4b49b622cfa2e3cd443c3b05b39ec7186c1863cea3ee",
+      "promptAndSchemaUtf8Bytes": 35898
     }
   }
 }

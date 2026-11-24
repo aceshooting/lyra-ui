@@ -10,7 +10,7 @@ import { createCatalogPropertyProof, createSchemaTypeProof } from './catalog-typ
 import { verifyTableAdapter } from './catalog-adapter-proof.mjs';
 import { validateSchema } from '../dist/schema.js';
 import { validateView } from '../dist/runtime.js';
-import { initialCatalog } from '../dist/catalog.js';
+import { dashboardCatalog, initialCatalog, mapCatalog } from '../dist/catalog.js';
 
 const uiRoot = fileURLToPath(new URL('../../lyra-ui/', import.meta.url));
 const manifest = JSON.parse(await readFile(new URL('../../lyra-ui/custom-elements.json', import.meta.url), 'utf8'));
@@ -50,7 +50,7 @@ const { assignment, literals } = createSchemaTypeProof(project);
 const proofSource = program.getSourceFile(fileURLToPath(new URL('./fixtures/catalog-proof-types.ts', import.meta.url)));
 assert.ok(proofSource, 'Concrete catalog proof types must load.');
 const concreteProof = createCatalogPropertyProof(project, proofSource);
-const concreteProperties = new Set(['select.value', 'table.rows', 'table.columns']);
+const concreteProperties = new Set(['select.value', 'table.rows', 'table.columns', 'data-grid.data', 'data-grid.columns', 'filter-bar.value']);
 const typeProofs = [];
 
 function schemaChecks(schema, name) {
@@ -93,14 +93,32 @@ let examples = 0;
 let authoredDefaults = 0;
 let usageGuides = 0;
 let enumValues = 0;
-for (const [role, component] of Object.entries(initialCatalog.components)) {
+// Overlay roles are proven exactly like built-in roles, each against the catalog that adds it.
+const proofRegions = { geojson: { type: 'FeatureCollection', features: ['north', 'south'].map((code, x) => ({ type: 'Feature', properties: { code }, geometry: { type: 'Polygon', coordinates: [[[x, 0], [x + 1, 0], [x + 1, 1], [x, 1], [x, 0]]] } })) }, idProperty: 'code' };
+const dashboard = mapCatalog(dashboardCatalog(), { mapStyle: { version: 8, sources: {}, layers: [] }, regions: proofRegions });
+/** Generated shapes a reviewed adapter rebuilds into the component type; proven by their adapter output below. */
+const adapterProperties = new Set(['map.choropleth']);
+function verifyChoroplethAdapter(component) {
+  const layer = component.prepareProperties({ label: 'Proof', choropleth: { values: { north: 1, south: 3 } } }).choropleth;
+  assert.equal(typeof layer.sourceId, 'string', 'map.choropleth: adapter sourceId');
+  assert.equal(layer.geojson.type, 'FeatureCollection', 'map.choropleth: adapter geojson');
+  assert.ok(layer.geojson.features.every(feature => typeof feature.properties[layer.field] === 'number'), 'map.choropleth: adapter field values');
+  assert.ok(layer.stops.length > 0 && layer.stops.every(([value, color], index, all) => Number.isFinite(value) && typeof color === 'string' && (index === 0 || value > all[index - 1][0])), 'map.choropleth: ascending stops');
+  assert.throws(() => component.prepareProperties({ label: 'Proof', choropleth: { values: { east: 1 } } }), 'map.choropleth: undeclared regions fail closed');
+  return { property: 'map.choropleth', mode: 'adapter-output' };
+}
+const proven = [
+  ...Object.entries(initialCatalog.components).map(([role, component]) => [role, component, initialCatalog]),
+  ...Object.entries(dashboard.components).filter(([role]) => !Object.hasOwn(initialCatalog.components, role)).map(([role, component]) => [role, component, dashboard]),
+];
+for (const [role, component, catalog] of proven) {
   for (const field of ['description', 'useWhen', 'documentation']) if (component[field] !== undefined) assert.ok(typeof component[field] === 'string' && component[field].trim().length > 0 && component[field].length <= 2048, `${role}: invalid ${field}`);
   if (component.useWhen) usageGuides++;
   if (component.minimumBlockSize) assert.match(component.minimumBlockSize, /^(?:[1-9]\d*(?:\.\d+)?|0\.\d+)(?:rem|em|px)$/, `${role}: invalid reserved block size`);
   for (const [key, schema] of Object.entries(component.properties)) schemaChecks(schema, `${role}.${key}`);
   for (const example of component.examples ?? []) {
     assert.equal(example.type, role, `${role}: example role mismatch`);
-    const checked = validateView({ version: '1', catalog: { id: initialCatalog.id, version: initialCatalog.version }, surfaceId: 'catalog-example', revision: 0, root: example }, initialCatalog);
+    const checked = validateView({ version: '1', catalog: { id: catalog.id, version: catalog.version }, surfaceId: 'catalog-example', revision: 0, root: example }, catalog);
     assert.ok(checked.ok, `${role}: example fails runtime validation: ${JSON.stringify(checked.diagnostics)}`);
     examples++;
   }
@@ -133,6 +151,7 @@ for (const [role, component] of Object.entries(initialCatalog.components)) {
     const propertyType = checker.getTypeOfSymbolAtLocation(propertySymbol, propertySymbol.valueDeclaration?.resolve(project) ?? classNode);
     const checkedType = assignment(schema, propertyType, classNode);
     const property = `${role}.${key}`;
+    if (adapterProperties.has(property)) { typeProofs.push(verifyChoroplethAdapter(component)); verifiedTypes++; continue; }
     const proof = concreteProperties.has(property) ? concreteProof(property, schema) : checkedType;
     assert.equal(proof.status, 'verified', `${property}: ${proof.status}: ${proof.reason}`);
     if (concreteProperties.has(property)) typeProofs.push({ property,
@@ -174,6 +193,6 @@ for (const [role, component] of Object.entries(initialCatalog.components)) {
 for (const property of concreteProperties) assert.ok(typeProofs.some(proof => proof.property === property), `${property}: stale concrete proof`);
 assert.equal(Object.hasOwn(initialCatalog.components.select.properties, 'multiple'), false, 'The select proof applies only to the single-selection catalog.');
 const adapterProof = verifyTableAdapter(initialCatalog.components.table, validateSchema);
-console.log(JSON.stringify({ roles: Object.keys(initialCatalog.components).length, properties, verifiedTypes, enumValues, authoredDefaults, examples, usageGuides, typeProofs, adapterProof }, null, 2));
+console.log(JSON.stringify({ roles: Object.keys(initialCatalog.components).length, overlayRoles: proven.length - Object.keys(initialCatalog.components).length, properties, verifiedTypes, enumValues, authoredDefaults, examples, usageGuides, typeProofs, adapterProof }, null, 2));
 
 } finally { snapshot.dispose(); api.close(); }

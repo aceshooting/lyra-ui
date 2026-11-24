@@ -5,6 +5,9 @@ import type { LyraGenCatalogPresetName } from './catalogs/presets.js';
 export { catalogPresetNames, catalogPresetRoles } from './catalogs/presets.js';
 export type { LyraGenCatalogPresetName } from './catalogs/presets.js';
 import { answerBlockComponents } from './catalogs/blocks.js';
+import { dashboardComponents, dashboardRoleNames } from './catalogs/dashboard.js';
+import { mapComponents, type LyraGenMapOptions } from './catalogs/geo.js';
+export type { LyraGenMapOptions } from './catalogs/geo.js';
 
 /** Create a trusted host catalog. Generated content must never construct this definition. */
 export function createCatalog(definition: LyraGenCatalog): LyraGenCatalog {
@@ -72,4 +75,37 @@ export const catalogPresets: Readonly<Record<LyraGenCatalogPresetName, LyraGenCa
  */
 export function answerBlocksCatalog(base: LyraGenCatalog = initialCatalog): LyraGenCatalog {
   return createCatalog({ ...base, id: `${base.id}+blocks`, version: base.version, components: { ...base.components, ...answerBlockComponents(base) } });
+}
+
+/**
+ * Opt-in overlay adding the reviewed live-dashboard roles: metrics (`gauge`, `sparkline`,
+ * `progress-bar`, `progress-ring`, `budget-meter`, `number-ticker`, `funnel`, `poll-status`),
+ * structure (`tabs` with `tab` and `tab-panel`, `details`, `timeline` with `timeline-item`) and
+ * charts (`series-chart`, `treemap`, `sankey`, `word-cloud`). The result has id
+ * `<base id>+dashboard` and the base version; the base catalog is not modified. Throws a `TypeError`
+ * when the base already defines one of the added roles.
+ */
+export function dashboardCatalog(base: LyraGenCatalog = initialCatalog): LyraGenCatalog {
+  return createCatalog({ ...base, id: `${base.id}+dashboard`, version: base.version, components: { ...base.components, ...dashboardComponents(base) } });
+}
+
+/** Layout, metric, chart and driving-control roles a live dashboard answer needs, with no actions. */
+export const liveDashboardRoles: readonly string[] = Object.freeze(['stack', 'row', 'text', 'heading', 'card', 'badge', 'alert', 'empty', 'skeleton', 'stat', 'table', 'chart', 'slider', 'switch', 'select', 'option', ...dashboardRoleNames]);
+
+/** The dashboard overlay narrowed to `liveDashboardRoles`; id `lyra-reviewed+dashboard/live`. */
+export const liveDashboardCatalog: LyraGenCatalog = /* @__PURE__ */ (() => {
+  const overlay = dashboardCatalog();
+  const selected = subsetCatalog(overlay, liveDashboardRoles);
+  if (!selected.ok) throw new TypeError('The live dashboard preset has an invalid role dependency.');
+  return createCatalog({ ...selected.value, id: `${overlay.id}/live` });
+})();
+
+/**
+ * Opt-in overlay adding the `map` role over a host-owned basemap: generated content supplies only a
+ * label, camera (`center`, `zoom`) and at most 500 labelled markers; `options.mapStyle` is assigned by
+ * the trusted adapter and is never part of the prompt or the generated schema. The result has id
+ * `<base id>+map`. Throws a `TypeError` without a style or when the base already defines `map`.
+ */
+export function mapCatalog(base: LyraGenCatalog, options: LyraGenMapOptions): LyraGenCatalog {
+  return createCatalog({ ...base, id: `${base.id}+map`, version: base.version, components: { ...base.components, ...mapComponents(base, options) } });
 }

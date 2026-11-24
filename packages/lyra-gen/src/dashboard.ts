@@ -145,7 +145,11 @@ export interface DashboardLayoutConstraints {
 export type DashboardLayoutEdit =
   | { readonly type: 'move'; readonly id: string; readonly columns: number; readonly rows: number }
   | { readonly type: 'resize'; readonly id: string; readonly columns: number; readonly rows: number }
-  | { readonly type: 'pin'; readonly id: string; readonly pinned: boolean };
+  | { readonly type: 'pin'; readonly id: string; readonly pinned: boolean }
+  /** Append a panel with a new id; under `pack` it moves to the first free cell, existing panels stay put. */
+  | { readonly type: 'add'; readonly panel: DashboardPanel }
+  /** Remove an unpinned panel; every other panel keeps its position. */
+  | { readonly type: 'remove'; readonly id: string };
 function overlaps(a: DashboardPanel, b: DashboardPanel): boolean { return a.column < b.column + b.width && a.column + a.width > b.column && a.row < b.row + b.height && a.row + a.height > b.row; }
 
 /** Pinned cells are installed first; the deterministic pack policy scans rows then logical columns. */
@@ -193,9 +197,17 @@ export function editDashboardLayout(panels: readonly DashboardPanel[], edit: Das
   const safe = admitted.value as unknown as { panels: readonly DashboardPanel[]; edit: DashboardLayoutEdit };
   panels = safe.panels;
   edit = safe.edit;
-  if (!Array.isArray(panels) || !edit || !['move', 'resize', 'pin'].includes(edit.type) || (edit.type === 'pin' && typeof edit.pinned !== 'boolean')) throw new Error('Invalid layout edit');
+  if (!Array.isArray(panels) || !edit || !['move', 'resize', 'pin', 'add', 'remove'].includes(edit.type) || (edit.type === 'pin' && typeof edit.pinned !== 'boolean')) throw new Error('Invalid layout edit');
+  if (edit.type === 'add') {
+    if (!edit.panel || typeof edit.panel.id !== 'string' || panels.some(panel => panel.id === edit.panel.id)) throw new Error('Added panels need a new id');
+    return constrainDashboardLayout([...panels, edit.panel], constraints);
+  }
   const target = panels.find(panel => panel.id === edit.id);
   if (!target) throw new Error('Unknown panel');
+  if (edit.type === 'remove') {
+    if (target.pinned) throw new Error('Pinned panels cannot be removed');
+    return constrainDashboardLayout(panels.filter(panel => panel.id !== edit.id), constraints);
+  }
   if (edit.type !== 'pin' && (target.pinned || ![edit.columns, edit.rows].every(Number.isSafeInteger))) throw new Error('Panel cannot be edited');
   return constrainDashboardLayout(panels.map(panel => {
     if (panel.id !== edit.id) return panel;

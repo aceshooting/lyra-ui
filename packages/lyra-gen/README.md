@@ -237,7 +237,9 @@ Set `.document` to a `LyraGenView` and `.catalog` to its trusted catalog. `.bind
 JSON values for declared bindings. A node's `reads` maps a declared, non-URL property to a state
 path that a binding in the same view owns, so a slider bound to `/limit` can drive a sibling
 gauge or stat live without a new revision; a read value applies only while it satisfies the
-property schema, otherwise the node's own `props` value stays. `.controlled` selects host-controlled state; listen for
+property schema, otherwise the node's own `props` value stays. A node's `liveReads` maps a property to a
+pointer into the host-published `.liveData`; reassigning `.liveData` updates those properties with
+no new revision or state change, so streamed metrics and freshness indicators stay current. `.controlled` selects host-controlled state; listen for
 `lr-gen-state-change` and supply the accepted state. `.enabledActions` can restrict available
 catalog actions further. `.confirmAction(action, signal)` supplies host approval for catalog
 actions marked `confirm`. The [approval example](docs/approval.md) connects that callback to a

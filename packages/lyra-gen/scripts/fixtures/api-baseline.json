@@ -46,6 +46,7 @@
         "DashboardApplication": "application.d.ts#DashboardApplication",
         "DashboardApplicationOptions": "application.d.ts#DashboardApplicationOptions",
         "DashboardAuthorizationRequest": "persistence.d.ts#DashboardAuthorizationRequest",
+        "dashboardCatalog": "catalog.d.ts#dashboardCatalog",
         "DashboardConflict": "persistence.d.ts#DashboardConflict",
         "DashboardContext": "persistence.d.ts#DashboardContext",
         "DashboardDataQueue": "live-data.d.ts#DashboardDataQueue",
@@ -144,6 +145,8 @@
         "JsonViewStream": "json-stream.d.ts#JsonViewStream",
         "JsonViewStreamOptions": "json-stream.d.ts#JsonViewStreamOptions",
         "JsonViewStreamResult": "json-stream.d.ts#JsonViewStreamResult",
+        "liveDashboardCatalog": "catalog.d.ts#liveDashboardCatalog",
+        "liveDashboardRoles": "catalog.d.ts#liveDashboardRoles",
         "LiveDataController": "live-data.d.ts#LiveDataController",
         "LYRA_GEN_FAILURE_CATEGORIES": "diagnostics.d.ts#LYRA_GEN_FAILURE_CATEGORIES",
         "LYRA_GEN_ISOLATED_TYPE": "isolation.d.ts#LYRA_GEN_ISOLATED_TYPE",
@@ -196,6 +199,7 @@
         "LyraGenFunctionRegistry": "functions.d.ts#LyraGenFunctionRegistry",
         "LyraGenIsolation": "types.d.ts#LyraGenIsolation",
         "LyraGenLimits": "types.d.ts#LyraGenLimits",
+        "LyraGenMapOptions": "catalogs/geo.d.ts#LyraGenMapOptions",
         "LyraGenMapSchema": "types.d.ts#LyraGenMapSchema",
         "LyraGenMigratedAnswer": "answer-migrations.d.ts#LyraGenMigratedAnswer",
         "LyraGenNode": "types.d.ts#LyraGenNode",
@@ -237,6 +241,7 @@
         "LyraGenValidationResult": "types.d.ts#LyraGenValidationResult",
         "LyraGenView": "types.d.ts#LyraGenView",
         "LyraGenViewChanges": "runtime.d.ts#LyraGenViewChanges",
+        "mapCatalog": "catalog.d.ts#mapCatalog",
         "MARKUP_LIMITS": "parser.d.ts#MARKUP_LIMITS",
         "MarkupIsland": "islands.d.ts#MarkupIsland",
         "MarkupLimits": "parser.d.ts#MarkupLimits",
@@ -418,10 +423,15 @@
         "catalogPresets": "catalog.d.ts#catalogPresets",
         "chatCatalog": "catalog.d.ts#chatCatalog",
         "createCatalog": "catalog.d.ts#createCatalog",
+        "dashboardCatalog": "catalog.d.ts#dashboardCatalog",
         "dataCatalog": "catalog.d.ts#dataCatalog",
         "formsCatalog": "catalog.d.ts#formsCatalog",
         "initialCatalog": "catalog.d.ts#initialCatalog",
+        "liveDashboardCatalog": "catalog.d.ts#liveDashboardCatalog",
+        "liveDashboardRoles": "catalog.d.ts#liveDashboardRoles",
         "LyraGenCatalogPresetName": "catalogs/presets.d.ts#LyraGenCatalogPresetName",
+        "LyraGenMapOptions": "catalogs/geo.d.ts#LyraGenMapOptions",
+        "mapCatalog": "catalog.d.ts#mapCatalog",
         "retrievalCatalog": "catalog.d.ts#retrievalCatalog",
         "selectCatalogPreset": "catalog.d.ts#selectCatalogPreset",
         "subsetCatalog": "catalog.d.ts#subsetCatalog"
@@ -694,6 +704,7 @@
         "DashboardApplication": "application.d.ts#DashboardApplication",
         "DashboardApplicationOptions": "application.d.ts#DashboardApplicationOptions",
         "DashboardAuthorizationRequest": "persistence.d.ts#DashboardAuthorizationRequest",
+        "dashboardCatalog": "catalog.d.ts#dashboardCatalog",
         "DashboardConflict": "persistence.d.ts#DashboardConflict",
         "DashboardContext": "persistence.d.ts#DashboardContext",
         "DashboardDataQueue": "live-data.d.ts#DashboardDataQueue",
@@ -792,6 +803,8 @@
         "JsonViewStream": "json-stream.d.ts#JsonViewStream",
         "JsonViewStreamOptions": "json-stream.d.ts#JsonViewStreamOptions",
         "JsonViewStreamResult": "json-stream.d.ts#JsonViewStreamResult",
+        "liveDashboardCatalog": "catalog.d.ts#liveDashboardCatalog",
+        "liveDashboardRoles": "catalog.d.ts#liveDashboardRoles",
         "LiveDataController": "live-data.d.ts#LiveDataController",
         "LYRA_GEN_FAILURE_CATEGORIES": "diagnostics.d.ts#LYRA_GEN_FAILURE_CATEGORIES",
         "LYRA_GEN_ISOLATED_TYPE": "isolation.d.ts#LYRA_GEN_ISOLATED_TYPE",
@@ -844,6 +857,7 @@
         "LyraGenFunctionRegistry": "functions.d.ts#LyraGenFunctionRegistry",
         "LyraGenIsolation": "types.d.ts#LyraGenIsolation",
         "LyraGenLimits": "types.d.ts#LyraGenLimits",
+        "LyraGenMapOptions": "catalogs/geo.d.ts#LyraGenMapOptions",
         "LyraGenMapSchema": "types.d.ts#LyraGenMapSchema",
         "LyraGenMigratedAnswer": "answer-migrations.d.ts#LyraGenMigratedAnswer",
         "LyraGenNode": "types.d.ts#LyraGenNode",
@@ -885,6 +899,7 @@
         "LyraGenValidationResult": "types.d.ts#LyraGenValidationResult",
         "LyraGenView": "types.d.ts#LyraGenView",
         "LyraGenViewChanges": "runtime.d.ts#LyraGenViewChanges",
+        "mapCatalog": "catalog.d.ts#mapCatalog",
         "MARKUP_LIMITS": "parser.d.ts#MARKUP_LIMITS",
         "MarkupIsland": "islands.d.ts#MarkupIsland",
         "MarkupLimits": "parser.d.ts#MarkupLimits",
@@ -1514,6 +1529,10 @@
       "hash": "08ee52b72401676a3055cf326cd06256b483ce5620c6e8ad2f40a582abc0fbd4",
       "profile": "supported"
     },
+    "catalog.d.ts#dashboardCatalog": {
+      "hash": "a1dac70a6540b99b8f0b305d1aaa37278b545a036011aee4053233f8eededbf6",
+      "profile": "supported"
+    },
     "catalog.d.ts#dataCatalog": {
       "hash": "0d758d2b2655788a8e5754a4f3a9f29f279b03d354c332697c301cfdcd680e66",
       "profile": "supported"
@@ -1523,11 +1542,23 @@
       "profile": "supported"
     },
     "catalog.d.ts#global": {
-      "hash": "35f31e62dfeab44a5082560ada2a8caf23e16b98abbdfbf7d406f35e017b7f29",
+      "hash": "2214bc14c6714058b1856c1f95c8a3c649f448e407e67534ca723b2a278b89d6",
       "profile": "supported"
     },
     "catalog.d.ts#initialCatalog": {
       "hash": "4219f5d301c8fd015b17e3fa1623e8492694d925394f486f6bfdece1ae539ec6",
+      "profile": "supported"
+    },
+    "catalog.d.ts#liveDashboardCatalog": {
+      "hash": "5d1a295923963589a9b2b637fc8a57077e2daacd89a54f6d993d57fdd32dbf85",
+      "profile": "supported"
+    },
+    "catalog.d.ts#liveDashboardRoles": {
+      "hash": "a162fd39ed2f08ef41dba3af618bbbff6b32b7790c4223fb96cd4a552a152437",
+      "profile": "supported"
+    },
+    "catalog.d.ts#mapCatalog": {
+      "hash": "3b9c3f8ab8942b3d3dce4d2a03225848fb4bd0491b4a985994d63bd78a3f9464",
       "profile": "supported"
     },
     "catalog.d.ts#retrievalCatalog": {
@@ -1540,6 +1571,18 @@
     },
     "catalog.d.ts#subsetCatalog": {
       "hash": "2fdd7366b3c887b94035cb3a5613b4a2ed878608fe94d2e6a63a6c84c15db548",
+      "profile": "supported"
+    },
+    "catalogs/geo.d.ts#global": {
+      "hash": "7c871b45e83260d8b2192d6def0fe7ef863b5f136c7ecb42731e52c2e62c7e64",
+      "profile": "supported"
+    },
+    "catalogs/geo.d.ts#LyraGenMapOptions": {
+      "hash": "4e355aa62aa004300a833dab782deca43584abef023f33240b254414ba86d8ff",
+      "profile": "supported"
+    },
+    "catalogs/geo.d.ts#LyraGenMapRegions": {
+      "hash": "2fd96e28f0374d6e9794e3b36f8a258a75efeb5926be9851ff97ea70584807c7",
       "profile": "supported"
     },
     "catalogs/presets.d.ts#catalogPresetNames": {
@@ -1719,7 +1762,7 @@
       "profile": "supported"
     },
     "dashboard.d.ts#DashboardLayoutEdit": {
-      "hash": "10cfbd87f6d67c917ff66e631792c644bbc721e4cdb0cca985106b3dc07c86af",
+      "hash": "7ae92c0bb2c5ea68e624f4fbf400186ce409e27042fbfaf64645ca7a595b2aff",
       "profile": "supported"
     },
     "dashboard.d.ts#DashboardNavigation": {
@@ -2003,7 +2046,7 @@
       "profile": "supported"
     },
     "gen-view.class.d.ts#LyraGenViewElement": {
-      "hash": "f0dfd04198c21dca0bdf14d9c76c4fa9655bf9303cb993cdae4ff7290cfdd687",
+      "hash": "51c6ddef1a28537e5db3f6a5607ca46f2f48450af5ccd7e71a3c843ad66490ff",
       "profile": "supported"
     },
     "gen-view.class.d.ts#LyraGenViewEventMap": {
@@ -2763,7 +2806,7 @@
       "profile": "supported"
     },
     "types.d.ts#LyraGenNode": {
-      "hash": "b5bad1017786818788335f5fb7787293417d4394639c6e08f7653ff16eb54c7d",
+      "hash": "3cc330969b69f9e45ff43ce25b1e0fb1e747a5cbadc7671830d408a5add93070",
       "profile": "supported"
     },
     "types.d.ts#LyraGenRecoveryMode": {

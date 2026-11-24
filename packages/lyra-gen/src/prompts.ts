@@ -54,7 +54,7 @@ export function exportCatalogJsonSchema(catalog: LyraGenCatalog): JsonObject {
     const bindings = Object.keys(component.bindings ?? {});
     if (bindings.length) properties['bindings'] = { type: 'object', additionalProperties: false, properties: Object.fromEntries(bindings.map(key => [key, { type: 'string', pattern: '^(?:/(?:[^~/]|~[01])*)+$' }])) };
     const readable = Object.keys(component.properties).filter(key => !isContentUrlProperty(key, component));
-    if (readable.length) properties['reads'] = { type: 'object', additionalProperties: false, properties: Object.fromEntries(readable.map(key => [key, { type: 'string', pattern: '^(?:/(?:[^~/]|~[01])*)+$' }])) };
+    if (readable.length) properties['reads'] = properties['liveReads'] = { type: 'object', additionalProperties: false, properties: Object.fromEntries(readable.map(key => [key, { type: 'string', pattern: '^(?:/(?:[^~/]|~[01])*)+$' }])) };
     if (component.events?.length && action.length) properties['action'] = { anyOf: action };
     const definition: Record<string, JsonValue> = { type: 'object', additionalProperties: false, properties, required: ['id', 'type'] };
     if (component.required?.length) definition['allOf'] = component.required.map((key): JsonObject => {
@@ -86,8 +86,8 @@ export function buildCatalogPrompt(catalog: LyraGenCatalog, options: LyraGenProm
   const artifact = exportCatalogArtifact(catalog);
   const prompt = [
     'Return one JSON LyraGenView: {version:"1",catalog:{id,version},surfaceId,revision,root}.',
-    'A node is {id,type,props?,text?,children?,slot?,bindings?,reads?,action?}. Use unique ids, explicit accessible names, approved properties and declared child slots only.',
-    'Use plain text. Never emit HTML, URLs, JavaScript, CSS, imports, handlers or invented component roles. Actions use host-declared names and payloads; bindings write and reads display local-state JSON Pointers; a read must address a path some binding in the view owns.',
+    'A node is {id,type,props?,text?,children?,slot?,bindings?,reads?,liveReads?,action?}. Use unique ids, explicit accessible names, approved properties and declared child slots only.',
+    'Use plain text. Never emit HTML, URLs, JavaScript, CSS, imports, handlers or invented component roles. Actions use host-declared names and payloads; bindings write and reads display local-state JSON Pointers; a read must address a path some binding in the view owns; liveReads shows a host-published live-data pointer the host documents.',
     'Keep source numbers as finite JSON numbers and dates as unambiguous ISO 8601 strings; the host locale formats display values. Never replace source numbers with locale-formatted strings. Write prose in the requested content language, which can differ from the host locale.',
     'Respect every schema bound. Request a supported subset when this catalog cannot express the task. Runtime validation remains required.',
     JSON.stringify(artifact),

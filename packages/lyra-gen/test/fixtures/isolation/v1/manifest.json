@@ -359,6 +359,50 @@
       ],
       "code": "read.conflict",
       "note": ""
+    },
+    {
+      "name": "live-invalid",
+      "file": "live-invalid.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "live.invalid",
+      "note": ""
+    },
+    {
+      "name": "live-unknown",
+      "file": "live-unknown.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "live.unknown",
+      "note": ""
+    },
+    {
+      "name": "live-pointer",
+      "file": "live-pointer.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "live.pointer",
+      "note": ""
+    },
+    {
+      "name": "live-conflict",
+      "file": "live-conflict.json",
+      "strict": "reject",
+      "isolate": "isolated",
+      "isolatedIds": [
+        "bad"
+      ],
+      "code": "live.conflict",
+      "note": ""
     }
   ]
 }

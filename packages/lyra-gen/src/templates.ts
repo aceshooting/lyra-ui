@@ -50,7 +50,7 @@ export function expandTemplate(template: LyraGenTemplate, rows: unknown, catalog
   const sourceNodes = new Map<string, Record<string, JsonValue>>();
   let sourceFailure = false;
   const inspect = (input: unknown): void => {
-    if (!object(input) || Object.keys(input).some(key => !['id', 'type', 'props', 'children', 'text', 'slot', 'bindings', 'reads', 'action'].includes(key)) || typeof input['id'] !== 'string' || !identity.test(input['id']) || sourceIds.has(input['id']) || typeof input['type'] !== 'string' || !Object.hasOwn(catalog.components, input['type'])) { sourceFailure = true; return; }
+    if (!object(input) || Object.keys(input).some(key => !['id', 'type', 'props', 'children', 'text', 'slot', 'bindings', 'reads', 'liveReads', 'action'].includes(key)) || typeof input['id'] !== 'string' || !identity.test(input['id']) || sourceIds.has(input['id']) || typeof input['type'] !== 'string' || !Object.hasOwn(catalog.components, input['type'])) { sourceFailure = true; return; }
     sourceIds.add(input['id']);
     sourceNodes.set(input['id'], input);
     if (input['children'] !== undefined) {

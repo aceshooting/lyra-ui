@@ -67,7 +67,11 @@ revision. `applyViewPatch()` checks the expected revision; its operations are `r
 and `insert` (`{ op: 'insert', parentId, node, before? | after? }`, appended when no anchor), so
 adding a panel never restates its siblings. Reassigning `.bindingState` replaces local state, so do
 not replay an old value over newer edits. A node's `reads` shows owned state in another node's
-property (slider value driving a gauge) without a new revision. `lr-gen-ready` reports renderer/child
+property (slider value driving a gauge) without a new revision, and `liveReads` shows host-published
+`.liveData` (streamed metrics) the same way. `dashboardCatalog()`/`liveDashboardCatalog` add reviewed
+live-dashboard roles (gauge, sparkline, progress, funnel, tabs, timeline, series-chart, treemap,
+sankey, heatmap, data-grid, time-range, filter-bar and more); `mapCatalog(base, { mapStyle })` adds a
+marker map over a host-owned basemap. `lr-gen-ready` reports renderer/child
 update settlement, not remote-data completion, and its `changes` lists added/changed/removed node
 ids since the previous ready revision (also marked by the `changed` part), and
 `elementForNode(id)` returns a node's stable rendered element for highlighting or scrolling; focus and completion

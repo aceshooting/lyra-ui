@@ -67,6 +67,28 @@ describe('generated view node lookup', () => {
   });
 });
 
+describe('generated view live data', () => {
+  it('shows host-published live values without a revision and falls back to props when invalid', async () => {
+    const element = await fixture<LyraGenViewElement>(html`<lr-gen-view .catalog=${catalog} .liveData=${{ cpu: { label: '61' } }} .document=${view([
+      { id: 'shown', type: 'out', props: { value: '-' }, liveReads: { value: '/cpu/label' } }
+    ], 0)}></lr-gen-view>`);
+    await waitUntil(() => element.status === 'ready');
+    const shown = node(element, 'shown') as ReadTarget;
+    expect(shown.value).to.equal('61');
+    let ready = 0;
+    element.addEventListener('lr-gen-ready', () => ready++);
+    element.liveData = { cpu: { label: '74' } };
+    await waitUntil(() => shown.value === '74');
+    element.liveData = { cpu: { label: 'far too long' } };
+    await waitUntil(() => shown.value === '-');
+    element.liveData = {};
+    await element.updateComplete;
+    expect(shown.value).to.equal('-');
+    expect(ready).to.equal(0);
+    expect(element.elementForNode('shown') === shown).to.equal(true);
+  });
+});
+
 describe('generated view state reads', () => {
   it('renders a read property from bound state live and falls back to props when the value violates its schema', async () => {
     const element = await fixture<LyraGenViewElement>(html`<lr-gen-view .catalog=${catalog} .document=${view([

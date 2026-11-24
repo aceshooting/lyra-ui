@@ -155,7 +155,7 @@ export function applyViewPatch(view: LyraGenView, patch: LyraGenPatch, catalog: 
 export interface LyraGenViewChanges {
   /** Ids present only in the next view. */
   readonly added: readonly string[];
-  /** Ids present in both views whose own members (type, props, text, slot, bindings, reads, action) differ; child changes are reported on the children. */
+  /** Ids present in both views whose own members (type, props, text, slot, bindings, reads, liveReads, action) differ; child changes are reported on the children. */
   readonly changed: readonly string[];
   /** Ids present only in the previous view. */
   readonly removed: readonly string[];
@@ -167,7 +167,7 @@ const sameJson = (left: unknown, right: unknown): boolean => {
   const keys = Object.keys(a);
   return keys.length === Object.keys(b).length && keys.every(key => Object.hasOwn(b, key) && sameJson(a[key], b[key]));
 };
-const OWN_MEMBERS = ['type', 'props', 'text', 'slot', 'bindings', 'reads', 'action'] as const;
+const OWN_MEMBERS = ['type', 'props', 'text', 'slot', 'bindings', 'reads', 'liveReads', 'action'] as const;
 const sameOwnMembers = (left: LyraGenNode, right: LyraGenNode): boolean => OWN_MEMBERS.every(key => sameJson(left[key], right[key]));
 const flatten = (root: LyraGenNode): LyraGenNode[] => {
   const nodes: LyraGenNode[] = [];

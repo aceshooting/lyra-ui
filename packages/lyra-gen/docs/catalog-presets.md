@@ -104,3 +104,47 @@ import { buildCatalogPrompt } from '@aceshooting/lyra-gen/prompts.js';
 const catalog = answerBlocksCatalog();
 const prompt = buildCatalogPrompt(catalog);
 ```
+
+## Live dashboard roles (opt-in overlay)
+
+`dashboardCatalog(base = initialCatalog)` returns a new catalog with id `${base.id}+dashboard`
+(built-in: `lyra-reviewed+dashboard`) and the base version, adding reviewed roles for live
+dashboards. Every role renders from plain bounded JSON; formatters, callbacks, colors, server modes
+and row hooks stay host-owned and unreachable from generated content. It throws a `TypeError` when the
+base already defines one of the added roles.
+
+| Group | Roles |
+| --- | --- |
+| Metrics and status | `gauge` (up to 8 `thresholds`), `sparkline` (1-500 `values`), `progress-bar`, `progress-ring`, `budget-meter`, `number-ticker`, `funnel` (1-12 `stages`, optional `comparison`), `poll-status` |
+| Structure | `tabs` with `tab` (slot `nav`, `panel`) and `tab-panel` (`name`), `details`, `timeline` with `timeline-item` (ISO `timestamp`) |
+| Charts | `series-chart` (`lr-chart`: up to 8 series over 200 categories, stacked, area, horizontal, pie, radar or a second axis), `treemap` (three levels), `sankey` (50 nodes, 200 links), `word-cloud` (200 words) |
+| Data and controls | `heatmap` (matrix up to 50 by 50), `data-grid` (16 columns `c0`-`c15`, 500 rows, client-side only), `time-range` (binds `start`/`end`), `filter-bar` (up to 12 select filters, binds `value`) |
+
+`liveDashboardCatalog` (id `lyra-reviewed+dashboard/live`) narrows the overlay to
+`liveDashboardRoles`: the common layout roles, `stat`, `table`, `chart`, the `slider`, `switch` and
+`select` controls and every dashboard role, with no actions. Controls drive other panels without a
+new revision through `reads`, and host data streams reach them through `liveReads` and `.liveData`.
+
+`mapCatalog(base, { mapStyle })` adds a `map` role (`lr-map`) with id `${base.id}+map`. The host
+supplies the basemap style; the adapter assigns it as `mapStyle`, and it never appears in the prompt
+or the generated schema. Generated content supplies only `label`, `center` (`[longitude, latitude]`),
+`zoom` (0-22) and at most 500 labelled `markers`; marker HTML, colors, tiles and engines are refused.
+With `regions: { geojson, idProperty, palette? }` (1-1000 features, each with a unique string id),
+the role also accepts `choropleth: { values, interpolation? }` keyed by region id and
+`choroplethLegend`; the trusted adapter builds the fill layer from the host's geometry and ascending
+palette (default: the brand fill ramp tokens), and a value for an undeclared region fails closed.
+
+```ts
+import { dashboardCatalog, liveDashboardCatalog, mapCatalog } from '@aceshooting/lyra-gen/catalog.js';
+
+const dashboard = dashboardCatalog();
+const live = liveDashboardCatalog;
+const geo = mapCatalog(dashboard, { mapStyle: 'https://tiles.example.com/style.json' });
+```
+
+To review a further role, `node scripts/draft-role.mjs lr-<tag>` (from the package directory of a
+repository checkout) drafts an overlay from the published Lyra UI manifest: scalar members get
+bounded schemas, closed unions become enums, and object data, callbacks, element references and
+URL-like members are listed for review instead of being exposed. The draft is never registered;
+`check:catalog` proves every overlay role against the component's declared types, and the browser
+conformance suite renders each one in both directions, under reduced motion and with axe.

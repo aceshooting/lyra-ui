@@ -128,3 +128,20 @@ test('shared snapshots are frozen and shared instead of copied', () => {
   assert.equal(Object.isFrozen(state.snapshot('s').filters), true);
   assert.equal(Object.isFrozen(state.snapshot('none')), true);
 });
+
+test('panel add and remove edits keep every other panel in place and respect pins and constraints', () => {
+  const constraints = { columns: 4, maxRows: 4, maxPanels: 3, collision: 'pack' } as const;
+  const layout = [
+    { id: 'kpi', column: 0, row: 0, width: 2, height: 1, pinned: true },
+    { id: 'chart', column: 2, row: 0, width: 2, height: 2 },
+  ];
+  const added = editDashboardLayout(layout, { type: 'add', panel: { id: 'map', column: 0, row: 0, width: 2, height: 1 } }, constraints);
+  assert.deepEqual(added.map(panel => [panel.id, panel.column, panel.row]), [['kpi', 0, 0], ['chart', 2, 0], ['map', 0, 1]]);
+  assert.throws(() => editDashboardLayout(layout, { type: 'add', panel: { id: 'chart', column: 0, row: 2, width: 1, height: 1 } }, constraints), /new id/u);
+  assert.throws(() => editDashboardLayout(added, { type: 'add', panel: { id: 'extra', column: 0, row: 3, width: 1, height: 1 } }, constraints));
+  assert.throws(() => editDashboardLayout(layout, { type: 'add', panel: { id: 'x', column: 0, row: 0, width: 1, height: 1 } }, { ...constraints, collision: 'reject' }), /collision/u);
+  const removed = editDashboardLayout(added, { type: 'remove', id: 'chart' }, constraints);
+  assert.deepEqual(removed.map(panel => [panel.id, panel.column, panel.row]), [['kpi', 0, 0], ['map', 0, 1]]);
+  assert.throws(() => editDashboardLayout(added, { type: 'remove', id: 'kpi' }, constraints), /Pinned/u);
+  assert.throws(() => editDashboardLayout(added, { type: 'remove', id: 'missing' }, constraints), /Unknown/u);
+});

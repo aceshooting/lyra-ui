@@ -141,6 +141,12 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
   @property({ attribute: false }) catalog: LyraGenCatalog = initialCatalog;
   /** Initial values, or authoritative values in controlled mode. Reassignment replaces local state. */
   @property({ attribute: false }) bindingState: JsonValue = {};
+  /**
+   * Host-published live data that nodes display through their `liveReads` member. Reassigning it
+   * re-renders the affected properties without a new revision, a state change or revalidation;
+   * a value that is missing or violates its property schema leaves the node's own `props` value.
+   */
+  @property({ attribute: false }) liveData: JsonValue = {};
   /** Emit edit proposals and keep displaying bindingState until the host updates it. */
   @property({ type: Boolean }) controlled = false;
   /** Optional host allowlist that further narrows the catalog's action permissions. */
@@ -601,6 +607,11 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
     // A read value replaces the generated property only while it exists and satisfies the property schema.
     for (const [propertyName, pointer] of Object.entries(node.reads ?? {})) {
       const value = readPointer(this.localState?.values ?? {}, pointer);
+      const schema = definition.properties[propertyName];
+      if (value.ok && schema && validateSchema(value.value, schema, this.resolvedLimits).ok) values[propertyName] = value.value;
+    }
+    for (const [propertyName, pointer] of Object.entries(node.liveReads ?? {})) {
+      const value = readPointer(this.liveData ?? {}, pointer);
       const schema = definition.properties[propertyName];
       if (value.ok && schema && validateSchema(value.value, schema, this.resolvedLimits).ok) values[propertyName] = value.value;
     }

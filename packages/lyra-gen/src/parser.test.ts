@@ -81,3 +81,12 @@ test('mistyped untrusted source fails without throwing or publishing', () => {
     assert.equal(parser.finish().view, undefined);
   }
 });
+
+test('reserved markup attributes never shadow a declared property of any reviewed role', async () => {
+  const { dashboardCatalog, initialCatalog, mapCatalog } = await import('./catalog.js');
+  const reserved = ['id', 'slot', 'text', 'bindings', 'reads', 'liveReads', 'action'];
+  const regions = { geojson: { type: 'FeatureCollection' as const, features: [{ type: 'Feature' as const, properties: { code: 'a' }, geometry: null }] }, idProperty: 'code' };
+  for (const catalog of [initialCatalog, mapCatalog(dashboardCatalog(), { mapStyle: 'https://tiles.example.com/style.json', regions })]) {
+    for (const [role, component] of Object.entries(catalog.components)) for (const key of reserved) assert.equal(Object.hasOwn(component.properties, key), false, `${role}.${key} collides with a Markup node member`);
+  }
+});

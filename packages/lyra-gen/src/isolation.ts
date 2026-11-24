@@ -20,7 +20,8 @@ export const ISOLATABLE_DIAGNOSTIC_CODES: readonly string[] = Object.freeze([
   'catalog.component', 'props.invalid', 'props.unknown', 'props.required',
   'node.text', 'node.slot', 'node.member',
   'children.type', 'children.forbidden', 'a11y.name', 'block.invalid',
-  'read.invalid', 'read.unknown', 'read.pointer', 'read.unowned', 'read.conflict'
+  'read.invalid', 'read.unknown', 'read.pointer', 'read.unowned', 'read.conflict',
+  'live.invalid', 'live.unknown', 'live.pointer', 'live.conflict'
 ]);
 
 /**
@@ -83,7 +84,7 @@ const markersIn = (root: JsonValue | undefined): { readonly nodeId: string; read
 const ownerPattern = /^\/root(?:\/children\/\d+)*/u;
 export const object = (value: unknown): value is Record<string, import('./types.js').JsonValue> => value !== null && typeof value === 'object' && !Array.isArray(value);
 
-const nodeMembers = new Set(['id', 'type', 'props', 'children', 'text', 'slot', 'bindings', 'reads', 'action']);
+const nodeMembers = new Set(['id', 'type', 'props', 'children', 'text', 'slot', 'bindings', 'reads', 'liveReads', 'action']);
 
 export const isNodeMember = (key: string): boolean => nodeMembers.has(key);
 export const isValidatedView = (view: import('./types.js').LyraGenView): boolean => validatedViews.has(view);
@@ -193,6 +194,16 @@ export function validateCanonicalView(input: unknown, catalog: import('./types.j
         if (object(value['bindings']) && Object.hasOwn(value['bindings'], property)) { issue('read.conflict', readPath, 'A property cannot both write and read state.'); continue; }
         if (!parsePointer(pointer).ok || pointer === '') { issue('read.pointer', readPath, 'Reads need a safe non-root JSON Pointer.'); continue; }
         reads.push({ pointer, path: readPath });
+      }
+    }
+    if (value['liveReads'] !== undefined) {
+      if (!object(value['liveReads'])) issue('live.invalid', `${path}/liveReads`, 'Live members must map properties to JSON Pointers.');
+      else for (const [property, pointer] of Object.entries(value['liveReads'])) {
+        const livePath = `${path}/liveReads/${escapePointerSegment(property)}`;
+        if (!Object.hasOwn(component.properties, property) || typeof pointer !== 'string') { issue('live.unknown', livePath, 'Live property is not declared by the catalog.'); continue; }
+        if (isContentUrlProperty(property, component)) { issue('content.url-binding', livePath, 'URL sinks cannot show live data.'); continue; }
+        if ((object(value['bindings']) && Object.hasOwn(value['bindings'], property)) || (object(value['reads']) && Object.hasOwn(value['reads'], property))) { issue('live.conflict', livePath, 'A property has at most one state or live source.'); continue; }
+        if (!parsePointer(pointer).ok || pointer === '') issue('live.pointer', livePath, 'Live members need a safe non-root JSON Pointer.');
       }
     }
     if (value['action'] !== undefined) {

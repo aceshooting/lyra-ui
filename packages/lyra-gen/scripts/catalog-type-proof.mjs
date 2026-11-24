@@ -76,7 +76,10 @@ export function createCatalogPropertyProof(project, source) {
   return (property, schema) => {
     if (property === 'select.value') return assignment(schema, get('CatalogSelectValue'), source);
     if (property === 'table.rows') return assignment(schema, get('CatalogTableRows'), source);
-    assert.equal(property, 'table.columns', 'Only the three declared concrete/adapter properties use this proof.');
+    if (property === 'data-grid.data') return assignment(schema, get('CatalogGridData'), source);
+    if (property === 'data-grid.columns') return assignment(schema, get('CatalogGridColumns'), source);
+    if (property === 'filter-bar.value') return assignment(schema, get('CatalogFilterValue'), source);
+    assert.equal(property, 'table.columns', 'Only the declared concrete/adapter properties use this proof.');
     assert.equal(schema.type, 'array');
     assert.equal(schema.items.type, 'object');
     const { format, ...properties } = schema.items.properties;

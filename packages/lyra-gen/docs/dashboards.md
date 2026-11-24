@@ -156,8 +156,13 @@ report loss. It does not create an unbounded subscription or a network transport
 
 `dashboard.js` provides scoped `SharedDashboardState` for filters/selection with origin suppression,
 `DashboardNavigation` for authorized drilldown history, bounded `dashboardPageWindow()` queries,
-and layout constraint/edit helpers. The host connects these to controls, loads pages and renders
-keyboard-accessible move/resize actions. These helpers alone do not supply an automatic dashboard
+and layout constraint/edit helpers. `editDashboardLayout()` applies `move`, `resize`, `pin`, `add`
+(a panel with a new id; `pack` places it in the first free cell) and `remove` (unpinned panels only)
+edits while every other panel keeps its position, so a refinement can grow a dashboard by one panel.
+The host connects these to controls, loads pages and renders keyboard-accessible move/resize actions.
+For live values, assign host data to `lr-gen-view.liveData` and let generated nodes display it through
+`liveReads`, with a `poll-status` panel showing each refresh; a `time-range` or `filter-bar` control bound
+to state drives other panels through `reads`. These helpers alone do not supply an automatic dashboard
 grid editor or complete large-data backend.
 
 `dashboard-binding.js` is the browser integration entry. `DashboardGridBinding` connects keyed

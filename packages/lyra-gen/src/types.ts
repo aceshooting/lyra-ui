@@ -92,6 +92,13 @@ export interface LyraGenNode {
    * never write state, and URL sinks cannot be read.
    */
   readonly reads?: Readonly<Record<string, string>>;
+  /**
+   * Component property shown from host-published live data (`lr-gen-view.liveData`): property to
+   * a JSON Pointer into that data. The live value replaces `props[property]` while it exists and
+   * satisfies the property schema; generated content can only choose what to display, never
+   * publish or write live data. URL sinks cannot be live.
+   */
+  readonly liveReads?: Readonly<Record<string, string>>;
   readonly action?: LyraGenActionBinding;
 }
 export interface LyraGenCatalogReference { readonly id: string; readonly version: string }

@@ -112,3 +112,14 @@ test('reads address owned state, declared non-URL properties and never conflict 
   assert.equal(isolated.ok, true);
   if (isolated.ok) assert.deepEqual(isolated.isolated?.map(entry => entry.nodeId), ['out']);
 });
+
+test('live members address declared non-URL properties with safe pointers and never conflict with state', () => {
+  const doc = (node: Record<string, unknown>): unknown => ({ version: '1', catalog: { id: 'test', version: '1' }, surfaceId: 's', revision: 0, root: { id: 'root', type: 'form', children: [node] } });
+  const code = (node: Record<string, unknown>): string | undefined => { const result = validateView(doc(node), catalog); return result.ok ? undefined : result.diagnostics[0]!.code; };
+  assert.equal(code({ id: 'out', type: 'text', liveReads: { value: '/metrics/cpu' } }), undefined);
+  assert.equal(code({ id: 'out', type: 'text', liveReads: [] }), 'live.invalid');
+  assert.equal(code({ id: 'out', type: 'text', liveReads: { invented: '/x' } }), 'live.unknown');
+  assert.equal(code({ id: 'out', type: 'text', liveReads: { value: 'x' } }), 'live.pointer');
+  assert.equal(code({ id: 'out', type: 'slider', props: { label: 'A' }, liveReads: { href: '/x' } }), 'content.url-binding');
+  assert.equal(code({ id: 'out', type: 'slider', props: { label: 'A' }, bindings: { value: '/a' }, liveReads: { value: '/x' } }), 'live.conflict');
+});

@@ -198,6 +198,7 @@
     "test:visual": "node ../../benchmarks/generative-ui/visual.mjs --browser=chromium --baselines=../../benchmarks/generative-ui/visual-baselines/chromium",
     "prepack": "pnpm --filter @aceshooting/lyra-ui build && pnpm build",
     "check:catalog": "node scripts/check-catalog.mjs",
+    "draft-role": "node scripts/draft-role.mjs",
     "check:types": "tsc -p tsconfig.types.json",
     "check:browser-types": "tsc -p tsconfig.browser-test.json",
     "check:build-artifacts": "node --test scripts/check-build-artifacts.test.mjs && node scripts/check-build-artifacts.mjs",

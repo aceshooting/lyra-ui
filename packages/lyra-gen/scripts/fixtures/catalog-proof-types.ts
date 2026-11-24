@@ -1,5 +1,7 @@
 import type { LyraSelect } from '../../../lyra-ui/src/components/forms/select/select.class.js';
 import type { LyraTable, TableColumn } from '../../../lyra-ui/src/components/data/table/table.class.js';
+import type { LyraFilterBar } from '../../../lyra-ui/src/components/layout/filter-bar/filter-bar.class.js';
+import type { LyraDataGrid } from '../../../lyra-ui/src/components/data/data-grid/data-grid.class.js';
 
 /** Concrete host choices made by the reviewed catalog, not arbitrary consumer generics. */
 export type CatalogSelectValue = LyraSelect<false>['value'];
@@ -14,3 +16,6 @@ export type CatalogPreparedColumns = readonly {
   sortable?: boolean;
   cell: (row: unknown) => string;
 }[];
+export type CatalogGridData = LyraDataGrid<CatalogTableRow>['data'];
+export type CatalogGridColumns = LyraDataGrid<CatalogTableRow>['columns'];
+export type CatalogFilterValue = LyraFilterBar['value'];
