@@ -12,6 +12,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isMainModule } from '../../lyra-ui/scripts/is-main-module.mjs';
 
 const uiRoot = fileURLToPath(new URL('../../lyra-ui/', import.meta.url));
 const urlLike = /(?:^|[A-Z_-])(?:url|href|src|srcset|action|formaction|poster|uri|image|icon|logo|avatar|thumbnail)$/iu;
@@ -115,7 +116,7 @@ export function draftRole(tag, { role = tag.replace(/^lr-/u, ''), manifest = JSO
   return { role, tag, source: lines.join('\n'), properties, review, notes };
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMainModule(import.meta.url)) {
   const [tag, ...rest] = process.argv.slice(2);
   if (!tag || !/^lr-[a-z0-9-]+$/u.test(tag)) { console.error('Usage: node scripts/draft-role.mjs lr-<tag> [--role <name>]'); process.exit(2); }
   const roleIndex = rest.indexOf('--role');

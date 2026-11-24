@@ -2,7 +2,7 @@ import type { JsonValue, LyraGenCatalog, LyraGenComponent, LyraGenSchema } from 
 import { array, documentation, label, object, string } from './shared.js';
 
 /** A host-reviewed region set generated content may colour by id; geometry never comes from content. */
-export interface LyraGenMapRegions {
+interface LyraGenMapRegions {
   /** GeoJSON FeatureCollection of at most 1000 features, each carrying a unique string id. */
   readonly geojson: { readonly type: 'FeatureCollection'; readonly features: readonly { readonly type: 'Feature'; readonly properties?: Readonly<Record<string, unknown>> | null; readonly geometry: unknown }[] };
   /** Feature property holding each region's id. */
@@ -38,7 +38,7 @@ function admitRegions(regions: LyraGenMapRegions): AdmittedRegions {
 }
 
 /** Build the lr-map choropleth layer from generated values; unknown region ids fail closed. */
-export function regionChoropleth(regions: AdmittedRegions, values: Readonly<Record<string, number>>, interpolation?: string): Readonly<Record<string, unknown>> {
+function regionChoropleth(regions: AdmittedRegions, values: Readonly<Record<string, number>>, interpolation?: string): Readonly<Record<string, unknown>> {
   const entries = Object.entries(values);
   for (const [id] of entries) if (!regions.ids.has(id)) throw new TypeError('Choropleth values must name declared regions.');
   const features = entries.map(([id, value]) => {
@@ -58,7 +58,7 @@ const lngLat: LyraGenSchema = { type: 'array', items: coordinate, minItems: 2, m
 const marker = object({ id: string(128), lngLat, label }, ['lngLat', 'label']);
 
 /** The `map` role: bounded markers and camera over a host-owned basemap. */
-export function mapComponent(options: LyraGenMapOptions): LyraGenComponent {
+function mapComponent(options: LyraGenMapOptions): LyraGenComponent {
   const style = options?.mapStyle;
   if (!(typeof style === 'string' ? style.length > 0 : style !== null && typeof style === 'object')) throw new TypeError('A map catalog needs a host-owned mapStyle.');
   const mapStyle = typeof style === 'string' ? style : Object.freeze(structuredClone(style));

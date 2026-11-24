@@ -108,7 +108,14 @@ describe('dashboard overlay rendered qualification', () => {
     await expect(host).to.be.accessible();
   });
 
-  it('renders a generated map with host-owned style and bounded markers', async () => {
+  /** CI does not build the optional map engine peer; its single load warning is expected here and nowhere else. */
+  async function withoutMapPeerWarning(run: () => Promise<void>): Promise<void> {
+    const original = console.warn;
+    console.warn = (...args: unknown[]) => { if (!String(args[0]).includes('could not load the optional peer dependency')) original(...args); };
+    try { await run(); } finally { console.warn = original; }
+  }
+
+  it('renders a generated map with host-owned style and bounded markers', () => withoutMapPeerWarning(async () => {
     const mapStyle = { version: 8, sources: {}, layers: [{ id: 'background', type: 'background', paint: { 'background-color': '#dde4ea' } }] };
     const catalog = mapCatalog(overlay, { mapStyle });
     const root: LyraGenNode = { id: 'subject', type: 'map', props: { label: 'Regional offices', center: [10, 50], zoom: 3, markers: [{ id: 'berlin', lngLat: [13.4, 52.52], label: 'Berlin' }, { id: 'madrid', lngLat: [-3.7, 40.42], label: 'Madrid' }] } };
@@ -118,9 +125,9 @@ describe('dashboard overlay rendered qualification', () => {
     expect((Reflect.get(subject, 'markers') as readonly { label: string }[]).map(marker => marker.label)).to.deep.equal(['Berlin', 'Madrid']);
     expect(Reflect.get(subject, 'label')).to.equal('Regional offices');
     await expect(host).to.be.accessible();
-  });
+  }));
 
-  it('colours host-declared regions from generated choropleth values', async () => {
+  it('colours host-declared regions from generated choropleth values', () => withoutMapPeerWarning(async () => {
     const mapStyle = { version: 8, sources: {}, layers: [] };
     const square = (code: string, x: number) => ({ type: 'Feature' as const, properties: { code }, geometry: { type: 'Polygon', coordinates: [[[x, 0], [x + 4, 0], [x + 4, 4], [x, 4], [x, 0]]] } });
     const catalog = mapCatalog(overlay, { mapStyle, regions: { geojson: { type: 'FeatureCollection', features: [square('west', 0), square('east', 5)] }, idProperty: 'code' } });
@@ -130,5 +137,5 @@ describe('dashboard overlay rendered qualification', () => {
     expect(layer.geojson.features.map(feature => feature.properties[layer.field])).to.deep.equal([12, 30]);
     expect(Reflect.get(subject, 'choroplethLegend')).to.equal(true);
     await expect(host).to.be.accessible();
-  });
+  }));
 });
