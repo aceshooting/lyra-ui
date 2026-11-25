@@ -4,6 +4,7 @@ import { answerRoles } from './answers.js';
 import { chartExtraRoles } from './charts-extra.js';
 import { technicalAnswerRoles } from './answers-technical.js';
 import { richAnswerRoles } from './answers-rich.js';
+import { answerMediaRoles } from './answers-media.js';
 
 /** Overlay roles for live dashboards. Every role renders from plain bounded JSON; formatters and callbacks stay host-owned. */
 const example = (id: string, type: string, props: Record<string, unknown>): LyraGenNode => ({ id, type, props } as LyraGenNode);
@@ -265,7 +266,7 @@ const tierThree: Readonly<Record<string, LyraGenComponent>> = {
   },
 };
 
-const roles: Readonly<Record<string, LyraGenComponent>> = { ...tierOne, ...tierTwo, ...tierThree, ...answerRoles, ...chartExtraRoles, ...technicalAnswerRoles, ...richAnswerRoles };
+const roles: Readonly<Record<string, LyraGenComponent>> = { ...tierOne, ...tierTwo, ...tierThree, ...answerRoles, ...chartExtraRoles, ...technicalAnswerRoles, ...richAnswerRoles, ...answerMediaRoles };
 
 /** Roles added by the dashboard overlay, in a stable order. */
 export const dashboardRoleNames: readonly string[] = Object.freeze(Object.keys(roles));

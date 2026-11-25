@@ -259,6 +259,14 @@ export const styles = css`
     display: block;
     overflow: visible;
   }
+  /* The bar rules above also match the ring's circles. SVG never paints a background or border,
+     but both still compute, and a contrast check reads that computed tone-colored background as
+     the backdrop of the centre caption, which really sits over the empty hole. */
+  :host([shape='ring']) [part='track'],
+  :host([shape='ring']) [part~='segment'] {
+    background: none;
+    border: none;
+  }
   :host([shape='ring']) [part='track'] {
     fill: none;
     stroke: var(--lr-context-meter-track-bg, color-mix(in srgb, var(--lr-color-border) 30%, transparent));

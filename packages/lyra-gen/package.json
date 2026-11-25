@@ -58,6 +58,10 @@
       "types": "./dist/prompts.d.ts",
       "default": "./dist/prompts.js"
     },
+    "./provider-tools.js": {
+      "types": "./dist/provider-tools.d.ts",
+      "default": "./dist/provider-tools.js"
+    },
     "./typed-catalog.js": {
       "types": "./dist/typed-catalog.d.ts",
       "default": "./dist/typed-catalog.js"
@@ -129,6 +133,14 @@
     "./gen-view.class.js": {
       "types": "./dist/gen-view.class.d.ts",
       "default": "./dist/gen-view.class.js"
+    },
+    "./mock-data.js": {
+      "types": "./dist/mock-data.d.ts",
+      "default": "./dist/mock-data.js"
+    },
+    "./telemetry.js": {
+      "types": "./dist/telemetry.d.ts",
+      "default": "./dist/telemetry.js"
     },
     "./gen-view.js": {
       "types": "./dist/gen-view.d.ts",
@@ -242,6 +254,7 @@
     "check:examples": "tsc -p tsconfig.examples.json",
     "test:saved-dashboard": "node --test test/host/saved-dashboard.test.mjs",
     "check:bundles": "node scripts/measure-bundles.mjs",
+    "bench:validation": "node scripts/bench-validation.mjs",
     "check:api": "node --test scripts/check-api.test.mjs && node scripts/check-api.mjs"
   },
   "dependencies": {

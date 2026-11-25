@@ -1,6 +1,8 @@
 import { MARKUP_LIMITS, parseMarkup } from './parser.js';
 import type { MarkupOptions, MarkupResult } from './parser.js';
-import type { LyraGenDiagnostic } from './types.js';
+import type { LyraGenPartialView, LyraGenProgressiveOptions } from './partial-view.js';
+import { createProgressiveMarkupParser, type ProgressiveMarkupParser } from './progressive.js';
+import type { LyraGenCatalog, LyraGenDiagnostic } from './types.js';
 
 export interface ProsePart { readonly kind: 'prose'; readonly source: string; readonly start: number; readonly end: number }
 export interface MarkupIsland {
@@ -14,6 +16,20 @@ export interface MarkupIsland {
   readonly closed: boolean;
   /** Parser offsets are relative to bodyStart. */
   readonly result: MarkupResult;
+  /**
+   * Progressive mode only: the latest validated preview of an island whose body is still streaming.
+   * It carries the surface and revision the committed view will carry. Absent once the island
+   * closes, after a syntax error, and after `cancel()`, `finish()` or a rejected push.
+   */
+  readonly partial?: LyraGenPartialView;
+}
+export interface IslandProgressiveOptions extends LyraGenProgressiveOptions {
+  /** The active catalog; previews pass its strict validation. */
+  readonly catalog: LyraGenCatalog;
+}
+export interface IslandParserOptions extends MarkupOptions {
+  /** Opt in to previews of the island that is still streaming. Off by default; results are otherwise identical. */
+  readonly progressive?: IslandProgressiveOptions;
 }
 export type IslandPart = ProsePart | MarkupIsland;
 export interface IslandResult {
@@ -27,7 +43,7 @@ export interface IslandParser {
 }
 
 /** Incremental fence scanner. Complete islands publish when their closing line arrives. */
-export function createIslandParser(options: MarkupOptions): IslandParser {
+export function createIslandParser(options: IslandParserOptions): IslandParser {
   const limit = (key: 'maxLength' | 'maxBytes'): number => {
     const value = options.limits?.[key];
     return typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? Math.min(MARKUP_LIMITS[key], value) : MARKUP_LIMITS[key];
@@ -51,6 +67,22 @@ export function createIslandParser(options: MarkupOptions): IslandParser {
   let done = false;
   let failure: LyraGenDiagnostic | undefined;
   let retained: readonly IslandPart[] = [];
+  // Progressive mode: the open island's preview parser, how much of the unfinished line it has
+  // consumed, and the latest preview it produced.
+  let preview: ProgressiveMarkupParser | undefined;
+  let previewFed = 0;
+  let latest: LyraGenPartialView | undefined;
+  const { progressive, ...markupOptions } = options;
+  const stopPreview = (): void => { preview?.cancel(); preview = undefined; previewFed = 0; latest = undefined; };
+  const feed = (text: string): void => {
+    if (!preview || !text) return;
+    const step = preview.push(text);
+    if (step.status === 'error') { stopPreview(); return; }
+    if (step.partial) latest = step.partial;
+  };
+  // A line that could still become the closing fence is held back until it completes.
+  const mayClose = (text: string): boolean =>
+    (fence!.character === '`' ? /^ {0,3}(?:`+[ \t]*)?$/ : /^ {0,3}(?:~+[ \t]*)?$/).test(text.replace(/\r$/, ''));
   const parts: IslandPart[] = [];
   const incomplete: MarkupResult = { status: 'incomplete', diagnostics: [], sourceMap: {} };
   const addProse = (): void => {
@@ -65,15 +97,23 @@ export function createIslandParser(options: MarkupOptions): IslandParser {
       const run = match[1]!;
       const lyra = /^[ \t]*lyra[ \t]*$/.test(match[2]!);
       fence = { character: run[0]!, length: run.length, lyra, start, bodyStart: end };
-      if (lyra) { addProse(); proseStart = start; proseText = ''; fenceText = raw; bodyText = ''; }
+      if (lyra) {
+        addProse(); proseStart = start; proseText = ''; fenceText = raw; bodyText = '';
+        if (progressive) {
+          stopPreview();
+          preview = createProgressiveMarkupParser({ ...markupOptions, catalog: progressive.catalog, surfaceId: `${options.surfaceId}:island-${islandCount}`,
+            progressive: progressive.minCodeUnits === undefined ? {} : { minCodeUnits: progressive.minCodeUnits } });
+        }
+      }
       else proseText += raw;
       return;
     }
     if (!match || match[1]![0] !== fence.character || match[1]!.length < fence.length || !/^[ \t]*$/.test(match[2]!)) {
-      if (fence.lyra) { fenceText += raw; bodyText += raw; } else proseText += raw;
+      if (fence.lyra) { fenceText += raw; bodyText += raw; feed(raw.slice(previewFed)); previewFed = 0; } else proseText += raw;
       return;
     }
     if (fence.lyra) {
+      stopPreview();
       const body = bodyText;
       parts.push({ kind: 'island', source: fenceText + raw, body, start: fence.start, end,
         bodyStart: fence.bodyStart, bodyEnd: start, closed: true, result: parseMarkup(body, { ...options, surfaceId: `${options.surfaceId}:island-${islandCount++}` }) });
@@ -110,7 +150,7 @@ export function createIslandParser(options: MarkupOptions): IslandParser {
     if (fence?.lyra) {
       current.push({ kind: 'island', source: fenceText + lineText, body: bodyText + lineText,
         start: fence.start, end: total, bodyStart: fence.bodyStart, bodyEnd: total,
-        closed: false, result: incomplete });
+        closed: false, result: incomplete, ...(latest ? { partial: latest } : {}) });
     } else if (total > proseStart) {
       current.push({ kind: 'prose', source: proseText + lineText, start: proseStart, end: total });
     }
@@ -122,6 +162,7 @@ export function createIslandParser(options: MarkupOptions): IslandParser {
   };
   // A rejected push keeps everything accepted before it; later input is never admitted.
   const reject = (diagnostic: LyraGenDiagnostic): void => {
+    stopPreview();
     if (!failure) retained = snapshotParts();
     failure = diagnostic;
     parts.length = 0; lineText = ''; proseText = ''; fenceText = ''; bodyText = ''; pendingReturn = false;
@@ -150,17 +191,22 @@ export function createIslandParser(options: MarkupOptions): IslandParser {
         return snapshot();
       }
       scanChunk(chunk);
+      if (preview && fence?.lyra && lineText.length > previewFed && !mayClose(lineText)) {
+        feed(lineText.slice(previewFed)); previewFed = lineText.length;
+      }
       return snapshot();
     },
     finish() {
       if (!done) {
         if (lineText.length > 0) completeLine();
         done = true;
+        stopPreview();
       }
       return snapshot();
     },
     cancel() {
       done = true;
+      stopPreview();
       // Already completed islands remain independently usable; incomplete input remains inert.
       return snapshot();
     }
@@ -168,7 +214,7 @@ export function createIslandParser(options: MarkupOptions): IslandParser {
 }
 
 /** Preserve prose verbatim and parse only explicitly fenced Lyra islands. */
-export function parseIslands(source: string, options: MarkupOptions): IslandResult {
+export function parseIslands(source: string, options: IslandParserOptions): IslandResult {
   const parser = createIslandParser(options);
   parser.push(source);
   return parser.finish();

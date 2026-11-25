@@ -2115,6 +2115,7 @@ export interface LyraComponentTypeMap {
       LyraCalendarViewer,
       | 'activeHighlightId'
       | 'anchor'
+      | 'events'
       | 'highlights'
       | 'locale'
       | 'maxEvents'
@@ -6798,6 +6799,7 @@ export interface LyraComponentTypeMap {
       LyraGeoJsonViewer,
       | 'activeHighlightId'
       | 'anchor'
+      | 'data'
       | 'highlights'
       | 'locale'
       | 'maxHeight'

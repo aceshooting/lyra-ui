@@ -28,8 +28,31 @@ Valid early all-day dates, including years `0001`, `0099`, and `0100`, retain th
 year when parsed through `ical.js`; the exclusive `DTEND` display rule remains unchanged. The peer
 may normalize malformed raw date fields before Lyra receives them.
 
-**Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
-`max-height`); invalid CSS
+**Plain events:** a host that already holds calendar data assigns `events` (property only, default
+`null`) instead of `src`: an array of `{ id?: string; title: string; start: string; end?: string;
+allDay?: boolean; location?: string; description?: string }` records
+(`LyraCalendarViewerEventRecord`). Records render in array order through the same text-only model,
+parts and bounds as parsed `.ics` events (`max-events`, 2 MiB of rendered text) and need no `ical.js`
+peer. `start`/`end` are ISO 8601: a `YYYY-MM-DD` value is an all-day date, a date-time without an
+offset is local time, and `allDay: true` uses only the leading date with an exclusive `end` (the
+day after the last day, as in iCalendar). An invalid, reversed or kind-mismatched date is ignored
+for that field only; a non-string or blank `title` shows the localized no-title text; non-object
+entries are skipped. A non-array value or too many records renders the localized failure or
+resource-limit message and fires `lr-render-error`. Whenever `events` is non-null (including `[]`,
+the empty-calendar note) it takes precedence over `src`, which is neither fetched nor parsed, and
+any in-flight load is superseded; `null` restores `src`. The array is read once per assignment, so
+reassign a new array to change the view.
+
+```ts
+calendar.events = [
+  { id: 'kickoff', title: 'Kickoff', start: '2026-07-14T14:00:00Z', end: '2026-07-14T15:00:00Z' },
+  { title: 'Offsite', start: '2026-07-20', end: '2026-07-22', allDay: true }, // 20 and 21
+];
+```
+
+**Properties:** `src: string = ''` (ignored while `events` is set), `events:
+LyraCalendarViewerEventRecord[] | null = null`, `name: string = ''`, and `maxHeight: string = ''`
+(attribute `max-height`); invalid CSS
 `max-height` values, declaration breaks, and `url()` are ignored. A host `aria-label` takes
 precedence over `name` by attribute presence, including an explicitly empty value. `highlights`,
 `activeHighlightId`, `anchor`, and

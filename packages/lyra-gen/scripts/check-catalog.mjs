@@ -10,7 +10,7 @@ import { createCatalogPropertyProof, createSchemaTypeProof } from './catalog-typ
 import { verifyTableAdapter } from './catalog-adapter-proof.mjs';
 import { validateSchema } from '../dist/schema.js';
 import { validateView } from '../dist/runtime.js';
-import { dashboardCatalog, initialCatalog, mapCatalog } from '../dist/catalog.js';
+import { dashboardCatalog, initialCatalog, mapCatalog, mediaCatalog } from '../dist/catalog.js';
 
 const uiRoot = fileURLToPath(new URL('../../lyra-ui/', import.meta.url));
 const manifest = JSON.parse(await readFile(new URL('../../lyra-ui/custom-elements.json', import.meta.url), 'utf8'));
@@ -95,11 +95,11 @@ let usageGuides = 0;
 let enumValues = 0;
 // Overlay roles are proven exactly like built-in roles, each against the catalog that adds it.
 const proofRegions = { geojson: { type: 'FeatureCollection', features: ['north', 'south'].map((code, x) => ({ type: 'Feature', properties: { code }, geometry: { type: 'Polygon', coordinates: [[[x, 0], [x + 1, 0], [x + 1, 1], [x, 1], [x, 0]]] } })) }, idProperty: 'code' };
-const dashboard = mapCatalog(dashboardCatalog(), { mapStyle: { version: 8, sources: {}, layers: [] }, regions: proofRegions });
+const dashboard = mediaCatalog(mapCatalog(dashboardCatalog(), { mapStyle: { version: 8, sources: {}, layers: [] }, regions: proofRegions }), { origins: ['https://media.example.com'] });
 /** Generated shapes a reviewed adapter rebuilds into the component type; proven by their adapter output below. */
 const adapterProperties = new Set(['map.choropleth']);
 /** Properties typed `unknown` that accept any JSON; the schema checks above already bound depth, keys, items and strings. */
-const jsonDataProperties = new Set(['json-viewer.data']);
+const jsonDataProperties = new Set(['json-viewer.data', 'geojson.data']);
 /** Generated-only inputs a reviewed adapter consumes and replaces with host properties; proven by running the adapter. */
 const adapterInputs = new Map([['slider.format', component => {
   const prepared = component.prepareProperties({ label: 'Proof', value: 80, format: { style: 'unit', unit: 'percent' } }, { locale: 'en' });

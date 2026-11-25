@@ -48538,8 +48538,31 @@ Valid early all-day dates, including years `0001`, `0099`, and `0100`, retain th
 year when parsed through `ical.js`; the exclusive `DTEND` display rule remains unchanged. The peer
 may normalize malformed raw date fields before Lyra receives them.
 
-**Properties:** `src: string = ''`, `name: string = ''`, and `maxHeight: string = ''` (attribute
-`max-height`); invalid CSS
+**Plain events:** a host that already holds calendar data assigns `events` (property only, default
+`null`) instead of `src`: an array of `{ id?: string; title: string; start: string; end?: string;
+allDay?: boolean; location?: string; description?: string }` records
+(`LyraCalendarViewerEventRecord`). Records render in array order through the same text-only model,
+parts and bounds as parsed `.ics` events (`max-events`, 2 MiB of rendered text) and need no `ical.js`
+peer. `start`/`end` are ISO 8601: a `YYYY-MM-DD` value is an all-day date, a date-time without an
+offset is local time, and `allDay: true` uses only the leading date with an exclusive `end` (the
+day after the last day, as in iCalendar). An invalid, reversed or kind-mismatched date is ignored
+for that field only; a non-string or blank `title` shows the localized no-title text; non-object
+entries are skipped. A non-array value or too many records renders the localized failure or
+resource-limit message and fires `lr-render-error`. Whenever `events` is non-null (including `[]`,
+the empty-calendar note) it takes precedence over `src`, which is neither fetched nor parsed, and
+any in-flight load is superseded; `null` restores `src`. The array is read once per assignment, so
+reassign a new array to change the view.
+
+```ts
+calendar.events = [
+  { id: 'kickoff', title: 'Kickoff', start: '2026-07-14T14:00:00Z', end: '2026-07-14T15:00:00Z' },
+  { title: 'Offsite', start: '2026-07-20', end: '2026-07-22', allDay: true }, // 20 and 21
+];
+```
+
+**Properties:** `src: string = ''` (ignored while `events` is set), `events:
+LyraCalendarViewerEventRecord[] | null = null`, `name: string = ''`, and `maxHeight: string = ''`
+(attribute `max-height`); invalid CSS
 `max-height` values, declaration breaks, and `url()` are ignored. A host `aria-label` takes
 precedence over `name` by attribute presence, including an explicitly empty value. `highlights`,
 `activeHighlightId`, `anchor`, and
@@ -50619,7 +50642,19 @@ lazy map initializes. After `lr-map-load`, landmark ownership transfers to the m
 is exactly one named region. Serialized metadata is locally inline-scrollable, preventing long
 unbroken values from widening a 320px allocation.
 
-**Properties:** `src: string = ''` — URL to fetch and parse. `name: string = ''` — accessible label,
+**Plain data:** `data: unknown = null` (property only) accepts an already-parsed GeoJSON
+`FeatureCollection`, `Feature` or bare geometry. It is admitted exactly like a fetched document:
+the same shape validation and the same graph-unit, nesting, text, serialized-size and 10,000-position
+ceilings, with the localized `geojsonViewInvalid` or `documentPreviewResourceTooLarge` message and
+`lr-render-error` on failure. The value must be JSON-compatible plain data: `undefined`, functions,
+non-finite numbers, cycles and an object reused at two places in the graph are rejected as invalid.
+The viewer renders a private copy taken at assignment and never mutates the host object; reassign
+a new object to change the view. Whenever `data` is non-null it takes precedence over `src`, which
+is not fetched (an in-flight load is superseded); `null` restores `src`. Supplied data survives
+disconnect/reconnect.
+
+**Properties:** `src: string = ''` — URL to fetch and parse; ignored while `data` is set.
+`data: unknown = null` — already-parsed GeoJSON, described above. `name: string = ''` — accessible label,
 used as `<lr-map>`'s `label` and the root's `aria-label` (falling back to the localized
 `geojsonViewLabel` when unset; a whitespace-only `name` counts as unset). A nonempty host
 `aria-label` takes precedence over `name`: it names the map, and while the map does not own the
@@ -50906,6 +50941,15 @@ These named interfaces and helper signatures are available to typed integrations
     endKind: ParsedCalendarTimeKind | null;
     location: string;
     description: string;
+  }`
+  `LyraCalendarViewerEventRecord {
+    id?: string;
+    title: string;
+    start: string;
+    end?: string;
+    allDay?: boolean;
+    location?: string;
+    description?: string;
   }`
 
 - **`components-viewers-contact-viewer-vcard-contracts`** — Supporting data types and helpers for this component family.

@@ -104,8 +104,37 @@ with model-selected or randomly reassigned surface ids.
 An unclosed block stays incomplete and inert. `cancel()` retains already completed islands but
 does not complete a partial control. Show a localized interrupted/retry state and preserve the
 transport cursor under host policy. `createMarkupParser()` commits a whole view only at
-`finish()`; neither parser promises interactive partial attributes or per-tag progressive mounting.
-Raw markup outside a `lyra` fence remains prose in the island API.
+`finish()`; a still-open island never mounts interactive controls. Raw markup outside a `lyra`
+fence remains prose in the island API.
+
+### Progressive islands
+
+Opt in with `progressive: true` (or `{ minCodeUnits }`) on `createChatStream()` to show a validated
+preview while an island's body is still streaming. A `loading` island then carries `partial`: a
+`LyraGenPartialView` with the surface and revision the committed document will carry, with host
+source authorization already applied to citations and source cards. Pass it to the island's view
+as `.partial`, and the committed `document` as `.document` when the island becomes `ready`:
+
+```ts
+const chat = createChatStream({ ...options, progressive: true });
+const island = chat.push(delta).islands.at(-1);
+if (island) { view.partial = island.partial; if (island.document) view.document = island.document; }
+```
+
+A preview renders inert: it fires no `lr-gen-ready`, reconciles no state, and nodes whose subtree
+is still open carry the `partial` part and `aria-busy`. Previews only grow; a shown node is never
+removed or retyped. Each holds only nodes that are complete in the source and pass strict catalog
+validation, so a malformed island never shows invented nodes: previews stop at the first syntax
+defect and the closed island takes the invalid fallback. `partial` is absent once the island is
+`ready`, `error` or `incomplete`, so clearing `.partial` on every update removes the preview when
+the stream is cancelled, interrupted or rejected; `resume()` restores it. A line that could still
+become the closing fence is held back until it completes, so fence text never reaches a preview.
+The committed document is identical with or without progressive mode.
+
+At the island level, `createIslandParser()` accepts `progressive: { catalog, minCodeUnits? }`
+and exposes the latest preview as `partial` on the open island part. For a JSON document streamed
+outside chat text, use `createJsonViewStream({ catalog, progressive: true })` and read `partial`
+from each incomplete push.
 
 The chat controller's `interrupt(resumable, reason?)` preserves completed islands and marks an
 unfinished tail. `resume()` permits more deltas only for a resumable interruption. `cancel()` makes

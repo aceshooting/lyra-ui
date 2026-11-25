@@ -8,10 +8,12 @@ import { answerBlockComponents } from './catalogs/blocks.js';
 import { dashboardComponents } from './catalogs/dashboard.js';
 export { dashboardRoleNames } from './catalogs/dashboard.js';
 import { mapComponents, type LyraGenMapOptions } from './catalogs/geo.js';
+import { mediaComponents, type LyraGenMediaOptions } from './catalogs/answers-media.js';
 import { mcpAppActions, mcpAppComponents, type LyraGenMcpAppOptions } from './catalogs/mcp.js';
 export type { LyraGenMcpAppOptions, LyraGenMcpAppResource } from './catalogs/mcp.js';
 export { mcpToolCallAction } from './catalogs/mcp.js';
 export type { LyraGenMapOptions, LyraGenMapRegions } from './catalogs/geo.js';
+export type { LyraGenMediaOptions } from './catalogs/answers-media.js';
 
 /** Create a trusted host catalog. Generated content must never construct this definition. */
 export function createCatalog(definition: LyraGenCatalog): LyraGenCatalog {
@@ -121,6 +123,14 @@ export const liveDashboardCatalog: LyraGenCatalog = /* @__PURE__ */ (() => {
  */
 export function mapCatalog(base: LyraGenCatalog, options: LyraGenMapOptions): LyraGenCatalog {
   return createCatalog({ ...base, id: `${base.id}+map`, version: base.version, components: { ...base.components, ...mapComponents(base, options) } });
+}
+
+/**
+ * Opt-in overlay adding a `media-card` role (id `<base id>+media`) whose `src` may only use the exact
+ * HTTPS origins the host approves. Throws a `TypeError` without at least one canonical origin.
+ */
+export function mediaCatalog(base: LyraGenCatalog, options: LyraGenMediaOptions): LyraGenCatalog {
+  return createCatalog({ ...base, id: `${base.id}+media`, version: base.version, components: { ...base.components, ...mediaComponents(base, options) } });
 }
 
 /**

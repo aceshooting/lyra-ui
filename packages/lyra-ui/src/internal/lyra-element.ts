@@ -400,6 +400,13 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
   private staleServerNodes?: number;
   /** Browser-only first-render reads coalesced behind one completed hydration update. */
   private deferredFirstRenderSeeds?: Set<() => void>;
+  /**
+   * Upgrade-replay guard; see {@link requestUpdate}. `'tracking'` from the first connect until the
+   * first update starts, `'replaying'` from then until `shouldUpdate()`, `undefined` otherwise.
+   */
+  private preUpdateWindow?: 'tracking' | 'replaying';
+  /** Reactive properties assigned while tracking, then the value each held as the first update began. */
+  private preUpdateWrites?: Map<PropertyKey, unknown>;
 
   constructor() {
     super();
@@ -519,6 +526,7 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     // whatever the browser alone can see. The SSR generation pass itself never seeds at all (see
     // SEED_FIRST_RENDER_STATE): the server renderer does not even call connectedCallback.
     this.hydratingServerShadow ??= !this.hasUpdated && this.shadowRoot !== null;
+    if (!this.hasUpdated) this.preUpdateWindow ??= 'tracking';
     // Before Lit's first update, so a component never paints without its tokens. Every connect
     // re-checks, which restores a layer an application removed by replacing adoptedStyleSheets.
     ensureLyraTokens(this);
@@ -710,15 +718,64 @@ export class LyraElement<Events = LyraEventMap> extends LitElement {
     // private `accessor` cannot be read back through `this[name]`.
     super.requestUpdate(...args);
     deprecatedAliasSyncHook?.(this, args[0], args[1]);
+    // Property writes pass the old value; a bare `requestUpdate(name)` is not an assignment.
+    if (this.preUpdateWindow !== undefined && args.length >= 2) this.guardPreUpdateWrite(args[0]);
+  }
+
+  /**
+   * Keeps assignments made after an upgrade from being undone by the values the element held
+   * before it. A property assigned to a not-yet-defined element is an own instance property; on
+   * upgrade Lit removes it so the reactive accessor works, then assigns the saved value at the
+   * start of the first update. A newer assignment in between (a host template that re-rendered
+   * while this child's first update was still queued, as happens when a lazily registered child
+   * upgrades) is otherwise overwritten by that stale value, and the host never assigns again
+   * because its own binding did not change. Writes are recorded from the first connect, which an
+   * upgrade runs only after every class-field initializer, so initial values still yield to the
+   * pre-upgrade ones; the replay of a recorded property is then followed by the newer value.
+   */
+  private guardPreUpdateWrite(name: PropertyKey | undefined): void {
+    if (name === undefined || !(this.constructor as typeof LitElement).elementProperties.has(name)) return;
+    const writes = this.preUpdateWrites;
+    if (this.preUpdateWindow === 'tracking') {
+      (this.preUpdateWrites ??= new Map()).set(name, undefined);
+    } else if (writes?.has(name)) {
+      const newer = writes.get(name);
+      // Each property is replayed once; deleting first keeps this restoring write untracked.
+      writes.delete(name);
+      (this as unknown as Record<PropertyKey, unknown>)[name] = newer;
+    }
   }
 
   protected override performUpdate(): void {
+    if (this.preUpdateWindow === 'tracking' && this.isUpdatePending) {
+      const writes = this.preUpdateWrites;
+      if (writes) {
+        const self = this as unknown as Record<PropertyKey, unknown>;
+        for (const name of writes.keys()) writes.set(name, self[name]);
+        this.preUpdateWindow = 'replaying';
+      } else {
+        this.preUpdateWindow = undefined;
+      }
+    }
     beginInheritedContextUpdate(this);
     try {
       super.performUpdate();
     } finally {
+      this.endPreUpdateWindow();
       finishInheritedContextUpdate(this);
     }
+  }
+
+  /** Lit replays pre-upgrade values before calling this; later writes are ordinary ones. */
+  protected override shouldUpdate(changedProperties: PropertyValues): boolean {
+    this.endPreUpdateWindow();
+    return super.shouldUpdate(changedProperties);
+  }
+
+  private endPreUpdateWindow(): void {
+    if (this.preUpdateWindow !== 'replaying') return;
+    this.preUpdateWindow = undefined;
+    this.preUpdateWrites = undefined;
   }
 
   protected override update(changedProperties: PropertyValues): void {

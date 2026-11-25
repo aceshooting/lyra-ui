@@ -12895,6 +12895,27 @@
     },
     {
       "module": "src/components/viewers/calendar-viewer/calendar-viewer.class.ts",
+      "exportName": "LyraCalendarViewerEventRecord",
+      "kind": "interface",
+      "fingerprint": "988850eb2bb2b43cbbb5",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-calendar-viewer.ts",
+        "src/components/viewers/calendar-viewer/calendar-viewer.class.ts",
+        "src/components/viewers/index.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/viewers.md",
+      "family": "viewers",
+      "locator": {
+        "kind": "utility",
+        "name": "components-viewers-calendar-viewer-calendar-viewer-contracts",
+        "declaration": "LyraCalendarViewerEventRecord"
+      }
+    },
+    {
+      "module": "src/components/viewers/calendar-viewer/calendar-viewer.class.ts",
       "exportName": "ParsedCalendarEvent",
       "kind": "interface",
       "fingerprint": "db7b71487d15667addca",
@@ -14468,7 +14489,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "8a4043479c9cd01061c4",
+      "fingerprint": "0ab8b2551b792377e216",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -16150,7 +16171,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "e116f70bc940b5feaa02",
+      "fingerprint": "74a8e73b58e8939a24da",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16166,7 +16187,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "af70dabc4431cbea0879",
+      "fingerprint": "d2c3225c050459e26eec",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16726,7 +16747,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "077e162b4e4de4331c91",
+      "fingerprint": "79140aee9249f8e0f0ab",
       "routes": [
         "src/vue.ts"
       ],
@@ -17118,7 +17139,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "6ff1bee60b45a889838d",
+      "fingerprint": "2d38d77c7f07834d369a",
       "routes": [
         "src/framework-types.ts"
       ],

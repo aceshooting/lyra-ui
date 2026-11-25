@@ -2146,6 +2146,7 @@ export type {
   ParsedCalendarTimeKind,
   ParsedCalendarEvent,
   LyraCalendarViewerEventMap,
+  LyraCalendarViewerEventRecord,
 } from './components/viewers/calendar-viewer/calendar-viewer.class.js';
 export * from './components/viewers/calendar-viewer/calendar-loader.js';
 export type {

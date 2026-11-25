@@ -14,7 +14,7 @@ import { LYRA_GEN_ISOLATED_TYPE } from './isolation.js';
 import { styles } from './gen-view.styles.js';
 import { createDefaultFunctions, type LyraGenFunctionRegistry } from './functions.js';
 import type { LyraGenPartialView } from './partial-view.js';
-import type { LyraGenCondition, LyraGenValueRef } from './types.js';
+import type { LyraGenCondition, LyraGenDataQuery, LyraGenQueryDefinition, LyraGenValueRef } from './types.js';
 import type { JsonValue, LyraGenAction, LyraGenCatalog, LyraGenComponent, LyraGenDiagnostic, LyraGenLimits, LyraGenNode, LyraGenRecoveryMode, LyraGenResult, LyraGenView } from './types.js';
 
 export type LyraGenViewStatus = 'empty' | 'loading' | 'ready' | 'error' | 'interrupted';
@@ -109,13 +109,66 @@ interface RenderPlan {
   readonly records: Map<string, RenderedNode>;
   readonly definitions: Set<LyraGenComponent>;
   readonly commits: PreparedNode[];
+  readonly items: ReadonlyMap<string, JsonValue>;
 }
+interface QuerySignature { readonly run: QueryRun; readonly status: QueryRun['status']; readonly value?: JsonValue }
+/** The inputs one preparation read; a later preparation re-prepares only the nodes whose sources differ. */
+interface RenderInputs {
+  readonly generation: number;
+  readonly accepted: LyraGenView;
+  readonly catalog: LyraGenCatalog;
+  readonly locale: string;
+  readonly limits?: Partial<LyraGenLimits>;
+  readonly functions?: LyraGenFunctionRegistry;
+  readonly state?: LyraGenSurfaceState;
+  readonly live: JsonValue;
+  readonly queries: ReadonlyMap<string, QuerySignature>;
+  items?: ReadonlyMap<string, JsonValue>;
+}
+/** Which sources changed since the committed preparation; `items` holds the repeat items it used. */
+interface SourceChanges {
+  readonly state: boolean;
+  readonly live: boolean;
+  readonly queries: ReadonlySet<string>;
+  readonly items: ReadonlyMap<string, JsonValue>;
+}
+interface QueryRequest { readonly key: string; readonly name: string; readonly params: JsonValue }
+interface QueryRequestCache {
+  readonly definition: LyraGenQueryDefinition;
+  readonly limits: Readonly<LyraGenLimits>;
+  readonly surfaceId: string;
+  readonly reads: readonly (JsonValue | undefined)[];
+  readonly request?: QueryRequest;
+}
+const hasEntries = (record: Readonly<Record<string, string>> | undefined): boolean => {
+  for (const key in record) if (Object.hasOwn(record, key)) return true;
+  return false;
+};
+/** Whether preparing `node` reads a source in `changes` (repeat items are compared separately). */
+const readsChangedSource = (node: LyraGenNode, changes: SourceChanges): boolean => {
+  // A query node's live references read its own query result instead of host live data.
+  const query = node.dataQuery !== undefined;
+  if (query && changes.queries.has(node.id)) return true;
+  const state = changes.state, live = changes.live && !query;
+  if (!state && !live) return false;
+  if (state && (hasEntries(node.bindings) || hasEntries(node.reads))) return true;
+  if (live && hasEntries(node.liveReads)) return true;
+  const reads = (ref: LyraGenValueRef): boolean => ref.source === 'state' ? state : ref.source !== 'item' && live;
+  if (node.visible && reads(node.visible)) return true;
+  if (node.checks?.some(reads)) return true;
+  for (const key in node.computes) {
+    const arg = node.computes[key]!.arg;
+    if (Array.isArray(arg) ? arg.some(reads) : !('value' in arg) && reads(arg as LyraGenValueRef)) return true;
+  }
+  return false;
+};
 
 /** Stand-in definition for isolation markers: a plain, non-interactive paragraph with no properties or events. */
 const ISOLATED_DEFINITION: LyraGenComponent = Object.freeze({ tag: 'p', properties: Object.freeze({}) }) as LyraGenComponent;
 
-// Cooperative limits: one trusted constructor, adapter or setter cannot be preempted.
-const RENDER_SLICE_STEPS = 64;
+// Cooperative limits: one trusted constructor, adapter or setter cannot be preempted. A slice is
+// time-budgeted; the step count only bounds a slice when the clock is coarse.
+const RENDER_SLICE_STEPS = 4096;
 const RENDER_SLICE_MS = 4;
 
 /**
@@ -225,7 +278,14 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
 
   private snapshotRestore?: { readonly snapshot: LyraGenSnapshot; readonly catalog: LyraGenCatalog };
   private processedLimits?: Partial<LyraGenLimits>;
-  private get resolvedLimits(): Readonly<LyraGenLimits> { return resolveLimits(this.limits ?? {}); }
+  private limitsCache?: { readonly input?: Partial<LyraGenLimits>; readonly value: Readonly<LyraGenLimits> };
+  private get resolvedLimits(): Readonly<LyraGenLimits> {
+    const cache = this.limitsCache;
+    if (cache && cache.input === this.limits) return cache.value;
+    const value = Object.freeze(resolveLimits(this.limits ?? {}));
+    this.limitsCache = { input: this.limits, value };
+    return value;
+  }
 
   private readinessStatus: LyraGenViewStatus = 'empty';
   private processedDocument?: LyraGenView;
@@ -245,6 +305,13 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
   private invalid = false;
   private nodes = new Map<string, RenderedNode>();
   private renderTask?: AbortController;
+  /** Whether the in-flight render still matches every input except live data. */
+  private renderCurrent?: () => boolean;
+  /** Live data changed while a render was in flight; it re-prepares the affected nodes after committing. */
+  private renderFollowUp = false;
+  /** Inputs of the last committed preparation, for incremental re-preparation. */
+  private committedInputs?: RenderInputs;
+  private readonly queryRequests = new WeakMap<LyraGenDataQuery, QueryRequestCache>();
   private renderComplete: Promise<void> = Promise.resolve();
   private committedSource?: LyraGenView;
   private readonly loads = new Map<LyraGenComponent, LoadState>();
@@ -302,8 +369,15 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    this.renderTask?.abort();
-    this.renderTask = undefined;
+    // Rapid live data must not restart a render before it commits: let it finish, then re-prepare
+    // only the nodes that read live data.
+    const coalesce = changed.size > 0 && [...changed.keys()].every(key => key === 'liveData') && this.renderCurrent?.() === true;
+    if (coalesce) this.renderFollowUp = true;
+    else {
+      this.renderTask?.abort();
+      this.renderTask = undefined;
+      this.renderCurrent = undefined;
+    }
     this.readinessTask?.abort();
     this.readinessTask = undefined;
     this.processedDocument = this.viewSource;
@@ -362,19 +436,26 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
   /** Start, keep or abort one run per query node from the current view and state; never blocks rendering. */
   private syncQueries(reset: boolean): void {
     const view = this.invalid ? undefined : this.accepted;
-    const wanted = new Map<string, { readonly key: string; readonly name: string; readonly params: JsonValue }>();
+    const wanted = new Map<string, QueryRequest>();
     if (view && this.queryProvider && this.isConnected) {
+      const limits = this.resolvedLimits;
+      const values = this.localState?.values ?? {};
       const visit = (node: LyraGenNode): void => {
         const query = node.dataQuery;
         const definition = query && this.catalog.queries?.[query.name];
         if (query && definition) {
-          const params: Record<string, JsonValue> = { ...query.params };
-          for (const [key, pointer] of Object.entries(query.paramReads ?? {})) {
-            const value = readPointer(this.localState?.values ?? {}, pointer);
-            if (value.ok) params[key] = value.value;
+          const reads = Object.values(query.paramReads ?? {}).map(pointer => { const value = readPointer(values, pointer); return value.ok ? value.value : undefined; });
+          const cached = this.queryRequests.get(query);
+          // The serialized key is computed once per query and distinct parameter reads.
+          let request = cached?.request;
+          if (!cached || cached.definition !== definition || cached.limits !== limits || cached.surfaceId !== view.surfaceId || cached.reads.length !== reads.length || cached.reads.some((value, index) => !Object.is(value, reads[index]))) {
+            const params: Record<string, JsonValue> = { ...query.params };
+            Object.keys(query.paramReads ?? {}).forEach((key, index) => { const value = reads[index]; if (value !== undefined) params[key] = value; });
+            const checked = validateSchema(params, definition.params, limits);
+            request = checked.ok ? { key: `${view.surfaceId}\u0000${query.name}\u0000${JSON.stringify(checked.value)}`, name: query.name, params: checked.value } : undefined;
+            this.queryRequests.set(query, { definition, limits, surfaceId: view.surfaceId, reads, ...(request ? { request } : {}) });
           }
-          const checked = validateSchema(params, definition.params, this.resolvedLimits);
-          if (checked.ok) wanted.set(node.id, { key: `${view.surfaceId}\u0000${query.name}\u0000${JSON.stringify(checked.value)}`, name: query.name, params: checked.value });
+          if (request) wanted.set(node.id, request);
         }
         node.children?.forEach(visit);
       };
@@ -418,14 +499,21 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
       const message = this.ownerDocument.createElement('p');
       message.setAttribute('part', this.invalid ? 'error' : 'empty');
       message.textContent = this.message(this.invalid ? 'genViewInvalid' : 'genViewEmpty');
+      this.renderTask?.abort();
+      this.renderTask = undefined;
+      this.renderCurrent = undefined;
       surface.replaceChildren(message);
       this.nodes.clear();
+      this.committedInputs = undefined;
       this.setReadiness(this.invalid ? 'error' : 'empty');
     } else {
       surface.inert = this.acceptedPreview;
-      const task = new AbortController();
-      this.renderTask = task;
-      this.renderComplete = this.renderInSlices(surface, task);
+      // A coalesced live update keeps the in-flight render, which re-prepares after committing.
+      if (!this.renderTask) {
+        const task = new AbortController();
+        this.renderTask = task;
+        this.renderComplete = this.renderInSlices(surface, task);
+      }
     }
     this.mounted = true;
   }
@@ -445,21 +533,35 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
     const bindings = this.bindingState;
     const limits = this.limits;
     const locale = this.effectiveLocale;
-    const current = (): boolean => this.effectiveLocale === locale && !task.signal.aborted && this.isConnected && !this.invalid && this.accepted === accepted && this.viewSource === source && this.catalog === catalog && this.localState === state && this.bindingState === bindings && this.limits === limits;
-    const preparation = this.prepareTree(accepted.root);
+    const functions = this.functions;
+    const generation = this.generation;
+    const current = (): boolean => this.effectiveLocale === locale && !task.signal.aborted && this.isConnected && !this.invalid && this.accepted === accepted && this.viewSource === source && this.catalog === catalog && this.localState === state && this.bindingState === bindings && this.limits === limits && this.functions === functions && this.generation === generation;
+    this.renderCurrent = current;
+    this.renderFollowUp = false;
+    let inputs = this.renderInputs();
+    let preparation = this.prepareTree(accepted.root, this.sourceChanges(inputs));
     try {
       while (current()) {
         const started = performance.now();
-        let step: IteratorResult<void, RenderPlan>;
         let work = 0;
         do {
-          step = preparation.next();
+          const step = preparation.next();
           if (!current()) return;
           if (step.done) {
             this.commitRender(surface, step.value);
             if (!current()) return;
             this.committedSource = source;
+            inputs.items = step.value.items;
+            this.committedInputs = inputs;
+            if (this.renderFollowUp) {
+              // Live data changed meanwhile: re-prepare only what reads it, then settle once.
+              this.renderFollowUp = false;
+              inputs = this.renderInputs();
+              preparation = this.prepareTree(accepted.root, this.sourceChanges(inputs));
+              continue;
+            }
             this.renderTask = undefined;
+            this.renderCurrent = undefined;
             this.checkReadiness();
             return;
           }
@@ -472,8 +574,51 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
       this.setReadiness('error');
       this.report('genViewLoadFailed', 'component.properties');
     } finally {
-      if (this.renderTask === task) this.renderTask = undefined;
+      if (this.renderTask === task) { this.renderTask = undefined; this.renderCurrent = undefined; }
     }
+  }
+
+  private renderInputs(): RenderInputs {
+    const queries = new Map<string, QuerySignature>();
+    for (const [nodeId, run] of this.queryRuns) queries.set(nodeId, { run, status: run.status, ...(run.value !== undefined ? { value: run.value } : {}) });
+    return {
+      generation: this.generation, accepted: this.accepted!, catalog: this.catalog, locale: this.effectiveLocale, limits: this.limits,
+      functions: this.functions, state: this.localState, live: this.liveData, queries,
+    };
+  }
+
+  /**
+   * The source changes since the committed preparation, or `undefined` when everything must be
+   * prepared again: a new document, catalog, locale, limits or functions, or any node or module
+   * that is not ready.
+   */
+  private sourceChanges(inputs: RenderInputs): SourceChanges | undefined {
+    const previous = this.committedInputs;
+    if (!previous?.items || previous.generation !== inputs.generation || previous.accepted !== inputs.accepted || previous.catalog !== inputs.catalog ||
+      previous.locale !== inputs.locale || previous.limits !== inputs.limits || previous.functions !== inputs.functions ||
+      this.readinessErrorGeneration === this.generation) return undefined;
+    for (const state of this.loads.values()) if (state.status !== 'ready') return undefined;
+    for (const record of this.nodes.values()) if (!record.ready) return undefined;
+    const queries = new Set<string>();
+    for (const [nodeId, signature] of inputs.queries) {
+      const before = previous.queries.get(nodeId);
+      if (before?.run !== signature.run || before.status !== signature.status || before.value !== signature.value) queries.add(nodeId);
+    }
+    for (const nodeId of previous.queries.keys()) if (!inputs.queries.has(nodeId)) queries.add(nodeId);
+    return { state: previous.state !== inputs.state, live: previous.live !== inputs.live, queries, items: previous.items };
+  }
+
+  /** The committed node without preparing it again, when none of the sources it reads changed. */
+  private reusePrepared(node: LyraGenNode, changes: SourceChanges): PreparedNode | undefined {
+    const previous = this.nodes.get(node.id);
+    if (!previous?.ready || previous.node.type !== node.type) return undefined;
+    const definition = this.definitionOf(node);
+    if (previous.definition !== definition) return undefined;
+    const loading = this.load(definition);
+    if (loading.status !== 'ready' || readsChangedSource(node, changes)) return undefined;
+    if (this.itemValues.get(node.id) !== changes.items.get(node.id)) return undefined;
+    // Committing re-applies the kept values, so a control that changed its own property is restored.
+    return { record: previous, next: previous, loading, fresh: false, children: [], canAssemble: false };
   }
 
   private nextRenderFrame(signal: AbortSignal): Promise<void> {
@@ -487,17 +632,18 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
     });
   }
 
-  private *prepareTree(root: LyraGenNode): Generator<void, RenderPlan> {
+  private *prepareTree(root: LyraGenNode, changes?: SourceChanges): Generator<void, RenderPlan> {
     const records = new Map<string, RenderedNode>();
     const definitions = new Set<LyraGenComponent>();
     const ordered: PreparedNode[] = [];
-    this.itemValues = new Map();
+    const items = new Map<string, JsonValue>();
+    this.itemValues = items;
     const pending: { nodes: readonly LyraGenNode[]; index: number; parent?: PreparedNode }[] = [{ nodes: [root], index: 0 }];
     while (pending.length) {
       const entry = pending[pending.length - 1]!;
       if (entry.index === entry.nodes.length) { pending.pop(); continue; }
       const node = entry.nodes[entry.index++]!;
-      const prepared = this.prepareNode(node);
+      const prepared = (changes && this.reusePrepared(node, changes)) ?? this.prepareNode(node);
       prepared.parent = entry.parent;
       entry.parent?.children.push(prepared);
       ordered.push(prepared);
@@ -521,7 +667,7 @@ export class LyraGenViewElement extends LyraElement<LyraGenViewEventMap> {
       }
       yield;
     }
-    return { root: ordered[0]!, records, definitions, commits };
+    return { root: ordered[0]!, records, definitions, commits, items };
   }
 
   /** Instantiate a repeat template once per keyed item; ids are `<template id>@<encoded key>`, which no declared id can equal. */

@@ -1,6 +1,8 @@
 import type { MessagePart } from '@aceshooting/lyra-ui/ai';
 import { createIslandParser, type IslandParser, type IslandResult } from './islands.js';
 import { validateCanonicalView } from './isolation.js';
+import type { LyraGenPartialView, LyraGenProgressiveOptions } from './partial-view.js';
+import { validateView } from './runtime.js';
 import { snapshotJson } from './schema.js';
 import type { MarkupOptions } from './parser.js';
 import type { JsonValue, LyraGenCatalog, LyraGenDiagnostic, LyraGenIsolation, LyraGenNode, LyraGenRecoveryMode, LyraGenValidationResult, LyraGenView } from './types.js';
@@ -40,6 +42,11 @@ export interface LyraGenChatOptions {
   readonly suggestions?: readonly LyraGenChatSuggestion[];
   readonly canAsk?: () => boolean;
   readonly onAsk?: (request: LyraGenChatAsk) => void | Promise<void>;
+  /**
+   * Opt in to validated previews of an island whose body is still streaming (`true` uses the
+   * default interval). Off by default; committed documents are identical either way.
+   */
+  readonly progressive?: boolean | LyraGenProgressiveOptions;
 }
 export interface LyraGenChatIsland {
   readonly kind: 'lyra-gen-island';
@@ -52,6 +59,13 @@ export interface LyraGenChatIsland {
   readonly diagnostics: readonly LyraGenDiagnostic[];
   /** Subtrees contained by `recovery: 'isolate'`; the island stays `ready`. Absent in strict mode or when nothing was contained. */
   readonly isolated?: readonly LyraGenIsolation[];
+  /**
+   * Progressive mode, `loading` islands only: the latest preview, with host source authorization
+   * applied. Pass it to the island's `lr-gen-view` as `.partial`; the committed `document` of the
+   * same surface and revision replaces it. Absent once the island is ready, invalid, interrupted or
+   * cancelled.
+   */
+  readonly partial?: LyraGenPartialView;
 }
 export interface LyraGenChatSnapshot {
   readonly status: LyraGenChatStatus;
@@ -99,6 +113,8 @@ export class LyraGenChatController {
   private interruptionReason?: string;
   private readonly options: LyraGenChatOptions;
   private parsedViews = new WeakMap<LyraGenView, LyraGenValidationResult>();
+  private previews = new WeakMap<LyraGenPartialView, LyraGenPartialView | null>();
+  private readonly shownPreviews = new Map<string, LyraGenPartialView>();
   private readonly rawViews = new Map<string, LyraGenView>();
   private readonly islands = new Map<string, LyraGenChatIsland>();
   private readonly admittedRoots = new Map<string, LyraGenNode>();
@@ -124,9 +140,11 @@ export class LyraGenChatController {
   }
 
   private newParser(): IslandParser {
+    const progressive = this.options.progressive;
     return createIslandParser({ catalog: this.options.catalog, surfaceId: this.options.surfaceId,
       revision: this.options.revision ?? 0, allowedTags: Object.keys(this.options.catalog.components),
-      ...(this.options.limits ? { limits: this.options.limits } : {}) });
+      ...(this.options.limits ? { limits: this.options.limits } : {}),
+      ...(progressive ? { progressive: { ...(progressive === true ? {} : progressive), catalog: this.options.catalog } } : {}) });
   }
 
   get snapshot(): LyraGenChatSnapshot { return this.current; }
@@ -202,6 +220,7 @@ export class LyraGenChatController {
   /** Revalidate viewer source availability without reparsing or replacing unrelated control ids. */
   refreshSources(): LyraGenChatSnapshot {
     if (this.disposed) return this.current;
+    this.previews = new WeakMap();
     for (const [partId, raw] of this.rawViews) this.admit(partId, raw, true);
     return this.current = this.sourceReleased ? this.projectReleased() : this.project();
   }
@@ -244,7 +263,8 @@ export class LyraGenChatController {
     if (this.disposed || this.sourceReleased) return this.current;
     this.abortRequests(); this.parser?.cancel(); this.parser = undefined;
     this.result = { parts: [], diagnostics: [] }; this.retryResult = undefined;
-    this.parsedViews = new WeakMap(); this.partCache.clear(); this.sourceReleased = true; this.resumable = false;
+    this.parsedViews = new WeakMap(); this.previews = new WeakMap(); this.shownPreviews.clear();
+    this.partCache.clear(); this.sourceReleased = true; this.resumable = false;
     const parts = this.current.parts.some(part => part.interruption?.resumable)
       ? Object.freeze(this.current.parts.map(part => part.interruption?.resumable
         ? Object.freeze({ ...part, interruption: Object.freeze({ ...part.interruption, resumable: false }) }) : part))
@@ -254,7 +274,7 @@ export class LyraGenChatController {
   dispose(): void {
     this.disposed = true; this.abortRequests(); this.parser?.cancel(); this.parser = undefined;
     this.result = { parts: [], diagnostics: [] }; this.retryResult = undefined;
-    this.parsedViews = new WeakMap();
+    this.parsedViews = new WeakMap(); this.previews = new WeakMap(); this.shownPreviews.clear();
     this.islands.clear(); this.rawViews.clear(); this.admittedRoots.clear(); this.partCache.clear(); this.suggestions.clear(); this.activations.clear();
     this.current = Object.freeze({ status: 'cancelled', parts: [], islands: [], diagnostics: [], resumable: false });
   }
@@ -288,9 +308,8 @@ export class LyraGenChatController {
   private validation(): { readonly recovery: LyraGenRecoveryMode } {
     return { recovery: this.options.recovery === 'isolate' ? 'isolate' : 'strict' };
   }
-  private admit(partId: string, raw: LyraGenView, refresh = false): LyraGenChatIsland {
-    const previous = this.islands.get(partId);
-    if (!refresh && this.rawViews.get(partId) === raw && previous) return previous;
+  /** Replace generated source labels with host-authorized ones, or the unavailable placeholder. */
+  private authorize(root: LyraGenNode): LyraGenNode {
     const rewrite = (node: LyraGenNode): LyraGenNode => {
       if (node.type === 'citation' || node.type === 'source-card') {
         const source = this.source(node.props?.['sourceId']);
@@ -309,7 +328,28 @@ export class LyraGenChatController {
       }
       return node.children ? { ...node, children: node.children.map(rewrite) } : node;
     };
-    const root = rewrite(raw.root);
+    return rewrite(root);
+  }
+  /** The preview with host source authorization applied; a preview that no longer validates keeps the previous one. */
+  private preview(partId: string, partial: LyraGenPartialView | undefined): LyraGenPartialView | undefined {
+    if (!partial) return undefined;
+    let shown = this.previews.get(partial);
+    if (shown === undefined) {
+      const root = this.authorize(partial.view.root);
+      if (root === partial.view.root) shown = partial;
+      else {
+        const checked = validateView({ ...partial.view, root }, this.options.catalog);
+        shown = checked.ok ? Object.freeze({ ...partial, view: checked.value }) : null;
+      }
+      this.previews.set(partial, shown);
+    }
+    if (shown) this.shownPreviews.set(partId, shown);
+    return shown ?? this.shownPreviews.get(partId);
+  }
+  private admit(partId: string, raw: LyraGenView, refresh = false): LyraGenChatIsland {
+    const previous = this.islands.get(partId);
+    if (!refresh && this.rawViews.get(partId) === raw && previous) return previous;
+    const root = this.authorize(raw.root);
     const previousRoot = this.admittedRoots.get(partId) ?? previous?.document?.root;
     const changed = previous?.document && previousRoot && !sameTree(previousRoot, root);
     const revision = refresh && changed ? previous!.document!.revision + 1 : previous?.document?.revision ?? raw.revision;
@@ -366,7 +406,10 @@ export class LyraGenChatController {
         else island = Object.freeze({ kind: 'lyra-gen-island', partId, surfaceId: part.result.view.surfaceId,
           status: 'error', fallback: this.options.strings.invalid, ...(this.options.provenance ? { provenance: this.options.provenance } : {}), diagnostics: checked.diagnostics });
       } else {
+        const loading = !part.closed && part.result.status !== 'error' && this.status === 'streaming';
+        const partial = loading ? this.preview(partId, part.partial) : undefined;
         island = Object.freeze({ kind: 'lyra-gen-island', partId, surfaceId,
+          ...(partial ? { partial } : {}),
           status: part.closed || part.result.status === 'error' ? 'error' : this.status === 'streaming' ? 'loading' : 'incomplete',
           fallback: part.closed || part.result.status === 'error' ? this.options.strings.invalid
             : this.status === 'streaming' ? this.options.strings.loading : this.options.strings.incomplete,
@@ -382,6 +425,7 @@ export class LyraGenChatController {
       if (!this.rawViews.has(id)) this.islands.delete(id);
     }
     for (const id of this.partCache.keys()) if (!live.has(id)) this.partCache.delete(id);
+    for (const id of this.shownPreviews.keys()) if (!live.has(id) || this.islands.get(id)?.status !== 'loading') this.shownPreviews.delete(id);
     return Object.freeze({ status: this.status, parts: Object.freeze(parts),
       islands: Object.freeze([...live].map(id => this.islands.get(id)).filter((island): island is LyraGenChatIsland => !!island)),
       diagnostics: Object.freeze(diagnostics), resumable: this.resumable });

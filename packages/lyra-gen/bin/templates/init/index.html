@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lyra Gen starter</title>
+  <!-- Resolves packages from a CDN so any static server works. After `npm install`, point these
+       entries at ./node_modules/@aceshooting/... or let your bundler resolve the bare specifiers. -->
+  <script type="importmap">
+  {
+    "imports": {
+      "@aceshooting/lyra-gen/": "https://esm.sh/@aceshooting/lyra-gen@__LYRA_GEN_VERSION__/",
+      "@aceshooting/lyra-ui/": "https://esm.sh/@aceshooting/lyra-ui/"
+    }
+  }
+  </script>
+  <style>body { font-family: system-ui, sans-serif; margin: 2rem; } lr-gen-view { display: block; max-width: 56rem; }</style>
+  <script type="module" src="./main.js"></script>
+</head>
+<body>
+  <main>
+    <h1>Lyra Gen starter</h1>
+    <p>A canned dashboard streams in revision by revision; data comes from deterministic mock providers.</p>
+    <lr-gen-view id="view"></lr-gen-view>
+  </main>
+</body>
+</html>

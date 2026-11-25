@@ -7604,6 +7604,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/viewers/calendar-viewer/calendar-viewer-events.test.ts",
+              "test": "isolates supplied text under RTL and is accessible",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/viewers/calendar-viewer/calendar-viewer.test.ts",
               "test": "is accessible with events listed",
               "target": "el",
@@ -7623,8 +7629,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/viewers/calendar-viewer/calendar-viewer.test.ts",
-              "test": "isolates calendar fields from the surrounding direction",
+              "file": "src/components/viewers/calendar-viewer/calendar-viewer-events.test.ts",
+              "test": "isolates supplied text under RTL and is accessible",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -7748,6 +7754,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/viewers/calendar-viewer/calendar-loader.test.ts",
+          "src/components/viewers/calendar-viewer/calendar-viewer-events.test.ts",
           "src/components/viewers/calendar-viewer/calendar-viewer-fetch-abort-ownership.test.ts",
           "src/components/viewers/calendar-viewer/calendar-viewer-load-lifecycle.test.ts",
           "src/components/viewers/calendar-viewer/calendar-viewer-peer-data-boundaries.test.ts",
@@ -15058,6 +15065,12 @@
               "state": "populated"
             },
             {
+              "file": "src/components/data/context-meter/context-meter-ring-label.test.ts",
+              "test": "passes axe color-contrast with a warning arc behind the caption",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/data/context-meter/context-meter.test.ts",
               "test": "is accessible with a populated bar meter",
               "target": "el",
@@ -15208,6 +15221,7 @@
           "src/components/data/context-meter/context-meter-interactive.test.ts",
           "src/components/data/context-meter/context-meter-remediation-b09.test.ts",
           "src/components/data/context-meter/context-meter-requests.test.ts",
+          "src/components/data/context-meter/context-meter-ring-label.test.ts",
           "src/components/data/context-meter/context-meter.test.ts",
           "src/components/data/context-meter/retired-properties.test.ts"
         ],
@@ -26521,6 +26535,12 @@
               "test": "is accessible once loaded through the canonical lr-geojson-viewer tag",
               "target": "el",
               "state": "populated"
+            },
+            {
+              "file": "src/components/viewers/geojson-view/geojson-viewer-data.test.ts",
+              "test": "keeps supplied data across reconnection and is accessible",
+              "target": "el",
+              "state": "populated"
             }
           ],
           "exemption": null
@@ -26662,7 +26682,8 @@
         "tests": [
           "src/components/viewers/geojson-view/geojson-view-peer-contract.test.ts",
           "src/components/viewers/geojson-view/geojson-view-scale.test.ts",
-          "src/components/viewers/geojson-view/geojson-view.test.ts"
+          "src/components/viewers/geojson-view/geojson-view.test.ts",
+          "src/components/viewers/geojson-view/geojson-viewer-data.test.ts"
         ],
         "visual": "visual-baselines/manifest.json",
         "ssr": "src/ssr.ts"
@@ -45971,6 +45992,7 @@
           "src/components/forms/radio/radio-button.test.ts",
           "src/components/forms/radio/radio-fieldset-and-restore.test.ts",
           "src/components/forms/radio/radio-form-lifecycle.test.ts",
+          "src/components/forms/radio/radio-pending-group-value.test.ts",
           "src/components/forms/radio/radio-remediation.test.ts",
           "src/components/forms/radio/radio-rendering-a11y.test.ts",
           "src/components/forms/radio/radio-select-request.test.ts",
@@ -46166,6 +46188,7 @@
           "src/components/forms/radio/radio-button.test.ts",
           "src/components/forms/radio/radio-fieldset-and-restore.test.ts",
           "src/components/forms/radio/radio-form-lifecycle.test.ts",
+          "src/components/forms/radio/radio-pending-group-value.test.ts",
           "src/components/forms/radio/radio-remediation.test.ts",
           "src/components/forms/radio/radio-rendering-a11y.test.ts",
           "src/components/forms/radio/radio-select-request.test.ts",
@@ -46361,6 +46384,7 @@
           "src/components/forms/radio/radio-button.test.ts",
           "src/components/forms/radio/radio-fieldset-and-restore.test.ts",
           "src/components/forms/radio/radio-form-lifecycle.test.ts",
+          "src/components/forms/radio/radio-pending-group-value.test.ts",
           "src/components/forms/radio/radio-remediation.test.ts",
           "src/components/forms/radio/radio-rendering-a11y.test.ts",
           "src/components/forms/radio/radio-select-request.test.ts",
@@ -57353,6 +57377,7 @@
           "src/components/data/table/table-hostile-columns.test.ts",
           "src/components/data/table/table-interaction-edges.test.ts",
           "src/components/data/table/table-layout.test.ts",
+          "src/components/data/table/table-lazy-pagination.test.ts",
           "src/components/data/table/table-million-provider-scale.test.ts",
           "src/components/data/table/table-modifier-keys.test.ts",
           "src/components/data/table/table-ordering-boundaries.test.ts",

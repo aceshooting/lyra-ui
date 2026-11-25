@@ -60,7 +60,19 @@ lazy map initializes. After `lr-map-load`, landmark ownership transfers to the m
 is exactly one named region. Serialized metadata is locally inline-scrollable, preventing long
 unbroken values from widening a 320px allocation.
 
-**Properties:** `src: string = ''` — URL to fetch and parse. `name: string = ''` — accessible label,
+**Plain data:** `data: unknown = null` (property only) accepts an already-parsed GeoJSON
+`FeatureCollection`, `Feature` or bare geometry. It is admitted exactly like a fetched document:
+the same shape validation and the same graph-unit, nesting, text, serialized-size and 10,000-position
+ceilings, with the localized `geojsonViewInvalid` or `documentPreviewResourceTooLarge` message and
+`lr-render-error` on failure. The value must be JSON-compatible plain data: `undefined`, functions,
+non-finite numbers, cycles and an object reused at two places in the graph are rejected as invalid.
+The viewer renders a private copy taken at assignment and never mutates the host object; reassign
+a new object to change the view. Whenever `data` is non-null it takes precedence over `src`, which
+is not fetched (an in-flight load is superseded); `null` restores `src`. Supplied data survives
+disconnect/reconnect.
+
+**Properties:** `src: string = ''` — URL to fetch and parse; ignored while `data` is set.
+`data: unknown = null` — already-parsed GeoJSON, described above. `name: string = ''` — accessible label,
 used as `<lr-map>`'s `label` and the root's `aria-label` (falling back to the localized
 `geojsonViewLabel` when unset; a whitespace-only `name` counts as unset). A nonempty host
 `aria-label` takes precedence over `name`: it names the map, and while the map does not own the

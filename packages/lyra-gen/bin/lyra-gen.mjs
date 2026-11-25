@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import { open, readdir, readFile } from 'node:fs/promises';
+import { mkdir, open, readdir, readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { initialCatalog, selectCatalogPreset } from '../dist/catalog.js';
 import { buildCatalogPrompt, exportCatalogArtifact, exportCatalogJsonSchema } from '../dist/prompts.js';
 import { validateView } from '../dist/runtime.js';
@@ -112,15 +112,36 @@ async function benchmark(flags) {
   emit({ version: '1', kind: 'offline', ok, catalog: { id: initialCatalog.id, version: initialCatalog.version }, providerLatencyMs: null, renderMs: null, tokenUsage: null, costUsd: null, results });
   if (!ok) process.exitCode = 1;
 }
+const INIT_FILES = ['index.html', 'main.js', 'dashboard-view.json', 'queries.json'];
+async function init(directory) {
+  const target = resolve(directory ?? 'lyra-gen-app');
+  const templates = new URL('./templates/init/', import.meta.url);
+  const metadata = readJson(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+  const existing = [];
+  for (const name of INIT_FILES) {
+    try { await (await open(join(target, name), 'r')).close(); existing.push(name); } catch (error) { if (error?.code !== 'ENOENT' && error?.code !== 'ENOTDIR') throw error; }
+  }
+  if (existing.length) {
+    emit({ ok: false, diagnostics: [{ code: 'init.exists', severity: 'error', path: '', message: `Refusing to overwrite: ${existing.join(', ')}` }] });
+    process.exitCode = 1; return;
+  }
+  await mkdir(target, { recursive: true });
+  for (const name of INIT_FILES) {
+    const text = (await readFile(new URL(name, templates), 'utf8')).replaceAll('__LYRA_GEN_VERSION__', metadata.version);
+    await writeFile(join(target, name), text, { flag: 'wx' });
+  }
+  emit({ ok: true, directory: target, files: INIT_FILES, next: 'Serve the directory with any static server and open index.html.' });
+}
 async function main() {
   const [command, ...args] = process.argv.slice(2);
   if (!command || command === 'help' || command === '--help') {
-    process.stdout.write('lyra-gen prompt [--preset name] [--format json|markup]\nlyra-gen schema [--preset name]\nlyra-gen validate <file|-> [--preset name] [--format json|markup]\nlyra-gen record <file|-> [--preset name] [--format json|markup] [--source id] [--model exact-id --provider id]\nlyra-gen replay <file|-> [--preset name]\nlyra-gen benchmark [--iterations 100] [--format json|markup|both] [--fixtures directory]\n');
+    process.stdout.write('lyra-gen prompt [--preset name] [--format json|markup]\nlyra-gen schema [--preset name]\nlyra-gen validate <file|-> [--preset name] [--format json|markup]\nlyra-gen record <file|-> [--preset name] [--format json|markup] [--source id] [--model exact-id --provider id]\nlyra-gen replay <file|-> [--preset name]\nlyra-gen benchmark [--iterations 100] [--format json|markup|both] [--fixtures directory]\nlyra-gen init [directory]\n');
     return;
   }
   const { flags, positional } = argumentsFor(args);
-  const allowed = { prompt: ['format', 'preset'], schema: ['preset'], validate: ['format', 'surface', 'revision', 'preset'], record: ['format', 'surface', 'revision', 'source', 'model', 'provider', 'preset'], replay: ['preset'], benchmark: ['iterations', 'fixtures', 'format'] };
+  const allowed = { prompt: ['format', 'preset'], schema: ['preset'], validate: ['format', 'surface', 'revision', 'preset'], record: ['format', 'surface', 'revision', 'source', 'model', 'provider', 'preset'], replay: ['preset'], benchmark: ['iterations', 'fixtures', 'format'], init: [] };
   if (!Object.hasOwn(allowed, command) || Object.keys(flags).some(key => !allowed[command].includes(key))) throw new Error('arguments');
+  if (command === 'init') { if (positional.length > 1) throw new Error('arguments'); await init(positional[0]); return; }
   if (['validate', 'record', 'replay'].includes(command) ? positional.length !== 1 : positional.length !== 0) throw new Error('arguments');
   const selected = flags.preset ? selectCatalogPreset(flags.preset) : { ok: true, value: initialCatalog };
   if (!selected.ok) { emit(selected); process.exitCode = 1; return; }

@@ -1,0 +1,16 @@
+{
+  "version": "1",
+  "catalog": { "id": "lyra-reviewed+dashboard/live/starter", "version": "1" },
+  "surfaceId": "starter",
+  "revision": 0,
+  "root": {
+    "id": "root",
+    "type": "stack",
+    "children": [
+      { "id": "title", "type": "heading", "text": "Live traffic" },
+      { "id": "visitors", "type": "stat", "props": { "label": "Visitors", "value": "0" }, "liveReads": { "value": "/summary/visitors" } },
+      { "id": "capacity", "type": "gauge", "props": { "label": "Capacity", "value": 0, "min": 0, "max": 100 }, "dataQuery": { "name": "capacity" }, "liveReads": { "value": "/percent" } },
+      { "id": "trend", "type": "series-chart", "props": { "label": "Last days", "labels": [], "datasets": [{ "label": "Visits", "data": [] }] }, "liveReads": { "labels": "/trend/labels", "datasets": "/trend/datasets" } }
+    ]
+  }
+}

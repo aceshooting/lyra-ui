@@ -46,6 +46,49 @@ arrives. Clear it when the stream fails or is cancelled. A syntax defect stops p
 returns exactly what a non-progressive stream returns, and attempts are spaced at least
 `minCodeUnits` (default 128) and a quarter of the consumed input apart, so validation stays linear.
 
+## Prompts, refinement and provider tools
+
+`buildCatalogPrompt(catalog, { format: 'markup' })` asks for one restricted Lyra Markup root instead
+of a JSON view and renders the catalog examples in Markup, for hosts that read output with
+`parseMarkup()` or `createProgressiveMarkupParser()`. `profile: 'signature'` is an opt-in compact
+catalog description; see [catalog presets](catalog-presets.md#prompt-profiles-and-size).
+
+`buildRefinementPrompt(catalog, view, instruction, { nodeId })` asks for one `LyraGenPatch` for
+`applyViewPatch()` using the `replace`, `remove`, `insert`, `set` and `move` operations, with the view's
+`surfaceId` and `revision` as `expectedRevision`. With `nodeId`, only that node's subtree and the
+catalog roles it uses (plus their required children and any `roles` you add) are sent, and the patch
+is asked to stay inside that node. The instruction is quoted as data. The runtime still validates
+every operation, so a patch that leaves the scope or breaks a bound is rejected like any other.
+
+`applyViewPatch()` also accepts two narrower operations: `{"op":"set","nodeId","prop","value"}`
+assigns one property of an existing node (each property once per patch) and keeps its other members
+and children, and `{"op":"move","nodeId","parentId","before"?,"after"?}` relocates an existing
+non-root node with its subtree, positioned like an insert; a node cannot move inside itself and an
+anchor cannot be removed or moved by the same patch. Like every operation, both are checked against
+the whole patched view, so a value the catalog rejects or a child type the new parent does not admit
+fails (or is isolated with `recovery: 'isolate'`).
+
+```ts
+import { buildRefinementPrompt } from '@aceshooting/lyra-gen/prompts.js';
+import { createAnthropicTool, createOpenAiTool, createAiSdkTool, estimatePromptTokens } from '@aceshooting/lyra-gen/provider-tools.js';
+
+const refine = buildRefinementPrompt(catalog, view, 'Show memory in GiB.', { nodeId: 'memory-panel', roles: ['gauge'] });
+const anthropicTool = createAnthropicTool(catalog);          // { name, description, input_schema }
+const openAiTool = createOpenAiTool(catalog, { name: 'show_view' }); // { type: 'function', function: { name, description, parameters } }
+const sdkTool = createAiSdkTool(catalog);                    // { description, inputSchema }
+const approximate = estimatePromptTokens(anthropicTool.description);
+```
+
+The provider helpers place the catalog prompt in the tool description and the view JSON Schema in
+the tool input schema; `prompt` and `schema` options pass through to `buildCatalogPrompt()` and
+`exportCatalogJsonSchema()`, and `description` replaces the prompt when the host sends it as a
+system message instead. Tool names use 1 to 64 letters, digits, `_` or `-`. `createOpenAiTool()`
+sets `strict` only when you pass it: strict mode requires every property and accepts fewer schema
+keywords than the catalog schema uses. `createAiSdkTool()` has no dependency on the AI SDK; wrap
+its `inputSchema` with the SDK's `jsonSchema()` helper. The tool call's input is the generated view;
+validate it with `validateView()` as for any other model output. `estimatePromptTokens()` is an approximation for
+comparing prompt variants, not a provider tokenizer.
+
 ## Keyed templates
 
 `expandTemplate(template, rows, catalog, { limits, previous })` instantiates a trusted template

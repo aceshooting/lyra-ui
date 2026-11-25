@@ -5,7 +5,8 @@ import { twoFrames } from '../../../lyra-ui/test/frames.js';
 import { sinkTexts } from '../../../lyra-ui/test/announcements.js';
 import type { LyraGenViewElement } from '@aceshooting/lyra-gen/gen-view.js';
 import { initialCatalog } from '@aceshooting/lyra-gen/catalog.js';
-import { moveChatSurface } from '@aceshooting/lyra-gen/chat.js';
+import { createChatStream, moveChatSurface } from '@aceshooting/lyra-gen/chat.js';
+import '@aceshooting/lyra-gen/gen-view.js';
 import { mountInteractiveChat } from '../../examples/chat.js';
 
 const formIsland = '```lyra\n<stack id="answer"><text id="intro">Review the answer.</text>'
@@ -222,4 +223,62 @@ it('moves the same generated surface to an artifact panel and back with edited s
   // An idempotent movement must preserve its current focus too.
   moveChatSurface(ownedShell, ownedShell.parentElement!, ownedShell.nextSibling);
   expect(activeElement()?.isConnected).to.equal(true);
+});
+
+describe('progressive chat islands', () => {
+  const strings = { loading: 'Loading', incomplete: 'Interrupted', invalid: 'Invalid', sourceUnavailable: 'Source unavailable' };
+  const island = '```lyra\n<stack id="answer">\n<heading id="title">Overview</heading>\n<text id="one">First finding.</text>\n'
+    + '<stack id="details">\n<text id="two">Second finding.</text>\n<text id="three">Third finding.</text>\n</stack>\n</stack>\n```\n';
+  const renderedIds = (view: LyraGenViewElement): string[] => [...view.shadowRoot!.querySelectorAll('[data-gen-id]')].map(node => node.getAttribute('data-gen-id')!);
+  async function settled(view: LyraGenViewElement): Promise<void> {
+    await view.updateComplete;
+    await waitUntil(() => view.shadowRoot!.querySelectorAll('[part="loading"]').length === 0, 'Generated modules loaded', { timeout: 10000 });
+    await view.updateComplete;
+  }
+
+  it('renders inert growing previews through .partial, then the committed .document with one ready event', async () => {
+    const chat = createChatStream({ messageId: 'progressive', surfaceId: 'progressive', catalog: initialCatalog, strings, progressive: { minCodeUnits: 0 } });
+    const view = await fixture<LyraGenViewElement>(html`<lr-gen-view .catalog=${initialCatalog}></lr-gen-view>`);
+    let readies = 0;
+    view.addEventListener('lr-gen-ready', () => { readies++; });
+    let previous: string[] = [];
+    let previews = 0;
+    for (let offset = 0; offset < island.length; offset += 12) {
+      const current = chat.push(island.slice(offset, offset + 12)).islands[0];
+      if (!current || current.status !== 'loading' || !current.partial || current.partial === view.partial) continue;
+      view.partial = current.partial;
+      await settled(view);
+      previews++;
+      const ids = renderedIds(view);
+      for (const id of previous) expect(ids).to.include(id);
+      previous = ids;
+      expect(view.shadowRoot!.querySelector('[part~="partial"]') !== null).to.equal(true);
+    }
+    expect(previews).to.be.greaterThan(1);
+    expect(readies).to.equal(0);
+    const done = chat.finish().islands[0]!;
+    expect(done.status).to.equal('ready');
+    view.document = done.document;
+    view.partial = done.partial;
+    await waitUntil(() => readies === 1 && view.status === 'ready', 'Committed view ready', { timeout: 10000 });
+    for (const id of previous) expect(renderedIds(view)).to.include(id);
+    expect(renderedIds(view)).to.include('three');
+    expect(view.shadowRoot!.querySelector('[part~="partial"]') === null).to.equal(true);
+  });
+
+  it('clears the preview on cancel and leaves the host fallback', async () => {
+    const chat = createChatStream({ messageId: 'cancelled', surfaceId: 'cancelled', catalog: initialCatalog, strings, progressive: { minCodeUnits: 0 } });
+    const view = await fixture<LyraGenViewElement>(html`<lr-gen-view .catalog=${initialCatalog}></lr-gen-view>`);
+    const pending = chat.push(island.slice(0, 90)).islands[0]!;
+    expect(pending.partial !== undefined).to.equal(true);
+    view.partial = pending.partial;
+    await settled(view);
+    expect(renderedIds(view).length).to.be.greaterThan(0);
+    const cancelled = chat.cancel().islands[0]!;
+    expect(cancelled.status).to.equal('incomplete');
+    view.partial = cancelled.partial;
+    await view.updateComplete;
+    expect(view.status).to.equal('empty');
+    expect(renderedIds(view)).to.deep.equal([]);
+  });
 });

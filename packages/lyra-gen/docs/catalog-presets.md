@@ -85,6 +85,57 @@ node packages/lyra-gen/scripts/report-catalog-presets.mjs --write
 
 Build the package first. The [checked report](https://github.com/aceshooting/lyra-ui/blob/main/packages/lyra-gen/scripts/fixtures/catalog-preset-prompts.json) includes prompt UTF-16/code-point counts, UTF-8 bytes and SHA-256; compact serialized-schema bytes and SHA-256; and their combined content bytes. Trailing newlines, provider wrappers and request metadata are excluded. Provider tokens and model error rates remain unmeasured; smaller content does not establish token, quality, latency, caching or cost improvements.
 
+## Prompt profiles and size
+
+`buildCatalogPrompt()` sends only what a model must respect. It leaves out renderer-only metadata
+(`tag`, `documentation`, `minimumBlockSize`, `optionalChildren`), the implicit
+`additionalProperties: false` and the default `-1e12..1e12` number range, and states both defaults
+once in the instructions. Every other bound stays: string lengths, item and key counts, enums,
+non-default ranges, required members, accessible-name sources and bindable properties.
+`exportCatalogArtifact()` is unchanged and still carries the full metadata.
+
+```ts
+import { liveDashboardCatalog } from '@aceshooting/lyra-gen/catalog.js';
+import { buildCatalogPrompt } from '@aceshooting/lyra-gen/prompts.js';
+
+const prompt = buildCatalogPrompt(liveDashboardCatalog);
+const signature = buildCatalogPrompt(liveDashboardCatalog, { profile: 'signature' });
+const withExamples = buildCatalogPrompt(liveDashboardCatalog, { profile: 'signature', examples: true });
+const markup = buildCatalogPrompt(liveDashboardCatalog, { format: 'markup' });
+```
+
+`profile: 'signature'` (opt in) writes one line per role after a notation legend, for example
+`gauge(label!@:str(1..256), value!:num, thresholds:{at:num, variant:E0}[..8]) -- Show one measured value...`,
+where `!` marks a required property, `@` an accessible-name source, `~` a bindable property and
+`E0` a repeated enum spelled once. It keeps every bound of the compact profile, and leaves examples
+out unless `examples: true`. It has not yet been evaluated against model output quality; measure it
+with your model before making it a default. `format: 'markup'` asks for one Lyra Markup root and
+renders the examples in Markup.
+
+`exportCatalogJsonSchema()` hoists repeated sub-schemas (the shared node members such as `visible`,
+`a11y`, `checks`, `computes`, `reads` and `repeat`, and repeated property shapes) into `$defs`
+entries named `_0`, `_1`, ... and references them with `$ref`. Expanding those references yields
+exactly the schema `exportCatalogJsonSchema(catalog, { inline: true })` returns; pass
+`inline: true` for a consumer that cannot resolve local references.
+
+Approximate sizes from the repository benchmark's `heuristic-v1` counter (not a provider tokenizer;
+use it only to compare variants of the same content). The full dashboard overlay exceeds the default
+65,536-character prompt budget and is measured with a raised `maxCharacters`:
+
+| Catalog | Previous prompt | Compact prompt | Signature | Signature + examples | Previous schema | Schema with `$defs` |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| full reviewed | 13,493 | 11,407 | 3,688 | 5,655 | 120,908 | 30,973 |
+| `chat` | 5,421 | 4,627 | 1,833 | 2,907 | 47,321 | 14,157 |
+| `forms` | 6,921 | 6,004 | 2,252 | 3,312 | 70,351 | 18,383 |
+| `data` | 6,499 | 5,428 | 2,022 | 2,882 | 43,181 | 13,059 |
+| `retrieval` | 4,603 | 3,937 | 1,625 | 2,516 | 39,624 | 12,175 |
+| `agent-ops` | 6,903 | 5,766 | 2,146 | 3,075 | 47,286 | 14,125 |
+| answer blocks | 15,554 | 13,265 | 4,230 | 6,547 | 132,407 | 34,842 |
+| `liveDashboardCatalog` | 20,455 | 16,601 | 4,950 | 7,876 | 161,895 | 40,187 |
+| full dashboard overlay | 62,627 | 52,236 | 14,191 | 24,091 | 455,743 | 112,438 |
+
+`estimatePromptTokens()` from `@aceshooting/lyra-gen/provider-tools.js` applies the same counter.
+
 ## Composite answer blocks (opt-in overlay)
 
 `answerBlocksCatalog(base = initialCatalog)` returns a new catalog with id `${base.id}+blocks` (built-in: `lyra-reviewed+blocks`) and the base version. It adds three compact roles that let a model express common answer patterns in one node. Nothing changes for existing catalogs or stored views, and the overlay is a different catalog identity: retain its reference with the answer. It throws a `TypeError` when the base lacks `row`, `stat` or `table`, or already defines one of the added roles.

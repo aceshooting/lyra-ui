@@ -114,6 +114,11 @@ const RADIUS = 40;
 const CENTER = 50;
 const STROKE = 12;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+// The centre caption is the square inscribed in the ring's hole (the stroke's inner edge), so no
+// corner of its box -- and so no wrapped glyph -- can reach an arc.
+const CAPTION_HALF = Math.floor((RADIUS - STROKE / 2) / Math.SQRT2);
+const CAPTION_ORIGIN = CENTER - CAPTION_HALF;
+const CAPTION_SIZE = CAPTION_HALF * 2;
 const MAX_CONTEXT_METER_SEGMENTS = 10_000;
 const EMPTY_CONTEXT_METER_SEGMENTS: readonly Readonly<ContextMeterSegment>[] = Object.freeze([]);
 
@@ -649,7 +654,7 @@ export class LyraContextMeter extends LyraElement<LyraContextMeterEventMap> {
         <circle part="track" cx=${CENTER} cy=${CENTER} r=${RADIUS} stroke-width=${STROKE}></circle>
         ${arcs}
         ${this.label ? svg`
-          <foreignObject part="label" x="20" y="25" width="60" height="50" aria-hidden="true">
+          <foreignObject part="label" x=${CAPTION_ORIGIN} y=${CAPTION_ORIGIN} width=${CAPTION_SIZE} height=${CAPTION_SIZE} aria-hidden="true">
             <div class="ring-label" title=${this.label}>${this.label}</div>
           </foreignObject>
         ` : nothing}

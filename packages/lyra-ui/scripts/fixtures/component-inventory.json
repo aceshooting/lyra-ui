@@ -19850,6 +19850,16 @@
             "default": "['text-quote', 'fragment']"
           },
           {
+            "name": "events",
+            "attribute": null,
+            "type": "readonly LyraCalendarViewerEventRecord[] | null",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
+          },
+          {
             "name": "highlights",
             "attribute": null,
             "type": "LyraHighlight[]",
@@ -72632,6 +72642,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "['text-quote', 'fragment']"
+          },
+          {
+            "name": "data",
+            "attribute": null,
+            "type": "unknown",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": null
           },
           {
             "name": "highlights",

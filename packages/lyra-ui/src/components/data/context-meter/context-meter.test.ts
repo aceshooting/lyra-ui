@@ -388,14 +388,9 @@ it('is accessible with a populated ring meter', async () => {
   )) as LyraContextMeter;
   el.segments = SEGMENTS;
   await el.updateComplete;
-  // The ring's segments are stroke-only circles (RADIUS 40, STROKE 12 -> inner edge at radius 34),
-  // so the centered `aria-hidden` label sits well inside the untouched hole, never overlapping a
-  // colored stroke. On WebKit specifically, axe still misattributes a segment's stroke color as
-  // the label's background (reproducibly: contrast 1.26 against a segment tone that isn't actually
-  // behind the text) -- a known axe/SVG false positive, not a real contrast defect. The sibling
-  // "populated bar meter" test above still exercises color-contrast for the real, non-decorative
-  // label of that variant.
-  await expect(el).to.be.accessible({ ignoredRules: ['color-contrast'] });
+  // Color-contrast included: the ring's circles carry no computed background, so no engine's
+  // contrast check can read an arc's tone as the centre caption's backdrop.
+  await expect(el).to.be.accessible();
 });
 
 it('scales the ring caption font-size with the host font, not the document root', async () => {

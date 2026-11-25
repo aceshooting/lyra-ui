@@ -6,11 +6,12 @@ import type { LyraGenCatalog, LyraGenNode, LyraGenView } from '../../src/types.j
 import { chartExtraRoles } from '../../src/catalogs/charts-extra.js';
 import { technicalAnswerRoles } from '../../src/catalogs/answers-technical.js';
 import { richAnswerRoles } from '../../src/catalogs/answers-rich.js';
+import { answerMediaRoles } from '../../src/catalogs/answers-media.js';
 
 interface UpdatingElement extends HTMLElement { readonly updateComplete: Promise<boolean> }
 const overlay = dashboardCatalog();
 /** Chart, technical and rich roles have their own conformance suites, each asserting a scenario per role. */
-const ownSuites = new Set([...Object.keys(chartExtraRoles), ...Object.keys(technicalAnswerRoles), ...Object.keys(richAnswerRoles)]);
+const ownSuites = new Set([...Object.keys(chartExtraRoles), ...Object.keys(technicalAnswerRoles), ...Object.keys(richAnswerRoles), ...Object.keys(answerMediaRoles)]);
 const overlayRoles = Object.keys(overlay.components).filter(role => !Object.hasOwn(initialCatalog.components, role) && !ownSuites.has(role));
 
 /** Authored independently of the reviewed examples; every overlay role needs one (checked below). */

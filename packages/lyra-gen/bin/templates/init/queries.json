@@ -1,0 +1,7 @@
+{
+  "capacity": {
+    "description": "Current capacity use as a percentage.",
+    "params": { "type": "object", "properties": {}, "additionalProperties": false },
+    "result": { "type": "object", "properties": { "percent": { "type": "number", "minimum": 0, "maximum": 100 } }, "required": ["percent"], "additionalProperties": false }
+  }
+}

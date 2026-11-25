@@ -26,6 +26,7 @@ import { viewerSemanticLabel, viewerSemanticRole } from '../viewer-semantic-owne
 import type { AnchorResultDetail, TextSelectDetail } from '../../../internal/document-anchors.js';
 import { DeferredTeardown } from '../../../internal/deferred-teardown.js';
 import { blankNumberConverter } from '../../../internal/converters.js';
+import { isRuntimeArray, isSafeNonArrayObject } from '../../../internal/object-guards.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_anchorJumped, LYRA_DEFAULT_anchorJumpedToPage, LYRA_DEFAULT_anchorNotFound, LYRA_DEFAULT_documentPreviewEmpty, LYRA_DEFAULT_scrollerLabel } from '../../../internal/default-strings/shared.generated.js';
@@ -45,6 +46,22 @@ export interface ParsedCalendarEvent {
   endKind: ParsedCalendarTimeKind | null;
   location: string;
   description: string;
+}
+/**
+ * One host-supplied calendar event for {@link LyraCalendarViewer.events}. Every field is plain
+ * text rendered without markup. `start`/`end` are ISO 8601 strings: a `YYYY-MM-DD` date is an
+ * all-day date, and a date-time without an offset is local time. With `allDay: true`, only the
+ * leading `YYYY-MM-DD` of each value is used and `end` is the exclusive day after the last one,
+ * as in iCalendar. An invalid, reversed, or kind-mismatched date is ignored for that field only.
+ */
+export interface LyraCalendarViewerEventRecord {
+  id?: string;
+  title: string;
+  start: string;
+  end?: string;
+  allDay?: boolean;
+  location?: string;
+  description?: string;
 }
 type CalendarFetchState = { kind: 'idle' } | { kind: 'loading' } | { kind: 'loaded'; events: ParsedCalendarEvent[] } | { kind: 'error'; message: () => string };
 export interface LyraCalendarViewerEventMap extends LyraTextViewerTargetEventMap {
@@ -110,9 +127,91 @@ function parseCalendarTime(time: IcalTimeApi | undefined): {
   return { value, kind: time.isDate === true ? 'date' : 'date-time' };
 }
 
+const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})/;
+const ISO_DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+const ISO_DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:\d{2})?$/;
+
+/** Parses one record date under the same DATE/DATE-TIME model as the `.ics` path; null when invalid. */
+function parseRecordTime(value: unknown, allDay: boolean): ReturnType<typeof parseCalendarTime> {
+  if (typeof value !== 'string' || value.length > 64) return null;
+  const dateOnly = ISO_DATE_ONLY.test(value);
+  const date = dateOnly || ISO_DATE_TIME.test(value) ? ISO_DATE.exec(value) : null;
+  if (!date) return null;
+  const [year, month, day] = [Number(date[1]), Number(date[2]), Number(date[3])];
+  const calendarDay = utcDate(year, month - 1, day);
+  if (
+    calendarDay.getUTCFullYear() !== year
+    || calendarDay.getUTCMonth() + 1 !== month
+    || calendarDay.getUTCDate() !== day
+  ) return null;
+  if (allDay || dateOnly) return { value: calendarDay, kind: 'date' };
+  const instant = new Date(value);
+  return Number.isFinite(instant.getTime()) ? { value: instant, kind: 'date-time' } : null;
+}
+
+/** Reads a record member only when it is a string own data property; getters and inherited
+ *  values are never invoked or trusted. */
+function recordText(record: object, key: string): string {
+  const descriptor = Object.getOwnPropertyDescriptor(record, key);
+  return descriptor && 'value' in descriptor && typeof descriptor.value === 'string' ? descriptor.value : '';
+}
+
 /** A malformed date drops only that event's time, not the whole calendar. */
 function eventTime(read: () => IcalTimeApi | undefined): ReturnType<typeof parseCalendarTime> {
   try { return parseCalendarTime(read()); } catch { return null; }
+}
+
+type CalendarEventFields = Omit<ParsedCalendarEvent, 'start' | 'end' | 'startKind' | 'endKind'> & {
+  start: ReturnType<typeof parseCalendarTime>;
+  end: ReturnType<typeof parseCalendarTime>;
+};
+
+/** Builds the shared render model for both sources under one rendered-text ceiling. An end of a
+ *  different DATE/DATE-TIME kind than the start, or before it, is dropped. */
+function retainCalendarEvents(fields: readonly CalendarEventFields[]): ParsedCalendarEvent[] {
+  let renderedChars = 0;
+  return fields.map(({ uid, summary, start, end: rawEnd, location, description }) => {
+    const end = start && rawEnd && (
+      start.kind !== rawEnd.kind
+      || rawEnd.value.getTime() < start.value.getTime()
+    ) ? null : rawEnd;
+    renderedChars += uid.length + summary.length + location.length + description.length;
+    if (renderedChars > MAX_CALENDAR_RENDERED_CHARS) {
+      throw new LyraResourceLimitError('The calendar contains too much rendered text.');
+    }
+    return {
+      uid,
+      summary,
+      start: start?.value ?? null,
+      end: end?.value ?? null,
+      startKind: start?.kind ?? null,
+      endKind: end?.kind ?? null,
+      location,
+      description,
+    };
+  });
+}
+
+/** Validates host-supplied records against the same count ceiling as a fetched document. */
+function recordEvents(records: unknown, limit: number): ParsedCalendarEvent[] {
+  if (!isRuntimeArray(records)) throw new Error('Calendar events must be an array.');
+  if (records.length > limit) throw new LyraResourceLimitError('The calendar contains too many events.');
+  const fields: CalendarEventFields[] = [];
+  for (let index = 0; index < records.length; index++) {
+    const record: unknown = records[index];
+    if (!isSafeNonArrayObject(record)) continue;
+    const allDay = Object.getOwnPropertyDescriptor(record, 'allDay')?.value === true;
+    const title = recordText(record, 'title');
+    fields.push({
+      uid: recordText(record, 'id'),
+      summary: title.trim() ? title : '',
+      start: parseRecordTime(Object.getOwnPropertyDescriptor(record, 'start')?.value, allDay),
+      end: parseRecordTime(Object.getOwnPropertyDescriptor(record, 'end')?.value, allDay),
+      location: recordText(record, 'location'),
+      description: recordText(record, 'description'),
+    });
+  }
+  return retainCalendarEvents(fields);
 }
 
 class LyraCalendarViewerBase extends LyraElement<LyraCalendarViewerEventMap> {}
@@ -120,6 +219,8 @@ class LyraCalendarViewerBase extends LyraElement<LyraCalendarViewerEventMap> {}
 /**
  * Parses `.ics` calendars with the optional `ical.js` peer and renders each
  * VEVENT as plain text, preserving summaries, DATE/DATE-TIME semantics, locations, and details.
+ * A host that already holds the data assigns plain `events` records instead; they render through
+ * the same text-only model and bounds, take precedence over `src`, and need no peer.
  * Early all-day years retain UTC calendar semantics and the exclusive DTEND display boundary.
  * By default, at most 250 events and 2 MiB of rendered event text are retained so search, selection and
  * text-quote anchors continue to cover the complete accepted document without eager 10k-row DOM.
@@ -176,8 +277,16 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
   // GENERATED DEFAULT-STRING SLICE: END
 
   static override styles = [LyraElement.styles, styles, viewerFrameStyles, srOnly, viewerLoadingStyles];
-  /** URL to fetch and parse as an iCalendar document. */
+  /** URL to fetch and parse as an iCalendar document. Ignored while `events` is set. */
   @property() src = '';
+  /**
+   * Already-loaded plain events, rendered in array order through the same text-only model as a
+   * parsed `.ics` document. When set (including an empty array), it takes precedence over `src`,
+   * which is neither fetched nor parsed and needs no `ical.js` peer; `null` restores `src`.
+   * The array is bounded by `maxEvents` and the 2 MiB rendered-text ceiling, and is read once per
+   * assignment: reassign a new array to change the view. Non-object entries are skipped.
+   */
+  @property({ attribute: false }) events: readonly LyraCalendarViewerEventRecord[] | null = null;
   /** Maximum admitted events (0–2,500, default 250). A larger document shows the resource-limit message. */
   @property({ converter: blankNumberConverter(250), attribute: 'max-events' }) maxEvents = 250;
   /** Display name associated with the calendar. It names `[part='base']` when host `aria-label` is
@@ -246,12 +355,23 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
       this.fetchState.kind,
       this.fetchState.kind === 'error' ? this.fetchState.message() : this.localize('loadingDocument'),
     );
-    if (changed.has('src') || changed.has('maxEvents')) this.scheduleAfterUpdate(() => { void this.load(); });
+    if (changed.has('src') || changed.has('maxEvents') || changed.has('events')) this.scheduleAfterUpdate(() => { void this.load(); });
     if (this.isConnected && changed.has('fetchState') && this.fetchState.kind === 'loaded') this.emit('lr-load', null);
   }
 
   private load(): Promise<void> {
     this.lastLoadSrc = this.src;
+    if (this.events != null) {
+      this.transport.cancel();
+      try {
+        const limit = finiteCount(this.maxEvents, DEFAULT_MAX_CALENDAR_EVENTS, MAX_CALENDAR_EVENTS);
+        this.fetchState = { kind: 'loaded', events: recordEvents(this.events, limit) };
+      } catch (error) {
+        this.fetchState = { kind: 'error', message: viewerFailureMessage(error, this.localize.bind(this)) };
+        this.emit('lr-render-error', { error });
+      }
+      return Promise.resolve();
+    }
     this.fetchState = this.src ? { kind: 'loading' } : { kind: 'idle' };
     return this.transport.begin(this.src);
   }
@@ -277,36 +397,18 @@ export class LyraCalendarViewer extends TextViewerTarget(LyraCalendarViewerBase)
     if (subcomponents.length > limit) {
       throw new LyraResourceLimitError('The calendar contains too many events.');
     }
-    let renderedChars = 0;
     const text = (value: unknown): string => typeof value === 'string' ? value : '';
-    const events = subcomponents.map((subcomponent) => {
+    return retainCalendarEvents(subcomponents.map((subcomponent) => {
       const event = new ical.Event(subcomponent);
-      const parsedStart = eventTime(() => event.startDate);
-      const parsedEnd = eventTime(() => event.endDate);
-      const end = parsedStart && parsedEnd && (
-        parsedStart.kind !== parsedEnd.kind
-        || parsedEnd.value.getTime() < parsedStart.value.getTime()
-      ) ? null : parsedEnd;
-      const uid = text(event.uid);
-      const summary = text(event.summary);
-      const location = text(event.location);
-      const description = text(event.description);
-      renderedChars += uid.length + summary.length + location.length + description.length;
-      if (renderedChars > MAX_CALENDAR_RENDERED_CHARS) {
-        throw new LyraResourceLimitError('The calendar contains too much rendered text.');
-      }
       return {
-        uid,
-        summary,
-        start: parsedStart?.value ?? null,
-        end: end?.value ?? null,
-        startKind: parsedStart?.kind ?? null,
-        endKind: end?.kind ?? null,
-        location,
-        description,
-      } as ParsedCalendarEvent;
-    });
-    return events;
+        uid: text(event.uid),
+        summary: text(event.summary),
+        start: eventTime(() => event.startDate),
+        end: eventTime(() => event.endDate),
+        location: text(event.location),
+        description: text(event.description),
+      };
+    }));
   }
 
   private renderEvent(event: ParsedCalendarEvent): TemplateResult {

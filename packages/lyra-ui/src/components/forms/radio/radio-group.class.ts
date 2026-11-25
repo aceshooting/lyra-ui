@@ -288,6 +288,9 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
   private _fieldsetDisabled = false;
   private hasInteracted = false;
   private selectedRadio?: LyraRadio;
+  // A host selection no owned radio matches yet. It survives until a radio with that value
+  // arrives, or a user/host selection, reset or restore supersedes it, so a renderer that assigns
+  // the group before its options' own values still lands on the intended radio.
   private pendingSelection?: string | null;
   private hadShoelaceDefaultValue = false;
 
@@ -591,7 +594,7 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
     } finally {
       this.syncingRadios = false;
     }
-    this.pendingSelection = undefined;
+    this.pendingSelection = match || !desired ? undefined : desired;
     this.syncRadios(match);
   }
 
@@ -619,7 +622,7 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
           if (radio.checked !== (radio === checkedRadio)) radio.checked = radio === checkedRadio;
         }
         checked = checkedRadio ? [checkedRadio] : [];
-        this.pendingSelection = undefined;
+        if (checkedRadio || !this.pendingSelection) this.pendingSelection = undefined;
       } else {
         checkedRadio = preferred?.checked && current.has(preferred)
           ? preferred
@@ -671,6 +674,7 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
     if (this.syncingRadios || !this.ownsRadio(radio)) return;
     markVetoGuardWrite(this.selectGuard);
     this._valueDirty = true;
+    if (radio.checked) this.pendingSelection = undefined;
     this.syncRadios(radio.checked ? radio : undefined);
   }
   // A listener that answers `lr-change-request` by writing `value` (or a radio's
@@ -692,6 +696,7 @@ export class LyraRadioGroup extends LyraFormControlElement<LyraRadioGroupEventMa
           if (this.effectiveDisabled || !this.ownsRadio(radio) || !this.isRadioAvailable(radio) || radio.checked) return;
           this._valueDirty = true;
           this.hasInteracted = true;
+          this.pendingSelection = undefined;
           this.syncingRadios = true;
           try {
             for (const candidate of this.radios()) {

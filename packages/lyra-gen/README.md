@@ -176,6 +176,14 @@ Each move produces a `node.normalized` warning at the original JSON Pointer, sub
 diagnostic limit. Existing conflicting properties, unknown members and invalid values still
 fail ordinary validation. The input stays intact. Strict placement is the default.
 
+`buildCatalogPrompt()` omits renderer-only metadata and implicit defaults; `{ profile: 'signature' }`
+(opt-in) describes each role on one typed line, and `{ format: 'markup' }` asks for Lyra Markup.
+`exportCatalogJsonSchema()` hoists repeated sub-schemas into `$defs` (`{ inline: true }` for the
+expanded form). `buildRefinementPrompt()` requests a patch scoped to one node, and
+`@aceshooting/lyra-gen/provider-tools.js` wraps prompt and schema as Anthropic, OpenAI and AI
+SDK-style tool definitions. See [catalog presets](docs/catalog-presets.md#prompt-profiles-and-size)
+and [structured input](docs/structured-input.md#prompts-refinement-and-provider-tools).
+
 ## Parse restricted Lyra Markup
 
 ```ts
@@ -296,7 +304,8 @@ time ranges, filter bars, value formatting, callouts, tags, statistics charts an
 overlay is a reviewed pool, so prompt with a preset or a `subsetCatalog()` of it. `mapCatalog(base,
 { mapStyle, regions? })` adds markers and choropleth regions over a host-owned basemap, and
 `mcpAppCatalog(base, { resources, tools })` embeds a sandboxed MCP App whose tool requests surface as
-a confirmed `mcp-tool-call` action for the host to authorize and run. See
+a confirmed `mcp-tool-call` action for the host to authorize and run. `mediaCatalog(base, { origins })`
+adds a `media-card` whose `src` may only use the exact HTTPS origins you approve. See
 [catalog presets](docs/catalog-presets.md).
 
 Streams render progressively: with `progressive: true` the JSON stream and `createProgressiveMarkupParser()` yield validated, growing partial views, which `lr-gen-view.partial` previews (inert, open nodes marked `partial`) until the commit arrives. Data reaches panels without a new revision. A catalog declares host `queries`; a node names one in
@@ -353,6 +362,11 @@ authored synthetic text and offsets, not provider output or latency. See the
 [measurement guide](https://github.com/aceshooting/lyra-ui/blob/main/benchmarks/generative-ui/README.md) for workloads, visual checks and
 measurement limits. The [OpenUI experiment](docs/openui-experiment.md) remains a separate no-go
 runtime-importer result.
+
+`npx lyra-gen init` scaffolds a working host with a fake provider; `@aceshooting/lyra-gen/mock-data.js`
+derives deterministic sample query and live data from the catalog, and
+`@aceshooting/lyra-gen/telemetry.js` reports parse, validate and render spans without state values
+or user text. See [developer tools](docs/developer-tools.md).
 
 ## Dependencies
 

@@ -6,6 +6,7 @@ import { dataComponents } from './data.js';
 import { retrievalComponents } from './retrieval.js';
 import { appearance, boolean, choice, deltaPercent, documentation, frame, goodDirection, label, size, string, variant } from './shared.js';
 import type { LyraGenNode } from '../types.js';
+import { markCreatedCatalog } from '../catalog-trust.js';
 
 /** Small original examples are validated against the same runtime contract as generated views. */
 export const reviewedExamples: Readonly<Record<string, { readonly useWhen: string; readonly example: LyraGenNode }>> = {
@@ -47,6 +48,19 @@ function freeze<T>(value: T): T {
   return value;
 }
 
+/** Deep-freeze plain schema data, including parts below an already frozen object, so its admission is reusable. */
+function freezeSchema(value: unknown, seen: WeakSet<object>): void {
+  if (value === null || typeof value !== 'object' || seen.has(value)) return;
+  const prototype: unknown = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== Array.prototype && prototype !== null) return;
+  seen.add(value);
+  for (const key of Reflect.ownKeys(value)) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (descriptor && 'value' in descriptor) freezeSchema(descriptor.value, seen);
+  }
+  Object.freeze(value);
+}
+
 /** Create a trusted host catalog. Generated content must never construct this definition. */
 export function createCatalog(definition: LyraGenCatalog): LyraGenCatalog {
   if (!definition.id.trim() || !definition.version.trim()) throw new TypeError('Catalog id and version are required.');
@@ -81,7 +95,11 @@ export function createCatalog(definition: LyraGenCatalog): LyraGenCatalog {
     }
     for (const child of component.optionalChildren ?? []) if (!Array.isArray(component.children) || !component.children.includes(child)) throw new TypeError(`Optional child ${role}.${child} must also be listed in children`);
   }
-  return freeze({ ...definition, components, ...(fieldPolicy ? { fieldPolicy } : {}) });
+  const schemas = new WeakSet<object>();
+  for (const component of Object.values(components)) for (const schema of Object.values(component.properties)) freezeSchema(schema, schemas);
+  for (const action of Object.values(definition.actions ?? {})) freezeSchema(action.payload, schemas);
+  for (const query of Object.values(definition.queries ?? {})) { freezeSchema(query.params, schemas); freezeSchema(query.result, schemas); }
+  return markCreatedCatalog(freeze({ ...definition, components, ...(fieldPolicy ? { fieldPolicy } : {}) }));
 }
 
 const structuralComponents: Readonly<Record<string, LyraGenComponent>> = {
@@ -105,4 +123,4 @@ for (const [role, component] of Object.entries({ ...structuralComponents, ...for
 }
 
 /** The emitted-artifact check validates this immutable library-owned catalog before packaging. */
-export const initialCatalog: LyraGenCatalog = freeze({ id: 'lyra-reviewed', version: '1', components: builtInRoles });
+export const initialCatalog: LyraGenCatalog = markCreatedCatalog(freeze({ id: 'lyra-reviewed', version: '1', components: builtInRoles }));

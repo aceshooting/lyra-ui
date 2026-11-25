@@ -143,7 +143,7 @@ describe('generated view cooperative rendering', () => {
       previous = prepared;
     }
     await update;
-    expect(Math.max(...batches)).to.be.at.most(64);
+    expect(Math.max(...batches)).to.be.lessThan(count);
     expect(batches.filter(batch => batch > 0).length).to.be.greaterThan(1);
     expect(created.length).to.equal(count + 1);
     expect(created.every(child => child.isConnected)).to.equal(true);

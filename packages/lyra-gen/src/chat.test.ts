@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createChatStream, type LyraGenChatOptions } from './chat.js';
+import type { LyraGenPartialView } from './partial-view.js';
 import type { LyraGenCatalog } from './types.js';
 
 const catalog: LyraGenCatalog = { id: 'chat-test', version: '1', components: {
@@ -215,4 +216,77 @@ test('admitting an unchanged tree after a source refresh keeps the document iden
   assert.equal(chat.refreshSources().islands[0]?.document, document);
   sources.set('a', { id: 'a', label: 'Renamed' });
   assert.equal(chat.refreshSources().islands[0]?.document?.revision, document!.revision + 1);
+});
+
+const streamedIsland = 'Intro\n```lyra\n<stack id="answer">\n<text id="one">First</text>\n<text id="two">Second</text>\n'
+  + '<text id="three">Third</text>\n</stack>\n```\nAfter';
+function previewsOf(chat: ReturnType<typeof createChatStream>, source: string, width: number) {
+  const previews: LyraGenPartialView[] = [];
+  for (let offset = 0; offset < source.length; offset += width) {
+    const island = chat.push(source.slice(offset, offset + width)).islands[0];
+    if (island?.status === 'loading' && island.partial && island.partial !== previews.at(-1)) previews.push(island.partial);
+    if (island && island.status !== 'loading') assert.equal(island.partial, undefined);
+  }
+  return previews;
+}
+
+test('progressive chat islands publish growing previews, then the committed document of the same surface and revision', () => {
+  const chat = createChatStream(options({ progressive: { minCodeUnits: 0 } }));
+  const previews = previewsOf(chat, streamedIsland, 5);
+  assert.ok(previews.length >= 2);
+  const shown = (view: { root: { id: string; children?: readonly { id: string }[] } }) => [view.root.id, ...(view.root.children ?? []).map(child => child.id)];
+  for (let index = 1; index < previews.length; index++) {
+    const before = shown(previews[index - 1]!.view);
+    assert.deepEqual(shown(previews[index]!.view).slice(0, before.length), before);
+  }
+  const done = chat.finish().islands[0]!;
+  assert.equal(done.status, 'ready');
+  assert.equal(done.partial, undefined);
+  assert.equal(done.document?.surfaceId, previews.at(-1)!.view.surfaceId);
+  assert.equal(done.document?.revision, previews.at(-1)!.view.revision);
+  const plain = createChatStream(options());
+  plain.push(streamedIsland);
+  assert.deepEqual(plain.finish().islands[0]?.document, done.document);
+});
+
+test('chat islands carry no preview unless progressive mode is opted in', () => {
+  const chat = createChatStream(options());
+  assert.equal(previewsOf(chat, streamedIsland, 5).length, 0);
+  assert.equal(chat.push('').islands[0]?.status, 'ready');
+});
+
+test('cancel clears the preview and keeps the incomplete fallback; interruption hides it until resume', () => {
+  const head = streamedIsland.slice(0, 70);
+  const cancelled = createChatStream(options({ progressive: { minCodeUnits: 0 } }));
+  assert.ok(previewsOf(cancelled, head, 4).length > 0);
+  const after = cancelled.cancel().islands[0]!;
+  assert.equal(after.status, 'incomplete');
+  assert.equal(after.partial, undefined);
+  assert.equal(after.document, undefined);
+  assert.equal(after.fallback, 'Retry this view');
+  const paused = createChatStream(options({ progressive: { minCodeUnits: 0 } }));
+  const previews = previewsOf(paused, head, 4);
+  assert.equal(paused.interrupt(true).islands[0]?.partial, undefined);
+  assert.equal(paused.resume().islands[0]?.partial, previews.at(-1));
+});
+
+test('a malformed progressive island ends in the invalid fallback without a preview', () => {
+  const chat = createChatStream(options({ progressive: { minCodeUnits: 0 } }));
+  const source = '```lyra\n<stack id="s">\n<text id="t">Real</text>\n<script id="x">bad</script>\n</stack>\n```\n';
+  for (const preview of previewsOf(chat, source, 3)) assert.equal(JSON.stringify(preview.view).includes('script'), false);
+  const island = chat.finish().islands[0]!;
+  assert.equal(island.status, 'error');
+  assert.equal(island.partial, undefined);
+  assert.equal(island.document, undefined);
+});
+
+test('previews apply host source authorization before a generated label can appear', () => {
+  const chat = createChatStream(options({ progressive: { minCodeUnits: 0 }, sources: new Map([['a', { id: 'a', label: 'Host label' }]]) }));
+  const previews = previewsOf(chat, '```lyra\n<stack id="s">\n<citation id="c" sourceId="a" label="Model label" />\n'
+    + '<citation id="d" sourceId="forged" label="Forged label" />\n<text id="t">More</text>\n', 6);
+  assert.ok(previews.length > 0);
+  for (const preview of previews) assert.equal(JSON.stringify(preview.view).includes('Model label') || JSON.stringify(preview.view).includes('Forged label'), false);
+  const children = previews.at(-1)!.view.root.children!;
+  assert.equal(children[0]?.props?.['label'], 'Host label');
+  assert.equal(children[1]?.text, 'Source unavailable');
 });

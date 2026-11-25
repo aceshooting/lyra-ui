@@ -1,4 +1,5 @@
 import { validateView } from './runtime.js';
+import { validateCanonicalView, ViewValidationCache } from './isolation.js';
 import type { LyraGenCatalog, LyraGenLimits, LyraGenNode, LyraGenView } from './types.js';
 
 /**
@@ -45,7 +46,8 @@ function prune(root: LyraGenNode, paths: ReadonlySet<string>, shown: ReadonlyMap
 /**
  * Admits best-effort previews: each candidate passes strict `validateView`; nodes that fail are
  * dropped when they were never shown, and a candidate that would hide or retype a shown node is
- * skipped, so successive previews only grow.
+ * skipped, so successive previews only grow. Completed subtrees keep their object identity between
+ * offers, so each attempt admits and validates only the nodes that are new or still open.
  */
 export class PartialViewTracker {
   readonly #shown = new Map<string, string>();
@@ -53,6 +55,7 @@ export class PartialViewTracker {
   readonly #limits: Partial<LyraGenLimits> | undefined;
   readonly #normalize: boolean;
   readonly #interval: number;
+  readonly #cache = new ViewValidationCache();
   #sequence = 0;
   #attempted = 0;
 
@@ -73,7 +76,10 @@ export class PartialViewTracker {
     this.#attempted = received;
     let root: LyraGenNode | undefined = view.root;
     for (let attempt = 0; attempt < 4 && root; attempt++) {
-      const checked = validateView({ ...view, root }, this.#catalog, { limits: this.#limits, normalize: this.#normalize });
+      const candidate = { ...view, root };
+      const checked = this.#normalize
+        ? validateView(candidate, this.#catalog, { limits: this.#limits, normalize: true })
+        : validateCanonicalView(candidate, this.#catalog, { limits: this.#limits }, candidate, this.#cache);
       if (checked.ok) return this.#accept(checked.value, open, received);
       const owners = new Set<string>();
       for (const diagnostic of checked.diagnostics) {

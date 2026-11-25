@@ -448,6 +448,21 @@ function analyzeGeoJson(value: unknown): GeoJsonAnalysis {
   return { value: root, metadata, featureCount: count, bounds };
 }
 
+/** Admits host-supplied, already-parsed GeoJSON under the fetched-document contract: the
+ *  caller's graph is first walked under the same node/depth/text/serialized ceilings (rejecting
+ *  cycles, functions, `undefined` and non-finite numbers), then serialized and re-parsed into a
+ *  private copy that `analyzeGeoJson` validates exactly as it would a fetched body. */
+function snapshotGeoJson(value: unknown): unknown {
+  assertGeoJsonGraphWithinLimits(value);
+  assertGeoJsonSerializedSize(value);
+  const text = JSON.stringify(value);
+  if (typeof text !== 'string') throw new Error('not a GeoJSON object');
+  if (text.length > MAX_GEOJSON_SERIALIZED_UNITS) {
+    throw new LyraResourceLimitError('The serialized GeoJSON is too large.');
+  }
+  return JSON.parse(text);
+}
+
 const FIT_PADDING = 24;
 const MAX_FIT_ZOOM = 18;
 
@@ -516,8 +531,9 @@ export interface LyraGeoJsonViewerEventMap
 class LyraGeoJsonViewerBase extends LyraElement<LyraGeoJsonViewerEventMap> {}
 
 /**
- * `<lr-geojson-viewer>` — document-registry bridge rendering a fetched GeoJSON file through
- * `<lr-map>`'s `dataLayers`.
+ * `<lr-geojson-viewer>` — document-registry bridge rendering a fetched GeoJSON file, or
+ * already-parsed host `data` under the same validation and ceilings, through `<lr-map>`'s
+ * `dataLayers`.
  * The inherited fragment path performs an exact DOM `id` lookup, but the generated metadata,
  * status, and map output define no fragment ids; such a jump reports `found: false`. Use a
  * text-quote anchor for the serialized metadata. Responses are limited to 4 MiB before JSON
@@ -588,8 +604,20 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
       : this.renderRoot.querySelector<HTMLElement>('[part="base"][role="region"]'),
   );
 
-  /** URL of the GeoJSON document to fetch and render; empty shows the idle state. */
+  /** URL of the GeoJSON document to fetch and render; empty shows the idle state. Ignored while
+   *  `data` is set. */
   @property() src = '';
+  /**
+   * Already-parsed GeoJSON (a `FeatureCollection`, `Feature` or bare geometry) to render instead of
+   * fetching `src`. When set to anything but `null`/`undefined` it takes precedence over `src`,
+   * which is not fetched; `null` restores `src`. The value must be JSON-compatible plain data (no
+   * `undefined`, functions, non-finite numbers, or object reused at two places in the graph) and
+   * is admitted under the same shape validation and feature, position, nesting, text and
+   * serialized-size ceilings as a fetched document, rendering the localized invalid or too-large
+   * message on failure. The viewer keeps a private copy taken at assignment: reassign a new
+   * object to change the view.
+   */
+  @property({ attribute: false }) data: unknown = null;
   /** Accessible-name fallback for the current region owner: the root in non-map states, or the
    * loaded map canvas when the optional peer is available. */
   @property() name = '';
@@ -691,7 +719,7 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
     super.connectedCallback();
     if (this.hasUpdated) this.syncScrollRegions();
     this.announcements.connect();
-    if (this.hasUpdated && this.src.trim() && this.src === this.lastLoadSrc && this.loadState.kind !== 'loaded') {
+    if (this.hasUpdated && (this.data != null || (this.src.trim() && this.src === this.lastLoadSrc)) && this.loadState.kind !== 'loaded') {
       this.scheduleAfterUpdate(() => {
         void this.load();
       });
@@ -740,7 +768,7 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
     }
     this.syncMapCanvasReadyCallback();
     this.fitLoadedData();
-    if (changed.has('src'))
+    if (changed.has('src') || changed.has('data'))
       this.scheduleAfterUpdate(() => {
         void this.load();
       });
@@ -772,14 +800,37 @@ export class LyraGeoJsonViewer extends TextViewerTarget(LyraGeoJsonViewerBase) {
     this.lastLoadSrc = this.src;
     this.mapReady = false;
     this.mapCanvas = null;
+    if (this.data != null) {
+      await this.loadData(this.data);
+      return;
+    }
     this.loadState = this.src ? { kind: 'loading' } : { kind: 'idle' };
     await this.transport.begin(this.src);
+  }
+
+  /** Host-supplied data supersedes any in-flight fetch and shares its generation guard. */
+  private async loadData(data: unknown): Promise<void> {
+    this.transport.cancel();
+    const view = this.ownerDocument.defaultView;
+    if (!view) return;
+    const token: ViewerSourceToken = { generation: this.transport.generation, signal: undefined, view: view as Window & typeof globalThis };
+    this.loadState = { kind: 'loading' };
+    try {
+      await this.admitParsed(snapshotGeoJson(data), token);
+    } catch (error) {
+      if (this.transport.isStale(token)) return;
+      this.loadState = { kind: 'error', message: viewerFailureMessage(error, this.localize.bind(this), () => this.localize('geojsonViewInvalid')) };
+      this.emit('lr-render-error', { error });
+    }
   }
 
   private async readDocument(response: Response, token: ViewerSourceToken): Promise<void> {
     const text = await this.transport.readText(response, MAX_GEOJSON_SERIALIZED_UNITS);
     if (this.transport.isStale(token)) return;
-    const parsed: unknown = JSON.parse(text);
+    await this.admitParsed(JSON.parse(text) as unknown, token);
+  }
+
+  private async admitParsed(parsed: unknown, token: ViewerSourceToken): Promise<void> {
     const analysis = analyzeGeoJson(parsed);
     const { center, zoom } = analysis.bounds
       ? fitBboxToView(analysis.bounds)
