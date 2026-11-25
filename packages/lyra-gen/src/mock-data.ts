@@ -119,6 +119,8 @@ function writeAt(root: JsonValue | undefined, pointer: string, value: JsonValue)
   const top = container;
   for (let index = 0; index < parts.length; index++) {
     const part = parts[index]!;
+    // Checked again at the write site (not only through UNSAFE above) so the guard is local to it.
+    if (part === '__proto__' || part === 'constructor' || part === 'prototype') return root;
     const last = index === parts.length - 1;
     const bag = container as Record<string, JsonValue>;
     if (last) { bag[part] = value; break; }
