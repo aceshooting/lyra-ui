@@ -351,8 +351,10 @@ const bundleEntries = {
     // 478,965 raw bytes; the ceiling advances to the next 64-byte boundary. The 32.1.0 shared
     // overlay and helper changes bring it to 480,036 raw bytes; the ceiling advances to the
     // next 64-byte boundary. The 33.0.0 declarative overlay actions and shared helpers bring it
-    // to 480,906 raw bytes; the ceiling advances to the next 64-byte boundary.
-    maxRawBytes: 480_960,
+    // to 480,906 raw bytes; the ceiling advances to the next 64-byte boundary. The
+    // pre-upgrade property restore in LyraElement brings it to 481,457 raw bytes; the ceiling
+    // advances to the next 64-byte boundary.
+    maxRawBytes: 481_472,
   },
 };
 
