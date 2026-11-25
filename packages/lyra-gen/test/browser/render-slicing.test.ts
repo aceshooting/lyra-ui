@@ -198,6 +198,8 @@ describe('generated view cooperative rendering', () => {
       ...base.components['item']!,
       prepareProperties: props => {
         prepared++;
+        const until = performance.now() + 0.05;
+        while (performance.now() < until) { /* deliberate minimum cost, as in catalog() */ }
         const result = { ...props };
         if (props['title'] === 'Revision 1') adapted = result;
         return result;
