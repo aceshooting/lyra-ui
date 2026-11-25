@@ -9,7 +9,8 @@ const tick = async () => { await new Promise<void>(resolve => requestAnimationFr
 function catalog(prepare: () => void): LyraGenCatalog {
   return createCatalog({ id: 'sliced', version: '1', components: {
     group: { tag: 'div', properties: {}, children: true },
-    item: { tag: 'p', properties: { title: { type: 'string' } }, text: true, prepareProperties: props => { prepare(); return props; } },
+    // Each item costs a known minimum, so a large view spans several time-budgeted slices on any machine.
+    item: { tag: 'p', properties: { title: { type: 'string' } }, text: true, prepareProperties: props => { prepare(); const until = performance.now() + 0.05; while (performance.now() < until) { /* deliberate minimum cost */ } return props; } },
     field: { tag: 'input', properties: { value: { type: 'string' }, name: { type: 'string' } }, bindings: { value: { property: 'value', event: 'input' } } },
     form: { tag: 'form', properties: {}, children: true },
     action: { tag: 'button', properties: {}, text: true, events: ['click'] },
