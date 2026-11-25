@@ -337,8 +337,9 @@ const bundleEntries = {
     // and shared overlay helpers bring it to 2,619,675 raw bytes; the ceiling advances to the
     // next 64-byte boundary. Per-obstacle anchor sides and the unpatched-hydration self-heal
     // bring it to 2,622,125 raw bytes across 42 files; the ceiling advances to the next 64-byte
-    // boundary.
-    maxRawBytes: 2_622_144,
+    // boundary. The pre-upgrade property restore in LyraElement brings it to 2,622,927 raw bytes;
+    // the ceiling advances to the next 64-byte boundary.
+    maxRawBytes: 2_622_976,
   },
   graph: {
     fixture: 'optional',
