@@ -60,8 +60,8 @@ summary repeats them above the tables.
 
 ## Recorded results
 
-[`results/dashboards-report.json`](results/dashboards-report.json) and
-[`results/dashboards-summary.md`](results/dashboards-summary.md) hold one run of the command above
+One run of the command above (written to the git-ignored `results/dashboards-report.json` and
+`results/dashboards-summary.md`) is recorded here
 (5 samples, 24-code-unit chunks, Node 22.23.2, all 13 scenarios). Median fraction of the stream
 consumed before the first tree passing `validateView`, across scenarios:
 
