@@ -117,7 +117,7 @@ reserved type and is rejected. Persist the original input and isolate again when
 ## Host-owned asynchronous repair
 
 The granular `repair-workflow.js` module exports `repairView()`. It validates the current view,
-rejects identity, catalog, authority and resource failures, then sends the declared failing nodes
+rejects identity, binding ownership, content policy, catalog version, revision, action payload and resource failures (see `isRepairableDiagnostic()`); content-shape failures such as unknown properties or component types, unowned reads, wrong types, out-of-range values and missing required properties are repairable, then sends the declared failing nodes
 and their content diagnostics to a host transport. Every selected node must contain a failure;
 selected regions cannot overlap, and all current failures must fall within those regions. The
 request includes no unrelated siblings, complete surface tree or local state. A selected parent

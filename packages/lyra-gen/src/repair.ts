@@ -1,7 +1,10 @@
-import { applyViewPatch, findNode, REPAIRABLE_DIAGNOSTIC_CODES, validateView } from './runtime.js';
+import { applyViewPatch, findNode, validateView } from './runtime.js';
 import type { LyraGenPatch, LyraGenValidationOptions } from './runtime.js';
+import { isRepairableCode } from './isolation.js';
 import { snapshotJson } from './schema.js';
 import type { LyraGenCatalog, LyraGenDiagnostic, LyraGenNode, LyraGenResult, LyraGenView } from './types.js';
+export { formatRepairMessage } from './repair-message.js';
+export type { LyraGenRepairMessageOptions } from './repair-message.js';
 
 export interface LyraGenRepairRequest {
   readonly surfaceId: string;
@@ -11,7 +14,16 @@ export interface LyraGenRepairRequest {
 }
 export interface LyraGenRepairLimits { readonly maxAttempts?: number; readonly maxElapsedMs?: number; readonly maxTokens?: number }
 const failed = <T>(code: string, message: string): LyraGenResult<T> => ({ ok: false, diagnostics: [{ code, message, path: '', severity: 'error' }] });
-const forbidden = (diagnostic: LyraGenDiagnostic) => !REPAIRABLE_DIAGNOSTIC_CODES.includes(diagnostic.code);
+/**
+ * Whether a host may ask a model to fix this diagnostic: a content-shape failure in
+ * `REPAIRABLE_DIAGNOSTIC_CODES`, with schema failures admitted only for a node's own properties (an
+ * action payload or query parameter schema failure stays terminal). Repairable only permits a
+ * repair request; every repaired candidate is validated again as a whole.
+ */
+export function isRepairableDiagnostic(diagnostic: LyraGenDiagnostic): boolean {
+  return diagnostic !== null && typeof diagnostic === 'object' && typeof diagnostic.code === 'string' && isRepairableCode(diagnostic.code, typeof diagnostic.path === 'string' ? diagnostic.path : '');
+}
+const forbidden = (diagnostic: LyraGenDiagnostic) => !isRepairableDiagnostic(diagnostic);
 
 /** Explicitly scope repair to known nodes; security, resource and identity failures are terminal. */
 export function createRepairRequest(view: LyraGenView, nodeIds: readonly string[], diagnostics: readonly LyraGenDiagnostic[]): LyraGenResult<LyraGenRepairRequest> {

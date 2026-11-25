@@ -20,7 +20,7 @@ test('strict mode stays byte-identical on the existing fixtures: results carry n
   assert.deepEqual(Object.keys(strict), ['ok', 'value', 'diagnostics']);
   assert.deepEqual(validateView(good, catalog, { recovery: 'isolate' }), strict);
   const bad = validateView(view({ id: 'a', type: 'nope' }), catalog);
-  assert.deepEqual(bad, { ok: false, diagnostics: [{ code: 'catalog.component', path: '/root/children/0/type', message: 'Component is not in the active catalog.', severity: 'error' }] });
+  assert.deepEqual(bad, { ok: false, diagnostics: [{ code: 'catalog.component', path: '/root/children/0/type', message: 'Component is not in the active catalog.', severity: 'error', hint: 'Declared components: text, row, stat, kpi.' }] });
 });
 
 test('expansion replaces the block by its primitives in place and the view is frozen and registered', () => {

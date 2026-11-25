@@ -22,7 +22,7 @@ test('content-only rejected boundaries can be repaired, authority failures canno
   assert.equal(request.ok, true); if (!request.ok) return;
   const patch = { surfaceId: 'surface', expectedRevision: 0, operations: [{ op: 'replace' as const, nodeId: 'text', node: { id: 'text', type: 'text', props: { label: 'Fixed' } } }] };
   assert.equal(new LyraGenRepairSession(request.value).apply(invalid, patch, boundedCatalog, 1).ok, true);
-  for (const code of ['catalog.component', 'view.catalog', 'action.unknown', 'binding.unknown', 'state.unauthorized']) {
+  for (const code of ['identity.duplicate', 'view.catalog', 'action.unknown', 'binding.unknown', 'state.unauthorized']) {
     assert.equal(createRepairRequest(view, ['text'], [{ code, path: '/root', message: 'Forbidden.', severity: 'error' }]).ok, false);
   }
 });

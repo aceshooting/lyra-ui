@@ -184,6 +184,16 @@ expanded form). `buildRefinementPrompt()` requests a patch scoped to one node, a
 SDK-style tool definitions. See [catalog presets](docs/catalog-presets.md#prompt-profiles-and-size)
 and [structured input](docs/structured-input.md#prompts-refinement-and-provider-tools).
 
+`formatRepairMessage(diagnostics, { maxCharacters, view })` turns validation diagnostics, each with a
+model-facing `hint`, into a compact, deterministic, size-bounded repair instruction grouped by node;
+`isRepairableDiagnostic()` says which failures a host may send back to the model.
+
+**Lyra Lines (opt in).** `@aceshooting/lyra-gen/lines.js` parses a compact one-line-per-node output
+syntax into an ordinary JSON v1 view before validation; nothing is stored as Lines.
+`buildLinesPrompt()` from `@aceshooting/lyra-gen/prompts-lines.js` asks a model for it. It measures
+about 0.56x JSON's approximate tokens on the offline dashboard benchmark and stays opt in until
+evaluated with a real model. See [Lyra Lines](docs/lines.md).
+
 ## Parse restricted Lyra Markup
 
 ```ts

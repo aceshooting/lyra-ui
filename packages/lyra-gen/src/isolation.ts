@@ -5,6 +5,7 @@ import { admitJson, limitsKey, resolveLimitValues, validateAdmittedValue, type N
 import { isCreatedCatalog } from './catalog-trust.js';
 import { isContentUrlProperty, validateContentProperties, validateFieldPurpose } from './content-policy.js';
 import { parsePointer } from './references.js';
+import { listNames, nearestName, requiredHint, schemaHint, unknownNameHint } from './diagnostic-hints.js';
 /**
  * Error isolation policy: which validation failures a view may contain in place and which must reject
  * the whole document. Everything not explicitly listed here is a boundary failure (fail closed).
@@ -64,8 +65,29 @@ export function classifyDiagnostic(code: string, relativePath = ''): 'isolatable
   return 'boundary';
 }
 
-/** Only content failures may be submitted to an explicit host repair request. */
-export const REPAIRABLE_DIAGNOSTIC_CODES: readonly string[] = Object.freeze(['schema.type', 'schema.enum', 'schema.length', 'schema.range', 'schema.required', 'schema.any-of', 'props.required', 'a11y.name']);
+/**
+ * Content-shape failures a host may submit to an explicit repair request: every code a view can
+ * isolate in place (schema codes only for a node's own properties, see `isRepairableDiagnostic()`).
+ * Identity, state and action authority, content policy, catalog version, revision and resource
+ * failures are never repairable. Repairable only permits asking for a fix; the result is validated
+ * again as a whole.
+ */
+export const REPAIRABLE_DIAGNOSTIC_CODES: readonly string[] = Object.freeze([...new Set([
+  'schema.type', 'schema.enum', 'schema.length', 'schema.range', 'schema.required', 'schema.any-of', 'props.required', 'a11y.name',
+  ...ISOLATABLE_SCHEMA_CODES, ...ISOLATABLE_DIAGNOSTIC_CODES
+])]);
+
+/**
+ * Whether a host may ask a model to fix a failure with this code at this path: a code in
+ * `REPAIRABLE_DIAGNOSTIC_CODES`, with schema failures admitted only for a node's own properties (an
+ * action payload or query parameter schema failure stays terminal).
+ */
+export function isRepairableCode(code: string, path: string): boolean {
+  if (!REPAIRABLE_DIAGNOSTIC_CODES.includes(code)) return false;
+  if (!code.startsWith('schema.')) return true;
+  const node = ownerPattern.exec(path)?.[0];
+  return node !== undefined && classifyDiagnostic(code, path.slice(node.length)) === 'isolatable';
+}
 const identityPattern = /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/u;
 const validatedViews = new WeakSet<LyraGenView>();
 /** Views produced by this module that contain isolation markers; only these may be re-validated with their markers. */
@@ -222,7 +244,7 @@ function validateWith(input: unknown, catalog: import('./types.js').LyraGenCatal
     errorCount++;
     if (boundary) forcedBoundary.add(diagnostic);
     if (diagnostics.length < limits.maxDiagnostics) diagnostics.push(diagnostic);
-    else { overflowed = true; if (!REPAIRABLE_DIAGNOSTIC_CODES.includes(code)) diagnostics[diagnostics.length - 1] = diagnostic; }
+    else { overflowed = true; if (!isRepairableCode(code, path)) diagnostics[diagnostics.length - 1] = diagnostic; }
   };
   const issue = (code: string, path: string, message: string, hint?: string, boundary = false): void => {
     log?.push({ kind: 'issue', code, path, message, hint, boundary });
@@ -232,7 +254,7 @@ function validateWith(input: unknown, catalog: import('./types.js').LyraGenCatal
   const claimId = (id: string, path: string): boolean => {
     const duplicate = ids.has(id);
     log?.push({ kind: 'id', id, path, duplicate });
-    if (duplicate) raise('identity.duplicate', `${path}/id`, 'Node identities must be unique.');
+    if (duplicate) raise('identity.duplicate', `${path}/id`, 'Node identities must be unique.', duplicateHint(id, path));
     else { ids.add(id); identifiedPaths.add(path); }
     return duplicate;
   };
@@ -240,7 +262,7 @@ function validateWith(input: unknown, catalog: import('./types.js').LyraGenCatal
   const claimBinding = (pointer: string, path: string): boolean => {
     const unique = registerBinding(bindings, bindingAncestors, pointer);
     log?.push({ kind: 'binding', pointer, path, unique });
-    if (!unique) raise('identity.binding', path, 'State paths must have exactly one nonoverlapping owner.');
+    if (!unique) raise('identity.binding', path, 'State paths must have exactly one nonoverlapping owner.', overlapHint(pointer, path));
     return unique;
   };
   const addRead = (read: StateRead): void => { log?.push({ kind: 'read', read }); reads.push(read); };
@@ -248,6 +270,48 @@ function validateWith(input: unknown, catalog: import('./types.js').LyraGenCatal
   const addTemplate = (path: string): void => { log?.push({ kind: 'template', path }); repeatTemplates.add(path); };
   const addExpansion = (path: string): void => { log?.push({ kind: 'expansion', path }); expansionRoots.add(path); };
   const inTemplateAt = (path: string): boolean => [...repeatTemplates].some(prefix => path === prefix || path.startsWith(prefix + '/'));
+  /** Declared state owners by pointer, collected from the admitted tree only when an ownership hint is needed. */
+  let stateOwners: Map<string, { readonly nodeId: string; readonly path: string }> | undefined;
+  const bindingOwners = (): Map<string, { readonly nodeId: string; readonly path: string }> => {
+    if (stateOwners) return stateOwners;
+    const found = new Map<string, { readonly nodeId: string; readonly path: string }>();
+    const walk = (node: JsonValue | undefined, path: string, depth: number): void => {
+      if (!object(node) || depth > limits.maxDepth || found.size >= 4096) return;
+      if (object(node['bindings']) && typeof node['id'] === 'string') for (const [property, pointer] of Object.entries(node['bindings'])) if (typeof pointer === 'string' && !found.has(pointer)) found.set(pointer, { nodeId: node['id'], path: `${path}/bindings/${escapePointerSegment(property)}` });
+      if (Array.isArray(node['children'])) node['children'].forEach((child, index) => walk(child, `${path}/children/${index}`, depth + 1));
+    };
+    walk(view['root'], '/root', 0);
+    return (stateOwners = found);
+  };
+  const ownershipHint = (pointer: string, subject: string): string => {
+    const declared = bindingOwners();
+    const near = nearestName(pointer, declared.keys());
+    const owner = near === undefined ? undefined : declared.get(near);
+    return owner ? `Did you mean "${near}" (bound by node "${owner.nodeId}")? ${subject} need a path a binding in this view owns.` : 'No binding in this view owns this path; bind it on an input or read a bound path.';
+  };
+  const overlapHint = (pointer: string, path: string): string => {
+    for (const [other, owner] of bindingOwners()) {
+      if (owner.path === path) continue;
+      if (other === pointer || other.startsWith(`${pointer}/`) || pointer.startsWith(`${other}/`)) return `The path overlaps the binding of node "${owner.nodeId}"; choose a separate state path.`;
+    }
+    return 'Each state path needs exactly one binding; choose a separate, nonoverlapping path.';
+  };
+  const duplicateHint = (id: string, path: string): string => {
+    const first = (node: JsonValue | undefined, at: string, depth: number): string | undefined => {
+      if (!object(node) || depth > limits.maxDepth || at === path) return undefined;
+      if (node['id'] === id) return at;
+      return Array.isArray(node['children']) ? node['children'].reduce<string | undefined>((hit, child, index) => hit ?? first(child, `${at}/children/${index}`, depth + 1), undefined) : undefined;
+    };
+    const original = first(view['root'], '/root', 0);
+    return original ? `The identity is already used by the node at ${original}; choose a unique id.` : 'Choose an identity no other node in this view uses.';
+  };
+  const componentHint = (type: JsonValue | undefined, parent: LyraGenNode | undefined): string => {
+    const allowed = parent ? catalog.components[parent.type]?.children : undefined;
+    return Array.isArray(allowed) ? unknownNameHint(type, allowed, 'Allowed child types', 'The parent accepts no children.') : unknownNameHint(type, Object.keys(catalog.components), 'Declared components', 'The catalog declares no components.');
+  };
+  const URL_SINK_HINT = 'Remove this entry; URL properties accept only literal values that the content policy admits.';
+  const POINTER_HINT = 'Use a JSON Pointer string that starts with "/", for example "/filters/region".';
+  const MAPPING_HINT = 'Use an object mapping declared property names to JSON Pointer strings, for example {"value": "/filters/region"}.';
   /** Re-apply a recorded subtree in order; cross-node checks run against this pass's state. */
   const replay = (record: VisitRecord): JsonValue | undefined => {
     const start = log!.length;
@@ -286,108 +350,108 @@ function validateWith(input: unknown, catalog: import('./types.js').LyraGenCatal
   };
   /** Validate one node; returns the node to keep (the block's expansion, a rebuilt parent, or the input). `expanded` skips identity registration for a block's own replacement. */
   const visitNode = (value: JsonValue | undefined, path: string, parent?: LyraGenNode, inForm = false, expanded = false): JsonValue | undefined => {
-    if (!object(value)) { issue('node.invalid', path, 'Expected a node object.'); return value; }
+    if (!object(value)) { issue('node.invalid', path, 'Expected a node object.', 'Each node is an object with at least an id and a catalog type.'); return value; }
     const startErrors = errorCount;
-    if (Object.keys(value).some(key => !isNodeMember(key))) issue('node.member', path, 'Unknown node member.');
+    if (Object.keys(value).some(key => !isNodeMember(key))) issue('node.member', path, 'Unknown node member.', unknownNameHint(Object.keys(value).find(key => !isNodeMember(key)), [...nodeMembers], 'Node members', ''));
     if (expanded) { /* identity was admitted with the block node */ }
-    else if (typeof value['id'] !== 'string' || !identityPattern.test(value['id'])) issue('identity.invalid', `${path}/id`, 'A node needs an explicit valid identity.');
+    else if (typeof value['id'] !== 'string' || !identityPattern.test(value['id'])) issue('identity.invalid', `${path}/id`, 'A node needs an explicit valid identity.', 'Use a string id of 1 to 128 letters, digits, "_", ".", ":" or "-" that starts with a letter or digit.');
     else claimId(value['id'], path);
     if (value['type'] === LYRA_GEN_ISOLATED_TYPE) {
       if (!expanded && typeof value['id'] === 'string' && allowedMarkers.has(value['id']) && Object.keys(value).length === 2) return value;
-      issue('catalog.component', `${path}/type`, 'Component is not in the active catalog.', undefined, true);
+      issue('catalog.component', `${path}/type`, 'Component is not in the active catalog.', 'This type is reserved; use a component declared by the catalog.', true);
       return value;
     }
-    if (typeof value['type'] !== 'string' || !Object.hasOwn(catalog.components, value['type'])) { issue('catalog.component', `${path}/type`, 'Component is not in the active catalog.'); return value; }
+    if (typeof value['type'] !== 'string' || !Object.hasOwn(catalog.components, value['type'])) { issue('catalog.component', `${path}/type`, 'Component is not in the active catalog.', componentHint(value['type'], parent)); return value; }
     const component = catalog.components[value['type']]!;
     for (const diagnostic of validateFieldPurpose(value as unknown as LyraGenNode, view['surfaceId'] as string, catalog)) issue(diagnostic.code, path + diagnostic.path, diagnostic.message);
-    if (component.tag === 'form' && inForm) issue('node.nested-form', path, 'Forms cannot be nested.');
+    if (component.tag === 'form' && inForm) issue('node.nested-form', path, 'Forms cannot be nested.', 'Move these fields into the enclosing form instead of nesting a second form.');
     const props = value['props'] ?? {};
-    if (!object(props)) issue('props.invalid', `${path}/props`, 'Properties must be an object.');
+    if (!object(props)) issue('props.invalid', `${path}/props`, 'Properties must be an object.', unknownNameHint(undefined, Object.keys(component.properties), 'Use an object of declared properties', 'This component declares no properties; omit props.'));
     else {
       for (const diagnostic of validateContentProperties(props, component)) issue(diagnostic.code, path + diagnostic.path, diagnostic.message);
       for (const [key, prop] of Object.entries(props)) {
         const schema = Object.hasOwn(component.properties, key) ? component.properties[key] : undefined;
-        if (!schema) { issue('props.unknown', `${path}/props/${escapePointerSegment(key)}`, 'Property is not declared by the catalog.', `Allowed properties: ${Object.keys(component.properties).join(', ')}`); continue; }
+        if (!schema) { issue('props.unknown', `${path}/props/${escapePointerSegment(key)}`, 'Property is not declared by the catalog.', unknownNameHint(key, Object.keys(component.properties), 'Allowed properties', 'This component declares no properties; omit props.')); continue; }
         const checked = validateAdmittedValue(prop, schema, limits);
-        if (checked) for (const diagnostic of checked.diagnostics) issue(diagnostic.code, `${path}/props/${escapePointerSegment(key)}${diagnostic.path}`, diagnostic.message);
+        if (checked) for (const diagnostic of checked.diagnostics) issue(diagnostic.code, `${path}/props/${escapePointerSegment(key)}${diagnostic.path}`, diagnostic.message, schemaHint(diagnostic.code, schema, diagnostic.path));
       }
-      for (const key of component.required ?? []) if (!Object.hasOwn(props, key) && !(object(value['bindings']) && Object.hasOwn(value['bindings'], key))) issue('props.required', `${path}/props/${escapePointerSegment(key)}`, 'A required property is missing.');
+      for (const key of component.required ?? []) if (!Object.hasOwn(props, key) && !(object(value['bindings']) && Object.hasOwn(value['bindings'], key))) issue('props.required', `${path}/props/${escapePointerSegment(key)}`, 'A required property is missing.', requiredHint(key, component.properties[key]));
     }
-    if (value['text'] !== undefined && (typeof value['text'] !== 'string' || !component.text)) issue('node.text', `${path}/text`, 'This component does not accept this text value.');
-    if (value['slot'] !== undefined && (typeof value['slot'] !== 'string' || !parent || !(catalog.components[parent.type]?.slots ?? []).includes(value['slot']))) issue('node.slot', `${path}/slot`, 'Slot is not declared by the parent.');
+    if (value['text'] !== undefined && (typeof value['text'] !== 'string' || !component.text)) issue('node.text', `${path}/text`, 'This component does not accept this text value.', component.text ? 'Text must be a string.' : `This component takes no text${Object.keys(component.properties).length ? `; use a declared property (${listNames(Object.keys(component.properties))})` : ''}.`);
+    if (value['slot'] !== undefined && (typeof value['slot'] !== 'string' || !parent || !(catalog.components[parent.type]?.slots ?? []).includes(value['slot']))) issue('node.slot', `${path}/slot`, 'Slot is not declared by the parent.', unknownNameHint(value['slot'], (parent && catalog.components[parent.type]?.slots) || [], 'Declared slots', 'The parent declares no slots; omit slot.'));
     if (value['bindings'] !== undefined) {
-      if (!object(value['bindings'])) issue('binding.invalid', `${path}/bindings`, 'Bindings must map properties to JSON Pointers.');
+      if (!object(value['bindings'])) issue('binding.invalid', `${path}/bindings`, 'Bindings must map properties to JSON Pointers.', MAPPING_HINT);
       else for (const [property, pointer] of Object.entries(value['bindings'])) {
         const bindingPath = `${path}/bindings/${escapePointerSegment(property)}`;
-        if (!component.bindings || !Object.hasOwn(component.bindings, property) || typeof pointer !== 'string') { issue('binding.unknown', bindingPath, 'Binding is not declared by the catalog.'); continue; }
-        if (isContentUrlProperty(property, component)) issue('content.url-binding', bindingPath, 'URL sinks cannot be state bindings.');
+        if (!component.bindings || !Object.hasOwn(component.bindings, property) || typeof pointer !== 'string') { issue('binding.unknown', bindingPath, 'Binding is not declared by the catalog.', typeof pointer !== 'string' && component.bindings && Object.hasOwn(component.bindings, property) ? POINTER_HINT : unknownNameHint(property, Object.keys(component.bindings ?? {}), 'Bindable properties', 'This component declares no bindings; use reads to show state.')); continue; }
+        if (isContentUrlProperty(property, component)) issue('content.url-binding', bindingPath, 'URL sinks cannot be state bindings.', URL_SINK_HINT);
         const parsed = parsePointer(pointer);
-        if (!parsed.ok || pointer === '') { issue('binding.pointer', bindingPath, 'Bindings need a safe non-root JSON Pointer.'); continue; }
+        if (!parsed.ok || pointer === '') { issue('binding.pointer', bindingPath, 'Bindings need a safe non-root JSON Pointer.', POINTER_HINT); continue; }
         claimBinding(pointer, bindingPath);
       }
     }
     if (value['reads'] !== undefined) {
-      if (!object(value['reads'])) issue('read.invalid', `${path}/reads`, 'Reads must map properties to JSON Pointers.');
+      if (!object(value['reads'])) issue('read.invalid', `${path}/reads`, 'Reads must map properties to JSON Pointers.', MAPPING_HINT);
       else for (const [property, pointer] of Object.entries(value['reads'])) {
         const readPath = `${path}/reads/${escapePointerSegment(property)}`;
-        if (!Object.hasOwn(component.properties, property) || typeof pointer !== 'string') { issue('read.unknown', readPath, 'Read property is not declared by the catalog.'); continue; }
-        if (isContentUrlProperty(property, component)) { issue('content.url-binding', readPath, 'URL sinks cannot read state.'); continue; }
-        if (object(value['bindings']) && Object.hasOwn(value['bindings'], property)) { issue('read.conflict', readPath, 'A property cannot both write and read state.'); continue; }
-        if (!parsePointer(pointer).ok || pointer === '') { issue('read.pointer', readPath, 'Reads need a safe non-root JSON Pointer.'); continue; }
+        if (!Object.hasOwn(component.properties, property) || typeof pointer !== 'string') { issue('read.unknown', readPath, 'Read property is not declared by the catalog.', typeof pointer !== 'string' && Object.hasOwn(component.properties, property) ? POINTER_HINT : unknownNameHint(property, Object.keys(component.properties), 'Declared properties', 'This component declares no properties to read into.')); continue; }
+        if (isContentUrlProperty(property, component)) { issue('content.url-binding', readPath, 'URL sinks cannot read state.', URL_SINK_HINT); continue; }
+        if (object(value['bindings']) && Object.hasOwn(value['bindings'], property)) { issue('read.conflict', readPath, 'A property cannot both write and read state.', 'Keep either the binding or the read for this property, not both.'); continue; }
+        if (!parsePointer(pointer).ok || pointer === '') { issue('read.pointer', readPath, 'Reads need a safe non-root JSON Pointer.', POINTER_HINT); continue; }
         addRead({ pointer, path: readPath });
       }
     }
     if (value['liveReads'] !== undefined) {
-      if (!object(value['liveReads'])) issue('live.invalid', `${path}/liveReads`, 'Live members must map properties to JSON Pointers.');
+      if (!object(value['liveReads'])) issue('live.invalid', `${path}/liveReads`, 'Live members must map properties to JSON Pointers.', MAPPING_HINT);
       else for (const [property, pointer] of Object.entries(value['liveReads'])) {
         const livePath = `${path}/liveReads/${escapePointerSegment(property)}`;
-        if (!Object.hasOwn(component.properties, property) || typeof pointer !== 'string') { issue('live.unknown', livePath, 'Live property is not declared by the catalog.'); continue; }
-        if (isContentUrlProperty(property, component)) { issue('content.url-binding', livePath, 'URL sinks cannot show live data.'); continue; }
-        if ((object(value['bindings']) && Object.hasOwn(value['bindings'], property)) || (object(value['reads']) && Object.hasOwn(value['reads'], property))) { issue('live.conflict', livePath, 'A property has at most one state or live source.'); continue; }
-        if (!parsePointer(pointer).ok || pointer === '') issue('live.pointer', livePath, 'Live members need a safe non-root JSON Pointer.');
+        if (!Object.hasOwn(component.properties, property) || typeof pointer !== 'string') { issue('live.unknown', livePath, 'Live property is not declared by the catalog.', typeof pointer !== 'string' && Object.hasOwn(component.properties, property) ? POINTER_HINT : unknownNameHint(property, Object.keys(component.properties), 'Declared properties', 'This component declares no properties to show live data in.')); continue; }
+        if (isContentUrlProperty(property, component)) { issue('content.url-binding', livePath, 'URL sinks cannot show live data.', URL_SINK_HINT); continue; }
+        if ((object(value['bindings']) && Object.hasOwn(value['bindings'], property)) || (object(value['reads']) && Object.hasOwn(value['reads'], property))) { issue('live.conflict', livePath, 'A property has at most one state or live source.', 'Keep one of bindings, reads or liveReads for this property.'); continue; }
+        if (!parsePointer(pointer).ok || pointer === '') issue('live.pointer', livePath, 'Live members need a safe non-root JSON Pointer.', POINTER_HINT);
       }
     }
     if (value['dataQuery'] !== undefined) {
       const query = value['dataQuery'];
       const queryPath = `${path}/dataQuery`;
       const definition = object(query) && typeof query['name'] === 'string' && catalog.queries && Object.hasOwn(catalog.queries, query['name']) ? catalog.queries[query['name']] : undefined;
-      if (!object(query) || Object.keys(query).some(key => !['name', 'params', 'paramReads'].includes(key)) || typeof query['name'] !== 'string' || (query['params'] !== undefined && !object(query['params'])) || (query['paramReads'] !== undefined && !object(query['paramReads']))) issue('query.invalid', queryPath, 'A data query needs a name and optional params and paramReads objects.');
-      else if (!definition) issue('query.unknown', `${queryPath}/name`, 'Query is not declared by the catalog.');
+      if (!object(query) || Object.keys(query).some(key => !['name', 'params', 'paramReads'].includes(key)) || typeof query['name'] !== 'string' || (query['params'] !== undefined && !object(query['params'])) || (query['paramReads'] !== undefined && !object(query['paramReads']))) issue('query.invalid', queryPath, 'A data query needs a name and optional params and paramReads objects.', 'Use {"name": "<declared query>", "params": {...}, "paramReads": {...}} with no other members.');
+      else if (!definition) issue('query.unknown', `${queryPath}/name`, 'Query is not declared by the catalog.', unknownNameHint(query['name'], Object.keys(catalog.queries ?? {}), 'Declared queries', 'The catalog declares no queries; omit dataQuery.'));
       else {
         const declared = 'properties' in definition.params ? definition.params.properties : {};
         for (const [key, literal] of Object.entries(query['params'] ?? {})) {
-          if (!Object.hasOwn(declared, key)) { issue('query.param', `${queryPath}/params/${escapePointerSegment(key)}`, 'Query parameter is not declared.'); continue; }
+          if (!Object.hasOwn(declared, key)) { issue('query.param', `${queryPath}/params/${escapePointerSegment(key)}`, 'Query parameter is not declared.', unknownNameHint(key, Object.keys(declared), 'Declared parameters', 'This query declares no parameters.')); continue; }
           const checked = validateAdmittedValue(literal, declared[key]!, limits);
-          if (checked) for (const diagnostic of checked.diagnostics) issue(diagnostic.code, `${queryPath}/params/${escapePointerSegment(key)}${diagnostic.path}`, diagnostic.message);
+          if (checked) for (const diagnostic of checked.diagnostics) issue(diagnostic.code, `${queryPath}/params/${escapePointerSegment(key)}${diagnostic.path}`, diagnostic.message, schemaHint(diagnostic.code, declared[key]!, diagnostic.path));
         }
         for (const [key, pointer] of Object.entries(query['paramReads'] ?? {})) {
           const readPath = `${queryPath}/paramReads/${escapePointerSegment(key)}`;
-          if (!Object.hasOwn(declared, key) || Object.hasOwn(query['params'] ?? {}, key)) { issue('query.param', readPath, 'Query parameter is not declared or is already literal.'); continue; }
-          if (typeof pointer !== 'string' || !parsePointer(pointer).ok || pointer === '') { issue('query.pointer', readPath, 'Query parameters read safe non-root JSON Pointers.'); continue; }
+          if (!Object.hasOwn(declared, key) || Object.hasOwn(query['params'] ?? {}, key)) { issue('query.param', readPath, 'Query parameter is not declared or is already literal.', Object.hasOwn(declared, key) ? 'Give a parameter either a literal in params or a pointer in paramReads, not both.' : unknownNameHint(key, Object.keys(declared), 'Declared parameters', 'This query declares no parameters.')); continue; }
+          if (typeof pointer !== 'string' || !parsePointer(pointer).ok || pointer === '') { issue('query.pointer', readPath, 'Query parameters read safe non-root JSON Pointers.', POINTER_HINT); continue; }
           addQueryRead({ pointer, path: readPath });
         }
       }
     }
     const inTemplate = [...repeatTemplates].some(prefix => path === prefix || path.startsWith(prefix + '/'));
-    if (inTemplate && ['bindings', 'action', 'dataQuery', 'repeat'].some(key => value[key] !== undefined)) issue('repeat.template', path, 'Repeat templates cannot bind state, start actions, run queries or repeat.');
+    if (inTemplate && ['bindings', 'action', 'dataQuery', 'repeat'].some(key => value[key] !== undefined)) issue('repeat.template', path, 'Repeat templates cannot bind state, start actions, run queries or repeat.', 'Remove bindings, action, dataQuery and repeat from the template; use itemReads for row values.');
     if (value['repeat'] !== undefined) {
       const repeat = value['repeat'];
       const repeatPath = `${path}/repeat`;
-      if (!object(repeat) || Object.keys(repeat).some(key => !['items', 'key', 'from', 'max'].includes(key)) || typeof repeat['items'] !== 'string' || typeof repeat['key'] !== 'string' || (repeat['from'] !== undefined && !['live', 'state'].includes(repeat['from'] as string)) || (repeat['max'] !== undefined && !(Number.isSafeInteger(repeat['max']) && (repeat['max'] as number) >= 1 && (repeat['max'] as number) <= 200)) || !Array.isArray(value['children']) || value['children'].length !== 1) issue('repeat.invalid', repeatPath, 'A repeat needs items and key pointers, an optional source and limit, and exactly one template child.');
-      else if (!parsePointer(repeat['items']).ok || repeat['items'] === '' || !parsePointer(repeat['key']).ok) issue('repeat.pointer', repeatPath, 'Repeat pointers must be safe JSON Pointers; items cannot be the root.');
+      if (!object(repeat) || Object.keys(repeat).some(key => !['items', 'key', 'from', 'max'].includes(key)) || typeof repeat['items'] !== 'string' || typeof repeat['key'] !== 'string' || (repeat['from'] !== undefined && !['live', 'state'].includes(repeat['from'] as string)) || (repeat['max'] !== undefined && !(Number.isSafeInteger(repeat['max']) && (repeat['max'] as number) >= 1 && (repeat['max'] as number) <= 200)) || !Array.isArray(value['children']) || value['children'].length !== 1) issue('repeat.invalid', repeatPath, 'A repeat needs items and key pointers, an optional source and limit, and exactly one template child.', 'Use {"items": "/rows", "key": "/id", "from": "live" or "state", "max": 1 to 200} and exactly one child as the template.');
+      else if (!parsePointer(repeat['items']).ok || repeat['items'] === '' || !parsePointer(repeat['key']).ok) issue('repeat.pointer', repeatPath, 'Repeat pointers must be safe JSON Pointers; items cannot be the root.', 'Use a non-root pointer such as "/rows" for items and a relative pointer such as "/id" for key.');
       else {
         if (repeat['from'] === 'state') addRead({ pointer: repeat['items'], path: `${repeatPath}/items`, code: 'repeat.unowned' });
         addTemplate(`${path}/children/0`);
       }
     }
     if (value['itemReads'] !== undefined) {
-      if (!inTemplate) issue('item.outside', `${path}/itemReads`, 'Item reads are only valid inside a repeat template.');
-      else if (!object(value['itemReads'])) issue('item.invalid', `${path}/itemReads`, 'Item reads must map properties to relative JSON Pointers.');
+      if (!inTemplate) issue('item.outside', `${path}/itemReads`, 'Item reads are only valid inside a repeat template.', 'Move this node inside a repeat template, or use reads for state.');
+      else if (!object(value['itemReads'])) issue('item.invalid', `${path}/itemReads`, 'Item reads must map properties to relative JSON Pointers.', 'Use an object mapping declared property names to pointers inside one item, for example {"label": "/name"}.');
       else for (const [property, pointer] of Object.entries(value['itemReads'])) {
         const itemPath = `${path}/itemReads/${escapePointerSegment(property)}`;
-        if (!Object.hasOwn(component.properties, property) || typeof pointer !== 'string') { issue('item.unknown', itemPath, 'Item property is not declared by the catalog.'); continue; }
-        if (isContentUrlProperty(property, component)) { issue('content.url-binding', itemPath, 'URL sinks cannot show item data.'); continue; }
-        if (!parsePointer(pointer).ok) issue('item.pointer', itemPath, 'Item reads need safe relative JSON Pointers.');
+        if (!Object.hasOwn(component.properties, property) || typeof pointer !== 'string') { issue('item.unknown', itemPath, 'Item property is not declared by the catalog.', typeof pointer !== 'string' && Object.hasOwn(component.properties, property) ? POINTER_HINT : unknownNameHint(property, Object.keys(component.properties), 'Declared properties', 'This component declares no properties to show item data in.')); continue; }
+        if (isContentUrlProperty(property, component)) { issue('content.url-binding', itemPath, 'URL sinks cannot show item data.', URL_SINK_HINT); continue; }
+        if (!parsePointer(pointer).ok) issue('item.pointer', itemPath, 'Item reads need safe relative JSON Pointers.', 'Use a pointer inside one item, for example "/name"; "" reads the whole item.');
       }
     }
     const ref = (candidate: JsonValue | undefined, refPath: string): boolean => {
@@ -404,56 +468,56 @@ function validateWith(input: unknown, catalog: import('./types.js').LyraGenCatal
           : ['truthy', 'falsy'].includes(candidate['op'] as string) ? candidate['value'] === undefined
             : ['gt', 'gte', 'lt', 'lte'].includes(candidate['op'] as string) ? typeof candidate['value'] === 'number'
               : candidate['value'] === null || ['string', 'number', 'boolean'].includes(typeof candidate['value']));
-      if (!valid) issue('condition.invalid', conditionPath, 'A condition needs a state, live or item reference, a declared operator and a matching literal.');
+      if (!valid) issue('condition.invalid', conditionPath, 'A condition needs a state, live or item reference, a declared operator and a matching literal.', `Use {"source": "state", "live" or "item", "pointer": "/path", "op": ${operators.map(op => `"${op}"`).join(', ')}}; gt, gte, lt and lte need a number value, in needs an array of up to 64 primitives, truthy and falsy take no value, item needs a repeat template.`);
     };
     if (value['visible'] !== undefined) condition(value['visible'], `${path}/visible`);
     if (value['checks'] !== undefined) {
-      if (!Array.isArray(value['checks']) || value['checks'].length === 0 || value['checks'].length > 16) issue('condition.invalid', `${path}/checks`, 'Checks need between one and sixteen conditions.');
+      if (!Array.isArray(value['checks']) || value['checks'].length === 0 || value['checks'].length > 16) issue('condition.invalid', `${path}/checks`, 'Checks need between one and sixteen conditions.', 'Use an array of 1 to 16 condition objects.');
       else value['checks'].forEach((check, index) => condition(check, `${path}/checks/${index}`));
     }
     if (value['computes'] !== undefined) {
-      if (!object(value['computes'])) issue('compute.invalid', `${path}/computes`, 'Computes must map properties to function calls.');
+      if (!object(value['computes'])) issue('compute.invalid', `${path}/computes`, 'Computes must map properties to function calls.', 'Use an object mapping declared property names to {"fn": "<function>", "arg": ...}.');
       else for (const [property, computation] of Object.entries(value['computes'])) {
         const computePath = `${path}/computes/${escapePointerSegment(property)}`;
-        if (!Object.hasOwn(component.properties, property)) { issue('compute.unknown', computePath, 'Computed property is not declared by the catalog.'); continue; }
-        if (isContentUrlProperty(property, component)) { issue('content.url-binding', computePath, 'URL sinks cannot be computed.'); continue; }
+        if (!Object.hasOwn(component.properties, property)) { issue('compute.unknown', computePath, 'Computed property is not declared by the catalog.', unknownNameHint(property, Object.keys(component.properties), 'Declared properties', 'This component declares no properties to compute.')); continue; }
+        if (isContentUrlProperty(property, component)) { issue('content.url-binding', computePath, 'URL sinks cannot be computed.', URL_SINK_HINT); continue; }
         const arg = object(computation) ? computation['arg'] : undefined;
         const literal = object(arg) && Object.keys(arg).length === 1 && Object.hasOwn(arg, 'value');
         const refs = Array.isArray(arg) ? arg : literal ? [] : [arg];
-        if (!object(computation) || Object.keys(computation).some(key => !['fn', 'arg'].includes(key)) || typeof computation['fn'] !== 'string' || !/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/u.test(computation['fn']) || arg === undefined || refs.length > 32 || !refs.every((item, index) => ref(item, `${computePath}/arg${Array.isArray(arg) ? `/${index}` : ''}`))) issue('compute.invalid', computePath, 'A computation needs a function name and value references or a literal value.');
+        if (!object(computation) || Object.keys(computation).some(key => !['fn', 'arg'].includes(key)) || typeof computation['fn'] !== 'string' || !/^[A-Za-z][A-Za-z0-9_.-]{0,63}$/u.test(computation['fn']) || arg === undefined || refs.length > 32 || !refs.every((item, index) => ref(item, `${computePath}/arg${Array.isArray(arg) ? `/${index}` : ''}`))) issue('compute.invalid', computePath, 'A computation needs a function name and value references or a literal value.', 'Use {"fn": "<function>", "arg": {"source": "state", "pointer": "/path"}}, an array of up to 32 such references, or {"value": <literal>}.');
       }
     }
     if (value['action'] !== undefined) {
-      if (!object(value['action']) || Object.keys(value['action']).some(key => !['name', 'payload'].includes(key)) || typeof value['action']['name'] !== 'string' || !catalog.actions || !Object.hasOwn(catalog.actions, value['action']['name']) || !component.events?.length) issue('action.unknown', `${path}/action`, 'Action or action event is not declared by the catalog.');
+      if (!object(value['action']) || Object.keys(value['action']).some(key => !['name', 'payload'].includes(key)) || typeof value['action']['name'] !== 'string' || !catalog.actions || !Object.hasOwn(catalog.actions, value['action']['name']) || !component.events?.length) issue('action.unknown', `${path}/action`, 'Action or action event is not declared by the catalog.', !component.events?.length ? 'This component starts no actions; move the action to a component with events, such as a button.' : unknownNameHint(object(value['action']) ? value['action']['name'] : undefined, Object.keys(catalog.actions ?? {}), 'Declared actions', 'The catalog declares no actions; omit action.'));
       else if (value['action']['payload'] !== undefined) {
         const checked = validateAdmittedValue(value['action']['payload'] ?? null, catalog.actions[value['action']['name']]!.payload, limits);
-        if (checked) for (const diagnostic of checked.diagnostics) issue(diagnostic.code, `${path}/action/payload${diagnostic.path}`, diagnostic.message);
+        if (checked) for (const diagnostic of checked.diagnostics) issue(diagnostic.code, `${path}/action/payload${diagnostic.path}`, diagnostic.message, schemaHint(diagnostic.code, catalog.actions[value['action']['name']]!.payload, diagnostic.path));
       }
     }
     const a11y = value['a11y'];
     if (a11y !== undefined) {
       const text = (candidate: JsonValue | undefined, max: number): boolean => candidate === undefined || (typeof candidate === 'string' && candidate.trim().length > 0 && candidate.length <= max);
-      if (!object(a11y) || Object.keys(a11y).some(key => !['label', 'description', 'live', 'hidden'].includes(key)) || !text(a11y['label'], 256) || !text(a11y['description'], 1024) || (a11y['live'] !== undefined && !['off', 'polite'].includes(a11y['live'] as string)) || (a11y['hidden'] !== undefined && typeof a11y['hidden'] !== 'boolean')) issue('a11y.invalid', `${path}/a11y`, 'Accessibility needs a bounded label or description, live off or polite, and a boolean hidden.');
-      else if ((a11y['live'] !== undefined || a11y['hidden'] === true) && (component.interactive || component.events?.length || Object.keys(component.bindings ?? {}).length)) issue('a11y.interactive', `${path}/a11y`, 'Interactive roles cannot be hidden or turned into live regions.');
-      else if (a11y['label'] !== undefined && !component.accessibleName?.properties?.length) issue('a11y.invalid', `${path}/a11y/label`, 'This role has no accessible-name property for a label.');
+      if (!object(a11y) || Object.keys(a11y).some(key => !['label', 'description', 'live', 'hidden'].includes(key)) || !text(a11y['label'], 256) || !text(a11y['description'], 1024) || (a11y['live'] !== undefined && !['off', 'polite'].includes(a11y['live'] as string)) || (a11y['hidden'] !== undefined && typeof a11y['hidden'] !== 'boolean')) issue('a11y.invalid', `${path}/a11y`, 'Accessibility needs a bounded label or description, live off or polite, and a boolean hidden.', 'Use {"label": 1 to 256 characters, "description": 1 to 1024 characters, "live": "off" or "polite", "hidden": true or false} with no other members.');
+      else if ((a11y['live'] !== undefined || a11y['hidden'] === true) && (component.interactive || component.events?.length || Object.keys(component.bindings ?? {}).length)) issue('a11y.interactive', `${path}/a11y`, 'Interactive roles cannot be hidden or turned into live regions.', 'Remove a11y.live and a11y.hidden from this interactive component.');
+      else if (a11y['label'] !== undefined && !component.accessibleName?.properties?.length) issue('a11y.invalid', `${path}/a11y/label`, 'This role has no accessible-name property for a label.', 'Remove a11y.label; use a11y.description or visible text instead.');
     }
     if (component.accessibleName?.required) {
       const named = (object(props) && component.accessibleName.properties?.some(key => typeof props[key] === 'string' && (props[key] as string).trim().length > 0)) || (object(a11y) && typeof a11y['label'] === 'string' && a11y['label'].trim().length > 0 && !!component.accessibleName.properties?.length);
-      if (!named && !(component.accessibleName.text && typeof value['text'] === 'string' && value['text'].trim())) issue('a11y.name', path, 'This component requires an accessible name.');
+      if (!named && !(component.accessibleName.text && typeof value['text'] === 'string' && value['text'].trim())) issue('a11y.name', path, 'This component requires an accessible name.', `Set ${[...(component.accessibleName.properties?.length ? [`a non-empty ${listNames(component.accessibleName.properties)} property`, 'a11y.label'] : []), ...(component.accessibleName.text ? ['non-empty text'] : [])].join(' or ') || 'an accessible name'}.`);
     }
     if (component.expand) {
       if (expanded) issue('block.expansion', path, 'Block expansion cannot produce another expandable block.', undefined, true);
       else {
-        if (Array.isArray(value['children']) && value['children'].length) issue('children.forbidden', `${path}/children`, 'This component does not accept children.');
+        if (Array.isArray(value['children']) && value['children'].length) issue('children.forbidden', `${path}/children`, 'This component does not accept children.', 'Remove children; this block takes its content from its properties.');
         if (errorCount === startErrors) return expand(value, component.expand, path, parent, inForm);
       }
     }
     if (value['children'] !== undefined) {
-      if (!Array.isArray(value['children'])) issue('children.invalid', `${path}/children`, 'Children must be an array.');
+      if (!Array.isArray(value['children'])) issue('children.invalid', `${path}/children`, 'Children must be an array.', 'Use an array of node objects.');
       else {
-        if (value['children'].length && !component.children) issue('children.forbidden', `${path}/children`, 'This component does not accept children.');
+        if (value['children'].length && !component.children) issue('children.forbidden', `${path}/children`, 'This component does not accept children.', `Remove children; place them in a sibling container${component.text ? ', or use text' : ''}.`);
         const next = value['children'].map((child, index) => {
-          if (Array.isArray(component.children) && object(child) && !component.children.includes(child['type'] as string)) issue('children.type', `${path}/children/${index}`, 'Child component type is not allowed here.');
+          if (Array.isArray(component.children) && object(child) && !component.children.includes(child['type'] as string)) issue('children.type', `${path}/children/${index}`, 'Child component type is not allowed here.', unknownNameHint(child['type'], component.children, 'Allowed child types', 'This component accepts no children.'));
           return visit(child, `${path}/children/${index}`, value as unknown as LyraGenNode, inForm || component.tag === 'form') ?? child;
         });
         if (next.some((child, index) => child !== (value['children'] as JsonValue[])[index])) return Object.freeze({ ...value, children: Object.freeze(next) });
@@ -486,8 +550,8 @@ function validateWith(input: unknown, catalog: import('./types.js').LyraGenCatal
     throw error;
   }
   // A read addresses state some binding in this view owns: the owned path itself or a path inside it.
-  for (const read of reads) if (!ownedBy(bindings, read.pointer)) issue(read.code ?? 'read.unowned', read.path, 'Reads must address a state path owned by a binding in this view.');
-  for (const read of queryReads) if (!ownedBy(bindings, read.pointer)) issue('query.unowned', read.path, 'Query parameters must read a state path owned by a binding in this view.');
+  for (const read of reads) if (!ownedBy(bindings, read.pointer)) issue(read.code ?? 'read.unowned', read.path, 'Reads must address a state path owned by a binding in this view.', ownershipHint(read.pointer, 'Reads'));
+  for (const read of queryReads) if (!ownedBy(bindings, read.pointer)) issue('query.unowned', read.path, 'Query parameters must read a state path owned by a binding in this view.', ownershipHint(read.pointer, 'Query parameters'));
   const finish = (finalRoot: JsonValue | undefined, warnings: readonly LyraGenDiagnostic[], contained: ReadonlyMap<string, readonly LyraGenDiagnostic[]>): LyraGenValidationResult => {
     const rewritten = finalRoot !== view['root'];
     const final = (rewritten ? Object.freeze({ ...view, root: finalRoot }) : view) as unknown as LyraGenView;

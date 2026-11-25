@@ -1,15 +1,17 @@
 /**
- * Encoders and incremental decoders for the four compared formats. The statement-language encoding
+ * Encoders and incremental decoders for the five compared formats. Lyra Lines is lyra-gen's own opt-in
+ * compact profile (`@aceshooting/lyra-gen/lines.js`), parsed into a JSON v1 view before validation. The statement-language encoding
  * is a minimal original design that borrows only the public idea of one `name = Component(args)`
  * statement per line with positional arguments and forward references; it is not an implementation
  * of any third-party grammar and shares no code with one. The flat element-map JSON Patch stream is
  * likewise a harness-local encoding in the style of RFC 6902 operations over `{ root, elements }`.
  */
 import { createJsonViewStream } from '../../../packages/lyra-gen/dist/json-stream.js';
+import { createLinesParser, encodeLines } from '../../../packages/lyra-gen/dist/lines.js';
 import { createProgressiveMarkupParser } from '../../../packages/lyra-gen/dist/progressive.js';
 
-export const FORMATS = Object.freeze(['json', 'markup', 'json-patch', 'statements']);
-export const FORMAT_LABELS = Object.freeze({ json: 'lyra-gen JSON view', markup: 'Lyra Markup', 'json-patch': 'RFC 6902 patch stream (flat map)', statements: 'Statement language (OpenUI Lang style)' });
+export const FORMATS = Object.freeze(['json', 'markup', 'json-patch', 'statements', 'lines']);
+export const FORMAT_LABELS = Object.freeze({ json: 'lyra-gen JSON view', markup: 'Lyra Markup', 'json-patch': 'RFC 6902 patch stream (flat map)', statements: 'Statement language (OpenUI Lang style)', lines: 'Lyra Lines (opt-in profile)' });
 
 export const makeView = (catalog, root) => ({ version: '1', catalog: { id: catalog.id, version: catalog.version }, surfaceId: 'bench', revision: 1, root });
 export const clone = (value) => JSON.parse(JSON.stringify(value));
@@ -217,6 +219,14 @@ export function materializeStatements(definitions) {
   return build('root');
 }
 
+/* ---------------------------------------------------------------- (e) Lyra Lines */
+/** Explicit ids (the default profile); every authored view in the corpus is encodable. */
+export function encodeLinesView(view, catalog) {
+  const result = encodeLines(view, catalog);
+  if (!result.ok) throw new TypeError(`Lines encoding failed: ${result.diagnostics[0]?.code}`);
+  return result.value;
+}
+
 /* ---------------------------------------------------------------- incremental consumers */
 /**
  * A consumer accepts fixed-size text chunks. `push` returns `{ materialize }` after a complete line (call it
@@ -241,6 +251,14 @@ export function createConsumer(format, context) {
       partialSupport: true,
       push: (chunk) => { const result = parser.push(chunk); if (result.status === 'error') return { failed: result.diagnostics[0]?.code }; const partial = result.partial; return partial ? { materialize: () => partial.view } : {}; },
       finish: () => { const result = parser.finish(); return { view: result.view, status: result.status, codes: result.diagnostics.map(d => d.code), validatedInside: false }; }
+    };
+  }
+  if (format === 'lines') {
+    const parser = createLinesParser(catalog, { surfaceId: template.surfaceId, revision: template.revision, progressive: {} });
+    return {
+      partialSupport: true,
+      push: (chunk) => { const result = parser.push(chunk); if (result.status === 'error') return { failed: result.diagnostics[0]?.code }; const partial = result.partial; return partial ? { materialize: () => partial.view } : {}; },
+      finish: () => { const result = parser.finish(); return result.ok ? { view: result.value, status: 'complete', codes: [], validatedInside: false } : { status: 'error', codes: result.diagnostics.map(d => d.code) }; }
     };
   }
   let buffer = '';
@@ -276,7 +294,7 @@ export function createConsumer(format, context) {
   return lineConsumer(line => { const { node, children } = parseStatement(line, catalog, names); definitions.set(node.id, { node, children }); }, () => { const root = materializeStatements(definitions); return root ? frame(root) : undefined; });
 }
 
-export const encode = (format, view, catalog) => format === 'json' ? encodeJson(view) : format === 'markup' ? encodeMarkup(view) : format === 'json-patch' ? encodePatchStream(view) : encodeStatements(view, catalog);
+export const encode = (format, view, catalog) => format === 'json' ? encodeJson(view) : format === 'markup' ? encodeMarkup(view) : format === 'json-patch' ? encodePatchStream(view) : format === 'lines' ? encodeLinesView(view, catalog) : encodeStatements(view, catalog);
 
 /** Split into fixed-size chunks of UTF-16 code units; never splits inside a surrogate pair. */
 export function chunkText(text, size) {

@@ -143,6 +143,7 @@
         "exportPrintableHtml": "data-export.d.ts#exportPrintableHtml",
         "exportViewData": "data-export.d.ts#exportViewData",
         "findNode": "runtime.d.ts#findNode",
+        "formatRepairMessage": "repair-message.d.ts#formatRepairMessage",
         "formsCatalog": "catalog.d.ts#formsCatalog",
         "GeneratedFormat": "replay.d.ts#GeneratedFormat",
         "GroundedDashboardValue": "live-data.d.ts#GroundedDashboardValue",
@@ -156,6 +157,7 @@
         "IslandPart": "islands.d.ts#IslandPart",
         "IslandProgressiveOptions": "islands.d.ts#IslandProgressiveOptions",
         "IslandResult": "islands.d.ts#IslandResult",
+        "isRepairableDiagnostic": "repair.d.ts#isRepairableDiagnostic",
         "isSafeKey": "schema.d.ts#isSafeKey",
         "JsonObject": "types.d.ts#JsonObject",
         "JsonPrimitive": "types.d.ts#JsonPrimitive",
@@ -249,6 +251,7 @@
         "LyraGenRefinementPromptOptions": "prompts.d.ts#LyraGenRefinementPromptOptions",
         "LyraGenRepairBoundary": "repair-workflow.d.ts#LyraGenRepairBoundary",
         "LyraGenRepairLimits": "repair.d.ts#LyraGenRepairLimits",
+        "LyraGenRepairMessageOptions": "repair-message.d.ts#LyraGenRepairMessageOptions",
         "LyraGenRepairOutcome": "repair-workflow.d.ts#LyraGenRepairOutcome",
         "LyraGenRepairRequest": "repair.d.ts#LyraGenRepairRequest",
         "LyraGenRepairResponse": "repair-workflow.d.ts#LyraGenRepairResponse",
@@ -987,6 +990,7 @@
         "exportPrintableHtml": "data-export.d.ts#exportPrintableHtml",
         "exportViewData": "data-export.d.ts#exportViewData",
         "findNode": "runtime.d.ts#findNode",
+        "formatRepairMessage": "repair-message.d.ts#formatRepairMessage",
         "formsCatalog": "catalog.d.ts#formsCatalog",
         "GeneratedFormat": "replay.d.ts#GeneratedFormat",
         "GroundedDashboardValue": "live-data.d.ts#GroundedDashboardValue",
@@ -1000,6 +1004,7 @@
         "IslandPart": "islands.d.ts#IslandPart",
         "IslandProgressiveOptions": "islands.d.ts#IslandProgressiveOptions",
         "IslandResult": "islands.d.ts#IslandResult",
+        "isRepairableDiagnostic": "repair.d.ts#isRepairableDiagnostic",
         "isSafeKey": "schema.d.ts#isSafeKey",
         "JsonObject": "types.d.ts#JsonObject",
         "JsonPrimitive": "types.d.ts#JsonPrimitive",
@@ -1093,6 +1098,7 @@
         "LyraGenRefinementPromptOptions": "prompts.d.ts#LyraGenRefinementPromptOptions",
         "LyraGenRepairBoundary": "repair-workflow.d.ts#LyraGenRepairBoundary",
         "LyraGenRepairLimits": "repair.d.ts#LyraGenRepairLimits",
+        "LyraGenRepairMessageOptions": "repair-message.d.ts#LyraGenRepairMessageOptions",
         "LyraGenRepairOutcome": "repair-workflow.d.ts#LyraGenRepairOutcome",
         "LyraGenRepairRequest": "repair.d.ts#LyraGenRepairRequest",
         "LyraGenRepairResponse": "repair-workflow.d.ts#LyraGenRepairResponse",
@@ -1243,6 +1249,28 @@
         "json-stream.d.ts#global"
       ]
     },
+    "./lines.js": {
+      "types": "./dist/lines.d.ts",
+      "default": "./dist/lines.js",
+      "profile": "supported",
+      "exports": {
+        "createLinesParser": "lines.d.ts#createLinesParser",
+        "encodeLines": "lines.d.ts#encodeLines",
+        "LINES_HEADER": "lines.d.ts#LINES_HEADER",
+        "LINES_LIMITS": "lines.d.ts#LINES_LIMITS",
+        "LINES_MEMBERS": "lines.d.ts#LINES_MEMBERS",
+        "LyraGenLinesEncodeOptions": "lines.d.ts#LyraGenLinesEncodeOptions",
+        "LyraGenLinesLimits": "lines.d.ts#LyraGenLinesLimits",
+        "LyraGenLinesOptions": "lines.d.ts#LyraGenLinesOptions",
+        "LyraGenLinesParser": "lines.d.ts#LyraGenLinesParser",
+        "LyraGenLinesStep": "lines.d.ts#LyraGenLinesStep",
+        "LyraGenLinesStreamOptions": "lines.d.ts#LyraGenLinesStreamOptions",
+        "parseLines": "lines.d.ts#parseLines"
+      },
+      "globals": [
+        "lines.d.ts#global"
+      ]
+    },
     "./live-data.js": {
       "types": "./dist/live-data.d.ts",
       "default": "./dist/live-data.js",
@@ -1384,6 +1412,18 @@
         "progressive.d.ts#global"
       ]
     },
+    "./prompts-lines.js": {
+      "types": "./dist/prompts-lines.d.ts",
+      "default": "./dist/prompts-lines.js",
+      "profile": "supported",
+      "exports": {
+        "buildLinesPrompt": "prompts-lines.d.ts#buildLinesPrompt",
+        "LyraGenLinesPromptOptions": "prompts-lines.d.ts#LyraGenLinesPromptOptions"
+      },
+      "globals": [
+        "prompts-lines.d.ts#global"
+      ]
+    },
     "./prompts.js": {
       "types": "./dist/prompts.d.ts",
       "default": "./dist/prompts.js",
@@ -1476,7 +1516,10 @@
       "profile": "supported",
       "exports": {
         "createRepairRequest": "repair.d.ts#createRepairRequest",
+        "formatRepairMessage": "repair-message.d.ts#formatRepairMessage",
+        "isRepairableDiagnostic": "repair.d.ts#isRepairableDiagnostic",
         "LyraGenRepairLimits": "repair.d.ts#LyraGenRepairLimits",
+        "LyraGenRepairMessageOptions": "repair-message.d.ts#LyraGenRepairMessageOptions",
         "LyraGenRepairRequest": "repair.d.ts#LyraGenRepairRequest",
         "LyraGenRepairSession": "repair.d.ts#LyraGenRepairSession"
       },
@@ -2860,6 +2903,58 @@
       "hash": "e82bc4768295f7f58421f2bcbe1a22992fe09e6b74db739b4767e6ab98d5ba34",
       "profile": "supported"
     },
+    "lines.d.ts#createLinesParser": {
+      "hash": "fbf149b3ff36149126e9c7b67882116bd86d53a603fbcebe94ff53926ba19210",
+      "profile": "supported"
+    },
+    "lines.d.ts#encodeLines": {
+      "hash": "106cb6fd4cf56648fb8eba746800d7cd253c3b36ccdf5c87445c16acb4b33057",
+      "profile": "supported"
+    },
+    "lines.d.ts#global": {
+      "hash": "a67c60521af447dbdf0f6e0bfd5fed8590e12c136862a5975cfcfd44c8f054b5",
+      "profile": "supported"
+    },
+    "lines.d.ts#LINES_HEADER": {
+      "hash": "8aa7fea9e617542be9dbb4c4d3aa132d422527c21252c3e12ea3018ca544c925",
+      "profile": "supported"
+    },
+    "lines.d.ts#LINES_LIMITS": {
+      "hash": "68496c9956d33ca691e0c34374c47a1474ba6973846eb91c8a05c8bc39814de9",
+      "profile": "supported"
+    },
+    "lines.d.ts#LINES_MEMBERS": {
+      "hash": "6fe5049319a5f8103c42220736254ebb6914de7936d0a67d50ea26c4429aa3b0",
+      "profile": "supported"
+    },
+    "lines.d.ts#LyraGenLinesEncodeOptions": {
+      "hash": "b1fa89431cb330224773a6696ac337d235a3d150a79c4f93d8562e96156a8ad3",
+      "profile": "supported"
+    },
+    "lines.d.ts#LyraGenLinesLimits": {
+      "hash": "40c8d02c1f891918f550f1adeeb270a7c7a1b23a3f8cddda13a94ee761c87af6",
+      "profile": "supported"
+    },
+    "lines.d.ts#LyraGenLinesOptions": {
+      "hash": "4aa7049a07aa01ffc07ae4fdc2b201a109600818007ef499110280a9b6038c1a",
+      "profile": "supported"
+    },
+    "lines.d.ts#LyraGenLinesParser": {
+      "hash": "e76fdb91bb61136a6d0bc354e49d8c037d054ae849126ff98427af8fad3fdedf",
+      "profile": "supported"
+    },
+    "lines.d.ts#LyraGenLinesStep": {
+      "hash": "938417aa50acb0d08b49df87b14a7facf74834484446ec2cb68e0268a96ddfb1",
+      "profile": "supported"
+    },
+    "lines.d.ts#LyraGenLinesStreamOptions": {
+      "hash": "7508ffae42e52d00a22088f644ab355232ca3819e98909cc65a62f845ec385cf",
+      "profile": "supported"
+    },
+    "lines.d.ts#parseLines": {
+      "hash": "76262cdede0285a087eed9369949085e0f72f3da700925e504079e07f4318677",
+      "profile": "supported"
+    },
     "live-data.d.ts#DashboardDataQueue": {
       "hash": "c8210a9085237222f088fde557961feda40da3292596978b609083e6b035b518",
       "profile": "supported"
@@ -3176,6 +3271,18 @@
       "hash": "28e60413a38be18f26d7a093edfe529ccbe68cadd9aaac8d700a65a5e152637b",
       "profile": "supported"
     },
+    "prompts-lines.d.ts#buildLinesPrompt": {
+      "hash": "9888f9fdc29faef607ddf41922d95dcfb80b8c7849429894a3dd3db2f0bfaa79",
+      "profile": "supported"
+    },
+    "prompts-lines.d.ts#global": {
+      "hash": "8c7e678b33956d722df03bf5a3c8d5ab799c0090956c69f0189108775a0797cd",
+      "profile": "supported"
+    },
+    "prompts-lines.d.ts#LyraGenLinesPromptOptions": {
+      "hash": "fcac6d94a0c843eefbb8e51fc66e5f840bba6e585697b61f5281ef919f9511d0",
+      "profile": "supported"
+    },
     "prompts.d.ts#buildCatalogPrompt": {
       "hash": "d17a994a4872504ba9eafe53edada007985b0c273317dee8875699ddfd7477dc",
       "profile": "supported"
@@ -3308,6 +3415,18 @@
       "hash": "0fb15872cc7bcc202f6f036a7be36afc7cfece24740ce0ad1a450600cfaf4397",
       "profile": "supported"
     },
+    "repair-message.d.ts#formatRepairMessage": {
+      "hash": "5ab3e536f9050d4664dcb8bcd22535b4098ce2ac193ee86011cdfae8e81a0928",
+      "profile": "supported"
+    },
+    "repair-message.d.ts#global": {
+      "hash": "121feb3028bc9103106466c8ed3c7d7aa74e2332f7f66db4b489a9c3c1056c87",
+      "profile": "supported"
+    },
+    "repair-message.d.ts#LyraGenRepairMessageOptions": {
+      "hash": "710aac463057edc5d4e686f5e87b87da2e83e0a159e2375815ee457e0b478385",
+      "profile": "supported"
+    },
     "repair-workflow.d.ts#global": {
       "hash": "400d4fae212b56205655236d00b1e5fb02a4b84f9e57b5376e6dd66060b6bb8c",
       "profile": "supported"
@@ -3345,7 +3464,11 @@
       "profile": "supported"
     },
     "repair.d.ts#global": {
-      "hash": "972e55aded2626669607c6a3f8001bff38aa1cafa49802e4747a8e97c44b4a8c",
+      "hash": "8ed0e9fe0d4c4e78811b973994ebc99220e8f93e4456f7a312ea7363d300d7c6",
+      "profile": "supported"
+    },
+    "repair.d.ts#isRepairableDiagnostic": {
+      "hash": "a7002f02dbfc9c8f45edaeb323c40f265252cba5ab99ee23cc96db56ab0fa093",
       "profile": "supported"
     },
     "repair.d.ts#LyraGenRepairLimits": {

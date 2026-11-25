@@ -1,6 +1,6 @@
-import { createRepairRequest, LyraGenRepairSession } from './repair.js';
+import { createRepairRequest, isRepairableDiagnostic, LyraGenRepairSession } from './repair.js';
 import type { LyraGenRepairLimits, LyraGenRepairRequest } from './repair.js';
-import { createSurfaceState, reconcileSurfaceState, REPAIRABLE_DIAGNOSTIC_CODES, restoreSnapshot, validateView } from './runtime.js';
+import { createSurfaceState, reconcileSurfaceState, restoreSnapshot, validateView } from './runtime.js';
 import type { LyraGenPatch, LyraGenSurfaceState, LyraGenValidationOptions } from './runtime.js';
 import { resolveLimits, snapshotJson } from './schema.js';
 import type { LyraGenCatalog, LyraGenDiagnostic, LyraGenNode, LyraGenResult, LyraGenView } from './types.js';
@@ -35,7 +35,7 @@ export interface LyraGenRepairOutcome extends LyraGenRepairBoundary {
   readonly tokensUsed: number;
 }
 const failure = <T>(code: string, message: string): LyraGenResult<T> => ({ ok: false, diagnostics: [{ code, message, path: '', severity: 'error' }] });
-const repairable = (diagnostics: readonly LyraGenDiagnostic[]): boolean => diagnostics.length > 0 && diagnostics.every(diagnostic => REPAIRABLE_DIAGNOSTIC_CODES.includes(diagnostic.code));
+const repairable = (diagnostics: readonly LyraGenDiagnostic[]): boolean => diagnostics.length > 0 && diagnostics.every(isRepairableDiagnostic);
 const cap = (value: number | undefined, fallback: number, hard: number): number => typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.max(1, Math.min(hard, Math.floor(value))) : fallback;
 
 /** Provider-neutral orchestration; the host owns transport and commits the returned candidate. */

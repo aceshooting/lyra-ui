@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Offline dashboard-generation benchmark harness. No model, provider or network is involved:
- * authored scenarios are encoded four ways and replayed through lyra-gen's own parsers.
+ * authored scenarios are encoded five ways and replayed through lyra-gen's own parsers.
  *
  *   node benchmarks/generative-ui/dashboards/run.mjs [--output=report.json] [--markdown=summary.md]
  *        [--samples=5] [--chunk=24] [--scenarios=id,id]
@@ -11,11 +11,12 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { isDeepStrictEqual } from 'node:util';
 import { dashboardCatalog } from '../../../packages/lyra-gen/dist/catalog.js';
 import { summarizeMeasurements } from '../../../packages/lyra-gen/dist/evaluation.js';
+import { parseLines } from '../../../packages/lyra-gen/dist/lines.js';
 import { parseMarkup } from '../../../packages/lyra-gen/dist/parser.js';
 import { LyraGenRepairSession, createRepairRequest } from '../../../packages/lyra-gen/dist/repair.js';
 import { REPAIRABLE_DIAGNOSTIC_CODES, applyViewPatch, findNode, validateView } from '../../../packages/lyra-gen/dist/runtime.js';
 import { STREAM_CORRUPTIONS, VIEW_CORRUPTIONS, corruptView } from './corrupt.mjs';
-import { FORMATS, FORMAT_LABELS, applyOperation, chunkText, clone, countNodes, createConsumer, encode, encodeMarkup, encodeStatements, flatten, makeView, materializeFlat, materializeStatements, parseStatement, typeMap, walk } from './encoders.mjs';
+import { FORMATS, FORMAT_LABELS, applyOperation, chunkText, clone, countNodes, createConsumer, encode, encodeLinesView, encodeMarkup, encodeStatements, flatten, makeView, materializeFlat, materializeStatements, parseStatement, typeMap, walk } from './encoders.mjs';
 import { CATALOG_NOTE, scenarios as allScenarios } from './scenarios.mjs';
 import { TOKENIZER_NAME, approximateTokens, bytesBaselineTokens } from './tokens.mjs';
 
@@ -25,7 +26,7 @@ export const LIMITS = Object.freeze([
   'Offline and synthetic: every scenario is authored by hand, so no model is in the loop and nothing here measures how well any model writes these formats.',
   'Token counts come from the heuristic-v1 approximation (documented in tokens.mjs) and a bytes/4 baseline; they are not provider token counts and were not calibrated against any provider tokenizer.',
   'Times are single-process Node wall-clock samples of the consumer only (parse, partial materialization and validation); they exclude generation, network, rendering and browser work, and vary by machine.',
-  'Streaming is replayed in fixed-size chunks with no inter-chunk delay. The lyra-gen JSON and Markup parsers run in progressive mode and admit validated partial views; the patch and statement consumers are harness-local and admit partial trees.',
+  'Streaming is replayed in fixed-size chunks with no inter-chunk delay. The lyra-gen JSON, Markup and Lines parsers run in progressive mode and admit validated partial views; the patch and statement consumers are harness-local and admit partial trees.',
   'The statement-language and flat patch-stream encoders are minimal originals written for this comparison; they are not implementations of any third-party grammar and say nothing about those projects.',
   'Repair outcomes use an oracle replacement (the original node), which exercises lyra-gen repair plumbing and scope rules, not the ability of a model to produce a correct fix.',
   'Scenarios cover one catalog (dashboard overlay); results do not generalize to other catalogs, larger dashboards or other content.'
@@ -227,6 +228,11 @@ function measureRefinement(scenario, base, catalog) {
   for (const line of [parentText, ...newText.trim().split('\n')]) { const { node, children } = parseStatement(line, catalog, names); patchedDefinitions.set(node.id, { node, children }); }
   const rebuilt = materializeStatements(patchedDefinitions);
   delta.statements = entry(`${parentText}\n${newText}`, isDeepStrictEqual(clone(rebuilt), clone(refined.root)), { shape: 'new statements plus the re-emitted parent statement' });
+  // lines: like markup, the new subtree only (header plus its lines); placement is a host-side instruction.
+  const linesFragment = encodeLinesView({ ...base, root: refinement.node }, catalog);
+  const parsedLines = parseLines(linesFragment, catalog, { surfaceId: 'fragment', revision: 0 });
+  const linesSpliced = parsedLines.ok ? applyViewPatch(base, { surfaceId: base.surfaceId, expectedRevision: base.revision, operations: [{ op: 'insert', parentId: refinement.parentId, node: parsedLines.value.root, after: refinement.afterId }] }, catalog) : undefined;
+  delta.lines = entry(linesFragment, Boolean(linesSpliced?.ok) && isDeepStrictEqual(clone(linesSpliced.value.root), clone(refined.root)), { shape: 'fragment only; placement is a host-side instruction outside the format' });
   return { insertion: { parentId: refinement.parentId, afterId: refinement.afterId, newNodes: countNodes(refinement.node) }, fullRegeneration: full, delta };
 }
 

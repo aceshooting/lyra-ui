@@ -120,11 +120,11 @@ test('nested forms reject and diagnostic ceilings cannot conceal terminal author
   assert.equal(validateView({ ...view(), root: { id: 'outer', type: 'form', children: [{ id: 'inner', type: 'form' }] } }, withForm).ok, false);
   const result = validateView({ ...view(), root: { id: 'root', type: 'row', children: [
     { id: 'unnamed', type: 'input', props: { value: 12 } },
-    { id: 'forbidden', type: 'unknown' }
+    { id: 'unnamed', type: 'row' }
   ] } }, catalog, { limits: { maxDiagnostics: 1 } });
   assert.equal(result.ok, false);
   assert.equal(result.diagnostics.length, 1);
-  assert.equal(result.diagnostics[0]?.code, 'catalog.component');
+  assert.equal(result.diagnostics[0]?.code, 'identity.duplicate');
 });
 
 test('normalization moves only declared properties and text into a free caption or description', () => {

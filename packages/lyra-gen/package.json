@@ -86,6 +86,14 @@
       "types": "./dist/progressive.d.ts",
       "default": "./dist/progressive.js"
     },
+    "./lines.js": {
+      "types": "./dist/lines.d.ts",
+      "default": "./dist/lines.js"
+    },
+    "./prompts-lines.js": {
+      "types": "./dist/prompts-lines.d.ts",
+      "default": "./dist/prompts-lines.js"
+    },
     "./authoring.js": {
       "types": "./dist/authoring.d.ts",
       "default": "./dist/authoring.js"

@@ -1,6 +1,6 @@
 # Dashboard generation format benchmark (offline)
 
-A reproducible harness that compares four encodings of the same authored dashboards. It is
+A reproducible harness that compares five encodings of the same authored dashboards. It is
 **offline, synthetic, and has no model in the loop**: no provider is contacted, nothing is generated,
 and no result says how well any model writes these formats.
 
@@ -14,8 +14,9 @@ grid, heatmap, sankey, tabs with charts, quota meters, and a refinement that add
 | `markup` | Lyra Markup | `createProgressiveMarkupParser` |
 | `json-patch` | RFC 6902 operations, one per line, over a flat `{ root, elements }` map | harness-local line consumer |
 | `statements` | one `name = Component(args)` line per node, positional arguments, forward references | harness-local line consumer |
+| `lines` | Lyra Lines, lyra-gen's opt-in compact profile: one indented line per node, required props positional, explicit ids | `createLinesParser` with `progressive: {}` |
 
-The last two encoders and their consumers are minimal originals written for this comparison; they share
+The `json-patch` and `statements` encoders and their consumers are minimal originals written for this comparison; they share
 no code with, and are not implementations of, any third-party grammar.
 
 ## Run
@@ -71,11 +72,17 @@ consumed before the first tree passing `validateView`, across scenarios:
 | `markup` (progressive) | 0.1930 | 0.1192 to 0.3000 | 0.69x |
 | `json-patch` | 0.1342 | 0.0977 to 0.1998 | 1.32x |
 | `statements` | 0.0848 | 0.0420 to 0.1865 | 0.62x |
+| `lines` (progressive) | 0.0814 | 0.0418 to 0.1333 | 0.56x |
+
+The `lines` row uses explicit ids. With opt-in id elision, and the corpus ids renamed to the derived
+`<type>-<n>` form so that every id can be left out, Lyra Lines measures 0.52x JSON on the same
+heuristic; that variant is checked in `packages/lyra-gen/src/lines.test.ts`, not in this harness.
 
 Every format streamed to a valid view equal to the authored one in all scenarios. The fractions are
 deterministic for this corpus and chunk size; the millisecond columns of the summary are not and
-vary by machine. The progressive lyra-gen formats show a first preview after roughly a fifth of the
-stream; the line formats start earlier because each line is a complete node, while a lyra-gen
-preview needs a root container holding at least one complete node that passes catalog
+vary by machine. The progressive lyra-gen JSON and Markup parsers show a first preview after roughly
+a fifth of the stream; the line formats (including Lyra Lines, whose parser may offer a validated
+preview after every completed line) start earlier because each line is a complete node, while a JSON
+or Markup preview needs a root container holding at least one complete node that passes catalog
 validation. The same limits apply: offline, synthetic, no model in the loop, and the fractions say
 nothing about how quickly or how well any model produces these formats.

@@ -89,6 +89,41 @@ its `inputSchema` with the SDK's `jsonSchema()` helper. The tool call's input is
 validate it with `validateView()` as for any other model output. `estimatePromptTokens()` is an approximation for
 comparing prompt variants, not a provider tokenizer.
 
+## Repair messages
+
+Validation diagnostics a model can fix carry a short `hint`: the allowed values of an enum, the
+expected type and bounds of a value, the missing required property and its shape, the nearest
+declared name (within two edits) for an unknown component, property, slot, action, query or state
+path, and the owning node for a duplicate identity or an overlapping binding. Hints name only
+catalog vocabulary, schema bounds and paths; they never repeat a generated value.
+
+`isRepairableDiagnostic(diagnostic)` reports whether the host may ask a model to fix a failure.
+Content-shape failures are repairable: unknown properties and component types, reads of unowned state,
+wrong types, out-of-range values and missing required properties, the same set `recovery: 'isolate'`
+can contain in place (`REPAIRABLE_DIAGNOSTIC_CODES`; schema failures only for a node's own properties).
+Duplicate identities, binding ownership, URL sinks and other content policy, catalog version,
+revision, action payload and resource-limit failures stay terminal. Repairable only permits a
+request: `createRepairRequest()`, `LyraGenRepairSession` and `repairView()` still validate every
+candidate as a whole.
+
+`formatRepairMessage(diagnostics, { maxCharacters, view })` renders diagnostics as a compact,
+deterministic repair instruction: grouped by node in document order (view-level failures first),
+one line per distinct diagnostic with its code, the path inside the node, the message and the hint,
+node ids named when `view` is given, and at most `maxCharacters` UTF-16 code units (default 4000,
+clamped to 200 to 32000), ending with a count of omitted errors when the bound is reached.
+
+```ts
+import { formatRepairMessage, isRepairableDiagnostic } from '@aceshooting/lyra-gen/repair.js';
+import { validateView } from '@aceshooting/lyra-gen/runtime.js';
+
+const checked = validateView(candidate, catalog);
+if (!checked.ok && checked.diagnostics.every(isRepairableDiagnostic)) {
+  const instruction = formatRepairMessage(checked.diagnostics, { view: candidate, maxCharacters: 1500 });
+  // Node "revenue" (/root/children/1):
+  // - props.unknown at /props/lable: Property is not declared by the catalog. Hint: Did you mean "label"? Allowed properties: ...
+}
+```
+
 ## Keyed templates
 
 `expandTemplate(template, rows, catalog, { limits, previous })` instantiates a trusted template
