@@ -273,6 +273,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'La carte ne peut pas être tracée car sa géométrie n’est pas valide. Fournissez des entités polygonales avec des coordonnées de longitude et de latitude.',
   calendarInputLimit: 'Affichage de {count} événements sur {total}. Fournissez une plage de dates plus restreinte pour inclure d’autres événements.',
   heatmapInputLimit: 'Certains éléments décoratifs de la carte de chaleur ou certaines cellules sélectionnées ont été omis car une limite d’entrée a été atteinte.',
+  radialBarSegment: '{label} : {value} sur {max}',
+  categoryBarRange: '{start} à {end}',
+  categoryBarMarker: 'Marqueur : {value}, plage {start} à {end}',
 };
 
 registerLyraLocale('fr', strings);

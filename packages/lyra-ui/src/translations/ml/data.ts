@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'ജ്യാമിതി അസാധുവായതിനാൽ മാപ്പ് വരയ്ക്കാൻ കഴിയില്ല. രേഖാംശ, അക്ഷാംശ കോർഡിനേറ്റുകളുള്ള പോളിഗൺ ഫീച്ചറുകൾ നൽകുക.',
   calendarInputLimit: '{total} ഇവന്റുകളിൽ {count} എണ്ണം കാണിക്കുന്നു. മറ്റ് ഇവന്റുകൾ ഉൾപ്പെടുത്താൻ ചെറിയ തീയതി പരിധി നൽകുക.',
   heatmapInputLimit: 'ഇൻപുട്ട് പരിധിയിലെത്തിയതിനാൽ ഹീറ്റ്മാപ്പിലെ ചില അലങ്കാരങ്ങളോ തിരഞ്ഞെടുത്ത സെല്ലുകളോ ഒഴിവാക്കി.',
+  radialBarSegment: '{label}: {value}/{max}',
+  categoryBarRange: '{start} മുതൽ {end} വരെ',
+  categoryBarMarker: 'അടയാളം: {value}, പരിധി {start} മുതൽ {end} വരെ',
 };
 
 registerLyraLocale('ml', strings);

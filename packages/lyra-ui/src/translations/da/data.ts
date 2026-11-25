@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'Kortet kan ikke tegnes, fordi dets geometri er ugyldig. Angiv polygonobjekter med længde- og breddegradskoordinater.',
   calendarInputLimit: 'Viser {count} af {total} begivenheder. Angiv et mindre datointerval for at medtage andre begivenheder.',
   heatmapInputLimit: 'Nogle udsmykninger af heatmappet eller valgte celler blev udeladt, fordi en grænse for input blev nået.',
+  radialBarSegment: '{label}: {value} af {max}',
+  categoryBarRange: '{start} til {end}',
+  categoryBarMarker: 'Markør: {value}, interval {start} til {end}',
 };
 
 registerLyraLocale('da', strings);

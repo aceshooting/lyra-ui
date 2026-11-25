@@ -273,6 +273,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'No es pot dibuixar el mapa perquè la geometria no és vàlida. Proporcioneu elements poligonals amb coordenades de longitud i latitud.',
   calendarInputLimit: 'Es mostren {count} de {total} esdeveniments. Indiqueu un interval de dates més petit per incloure-hi altres esdeveniments.',
   heatmapInputLimit: 'S’han omès algunes decoracions o cel·les seleccionades del mapa de calor perquè s’ha arribat a un límit d’entrada.',
+  radialBarSegment: '{label}: {value} de {max}',
+  categoryBarRange: '{start} a {end}',
+  categoryBarMarker: 'Marcador: {value}, interval {start} a {end}',
 };
 
 registerLyraLocale('ca', strings);

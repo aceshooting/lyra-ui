@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'ਨਕਸ਼ਾ ਨਹੀਂ ਬਣਾਇਆ ਜਾ ਸਕਦਾ ਕਿਉਂਕਿ ਇਸਦੀ ਜਿਓਮੈਟਰੀ ਅਵੈਧ ਹੈ। ਲੰਬਕਾਰ ਅਤੇ ਅਕਸ਼ਾਂਸ਼ ਕੋਆਰਡੀਨੇਟਾਂ ਵਾਲੀਆਂ ਬਹੁਭੁਜ ਫੀਚਰਾਂ ਦਿਓ।',
   calendarInputLimit: '{total} ਇਵੈਂਟਾਂ ਵਿੱਚੋਂ {count} ਦਿਖਾਏ ਜਾ ਰਹੇ ਹਨ। ਹੋਰ ਇਵੈਂਟ ਸ਼ਾਮਲ ਕਰਨ ਲਈ ਛੋਟੀ ਮਿਤੀ ਸੀਮਾ ਦਿਓ।',
   heatmapInputLimit: 'ਇਨਪੁੱਟ ਸੀਮਾ ਪੂਰੀ ਹੋਣ ਕਾਰਨ ਹੀਟਮੈਪ ਦੀਆਂ ਕੁਝ ਸਜਾਵਟਾਂ ਜਾਂ ਚੁਣੇ ਸੈੱਲ ਛੱਡ ਦਿੱਤੇ ਗਏ ਹਨ।',
+  radialBarSegment: '{label}: {max} ਵਿੱਚੋਂ {value}',
+  categoryBarRange: '{start} ਤੋਂ {end} ਤੱਕ',
+  categoryBarMarker: 'ਨਿਸ਼ਾਨ: {value}, ਰੇਂਜ {start} ਤੋਂ {end} ਤੱਕ',
 };
 
 registerLyraLocale('pa', strings);

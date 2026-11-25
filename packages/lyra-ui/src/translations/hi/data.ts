@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'ज्यामिति अमान्य होने के कारण मानचित्र नहीं बनाया जा सकता। देशांतर और अक्षांश निर्देशांक वाली बहुभुज फ़ीचर दें।',
   calendarInputLimit: '{total} में से {count} कार्यक्रम दिखाए जा रहे हैं। अन्य कार्यक्रम शामिल करने के लिए तारीखों की छोटी सीमा दें।',
   heatmapInputLimit: 'इनपुट सीमा पूरी होने के कारण हीटमैप की कुछ सजावट या चयनित सेल छोड़ दिए गए हैं।',
+  radialBarSegment: '{label}: {max} में से {value}',
+  categoryBarRange: '{start} से {end} तक',
+  categoryBarMarker: 'चिह्नक: {value}, सीमा {start} से {end} तक',
 };
 
 registerLyraLocale('hi', strings);

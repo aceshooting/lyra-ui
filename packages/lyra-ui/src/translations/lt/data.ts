@@ -281,6 +281,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'Žemėlapio nubrėžti neįmanoma, nes jo geometrija netinkama. Pateikite daugiakampių objektus su ilgumos ir platumos koordinatėmis.',
   calendarInputLimit: 'Rodoma įvykių: {count} iš {total}. Norėdami įtraukti kitus įvykius, nurodykite mažesnį datų intervalą.',
   heatmapInputLimit: 'Kai kurie šilumos žemėlapio papuošimai arba pasirinkti langeliai praleisti, nes pasiekta įvesties riba.',
+  radialBarSegment: '{label}: {value} iš {max}',
+  categoryBarRange: 'nuo {start} iki {end}',
+  categoryBarMarker: 'Žymeklis: {value}, intervalas nuo {start} iki {end}',
 };
 
 registerLyraLocale('lt', strings);

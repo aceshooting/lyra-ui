@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'Картата не може да бъде изобразена, защото геометрията ѝ е невалидна. Предоставете полигонни обекти с координати за географска дължина и ширина.',
   calendarInputLimit: 'Показани са {count} от {total} събития. Задайте по-малък период, за да включите други събития.',
   heatmapInputLimit: 'Някои украси или избрани клетки на топлинната карта са пропуснати, защото е достигнато ограничение за входните данни.',
+  radialBarSegment: '{label}: {value} от {max}',
+  categoryBarRange: 'от {start} до {end}',
+  categoryBarMarker: 'Маркер: {value}, диапазон от {start} до {end}',
 };
 
 registerLyraLocale('bg', strings);

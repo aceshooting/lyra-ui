@@ -257,6 +257,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'Peta teu bisa digambar sabab géométrina teu sah. Sadiakeun fitur poligon nu maké koordinat bujur jeung lintang.',
   calendarInputLimit: 'Nembongkeun {count} tina {total} acara. Pasihkeun rentang tanggal nu leuwih leutik pikeun ngawengku acara séjén.',
   heatmapInputLimit: 'Sababaraha hiasan peta panas atawa sél nu dipilih teu diasupkeun lantaran wates input geus kahontal.',
+  radialBarSegment: '{label}: {value} tina {max}',
+  categoryBarRange: '{start} nepi ka {end}',
+  categoryBarMarker: 'Pananda: {value}, rentang {start} nepi ka {end}',
 };
 
 registerLyraLocale('su', strings);

@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'Hindi maiguhit ang mapa dahil di-wasto ang geometry nito. Magbigay ng mga polygon feature na may mga coordinate ng longitude at latitude.',
   calendarInputLimit: 'Ipinapakita ang {count} sa {total} kaganapan. Magbigay ng mas maliit na saklaw ng petsa upang maisama ang iba pang kaganapan.',
   heatmapInputLimit: 'May ilang dekorasyon ng heatmap o napiling cell na hindi isinama dahil naabot ang limitasyon sa input.',
+  radialBarSegment: '{label}: {value} sa {max}',
+  categoryBarRange: '{start} hanggang {end}',
+  categoryBarMarker: 'Pananda: {value}, saklaw {start} hanggang {end}',
 };
 
 registerLyraLocale('tl', strings);

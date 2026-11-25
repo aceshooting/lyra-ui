@@ -92,6 +92,8 @@ export type LyraBadgeSvelteProps = LyraSvelteElementProps<'lr-badge'>;
 
 export type LyraBarChartSvelteProps = LyraSvelteElementProps<'lr-bar-chart'>;
 
+export type LyraBarListSvelteProps = LyraSvelteElementProps<'lr-bar-list'>;
+
 export type LyraBoxPlotSvelteProps = LyraSvelteElementProps<'lr-box-plot'>;
 
 export type LyraBranchPickerSvelteProps = LyraSvelteElementProps<'lr-branch-picker'>;
@@ -121,6 +123,8 @@ export type LyraCardSvelteProps = LyraSvelteElementProps<'lr-card'>;
 export type LyraCarouselSvelteProps = LyraSvelteElementProps<'lr-carousel'>;
 
 export type LyraCarouselItemSvelteProps = LyraSvelteElementProps<'lr-carousel-item'>;
+
+export type LyraCategoryBarSvelteProps = LyraSvelteElementProps<'lr-category-bar'>;
 
 export type LyraChangeReviewSvelteProps = LyraSvelteElementProps<'lr-change-review'>;
 
@@ -478,6 +482,8 @@ export type LyraQrCodeSvelteProps = LyraSvelteElementProps<'lr-qr-code'>;
 
 export type LyraRadarChartSvelteProps = LyraSvelteElementProps<'lr-radar-chart'>;
 
+export type LyraRadialBarSvelteProps = LyraSvelteElementProps<'lr-radial-bar'>;
+
 export type LyraRadioSvelteProps = LyraSvelteElementProps<'lr-radio'>;
 
 export type LyraRadioButtonSvelteProps = LyraSvelteElementProps<'lr-radio-button'>;
@@ -709,6 +715,7 @@ export interface LyraSvelteElements {
   'lr-background-runs': LyraBackgroundRunsSvelteProps;
   'lr-badge': LyraBadgeSvelteProps;
   'lr-bar-chart': LyraBarChartSvelteProps;
+  'lr-bar-list': LyraBarListSvelteProps;
   'lr-box-plot': LyraBoxPlotSvelteProps;
   'lr-branch-picker': LyraBranchPickerSvelteProps;
   'lr-breadcrumb': LyraBreadcrumbSvelteProps;
@@ -724,6 +731,7 @@ export interface LyraSvelteElements {
   'lr-card': LyraCardSvelteProps;
   'lr-carousel': LyraCarouselSvelteProps;
   'lr-carousel-item': LyraCarouselItemSvelteProps;
+  'lr-category-bar': LyraCategoryBarSvelteProps;
   'lr-change-review': LyraChangeReviewSvelteProps;
   'lr-chart': LyraChartSvelteProps;
   'lr-chart-3d': LyraChart3dSvelteProps;
@@ -902,6 +910,7 @@ export interface LyraSvelteElements {
   'lr-push-to-talk': LyraPushToTalkSvelteProps;
   'lr-qr-code': LyraQrCodeSvelteProps;
   'lr-radar-chart': LyraRadarChartSvelteProps;
+  'lr-radial-bar': LyraRadialBarSvelteProps;
   'lr-radio': LyraRadioSvelteProps;
   'lr-radio-button': LyraRadioButtonSvelteProps;
   'lr-radio-group': LyraRadioGroupSvelteProps;
@@ -1033,6 +1042,7 @@ export interface LyraElementTagNameMap {
   'lr-background-runs': LyraComponentTypeMap['lr-background-runs']['element'];
   'lr-badge': LyraComponentTypeMap['lr-badge']['element'];
   'lr-bar-chart': LyraComponentTypeMap['lr-bar-chart']['element'];
+  'lr-bar-list': LyraComponentTypeMap['lr-bar-list']['element'];
   'lr-box-plot': LyraComponentTypeMap['lr-box-plot']['element'];
   'lr-branch-picker': LyraComponentTypeMap['lr-branch-picker']['element'];
   'lr-breadcrumb': LyraComponentTypeMap['lr-breadcrumb']['element'];
@@ -1048,6 +1058,7 @@ export interface LyraElementTagNameMap {
   'lr-card': LyraComponentTypeMap['lr-card']['element'];
   'lr-carousel': LyraComponentTypeMap['lr-carousel']['element'];
   'lr-carousel-item': LyraComponentTypeMap['lr-carousel-item']['element'];
+  'lr-category-bar': LyraComponentTypeMap['lr-category-bar']['element'];
   'lr-change-review': LyraComponentTypeMap['lr-change-review']['element'];
   'lr-chart': LyraComponentTypeMap['lr-chart']['element'];
   'lr-chart-3d': LyraComponentTypeMap['lr-chart-3d']['element'];
@@ -1226,6 +1237,7 @@ export interface LyraElementTagNameMap {
   'lr-push-to-talk': LyraComponentTypeMap['lr-push-to-talk']['element'];
   'lr-qr-code': LyraComponentTypeMap['lr-qr-code']['element'];
   'lr-radar-chart': LyraComponentTypeMap['lr-radar-chart']['element'];
+  'lr-radial-bar': LyraComponentTypeMap['lr-radial-bar']['element'];
   'lr-radio': LyraComponentTypeMap['lr-radio']['element'];
   'lr-radio-button': LyraComponentTypeMap['lr-radio-button']['element'];
   'lr-radio-group': LyraComponentTypeMap['lr-radio-group']['element'];

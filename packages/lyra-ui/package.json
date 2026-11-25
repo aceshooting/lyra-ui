@@ -242,7 +242,9 @@
     "./components/conversation/widget-renderer/resolve.js": "./dist/components/conversation/widget-renderer/resolve.js",
     "./components/conversation/widget-renderer/widget-renderer.class.js": "./dist/components/conversation/widget-renderer/widget-renderer.class.js",
     "./components/data": "./dist/components/data/index.js",
+    "./components/data/bar-list/bar-list.class.js": "./dist/components/data/bar-list/bar-list.class.js",
     "./components/data/calendar/calendar.class.js": "./dist/components/data/calendar/calendar.class.js",
+    "./components/data/category-bar/category-bar.class.js": "./dist/components/data/category-bar/category-bar.class.js",
     "./components/data/chord/chord.class.js": "./dist/components/data/chord/chord.class.js",
     "./components/data/choropleth/choropleth.class.js": "./dist/components/data/choropleth/choropleth.class.js",
     "./components/data/condition-builder/condition-builder-register.js": "./dist/components/data/condition-builder/condition-builder-register.js",
@@ -263,6 +265,7 @@
     "./components/data/graph-query-builder/graph-query-builder.class.js": "./dist/components/data/graph-query-builder/graph-query-builder.class.js",
     "./components/data/heatmap/heatmap.class.js": "./dist/components/data/heatmap/heatmap.class.js",
     "./components/data/pagination/pagination.class.js": "./dist/components/data/pagination/pagination.class.js",
+    "./components/data/radial-bar/radial-bar.class.js": "./dist/components/data/radial-bar/radial-bar.class.js",
     "./components/data/sankey/sankey.class.js": "./dist/components/data/sankey/sankey.class.js",
     "./components/data/sequence-strip/sequence-strip.class.js": "./dist/components/data/sequence-strip/sequence-strip.class.js",
     "./components/data/sparkline/sparkline.class.js": "./dist/components/data/sparkline/sparkline.class.js",
@@ -464,6 +467,10 @@
       "types": "./dist/components/lr-bar-chart.d.ts",
       "default": "./dist/components/lr-bar-chart.js"
     },
+    "./components/lr-bar-list.js": {
+      "types": "./dist/components/lr-bar-list.d.ts",
+      "default": "./dist/components/lr-bar-list.js"
+    },
     "./components/lr-box-plot.js": {
       "types": "./dist/components/lr-box-plot.d.ts",
       "default": "./dist/components/lr-box-plot.js"
@@ -523,6 +530,10 @@
     "./components/lr-carousel.js": {
       "types": "./dist/components/lr-carousel.d.ts",
       "default": "./dist/components/lr-carousel.js"
+    },
+    "./components/lr-category-bar.js": {
+      "types": "./dist/components/lr-category-bar.d.ts",
+      "default": "./dist/components/lr-category-bar.js"
     },
     "./components/lr-change-review.js": {
       "types": "./dist/components/lr-change-review.d.ts",
@@ -1235,6 +1246,10 @@
     "./components/lr-radar-chart.js": {
       "types": "./dist/components/lr-radar-chart.d.ts",
       "default": "./dist/components/lr-radar-chart.js"
+    },
+    "./components/lr-radial-bar.js": {
+      "types": "./dist/components/lr-radial-bar.d.ts",
+      "default": "./dist/components/lr-radial-bar.js"
     },
     "./components/lr-radio-button.js": {
       "types": "./dist/components/lr-radio-button.d.ts",

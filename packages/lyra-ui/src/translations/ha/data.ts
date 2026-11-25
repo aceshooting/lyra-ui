@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'Ba za a iya zana taswirar ba saboda siffar ƙasarta ba ta da inganci. Bayar da siffofin polygon masu daidaitattun longitude da latitude.',
   calendarInputLimit: 'Ana nuna taruka {count} daga cikin {total}. Bayar da ƙaramin zangon kwanan wata don haɗa wasu taruka.',
   heatmapInputLimit: 'An bar wasu kayan ƙawata taswirar zafin launi ko ƙwayoyin da aka zaɓa saboda an kai iyakar shigarwa.',
+  radialBarSegment: '{label}: {value} cikin {max}',
+  categoryBarRange: 'daga {start} zuwa {end}',
+  categoryBarMarker: 'Alama: {value}, kewayon daga {start} zuwa {end}',
 };
 
 registerLyraLocale('ha', strings);

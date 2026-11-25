@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'Karttaa ei voi piirtää, koska sen geometria on virheellinen. Anna monikulmiokohteita, joissa on pituus- ja leveysastekoordinaatit.',
   calendarInputLimit: 'Näytetään {count} tapahtumaa yhteensä {total} tapahtumasta. Anna pienempi päivämääräväli, jotta muut tapahtumat voidaan sisällyttää.',
   heatmapInputLimit: 'Osa lämpökartan koristeista tai valituista soluista jätettiin pois syöterajan täyttymisen vuoksi.',
+  radialBarSegment: '{label}: {value}/{max}',
+  categoryBarRange: '{start}–{end}',
+  categoryBarMarker: 'Merkki: {value}, väli {start}–{end}',
 };
 
 registerLyraLocale('fi', strings);

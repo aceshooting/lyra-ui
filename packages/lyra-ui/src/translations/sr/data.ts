@@ -273,6 +273,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'Мапа се не може нацртати јер је њена геометрија неважећа. Обезбедите полигонске објекте са координатама географске дужине и ширине.',
   calendarInputLimit: 'Приказано догађаја: {count} од {total}. Наведите мањи опсег датума да бисте укључили остале догађаје.',
   heatmapInputLimit: 'Неки украси топлотне мапе или изабране ћелије су изостављени јер је достигнуто ограничење уноса.',
+  radialBarSegment: '{label}: {value} од {max}',
+  categoryBarRange: 'од {start} до {end}',
+  categoryBarMarker: 'Ознака: {value}, опсег од {start} до {end}',
 };
 
 registerLyraLocale('sr', strings);

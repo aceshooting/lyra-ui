@@ -273,6 +273,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'Karti nevar attēlot, jo tās ģeometrija nav derīga. Norādiet poligonu objektus ar garuma un platuma koordinātām.',
   calendarInputLimit: 'Tiek rādīti {count} no {total} notikumiem. Lai iekļautu citus notikumus, norādiet mazāku datumu diapazonu.',
   heatmapInputLimit: 'Daži siltumkartes noformējumi vai atlasītās šūnas tika izlaistas, jo tika sasniegts ievades ierobežojums.',
+  radialBarSegment: '{label}: {value} no {max}',
+  categoryBarRange: 'no {start} līdz {end}',
+  categoryBarMarker: 'Marķieris: {value}, diapazons no {start} līdz {end}',
 };
 
 registerLyraLocale('lv', strings);

@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'ଜ୍ୟାମିତି ଅବୈଧ ହୋଇଥିବାରୁ ମାନଚିତ୍ର ଅଙ୍କନ କରାଯାଇପାରିବ ନାହିଁ। ଦ୍ରାଘିମା ଓ ଅକ୍ଷାଂଶ ସ୍ଥାନାଙ୍କ ସହିତ ବହୁଭୁଜ ଫିଚର ଦିଅନ୍ତୁ।',
   calendarInputLimit: '{total}ଟି ଘଟଣାରୁ {count}ଟି ଦେଖାଯାଉଛି। ଅନ୍ୟ ଘଟଣାଗୁଡ଼ିକୁ ସାମିଲ କରିବାକୁ ଏକ ଛୋଟ ତାରିଖ ପରିସର ଦିଅନ୍ତୁ।',
   heatmapInputLimit: 'ଇନପୁଟ୍ ସୀମାରେ ପହଞ୍ଚିଥିବାରୁ ହିଟମ୍ୟାପ୍‌ର କିଛି ସଜାଣି କିମ୍ବା ଚୟନିତ କୋଷ ବାଦ ଦିଆଯାଇଛି।',
+  radialBarSegment: '{label}: {max}ରୁ {value}',
+  categoryBarRange: '{start} ରୁ {end} ପର୍ଯ୍ୟନ୍ତ',
+  categoryBarMarker: 'ଚିହ୍ନକ: {value}, ପରିସର {start} ରୁ {end} ପର୍ଯ୍ୟନ୍ତ',
 };
 
 registerLyraLocale('or', strings);

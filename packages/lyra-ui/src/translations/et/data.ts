@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'Kaarti ei saa joonistada, kuna selle geomeetria on kehtetu. Esitage hulknurkobjektid pikkus- ja laiuskraadi koordinaatidega.',
   calendarInputLimit: 'Kuvatakse {count} sündmust {total}-st. Teiste sündmuste kaasamiseks valige väiksem kuupäevavahemik.',
   heatmapInputLimit: 'Osa soojuskaardi kujundusi või valitud lahtreid jäeti välja, kuna sisendi piirang sai täis.',
+  radialBarSegment: '{label}: {value} / {max}',
+  categoryBarRange: '{start} kuni {end}',
+  categoryBarMarker: 'Marker: {value}, vahemik {start} kuni {end}',
 };
 
 registerLyraLocale('et', strings);

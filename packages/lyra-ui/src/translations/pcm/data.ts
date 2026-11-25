@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'We no fit draw di map because im geometry no correct. Give polygon features wey get longitude and latitude coordinates.',
   calendarInputLimit: 'E dey show {count} out of {total} events. Give smaller date range make other events fit enter.',
   heatmapInputLimit: 'Some heatmap decorations or cells wey you select no enter because di input don reach im limit.',
+  radialBarSegment: '{label}: {value} out of {max}',
+  categoryBarRange: 'From {start} reach {end}',
+  categoryBarMarker: 'Mark: {value}, range from {start} reach {end}',
 };
 
 registerLyraLocale('pcm', strings);

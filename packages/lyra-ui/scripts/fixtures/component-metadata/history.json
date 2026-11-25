@@ -38165,7 +38165,7 @@
     "current": {
       "version": "33.1.0",
       "sourceCommit": null,
-      "manifestSha256": "e49d9430404430f2d5ebcd80d90d7e1439ab271487bed34d0f67a99bd1c4ca0a",
+      "manifestSha256": "b92400f66cb9771b4b81a8d70673d90b3e54098ff27c0dff58fc645f23b32b9a",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",
@@ -38193,6 +38193,7 @@
         "lr-background-runs",
         "lr-badge",
         "lr-bar-chart",
+        "lr-bar-list",
         "lr-box-plot",
         "lr-branch-picker",
         "lr-breadcrumb",
@@ -38208,6 +38209,7 @@
         "lr-card",
         "lr-carousel",
         "lr-carousel-item",
+        "lr-category-bar",
         "lr-change-review",
         "lr-chart",
         "lr-chart-3d",
@@ -38386,6 +38388,7 @@
         "lr-push-to-talk",
         "lr-qr-code",
         "lr-radar-chart",
+        "lr-radial-bar",
         "lr-radio",
         "lr-radio-button",
         "lr-radio-group",

@@ -21,6 +21,7 @@ import { isKeyboardFocusEvent } from '../../../internal/focus-modality.js';
 import { lyraLocaleCatalogVersion } from '../../../internal/localization-runtime.js';
 import { styles } from './sequence-strip.styles.js';
 import { blankNumberConverter } from '../../../internal/converters.js';
+import { normalizeLabel } from '../../../internal/accessible-name.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_sequenceStripBucketLabel, LYRA_DEFAULT_sequenceStripBucketSummary, LYRA_DEFAULT_sequenceStripCategoryCount, LYRA_DEFAULT_sequenceStripCellKeyboardHelp, LYRA_DEFAULT_sequenceStripEmpty, LYRA_DEFAULT_sequenceStripItemCount, LYRA_DEFAULT_sequenceStripRangeCount, LYRA_DEFAULT_sequenceStripSourceError, LYRA_DEFAULT_sequenceStripSourceItemLabel, LYRA_DEFAULT_sequenceStripSourceItemUnavailable, LYRA_DEFAULT_sequenceStripSourceKeyboardHelp, LYRA_DEFAULT_sequenceStripSourceRangeDetails, LYRA_DEFAULT_sequenceStripUnnamedCategory } from '../../../internal/default-strings/data.generated.js';
@@ -135,9 +136,8 @@ export interface LyraSequenceStripEventMap {
  * visualization. The strip is a labeled `role="list"` and each cell is a named list item.
  * Exactly one cell is tabbable; Left/Right and Home/End rove through the cells and show the same
  * detail tooltip as pointer hover. Clicking a cell, or pressing Enter/Space on the roving cell,
- * emits the controlled `lr-item-activate` event without moving selection. A host `aria-label`
- * names the host itself without being duplicated on the internal list; otherwise the list uses its
- * category summary.
+ * emits the controlled `lr-item-activate` event without moving selection. The list is named by a
+ * host `aria-label`, then by `label`, and otherwise by its generated category summary.
  * A category whose label is omitted or blank uses the localized unnamed-category label for
  * affected list-item names and tooltips, its summary clause, and its legend row.
  * Controlled item refreshes preserve the focused
@@ -423,6 +423,17 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
   }
   /** The canonical host accessible name. Presence wins, including an explicitly empty string. */
   @property({ attribute: 'aria-label' }) private hostAccessibleLabel: string | null = null;
+
+  /**
+   * Accessible name for the strip's list. A host `aria-label` wins over it. Unset or blank keeps the
+   * generated category summary as the list's name.
+   */
+  @property() label?: string;
+
+  /** The list's accessible name: host `aria-label`, then `label`, then the generated summary. */
+  private listName(summary: string): string {
+    return this.hostAccessibleLabel ?? normalizeLabel(this.label) ?? summary;
+  }
 
   /**
    * Index of the currently selected item, or `-1` (the default) for none — the controlled selection
@@ -941,7 +952,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     return html`
       ${!snapshot ? html`<div part="source-status" aria-busy=${controller.pending ? 'true' : 'false'}>${summary}</div>
         ${controller.error ? html`<button part="source-retry" type="button" @click=${() => { if (current()) { this.invalidateSource(); this.requestUpdate('source'); } }}>${this.localize('retry')}</button>` : nothing}` : nothing}
-      <div part="base" role="list" aria-label=${this.hostAccessibleLabel ?? summary} tabindex=${ranges.length ? '-1' : '0'} @focusout=${this.onStripFocusOut} ?data-dense=${ranges.length >= MAX_RENDERED_CELLS}>
+      <div part="base" role="list" aria-label=${this.listName(summary)} tabindex=${ranges.length ? '-1' : '0'} @focusout=${this.onStripFocusOut} ?data-dense=${ranges.length >= MAX_RENDERED_CELLS}>
         ${ranges.map((range, index) => {
           const category = this.sourceCategory(range, categoryRanks);
           const label = this.localize('sequenceStripSourceRangeDetails', undefined, {
@@ -989,7 +1000,7 @@ export class LyraSequenceStrip extends LyraElement<LyraSequenceStripEventMap> {
     const current = (): boolean => this.isConnected && !this.sourceMode && this.items === items;
     const cells = this.cells();
     const view = this.cellView(cells);
-    const ariaLabel = this.hostAccessibleLabel ?? view.summary;
+    const ariaLabel = this.listName(view.summary);
     const activeIndex = this.hoverIndex ?? (this.keyboardTooltip ? this.keyboardIndex : null);
     const active = activeIndex !== null ? cells[activeIndex] : undefined;
     const selectedCell = this.selectedCellIndex();

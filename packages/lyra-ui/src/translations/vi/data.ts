@@ -257,6 +257,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'Không thể vẽ bản đồ vì hình học không hợp lệ. Hãy cung cấp các đối tượng đa giác có tọa độ kinh độ và vĩ độ.',
   calendarInputLimit: 'Đang hiển thị {count} trên {total} sự kiện. Hãy cung cấp khoảng ngày nhỏ hơn để bao gồm các sự kiện khác.',
   heatmapInputLimit: 'Một số phần trang trí bản đồ nhiệt hoặc ô được chọn đã bị bỏ qua vì đạt giới hạn đầu vào.',
+  radialBarSegment: '{label}: {value} trên {max}',
+  categoryBarRange: 'từ {start} đến {end}',
+  categoryBarMarker: 'Điểm đánh dấu: {value}, khoảng từ {start} đến {end}',
 };
 
 registerLyraLocale('vi', strings);

@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'De kaart kan niet worden getekend omdat de geometrie ongeldig is. Geef veelhoekobjecten op met lengte- en breedtegraadcoördinaten.',
   calendarInputLimit: 'Er worden {count} van {total} afspraken weergegeven. Geef een kleiner datumbereik op om andere afspraken op te nemen.',
   heatmapInputLimit: 'Sommige versieringen van de heatmap of geselecteerde cellen zijn weggelaten omdat een invoerlimiet is bereikt.',
+  radialBarSegment: '{label}: waarde {value} van {max}',
+  categoryBarRange: '{start} tot {end}',
+  categoryBarMarker: 'Markering: waarde {value}, bereik {start} tot {end}',
 };
 
 registerLyraLocale('nl', strings);

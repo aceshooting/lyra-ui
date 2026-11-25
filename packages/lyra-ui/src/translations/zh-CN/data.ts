@@ -257,6 +257,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: '地图的几何数据无效，无法绘制。请提供带有经度和纬度坐标的多边形要素。',
   calendarInputLimit: '显示 {count} 个日历事件，共 {total} 个。请提供较小的日期范围，以包含其他事件。',
   heatmapInputLimit: '由于达到输入限制，部分热力图装饰或选中的单元格已被省略。',
+  radialBarSegment: '{label}：{value}/{max}',
+  categoryBarRange: '{start} 至 {end}',
+  categoryBarMarker: '标记：{value}，范围 {start} 至 {end}',
 };
 
 registerLyraLocale('zh-CN', strings);

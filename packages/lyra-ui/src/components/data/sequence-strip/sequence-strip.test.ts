@@ -371,6 +371,30 @@ it('prefers the host aria-label and restores the generated summary on removal', 
   expect(renderedLabel()).to.equal('Text: 2, Tool: 1');
 });
 
+it('names the list from label, lets a host aria-label win, and keeps the summary while label is unset or blank', async () => {
+  const el = (await fixture(html`<lr-sequence-strip label="Agent run"></lr-sequence-strip>`)) as LyraSequenceStrip;
+  el.items = items;
+  el.categories = categories;
+  await el.updateComplete;
+  const renderedLabel = (): string | null =>
+    el.shadowRoot!.querySelector('[part="base"]')!.getAttribute('aria-label');
+  expect(renderedLabel()).to.equal('Agent run');
+  await expect(el).to.be.accessible();
+
+  el.setAttribute('aria-label', 'Host label');
+  await el.updateComplete;
+  expect(renderedLabel()).to.equal('Host label');
+
+  el.removeAttribute('aria-label');
+  el.label = '   ';
+  await el.updateComplete;
+  expect(renderedLabel()).to.equal('Text: 2, Tool: 1');
+
+  el.label = undefined;
+  await el.updateComplete;
+  expect(renderedLabel()).to.equal('Text: 2, Tool: 1');
+});
+
 it('renders an empty strip (no cells, generic aria-label) when items is empty', async () => {
   const el = (await fixture(html`<lr-sequence-strip></lr-sequence-strip>`)) as LyraSequenceStrip;
   await el.updateComplete;

@@ -85,6 +85,8 @@ export type LyraBadgeVueProps = LyraVueCustomElement<'lr-badge'>;
 
 export type LyraBarChartVueProps = LyraVueCustomElement<'lr-bar-chart'>;
 
+export type LyraBarListVueProps = LyraVueCustomElement<'lr-bar-list'>;
+
 export type LyraBoxPlotVueProps = LyraVueCustomElement<'lr-box-plot'>;
 
 export type LyraBranchPickerVueProps = LyraVueCustomElement<'lr-branch-picker'>;
@@ -114,6 +116,8 @@ export type LyraCardVueProps = LyraVueCustomElement<'lr-card'>;
 export type LyraCarouselVueProps = LyraVueCustomElement<'lr-carousel'>;
 
 export type LyraCarouselItemVueProps = LyraVueCustomElement<'lr-carousel-item'>;
+
+export type LyraCategoryBarVueProps = LyraVueCustomElement<'lr-category-bar'>;
 
 export type LyraChangeReviewVueProps = LyraVueCustomElement<'lr-change-review'>;
 
@@ -471,6 +475,8 @@ export type LyraQrCodeVueProps = LyraVueCustomElement<'lr-qr-code'>;
 
 export type LyraRadarChartVueProps = LyraVueCustomElement<'lr-radar-chart'>;
 
+export type LyraRadialBarVueProps = LyraVueCustomElement<'lr-radial-bar'>;
+
 export type LyraRadioVueProps = LyraVueCustomElement<'lr-radio'>;
 
 export type LyraRadioButtonVueProps = LyraVueCustomElement<'lr-radio-button'>;
@@ -702,6 +708,7 @@ export interface LyraVueGlobalComponents {
   'lr-background-runs': LyraBackgroundRunsVueProps;
   'lr-badge': LyraBadgeVueProps;
   'lr-bar-chart': LyraBarChartVueProps;
+  'lr-bar-list': LyraBarListVueProps;
   'lr-box-plot': LyraBoxPlotVueProps;
   'lr-branch-picker': LyraBranchPickerVueProps;
   'lr-breadcrumb': LyraBreadcrumbVueProps;
@@ -717,6 +724,7 @@ export interface LyraVueGlobalComponents {
   'lr-card': LyraCardVueProps;
   'lr-carousel': LyraCarouselVueProps;
   'lr-carousel-item': LyraCarouselItemVueProps;
+  'lr-category-bar': LyraCategoryBarVueProps;
   'lr-change-review': LyraChangeReviewVueProps;
   'lr-chart': LyraChartVueProps;
   'lr-chart-3d': LyraChart3dVueProps;
@@ -895,6 +903,7 @@ export interface LyraVueGlobalComponents {
   'lr-push-to-talk': LyraPushToTalkVueProps;
   'lr-qr-code': LyraQrCodeVueProps;
   'lr-radar-chart': LyraRadarChartVueProps;
+  'lr-radial-bar': LyraRadialBarVueProps;
   'lr-radio': LyraRadioVueProps;
   'lr-radio-button': LyraRadioButtonVueProps;
   'lr-radio-group': LyraRadioGroupVueProps;

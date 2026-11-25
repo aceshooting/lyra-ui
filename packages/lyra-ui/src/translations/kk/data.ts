@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'Геометриясы жарамсыз болғандықтан, картаны сызу мүмкін емес. Бойлық пен ендік координаттары бар көпбұрыш нысандарын беріңіз.',
   calendarInputLimit: '{total} оқиғаның {count} оқиғасы көрсетілуде. Басқа оқиғаларды қосу үшін кішірек күндер ауқымын беріңіз.',
   heatmapInputLimit: 'Енгізу шегіне жеткендіктен, жылу картасының кейбір безендірулері немесе таңдалған ұяшықтары алынып тасталды.',
+  radialBarSegment: '{label}: {value} / {max}',
+  categoryBarRange: '{start} бастап {end} дейін',
+  categoryBarMarker: 'Белгі: {value}, аралық {start} бастап {end} дейін',
 };
 
 registerLyraLocale('kk', strings);

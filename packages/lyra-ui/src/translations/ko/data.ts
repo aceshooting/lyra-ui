@@ -257,6 +257,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: '지오메트리가 올바르지 않아 지도를 그릴 수 없습니다. 경도와 위도 좌표가 있는 폴리곤 피처를 제공하세요.',
   calendarInputLimit: '총 {total}개 일정 중 {count}개를 표시합니다. 다른 일정을 포함하려면 더 짧은 날짜 범위를 제공하세요.',
   heatmapInputLimit: '입력 한도에 도달하여 일부 히트맵 장식 또는 선택한 셀이 생략되었습니다.',
+  radialBarSegment: '{label}: {max} 중 {value}',
+  categoryBarRange: '{start}부터 {end}까지',
+  categoryBarMarker: '마커: {value}, 범위 {start}부터 {end}까지',
 };
 
 registerLyraLocale('ko', strings);

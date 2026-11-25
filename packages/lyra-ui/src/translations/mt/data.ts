@@ -289,6 +289,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'Il-mappa ma tistax tiġi mfassla għax il-ġeometrija tagħha mhix valida. Ipprovdi karatteristiċi poligonali b’koordinati tal-lonġitudni u tal-latitudni.',
   calendarInputLimit: 'Qed jintwerew {count} minn {total} avvenimenti. Ipprovdi firxa ta’ dati iżgħar biex tinkludi avvenimenti oħra.',
   heatmapInputLimit: 'Xi dekorazzjonijiet tal-mappa tas-sħana jew ċelloli magħżula tħallew barra għax intlaħaq limitu tal-input.',
+  radialBarSegment: '{label}: {value} minn {max}',
+  categoryBarRange: 'minn {start} sa {end}',
+  categoryBarMarker: 'Markatur: {value}, medda minn {start} sa {end}',
 };
 
 registerLyraLocale('mt', strings);

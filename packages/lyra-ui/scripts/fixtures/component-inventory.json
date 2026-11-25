@@ -14579,6 +14579,202 @@
       }
     },
     {
+      "tag": "lr-bar-list",
+      "family": "data",
+      "classModule": "src/components/data/bar-list/bar-list.class.ts",
+      "registrationModule": "src/components/lr-bar-list.ts",
+      "rootIncluded": true,
+      "rootExclusion": null,
+      "optionalPeers": [],
+      "maturity": {
+        "status": "experimental",
+        "since": "unreleased",
+        "deprecated": null,
+        "profile": "new-component-experimental",
+        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "deprecations": []
+      },
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "accessibility": "automated",
+        "scale": "unmeasured",
+        "ledger": "scripts/fixtures/component-qualification.json"
+      },
+      "dependencies": {
+        "direct": [],
+        "transitive": [],
+        "ledger": "scripts/fixtures/component-integration.json"
+      },
+      "counterparts": [],
+      "surface": {
+        "attributes": [
+          {
+            "name": "label",
+            "property": "label",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "max",
+            "property": "max",
+            "type": "number | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "sort",
+            "property": "sort",
+            "type": "LyraBarListSort",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "descending"
+          }
+        ],
+        "properties": [
+          {
+            "name": "items",
+            "attribute": null,
+            "type": "readonly LyraBarListItem[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
+          {
+            "name": "label",
+            "attribute": "label",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "max",
+            "attribute": "max",
+            "type": "number | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "sort",
+            "attribute": "sort",
+            "type": "LyraBarListSort",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "descending"
+          },
+          {
+            "name": "valueFormatter",
+            "attribute": null,
+            "type": "LyraBarListValueFormatter | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
+        "slots": [],
+        "events": [],
+        "parts": [
+          {
+            "name": "bar",
+            "deprecated": null
+          },
+          {
+            "name": "base",
+            "deprecated": null
+          },
+          {
+            "name": "empty",
+            "deprecated": null
+          },
+          {
+            "name": "label",
+            "deprecated": null
+          },
+          {
+            "name": "list",
+            "deprecated": null
+          },
+          {
+            "name": "row",
+            "deprecated": null
+          },
+          {
+            "name": "value",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [
+          {
+            "name": "--lr-bar-list-bar-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-brand-fill-quiet)"
+          },
+          {
+            "name": "--lr-bar-list-bar-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-2rem)"
+          }
+        ],
+        "cssStates": [],
+        "methods": [],
+        "staticProperties": [],
+        "staticMethods": [],
+        "moduleExports": [],
+        "form": {
+          "associated": false,
+          "properties": [],
+          "methods": []
+        },
+        "native": {
+          "forwardedEvents": [],
+          "delegatedMethods": []
+        }
+      }
+    },
+    {
       "tag": "lr-box-plot",
       "family": "charts",
       "classModule": "src/components/charts/chart/box-plot.class.ts",
@@ -21827,6 +22023,206 @@
             "name": "--aspect-ratio",
             "deprecated": null,
             "hasDefault": false
+          }
+        ],
+        "cssStates": [],
+        "methods": [],
+        "staticProperties": [],
+        "staticMethods": [],
+        "moduleExports": [],
+        "form": {
+          "associated": false,
+          "properties": [],
+          "methods": []
+        },
+        "native": {
+          "forwardedEvents": [],
+          "delegatedMethods": []
+        }
+      }
+    },
+    {
+      "tag": "lr-category-bar",
+      "family": "data",
+      "classModule": "src/components/data/category-bar/category-bar.class.ts",
+      "registrationModule": "src/components/lr-category-bar.ts",
+      "rootIncluded": true,
+      "rootExclusion": null,
+      "optionalPeers": [],
+      "maturity": {
+        "status": "experimental",
+        "since": "unreleased",
+        "deprecated": null,
+        "profile": "new-component-experimental",
+        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "deprecations": []
+      },
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "accessibility": "automated",
+        "scale": "unmeasured",
+        "ledger": "scripts/fixtures/component-qualification.json"
+      },
+      "dependencies": {
+        "direct": [],
+        "transitive": [],
+        "ledger": "scripts/fixtures/component-integration.json"
+      },
+      "counterparts": [],
+      "surface": {
+        "attributes": [
+          {
+            "name": "label",
+            "property": "label",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "marker",
+            "property": "marker",
+            "type": "number | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "with-labels",
+            "property": "withLabels",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          }
+        ],
+        "properties": [
+          {
+            "name": "label",
+            "attribute": "label",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "marker",
+            "attribute": "marker",
+            "type": "number | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "values",
+            "attribute": null,
+            "type": "readonly number[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
+          {
+            "name": "variants",
+            "attribute": null,
+            "type": "readonly LyraVariant[] | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "withLabels",
+            "attribute": "with-labels",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          }
+        ],
+        "slots": [],
+        "events": [],
+        "parts": [
+          {
+            "name": "bar",
+            "deprecated": null
+          },
+          {
+            "name": "base",
+            "deprecated": null
+          },
+          {
+            "name": "description",
+            "deprecated": null
+          },
+          {
+            "name": "empty",
+            "deprecated": null
+          },
+          {
+            "name": "labels",
+            "deprecated": null
+          },
+          {
+            "name": "marker",
+            "deprecated": null
+          },
+          {
+            "name": "range",
+            "deprecated": null
+          },
+          {
+            "name": "range-label",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [
+          {
+            "name": "--lr-category-bar-marker-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text)"
+          },
+          {
+            "name": "--lr-category-bar-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-0-5rem)"
           }
         ],
         "cssStates": [],
@@ -127739,6 +128135,201 @@
       }
     },
     {
+      "tag": "lr-radial-bar",
+      "family": "data",
+      "classModule": "src/components/data/radial-bar/radial-bar.class.ts",
+      "registrationModule": "src/components/lr-radial-bar.ts",
+      "rootIncluded": true,
+      "rootExclusion": null,
+      "optionalPeers": [],
+      "maturity": {
+        "status": "experimental",
+        "since": "unreleased",
+        "deprecated": null,
+        "profile": "new-component-experimental",
+        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "deprecations": []
+      },
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "accessibility": "automated",
+        "scale": "unmeasured",
+        "ledger": "scripts/fixtures/component-qualification.json"
+      },
+      "dependencies": {
+        "direct": [],
+        "transitive": [],
+        "ledger": "scripts/fixtures/component-integration.json"
+      },
+      "counterparts": [],
+      "surface": {
+        "attributes": [
+          {
+            "name": "label",
+            "property": "label",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "max",
+            "property": "max",
+            "type": "number | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "with-legend",
+            "property": "withLegend",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          }
+        ],
+        "properties": [
+          {
+            "name": "label",
+            "attribute": "label",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "max",
+            "attribute": "max",
+            "type": "number | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
+            "name": "segments",
+            "attribute": null,
+            "type": "readonly LyraRadialBarSegment[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "[]"
+          },
+          {
+            "name": "withLegend",
+            "attribute": "with-legend",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          }
+        ],
+        "slots": [],
+        "events": [],
+        "parts": [
+          {
+            "name": "arc",
+            "deprecated": null
+          },
+          {
+            "name": "base",
+            "deprecated": null
+          },
+          {
+            "name": "chart",
+            "deprecated": null
+          },
+          {
+            "name": "empty",
+            "deprecated": null
+          },
+          {
+            "name": "legend",
+            "deprecated": null
+          },
+          {
+            "name": "legend-item",
+            "deprecated": null
+          },
+          {
+            "name": "legend-label",
+            "deprecated": null
+          },
+          {
+            "name": "legend-swatch",
+            "deprecated": null
+          },
+          {
+            "name": "track",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [
+          {
+            "name": "--lr-radial-bar-size",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-size-12rem)"
+          },
+          {
+            "name": "--lr-radial-bar-track-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-surface-raised)"
+          }
+        ],
+        "cssStates": [],
+        "methods": [],
+        "staticProperties": [],
+        "staticMethods": [],
+        "moduleExports": [],
+        "form": {
+          "associated": false,
+          "properties": [],
+          "methods": []
+        },
+        "native": {
+          "forwardedEvents": [],
+          "delegatedMethods": []
+        }
+      }
+    },
+    {
       "tag": "lr-radio",
       "family": "forms",
       "classModule": "src/components/forms/radio/radio.class.ts",
@@ -141851,6 +142442,15 @@
             "default": null
           },
           {
+            "name": "label",
+            "property": "label",
+            "type": "string | undefined",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": false
+          },
+          {
             "name": "locale",
             "property": "locale",
             "type": "string",
@@ -141910,6 +142510,15 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "[]"
+          },
+          {
+            "name": "label",
+            "attribute": "label",
+            "type": "string | undefined",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
           },
           {
             "name": "locale",

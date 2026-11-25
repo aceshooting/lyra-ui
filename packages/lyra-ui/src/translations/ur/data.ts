@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'نقشہ نہیں بنایا جا سکتا کیونکہ اس کی جیومیٹری درست نہیں ہے۔ طول بلد اور عرض بلد کے محددات والی کثیر الاضلاع خصوصیات فراہم کریں۔',
   calendarInputLimit: '{total} واقعات میں سے {count} دکھائے جا رہے ہیں۔ دیگر واقعات شامل کرنے کے لیے تاریخوں کی چھوٹی حد فراہم کریں۔',
   heatmapInputLimit: 'ان پٹ کی حد پوری ہونے کی وجہ سے حرارتی نقشے کی کچھ آرائشیں یا منتخب خانے چھوڑ دیے گئے ہیں۔',
+  radialBarSegment: '{label}: {max} میں سے {value}',
+  categoryBarRange: '{start} سے {end} تک',
+  categoryBarMarker: 'نشان: {value}، حد {start} سے {end} تک',
 };
 
 registerLyraLocale('ur', strings, { dir: 'rtl', name: 'اردو' });

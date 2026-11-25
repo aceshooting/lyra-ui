@@ -257,6 +257,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'Peta tidak dapat digambar karena geometrinya tidak valid. Berikan fitur poligon dengan koordinat bujur dan lintang.',
   calendarInputLimit: 'Menampilkan {count} dari {total} acara. Berikan rentang tanggal yang lebih kecil untuk menyertakan acara lain.',
   heatmapInputLimit: 'Sebagian hiasan peta panas atau sel yang dipilih dihilangkan karena batas masukan tercapai.',
+  radialBarSegment: '{label}: {value} dari {max}',
+  categoryBarRange: '{start} sampai {end}',
+  categoryBarMarker: 'Penanda: {value}, rentang {start} sampai {end}',
 };
 
 registerLyraLocale('id', strings);

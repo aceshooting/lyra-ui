@@ -36,7 +36,7 @@ additionally renders a static `[part="legend"]` key below the strip, so the colo
 mapping is readable without visiting each cell.
 
 A standard host `aria-label` names the internal list and wins by presence, including empty. With
-no host label, the generated category-count summary names it. When an
+no host label, a nonblank `label` names it, and otherwise the generated category-count summary does. When an
 `items` refresh occurs while a cell owns focus, its `id` remains the sole roving stop; removal
 clamps focus to the nearest survivor, or to the stable list base when no cells remain. Unfocused
 refreshes do not move focus. A queued Arrow/Home/End focus is bound to the current item-array
@@ -172,6 +172,8 @@ readonly color, readonly label? }`; `color`
   internal `id`. Both collection properties are cloned and frozen at assignment,
   bounded to the first 10,000 source entries, and require reassignment after changes; empty/blank
   ids are omitted and duplicates use the first valid entry, so identity is deterministic
+- `label?: string` (attribute `label`) — accessible name of the internal list. A host `aria-label`
+  wins; unset or blank keeps the generated category-count summary as the name
 - `withLegend: boolean = false` (attribute `with-legend`, reflected) — renders a static
   `[part="legend"]` key below the strip, one swatch + label row per `categories` entry, in array
   order. The key describes the _scheme_, not the current data: a category with no matching item

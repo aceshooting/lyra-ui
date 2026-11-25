@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'नकाशाची भूमिती अवैध असल्यामुळे तो रेखाटता येत नाही. रेखांश आणि अक्षांश निर्देशांकांसह बहुभुज वैशिष्ट्ये द्या.',
   calendarInputLimit: '{total} पैकी {count} कार्यक्रम दाखवले जात आहेत. इतर कार्यक्रम समाविष्ट करण्यासाठी तारखांची लहान श्रेणी द्या.',
   heatmapInputLimit: 'इनपुट मर्यादा गाठल्यामुळे हीटमॅपमधील काही सजावट किंवा निवडलेले सेल वगळले आहेत.',
+  radialBarSegment: '{label}: {value}/{max}',
+  categoryBarRange: '{start} ते {end}',
+  categoryBarMarker: 'चिन्हक: {value}, श्रेणी {start} ते {end}',
 };
 
 registerLyraLocale('mr', strings);

@@ -257,6 +257,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'A kò lè ya màpù náà nítorí pé geometry rẹ̀ kò bófin mu. Pèsè àwọn ẹ̀yà polygon pẹ̀lú àwọn ìṣọ̀kan longitude àti latitude.',
   calendarInputLimit: 'A ń fi ìṣẹ̀lẹ̀ {count} nínú {total} hàn. Pèsè àkókò ọjọ́ tó kéré sí i láti fi àwọn ìṣẹ̀lẹ̀ míì kún un.',
   heatmapInputLimit: 'A fi díẹ̀ lára àwọn ọ̀ṣọ́ àwòrán ooru tàbí àwọn sẹ́ẹ̀lì tí a yàn sílẹ̀ nítorí pé a ti dé ààlà ìwọlé.',
+  radialBarSegment: '{label}: {value} nínú {max}',
+  categoryBarRange: 'lati {start} si {end}',
+  categoryBarMarker: 'Àmì: {value}, ìwọ̀n lati {start} si {end}',
 };
 
 registerLyraLocale('yo', strings);

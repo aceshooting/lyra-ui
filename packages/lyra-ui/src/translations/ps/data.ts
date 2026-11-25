@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'نقشه نشي انځورېدلی ځکه چې جیومیټري یې ناسمه ده. څو‌ضلعي ځانګړتیاوې د اوږدوالي او عرض البلد همغږو سره ورکړئ.',
   calendarInputLimit: 'له {total} پېښو څخه {count} ښودل کېږي. د نورو پېښو د شاملولو لپاره د نېټو کوچنی واټن ورکړئ.',
   heatmapInputLimit: 'د ننوتو حد ته د رسېدو له امله د تودوخې نقشې ځینې سینګارونه یا ټاکل شوې حجرې پرېښودل شوي دي.',
+  radialBarSegment: '{label}: {value} د {max} څخه',
+  categoryBarRange: 'له {start} څخه تر {end} پورې',
+  categoryBarMarker: 'نښه: {value}، حد له {start} څخه تر {end} پورې',
 };
 
 registerLyraLocale('ps', strings, { dir: 'rtl', name: 'پښتو' });

@@ -20,7 +20,9 @@ const loadPolarArea = () => import('@aceshooting/lyra-ui/components/lr-polar-are
 const loadRadar = () => import('@aceshooting/lyra-ui/components/lr-radar-chart.js');
 const loadBar = () => import('@aceshooting/lyra-ui/components/lr-bar-chart.js');
 const loadBubble = () => import('@aceshooting/lyra-ui/components/lr-bubble-chart.js');
-const loadContextMeter = () => import('@aceshooting/lyra-ui/components/lr-context-meter.js');
+const loadBarList = () => import('@aceshooting/lyra-ui/components/lr-bar-list.js');
+const loadRadialBar = () => import('@aceshooting/lyra-ui/components/lr-radial-bar.js');
+const loadCategoryBar = () => import('@aceshooting/lyra-ui/components/lr-category-bar.js');
 const loadSequenceStrip = () => import('@aceshooting/lyra-ui/components/lr-sequence-strip.js');
 const loadChord = () => import('@aceshooting/lyra-ui/components/lr-chord.js');
 
@@ -46,18 +48,12 @@ const barProperties: Readonly<Record<string, LyraGenSchema>> = {
   scaleType: choice('linear', 'logarithmic'),
   withoutLegend: boolean,
 };
-const rankedProperties: Readonly<Record<string, LyraGenSchema>> = {
-  ...chartText,
-  labels: categories(50),
-  datasets: { ...array(series(50), 1), minItems: 1 } as LyraGenSchema,
-  xLabel: string(256),
-};
+const barListItem = object({ label: string(256), value: number, variant }, ['label', 'value']);
+const radialBarSegment = object({ label: string(256), value: number, max: quantity, variant }, ['label', 'value']);
 
 const horizontal = (props: Readonly<Record<string, JsonValue>>): Readonly<Record<string, unknown>> => ({ ...props, indexAxis: 'y' });
-const ranked = (props: Readonly<Record<string, JsonValue>>): Readonly<Record<string, unknown>> => ({ ...props, indexAxis: 'y', withoutLegend: true, grid: 'none' });
 
 const bubblePoint = object({ x: number, y: number, r: { type: 'number', minimum: 0, maximum: 100 }, label: string(256) }, ['x', 'y', 'r']);
-const segment = object({ label, value: quantity, tone: variant }, ['label', 'value']);
 const trackerCategory = object({ id: identity, color: choice(...trackerColors), label }, ['id', 'color']);
 const trackerItem = object({ id: identity, categoryId: identity, label: string(256), marker: boolean }, ['id', 'categoryId']);
 const chordEntity = object({ id: identity, label }, ['id', 'label']);
@@ -86,6 +82,17 @@ export const chartExtraRoles: Readonly<Record<string, LyraGenComponent>> = Objec
     load: loadPolarArea,
     documentation: documentation('lr-polar-area-chart'),
   },
+  'radial-bar': {
+    tag: 'lr-radial-bar',
+    properties: { label, segments: minItems(array(radialBarSegment, 10), 1), withLegend: boolean, max: quantity },
+    required: ['label', 'segments'],
+    accessibleName: { required: true, properties: ['label'] },
+    minimumBlockSize: '12rem',
+    useWhen: 'Show progress of up to 10 categories as concentric rings, each ring a share of a full circle (max, per segment or shared); not for parts of one total, use donut-chart.',
+    examples: [example('goals', 'radial-bar', { label: 'Quarterly goals', max: 100, withLegend: true, segments: [{ label: 'Revenue', value: 82, variant: 'success' }, { label: 'Signups', value: 64 }, { label: 'Churn target', value: 35, variant: 'warning' }] })],
+    load: loadRadialBar,
+    documentation: documentation('lr-radial-bar'),
+  },
   'radar-chart': {
     tag: 'lr-radar-chart',
     properties: { ...chartText, labels: categories(20), datasets: minItems(array(series(20, { fill: boolean }), 8), 1), min: number, max: number, withoutLegend: boolean },
@@ -111,17 +118,15 @@ export const chartExtraRoles: Readonly<Record<string, LyraGenComponent>> = Objec
     documentation: documentation('lr-bar-chart'),
   },
   'bar-list': {
-    tag: 'lr-bar-chart',
-    properties: rankedProperties,
-    required: ['label', 'labels', 'datasets'],
+    tag: 'lr-bar-list',
+    properties: { label, items: minItems(array(barListItem, 50), 1), max: quantity, sort: choice('descending', 'ascending', 'none') },
+    required: ['label', 'items'],
     accessibleName: { required: true, properties: ['label'] },
-    hostProperties: ['indexAxis', 'withoutLegend', 'grid'],
-    prepareProperties: ranked,
-    minimumBlockSize: '12rem',
-    useWhen: 'Rank at most 50 named items by one value as a compact list of horizontal bars; order labels from largest to smallest.',
-    examples: [example('pages', 'bar-list', { label: 'Top pages by visits', labels: ['/home', '/pricing', '/docs'], datasets: [{ label: 'Visits', data: [1840, 920, 610] }] })],
-    load: loadBar,
-    documentation: documentation('lr-bar-chart'),
+    minimumBlockSize: '8rem',
+    useWhen: 'Rank at most 50 named items by one value as a compact list of horizontal bars; sort defaults to largest first and max fixes a shared scale.',
+    examples: [example('pages', 'bar-list', { label: 'Top pages by visits', items: [{ label: '/home', value: 1840 }, { label: '/pricing', value: 920, variant: 'brand' }, { label: '/docs', value: 610 }], sort: 'descending' })],
+    load: loadBarList,
+    documentation: documentation('lr-bar-list'),
   },
   'bubble-chart': {
     tag: 'lr-bubble-chart',
@@ -135,21 +140,22 @@ export const chartExtraRoles: Readonly<Record<string, LyraGenComponent>> = Objec
     documentation: documentation('lr-bubble-chart'),
   },
   'category-bar': {
-    tag: 'lr-context-meter',
-    properties: { label, segments: minItems(array(segment, 12), 1), total: quantity, shape: choice('bar', 'ring'), withLegend: boolean, legendDisplay: choice('label', 'label-value', 'label-percent', 'label-value-percent') },
-    required: ['label', 'segments'],
+    tag: 'lr-category-bar',
+    properties: { label, values: minItems(array(quantity, 12), 1), variants: array(variant, 12), marker: quantity, withLabels: boolean },
+    required: ['label', 'values'],
     accessibleName: { required: true, properties: ['label'] },
-    useWhen: 'Show how a capacity or total divides into up to 12 labelled categories as one segmented bar (or ring); total defaults to the sum.',
-    examples: [example('storage', 'category-bar', { label: 'Storage by type', total: 500, segments: [{ label: 'Media', value: 210, tone: 'brand' }, { label: 'Backups', value: 120, tone: 'warning' }, { label: 'Logs', value: 40, tone: 'neutral' }], withLegend: true, legendDisplay: 'label-value' })],
-    load: loadContextMeter,
-    documentation: documentation('lr-context-meter'),
+    useWhen: 'Show consecutive ranges of one scale (for example score bands) as a segmented bar, each range as wide as its value, with an optional marker pointing at a value on that scale.',
+    examples: [example('bands', 'category-bar', { label: 'Risk score bands', values: [40, 30, 30], variants: ['success', 'warning', 'danger'], marker: 62, withLabels: true })],
+    load: loadCategoryBar,
+    documentation: documentation('lr-category-bar'),
   },
   tracker: {
     tag: 'lr-sequence-strip',
-    properties: { categories: minItems(array(trackerCategory, 12), 1), items: minItems(array(trackerItem, 200), 1), withLegend: boolean, markerLabel: string(256) },
-    required: ['categories', 'items'],
+    properties: { label, categories: minItems(array(trackerCategory, 12), 1), items: minItems(array(trackerItem, 200), 1), withLegend: boolean, markerLabel: string(256) },
+    required: ['label', 'categories', 'items'],
+    accessibleName: { required: true, properties: ['label'] },
     useWhen: 'Show the status of up to 200 consecutive periods or checks as a strip of coloured cells, such as daily uptime; each category picks a theme colour token.',
-    examples: [example('uptime', 'tracker', { categories: [{ id: 'up', color: 'var(--lr-color-success)', label: 'Operational' }, { id: 'down', color: 'var(--lr-color-danger)', label: 'Outage' }], items: [{ id: 'd1', categoryId: 'up', label: 'Nov 20' }, { id: 'd2', categoryId: 'down', label: 'Nov 21' }, { id: 'd3', categoryId: 'up', label: 'Nov 22' }], withLegend: true })],
+    examples: [example('uptime', 'tracker', { label: 'Daily uptime', categories: [{ id: 'up', color: 'var(--lr-color-success)', label: 'Operational' }, { id: 'down', color: 'var(--lr-color-danger)', label: 'Outage' }], items: [{ id: 'd1', categoryId: 'up', label: 'Nov 20' }, { id: 'd2', categoryId: 'down', label: 'Nov 21' }, { id: 'd3', categoryId: 'up', label: 'Nov 22' }], withLegend: true })],
     load: loadSequenceStrip,
     documentation: documentation('lr-sequence-strip'),
   },

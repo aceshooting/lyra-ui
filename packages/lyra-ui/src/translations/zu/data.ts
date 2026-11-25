@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'Imephu ayikwazi ukudwetshwa ngoba i-geometry yayo ayisebenzi. Nikeza izakhi zepholigoni ezinezixhumanisi zobude nobubanzi.',
   calendarInputLimit: 'Kuboniswa imicimbi engu-{count} kwengu-{total}. Nikeza ibanga lezinsuku elincane ukuze kufakwe eminye imicimbi.',
   heatmapInputLimit: 'Eminye imihlobiso yemephu yokushisa noma amaseli akhethiwe ashiyiwe ngoba kufinyelelwe emkhawulweni wokufaka.',
+  radialBarSegment: '{label}: {value} kokungu-{max}',
+  categoryBarRange: 'kusukela ku-{start} kuya ku-{end}',
+  categoryBarMarker: 'Umaka: {value}, ibanga kusukela ku-{start} kuya ku-{end}',
 };
 
 registerLyraLocale('zu', strings);

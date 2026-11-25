@@ -289,6 +289,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'Ní féidir an léarscáil a tharraingt toisc go bhfuil a geoiméadracht neamhbhailí. Cuir gnéithe polagain ar fáil le comhordanáidí domhanfhaid agus domhanleithid.',
   calendarInputLimit: 'Imeachtaí á dtaispeáint: {count} as {total}. Cuir raon dátaí níos lú ar fáil chun imeachtaí eile a áireamh.',
   heatmapInputLimit: 'Fágadh roinnt maisiúchán teasmhapa nó ceall roghnaithe ar lár mar gur sroicheadh teorainn ionchuir.',
+  radialBarSegment: '{label}: {value} as {max}',
+  categoryBarRange: '{start} go {end}',
+  categoryBarMarker: 'Marcóir: {value}, raon {start} go {end}',
 };
 
 registerLyraLocale('ga', strings);

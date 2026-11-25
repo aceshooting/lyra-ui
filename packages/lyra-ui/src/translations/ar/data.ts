@@ -297,6 +297,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'لا يمكن رسم الخريطة لأن هندستها غير صالحة. قدّم عناصر مضلعة بإحداثيات خط الطول وخط العرض.',
   calendarInputLimit: 'عرض {count} من أصل {total} حدثًا. حدّد نطاق تواريخ أصغر لتضمين أحداث أخرى.',
   heatmapInputLimit: 'حُذفت بعض العناصر التوضيحية للخريطة الحرارية أو الخلايا المحددة لبلوغ حد الإدخال.',
+  radialBarSegment: '{label}: {value} من {max}',
+  categoryBarRange: 'من {start} إلى {end}',
+  categoryBarMarker: 'علامة: {value}، النطاق من {start} إلى {end}',
 };
 
 registerLyraLocale('ar', strings, { dir: 'rtl', name: 'العربية' });

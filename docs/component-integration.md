@@ -9,7 +9,7 @@ is an explicit evidence gap, not a zero-byte claim. Each tag’s stable registra
 Raw byte counts and bundle SHA-256 digests are in
 `packages/lyra-ui/scripts/fixtures/component-integration.json`, keyed by tag, not repeated below.
 
-Coverage: **321 tags**, **321 measured gzip entries**, **0 not measured**.
+Coverage: **324 tags**, **324 measured gzip entries**, **0 not measured**.
 
 Dependency meaning: direct edges are tags rendered by this component or registration entries it
 imports directly. Transitive edges are other registrations reachable through those direct edges.
@@ -42,6 +42,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-background-runs"></a>`lr-background-runs` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-background-runs.js';` | none | none | none | 39.1 KiB |
 | <a id="lr-badge"></a>`lr-badge` | overlays | `import '@aceshooting/lyra-ui/components/lr-badge.js';` | none | none | none | 27.8 KiB |
 | <a id="lr-bar-chart"></a>`lr-bar-chart` | charts | `import '@aceshooting/lyra-ui/components/lr-bar-chart.js';` | `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` | `lr-chart`, `lr-skeleton` | none | 97.6 KiB |
+| <a id="lr-bar-list"></a>`lr-bar-list` | data | `import '@aceshooting/lyra-ui/components/lr-bar-list.js';` | none | none | none | 30.2 KiB |
 | <a id="lr-box-plot"></a>`lr-box-plot` | charts | `import '@aceshooting/lyra-ui/components/lr-box-plot.js';` | `@sgratzl/chartjs-chart-boxplot`, `chart.js` | `lr-skeleton` | none | 54.7 KiB |
 | <a id="lr-branch-picker"></a>`lr-branch-picker` | conversation | `import '@aceshooting/lyra-ui/components/lr-branch-picker.js';` | none | `lr-live-region` | none | 31.2 KiB |
 | <a id="lr-breadcrumb"></a>`lr-breadcrumb` | layout | `import '@aceshooting/lyra-ui/components/lr-breadcrumb.js';` | none | none | none | 29.1 KiB |
@@ -57,6 +58,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-card"></a>`lr-card` | layout | `import '@aceshooting/lyra-ui/components/lr-card.js';` | none | none | none | 35.5 KiB |
 | <a id="lr-carousel"></a>`lr-carousel` | layout | `import '@aceshooting/lyra-ui/components/lr-carousel.js';` | none | none | none | 43.9 KiB |
 | <a id="lr-carousel-item"></a>`lr-carousel-item` | layout | `import '@aceshooting/lyra-ui/components/lr-carousel-item.js';` | none | none | none | 24 KiB |
+| <a id="lr-category-bar"></a>`lr-category-bar` | data | `import '@aceshooting/lyra-ui/components/lr-category-bar.js';` | none | none | none | 31.7 KiB |
 | <a id="lr-change-review"></a>`lr-change-review` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-change-review.js';` | `shiki` | `lr-diff-view` | none | 50.4 KiB |
 | <a id="lr-chart"></a>`lr-chart` | charts | `import '@aceshooting/lyra-ui/components/lr-chart.js';` | `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` | `lr-skeleton` | none | 97.6 KiB |
 | <a id="lr-chart-3d"></a>`lr-chart-3d` | charts | `import '@aceshooting/lyra-ui/components/lr-chart-3d.js';` | `@aceshooting/lyra-3d` | none | none | 45.3 KiB |
@@ -235,6 +237,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-push-to-talk"></a>`lr-push-to-talk` | conversation | `import '@aceshooting/lyra-ui/components/lr-push-to-talk.js';` | none | `lr-live-region` | none | 34.3 KiB |
 | <a id="lr-qr-code"></a>`lr-qr-code` | media | `import '@aceshooting/lyra-ui/components/lr-qr-code.js';` | `qrcode` | none | none | 35.1 KiB |
 | <a id="lr-radar-chart"></a>`lr-radar-chart` | charts | `import '@aceshooting/lyra-ui/components/lr-radar-chart.js';` | `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` | `lr-chart`, `lr-skeleton` | none | 97.6 KiB |
+| <a id="lr-radial-bar"></a>`lr-radial-bar` | data | `import '@aceshooting/lyra-ui/components/lr-radial-bar.js';` | none | none | none | 31.8 KiB |
 | <a id="lr-radio"></a>`lr-radio` | forms | `import '@aceshooting/lyra-ui/components/lr-radio.js';` | none | none | none | 47.8 KiB |
 | <a id="lr-radio-button"></a>`lr-radio-button` | forms | `import '@aceshooting/lyra-ui/components/lr-radio-button.js';` | none | none | none | 47.5 KiB |
 | <a id="lr-radio-group"></a>`lr-radio-group` | forms | `import '@aceshooting/lyra-ui/components/lr-radio-group.js';` | none | none | none | 46.9 KiB |
@@ -263,7 +266,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-select"></a>`lr-select` | forms | `import '@aceshooting/lyra-ui/components/lr-select.js';` | none | `lr-option` | none | 86.8 KiB |
 | <a id="lr-selection-toolbar"></a>`lr-selection-toolbar` | conversation | `import '@aceshooting/lyra-ui/components/lr-selection-toolbar.js';` | none | `lr-button` | none | 65.7 KiB |
 | <a id="lr-sequence-playback"></a>`lr-sequence-playback` | media | `import '@aceshooting/lyra-ui/components/lr-sequence-playback.js';` | none | none | none | 28.8 KiB |
-| <a id="lr-sequence-strip"></a>`lr-sequence-strip` | data | `import '@aceshooting/lyra-ui/components/lr-sequence-strip.js';` | none | none | none | 46 KiB |
+| <a id="lr-sequence-strip"></a>`lr-sequence-strip` | data | `import '@aceshooting/lyra-ui/components/lr-sequence-strip.js';` | none | none | none | 46.1 KiB |
 | <a id="lr-signature-pad"></a>`lr-signature-pad` | forms | `import '@aceshooting/lyra-ui/components/lr-signature-pad.js';` | none | none | none | 44.2 KiB |
 | <a id="lr-skeleton"></a>`lr-skeleton` | overlays | `import '@aceshooting/lyra-ui/components/lr-skeleton.js';` | none | none | none | 29.2 KiB |
 | <a id="lr-slider"></a>`lr-slider` | forms | `import '@aceshooting/lyra-ui/components/lr-slider.js';` | none | none | none | 47.9 KiB |

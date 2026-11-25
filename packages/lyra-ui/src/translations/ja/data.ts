@@ -257,6 +257,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'ジオメトリが無効なため、地図を描画できません。経度と緯度の座標を持つポリゴンフィーチャを指定してください。',
   calendarInputLimit: '{total}件の予定のうち{count}件を表示しています。他の予定を含めるには、より短い日付範囲を指定してください。',
   heatmapInputLimit: '入力上限に達したため、ヒートマップの装飾または選択されたセルの一部が省略されました。',
+  radialBarSegment: '{label}：{max} 中 {value}',
+  categoryBarRange: '{start} から {end}',
+  categoryBarMarker: 'マーカー：{value}、範囲 {start} から {end}',
 };
 
 registerLyraLocale('ja', strings);

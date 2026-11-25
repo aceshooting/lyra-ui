@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'نقشہ نہیں بݨ سکدا کیوں جے اس دی جیومیٹری غلط اے۔ طول بلد تے عرض بلد دے محدد والیاں کثیر الاضلاع خصوصیتاں دیو۔',
   calendarInputLimit: '{total} ایونٹاں وچوں {count} وکھائے جا رہے نیں۔ ہور ایونٹ شامل کرن لئی تاریخاں دا چھوٹا دائرہ دیو۔',
   heatmapInputLimit: 'اِن پُٹ دی حد پوری ہون کارن ہیٹ میپ دیاں کجھ سجاوٹاں یا چُنے ہوئے خانے چھڈ دتے گئے نیں۔',
+  radialBarSegment: '{label}: {max} وچوں {value}',
+  categoryBarRange: '{start} توں {end} تک',
+  categoryBarMarker: 'نشان: {value}، حد {start} توں {end} تک',
 };
 
 registerLyraLocale('pnb', strings, { dir: 'rtl', name: 'پنجابی' });

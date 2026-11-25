@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'জ্যামিতি অবৈধ হওয়ায় মানচিত্রটি আঁকা যাচ্ছে না। দ্রাঘিমাংশ ও অক্ষাংশের স্থানাঙ্কসহ বহুভুজ ফিচার দিন।',
   calendarInputLimit: '{total}টি ইভেন্টের মধ্যে {count}টি দেখানো হচ্ছে। অন্য ইভেন্ট অন্তর্ভুক্ত করতে আরও ছোট তারিখের পরিসর দিন।',
   heatmapInputLimit: 'ইনপুটের সীমা পূর্ণ হওয়ায় হিটম্যাপের কিছু অলংকরণ বা নির্বাচিত ঘর বাদ দেওয়া হয়েছে।',
+  radialBarSegment: '{label}: মোট {max}-এর মধ্যে {value}',
+  categoryBarRange: '{start} থেকে {end}',
+  categoryBarMarker: 'চিহ্নিতকারী: {value}, পরিসর {start} থেকে {end}',
 };
 
 registerLyraLocale('bn', strings);

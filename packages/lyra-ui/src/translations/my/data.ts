@@ -257,6 +257,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'ဂျီအိုမက်ထရီ မမှန်ကန်သောကြောင့် မြေပုံကို ဆွဲ၍မရပါ။ လောင်ဂျီတွဒ်နှင့် လက်တီတွဒ် ကိုဩဒိနိတ်များပါသော ပိုလီဂွန် အင်္ဂါရပ်များကို ပေးပါ။',
   calendarInputLimit: 'အစီအစဉ် {total} ခုအနက် {count} ခုကို ပြသနေသည်။ အခြားအစီအစဉ်များကို ထည့်သွင်းရန် ပိုတိုသော ရက်စွဲအပိုင်းအခြားကို ပေးပါ။',
   heatmapInputLimit: 'ထည့်သွင်းမှုကန့်သတ်ချက်သို့ ရောက်ရှိသွားသောကြောင့် အပူမြေပုံ၏ အလှဆင်ချက်အချို့ သို့မဟုတ် ရွေးထားသော ဆဲလ်အချို့ကို ချန်လှပ်ထားသည်။',
+  radialBarSegment: '{label} — စုစုပေါင်း {max} အနက် {value}',
+  categoryBarRange: '{start} မှ {end} အထိ',
+  categoryBarMarker: 'အမှတ်အသား — {value}၊ အပိုင်းအခြား {start} မှ {end} အထိ',
 };
 
 registerLyraLocale('my', strings);

@@ -273,6 +273,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'Harta nu poate fi desenată deoarece geometria ei nu este validă. Furnizați entități poligonale cu coordonate de longitudine și latitudine.',
   calendarInputLimit: 'Se afișează {count} din {total} evenimente. Furnizați un interval de date mai mic pentru a include alte evenimente.',
   heatmapInputLimit: 'Unele decorațiuni ale hărții termice sau celule selectate au fost omise deoarece s-a atins o limită de intrare.',
+  radialBarSegment: '{label}: {value} din {max}',
+  categoryBarRange: 'de la {start} la {end}',
+  categoryBarMarker: 'Marcator: {value}, interval de la {start} la {end}',
 };
 
 registerLyraLocale('ro', strings);

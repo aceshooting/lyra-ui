@@ -132,7 +132,7 @@ The entry points, then:
   or future exports. Prefer the owning entry for that component's complete contract and smaller
   bundles.
 
-- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 306
+- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 309
   root-included tags — everything **except** the 15 inventory-designated optional-peer-family tags:
   `lr-chart` and its 8 typed subclasses (`lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`,
   `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`,
@@ -5962,6 +5962,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-background-runs': LyraBackgroundRunsReactProps;
   'lr-badge': LyraBadgeReactProps;
   'lr-bar-chart': LyraBarChartReactProps;
+  'lr-bar-list': LyraBarListReactProps;
   'lr-box-plot': LyraBoxPlotReactProps;
   'lr-branch-picker': LyraBranchPickerReactProps;
   'lr-breadcrumb': LyraBreadcrumbReactProps;
@@ -5977,6 +5978,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-card': LyraCardReactProps;
   'lr-carousel': LyraCarouselReactProps;
   'lr-carousel-item': LyraCarouselItemReactProps;
+  'lr-category-bar': LyraCategoryBarReactProps;
   'lr-change-review': LyraChangeReviewReactProps;
   'lr-chart': LyraChartReactProps;
   'lr-chart-3d': LyraChart3dReactProps;
@@ -6155,6 +6157,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-push-to-talk': LyraPushToTalkReactProps;
   'lr-qr-code': LyraQrCodeReactProps;
   'lr-radar-chart': LyraRadarChartReactProps;
+  'lr-radial-bar': LyraRadialBarReactProps;
   'lr-radio': LyraRadioReactProps;
   'lr-radio-button': LyraRadioButtonReactProps;
   'lr-radio-group': LyraRadioGroupReactProps;
@@ -6414,6 +6417,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-background-runs': LyraComponentTypeMap['lr-background-runs']['element'];
   'lr-badge': LyraComponentTypeMap['lr-badge']['element'];
   'lr-bar-chart': LyraComponentTypeMap['lr-bar-chart']['element'];
+  'lr-bar-list': LyraComponentTypeMap['lr-bar-list']['element'];
   'lr-box-plot': LyraComponentTypeMap['lr-box-plot']['element'];
   'lr-branch-picker': LyraComponentTypeMap['lr-branch-picker']['element'];
   'lr-breadcrumb': LyraComponentTypeMap['lr-breadcrumb']['element'];
@@ -6429,6 +6433,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-card': LyraComponentTypeMap['lr-card']['element'];
   'lr-carousel': LyraComponentTypeMap['lr-carousel']['element'];
   'lr-carousel-item': LyraComponentTypeMap['lr-carousel-item']['element'];
+  'lr-category-bar': LyraComponentTypeMap['lr-category-bar']['element'];
   'lr-change-review': LyraComponentTypeMap['lr-change-review']['element'];
   'lr-chart': LyraComponentTypeMap['lr-chart']['element'];
   'lr-chart-3d': LyraComponentTypeMap['lr-chart-3d']['element'];
@@ -6607,6 +6612,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-push-to-talk': LyraComponentTypeMap['lr-push-to-talk']['element'];
   'lr-qr-code': LyraComponentTypeMap['lr-qr-code']['element'];
   'lr-radar-chart': LyraComponentTypeMap['lr-radar-chart']['element'];
+  'lr-radial-bar': LyraComponentTypeMap['lr-radial-bar']['element'];
   'lr-radio': LyraComponentTypeMap['lr-radio']['element'];
   'lr-radio-button': LyraComponentTypeMap['lr-radio-button']['element'];
   'lr-radio-group': LyraComponentTypeMap['lr-radio-group']['element'];
@@ -6737,6 +6743,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-background-runs': LyraBackgroundRunsSvelteProps;
   'lr-badge': LyraBadgeSvelteProps;
   'lr-bar-chart': LyraBarChartSvelteProps;
+  'lr-bar-list': LyraBarListSvelteProps;
   'lr-box-plot': LyraBoxPlotSvelteProps;
   'lr-branch-picker': LyraBranchPickerSvelteProps;
   'lr-breadcrumb': LyraBreadcrumbSvelteProps;
@@ -6752,6 +6759,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-card': LyraCardSvelteProps;
   'lr-carousel': LyraCarouselSvelteProps;
   'lr-carousel-item': LyraCarouselItemSvelteProps;
+  'lr-category-bar': LyraCategoryBarSvelteProps;
   'lr-change-review': LyraChangeReviewSvelteProps;
   'lr-chart': LyraChartSvelteProps;
   'lr-chart-3d': LyraChart3dSvelteProps;
@@ -6930,6 +6938,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-push-to-talk': LyraPushToTalkSvelteProps;
   'lr-qr-code': LyraQrCodeSvelteProps;
   'lr-radar-chart': LyraRadarChartSvelteProps;
+  'lr-radial-bar': LyraRadialBarSvelteProps;
   'lr-radio': LyraRadioSvelteProps;
   'lr-radio-button': LyraRadioButtonSvelteProps;
   'lr-radio-group': LyraRadioGroupSvelteProps;
@@ -7219,6 +7228,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-background-runs': LyraBackgroundRunsVueProps;
   'lr-badge': LyraBadgeVueProps;
   'lr-bar-chart': LyraBarChartVueProps;
+  'lr-bar-list': LyraBarListVueProps;
   'lr-box-plot': LyraBoxPlotVueProps;
   'lr-branch-picker': LyraBranchPickerVueProps;
   'lr-breadcrumb': LyraBreadcrumbVueProps;
@@ -7234,6 +7244,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-card': LyraCardVueProps;
   'lr-carousel': LyraCarouselVueProps;
   'lr-carousel-item': LyraCarouselItemVueProps;
+  'lr-category-bar': LyraCategoryBarVueProps;
   'lr-change-review': LyraChangeReviewVueProps;
   'lr-chart': LyraChartVueProps;
   'lr-chart-3d': LyraChart3dVueProps;
@@ -7412,6 +7423,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-push-to-talk': LyraPushToTalkVueProps;
   'lr-qr-code': LyraQrCodeVueProps;
   'lr-radar-chart': LyraRadarChartVueProps;
+  'lr-radial-bar': LyraRadialBarVueProps;
   'lr-radio': LyraRadioVueProps;
   'lr-radio-button': LyraRadioButtonVueProps;
   'lr-radio-group': LyraRadioGroupVueProps;

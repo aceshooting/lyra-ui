@@ -257,6 +257,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'ไม่สามารถวาดแผนที่ได้เนื่องจากรูปทรงเรขาคณิตไม่ถูกต้อง โปรดระบุฟีเจอร์รูปหลายเหลี่ยมที่มีพิกัดลองจิจูดและละติจูด',
   calendarInputLimit: 'กำลังแสดง {count} จาก {total} เหตุการณ์ โปรดระบุช่วงวันที่ที่สั้นลงเพื่อรวมเหตุการณ์อื่น',
   heatmapInputLimit: 'ละส่วนตกแต่งแผนที่ความร้อนหรือเซลล์ที่เลือกบางส่วนไว้เนื่องจากถึงขีดจำกัดข้อมูลนำเข้า',
+  radialBarSegment: '{label}: {value} จาก {max}',
+  categoryBarRange: '{start} ถึง {end}',
+  categoryBarMarker: 'เครื่องหมาย: {value}, ช่วง {start} ถึง {end}',
 };
 
 registerLyraLocale('th', strings);

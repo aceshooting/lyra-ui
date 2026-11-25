@@ -281,6 +281,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'Мапу неможливо намалювати, оскільки її геометрія некоректна. Надайте полігональні об’єкти з координатами довготи й широти.',
   calendarInputLimit: 'Показано {count} із {total} подій. Надайте менший діапазон дат, щоб включити інші події.',
   heatmapInputLimit: 'Частину оформлення теплової карти або вибраних клітинок пропущено через досягнення обмеження на вхідні дані.',
+  radialBarSegment: '{label}: {value} із {max}',
+  categoryBarRange: 'від {start} до {end}',
+  categoryBarMarker: 'Позначка: {value}, діапазон від {start} до {end}',
 };
 
 registerLyraLocale('uk', strings);

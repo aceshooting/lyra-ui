@@ -1,4 +1,6 @@
+export * from '../lr-bar-list.js';
 export * from '../lr-calendar.js';
+export * from '../lr-category-bar.js';
 export * from '../lr-chord.js';
 export * from '../lr-choropleth.js';
 export * from '../lr-context-meter.js';
@@ -17,6 +19,7 @@ export * from '../lr-graph-query-builder.js';
 export * from '../lr-heatmap.js';
 export * from '../lr-pagination.js';
 export * from '../lr-condition-builder.js';
+export * from '../lr-radial-bar.js';
 export * from '../lr-sankey.js';
 export * from '../lr-sequence-strip.js';
 export * from '../lr-sparkline.js';

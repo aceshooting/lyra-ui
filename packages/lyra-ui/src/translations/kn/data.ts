@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'ನಕ್ಷೆಯ ಜ್ಯಾಮಿತಿ ಅಮಾನ್ಯವಾಗಿರುವುದರಿಂದ ಅದನ್ನು ಚಿತ್ರಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ. ರೇಖಾಂಶ ಮತ್ತು ಅಕ್ಷಾಂಶ ನಿರ್ದೇಶಾಂಕಗಳಿರುವ ಬಹುಭುಜಾಕೃತಿ ಫೀಚರ್‌ಗಳನ್ನು ನೀಡಿ.',
   calendarInputLimit: '{total} ಈವೆಂಟ್‌ಗಳಲ್ಲಿ {count} ಈವೆಂಟ್‌ಗಳನ್ನು ತೋರಿಸಲಾಗುತ್ತಿದೆ. ಇತರ ಈವೆಂಟ್‌ಗಳನ್ನು ಸೇರಿಸಲು ಚಿಕ್ಕ ದಿನಾಂಕ ವ್ಯಾಪ್ತಿಯನ್ನು ನೀಡಿ.',
   heatmapInputLimit: 'ಇನ್‌ಪುಟ್ ಮಿತಿ ತಲುಪಿದ್ದರಿಂದ ಹೀಟ್‌ಮ್ಯಾಪ್‌ನ ಕೆಲವು ಅಲಂಕಾರಗಳು ಅಥವಾ ಆಯ್ಕೆಮಾಡಿದ ಕೋಶಗಳನ್ನು ಬಿಡಲಾಗಿದೆ.',
+  radialBarSegment: '{label}: {max}ರಲ್ಲಿ {value}',
+  categoryBarRange: '{start} ನಿಂದ {end} ವರೆಗೆ',
+  categoryBarMarker: 'ಗುರುತು: {value}, ವ್ಯಾಪ್ತಿ {start} ನಿಂದ {end} ವರೆಗೆ',
 };
 
 registerLyraLocale('kn', strings);

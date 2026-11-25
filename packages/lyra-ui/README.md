@@ -27,7 +27,7 @@
 library for accessible forms, dashboards, charts, data visualization, and AI chat/agent interfaces.
 Built with [Lit](https://lit.dev), it works with Lit, React, Vue, Angular, Svelte, and plain JavaScript.
 It is a practical open-source alternative to [Shoelace](https://shoelace.style/) and
-[Web Awesome](https://webawesome.com/), with 321 custom elements, native custom-element APIs,
+[Web Awesome](https://webawesome.com/), with 324 custom elements, native custom-element APIs,
 tree-shakeable, granular per-component imports, its own `--lr-*` design tokens, built-in localization and RTL support,
 and no runtime dependency on either project.
 
@@ -157,7 +157,7 @@ import "@aceshooting/lyra-ui/components/lr-option.js";
 - **Family entries** (`@aceshooting/lyra-ui/components/forms`, likewise `overlays`, `agent-tools`, `charts`,
   `conversation`, `data`, `layout`, `media`, `retrieval`, `utility`, `viewers`) register every tag in the family;
   they are side-effectful and cannot be tree-shaken, so prefer granular paths.
-- **Everything:** `import "@aceshooting/lyra-ui/all.js"` registers 306 tags — every component **except** the 15 optional-peer
+- **Everything:** `import "@aceshooting/lyra-ui/all.js"` registers 309 tags — every component **except** the 15 optional-peer
   tags (`<lr-chart>` and typed subclasses, `<lr-box-plot>`, `<lr-histogram>`, `<lr-map>`, `<lr-graph>`,
   `<lr-knowledge-graph-explorer>`, `<lr-geojson-viewer>`), which need their own subpath import.
   `<lr-flag>` with `country`/`language` also needs `@aceshooting/lyra-ui/components/media/flag/flag-peer.js` once.
@@ -343,7 +343,7 @@ A per-tag entry can register several elements (`components/lr-table.js` also def
 
 ## Components
 
-All 321 tags appear below: the table lists components mirroring a Web Awesome or Shoelace tag, the lists after it the
+All 324 tags appear below: the table lists components mirroring a Web Awesome or Shoelace tag, the lists after it the
 original ones. Purpose and import path: [`llms/index.md`](./llms/index.md); full APIs: `llms/components/<tag>.md`
 and the [live docs](https://aceshooting.github.io/lyra-ui/).
 
@@ -428,7 +428,7 @@ and the [live docs](https://aceshooting.github.io/lyra-ui/).
 **Original components, by area:**
 - **Form controls, toasts, sparkline, and flags:** `<lr-currency-picker>`, `<lr-country-picker>`, `<lr-time-zone-picker>`, `<lr-unit-picker>`, `<lr-signature-pad>`, `<lr-phone-input>`, `<lr-native-time-input>`, `<lr-toggle>`, `<lr-toggle-group>`, `<lr-flag>`, `<lr-locale-picker>`.
 - **Additional media and interaction primitives:** `<lr-avatar-group>`, `<lr-timeline>`, `<lr-timeline-item>`, `<lr-tour>`, `<lr-help>`.
-- **Dashboard atoms:** `<lr-empty>`, `<lr-stat>`, `<lr-table>`, `<lr-gauge>`, `<lr-export-button>`, `<lr-multi-split>`, `<lr-widget>`, `<lr-word-cloud>`.
+- **Dashboard atoms:** `<lr-empty>`, `<lr-stat>`, `<lr-table>`, `<lr-gauge>`, `<lr-export-button>`, `<lr-multi-split>`, `<lr-widget>`, `<lr-word-cloud>`, `<lr-bar-list>`, `<lr-radial-bar>`, `<lr-category-bar>`.
 - **Part-to-whole, flow, and geographic charts:** `<lr-treemap>`, `<lr-sankey>`, `<lr-chord>`, `<lr-choropleth>`.
 - **Temporal & graph:** `<lr-time-range>`, `<lr-sequence-playback>`, `<lr-heatmap>`, `<lr-funnel>`, `<lr-sequence-strip>`, `<lr-graph>`.
 - **Flow canvas:** `<lr-flow-canvas>`, `<lr-flow-node>`, `<lr-flow-minimap>`, `<lr-flow-controls>`, `<lr-node-palette>`, `<lr-flow-run-status>`.

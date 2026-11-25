@@ -2,7 +2,7 @@
 
 # Component index
 
-321 lyra-ui custom elements plus 2 companion-package elements (`lr-docx-editor` from `@aceshooting/lyra-docs`, `lr-gen-view` from `@aceshooting/lyra-gen`), grouped by the source family they live in.
+324 lyra-ui custom elements plus 2 companion-package elements (`lr-docx-editor` from `@aceshooting/lyra-docs`, `lr-gen-view` from `@aceshooting/lyra-gen`), grouped by the source family they live in.
 
 **Reading one component.** Its reference file path is derived from the tag — no search needed:
 `llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`): import path, optional peers,
@@ -73,7 +73,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-unit-picker` · lr-unit-picker.js · `experimental` since `25.5.0` · ~122 KiB gzip — a form-associated measurement-unit identifier selector.
 - `lr-signature-pad` · lr-signature-pad.js · `experimental` since `26.0.0` · ~44 KiB gzip — a form control that captures a drawn signature with a pointer, touch or the keyboard, and submits it as a PNG data URL.
 
-## Data display, dashboards & flow canvas — `components/data/` (30)
+## Data display, dashboards & flow canvas — `components/data/` (33)
 
 - `lr-sparkline` · lr-sparkline.js · `stable` since `4.0.0` · ~32 KiB gzip — a zero-dependency inline SVG trend chart.
 - `lr-stat` · lr-stat.js · `stable` since `4.0.0` · ~37 KiB gzip — a KPI/stat card.
@@ -105,6 +105,9 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-sankey` · lr-sankey.js · `experimental` since `32.0.0` · ~49 KiB gzip — A peer-free SVG Sankey chart for weighted flows across stages.
 - `lr-chord` · lr-chord.js · `experimental` since `32.0.0` · ~48 KiB gzip — A peer-free SVG chord chart for symmetric co-occurrence data.
 - `lr-choropleth` · lr-choropleth.js · `experimental` since `32.0.0` · ~46 KiB gzip — A peer-free SVG choropleth for caller-supplied GeoJSON or TopoJSON.
+- `lr-bar-list` · lr-bar-list.js · `experimental` since `unreleased` · ~30 KiB gzip — a ranked list of horizontal bars rendered as plain DOM, each row carrying its real label over the bar and its formatted value at the...
+- `lr-radial-bar` · lr-radial-bar.js · `experimental` since `unreleased` · ~32 KiB gzip — concentric progress arcs, one ring per category, drawn as SVG from design tokens and read as a plain list.
+- `lr-category-bar` · lr-category-bar.js · `experimental` since `unreleased` · ~32 KiB gzip — one horizontal bar split into consecutive threshold ranges, with an optional marker pointing at a value on the same scale.
 
 ## Layout, navigation & structure — `components/layout/` (41)
 

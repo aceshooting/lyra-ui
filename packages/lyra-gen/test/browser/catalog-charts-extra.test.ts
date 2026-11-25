@@ -14,10 +14,11 @@ const scenarios: Readonly<Record<string, LyraGenNode>> = {
   'radial-chart': { id: 'subject', type: 'radial-chart', props: { label: 'Alerts by severity', labels: ['Critical', 'High', 'Medium', 'Low'], datasets: [{ label: 'Alerts', data: [3, 9, 14, 21] }] } },
   'radar-chart': { id: 'subject', type: 'radar-chart', props: { label: 'Vendor comparison', labels: ['Price', 'Quality', 'Speed', 'Support'], datasets: [{ label: 'Vendor A', data: [3, 4, 5, 2], fill: true }, { label: 'Vendor B', data: [4, 3, 3, 5] }], min: 0, max: 5 } },
   'horizontal-bar': { id: 'subject', type: 'horizontal-bar', props: { label: 'Errors by region', labels: ['Europe', 'Americas', 'Asia Pacific'], datasets: [{ label: 'Client', data: [12, 30, 8], stack: 'all' }, { label: 'Server', data: [4, 9, 2], stack: 'all' }], stacked: true, xLabel: 'Errors' } },
-  'bar-list': { id: 'subject', type: 'bar-list', props: { label: 'Top referrers', labels: ['search', 'newsletter', 'social'], datasets: [{ label: 'Visits', data: [2400, 1100, 380] }] } },
+  'bar-list': { id: 'subject', type: 'bar-list', props: { label: 'Top referrers', items: [{ label: 'search', value: 2400 }, { label: 'newsletter', value: 1100, variant: 'brand' }, { label: 'social', value: 380 }], sort: 'descending' } },
+  'radial-bar': { id: 'subject', type: 'radial-bar', props: { label: 'Sprint goals', max: 100, withLegend: true, segments: [{ label: 'Features', value: 70, variant: 'success' }, { label: 'Bugs', value: 40, variant: 'danger' }] } },
   'bubble-chart': { id: 'subject', type: 'bubble-chart', props: { label: 'Accounts by usage and spend', xLabel: 'Seats', yLabel: 'Spend', datasets: [{ label: 'Accounts', points: [{ x: 10, y: 1200, r: 6 }, { x: 45, y: 5200, r: 12, label: 'Initech' }] }] } },
-  'category-bar': { id: 'subject', type: 'category-bar', props: { label: 'Team capacity', total: 40, segments: [{ label: 'Features', value: 22, tone: 'brand' }, { label: 'Bugs', value: 8, tone: 'danger' }, { label: 'Support', value: 6, tone: 'neutral' }], withLegend: true } },
-  tracker: { id: 'subject', type: 'tracker', props: { categories: [{ id: 'ok', color: 'var(--lr-color-success)', label: 'Passed' }, { id: 'fail', color: 'var(--lr-color-danger)', label: 'Failed' }], items: [
+  'category-bar': { id: 'subject', type: 'category-bar', props: { label: 'Team capacity', values: [22, 8, 6], variants: ['brand', 'danger', 'neutral'], marker: 30, withLabels: true } },
+  tracker: { id: 'subject', type: 'tracker', props: { label: 'Test run results', categories: [{ id: 'ok', color: 'var(--lr-color-success)', label: 'Passed' }, { id: 'fail', color: 'var(--lr-color-danger)', label: 'Failed' }], items: [
     { id: 'r1', categoryId: 'ok', label: 'Run 1' }, { id: 'r2', categoryId: 'ok', label: 'Run 2' }, { id: 'r3', categoryId: 'fail', label: 'Run 3', marker: true }, { id: 'r4', categoryId: 'ok', label: 'Run 4' },
   ], withLegend: true, markerLabel: 'Retried' } },
   chord: { id: 'subject', type: 'chord', props: { label: 'Messages between services', entities: [{ id: 'api', label: 'API' }, { id: 'jobs', label: 'Jobs' }, { id: 'db', label: 'Database' }], matrix: [[0, 12, 30], [12, 0, 18], [30, 18, 0]], withDataTable: true } },
@@ -26,7 +27,6 @@ const scenarios: Readonly<Record<string, LyraGenNode>> = {
 /** Properties the trusted adapter sets on each profile role, never generated. */
 const adapted: Readonly<Record<string, Readonly<Record<string, unknown>>>> = {
   'horizontal-bar': { indexAxis: 'y' },
-  'bar-list': { indexAxis: 'y', withoutLegend: true, grid: 'none' },
 };
 
 async function mount(root: LyraGenNode, dir: 'ltr' | 'rtl' = 'ltr'): Promise<{ host: LyraGenViewElement; subject: UpdatingElement }> {

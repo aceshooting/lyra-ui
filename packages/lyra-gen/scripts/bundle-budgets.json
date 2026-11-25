@@ -38,8 +38,8 @@
     },
     "runtime": {
       "measured": {
-        "eagerJsBytes": 40260,
-        "eagerJsGzipBytes": 13117,
+        "eagerJsBytes": 45885,
+        "eagerJsGzipBytes": 15021,
         "lazyJsBytes": 0,
         "lazyJsGzipBytes": 0,
         "eagerCssBytes": 0,
@@ -49,8 +49,8 @@
         "assetBytes": 0
       },
       "ceilings": {
-        "eagerJsBytes": 40320,
-        "eagerJsGzipBytes": 13120,
+        "eagerJsBytes": 45888,
+        "eagerJsGzipBytes": 15040,
         "lazyJsBytes": 0,
         "lazyJsGzipBytes": 0,
         "eagerCssBytes": 0,
@@ -63,8 +63,8 @@
     },
     "chat": {
       "measured": {
-        "eagerJsBytes": 54997,
-        "eagerJsGzipBytes": 17010,
+        "eagerJsBytes": 64902,
+        "eagerJsGzipBytes": 20684,
         "lazyJsBytes": 0,
         "lazyJsGzipBytes": 0,
         "eagerCssBytes": 0,
@@ -74,8 +74,8 @@
         "assetBytes": 0
       },
       "ceilings": {
-        "eagerJsBytes": 55040,
-        "eagerJsGzipBytes": 17024,
+        "eagerJsBytes": 64960,
+        "eagerJsGzipBytes": 20736,
         "lazyJsBytes": 0,
         "lazyJsGzipBytes": 0,
         "eagerCssBytes": 0,
@@ -88,10 +88,10 @@
     },
     "gen-view": {
       "measured": {
-        "eagerJsBytes": 177989,
-        "eagerJsGzipBytes": 58610,
+        "eagerJsBytes": 185407,
+        "eagerJsGzipBytes": 61071,
         "lazyJsBytes": 892311,
-        "lazyJsGzipBytes": 265154,
+        "lazyJsGzipBytes": 265109,
         "eagerCssBytes": 0,
         "eagerCssGzipBytes": 0,
         "lazyCssBytes": 0,
@@ -99,8 +99,8 @@
         "assetBytes": 0
       },
       "ceilings": {
-        "eagerJsBytes": 178048,
-        "eagerJsGzipBytes": 58624,
+        "eagerJsBytes": 185408,
+        "eagerJsGzipBytes": 61120,
         "lazyJsBytes": 892352,
         "lazyJsGzipBytes": 265216,
         "eagerCssBytes": 0,
@@ -113,10 +113,10 @@
     },
     "chat-composition": {
       "measured": {
-        "eagerJsBytes": 523462,
-        "eagerJsGzipBytes": 173754,
+        "eagerJsBytes": 537393,
+        "eagerJsGzipBytes": 178574,
         "lazyJsBytes": 1079878,
-        "lazyJsGzipBytes": 313027,
+        "lazyJsGzipBytes": 313009,
         "eagerCssBytes": 104860,
         "eagerCssGzipBytes": 13553,
         "lazyCssBytes": 0,
@@ -124,8 +124,8 @@
         "assetBytes": 0
       },
       "ceilings": {
-        "eagerJsBytes": 523520,
-        "eagerJsGzipBytes": 173760,
+        "eagerJsBytes": 537408,
+        "eagerJsGzipBytes": 178624,
         "lazyJsBytes": 1079936,
         "lazyJsGzipBytes": 313088,
         "eagerCssBytes": 104896,

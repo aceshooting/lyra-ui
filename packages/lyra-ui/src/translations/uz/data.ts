@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'Geometriyasi yaroqsiz boʻlgani uchun xaritani chizib boʻlmaydi. Uzunlik va kenglik koordinatalariga ega poligon obyektlarini taqdim eting.',
   calendarInputLimit: '{total} ta tadbirdan {count} tasi koʻrsatilmoqda. Boshqa tadbirlarni ham kiritish uchun kichikroq sana oraligʻini taqdim eting.',
   heatmapInputLimit: 'Kiritish chegarasiga yetilgani uchun issiqlik xaritasining ayrim bezaklari yoki tanlangan kataklar tashlab ketildi.',
+  radialBarSegment: '{label}: {value} / {max}',
+  categoryBarRange: '{start} dan {end} gacha',
+  categoryBarMarker: 'Belgi: {value}, oraliq {start} dan {end} gacha',
 };
 
 registerLyraLocale('uz', strings);

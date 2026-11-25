@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'نقشه قابل ترسیم نیست زیرا هندسهٔ آن نامعتبر است. عناصر چندضلعی را با مختصات طول و عرض جغرافیایی فراهم کنید.',
   calendarInputLimit: '{count} رویداد از {total} رویداد نمایش داده می‌شود. برای شامل ساختن رویدادهای دیگر، یک بازهٔ تاریخ کوتاه‌تر فراهم کنید.',
   heatmapInputLimit: 'برخی یادداشت‌های نقشهٔ حرارتی یا خانه‌های انتخاب‌شده به‌دلیل رسیدن به حد ورودی حذف شدند.',
+  radialBarSegment: '{label}: {value} از {max}',
+  categoryBarRange: 'از {start} تا {end}',
+  categoryBarMarker: 'نشانگر: {value}، بازه از {start} تا {end}',
 };
 
 registerLyraLocale('fa-AF', strings, { dir: 'rtl', name: 'دری' });

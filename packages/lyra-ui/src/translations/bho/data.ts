@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'नक्शा नइखे खींचल जा सकत काहे कि ओकर ज्यामिति गलत बा। देशांतर आ अक्षांश निर्देशांक वाला बहुभुज फीचर दीं।',
   calendarInputLimit: '{total} में से {count} गो आयोजन देखावल जात बा। अउरी आयोजन शामिल करे खातिर तारीख के छोट दायरा दीं।',
   heatmapInputLimit: 'इनपुट के सीमा पूरा हो गइल एह से हीटमैप के कुछ सजावट भा चुनल सेल छोड़ दिहल गइल बा।',
+  radialBarSegment: '{label}: {value}/{max}',
+  categoryBarRange: '{start} से {end} तक',
+  categoryBarMarker: 'निशान: {value}, सीमा {start} से {end} तक',
 };
 
 registerLyraLocale('bho', strings);

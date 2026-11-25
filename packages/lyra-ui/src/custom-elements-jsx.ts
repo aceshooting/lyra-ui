@@ -90,6 +90,8 @@ export type LyraBadgeReactProps = LyraReactElementProps<'lr-badge'>;
 
 export type LyraBarChartReactProps = LyraReactElementProps<'lr-bar-chart'>;
 
+export type LyraBarListReactProps = LyraReactElementProps<'lr-bar-list'>;
+
 export type LyraBoxPlotReactProps = LyraReactElementProps<'lr-box-plot'>;
 
 export type LyraBranchPickerReactProps = LyraReactElementProps<'lr-branch-picker'>;
@@ -119,6 +121,8 @@ export type LyraCardReactProps = LyraReactElementProps<'lr-card'>;
 export type LyraCarouselReactProps = LyraReactElementProps<'lr-carousel'>;
 
 export type LyraCarouselItemReactProps = LyraReactElementProps<'lr-carousel-item'>;
+
+export type LyraCategoryBarReactProps = LyraReactElementProps<'lr-category-bar'>;
 
 export type LyraChangeReviewReactProps = LyraReactElementProps<'lr-change-review'>;
 
@@ -476,6 +480,8 @@ export type LyraQrCodeReactProps = LyraReactElementProps<'lr-qr-code'>;
 
 export type LyraRadarChartReactProps = LyraReactElementProps<'lr-radar-chart'>;
 
+export type LyraRadialBarReactProps = LyraReactElementProps<'lr-radial-bar'>;
+
 export type LyraRadioReactProps = LyraReactElementProps<'lr-radio'>;
 
 export type LyraRadioButtonReactProps = LyraReactElementProps<'lr-radio-button'>;
@@ -707,6 +713,7 @@ export interface LyraReactIntrinsicElements {
   'lr-background-runs': LyraBackgroundRunsReactProps;
   'lr-badge': LyraBadgeReactProps;
   'lr-bar-chart': LyraBarChartReactProps;
+  'lr-bar-list': LyraBarListReactProps;
   'lr-box-plot': LyraBoxPlotReactProps;
   'lr-branch-picker': LyraBranchPickerReactProps;
   'lr-breadcrumb': LyraBreadcrumbReactProps;
@@ -722,6 +729,7 @@ export interface LyraReactIntrinsicElements {
   'lr-card': LyraCardReactProps;
   'lr-carousel': LyraCarouselReactProps;
   'lr-carousel-item': LyraCarouselItemReactProps;
+  'lr-category-bar': LyraCategoryBarReactProps;
   'lr-change-review': LyraChangeReviewReactProps;
   'lr-chart': LyraChartReactProps;
   'lr-chart-3d': LyraChart3dReactProps;
@@ -900,6 +908,7 @@ export interface LyraReactIntrinsicElements {
   'lr-push-to-talk': LyraPushToTalkReactProps;
   'lr-qr-code': LyraQrCodeReactProps;
   'lr-radar-chart': LyraRadarChartReactProps;
+  'lr-radial-bar': LyraRadialBarReactProps;
   'lr-radio': LyraRadioReactProps;
   'lr-radio-button': LyraRadioButtonReactProps;
   'lr-radio-group': LyraRadioGroupReactProps;

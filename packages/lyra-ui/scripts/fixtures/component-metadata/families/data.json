@@ -2,8 +2,11 @@
   "family": "data",
   "assignments": {
     "new-component-experimental": [
+      "lr-bar-list",
+      "lr-category-bar",
       "lr-chord",
       "lr-choropleth",
+      "lr-radial-bar",
       "lr-sankey",
       "lr-treemap"
     ],

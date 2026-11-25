@@ -273,6 +273,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'Mapa se ne može nacrtati jer je njena geometrija neispravna. Navedite poligonalne objekte sa koordinatama geografske dužine i širine.',
   calendarInputLimit: 'Prikazano događaja: {count} od {total}. Navedite manji opseg datuma da biste uključili ostale događaje.',
   heatmapInputLimit: 'Neki ukrasi toplotne mape ili izabrane ćelije su izostavljeni jer je dostignuto ograničenje unosa.',
+  radialBarSegment: '{label}: {value} od {max}',
+  categoryBarRange: 'od {start} do {end}',
+  categoryBarMarker: 'Oznaka: {value}, opseg od {start} do {end}',
 };
 
 registerLyraLocale('sr-Latn', strings);

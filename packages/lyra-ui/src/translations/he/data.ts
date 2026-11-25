@@ -273,6 +273,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'לא ניתן לצייר את המפה כי הגאומטריה שלה לא חוקית. יש לספק ישויות מצולע עם קואורדינטות של קו אורך וקו רוחב.',
   calendarInputLimit: 'מוצגים {count} מתוך {total} אירועים. יש לספק טווח תאריכים מצומצם יותר כדי לכלול אירועים נוספים.',
   heatmapInputLimit: 'חלק מהעיטורים של מפת החום או מהתאים שנבחרו הושמטו משום שהקלט הגיע למגבלה.',
+  radialBarSegment: '{label}: {value} מתוך {max}',
+  categoryBarRange: 'מ-{start} עד {end}',
+  categoryBarMarker: 'סמן: {value}, טווח מ-{start} עד {end}',
 };
 
 registerLyraLocale('he', strings, { dir: 'rtl', name: 'עברית' });

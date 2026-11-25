@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'A térkép nem rajzolható meg, mert a geometriája érvénytelen. Adjon meg sokszögobjektumokat hosszúsági és szélességi koordinátákkal.',
   calendarInputLimit: 'Összesen {total} eseményből {count} látható. További események bevonásához adjon meg szűkebb dátumtartományt.',
   heatmapInputLimit: 'A bemeneti korlát elérése miatt a hőtérkép egyes díszítőelemei vagy kijelölt cellái kimaradtak.',
+  radialBarSegment: '{label}: {value} / {max}',
+  categoryBarRange: '{start} – {end}',
+  categoryBarMarker: 'Jelölő: {value}, tartomány {start} – {end}',
 };
 
 registerLyraLocale('hu', strings);

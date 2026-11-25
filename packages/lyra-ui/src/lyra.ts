@@ -2187,6 +2187,12 @@ export type {
   LyraTreemapEventMap,
   LyraTreemapNode,
 } from './components/data/treemap/treemap.class.js';
+export type {
+  LyraBarListItem,
+  LyraBarListSort,
+  LyraBarListValueFormatter,
+} from './components/data/bar-list/bar-list.class.js';
+export type { LyraRadialBarSegment } from './components/data/radial-bar/radial-bar.class.js';
 export type { LyraInputEventMap } from './components/forms/input/input.class.js';
 export type { LyraNumberInputEventMap } from './components/forms/input/number-input.class.js';
 export type { LyraTimeInputEventMap } from './components/forms/input/time-input.class.js';

@@ -92,7 +92,9 @@ import type { LyraTypingIndicator } from './components/conversation/typing-indic
 import type { LyraUsageBadge } from './components/conversation/usage-badge/usage-badge.class.js';
 import type { LyraVoicePicker, LyraVoicePickerEventMap } from './components/conversation/voice-picker/voice-picker.class.js';
 import type { LyraWidgetRenderer, LyraWidgetRendererEventMap } from './components/conversation/widget-renderer/widget-renderer.class.js';
+import type { LyraBarList } from './components/data/bar-list/bar-list.class.js';
 import type { LyraCalendar, LyraCalendarEventMap } from './components/data/calendar/calendar.class.js';
+import type { LyraCategoryBar } from './components/data/category-bar/category-bar.class.js';
 import type { LyraChord, LyraChordEventMap } from './components/data/chord/chord.class.js';
 import type { LyraChoropleth, LyraChoroplethEventMap } from './components/data/choropleth/choropleth.class.js';
 import type { LyraConditionBuilder, LyraConditionBuilderEventMap } from './components/data/condition-builder/condition-builder.class.js';
@@ -111,6 +113,7 @@ import type { LyraGauge } from './components/data/gauge/gauge.class.js';
 import type { LyraGraphQueryBuilder, LyraGraphQueryBuilderEventMap } from './components/data/graph-query-builder/graph-query-builder.class.js';
 import type { LyraHeatmap, LyraHeatmapEventMap } from './components/data/heatmap/heatmap.class.js';
 import type { LyraPagination, LyraPaginationEventMap } from './components/data/pagination/pagination.class.js';
+import type { LyraRadialBar } from './components/data/radial-bar/radial-bar.class.js';
 import type { LyraSankey, LyraSankeyEventMap } from './components/data/sankey/sankey.class.js';
 import type { LyraSequenceStrip, LyraSequenceStripEventMap } from './components/data/sequence-strip/sequence-strip.class.js';
 import type { LyraSparkline } from './components/data/sparkline/sparkline.class.js';
@@ -1596,6 +1599,25 @@ export interface LyraComponentTypeMap {
       'y2-label'?: LyraBarChart['y2Label'];
     };
   };
+  'lr-bar-list': {
+    element: LyraBarList;
+    properties: LyraElementProperties<
+      LyraBarList,
+      | 'items'
+      | 'label'
+      | 'locale'
+      | 'max'
+      | 'sort'
+      | 'strings'
+      | 'valueFormatter',
+      {}
+    >;
+    events: {};
+    eventNames: never;
+    cssNames:       | '--lr-bar-list-bar-color'
+      | '--lr-bar-list-bar-size';
+    attributeAliases: {};
+  };
   'lr-box-plot': {
     element: LyraBoxPlot;
     properties: LyraElementProperties<
@@ -2291,6 +2313,27 @@ export interface LyraComponentTypeMap {
     eventNames: never;
     cssNames:       | '--aspect-ratio';
     attributeAliases: {};
+  };
+  'lr-category-bar': {
+    element: LyraCategoryBar;
+    properties: LyraElementProperties<
+      LyraCategoryBar,
+      | 'label'
+      | 'locale'
+      | 'marker'
+      | 'strings'
+      | 'values'
+      | 'variants'
+      | 'withLabels',
+      {}
+    >;
+    events: {};
+    eventNames: never;
+    cssNames:       | '--lr-category-bar-marker-color'
+      | '--lr-category-bar-size';
+    attributeAliases: {
+      'with-labels'?: LyraCategoryBar['withLabels'];
+    };
   };
   'lr-change-review': {
     element: LyraChangeReview;
@@ -11843,6 +11886,26 @@ export interface LyraComponentTypeMap {
       'y2-label'?: LyraRadarChart['y2Label'];
     };
   };
+  'lr-radial-bar': {
+    element: LyraRadialBar;
+    properties: LyraElementProperties<
+      LyraRadialBar,
+      | 'label'
+      | 'locale'
+      | 'max'
+      | 'segments'
+      | 'strings'
+      | 'withLegend',
+      {}
+    >;
+    events: {};
+    eventNames: never;
+    cssNames:       | '--lr-radial-bar-size'
+      | '--lr-radial-bar-track-color';
+    attributeAliases: {
+      'with-legend'?: LyraRadialBar['withLegend'];
+    };
+  };
   'lr-radio': {
     element: LyraRadio;
     properties: LyraElementProperties<
@@ -13065,6 +13128,7 @@ export interface LyraComponentTypeMap {
       LyraSequenceStrip,
       | 'categories'
       | 'items'
+      | 'label'
       | 'locale'
       | 'markerLabel'
       | 'selectedIndex'

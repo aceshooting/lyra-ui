@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'Ο χάρτης δεν μπορεί να σχεδιαστεί επειδή η γεωμετρία του δεν είναι έγκυρη. Δώστε πολυγωνικά στοιχεία με συντεταγμένες γεωγραφικού μήκους και πλάτους.',
   calendarInputLimit: 'Εμφανίζονται {count} από {total} εκδηλώσεις. Δώστε μικρότερο εύρος ημερομηνιών για να συμπεριλάβετε άλλες εκδηλώσεις.',
   heatmapInputLimit: 'Ορισμένα διακοσμητικά στοιχεία του χάρτη θερμότητας ή επιλεγμένα κελιά παραλείφθηκαν επειδή συμπληρώθηκε ένα όριο εισόδου.',
+  radialBarSegment: '{label}: {value} από {max}',
+  categoryBarRange: 'από {start} έως {end}',
+  categoryBarMarker: 'Δείκτης: {value}, εύρος από {start} έως {end}',
 };
 
 registerLyraLocale('el', strings);

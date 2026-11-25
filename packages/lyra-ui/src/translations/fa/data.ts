@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'نقشه قابل رسم نیست زیرا هندسه آن نامعتبر است. ویژگی‌های چندضلعی با مختصات طول و عرض جغرافیایی ارائه کنید.',
   calendarInputLimit: '{count} رویداد از {total} رویداد نمایش داده می‌شود. برای گنجاندن رویدادهای دیگر، محدودهٔ تاریخ کوچک‌تری ارائه کنید.',
   heatmapInputLimit: 'برخی حاشیه‌نویسی‌های نقشهٔ حرارتی یا خانه‌های انتخاب‌شده به‌دلیل رسیدن به محدودیت ورودی حذف شدند.',
+  radialBarSegment: '{label}: {value} از {max}',
+  categoryBarRange: 'از {start} تا {end}',
+  categoryBarMarker: 'نشانگر: {value}، بازه از {start} تا {end}',
 };
 
 registerLyraLocale('fa', strings, { dir: 'rtl', name: 'فارسی' });

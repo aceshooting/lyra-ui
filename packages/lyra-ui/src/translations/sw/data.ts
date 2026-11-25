@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'Ramani haiwezi kuchorwa kwa sababu jiometri yake si sahihi. Toa vipengele vya poligoni vyenye viwianishi vya longitudo na latitudo.',
   calendarInputLimit: 'Inaonyesha matukio {count} kati ya {total}. Toa kipindi kifupi zaidi cha tarehe ili kujumuisha matukio mengine.',
   heatmapInputLimit: 'Baadhi ya mapambo ya ramani ya joto au visanduku vilivyochaguliwa vimeachwa kwa sababu kikomo cha ingizo kimefikiwa.',
+  radialBarSegment: '{label}: {value} kati ya {max}',
+  categoryBarRange: '{start} hadi {end}',
+  categoryBarMarker: 'Alama: {value}, masafa {start} hadi {end}',
 };
 
 registerLyraLocale('sw', strings);

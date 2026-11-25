@@ -2,12 +2,12 @@
   "locale": "ru",
   "direction": "ltr",
   "source": {
-    "keyCount": 1775,
-    "sha256": "sha256:ad14e014505085ddb1ab428ddfa2d269b3e4c6764fbed873c02cdb89f7cb385b"
+    "keyCount": 1778,
+    "sha256": "sha256:b65d5ac9c510e932120eebd1c6305f52d54368a8eff17e5faea3c122a71ff8aa"
   },
   "catalog": {
-    "keyCount": 1775,
-    "sha256": "sha256:b8040cbdcf748fbec69f4cecabd4c1a07e31c99b3de1c2649c55e2abfe140cc6"
+    "keyCount": 1778,
+    "sha256": "sha256:557c32f730eb5c5900d3aba7f490a04b8ad8582e00f03da8542037303c17fcc4"
   },
   "translator": {
     "status": "complete-original",

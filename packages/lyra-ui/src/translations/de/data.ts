@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'Die Karte kann nicht dargestellt werden, weil ihre Geometrie ungültig ist. Übergeben Sie Polygon-Features mit Längen- und Breitengradkoordinaten.',
   calendarInputLimit: '{count} von {total} Terminen werden angezeigt. Geben Sie einen kleineren Datumsbereich an, um weitere Termine einzubeziehen.',
   heatmapInputLimit: 'Einige Zusatzmarkierungen der Heatmap oder ausgewählte Zellen wurden ausgelassen, weil eine Eingabegrenze erreicht wurde.',
+  radialBarSegment: '{label}: {value} von {max}',
+  categoryBarRange: '{start} bis {end}',
+  categoryBarMarker: 'Markierung: {value}, Bereich {start} bis {end}',
 };
 
 registerLyraLocale('de', strings);

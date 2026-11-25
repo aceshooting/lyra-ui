@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'ज्यामिति अमान्य भएकाले नक्सा कोर्न सकिँदैन। देशान्तर र अक्षांश निर्देशाङ्क भएका बहुभुज फिचरहरू दिनुहोस्।',
   calendarInputLimit: '{total} कार्यक्रममध्ये {count} देखाइँदै छन्। अन्य कार्यक्रम समावेश गर्न सानो मिति दायरा दिनुहोस्।',
   heatmapInputLimit: 'इनपुट सीमा पुगेकाले ताप नक्साका केही सजावट वा चयन गरिएका कोषहरू छुटाइएका छन्।',
+  radialBarSegment: '{label}: {value}/{max}',
+  categoryBarRange: '{start} देखि {end} सम्म',
+  categoryBarMarker: 'चिन्हक: {value}, दायरा {start} देखि {end} सम्म',
 };
 
 registerLyraLocale('ne', strings);

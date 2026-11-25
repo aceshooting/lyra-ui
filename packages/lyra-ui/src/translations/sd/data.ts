@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'نقشو ڪڍي نٿو سگهجي ڇاڪاڻ ته ان جي جاميٽري صحيح ناهي. ڊگھائي ۽ ويڪرائي ڪوآرڊينيٽ سان گھڻ‑ڪنڊن وارا فيچر ڏيو.',
   calendarInputLimit: '{total} واقعن مان {count} ڏيکاريا پيا وڃن. ٻيا واقعا شامل ڪرڻ لاءِ تاريخن جي ننڍي حد ڏيو.',
   heatmapInputLimit: 'ان پٽ جي حد پوري ٿيڻ سبب گرمي نقشي جون ڪجهه سجاوٽون يا چونڊيل خانا ڇڏيا ويا آهن.',
+  radialBarSegment: '{label}: {max} مان {value}',
+  categoryBarRange: '{start} کان {end} تائين',
+  categoryBarMarker: 'نشان: {value}، حد {start} کان {end} تائين',
 };
 
 registerLyraLocale('sd', strings, { dir: 'rtl', name: 'سنڌي' });

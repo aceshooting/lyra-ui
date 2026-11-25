@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'Geometrisi geçersiz olduğu için harita çizilemiyor. Boylam ve enlem koordinatlarına sahip çokgen öğeler sağlayın.',
   calendarInputLimit: '{total} etkinlikten {count} tanesi gösteriliyor. Diğer etkinlikleri dahil etmek için daha dar bir tarih aralığı sağlayın.',
   heatmapInputLimit: 'Girdi sınırına ulaşıldığı için bazı ısı haritası süslemeleri veya seçili hücreler atlandı.',
+  radialBarSegment: '{label}: {value} / {max}',
+  categoryBarRange: '{start} - {end}',
+  categoryBarMarker: 'İşaretçi: {value}, aralık {start} - {end}',
 };
 
 registerLyraLocale('tr', strings);

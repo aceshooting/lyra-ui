@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'ጂኦሜትሪው ልክ ስላልሆነ ካርታውን መሳል አይቻልም። ኬንትሮስና ኬክሮስ መጋጠሚያዎች ያሏቸው ፖሊጎን ገጽታዎችን ያቅርቡ።',
   calendarInputLimit: 'ከ{total} ክስተቶች {count} እየታዩ ነው። ሌሎች ክስተቶችን ለማካተት አጭር የቀን ክልል ያቅርቡ።',
   heatmapInputLimit: 'የግቤት ገደብ ስለተደረሰ አንዳንድ የሙቀት ካርታ ማስዋቢያዎች ወይም የተመረጡ ሕዋሶች ተወግደዋል።',
+  radialBarSegment: '{label}: ከ{max} {value}',
+  categoryBarRange: 'ከ{start} እስከ {end}',
+  categoryBarMarker: 'ምልክት: {value}፣ ክልል ከ{start} እስከ {end}',
 };
 
 registerLyraLocale('am', strings);

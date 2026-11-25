@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'జ్యామితి చెల్లనిది కాబట్టి మ్యాప్‌ను గీయలేము. రేఖాంశం, అక్షాంశం కోఆర్డినేట్‌లతో పాలిగాన్ ఫీచర్‌లను అందించండి.',
   calendarInputLimit: '{total} ఈవెంట్‌లలో {count} చూపబడుతున్నాయి. ఇతర ఈవెంట్‌లను చేర్చడానికి చిన్న తేదీ పరిధిని అందించండి.',
   heatmapInputLimit: 'ఇన్‌పుట్ పరిమితిని చేరుకున్నందున హీట్‌మ్యాప్‌లోని కొన్ని అలంకరణలు లేదా ఎంచుకున్న సెల్‌లు వదిలివేయబడ్డాయి.',
+  radialBarSegment: '{label}: {max}లో {value}',
+  categoryBarRange: '{start} నుండి {end} వరకు',
+  categoryBarMarker: 'గుర్తు: {value}, పరిధి {start} నుండి {end} వరకు',
 };
 
 registerLyraLocale('te', strings);

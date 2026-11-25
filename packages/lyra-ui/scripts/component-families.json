@@ -319,6 +319,9 @@
     "help": "overlays",
     "style-panel": "utility",
     "counter": "utility",
-    "number-ticker": "utility"
+    "number-ticker": "utility",
+    "bar-list": "data",
+    "radial-bar": "data",
+    "category-bar": "data"
   }
 }

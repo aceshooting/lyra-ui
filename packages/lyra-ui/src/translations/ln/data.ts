@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'Karte ekoki te kobimisama na elilingi mpo géométrie na yango ezali malamu te. Pesa ba polygone na ba coordonnées ya longitude mpe latitude.',
   calendarInputLimit: 'Ezali kolakisa milulu {count} kati na {total}. Pesa eleko ya mikolo ya mokuse koleka mpo na kokɔtisa milulu mosusu.',
   heatmapInputLimit: 'Balongoli ndambo ya biloko ya kokembisa carte ya molunge to ba cellule oyo baponami mpo motango ya kokɔtisa ekómi na ndelo.',
+  radialBarSegment: '{label}: {value} kati na {max}',
+  categoryBarRange: 'longwa na {start} tii na {end}',
+  categoryBarMarker: 'Elembo: {value}, ndelo longwa na {start} tii na {end}',
 };
 
 registerLyraLocale('ln', strings);

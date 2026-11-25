@@ -273,6 +273,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'No se puede dibujar el mapa porque su geometría no es válida. Proporcione entidades de polígono con coordenadas de longitud y latitud.',
   calendarInputLimit: 'Se muestran {count} de {total} eventos. Proporcione un intervalo de fechas más pequeño para incluir otros eventos.',
   heatmapInputLimit: 'Se omitieron algunos elementos decorativos del mapa de calor o celdas seleccionadas porque se alcanzó un límite de entrada.',
+  radialBarSegment: '{label}: {value} de {max}',
+  categoryBarRange: '{start} a {end}',
+  categoryBarMarker: 'Marcador: {value}, intervalo {start} a {end}',
 };
 
 registerLyraLocale('es', strings);

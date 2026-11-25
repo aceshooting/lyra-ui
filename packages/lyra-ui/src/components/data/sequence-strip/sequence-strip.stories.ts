@@ -156,6 +156,11 @@ export const CustomAccessibleLabel: Story = {
     ></lr-sequence-strip>`,
 };
 
+/** `label` names the list in place of the generated category summary; a host `aria-label` still wins. */
+export const Labelled: Story = {
+  render: () => html`<lr-sequence-strip label="Agent run timeline" .items=${items} .categories=${categories()}></lr-sequence-strip>`,
+};
+
 /** Focus a cell and press R. The story replaces every item object without changing its ids; real
  * focus and the sole roving stop remain on that id instead of resetting to the first cell. */
 export const ControlledRefreshFocus: Story = {

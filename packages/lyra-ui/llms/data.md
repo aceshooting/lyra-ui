@@ -3240,7 +3240,7 @@ additionally renders a static `[part="legend"]` key below the strip, so the colo
 mapping is readable without visiting each cell.
 
 A standard host `aria-label` names the internal list and wins by presence, including empty. With
-no host label, the generated category-count summary names it. When an
+no host label, a nonblank `label` names it, and otherwise the generated category-count summary does. When an
 `items` refresh occurs while a cell owns focus, its `id` remains the sole roving stop; removal
 clamps focus to the nearest survivor, or to the stable list base when no cells remain. Unfocused
 refreshes do not move focus. A queued Arrow/Home/End focus is bound to the current item-array
@@ -3376,6 +3376,8 @@ readonly color, readonly label? }`; `color`
   internal `id`. Both collection properties are cloned and frozen at assignment,
   bounded to the first 10,000 source entries, and require reassignment after changes; empty/blank
   ids are omitted and duplicates use the first valid entry, so identity is deterministic
+- `label?: string` (attribute `label`) — accessible name of the internal list. A host `aria-label`
+  wins; unset or blank keeps the generated category-count summary as the name
 - `withLegend: boolean = false` (attribute `with-legend`, reflected) — renders a static
   `[part="legend"]` key below the strip, one swatch + label row per `categories` entry, in array
   order. The key describes the _scheme_, not the current data: a category with no matching item
@@ -6878,3 +6880,201 @@ chart.geography = {
     label: string;
     value: number | null;
   }`
+
+## `lr-bar-list`
+
+A ranked list of horizontal bars rendered as plain DOM (no canvas, no charting library). Each row
+shows its label over a decorative bar and its formatted value at the row's end, so labels and
+values are real text.
+
+The rows are a `<ul role="list">` named by `label` (a host `aria-label` wins; blank falls back to the
+localized generic chart name). Each row's text reads "label value"; bars are `aria-hidden`. Bars
+are measured against `max` when it is a positive finite number, otherwise against the largest value
+in `items`; values above the scale fill the track, and zero, negative or missing values draw an
+empty bar. A missing or non-finite value shows the localized no-data text and always sorts last.
+
+Values are formatted with `Intl.NumberFormat` for the effective locale. A host-only `valueFormatter`
+replaces that text; one that throws or returns a non-string falls back to the locale format.
+`items` is an owned collection: each assignment is detached into a frozen snapshot of at most the
+first 10,000 entries, and entries without a string `label` are skipped. An empty list renders the
+`empty` part instead of the list.
+
+**Properties:**
+
+- `items: readonly LyraBarListItem[] = []` (property only)
+- `label: string = ''` (accessible name of the list)
+- `max?: number` (attribute `max`; unset, non-finite or non-positive uses the largest value)
+- `sort: LyraBarListSort = 'descending'` (attribute `sort`, reflected; `'descending' | 'ascending' | 'none'`,
+  where `none` keeps the order of `items`)
+- `valueFormatter?: LyraBarListValueFormatter` (property only; `(value: number) => string`)
+
+```ts
+interface LyraBarListItem {
+  readonly label: string;
+  readonly value: number;
+  readonly variant?: LyraVariant; // 'neutral' | 'brand' | 'success' | 'warning' | 'danger'
+}
+```
+
+**Events:** none.
+
+**Slots:** none.
+
+**CSS parts:** `base`, `list` (the `<ul>`), `row`, `bar`, `label`, `value`, `empty`
+
+**Themeable custom properties:** `--lr-bar-list-bar-color` (fill of bars without a `variant`,
+default `var(--lr-color-brand-fill-quiet)`), `--lr-bar-list-bar-size` (bar block size, default
+`var(--lr-size-2rem)`). A `variant` row uses `--lr-color-<variant>-fill-quiet`.
+
+**Optional peer deps:** none.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/lr-bar-list.js';
+</script>
+
+<lr-bar-list id="pages" label="Top pages"></lr-bar-list>
+
+<script type="module">
+  const list = document.querySelector('#pages');
+  list.items = [
+    { label: '/home', value: 8920 },
+    { label: '/docs', value: 4310, variant: 'success' },
+    { label: '/pricing', value: 2140 },
+  ];
+  list.valueFormatter = (value) => `${(value / 1000).toFixed(1)}k`;
+</script>
+```
+
+- **`components-data-bar-list-bar-list-contracts`** — Row type for ranked bar lists.
+  Import `@aceshooting/lyra-ui/components/lr-bar-list.js`.
+  `LyraBarListItem {
+    readonly label: string;
+    readonly value: number;
+    readonly variant?: LyraVariant;
+  }`
+
+## `lr-radial-bar`
+
+Concentric progress arcs, one ring per category, drawn as SVG from design tokens. Each arc runs
+clockwise from the top (mirrored under a right-to-left direction) and covers `value / max` of a full
+circle, where `max` is the segment's own `max`, then the host `max`, then the largest value among segments
+without their own `max`.
+Values above the scale draw a full ring; zero, negative and missing values draw no arc.
+
+The drawing is `aria-hidden`. Assistive technology reads a `<ul role="list">` named by `label` (a host
+`aria-label` wins; blank falls back to the localized generic chart name) with one item per segment,
+"label: value of max" (localized `radialBarSegment`; a segment without a value or scale reads
+"label: value"). With `withLegend` the same list is the visible legend with color swatches; without
+it the list is visually hidden but still read. Numbers are formatted for the effective locale.
+`segments` is an owned collection (frozen snapshot, at most 10,000 entries); entries without a
+string `label` are skipped. An empty chart renders the `empty` part.
+
+Arcs without a `variant` take the categorical palette `--lr-color-chart-1` to `--lr-color-chart-8` by
+position; a `variant` uses `--lr-color-<variant>-fill-loud`. In a narrow allocation the legend
+stacks under the drawing.
+
+**Properties:**
+
+- `segments: readonly LyraRadialBarSegment[] = []` (property only; outermost ring first)
+- `label: string = ''` (accessible name of the segment list)
+- `withLegend: boolean = false` (attribute `with-legend`, reflected)
+- `max?: number` (attribute `max`; the full-circle value for segments without their own `max`)
+
+```ts
+interface LyraRadialBarSegment {
+  readonly label: string;
+  readonly value: number;
+  readonly max?: number;
+  readonly variant?: LyraVariant;
+}
+```
+
+**Events:** none.
+
+**Slots:** none.
+
+**CSS parts:** `base`, `chart` (the `<svg>`), `track`, `arc`, `legend` (the `<ul>`), `legend-item`,
+`legend-swatch`, `legend-label`, `empty`
+
+**Themeable custom properties:** `--lr-radial-bar-size` (drawing inline size, default
+`var(--lr-size-12rem)`), `--lr-radial-bar-track-color` (default `var(--lr-color-surface-raised)`).
+
+**Optional peer deps:** none.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/lr-radial-bar.js';
+</script>
+
+<lr-radial-bar id="browsers" label="Visitors by browser" max="300" with-legend></lr-radial-bar>
+
+<script type="module">
+  document.querySelector('#browsers').segments = [
+    { label: 'Chrome', value: 275 },
+    { label: 'Safari', value: 200 },
+    { label: 'Firefox', value: 187, variant: 'warning' },
+  ];
+</script>
+```
+
+- **`components-data-radial-bar-radial-bar-contracts`** — Segment type for concentric progress arcs.
+  Import `@aceshooting/lyra-ui/components/lr-radial-bar.js`.
+  `LyraRadialBarSegment {
+    readonly label: string;
+    readonly value: number;
+    readonly max?: number;
+    readonly variant?: LyraVariant;
+  }`
+
+## `lr-category-bar`
+
+One horizontal bar split into consecutive threshold ranges, with an optional marker pointing at a
+value on the same scale. `values` lists each range's width from the inline start: `[40, 30, 30]`
+draws 0 to 40, 40 to 70 and 70 to 100. Non-finite and negative widths count as zero and draw
+nothing; the scale runs from 0 to the sum of `values`. Each range takes its color from the matching
+`variants` entry (`--lr-color-<variant>-fill-loud`), otherwise from `--lr-color-chart-1` to
+`--lr-color-chart-8` by position. A `marker` outside the scale is pinned to the nearer end while its
+text keeps the real value; a marker on a boundary belongs to the range that starts there.
+
+The content is a `role="group"` named by `label` (a host `aria-label` wins; blank falls back to the
+localized generic chart name). Its visually hidden `description` text names the marker's range
+("Marker: 62, range 40 to 70", localized `categoryBarMarker`) or, without a marker, lists every
+range (`categoryBarRange` joined with the locale's list format). The drawing, marker and boundary
+labels are `aria-hidden`. With `withLabels` each range's start value and the scale's end show under
+the bar; a narrow allocation keeps only the two end values. Numbers are formatted for the effective
+locale. `values` and `variants` are owned collections. When no range has a positive width, the
+`empty` part renders instead.
+
+**Properties:**
+
+- `values: readonly number[] = []` (property only; range widths)
+- `variants?: readonly LyraVariant[]` (property only; matched by position)
+- `marker?: number` (attribute `marker`; unset or non-finite draws no marker)
+- `label: string = ''` (accessible name of the group)
+- `withLabels: boolean = false` (attribute `with-labels`, reflected)
+
+**Events:** none.
+
+**Slots:** none.
+
+**CSS parts:** `base`, `bar`, `range`, `marker`, `labels`, `range-label`, `description`, `empty`
+
+**Themeable custom properties:** `--lr-category-bar-size` (bar block size, default
+`var(--lr-size-0-5rem)`), `--lr-category-bar-marker-color` (default `var(--lr-color-text)`).
+
+**Optional peer deps:** none.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/lr-category-bar.js';
+</script>
+
+<lr-category-bar id="score" label="Credit score" marker="72" with-labels></lr-category-bar>
+
+<script type="module">
+  const bar = document.querySelector('#score');
+  bar.values = [40, 30, 20, 10];
+  bar.variants = ['danger', 'warning', 'brand', 'success'];
+</script>
+```

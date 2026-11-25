@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'வரைபடத்தின் வடிவியல் செல்லாததால் அதை வரைய முடியாது. தீர்க்கரேகை மற்றும் அட்சரேகை ஆயங்களுடன் பலகோண அம்சங்களை வழங்கவும்.',
   calendarInputLimit: '{total} நிகழ்வுகளில் {count} காட்டப்படுகின்றன. பிற நிகழ்வுகளைச் சேர்க்க சிறிய தேதி வரம்பை வழங்கவும்.',
   heatmapInputLimit: 'உள்ளீட்டு வரம்பை எட்டியதால் வெப்ப வரைபடத்தின் சில அலங்காரங்கள் அல்லது தேர்ந்தெடுத்த கலங்கள் விடுபட்டுள்ளன.',
+  radialBarSegment: '{label}: {max}-இல் {value}',
+  categoryBarRange: '{start} முதல் {end} வரை',
+  categoryBarMarker: 'குறியீடு: {value}, வரம்பு {start} முதல் {end} வரை',
 };
 
 registerLyraLocale('ta', strings);

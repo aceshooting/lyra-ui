@@ -281,6 +281,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'Mapu nemožno vykresliť, pretože jej geometria je neplatná. Zadajte polygónové prvky so súradnicami zemepisnej dĺžky a šírky.',
   calendarInputLimit: 'Zobrazuje sa {count} z {total} udalostí. Ak chcete zahrnúť ďalšie udalosti, zadajte menší rozsah dátumov.',
   heatmapInputLimit: 'Niektoré dekorácie tepelnej mapy alebo vybrané bunky boli vynechané, pretože sa dosiahol limit vstupu.',
+  radialBarSegment: '{label}: {value} z {max}',
+  categoryBarRange: 'od {start} do {end}',
+  categoryBarMarker: 'Značka: {value}, rozsah od {start} do {end}',
 };
 
 registerLyraLocale('sk', strings);

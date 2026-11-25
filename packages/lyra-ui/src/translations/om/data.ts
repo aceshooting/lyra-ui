@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'Kaartaan kun jiʼoometiriin isaa sirrii waan hin taaneef kaasamuu hin danda’u. Amaloota poligoonii qindoomina dheerinaa fi gar-dheerinaa qabu kenni.',
   calendarInputLimit: 'Taateewwan {total} keessaa {count} agarsiisaa jira. Taateewwan biroo hammachuuf daangaa guyyaa xiqqaa kenni.',
   heatmapInputLimit: 'Daangaan galtee waan gaʼameef faaya kaartaa hoʼaa tokko tokko ykn manʼeelee filataman hafaniiru.',
+  radialBarSegment: '{label}: {value} / {max}',
+  categoryBarRange: '{start} irraa hanga {end}',
+  categoryBarMarker: 'Mallattoo: {value}, daangaa {start} irraa hanga {end}',
 };
 
 registerLyraLocale('om', strings);

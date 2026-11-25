@@ -265,6 +265,9 @@ const strings: LyraLocaleStrings = {
   choroplethInvalidGeometry: 'નકશો દોરી શકાતો નથી કારણ કે તેની ભૂમિતિ અમાન્ય છે. રેખાંશ અને અક્ષાંશ કોઓર્ડિનેટ્સ સાથે બહુકોણ ફીચર્સ આપો.',
   calendarInputLimit: 'કુલ {total}માંથી {count} ઇવેન્ટ બતાવવામાં આવે છે. અન્ય ઇવેન્ટ સામેલ કરવા તારીખની નાની શ્રેણી આપો.',
   heatmapInputLimit: 'ઇનપુટ મર્યાદા પહોંચી જવાથી હીટમૅપની કેટલીક સજાવટ અથવા પસંદ કરેલા કોષો છોડી દેવાયા છે.',
+  radialBarSegment: '{label}: {max}માંથી {value}',
+  categoryBarRange: '{start} થી {end}',
+  categoryBarMarker: 'નિશાન: {value}, શ્રેણી {start} થી {end}',
 };
 
 registerLyraLocale('gu', strings);
