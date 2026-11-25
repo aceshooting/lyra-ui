@@ -1,5 +1,0 @@
----
-"@aceshooting/lyra-gen": minor
----
-
-Add `@aceshooting/lyra-gen/scripted-conversation.js`, a framework-free controller for branching scripted (no-model) conversations on one generated surface. `createScriptedConversation({ tree, catalog, surfaceId, buildStep })` validates a bounded, acyclic choice tree; tracks the current path through `choose()`, `back()`, `restart()`, `goTo()` and `retry()`; and gives every transition a new, strictly increasing revision, including Back. A later transition aborts and discards a superseded build. Control edits through `setControls()` are coalesced into at most one in-flight build, and the latest values win. Each step result is validated against the host catalog, and the controller publishes frozen snapshots with the current choices, a transcript of application-owned copy and a focus hint. `connectScriptedConversation()` binds the controller to an `lr-gen-view`: it assigns each committed document, accepts `lr-gen-ready` only for that revision and restores focus to the next choices only when the host opts in.

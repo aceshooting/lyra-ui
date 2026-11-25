@@ -61,7 +61,7 @@ interface ResolvedRange {
  * @cssprop [--lr-category-bar-size=var(--lr-size-0-5rem)] - Block size of the bar.
  * @cssprop [--lr-category-bar-marker-color=var(--lr-color-text)] - Color of the marker.
  * @status experimental
- * @since unreleased
+ * @since 33.2.0
  */
 export class LyraCategoryBar extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: START

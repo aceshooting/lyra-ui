@@ -87,7 +87,7 @@ function positive(value: unknown): number | null {
  * @cssprop [--lr-radial-bar-size=var(--lr-size-12rem)] - Inline size of the drawing.
  * @cssprop [--lr-radial-bar-track-color=var(--lr-color-surface-raised)] - Color of every ring's track.
  * @status experimental
- * @since unreleased
+ * @since 33.2.0
  */
 export class LyraRadialBar extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: START

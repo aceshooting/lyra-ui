@@ -108,7 +108,7 @@ function sortRows(rows: ResolvedRow[], sort: LyraBarListSort): ResolvedRow[] {
  *   has no `variant`.
  * @cssprop [--lr-bar-list-bar-size=var(--lr-size-2rem)] - Block size of each row's bar.
  * @status experimental
- * @since unreleased
+ * @since 33.2.0
  */
 export class LyraBarList extends LyraElement {
   // GENERATED DEFAULT-STRING SLICE: START

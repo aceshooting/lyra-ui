@@ -105,9 +105,9 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-sankey` · lr-sankey.js · `experimental` since `32.0.0` · ~49 KiB gzip — A peer-free SVG Sankey chart for weighted flows across stages.
 - `lr-chord` · lr-chord.js · `experimental` since `32.0.0` · ~48 KiB gzip — A peer-free SVG chord chart for symmetric co-occurrence data.
 - `lr-choropleth` · lr-choropleth.js · `experimental` since `32.0.0` · ~46 KiB gzip — A peer-free SVG choropleth for caller-supplied GeoJSON or TopoJSON.
-- `lr-bar-list` · lr-bar-list.js · `experimental` since `unreleased` · ~30 KiB gzip — a ranked list of horizontal bars rendered as plain DOM, each row carrying its real label over the bar and its formatted value at the...
-- `lr-radial-bar` · lr-radial-bar.js · `experimental` since `unreleased` · ~32 KiB gzip — concentric progress arcs, one ring per category, drawn as SVG from design tokens and read as a plain list.
-- `lr-category-bar` · lr-category-bar.js · `experimental` since `unreleased` · ~32 KiB gzip — one horizontal bar split into consecutive threshold ranges, with an optional marker pointing at a value on the same scale.
+- `lr-bar-list` · lr-bar-list.js · `experimental` since `33.2.0` · ~30 KiB gzip — a ranked list of horizontal bars rendered as plain DOM, each row carrying its real label over the bar and its formatted value at the...
+- `lr-radial-bar` · lr-radial-bar.js · `experimental` since `33.2.0` · ~32 KiB gzip — concentric progress arcs, one ring per category, drawn as SVG from design tokens and read as a plain list.
+- `lr-category-bar` · lr-category-bar.js · `experimental` since `33.2.0` · ~32 KiB gzip — one horizontal bar split into consecutive threshold ranges, with an optional marker pointing at a value on the same scale.
 
 ## Layout, navigation & structure — `components/layout/` (41)
 

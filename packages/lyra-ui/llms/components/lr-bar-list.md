@@ -5,7 +5,7 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-bar-list.js';` (stable tag alias; registers the tag)
 - **Class** `LyraBarList`, also available unregistered from `@aceshooting/lyra-ui/components/data/bar-list/bar-list.class.js`
 - **Family** `components/data/` — see `llms/index.md` for its siblings
-- **Status** `experimental` since `unreleased` — see the maturity and deprecation policy in `llms/shared.md`
+- **Status** `experimental` since `33.2.0` — see the maturity and deprecation policy in `llms/shared.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none

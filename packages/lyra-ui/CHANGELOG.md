@@ -1,5 +1,27 @@
 # Changelog
 
+## 33.2.0
+
+### Minor Changes
+
+- 8a8ecb0: Three new data components:
+
+  - `<lr-bar-list>` ranks rows as horizontal DOM bars with a real label over each bar and a locale-formatted value at the row's end. It takes `items` (`label`, `value`, optional `variant`), `label`, `max`, `sort` (`descending` by default, `ascending` or `none`) and a host-only `valueFormatter`. Rows form a labeled list read as "label value"; the bars are decorative.
+  - `<lr-radial-bar>` draws concentric SVG progress arcs, one ring per segment (`label`, `value`, optional `max` and `variant`), with an optional visible legend (`with-legend`) and a host `max`. Assistive technology reads a labeled list of "label: value of max".
+  - `<lr-category-bar>` splits one bar into consecutive threshold ranges (`values`, optional `variants`) with an optional `marker` and boundary labels (`with-labels`). It is a labeled group whose text names the range the marker falls in, or lists every range.
+
+  `<lr-sequence-strip>` gains a `label` property that names its list; a host `aria-label` still wins, and the generated category summary remains the name when neither is set.
+- 83884b3: `<lr-calendar-viewer>` accepts already-loaded plain events through a new `events` property (`LyraCalendarViewerEventRecord[]`: `id`, `title`, ISO 8601 `start`/`end`, `allDay`, `location`, `description`). Records render as text, in array order, through the same model and bounds as a parsed `.ics` document, and need no `ical.js` peer. Invalid dates are ignored for that field only. While `events` is non-null it takes precedence over `src`.
+
+  `<lr-geojson-viewer>` accepts an already-parsed GeoJSON `FeatureCollection`, `Feature` or geometry through a new `data` property. It is validated and bounded exactly like a fetched document, rendered from a private copy, and rejected with the same localized messages. While `data` is non-null it takes precedence over `src`.
+
+### Patch Changes
+
+- 83884b3: A property assigned to a Lyra element after it upgrades, but before its first update, is no longer overwritten by the value it was given while it was still undefined. A lazily registered child such as `<lr-table>`'s pager could otherwise keep a stale `total` of `0` after the table's rows arrived, leaving Next disabled, because the table does not assign a value that has not changed again.
+- 83884b3: `<lr-radio-group>` now keeps a `value` assigned before its radios carry their own values and selects the matching radio once one arrives, instead of dropping it when the first radio connects. A user selection, a newer host value, a form reset or a restore still replaces the pending value.
+
+  `<lr-context-meter shape="ring">` keeps its centre caption inside the ring's hole, and its ring circles no longer inherit the bar shape's band backgrounds, so a contrast check no longer reads an arc's tone as the caption's backdrop.
+
 ## 33.1.0
 
 ### Minor Changes

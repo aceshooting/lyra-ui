@@ -1,5 +1,0 @@
----
-"@aceshooting/lyra-gen": patch
----
-
-Validation, patching and streaming previews are several times faster with identical results. A catalog schema is admitted and inspected once per set of limits instead of once per property value (`createCatalog()` now deep-freezes property, action payload and query schemas), property values already admitted with their view are not copied again, and resolved limits are reused. A view returned by validation, or by `applyViewPatch()`, validates again at no cost against the same created catalog and limits, so a patch no longer re-validates its unchanged base and addresses nodes through one identity index. Progressive JSON and Markup previews reuse the admitted copy and recorded checks of every completed subtree, so each preview validates only new or still-open nodes while identity, binding-ownership and read checks still run over the whole preview. `applyViewPatch()` also accepts `{ op: 'set', nodeId, prop, value }` to assign one property and `{ op: 'move', nodeId, parentId, before?, after? }` to relocate a subtree; both pass the same full validation of the patched view.
