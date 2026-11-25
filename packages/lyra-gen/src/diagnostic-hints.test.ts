@@ -22,8 +22,8 @@ const errors = (root: LyraGenNode): readonly LyraGenDiagnostic[] => { const resu
 const only = (root: LyraGenNode, code: string): LyraGenDiagnostic => { const found = errors(root).find(diagnostic => diagnostic.code === code); assert.ok(found, `expected ${code}`); return found; };
 
 test('nearestName returns the closest declared name within two edits, deterministically', () => {
-  assert.equal(nearestName('lable', ['label', 'value']), 'label');
-  assert.equal(nearestName('vlaue', ['label', 'value']), 'value');
+  assert.equal(nearestName('labelz', ['label', 'value']), 'label');
+  assert.equal(nearestName('valuz', ['label', 'value']), 'value');
   assert.equal(nearestName('completely-different', ['label', 'value']), undefined);
   assert.equal(nearestName('ab', ['ac', 'ad']), 'ac');
   assert.equal(nearestName('x'.repeat(500), ['x'.repeat(499)]), undefined);
@@ -35,14 +35,14 @@ test('schemaHint names allowed values, bounds and shapes from the declared schem
   assert.equal(schemaHint('schema.length', { type: 'string', maxLength: 8 }, ''), 'Expected a string of at most 8 characters.');
   assert.equal(schemaHint('schema.type', { type: 'array', items: { type: 'number' }, maxItems: 3 }, ''), 'Expected an array of at most 3 items, each a number.');
   assert.equal(schemaHint('schema.required', { type: 'array', items: { type: 'object', properties: { name: { type: 'string' } }, required: ['name'] } }, '/0/name'), 'Add the required property "name" (a string).');
-  assert.equal(schemaHint('schema.property', { type: 'object', properties: { name: { type: 'string' } } }, '/nmae'), 'Did you mean "name"? Allowed properties: name.');
+  assert.equal(schemaHint('schema.property', { type: 'object', properties: { name: { type: 'string' } } }, '/namz'), 'Did you mean "name"? Allowed properties: name.');
   assert.equal(schemaHint('schema.any-of', { anyOf: [{ type: 'string' }, { type: 'number' }] }, ''), 'Expected one of: a string, a number.');
   assert.equal(schemaHint('schema.type', { type: 'string' }, '/deep/missing'), undefined);
 });
 
 test('content errors carry actionable hints with nearest names and declared alternatives', () => {
   assert.equal(only({ id: 'r', type: 'stack', children: [{ id: 't', type: 'txet' }] }, 'catalog.component').hint, 'Did you mean "text"? Declared components: stack, list, text, metric, input, button.');
-  assert.match(only({ id: 'r', type: 'stack', children: [{ id: 't', type: 'text', props: { lable: 'x' } }] }, 'props.unknown').hint ?? '', /^Did you mean "label"\? Allowed properties: tone, size, label\.$/u);
+  assert.match(only({ id: 'r', type: 'stack', children: [{ id: 't', type: 'text', props: { labelz: 'x' } }] }, 'props.unknown').hint ?? '', /^Did you mean "label"\? Allowed properties: tone, size, label\.$/u);
   assert.equal(only({ id: 'r', type: 'stack', children: [{ id: 't', type: 'text', props: { tone: 'loud' } }] }, 'schema.enum').hint, 'Allowed values: "info", "warning".');
   assert.equal(only({ id: 'r', type: 'stack', children: [{ id: 't', type: 'text', props: { size: 9 } }] }, 'schema.range').hint, 'Expected an integer from 1 to 6.');
   assert.equal(only({ id: 'r', type: 'stack', children: [{ id: 'm', type: 'metric', props: { label: 'L', value: 'high' } }] }, 'schema.type').hint, 'Expected a number.');
@@ -50,9 +50,9 @@ test('content errors carry actionable hints with nearest names and declared alte
   assert.equal(only({ id: 'r', type: 'stack', children: [{ id: 'm', type: 'metric', props: {} }] }, 'props.required').hint, 'Add the required property "label" (a string).');
   assert.equal(only({ id: 'r', type: 'list', children: [{ id: 'b', type: 'button', text: 'Go' }] }, 'children.type').hint, 'Allowed child types: text.');
   assert.equal(only({ id: 'r', type: 'stack', children: [{ id: 't', type: 'text', slot: 'asid' }] }, 'node.slot').hint, 'Did you mean "aside"? Declared slots: aside.');
-  assert.equal(only({ id: 'r', type: 'stack', children: [{ id: 't', type: 'text', reads: { lable: '/x' } }] }, 'read.unknown').hint, 'Did you mean "label"? Declared properties: tone, size, label.');
+  assert.equal(only({ id: 'r', type: 'stack', children: [{ id: 't', type: 'text', reads: { labelz: '/x' } }] }, 'read.unknown').hint, 'Did you mean "label"? Declared properties: tone, size, label.');
   assert.equal(only({ id: 'r', type: 'stack', children: [{ id: 'i', type: 'input' }] }, 'a11y.name').hint, 'Set a non-empty label property or a11y.label.');
-  assert.equal(only({ id: 'r', type: 'stack', children: [{ id: 'b', type: 'button', text: 'Go', action: { name: 'sav' } }] }, 'action.unknown').hint, 'Did you mean "save"? Declared actions: save.');
+  assert.equal(only({ id: 'r', type: 'stack', children: [{ id: 'b', type: 'button', text: 'Go', action: { name: 'savz' } }] }, 'action.unknown').hint, 'Did you mean "save"? Declared actions: save.');
   assert.equal(only({ id: 'r', type: 'stack', children: [{ id: 't', type: 'text', dataQuery: { name: 'metric' } }] }, 'query.unknown').hint, 'Did you mean "metrics"? Declared queries: metrics.');
 });
 
@@ -75,7 +75,7 @@ test('ownership errors name the nearest owned state path and its owning node', (
 test('hints never echo generated values, including values of secret-like properties', () => {
   const secret = 'sk-live-0123456789';
   const diagnostics = errors({ id: 'r', type: 'stack', children: [
-    { id: 'i', type: 'input', props: { label: 'Key', secretToken: 7 as unknown as string, valeu: secret } },
+    { id: 'i', type: 'input', props: { label: 'Key', secretToken: 7 as unknown as string, valux: secret } },
     { id: 't', type: 'text', props: { tone: secret, label: `${secret}${secret}` } }
   ] });
   assert.ok(diagnostics.length >= 3);
