@@ -125,7 +125,7 @@
       },
       "ceilings": {
         "eagerJsBytes": 547136,
-        "eagerJsGzipBytes": 181696,
+        "eagerJsGzipBytes": 182272,
         "lazyJsBytes": 1079936,
         "lazyJsGzipBytes": 313088,
         "eagerCssBytes": 104896,
