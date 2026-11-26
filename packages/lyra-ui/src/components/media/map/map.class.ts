@@ -8409,11 +8409,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this.setMapPaint(lineId, 'line-dasharray', layer.line?.dash ?? null);
     }
     this.setMapPaint(lineId, 'line-width', layer.line?.width ?? 2);
-    this.paintGeometryLayers(sourceId, layer);
+    this.paintGeometryLayers(sourceId, layer, true);
   }
 
   /** Paint-only half of `applyGeometryLayers`. See `paintDataLayer` for why the halves are split. */
-  private paintGeometryLayers(sourceId: string, layer: CanonicalMapDataLayer): void {
+  private paintGeometryLayers(sourceId: string, layer: CanonicalMapDataLayer, applyLineOpacity = false): void {
     if (!this._map) return;
     const tone = layer.tone;
     const color = resolvedLayerColor(this, layer.color, tone);
@@ -8424,9 +8424,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const line = layer.line;
     const opacity = line?.opacity ?? 1;
     const categorical = line?.colors.length || line?.dash?.[0] === 'match';
-    this.setMapPaint(lineId, 'line-opacity', categorical && line?.field && this.hiddenCategories.length
-      ? mutedCategoryOpacityExpression(line.field, this.hiddenCategories, this.hiddenOpacity * opacity, opacity)
-      : opacity);
+    if (applyLineOpacity || categorical) {
+      this.setMapPaint(lineId, 'line-opacity', categorical && line?.field && this.hiddenCategories.length
+        ? mutedCategoryOpacityExpression(line.field, this.hiddenCategories, this.hiddenOpacity * opacity, opacity)
+        : opacity);
+    }
     this.paintPoints(sourceId, layer);
   }
 

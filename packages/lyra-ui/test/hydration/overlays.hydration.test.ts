@@ -1,7 +1,7 @@
 import { html, ssrFixture } from '../wtr-ssr-fixture.js';
 import { expect, waitUntil } from '@open-wc/testing';
 
-interface AlertHost extends HTMLElement {
+interface OpenOverlayHost extends HTMLElement {
   open: boolean;
   updateComplete: Promise<boolean>;
 }
@@ -12,8 +12,16 @@ interface RatingHost extends HTMLElement {
 }
 
 describe('hydrated overlays', () => {
+  it('lr-lightbox renders open without details and closes after hydration', async () => {
+    const lightbox = await ssrFixture<OpenOverlayHost>(html`<lr-lightbox open><button slot="actions">Download</button></lr-lightbox>`);
+    expect(lightbox.open).to.equal(true);
+    const close = lightbox.shadowRoot!.querySelector<HTMLButtonElement>('[part="close-button"]')!;
+    close.click();
+    await waitUntil(() => !lightbox.open, 'the hydrated lightbox close button must close the gallery');
+  });
+
   it('lr-alert keeps its server open state and closes from its button after hydration', async () => {
-    const alert = await ssrFixture<AlertHost>(html`<lr-alert open closable variant="success">Saved</lr-alert>`);
+    const alert = await ssrFixture<OpenOverlayHost>(html`<lr-alert open closable variant="success">Saved</lr-alert>`);
     expect(alert.open).to.equal(true);
     alert.shadowRoot!.querySelector<HTMLElement>('[part~="close-button"]')!.click();
     await waitUntil(() => !alert.open, 'the hydrated close button must close the alert');

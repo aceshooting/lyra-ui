@@ -148,7 +148,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-funnel"></a>`lr-funnel` | data | `import '@aceshooting/lyra-ui/components/lr-funnel.js';` | none | none | none | 31.4 KiB |
 | <a id="lr-gauge"></a>`lr-gauge` | data | `import '@aceshooting/lyra-ui/components/lr-gauge.js';` | none | none | none | 27.9 KiB |
 | <a id="lr-generation-metrics"></a>`lr-generation-metrics` | conversation | `import '@aceshooting/lyra-ui/components/lr-generation-metrics.js';` | none | none | none | 27.2 KiB |
-| <a id="lr-geojson-viewer"></a>`lr-geojson-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-geojson-viewer.js';` | `@aceshooting/lyra-map`, `dompurify`, `maplibre-gl` | `lr-json-viewer`, `lr-map`, `lr-skeleton` | `lr-virtual-list` | 276.3 KiB |
+| <a id="lr-geojson-viewer"></a>`lr-geojson-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-geojson-viewer.js';` | `@aceshooting/lyra-map`, `dompurify`, `maplibre-gl` | `lr-json-viewer`, `lr-map`, `lr-skeleton` | `lr-virtual-list` | 276.4 KiB |
 | <a id="lr-graph"></a>`lr-graph` | retrieval | `import '@aceshooting/lyra-ui/components/lr-graph.js';` | `@aceshooting/lyra-3d`, `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` | `lr-pagination`, `lr-skeleton` | none | 115.5 KiB |
 | <a id="lr-graph-legend"></a>`lr-graph-legend` | retrieval | `import '@aceshooting/lyra-ui/components/lr-graph-legend.js';` | none | none | none | 35.6 KiB |
 | <a id="lr-graph-query-builder"></a>`lr-graph-query-builder` | data | `import '@aceshooting/lyra-ui/components/lr-graph-query-builder.js';` | none | `lr-chip`, `lr-chip-group`, `lr-input`, `lr-option`, `lr-select` | none | 112.6 KiB |

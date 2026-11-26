@@ -11,7 +11,7 @@
     "dist/autoloader-cdn.js": 13.25,
     "dist/autoloader.js": 13.125,
     "dist/locale-loader.js": 1.0625,
-    "dist/utilities/scoped-registry-loader.js": 11.5625
+    "dist/utilities/scoped-registry-loader.js": 11.625
   },
   "$marginalGzipKb": {
     "dist/components/lr-tool-call-chip.js": 8.25,

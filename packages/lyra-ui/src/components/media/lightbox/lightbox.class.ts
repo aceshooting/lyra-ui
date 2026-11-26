@@ -1103,10 +1103,11 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     if (this.sourceBindingCurrent && (changed.has('index') || changed.has('itemsVersion') || changed.has('images') || changed.has('imageSource') || changed.has('sourceState') || changed.has('strings') || changed.has('locale'))) {
       this.updateLiveRegion();
     }
-    if (this.open && !this.showsDetails()) {
-      const details = this.renderRoot.querySelector<HTMLElement>('[part="details"]:not([hidden])');
+    const root = this.renderRoot;
+    if (root && this.open && !this.showsDetails()) {
+      const details = root.querySelector<HTMLElement>('[part="details"]:not([hidden])');
       if (details && composedContains(details, deepActiveElementIn(this.ownerDocument))) {
-        focusFirstAvailable([this.renderRoot.querySelector<HTMLElement>('[part="close-button"]')]);
+        focusFirstAvailable([root.querySelector<HTMLElement>('[part="close-button"]')]);
       }
     }
     if (changed.has('open')) {

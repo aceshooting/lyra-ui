@@ -214,6 +214,12 @@ function outline(root: Node): string[] {
   const normalize = (name: string, value: string) => {
     if (name === 'style') {
       styleProbe.style.cssText = value;
+      // Open overlays lease indices from the shared document stack. Sequential renders get
+      // different indices, so compare the presence of the lease and all other declarations.
+      const stackIndex = '--lr-overlay-stack-index';
+      if (/^\d+$/u.test(styleProbe.style.getPropertyValue(stackIndex).trim())) {
+        styleProbe.style.setProperty(stackIndex, '0', styleProbe.style.getPropertyPriority(stackIndex));
+      }
       return styleProbe.style.cssText;
     }
     if (idReferenceAttributes.has(name)) {

@@ -67,6 +67,9 @@ try {
       minify: !coverage,
       sourcemap: coverage,
       modulePreload: false,
+      // The browser fixture imports every 3D engine and shares Three.js in one ~887 kB entry.
+      // Vite sends its chunk-size warning through onwarn, so use a bounded fixture-specific limit.
+      chunkSizeWarningLimit: 900,
       rolldownOptions: {
         onwarn(warning) {
           throw new Error(`Consumer build warning ${warning.code}: ${warning.message}`);
