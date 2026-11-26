@@ -376,6 +376,21 @@ importers:
 
   packages/lyra-cdn:
     devDependencies:
+      '@aceshooting/lyra-3d':
+        specifier: workspace:*
+        version: link:../lyra-3d
+      '@aceshooting/lyra-docs':
+        specifier: workspace:*
+        version: link:../lyra-docs
+      '@aceshooting/lyra-flags':
+        specifier: workspace:*
+        version: link:../lyra-flags
+      '@aceshooting/lyra-gen':
+        specifier: workspace:*
+        version: link:../lyra-gen
+      '@aceshooting/lyra-map':
+        specifier: workspace:*
+        version: link:../lyra-map
       '@aceshooting/lyra-ui':
         specifier: workspace:*
         version: link:../lyra-ui

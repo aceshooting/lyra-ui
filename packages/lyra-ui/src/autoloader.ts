@@ -1,5 +1,5 @@
 import { AUTOLOADER_OPTIONAL_PEERS } from './internal/autoloader-manifest.js';
-import { loadAutoloaderConstructor } from './internal/autoloader-loaders.js';
+import { autoloaderDefinitionChildren, loadAutoloaderConstructor } from './internal/autoloader-loaders.js';
 import { AUTOLOADER_TAG_SET, type AutoloadableTagName } from './internal/autoloader-tags.js';
 import { registryForRoot } from './internal/definition-registry.js';
 import {
@@ -269,6 +269,35 @@ async function withWorkSlot<Result>(context: LoaderContext, task: () => Promise<
   return task();
 }
 
+/**
+ * Constructors of the children a tag composes. A child whose import fails is left to ordinary
+ * discovery, which reports and retries it once the host renders it.
+ */
+async function loadDefinitionChildren(
+  tag: AutoloadableTagName,
+): Promise<ReadonlyArray<readonly [AutoloadableTagName, CustomElementConstructor]>> {
+  const children = await autoloaderDefinitionChildren(tag);
+  const loads = await Promise.allSettled(
+    children.map(async (child) => [child, await loadAutoloaderConstructor(child)] as const),
+  );
+  return loads.flatMap((load) => (load.status === 'fulfilled' ? [load.value] : []));
+}
+
+/** Defines what a granular `lr-<tag>.js` entry would have registered before the tag itself. */
+function defineChildren(
+  registry: CustomElementRegistry,
+  children: ReadonlyArray<readonly [AutoloadableTagName, CustomElementConstructor]>,
+): void {
+  for (const [child, constructor] of children) {
+    if (registry.get(child)) continue;
+    try {
+      registry.define(child, constructor);
+    } catch {
+      // Already defined under another name in this registry; discovery reports any real failure.
+    }
+  }
+}
+
 async function defineTag(
   context: LoaderContext,
   registry: CustomElementRegistry,
@@ -286,8 +315,14 @@ async function defineTag(
       optionalPeers,
     });
     try {
-      const constructor = await loadAutoloaderConstructor(tag);
+      // A host may reach into its composed children during its first update; a granular entry
+      // guarantees they exist by importing their registrations first, so define them first too.
+      const [constructor, children] = await Promise.all([
+        loadAutoloaderConstructor(tag),
+        loadDefinitionChildren(tag),
+      ]);
       if (!context.active) return;
+      defineChildren(registry, children);
       if (!registry.get(tag)) registry.define(tag, constructor);
       await registry.whenDefined(tag);
       if (!context.active) return;

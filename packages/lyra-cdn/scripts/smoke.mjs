@@ -1,5 +1,6 @@
 // Smoke test for this package's `dist/`: a page with ONE script tag, no import map and no build step must
-// upgrade an `lr-button`, lazy-load only what the page uses, and honour the opt-out attribute.
+// upgrade an `lr-button`, lazy-load only what the page uses, and honour the opt-out attribute. The bundled
+// optional peers, flag assets, locale catalogs and companion elements must work with no further setup.
 // Run after `pnpm run build`: `pnpm test`.
 import assert from 'node:assert/strict';
 import { createReadStream, existsSync, statSync } from 'node:fs';
@@ -11,12 +12,15 @@ import { chromium } from 'playwright';
 const root = join(fileURLToPath(new URL('..', import.meta.url)), 'dist');
 assert.ok(existsSync(join(root, 'lyra-ui.loader.js')), 'dist/lyra-ui.loader.js is missing; run the build first');
 
-const types = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html', '.wasm': 'application/wasm' };
+const types = { '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.html': 'text/html', '.svg': 'image/svg+xml', '.wasm': 'application/wasm' };
 const pages = {
   '/default.html': '<!doctype html><lr-button class="lr-cloak" id="b">Go</lr-button><script type="module" src="/lyra-ui.loader.js"></script>',
   '/optout.html': '<!doctype html><lr-button id="b">Go</lr-button><script type="module" src="/lyra-ui.loader.js" data-lyra-autoload="false"></script>',
   '/cloak-timeout.html': '<!doctype html><div id="c" lr-cloak></div><script type="module" src="/lyra-ui.loader.js" data-lyra-cloak-timeout="0"></script>',
   '/linked.html': '<!doctype html><link rel="stylesheet" href="/theme.css"><lr-button id="b">Go</lr-button><script type="module" src="/lyra-ui.loader.js"></script>',
+  '/peers.html': '<!doctype html><lr-markdown id="md" math content="**bold** $x^2$"></lr-markdown><lr-flag id="flag" country="fr"></lr-flag><lr-copy-button id="copy" value="x"></lr-copy-button><script type="module" src="/lyra-ui.loader.js"></script>',
+  '/fr.html': '<!doctype html><html lang="fr-FR"><lr-copy-button id="copy" value="x"></lr-copy-button><script type="module" src="/lyra-ui.loader.js"></script></html>',
+  '/companions.html': '<!doctype html><lr-gen-devtools id="gen"></lr-gen-devtools><lr-docx-editor id="docx"></lr-docx-editor><script type="module" src="/lyra-ui.loader.js"></script>',
   '/late.html': '<!doctype html><script type="module" src="/lyra-ui.loader.js"></script><script>document.addEventListener("DOMContentLoaded",()=>document.body.append(document.createElement("lr-badge")))</script>',
 };
 const requested = [];
@@ -81,6 +85,25 @@ try {
   const late = await open('/late.html');
   await late.page.waitForFunction(() => customElements.get('lr-badge') !== undefined, undefined, { timeout: 15000 });
   assert.deepEqual(late.failures, []);
+  for (const asset of ['chunks/pdf.worker.min.mjs', 'chunks/maplibre-gl-worker.mjs', 'chunks/lyra-map.worker.js', 'chunks/layout.worker.js', 'chunks/model.worker.js', 'vendor/lyra-flags/index.js', 'lyra-gen.js', 'lyra-docs.js', 'phone-numbers.js']) {
+    assert.ok(existsSync(join(root, asset)), `dist/${asset} must ship beside the chunks that locate it`);
+  }
+
+  const peers = await open('/peers.html');
+  const inShadow = (id, selector) => peers.page.evaluate(([id, selector]) => !!document.getElementById(id).shadowRoot?.querySelector(selector), [id, selector]);
+  await peers.page.waitForFunction(() => document.getElementById('md').shadowRoot?.querySelector('strong') && document.getElementById('md').shadowRoot?.querySelector('math'), undefined, { timeout: 15000 });
+  await peers.page.waitForFunction(() => { const img = document.getElementById('flag').shadowRoot?.querySelector('img'); return img?.complete && img.naturalWidth > 0; }, undefined, { timeout: 15000 });
+  assert.equal(await inShadow('copy', 'lr-icon-button'), true, 'a composite renders its composed children');
+  assert.deepEqual(peers.failures, [], 'bundled peers, flag assets and composed children load without errors');
+
+  const french = await open('/fr.html');
+  await french.page.waitForFunction(() => /copier/i.test(document.getElementById('copy').shadowRoot?.querySelector('lr-icon-button')?.getAttribute('aria-label') ?? ''), undefined, { timeout: 15000 });
+  assert.deepEqual(french.failures, [], 'the document language loads its base catalog');
+
+  const companions = await open('/companions.html');
+  await companions.page.waitForFunction(() => customElements.get('lr-gen-devtools') && customElements.get('lr-docx-editor') && document.getElementById('docx').shadowRoot?.childElementCount > 0, undefined, { timeout: 20000 });
+  assert.deepEqual(companions.failures, [], 'companion elements autoload from markup');
+
   console.log(`CDN smoke test passed (${loaded} scripts fetched for lr-button, no import map).`);
 } finally {
   await browser.close();

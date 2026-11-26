@@ -2,7 +2,7 @@ import { LyraButton } from './components/forms/button/button.class.js';
 import { resetNativeGetterCache } from './internal/rendered-tree-traversal.js';
 import { aTimeout, expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { AUTOLOADER_PENDING_ATTRIBUTE, discover, start, stop, type AutoloadableTagName } from './autoloader.js';
-import { setAutoloaderLoaderForTesting } from './internal/autoloader-loaders.js';
+import { setAutoloaderDefinitionChildrenForTesting, setAutoloaderLoaderForTesting } from './internal/autoloader-loaders.js';
 
 class ObservedButton extends LyraButton {
   onRemoveMarker?: () => void;
@@ -59,8 +59,13 @@ function createScopedRegistry(): CustomElementRegistry {
   } as CustomElementRegistry;
 }
 
+// Stand-in hosts are defined globally below; their real composed children would leak into later
+// cases, so only the cases that exercise child definition enable it.
+beforeEach(() => setAutoloaderDefinitionChildrenForTesting(false));
+
 afterEach(() => {
   stop();
+  setAutoloaderDefinitionChildrenForTesting(true);
   for (const tag of overriddenTags) setAutoloaderLoaderForTesting(tag, undefined);
   overriddenTags.clear();
 });
@@ -324,6 +329,54 @@ describe('autoloader', () => {
       expect(await discover(host)).to.deep.equal([tag]);
       expect(typeof registry.get(tag)).to.equal('function');
       expect(customElements.get(tag)).to.equal(undefined);
+    } finally {
+      delete (shadow as unknown as Record<string, unknown>)['customElementRegistry'];
+    }
+  });
+
+  it('defines the children a host composes before the host, as its registration entry does', async () => {
+    const tag = 'lr-copy-button';
+    const children = ['lr-icon-button', 'lr-tooltip'] as const;
+    setAutoloaderDefinitionChildrenForTesting(true);
+    for (const name of [tag, ...children]) override(name, async () => constructorForTag());
+    const host = await fixture<HTMLElement>(html`<section></section>`);
+    const shadow = host.attachShadow({ mode: 'open' });
+    const registry = createScopedRegistry();
+    const order: string[] = [];
+    const define = registry.define.bind(registry);
+    registry.define = (name, constructor) => {
+      order.push(name);
+      define(name, constructor);
+    };
+    Object.defineProperty(shadow, 'customElementRegistry', { configurable: true, value: registry });
+    shadow.append(document.createElement(tag));
+    try {
+      expect(await discover(host)).to.deep.equal([tag]);
+      expect(order.at(-1)).to.equal(tag);
+      expect(order.slice(0, -1).sort()).to.deep.equal([...children]);
+    } finally {
+      delete (shadow as unknown as Record<string, unknown>)['customElementRegistry'];
+    }
+  });
+
+  it('still defines the host when one composed child fails to import', async () => {
+    const tag = 'lr-copy-button';
+    setAutoloaderDefinitionChildrenForTesting(true);
+    override(tag, async () => constructorForTag());
+    override('lr-icon-button', async () => constructorForTag());
+    override('lr-tooltip', async () => {
+      throw new Error('tooltip chunk unavailable');
+    });
+    const host = await fixture<HTMLElement>(html`<section></section>`);
+    const shadow = host.attachShadow({ mode: 'open' });
+    const registry = createScopedRegistry();
+    Object.defineProperty(shadow, 'customElementRegistry', { configurable: true, value: registry });
+    shadow.append(document.createElement(tag));
+    try {
+      expect(await discover(host)).to.deep.equal([tag]);
+      expect(typeof registry.get(tag)).to.equal('function');
+      expect(typeof registry.get('lr-icon-button')).to.equal('function');
+      expect(registry.get('lr-tooltip')).to.equal(undefined);
     } finally {
       delete (shadow as unknown as Record<string, unknown>)['customElementRegistry'];
     }

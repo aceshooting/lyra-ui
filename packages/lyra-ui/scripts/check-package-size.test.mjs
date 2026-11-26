@@ -14,6 +14,8 @@ import {
   parsePackageSizeArguments,
   packageBudgetFindings,
   readTarballMetrics,
+  companionExclusiveMaximumPackedBytes,
+  DEFAULT_EXCLUSIVE_MAXIMUM_PACKED_BYTES,
   validatePackageBudgets,
 } from './check-package-size.mjs';
 
@@ -192,6 +194,29 @@ test('gates actual archive bytes even when the dry-run estimate is below the dow
 
     writeFileSync(tarball, withDownloadSize(archive, 10_000_000));
     await assert.rejects(readTarballMetrics(tarball), /packedBytes 10,000,000 exceeds hard budget 9,999,999/);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('only a companion that declares and explains its own packed ceiling leaves the download limit', async () => {
+  const actualBudgets = JSON.parse(readFileSync(new URL('package-budgets.json', import.meta.url), 'utf8'));
+  assert.equal(companionExclusiveMaximumPackedBytes('@aceshooting/lyra-gen', actualBudgets), DEFAULT_EXCLUSIVE_MAXIMUM_PACKED_BYTES);
+  assert.ok(companionExclusiveMaximumPackedBytes('@aceshooting/lyra-cdn', actualBudgets) > DEFAULT_EXCLUSIVE_MAXIMUM_PACKED_BYTES);
+  const unexplained = structuredClone(actualBudgets);
+  delete unexplained.companions['@aceshooting/lyra-cdn'].$comment;
+  assert.throws(() => companionExclusiveMaximumPackedBytes('@aceshooting/lyra-cdn', unexplained), /requires a \$comment/u);
+  const uninspectable = structuredClone(actualBudgets);
+  uninspectable.companions['@aceshooting/lyra-cdn'].exclusiveMaximumPackedBytes = 128 * 1024 * 1024;
+  assert.throws(() => companionExclusiveMaximumPackedBytes('@aceshooting/lyra-cdn', uninspectable), /at most/u);
+
+  const directory = mkdtempSync(join(tmpdir(), 'lyra-package-size-'));
+  const tarball = join(directory, 'package.tgz');
+  try {
+    writeFileSync(tarball, withDownloadSize(archiveFixture(), 10_000_000));
+    await assert.rejects(readTarballMetrics(tarball), /exceeds hard budget 9,999,999/u);
+    const measured = await readTarballMetrics(tarball, undefined, { exclusiveMaximumPackedBytes: 20_000_000 });
+    assert.equal(measured.packedBytes, 10_000_000);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

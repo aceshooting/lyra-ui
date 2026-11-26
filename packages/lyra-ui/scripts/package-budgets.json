@@ -53,10 +53,12 @@
       }
     },
     "@aceshooting/lyra-cdn": {
+      "$comment": "No browser downloads this archive whole: jsDelivr and unpkg serve its files one by one and a page fetches only the lazy chunks it renders. It bundles every optional peer, the locale catalogs and the lyra-gen, lyra-docs, lyra-map, lyra-3d and lyra-flags companions, so it declares its own exclusive packed ceiling (user-approved 2026-11-26) instead of the 10,000,000-byte download limit. The first full bundle measures 16,918,254 packed and 63,784,432 unpacked bytes in 2,707 files; like the previous budget, maxima carry about 2% headroom (on the next 64-byte boundary) because every new component adds chunks.",
+      "exclusiveMaximumPackedBytes": 33554432,
       "maximum": {
-        "packedBytes": 2169995,
-        "unpackedBytes": 8076419,
-        "fileCount": 905
+        "packedBytes": 17256640,
+        "unpackedBytes": 65060160,
+        "fileCount": 2760
       }
     },
     "@aceshooting/lyra-gen": {

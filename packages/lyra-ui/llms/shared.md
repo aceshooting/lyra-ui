@@ -286,34 +286,50 @@ also renders that component.
 
 ### Single script tag (no build step, no import map)
 
-`@aceshooting/lyra-cdn` is a companion package with a pre-bundled build of the same components: lit,
-tslib and Floating UI are inlined into relative, code-split chunks, so one tag is the whole install.
-Only the components the page renders are fetched (the autoloader's lazy loaders become chunks).
+`@aceshooting/lyra-cdn` is a companion package with a pre-bundled build of every component: lit,
+tslib, Floating UI, every optional peer, the locale catalogs and the `@aceshooting/lyra-gen`,
+`@aceshooting/lyra-docs`, `@aceshooting/lyra-map`, `@aceshooting/lyra-3d` and
+`@aceshooting/lyra-flags` companions are inlined into relative, code-split chunks, so one tag is the
+whole install. Only the chunks of the components the page renders are fetched.
 
 ```html
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@aceshooting/lyra-cdn@VERSION/dist/theme.css">
 <script type="module" src="https://cdn.jsdelivr.net/npm/@aceshooting/lyra-cdn@VERSION/dist/lyra-ui.loader.js"></script>
 
 <lr-button variant="primary">Save</lr-button>
+<lr-markdown math content="**Total:** $x^2$"></lr-markdown>
 ```
 
 It versions together with `@aceshooting/lyra-ui`; pin an exact version in production. Also published
-beside the loader: `theme.css`, `theme-core.css`, `density.css`, `accents.css`, `design-tokens.css`,
-`native.css` and `utilities.css`.
+beside the loader: `theme.css`, `theme-core.css`, `density.css`, `accents.css`, `accent-roles.css`,
+`design-tokens.css`, `native.css`, `utilities.css` and `docx-editor.css`.
 
 - The loader starts the autoloader on `DOMContentLoaded` (immediately when the document is already
   parsed) and keeps watching insertions. It injects no styles or inline script.
-- Script attributes: `data-lyra-optional-peers="dompurify,postal-mime"` (or `all`),
-  `data-lyra-autoload-events`, the opt-out `data-lyra-autoload="false"` (alias
-  `data-lyra-no-autoload`), which loads the module without starting it (it re-exports `start`,
-  `stop` and `discover`), and `data-lyra-cloak-timeout` (milliseconds, default `2000`).
+- Every optional peer is bundled, so every component is enabled: charts, maps, PDF, Office, e-book,
+  e-mail and calendar viewers, Markdown with math and syntax highlighting, 3D views and flags. The
+  workers PDF.js, lyra-map, MapLibre and lyra-3d need ship beside the chunks and are configured
+  automatically, including from a cross-origin CDN; lyra-3d's layout and model workers fall back to
+  the main thread there, as they do wherever a module worker cannot start.
+- The catalog for the document's `lang` loads automatically, and again when it changes: the exact
+  tag when one ships, otherwise its base language (`fr-FR` uses `fr`). The loader re-exports
+  `loadLyraLocale()` for other languages on the page.
+- `<lr-gen-view>`, `<lr-gen-devtools>` and `<lr-docx-editor>` load when they first appear, and
+  `<lr-flag>` resolves country and language flags without registering a flag peer. The APIs are
+  modules beside the loader: `dist/lyra-gen.js` (the lyra-gen root plus both elements),
+  `dist/lyra-docs.js` (the DOCX contracts plus the editor) and `dist/phone-numbers.js`
+  (`el.adapter = await loadPhoneNumberAdapter()` gives `<lr-phone-input>` the bundled
+  `libphonenumber-js`). Link `docx-editor.css` on pages that render the editor.
+- Script attributes: `data-lyra-optional-peers` narrows the enabled peers to a comma-separated list
+  (`none` disables them all; the default is every peer), `data-lyra-autoload-events`, the opt-out
+  `data-lyra-autoload="false"` (alias `data-lyra-no-autoload`), which loads the module without
+  starting it (it re-exports `start`, `stop` and `discover`), and `data-lyra-cloak-timeout`
+  (milliseconds, default `2000`).
 - Cloaking: elements carrying class or attribute `lr-cloak` are revealed when the first scan
   settles, or when the cloak timeout elapses, whichever comes first. Pair it with `.lr-fouce-hidden`
   from `utilities.css` to hide not-yet-defined tags.
-- Optional peers and the non-English catalogs of `@aceshooting/lyra-translations` are not bundled.
-  A component that needs one takes its usual localized fallback until the dependency resolves, for
-  example through an import map to a CDN URL.
 - Bundler users keep importing `@aceshooting/lyra-ui` itself; the CDN build ships no source maps.
+  Bundled licenses are listed in the package's `THIRD_PARTY_NOTICES.md`.
 
 ### Optional autoloader
 
@@ -334,6 +350,9 @@ independent. Importing it has no side effects or registrations.
   `start()` preflights its currently rendered tree and rejects a traversal-limit failure before
   loading it. Newly rendered shadow content remains under the same cumulative ceilings, but a
   failure found there necessarily follows the parent definition that rendered it.
+- Defining a tag first defines the children it composes, the same set its granular `lr-<tag>.js`
+  entry registers, so a host can rely on them during its first update. A child whose import fails
+  is left to ordinary discovery, which reports and retries it once the host renders it.
 - A discovered element carries `data-lr-autoload-pending` until its class is defined and its first
   `updateComplete` settles. The exported `AUTOLOADER_PENDING_ATTRIBUTE` is that exact string. A
   pre-existing consumer-owned marker is never removed by the loader.

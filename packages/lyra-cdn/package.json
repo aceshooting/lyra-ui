@@ -1,14 +1,17 @@
 {
   "name": "@aceshooting/lyra-cdn",
   "version": "33.2.0",
-  "description": "Single-script-tag build of @aceshooting/lyra-ui: lit, tslib and Floating UI bundled into lazy chunks, no build step and no import map.",
+  "description": "Single-script-tag build of @aceshooting/lyra-ui with every optional peer, the locale catalogs and the lyra-gen, lyra-docs, lyra-map, lyra-3d and lyra-flags companions bundled into lazy chunks: no build step and no import map.",
   "keywords": [
     "lyra-ui",
     "cdn",
     "jsdelivr",
     "unpkg",
     "web-components",
-    "lit"
+    "lit",
+    "lyra-gen",
+    "lyra-docs",
+    "lyra-map"
   ],
   "license": "MIT",
   "type": "module",
@@ -37,6 +40,9 @@
   "unpkg": "./dist/lyra-ui.loader.js",
   "exports": {
     "./lyra-ui.loader.js": "./dist/lyra-ui.loader.js",
+    "./lyra-gen.js": "./dist/lyra-gen.js",
+    "./lyra-docs.js": "./dist/lyra-docs.js",
+    "./phone-numbers.js": "./dist/phone-numbers.js",
     "./theme.css": "./dist/theme.css",
     "./theme-core.css": "./dist/theme-core.css",
     "./density.css": "./dist/density.css",
@@ -45,6 +51,7 @@
     "./design-tokens.css": "./dist/design-tokens.css",
     "./native.css": "./dist/native.css",
     "./utilities.css": "./dist/utilities.css",
+    "./docx-editor.css": "./dist/docx-editor.css",
     "./package.json": "./package.json"
   },
   "files": [
@@ -55,10 +62,15 @@
   ],
   "scripts": {
     "build": "node scripts/build.mjs",
-    "prepack": "pnpm --filter @aceshooting/lyra-ui build && node scripts/build.mjs",
+    "prepack": "pnpm --filter @aceshooting/lyra-ui build && pnpm --filter @aceshooting/lyra-map --filter @aceshooting/lyra-3d --filter @aceshooting/lyra-gen --filter @aceshooting/lyra-docs build && node scripts/build.mjs",
     "test": "node scripts/smoke.mjs"
   },
   "devDependencies": {
+    "@aceshooting/lyra-3d": "workspace:*",
+    "@aceshooting/lyra-docs": "workspace:*",
+    "@aceshooting/lyra-flags": "workspace:*",
+    "@aceshooting/lyra-gen": "workspace:*",
+    "@aceshooting/lyra-map": "workspace:*",
     "@aceshooting/lyra-ui": "workspace:*",
     "playwright": "^1.65.1"
   }

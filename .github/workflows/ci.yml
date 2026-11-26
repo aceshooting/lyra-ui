@@ -770,6 +770,8 @@ jobs:
         with:
           name: lyra-ui-dist
           path: packages/lyra-ui/dist
+      # The bundle reads every companion's dist.
+      - run: pnpm --filter @aceshooting/lyra-map --filter @aceshooting/lyra-3d --filter @aceshooting/lyra-gen --filter @aceshooting/lyra-docs build
       - run: pnpm --filter @aceshooting/lyra-cdn build
       - run: pnpm --filter @aceshooting/lyra-cdn test
 

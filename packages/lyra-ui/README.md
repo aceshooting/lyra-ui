@@ -103,7 +103,8 @@ approval" notice is safe: `pnpm approve @aceshooting/lyra-ui`.
 npm install @aceshooting/lyra-ui
 ```
 
-No build step? The companion `@aceshooting/lyra-cdn` loads Lyra from one script tag with its dependencies bundled, no import map needed. Only the
+No build step? The companion `@aceshooting/lyra-cdn` loads Lyra from one script tag with every dependency bundled: the optional peers, the
+locale catalogs and the lyra-gen, lyra-docs, lyra-map, lyra-3d and lyra-flags companions, no import map needed. Only the
 components the page uses are fetched:
 
 ```html

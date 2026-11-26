@@ -32,7 +32,13 @@ const COMPANIONS = Object.freeze({
   '@aceshooting/lyra-translations': { directory: 'lyra-translations', required: ['dist/side-effect-only.d.ts', 'dist/fr.js', 'dist/fr/forms.js'] },
   '@aceshooting/lyra-ide': { directory: 'lyra-ide', required: ['custom-elements.json', 'web-types.json', 'vscode-html-data.json', 'vscode-css-data.json'] },
   '@aceshooting/lyra-map': { directory: 'lyra-map', required: ['dist/index.mjs', 'dist/index.d.ts', 'dist/worker.mjs', 'dist/vite.mjs', 'dist/map.css', 'dist/provenance.json', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'UPSTREAM.json'] },
-  '@aceshooting/lyra-cdn': { directory: 'lyra-cdn', required: ['dist/lyra-ui.loader.js', 'dist/theme.css', 'dist/utilities.css', 'README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md'] },
+  '@aceshooting/lyra-cdn': { directory: 'lyra-cdn', required: [
+    'dist/lyra-ui.loader.js', 'dist/lyra-gen.js', 'dist/lyra-docs.js', 'dist/phone-numbers.js',
+    'dist/theme.css', 'dist/utilities.css', 'dist/docx-editor.css',
+    'dist/chunks/pdf.worker.min.mjs', 'dist/chunks/maplibre-gl-worker.mjs', 'dist/chunks/lyra-map.worker.js',
+    'dist/chunks/layout.worker.js', 'dist/chunks/model.worker.js', 'dist/vendor/lyra-flags/index.js',
+    'README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md',
+  ] },
   '@aceshooting/lyra-3d': { directory: 'lyra-3d', required: [
     'dist/core/index.js', 'dist/core/index.d.ts',
     'dist/graph/index.js', 'dist/graph/index.d.ts',
@@ -255,6 +261,10 @@ export function companionBudgetFindings(metrics, packageName, budgets) {
   for (const requiredFile of companion.required) {
     if (!packagePaths.has(requiredFile)) findings.push(`published tarball is missing required file: ${requiredFile}`);
   }
+  assert.ok(
+    maximum.packedBytes < companionExclusiveMaximumPackedBytes(packageName, budgets),
+    `${packageName} budget maximum.packedBytes must stay below its exclusive packed ceiling`,
+  );
   for (const metric of ['packedBytes', 'unpackedBytes', 'fileCount']) {
     assert.ok(Number.isInteger(maximum[metric]) && maximum[metric] > 0, `${packageName} budget maximum.${metric} must be a positive integer`);
     if (metrics[metric] > maximum[metric]) {
@@ -330,13 +340,42 @@ export function parsePackageSizeArguments(args) {
   return options;
 }
 
+/** The download ceiling every archive stays strictly below unless its budget declares its own. */
+export const DEFAULT_EXCLUSIVE_MAXIMUM_PACKED_BYTES = 10_000_000;
+/** No declared ceiling may exceed what the archive inspector itself admits. */
+const INSPECTABLE_PACKED_BYTES = 64 * 1024 * 1024;
+
+/**
+ * A companion's own exclusive packed ceiling. Only a package whose archive no browser downloads
+ * whole (a CDN mirror serving individual lazy files) declares one, with the reason beside it.
+ */
+export function companionExclusiveMaximumPackedBytes(packageName, budgets) {
+  const declared = budgets?.companions?.[packageName]?.exclusiveMaximumPackedBytes;
+  if (declared === undefined) return DEFAULT_EXCLUSIVE_MAXIMUM_PACKED_BYTES;
+  assert.ok(
+    Number.isSafeInteger(declared) && declared > DEFAULT_EXCLUSIVE_MAXIMUM_PACKED_BYTES && declared <= INSPECTABLE_PACKED_BYTES,
+    `${packageName} exclusiveMaximumPackedBytes must be an integer above the default ceiling and at most ${INSPECTABLE_PACKED_BYTES}`,
+  );
+  assert.ok(
+    typeof budgets.companions[packageName].$comment === 'string' && budgets.companions[packageName].$comment.length > 40,
+    `${packageName} exclusiveMaximumPackedBytes requires a $comment stating why browsers never download the archive whole`,
+  );
+  return declared;
+}
+
 /** Inspect the already-produced archive; its download size is never inferred from a dry run. */
-export async function readTarballMetrics(tarball, expectedPackage = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8'))) {
+export async function readTarballMetrics(
+  tarball,
+  expectedPackage = JSON.parse(readFileSync(join(packageDir, 'package.json'), 'utf8')),
+  { exclusiveMaximumPackedBytes = DEFAULT_EXCLUSIVE_MAXIMUM_PACKED_BYTES } = {},
+) {
   const file = resolve(tarball);
   const metadata = lstatSync(file);
   if (!metadata.isFile()) throw new TypeError('Package tarball must be a regular file.');
-  if (metadata.size >= 10_000_000) {
-    throw new Error(`packedBytes ${metadata.size.toLocaleString('en')} exceeds hard budget 9,999,999`);
+  if (metadata.size >= exclusiveMaximumPackedBytes) {
+    throw new Error(
+      `packedBytes ${metadata.size.toLocaleString('en')} exceeds hard budget ${(exclusiveMaximumPackedBytes - 1).toLocaleString('en')}`,
+    );
   }
   const bytes = readFileSync(file);
   assert.equal(bytes.length, metadata.size, 'Package tarball changed while being measured.');
@@ -365,7 +404,9 @@ async function main() {
     // A companion archive is always inspected as produced; there is no dry-run estimate for it.
     const companionDir = join(packageDir, '..', COMPANIONS[options.package].directory);
     const manifest = JSON.parse(readFileSync(join(companionDir, 'package.json'), 'utf8'));
-    const metrics = await readTarballMetrics(options.tarball, manifest);
+    const metrics = await readTarballMetrics(options.tarball, manifest, {
+      exclusiveMaximumPackedBytes: companionExclusiveMaximumPackedBytes(options.package, budgets),
+    });
     reportMeasurement(manifest, metrics);
     console.log(`Package archive SHA-256: ${metrics.sha256}`);
     const findings = companionBudgetFindings(metrics, options.package, budgets);
