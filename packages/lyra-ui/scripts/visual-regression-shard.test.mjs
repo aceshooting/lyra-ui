@@ -21,9 +21,9 @@ test('builds the complete retained-baseline/evidence plan without changing enrol
       axes.get(axisName)?.artifactPolicy === 'evidence-only',
   );
 
-  assert.equal(new Set(captures.map(({ story }) => story.id)).size, 111);
-  assert.equal(captures.length, 321);
-  assert.equal(evidenceOnly.length, 213);
+  assert.equal(new Set(captures.map(({ story }) => story.id)).size, 112);
+  assert.equal(captures.length, 325);
+  assert.equal(evidenceOnly.length, 217);
   assert.equal(captures.length - evidenceOnly.length, 108);
 });
 
@@ -42,6 +42,7 @@ test('enrolls the exact required canaries on their intended visual axes', () => 
         'resultcard-result-field--narrow-long-rtl',
         'overlay-dropdown--narrow-long-rtl',
         'textarea--narrow-long-rtl',
+        'media-files-image-editor--default',
         'observability-span-waterfall--narrow-edge-clamp',
         'agent-tools-subagent-panel--depth-12-narrow',
         'message-parts--narrow-error-retry',
@@ -53,6 +54,7 @@ test('enrolls the exact required canaries on their intended visual axes', () => 
       'resultcard-result-field--narrow-long-rtl': ['narrow'],
       'overlay-dropdown--narrow-long-rtl': ['narrow'],
       'textarea--narrow-long-rtl': ['narrow'],
+      'media-files-image-editor--default': ['dark', 'light', 'narrow', 'rtl'],
       'observability-span-waterfall--narrow-edge-clamp': ['narrow'],
       'agent-tools-subagent-panel--depth-12-narrow': ['narrow'],
       'message-parts--narrow-error-retry': ['narrow'],
@@ -68,7 +70,7 @@ test('creates deterministic, disjoint, exhaustive, balanced capture shards', () 
     shardVisualCaptures(captures, shardIndex, 3),
   );
 
-  assert.deepEqual(shards.map((shard) => shard.length), [107, 107, 107]);
+  assert.deepEqual(shards.map((shard) => shard.length), [109, 108, 108]);
   assert.equal(new Set(shards.flat().map(({ key }) => key)).size, captures.length);
   assert.deepEqual(
     shards.flat().map(({ key }) => key).sort(),

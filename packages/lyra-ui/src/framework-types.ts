@@ -214,6 +214,7 @@ import type { LyraFileIcon } from './components/media/file-icon/file-icon.class.
 import type { LyraFileInput, LyraFileInputEventMap } from './components/media/file-input/file-input.class.js';
 import type { LyraFlag } from './components/media/flag/flag.class.js';
 import type { LyraImageComparer, LyraImageComparerEventMap } from './components/media/image-comparer/image-comparer.class.js';
+import type { LyraImageEditor, LyraImageEditorEventMap } from './components/media/image-editor/image-editor.class.js';
 import type { LyraImageViewer, LyraImageViewerEventMap } from './components/media/image-viewer/image-viewer.class.js';
 import type { LyraLightboxItem } from './components/media/lightbox/lightbox-item.class.js';
 import type { LyraLightbox, LyraLightboxEventMap } from './components/media/lightbox/lightbox.class.js';
@@ -7594,6 +7595,21 @@ export interface LyraComponentTypeMap {
       'before-label'?: LyraImageComparer['beforeLabel'];
     };
   };
+  'lr-image-editor': {
+    element: LyraImageEditor;
+    properties: LyraElementProperties<
+      LyraImageEditor,
+      | 'alt'
+      | 'locale'
+      | 'src'
+      | 'strings',
+      {}
+    >;
+    events: LyraImageEditorEventMap;
+    eventNames:       | 'lr-export';
+    cssNames: never;
+    attributeAliases: {};
+  };
   'lr-image-viewer': {
     element: LyraImageViewer;
     properties: LyraElementProperties<
@@ -8208,6 +8224,7 @@ export interface LyraComponentTypeMap {
     properties: LyraElementProperties<
       LyraLightbox,
       | 'accessibleLabel'
+      | 'detailsPlacement'
       | 'fit'
       | 'images'
       | 'imageSource'
@@ -8261,6 +8278,7 @@ export interface LyraComponentTypeMap {
       | '--thumbnail-size';
     attributeAliases: {
       'aria-label'?: LyraLightbox['accessibleLabel'];
+      'details-placement'?: LyraLightbox['detailsPlacement'];
       'light-dismiss'?: LyraLightbox['lightDismiss'];
       'max-zoom'?: LyraLightbox['maxZoom'];
       'min-zoom'?: LyraLightbox['minZoom'];
@@ -12204,6 +12222,7 @@ export interface LyraComponentTypeMap {
     properties: LyraElementProperties<
       LyraRating,
       | 'accessibleLabel'
+      | 'clearable'
       | 'customError'
       | 'defaultValue'
       | 'disabled'
@@ -12218,7 +12237,8 @@ export interface LyraComponentTypeMap {
       | 'required'
       | 'size'
       | 'strings'
-      | 'value',
+      | 'value'
+      | 'withLabel',
       {
         form: HTMLFormElement | string | null;
       }
@@ -12246,6 +12266,7 @@ export interface LyraComponentTypeMap {
     attributeAliases: {
       'custom-error'?: LyraRating['customError'];
       'default-value'?: LyraRating['defaultValue'];
+      'with-label'?: LyraRating['withLabel'];
     };
   };
   'lr-realtime-session': {
@@ -16389,6 +16410,8 @@ export interface LyraComponentTypeMap {
     properties: LyraElementProperties<
       LyraVirtualList,
       | 'activeItemId'
+      | 'cellAspectRatio'
+      | 'columns'
       | 'groups'
       | 'hasMore'
       | 'itemRole'
@@ -16396,6 +16419,7 @@ export interface LyraComponentTypeMap {
       | 'keyFunction'
       | 'loading'
       | 'locale'
+      | 'minCellWidth'
       | 'overscan'
       | 'renderItem'
       | 'renderStickyGroup'
@@ -16428,8 +16452,10 @@ export interface LyraComponentTypeMap {
       | '--lr-virtual-list-sticky-group-bg';
     attributeAliases: {
       'active-item-id'?: LyraVirtualList['activeItemId'];
+      'cell-aspect-ratio'?: LyraVirtualList['cellAspectRatio'];
       'has-more'?: LyraVirtualList['hasMore'];
       'item-role'?: LyraVirtualList['itemRole'];
+      'min-cell-width'?: LyraVirtualList['minCellWidth'];
       'row-height'?: LyraVirtualList['rowHeight'];
       'row-index-offset'?: LyraVirtualList['rowIndexOffset'];
       'row-projection'?: LyraVirtualList['rowProjection'];

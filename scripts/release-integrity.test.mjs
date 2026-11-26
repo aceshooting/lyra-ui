@@ -2930,8 +2930,10 @@ test('upgrade dependency-only mode refreshes and deduplicates transitive depende
     const dedupeIndex = dependencyOnly.commands.indexOf('pnpm dedupe\n');
     assert.equal(exactShellCommandCount(dependencyOnly.commands, 'pnpm dedupe'), 1);
     assert.ok(dedupeIndex > refreshIndex, 'dedupe must follow the transitive update');
+    const docxToolchainIndex = dependencyOnly.commands.indexOf('lock.toolchain.vite = docsRequire("vite/package.json").version;');
+    assert.ok(docxToolchainIndex > dedupeIndex, 'resolve the engine Vite pin from the final installed graph');
     const docxIndex = dependencyOnly.commands.indexOf('node scripts/sync-docx-engine-peer.mjs');
-    assert.ok(docxIndex > dedupeIndex, 'dedupe must finish before source metadata writers');
+    assert.ok(docxIndex > docxToolchainIndex, 'the engine toolchain pin must be current before source metadata writers');
     assert.ok(dependencyOnly.commands.indexOf('check-peer-compatibility.mjs --write-current-versions') > docxIndex);
     assert.match(dependencyOnly.commands, /check-managed-peer-rewrites/u);
     assert.match(dependencyOnly.commands, /sync-package-manager-docs\.mjs --write/u);
@@ -2948,6 +2950,7 @@ test('upgrade dependency-only mode refreshes and deduplicates transitive depende
       const failed = run(verify, false, true);
       assert.ok(failed.commands.indexOf('pnpm dedupe\n') > failed.commands.indexOf(refreshCommand));
       assert.equal(exactShellCommandCount(failed.commands, 'pnpm dedupe'), 1);
+      assert.doesNotMatch(failed.commands, /lock\.toolchain\.vite/u);
       assert.doesNotMatch(failed.commands, /sync-docx-engine-peer|check-peer-compatibility\.mjs --write-current-versions|pnpm manifest|pnpm build|package\.sh|generate-component-quality/u);
       assert.doesNotMatch(failed.output, /Dependencies upgraded|regeneration complete/u);
     }

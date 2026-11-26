@@ -161,6 +161,13 @@ const rowHeightConverter = {
   },
 };
 
+const MAX_COLUMNS = 64;
+const columnsConverter = {
+  fromAttribute(value: string | null): number | 'auto' {
+    return value === 'auto' ? value : finiteInteger(Number(value), 1, 1, MAX_COLUMNS);
+  },
+};
+
 type VirtualListKey = string | number;
 
 /** A random-access collection that does not have to materialize one JavaScript value per row. */
@@ -563,6 +570,20 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
    *  into numbers; invalid markup safely canonicalizes to `'auto'`. */
   @property({ attribute: 'row-height', converter: rowHeightConverter })
   rowHeight: LyraVirtualListRowHeight = 'auto';
+
+  /** Number of equal-width cells per visual row (1–64), or auto to fit min-cell-width.
+   * Group markers and table-row semantics use a single column. */
+  @property({ converter: columnsConverter }) columns: number | 'auto' = 1;
+
+  /** Minimum preferred cell width in CSS pixels for automatic columns. */
+  @property({ attribute: 'min-cell-width', converter: blankNumberConverter(160) }) minCellWidth = 160;
+
+  /** Cell width divided by height in gallery mode. A numeric row-height takes precedence. */
+  @property({ attribute: 'cell-aspect-ratio', converter: blankNumberConverter(1) }) cellAspectRatio = 1;
+
+  private gridColumns = 0;
+  @state() private viewportWidth = 0;
+  private pendingViewportWidth?: number;
 
   /** `'listitem'` (default) maps to `role="list"`/`role="listitem"` with
    *  `aria-setsize`/`aria-posinset`. `'row'` maps to `role="rowgroup"`/`role="row"` with
@@ -1359,6 +1380,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     this.pendingRowMeasurements.clear();
     this.pendingGroupMeasurements.clear();
     this.rowObserveFrame.cancel();
+    this.pendingViewportWidth = undefined;
     this.containerResizeObserver?.disconnect();
     this.containerResizeObserver = undefined;
     this.stickyResizeObserver?.disconnect();
@@ -1483,8 +1505,27 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     if (sequence || changed.has('groups')) {
       this.recomputeGroups();
     }
-    if (changed.has('rowHeight')) {
+    const previousColumns = this.gridColumns;
+    const requestedColumns = this.columns === 'auto'
+      ? this.viewportWidth / Math.max(1, finiteNumber(this.minCellWidth, 160))
+      : this.columns;
+    const columns = finiteInteger(requestedColumns, 1, 1, MAX_COLUMNS);
+    this.gridColumns = (columns > 1 || this.columns === 'auto') &&
+      this.itemRole !== 'row' && !this.normalizedGroups.length ? columns : 0;
+    if (Boolean(previousColumns) !== Boolean(this.gridColumns)) {
+      this.offsetsDirty = true;
+      this.offsetDirtyStart = 0;
+    }
+    if (changed.has('rowHeight') || previousColumns !== this.gridColumns ||
+        (this.gridColumns && (changed.has('viewportWidth') || changed.has('cellAspectRatio')))) {
+      this.pendingScrollCorrection = undefined;
+      const ratio = finiteNumber(this.cellAspectRatio, 1);
       this.fixedRowHeight = this.parseRowHeight(this.rowHeight);
+      if (this.fixedRowHeight === null && this.gridColumns > 0) {
+        const cellWidth = this.viewportWidth / this.gridColumns || DEFAULT_ROW_ESTIMATE_PX;
+        const height = ratio > 0 ? cellWidth / ratio : cellWidth;
+        this.fixedRowHeight = Math.max(1, finiteNumber(height, DEFAULT_ROW_ESTIMATE_PX));
+      }
       if (this.fixedRowHeight != null) {
         this.measuredHeights.clear();
         this.measuredIndices.clear();
@@ -1720,6 +1761,10 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   }
 
   private offsetAt(index: number): number {
+    if (this.gridColumns) {
+      const row = index === this.itemCount ? Math.ceil(index / this.gridColumns) : Math.floor(index / this.gridColumns);
+      return Math.min(Number.MAX_VALUE, row * this.fixedRowHeight!);
+    }
     return isIndexedSource(this.effectiveSource)
       ? this.indexedOffsetForIndex(index)
       : this.arrayOffsetAt(index);
@@ -1826,9 +1871,20 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
   }
 
   private rowBottomAt(index: number): number {
+    if (this.gridColumns) return finiteAdd(this.offsetAt(index), this.fixedRowHeight!);
     return isIndexedSource(this.effectiveSource)
       ? finiteAdd(this.indexedOffsetForIndex(index), this.rowHeightAt(index))
       : this.offsetIndex.offsetOf(index + 1);
+  }
+
+  private gridRowAt(offset: number): number {
+    const height = this.fixedRowHeight!;
+    const row = Math.floor(offset / height);
+    // Division can round across a boundary returned by offsetForIndex() when height is
+    // fractional. Compare against the same products used to position the rows.
+    if ((row + 1) * height <= offset) return row + 1;
+    if (row * height > offset) return row - 1;
+    return row;
   }
 
   private entryTopAt(index: number): number {
@@ -1837,6 +1893,10 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
 
   /** First item index whose bottom edge is at/after `offset`. */
   private findIndexAtOrAfter(offset: number): number {
+    if (this.gridColumns) {
+      const lastRow = Math.floor((this.itemCount - 1) / this.gridColumns);
+      return Math.max(0, Math.min(lastRow, this.gridRowAt(offset))) * this.gridColumns;
+    }
     if (!isIndexedSource(this.effectiveSource)) {
       return offset < 0 ? 0 : this.offsetIndex.indexAt(offset);
     }
@@ -1852,6 +1912,11 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
 
   /** Last item index whose entry top is strictly before `offset`. */
   private findIndexAtOrBefore(offset: number): number {
+    if (this.gridColumns) {
+      const row = this.gridRowAt(offset);
+      const rowLimit = offset > row * this.fixedRowHeight! ? row + 1 : row;
+      return Math.max(0, Math.min(this.itemCount, rowLimit * this.gridColumns) - 1);
+    }
     if (!isIndexedSource(this.effectiveSource)) return this.offsetIndex.indexBefore(offset);
     let lo = 0;
     let hi = this.itemCount - 1;
@@ -1886,16 +1951,20 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
 
   /**
    * The index of the row whose box contains `px`, expressed in the same scroll-coordinate space
-   * `offsetForIndex()` returns — so `indexAtOffset(offsetForIndex(i))` round-trips to `i`, and
+   * `offsetForIndex()` returns. In single-column mode `indexAtOffset(offsetForIndex(i))` returns `i`, and
    * `indexAtOffset(scrollContainer.scrollTop)` is the row at the top of the viewport. Clamped: a
    * negative offset resolves to `0` and an offset past the end of the content to the last row.
+   * Gallery offsets resolve to the first item in the visual row.
    * Returns `-1` when the effective source is empty. Same `row-height="auto"` estimate caveat as
    * `offsetForIndex()`.
    */
   indexAtOffset(px: number): number {
     const n = this.itemCount;
     if (n === 0) return -1;
-    if (!Number.isFinite(px)) return px > 0 ? n - 1 : 0;
+    if (!Number.isFinite(px)) {
+      const columns = this.gridColumns || 1;
+      return px > 0 ? n - 1 - (n - 1) % columns : 0;
+    }
     return Math.min(n - 1, Math.max(0, this.findIndexAtOrAfter(px)));
   }
 
@@ -1920,9 +1989,10 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
       // overscanned window instead of a false empty list. This keeps content reachable with no JS
       // while preserving the library's bounded-DOM guarantee for arbitrarily large collections.
       this.visibleStart = 0;
-      this.visibleEnd = 0;
+      const columns = this.gridColumns || 1;
+      this.visibleEnd = Math.min(n - 1, columns - 1);
       this.renderStart = 0;
-      this.renderEnd = Math.min(n - 1, normalizeOverscan(this.overscan));
+      this.renderEnd = Math.min(n - 1, (1 + normalizeOverscan(this.overscan)) * columns - 1);
       return;
     }
     const viewTop = this.containerScrollTop;
@@ -1932,7 +2002,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     // Property assignments bypass Lit's attribute converter, so normalize at
     // the arithmetic boundary too. This preserves virtualization even when
     // JavaScript writes Infinity, NaN, a negative, or an excessive number.
-    const overscan = normalizeOverscan(this.overscan);
+    const overscan = normalizeOverscan(this.overscan) * (this.gridColumns || 1);
     this.renderStart = Math.max(0, this.visibleStart - overscan);
     this.renderEnd = Math.min(n - 1, this.visibleEnd + overscan);
     if (this.pruneIndexedMeasurements()) this.computeRange();
@@ -1993,6 +2063,8 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
           !this.isCurrentOwnerWork(ownerDocument, generation)
         ) return;
         this.beginResizeDelivery();
+        const baseEntry = entries.find(entry => entry.target === base);
+        if (baseEntry) this.pendingViewportWidth = baseEntry.contentRect.width;
         if (external) {
           this.externalGeometry = undefined;
           // Either box resizing changes the same answer -- the scroller's is the visible band, and
@@ -2032,6 +2104,7 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
         this.scrollContainer !== base ||
         !this.isCurrentOwnerWork(ownerDocument, generation)
       ) return;
+      this.viewportWidth = base.clientWidth;
       const metrics = this.readScrollMetrics();
       if (!metrics) return;
       if (this.viewportHeight !== metrics.viewportHeight)
@@ -2291,6 +2364,10 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
     }
     this.rowObserveFrame.schedule(() => {
       this.inResizeDelivery = false;
+      if (this.pendingViewportWidth !== undefined) {
+        this.viewportWidth = this.pendingViewportWidth;
+        this.pendingViewportWidth = undefined;
+      }
       flushObservations(this.rowResizeObserver, this.observedRows, this.deferredRowObservations);
       flushObservations(this.groupResizeObserver, this.observedGroups, this.deferredGroupObservations);
       // Now that the loop this frame belongs to is over, the offsets may move again.
@@ -2695,6 +2772,9 @@ export class LyraVirtualList extends LyraElement<LyraVirtualListEventMap> {
         aria-current=${transparent ? nothing : isActive ? 'true' : 'false'}
         style=${styleMap({
           transform: `translateY(${top}px)`,
+          inlineSize: this.gridColumns ? `${100 / this.gridColumns}%` : undefined,
+          insetInlineStart: this.gridColumns ? `${index % this.gridColumns * 100 / this.gridColumns}%` : undefined,
+          blockSize: this.gridColumns ? `${this.fixedRowHeight}px` : undefined,
           '--_lr-virtual-list-row-offset': `${top}px`,
         })}
       >

@@ -307,7 +307,8 @@ const LEGEND_CONTROL_ROLE = literalSetConverter<LyraMapLegendControlRole>(
 export interface LyraMapLegendEntry {
   readonly color: string;
   readonly label: string;
-  readonly pattern: LyraMapLegendPattern;
+  /** Swatch pattern. Defaults to 'solid'. */
+  readonly pattern?: LyraMapLegendPattern;
   /**
    * Category key this row stands for -- the same string a `point.colors` / `point.icons` entry
    * matches against `point.field` / `point.iconField`. Trimmed, bounded to 256 characters and
@@ -485,7 +486,8 @@ function normalizeMapLegend(value: unknown): NormalizedMapLegend {
       if (!candidate || typeof candidate !== 'object') continue;
       const rawColor = candidate.color;
       const rawLabel = candidate.label;
-      const rawPattern = candidate.pattern;
+      const pattern = candidate.pattern;
+      const rawPattern = pattern === undefined ? 'solid' : pattern;
       if (
         typeof rawColor !== 'string' ||
         typeof rawLabel !== 'string' ||
@@ -531,7 +533,8 @@ function normalizeMapLegend(value: unknown): NormalizedMapLegend {
     }
   }
 
-  const frozenEntries = entries.length ? Object.freeze(entries) : EMPTY_MAP_LEGEND;
+  // A rejected nonempty input has a visible projection even when it admits no rows.
+  const frozenEntries = inputCount > 0 ? Object.freeze(entries) : EMPTY_MAP_LEGEND;
   const omittedCount = Math.max(0, inputCount - frozenEntries.length);
   const projection: LyraMapLegendProjection = Object.freeze({
     inputCount,
@@ -924,14 +927,20 @@ export interface LyraMapHeatmapOptions {
   readonly opacity?: number;
 }
 
-/** Continuous feature-driven color and constant width for an auto data layer's lines/outlines. */
+/** Feature-driven color and dash patterns for an auto data layer's lines/outlines. */
 export interface LyraMapLineOptions {
-  /** Numeric feature property to color by. Missing/non-numeric values use strokeColor/color/tone. */
+  /** Feature property for numeric stops or string categories. */
   readonly field?: string;
   /** Linear [value, color] stops. First 64 entries are inspected, sorted and deduplicated
    * first-wins. Two usable stops are required; otherwise the flat stroke color remains.
    * CSS variables resolve on the host. Share these stops with legendGradient for a matching key. */
   readonly stops?: readonly (readonly [number, string])[];
+  /** String category/color pairs. The first 32 entries are inspected and valid duplicates are first-wins.
+   * Usable categories take precedence over numeric stops. Unmatched features use strokeColor/color/tone. */
+  readonly colors?: readonly (readonly [string, string])[];
+  /** Alternating dash and gap lengths in line widths, or up to 32 category/pattern pairs keyed by field.
+   * Patterns contain 1–32 lengths in [0, 256] with a positive total. Unmatched features are solid. */
+  readonly dash?: readonly number[] | readonly (readonly [string, readonly number[]])[];
   /** Stroke width in CSS pixels, clamped to [0, 200]. Unset/non-finite restores 2. */
   readonly width?: number;
   /** Whole-line opacity, clamped to [0, 1]. Unset/non-finite restores 1. */
@@ -982,6 +991,9 @@ export interface LyraMapPointIcon {
 
 /** Category colors and optional symbols for points, including unclustered points in a cluster source. */
 export interface LyraMapPointOptions {
+  /** Visible unclustered points can display center-cropped thumbnails from an HTTP(S) URL property.
+   * Size defaults to 32 CSS pixels (1–96). Shape defaults to circle. A CSS border color draws a one-pixel rim. */
+  readonly image?: { readonly field: string; readonly size?: number; readonly shape?: 'circle' | 'square'; readonly border?: string };
   /** String feature property to match. Unknown, missing and non-string values use the flat layer color. */
   readonly field?: string;
   /** [category, CSS color] pairs; first 32 inspected, duplicate categories first-wins. */
@@ -1157,6 +1169,7 @@ const DATA_LAYER_SUFFIXES = [
   '-line',
   '-circle',
   '-point-icon',
+  '-point-image',
   '-cluster',
   '-cluster-count',
   '-heatmap',
@@ -1172,7 +1185,7 @@ const DATA_LAYER_SUFFIXES = [
  * top of the `-cluster` circle already queried and carries the same properties, so including it
  * would just make the label, rather than the cluster, the topmost hit.
  */
-const QUERYABLE_DATA_LAYER_SUFFIXES = ['-fill', '-line', '-circle', '-cluster', '-point-icon', '-label'] as const;
+const QUERYABLE_DATA_LAYER_SUFFIXES = ['-fill', '-line', '-circle', '-cluster', '-point-icon', '-point-image', '-label'] as const;
 
 /** MapLibre's own `heatmap-radius` default. */
 const DEFAULT_HEATMAP_RADIUS = 30;
@@ -2429,7 +2442,8 @@ export interface LyraMapEventMap {
  *   `dataLayers` fills. Read from the resolved cascade whenever those layers are applied or painted
  *   after a theme change.
  * @cssprop [--lr-map-hidden-category-opacity=0.15] - Opacity a hidden category's points, point
- *   strokes and point icons are muted to in the rendered MapLibre paint. Read from the resolved
+ *   strokes and point icons are muted to in the rendered MapLibre paint. Categorical lines multiply
+ *   their configured opacity by this value. Read from the resolved
  *   cascade on every paint, because MapLibre draws to a WebGL canvas the CSS cascade never reaches.
  * @cssprop [--lr-map-legend-inset-block=var(--lr-space-s)] - Block offset of the legend panel from the
  *   control rows, or from the map edge under `legendClearance = 'none'`.
@@ -2485,7 +2499,7 @@ export interface LyraMapEventMap {
  * to the shared `--lr-icon-button-size` hit-area floor. Activation emits the cancelable
  * `lr-map-legend-toggle-request`; there is deliberately no confirmation event, because the
  * committed state is `hiddenCategories` and the host already observes it. A hidden category mutes
- * its points, point strokes and point icons through `--lr-map-hidden-category-opacity`; a
+ * its categorized lines, points, point strokes and point icons through `--lr-map-hidden-category-opacity`; a
  * `kind: 'heatmap'` entry is deliberately out of scope, having no per-category field to mute.
  *
  * No style or tile provider is selected implicitly. Set `mapStyle` explicitly before connection;
@@ -3489,8 +3503,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   private _legendRevision = 0;
   private _legendProjection = EMPTY_MAP_LEGEND_PROJECTION;
   private _legendGrouped = false;
-  /** Immutable, bounded entries rendered in the optional map legend. A required pattern keeps
-   * category identity available when authored colors collapse or are unavailable. */
+  /** Immutable, bounded entries rendered in the optional map legend. Omitted swatch patterns
+   * default to 'solid'. Use distinct patterns for categories that need a non-color cue. */
   @property({ attribute: false })
   get legend(): readonly LyraMapLegendEntry[] {
     return this._legend;
@@ -3598,7 +3612,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const stops = this.legendGradient;
     if (stops.length < 2) return false;
     return this.canonicalDataLayers.some((layer) => layer.kind === 'auto' && !layer.cluster && layer.line?.field &&
-      layer.line.stops.length === stops.length && layer.line.stops.every(([value, color], index) =>
+      !layer.line.colors.length && layer.line.stops.length === stops.length && layer.line.stops.every(([value, color], index) =>
         value === stops[index]![0] && resolvedLayerColor(this, color, layer.tone) ===
         resolvedLayerColor(this, stops[index]![1], layer.tone)));
   }
@@ -3920,7 +3934,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    * is what thousands of points need and what `markers` -- one real DOM element per entry -- cannot
    * be; `kind: 'heatmap'` replaces the geometry split with MapLibre's own `heatmap` layer. Neither
    * changes an entry that sets neither. `point` adds categorical circle paint and bounded SVG path
-   * icons to ordinary or clustered points on the same source; `line` adds numeric route paint.
+   * icons to ordinary or clustered points on the same source. `line` supports numeric ramps, category
+   * colors, and constant or categorical dash patterns.
    * Explicit vector/raster/image/canvas entries add native external sources (up to 32); vector
    * entries name sourceLayer and line/circle/fill/symbol render families. HTTP(S) URL templates
    * use the engine transport contract and its CORS/provider behavior, without library response
@@ -4238,6 +4253,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
    *  object free of the key entirely. Keyed by layer id, not source id, because one source's
    *  circle and point-icon layers mute independently on different fields. */
   private appliedPointMuting = new Set<string>();
+  private pointImages?: import('./map-point-images.js').MapPointImages;
   private appliedPointIcons = new Map<string, {
     signature: string;
     color: string;
@@ -6042,6 +6058,8 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.controlPeer = undefined;
     this.attributionState = undefined;
     this.setControlOutlines([]);
+    this.pointImages?.clear();
+    this.pointImages = undefined;
     if (this._map) this.peerEvents.clear(this._map);
     try {
       this._map?.remove();
@@ -6364,6 +6382,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
             if (!active || !current()) return;
             try {
               if (event === 'style-ready') startRestoration();
+              if (event === 'idle') this.pointImages?.refresh();
               if (active && current()) listener();
             } catch { if (current()) this.readiness.fail(); }
           }));
@@ -6587,6 +6606,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this._styleLayers = EMPTY_STYLE_LAYERS; this._styleSources = EMPTY_STYLE_SOURCES;
       const map = this._map;
       this.beginStyleReadiness(map, false, () => {
+        this.pointImages?.clear();
         for (const sourceId of this.appliedPointIcons.keys()) this.removePointIcons(sourceId);
         // Use the live peer's capability: engine changes take effect only after reconnecting.
         // Rebuild modular and URL styles so even unchanged inputs emit a committed style.load.
@@ -7508,7 +7528,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       if (layer.kind === 'heatmap') add(source, ['heatmap']);
       else {
         add(source, cluster ? ['circle'] : ['fill', 'line', 'circle']);
-        if (layer.label || (cluster && this.styleProvidesGlyphs()) || (layer.point?.iconField && layer.point.icons.length)) {
+        if (layer.label || layer.point?.image || (cluster && this.styleProvidesGlyphs()) || (layer.point?.iconField && layer.point.icons.length)) {
           add(source, ['symbol']);
         }
       }
@@ -7558,6 +7578,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       const suffixes = row.kind === 'heatmap' ? ['-heatmap'] : row.cluster
         ? ['-cluster', ...(this.styleProvidesGlyphs() ? ['-cluster-count'] : []), '-circle'] : ['-fill', '-line', '-circle'];
       if (row.kind !== 'heatmap' && row.point?.iconField && row.point.icons.length) suffixes.push('-point-icon');
+      if (row.point?.image) suffixes.push('-point-image');
       if (row.label) suffixes.push('-label');
       groups.push({ id: row.sourceId, layerIds: suffixes.map(suffix => `${native}${suffix}`), ...(row.before ? { before: row.before } : {}) });
     }
@@ -8248,6 +8269,15 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     if (!current()) throw new DOMException('Map update superseded.', 'AbortError');
     this.applyPointIcons(sourceId, layer);
     if (!current()) throw new DOMException('Map update superseded.', 'AbortError');
+    if (layer.point?.image && this._map) {
+      this.pointImages ??= new (layerRuntime().MapPointImages)(this, this._map, work => this.trackFeatureLoad(work),
+        id => this.removeMapLayer(id));
+      this.paintPointImage(sourceId, layer);
+    } else {
+      this.pointImages?.remove(sourceId);
+      this.appliedPointMuting.delete(`${sourceId}-point-image`);
+    }
+    if (!current()) throw new DOMException('Map update superseded.', 'AbortError');
     this.applyGeoLabel(sourceId, layer, current);
   }
 
@@ -8269,6 +8299,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this.paintGeometryLayers(sourceId, layer);
     }
     this.paintPointIcons(sourceId, layer);
+    this.paintPointImage(sourceId, layer);
     if (layer.label && this.appliedGeoLabels.has(sourceId)) {
       const descriptor = layerRuntime().buildMapLabelLayer(`${sourceId}-label`, sourceId, layer.label, value => resolvedLayerColor(this, value, layer.tone));
       for (const [property, value] of Object.entries(descriptor['paint'] as Record<string, unknown>)) this.setMapPaint(descriptor.id, property, value);
@@ -8361,6 +8392,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         paint: {
           'line-color': this.lineColor(layer), 'line-width': layer.line?.width ?? 2,
           ...(layer.line ? { 'line-opacity': layer.line.opacity } : {}),
+          ...(layer.line?.dash ? { 'line-dasharray': layer.line.dash } : {}),
         },
       });
     }
@@ -8373,8 +8405,10 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
         paint: { 'circle-color': stroke, 'circle-radius': 5 },
       });
     }
+    if (layer.line?.dash || this._map.getPaintProperty?.(lineId, 'line-dasharray') != null) {
+      this.setMapPaint(lineId, 'line-dasharray', layer.line?.dash ?? null);
+    }
     this.setMapPaint(lineId, 'line-width', layer.line?.width ?? 2);
-    this.setMapPaint(lineId, 'line-opacity', layer.line?.opacity ?? 1);
     this.paintGeometryLayers(sourceId, layer);
   }
 
@@ -8385,13 +8419,24 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const color = resolvedLayerColor(this, layer.color, tone);
     this.setMapPaint(`${sourceId}-fill`, 'fill-color', color);
     this.setMapPaint(`${sourceId}-fill`, 'fill-opacity', this.fillOpacity);
-    this.setMapPaint(`${sourceId}-line`, 'line-color', this.lineColor(layer));
+    const lineId = `${sourceId}-line`;
+    this.setMapPaint(lineId, 'line-color', this.lineColor(layer));
+    const line = layer.line;
+    const opacity = line?.opacity ?? 1;
+    const categorical = line?.colors.length || line?.dash?.[0] === 'match';
+    this.setMapPaint(lineId, 'line-opacity', categorical && line?.field && this.hiddenCategories.length
+      ? mutedCategoryOpacityExpression(line.field, this.hiddenCategories, this.hiddenOpacity * opacity, opacity)
+      : opacity);
     this.paintPoints(sourceId, layer);
   }
 
   private lineColor(layer: CanonicalMapDataLayer): string | unknown[] {
     const fallback = resolvedLayerColor(this, layer.strokeColor ?? layer.color, layer.tone);
     const line = layer.line;
+    if (line?.field && line.colors.length) {
+      return pointColorExpression(line.field,
+        line.colors.map(([key, color]) => [key, resolvedLayerColor(this, color, layer.tone)] as const), fallback);
+    }
     if (!line?.field || line.stops.length < 2) return fallback;
     return lineColorExpression(
       line.field,
@@ -8463,6 +8508,16 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
       this, layer.point?.iconColor ?? `var(${ON_TONE_TOKEN[layer.tone ?? 'accent']})`, layer.tone,
     );
     return resolveCanvasColor(this, resolved, dataLayerColor(this, layer.tone));
+  }
+
+  private paintPointImage(sourceId: string, layer: CanonicalMapDataLayer): void {
+    const image = layer.point?.image;
+    if (!image || !this.pointImages) return;
+    const border = image.border ? resolvedLayerColor(this, image.border, layer.tone) : undefined;
+    if (!this.pointImages.configure(sourceId, !!layer.cluster, image, border)) return;
+    const id = `${sourceId}-point-image`;
+    const opacity = this.mutedPointOpacity(id, layer.point?.field);
+    if (opacity !== undefined) this.setMapPaint(id, 'icon-opacity', opacity);
   }
 
   private removePointIcons(sourceId: string): void {
@@ -8859,6 +8914,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     const sourceId = this._appliedDataLayerIds.get(publicSourceId);
     if (!sourceId) return;
     this.featureStates?.refreshNative('data-layer', sourceId);
+    this.pointImages?.remove(sourceId);
     this.removePointIcons(sourceId);
     this.appliedPointPaint.delete(sourceId);
     this.appliedGeoLabels.delete(sourceId);
@@ -9436,8 +9492,9 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
   }
 
   private legendLimitText(): string {
+    if (this.legend.length === 0) return this.localize('noData');
     return this.localize('paginationSummary', undefined, {
-      start: this.formatLocaleNumber(this.legend.length === 0 ? 0 : 1),
+      start: this.formatLocaleNumber(1),
       end: this.formatLocaleNumber(this.legend.length),
       total: this.formatLocaleNumber(this.legendProjection.inputCount),
       itemLabel: this.localize('items'),
@@ -9797,7 +9854,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
               ${this.renderLegendGradient()}
               <div
                 class="legend-list"
-                role=${this._legendGrouped ? nothing : 'list'}
+                role=${this.legend.length > 0 && !this._legendGrouped ? 'list' : nothing}
                 id=${this.legendCollapsible ? 'map-legend-list' : nothing}
                 ?hidden=${this.legendCollapsed}
               >

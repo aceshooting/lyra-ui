@@ -132,7 +132,7 @@ The entry points, then:
   or future exports. Prefer the owning entry for that component's complete contract and smaller
   bundles.
 
-- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 309
+- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 310
   root-included tags — everything **except** the 15 inventory-designated optional-peer-family tags:
   `lr-chart` and its 8 typed subclasses (`lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`,
   `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`,
@@ -6082,6 +6082,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-icon': LyraIconReactProps;
   'lr-icon-button': LyraIconButtonReactProps;
   'lr-image-comparer': LyraImageComparerReactProps;
+  'lr-image-editor': LyraImageEditorReactProps;
   'lr-image-viewer': LyraImageViewerReactProps;
   'lr-include': LyraIncludeReactProps;
   'lr-ingestion-queue': LyraIngestionQueueReactProps;
@@ -6537,6 +6538,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-icon': LyraComponentTypeMap['lr-icon']['element'];
   'lr-icon-button': LyraComponentTypeMap['lr-icon-button']['element'];
   'lr-image-comparer': LyraComponentTypeMap['lr-image-comparer']['element'];
+  'lr-image-editor': LyraComponentTypeMap['lr-image-editor']['element'];
   'lr-image-viewer': LyraComponentTypeMap['lr-image-viewer']['element'];
   'lr-include': LyraComponentTypeMap['lr-include']['element'];
   'lr-ingestion-queue': LyraComponentTypeMap['lr-ingestion-queue']['element'];
@@ -6863,6 +6865,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-icon': LyraIconSvelteProps;
   'lr-icon-button': LyraIconButtonSvelteProps;
   'lr-image-comparer': LyraImageComparerSvelteProps;
+  'lr-image-editor': LyraImageEditorSvelteProps;
   'lr-image-viewer': LyraImageViewerSvelteProps;
   'lr-include': LyraIncludeSvelteProps;
   'lr-ingestion-queue': LyraIngestionQueueSvelteProps;
@@ -7348,6 +7351,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-icon': LyraIconVueProps;
   'lr-icon-button': LyraIconButtonVueProps;
   'lr-image-comparer': LyraImageComparerVueProps;
+  'lr-image-editor': LyraImageEditorVueProps;
   'lr-image-viewer': LyraImageViewerVueProps;
   'lr-include': LyraIncludeVueProps;
   'lr-ingestion-queue': LyraIngestionQueueVueProps;

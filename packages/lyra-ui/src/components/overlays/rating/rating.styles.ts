@@ -34,6 +34,12 @@ export const styles = css`
      single star, say) is narrower than that floor, and the default (normal => flex-start) would
      push the stars against the leading edge of an otherwise centred control. A no-op once the
      stars fill the floor. */
+  [part='label'] {
+    display: block;
+    color: var(--lr-color-text);
+    font-size: var(--lr-font-size-m);
+    overflow-wrap: anywhere;
+  }
   [part~="base"] {
     display: inline-flex;
     justify-content: center;

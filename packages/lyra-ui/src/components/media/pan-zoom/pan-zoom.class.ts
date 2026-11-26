@@ -17,6 +17,7 @@ import { shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js'
 import { styles } from './pan-zoom.styles.js';
 import { repairControlFocusOnUpdate } from '../../../internal/control-focus-repair.js';
 import { blankNumberConverter } from '../../../internal/converters.js';
+import { capturePointer, releasePointer } from '../../../internal/pointer-capture.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_imageViewerFailedToLoad, LYRA_DEFAULT_zoomControls, LYRA_DEFAULT_zoomableFrameLabel } from '../../../internal/default-strings/media.generated.js';
@@ -41,6 +42,8 @@ export interface LyraPanZoomEventMap {
  * returns the viewport to its origin for consumers that replace the inspected content.
  * `fit` controls the base layout of an image supplied through `src`: `actual` preserves the
  * existing natural-size behavior, while `contain` and `width` size it against the viewport.
+ * A definite host block size bounds the viewport, leaving room for the controls. Overflowing
+ * `src` images can be panned by mouse drag as well as with native scrolling.
  * The three controls are independently tabbable native buttons in a labelled `group`; they do not
  * claim the arrow-key navigation contract of an ARIA toolbar.
  *
@@ -60,7 +63,7 @@ export interface LyraPanZoomEventMap {
  * @csspart zoom-out - Zoom-out button.
  * @csspart zoom-in - Zoom-in button.
  * @csspart reset - Reset-to-100-percent button.
- * @cssprop [--lr-pan-zoom-min-block-size=var(--lr-size-10rem)] - Minimum viewport block size.
+ * @cssprop [--lr-pan-zoom-min-block-size=var(--lr-size-10rem)] - Minimum viewport block size for an intrinsically sized frame.
  * @cssprop [--lr-pan-zoom-zoom=1] - Read-only scale written from `zoom`; set the property instead.
  * @cssprop [--lr-icon-button-bg=var(--lr-color-surface)] - Control background in the resting state.
  * @cssprop [--lr-pan-zoom-control-hover-bg=var(--lr-color-brand-quiet)] - Zoom and reset control
@@ -99,6 +102,20 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
 
   private readonly announcements = new AnnouncementSinkController(this, { eager: ['assertive'] });
   @state() private failedSrc: string | null = null;
+  private mousePan?: {
+    id: number;
+    image: HTMLImageElement;
+    viewport: HTMLElement;
+    x: number;
+    y: number;
+    left: number;
+    top: number;
+  };
+
+  override disconnectedCallback(): void {
+    this.endMousePan();
+    super.disconnectedCallback();
+  }
 
   override adoptedCallback(): void {
     super.adoptedCallback();
@@ -115,7 +132,10 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
-    if (changed.has('src')) this.failedSrc = null;
+    if (changed.has('src')) {
+      this.endMousePan();
+      this.failedSrc = null;
+    }
   }
 
   private onImageError(event: Event, src: string): void {
@@ -124,6 +144,46 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
     this.failedSrc = src;
     this.announcements.announceAssertive(this.localize('imageViewerFailedToLoad'));
     this.emit('lr-render-error', { error: new Error('The image failed to load.') });
+  }
+
+  private onImagePointerDown(event: PointerEvent): void {
+    if (event.defaultPrevented || event.pointerType !== 'mouse' || event.button !== 0 || this.mousePan) return;
+    const viewport = this.viewportEl;
+    const image = event.currentTarget as HTMLImageElement;
+    if (!viewport || (viewport.scrollWidth <= viewport.clientWidth && viewport.scrollHeight <= viewport.clientHeight)) return;
+    if (!capturePointer(image, event.pointerId)) return;
+    this.mousePan = {
+      id: event.pointerId,
+      image,
+      viewport,
+      x: event.clientX,
+      y: event.clientY,
+      left: viewport.scrollLeft,
+      top: viewport.scrollTop,
+    };
+    image.setAttribute('data-panning', '');
+  }
+
+  private onImagePointerMove(event: PointerEvent): void {
+    const pan = this.mousePan;
+    if (!pan || pan.id !== event.pointerId) return;
+    pan.viewport.scrollTo({
+      left: pan.left + pan.x - event.clientX,
+      top: pan.top + pan.y - event.clientY,
+      behavior: 'instant',
+    });
+  }
+
+  private onImagePointerEnd(event: PointerEvent): void {
+    if (this.mousePan?.id === event.pointerId) this.endMousePan();
+  }
+
+  private endMousePan(): void {
+    const pan = this.mousePan;
+    if (!pan) return;
+    this.mousePan = undefined;
+    pan.image.removeAttribute('data-panning');
+    releasePointer(pan.image, pan.id);
   }
 
   /** Current zoom multiplier (default 1), clamped to `minZoom`-`maxZoom`; reflects to the `zoom` attribute. */
@@ -263,6 +323,7 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
     return html`<div part="base">
       <div
         part="viewport"
+        ?data-image=${safeSrc !== null && this.failedSrc !== safeSrc}
         role="group"
         aria-label=${viewportLabel}
         tabindex="0"
@@ -278,7 +339,17 @@ export class LyraPanZoom extends LyraElement<LyraPanZoomEventMap> {
           ${safeSrc
             ? this.failedSrc === safeSrc
               ? html`<div part="error">${this.localize('imageViewerFailedToLoad')}</div>`
-              : keyed(safeSrc, html`<img src=${safeSrc} alt=${this.alt} @error=${(event: Event) => this.onImageError(event, safeSrc)} />`)
+              : keyed(safeSrc, html`<img
+                  src=${safeSrc}
+                  alt=${this.alt}
+                  draggable="false"
+                  @error=${(event: Event) => this.onImageError(event, safeSrc)}
+                  @pointerdown=${this.onImagePointerDown}
+                  @pointermove=${this.onImagePointerMove}
+                  @pointerup=${this.onImagePointerEnd}
+                  @pointercancel=${this.onImagePointerEnd}
+                  @lostpointercapture=${this.onImagePointerEnd}
+                />`)
             : html`<slot></slot>`}
         </div>
       </div>

@@ -57,8 +57,8 @@ and event listeners survive every breakpoint crossing.
   stylesheets, which a `style-src` nonce does not govern).
 - `navigationPlacement: 'start' | 'end' = 'start'` (attribute `navigation-placement`, reflected) —
   a logical placement: `start` is left in LTR and right in RTL; `end` is the reverse.
-- `tabindex: string = '-1'` (reflected) — the host fragment target's native focusability. The Page
-  preserves an authored value and otherwise keeps the host target focusable programmatically so a
+- The native `tabIndex` property reflects the host's `tabindex` attribute. The Page sets it to `-1` by default
+  and preserves an authored value. The default keeps the host programmatically focusable so a
   skip link or URL fragment can transfer focus into the main content.
 - `disableNavigationToggle: boolean = false` (attribute `disable-navigation-toggle`, reflected) —
   hides the built-in mobile toggle. One or more custom controls assigned to `navigation-toggle`, or

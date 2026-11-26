@@ -4,6 +4,7 @@ import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write
 import { FormControlController, reflectFormName } from '../../../internal/form-control-controller.js';
 import {
   html,
+  nothing,
   svg,
   type PropertyValues,
   type SVGTemplateResult,
@@ -140,9 +141,8 @@ function starSolid(): SVGTemplateResult {
  * The shadow symbol row is presentational chrome, so host ARIA customization cannot create a
  * second competing slider.
  *
- * Deliberately no label/hint/error chrome: `label` here is an accessible-name override, not visible
- * label text. A rating is a row of symbols with no field frame of its own, so a consumer wanting a
- * labeled field wraps this element in their own layout, or names it with an external `<label for>`.
+ * Set `with-label` to display the supplied `label` above the symbols. With `clearable`, clicking
+ * the selected value again or pressing Delete or Backspace proposes zero through the usual change request.
  *
  * Readonly transitions synchronize validity and aria-invalid in the same completed update. Form reset restores the independent default-value rather than the live value attribute.
  *
@@ -153,8 +153,7 @@ function starSolid(): SVGTemplateResult {
  * @event change - Bubbling, composed native `Event` emitted when a user commits a new value,
  * immediately before `lr-change`. Programmatic writes and no-op gestures are silent.
  * @event lr-change - The rating changed. `detail: { value }`.
- * @event lr-change-request - A user gesture (a click on a symbol, or an Arrow/Page/Home/End
- *   key) is about to change the rating; `detail: { value, previousValue }` carries the proposed
+ * @event lr-change-request - A pointer or keyboard gesture is about to change or clear the rating; `detail: { value, previousValue }` carries the proposed
  *   rating while `value` still holds the current one. Cancelable: calling `preventDefault()` keeps
  *   the current rating, and none of `input`/`lr-input`/`change`/`lr-change` fire. A listener may
  *   instead resolve the request by assigning `value` itself, which also suppresses the built-in
@@ -172,8 +171,7 @@ function starSolid(): SVGTemplateResult {
  *   and `lr-change` are emitted first, so a listener reading `value` from any of them sees the
  *   settled rating. A non-interactive (`readonly`/`disabled`) rating fires none of them.
  * @event lr-hover - The pointer entered, moved across, or left the symbols while the rating is
- * settable. `detail: { phase, value }`, where `value` is the rating that committing the current
- * pointer position would produce — enough to render a live description of what is being hovered.
+ * settable. `detail: { phase, value }` reports the symbol value under the pointer, including fractional precision.
  * @event focus - The native focus event from the host-owned slider.
  * @event blur - The native blur event from the host-owned slider.
  * @event lr-invalid - The rating failed a validity check. Cancelable: calling
@@ -188,6 +186,7 @@ function starSolid(): SVGTemplateResult {
  * Survives intrinsic revalidation and a form reset; clearing it restores the computed validity
  * rather than forcing the control valid.
  * @csspart base - Compatibility name for the presentational symbol row; use `rating`.
+ * @csspart label - The visible label when `with-label` and label text are supplied.
  * @csspart rating - The presentational symbol row. It is the same node as `base`.
  * @csspart star - Each visual symbol.
  * @csspart star-fill - The filled overlay inside each symbol, clipped to that
@@ -281,9 +280,12 @@ export class LyraRating extends LyraFormControlElement<LyraRatingEventMap> {
   /** Accessible-name property override. A host `aria-label` attribute has higher priority, and an
    * explicitly empty host attribute is preserved instead of restoring a fallback name. */
   @property({ attribute: false }) accessibleLabel = '';
-  /** Accessible name for the whole control, used when the host carries no `aria-label`. Not
-   *  rendered as visible text — a rating has no field frame of its own. */
+  /** Accessible name for the control, also shown above the symbols with `with-label`. */
   @property() label = '';
+  /** Display the supplied label above the symbols. */
+  @property({ type: Boolean, attribute: 'with-label' }) withLabel = false;
+  /** Clear the value by clicking the selected value again or pressing Delete or Backspace. */
+  @property({ type: Boolean }) clearable = false;
   /** Visual density; changes the private fallback behind `--lr-rating-size`. An inherited or
    * direct public value wins. Valid upstream long-form sizes remain observable verbatim rather
    * than being reflected back as a different token. */
@@ -786,7 +788,7 @@ export class LyraRating extends LyraFormControlElement<LyraRatingEventMap> {
   private onClick = (event: MouseEvent): void => {
     const next = this.pointerValue(event);
     if (next === null) return;
-    this.setValue(next);
+    this.setValue(this.clearable && next === this.safeValue ? 0 : next);
   };
 
   private onPointerEnter = (event: PointerEvent): void => {
@@ -849,7 +851,7 @@ export class LyraRating extends LyraFormControlElement<LyraRatingEventMap> {
       event.preventDefault();
       this.setValue(this.safeValue - this.safePrecision * PAGE_STEPS);
     }
-    if (event.key === 'Home') {
+    if (event.key === 'Home' || (this.clearable && (event.key === 'Delete' || event.key === 'Backspace'))) {
       event.preventDefault();
       this.setValue(0);
     }
@@ -1004,7 +1006,9 @@ export class LyraRating extends LyraFormControlElement<LyraRatingEventMap> {
         ? Math.min(this.hoverValue, safeMax)
         : safeValue;
     const count = Math.round(safeMax);
-    return html`<div
+    return html`${this.withLabel && this.label?.trim()
+      ? html`<span part="label" aria-hidden="true">${this.label}</span>`
+      : nothing}<div
       part="base rating"
       aria-hidden="true"
       @click=${this.onClick}

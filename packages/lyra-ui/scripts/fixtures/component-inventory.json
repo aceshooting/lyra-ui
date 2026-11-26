@@ -80854,6 +80854,167 @@
       }
     },
     {
+      "tag": "lr-image-editor",
+      "family": "media",
+      "classModule": "src/components/media/image-editor/image-editor.class.ts",
+      "registrationModule": "src/components/lr-image-editor.ts",
+      "rootIncluded": true,
+      "rootExclusion": null,
+      "optionalPeers": [],
+      "maturity": {
+        "status": "experimental",
+        "since": "unreleased",
+        "deprecated": null,
+        "profile": "new-component-experimental",
+        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "deprecations": []
+      },
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "accessibility": "automated",
+        "scale": "unmeasured",
+        "ledger": "scripts/fixtures/component-qualification.json"
+      },
+      "dependencies": {
+        "direct": [],
+        "transitive": [],
+        "ledger": "scripts/fixtures/component-integration.json"
+      },
+      "counterparts": [],
+      "surface": {
+        "attributes": [
+          {
+            "name": "alt",
+            "property": "alt",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "src",
+            "property": "src",
+            "type": "string",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          }
+        ],
+        "properties": [
+          {
+            "name": "alt",
+            "attribute": "alt",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "src",
+            "attribute": "src",
+            "type": "string",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          }
+        ],
+        "slots": [],
+        "events": [
+          {
+            "name": "lr-export",
+            "type": "CustomEvent<{ blob: Blob }>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          }
+        ],
+        "parts": [
+          {
+            "name": "base",
+            "deprecated": null
+          },
+          {
+            "name": "controls",
+            "deprecated": null
+          },
+          {
+            "name": "preview",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [],
+        "cssStates": [],
+        "methods": [
+          {
+            "name": "exportBlob",
+            "overloads": [
+              {
+                "parameters": [
+                  {
+                    "name": "type",
+                    "type": "string",
+                    "optional": false,
+                    "hasDefault": true,
+                    "default": "image/png"
+                  },
+                  {
+                    "name": "quality",
+                    "type": "number",
+                    "optional": true,
+                    "hasDefault": false
+                  }
+                ],
+                "returnType": "Promise<Blob>"
+              }
+            ]
+          }
+        ],
+        "staticProperties": [],
+        "staticMethods": [],
+        "moduleExports": [],
+        "form": {
+          "associated": false,
+          "properties": [],
+          "methods": []
+        },
+        "native": {
+          "forwardedEvents": [],
+          "delegatedMethods": []
+        }
+      }
+    },
+    {
       "tag": "lr-image-viewer",
       "family": "media",
       "classModule": "src/components/media/image-viewer/image-viewer.class.ts",
@@ -88031,6 +88192,16 @@
             "default": null
           },
           {
+            "name": "details-placement",
+            "property": "detailsPlacement",
+            "type": "'end' | 'bottom'",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "end"
+          },
+          {
             "name": "fit",
             "property": "fit",
             "type": "LyraImageFit",
@@ -88190,6 +88361,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "detailsPlacement",
+            "attribute": "details-placement",
+            "type": "'end' | 'bottom'",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "end"
           },
           {
             "name": "fit",
@@ -88373,6 +88554,10 @@
             "deprecated": null
           },
           {
+            "name": "details",
+            "deprecated": null
+          },
+          {
             "name": "next-icon",
             "deprecated": null
           },
@@ -88464,6 +88649,10 @@
           },
           {
             "name": "counter",
+            "deprecated": null
+          },
+          {
+            "name": "details",
             "deprecated": null
           },
           {
@@ -132147,6 +132336,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "clearable",
+            "property": "clearable",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
             "name": "custom-error",
             "property": "customError",
             "type": "string | null",
@@ -132275,6 +132474,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": 0
+          },
+          {
+            "name": "with-label",
+            "property": "withLabel",
+            "type": "boolean",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "properties": [
@@ -132287,6 +132496,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "clearable",
+            "attribute": "clearable",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           },
           {
             "name": "customError",
@@ -132480,6 +132699,16 @@
             "reflects": false,
             "deprecated": null,
             "hasDefault": false
+          },
+          {
+            "name": "withLabel",
+            "attribute": "with-label",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
           }
         ],
         "slots": [],
@@ -132554,6 +132783,10 @@
         "parts": [
           {
             "name": "base",
+            "deprecated": null
+          },
+          {
+            "name": "label",
             "deprecated": null
           },
           {
@@ -179208,6 +179441,26 @@
             "default": ""
           },
           {
+            "name": "cell-aspect-ratio",
+            "property": "cellAspectRatio",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 1
+          },
+          {
+            "name": "columns",
+            "property": "columns",
+            "type": "number | 'auto'",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 1
+          },
+          {
             "name": "has-more",
             "property": "hasMore",
             "type": "boolean",
@@ -179246,6 +179499,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "min-cell-width",
+            "property": "minCellWidth",
+            "type": "number",
+            "reflects": false,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 160
           },
           {
             "name": "overscan",
@@ -179298,6 +179561,26 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "cellAspectRatio",
+            "attribute": "cell-aspect-ratio",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 1
+          },
+          {
+            "name": "columns",
+            "attribute": "columns",
+            "type": "number | 'auto'",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 1
           },
           {
             "name": "groups",
@@ -179366,6 +179649,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": ""
+          },
+          {
+            "name": "minCellWidth",
+            "attribute": "min-cell-width",
+            "type": "number",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": 160
           },
           {
             "name": "overscan",

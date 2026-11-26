@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 33 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 34 parts, 22 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Documented with** `lr-lightbox-item` (same section below)
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -68,6 +68,9 @@ A lightbox opened outside an existing native `dialog.showModal()` stays interact
   changing the theme does not mutate the lightbox's zoom property.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — the dialog's accessible name.
   Blank labels use the localized `lightboxLabel` default.
+- `detailsPlacement: 'end' | 'bottom' = 'end'` (attribute `details-placement`) — show the details
+  at logical inline-end, moving them below the image when the available inline size is below
+  40rem. Set `bottom` to always place the details below the image.
 
 More properties: `withThumbnails` (attribute `with-thumbnails`, default `false`): Shows a strip of
 thumbnails for jumping between items in every mode; each uses the item's `thumbnail`, else the
@@ -131,7 +134,37 @@ not when `index` is written directly, open or closed (the same rule as `lr-carou
 zoom }`) is not emitted by the lightbox itself — it bubbles up composed from the embedded frame.
 
 **Slots:** `actions` — extra toolbar buttons (download/share/delete), rendered in `[part="toolbar"]`
-between the counter and the close button.
+between the counter and the close button. `details` — one reusable panel of rich content for the
+current image in `images` or `imageSource` mode. Update the panel on `lr-index-change` and initialize
+it for the starting index. If you write `index` directly, update the panel in the same operation.
+The panel stays hidden for empty galleries, slotted-item galleries, and while a source image is
+loading or has failed. It scrolls when its content exceeds the available space and uses the
+localized `details` label when it becomes a keyboard-scrollable region.
+
+```html
+<lr-lightbox id="gallery" fit="contain">
+  <section slot="details">
+    <h2>Photo information</h2>
+    <p data-location></p>
+  </section>
+</lr-lightbox>
+<script type="module">
+  import '@aceshooting/lyra-ui/components/lr-lightbox.js';
+
+  const photos = [
+    { src: '/photos/ridge.jpg', alt: 'View from the ridge', location: 'North Ridge' },
+    { src: '/photos/lake.jpg', alt: 'Lake from the trail', location: 'Lake Trail' },
+  ];
+  const gallery = document.querySelector('#gallery');
+  const location = gallery.querySelector('[data-location]');
+  const updateDetails = index => {
+    location.textContent = photos[index]?.location ?? '';
+  };
+  gallery.images = photos;
+  updateDetails(gallery.index);
+  gallery.addEventListener('lr-index-change', event => updateDetails(event.detail.index));
+</script>
+```
 
 **CSS parts:** `backdrop`, `panel` (`role="dialog"` + `aria-modal="true"` while open; fills the
 padded safe area rather than shrink-wrapping), `toolbar`, `counter` (visible localized "Image N of
@@ -143,7 +176,8 @@ including a consumer-driven one, appends the localized position to the document'
 embedded `<lr-pan-zoom>`), forwarded aliases `frame-viewport`, `frame-content`, `frame-controls`,
 `previous-button`,
 `previous-glyph`, `next-button`, `next-glyph`, `caption` (only when the current image has one; its
-`id` is the panel's `aria-describedby` target), `source-loading`, `source-error`, and `source-retry`
+`id` is the panel's `aria-describedby` target), `details` (scrollable details wrapper),
+`source-loading`, `source-error`, and `source-retry`
 (the current source image's retry button). `stage` exposes `aria-busy="true"` while source
 descriptor or native image loading is pending.
 

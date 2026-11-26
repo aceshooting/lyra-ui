@@ -140,6 +140,7 @@ import './components/lr-html-viewer.js';
 import './components/lr-icon.js';
 import './components/lr-icon-button.js';
 import './components/lr-image-comparer.js';
+import './components/lr-image-editor.js';
 import './components/lr-image-viewer.js';
 import './components/lr-include.js';
 import './components/lr-ingestion-queue.js';

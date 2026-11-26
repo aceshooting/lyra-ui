@@ -1358,6 +1358,17 @@ export class LyraExpandEvent extends LyraEvent<LyraEventDetailOf<LyraGlobalEvent
 }
 
 /**
+ * Class of every `lr-export` event; `event instanceof LyraExportEvent` is true for the events
+ * components dispatch and narrows `detail`.
+ */
+export class LyraExportEvent extends LyraEvent<LyraEventDetailOf<LyraGlobalEventMap['lr-export']>> {
+  static override readonly eventName = 'lr-export';
+  constructor(detail: LyraEventDetailOf<LyraGlobalEventMap['lr-export']>, options?: LyraEventOptions) {
+    super('lr-export', detail, options);
+  }
+}
+
+/**
  * Class of every `lr-export-complete` event; `event instanceof LyraExportCompleteEvent` is true
  * for the events components dispatch and narrows `detail`.
  */

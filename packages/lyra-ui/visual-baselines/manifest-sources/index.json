@@ -458,6 +458,10 @@
     {
       "id": "localization-pseudo-locales--bidirectional",
       "family": "forms"
+    },
+    {
+      "id": "media-files-image-editor--default",
+      "family": "media"
     }
   ],
   "tagOrder": [
@@ -496,6 +500,7 @@
     "lr-json-viewer",
     "lr-line-chart",
     "lr-lite-chart",
+    "lr-image-editor",
     "lr-map",
     "lr-markdown",
     "lr-message-parts",

@@ -16,6 +16,9 @@ const meta: Meta = {
 };
 export default meta;
 export const Default: StoryObj = { render: () => html`<lr-rating value="3" label="Satisfaction"></lr-rating>` };
+export const MinimumRating: StoryObj = {
+  render: () => html`<lr-rating label="Minimum stars" with-label clearable value="3"></lr-rating>`,
+};
 export const WhitespaceLabelFallback: StoryObj = {
   parameters: {
     docs: {

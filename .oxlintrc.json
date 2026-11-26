@@ -42,6 +42,9 @@
     "typescript/no-base-to-string": "off", // `String(unknown)` in defensive snapshotting
     "typescript/no-this-alias": "off", // `const host = this` inside object-literal adapters
     "typescript/no-misused-spread": "off", // `[...code]` over ASCII-only ISO codes
+    // Intentional getter reads (DOM layout flushes, access probes) and test registration
+    // witnesses use `void` to discard a value. The rule has no option for non-call operands.
+    "typescript/no-meaningless-void-operator": "off",
     "eslint/no-self-assign": "off", // `tree.data = tree.data` re-runs the setter on purpose
     "eslint/no-control-regex": "off", // sanitizers match C0 control characters on purpose
     // `const { omitted, ...rest } = value` is the omit idiom; the patterns restate oxlint's defaults,

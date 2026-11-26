@@ -1,7 +1,9 @@
 {
   "family": "media",
   "assignments": {
-    "new-component-experimental": [],
+    "new-component-experimental": [
+      "lr-image-editor"
+    ],
     "published-stable": [
       "lr-animated-image",
       "lr-animation",

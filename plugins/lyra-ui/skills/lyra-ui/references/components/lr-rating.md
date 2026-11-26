@@ -9,7 +9,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 4 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 5 parts, 9 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): the focused guides in `llms/shared/` (topic list in `llms/index.md`)
 
 ---
@@ -44,10 +44,12 @@ round-trip unchanged), plus two separate naming knobs:
 `label`). An authored host `aria-label` wins by attribute presence, including an explicitly empty
 value. Without one, a non-empty external `<label for>` names the host; `accessibleLabel`, `label`,
 then the localized name are the fallback order when no external label supplies text. Clicking an
-associated external label focuses the host-owned slider without changing its value. Neither
-property is visible label text, since a rating is a bare row of symbols with no field frame of its
-own; wrap the element in your own layout for a labelled field, or name it with an external
-`<label for>`.
+associated external label focuses the host-owned slider without changing its value. Set `with-label` (`withLabel`, default false) to display the supplied
+`label` above the symbols. The visible text exposes the `label` CSS part.
+
+Set `clearable` (default false) to clear a rating by clicking the selected value again or pressing
+Delete or Backspace. Clearing proposes zero through `lr-change-request` and emits the usual
+value events if accepted. Home selects zero in either mode.
 
 For the managed slider name only, an empty or whitespace-only `label` counts as absent and falls
 through to localized `rating`; the raw `label` property still reads exactly as assigned. An
@@ -87,7 +89,7 @@ Left unset, the built-in star outline/solid pair is unchanged.
 **Events:**
 
 - `lr-change-request` — `detail: { value, previousValue }`, cancelable. Dispatched before a
-  click or Arrow/Page/Home/End key changes the rating, while `value` still holds the current one; a
+  click or keyboard gesture changes the rating, including clearing, while `value` still holds the current one; a
   gesture that would not move the value requests nothing. `preventDefault()` keeps the rating and
   suppresses `input`/`lr-input`/`change`/`lr-change`; a listener may instead resolve the request by
   assigning `value` itself, which also suppresses the built-in commit. A refused or redirected
@@ -112,7 +114,7 @@ Left unset, the built-in star outline/solid pair is unchanged.
   first, so a listener reading `value` from any of the three sees the settled rating. A
   non-interactive (`readonly`/`disabled`) rating fires none of them.
 - `lr-hover` — `detail: { phase: 'start' | 'move' | 'end', value }`, where `value`
-  is the rating that committing the current pointer position _would_ produce — enough to render a
+  is the symbol value under the pointer, including fractional precision. Use it to render a
   live description of what is being hovered without waiting for a click. Fires only while the rating
   is settable (neither `disabled`, fieldset-disabled, nor `readonly`). `start` also covers a pointer
   that reaches the symbols without a `pointerenter` the component saw; `end` fires on
@@ -152,7 +154,8 @@ non-string restored state falls back to `0` rather than producing NaN geometry.
 `lr-rating:state(user-invalid)` is the one to paint red. Plain `invalid` matches a pristine
 `required` rating that has never been set.
 
-**CSS parts:** `base` (compatibility name for the presentational symbol row; use `rating`),
+**CSS parts:** `label` (the supplied text displayed by `with-label`),
+`base` (compatibility name for the presentational symbol row; use `rating`),
 `rating` (the presentational symbol row; it is the same node as `base`), `star` (each rendered symbol), `star-fill` (the
 filled overlay inside each symbol, clipped to that symbol's filled fraction — 0%, a partial
 percentage under a fractional `precision`, or 100%).

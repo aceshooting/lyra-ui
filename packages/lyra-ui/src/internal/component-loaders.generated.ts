@@ -150,6 +150,7 @@ export const COMPONENT_LOADERS: Readonly<Record<AutoloadableTagName, () => Promi
   'lr-icon': () => import('../components/utility/icon/icon.class.js').then((module) => module.LyraIcon),
   'lr-icon-button': () => import('../components/forms/icon-button/icon-button.class.js').then((module) => module.LyraIconButton),
   'lr-image-comparer': () => import('../components/media/image-comparer/image-comparer.class.js').then((module) => module.LyraImageComparer),
+  'lr-image-editor': () => import('../components/media/image-editor/image-editor.class.js').then((module) => module.LyraImageEditor),
   'lr-image-viewer': () => import('../components/media/image-viewer/image-viewer.class.js').then((module) => module.LyraImageViewer),
   'lr-include': () => import('../components/viewers/include/include.class.js').then((module) => module.LyraInclude),
   'lr-ingestion-queue': () => import('../components/retrieval/ingestion-queue/ingestion-queue.class.js').then((module) => module.LyraIngestionQueue),

@@ -32,11 +32,20 @@
       "profile": "standard",
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "The inherited inert decorative icon layers for native video controls change the current capture, which awaits human visual review."
+    },
+    {
+      "id": "media-files-image-editor--default",
+      "profile": "narrow-responsive",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The image preview and editing controls await human visual review."
     }
   ],
   "tagCoverage": {
     "lr-animated-image": [
       "animatedimage--default"
+    ],
+    "lr-image-editor": [
+      "media-files-image-editor--default"
     ],
     "lr-map": [
       "map--default"

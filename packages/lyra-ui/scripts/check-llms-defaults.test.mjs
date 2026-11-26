@@ -94,6 +94,16 @@ test('a documented optional over a real default is reported', () => {
   );
 });
 
+test('a typed entry in a Properties list must name a component field', () => {
+  withScratch(
+    { fillBody: { type: 'boolean', default: 'false' } },
+    '**Properties:**\n\n- `fill: boolean = false`\n- `fillBody: boolean = false`\n\n**Item shape:**\n- `id: string`',
+    (findings) => {
+      assert.deepEqual(findings.map(({ member, rule }) => [member, rule]), [['fill', 'unknown-property']]);
+    },
+  );
+});
+
 test('a correct pairing in either direction is silent', () => {
   withScratch(
     { label: { type: 'string | undefined' }, caption: { type: 'string', default: "''" } },

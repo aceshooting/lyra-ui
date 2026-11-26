@@ -325,6 +325,8 @@ export type LyraIconButtonVueProps = LyraVueCustomElement<'lr-icon-button'>;
 
 export type LyraImageComparerVueProps = LyraVueCustomElement<'lr-image-comparer'>;
 
+export type LyraImageEditorVueProps = LyraVueCustomElement<'lr-image-editor'>;
+
 export type LyraImageViewerVueProps = LyraVueCustomElement<'lr-image-viewer'>;
 
 export type LyraIncludeVueProps = LyraVueCustomElement<'lr-include'>;
@@ -828,6 +830,7 @@ export interface LyraVueGlobalComponents {
   'lr-icon': LyraIconVueProps;
   'lr-icon-button': LyraIconButtonVueProps;
   'lr-image-comparer': LyraImageComparerVueProps;
+  'lr-image-editor': LyraImageEditorVueProps;
   'lr-image-viewer': LyraImageViewerVueProps;
   'lr-include': LyraIncludeVueProps;
   'lr-ingestion-queue': LyraIngestionQueueVueProps;

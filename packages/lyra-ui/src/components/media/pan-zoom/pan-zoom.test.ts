@@ -3,7 +3,7 @@ import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import '../../lr-pan-zoom.js';
 import type { LyraPanZoom } from '../../lr-pan-zoom.js';
-import { hoverUntilMatched, resetMouse, sendMouse, settlePointer } from '../../../../test/wtr-mouse.js';
+import { hoverUntilMatched, resetMouse, sendMouse, sendWheel, settlePointer } from '../../../../test/wtr-mouse.js';
 import { ignoreResizeObserverLoopErrors } from '../../../../test/resize-observer-noise.js';
 
 ignoreResizeObserverLoopErrors(
@@ -69,14 +69,14 @@ it('uses only pan-zoom geometry tokens after the v9 component split', async () =
   `);
   const viewport = el.shadowRoot!.querySelector('[part="viewport"]') as HTMLElement;
   const content = el.shadowRoot!.querySelector('[part="content"]') as HTMLElement;
-  expect(getComputedStyle(viewport).minBlockSize).to.not.equal('333px');
+  expect(viewport.getBoundingClientRect().height).to.be.lessThan(333);
   expect(content.style.getPropertyValue('--lr-zoomable-frame-zoom')).to.equal('');
   expect(Number(getComputedStyle(content).zoom)).to.equal(1);
 
   el.style.setProperty('--lr-pan-zoom-min-block-size', '123px');
   el.zoom = 1.5;
   await el.updateComplete;
-  expect(getComputedStyle(viewport).minBlockSize).to.equal('123px');
+  expect(viewport.getBoundingClientRect().height).to.equal(123);
   expect(content.style.getPropertyValue('--lr-pan-zoom-zoom').trim()).to.equal('1.5');
   expect(Number(getComputedStyle(content).zoom)).to.equal(1.5);
 });
@@ -491,5 +491,183 @@ it('keeps the focusable viewport named when the host aria-label is empty or blan
   for (const value of ['', '   ']) {
     const el = (await fixture(html`<lr-pan-zoom aria-label=${value}></lr-pan-zoom>`)) as LyraPanZoom;
     expect(el.shadowRoot!.querySelector('[part="viewport"]')!.getAttribute('aria-label')).to.equal('Zoomable content');
+  }
+});
+
+const portrait = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="1363" height="2048"%3E%3Crect width="100%25" height="100%25" fill="blue"/%3E%3C/svg%3E';
+
+it('fits a portrait image to both dimensions of a bounded viewport and refits on resize', async () => {
+  const el = await fixture<LyraPanZoom>(html`
+    <lr-pan-zoom fit="contain" style="inline-size: 500px; block-size: 300px"></lr-pan-zoom>
+  `);
+  const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]')!;
+  const controls = el.shadowRoot!.querySelector<HTMLElement>('[part="controls"]')!;
+  el.src = portrait;
+  await el.updateComplete;
+  const image = el.shadowRoot!.querySelector('img')!;
+  await image.decode();
+
+  for (const height of [300, 210]) {
+    el.style.blockSize = `${height}px`;
+    expect(controls.getBoundingClientRect().bottom).to.be.at.most(el.getBoundingClientRect().bottom);
+    expect(image.getBoundingClientRect().height).to.be.closeTo(viewport.clientHeight, 1);
+    expect(viewport.scrollHeight).to.equal(viewport.clientHeight);
+    expect(viewport.scrollWidth).to.equal(viewport.clientWidth);
+  }
+
+  el.zoom = 2;
+  await el.updateComplete;
+  expect(viewport.scrollHeight).to.be.at.least(2 * viewport.clientHeight - 1);
+  expect(viewport.scrollWidth).to.be.at.least(2 * viewport.clientWidth - 1);
+
+  el.zoom = 0.5;
+  await el.updateComplete;
+  expect(viewport.scrollHeight).to.equal(viewport.clientHeight);
+  expect(viewport.scrollWidth).to.equal(viewport.clientWidth);
+  const viewportBounds = viewport.getBoundingClientRect();
+  const imageBounds = image.getBoundingClientRect();
+  expect(imageBounds.height).to.be.closeTo(viewport.clientHeight / 2, 1);
+  expect(imageBounds.top + imageBounds.height / 2).to.be.closeTo(viewportBounds.top + viewportBounds.height / 2, 1);
+});
+
+it('keeps actual-size content reachable with wheel and keyboard in an absolutely allocated frame', async () => {
+  const wrapper = await fixture<HTMLElement>(html`
+    <div style="position: relative; inline-size: 500px; block-size: 300px; overflow: hidden">
+      <lr-pan-zoom fit="actual" src=${portrait}
+        style="position: absolute; inset: 0; block-size: 100%; --lr-pan-zoom-min-block-size: 100%"
+      ></lr-pan-zoom>
+    </div>`);
+  const el = wrapper.querySelector<LyraPanZoom>('lr-pan-zoom')!;
+  const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]')!;
+  const controls = el.shadowRoot!.querySelector<HTMLElement>('[part="controls"]')!;
+  const image = el.shadowRoot!.querySelector('img')!;
+  await image.decode();
+
+  expect(controls.getBoundingClientRect().bottom).to.be.at.most(wrapper.getBoundingClientRect().bottom);
+  expect(image.getBoundingClientRect().height).to.equal(image.naturalHeight);
+  expect(viewport.scrollHeight).to.be.at.least(image.naturalHeight);
+  try {
+    await hoverUntilMatched(viewport, 'the actual-size viewport receives the wheel');
+    await sendWheel({ deltaX: 0, deltaY: 100 });
+    await waitUntil(() => viewport.scrollTop > 0);
+    await focusByKeyboard(viewport);
+    await sendKeys({ press: 'End' });
+    await waitUntil(() => viewport.scrollTop === viewport.scrollHeight - viewport.clientHeight);
+    expect(image.getBoundingClientRect().bottom).to.be.closeTo(viewport.getBoundingClientRect().bottom, 2);
+  } finally {
+    await resetMouse();
+  }
+});
+
+it('fits width while keeping the tall image scrollable at the selected zoom', async () => {
+  const el = await fixture<LyraPanZoom>(html`
+    <lr-pan-zoom fit="width" src=${portrait}
+      style="inline-size: 360px; block-size: 240px"
+    ></lr-pan-zoom>
+  `);
+  const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]')!;
+  const image = el.shadowRoot!.querySelector('img')!;
+  await image.decode();
+  expect(image.getBoundingClientRect().width).to.be.closeTo(viewport.clientWidth, 1);
+  expect(viewport.scrollHeight).to.be.greaterThan(viewport.clientHeight);
+  expect(viewport.scrollWidth).to.equal(viewport.clientWidth);
+  el.zoom = 1.5;
+  await el.updateComplete;
+  expect(image.getBoundingClientRect().width).to.be.closeTo(viewport.clientWidth * 1.5, 1);
+});
+
+for (const direction of ['ltr', 'rtl']) {
+  it(`pans an overflowing src image with a mouse drag in ${direction}`, async () => {
+    const el = await fixture<LyraPanZoom>(html`
+      <lr-pan-zoom dir=${direction} fit="contain" zoom="2" src=${portrait}
+        style="inline-size: 350px; block-size: 250px"></lr-pan-zoom>
+    `);
+    const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]')!;
+    const image = el.shadowRoot!.querySelector('img')!;
+    await image.decode();
+    try {
+      await hoverUntilMatched(viewport, 'the viewport receives the drag');
+      const { left, top, width, height } = viewport.getBoundingClientRect();
+      const x = Math.round(left + width / 2);
+      const y = Math.round(top + height / 2);
+      await sendMouse({ type: 'move', position: [x, y] });
+      await sendMouse({ type: 'down' });
+      await waitUntil(() => getComputedStyle(image).cursor === 'grabbing');
+      await sendMouse({ type: 'move', position: [x + (direction === 'rtl' ? 55 : -55), y - 70] });
+      await waitUntil(() => Math.abs(viewport.scrollLeft) >= 54 && viewport.scrollTop >= 69);
+      await sendMouse({ type: 'up' });
+      await waitUntil(() => getComputedStyle(image).cursor !== 'grabbing');
+      const { scrollLeft, scrollTop } = viewport;
+      await sendMouse({ type: 'move', position: [x, y] });
+      await settlePointer();
+      expect(viewport.scrollLeft).to.equal(scrollLeft);
+      expect(viewport.scrollTop).to.equal(scrollTop);
+    } finally {
+      await resetMouse();
+    }
+  });
+}
+
+function nextPointerDown(image: HTMLImageElement): Promise<PointerEvent> {
+  return new Promise(resolve => image.addEventListener('pointerdown', resolve, { once: true }));
+}
+
+for (const termination of ['pointercancel', 'disconnect', 'source replacement'] as const) {
+  it(`clears the captured mouse pan on ${termination}`, async () => {
+    const wrapper = await fixture<HTMLElement>(html`<div><lr-pan-zoom src=${portrait}
+      style="inline-size: 350px; block-size: 250px"></lr-pan-zoom></div>`);
+    const el = wrapper.querySelector<LyraPanZoom>('lr-pan-zoom')!;
+    const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]')!;
+    const image = el.shadowRoot!.querySelector('img')!;
+    await image.decode();
+    try {
+      await hoverUntilMatched(viewport, 'the viewport receives the drag');
+      const pointerDown = nextPointerDown(image);
+      await sendMouse({ type: 'down' });
+      const { pointerId } = await pointerDown;
+      await waitUntil(() => image.hasPointerCapture(pointerId) && image.hasAttribute('data-panning'));
+
+      if (termination === 'pointercancel') {
+        image.dispatchEvent(new PointerEvent('pointercancel', { pointerId }));
+      } else if (termination === 'disconnect') {
+        el.remove();
+        wrapper.append(el);
+      } else {
+        el.src = `${portrait}#replacement`;
+        await el.updateComplete;
+        await el.shadowRoot!.querySelector('img')!.decode();
+      }
+
+      await waitUntil(() => !image.hasPointerCapture(pointerId) && !image.hasAttribute('data-panning'));
+      const { left, top, width, height } = viewport.getBoundingClientRect();
+      await sendMouse({ type: 'move', position: [Math.round(left + width / 2), Math.round(top + height / 4)] });
+      await settlePointer();
+      expect(viewport.scrollTop).to.equal(0);
+    } finally {
+      await resetMouse();
+    }
+  });
+}
+
+it('leaves clicks on a fitted image and secondary presses on an overflowing image uncaptured', async () => {
+  const el = await fixture<LyraPanZoom>(html`<lr-pan-zoom fit="contain" src=${portrait}
+    style="inline-size: 350px; block-size: 250px"></lr-pan-zoom>`);
+  const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]')!;
+  const image = el.shadowRoot!.querySelector('img')!;
+  await image.decode();
+  try {
+    await hoverUntilMatched(viewport, 'the viewport receives the mouse press');
+    for (const button of ['left', 'right'] as const) {
+      el.zoom = button === 'left' ? 1 : 2;
+      await el.updateComplete;
+      const pointerDown = nextPointerDown(image);
+      await sendMouse({ type: 'down', button });
+      const { pointerId } = await pointerDown;
+      expect(image.hasPointerCapture(pointerId)).to.equal(false);
+      expect(image.hasAttribute('data-panning')).to.equal(false);
+      await sendMouse({ type: 'up', button });
+    }
+  } finally {
+    await resetMouse();
   }
 });

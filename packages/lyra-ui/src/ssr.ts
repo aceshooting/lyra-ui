@@ -115,6 +115,9 @@ export const LYRA_SSR_CLIENT_RENDER_TAGS = Object.freeze(
  * depends on the capability.
  */
 export const LYRA_SSR_TAG_CAPABILITIES = Object.freeze({
+  [tag('image-editor')]: {
+    canvas: 'after-hydration', // the browser decodes the source before painting the editable preview
+  },
   [tag('number-ticker')]: {
     observers: 'after-hydration', // shows the start value until an intersection observer starts the count
   },

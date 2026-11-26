@@ -1388,7 +1388,7 @@ it('shows only a legend-limit disclosure (no legend list) when every explicit le
   await el.updateComplete;
   expect(el.legend).to.deep.equal([]);
   expect(el.shadowRoot!.querySelector('[part="legend"]') == null).to.be.true;
-  expect(el.shadowRoot!.querySelector('[part="legend-limit"]')).to.exist;
+  expect(el.shadowRoot!.querySelector('[part="legend-limit"]')?.textContent?.trim()).to.equal('No data');
 });
 
 it('relayouts when scale changes on a mounted element without reassigning words', async () => {

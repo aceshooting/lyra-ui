@@ -2,7 +2,7 @@ import { dialogChrome, dialogOpenHost } from '../../../internal/modal-surface.st
 import { activeFill, disabledControl, focusRingShorthand, iconHitTarget } from '../../../internal/interactive-control.styles.js';
 import { css } from 'lit';
 import { modalHostStyles } from '../../../internal/native-modal-carrier.styles.js';
-import { compactContainerQuery } from '../../../internal/container-breakpoints.styles.js';
+import { compactContainerQuery, wideContainerQuery } from '../../../internal/container-breakpoints.styles.js';
 import { inlineSizeContainer } from '../../../internal/layout-fragments.styles.js';
 
 export const styles = css`
@@ -183,6 +183,50 @@ export const styles = css`
     overflow-wrap: anywhere;
   }
   [part="source-retry"] { padding-inline: var(--lr-space-s); }
+  .media-layout {
+    display: contents;
+  }
+  .media-layout[data-details-placement] {
+    display: flex;
+    flex: 1 1 0;
+    min-block-size: 0;
+    gap: var(--spacing, var(--lr-space-s));
+  }
+  [part="details"] {
+    box-sizing: border-box;
+    flex: 0 1 min(35%, var(--lr-size-20rem));
+    min-inline-size: 0;
+    min-block-size: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    overflow-wrap: anywhere;
+    padding: var(--lr-space-s);
+    border-radius: var(--lr-radius);
+    background: var(--lr-lightbox-control-bg, var(--_lr-lightbox-control-bg));
+    color: var(--lr-lightbox-control-color, var(--_lr-lightbox-control-color));
+  }
+  [part="details"][hidden] {
+    display: none;
+  }
+  [part="details"]:focus-visible {
+    ${focusRingShorthand}
+  }
+  .media-layout[data-details-placement="bottom"] {
+    flex-direction: column;
+  }
+  .media-layout[data-details-placement="bottom"] [part="details"] {
+    flex-basis: auto;
+    max-block-size: 40%;
+  }
+  @container ${wideContainerQuery} {
+    .media-layout[data-details-placement="end"] {
+      flex-direction: column;
+    }
+    .media-layout[data-details-placement="end"] [part="details"] {
+      flex-basis: auto;
+      max-block-size: 40%;
+    }
+  }
   [part~="stage"] {
     position: relative;
     touch-action: pan-y pinch-zoom;
@@ -285,12 +329,6 @@ export const styles = css`
   [part~="thumbnail-active"] {
     opacity: 1;
     border-color: var(--lr-lightbox-control-color, var(--_lr-lightbox-control-color));
-  }
-  lr-pan-zoom[part~="frame"]::part(base) {
-    block-size: 100%;
-  }
-  lr-pan-zoom[part~="frame"]::part(viewport) {
-    block-size: 100%;
   }
   [part~="previous-button"],
   [part~="next-button"] {

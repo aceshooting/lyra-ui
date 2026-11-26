@@ -156,14 +156,6 @@ node scripts/check-peer-compatibility.mjs --check-managed-peer-rewrites "$peer_m
 echo
 echo "==> Synchronizing package-manager documentation"
 node scripts/sync-package-manager-docs.mjs --write
-# The lyra-docs engine lock records the pnpm that builds the engine; its test requires the root pin.
-node -e '
-const fs = require("node:fs");
-const lockPath = "packages/lyra-docs/scripts/engine-source.lock.json";
-const lock = JSON.parse(fs.readFileSync(lockPath, "utf8"));
-lock.toolchain.pnpm = JSON.parse(fs.readFileSync("package.json", "utf8")).packageManager.replace(/^pnpm@/u, "");
-fs.writeFileSync(lockPath, JSON.stringify(lock, null, 2) + "\n");
-'
 
 echo
 echo "==> Synchronizing Playwright container images"
@@ -187,6 +179,21 @@ echo "==> Deduplicating refreshed workspace dependencies"
 # A transitive refresh can retain older compatible copies. Normalize the final graph before
 # metadata writers and VERIFY=0 return so check:lockfile sees the same deduplicated resolutions.
 pnpm dedupe
+
+echo
+echo "==> Synchronizing the DOCX engine toolchain pins"
+# Vite must come from the installed graph after the transitive refresh and deduplication.
+node -e '
+const fs = require("node:fs");
+const { createRequire } = require("node:module");
+const path = require("node:path");
+const lockPath = "packages/lyra-docs/scripts/engine-source.lock.json";
+const lock = JSON.parse(fs.readFileSync(lockPath, "utf8"));
+const docsRequire = createRequire(path.resolve("packages/lyra-docs/package.json"));
+lock.toolchain.pnpm = JSON.parse(fs.readFileSync("package.json", "utf8")).packageManager.replace(/^pnpm@/u, "");
+lock.toolchain.vite = docsRequire("vite/package.json").version;
+fs.writeFileSync(lockPath, JSON.stringify(lock, null, 2) + "\n");
+'
 
 echo
 echo "==> Verifying the pinned DOCX engine source and synchronizing shipped notices"

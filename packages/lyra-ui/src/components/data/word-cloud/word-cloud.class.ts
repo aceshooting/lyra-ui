@@ -964,6 +964,7 @@ export class LyraWordCloud extends LyraElement<LyraWordCloudEventMap> {
 
   /** "1–N of M" for a capped list; the plural category follows the total, so the noun inflects. */
   private collectionSummary(shown: number, total: number, words: boolean): string {
+    if (!words && shown === 0) return this.localize('noData');
     const values = {
       start: this.formatLocaleNumber(shown === 0 ? 0 : 1),
       end: this.formatLocaleNumber(shown),

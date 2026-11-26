@@ -17,7 +17,8 @@
 ## `lr-pan-zoom`
 
 Scrollable inspection surface for slotted DOM or one image, with bounded zoom and native-scroll
-panning. This is the compatibility destination for Lyra's former `lr-zoomable-frame` behavior:
+panning. A primary-button mouse drag also pans an overflowing `src` image. This is the
+compatibility destination for Lyra's former `lr-zoomable-frame` behavior:
 existing consumers that inspect DOM/images should rename the tag to `lr-pan-zoom` (and the class
 import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe component above.
 
@@ -36,8 +37,9 @@ variants `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-b
   as absent and the default slot renders; no empty or unsafe `<img>` replaces that fallback.
 - `fit: LyraImageFit = 'actual'` (reflected) — base sizing policy for an image supplied through
   `src`, using the same `contain`/`width`/`actual` vocabulary as `<lr-image-viewer>`. `actual`
-  preserves the historical natural-size layout; the other modes resolve against the viewport and
-  update with its allocation, including when an image loads after the frame first renders.
+  uses the natural image size. `contain` fits both viewport dimensions and `width` fits the
+  viewport width at 100% zoom. The fitted modes update when the allocation changes, including
+  when an image loads after the frame first renders.
 - `accessibleLabel: string | null` (attribute `aria-label`) — names the focusable viewport; a host
   `aria-label` attribute does the same; an empty or blank value is ignored. Without either (or with
   an empty property) the viewport gets the localized inspection-surface name.
@@ -66,7 +68,8 @@ failed to load). The
 action and that visible percentage, so the visible label is contained in the computed name.
 
 **Themeable custom properties:** `--lr-pan-zoom-min-block-size` (default `var(--lr-size-10rem)`)
-and the read-only `--lr-pan-zoom-zoom`. Scaling
+sets the viewport minimum when the host grows with its content. A definite host block size
+bounds the viewport and leaves room for the controls. `--lr-pan-zoom-zoom` is read-only. Scaling
 uses layout-participating CSS `zoom`, not a paint-only transform, so the viewport's native scroll
 range reaches the entire painted footprint at both logical edges in LTR and RTL.
 

@@ -10,6 +10,7 @@ export * from '../lr-file-icon.js';
 export * from '../lr-file-input.js';
 export * from '../lr-flag.js';
 export * from '../lr-image-comparer.js';
+export * from '../lr-image-editor.js';
 export * from '../lr-image-viewer.js';
 export * from '../lr-lightbox-item.js';
 export * from '../lr-lightbox.js';

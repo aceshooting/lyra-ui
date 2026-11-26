@@ -9,11 +9,24 @@ export const styles = css`
   }
   [part='base'] {
     display: grid;
-    gap: var(--lr-space-s);
+    grid-template-rows: minmax(0, 1fr) auto;
+    block-size: 100%;
     min-inline-size: 0;
   }
+  /* Give an intrinsic frame its minimum height without preventing a bounded viewport from
+     shrinking to leave room for the controls. The sizing box never contributes scroll overflow. */
+  [part='base']::before {
+    content: '';
+    grid-area: 1 / 1;
+    block-size: var(--lr-pan-zoom-min-block-size, var(--lr-size-10rem));
+    max-block-size: 100%;
+    overflow: clip;
+    pointer-events: none;
+  }
   [part='viewport'] {
-    min-block-size: var(--lr-pan-zoom-min-block-size, var(--lr-size-10rem));
+    grid-area: 1 / 1;
+    box-sizing: border-box;
+    min-block-size: 0;
     overflow: auto;
     overscroll-behavior: contain;
     border: var(--lr-border-width-thin) solid var(--lr-color-border);
@@ -46,16 +59,27 @@ export const styles = css`
   [part='content'] img {
     display: block;
     max-inline-size: none;
+    user-select: none;
   }
-  /* Actual keeps the historical max-content layout. The other policies establish a definite
-     viewport-sized basis, so CSS can resolve image sizing both before and after a delayed load and
-     again whenever the containing lightbox is resized. */
-  :host([fit='contain']) [part='content'],
-  :host([fit='width']) [part='content'] {
-    inline-size: 100%;
+  [part='content'] img:where([data-panning]) {
+    cursor: grabbing;
   }
-  :host([fit='contain']) [part='content'] {
-    block-size: 100%;
+  /* Auto margins center fitted images while positive and leave overflowing edges reachable. */
+  :host(:where([fit='contain'], [fit='width'])) [part='viewport']:where([data-image]) {
+    display: flex;
+    flex-direction: column;
+  }
+  /* Percentages on the zoomed box resolve in viewport pixels. Multiply the fitted box
+     explicitly so its base size scales with the selected zoom. */
+  :host(:where([fit='contain'], [fit='width'])) [part='viewport']:where([data-image]) [part='content'] {
+    flex: none;
+    margin: auto;
+    min-inline-size: 0;
+    inline-size: calc(100% * var(--lr-pan-zoom-zoom, 1));
+  }
+  :host([fit='contain']) [part='viewport']:where([data-image]) [part='content'] {
+    min-block-size: 0;
+    block-size: calc(100% * var(--lr-pan-zoom-zoom, 1));
   }
   :host([fit='contain']) [part='content'] img {
     min-inline-size: 0;
@@ -70,11 +94,13 @@ export const styles = css`
     block-size: auto;
   }
   [part='controls'] {
+    grid-area: 2 / 1;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: var(--lr-space-xs);
     min-inline-size: 0;
+    margin-block-start: var(--lr-space-s);
   }
   [part='zoom-out'],
   [part='zoom-in'],

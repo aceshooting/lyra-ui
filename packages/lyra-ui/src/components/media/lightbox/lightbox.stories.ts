@@ -48,6 +48,27 @@ export const Default: Story = {
   `,
 };
 
+export const DataModeDetails: Story = {
+  render: () => {
+    const locations = ['North Ridge', 'Lake Trail'];
+    return html`
+      <button @click=${(event: Event) => {
+        const lightbox = (event.currentTarget as HTMLElement).nextElementSibling as LyraLightbox;
+        void lightbox.show();
+      }}>Open gallery with details</button>
+      <lr-lightbox fit="contain" .images=${images} @lr-index-change=${(event: CustomEvent<{ index: number }>) => {
+        const lightbox = event.currentTarget as LyraLightbox;
+        lightbox.querySelector('[slot="details"] dd')!.textContent = locations[event.detail.index] ?? '';
+      }}>
+        <section slot="details">
+          <h2>Photo information</h2>
+          <dl><dt>Location</dt><dd>${locations[0]}</dd></dl>
+        </section>
+      </lr-lightbox>
+    `;
+  },
+};
+
 /** The promise-based `show()`/`hide()`/`close()` lifecycle matches the shared Lyra overlay
  * phases. Cancel `lr-show`, `lr-hide`, or `lr-close-request` to veto the corresponding request. */
 export const LifecycleMethods: Story = {

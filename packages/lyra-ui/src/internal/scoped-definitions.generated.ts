@@ -147,6 +147,7 @@ export const scopedDefinitionClosures: Readonly<Record<string, readonly string[]
   'lr-icon': ['lr-icon'],
   'lr-icon-button': ['lr-icon', 'lr-icon-button'],
   'lr-image-comparer': ['lr-image-comparer'],
+  'lr-image-editor': ['lr-image-editor'],
   'lr-image-viewer': ['lr-image-viewer', 'lr-live-region', 'lr-pan-zoom'],
   'lr-include': ['lr-include'],
   'lr-ingestion-queue': ['lr-badge', 'lr-empty', 'lr-ingestion-queue', 'lr-pagination', 'lr-progress-bar', 'lr-virtual-list'],

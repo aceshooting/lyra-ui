@@ -135,7 +135,7 @@ describe('layout allocation', () => {
     const el = await fixture<LyraImageViewer>(
       html`<lr-image-viewer style="inline-size: 1000px; block-size: 700px"></lr-image-viewer>`
     );
-    await loadInto(el, pngOfSize(1600, 900));
+    await loadInto(el, pngOfSize(900, 1600));
     await waitUntil(
       () => el.shadowRoot!.querySelector('[part="rotation-frame"]')!.hasAttribute('data-measured'),
       'the rotation frame was never measured'
@@ -152,16 +152,34 @@ describe('layout allocation', () => {
 
   it('keeps an auto-height viewer at the viewport minimum in contain mode', async () => {
     const el = await fixture<LyraImageViewer>(
-      html`<lr-image-viewer style="inline-size: 600px"></lr-image-viewer>`
+      html`<lr-image-viewer style="inline-size: 600px; --lr-pan-zoom-min-block-size: 160px"></lr-image-viewer>`
     );
     await loadInto(el, pngOfSize(1600, 900));
     const viewport = el.shadowRoot!
       .querySelector('lr-pan-zoom')!
       .shadowRoot!.querySelector<HTMLElement>('[part="viewport"]')!;
-    const minimum = parseFloat(getComputedStyle(viewport).minBlockSize);
-    expect(viewport.clientHeight, 'the viewport does not grow to the image').to.be.at.most(minimum + 2);
+    expect(viewport.getBoundingClientRect().height, 'the viewport does not grow to the image').to.equal(160);
     const image = el.shadowRoot!.querySelector('[part="image"]')!.getBoundingClientRect();
     expect(image.height).to.be.at.most(viewport.clientHeight + 1);
+  });
+
+  it('keeps a bounded actual-size portrait scrollable when the viewport minimum is 100%', async () => {
+    const el = await fixture<LyraImageViewer>(html`
+      <lr-image-viewer fit="actual"
+        style="inline-size: 500px; block-size: 350px; --lr-pan-zoom-min-block-size: 100%"
+      ></lr-image-viewer>
+    `);
+    await loadInto(el, pngOfSize(500, 900));
+    const frame = el.shadowRoot!.querySelector('lr-pan-zoom')!;
+    const viewport = frame.shadowRoot!.querySelector<HTMLElement>('[part="viewport"]')!;
+    const controls = frame.shadowRoot!.querySelector<HTMLElement>('[part="controls"]')!;
+    expect(controls.getBoundingClientRect().bottom).to.be.at.most(el.getBoundingClientRect().bottom);
+    viewport.scrollTop = viewport.scrollHeight;
+    expect(viewport.scrollTop).to.be.greaterThan(0);
+    const image = el.shadowRoot!.querySelector('[part="image"]')!;
+    expect(image.getBoundingClientRect().bottom).to.be.within(
+      viewport.getBoundingClientRect().top, viewport.getBoundingClientRect().bottom,
+    );
   });
 
   for (const fit of ['contain', 'width'] as const) {

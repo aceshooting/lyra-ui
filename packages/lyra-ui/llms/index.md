@@ -2,7 +2,7 @@
 
 # Component index
 
-324 lyra-ui custom elements plus 2 companion-package elements (`lr-docx-editor` from `@aceshooting/lyra-docs`, `lr-gen-view` from `@aceshooting/lyra-gen`), grouped by the source family they live in.
+325 lyra-ui custom elements plus 2 companion-package elements (`lr-docx-editor` from `@aceshooting/lyra-docs`, `lr-gen-view` from `@aceshooting/lyra-gen`), grouped by the source family they live in.
 
 **Reading one component.** Its reference file path is derived from the tag — no search needed:
 `llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`): import path, optional peers,
@@ -205,7 +205,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-counter` · lr-counter.js · `experimental` since `32.1.0` · ~27 KiB gzip — counts down to a date (or for a duration) or up from one, ticking through years, months, days, hours, minutes and seconds with...
 - `lr-number-ticker` · lr-number-ticker.js · `experimental` since `32.1.0` · ~30 KiB gzip — counts to `value` when it scrolls into view, formatting every frame with `Intl.NumberFormat` in the effective locale.
 
-## Media, files & maps — `components/media/` (24)
+## Media, files & maps — `components/media/` (25)
 
 - `lr-flag` · lr-flag.js · `stable` since `4.0.0` · ~34 KiB gzip — a country/language flag.
 - `lr-sequence-playback` · lr-sequence-playback.js · `stable` since `9.0.0` · ~29 KiB gzip — steps a current index through `[0, itemCount)` on a fixed interval (play/pause), the common building block behind ad-hoc play-timers in...
@@ -231,6 +231,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-av-player` · lr-av-player.js · `stable` since `4.0.0` · ~81 KiB gzip — audio/video player built on a native `<audio>`/`<video>` element, plus a cue transcript synced to `currentTime`, `time-range`...
 - `lr-video` · lr-video.js · `experimental` since `8.0.0` · ~65 KiB gzip — a native, inline video player with three custom-control presets, selectable captions, fullscreen and picture-in-picture capability gates...
 - `lr-video-playlist` · lr-video-playlist.js · `experimental` since `8.0.0` · ~71 KiB gzip — a direct-child `<lr-video>` playlist with a navigable current-item list.
+- `lr-image-editor` · lr-image-editor.js · `experimental` since `unreleased` — Edits a photo locally and exports the edited crop at its original pixel density.
 
 ## Charts — `components/charts/` (13)
 

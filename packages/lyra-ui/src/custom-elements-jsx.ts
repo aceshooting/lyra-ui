@@ -330,6 +330,8 @@ export type LyraIconButtonReactProps = LyraReactElementProps<'lr-icon-button'>;
 
 export type LyraImageComparerReactProps = LyraReactElementProps<'lr-image-comparer'>;
 
+export type LyraImageEditorReactProps = LyraReactElementProps<'lr-image-editor'>;
+
 export type LyraImageViewerReactProps = LyraReactElementProps<'lr-image-viewer'>;
 
 export type LyraIncludeReactProps = LyraReactElementProps<'lr-include'>;
@@ -833,6 +835,7 @@ export interface LyraReactIntrinsicElements {
   'lr-icon': LyraIconReactProps;
   'lr-icon-button': LyraIconButtonReactProps;
   'lr-image-comparer': LyraImageComparerReactProps;
+  'lr-image-editor': LyraImageEditorReactProps;
   'lr-image-viewer': LyraImageViewerReactProps;
   'lr-include': LyraIncludeReactProps;
   'lr-ingestion-queue': LyraIngestionQueueReactProps;

@@ -148,6 +148,7 @@ export const AUTOLOADER_TAGS = [
   'lr-icon',
   'lr-icon-button',
   'lr-image-comparer',
+  'lr-image-editor',
   'lr-image-viewer',
   'lr-include',
   'lr-ingestion-queue',

@@ -14,14 +14,15 @@ async function svgViewer(width: number, height: number, capped = true, zoomable 
 }
 
 for (const [width, height] of [[200, 1000], [1000, 200]]) {
-  it(`keeps the capped ${width}×${height} nonzoomable SVG origin and bottom reachable`, async () => {
-    const { viewer, svg, body } = await svgViewer(width!, height!);
-    expect(viewer.zoomable).to.equal(false);
-    body.scrollTop = 0;
-    expect(svg.getBoundingClientRect().top).to.be.at.least(body.getBoundingClientRect().top);
-    body.scrollTop = body.scrollHeight;
-    await waitUntil(() => svg.getBoundingClientRect().bottom <= body.getBoundingClientRect().bottom + 1);
-  });
+  for (const zoomable of [false, true]) {
+    it(`keeps the capped ${width}×${height} SVG origin and bottom reachable with zoomable=${zoomable}`, async () => {
+      const { svg, body } = await svgViewer(width!, height!, true, zoomable);
+      body.scrollTop = 0;
+      expect(svg.getBoundingClientRect().top).to.be.at.least(body.getBoundingClientRect().top);
+      body.scrollTop = body.scrollHeight;
+      await waitUntil(() => svg.getBoundingClientRect().bottom <= body.getBoundingClientRect().bottom + 1);
+    });
+  }
 }
 
 it('preserves centered fitting SVGs, uncapped height, and the zoom wrapper', async () => {

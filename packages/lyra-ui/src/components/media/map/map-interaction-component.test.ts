@@ -236,14 +236,33 @@ describe('lr-map interaction and retained state integration', () => {
     peer.hits = [hit(peer, circles[0]!), hit(peer, circles[2]!), hit(peer, circles[1]!)]; const clicks = capture(element, 'lr-map-click'); fire(peer);
     expect(peer.queryCount).to.equal(1); expect((clicks[0] as { sourceId: string }).sourceId).to.equal('high');
   });
-  it('applies owned overlay interaction metadata without querying a disabled basemap opt-in', async () => {
+  it('skips decorative overlays above a generated cluster until explicitly opted in', async () => {
     const { element, peer } = await mount(el => {
-      el.dataLayers = [row()]; el.overlays = { sources: [{ id: 'extra', source: { type: 'geojson', data: POINTS } }],
-        layers: [{ layer: { id: 'extra-layer', type: 'circle', source: 'extra' }, priority: 10 }] };
-      el.interactiveBasemapLayers = [{ layerId: 'unowned', interactive: false }];
+      el.dataLayers = [{ ...row(), cluster: {} }];
+      el.overlays = {
+        sources: [{ id: 'extra', source: { type: 'geojson', data: POINTS } }],
+        layers: [
+          { layer: { id: 'extra-layer', type: 'line', source: 'extra' }, priority: 10 },
+          { layer: { id: 'extra-outline', type: 'line', source: 'extra' } },
+        ],
+      };
+      el.interactiveBasemapLayers = [{ layerId: 'extra-layer' }];
     });
-    peer.hits = [hit(peer), hit(peer, 'extra-layer', 'overlay-id')]; const clicks = capture(element, 'lr-map-click'); fire(peer);
-    expect((clicks[0] as { hit: { origin: string; source: string } }).hit).to.include({ origin: 'overlay', source: 'extra' }); expect(peer.queryCount).to.equal(1);
+    const cluster = [...peer.layers.keys()].find(id => id.endsWith('-cluster'))!;
+    expect(peer.layers.has('extra-layer')).to.equal(true);
+    const clusteredHit = { ...hit(peer, cluster), properties: { cluster_id: 3, point_count: 2 } };
+    peer.hits = [hit(peer, 'extra-layer', 'overlay-id'), hit(peer, 'extra-outline'), clusteredHit];
+    const clicks = capture(element, 'lr-map-click');
+    fire(peer);
+    expect(clicks[0]).to.include({ origin: 'cluster', sourceId: 'points' });
+    expect(peer.queryCount).to.equal(1);
+
+    element.overlays = { ...element.overlays,
+      layers: [{ ...element.overlays!.layers![0]!, interactive: true }] };
+    await restore(element);
+    fire(peer);
+    expect((clicks[1] as { hit: { origin: string; source: string } }).hit).to.include({ origin: 'overlay', source: 'extra' });
+    expect(peer.queryCount).to.equal(2);
   });
   it('does not dispatch a background click or context menu for malformed/error query results', async () => {
     const { element, peer } = await mount(el => { el.dataLayers = [row()]; }); const clicks = capture(element, 'lr-map-click'), menus = capture(element, 'lr-map-contextmenu');
@@ -253,7 +272,7 @@ describe('lr-map interaction and retained state integration', () => {
   for (const target of ['generated', 'overlay', 'external']) {
     it(`keeps ${target} clicks available while unchanged overlay layers await new GeoJSON`, async () => {
       const overlays = (data: unknown) => ({ sources: [{ id: 'extra', source: { type: 'geojson', data } }],
-        layers: [{ layer: { id: 'extra-layer', type: 'circle', source: 'extra' }, priority: 10 }] });
+        layers: [{ interactive: true, layer: { id: 'extra-layer', type: 'circle', source: 'extra' }, priority: 10 }] });
       const { element, peer } = await mount(el => {
         el.dataLayers = target === 'external'
           ? [{ kind: 'vector', sourceId: 'roads', source: { tiles: ['https://example.test/{z}/{x}/{y}.pbf'] }, sourceLayer: 'transport', render: 'line' }]
@@ -289,7 +308,7 @@ describe('lr-map interaction and retained state integration', () => {
   for (const change of ['source-options', 'layer-paint', 'interaction', 'generated-data', 'missing-setter']) {
     it(`keeps pending interaction blocked for ${change} changes`, async () => {
       const overlays = (data: unknown) => ({ sources: [{ id: 'extra', source: { type: 'geojson', data } }],
-        layers: [{ layer: { id: 'extra-layer', type: 'circle', source: 'extra' } }] });
+        layers: [{ interactive: true, layer: { id: 'extra-layer', type: 'circle', source: 'extra' } }] });
       const { element, peer } = await mount(el => { el.dataLayers = [row()]; el.overlays = overlays(POINTS); });
       peer.hits = [hit(peer, 'extra-layer')];
       const clicks = capture(element, 'lr-map-click');
@@ -323,7 +342,7 @@ describe('lr-map interaction and retained state integration', () => {
   for (const guard of ['disabled', 'inert']) {
     it(`respects ${guard} while retaining clicks during an overlay data refresh`, async () => {
       const overlays = (data: unknown) => ({ sources: [{ id: 'extra', source: { type: 'geojson', data } }],
-        layers: [{ layer: { id: 'extra-layer', type: 'circle', source: 'extra' } }] });
+        layers: [{ interactive: true, layer: { id: 'extra-layer', type: 'circle', source: 'extra' } }] });
       const { element, peer, wrapper } = await mount(el => { el.overlays = overlays(POINTS); });
       peer.hits = [hit(peer, 'extra-layer')];
       const clicks = capture(element, 'lr-map-click');
@@ -350,7 +369,7 @@ describe('lr-map interaction and retained state integration', () => {
   }
   it('retires retained click routes when a style replacement supersedes the data refresh', async () => {
     const overlays = (data: unknown) => ({ sources: [{ id: 'extra', source: { type: 'geojson', data } }],
-      layers: [{ layer: { id: 'extra-layer', type: 'circle', source: 'extra' } }] });
+      layers: [{ interactive: true, layer: { id: 'extra-layer', type: 'circle', source: 'extra' } }] });
     const { element, peer } = await mount(el => { el.overlays = overlays(POINTS); });
     peer.hits = [hit(peer, 'extra-layer')];
     const clicks = capture(element, 'lr-map-click');
@@ -378,7 +397,7 @@ describe('lr-map interaction and retained state integration', () => {
   });
   it('retains the committed click routes when a second GeoJSON refresh supersedes preparation', async () => {
     const overlays = (data: unknown) => ({ sources: [{ id: 'extra', source: { type: 'geojson', data } }],
-      layers: [{ layer: { id: 'extra-layer', type: 'circle', source: 'extra' } }] });
+      layers: [{ interactive: true, layer: { id: 'extra-layer', type: 'circle', source: 'extra' } }] });
     const { element, peer } = await mount(el => { el.overlays = overlays(POINTS); });
     peer.hits = [hit(peer, 'extra-layer')];
     const clicks = capture(element, 'lr-map-click');

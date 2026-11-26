@@ -166,6 +166,7 @@ import type { LyraAvatarEventMap } from './components/media/avatar/avatar.class.
 import type { LyraDropZoneEventMap } from './components/media/drop-zone/drop-zone.class.js';
 import type { LyraFileInputEventMap } from './components/media/file-input/file-input.class.js';
 import type { LyraImageComparerEventMap } from './components/media/image-comparer/image-comparer.class.js';
+import type { LyraImageEditorEventMap } from './components/media/image-editor/image-editor.class.js';
 import type { LyraImageViewerEventMap } from './components/media/image-viewer/image-viewer.class.js';
 import type { LyraLightboxEventMap } from './components/media/lightbox/lightbox.class.js';
 import type { LyraMapAnchorEventMap } from './components/media/map/map-anchor.class.js';
@@ -1342,6 +1343,11 @@ export type LyraExpandEvent =
   | LyraAccordionEventMap['lr-expand']
   | LyraTreeEventMap['lr-expand']
   | LyraTreeItemEventMap['lr-expand'];
+
+/**
+ * `lr-export` — dispatched by `<lr-image-editor>`; detail `LyraImageEditorEventMap['lr-export']`.
+ */
+export type LyraExportEvent = LyraImageEditorEventMap['lr-export'];
 
 /**
  * `lr-export-complete` — dispatched by 2 components: `<lr-context-inspector>`,
@@ -4110,6 +4116,7 @@ export interface LyraGlobalEventMap {
   'lr-example-tool-approval-decide-request': LyraExampleToolApprovalDecideRequestEvent;
   'lr-example-tool-render-error': LyraExampleToolRenderErrorEvent;
   'lr-expand': LyraExpandEvent;
+  'lr-export': LyraExportEvent;
   'lr-export-complete': LyraExportCompleteEvent;
   'lr-export-error': LyraExportErrorEvent;
   'lr-export-request': LyraExportRequestEvent;

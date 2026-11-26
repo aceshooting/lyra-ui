@@ -752,6 +752,12 @@
       "comparisonPolicy": "evidence-only",
       "comparisonReason": "Synthetic locale expansion and bidirectional coverage; captures await visual review before baseline promotion.",
       "narrowProbe": "viewport-fit"
+    },
+    {
+      "id": "media-files-image-editor--default",
+      "profile": "narrow-responsive",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "The image preview and editing controls await human visual review."
     }
   ],
   "tagCoverage": {
@@ -866,6 +872,9 @@
     "lr-lite-chart": [
       "charts-litechart--default",
       "charts-litechart--logarithmic-scale-canary"
+    ],
+    "lr-image-editor": [
+      "media-files-image-editor--default"
     ],
     "lr-map": [
       "map--default"

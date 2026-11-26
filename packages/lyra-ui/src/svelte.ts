@@ -332,6 +332,8 @@ export type LyraIconButtonSvelteProps = LyraSvelteElementProps<'lr-icon-button'>
 
 export type LyraImageComparerSvelteProps = LyraSvelteElementProps<'lr-image-comparer'>;
 
+export type LyraImageEditorSvelteProps = LyraSvelteElementProps<'lr-image-editor'>;
+
 export type LyraImageViewerSvelteProps = LyraSvelteElementProps<'lr-image-viewer'>;
 
 export type LyraIncludeSvelteProps = LyraSvelteElementProps<'lr-include'>;
@@ -835,6 +837,7 @@ export interface LyraSvelteElements {
   'lr-icon': LyraIconSvelteProps;
   'lr-icon-button': LyraIconButtonSvelteProps;
   'lr-image-comparer': LyraImageComparerSvelteProps;
+  'lr-image-editor': LyraImageEditorSvelteProps;
   'lr-image-viewer': LyraImageViewerSvelteProps;
   'lr-include': LyraIncludeSvelteProps;
   'lr-ingestion-queue': LyraIngestionQueueSvelteProps;
@@ -1162,6 +1165,7 @@ export interface LyraElementTagNameMap {
   'lr-icon': LyraComponentTypeMap['lr-icon']['element'];
   'lr-icon-button': LyraComponentTypeMap['lr-icon-button']['element'];
   'lr-image-comparer': LyraComponentTypeMap['lr-image-comparer']['element'];
+  'lr-image-editor': LyraComponentTypeMap['lr-image-editor']['element'];
   'lr-image-viewer': LyraComponentTypeMap['lr-image-viewer']['element'];
   'lr-include': LyraComponentTypeMap['lr-include']['element'];
   'lr-ingestion-queue': LyraComponentTypeMap['lr-ingestion-queue']['element'];

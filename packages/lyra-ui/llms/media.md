@@ -992,8 +992,10 @@ their HTTP(S)-only policy.
 Paint-only data-layer and choropleth changes request one repaint per synchronous mutation batch.
 Equal paint produces no repaint; camera movement is not needed to show a metric or theme change.
 
-**Interactions:** opt in with `interactive` and optional `priority` on a data layer, choropleth or
-owned overlay layer; `interactiveBasemapLayers = []` explicitly enrolls basemap layers.
+**Interactions:** owned overlay layers enter hit testing only with `interactive: true`.
+Data layers and the choropleth are interactive by default and accept `interactive: false`.
+Interactive layers accept an optional `priority`. Enroll basemap layers explicitly through
+`interactiveBasemapLayers`.
 `lr-map-click`, `lr-map-contextmenu`, `lr-map-feature-enter`, and `lr-map-feature-leave` report routed interaction data;
 every interaction detail, `lr-map-pick` included, carries `point` (container CSS pixels, as `project()`
 reports) and viewport `clientX`/`clientY` (`LyraMapInteractionPosition`); a keyboard activation reports
@@ -1330,11 +1332,11 @@ split), and is drawn right-to-left, aligned to the right edge, inside an RTL map
   `[]`) replaces the derived ticks, and `legend` rows render ahead of the derived rows. Derived rows
   are not interactive. Default off, so an unset map renders what it rendered before.
 - `legend: readonly LyraMapLegendEntry[] = []` (attribute: false) — immutable defensive snapshots
-  of `LyraMapLegendEntry { readonly color: string; readonly label: string; readonly pattern:
-LyraMapLegendPattern }`, where `LyraMapLegendPattern` is `'solid' | 'diagonal' | 'dots' |
-'crosshatch'`. Pattern supplies the non-color cue for rows without an icon; an icon row uses its
-glyph shape as that cue. At most 100 valid
-  rows, 256 characters per label, and 8,192 aggregate label characters are retained; colors are
+  of `LyraMapLegendEntry { readonly color: string; readonly label: string; readonly pattern?:
+  LyraMapLegendPattern }`, where `LyraMapLegendPattern` is `'solid' | 'diagonal' | 'dots' |
+  'crosshatch'`. An omitted pattern defaults to `'solid'`. Use distinct patterns to supply a non-color
+  cue for rows without an icon. An icon row uses its glyph shape as that cue. At most 100 valid rows,
+  256 characters per label, and 8,192 aggregate label characters are retained. Colors are
   bounded before validation. The overlay scrolls within the map allocation.
   A row may also carry its own `value`: the category key that row stands for — the same string a
   `point.colors`/`point.icons` entry matches against `point.field`/`point.iconField`. It is
@@ -1636,17 +1638,26 @@ intensity?: LyraMapHeatmapZoomValue; opacity?: number }`, where `LyraMapHeatmapZ
   peer's default untouched on construction, and dropping a previously-authored value restores 1.
   `cluster` is ignored on a heatmap entry: a heatmap already aggregates density, and clustering its
   input would feed it one point per cluster instead of the real distribution.
-  `line?: LyraMapLineOptions { field?: string; stops?: readonly (readonly [number, string])[];
-  width?: number; opacity?: number }` configures line/outline paint for an ordinary `dataLayers`
-  entry. `field` names a numeric feature property; two usable `[value, color]` stops produce a
+  `line?: LyraMapLineOptions` configures line/outline paint for an ordinary `dataLayers`
+  entry. For numeric styling, `field` names a numeric feature property and two usable `[value, color]` stops produce a
   continuous linear ramp. Missing, null, and non-numeric feature values use `strokeColor`, then
   `color`, then `tone`. Stops inspect the first 64 entries, discard non-finite values and invalid
   CSS colors, sort ascending, and retain the first duplicate threshold. Fewer than two stops or
-  an absent field preserves flat color. Values beyond the endpoints clamp to their endpoint color.
+  an absent field preserves flat color when no category colors apply. Values beyond the endpoints clamp to their endpoint color.
   CSS variables resolve on the host during reconciliation and retheming. `width` defaults to 2 CSS
   pixels and clamps to `[0, 200]`; `opacity` defaults to 1 and clamps to `[0, 1]`. Non-finite values
   restore those defaults, as does dropping a previously-authored option. Point colors and polygon
   fills are unaffected; cluster and heatmap entries ignore `line`.
+
+  For a string-valued field, `line.colors` pairs each category with a CSS color.
+  For example, `line: { field: 'mode', colors: [['rail', 'green'], ['air', 'blue']], dash: [['air', [3, 2]]] }`
+  draws solid green rail routes and dashed blue flights. Unmatched categories use the flat stroke
+  color and a solid line. Usable categorical colors take precedence over numeric stops. A constant
+  `dash: [3, 2]` applies to every line. Pattern lengths are multiples of the stroke width, with
+  1–32 finite entries between 0 and 256 and a positive total. Both categorical options inspect
+  the first 32 pairs and keep the first valid entry for each category. For an interactive
+  legend, use each category as the legend row’s `value`. A hidden line category multiplies its
+  configured opacity by `--lr-map-hidden-category-opacity`.
 
   `point?: LyraMapPointOptions` styles individual points on ordinary and clustered auto entries.
   It is ignored for heatmaps. `field` names a **string** feature property; `colors` maps exact
@@ -1667,6 +1678,15 @@ intensity?: LyraMapHeatmapZoomValue; opacity?: number }`, where `LyraMapHeatmapZ
   Invalid interpolation values use step. These options style individual/unclustered points;
   cluster-count radii remain independent. Switching back to a number or removing the radius
   scale restores the fixed radius without recreating the source.
+
+  Set `point.image: { field: 'thumbnail', size: 40, shape: 'circle', border: 'white' }` to
+  show a thumbnail from a string URL property on visible unclustered points. The map center-crops
+  each image. The default size is 32 CSS pixels (range 1–96), the shape is `'circle'` or
+  `'square'`, and an optional CSS color adds a one-pixel border. The point circle remains visible
+  while loading or after a failed request. Clusters retain their count, click and expansion behavior.
+  After the map settles, up to 128 visible thumbnails across layers are retained, with
+  four concurrent transfers. Panning away releases their atlas entries. Relative URLs resolve
+  against the map's document. The same HTTP(S), CORS, format and per-image limits as `images` apply.
 
   `point.icons` maps exact category values to `LyraMapPointIcon { value: string; path: string;
   viewBox?: readonly [number, number, number, number]; mode?: LyraMapPointIconMode;
@@ -1692,7 +1712,7 @@ intensity?: LyraMapHeatmapZoomValue; opacity?: number }`, where `LyraMapHeatmapZ
 
   All categories use the **same GeoJSON source** and cluster across categories. Cluster circles
   keep the existing count-based styling; only unclustered points get category colors/icons.
-  An optional symbol layer and at most 32 images are allocated per configured source, with no
+  The category icons use an optional symbol layer and at most 32 icon images per configured source, with no
   per-feature DOM markers. Data changes reuse the source, retheming updates paint/icon pixels,
   and style reloads restore the owned resources. Removing the entry or icons releases its images.
   `lr-map-click` on either a point's circle or icon returns `origin: 'data-layer'`, the public
@@ -2407,8 +2427,8 @@ container therefore drops its own `role` in that case; a legend with no groups k
 section: `aria-setsize` already reports the *input* count so a bounded key stays honest, and a
 dropped row carries no attributable group, so a section adds a labelled sub-region without
 renumbering the key.
-`legend-limit` is the localized bounded-projection summary. The five peer-chrome parts project
-stable Lyra names onto MapLibre-generated DOM without erasing peer-supplied part tokens;
+`legend-limit` is the localized bounded-projection summary. If every authored row is rejected, it
+displays the localized empty state. The five peer-chrome parts project stable Lyra names onto MapLibre-generated DOM without erasing peer-supplied part tokens;
 `marker` retains a 24px minimum target in both axes even when a peer/custom marker has no intrinsic
 content size. `popup-close-button` is the generated close control on an open marker popup, named `Close {label}`
 (`mapCloseWithLabel`) with the marker's label so several open popups stay distinguishable. `error` is ordinary localized visible
@@ -2699,7 +2719,7 @@ undefined`, or changing `choropleth.sourceId` to a different value, now calls `r
 - `LyraMapLegendEntry.color` is validated against a strict CSS-color-syntax allowlist before being applied
   to the legend swatch's `background-color`, rejecting anything that isn't recognizable color syntax
   (notably `url(...)`, which `background` also accepts and would otherwise fetch as soon as the
-  swatch renders). The required `pattern` remains distinct in forced colors through solid, dashed,
+  swatch renders). The `pattern` remains distinct in forced colors through solid, dashed,
   dotted, and double border/shape encodings.
 - While the selected map peer is resolving, the base exposes `aria-busy="true"` and shows a
   decorative `<lr-skeleton shape="rect" announce="false">` in place of the map container. The host
@@ -3934,7 +3954,8 @@ import "@aceshooting/lyra-ui/components/lr-zoomable-frame.js";
 ## `lr-pan-zoom`
 
 Scrollable inspection surface for slotted DOM or one image, with bounded zoom and native-scroll
-panning. This is the compatibility destination for Lyra's former `lr-zoomable-frame` behavior:
+panning. A primary-button mouse drag also pans an overflowing `src` image. This is the
+compatibility destination for Lyra's former `lr-zoomable-frame` behavior:
 existing consumers that inspect DOM/images should rename the tag to `lr-pan-zoom` (and the class
 import to `LyraPanZoom`); `lr-zoomable-frame` now means the mapped iframe component above.
 
@@ -3953,8 +3974,9 @@ variants `--lr-icon-button-hover-bg`, `--lr-icon-button-active-bg`, `--lr-icon-b
   as absent and the default slot renders; no empty or unsafe `<img>` replaces that fallback.
 - `fit: LyraImageFit = 'actual'` (reflected) — base sizing policy for an image supplied through
   `src`, using the same `contain`/`width`/`actual` vocabulary as `<lr-image-viewer>`. `actual`
-  preserves the historical natural-size layout; the other modes resolve against the viewport and
-  update with its allocation, including when an image loads after the frame first renders.
+  uses the natural image size. `contain` fits both viewport dimensions and `width` fits the
+  viewport width at 100% zoom. The fitted modes update when the allocation changes, including
+  when an image loads after the frame first renders.
 - `accessibleLabel: string | null` (attribute `aria-label`) — names the focusable viewport; a host
   `aria-label` attribute does the same; an empty or blank value is ignored. Without either (or with
   an empty property) the viewport gets the localized inspection-surface name.
@@ -3983,7 +4005,8 @@ failed to load). The
 action and that visible percentage, so the visible label is contained in the computed name.
 
 **Themeable custom properties:** `--lr-pan-zoom-min-block-size` (default `var(--lr-size-10rem)`)
-and the read-only `--lr-pan-zoom-zoom`. Scaling
+sets the viewport minimum when the host grows with its content. A definite host block size
+bounds the viewport and leaves room for the controls. `--lr-pan-zoom-zoom` is read-only. Scaling
 uses layout-participating CSS `zoom`, not a paint-only transform, so the viewport's native scroll
 range reaches the entire painted footprint at both logical edges in LTR and RTL.
 
@@ -5037,6 +5060,9 @@ A lightbox opened outside an existing native `dialog.showModal()` stays interact
   changing the theme does not mutate the lightbox's zoom property.
 - `accessibleLabel: string | null = null` (attribute `aria-label`) — the dialog's accessible name.
   Blank labels use the localized `lightboxLabel` default.
+- `detailsPlacement: 'end' | 'bottom' = 'end'` (attribute `details-placement`) — show the details
+  at logical inline-end, moving them below the image when the available inline size is below
+  40rem. Set `bottom` to always place the details below the image.
 
 More properties: `withThumbnails` (attribute `with-thumbnails`, default `false`): Shows a strip of
 thumbnails for jumping between items in every mode; each uses the item's `thumbnail`, else the
@@ -5100,7 +5126,37 @@ not when `index` is written directly, open or closed (the same rule as `lr-carou
 zoom }`) is not emitted by the lightbox itself — it bubbles up composed from the embedded frame.
 
 **Slots:** `actions` — extra toolbar buttons (download/share/delete), rendered in `[part="toolbar"]`
-between the counter and the close button.
+between the counter and the close button. `details` — one reusable panel of rich content for the
+current image in `images` or `imageSource` mode. Update the panel on `lr-index-change` and initialize
+it for the starting index. If you write `index` directly, update the panel in the same operation.
+The panel stays hidden for empty galleries, slotted-item galleries, and while a source image is
+loading or has failed. It scrolls when its content exceeds the available space and uses the
+localized `details` label when it becomes a keyboard-scrollable region.
+
+```html
+<lr-lightbox id="gallery" fit="contain">
+  <section slot="details">
+    <h2>Photo information</h2>
+    <p data-location></p>
+  </section>
+</lr-lightbox>
+<script type="module">
+  import '@aceshooting/lyra-ui/components/lr-lightbox.js';
+
+  const photos = [
+    { src: '/photos/ridge.jpg', alt: 'View from the ridge', location: 'North Ridge' },
+    { src: '/photos/lake.jpg', alt: 'Lake from the trail', location: 'Lake Trail' },
+  ];
+  const gallery = document.querySelector('#gallery');
+  const location = gallery.querySelector('[data-location]');
+  const updateDetails = index => {
+    location.textContent = photos[index]?.location ?? '';
+  };
+  gallery.images = photos;
+  updateDetails(gallery.index);
+  gallery.addEventListener('lr-index-change', event => updateDetails(event.detail.index));
+</script>
+```
 
 **CSS parts:** `backdrop`, `panel` (`role="dialog"` + `aria-modal="true"` while open; fills the
 padded safe area rather than shrink-wrapping), `toolbar`, `counter` (visible localized "Image N of
@@ -5112,7 +5168,8 @@ including a consumer-driven one, appends the localized position to the document'
 embedded `<lr-pan-zoom>`), forwarded aliases `frame-viewport`, `frame-content`, `frame-controls`,
 `previous-button`,
 `previous-glyph`, `next-button`, `next-glyph`, `caption` (only when the current image has one; its
-`id` is the panel's `aria-describedby` target), `source-loading`, `source-error`, and `source-retry`
+`id` is the panel's `aria-describedby` target), `details` (scrollable details wrapper),
+`source-loading`, `source-error`, and `source-retry`
 (the current source image's retry button). `stage` exposes `aria-busy="true"` while source
 descriptor or native image loading is pending.
 
@@ -6548,6 +6605,8 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraMapLineOptions {
     readonly field?: string;
     readonly stops?: readonly (readonly [number, string])[];
+    readonly colors?: readonly (readonly [string, string])[];
+    readonly dash?: readonly number[] | readonly (readonly [string, readonly number[]])[];
     readonly width?: number;
     readonly opacity?: number;
   }`
@@ -6563,6 +6622,7 @@ These named interfaces and helper signatures are available to typed integrations
   }`
   Import: `@aceshooting/lyra-ui/components/media/map/map.class.js`.
   `LyraMapPointOptions {
+    readonly image?: { readonly field: string; readonly size?: number; readonly shape?: 'circle' | 'square'; readonly border?: string };
     readonly field?: string;
     readonly colors?: readonly (readonly [string, string])[];
     readonly radius?: number | LyraMapPointRadiusOptions;
@@ -6648,7 +6708,7 @@ These named interfaces and helper signatures are available to typed integrations
   `LyraMapLegendEntry {
     readonly color: string;
     readonly label: string;
-    readonly pattern: LyraMapLegendPattern;
+    readonly pattern?: LyraMapLegendPattern;
     readonly icon?: LyraMapPointIcon | Omit<LyraMapPointIcon, 'value'>;
     readonly group?: string;
   }`
@@ -7340,3 +7400,25 @@ const roads: LyraMapVectorDataLayer = {
 };
 map.dataLayers = [roads];
 ```
+
+## `lr-image-editor`
+
+Use `src` for the photo and `alt` for its accessible description. Remote image servers must permit anonymous CORS access so the browser can read and export pixels. A caller-owned object URL can load a local file.
+
+The editor offers exposure, contrast, highlights, shadows, saturation, vibrance, warmth, tint and vignette. Select Original, Monochrome or Vivid to replace the color adjustments while keeping the crop and orientation. Choose a crop aspect ratio, size and position, rotate clockwise by quarter turns, or flip horizontally or vertically. Before shows the source image. After shows the edited result.
+
+The preview samples the image to at most 1024 pixels on its longest edge before applying adjustments. Fine textures can look different in the preview because the export applies those adjustments to the full-resolution pixels. `exportBlob(type?, quality?)` encodes the edited crop at full resolution even while Before is selected. The default format is PNG. The method rejects if the source is unavailable or the browser cannot encode the canvas.
+
+**Events:**
+
+- `lr-export` bubbles and crosses the shadow boundary when the Export image button finishes encoding the PNG. Read the exported `Blob` from `event.detail.blob`.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/lr-image-editor.js';
+</script>
+
+<lr-image-editor src="/photos/river.jpg" alt="Sunlit riverbank"></lr-image-editor>
+```
+
+**CSS parts:** `base` wraps the editor, `preview` exposes the canvas, and `controls` groups the editing controls.

@@ -109,6 +109,17 @@ export const FixedRowHeight: Story = {
 };
 
 /** A count/index source renders 100,000 synthetic rows without first allocating 100,000 items. */
+export const ResponsiveGallery: Story = {
+  render: () => html`
+    <lr-virtual-list columns="auto" min-cell-width="140" cell-aspect-ratio="1.5"
+      .source=${indexedMessages}
+      .renderItem=${(_item: unknown, index: number) => html`
+        <div style="display:grid;place-items:center;block-size:100%;background:var(--lr-color-surface-raised);border:var(--lr-border-width-thin) solid var(--lr-color-border);box-sizing:border-box">
+          Tile ${index + 1}
+        </div>`}>
+    </lr-virtual-list>`,
+};
+
 export const IndexedSource: Story = {
   render: () => html`
     <lr-virtual-list

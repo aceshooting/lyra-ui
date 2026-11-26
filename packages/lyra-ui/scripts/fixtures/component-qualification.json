@@ -67,11 +67,11 @@
     "Source-signal dimensions identify evidence locations but do not turn regex presence into a behavioral pass."
   ],
   "summary": {
-    "componentCount": 324,
-    "automatedAccessibility": 323,
+    "componentCount": 325,
+    "automatedAccessibility": 324,
     "accessibilityExemptions": 1,
     "accessibilityMissing": 0,
-    "visualEnrolled": 92,
+    "visualEnrolled": 93,
     "forcedColorsEnrolled": 8,
     "assistiveTechnologyVerified": 0,
     "scaleMeasured": 95
@@ -29878,6 +29878,190 @@
       }
     },
     {
+      "tag": "lr-image-editor",
+      "family": "media",
+      "maturity": "experimental",
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "evidenceGaps": [
+          "scale",
+          "forcedColors",
+          "assistiveTechnology"
+        ]
+      },
+      "dimensions": {
+        "scale": {
+          "applicability": "applicable",
+          "status": "unmeasured",
+          "scenarios": [],
+          "measuredAt": null,
+          "evidence": [],
+          "limitation": "No deterministic scale budget has been measured for this tag."
+        },
+        "accessibility": {
+          "applicability": "applicable",
+          "status": "automated",
+          "evidence": [
+            {
+              "file": "src/components/media/image-editor/image-editor.test.ts",
+              "test": "exports the full edited crop while the original preview is selected",
+              "target": "el",
+              "state": "populated"
+            }
+          ],
+          "exemption": null
+        },
+        "keyboard": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/media/image-editor/image-editor.test.ts",
+              "test": "fits 320px RTL allocation and adjusts exposure with the keyboard",
+              "kind": "component keyboard exercise signal"
+            }
+          ]
+        },
+        "rtl": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/media/image-editor/image-editor.test.ts",
+              "test": "fits 320px RTL allocation and adjusts exposure with the keyboard",
+              "kind": "rendered RTL test signal"
+            }
+          ]
+        },
+        "reducedMotion": {
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "No component-owned motion declaration or programmatic animation was detected."
+        },
+        "narrowAllocation": {
+          "applicability": "applicable",
+          "status": "source-evidence",
+          "evidence": [
+            {
+              "file": "src/components/media/image-editor/image-editor.test.ts",
+              "test": "fits 320px RTL allocation and adjusts exposure with the keyboard",
+              "kind": "320px allocation test signal"
+            }
+          ]
+        },
+        "engines": {
+          "applicability": "applicable",
+          "status": "configured-automation",
+          "evidence": [
+            {
+              "file": ".github/workflows/ci.yml",
+              "kind": "Chromium full suite and Firefox/WebKit contract subset"
+            },
+            {
+              "file": ".github/workflows/full-engine.yml",
+              "kind": "weekly/manual Firefox and WebKit full-suite shards"
+            }
+          ],
+          "limitation": "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit."
+        },
+        "ssrHydration": {
+          "applicability": "applicable",
+          "status": "declared-and-gated",
+          "mode": "render-and-hydrate",
+          "reason": null,
+          "evidence": [
+            {
+              "file": "src/ssr.ts",
+              "kind": "machine-readable SSR support matrix"
+            },
+            {
+              "file": "scripts/check-ssr.mjs",
+              "kind": "server render crawl"
+            },
+            {
+              "file": "scripts/check-hydration.mjs",
+              "kind": "browser hydration identity crawl"
+            }
+          ],
+          "limitation": "The ledger classifies the declared mode and gate ownership; CI run results are reported separately."
+        },
+        "visual": {
+          "applicability": "applicable",
+          "status": "complete",
+          "stories": [
+            "media-files-image-editor--default"
+          ],
+          "axes": [
+            "dark",
+            "light",
+            "narrow",
+            "rtl"
+          ],
+          "evidence": [
+            {
+              "file": "visual-baselines/manifest.json",
+              "kind": "automated screenshot enrollment"
+            }
+          ],
+          "reviewer": "maintainer",
+          "reviewedAt": "2026-11-23",
+          "limitation": "Automated captures are enrolled, but complete human visual approval is not recorded."
+        },
+        "peerFailure": {
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "The component declares no optional peer dependencies."
+        },
+        "security": {
+          "applicability": "not-applicable",
+          "status": "not-applicable",
+          "evidence": [],
+          "limitation": "No optional-peer or remote-content trust boundary was detected in the component directory."
+        },
+        "forcedColors": {
+          "applicability": "applicable",
+          "status": "not-enrolled",
+          "stories": [],
+          "evidence": [],
+          "limitation": "No forced-colors visual capture is enrolled for this tag."
+        },
+        "assistiveTechnology": {
+          "applicability": "applicable",
+          "status": "not-verified",
+          "evidence": [],
+          "reviewer": null,
+          "reviewedAt": null,
+          "limitation": "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
+        }
+      },
+      "knownLimitations": [
+        "No deterministic scale budget has been measured for this tag.",
+        "No component-owned motion declaration or programmatic animation was detected.",
+        "This record proves CI configuration, not a particular green run; Firefox/WebKit full coverage is weekly/manual rather than per commit.",
+        "The ledger classifies the declared mode and gate ownership; CI run results are reported separately.",
+        "Automated captures are enrolled, but complete human visual approval is not recorded.",
+        "The component declares no optional peer dependencies.",
+        "No optional-peer or remote-content trust boundary was detected in the component directory.",
+        "No forced-colors visual capture is enrolled for this tag.",
+        "No screen reader, voice-control tool, or Windows High Contrast pairing has been manually verified."
+      ],
+      "provenance": {
+        "inventory": "scripts/fixtures/component-inventory.json",
+        "tests": [
+          "src/components/media/image-editor/image-editor-errors.test.ts",
+          "src/components/media/image-editor/image-editor-pixels.property.test.ts",
+          "src/components/media/image-editor/image-editor.test.ts"
+        ],
+        "visual": "visual-baselines/manifest.json",
+        "ssr": "src/ssr.ts"
+      }
+    },
+    {
       "tag": "lr-image-viewer",
       "family": "media",
       "maturity": "stable",
@@ -32247,6 +32431,12 @@
           "status": "automated",
           "evidence": [
             {
+              "file": "src/components/media/lightbox/lightbox-details.test.ts",
+              "test": "places one live details panel at inline-end or below the allocated stage",
+              "target": "el",
+              "state": "open"
+            },
+            {
               "file": "src/components/media/lightbox/lightbox-item.test.ts",
               "test": "clears its closing state after the exit animation and passes axe while open",
               "target": "el",
@@ -32272,8 +32462,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/lightbox/lightbox-item.test.ts",
-              "test": "activates a source-less trigger from the keyboard",
+              "file": "src/components/media/lightbox/lightbox-details.test.ts",
+              "test": "places one live details panel at inline-end or below the allocated stage",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -32283,8 +32473,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/lightbox/lightbox-item.test.ts",
-              "test": "swipes between items by touch, reverses under RTL, ignores a mouse and a pointercancel",
+              "file": "src/components/media/lightbox/lightbox-details.test.ts",
+              "test": "places one live details panel at inline-end or below the allocated stage",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -32305,8 +32495,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/lightbox/lightbox.test.ts",
-              "test": "fits landscape and tall images on open and navigation at narrow allocations",
+              "file": "src/components/media/lightbox/lightbox-details.test.ts",
+              "test": "places one live details panel at inline-end or below the allocated stage",
               "kind": "320px allocation test signal"
             }
           ]
@@ -32369,7 +32559,7 @@
           "evidence": [
             {
               "file": "src/components/media/lightbox/lightbox.class.ts",
-              "line": 849,
+              "line": 859,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -32404,6 +32594,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/lightbox/lightbox-details.test.ts",
           "src/components/media/lightbox/lightbox-item.test.ts",
           "src/components/media/lightbox/lightbox-remediation.test.ts",
           "src/components/media/lightbox/lightbox-source-boundaries.test.ts",
@@ -32460,8 +32651,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/lightbox/lightbox-item.test.ts",
-              "test": "activates a source-less trigger from the keyboard",
+              "file": "src/components/media/lightbox/lightbox-details.test.ts",
+              "test": "places one live details panel at inline-end or below the allocated stage",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -32471,8 +32662,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/lightbox/lightbox-item.test.ts",
-              "test": "swipes between items by touch, reverses under RTL, ignores a mouse and a pointercancel",
+              "file": "src/components/media/lightbox/lightbox-details.test.ts",
+              "test": "places one live details panel at inline-end or below the allocated stage",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -32493,8 +32684,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/media/lightbox/lightbox.test.ts",
-              "test": "fits landscape and tall images on open and navigation at narrow allocations",
+              "file": "src/components/media/lightbox/lightbox-details.test.ts",
+              "test": "places one live details panel at inline-end or below the allocated stage",
               "kind": "320px allocation test signal"
             }
           ]
@@ -32557,7 +32748,7 @@
           "evidence": [
             {
               "file": "src/components/media/lightbox/lightbox.class.ts",
-              "line": 849,
+              "line": 859,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -32592,6 +32783,7 @@
       "provenance": {
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
+          "src/components/media/lightbox/lightbox-details.test.ts",
           "src/components/media/lightbox/lightbox-item.test.ts",
           "src/components/media/lightbox/lightbox-remediation.test.ts",
           "src/components/media/lightbox/lightbox-source-boundaries.test.ts",
@@ -34119,6 +34311,8 @@
           "src/components/media/map/map-legend-icon-border.test.ts",
           "src/components/media/map/map-legend-icon.test.ts",
           "src/components/media/map/map-legend-scroll.test.ts",
+          "src/components/media/map/map-line-categories.property.test.ts",
+          "src/components/media/map/map-line-categories.test.ts",
           "src/components/media/map/map-loader.test.ts",
           "src/components/media/map/map-loading-ownership.test.ts",
           "src/components/media/map/map-local-image-url.property.test.ts",
@@ -34137,6 +34331,7 @@
           "src/components/media/map/map-paint-batch.test.ts",
           "src/components/media/map/map-peer-recovery.test.ts",
           "src/components/media/map/map-point-icon-recovery.test.ts",
+          "src/components/media/map/map-point-images.test.ts",
           "src/components/media/map/map-provider-context-transitions.test.ts",
           "src/components/media/map/map-public-boundaries-coverage.test.ts",
           "src/components/media/map/map-public-boundaries.test.ts",
@@ -34485,6 +34680,8 @@
           "src/components/media/map/map-legend-icon-border.test.ts",
           "src/components/media/map/map-legend-icon.test.ts",
           "src/components/media/map/map-legend-scroll.test.ts",
+          "src/components/media/map/map-line-categories.property.test.ts",
+          "src/components/media/map/map-line-categories.test.ts",
           "src/components/media/map/map-loader.test.ts",
           "src/components/media/map/map-loading-ownership.test.ts",
           "src/components/media/map/map-local-image-url.property.test.ts",
@@ -34503,6 +34700,7 @@
           "src/components/media/map/map-paint-batch.test.ts",
           "src/components/media/map/map-peer-recovery.test.ts",
           "src/components/media/map/map-point-icon-recovery.test.ts",
+          "src/components/media/map/map-point-images.test.ts",
           "src/components/media/map/map-provider-context-transitions.test.ts",
           "src/components/media/map/map-public-boundaries-coverage.test.ts",
           "src/components/media/map/map-public-boundaries.test.ts",
@@ -47636,6 +47834,7 @@
         "inventory": "scripts/fixtures/component-inventory.json",
         "tests": [
           "src/components/overlays/rating/rating-change-request.test.ts",
+          "src/components/overlays/rating/rating-clearable.test.ts",
           "src/components/overlays/rating/rating-default-coercion.test.ts",
           "src/components/overlays/rating/rating-remediation.test.ts",
           "src/components/overlays/rating/rating.test.ts"
@@ -65499,8 +65698,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/layout/virtual-list/virtual-list.test.ts",
-              "test": "wraps ordinary long row content and measures its auto height at 320px in LTR and RTL",
+              "file": "src/components/layout/virtual-list/virtual-list-grid.test.ts",
+              "test": "keeps responsive cells keyed and addressed by item index",
               "kind": "rendered RTL test signal"
             }
           ]
@@ -65615,6 +65814,7 @@
           "src/components/layout/virtual-list/virtual-list-composition-scale.test.ts",
           "src/components/layout/virtual-list/virtual-list-coverage.test.ts",
           "src/components/layout/virtual-list/virtual-list-geometry-edges.test.ts",
+          "src/components/layout/virtual-list/virtual-list-grid.test.ts",
           "src/components/layout/virtual-list/virtual-list-indexed-groups.test.ts",
           "src/components/layout/virtual-list/virtual-list-indexed-measurement.test.ts",
           "src/components/layout/virtual-list/virtual-list-layout-fallback.test.ts",

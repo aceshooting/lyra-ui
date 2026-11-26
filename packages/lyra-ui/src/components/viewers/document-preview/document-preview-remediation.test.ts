@@ -52,14 +52,16 @@ async function imagePreview(height: number, capped = true, zoomable = false) {
   return { viewer, image, body: viewer.shadowRoot!.querySelector<HTMLElement>('[part="body"]')! };
 }
 
-it('keeps the tall capped nonzoomable image origin and bottom reachable using the body scroll range', async () => {
-  const { viewer, image, body } = await imagePreview(1000);
-  expect(viewer.zoomable).to.equal(false);
-  body.scrollTop = 0;
-  expect(image.getBoundingClientRect().top).to.be.at.least(body.getBoundingClientRect().top);
-  body.scrollTop = body.scrollHeight;
-  await waitUntil(() => image.getBoundingClientRect().bottom <= body.getBoundingClientRect().bottom + 1);
-});
+for (const zoomable of [false, true]) {
+  it(`keeps the tall capped image reachable through the body scroll range with zoomable=${zoomable}`, async () => {
+    const { image, body } = await imagePreview(1000, true, zoomable);
+    body.scrollTop = 0;
+    expect(image.getBoundingClientRect().top).to.be.at.least(body.getBoundingClientRect().top);
+    body.scrollTop = body.scrollHeight;
+    expect(body.scrollTop).to.be.greaterThan(0);
+    await waitUntil(() => image.getBoundingClientRect().bottom <= body.getBoundingClientRect().bottom + 1);
+  });
+}
 
 it('preserves centered fitting content, uncapped content, and the zoom wrapper', async () => {
   const small = await imagePreview(60);

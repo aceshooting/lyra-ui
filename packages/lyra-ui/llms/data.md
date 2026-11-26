@@ -2217,8 +2217,9 @@ number, color?: string, group?: string }` snapshots; malformed/hostile records a
   overrides; when omitted, the component derives entries from grouped and explicitly colored
   words. Explicit legends retain at most 100 entries and 8,192 aggregate characters; malformed
   records are skipped, overlong strings end in an ellipsis, invalid colors render transparent, and
-  `[part="legend-limit"]` truthfully exposes the localized rendered/received count. The returned
-  sequence and records are frozen; assign a new array after changes.
+  `[part="legend-limit"]` displays the localized rendered/received count or the localized empty
+  state when every row is rejected. The returned sequence and records are frozen. Assign a new
+  array after changes.
 - `withLegend: boolean = false` (attribute `with-legend`, reflected) — renders the supplied or
   derived legend below the cloud; the color key is an accessible list and does not change word
   activation or palette selection.
@@ -2295,7 +2296,7 @@ cursor's word), `live-region` (visually-hidden, `aria-hidden` mirror of the late
 the actual announcement uses the shared light-DOM polite sink),
 `legend`/`legend-item`/`legend-swatch`/`legend-label` (the optional static color key), and `empty`
 (the no-data placeholder), `limit` (localized rendered/received word count; rendered/selected in
-prepared mode), `legend-limit` (localized rendered/received explicit-legend count),
+prepared mode), `legend-limit` (localized explicit-legend count or empty state),
 `summary` (prepared full/retained counts and weights), and `error` (invalid prepared-input message)
 
 **Themeable custom properties:** `--lr-word-cloud-color-1`, `--lr-word-cloud-color-2`,

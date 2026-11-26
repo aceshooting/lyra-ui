@@ -20,6 +20,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { expandManifestInheritance } from './manifest-compact.mjs';
 import { isMainModule } from './is-main-module.mjs';
 
 const packageDir = fileURLToPath(new URL('..', import.meta.url));
@@ -100,16 +101,19 @@ function authoredFamilyDocs(llmsDir) {
 
 export function findLlmsDefaultMismatches(dir = packageDir) {
   const manifest = JSON.parse(readFileSync(join(dir, 'custom-elements.json'), 'utf8'));
-  const tags = collectManifestMembers(manifest);
+  const tags = collectManifestMembers(expandManifestInheritance(manifest));
   const llmsDir = join(dir, 'llms');
   const findings = [];
 
   for (const name of authoredFamilyDocs(llmsDir)) {
     const lines = readFileSync(join(llmsDir, name), 'utf8').split('\n');
     let sectionTags = [];
+    let propertiesList = false;
     lines.forEach((line, index) => {
       const heading = HEADING.exec(line);
-      if (heading) {
+      if (/^(?:#{2,6} |\*\*)/.test(line))
+        propertiesList = /^(?:#{2,6} |\*\*)Properties(?:[: (]|$)/i.test(line);
+      if (heading && !propertiesList) {
         sectionTags = heading[1].match(TAG) ?? [];
         return;
       }
@@ -121,6 +125,13 @@ export function findLlmsDefaultMismatches(dir = packageDir) {
         findings.push({ file: `llms/${name}`, line: index + 1, member, rule, documented, tags: owners(member) });
       };
 
+      // Only typed bullets in an explicit property list claim that its tag owns this field.
+      // Data-shape fields and native HTML attributes are also documented elsewhere in a section.
+      const property = propertiesList && /^- `([A-Za-z][A-Za-z0-9]*)\??\s*:/.exec(line);
+      if (property && sectionTags.some(tag => tags.has(tag)) && owners(property[1]).length === 0) {
+        findings.push({ file: `llms/${name}`, line: index + 1, member: property[1], rule: 'unknown-property',
+          documented: property[1], tags: sectionTags });
+      }
       for (const [, member, , documented] of line.matchAll(DEFAULT_CLAIM)) {
         const owning = owners(member);
         if (owning.length === 0) continue;
@@ -146,6 +157,7 @@ export function findLlmsDefaultMismatches(dir = packageDir) {
 }
 
 const EXPLANATION = Object.freeze({
+  'unknown-property': 'the property list names a field absent from the component and its base classes',
   'documented-default-but-optional':
     'the reference states a default, but the property is declared optional and reads back `undefined`',
   'documented-optional-but-defaulted':
@@ -156,7 +168,7 @@ if (isMainModule(import.meta.url)) {
   const findings = findLlmsDefaultMismatches();
   if (findings.length > 0) {
     console.error(
-      `Authored llms property defaults disagree with custom-elements.json (${findings.length}):\n`,
+      `Authored llms properties disagree with custom-elements.json (${findings.length}):\n`,
     );
     for (const finding of findings) {
       console.error(`  ${finding.file}:${finding.line}  \`${finding.documented}\``);

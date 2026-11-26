@@ -1152,7 +1152,7 @@ selection.
   edge the strip sits on. `start`/`end` are _logical_, so they mirror under RTL with no `:dir()`
   rule of your own; either turns the tablist vertical, which sets `aria-orientation="vertical"` and
   switches the navigation keys to Up/Down per the APG.
-- `fill: boolean = false` (reflected) — stretches the active panel to the body's available block
+- `fillBody: boolean = false` (attribute `fill-body`, reflected) — stretches the active panel to the body's available block
   size in a height-bounded group. The panel's content can own scrolling in this mode. By default
   the body scrolls while a top or bottom tab strip keeps its natural height.
 - `activation: 'auto' | 'manual' = 'auto'` (reflected) — `auto` moves selection with focus; `manual`
@@ -2234,6 +2234,14 @@ Hydration preserves that window on its first pass and then reconciles it with th
 viewport; an ordinary browser-only mount retains the established empty-until-measured range-event
 contract.
 
+For a thumbnail gallery, set `columns="auto"` and `min-cell-width` (`minCellWidth`, default 160 CSS pixels),
+or set a fixed count from 2 to 64. Cells fill each visual row from inline start. With the default
+`row-height="auto"`, gallery cells are square. Set `cell-aspect-ratio` (`cellAspectRatio`) to width divided by height,
+or use a numeric `row-height` for fixed-height cells. Each cell keeps its original item index,
+key, focus ownership and accessible list position. `indexAtOffset()` returns the first item in
+the visual row. A count passed to `offsetForIndex()` includes the final partial row. Overscan is
+measured in visual rows. Grouped lists and `item-role="row"` use the single-column layout.
+
 **Properties:**
 
 - `items: readonly unknown[] = []` (attribute: false) — the full, non-windowed item collection. JS-only; set via
@@ -2308,10 +2316,10 @@ list's `base` scroll container exposes horizontal scrolling for that explicit op
   mounted (called with the first group, rendered hidden) so its height is known before the first
   programmatic jump rather than only after it.
 
-- `rowHeight: number | 'auto' = 'auto'` (attribute `row-height`) — `'auto'` measures each row's real
-  height via `ResizeObserver`; a numeric markup value (for example `row-height="56"`) parses to the
-  number `56` and fixes every row to that many pixels. Property callers assign a number, not a
-  numeric string. Anything else (non-numeric, zero, negative, non-finite) safely canonicalizes to
+- `rowHeight: number | 'auto' = 'auto'` (attribute `row-height`) — the default list measures each row's real
+  height via `ResizeObserver`. Gallery mode derives the height from its cell width and aspect ratio.
+  A numeric markup value such as `row-height="56"` fixes every row at 56 CSS pixels. Property
+  callers assign a number. Anything else (non-numeric, zero, negative, non-finite) safely canonicalizes to
   `'auto'` rather than throwing.
 - `rowProjection: 'shadow' | 'light' = 'shadow'` (attribute `row-projection`) — where
   `renderItem`'s output is instantiated. `'shadow'` (default) stamps it inside this component's own
@@ -2402,10 +2410,11 @@ newer view back to stale content.
 `scrollElement` that space is unchanged — it
 measures from the top of the list itself, not from the top of the external scroller's content, and
 the component converts between the two. It is clamped to `0…count`, so `offsetForIndex(count)`
-is the logical total content height and an empty list is always `0`. `indexAtOffset(px)` is its inverse — the
-row whose box contains that offset, clamped at both ends, `-1` for an empty list — so
-`indexAtOffset(offsetForIndex(i)) === i`. Native `scrollTop` shares this logical space only while
-scrollbar scaling is inactive. In `row-height="auto"` mode both are estimate-based for any row that (or
+is the logical total content height and an empty list is always `0`. `indexAtOffset(px)` returns the
+first item in the visual row containing that offset, clamped at both ends, or `-1` for an empty list.
+In a single column, `indexAtOffset(offsetForIndex(i)) === i` for each item. Native `scrollTop` shares
+this logical space only while scrollbar scaling is inactive. With a single column and
+`row-height="auto"`, both methods are estimate-based for any row that (or
 above which) has not been measured yet, and converge as those `ResizeObserver` measurements land;
 fixed numeric `row-height` offsets are exact from the first render. Both read the most recent render,
 so `await el.updateComplete` after assigning `items` or `source` before querying.
@@ -5989,8 +5998,8 @@ and event listeners survive every breakpoint crossing.
   stylesheets, which a `style-src` nonce does not govern).
 - `navigationPlacement: 'start' | 'end' = 'start'` (attribute `navigation-placement`, reflected) —
   a logical placement: `start` is left in LTR and right in RTL; `end` is the reverse.
-- `tabindex: string = '-1'` (reflected) — the host fragment target's native focusability. The Page
-  preserves an authored value and otherwise keeps the host target focusable programmatically so a
+- The native `tabIndex` property reflects the host's `tabindex` attribute. The Page sets it to `-1` by default
+  and preserves an authored value. The default keeps the host programmatically focusable so a
   skip link or URL fragment can transfer focus into the main content.
 - `disableNavigationToggle: boolean = false` (attribute `disable-navigation-toggle`, reflected) —
   hides the built-in mobile toggle. One or more custom controls assigned to `navigation-toggle`, or

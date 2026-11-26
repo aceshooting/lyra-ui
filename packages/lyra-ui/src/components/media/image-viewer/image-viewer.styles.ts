@@ -27,10 +27,6 @@ export const styles = css`
     flex: 1 1 auto;
     min-block-size: 0;
   }
-  [part="frame"]::part(base) {
-    block-size: 100%;
-    grid-template-rows: minmax(0, 1fr) auto;
-  }
   /* 'contain' and 'width' size the image against the viewport, which must not grow with it. */
   :host([fit="contain"]) [part="frame"]::part(viewport) {
     container-type: size;

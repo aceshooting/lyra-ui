@@ -38,6 +38,23 @@ export const ImageSource: Story = {
   ></lr-pan-zoom>`,
 };
 
+const portrait = `data:image/svg+xml,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="720">' +
+  '<path fill="#172554" d="M0 0h480v720H0z"/><circle fill="#fbbf24" cx="340" cy="180" r="60"/>' +
+  '<path fill="#1e40af" d="M0 500l140-250 180 230 100-150 60 125v265H0z"/>' +
+  '<path fill="#0f766e" d="M0 580l160-90 220 70 100-65v225H0z"/></svg>',
+)}`;
+
+export const BoundedPortrait: Story = {
+  render: () => html`<lr-pan-zoom
+    fit="contain"
+    src=${portrait}
+    alt="Illustration of a mountain landscape"
+    aria-label="Portrait image preview"
+    style="inline-size: 32rem; max-inline-size: 100%; block-size: min(65dvh, 28rem)"
+  ></lr-pan-zoom>`,
+};
+
 /** The 2× surface expands native scroll geometry rather than painting beyond its reachable layout
  * box. Switch this story to RTL to inspect the opposite logical edge. */
 export const ScaledFootprint: Story = {

@@ -30,9 +30,9 @@ webfont swap-in, wall-clock reads, the browser's default timezone, and the defau
 `system-ui`/`ui-monospace` font stacks resolving to whatever substitution the capturing host
 happens to have installed are all pinned (see `../scripts/visual-regression.mjs`'s header
 comment). The font substitution gap alone once cascaded into a 3.6% diff for word-cloud's
-spiral-search layout. The configured matrix is 111 stories and 321 live captures, spanning
+spiral-search layout. The configured matrix is 112 stories and 325 live captures, spanning
 light, dark, and RTL plus targeted forced-colors and narrow axes. While human review is pending,
-108 captures compare with retained tracked baselines and 213 are semantic, nonblank, or
+108 captures compare with retained tracked baselines and 217 are semantic, nonblank, or
 painted-pixel evidence only. `manifest.json` computes
 that matrix and records every exemption. The CI step (`.github/workflows/ci.yml`) remains blocking:
 semantic errors, console errors, missing reviewed baselines, and mismatches outside an explicit
@@ -99,9 +99,9 @@ exemption. To extend coverage, add another `<title>--<name>` story id from
 blocking `new` result; an evidence-only capture runs its assertions and stays under
 `.visual-diff-output/evidence/` until a human explicitly promotes that axis.
 
-The runner expands the 111 stories into 321 capture axes before partitioning. Its three CI shards
-contain 107 captures each; the blocking unit/config tests prove the shards are deterministic,
-disjoint, exhaustive, and balanced without changing the 108 retained-baseline plus 213
+The runner expands the 112 stories into 325 capture axes before partitioning. Its three CI shards
+contain 109, 108, and 108 captures. The blocking unit/config tests prove the shards are deterministic,
+disjoint, exhaustive, and balanced without changing the 108 retained-baseline plus 217
 evidence-only policy.
 
 Before any PNG is compared or retained as evidence, the harness recursively checks rendered shadow

@@ -8,6 +8,8 @@ export interface LyraMapOverlaySource {
   readonly source: Readonly<Record<string, unknown>>;
 }
 export interface LyraMapOverlayLayer extends LyraMapInteractionOptions {
+  /** Set to true to include this layer in map feature hit testing. Defaults to false. */
+  readonly interactive?: boolean;
   readonly layer: Readonly<Record<string, unknown>> & { readonly id: string; readonly type: string };
   readonly before?: string;
 }
@@ -172,7 +174,7 @@ export function admitMapOverlays(input: unknown): MapOverlayAdmission {
       const snapshot = { ...clone(layer, 0) as Readonly<Record<string, unknown>>, id, type,
         ...(source === undefined ? {} : { source: identifier(source) }) };
       layerIds.add(id);
-      layers.push(Object.freeze({ ...projectMapInteractionOptions(row), layer: Object.freeze(snapshot), ...(before === undefined ? {} : { before: identifier(before) }) }));
+      layers.push(Object.freeze({ ...projectMapInteractionOptions(row, false), layer: Object.freeze(snapshot), ...(before === undefined ? {} : { before: identifier(before) }) }));
     }
     return Object.freeze({ ok: true, overlays: Object.freeze({ sources: Object.freeze(sources), layers: Object.freeze(layers) }) });
   } catch (error) {

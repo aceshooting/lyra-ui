@@ -54,14 +54,33 @@ describe('lr-map hostile and malformed input boundaries', () => {
 
   it('reports a legend whose every row was rejected without drawing a swatch', async () => {
     const { el } = await liveScriptedMap((map) => {
-      map.strings = { paginationSummary: 'Showing {start} through {end} of {total} {itemLabel}', items: 'rows' };
-      map.legend = [null, 'row', { label: '  ', color: '#ff0000', pattern: 'solid' }] as never;
+      map.strings = { noData: 'No legend rows' };
+      map.legendCollapsible = true;
     });
+    el.legend = [null, 'row', { label: '  ', color: '#ff0000', pattern: 'solid' }] as never;
     await el.updateComplete;
     expect(el.legend.length).to.equal(0);
     expect(el.legendProjection).to.deep.equal({ inputCount: 3, renderedCount: 0, omittedCount: 3, truncatedLabelCount: 0, truncated: true });
-    expect(el.shadowRoot!.querySelector('[part="legend-limit"]')?.textContent?.trim()).to.equal('Showing 0 through 0 of 3 rows');
+    expect(el.shadowRoot!.querySelector('[part="legend-limit"]')?.textContent?.trim()).to.equal('No legend rows');
     expect(el.shadowRoot!.querySelectorAll('[part="legend-swatch"]').length).to.equal(0);
+    el.legend = [];
+    await el.updateComplete;
+    expect(Boolean(el.shadowRoot!.querySelector('[part="legend-limit"]'))).to.equal(false);
+  });
+
+  it('retains patternless rows with a solid swatch in a collapsible legend', async () => {
+    const { el } = await liveScriptedMap((map) => {
+      map.legendCollapsible = true;
+      map.legend = [
+        { label: 'Walk', color: '#ff0000' },
+        { label: 'Train', color: '#00ff00', pattern: 'diagonal' },
+      ];
+    });
+    const swatches = [...el.shadowRoot!.querySelectorAll('[part="legend-swatch"]')];
+    expect(swatches.map(swatch => swatch.getAttribute('data-pattern'))).to.deep.equal(['solid', 'diagonal']);
+    expect(el.legend.map(row => row.pattern)).to.deep.equal(['solid', 'diagonal']);
+    expect(el.legendProjection.omittedCount).to.equal(0);
+    expect(Boolean(el.shadowRoot!.querySelector('[part="legend-limit"]'))).to.equal(false);
   });
 
   it('treats a legend or hidden-category assignment that is not a list as empty', async () => {

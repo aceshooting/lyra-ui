@@ -72,14 +72,14 @@ export function expandMapStyleLayerTargets<T>(entries: readonly T[], layers: rea
 export interface CanonicalMapInteraction { readonly interactive: boolean; readonly priority: number; }
 const OFF = Object.freeze({ interactive: false, priority: 0 });
 /** Invalid explicit interaction options cannot accidentally enable a query target. */
-export function projectMapInteractionOptions(value: object): CanonicalMapInteraction {
+export function projectMapInteractionOptions(value: object, defaultInteractive = true): CanonicalMapInteraction {
   const enabled = getOwnDataDescriptor(value, 'interactive'), priority = getOwnDataDescriptor(value, 'priority');
   if (enabled === UNSAFE_OWN_DATA_DESCRIPTOR || priority === UNSAFE_OWN_DATA_DESCRIPTOR) return OFF;
   const interactive = enabled === MISSING_OWN_DATA_DESCRIPTOR ? undefined : enabled.value;
   const rank = priority === MISSING_OWN_DATA_DESCRIPTOR ? undefined : priority.value;
   if (interactive !== undefined && typeof interactive !== 'boolean' || rank !== undefined &&
     (typeof rank !== 'number' || !Number.isFinite(rank) || Math.abs(rank) > 1000000)) return OFF;
-  return Object.freeze({ interactive: interactive !== false, priority: typeof rank === 'number' ? rank : 0 });
+  return Object.freeze({ interactive: interactive ?? defaultInteractive, priority: typeof rank === 'number' ? rank : 0 });
 }
 export type CanonicalMapBasemapInteraction = CanonicalMapInteraction &
   ({ readonly layerId: string; readonly selector?: undefined } | { readonly layerId?: undefined; readonly selector: CanonicalSelector });

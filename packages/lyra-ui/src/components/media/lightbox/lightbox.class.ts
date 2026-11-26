@@ -31,7 +31,10 @@ import { prefersReducedMotion } from '../../../internal/motion.js';
 import type { LyraPanZoom } from '../pan-zoom/pan-zoom.class.js';
 import { keyEventOwnedByInnerControl } from '../../../internal/hotkey.js';
 import { isElement } from '../../../internal/rendered-tree-traversal.js';
+import { composedContains } from '../../../internal/composed-tree.js';
 import { repairControlFocusOnUpdate } from '../../../internal/control-focus-repair.js';
+import { deepActiveElementIn } from '../../../internal/active-element.js';
+import { focusFirstAvailable } from '../../../internal/focus-navigation.js';
 import { trackScrollRegions } from '../../../internal/scroll-region.js';
 import { blankNumberConverter } from '../../../internal/converters.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
@@ -39,7 +42,7 @@ import { setCustomState } from '../../../internal/custom-states.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_imageViewerFailedToLoad, LYRA_DEFAULT_lightboxImagePosition, LYRA_DEFAULT_lightboxLabel } from '../../../internal/default-strings/media.generated.js';
-import { LYRA_DEFAULT_close, LYRA_DEFAULT_loading, LYRA_DEFAULT_next, LYRA_DEFAULT_previous, LYRA_DEFAULT_retry, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_close, LYRA_DEFAULT_details, LYRA_DEFAULT_loading, LYRA_DEFAULT_next, LYRA_DEFAULT_previous, LYRA_DEFAULT_retry, LYRA_DEFAULT_zoomIn, LYRA_DEFAULT_zoomOut } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type { LyraImageFit } from '../../../internal/image-fit.js';
@@ -244,6 +247,8 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
  * @slot - One or more `<lr-lightbox-item>` elements, with any markup that lays them out.
  * @slot actions - Optional extra toolbar buttons (e.g. download/share/delete), rendered in
  *   `part="toolbar"` between the counter and the close button.
+ * @slot details - Optional rich content for the current data-mode image. Update one shared
+ *   panel on `lr-index-change`. The slot is hidden while a source image loads or fails.
  * @slot close-icon - Optional close icon used instead of the default.
  * @slot previous-icon - Optional previous icon used instead of the default.
  * @slot next-icon - Optional next icon used instead of the default.
@@ -294,6 +299,7 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
  * @csspart stage - Also exposed as `scroll-container`. Houses the embedded `<lr-pan-zoom>` plus the floating
  *   `previous-button`/`next-button`.
  * @csspart scroll-container - The same element as `stage`.
+ * @csspart details - Scrollable wrapper around the data-mode details slot.
  * @csspart source-loading - Source-mode loading message.
  * @csspart source-error - Source descriptor or image loading error.
  * @csspart source-retry - Retry the current source image after an error.
@@ -324,9 +330,9 @@ function queueDocumentMicrotask(ownerDocument: Document, callback: VoidFunction)
  * @cssprop [--backdrop-filter=none] - A filter applied to the page behind the backdrop, e.g. `blur(1rem)`.
  * @cssprop --lr-lightbox-control-bg - Background for every floating/toolbar icon button.
  * @cssprop --lr-lightbox-control-color - Icon/text color paired with `--lr-lightbox-control-bg`.
- * @cssprop [--controls-background=var(--lr-color-neutral)] - Background of the controls, counter and caption; `--lr-lightbox-control-bg` wins when both are set.
- * @cssprop [--controls-color=var(--lr-color-on-neutral)] - Text and icon color of the controls, counter and caption; `--lr-lightbox-control-color` wins when both are set.
- * @cssprop [--spacing=var(--lr-space-s)] - Space between the toolbar, the media, the caption and the thumbnail strip.
+ * @cssprop [--controls-background=var(--lr-color-neutral)] - Background of the controls, counter, caption and details; `--lr-lightbox-control-bg` wins when both are set.
+ * @cssprop [--controls-color=var(--lr-color-on-neutral)] - Text and icon color of the controls, counter, caption and details; `--lr-lightbox-control-color` wins when both are set.
+ * @cssprop [--spacing=var(--lr-space-s)] - Space between the toolbar, media, details, caption and thumbnail strip.
  * @cssprop --lr-lightbox-control-hover-bg - Hovered control background. Defaults to `--lr-color-brand-quiet`.
  * @cssprop --lr-lightbox-control-hover-color - Hovered control icon/text color. Defaults to `--lr-color-brand`.
  * @cssprop --lr-lightbox-control-active-bg - Pressed control background. Defaults to the hover background mixed toward `--lr-color-mix-partner`.
@@ -352,6 +358,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   protected static override readonly defaultStrings: Readonly<LyraLocaleStrings> = {
     ...super.defaultStrings,
     close: LYRA_DEFAULT_close,
+    details: LYRA_DEFAULT_details,
     imageViewerFailedToLoad: LYRA_DEFAULT_imageViewerFailedToLoad,
     lightboxImagePosition: LYRA_DEFAULT_lightboxImagePosition,
     lightboxLabel: LYRA_DEFAULT_lightboxLabel,
@@ -539,6 +546,9 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
 
   /** A nonblank host label names the dialog. Blank labels use the localized `lightboxLabel` default. */
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
+
+  /** Place data-mode details at inline-end when space allows, or always below the image. */
+  @property({ attribute: 'details-placement' }) detailsPlacement: 'end' | 'bottom' = 'end';
 
   private readonly slotPresence = new SlotPresenceController(this);
   @state() private itemsVersion = 0;
@@ -1057,6 +1067,13 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     };
   }
 
+  private showsDetails(): boolean {
+    return this.slotPresence.has('details') && !this.itemMode &&
+      (this.imageSource === undefined
+        ? this.imageCount() > 0
+        : this.sourceBindingCurrent && this.sourceController.state === 'ready');
+  }
+
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
     this.sourceBindingCurrent = this.sourceController.update(this.imageSource, this.effectiveLocale);
@@ -1086,6 +1103,12 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     if (this.sourceBindingCurrent && (changed.has('index') || changed.has('itemsVersion') || changed.has('images') || changed.has('imageSource') || changed.has('sourceState') || changed.has('strings') || changed.has('locale'))) {
       this.updateLiveRegion();
     }
+    if (this.open && !this.showsDetails()) {
+      const details = this.renderRoot.querySelector<HTMLElement>('[part="details"]:not([hidden])');
+      if (details && composedContains(details, deepActiveElementIn(this.ownerDocument))) {
+        focusFirstAvailable([this.renderRoot.querySelector<HTMLElement>('[part="close-button"]')]);
+      }
+    }
     if (changed.has('open')) {
       if (this.open) {
         this.modalSurface.open(() => this.activateOverlay());
@@ -1098,6 +1121,10 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
+    if (changed.has('index') || changed.has('imageSource') || changed.has('images')) {
+      const details = this.renderRoot.querySelector<HTMLElement>('[part="details"]');
+      if (details) details.scrollTop = 0;
+    }
     // Reconnecting establishes a silent baseline for navigation announcements.
     const isConnectionBaseline =
       this.announcementBaseline?.index === this.currentIndex() &&
@@ -1287,10 +1314,10 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
 
   private onPanelKeyDown = (event: KeyboardEvent): void => {
     if (event.defaultPrevented || shouldIgnoreNavigationKey(event) || event.shiftKey) return;
-    // A slotted control (actions slot, custom slide content) owns Arrow keys; the lightbox's own
-    // shadow controls do not.
+    // Details and slotted controls keep their own scrolling and navigation keys.
     for (const target of event.composedPath() as Node[]) {
       if (target === this) break;
+      if (isElement(target) && target.getAttribute('part') === 'details' && target.getRootNode() === this.shadowRoot) return;
       if (
         isElement(target) && target.getRootNode() !== this.shadowRoot &&
         target.matches('a[href], button, [role="button"], [role="link"], [role="slider"], input, select, textarea, [contenteditable]:not([contenteditable="false"])')
@@ -1328,10 +1355,11 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
       this.renderRoot.querySelector<HTMLElement>('[part="close-button"]'),
       this.renderRoot.querySelector<HTMLElement>('[part~="frame"]'),
     ]);
-    // A capped caption takes a tab stop only while it has more text to scroll to.
+    // Capped content takes a tab stop only while there is more to scroll to.
     trackScrollRegions(this, () => {
-      const el = this.renderRoot.querySelector<HTMLElement>('[part="caption"]');
-      return [el && { el, role: false }];
+      const caption = this.renderRoot.querySelector<HTMLElement>('[part="caption"]');
+      const details = this.renderRoot.querySelector<HTMLElement>('[part="details"]:not([hidden])');
+      return [caption && { el: caption, role: false }, details && { el: details, name: this.localize('details') }];
     });
   }
 
@@ -1403,6 +1431,8 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
     // The toolbar zoom toggle belongs to the slotted-item viewer; data mode keeps its original
     // chrome (the embedded pan-zoom controls) so existing galleries gain no new button.
     const showZoom = this.itemMode && !this.withoutZoom && !isVideo && !isCustom && count > 0;
+    const showDetails = this.showsDetails();
+    const detailsPlacement = this.detailsPlacement === 'bottom' ? 'bottom' : 'end';
 
     return html`<slot></slot><div part="surface">${this.nativeModal.render(html`
       <div part="backdrop" @click=${this.onBackdropClick}></div>
@@ -1434,73 +1464,78 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
             <slot name="close-icon">${closeIcon()}</slot>
           </button>
         </div>
-        <div
-          part="stage scroll-container"
-          aria-busy=${sourceState === 'loading' ? 'true' : 'false'}
-          @pointerdown=${this.onSwipeStart}
-          @pointermove=${this.onSwipeMove}
-          @pointerup=${this.onSwipeEnd}
-          @pointercancel=${this.onSwipeCancel}
-        >
-          ${sourceState === 'loading' ? html`<p part="source-loading">${this.localize('loading')}</p>` : nothing}
-          ${sourceState === 'error' ? html`<div part="source-error">${this.localize('imageViewerFailedToLoad')}<button part="source-retry" type="button" @click=${() => this.sourceController.retry(this.currentIndex())}>${this.localize('retry')}</button></div>` : nothing}
-          ${count > 1 && !this.withoutNavigation
-            ? html`
-                <button
-                  part="previous-button navigation-button navigation-button-previous"
-                  type="button"
-                  aria-label=${this.localize('previous')}
-                  ?disabled=${!this.loop && current === 0}
-                  @click=${this.previous}
-                >
-                  <span part="previous-glyph"><slot name="previous-icon">${chevronIcon()}</slot></span>
-                </button>
-              `
-            : nothing}
-          <div part="slide">
-            ${isVideo
-              ? keyed(current, html`<video
-                  part="video"
-                  controls
-                  playsinline
-                  preload="metadata"
-                  src=${mediaSrc}
-                  poster=${ifDefined(record?.thumbnail || undefined)}
-                  aria-label=${ifDefined(image?.alt || undefined)}
-                  width=${ifDefined(record?.width)}
-                  height=${ifDefined(record?.height)}
-                ></video>`)
+        <div class="media-layout" data-details-placement=${showDetails ? detailsPlacement : nothing}>
+          <div
+            part="stage scroll-container"
+            aria-busy=${sourceState === 'loading' ? 'true' : 'false'}
+            @pointerdown=${this.onSwipeStart}
+            @pointermove=${this.onSwipeMove}
+            @pointerup=${this.onSwipeEnd}
+            @pointercancel=${this.onSwipeCancel}
+          >
+            ${sourceState === 'loading' ? html`<p part="source-loading">${this.localize('loading')}</p>` : nothing}
+            ${sourceState === 'error' ? html`<div part="source-error">${this.localize('imageViewerFailedToLoad')}<button part="source-retry" type="button" @click=${() => this.sourceController.retry(this.currentIndex())}>${this.localize('retry')}</button></div>` : nothing}
+            ${count > 1 && !this.withoutNavigation
+              ? html`
+                  <button
+                    part="previous-button navigation-button navigation-button-previous"
+                    type="button"
+                    aria-label=${this.localize('previous')}
+                    ?disabled=${!this.loop && current === 0}
+                    @click=${this.previous}
+                  >
+                    <span part="previous-glyph"><slot name="previous-icon">${chevronIcon()}</slot></span>
+                  </button>
+                `
               : nothing}
-            ${isCustom ? html`<slot name=${CUSTOM_SLIDE_SLOT}></slot>` : nothing}
-            <lr-pan-zoom
-              part="frame image"
-              exportparts="viewport:frame-viewport,content:frame-content,controls:frame-controls"
-              ?hidden=${isVideo || isCustom}
-              .src=${live(isVideo || isCustom ? '' : image?.src ?? '')}
-              alt=${image?.alt ?? ''}
-              .fit=${this.fit}
-              .minZoom=${this.withoutZoom ? 1 : this.minZoom}
-              .maxZoom=${this.withoutZoom ? 1 : this.maxZoom}
-              .zoomStep=${this.zoomStep}
-              .accessibleLabel=${positionText || null}
-              @focus=${(event: Event) => event.stopPropagation()}
-              @blur=${(event: Event) => event.stopPropagation()}
-              @lr-zoom-change=${this.onZoomChange}
-            ></lr-pan-zoom>
+            <div part="slide">
+              ${isVideo
+                ? keyed(current, html`<video
+                    part="video"
+                    controls
+                    playsinline
+                    preload="metadata"
+                    src=${mediaSrc}
+                    poster=${ifDefined(record?.thumbnail || undefined)}
+                    aria-label=${ifDefined(image?.alt || undefined)}
+                    width=${ifDefined(record?.width)}
+                    height=${ifDefined(record?.height)}
+                  ></video>`)
+                : nothing}
+              ${isCustom ? html`<slot name=${CUSTOM_SLIDE_SLOT}></slot>` : nothing}
+              <lr-pan-zoom
+                part="frame image"
+                exportparts="viewport:frame-viewport,content:frame-content,controls:frame-controls"
+                ?hidden=${isVideo || isCustom}
+                .src=${live(isVideo || isCustom ? '' : image?.src ?? '')}
+                alt=${image?.alt ?? ''}
+                .fit=${this.fit}
+                .minZoom=${this.withoutZoom ? 1 : this.minZoom}
+                .maxZoom=${this.withoutZoom ? 1 : this.maxZoom}
+                .zoomStep=${this.zoomStep}
+                .accessibleLabel=${positionText || null}
+                @focus=${(event: Event) => event.stopPropagation()}
+                @blur=${(event: Event) => event.stopPropagation()}
+                @lr-zoom-change=${this.onZoomChange}
+              ></lr-pan-zoom>
+            </div>
+            ${count > 1 && !this.withoutNavigation
+              ? html`
+                  <button
+                    part="next-button navigation-button navigation-button-next"
+                    type="button"
+                    aria-label=${this.localize('next')}
+                    ?disabled=${!this.loop && current === count - 1}
+                    @click=${this.next}
+                  >
+                    <span part="next-glyph"><slot name="next-icon">${chevronIcon()}</slot></span>
+                  </button>
+                `
+              : nothing}
           </div>
-          ${count > 1 && !this.withoutNavigation
-            ? html`
-                <button
-                  part="next-button navigation-button navigation-button-next"
-                  type="button"
-                  aria-label=${this.localize('next')}
-                  ?disabled=${!this.loop && current === count - 1}
-                  @click=${this.next}
-                >
-                  <span part="next-glyph"><slot name="next-icon">${chevronIcon()}</slot></span>
-                </button>
-              `
-            : nothing}
+          <div part="details" ?hidden=${!showDetails}>
+            <slot name="details"></slot>
+          </div>
         </div>
         ${hasCaption ? html`<p part="caption" id=${this.captionId}>${image!.caption}</p>` : nothing}
         ${this.renderThumbnails(count, current)}

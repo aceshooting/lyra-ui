@@ -15,6 +15,8 @@ export interface MapImagePreparationContext {
   readonly signal: AbortSignal;
   /** A component-owned request can abort the transfer without cancelling its parent operation. */
   readonly fetchController?: AbortController;
+  /** Center-crop a point thumbnail and optionally clip and stroke its perimeter. */
+  readonly thumbnail?: { readonly shape: 'circle' | 'square'; readonly border?: string };
   readonly isCurrent: () => boolean;
 }
 interface MapImageRasterInput {
@@ -103,7 +105,7 @@ async function readRemoteImage(
     context.signal.removeEventListener('abort', abort);
   }
 }
-function sanitizeSvg(raw: string, sanitizer: HtmlSanitizer, owner: Element, width: number, height: number): string {
+function sanitizeSvg(raw: string, sanitizer: HtmlSanitizer, owner: Element, width: number, height: number, thumbnail: boolean): string {
   const fragment = sanitizePassiveMarkupFragment(sanitizer, raw, owner.ownerDocument, 'passive-svg');
   const roots = [...fragment.children];
   if (roots.length !== 1 || !isSvgElement(roots[0]) || roots[0].localName !== 'svg' ||
@@ -128,16 +130,41 @@ function sanitizeSvg(raw: string, sanitizer: HtmlSanitizer, owner: Element, widt
       !Number.isFinite(Number.parseFloat(value)) || Number.parseFloat(value) <= 0 || Number.parseFloat(value) > MAP_IMAGE_LIMITS.dimension)) fail('invalid-svg');
   }
   const viewBox = root.getAttribute('viewBox');
+  let viewBoxWidth: number | undefined;
+  let viewBoxHeight: number | undefined;
   if (viewBox !== null) {
     const tokens = viewBox.trim().split(/[\s,]+/u);
     if (tokens.some((token) => !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/u.test(token))) fail('invalid-svg');
     const numbers = tokens.map(Number);
     if (numbers.length !== 4 || !numbers.every(Number.isFinite) || numbers[2]! <= 0 || numbers[3]! <= 0 ||
       numbers.some((value) => Math.abs(value) > 1e7)) fail('invalid-svg');
+    viewBoxWidth = numbers[2];
+    viewBoxHeight = numbers[3];
   }
-  root.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-  root.setAttribute('width', String(width)); root.setAttribute('height', String(height));
-  const serialized = root.outerHTML;
+  let output = root;
+  if (thumbnail) {
+    // Preserve the authored viewport, including its own viewBox alignment. The outer SVG
+    // crops that viewport before rasterization and only allocates the requested backing size.
+    const widthAttribute = root.getAttribute('width');
+    const heightAttribute = root.getAttribute('height');
+    const authoredWidth = widthAttribute === null ? undefined : Number.parseFloat(widthAttribute);
+    const authoredHeight = heightAttribute === null ? undefined : Number.parseFloat(heightAttribute);
+    const ratio = viewBoxWidth && viewBoxHeight ? viewBoxWidth / viewBoxHeight : undefined;
+    const viewportWidth = authoredWidth ?? (authoredHeight && ratio ? authoredHeight * ratio : viewBoxWidth ?? 300);
+    const viewportHeight = authoredHeight ?? (authoredWidth && ratio ? authoredWidth / ratio : viewBoxHeight ?? 150);
+    if (!(viewportWidth > 0 && viewportHeight > 0 && Number.isFinite(viewportWidth) && Number.isFinite(viewportHeight))) {
+      return fail('invalid-svg');
+    }
+    root.setAttribute('width', String(viewportWidth)); root.setAttribute('height', String(viewportHeight));
+    root.removeAttribute('x'); root.removeAttribute('y');
+    output = owner.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    output.setAttribute('viewBox', `0 0 ${viewportWidth} ${viewportHeight}`);
+    output.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+    output.append(root);
+  }
+  output.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  output.setAttribute('width', String(width)); output.setAttribute('height', String(height));
+  const serialized = output.outerHTML;
   bytesOf(serialized, MAP_IMAGE_LIMITS.encodedBytes);
   return serialized;
 }
@@ -179,7 +206,20 @@ async function rasterizeMapImage(input: MapImageRasterInput, context: MapImagePr
     // Drawn once and read back at once: a CPU-backed surface avoids a GPU-to-CPU synchronization.
     const drawing = canvas.getContext('2d', { willReadFrequently: true });
     if (!drawing) return fail('decode');
-    drawing.drawImage(image, 0, 0, input.width, input.height);
+    if (context.thumbnail) {
+      const side = Math.min(image.naturalWidth, image.naturalHeight);
+      const size = input.width;
+      drawing.beginPath();
+      if (context.thumbnail.shape === 'circle') drawing.arc(size / 2, size / 2, size / 2, 0, 2 * Math.PI);
+      else drawing.rect(0, 0, size, size);
+      drawing.clip();
+      drawing.drawImage(image, (image.naturalWidth - side) / 2, (image.naturalHeight - side) / 2, side, side, 0, 0, size, size);
+      if (context.thumbnail.border) {
+        drawing.lineWidth = 2;
+        drawing.strokeStyle = context.thumbnail.border;
+        drawing.stroke();
+      }
+    } else drawing.drawImage(image, 0, 0, input.width, input.height);
     let pixels: ImageData;
     try { pixels = drawing.getImageData(0, 0, input.width, input.height); } catch { return fail('tainted'); }
     guard(context);
@@ -227,7 +267,7 @@ export async function prepareMapImages(value: unknown, context: MapImagePreparat
         if (!sanitizer) return fail('missing-sanitizer');
         let markup: string;
         try { markup = new TextDecoder('utf-8', { fatal: true }).decode(encoded); } catch { return fail('invalid-svg'); }
-        const svg = sanitizeSvg(markup, sanitizer, context.owner, descriptor.width, descriptor.height);
+        const svg = sanitizeSvg(markup, sanitizer, context.owner, descriptor.width, descriptor.height, !!context.thumbnail);
         input = { mime: 'image/svg+xml', svg, width: descriptor.width, height: descriptor.height,
           intrinsicWidth: descriptor.width, intrinsicHeight: descriptor.height };
       } else {

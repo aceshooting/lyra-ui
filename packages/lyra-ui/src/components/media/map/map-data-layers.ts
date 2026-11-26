@@ -62,8 +62,9 @@ export function mutedCategoryOpacityExpression(
   field: string,
   categories: readonly string[],
   opacity: number,
+  visibleOpacity = 1,
 ): unknown[] {
-  return ['match', ['get', field], ...categories.flatMap((value) => [value, opacity]), 1];
+  return ['match', ['get', field], ...categories.flatMap((value) => [value, opacity]), visibleOpacity];
 }
 
 /** Converts a normalized scalar or ramp radius to MapLibre's data expression. */

@@ -30,7 +30,7 @@ import { createNetworkMonitoringFixture, deriveNetworkFrame, type SyntheticNetwo
   type SyntheticNodeStatus } from '../../../../test/network-monitoring-fixture.js';
 
 const legend = (): LyraMapLegendEntry[] => [
-  { color: storyColor('brand'), label: 'Low', pattern: 'solid' },
+  { color: storyColor('brand'), label: 'Low' },
   { color: storyColor('danger'), label: 'High', pattern: 'diagonal' },
 ];
 
@@ -320,8 +320,8 @@ export const CustomCoverageCone: Story = {
   },
 };
 
-/** The legend owns a frozen 100-row projection, keeps a required non-color pattern for every
- * category, and reports omitted input through `legendProjection` plus visible localized text. */
+/** The legend owns a frozen 100-row projection, supports category patterns, and reports
+ * omitted input through `legendProjection` plus visible localized text. */
 export const BoundedSemanticLegend: Story = {
   render: () => {
     const patterns = ['solid', 'diagonal', 'dots', 'crosshatch'] as const;
@@ -917,6 +917,22 @@ export const RouteSpeed: Story = {
   },
 };
 
+export const RouteCategories: Story = {
+  render: () => {
+    const colors = [['Rail', storyColor('brand')], ['Air', storyColor('danger')]] as const;
+    const layer: LyraMapGeoJsonDataLayer = {
+      sourceId: 'journey',
+      geojson: { type: 'FeatureCollection', features: colors.map(([mode], index) => ({
+        type: 'Feature', properties: { mode },
+        geometry: { type: 'LineString', coordinates: [[-0.025, 0], [0, 0.01 * index], [0.025, 0.015 * index]] },
+      })) },
+      line: { field: 'mode', colors, dash: [['Air', [3, 2]]], width: 4 },
+    };
+    return html`<lr-map label="Rail and air routes" .mapStyle=${OFFLINE_RASTER_STYLE} zoom="12"
+      .dataLayers=${[layer]} legend-interactive .legend=${colors.map(([label, color]) => ({ label, value: label, color }))}></lr-map>`;
+  },
+};
+
 export const NavigationAndScale: Story = {
   parameters: { docs: { description: { story: 'Standard MapLibre NavigationControl and ScaleControl added through the public map getter receive shadow-root styles, localized button names and public CSS parts. Positions follow text direction. The legend reserves room for controls and attribution; ScaleControl owns unit formatting and viewport updates.' } } },
   render: () => html`<lr-map label="Map with navigation controls" .mapStyle=${OFFLINE_RASTER_STYLE}
@@ -971,6 +987,21 @@ export const ClassifiedPoints: Story = {
         { label: 'Work', color: storyColor('success'), pattern: 'diagonal', icon: icons[1] },
         { label: 'Shop', color: storyColor('warning'), pattern: 'dots', icon: icons[2] },
       ]}></lr-map>`;
+  },
+};
+
+export const ClusteredImageMarkers: Story = {
+  render: () => {
+    const layer: LyraMapGeoJsonDataLayer = {
+      sourceId: 'places', cluster: { zoomOnClick: true },
+      point: { image: { field: 'thumbnail', size: 40, shape: 'circle', border: storyColor('brand') } },
+      geojson: { type: 'FeatureCollection', features: [-0.24, 0.12, 0.125].map((longitude, index) => ({
+        type: 'Feature', id: index, properties: { thumbnail: index === 1 ? './lyra-mark.svg' : './fixtures/story-image.svg' },
+        geometry: { type: 'Point', coordinates: [longitude, 0] },
+      })) },
+    };
+    return html`<lr-map label="Clustered image markers" .zoom=${9} .center=${[0, 0]}
+      .mapStyle=${OFFLINE_RASTER_STYLE} .dataLayers=${[layer]}></lr-map>`;
   },
 };
 

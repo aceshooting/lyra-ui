@@ -1338,6 +1338,7 @@ export type {
   LyraImageComparerEventMap,
   LyraImageComparerOrientation,
 } from './components/media/image-comparer/image-comparer.class.js';
+export type { LyraImageEditorEventMap } from './components/media/image-editor/image-editor.class.js';
 export type { LyraPanZoomEventMap } from './components/media/pan-zoom/pan-zoom.class.js';
 export type {
   LyraZoomableFrameEventMap,

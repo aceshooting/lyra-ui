@@ -177,6 +177,7 @@ import type { LyraAvatarEventMap } from '../components/media/avatar/avatar.class
 import type { LyraDropZoneEventMap } from '../components/media/drop-zone/drop-zone.class.js';
 import type { LyraFileInputEventMap } from '../components/media/file-input/file-input.class.js';
 import type { LyraImageComparerEventMap } from '../components/media/image-comparer/image-comparer.class.js';
+import type { LyraImageEditorEventMap } from '../components/media/image-editor/image-editor.class.js';
 import type { LyraImageViewerEventMap } from '../components/media/image-viewer/image-viewer.class.js';
 import type { LyraLightboxEventMap } from '../components/media/lightbox/lightbox.class.js';
 import type { LyraMapAnchorEventMap } from '../components/media/map/map-anchor.class.js';
@@ -397,6 +398,7 @@ export interface LyraTagEventTypes {
   'lr-icon': LyraIconEventMap;
   'lr-icon-button': LyraIconButtonEventMap;
   'lr-image-comparer': LyraImageComparerEventMap;
+  'lr-image-editor': LyraImageEditorEventMap;
   'lr-image-viewer': LyraImageViewerEventMap;
   'lr-include': LyraIncludeEventMap;
   'lr-ingestion-queue': LyraIngestionQueueEventMap;

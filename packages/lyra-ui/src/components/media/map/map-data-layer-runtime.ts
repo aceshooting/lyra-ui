@@ -1,3 +1,4 @@
+import type { CanonicalPointImage } from './map-point-images.js';
 import type { Feature, FeatureCollection } from 'geojson';
 import { projectChoroplethNoData, type CanonicalChoroplethNoData } from '../../../internal/choropleth-no-data.js';
 import { isSafeNonArrayObject } from '../../../internal/object-guards.js';
@@ -294,13 +295,18 @@ function normalizedClusterFonts(value: unknown): readonly string[] {
 }
 
 export interface CanonicalLineOptions {
+  readonly colors: readonly (readonly [string, string])[];
+  readonly dash: readonly unknown[] | undefined;
   readonly field: string | undefined;
   readonly stops: readonly (readonly [number, string])[];
   readonly width: number;
   readonly opacity: number;
 }
 
+export { MapPointImages } from './map-point-images.js';
+
 export interface CanonicalPointOptions {
+  readonly image: CanonicalPointImage | undefined;
   readonly field: string | undefined;
   readonly colors: readonly (readonly [string, string])[];
   readonly radius: number | CanonicalPointRadius;
@@ -342,7 +348,7 @@ function projectPointOptions(value: unknown): CanonicalPointOptions | undefined 
     const candidate = read(key);
     return finiteRange(typeof candidate === 'number' ? candidate : NaN, fallback, min, max);
   };
-  const colors: (readonly [string, string])[] = [];
+  const colors = projectCategoryEntries(read('colors'), categoryColor);
   const icons: CanonicalPointIcon[] = [];
   const project = (input: unknown, accept: (row: object) => void): void => {
     const length = boundedOwnArrayLength(input, MAX_MAP_STEP_STOPS) ?? 0;
@@ -351,13 +357,6 @@ function projectPointOptions(value: unknown): CanonicalPointOptions | undefined 
       if (row !== null && typeof row === 'object') accept(row);
     }
   };
-  project(read('colors'), (row) => {
-    const key = optionalDescriptorValue(getOwnDataDescriptor(row, '0'));
-    const color = optionalDescriptorValue(getOwnDataDescriptor(row, '1'));
-    if (typeof key !== 'string' || typeof color !== 'string' || !sanitizeCssColor(color) ||
-      colors.some(([existing]) => existing === key)) return;
-    colors.push(Object.freeze([key, color]));
-  });
   project(read('icons'), (row) => {
     const key = optionalDescriptorValue(getOwnDataDescriptor(row, 'value'));
     if (typeof key !== 'string' || icons.some((icon) => icon.value === key)) return;
@@ -365,20 +364,71 @@ function projectPointOptions(value: unknown): CanonicalPointOptions | undefined 
     if (!paint) return;
     icons.push(Object.freeze({ value: key, ...paint }));
   });
-  return Object.freeze({ field: string('field'), colors: Object.freeze(colors), radius: projectPointRadius(read('radius')),
+  const imageValue = read('image');
+  const imageRead = (key: string): unknown => isSafeNonArrayObject(imageValue)
+    ? optionalDescriptorValue(getOwnDataDescriptor(imageValue, key)) : undefined;
+  const field = imageRead('field'), size = imageRead('size'), border = imageRead('border');
+  const image = typeof field === 'string' && field.trim() && field.length <= 256
+    ? Object.freeze({ field: field.trim(), size: Math.round(finiteRange(typeof size === 'number' ? size : NaN, 32, 1, 96)),
+      shape: imageRead('shape') === 'square' ? 'square' as const : 'circle' as const,
+      border: typeof border === 'string' && sanitizeCssColor(border) ? border : undefined })
+    : undefined;
+  return Object.freeze({ image, field: string('field'), colors: Object.freeze(colors), radius: projectPointRadius(read('radius')),
     strokeWidth: number('strokeWidth', 0, 0, 200), strokeColor: string('strokeColor'),
     iconField: string('iconField') ?? string('field'), icons: Object.freeze(icons),
     iconColor: string('iconColor'), iconSize: number('iconSize', 16, 1, 200) });
 }
 
+function projectCategoryEntries<T>(value: unknown, project: (raw: unknown) => T | undefined): readonly (readonly [string, T])[] {
+  const entries = new Map<string, T>();
+  const length = boundedOwnArrayLength(value, MAX_MAP_STEP_STOPS) ?? 0;
+  for (let i = 0; i < length; i++) {
+    const row = optionalDescriptorValue(getOwnDataDescriptor(value as object, String(i)));
+    if (!row || typeof row !== 'object') continue;
+    const key = optionalDescriptorValue(getOwnDataDescriptor(row, '0'));
+    if (typeof key !== 'string' || entries.has(key)) continue;
+    const output = project(optionalDescriptorValue(getOwnDataDescriptor(row, '1')));
+    if (output !== undefined) entries.set(key, output);
+  }
+  return Object.freeze(Array.from(entries, entry => Object.freeze(entry)));
+}
+
+function categoryColor(raw: unknown): string | undefined {
+  return typeof raw === 'string' && sanitizeCssColor(raw) ? raw : undefined;
+}
+
+function dashPattern(raw: unknown): readonly number[] | undefined {
+  const length = boundedOwnArrayLength(raw, 33);
+  if (!length || length > 32) return undefined;
+  const pattern: number[] = [];
+  for (let i = 0; i < length; i++) {
+    const part = optionalDescriptorValue(getOwnDataDescriptor(raw as object, String(i)));
+    if (typeof part !== 'number' || !Number.isFinite(part) || part < 0 || part > 256) return undefined;
+    pattern.push(part);
+  }
+  return pattern.some(part => part > 0) ? Object.freeze(pattern) : undefined;
+}
+
+function projectLineDash(raw: unknown, field: string | undefined): readonly unknown[] | undefined {
+  const constant = dashPattern(raw);
+  if (constant || !field) return constant;
+  const categories = projectCategoryEntries(raw, dashPattern);
+  if (!categories.length) return undefined;
+  return Object.freeze(['match', ['get', field],
+    ...categories.flatMap(([key, pattern]) => [key, ['literal', pattern]]), ['literal', [1]]]);
+}
+
 function projectLineOptions(value: unknown): CanonicalLineOptions | undefined {
   try {
     if (!isSafeNonArrayObject(value)) return undefined;
-    const field = optionalDescriptorValue(getOwnDataDescriptor(value, 'field'));
+    const rawField = optionalDescriptorValue(getOwnDataDescriptor(value, 'field'));
+    const field = typeof rawField === 'string' && rawField.trim() ? rawField.trim() : undefined;
     const width = optionalDescriptorValue(getOwnDataDescriptor(value, 'width'));
     const opacity = optionalDescriptorValue(getOwnDataDescriptor(value, 'opacity'));
     return Object.freeze({
-      field: typeof field === 'string' && field.trim() ? field.trim() : undefined,
+      field,
+      colors: projectCategoryEntries(optionalDescriptorValue(getOwnDataDescriptor(value, 'colors')), categoryColor),
+      dash: projectLineDash(optionalDescriptorValue(getOwnDataDescriptor(value, 'dash')), field),
       stops: Object.freeze(normalizeMapLegendGradient(
         optionalDescriptorValue(getOwnDataDescriptor(value, 'stops')),
       ).filter((stop, index, stops) => index === 0 || stop[0] > stops[index - 1]![0])

@@ -1587,7 +1587,7 @@ it('bounds labels and contains malformed or hostile legend records', async () =>
   });
   el.legend = [
     { color: '#f00', label: 'x'.repeat(400), pattern: 'diagonal' },
-    { color: '#0f0', label: 'Missing pattern' },
+    { color: '#0f0', label: 'Unsupported pattern', pattern: 'stripe' },
     hostile,
     { color: '#00f', label: 'Valid', pattern: 'dots' },
   ] as never;
