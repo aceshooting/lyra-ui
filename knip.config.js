@@ -101,12 +101,22 @@ export default {
       project: ['scripts/**/*.mjs'],
       ignoreDependencies: ['@aceshooting/lyra-ui'],
     },
-    // Bundles lyra-ui's dist; the workspace dependency is read by path, never imported by name.
     'packages/lyra-cdn': {
-      // esbuild bundles this loader entry by path in scripts/build.mjs.
-      entry: ['scripts/lyra-ui.loader.mjs'],
+      // esbuild receives these entry paths in scripts/build.mjs.
+      entry: ['scripts/{lyra-ui.loader,lyra-docs.entry,lyra-gen.entry,phone-numbers.entry}.mjs!'],
       project: ['scripts/**/*.mjs'],
-      ignoreDependencies: ['@aceshooting/lyra-ui'],
+      // The build reads these workspace outputs by relative path. Their devDependencies also
+      // order recursive builds. Flags are copied as vendor files.
+      ignoreDependencies: [
+        '@aceshooting/lyra-3d',
+        '@aceshooting/lyra-docs',
+        '@aceshooting/lyra-flags',
+        '@aceshooting/lyra-gen',
+        '@aceshooting/lyra-map',
+        '@aceshooting/lyra-ui',
+        // esbuild resolves the phone adapter's bare import from lyra-ui, which declares it.
+        'libphonenumber-js',
+      ],
     },
     'packages/lyra-translations': {
       project: ['scripts/**/*.mjs'],

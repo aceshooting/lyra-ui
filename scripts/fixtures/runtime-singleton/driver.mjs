@@ -186,7 +186,9 @@ function configuration(mode, environment, phaseMode) {
     cacheDir: join(fixture, `.vite-${mode}-${environment}`), customLogger: logger,
     resolve: { dedupe: mode === 'raw' ? [] : [UI_PACKAGE] },
     optimizeDeps,
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [fixture] } },
+    // Playwright captures and validates browser diagnostics per page. Keep Vite's logger
+    // dedicated to server diagnostics even in environments that forward the browser console.
+    server: { host: '127.0.0.1', port: 0, fs: { allow: [fixture] }, forwardConsole: false },
     preview: { host: '127.0.0.1', port: 0 },
     build: { outDir: join(fixture, `output-${mode}`), emptyOutDir: true, target: 'es2022' },
     plugins: [...(mode === 'shared' ? [{ ...applicationResolver(), enforce: 'pre' }] : []), {

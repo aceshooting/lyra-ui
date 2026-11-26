@@ -8,11 +8,8 @@
 
 ## Which file to read
 
-Read the narrow reference for the task. `llms/index.md` lists the current element count and
-complete tag list.
-
-- [llms/index.md](./llms/index.md): every tag, its exact import path, and a one-line purpose —
-  **start here** to pick a component.
+- [llms/index.md](./llms/index.md) lists the component count, every tag, its import path, and
+  what it does. Start here to pick a component.
 - [llms/components/&lt;tag&gt;.md](./llms/components/): the full API of one component (properties,
   events, slots, CSS parts, custom properties, snippet, gotchas), derived from the tag name with no
   search: `llms/components/lr-table.md`.

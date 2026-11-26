@@ -52,7 +52,7 @@ test('the local docs server supports streaming WebAssembly compilation', async t
   assert.deepEqual(summary.diagnosticFailures, []);
 });
 
-async function inspectFixture(t, { delayedSource = false, initialDelay = 0, neverRender = false, offscreen = false, immediateSource = false }) {
+async function inspectFixture(t, { delayedSource = false, initialDelay = 0, neverRender = false, offscreen = false, immediateSource = false, controlCount = 1 }) {
   const server = createServer((request, response) => {
     if (request.url === '/index.json') {
       response.setHeader('Content-Type', 'application/json');
@@ -74,19 +74,25 @@ async function inspectFixture(t, { delayedSource = false, initialDelay = 0, neve
         <script>
           if (${offscreen}) window.addEventListener('scroll', () => console.error('offscreen source check scrolled the page'));
           function mountControls() {
-            document.getElementById('controls').innerHTML = '<button role="switch" aria-checked="false" aria-controls="source">Show code</button><pre id="source"></pre>';
-            const control = document.querySelector('button');
-            control.addEventListener('click', () => {
-              control.textContent = 'Hide code';
-              control.setAttribute('aria-checked', 'true');
-              if (${offscreen} && window.scrollY !== 0) console.error('offscreen source check changed the scroll position');
-              if (${immediateSource}) document.getElementById('source').textContent = '<lr-empty>No results</lr-empty>';
-              if (${delayedSource}) {
-                setTimeout(() => {
-                  document.getElementById('source').textContent = '<lr-empty>No results</lr-empty>';
-                }, 2000);
-              }
-            });
+            const container = document.getElementById('controls');
+            for (let index = 0; index < ${controlCount}; index += 1) {
+              const source = document.createElement('pre');
+              source.id = 'source-' + index;
+              const control = document.createElement('button');
+              control.setAttribute('role', 'switch');
+              control.setAttribute('aria-checked', 'false');
+              control.setAttribute('aria-controls', source.id);
+              control.textContent = 'Show code';
+              control.addEventListener('click', () => {
+                control.textContent = 'Hide code';
+                control.setAttribute('aria-checked', 'true');
+                if (${offscreen} && window.scrollY !== 0) console.error('offscreen source check changed the scroll position');
+                const fill = () => { source.textContent = '<lr-empty>No results</lr-empty>'; };
+                if (${immediateSource}) fill();
+                if (${delayedSource}) setTimeout(fill, 2000);
+              });
+              container.append(control, source);
+            }
           }
           if (!${neverRender}) {
             if (${initialDelay} > 0) setTimeout(mountControls, ${initialDelay});
@@ -125,6 +131,20 @@ test('waits for source text that renders after the expanded controls settle', { 
   assert.equal(summary.clicked, 1);
   assert.deepEqual(summary.structuralFailures, []);
   assert.deepEqual(summary.diagnosticFailures, []);
+});
+
+test('settles delayed source text after expanding exactly the click limit', async t => {
+  const { code, summary } = await inspectFixture(t, { controlCount: 80, delayedSource: true });
+  assert.equal(summary.clicked, 80);
+  assert.equal(code, 0, JSON.stringify(summary.structuralFailures));
+});
+
+test('fails without clicking the extra control above the click limit', async t => {
+  const { code, summary } = await inspectFixture(t, { controlCount: 81, immediateSource: true });
+  assert.equal(code, 1);
+  assert.equal(summary.clicked, 80);
+  assert.equal(summary.structuralFailures.length, 1);
+  assert.equal(summary.structuralFailures[0].remaining, 1);
 });
 
 test('still rejects an expanded source block that never receives text', { timeout: 100_000 }, async (t) => {

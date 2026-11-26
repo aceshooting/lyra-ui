@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/web-components-vite';
 import { html } from 'lit';
+import { LYRA_CHART_PALETTES } from '../../../theme/options/charts.js';
 import '../../lr-pan-zoom.js';
 
 const meta: Meta = {
@@ -38,11 +39,12 @@ export const ImageSource: Story = {
   ></lr-pan-zoom>`,
 };
 
+const { sequential: [sky, mountain, foreground], diverging: [sun] } = LYRA_CHART_PALETTES.lyra.dark;
 const portrait = `data:image/svg+xml,${encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="720">' +
-  '<path fill="#172554" d="M0 0h480v720H0z"/><circle fill="#fbbf24" cx="340" cy="180" r="60"/>' +
-  '<path fill="#1e40af" d="M0 500l140-250 180 230 100-150 60 125v265H0z"/>' +
-  '<path fill="#0f766e" d="M0 580l160-90 220 70 100-65v225H0z"/></svg>',
+  `<path fill="${sky}" d="M0 0h480v720H0z"/><circle fill="${sun}" cx="340" cy="180" r="60"/>` +
+  `<path fill="${mountain}" d="M0 500l140-250 180 230 100-150 60 125v265H0z"/>` +
+  `<path fill="${foreground}" d="M0 580l160-90 220 70 100-65v225H0z"/></svg>`,
 )}`;
 
 export const BoundedPortrait: Story = {

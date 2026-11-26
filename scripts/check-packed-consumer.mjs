@@ -338,8 +338,10 @@ const bundleEntries = {
     // next 64-byte boundary. Per-obstacle anchor sides and the unpatched-hydration self-heal
     // bring it to 2,622,125 raw bytes across 42 files; the ceiling advances to the next 64-byte
     // boundary. The pre-upgrade property restore in LyraElement brings it to 2,622,927 raw bytes;
-    // the ceiling advances to the next 64-byte boundary.
-    maxRawBytes: 2_622_976,
+    // the ceiling advances to the next 64-byte boundary. Viewport photo markers and categorical
+    // line styling grow the data-layer and image chunks. With style-spec 26.11.0 and Vite 8.4.0,
+    // the complete graph measures 2,625,698 raw bytes across 30 files, rounded up to the next 64-byte boundary.
+    maxRawBytes: 2_625_728,
   },
   graph: {
     fixture: 'optional',

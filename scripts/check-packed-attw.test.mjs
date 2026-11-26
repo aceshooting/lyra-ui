@@ -22,13 +22,15 @@ const manifest = JSON.parse(
 
 test('checks every live typed export while preserving blocked retired routes', () => {
   const entrypoints = attwEntrypoints(manifest);
-  assert.equal(entrypoints.length, 800, 'the reviewed package has 800 live typed exports (the locale catalogs publish from @aceshooting/lyra-translations)');
+  assert.equal(entrypoints.length, 802, 'reviewed live typed exports, with locale catalogs published separately');
   assert.ok(entrypoints.includes('.'));
   assert.ok(entrypoints.includes('./package.json'));
   assert.ok(entrypoints.includes('./theme/*'));
   assert.ok(entrypoints.includes('./theme/looks/shadcn.js'), 'current look routes remain checked');
   assert.ok(entrypoints.includes('./components/lr-currency-picker.js'));
   assert.ok(entrypoints.includes('./components/forms/currency-picker/currency-picker.class.js'));
+  assert.ok(entrypoints.includes('./components/lr-image-editor.js'));
+  assert.ok(entrypoints.includes('./components/media/image-editor/image-editor.class.js'));
   assert.ok(entrypoints.includes('./components/lr-chart-3d.js'), 'the chart-3d registration is checked');
   assert.ok(entrypoints.includes('./components/charts/chart-3d/chart-3d.class.js'), 'the chart-3d class is checked');
   assert.ok(entrypoints.includes('./components/lr-map-anchor.js'), 'the map-anchor registration is checked');

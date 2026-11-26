@@ -166,9 +166,9 @@ async function inspectDoc(context, doc) {
     const requiresControls = doc.importPath.includes('/src/components/');
     let idlePolls = 0;
     let previousTotal = -1;
-    while (idlePolls < QUIET_POLLS && Date.now() < deadline && clicked < MAX_CLICKS) {
+    while (idlePolls < QUIET_POLLS && Date.now() < deadline) {
       let expanded = false;
-      while ((await tolerateNavigation(page, () => showCode().count())) > 0 && clicked < MAX_CLICKS) {
+      while (clicked < MAX_CLICKS && Date.now() < deadline && (await tolerateNavigation(page, () => showCode().count())) > 0) {
         // Static demos can overlap later toggles on an autodocs page. Dispatch a native click on
         // the control itself, without Playwright's coordinate hit test or a presentational scroll.
         // Scrolling would activate offscreen demos whose work is unrelated to their source block.
@@ -188,11 +188,16 @@ async function inspectDoc(context, doc) {
       const rendered = (await tolerateNavigation(page, () => renderedBody().count())) > 0;
       // Source controls can switch to "Hide code" before their asynchronously rendered text is
       // available. Keep the same bounded settling budget for that content, not just the controls.
-      const sourcesReady = (await readSourceTexts()).every((source) => source.trim().length > 0);
+      const sourceTexts = await readSourceTexts();
+      const sourcesReady = sourceTexts.every((source) => source.trim().length > 0);
       // A rendered body can precede its first lazy docs block. Component pages must expose a
       // source control before quiescence is meaningful; missing controls still exhaust the budget.
       const controlsReady = !requiresControls || clicked > 0;
-      idlePolls = expanded || !rendered || !controlsReady || !sourcesReady || total !== previousTotal ? 0 : idlePolls + 1;
+      // The cap bounds clicks. The last switch and its source can still be rendering afterward.
+      const pendingAtCap = clicked === MAX_CLICKS && (await tolerateNavigation(page, () => showCode().count())) > 0;
+      // Once every allowed click has an expanded switch, an additional closed switch cannot fit.
+      if (pendingAtCap && sourceTexts.length >= MAX_CLICKS) break;
+      idlePolls = expanded || pendingAtCap || !rendered || !controlsReady || !sourcesReady || total !== previousTotal ? 0 : idlePolls + 1;
       previousTotal = total;
       if (idlePolls < QUIET_POLLS) await page.waitForTimeout(POLL_INTERVAL_MS);
     }
@@ -209,7 +214,7 @@ async function inspectDoc(context, doc) {
       expandedControls,
       sourceTexts,
       settled: idlePolls >= QUIET_POLLS,
-      reachedClickCap: clicked >= MAX_CLICKS,
+      reachedClickCap: clicked === MAX_CLICKS && idlePolls < QUIET_POLLS,
       requiresControls,
     });
     return {
