@@ -338,7 +338,7 @@ describe('autoloader', () => {
     const tag = 'lr-copy-button';
     const children = ['lr-icon-button', 'lr-tooltip'] as const;
     setAutoloaderDefinitionChildrenForTesting(true);
-    for (const name of [tag, ...children]) override(name, async () => constructorForTag());
+    for (const name of [tag, ...children] as const) override(name, async () => constructorForTag());
     const host = await fixture<HTMLElement>(html`<section></section>`);
     const shadow = host.attachShadow({ mode: 'open' });
     const registry = createScopedRegistry();
