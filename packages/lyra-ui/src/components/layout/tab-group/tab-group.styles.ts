@@ -52,6 +52,13 @@ export const styles = css`
     flex: 1 1 auto;
     min-inline-size: 0;
   }
+  /* The leading scroll control is present only on horizontal strips using custom controls. */
+  :where([part~="scroll-button"]) + [part~="tablist"] {
+    scrollbar-width: none;
+  }
+  :where([part~="scroll-button"]) + [part~="tablist"]::-webkit-scrollbar {
+    display: none;
+  }
   [part~="tablist"][hidden] { display: none; }
   :where([part~="scroll-button"]) {
     /* Never shrinks: at the narrow allocations that cause overflow, a shrinkable control would be

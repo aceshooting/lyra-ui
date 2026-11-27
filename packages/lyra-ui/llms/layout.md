@@ -1203,7 +1203,10 @@ group.focusTab("activity");
 
 **Overflow and scrolling.** The tablist is a native scroll container (`overflow-x: auto`). A
 horizontal row that does not fit additionally gets two pointer scroll controls flanking it inside
-`[part="nav"]`. Logical edge state drives both controls and the mask: at the initial edge only the
+`[part="nav"]`. Horizontal tablists hide the browser scrollbar when these controls are enabled.
+Touch, trackpad and keyboard scrolling still work. Set `without-scroll-controls` or
+`no-scroll-controls` to use the browser scrollbar in a horizontal strip. Vertical tablists use the
+browser scrollbar. Logical edge state drives both controls and the mask: at the initial edge only the
 inline-end fade/control appears, in the middle both appear, and at the final edge only inline-start
 appears. Native scroll plus a `ResizeObserver` on the strip and its rendered tabs refresh that state,
 so intrinsic label/font geometry changes cannot leave stale controls. The same contract works under

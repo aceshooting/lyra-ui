@@ -2329,9 +2329,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 103069,
+        "bytes": 103116,
         "kib": 100.7,
-        "bundleSha256": "df5df171ffd64f4fb087fe838952378b53796026b5626fa10764b4a0caef2974",
+        "bundleSha256": "b538f5a8a73779805c94fb7322a573ccf307897ed16d96a35168d94218ce8ba7",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -2595,9 +2595,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 147320,
+        "bytes": 147352,
         "kib": 143.9,
-        "bundleSha256": "62dca91f7831a493c6305e422206179766dcf4ce783ee205582e984e1f852a69",
+        "bundleSha256": "0b4fbaabaffc85bed706af567d5f8ad864497a1de64d8877a867e1c6662ab3ff",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -6158,9 +6158,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 95599,
+        "bytes": 95625,
         "kib": 93.4,
-        "bundleSha256": "623ef8d96dba108aac83a3113d51b4bd8422e41c2cc2d9c13c4a27bf7ac440c2",
+        "bundleSha256": "ea70e1e505722a620c24006c536ef83dc17029475b895b53dfc40da284dfb035",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },
@@ -6492,9 +6492,9 @@
       },
       "gzip": {
         "status": "measured",
-        "bytes": 43978,
-        "kib": 42.9,
-        "bundleSha256": "66e45a645c221afc309d55a50de07caf1ee22a361dbd167081f288a9306e5be9",
+        "bytes": 44003,
+        "kib": 43,
+        "bundleSha256": "9b8221ef1125d0ce6b797294d54ad9ae7e146891c7cba51216420508ff463d8c",
         "limitation": "Self-contained standalone entry; shared Lit/Lyra layers are counted again for every component and optional peers are externalized."
       }
     },

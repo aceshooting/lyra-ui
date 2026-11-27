@@ -2433,6 +2433,47 @@ it('inherits a 20px host font into both directional scroll controls and their 1e
   }
 });
 
+for (const placement of ['top', 'bottom'] as const) {
+  it(`hides the native scrollbar while keeping the overflowing ${placement} tab strip scrollable`, async () => {
+    const el = (await fixture(html`
+      <lr-tab-group placement=${placement} style="display: block; width: 390px">
+        ${crowdedTabs()}
+      </lr-tab-group>
+    `)) as LyraTabGroup;
+    const list = el.shadowRoot!.querySelector<HTMLElement>('[part~="tablist"]')!;
+    await waitUntil(() => list.hasAttribute('data-scroll-overflow'));
+    expect(list.scrollWidth).to.be.greaterThan(list.clientWidth);
+    expect(getComputedStyle(list).scrollbarWidth).to.equal('none');
+    expect(getComputedStyle(list).overflowX).to.equal('auto');
+    expect(getComputedStyle(list).touchAction).to.equal('auto');
+
+    scrollControl(el, 'end').click();
+    await waitUntil(() => list.scrollLeft > 0);
+    list.scrollTo({ left: 0, behavior: 'instant' });
+    expect(list.scrollLeft).to.equal(0);
+    await focusByKeyboard(tabButtons(el)[0]!);
+    press(list, 'End');
+    await waitUntil(() => el.active === 'permissions' && list.scrollLeft > 0);
+  });
+}
+
+for (const placement of ['start', 'end'] as const) {
+  it(`keeps the vertical native scrollbar available for ${placement} placement`, async () => {
+    const el = (await fixture(html`
+      <lr-tab-group placement=${placement} style="display: block; height: 100px">
+        ${crowdedTabs()}
+      </lr-tab-group>
+    `)) as LyraTabGroup;
+    const list = el.shadowRoot!.querySelector<HTMLElement>('[part~="tablist"]')!;
+    list.style.maxHeight = '100px';
+    await nextFrames();
+    expect(list.scrollHeight).to.be.greaterThan(list.clientHeight);
+    expect(getComputedStyle(list).scrollbarWidth).to.equal(getComputedStyle(el).scrollbarWidth);
+    list.scrollTop = 25;
+    expect(list.scrollTop).to.be.greaterThan(0);
+  });
+}
+
 it("without-scroll-controls removes them entirely, leaving native scrolling and the edge fade", async () => {
   const el = (await fixture(html`
     <lr-tab-group
@@ -2448,6 +2489,7 @@ it("without-scroll-controls removes them entirely, leaving native scrolling and 
     '[part~="tablist"]'
   ) as HTMLElement;
   expect(tablist.hasAttribute("data-scroll-overflow")).to.equal(true);
+  expect(getComputedStyle(tablist).scrollbarWidth).to.equal(getComputedStyle(el).scrollbarWidth);
   expect(getComputedStyle(tablist).maskImage).to.contain("linear-gradient");
 });
 
@@ -2461,6 +2503,8 @@ it("accepts the Shoelace spelling no-scroll-controls for the same opt-out", asyn
     </lr-tab-group>
   `)) as LyraTabGroup;
   await nextFrames();
+  const list = el.shadowRoot!.querySelector<HTMLElement>('[part~="tablist"]')!;
+  expect(getComputedStyle(list).scrollbarWidth).to.equal(getComputedStyle(el).scrollbarWidth);
   expect(el.noScrollControls).to.equal(true);
   expect(el.withoutScrollControls).to.equal(false);
   expect(scrollControls(el)).to.have.lengthOf(0);
