@@ -38,7 +38,7 @@ export interface LyraImageEditorEventMap {
  * @csspart preview - The preview canvas.
  * @csspart controls - The editing controls.
  * @status experimental
- * @since unreleased
+ * @since 33.3.0
  */
 export class LyraImageEditor extends LyraElement<LyraImageEditorEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START

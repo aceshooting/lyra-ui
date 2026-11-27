@@ -70,7 +70,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-checkpoint"></a>`lr-checkpoint` | conversation | `import '@aceshooting/lyra-ui/components/lr-checkpoint.js';` | none | none | none | 27.2 KiB |
 | <a id="lr-chip"></a>`lr-chip` | overlays | `import '@aceshooting/lyra-ui/components/lr-chip.js';` | none | none | none | 38.9 KiB |
 | <a id="lr-chip-group"></a>`lr-chip-group` | overlays | `import '@aceshooting/lyra-ui/components/lr-chip-group.js';` | none | none | none | 34.3 KiB |
-| <a id="lr-chord"></a>`lr-chord` | data | `import '@aceshooting/lyra-ui/components/lr-chord.js';` | none | none | none | 48.2 KiB |
+| <a id="lr-chord"></a>`lr-chord` | data | `import '@aceshooting/lyra-ui/components/lr-chord.js';` | none | none | none | 48.1 KiB |
 | <a id="lr-choropleth"></a>`lr-choropleth` | data | `import '@aceshooting/lyra-ui/components/lr-choropleth.js';` | none | none | none | 46.5 KiB |
 | <a id="lr-chunk-inspector"></a>`lr-chunk-inspector` | retrieval | `import '@aceshooting/lyra-ui/components/lr-chunk-inspector.js';` | none | `lr-empty`, `lr-virtual-list` | none | 61.1 KiB |
 | <a id="lr-citation-badge"></a>`lr-citation-badge` | retrieval | `import '@aceshooting/lyra-ui/components/lr-citation-badge.js';` | none | none | none | 50 KiB |
@@ -268,7 +268,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-selection-toolbar"></a>`lr-selection-toolbar` | conversation | `import '@aceshooting/lyra-ui/components/lr-selection-toolbar.js';` | none | `lr-button` | none | 65.7 KiB |
 | <a id="lr-sequence-playback"></a>`lr-sequence-playback` | media | `import '@aceshooting/lyra-ui/components/lr-sequence-playback.js';` | none | none | none | 28.8 KiB |
 | <a id="lr-sequence-strip"></a>`lr-sequence-strip` | data | `import '@aceshooting/lyra-ui/components/lr-sequence-strip.js';` | none | none | none | 46.1 KiB |
-| <a id="lr-signature-pad"></a>`lr-signature-pad` | forms | `import '@aceshooting/lyra-ui/components/lr-signature-pad.js';` | none | none | none | 44.3 KiB |
+| <a id="lr-signature-pad"></a>`lr-signature-pad` | forms | `import '@aceshooting/lyra-ui/components/lr-signature-pad.js';` | none | none | none | 44.2 KiB |
 | <a id="lr-skeleton"></a>`lr-skeleton` | overlays | `import '@aceshooting/lyra-ui/components/lr-skeleton.js';` | none | none | none | 29.2 KiB |
 | <a id="lr-slider"></a>`lr-slider` | forms | `import '@aceshooting/lyra-ui/components/lr-slider.js';` | none | none | none | 47.9 KiB |
 | <a id="lr-source-card"></a>`lr-source-card` | retrieval | `import '@aceshooting/lyra-ui/components/lr-source-card.js';` | none | none | none | 26 KiB |

@@ -1,6 +1,6 @@
 {
   "name": "@aceshooting/lyra-cdn",
-  "version": "33.2.0",
+  "version": "33.3.0",
   "description": "Single-script-tag build of @aceshooting/lyra-ui with every optional peer, the locale catalogs and the lyra-gen, lyra-docs, lyra-map, lyra-3d and lyra-flags companions bundled into lazy chunks: no build step and no import map.",
   "keywords": [
     "lyra-ui",

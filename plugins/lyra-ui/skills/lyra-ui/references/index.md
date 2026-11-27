@@ -203,7 +203,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-style-panel` · lr-style-panel.js · `experimental` since `32.0.0` · ~129 KiB gzip — ready-made appearance controls bound to the document style runtime (`setLyraStyle()`/`getLyraStyle()` from `theme.js`): colour mode...
 - `lr-counter` · lr-counter.js · `experimental` since `32.1.0` · ~27 KiB gzip — counts down to a date (or for a duration) or up from one, ticking through years, months, days, hours, minutes and seconds with...
 - `lr-number-ticker` · lr-number-ticker.js · `experimental` since `32.1.0` · ~30 KiB gzip — counts to `value` when it scrolls into view, formatting every frame with `Intl.NumberFormat` in the effective locale.
-- `lr-transfer-manager` · lr-transfer-manager.js · `experimental` since `unreleased` · ~37 KiB gzip — Displays caller-controlled transfers, per-item and overall progress, throughput and remaining time.
+- `lr-transfer-manager` · lr-transfer-manager.js · `experimental` since `33.3.0` · ~37 KiB gzip — Displays caller-controlled transfers, per-item and overall progress, throughput and remaining time.
 
 ## Media, files & maps — `components/media/` (25)
 
@@ -231,7 +231,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-av-player` · lr-av-player.js · `stable` since `4.0.0` · ~81 KiB gzip — audio/video player built on a native `<audio>`/`<video>` element, plus a cue transcript synced to `currentTime`, `time-range`...
 - `lr-video` · lr-video.js · `experimental` since `8.0.0` · ~66 KiB gzip — a native, inline video player with three custom-control presets, selectable captions, fullscreen and picture-in-picture capability gates...
 - `lr-video-playlist` · lr-video-playlist.js · `experimental` since `8.0.0` · ~71 KiB gzip — a direct-child `<lr-video>` playlist with a navigable current-item list.
-- `lr-image-editor` · lr-image-editor.js · `experimental` since `unreleased` · ~32 KiB gzip — Edits a photo locally and exports the edited crop at its original pixel density.
+- `lr-image-editor` · lr-image-editor.js · `experimental` since `33.3.0` · ~32 KiB gzip — Edits a photo locally and exports the edited crop at its original pixel density.
 
 ## Charts — `components/charts/` (13)
 

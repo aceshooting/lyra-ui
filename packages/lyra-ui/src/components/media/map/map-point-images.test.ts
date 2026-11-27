@@ -163,6 +163,7 @@ describe('map per-feature thumbnails', () => {
     window.fetch = () => new Promise(resolve => { release = resolve; });
     const { map, engine } = await mountMap(el => { el.dataLayers = [photos]; }, PhotoMap);
     const settles = () => Promise.race([map.whenIdle().then(() => 'idle', () => 'failed'),
+      // wait-reason: a race ceiling only; a held readiness never resolves, so the timer reports it as held.
       new Promise(resolve => setTimeout(resolve, 1000, 'held'))]);
     engine.hits = [{ properties: { thumb: '/photos/slow.svg' } }];
     engine.queryError = true;

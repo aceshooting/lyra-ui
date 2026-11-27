@@ -5,7 +5,7 @@
 - **Import** `import '@aceshooting/lyra-ui/components/lr-transfer-manager.js';` (stable tag alias; registers the tag)
 - **Class** `LyraTransferManager`, also available unregistered from `@aceshooting/lyra-ui/components/utility/transfer-manager/transfer-manager.class.js`
 - **Family** `components/utility/` — see `llms/index.md` for its siblings
-- **Status** `experimental` since `unreleased` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
+- **Status** `experimental` since `33.3.0` — see the maturity and deprecation policy in `llms/shared/imports-and-registration.md`
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none

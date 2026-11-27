@@ -569,7 +569,7 @@ test('retains seven scaffold files above the reviewed required-artifact inventor
   );
   assert.deepEqual(
     [actualBudgets.maximum.packedBytes, actualBudgets.maximum.unpackedBytes],
-    [9_999_999, 26_163_392],
+    [9_999_999, 26_169_216],
     'the split package keeps the absolute download ceiling and a tight unpacked ceiling',
   );
 
@@ -614,12 +614,12 @@ test('keeps editor data and locale catalogs out of the lyra-ui tarball and gates
   assert.equal(actualBudgets.companions['@aceshooting/lyra-map'].maximum.packedBytes, 1_075_200);
   assert.equal(actualBudgets.companions['@aceshooting/lyra-map'].maximum.unpackedBytes, 4_416_000);
   assert.equal(actualBudgets.companions['@aceshooting/lyra-map'].maximum.fileCount, 693);
-  assert.equal(actualBudgets.companions['@aceshooting/lyra-translations'].maximum.packedBytes, 2_073_984);
-  assert.equal(actualBudgets.companions['@aceshooting/lyra-translations'].maximum.unpackedBytes, 9_123_520);
+  assert.equal(actualBudgets.companions['@aceshooting/lyra-translations'].maximum.packedBytes, 2_074_048);
+  assert.equal(actualBudgets.companions['@aceshooting/lyra-translations'].maximum.unpackedBytes, 9_123_584);
   assert.equal(actualBudgets.companions['@aceshooting/lyra-translations'].maximum.fileCount, 1_121);
   assert.deepEqual(
     [actualBudgets.companions['@aceshooting/lyra-ide'].maximum.packedBytes, actualBudgets.companions['@aceshooting/lyra-ide'].maximum.unpackedBytes],
-    [1_978_368, 10_890_304],
+    [1_978_496, 10_890_304],
   );
 
   const ide = ['custom-elements.json', 'web-types.json', 'vscode-html-data.json', 'vscode-css-data.json'].map((path) => file(path));

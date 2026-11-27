@@ -76,7 +76,7 @@ const PAGE_SIZE = 100;
  * @csspart action - A transfer action or the button revealing additional rows.
  * @csspart empty - The empty queue message.
  * @status experimental
- * @since unreleased
+ * @since 33.3.0
  */
 export class LyraTransferManager extends LyraElement<LyraTransferManagerEventMap> {
   // GENERATED DEFAULT-STRING SLICE: START

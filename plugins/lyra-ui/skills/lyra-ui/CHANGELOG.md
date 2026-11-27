@@ -1,5 +1,49 @@
 # Changelog
 
+## 33.3.0
+
+### Minor Changes
+
+- 9a88b2e: Add an optional More menu to horizontal tab groups. Trailing tabs move into the menu when space runs out, and More shows the selected state when it represents the active tab.
+
+  Let video players use the clip's aspect ratio and fit inside a height-bounded stage. `lr-video.play()` and mounted `lr-av-player.play()` and `toggle()` apply a pending source assignment before acting, so a clip can be switched and played in the same task.
+
+  These additions increase the minified, gzip-compressed all-components build by 3,466 bytes. The layout family grows by 2,597 bytes for tab measurement and accessible overflow navigation. The media family grows by 673 bytes for player sizing and source synchronization. A granular tab-group import loads the popup positioning code when the menu first opens.
+
+  The translated More label brings the unpacked translations package to 9,123,513 bytes. The IDE package with the new attributes and styling parts measures 1,978,341 bytes packed.
+- 1dc5edc: Add `lr-image-editor` for photo adjustments, cropping, rotation, flipping, before-and-after comparison, and full-resolution image export. Add responsive columns to `lr-virtual-list`, a per-image details panel to data-backed lightboxes, and opt-in clearing and visible labels to ratings.
+
+  The image editor, lightbox details and map styling bring the media barrel to 417,689 gzip bytes. The viewers barrel includes the map through the GeoJSON viewer and measures 496,491 bytes. Responsive virtual rows also ship with components that render virtual lists, including the PDF viewer. The JSON viewer used in the chat composition adds 609 gzip bytes to its lazy JavaScript. Rating labels and the additional English messages contribute to the overlays and localization bundles. The registration catalog includes the new editor tag, bringing the scoped loader’s initial route to 11,849 bytes. The 16 exceeded direct-entry ceilings and that initial-route ceiling advance to the next 64-byte boundary of their measured sizes.
+
+  Bound pan-and-zoom image viewports to the available height so portraits fit and zoomed images stay scrollable. Add mouse dragging for overflowing images.
+
+  Support clustered thumbnail markers, categorical line colors, and dash patterns on map data layers. Decorative overlay layers no longer intercept feature clicks. Map legend entries can omit their pattern, and empty map and word-cloud legends have a localized empty state.
+
+  The image editor messages add 78,541 unpacked bytes across 75 existing media catalogs. The generated IDE archive for the new tag and expanded APIs measures 1,975,207 packed bytes. The exceeded unpacked translations and packed IDE limits advance to the next 64-byte boundary.
+- 67e10e8: Add `lr-transfer-manager` for application-controlled upload and download queues. Display per-transfer and overall progress, live transfer rates and estimated completion times in an application header or a collapsible floating panel. Pause, resume, cancel and retry actions report eligible transfer IDs to the application.
+
+  The new component adds registration code to the utility and full-library bundles, a tag entry to the CDN autoloader, and English messages to the shared localization bundle. The CDN autoloader's initial route measures 14,093 bytes gzip. Transfer messages across the locale catalogs bring the translations archive to 2,073,961 bytes packed and 9,121,822 bytes unpacked. Generated editor data brings the IDE archive to 1,977,010 bytes packed. The affected size limits use the next 64-byte boundary above each measurement.
+
+### Patch Changes
+
+- 8da89aa: The autoloader defines the children a tag composes before the tag itself, the same set the tag's granular `lr-<tag>.js` entry registers. Composites such as `<lr-copy-button>`, which reach into their `<lr-icon-button>` during their first update, no longer throw when loaded through `autoloader.js` or the CDN build. A child whose import fails is left to ordinary discovery, which reports and retries it once the host renders it.
+- 5f8b392: Keep keyboard navigation and option activation in `lr-combobox` aligned with the rows shown in the popup. When only a loading or error message is visible, Enter can still commit typed text in `commit="text"` mode. Server searches that keep their options on screen continue to support keyboard selection.
+
+  The full server-rendering entry includes this keyboard handling and measures 1,882,243 gzip bytes, 11 bytes above its previous reviewed measurement. Its size ceiling advances to the next 64-byte boundary.
+- d109fb5: `lr-map` point image thumbnails no longer affect map readiness: a failure while placing thumbnails keeps the fallback circles instead of failing the map, and `whenIdle()` no longer waits for thumbnail downloads. Thumbnails are rasterized at the display's pixel density, up to 4×, so they stay sharp on high-density screens.
+- d109fb5: `lr-image-editor` keeps its Preset and Aspect selects in sync with the applied settings after repeated rotations, moves the crop in the direction of the Crop X thumb in right-to-left layouts, and redraws the preview at most once per animation frame while a slider is dragged. `lr-lightbox` exports the `LyraLightboxDetailsPlacement` type for its `detailsPlacement` property.
+- d109fb5: Hiding the current `lr-stepper` step now moves `active` to the next visible step (or the previous one when none follows) and fires `lr-step-change`, matching `lr-tab-group`. In a tab group with an overflow menu, the More button returns the tab stop to the selected tab once focus leaves the strip.
+- efde51a: Honor the native `hidden` attribute on `lr-tab` descriptors. Hidden tabs stay out of the strip and keyboard navigation, and their paired panels remain available through `lr-tab-group.show(name)` or an explicit `active` selection.
+
+  Child-mode steppers skip hidden steps during navigation, and carousels exclude hidden slides from pagination and the current-slide index. Both update when a child is hidden or revealed.
+
+  Hidden-child navigation brings the layout family bundle to 422,280 bytes gzip. Tab groups also ship through the retrieval and viewer families. The affected family, full-library, autoloader and server bundle limits advance to the next 64-byte boundary above their measurements. Updated editor descriptions bring the IDE archive to 1,977,196 packed bytes.
+- 029d3ee: Hide the native scrollbar on horizontal `lr-tab-group` strips that use built-in scroll controls. Touch, trackpad and keyboard scrolling still work. Vertical tablists and horizontal strips with `without-scroll-controls` or `no-scroll-controls` retain the browser scrollbar.
+
+  The additional tab styles ship in the retrieval and viewer families, the CDN autoloader and the full server registration bundle. Each of those four gzip measurements crossed its previous limit by less than 64 bytes. Their updated limits use the next 64-byte boundary.
+- d109fb5: `lr-transfer-manager` reports more accurate queue metrics. Failed and cancelled transfers leave the overall progress, so a queue with a cancelled item can reach 100 %. The overall remaining time counts only bytes still due from active and queued transfers. Remaining time appears only on active rows. Throughput and remaining time expire after ten seconds without a new snapshot, so a stalled connection reads as unknown rather than as its last speed. Rates scale from B/s to GB/s, hours keep one decimal, and the collapsed percentage rounds down so an unfinished queue never reads 100 %. Completion and failure of a transfer are now announced to assistive technology.
+- d109fb5: `lr-video` with `fit="contain"` keeps full-width media with the controls below it when a narrow player sits in a parent without a set height, and `play()` no longer reloads the clip after an edit to a `<track>` attribute alone. `lr-combobox` clears a highlighted option when `loading` changes and hides it, so the highlight never returns on a different option.
+
 ## 33.2.0
 
 ### Minor Changes

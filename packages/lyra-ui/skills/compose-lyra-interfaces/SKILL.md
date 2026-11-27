@@ -12,7 +12,7 @@ routes cover the experimental DOCX editor, generated views, flag assets, locale 
 
 Appearance defaults and the optional spotlights, gemstone selector, 44px mode/design/flag-language
 controls and persistence recipe are owned by the sibling `lyra-ui` skill ("Appearance defaults") and the
-[Lyra signature starter](https://github.com/aceshooting/lyra-ui/blob/lyra-ui@33.2.0/packages/lyra-ui/llms/shared/styles-and-tokens.md#lyra-signature-starter);
+[Lyra signature starter](https://github.com/aceshooting/lyra-ui/blob/lyra-ui@33.3.0/packages/lyra-ui/llms/shared/styles-and-tokens.md#lyra-signature-starter);
 older releases have different defaults, so read the installed `llms/shared/styles-and-tokens.md`.
 Language menus keep flags and readable localized names. Preserve saved preferences and branding, and
 retheme an existing app only within an authorized migration or redesign.
