@@ -84,7 +84,6 @@ const strings: LyraLocaleStrings = {
   videoPlaylistLabel: '影片播放列表',
   videoPlaylistUntitled: '影片 {position}',
   videoTimeReadout: '{current}/{duration}',
-  pause: '暫停',
   qrCodeMissingLibrary: '此元件需要安裝可選的 "qrcode" 套件才能產生 QR Code。',
   qrCodeGenerationFailed: '無法將此值編碼為二維碼。',
   mapMissingLibrary: '此元件需要安裝可選的 "{package}" 套件才能渲染地圖。',

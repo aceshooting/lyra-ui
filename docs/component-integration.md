@@ -9,7 +9,7 @@ is an explicit evidence gap, not a zero-byte claim. Each tag’s stable registra
 Raw byte counts and bundle SHA-256 digests are in
 `packages/lyra-ui/scripts/fixtures/component-integration.json`, keyed by tag, not repeated below.
 
-Coverage: **325 tags**, **325 measured gzip entries**, **0 not measured**.
+Coverage: **326 tags**, **326 measured gzip entries**, **0 not measured**.
 
 Dependency meaning: direct edges are tags rendered by this component or registration entries it
 imports directly. Transitive edges are other registrations reachable through those direct edges.
@@ -148,7 +148,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-funnel"></a>`lr-funnel` | data | `import '@aceshooting/lyra-ui/components/lr-funnel.js';` | none | none | none | 31.4 KiB |
 | <a id="lr-gauge"></a>`lr-gauge` | data | `import '@aceshooting/lyra-ui/components/lr-gauge.js';` | none | none | none | 27.9 KiB |
 | <a id="lr-generation-metrics"></a>`lr-generation-metrics` | conversation | `import '@aceshooting/lyra-ui/components/lr-generation-metrics.js';` | none | none | none | 27.2 KiB |
-| <a id="lr-geojson-viewer"></a>`lr-geojson-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-geojson-viewer.js';` | `@aceshooting/lyra-map`, `dompurify`, `maplibre-gl` | `lr-json-viewer`, `lr-map`, `lr-skeleton` | `lr-virtual-list` | 276.4 KiB |
+| <a id="lr-geojson-viewer"></a>`lr-geojson-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-geojson-viewer.js';` | `@aceshooting/lyra-map`, `dompurify`, `maplibre-gl` | `lr-json-viewer`, `lr-map`, `lr-skeleton` | `lr-virtual-list` | 276.3 KiB |
 | <a id="lr-graph"></a>`lr-graph` | retrieval | `import '@aceshooting/lyra-ui/components/lr-graph.js';` | `@aceshooting/lyra-3d`, `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` | `lr-pagination`, `lr-skeleton` | none | 115.5 KiB |
 | <a id="lr-graph-legend"></a>`lr-graph-legend` | retrieval | `import '@aceshooting/lyra-ui/components/lr-graph-legend.js';` | none | none | none | 35.6 KiB |
 | <a id="lr-graph-query-builder"></a>`lr-graph-query-builder` | data | `import '@aceshooting/lyra-ui/components/lr-graph-query-builder.js';` | none | `lr-chip`, `lr-chip-group`, `lr-input`, `lr-option`, `lr-select` | none | 112.6 KiB |
@@ -182,7 +182,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-live-region"></a>`lr-live-region` | utility | `import '@aceshooting/lyra-ui/components/lr-live-region.js';` | none | none | none | 27.7 KiB |
 | <a id="lr-locale-picker"></a>`lr-locale-picker` | forms | `import '@aceshooting/lyra-ui/components/lr-locale-picker.js';` | none | `lr-flag` | `lr-skeleton` | 80.4 KiB |
 | <a id="lr-map"></a>`lr-map` | media | `import '@aceshooting/lyra-ui/components/lr-map.js';` | `@aceshooting/lyra-map`, `dompurify`, `maplibre-gl` | `lr-skeleton` | none | 218.5 KiB |
-| <a id="lr-map-anchor"></a>`lr-map-anchor` | media | `import '@aceshooting/lyra-ui/components/lr-map-anchor.js';` | none | none | none | 26.9 KiB |
+| <a id="lr-map-anchor"></a>`lr-map-anchor` | media | `import '@aceshooting/lyra-ui/components/lr-map-anchor.js';` | none | none | none | 26.8 KiB |
 | <a id="lr-markdown"></a>`lr-markdown` | conversation | `import '@aceshooting/lyra-ui/components/lr-markdown.js';` | `dompurify`, `katex`, `marked`, `shiki` | none | none | 77.2 KiB |
 | <a id="lr-markdown-core"></a>`lr-markdown-core` | conversation | `import '@aceshooting/lyra-ui/components/lr-markdown-core.js';` | `dompurify`, `katex`, `marked`, `shiki` | none | none | 75.9 KiB |
 | <a id="lr-mcp-app"></a>`lr-mcp-app` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-mcp-app.js';` | none | none | none | 38.9 KiB |
@@ -268,7 +268,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-selection-toolbar"></a>`lr-selection-toolbar` | conversation | `import '@aceshooting/lyra-ui/components/lr-selection-toolbar.js';` | none | `lr-button` | none | 65.7 KiB |
 | <a id="lr-sequence-playback"></a>`lr-sequence-playback` | media | `import '@aceshooting/lyra-ui/components/lr-sequence-playback.js';` | none | none | none | 28.8 KiB |
 | <a id="lr-sequence-strip"></a>`lr-sequence-strip` | data | `import '@aceshooting/lyra-ui/components/lr-sequence-strip.js';` | none | none | none | 46.1 KiB |
-| <a id="lr-signature-pad"></a>`lr-signature-pad` | forms | `import '@aceshooting/lyra-ui/components/lr-signature-pad.js';` | none | none | none | 44.2 KiB |
+| <a id="lr-signature-pad"></a>`lr-signature-pad` | forms | `import '@aceshooting/lyra-ui/components/lr-signature-pad.js';` | none | none | none | 44.3 KiB |
 | <a id="lr-skeleton"></a>`lr-skeleton` | overlays | `import '@aceshooting/lyra-ui/components/lr-skeleton.js';` | none | none | none | 29.2 KiB |
 | <a id="lr-slider"></a>`lr-slider` | forms | `import '@aceshooting/lyra-ui/components/lr-slider.js';` | none | none | none | 47.9 KiB |
 | <a id="lr-source-card"></a>`lr-source-card` | retrieval | `import '@aceshooting/lyra-ui/components/lr-source-card.js';` | none | none | none | 26 KiB |
@@ -325,6 +325,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-tour"></a>`lr-tour` | utility | `import '@aceshooting/lyra-ui/components/lr-tour.js';` | none | none | none | 59.7 KiB |
 | <a id="lr-trace-tree"></a>`lr-trace-tree` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-trace-tree.js';` | none | `lr-empty`, `lr-live-region`, `lr-virtual-list` | none | 79.5 KiB |
 | <a id="lr-transcript-feed"></a>`lr-transcript-feed` | conversation | `import '@aceshooting/lyra-ui/components/lr-transcript-feed.js';` | none | none | none | 36.8 KiB |
+| <a id="lr-transfer-manager"></a>`lr-transfer-manager` | utility | `import '@aceshooting/lyra-ui/components/lr-transfer-manager.js';` | none | none | none | 34 KiB |
 | <a id="lr-tree"></a>`lr-tree` | data | `import '@aceshooting/lyra-ui/components/lr-tree.js';` | none | `lr-empty`, `lr-live-region`, `lr-tree-item`, `lr-virtual-list` | none | 87.4 KiB |
 | <a id="lr-tree-item"></a>`lr-tree-item` | data | `import '@aceshooting/lyra-ui/components/lr-tree-item.js';` | none | none | none | 42.6 KiB |
 | <a id="lr-treemap"></a>`lr-treemap` | data | `import '@aceshooting/lyra-ui/components/lr-treemap.js';` | none | none | none | 45.9 KiB |

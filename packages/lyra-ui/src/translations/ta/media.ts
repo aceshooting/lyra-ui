@@ -86,7 +86,6 @@ const strings: LyraLocaleStrings = {
   videoPlaylistLabel: 'காணொளிப் பட்டியல்',
   videoPlaylistUntitled: 'காணொளி {position}',
   videoTimeReadout: '{duration}-இல் {current}',
-  pause: 'இடைநிறுத்து',
   qrCodeMissingLibrary: 'QR குறியீடுகளை உருவாக்க இந்தக் கூறுக்கு விருப்பமான "qrcode" தொகுப்பை நிறுவ வேண்டும்.',
   qrCodeGenerationFailed: 'இந்த மதிப்பை QR குறியீடாக மாற்ற முடியவில்லை.',
   mapMissingLibrary: 'வரைபடத்தைக் காட்ட இந்தக் கூறுக்கு விருப்பமான "{package}" தொகுப்பை நிறுவ வேண்டும்.',

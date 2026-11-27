@@ -94,7 +94,6 @@ const strings: LyraLocaleStrings = {
   videoPlaylistLabel: 'قائمة تشغيل الفيديو',
   videoPlaylistUntitled: 'الفيديو {position}',
   videoTimeReadout: '{current} من {duration}',
-  pause: 'إيقاف مؤقت',
   qrCodeMissingLibrary: 'يحتاج هذا المكوّن إلى تثبيت الحزمة الاختيارية "qrcode" لإنشاء رموز QR.',
   qrCodeGenerationFailed: 'تعذّر ترميز هذه القيمة كرمز QR.',
   mapMissingLibrary: 'يحتاج هذا المكوّن إلى تثبيت الحزمة الاختيارية "{package}" لعرض الخريطة.',

@@ -726,6 +726,12 @@
       "comparisonReason": "New story; awaits human visual review before baselines are promoted."
     },
     {
+      "id": "utility-transfer-manager--default",
+      "profile": "narrow-responsive",
+      "comparisonPolicy": "evidence-only",
+      "comparisonReason": "Transfer progress and row actions await human visual review."
+    },
+    {
       "id": "utility-visually-hidden--skip-link",
       "profile": "standard"
     },
@@ -1024,6 +1030,9 @@
     ],
     "lr-tooltip": [
       "overlay-tooltip--default"
+    ],
+    "lr-transfer-manager": [
+      "utility-transfer-manager--default"
     ],
     "lr-tree-item": [
       "navigation-tree-node--declarative"

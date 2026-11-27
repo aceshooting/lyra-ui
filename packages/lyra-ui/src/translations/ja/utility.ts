@@ -94,6 +94,22 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'データ',
   styleLookTerminal: 'ターミナル',
   styleLookHighContrast: 'ハイコントラスト',
+  transferManagerLabel: '転送',
+  transferManagerCount: {
+    other: '転送 {count} 件',
+  },
+  transferManagerResume: '再開',
+  transferManagerPauseAll: 'すべて一時停止',
+  transferManagerResumeAll: 'すべて再開',
+  transferManagerCancelAll: 'すべてキャンセル',
+  transferManagerRetryAll: 'すべて再試行',
+  transferManagerItemAction: '{name}：{action}',
+  transferManagerBytes: '{done} / {total}',
+  transferManagerEta: '残り {duration}',
+  transferManagerUnknownEta: '残り時間は不明です',
+  transferManagerPaused: '一時停止中',
+  transferManagerCancelled: 'キャンセル済み',
+  transferManagerEmpty: '転送はありません',
 };
 
 registerLyraLocale('ja', strings);

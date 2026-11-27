@@ -4,7 +4,8 @@
     "new-component-experimental": [
       "lr-counter",
       "lr-number-ticker",
-      "lr-style-panel"
+      "lr-style-panel",
+      "lr-transfer-manager"
     ],
     "published-stable": [
       "lr-copy-button",

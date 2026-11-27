@@ -170,7 +170,6 @@ export const LYRA_DEFAULT_mediaCardUntitledFile: LyraMessage = 'Untitled file';
 export const LYRA_DEFAULT_mediaCardVideoAttachment: LyraMessage = 'Video attachment';
 export const LYRA_DEFAULT_panoramaHotspotsLabel: LyraMessage = 'Panorama hotspots';
 export const LYRA_DEFAULT_panoramaInstructions: LyraMessage = 'Use arrow keys to look around, plus and minus to zoom, and Home to reset the view.';
-export const LYRA_DEFAULT_pause: LyraMessage = 'Pause';
 export const LYRA_DEFAULT_pauseWithContext: LyraMessage = 'Pause {name}';
 export const LYRA_DEFAULT_play: LyraMessage = 'Play';
 export const LYRA_DEFAULT_playWithContext: LyraMessage = 'Play {name}';

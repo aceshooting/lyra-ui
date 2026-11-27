@@ -298,6 +298,7 @@ export const ROOT_BARREL_TAGS = [
   'lr-tour',
   'lr-trace-tree',
   'lr-transcript-feed',
+  'lr-transfer-manager',
   'lr-tree',
   'lr-tree-item',
   'lr-treemap',

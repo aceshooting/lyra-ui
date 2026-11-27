@@ -109,6 +109,25 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Dáta',
   styleLookTerminal: 'Terminál',
   styleLookHighContrast: 'Vysoký kontrast',
+  transferManagerLabel: 'Prenosy',
+  transferManagerCount: {
+    one: '{count} prenos',
+    few: '{count} prenosy',
+    many: '{count} prenosu',
+    other: '{count} prenosov',
+  },
+  transferManagerResume: 'Pokračovať',
+  transferManagerPauseAll: 'Pozastaviť všetky',
+  transferManagerResumeAll: 'Obnoviť všetky',
+  transferManagerCancelAll: 'Zrušiť všetky',
+  transferManagerRetryAll: 'Zopakovať všetky',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} z {total}',
+  transferManagerEta: 'Zostáva {duration}',
+  transferManagerUnknownEta: 'Zostávajúci čas nie je známy',
+  transferManagerPaused: 'Pozastavené',
+  transferManagerCancelled: 'Zrušené',
+  transferManagerEmpty: 'Žiadne prenosy',
 };
 
 registerLyraLocale('sk', strings);

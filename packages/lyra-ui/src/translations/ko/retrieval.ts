@@ -20,7 +20,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: '그래프 범례',
   entityChipWithType: '{label}, {type}',
   showMore: '더 보기',
-  showMoreCount: '{count} 더 보기',
   embeddingExplorerSpatialBounds: '가로 {minX}~{maxX}, 세로 {minY}~{maxY}',
   embeddingExplorerSpatialSummary: '전체 원본의 점 {total}개({global}). 표시 영역의 점 {matched}개({viewport}). 밀도 영역은 일치하는 모든 점을 계산하며, 겹쳐 표시되는 점은 이 개수에 추가되지 않습니다.',
   embeddingExplorerSpatialBin: '밀도 영역의 점 {count}개: {bounds}',

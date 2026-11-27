@@ -94,6 +94,22 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Dátà',
   styleLookTerminal: 'Tẹ́mínà',
   styleLookHighContrast: 'Ìyàtọ̀ gíga',
+  transferManagerLabel: 'Gbigbe fáìlì',
+  transferManagerCount: {
+    other: 'Gbigbe fáìlì {count}',
+  },
+  transferManagerResume: 'Tẹ̀ síwájú',
+  transferManagerPauseAll: 'Dá gbogbo wọn dúró fún ìgbà díẹ̀',
+  transferManagerResumeAll: 'Tẹ̀ síwájú pẹ̀lú gbogbo wọn',
+  transferManagerCancelAll: 'Fagilé gbogbo wọn',
+  transferManagerRetryAll: 'Gbìyànjú gbogbo wọn lẹ́ẹ̀kan sí i',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} nínú {total}',
+  transferManagerEta: 'Àkókò tó kù: {duration}',
+  transferManagerUnknownEta: 'A kò mọ àkókò tó kù',
+  transferManagerPaused: 'A dá a dúró fún ìgbà díẹ̀',
+  transferManagerCancelled: 'A ti fagilé rẹ̀',
+  transferManagerEmpty: 'Kò sí gbigbe fáìlì',
 };
 
 registerLyraLocale('yo', strings);

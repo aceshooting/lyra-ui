@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Data',
   styleLookTerminal: 'Terminali',
   styleLookHighContrast: 'Utofautishaji wa juu',
+  transferManagerLabel: 'Uhamishaji wa faili',
+  transferManagerCount: {
+    one: 'Uhamishaji {count}',
+    other: 'Uhamishaji {count}',
+  },
+  transferManagerResume: 'Endelea',
+  transferManagerPauseAll: 'Sitisha zote kwa muda',
+  transferManagerResumeAll: 'Endeleza zote',
+  transferManagerCancelAll: 'Ghairi zote',
+  transferManagerRetryAll: 'Jaribu zote tena',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} kati ya {total}',
+  transferManagerEta: 'Muda uliosalia: {duration}',
+  transferManagerUnknownEta: 'Muda uliosalia haujulikani',
+  transferManagerPaused: 'Imesitishwa kwa muda',
+  transferManagerCancelled: 'Imeghairiwa',
+  transferManagerEmpty: 'Hakuna uhamishaji wa faili',
 };
 
 registerLyraLocale('sw', strings);

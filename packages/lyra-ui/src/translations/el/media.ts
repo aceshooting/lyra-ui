@@ -86,7 +86,6 @@ const strings: LyraLocaleStrings = {
   videoPlaylistLabel: 'Λίστα αναπαραγωγής βίντεο',
   videoPlaylistUntitled: 'Βίντεο {position}',
   videoTimeReadout: '{current} από {duration}',
-  pause: 'Παύση',
   qrCodeMissingLibrary: 'Για την εμφάνιση κωδικών QR απαιτείται η εγκατάσταση του προαιρετικού πακέτου "qrcode".',
   qrCodeGenerationFailed: 'Δεν ήταν δυνατή η κωδικοποίηση αυτής της τιμής ως κωδικού QR.',
   mapMissingLibrary: 'Για την εμφάνιση του χάρτη απαιτείται το προαιρετικό πακέτο "{package}".',

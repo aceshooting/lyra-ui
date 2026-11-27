@@ -109,6 +109,25 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Dane',
   styleLookTerminal: 'Terminal',
   styleLookHighContrast: 'Wysoki kontrast',
+  transferManagerLabel: 'Transfery',
+  transferManagerCount: {
+    one: '{count} transfer',
+    few: '{count} transfery',
+    many: '{count} transferów',
+    other: '{count} transferu',
+  },
+  transferManagerResume: 'Wznów',
+  transferManagerPauseAll: 'Wstrzymaj wszystkie',
+  transferManagerResumeAll: 'Wznów wszystkie',
+  transferManagerCancelAll: 'Anuluj wszystkie',
+  transferManagerRetryAll: 'Ponów wszystkie',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} z {total}',
+  transferManagerEta: 'Pozostały czas: {duration}',
+  transferManagerUnknownEta: 'Nieznany pozostały czas',
+  transferManagerPaused: 'Wstrzymano',
+  transferManagerCancelled: 'Anulowano',
+  transferManagerEmpty: 'Brak transferów',
 };
 
 registerLyraLocale('pl', strings);

@@ -18,7 +18,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Guide for di graph',
   entityChipWithType: '{label}, {type}',
   showMore: 'Show some more',
-  showMoreCount: 'Show {count} extra',
   embeddingExplorerSpatialBounds: '{minX} to {maxX} for side-to-side direction; {minY} to {maxY} for up-and-down direction',
   embeddingExplorerSpatialSummary: '{total} points dey for di full source ({global}). {matched} points dey for di viewport ({viewport}). Density regions dey count all matches; point overlays no dey add to dese counts.',
   embeddingExplorerSpatialBin: '{count} points dey for density region: {bounds}',

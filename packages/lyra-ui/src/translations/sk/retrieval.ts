@@ -23,7 +23,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Legenda grafu',
   entityChipWithType: '{label}, {type}',
   showMore: 'Zobraziť viac',
-  showMoreCount: 'Zobraziť ďalšie ({count})',
   embeddingExplorerSpatialBounds: 'vodorovne {minX} až {maxX}; zvisle {minY} až {maxY}',
   embeddingExplorerSpatialSummary: 'Body v celom zdroji: {total} ({global}). Body vo výreze: {matched} ({viewport}). Oblasti hustoty započítavajú všetky zhody; prekryvné body sa k týmto počtom nepripočítavajú.',
   embeddingExplorerSpatialBin: 'Body v oblasti hustoty: {count}, {bounds}',

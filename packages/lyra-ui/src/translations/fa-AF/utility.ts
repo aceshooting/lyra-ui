@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'داده',
   styleLookTerminal: 'ترمینال',
   styleLookHighContrast: 'تضاد بالا',
+  transferManagerLabel: 'انتقال‌ها',
+  transferManagerCount: {
+    one: '{count} انتقال',
+    other: '{count} انتقال',
+  },
+  transferManagerResume: 'ادامه',
+  transferManagerPauseAll: 'توقف موقت همه',
+  transferManagerResumeAll: 'ادامۀ همه',
+  transferManagerCancelAll: 'لغو همه',
+  transferManagerRetryAll: 'کوشش دوباره برای همه',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} از {total}',
+  transferManagerEta: 'زمان باقی‌مانده: {duration}',
+  transferManagerUnknownEta: 'زمان باقی‌مانده معلوم نیست',
+  transferManagerPaused: 'به‌طور موقت متوقف شده',
+  transferManagerCancelled: 'لغو شده',
+  transferManagerEmpty: 'هیچ انتقالی وجود ندارد',
 };
 
 registerLyraLocale('fa-AF', strings, { dir: 'rtl', name: 'دری' });

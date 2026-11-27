@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'ડેટા',
   styleLookTerminal: 'ટર્મિનલ',
   styleLookHighContrast: 'ઉચ્ચ કૉન્ટ્રાસ્ટ',
+  transferManagerLabel: 'સ્થાનાંતરણો',
+  transferManagerCount: {
+    one: '{count} સ્થાનાંતરણ',
+    other: '{count} સ્થાનાંતરણો',
+  },
+  transferManagerResume: 'ફરી ચાલુ કરો',
+  transferManagerPauseAll: 'બધાં થોભાવો',
+  transferManagerResumeAll: 'બધાં ફરી ચાલુ કરો',
+  transferManagerCancelAll: 'બધાં રદ કરો',
+  transferManagerRetryAll: 'બધાંનો ફરી પ્રયાસ કરો',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{total} માંથી {done}',
+  transferManagerEta: 'બાકી સમય: {duration}',
+  transferManagerUnknownEta: 'બાકી સમય અજ્ઞાત છે',
+  transferManagerPaused: 'થોભાવેલું',
+  transferManagerCancelled: 'રદ કરેલું',
+  transferManagerEmpty: 'કોઈ સ્થાનાંતરણ નથી',
 };
 
 registerLyraLocale('gu', strings);

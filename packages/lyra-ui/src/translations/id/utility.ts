@@ -94,6 +94,22 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Data',
   styleLookTerminal: 'Terminal',
   styleLookHighContrast: 'Kontras tinggi',
+  transferManagerLabel: 'Transfer berkas',
+  transferManagerCount: {
+    other: '{count} transfer berkas',
+  },
+  transferManagerResume: 'Lanjutkan',
+  transferManagerPauseAll: 'Jeda semua',
+  transferManagerResumeAll: 'Lanjutkan semua',
+  transferManagerCancelAll: 'Batalkan semua',
+  transferManagerRetryAll: 'Coba ulang semua',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} dari {total}',
+  transferManagerEta: 'Sisa waktu: {duration}',
+  transferManagerUnknownEta: 'Sisa waktu tidak diketahui',
+  transferManagerPaused: 'Dijeda',
+  transferManagerCancelled: 'Dibatalkan',
+  transferManagerEmpty: 'Tidak ada transfer',
 };
 
 registerLyraLocale('id', strings);

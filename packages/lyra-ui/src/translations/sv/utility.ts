@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Data',
   styleLookTerminal: 'Terminal',
   styleLookHighContrast: 'Hög kontrast',
+  transferManagerLabel: 'Överföringar',
+  transferManagerCount: {
+    one: '{count} överföring',
+    other: '{count} överföringar',
+  },
+  transferManagerResume: 'Återuppta',
+  transferManagerPauseAll: 'Pausa alla',
+  transferManagerResumeAll: 'Återuppta alla',
+  transferManagerCancelAll: 'Avbryt alla',
+  transferManagerRetryAll: 'Försök igen med alla',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} av {total}',
+  transferManagerEta: '{duration} kvar',
+  transferManagerUnknownEta: 'Okänd återstående tid',
+  transferManagerPaused: 'Pausad',
+  transferManagerCancelled: 'Avbruten',
+  transferManagerEmpty: 'Inga överföringar',
 };
 
 registerLyraLocale('sv', strings);

@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Δεδομένα',
   styleLookTerminal: 'Τερματικό',
   styleLookHighContrast: 'Υψηλή αντίθεση',
+  transferManagerLabel: 'Μεταφορές',
+  transferManagerCount: {
+    one: '{count} μεταφορά',
+    other: '{count} μεταφορές',
+  },
+  transferManagerResume: 'Συνέχιση',
+  transferManagerPauseAll: 'Παύση όλων',
+  transferManagerResumeAll: 'Συνέχιση όλων',
+  transferManagerCancelAll: 'Ακύρωση όλων',
+  transferManagerRetryAll: 'Επανάληψη όλων',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} από {total}',
+  transferManagerEta: 'Απομένουν: {duration}',
+  transferManagerUnknownEta: 'Άγνωστος χρόνος που απομένει',
+  transferManagerPaused: 'Σε παύση',
+  transferManagerCancelled: 'Ακυρώθηκε',
+  transferManagerEmpty: 'Δεν υπάρχουν μεταφορές',
 };
 
 registerLyraLocale('el', strings);

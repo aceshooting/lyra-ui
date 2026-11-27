@@ -92,7 +92,6 @@ const strings: LyraLocaleStrings = {
   videoPlaylistLabel: 'Seinmliosta físeán',
   videoPlaylistUntitled: 'Físeán {position}',
   videoTimeReadout: '{current} as {duration}',
-  pause: 'Cuir ar sos',
   qrCodeMissingLibrary: 'Teastaíonn an pacáiste roghnach "qrcode" ón gcomhpháirt seo chun cóid QR a rindreáil.',
   qrCodeGenerationFailed: 'Níorbh fhéidir an luach seo a ionchódú mar chód QR.',
   mapMissingLibrary: 'Teastaíonn an pacáiste roghnach "{package}" ón gcomhpháirt seo chun an léarscáil a rindreáil.',

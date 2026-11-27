@@ -1599,6 +1599,10 @@
       "types": "./dist/components/lr-transcript-feed.d.ts",
       "default": "./dist/components/lr-transcript-feed.js"
     },
+    "./components/lr-transfer-manager.js": {
+      "types": "./dist/components/lr-transfer-manager.d.ts",
+      "default": "./dist/components/lr-transfer-manager.js"
+    },
     "./components/lr-tree-item.js": {
       "types": "./dist/components/lr-tree-item.d.ts",
       "default": "./dist/components/lr-tree-item.js"
@@ -1782,6 +1786,7 @@
     "./components/utility/resize-observer/resize-observer.class.js": "./dist/components/utility/resize-observer/resize-observer.class.js",
     "./components/utility/style-panel/style-panel.class.js": "./dist/components/utility/style-panel/style-panel.class.js",
     "./components/utility/tour/tour.class.js": "./dist/components/utility/tour/tour.class.js",
+    "./components/utility/transfer-manager/transfer-manager.class.js": "./dist/components/utility/transfer-manager/transfer-manager.class.js",
     "./components/utility/visually-hidden/visually-hidden.class.js": "./dist/components/utility/visually-hidden/visually-hidden.class.js",
     "./components/viewers": "./dist/components/viewers/index.js",
     "./components/viewers/archive-viewer/archive-viewer-register.js": "./dist/components/viewers/archive-viewer/archive-viewer-register.js",

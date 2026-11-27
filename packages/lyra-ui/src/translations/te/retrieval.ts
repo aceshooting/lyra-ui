@@ -18,7 +18,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'గ్రాఫ్ సూచిక',
   entityChipWithType: '{label}, {type}',
   showMore: 'మరిన్ని చూపించండి',
-  showMoreCount: 'మరిన్ని {count} చూపించండి',
   embeddingExplorerSpatialBounds: 'అడ్డంగా {minX} నుండి {maxX} వరకు; నిలువుగా {minY} నుండి {maxY} వరకు',
   embeddingExplorerSpatialSummary: 'పూర్తి మూలంలో {total} బిందువులు ({global}). వీక్షణ ప్రాంతంలో {matched} బిందువులు ({viewport}). సాంద్రత ప్రాంతాలు అన్ని సరిపోలికలను లెక్కిస్తాయి; బిందువుల ఓవర్‌లేలు ఈ లెక్కలను పెంచవు.',
   embeddingExplorerSpatialBin: 'సాంద్రత ప్రాంతంలో {count} బిందువులు: {bounds}',

@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'डेटा',
   styleLookTerminal: 'टर्मिनल',
   styleLookHighContrast: 'उच्च कंट्रास्ट',
+  transferManagerLabel: 'स्थानांतरण',
+  transferManagerCount: {
+    one: '{count} स्थानांतरण',
+    other: '{count} स्थानांतरण',
+  },
+  transferManagerResume: 'फिर शुरू करें',
+  transferManagerPauseAll: 'सभी को रोकें',
+  transferManagerResumeAll: 'सभी को फिर शुरू करें',
+  transferManagerCancelAll: 'सभी को रद्द करें',
+  transferManagerRetryAll: 'सभी के लिए फिर कोशिश करें',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{total} में से {done}',
+  transferManagerEta: 'शेष समय: {duration}',
+  transferManagerUnknownEta: 'शेष समय अज्ञात है',
+  transferManagerPaused: 'रोका गया',
+  transferManagerCancelled: 'रद्द किया गया',
+  transferManagerEmpty: 'कोई स्थानांतरण नहीं',
 };
 
 registerLyraLocale('hi', strings);

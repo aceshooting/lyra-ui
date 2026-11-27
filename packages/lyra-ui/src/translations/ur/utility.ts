@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'ڈیٹا',
   styleLookTerminal: 'ٹرمینل',
   styleLookHighContrast: 'ہائی کنٹراسٹ',
+  transferManagerLabel: 'منتقلیاں',
+  transferManagerCount: {
+    one: '{count} منتقلی',
+    other: '{count} منتقلیاں',
+  },
+  transferManagerResume: 'دوبارہ شروع کریں',
+  transferManagerPauseAll: 'سب کو عارضی طور پر روکیں',
+  transferManagerResumeAll: 'سب کو دوبارہ شروع کریں',
+  transferManagerCancelAll: 'سب کو منسوخ کریں',
+  transferManagerRetryAll: 'سب کی دوبارہ کوشش کریں',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{total} میں سے {done}',
+  transferManagerEta: 'باقی وقت: {duration}',
+  transferManagerUnknownEta: 'باقی وقت معلوم نہیں',
+  transferManagerPaused: 'عارضی طور پر رکی ہوئی',
+  transferManagerCancelled: 'منسوخ',
+  transferManagerEmpty: 'کوئی منتقلی نہیں',
 };
 
 registerLyraLocale('ur', strings, { dir: 'rtl', name: 'اردو' });

@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Maʼlumotlar',
   styleLookTerminal: 'Terminal',
   styleLookHighContrast: 'Yuqori kontrast',
+  transferManagerLabel: 'Fayl uzatishlar',
+  transferManagerCount: {
+    one: '{count} ta uzatish',
+    other: '{count} ta uzatish',
+  },
+  transferManagerResume: 'Davom ettirish',
+  transferManagerPauseAll: 'Barchasini vaqtincha to‘xtatish',
+  transferManagerResumeAll: 'Barchasini davom ettirish',
+  transferManagerCancelAll: 'Barchasini bekor qilish',
+  transferManagerRetryAll: 'Barchasini qayta urinish',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{total} dan {done}',
+  transferManagerEta: 'Qolgan vaqt: {duration}',
+  transferManagerUnknownEta: 'Qolgan vaqt noma’lum',
+  transferManagerPaused: 'Vaqtincha to‘xtatilgan',
+  transferManagerCancelled: 'Bekor qilingan',
+  transferManagerEmpty: 'Fayl uzatishlar yo‘q',
 };
 
 registerLyraLocale('uz', strings);

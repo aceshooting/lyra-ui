@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Adat',
   styleLookTerminal: 'Terminál',
   styleLookHighContrast: 'Nagy kontraszt',
+  transferManagerLabel: 'Átvitelek',
+  transferManagerCount: {
+    one: '{count} átvitel',
+    other: '{count} átvitel',
+  },
+  transferManagerResume: 'Folytatás',
+  transferManagerPauseAll: 'Összes szüneteltetése',
+  transferManagerResumeAll: 'Összes folytatása',
+  transferManagerCancelAll: 'Összes megszakítása',
+  transferManagerRetryAll: 'Összes újrapróbálása',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} / {total}',
+  transferManagerEta: 'Hátralévő idő: {duration}',
+  transferManagerUnknownEta: 'A hátralévő idő ismeretlen',
+  transferManagerPaused: 'Szünetel',
+  transferManagerCancelled: 'Megszakítva',
+  transferManagerEmpty: 'Nincs átvitel',
 };
 
 registerLyraLocale('hu', strings);

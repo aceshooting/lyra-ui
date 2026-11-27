@@ -94,6 +94,22 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'ข้อมูล',
   styleLookTerminal: 'เทอร์มินัล',
   styleLookHighContrast: 'คอนทราสต์สูง',
+  transferManagerLabel: 'การถ่ายโอน',
+  transferManagerCount: {
+    other: '{count} รายการถ่ายโอน',
+  },
+  transferManagerResume: 'ดำเนินการต่อ',
+  transferManagerPauseAll: 'หยุดทั้งหมดชั่วคราว',
+  transferManagerResumeAll: 'ดำเนินการทั้งหมดต่อ',
+  transferManagerCancelAll: 'ยกเลิกทั้งหมด',
+  transferManagerRetryAll: 'ลองทั้งหมดอีกครั้ง',
+  transferManagerItemAction: '{action} — {name}',
+  transferManagerBytes: '{done} จาก {total}',
+  transferManagerEta: 'เวลาที่เหลือ: {duration}',
+  transferManagerUnknownEta: 'ไม่ทราบเวลาที่เหลือ',
+  transferManagerPaused: 'หยุดชั่วคราว',
+  transferManagerCancelled: 'ยกเลิกแล้ว',
+  transferManagerEmpty: 'ไม่มีรายการถ่ายโอน',
 };
 
 registerLyraLocale('th', strings);

@@ -1399,6 +1399,14 @@ export type {
   LyraThemeTokens,
   LyraThemeTokenValue,
 } from './theme/theme.js';
+export type {
+  LyraTransfer,
+  LyraTransferAction,
+  LyraTransferActionDetail,
+  LyraTransferManagerEventMap,
+  LyraTransferPlacement,
+  LyraTransferStatus,
+} from './components/utility/transfer-manager/transfer-manager.class.js';
 export type { LyraStylePanelAxis, LyraStylePanelEventMap } from './components/utility/style-panel/style-panel.class.js';
 export { computeLineDiff } from './components/utility/diff-view/diff-line-diff.js';
 export type { LyraDiffOp } from './components/utility/diff-view/diff-line-diff.js';

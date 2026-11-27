@@ -18,7 +18,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'ਗ੍ਰਾਫ ਲੈਜੈਂਡ',
   entityChipWithType: '{label}, {type}',
   showMore: 'ਹੋਰ ਦਿਖਾਓ',
-  showMoreCount: 'ਹੋਰ {count} ਦਿਖਾਓ',
   embeddingExplorerSpatialBounds: 'ਲੇਟਵੇਂ ਤੌਰ \'ਤੇ {minX} ਤੋਂ {maxX}; ਖੜ੍ਹਵੇਂ ਤੌਰ \'ਤੇ {minY} ਤੋਂ {maxY}',
   embeddingExplorerSpatialSummary: 'ਪੂਰੇ ਸਰੋਤ ਵਿੱਚ {total} ਬਿੰਦੂ ({global})। ਦ੍ਰਿਸ਼ ਖੇਤਰ ਵਿੱਚ {matched} ਬਿੰਦੂ ({viewport})। ਘਣਤਾ ਖੇਤਰ ਸਾਰੇ ਮੇਲ ਗਿਣਦੇ ਹਨ; ਬਿੰਦੂ ਓਵਰਲੇ ਇਹਨਾਂ ਗਿਣਤੀਆਂ ਵਿੱਚ ਵਾਧਾ ਨਹੀਂ ਕਰਦੇ।',
   embeddingExplorerSpatialBin: 'ਘਣਤਾ ਖੇਤਰ ਵਿੱਚ {count} ਬਿੰਦੂ: {bounds}',

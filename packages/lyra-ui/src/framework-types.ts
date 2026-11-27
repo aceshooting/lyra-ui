@@ -303,6 +303,7 @@ import type { LyraRandomContent, LyraRandomContentEventMap } from './components/
 import type { LyraResizeObserver, LyraResizeObserverEventMap } from './components/utility/resize-observer/resize-observer.class.js';
 import type { LyraStylePanel, LyraStylePanelEventMap } from './components/utility/style-panel/style-panel.class.js';
 import type { LyraTour, LyraTourEventMap } from './components/utility/tour/tour.class.js';
+import type { LyraTransferManager, LyraTransferManagerEventMap } from './components/utility/transfer-manager/transfer-manager.class.js';
 import type { LyraVisuallyHidden } from './components/utility/visually-hidden/visually-hidden.class.js';
 import type { LyraArchiveViewer, LyraArchiveViewerEventMap } from './components/viewers/archive-viewer/archive-viewer.class.js';
 import type { LyraCalendarViewer, LyraCalendarViewerEventMap } from './components/viewers/calendar-viewer/calendar-viewer.class.js';
@@ -16061,6 +16062,25 @@ export interface LyraComponentTypeMap {
       'session-id'?: LyraTranscriptFeed['sessionId'];
       'with-timestamps'?: LyraTranscriptFeed['withTimestamps'];
     };
+  };
+  'lr-transfer-manager': {
+    element: LyraTransferManager;
+    properties: LyraElementProperties<
+      LyraTransferManager,
+      | 'collapsed'
+      | 'locale'
+      | 'placement'
+      | 'strings'
+      | 'transfers',
+      {}
+    >;
+    events: LyraTransferManagerEventMap;
+    eventNames:       | 'lr-transfer-cancel'
+      | 'lr-transfer-pause'
+      | 'lr-transfer-resume'
+      | 'lr-transfer-retry';
+    cssNames: never;
+    attributeAliases: {};
   };
   'lr-tree': {
     element: LyraTree;

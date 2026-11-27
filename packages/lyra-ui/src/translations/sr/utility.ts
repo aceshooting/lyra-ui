@@ -104,6 +104,24 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Подаци',
   styleLookTerminal: 'Терминал',
   styleLookHighContrast: 'Висок контраст',
+  transferManagerLabel: 'Преноси',
+  transferManagerCount: {
+    one: '{count} пренос',
+    few: '{count} преноса',
+    other: '{count} преноса',
+  },
+  transferManagerResume: 'Настави',
+  transferManagerPauseAll: 'Паузирај све',
+  transferManagerResumeAll: 'Настави све',
+  transferManagerCancelAll: 'Откажи све',
+  transferManagerRetryAll: 'Покушај све поново',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} од {total}',
+  transferManagerEta: 'Преостало време: {duration}',
+  transferManagerUnknownEta: 'Преостало време није познато',
+  transferManagerPaused: 'Паузирано',
+  transferManagerCancelled: 'Отказано',
+  transferManagerEmpty: 'Нема преноса',
 };
 
 registerLyraLocale('sr', strings);

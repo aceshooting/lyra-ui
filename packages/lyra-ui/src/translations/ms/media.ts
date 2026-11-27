@@ -84,7 +84,6 @@ const strings: LyraLocaleStrings = {
   videoPlaylistLabel: 'Senarai main video',
   videoPlaylistUntitled: 'Video {position}',
   videoTimeReadout: '{current} daripada {duration}',
-  pause: 'Jeda',
   qrCodeMissingLibrary: 'Komponen ini memerlukan pakej pilihan "qrcode" dipasang untuk memaparkan kod QR.',
   qrCodeGenerationFailed: 'Nilai ini tidak dapat dikodkan sebagai kod QR.',
   mapMissingLibrary: 'Komponen ini memerlukan pakej pilihan "{package}" dipasang untuk memaparkan peta.',

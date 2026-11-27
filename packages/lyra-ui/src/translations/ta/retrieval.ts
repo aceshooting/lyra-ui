@@ -18,7 +18,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'வரைபடக் குறியீடு',
   entityChipWithType: '{label}, {type}',
   showMore: 'மேலும் காட்டு',
-  showMoreCount: 'மேலும் {count} காட்டு',
   embeddingExplorerSpatialBounds: 'கிடைமட்டமாக {minX} முதல் {maxX} வரை; செங்குத்தாக {minY} முதல் {maxY} வரை',
   embeddingExplorerSpatialSummary: 'முழு மூலத்தில் {total} புள்ளிகள் ({global}). காட்சிப் பகுதியில் {matched} புள்ளிகள் ({viewport}). அடர்த்திப் பகுதிகள் அனைத்துப் பொருத்தங்களையும் எண்ணுகின்றன; புள்ளி மேலடுக்குகள் இந்த எண்ணிக்கைகளை அதிகரிப்பதில்லை.',
   embeddingExplorerSpatialBin: 'அடர்த்திப் பகுதியில் {count} புள்ளிகள்: {bounds}',

@@ -22,7 +22,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Legenda del grafo',
   entityChipWithType: '{label}, {type}',
   showMore: 'Mostra altro',
-  showMoreCount: 'Mostra altri {count}',
   embeddingExplorerSpatialBounds: 'da {minX} a {maxX} in orizzontale; da {minY} a {maxY} in verticale',
   embeddingExplorerSpatialSummary: '{total} punti nell’intera origine ({global}). {matched} punti nell’area visibile ({viewport}). Le regioni di densità contano tutte le corrispondenze; le sovrapposizioni di punti non si aggiungono a questi conteggi.',
   embeddingExplorerSpatialBin: '{count} punti nella regione di densità: {bounds}',

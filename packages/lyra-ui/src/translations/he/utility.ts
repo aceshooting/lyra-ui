@@ -104,6 +104,24 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'נתונים',
   styleLookTerminal: 'מסוף',
   styleLookHighContrast: 'ניגודיות גבוהה',
+  transferManagerLabel: 'העברות',
+  transferManagerCount: {
+    one: 'העברה אחת ({count})',
+    two: 'שתי העברות ({count})',
+    other: '{count} העברות',
+  },
+  transferManagerResume: 'המשך',
+  transferManagerPauseAll: 'השהיית הכול',
+  transferManagerResumeAll: 'המשך הכול',
+  transferManagerCancelAll: 'ביטול הכול',
+  transferManagerRetryAll: 'ניסיון חוזר לכול',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} מתוך {total}',
+  transferManagerEta: 'זמן שנותר: {duration}',
+  transferManagerUnknownEta: 'הזמן שנותר אינו ידוע',
+  transferManagerPaused: 'מושהה',
+  transferManagerCancelled: 'בוטל',
+  transferManagerEmpty: 'אין העברות',
 };
 
 registerLyraLocale('he', strings, { dir: 'rtl', name: 'עברית' });

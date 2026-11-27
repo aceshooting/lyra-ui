@@ -237,6 +237,7 @@ import type { LyraRandomContentEventMap } from './components/utility/random-cont
 import type { LyraResizeObserverEventMap } from './components/utility/resize-observer/resize-observer.class.js';
 import type { LyraStylePanelEventMap } from './components/utility/style-panel/style-panel.class.js';
 import type { LyraTourEventMap } from './components/utility/tour/tour.class.js';
+import type { LyraTransferManagerEventMap } from './components/utility/transfer-manager/transfer-manager.class.js';
 import type { LyraArchiveViewerEventMap } from './components/viewers/archive-viewer/archive-viewer.class.js';
 import type { LyraCalendarViewerEventMap } from './components/viewers/calendar-viewer/calendar-viewer.class.js';
 import type { LyraContactViewerEventMap } from './components/viewers/contact-viewer/contact-viewer.class.js';
@@ -3819,6 +3820,30 @@ export type LyraTourStepChangeRequestEvent = LyraTourEventMap['lr-tour-step-chan
 export type LyraTourTargetMissingEvent = LyraTourEventMap['lr-tour-target-missing'];
 
 /**
+ * `lr-transfer-cancel` — dispatched by `<lr-transfer-manager>`; detail
+ * `LyraTransferManagerEventMap['lr-transfer-cancel']`.
+ */
+export type LyraTransferCancelEvent = LyraTransferManagerEventMap['lr-transfer-cancel'];
+
+/**
+ * `lr-transfer-pause` — dispatched by `<lr-transfer-manager>`; detail
+ * `LyraTransferManagerEventMap['lr-transfer-pause']`.
+ */
+export type LyraTransferPauseEvent = LyraTransferManagerEventMap['lr-transfer-pause'];
+
+/**
+ * `lr-transfer-resume` — dispatched by `<lr-transfer-manager>`; detail
+ * `LyraTransferManagerEventMap['lr-transfer-resume']`.
+ */
+export type LyraTransferResumeEvent = LyraTransferManagerEventMap['lr-transfer-resume'];
+
+/**
+ * `lr-transfer-retry` — dispatched by `<lr-transfer-manager>`; detail
+ * `LyraTransferManagerEventMap['lr-transfer-retry']`.
+ */
+export type LyraTransferRetryEvent = LyraTransferManagerEventMap['lr-transfer-retry'];
+
+/**
  * `lr-validity-change` — dispatched by 4 components: `<lr-filter-bar>`,
  * `<lr-graph-query-builder>`, `<lr-rubric-form>`, `<lr-tool-param-form>`; detail union of 4, e.g.
  * `LyraFilterBarEventMap['lr-validity-change']`.
@@ -4435,6 +4460,10 @@ export interface LyraGlobalEventMap {
   'lr-tour-step-activate': LyraTourStepActivateEvent;
   'lr-tour-step-change-request': LyraTourStepChangeRequestEvent;
   'lr-tour-target-missing': LyraTourTargetMissingEvent;
+  'lr-transfer-cancel': LyraTransferCancelEvent;
+  'lr-transfer-pause': LyraTransferPauseEvent;
+  'lr-transfer-resume': LyraTransferResumeEvent;
+  'lr-transfer-retry': LyraTransferRetryEvent;
   'lr-validity-change': LyraValidityChangeEvent;
   'lr-version-change': LyraVersionChangeEvent;
   'lr-version-select': LyraVersionSelectEvent;

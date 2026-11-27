@@ -104,6 +104,24 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Dades',
   styleLookTerminal: 'Terminal',
   styleLookHighContrast: 'Contrast alt',
+  transferManagerLabel: 'Transferències',
+  transferManagerCount: {
+    one: '{count} transferència',
+    many: '{count} transferències',
+    other: '{count} transferències',
+  },
+  transferManagerResume: 'Reprèn',
+  transferManagerPauseAll: 'Posa-les totes en pausa',
+  transferManagerResumeAll: 'Reprèn-les totes',
+  transferManagerCancelAll: 'Cancel·la-les totes',
+  transferManagerRetryAll: 'Torna-les a provar totes',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} de {total}',
+  transferManagerEta: 'Temps restant: {duration}',
+  transferManagerUnknownEta: 'Temps restant desconegut',
+  transferManagerPaused: 'En pausa',
+  transferManagerCancelled: 'Cancel·lada',
+  transferManagerEmpty: 'No hi ha cap transferència',
 };
 
 registerLyraLocale('ca', strings);

@@ -18,7 +18,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Furtuu giraafii',
   entityChipWithType: '{label}, {type}',
   showMore: 'Dabalataan agarsiisi',
-  showMoreCount: '{count} dabalataa agarsiisi',
   embeddingExplorerSpatialBounds: 'dalgaan {minX} hanga {maxX}; olee {minY} hanga {maxY}',
   embeddingExplorerSpatialSummary: 'Madda guutuu keessatti tuqaalee {total} ({global}). Naannoo mulʼataa keessatti tuqaalee {matched} ({viewport}). Naannoowwan rukkinni itti agarsiifamu walsimannaa hunda lakkaaʼu; tuqaaleen irra buufaman lakkoofsota kana hin dabalan.',
   embeddingExplorerSpatialBin: 'Naannoo rukkinnaa keessatti tuqaalee {count}: {bounds}',

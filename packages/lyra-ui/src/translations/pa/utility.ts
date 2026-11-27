@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'ਡਾਟਾ',
   styleLookTerminal: 'ਟਰਮੀਨਲ',
   styleLookHighContrast: 'ਉੱਚ ਕੰਟ੍ਰਾਸਟ',
+  transferManagerLabel: 'ਟ੍ਰਾਂਸਫ਼ਰ',
+  transferManagerCount: {
+    one: '{count} ਟ੍ਰਾਂਸਫ਼ਰ',
+    other: '{count} ਟ੍ਰਾਂਸਫ਼ਰ',
+  },
+  transferManagerResume: 'ਮੁੜ ਚਲਾਓ',
+  transferManagerPauseAll: 'ਸਾਰੇ ਕੁਝ ਸਮੇਂ ਲਈ ਰੋਕੋ',
+  transferManagerResumeAll: 'ਸਾਰੇ ਮੁੜ ਚਲਾਓ',
+  transferManagerCancelAll: 'ਸਾਰੇ ਰੱਦ ਕਰੋ',
+  transferManagerRetryAll: 'ਸਾਰਿਆਂ ਲਈ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਕਰੋ',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{total} ਵਿੱਚੋਂ {done}',
+  transferManagerEta: 'ਬਾਕੀ ਸਮਾਂ: {duration}',
+  transferManagerUnknownEta: 'ਬਾਕੀ ਸਮਾਂ ਪਤਾ ਨਹੀਂ',
+  transferManagerPaused: 'ਕੁਝ ਸਮੇਂ ਲਈ ਰੋਕਿਆ',
+  transferManagerCancelled: 'ਰੱਦ ਕੀਤਾ',
+  transferManagerEmpty: 'ਕੋਈ ਟ੍ਰਾਂਸਫ਼ਰ ਨਹੀਂ',
 };
 
 registerLyraLocale('pa', strings);

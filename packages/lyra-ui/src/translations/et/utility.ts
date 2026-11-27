@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Andmed',
   styleLookTerminal: 'Terminal',
   styleLookHighContrast: 'Kõrge kontrast',
+  transferManagerLabel: 'Edastused',
+  transferManagerCount: {
+    one: '{count} edastus',
+    other: '{count} edastust',
+  },
+  transferManagerResume: 'Jätka',
+  transferManagerPauseAll: 'Peata kõik ajutiselt',
+  transferManagerResumeAll: 'Jätka kõiki',
+  transferManagerCancelAll: 'Tühista kõik',
+  transferManagerRetryAll: 'Proovi kõiki uuesti',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} / {total}',
+  transferManagerEta: 'Jäänud: {duration}',
+  transferManagerUnknownEta: 'Järelejäänud aeg pole teada',
+  transferManagerPaused: 'Peatatud',
+  transferManagerCancelled: 'Tühistatud',
+  transferManagerEmpty: 'Edastusi pole',
 };
 
 registerLyraLocale('et', strings);

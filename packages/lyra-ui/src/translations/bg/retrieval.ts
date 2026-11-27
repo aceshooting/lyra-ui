@@ -21,7 +21,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Легенда на графа',
   entityChipWithType: '{label}, {type}',
   showMore: 'Покажи още',
-  showMoreCount: 'Покажи още {count}',
   embeddingExplorerSpatialBounds: 'от {minX} до {maxX} хоризонтално; от {minY} до {maxY} вертикално',
   embeddingExplorerSpatialSummary: '{total} точки в целия източник ({global}). {matched} точки в изгледа ({viewport}). Областите на плътност отчитат всички съвпадения; наслагванията на точки не се добавят към тези бройки.',
   embeddingExplorerSpatialBin: '{count} точки в областта на плътност: {bounds}',

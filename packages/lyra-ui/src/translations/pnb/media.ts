@@ -86,7 +86,6 @@ const strings: LyraLocaleStrings = {
   videoPlaylistLabel: 'ویڈیو پلے لسٹ',
   videoPlaylistUntitled: 'ویڈیو {position}',
   videoTimeReadout: '{duration} وچوں {current}',
-  pause: 'روکو',
   qrCodeMissingLibrary: 'QR کوڈ وکھاؤن لئی ایس جزو نوں اختیاری "qrcode" پیکیج چاہیدا اے۔',
   qrCodeGenerationFailed: 'ایہہ قدر QR کوڈ وچ انکوڈ نئیں ہو سکی۔',
   mapMissingLibrary: 'نقشہ وکھاؤن لئی ایس جزو نوں اختیاری "{package}" پیکیج چاہیدا اے۔',

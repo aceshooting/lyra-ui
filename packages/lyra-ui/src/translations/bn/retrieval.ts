@@ -21,7 +21,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'গ্রাফের সংকেত',
   entityChipWithType: '{label}, {type}',
   showMore: 'আরও দেখান',
-  showMoreCount: 'আরও {count}টি দেখান',
   embeddingExplorerSpatialBounds: 'অনুভূমিকভাবে {minX} থেকে {maxX}; উল্লম্বভাবে {minY} থেকে {maxY}',
   embeddingExplorerSpatialSummary: 'সম্পূর্ণ উৎসে {total}টি বিন্দু ({global})। দৃশ্যমান এলাকায় {matched}টি বিন্দু ({viewport})। ঘনত্বের অঞ্চলগুলি সব মিল গণনা করে; বিন্দুর উপরিস্তর এই গণনায় যুক্ত হয় না।',
   embeddingExplorerSpatialBin: 'ঘনত্বের অঞ্চলে {count}টি বিন্দু: {bounds}',

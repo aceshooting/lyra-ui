@@ -90,7 +90,6 @@ const strings: LyraLocaleStrings = {
   videoPlaylistLabel: 'Список відтворення відео',
   videoPlaylistUntitled: 'Відео {position}',
   videoTimeReadout: '{current} із {duration}',
-  pause: 'Призупинити',
   qrCodeMissingLibrary: 'Для створення QR-кодів потрібно встановити необов’язковий пакет "qrcode".',
   qrCodeGenerationFailed: 'Не вдалося закодувати це значення як QR-код.',
   mapMissingLibrary: 'Для відображення мапи потрібно встановити необов’язковий пакет "{package}".',

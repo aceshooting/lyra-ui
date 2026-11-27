@@ -109,6 +109,25 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Data',
   styleLookTerminal: 'Terminál',
   styleLookHighContrast: 'Vysoký kontrast',
+  transferManagerLabel: 'Přenosy',
+  transferManagerCount: {
+    one: '{count} přenos',
+    few: '{count} přenosy',
+    many: '{count} přenosu',
+    other: '{count} přenosů',
+  },
+  transferManagerResume: 'Pokračovat',
+  transferManagerPauseAll: 'Pozastavit vše',
+  transferManagerResumeAll: 'Pokračovat ve všech',
+  transferManagerCancelAll: 'Zrušit vše',
+  transferManagerRetryAll: 'Opakovat vše',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} z {total}',
+  transferManagerEta: 'Zbývá {duration}',
+  transferManagerUnknownEta: 'Zbývající čas není znám',
+  transferManagerPaused: 'Pozastaveno',
+  transferManagerCancelled: 'Zrušeno',
+  transferManagerEmpty: 'Žádné přenosy',
 };
 
 registerLyraLocale('cs', strings);

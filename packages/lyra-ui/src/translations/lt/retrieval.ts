@@ -23,7 +23,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Grafo legenda',
   entityChipWithType: '{label}, {type}',
   showMore: 'Rodyti daugiau',
-  showMoreCount: 'Rodyti dar {count}',
   embeddingExplorerSpatialBounds: 'horizontaliai nuo {minX} iki {maxX}; vertikaliai nuo {minY} iki {maxY}',
   embeddingExplorerSpatialSummary: 'Taškų visame šaltinyje: {total} ({global}). Taškų rodinyje: {matched} ({viewport}). Tankio sritys skaičiuoja visus atitikmenis; taškų sluoksniai prie šių skaičių neprisideda.',
   embeddingExplorerSpatialBin: 'Taškų tankio srityje: {count}; {bounds}',

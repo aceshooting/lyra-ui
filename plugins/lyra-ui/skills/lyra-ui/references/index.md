@@ -2,7 +2,7 @@
 
 # Component index
 
-325 lyra-ui custom elements plus 2 companion-package elements (`lr-docx-editor` from `@aceshooting/lyra-docs`, `lr-gen-view` from `@aceshooting/lyra-gen`), grouped by the source family they live in.
+326 lyra-ui custom elements plus 2 companion-package elements (`lr-docx-editor` from `@aceshooting/lyra-docs`, `lr-gen-view` from `@aceshooting/lyra-gen`), grouped by the source family they live in.
 
 **Reading one component.** Its reference file path is derived from the tag — no search needed:
 `llms/components/<tag>.md` (e.g. `llms/components/lr-table.md`): import path, optional peers,
@@ -178,7 +178,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-rating` · lr-rating.js · `stable` since `4.0.0` · ~36 KiB gzip — a keyboard-accessible star rating control.
 - `lr-help` · lr-help.js · `experimental` since `32.0.0` · ~67 KiB gzip — a compact "?" explanation disclosure: an `<lr-icon-button>` trigger that opens an `<lr-popover>` holding the slotted explanation.
 
-## Utilities, formatting & observers — `components/utility/` (23)
+## Utilities, formatting & observers — `components/utility/` (24)
 
 - `lr-export-button` · lr-export-button.js · `stable` since `4.0.0` · ~59 KiB gzip — a CSV/JSON download button, single-format or a format-choice menu.
 - `lr-copy-button` · lr-copy-button.js · `stable` since `4.0.0` · ~75 KiB gzip — a standalone icon-only copy-to-clipboard affordance for a plain single/multi-line text value in a layout the consumer controls (e.g.
@@ -203,6 +203,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-style-panel` · lr-style-panel.js · `experimental` since `32.0.0` · ~129 KiB gzip — ready-made appearance controls bound to the document style runtime (`setLyraStyle()`/`getLyraStyle()` from `theme.js`): colour mode...
 - `lr-counter` · lr-counter.js · `experimental` since `32.1.0` · ~27 KiB gzip — counts down to a date (or for a duration) or up from one, ticking through years, months, days, hours, minutes and seconds with...
 - `lr-number-ticker` · lr-number-ticker.js · `experimental` since `32.1.0` · ~30 KiB gzip — counts to `value` when it scrolls into view, formatting every frame with `Intl.NumberFormat` in the effective locale.
+- `lr-transfer-manager` · lr-transfer-manager.js · `experimental` since `unreleased` · ~34 KiB gzip — Displays caller-controlled transfers, per-item and overall progress, throughput and remaining time.
 
 ## Media, files & maps — `components/media/` (25)
 

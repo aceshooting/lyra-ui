@@ -21,7 +21,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'ग्राफची संकेतसूची',
   entityChipWithType: '{label}, {type}',
   showMore: 'आणखी दाखवा',
-  showMoreCount: 'आणखी {count} दाखवा',
   embeddingExplorerSpatialBounds: 'आडवे {minX} ते {maxX}; उभे {minY} ते {maxY}',
   embeddingExplorerSpatialSummary: 'संपूर्ण स्रोतात {total} बिंदू ({global}). दृश्य क्षेत्रात {matched} बिंदू ({viewport}). घनता प्रदेश सर्व जुळणारे बिंदू मोजतात; बिंदूंचे वरील थर या मोजणीत जोडले जात नाहीत.',
   embeddingExplorerSpatialBin: 'घनता प्रदेशात {count} बिंदू: {bounds}',

@@ -18,7 +18,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Chú giải đồ thị',
   entityChipWithType: '{label}, {type}',
   showMore: 'Hiện thêm',
-  showMoreCount: 'Hiển thị thêm {count} mục',
   embeddingExplorerSpatialBounds: 'từ {minX} đến {maxX} theo chiều ngang; từ {minY} đến {maxY} theo chiều dọc',
   embeddingExplorerSpatialSummary: '{total} điểm trong toàn bộ nguồn ({global}). {matched} điểm trong vùng xem ({viewport}). Các vùng mật độ đếm tất cả kết quả khớp; các lớp phủ điểm không làm tăng các số lượng này.',
   embeddingExplorerSpatialBin: '{count} điểm trong vùng mật độ: {bounds}',

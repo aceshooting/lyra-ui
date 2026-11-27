@@ -249,7 +249,6 @@ export const LYRA_DEFAULT_scoreTierLow: LyraMessage = 'Low relevance';
 export const LYRA_DEFAULT_scoreTierMedium: LyraMessage = 'Medium relevance';
 export const LYRA_DEFAULT_selectAllSources: LyraMessage = 'Select all sources';
 export const LYRA_DEFAULT_showMore: LyraMessage = 'Show more';
-export const LYRA_DEFAULT_showMoreCount: LyraMessage = 'Show {count} more';
 export const LYRA_DEFAULT_sourcePageSuffix: LyraMessage = '{base} — p. {page}';
 export const LYRA_DEFAULT_sourcePickerLimit: LyraMessage = 'Some sources are not shown because the list is too large or contains invalid entries.';
 export const LYRA_DEFAULT_sourcePickerMatches: LyraMessage = { one: '{count} source match', other: '{count} sources match' };

@@ -175098,6 +175098,234 @@
       }
     },
     {
+      "tag": "lr-transfer-manager",
+      "family": "utility",
+      "classModule": "src/components/utility/transfer-manager/transfer-manager.class.ts",
+      "registrationModule": "src/components/lr-transfer-manager.ts",
+      "rootIncluded": true,
+      "rootExclusion": null,
+      "optionalPeers": [],
+      "maturity": {
+        "status": "experimental",
+        "since": "unreleased",
+        "deprecated": null,
+        "profile": "new-component-experimental",
+        "rationale": "This newly scaffolded component is an unreleased public-surface candidate whose API is still under maintainer review.",
+        "graduationCriteria": "Graduate to stable only after its documented API, populated accessibility state, three-engine behavior, and compatibility contract pass review and a release qualification.",
+        "deprecations": []
+      },
+      "qualification": {
+        "status": "incomplete",
+        "humanReview": "pending",
+        "reviewer": null,
+        "reviewedAt": null,
+        "accessibility": "automated",
+        "scale": "unmeasured",
+        "ledger": "scripts/fixtures/component-qualification.json"
+      },
+      "dependencies": {
+        "direct": [],
+        "transitive": [],
+        "ledger": "scripts/fixtures/component-integration.json"
+      },
+      "counterparts": [],
+      "surface": {
+        "attributes": [
+          {
+            "name": "collapsed",
+            "property": "collapsed",
+            "type": "boolean",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "locale",
+            "property": "locale",
+            "type": "string",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "placement",
+            "property": "placement",
+            "type": "LyraTransferPlacement",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "header"
+          }
+        ],
+        "properties": [
+          {
+            "name": "collapsed",
+            "attribute": "collapsed",
+            "type": "boolean",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": false
+          },
+          {
+            "name": "locale",
+            "attribute": "locale",
+            "type": "string",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": ""
+          },
+          {
+            "name": "placement",
+            "attribute": "placement",
+            "type": "LyraTransferPlacement",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "header"
+          },
+          {
+            "name": "transfers",
+            "attribute": null,
+            "type": "readonly LyraTransfer[]",
+            "readonly": false,
+            "reflects": false,
+            "deprecated": null,
+            "hasDefault": false
+          }
+        ],
+        "slots": [],
+        "events": [
+          {
+            "name": "lr-transfer-cancel",
+            "type": "CustomEvent<LyraTransferActionDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-transfer-pause",
+            "type": "CustomEvent<LyraTransferActionDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-transfer-resume",
+            "type": "CustomEvent<LyraTransferActionDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          },
+          {
+            "name": "lr-transfer-retry",
+            "type": "CustomEvent<LyraTransferActionDetail>",
+            "cancelable": "never",
+            "constructor": "CustomEvent"
+          }
+        ],
+        "parts": [
+          {
+            "name": "action",
+            "deprecated": null
+          },
+          {
+            "name": "base",
+            "deprecated": null
+          },
+          {
+            "name": "bulk-actions",
+            "deprecated": null
+          },
+          {
+            "name": "bytes",
+            "deprecated": null
+          },
+          {
+            "name": "disclosure",
+            "deprecated": null
+          },
+          {
+            "name": "empty",
+            "deprecated": null
+          },
+          {
+            "name": "eta",
+            "deprecated": null
+          },
+          {
+            "name": "header",
+            "deprecated": null
+          },
+          {
+            "name": "item",
+            "deprecated": null
+          },
+          {
+            "name": "item-actions",
+            "deprecated": null
+          },
+          {
+            "name": "list",
+            "deprecated": null
+          },
+          {
+            "name": "metrics",
+            "deprecated": null
+          },
+          {
+            "name": "name",
+            "deprecated": null
+          },
+          {
+            "name": "overall-progress",
+            "deprecated": null
+          },
+          {
+            "name": "panel",
+            "deprecated": null
+          },
+          {
+            "name": "progress",
+            "deprecated": null
+          },
+          {
+            "name": "rate",
+            "deprecated": null
+          },
+          {
+            "name": "status",
+            "deprecated": null
+          },
+          {
+            "name": "summary",
+            "deprecated": null
+          }
+        ],
+        "cssProperties": [],
+        "cssStates": [],
+        "methods": [],
+        "staticProperties": [],
+        "staticMethods": [],
+        "moduleExports": [],
+        "form": {
+          "associated": false,
+          "properties": [],
+          "methods": []
+        },
+        "native": {
+          "forwardedEvents": [],
+          "delegatedMethods": []
+        }
+      }
+    },
+    {
       "tag": "lr-tree",
       "family": "data",
       "classModule": "src/components/data/tree/tree.class.ts",

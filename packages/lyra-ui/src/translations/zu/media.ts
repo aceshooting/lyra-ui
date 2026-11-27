@@ -86,7 +86,6 @@ const strings: LyraLocaleStrings = {
   videoPlaylistLabel: 'Uhlu lwamavidiyo',
   videoPlaylistUntitled: 'Ividiyo {position}',
   videoTimeReadout: '{current} kokungu-{duration}',
-  pause: 'Misa isikhashana',
   qrCodeMissingLibrary: 'Le ngxenye idinga ukuthi kufakwe iphakheji ongayikhetha ethi "qrcode" ukuze ibonise amakhodi e-QR.',
   qrCodeGenerationFailed: 'Leli nani alikwazanga ukubhalwa njengekhodi ye-QR.',
   mapMissingLibrary: 'Le ngxenye idinga ukuthi kufakwe iphakheji ongayikhetha ethi "{package}" ukuze ibonise imephu.',

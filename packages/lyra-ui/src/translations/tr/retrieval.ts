@@ -18,7 +18,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Grafik açıklaması',
   entityChipWithType: '{label}, {type}',
   showMore: 'Daha fazlasını göster',
-  showMoreCount: '{count} tane daha göster',
   embeddingExplorerSpatialBounds: 'yatayda {minX} ile {maxX}; dikeyde {minY} ile {maxY}',
   embeddingExplorerSpatialSummary: 'Kaynağın tamamında {total} nokta ({global}). Görünüm alanında {matched} nokta ({viewport}). Yoğunluk bölgeleri tüm eşleşmeleri sayar; nokta katmanları bu sayılara eklenmez.',
   embeddingExplorerSpatialBin: 'Yoğunluk bölgesinde {count} nokta: {bounds}',

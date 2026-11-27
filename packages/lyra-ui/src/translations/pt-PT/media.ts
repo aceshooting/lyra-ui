@@ -87,7 +87,6 @@ const strings: LyraLocaleStrings = {
   videoPlaylistLabel: 'Playlist de vídeos',
   videoPlaylistUntitled: 'Vídeo {position}',
   videoTimeReadout: '{current} de {duration}',
-  pause: 'Pausar',
   qrCodeMissingLibrary: 'Este componente precisa do pacote opcional "qrcode" instalado para renderizar códigos QR.',
   qrCodeGenerationFailed: 'Não foi possível codificar este valor como um código QR.',
   mapMissingLibrary: 'Este componente precisa do pacote opcional "{package}" instalado para renderizar o mapa.',

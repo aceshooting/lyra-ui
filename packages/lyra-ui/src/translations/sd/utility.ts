@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'ڊيٽا',
   styleLookTerminal: 'ٽرمينل',
   styleLookHighContrast: 'هاءِ ڪنٽراسٽ',
+  transferManagerLabel: 'منتقليون',
+  transferManagerCount: {
+    one: '{count} منتقلي',
+    other: '{count} منتقليون',
+  },
+  transferManagerResume: 'ٻيهر شروع ڪريو',
+  transferManagerPauseAll: 'سڀ ٿوري دير لاءِ روڪيو',
+  transferManagerResumeAll: 'سڀ ٻيهر شروع ڪريو',
+  transferManagerCancelAll: 'سڀ رد ڪريو',
+  transferManagerRetryAll: 'سڀ ٻيهر ڪوشش ڪريو',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{total} مان {done}',
+  transferManagerEta: 'باقي وقت: {duration}',
+  transferManagerUnknownEta: 'باقي وقت معلوم ناهي',
+  transferManagerPaused: 'ٿوري دير لاءِ روڪيل',
+  transferManagerCancelled: 'رد ٿيل',
+  transferManagerEmpty: 'ڪا منتقلي ناهي',
 };
 
 registerLyraLocale('sd', strings, { dir: 'rtl', name: 'سنڌي' });

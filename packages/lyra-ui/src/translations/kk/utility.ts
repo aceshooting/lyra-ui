@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Деректер',
   styleLookTerminal: 'Терминал',
   styleLookHighContrast: 'Жоғары контраст',
+  transferManagerLabel: 'Тасымалдаулар',
+  transferManagerCount: {
+    one: '{count} тасымалдау',
+    other: '{count} тасымалдау',
+  },
+  transferManagerResume: 'Жалғастыру',
+  transferManagerPauseAll: 'Барлығын кідірту',
+  transferManagerResumeAll: 'Барлығын жалғастыру',
+  transferManagerCancelAll: 'Барлығын болдырмау',
+  transferManagerRetryAll: 'Барлығын қайталау',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{total} ішінен {done}',
+  transferManagerEta: 'Қалған уақыт: {duration}',
+  transferManagerUnknownEta: 'Қалған уақыт белгісіз',
+  transferManagerPaused: 'Кідіртілді',
+  transferManagerCancelled: 'Болдырылмады',
+  transferManagerEmpty: 'Тасымалдаулар жоқ',
 };
 
 registerLyraLocale('kk', strings);

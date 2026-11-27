@@ -109,6 +109,25 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Podatki',
   styleLookTerminal: 'Terminal',
   styleLookHighContrast: 'Visok kontrast',
+  transferManagerLabel: 'Prenosi',
+  transferManagerCount: {
+    one: '{count} prenos',
+    two: '{count} prenosa',
+    few: '{count} prenosi',
+    other: '{count} prenosov',
+  },
+  transferManagerResume: 'Nadaljuj',
+  transferManagerPauseAll: 'Začasno ustavi vse',
+  transferManagerResumeAll: 'Nadaljuj vse',
+  transferManagerCancelAll: 'Prekliči vse',
+  transferManagerRetryAll: 'Poskusi vse znova',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} od {total}',
+  transferManagerEta: 'Preostali čas: {duration}',
+  transferManagerUnknownEta: 'Preostali čas ni znan',
+  transferManagerPaused: 'Začasno ustavljeno',
+  transferManagerCancelled: 'Preklicano',
+  transferManagerEmpty: 'Ni prenosov',
 };
 
 registerLyraLocale('sl', strings);

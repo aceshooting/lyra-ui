@@ -20,4 +20,5 @@ export * from '../lr-random-content.js';
 export * from '../lr-resize-observer.js';
 export * from '../lr-style-panel.js';
 export * from '../lr-tour.js';
+export * from '../lr-transfer-manager.js';
 export * from '../lr-visually-hidden.js';

@@ -119,6 +119,27 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'بيانات',
   styleLookTerminal: 'الطرفية',
   styleLookHighContrast: 'تباين عالٍ',
+  transferManagerLabel: 'عمليات النقل',
+  transferManagerCount: {
+    zero: 'لا توجد عمليات نقل ({count})',
+    one: 'عملية نقل واحدة ({count})',
+    two: 'عمليتا نقل ({count})',
+    few: '{count} عمليات نقل',
+    many: '{count} عملية نقل',
+    other: 'عمليات النقل: {count}',
+  },
+  transferManagerResume: 'استئناف',
+  transferManagerPauseAll: 'إيقاف الكل مؤقتًا',
+  transferManagerResumeAll: 'استئناف الكل',
+  transferManagerCancelAll: 'إلغاء الكل',
+  transferManagerRetryAll: 'إعادة محاولة الكل',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} من {total}',
+  transferManagerEta: 'الوقت المتبقي: {duration}',
+  transferManagerUnknownEta: 'الوقت المتبقي غير معروف',
+  transferManagerPaused: 'متوقف مؤقتًا',
+  transferManagerCancelled: 'ملغى',
+  transferManagerEmpty: 'لا توجد عمليات نقل',
 };
 
 registerLyraLocale('ar', strings, { dir: 'rtl', name: 'العربية' });

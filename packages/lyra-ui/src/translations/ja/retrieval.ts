@@ -20,7 +20,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'グラフの凡例',
   entityChipWithType: '{label}、{type}',
   showMore: 'もっと見る',
-  showMoreCount: 'さらに {count} 件を表示',
   embeddingExplorerSpatialBounds: '水平方向 {minX}～{maxX}、垂直方向 {minY}～{maxY}',
   embeddingExplorerSpatialSummary: 'ソース全体に {total} 個の点（{global}）。表示領域に {matched} 個の点（{viewport}）。密度領域は一致するすべての点を数えます。重ねて表示する点はこれらの件数に加算されません。',
   embeddingExplorerSpatialBin: '密度領域内の点 {count} 個：{bounds}',

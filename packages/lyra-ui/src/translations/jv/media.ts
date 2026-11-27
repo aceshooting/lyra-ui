@@ -84,7 +84,6 @@ const strings: LyraLocaleStrings = {
   videoPlaylistLabel: 'Dhaptar puter video',
   videoPlaylistUntitled: 'Video {position}',
   videoTimeReadout: '{current} saka {duration}',
-  pause: 'Ngaso',
   qrCodeMissingLibrary: 'Komponen iki mbutuhake paket opsional "qrcode" kanggo nggawe kode QR.',
   qrCodeGenerationFailed: 'Nilai iki ora bisa dienkode dadi kode QR.',
   mapMissingLibrary: 'Komponen iki mbutuhake paket opsional "{package}" supaya peta bisa ditampilake.',

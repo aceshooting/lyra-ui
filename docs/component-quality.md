@@ -9,11 +9,11 @@ component’s compatibility status. The machine-readable source is
 
 ## Current evidence
 
-- Public tags: **325**
-- Exact same-test/same-instance populated or open axe evidence: **324**
+- Public tags: **326**
+- Exact same-test/same-instance populated or open axe evidence: **325**
 - Narrow reviewed axe-state exemptions: **1**
 - Missing axe qualification: **0**
-- Visual-regression enrollment: **93** tags
+- Visual-regression enrollment: **94** tags
 - Forced-colors visual enrollment: **8** tags
 - Manually verified assistive-technology pairings: **0**
 - Scale counter budgets: **95** tags
@@ -371,6 +371,7 @@ complete enrolled set. Axe is not assistive-technology testing.
 | [`lr-tour`](component-integration.md#lr-tour) | stable | automated | source signal | source signal | source signal | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | unmeasured |
 | [`lr-trace-tree`](component-integration.md#lr-trace-tree) | stable | automated | source signal | source signal | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | measured |
 | [`lr-transcript-feed`](component-integration.md#lr-transcript-feed) | stable | automated | not recorded | source signal | not recorded | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | measured |
+| [`lr-transfer-manager`](component-integration.md#lr-transfer-manager) | experimental | automated | source signal | source signal | not recorded | source signal | configured CI | render-and-hydrate | complete | N/A | N/A | not enrolled | not verified | unmeasured |
 | [`lr-tree`](component-integration.md#lr-tree) | stable | automated | source signal | source signal | source signal | source signal | configured CI | client-render | not enrolled | N/A | source signal | not enrolled | not verified | measured |
 | [`lr-tree-item`](component-integration.md#lr-tree-item) | stable | automated | source signal | source signal | source signal | source signal | configured CI | render-and-hydrate | complete | N/A | source signal | not enrolled | not verified | measured |
 | [`lr-treemap`](component-integration.md#lr-treemap) | experimental | automated | source signal | source signal | N/A | source signal | configured CI | render-and-hydrate | not enrolled | N/A | N/A | not enrolled | not verified | unmeasured |

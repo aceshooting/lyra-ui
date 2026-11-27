@@ -656,6 +656,8 @@ export type LyraTraceTreeReactProps = LyraReactElementProps<'lr-trace-tree'>;
 
 export type LyraTranscriptFeedReactProps = LyraReactElementProps<'lr-transcript-feed'>;
 
+export type LyraTransferManagerReactProps = LyraReactElementProps<'lr-transfer-manager'>;
+
 export type LyraTreeReactProps = LyraReactElementProps<'lr-tree'>;
 
 export type LyraTreeItemReactProps = LyraReactElementProps<'lr-tree-item'>;
@@ -998,6 +1000,7 @@ export interface LyraReactIntrinsicElements {
   'lr-tour': LyraTourReactProps;
   'lr-trace-tree': LyraTraceTreeReactProps;
   'lr-transcript-feed': LyraTranscriptFeedReactProps;
+  'lr-transfer-manager': LyraTransferManagerReactProps;
   'lr-tree': LyraTreeReactProps;
   'lr-tree-item': LyraTreeItemReactProps;
   'lr-treemap': LyraTreemapReactProps;

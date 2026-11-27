@@ -2803,3 +2803,87 @@ value and still emits `lr-finish`.
 <lr-number-ticker value="12840"></lr-number-ticker>
 <lr-number-ticker type="currency" currency="EUR" value="98765.43" eager></lr-number-ticker>
 ```
+
+## `lr-transfer-manager`
+
+An accessible queue for transfers such as photo exports, archive downloads, and file uploads.
+Keep the transport in your application and assign a new `.transfers` array whenever progress or
+status changes. The disclosure keeps the transfer count and overall progress visible when the list
+is collapsed.
+
+**Properties:**
+
+- `transfers: readonly LyraTransfer[] = []` (property only) — ordered transfer records. Each has
+  a stable unique string `id`, a display `name`, `status`, `bytesDone`, and optional `bytesTotal`.
+  `LyraTransferStatus` is `'queued' | 'active' | 'paused' | 'done' | 'error' | 'cancelled'`.
+- `placement: LyraTransferPlacement = 'header'` (reflected) — `'header'` places the component
+  in normal layout, for example inside an application header. `'floating'` displays it as a
+  fixed panel at the logical bottom-end of the viewport.
+- `collapsed: boolean = false` (reflected) — hides the queue and bulk actions. The named
+  disclosure toggles this property and shows the queue count and the overall percentage when every byte total is known.
+
+Give each transfer its real byte total when known. An unknown total shows indeterminate progress
+and no estimated completion time. Active transfers calculate a smoothed rate and remaining time
+from consecutive active progress snapshots. Keep the same ID across those updates. Frequent byte
+updates stay visible without repeatedly interrupting the screen reader. Overall progress sums the
+bytes across the queue, and the overall rate sums the active transfer rates. An unknown total in
+the queue makes the overall progress indeterminate. The expanded list starts with 100 rows and
+Show more reveals the next batch. The summary and bulk actions include the whole queue.
+
+**Types:**
+
+- `LyraTransfer { readonly id: string; readonly name: string; readonly status: LyraTransferStatus;
+  readonly bytesDone: number; readonly bytesTotal?: number }`
+- `LyraTransferActionDetail { readonly ids: readonly string[] }`
+
+**Events:** `lr-transfer-pause`, `lr-transfer-resume`, `lr-transfer-cancel`, and
+`lr-transfer-retry` bubble and cross shadow boundaries. Each carries
+`LyraTransferActionDetail = { ids: readonly string[] }`. A row action sends one ID. A bulk action
+sends eligible IDs in the supplied order. Pause applies to queued and active transfers, resume to
+paused transfers, cancel to queued, active and paused transfers, and retry to failed and cancelled
+transfers. Handle the request in your transport and publish its current state back to the component.
+
+**CSS parts:** `base`, `header`, `disclosure`, `summary`, `overall-progress`, `panel`,
+`bulk-actions`, `list`, `item`, `name`, `status`, `metrics`, `bytes`, `rate`, `eta`,
+`progress`, `item-actions`, `action`, and `empty`.
+
+```html
+<header>
+  <lr-transfer-manager id="downloads"></lr-transfer-manager>
+</header>
+<script type="module">
+  import '@aceshooting/lyra-ui/components/lr-transfer-manager.js';
+
+  const manager = document.querySelector('#downloads');
+  const controller = new EventTarget();
+  const statusByAction = {
+    'lr-transfer-pause': 'paused',
+    'lr-transfer-resume': 'active',
+    'lr-transfer-cancel': 'cancelled',
+    'lr-transfer-retry': 'queued',
+  };
+  manager.transfers = [
+    { id: 'archive', name: 'Travel photos.zip', status: 'active', bytesDone: 12_000_000, bytesTotal: 48_000_000 },
+    { id: 'cover', name: 'Cover photo.jpg', status: 'queued', bytesDone: 0 },
+  ];
+  for (const [action, status] of Object.entries(statusByAction)) {
+    manager.addEventListener(action, ({ detail }) => {
+      const ids = new Set(detail.ids);
+      manager.transfers = manager.transfers.map(transfer => ids.has(transfer.id)
+        ? { ...transfer, status, bytesDone: status === 'queued' ? 0 : transfer.bytesDone }
+        : transfer);
+    });
+  }
+  controller.addEventListener('progress', ({ detail }) => {
+    manager.transfers = manager.transfers.map(transfer => transfer.id === detail.id
+      ? { ...transfer, bytesDone: detail.bytesDone, bytesTotal: detail.bytesTotal }
+      : transfer);
+  });
+  // In an application, call the transport for each action and use its progress events.
+  controller.dispatchEvent(new CustomEvent('progress', {
+    detail: { id: 'archive', bytesDone: 16_000_000, bytesTotal: 48_000_000 },
+  }));
+</script>
+```
+
+Set `placement="floating" collapsed` on the same component for a compact floating queue.

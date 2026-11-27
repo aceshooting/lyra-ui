@@ -296,6 +296,7 @@ import './components/lr-tooltip.js';
 import './components/lr-tour.js';
 import './components/lr-trace-tree.js';
 import './components/lr-transcript-feed.js';
+import './components/lr-transfer-manager.js';
 import './components/lr-tree.js';
 import './components/lr-tree-item.js';
 import './components/lr-treemap.js';

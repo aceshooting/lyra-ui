@@ -21,7 +21,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Граф шартты белгілері',
   entityChipWithType: '{label}, {type}',
   showMore: 'Көбірек көрсету',
-  showMoreCount: 'Тағы {count} көрсету',
   embeddingExplorerSpatialBounds: 'көлденеңінен {minX}–{maxX}; тігінен {minY}–{maxY}',
   embeddingExplorerSpatialSummary: 'Толық дереккөзде {total} нүкте ({global}). Көрініс аймағында {matched} нүкте ({viewport}). Тығыздық аймақтары барлық сәйкестіктерді санайды; үстінен көрсетілген нүктелер бұл сандарға қосылмайды.',
   embeddingExplorerSpatialBin: 'Тығыздық аймағында {count} нүкте: {bounds}',

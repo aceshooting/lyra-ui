@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'डेटा',
   styleLookTerminal: 'टर्मिनल',
   styleLookHighContrast: 'उच्च कंट्रास्ट',
+  transferManagerLabel: 'फाइल भेजल आ पावल',
+  transferManagerCount: {
+    one: '{count} बेर फाइल भेजल आ पावल',
+    other: '{count} बेर फाइल भेजल आ पावल',
+  },
+  transferManagerResume: 'फेरू चालू करीं',
+  transferManagerPauseAll: 'सभ के कुछ देर रोकीं',
+  transferManagerResumeAll: 'सभ के फेरू चालू करीं',
+  transferManagerCancelAll: 'सभ के रद्द करीं',
+  transferManagerRetryAll: 'सभ खातिर फेरू कोसिस करीं',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{total} में से {done}',
+  transferManagerEta: '{duration} बाकी बा',
+  transferManagerUnknownEta: 'बाकी समय मालूम नइखे',
+  transferManagerPaused: 'कुछ देर खातिर रुकल बा',
+  transferManagerCancelled: 'रद्द हो गइल',
+  transferManagerEmpty: 'कवनो फाइल भेजल भा पावल नइखे जात',
 };
 
 registerLyraLocale('bho', strings);

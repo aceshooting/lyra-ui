@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'डेटा',
   styleLookTerminal: 'टर्मिनल',
   styleLookHighContrast: 'उच्च कन्ट्रास्ट',
+  transferManagerLabel: 'स्थानान्तरणहरू',
+  transferManagerCount: {
+    one: '{count} स्थानान्तरण',
+    other: '{count} स्थानान्तरण',
+  },
+  transferManagerResume: 'फेरि सुरु गर्नुहोस्',
+  transferManagerPauseAll: 'सबै रोक्नुहोस्',
+  transferManagerResumeAll: 'सबै फेरि सुरु गर्नुहोस्',
+  transferManagerCancelAll: 'सबै रद्द गर्नुहोस्',
+  transferManagerRetryAll: 'सबै फेरि प्रयास गर्नुहोस्',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{total} मध्ये {done}',
+  transferManagerEta: 'बाँकी समय: {duration}',
+  transferManagerUnknownEta: 'बाँकी समय थाहा छैन',
+  transferManagerPaused: 'अस्थायी रूपमा रोकिएको',
+  transferManagerCancelled: 'रद्द गरिएको',
+  transferManagerEmpty: 'कुनै स्थानान्तरण छैन',
 };
 
 registerLyraLocale('ne', strings);

@@ -109,6 +109,25 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Данные',
   styleLookTerminal: 'Терминал',
   styleLookHighContrast: 'Высокая контрастность',
+  transferManagerLabel: 'Передачи',
+  transferManagerCount: {
+    one: '{count} передача',
+    few: '{count} передачи',
+    many: '{count} передач',
+    other: '{count} передачи',
+  },
+  transferManagerResume: 'Возобновить',
+  transferManagerPauseAll: 'Приостановить все',
+  transferManagerResumeAll: 'Возобновить все',
+  transferManagerCancelAll: 'Отменить все',
+  transferManagerRetryAll: 'Повторить все',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} из {total}',
+  transferManagerEta: 'Осталось: {duration}',
+  transferManagerUnknownEta: 'Оставшееся время неизвестно',
+  transferManagerPaused: 'Приостановлено',
+  transferManagerCancelled: 'Отменено',
+  transferManagerEmpty: 'Нет передач',
 };
 
 registerLyraLocale('ru', strings);

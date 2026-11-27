@@ -98,6 +98,22 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Data',
   styleLookTerminal: 'Tọminal',
   styleLookHighContrast: 'Ọdịiche dị elu',
+  transferManagerLabel: 'Mbufe faịlụ',
+  transferManagerCount: {
+    other: 'Mbufe {count}',
+  },
+  transferManagerResume: 'Gaa n’ihu',
+  transferManagerPauseAll: 'Kwụsịtụ ha niile',
+  transferManagerResumeAll: 'Gaa n’ihu na ha niile',
+  transferManagerCancelAll: 'Kagbuo ha niile',
+  transferManagerRetryAll: 'Nwaa ha niile ọzọ',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} n’ime {total}',
+  transferManagerEta: 'Oge fọdụrụ: {duration}',
+  transferManagerUnknownEta: 'Amaghị oge fọdụrụ',
+  transferManagerPaused: 'Akwụsịtụrụ',
+  transferManagerCancelled: 'Akagbuola',
+  transferManagerEmpty: 'Enweghị mbufe',
 };
 
 registerLyraLocale('ig', strings);

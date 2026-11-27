@@ -310,6 +310,7 @@ export const scopedDefinitionClosures: Readonly<Record<string, readonly string[]
   'lr-tour': ['lr-tour'],
   'lr-trace-tree': ['lr-empty', 'lr-live-region', 'lr-trace-tree', 'lr-virtual-list'],
   'lr-transcript-feed': ['lr-transcript-feed'],
+  'lr-transfer-manager': ['lr-transfer-manager'],
   'lr-tree': ['lr-empty', 'lr-live-region', 'lr-tree', 'lr-tree-item', 'lr-virtual-list'],
   'lr-tree-item': ['lr-tree-item'],
   'lr-treemap': ['lr-treemap'],

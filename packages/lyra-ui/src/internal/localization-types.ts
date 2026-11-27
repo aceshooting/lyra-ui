@@ -1842,7 +1842,21 @@ export type LyraMessageKey =
   | 'styleLookMaterial'
   | 'styleLookData'
   | 'styleLookTerminal'
-  | 'styleLookHighContrast';
+  | 'styleLookHighContrast'
+  | 'transferManagerLabel'
+  | 'transferManagerCount'
+  | 'transferManagerResume'
+  | 'transferManagerPauseAll'
+  | 'transferManagerResumeAll'
+  | 'transferManagerCancelAll'
+  | 'transferManagerRetryAll'
+  | 'transferManagerItemAction'
+  | 'transferManagerBytes'
+  | 'transferManagerEta'
+  | 'transferManagerUnknownEta'
+  | 'transferManagerPaused'
+  | 'transferManagerCancelled'
+  | 'transferManagerEmpty';
 
 /**
  * Message-catalog input. Registration and per-instance `.strings` assignment snapshot eligible

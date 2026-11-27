@@ -22,7 +22,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Grafa leģenda',
   entityChipWithType: '{label}, {type}',
   showMore: 'Rādīt vairāk',
-  showMoreCount: 'Rādīt vēl {count}',
   embeddingExplorerSpatialBounds: 'horizontāli no {minX} līdz {maxX}; vertikāli no {minY} līdz {maxY}',
   embeddingExplorerSpatialSummary: 'Punkti pilnajā avotā: {total} ({global}). Punkti skatlaukā: {matched} ({viewport}). Blīvuma apgabali ietver visas atbilstības; punktu pārklājumi šiem skaitiem neko nepievieno.',
   embeddingExplorerSpatialBin: 'Punkti blīvuma apgabalā: {count}; {bounds}',

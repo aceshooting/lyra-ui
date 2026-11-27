@@ -4890,6 +4890,50 @@ export class LyraTourTargetMissingEvent extends LyraEvent<LyraEventDetailOf<Lyra
 }
 
 /**
+ * Class of every `lr-transfer-cancel` event; `event instanceof LyraTransferCancelEvent` is true
+ * for the events components dispatch and narrows `detail`.
+ */
+export class LyraTransferCancelEvent extends LyraEvent<LyraEventDetailOf<LyraGlobalEventMap['lr-transfer-cancel']>> {
+  static override readonly eventName = 'lr-transfer-cancel';
+  constructor(detail: LyraEventDetailOf<LyraGlobalEventMap['lr-transfer-cancel']>, options?: LyraEventOptions) {
+    super('lr-transfer-cancel', detail, options);
+  }
+}
+
+/**
+ * Class of every `lr-transfer-pause` event; `event instanceof LyraTransferPauseEvent` is true for
+ * the events components dispatch and narrows `detail`.
+ */
+export class LyraTransferPauseEvent extends LyraEvent<LyraEventDetailOf<LyraGlobalEventMap['lr-transfer-pause']>> {
+  static override readonly eventName = 'lr-transfer-pause';
+  constructor(detail: LyraEventDetailOf<LyraGlobalEventMap['lr-transfer-pause']>, options?: LyraEventOptions) {
+    super('lr-transfer-pause', detail, options);
+  }
+}
+
+/**
+ * Class of every `lr-transfer-resume` event; `event instanceof LyraTransferResumeEvent` is true
+ * for the events components dispatch and narrows `detail`.
+ */
+export class LyraTransferResumeEvent extends LyraEvent<LyraEventDetailOf<LyraGlobalEventMap['lr-transfer-resume']>> {
+  static override readonly eventName = 'lr-transfer-resume';
+  constructor(detail: LyraEventDetailOf<LyraGlobalEventMap['lr-transfer-resume']>, options?: LyraEventOptions) {
+    super('lr-transfer-resume', detail, options);
+  }
+}
+
+/**
+ * Class of every `lr-transfer-retry` event; `event instanceof LyraTransferRetryEvent` is true for
+ * the events components dispatch and narrows `detail`.
+ */
+export class LyraTransferRetryEvent extends LyraEvent<LyraEventDetailOf<LyraGlobalEventMap['lr-transfer-retry']>> {
+  static override readonly eventName = 'lr-transfer-retry';
+  constructor(detail: LyraEventDetailOf<LyraGlobalEventMap['lr-transfer-retry']>, options?: LyraEventOptions) {
+    super('lr-transfer-retry', detail, options);
+  }
+}
+
+/**
  * Class of every `lr-validity-change` event; `event instanceof LyraValidityChangeEvent` is true
  * for the events components dispatch and narrows `detail`.
  */

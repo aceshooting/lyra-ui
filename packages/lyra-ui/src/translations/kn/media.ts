@@ -86,7 +86,6 @@ const strings: LyraLocaleStrings = {
   videoPlaylistLabel: 'ವೀಡಿಯೋ ಪ್ಲೇಪಟ್ಟಿ',
   videoPlaylistUntitled: 'ವೀಡಿಯೋ {position}',
   videoTimeReadout: '{duration}ರಲ್ಲಿ {current}',
-  pause: 'ವಿರಾಮಗೊಳಿಸಿ',
   qrCodeMissingLibrary: 'QR ಕೋಡ್ ರೆಂಡರ್ ಮಾಡಲು ಈ ಘಟಕಕ್ಕೆ ಐಚ್ಛಿಕ "qrcode" ಪ್ಯಾಕೇಜ್ ಅಗತ್ಯವಿದೆ.',
   qrCodeGenerationFailed: 'ಈ ಮೌಲ್ಯವನ್ನು QR ಕೋಡ್ ಆಗಿ ಎನ್‌ಕೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.',
   mapMissingLibrary: 'ನಕ್ಷೆ ರೆಂಡರ್ ಮಾಡಲು ಈ ಘಟಕಕ್ಕೆ ಐಚ್ಛಿಕ "{package}" ಪ್ಯಾಕೇಜ್ ಅಗತ್ಯವಿದೆ.',

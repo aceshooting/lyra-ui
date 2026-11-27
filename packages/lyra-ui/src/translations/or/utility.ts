@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'ଡାଟା',
   styleLookTerminal: 'ଟର୍ମିନାଲ୍',
   styleLookHighContrast: 'ଉଚ୍ଚ କଣ୍ଟ୍ରାଷ୍ଟ',
+  transferManagerLabel: 'ସ୍ଥାନାନ୍ତର',
+  transferManagerCount: {
+    one: '{count}ଟି ସ୍ଥାନାନ୍ତର',
+    other: '{count}ଟି ସ୍ଥାନାନ୍ତର',
+  },
+  transferManagerResume: 'ପୁଣି ଆରମ୍ଭ କରନ୍ତୁ',
+  transferManagerPauseAll: 'ସବୁ ସାମୟିକ ଭାବେ ବନ୍ଦ କରନ୍ତୁ',
+  transferManagerResumeAll: 'ସବୁ ପୁଣି ଆରମ୍ଭ କରନ୍ତୁ',
+  transferManagerCancelAll: 'ସବୁ ବାତିଲ କରନ୍ତୁ',
+  transferManagerRetryAll: 'ସବୁ ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{total} ମଧ୍ୟରୁ {done}',
+  transferManagerEta: 'ବାକି ସମୟ: {duration}',
+  transferManagerUnknownEta: 'ବାକି ସମୟ ଜଣା ନାହିଁ',
+  transferManagerPaused: 'ସାମୟିକ ଭାବେ ବନ୍ଦ',
+  transferManagerCancelled: 'ବାତିଲ ହୋଇଛି',
+  transferManagerEmpty: 'କୌଣସି ସ୍ଥାନାନ୍ତର ନାହିଁ',
 };
 
 registerLyraLocale('or', strings);

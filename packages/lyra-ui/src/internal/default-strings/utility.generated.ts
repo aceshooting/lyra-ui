@@ -82,3 +82,20 @@ export const LYRA_DEFAULT_stylePanelSurfaceSolid: LyraMessage = 'Solid';
 export const LYRA_DEFAULT_tourDone: LyraMessage = 'Done';
 export const LYRA_DEFAULT_tourSkip: LyraMessage = 'Skip';
 export const LYRA_DEFAULT_tourStepOf: LyraMessage = 'Step {current} of {total}';
+export const LYRA_DEFAULT_transferManagerBytes: LyraMessage = '{done} of {total}';
+export const LYRA_DEFAULT_transferManagerCancelAll: LyraMessage = 'Cancel all';
+export const LYRA_DEFAULT_transferManagerCancelled: LyraMessage = 'Cancelled';
+export const LYRA_DEFAULT_transferManagerCount: LyraMessage = {
+    one: '{count} transfer',
+    other: '{count} transfers',
+  };
+export const LYRA_DEFAULT_transferManagerEmpty: LyraMessage = 'No transfers';
+export const LYRA_DEFAULT_transferManagerEta: LyraMessage = '{duration} remaining';
+export const LYRA_DEFAULT_transferManagerItemAction: LyraMessage = '{action}: {name}';
+export const LYRA_DEFAULT_transferManagerLabel: LyraMessage = 'Transfers';
+export const LYRA_DEFAULT_transferManagerPauseAll: LyraMessage = 'Pause all';
+export const LYRA_DEFAULT_transferManagerPaused: LyraMessage = 'Paused';
+export const LYRA_DEFAULT_transferManagerResume: LyraMessage = 'Resume';
+export const LYRA_DEFAULT_transferManagerResumeAll: LyraMessage = 'Resume all';
+export const LYRA_DEFAULT_transferManagerRetryAll: LyraMessage = 'Retry all';
+export const LYRA_DEFAULT_transferManagerUnknownEta: LyraMessage = 'Time remaining unknown';

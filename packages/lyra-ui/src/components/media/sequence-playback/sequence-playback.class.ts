@@ -16,7 +16,8 @@ import { registerSequencePlayback, type SequencePlaybackCommands, type SequenceP
 import { blankNumberConverter } from '../../../internal/converters.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_pause, LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition, LYRA_DEFAULT_playbackStepPosition } from '../../../internal/default-strings/media.generated.js';
+import { LYRA_DEFAULT_play, LYRA_DEFAULT_playbackPosition, LYRA_DEFAULT_playbackStepPosition } from '../../../internal/default-strings/media.generated.js';
+import { LYRA_DEFAULT_pause } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 const DEFAULT_INTERVAL_MS = 900;

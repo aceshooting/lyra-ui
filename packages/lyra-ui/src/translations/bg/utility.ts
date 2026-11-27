@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Данни',
   styleLookTerminal: 'Терминал',
   styleLookHighContrast: 'Висок контраст',
+  transferManagerLabel: 'Прехвърляния',
+  transferManagerCount: {
+    one: '{count} прехвърляне',
+    other: '{count} прехвърляния',
+  },
+  transferManagerResume: 'Продължаване',
+  transferManagerPauseAll: 'Пауза на всички',
+  transferManagerResumeAll: 'Продължаване на всички',
+  transferManagerCancelAll: 'Отмяна на всички',
+  transferManagerRetryAll: 'Нов опит за всички',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} от {total}',
+  transferManagerEta: 'Остава: {duration}',
+  transferManagerUnknownEta: 'Оставащото време е неизвестно',
+  transferManagerPaused: 'На пауза',
+  transferManagerCancelled: 'Отменено',
+  transferManagerEmpty: 'Няма прехвърляния',
 };
 
 registerLyraLocale('bg', strings);

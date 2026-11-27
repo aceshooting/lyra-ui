@@ -114,6 +114,26 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Sonraí',
   styleLookTerminal: 'Teirminéal',
   styleLookHighContrast: 'Ardchodarsnacht',
+  transferManagerLabel: 'Aistrithe',
+  transferManagerCount: {
+    one: '{count} aistriú',
+    two: '{count} aistriú',
+    few: '{count} aistriú',
+    many: '{count} n-aistriú',
+    other: '{count} aistriú',
+  },
+  transferManagerResume: 'Lean ar aghaidh',
+  transferManagerPauseAll: 'Cuir ar sos iad uile',
+  transferManagerResumeAll: 'Lean ar aghaidh leo uile',
+  transferManagerCancelAll: 'Cealaigh iad uile',
+  transferManagerRetryAll: 'Bain triail astu uile arís',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} as {total}',
+  transferManagerEta: 'Am fágtha: {duration}',
+  transferManagerUnknownEta: 'Ní fios an t-am atá fágtha',
+  transferManagerPaused: 'Ar sos',
+  transferManagerCancelled: 'Cealaithe',
+  transferManagerEmpty: 'Níl aon aistriú ann',
 };
 
 registerLyraLocale('ga', strings);

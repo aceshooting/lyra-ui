@@ -18,7 +18,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Legend ng graph',
   entityChipWithType: '{label}, {type}',
   showMore: 'Magpakita pa',
-  showMoreCount: 'Magpakita pa ng {count}',
   embeddingExplorerSpatialBounds: '{minX} hanggang {maxX} nang pahalang; {minY} hanggang {maxY} nang patayo',
   embeddingExplorerSpatialSummary: '{total} punto sa buong source ({global}). {matched} punto sa viewport ({viewport}). Binibilang ng mga rehiyon ng densidad ang lahat ng tugma; hindi nagdaragdag sa mga bilang na ito ang mga point overlay.',
   embeddingExplorerSpatialBin: '{count} punto sa rehiyon ng densidad: {bounds}',

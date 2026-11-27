@@ -88,7 +88,6 @@ const strings: LyraLocaleStrings = {
   videoPlaylistLabel: 'Popis videozapisa',
   videoPlaylistUntitled: 'Videozapis {position}',
   videoTimeReadout: '{current} od {duration}',
-  pause: 'Pauziraj',
   qrCodeMissingLibrary: 'Za prikaz QR kodova ova komponenta zahtijeva instaliran izborni paket „qrcode”.',
   qrCodeGenerationFailed: 'Ovu vrijednost nije moguće kodirati kao QR kod.',
   mapMissingLibrary: 'Za prikaz karte ova komponenta zahtijeva instaliran izborni paket „{package}”.',

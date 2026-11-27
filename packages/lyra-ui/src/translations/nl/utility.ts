@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Data',
   styleLookTerminal: 'Terminal',
   styleLookHighContrast: 'Hoog contrast',
+  transferManagerLabel: 'Overdrachten',
+  transferManagerCount: {
+    one: '{count} overdracht',
+    other: '{count} overdrachten',
+  },
+  transferManagerResume: 'Hervatten',
+  transferManagerPauseAll: 'Alles pauzeren',
+  transferManagerResumeAll: 'Alles hervatten',
+  transferManagerCancelAll: 'Alles annuleren',
+  transferManagerRetryAll: 'Alles opnieuw proberen',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} van {total}',
+  transferManagerEta: 'Nog {duration}',
+  transferManagerUnknownEta: 'Resterende tijd onbekend',
+  transferManagerPaused: 'Gepauzeerd',
+  transferManagerCancelled: 'Geannuleerd',
+  transferManagerEmpty: 'Geen overdrachten',
 };
 
 registerLyraLocale('nl', strings);

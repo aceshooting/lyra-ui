@@ -38496,7 +38496,7 @@
     "current": {
       "version": "33.2.0",
       "sourceCommit": null,
-      "manifestSha256": "571b1b9c2067e1687de819f022c55c0175766168f9584b82e0997e9032b0e24b",
+      "manifestSha256": "4d2d4eae0c6d092ea4fed2818a1f799e4220dc09df8b548d588a45bbc86da213",
       "tags": [
         "lr-accordion",
         "lr-accordion-item",
@@ -38807,6 +38807,7 @@
         "lr-tour",
         "lr-trace-tree",
         "lr-transcript-feed",
+        "lr-transfer-manager",
         "lr-tree",
         "lr-tree-item",
         "lr-treemap",

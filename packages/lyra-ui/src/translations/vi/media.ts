@@ -84,7 +84,6 @@ const strings: LyraLocaleStrings = {
   videoPlaylistLabel: 'Danh sách phát video',
   videoPlaylistUntitled: 'Video {position}',
   videoTimeReadout: '{current} trên {duration}',
-  pause: 'Tạm dừng',
   qrCodeMissingLibrary: 'Cần cài gói tùy chọn "qrcode" để hiển thị mã QR.',
   qrCodeGenerationFailed: 'Không thể mã hóa giá trị này thành mã QR.',
   mapMissingLibrary: 'Cần cài gói tùy chọn "{package}" để hiển thị bản đồ.',

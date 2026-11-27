@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'ಡೇಟಾ',
   styleLookTerminal: 'ಟರ್ಮಿನಲ್',
   styleLookHighContrast: 'ಹೆಚ್ಚಿನ ಕಾಂಟ್ರಾಸ್ಟ್',
+  transferManagerLabel: 'ವರ್ಗಾವಣೆಗಳು',
+  transferManagerCount: {
+    one: '{count} ವರ್ಗಾವಣೆ',
+    other: '{count} ವರ್ಗಾವಣೆಗಳು',
+  },
+  transferManagerResume: 'ಮುಂದುವರಿಸಿ',
+  transferManagerPauseAll: 'ಎಲ್ಲವನ್ನೂ ತಾತ್ಕಾಲಿಕವಾಗಿ ನಿಲ್ಲಿಸಿ',
+  transferManagerResumeAll: 'ಎಲ್ಲವನ್ನೂ ಮುಂದುವರಿಸಿ',
+  transferManagerCancelAll: 'ಎಲ್ಲವನ್ನೂ ರದ್ದುಗೊಳಿಸಿ',
+  transferManagerRetryAll: 'ಎಲ್ಲವನ್ನೂ ಮರುಪ್ರಯತ್ನಿಸಿ',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{total} ರಲ್ಲಿ {done}',
+  transferManagerEta: 'ಉಳಿದ ಸಮಯ: {duration}',
+  transferManagerUnknownEta: 'ಉಳಿದ ಸಮಯ ತಿಳಿದಿಲ್ಲ',
+  transferManagerPaused: 'ತಾತ್ಕಾಲಿಕವಾಗಿ ನಿಲ್ಲಿಸಲಾಗಿದೆ',
+  transferManagerCancelled: 'ರದ್ದುಗೊಳಿಸಲಾಗಿದೆ',
+  transferManagerEmpty: 'ಯಾವುದೇ ವರ್ಗಾವಣೆಗಳಿಲ್ಲ',
 };
 
 registerLyraLocale('kn', strings);

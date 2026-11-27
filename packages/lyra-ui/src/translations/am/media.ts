@@ -86,7 +86,6 @@ const strings: LyraLocaleStrings = {
   videoPlaylistLabel: 'የቪዲዮ ዝርዝር',
   videoPlaylistUntitled: 'ቪዲዮ {position}',
   videoTimeReadout: 'ከ{duration} {current}',
-  pause: 'አቁም',
   qrCodeMissingLibrary: 'QR ኮዶችን ለማሳየት ይህ ክፍል አማራጭ "qrcode" ጥቅል እንዲጫን ይፈልጋል።',
   qrCodeGenerationFailed: 'ይህን ዋጋ እንደ QR ኮድ መቀየር አልተቻለም።',
   mapMissingLibrary: 'ካርታውን ለማሳየት ይህ ክፍል አማራጭ "{package}" ጥቅል እንዲጫን ይፈልጋል።',

@@ -248,6 +248,7 @@ import type { LyraRandomContentEventMap } from '../components/utility/random-con
 import type { LyraResizeObserverEventMap } from '../components/utility/resize-observer/resize-observer.class.js';
 import type { LyraStylePanelEventMap } from '../components/utility/style-panel/style-panel.class.js';
 import type { LyraTourEventMap } from '../components/utility/tour/tour.class.js';
+import type { LyraTransferManagerEventMap } from '../components/utility/transfer-manager/transfer-manager.class.js';
 import type { LyraArchiveViewerEventMap } from '../components/viewers/archive-viewer/archive-viewer.class.js';
 import type { LyraCalendarViewerEventMap } from '../components/viewers/calendar-viewer/calendar-viewer.class.js';
 import type { LyraContactViewerEventMap } from '../components/viewers/contact-viewer/contact-viewer.class.js';
@@ -540,6 +541,7 @@ export interface LyraTagEventTypes {
   'lr-tour': LyraTourEventMap;
   'lr-trace-tree': LyraTraceTreeEventMap;
   'lr-transcript-feed': LyraTranscriptFeedEventMap;
+  'lr-transfer-manager': LyraTransferManagerEventMap;
   'lr-tree': LyraTreeEventMap;
   'lr-tree-item': LyraTreeItemEventMap;
   'lr-treemap': LyraTreemapEventMap;

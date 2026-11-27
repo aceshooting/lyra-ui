@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'ডেটা',
   styleLookTerminal: 'টার্মিনাল',
   styleLookHighContrast: 'উচ্চ কনট্রাস্ট',
+  transferManagerLabel: 'স্থানান্তর',
+  transferManagerCount: {
+    one: '{count}টি স্থানান্তর',
+    other: '{count}টি স্থানান্তর',
+  },
+  transferManagerResume: 'আবার চালু করুন',
+  transferManagerPauseAll: 'সব স্থগিত করুন',
+  transferManagerResumeAll: 'সব আবার চালু করুন',
+  transferManagerCancelAll: 'সব বাতিল করুন',
+  transferManagerRetryAll: 'সব আবার চেষ্টা করুন',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{total} এর মধ্যে {done}',
+  transferManagerEta: 'বাকি সময়: {duration}',
+  transferManagerUnknownEta: 'বাকি সময় অজানা',
+  transferManagerPaused: 'স্থগিত',
+  transferManagerCancelled: 'বাতিল',
+  transferManagerEmpty: 'কোনো স্থানান্তর নেই',
 };
 
 registerLyraLocale('bn', strings);

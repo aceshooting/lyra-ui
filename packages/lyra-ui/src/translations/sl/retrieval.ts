@@ -18,7 +18,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Legenda grafa',
   entityChipWithType: '{label}, {type}',
   showMore: 'Pokaži več',
-  showMoreCount: 'Pokaži več ({count})',
   embeddingExplorerSpatialBounds: 'od {minX} do {maxX} vodoravno; od {minY} do {maxY} navpično',
   embeddingExplorerSpatialSummary: '{total} točk v celotnem viru ({global}). {matched} točk v vidnem območju ({viewport}). Območja gostote štejejo vsa ujemanja; prekrivne točke teh števil ne povečajo.',
   embeddingExplorerSpatialBin: '{count} točk v območju gostote: {bounds}',

@@ -18,7 +18,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Grafieklegenda',
   entityChipWithType: '{label}, type {type}',
   showMore: 'Meer weergeven',
-  showMoreCount: 'Toon nog {count}',
   embeddingExplorerSpatialBounds: '{minX} tot {maxX} horizontaal; {minY} tot {maxY} verticaal',
   embeddingExplorerSpatialSummary: '{total} punten in de volledige bron ({global}). {matched} punten in het weergavegebied ({viewport}). Dichtheidsgebieden tellen alle overeenkomsten; puntoverlays verhogen deze aantallen niet.',
   embeddingExplorerSpatialBin: '{count} punten in dichtheidsgebied: {bounds}',

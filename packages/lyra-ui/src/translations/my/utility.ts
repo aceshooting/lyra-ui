@@ -94,6 +94,22 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'ဒေတာ',
   styleLookTerminal: 'တာမီနယ်',
   styleLookHighContrast: 'အရောင်ခြားနားမှု မြင့်',
+  transferManagerLabel: 'ဖိုင်လွှဲပြောင်းမှုများ',
+  transferManagerCount: {
+    other: 'လွှဲပြောင်းမှု {count} ခု',
+  },
+  transferManagerResume: 'ပြန်ဆက်ရန်',
+  transferManagerPauseAll: 'အားလုံး ခေတ္တရပ်ရန်',
+  transferManagerResumeAll: 'အားလုံး ပြန်ဆက်ရန်',
+  transferManagerCancelAll: 'အားလုံး ပယ်ဖျက်ရန်',
+  transferManagerRetryAll: 'အားလုံး ထပ်ကြိုးစားရန်',
+  transferManagerItemAction: '{action} - {name}',
+  transferManagerBytes: '{total} အနက် {done}',
+  transferManagerEta: 'ကျန်ချိန် - {duration}',
+  transferManagerUnknownEta: 'ကျန်ချိန် မသိရပါ',
+  transferManagerPaused: 'ခေတ္တရပ်ထားသည်',
+  transferManagerCancelled: 'ပယ်ဖျက်ထားသည်',
+  transferManagerEmpty: 'လွှဲပြောင်းမှု မရှိပါ',
 };
 
 registerLyraLocale('my', strings);

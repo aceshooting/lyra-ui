@@ -94,6 +94,22 @@ const strings: LyraLocaleStrings = {
   styleLookData: '数据',
   styleLookTerminal: '终端',
   styleLookHighContrast: '高对比度',
+  transferManagerLabel: '传输',
+  transferManagerCount: {
+    other: '{count} 项传输',
+  },
+  transferManagerResume: '继续',
+  transferManagerPauseAll: '全部暂停',
+  transferManagerResumeAll: '全部继续',
+  transferManagerCancelAll: '全部取消',
+  transferManagerRetryAll: '全部重试',
+  transferManagerItemAction: '{action}：{name}',
+  transferManagerBytes: '{done} / {total}',
+  transferManagerEta: '剩余时间：{duration}',
+  transferManagerUnknownEta: '剩余时间未知',
+  transferManagerPaused: '已暂停',
+  transferManagerCancelled: '已取消',
+  transferManagerEmpty: '没有传输任务',
 };
 
 registerLyraLocale('zh-CN', strings);

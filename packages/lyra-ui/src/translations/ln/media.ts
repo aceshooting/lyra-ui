@@ -86,7 +86,6 @@ const strings: LyraLocaleStrings = {
   videoPlaylistLabel: 'Liste ya vidéo',
   videoPlaylistUntitled: 'Vidéo {position}',
   videoTimeReadout: '{current} kati na {duration}',
-  pause: 'Telemisa',
   qrCodeMissingLibrary: 'Composant oyo esengaka paquet "qrcode" mpo na kosala ba code QR.',
   qrCodeGenerationFailed: 'Valeur oyo ekoki te kokomama lokola code QR.',
   mapMissingLibrary: 'Composant oyo esengaka paquet "{package}" mpo na kolakisa carte.',

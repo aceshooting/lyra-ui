@@ -18,7 +18,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'ଗ୍ରାଫ୍ ସୂଚକ',
   entityChipWithType: '{label}, {type}',
   showMore: 'ଅଧିକ ଦେଖାନ୍ତୁ',
-  showMoreCount: 'ଆଉ {count}ଟି ଦେଖାନ୍ତୁ',
   embeddingExplorerSpatialBounds: 'ଆଡ଼ରେ {minX}ରୁ {maxX}; ଲମ୍ବରେ {minY}ରୁ {maxY}',
   embeddingExplorerSpatialSummary: 'ସମ୍ପୂର୍ଣ୍ଣ ଉତ୍ସରେ {total}ଟି ବିନ୍ଦୁ ({global})। ଦୃଶ୍ୟ ଅଞ୍ଚଳରେ {matched}ଟି ବିନ୍ଦୁ ({viewport})। ଘନତା ଅଞ୍ଚଳଗୁଡ଼ିକ ସମସ୍ତ ମେଳକୁ ଗଣନା କରନ୍ତି; ବିନ୍ଦୁ ଓଭରଲେଗୁଡ଼ିକ ଏହି ସଂଖ୍ୟା ବଢ଼ାନ୍ତି ନାହିଁ।',
   embeddingExplorerSpatialBin: 'ଘନତା ଅଞ୍ଚଳରେ {count}ଟି ବିନ୍ଦୁ: {bounds}',

@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Données',
   styleLookTerminal: 'Terminal',
   styleLookHighContrast: 'Contraste makasi',
+  transferManagerLabel: 'Botindi ya bafichye',
+  transferManagerCount: {
+    one: 'Botindi {count}',
+    other: 'Botindi {count}',
+  },
+  transferManagerResume: 'Koba',
+  transferManagerPauseAll: 'Pema na nyonso',
+  transferManagerResumeAll: 'Koba na nyonso',
+  transferManagerCancelAll: 'Longola nyonso',
+  transferManagerRetryAll: 'Meka nyonso lisusu',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} kati na {total}',
+  transferManagerEta: 'Ntango oyo etikali: {duration}',
+  transferManagerUnknownEta: 'Ntango oyo etikali eyebani te',
+  transferManagerPaused: 'Etelemi mpo na mwa ntango',
+  transferManagerCancelled: 'Elongolami',
+  transferManagerEmpty: 'Botindi ya bafichye ezali te',
 };
 
 registerLyraLocale('ln', strings);

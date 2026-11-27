@@ -132,7 +132,7 @@ The entry points, then:
   or future exports. Prefer the owning entry for that component's complete contract and smaller
   bundles.
 
-- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 310
+- **`all.js` compatibility entry.** `import '@aceshooting/lyra-ui/all.js';` registers the 311
   root-included tags — everything **except** the 15 inventory-designated optional-peer-family tags:
   `lr-chart` and its 8 typed subclasses (`lr-line-chart`, `lr-bar-chart`, `lr-pie-chart`,
   `lr-doughnut-chart`, `lr-radar-chart`, `lr-polar-area-chart`, `lr-bubble-chart`,
@@ -6264,6 +6264,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-tour': LyraTourReactProps;
   'lr-trace-tree': LyraTraceTreeReactProps;
   'lr-transcript-feed': LyraTranscriptFeedReactProps;
+  'lr-transfer-manager': LyraTransferManagerReactProps;
   'lr-tree': LyraTreeReactProps;
   'lr-tree-item': LyraTreeItemReactProps;
   'lr-treemap': LyraTreemapReactProps;
@@ -6720,6 +6721,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-tour': LyraComponentTypeMap['lr-tour']['element'];
   'lr-trace-tree': LyraComponentTypeMap['lr-trace-tree']['element'];
   'lr-transcript-feed': LyraComponentTypeMap['lr-transcript-feed']['element'];
+  'lr-transfer-manager': LyraComponentTypeMap['lr-transfer-manager']['element'];
   'lr-tree': LyraComponentTypeMap['lr-tree']['element'];
   'lr-tree-item': LyraComponentTypeMap['lr-tree-item']['element'];
   'lr-treemap': LyraComponentTypeMap['lr-treemap']['element'];
@@ -7047,6 +7049,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-tour': LyraTourSvelteProps;
   'lr-trace-tree': LyraTraceTreeSvelteProps;
   'lr-transcript-feed': LyraTranscriptFeedSvelteProps;
+  'lr-transfer-manager': LyraTransferManagerSvelteProps;
   'lr-tree': LyraTreeSvelteProps;
   'lr-tree-item': LyraTreeItemSvelteProps;
   'lr-treemap': LyraTreemapSvelteProps;
@@ -7533,6 +7536,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-tour': LyraTourVueProps;
   'lr-trace-tree': LyraTraceTreeVueProps;
   'lr-transcript-feed': LyraTranscriptFeedVueProps;
+  'lr-transfer-manager': LyraTransferManagerVueProps;
   'lr-tree': LyraTreeVueProps;
   'lr-tree-item': LyraTreeItemVueProps;
   'lr-treemap': LyraTreemapVueProps;

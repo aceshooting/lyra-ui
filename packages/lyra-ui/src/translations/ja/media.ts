@@ -84,7 +84,6 @@ const strings: LyraLocaleStrings = {
   videoPlaylistLabel: '動画プレイリスト',
   videoPlaylistUntitled: '動画 {position}',
   videoTimeReadout: '{duration} 中 {current}',
-  pause: '一時停止',
   qrCodeMissingLibrary: 'このコンポーネントで QR コードを生成するには、オプションの "qrcode" パッケージをインストールしてください。',
   qrCodeGenerationFailed: 'この値は QR コードにエンコードできませんでした。',
   mapMissingLibrary: 'このコンポーネントで地図を表示するには、オプションの "{package}" パッケージをインストールしてください。',

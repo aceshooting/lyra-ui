@@ -21,7 +21,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Maɓallin jadawali',
   entityChipWithType: '{label}, {type}',
   showMore: 'Nuna ƙari',
-  showMoreCount: 'Nuna ƙarin {count}',
   embeddingExplorerSpatialBounds: '{minX} zuwa {maxX} a kwance; {minY} zuwa {maxY} a tsaye',
   embeddingExplorerSpatialSummary: 'Ɗigo {total} a cikakken tushe ({global}). Ɗigo {matched} a yankin kallo ({viewport}). Yankunan yawa suna ƙirga dukkan abubuwan da suka dace; ɗigon da aka nuna a sama ba sa ƙara wa waɗannan ƙididdiga.',
   embeddingExplorerSpatialBin: 'Ɗigo {count} a yankin yawa: {bounds}',

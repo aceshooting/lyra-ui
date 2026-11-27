@@ -86,7 +86,6 @@ const strings: LyraLocaleStrings = {
   videoPlaylistLabel: 'Tarree taphannaa viidiyoo',
   videoPlaylistUntitled: 'Viidiyoo {position}',
   videoTimeReadout: '{current} / {duration}',
-  pause: 'Dhaabi',
   qrCodeMissingLibrary: 'Kutaan kun koodii QR agarsiisuuf paakeejii filannoo "qrcode" fe\'amee qabaachuu barbaada.',
   qrCodeGenerationFailed: 'Gatii kana koodii QRtti jijjiiruun hin danda\'amne.',
   mapMissingLibrary: 'Kutaan kun kaartaa agarsiisuuf paakeejii filannoo "{package}" fe\'amee qabaachuu barbaada.',

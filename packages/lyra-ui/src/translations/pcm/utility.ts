@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Data',
   styleLookTerminal: 'Terminal',
   styleLookHighContrast: 'High contrast',
+  transferManagerLabel: 'File Transfer Dem',
+  transferManagerCount: {
+    one: '{count} file transfer',
+    other: '{count} transfer dem',
+  },
+  transferManagerResume: 'Continue am',
+  transferManagerPauseAll: 'Pause all of dem',
+  transferManagerResumeAll: 'Continue all of dem',
+  transferManagerCancelAll: 'Cancel all of dem',
+  transferManagerRetryAll: 'Try all of dem again',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} out of {total}',
+  transferManagerEta: 'Time wey remain: {duration}',
+  transferManagerUnknownEta: 'We no know di time wey remain',
+  transferManagerPaused: 'E pause',
+  transferManagerCancelled: 'Dem don cancel am',
+  transferManagerEmpty: 'No file transfer dey',
 };
 
 registerLyraLocale('pcm', strings);

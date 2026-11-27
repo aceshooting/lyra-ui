@@ -104,6 +104,24 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Dati',
   styleLookTerminal: 'Terminālis',
   styleLookHighContrast: 'Augsts kontrasts',
+  transferManagerLabel: 'Pārsūtīšana',
+  transferManagerCount: {
+    zero: '{count} pārsūtījumu',
+    one: '{count} pārsūtījums',
+    other: '{count} pārsūtījumi',
+  },
+  transferManagerResume: 'Turpināt',
+  transferManagerPauseAll: 'Pauzēt visus',
+  transferManagerResumeAll: 'Turpināt visus',
+  transferManagerCancelAll: 'Atcelt visus',
+  transferManagerRetryAll: 'Mēģināt visus vēlreiz',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} no {total}',
+  transferManagerEta: 'Atlicis: {duration}',
+  transferManagerUnknownEta: 'Atlikušais laiks nav zināms',
+  transferManagerPaused: 'Pauzēts',
+  transferManagerCancelled: 'Atcelts',
+  transferManagerEmpty: 'Nav pārsūtījumu',
 };
 
 registerLyraLocale('lv', strings);

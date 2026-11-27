@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'ڈیٹا',
   styleLookTerminal: 'ٹرمینل',
   styleLookHighContrast: 'اُچا کنٹراسٹ',
+  transferManagerLabel: 'فائلاں دی منتقلی',
+  transferManagerCount: {
+    one: '{count} منتقلی',
+    other: '{count} منتقلیاں',
+  },
+  transferManagerResume: 'فیر چالو کرو',
+  transferManagerPauseAll: 'ساریاں تھوڑی دیر لئی روکو',
+  transferManagerResumeAll: 'ساریاں فیر چالو کرو',
+  transferManagerCancelAll: 'ساریاں منسوخ کرو',
+  transferManagerRetryAll: 'ساریاں دی فیر کوشش کرو',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{total} وچوں {done}',
+  transferManagerEta: 'باقی سماں: {duration}',
+  transferManagerUnknownEta: 'باقی سمے دا پتہ نئیں',
+  transferManagerPaused: 'تھوڑی دیر لئی رکی اے',
+  transferManagerCancelled: 'منسوخ ہو گئی',
+  transferManagerEmpty: 'کوئی منتقلی نئیں',
 };
 
 registerLyraLocale('pnb', strings, { dir: 'rtl', name: 'پنجابی' });

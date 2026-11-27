@@ -18,7 +18,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Graf izohi',
   entityChipWithType: '{label}, {type}',
   showMore: 'Koʻproq koʻrsatish',
-  showMoreCount: 'Yana {count} ta koʻrsatish',
   embeddingExplorerSpatialBounds: 'gorizontal {minX} dan {maxX} gacha; vertikal {minY} dan {maxY} gacha',
   embeddingExplorerSpatialSummary: 'Toʻliq manbada {total} ta nuqta ({global}). Koʻrish sohasida {matched} ta nuqta ({viewport}). Zichlik sohalari barcha mosliklarni hisoblaydi; nuqta ustqatlamlari bu sonlarga qoʻshilmaydi.',
   embeddingExplorerSpatialBin: 'Zichlik sohasida {count} ta nuqta: {bounds}',

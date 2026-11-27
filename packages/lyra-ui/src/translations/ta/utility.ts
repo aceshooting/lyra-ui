@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'தரவு',
   styleLookTerminal: 'டெர்மினல்',
   styleLookHighContrast: 'அதிக மாறுபாடு',
+  transferManagerLabel: 'பரிமாற்றங்கள்',
+  transferManagerCount: {
+    one: '{count} பரிமாற்றம்',
+    other: '{count} பரிமாற்றங்கள்',
+  },
+  transferManagerResume: 'தொடரவும்',
+  transferManagerPauseAll: 'அனைத்தையும் தற்காலிகமாக நிறுத்தவும்',
+  transferManagerResumeAll: 'அனைத்தையும் தொடரவும்',
+  transferManagerCancelAll: 'அனைத்தையும் ரத்துசெய்யவும்',
+  transferManagerRetryAll: 'அனைத்தையும் மீண்டும் முயலவும்',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{total} இல் {done}',
+  transferManagerEta: 'மீதமுள்ள நேரம்: {duration}',
+  transferManagerUnknownEta: 'மீதமுள்ள நேரம் தெரியவில்லை',
+  transferManagerPaused: 'தற்காலிகமாக நிறுத்தப்பட்டது',
+  transferManagerCancelled: 'ரத்துசெய்யப்பட்டது',
+  transferManagerEmpty: 'பரிமாற்றங்கள் இல்லை',
 };
 
 registerLyraLocale('ta', strings);

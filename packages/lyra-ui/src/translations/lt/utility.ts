@@ -109,6 +109,25 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Duomenys',
   styleLookTerminal: 'Terminalas',
   styleLookHighContrast: 'Didelis kontrastas',
+  transferManagerLabel: 'Perdavimai',
+  transferManagerCount: {
+    one: '{count} perdavimas',
+    few: '{count} perdavimai',
+    many: '{count} perdavimo',
+    other: '{count} perdavimų',
+  },
+  transferManagerResume: 'Tęsti',
+  transferManagerPauseAll: 'Pristabdyti visus',
+  transferManagerResumeAll: 'Tęsti visus',
+  transferManagerCancelAll: 'Atšaukti visus',
+  transferManagerRetryAll: 'Bandyti visus dar kartą',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} iš {total}',
+  transferManagerEta: 'Liko {duration}',
+  transferManagerUnknownEta: 'Likęs laikas nežinomas',
+  transferManagerPaused: 'Pristabdyta',
+  transferManagerCancelled: 'Atšaukta',
+  transferManagerEmpty: 'Perdavimų nėra',
 };
 
 registerLyraLocale('lt', strings);

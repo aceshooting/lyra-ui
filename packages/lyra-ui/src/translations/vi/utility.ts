@@ -94,6 +94,22 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Dữ liệu',
   styleLookTerminal: 'Terminal',
   styleLookHighContrast: 'Độ tương phản cao',
+  transferManagerLabel: 'Truyền tệp',
+  transferManagerCount: {
+    other: '{count} lượt truyền',
+  },
+  transferManagerResume: 'Tiếp tục',
+  transferManagerPauseAll: 'Tạm dừng tất cả',
+  transferManagerResumeAll: 'Tiếp tục tất cả',
+  transferManagerCancelAll: 'Hủy tất cả',
+  transferManagerRetryAll: 'Thử lại tất cả',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} trên {total}',
+  transferManagerEta: 'Thời gian còn lại: {duration}',
+  transferManagerUnknownEta: 'Không rõ thời gian còn lại',
+  transferManagerPaused: 'Đã tạm dừng',
+  transferManagerCancelled: 'Đã hủy',
+  transferManagerEmpty: 'Không có lượt truyền',
 };
 
 registerLyraLocale('vi', strings);

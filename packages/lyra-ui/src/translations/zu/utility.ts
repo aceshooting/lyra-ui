@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Idatha',
   styleLookTerminal: 'Itheminali',
   styleLookHighContrast: 'Ukugqama okuphezulu',
+  transferManagerLabel: 'Ukudlulisa amafayela',
+  transferManagerCount: {
+    one: 'Ukudlulisa oku-{count}',
+    other: 'Ukudlulisa oku-{count}',
+  },
+  transferManagerResume: 'Qhubeka',
+  transferManagerPauseAll: 'Misa konke okwesikhashana',
+  transferManagerResumeAll: 'Qhubeka nakho konke',
+  transferManagerCancelAll: 'Khansela konke',
+  transferManagerRetryAll: 'Zama konke futhi',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} kokungu-{total}',
+  transferManagerEta: 'Isikhathi esisele: {duration}',
+  transferManagerUnknownEta: 'Isikhathi esisele asaziwa',
+  transferManagerPaused: 'Kumiswe okwesikhashana',
+  transferManagerCancelled: 'Kukhanseliwe',
+  transferManagerEmpty: 'Akukho kudlulisa amafayela',
 };
 
 registerLyraLocale('zu', strings);

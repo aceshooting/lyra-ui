@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Veri',
   styleLookTerminal: 'Terminal',
   styleLookHighContrast: 'Yüksek kontrast',
+  transferManagerLabel: 'Aktarımlar',
+  transferManagerCount: {
+    one: '{count} aktarım',
+    other: '{count} aktarım',
+  },
+  transferManagerResume: 'Sürdür',
+  transferManagerPauseAll: 'Tümünü duraklat',
+  transferManagerResumeAll: 'Tümünü sürdür',
+  transferManagerCancelAll: 'Tümünü iptal et',
+  transferManagerRetryAll: 'Tümünü yeniden dene',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} / {total}',
+  transferManagerEta: 'Kalan süre: {duration}',
+  transferManagerUnknownEta: 'Kalan süre bilinmiyor',
+  transferManagerPaused: 'Duraklatıldı',
+  transferManagerCancelled: 'İptal edildi',
+  transferManagerEmpty: 'Aktarım yok',
 };
 
 registerLyraLocale('tr', strings);

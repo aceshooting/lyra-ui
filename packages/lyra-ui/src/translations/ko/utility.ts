@@ -94,6 +94,22 @@ const strings: LyraLocaleStrings = {
   styleLookData: '데이터',
   styleLookTerminal: '터미널',
   styleLookHighContrast: '고대비',
+  transferManagerLabel: '전송',
+  transferManagerCount: {
+    other: '전송 {count}개',
+  },
+  transferManagerResume: '다시 시작',
+  transferManagerPauseAll: '모두 일시 정지',
+  transferManagerResumeAll: '모두 다시 시작',
+  transferManagerCancelAll: '모두 취소',
+  transferManagerRetryAll: '모두 다시 시도',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} / {total}',
+  transferManagerEta: '남은 시간: {duration}',
+  transferManagerUnknownEta: '남은 시간 알 수 없음',
+  transferManagerPaused: '일시 정지됨',
+  transferManagerCancelled: '취소됨',
+  transferManagerEmpty: '전송 항목 없음',
 };
 
 registerLyraLocale('ko', strings);

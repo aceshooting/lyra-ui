@@ -323,6 +323,7 @@
     "bar-list": "data",
     "radial-bar": "data",
     "category-bar": "data",
-    "image-editor": "media"
+    "image-editor": "media",
+    "transfer-manager": "utility"
   }
 }

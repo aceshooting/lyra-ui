@@ -658,6 +658,8 @@ export type LyraTraceTreeSvelteProps = LyraSvelteElementProps<'lr-trace-tree'>;
 
 export type LyraTranscriptFeedSvelteProps = LyraSvelteElementProps<'lr-transcript-feed'>;
 
+export type LyraTransferManagerSvelteProps = LyraSvelteElementProps<'lr-transfer-manager'>;
+
 export type LyraTreeSvelteProps = LyraSvelteElementProps<'lr-tree'>;
 
 export type LyraTreeItemSvelteProps = LyraSvelteElementProps<'lr-tree-item'>;
@@ -1000,6 +1002,7 @@ export interface LyraSvelteElements {
   'lr-tour': LyraTourSvelteProps;
   'lr-trace-tree': LyraTraceTreeSvelteProps;
   'lr-transcript-feed': LyraTranscriptFeedSvelteProps;
+  'lr-transfer-manager': LyraTransferManagerSvelteProps;
   'lr-tree': LyraTreeSvelteProps;
   'lr-tree-item': LyraTreeItemSvelteProps;
   'lr-treemap': LyraTreemapSvelteProps;
@@ -1328,6 +1331,7 @@ export interface LyraElementTagNameMap {
   'lr-tour': LyraComponentTypeMap['lr-tour']['element'];
   'lr-trace-tree': LyraComponentTypeMap['lr-trace-tree']['element'];
   'lr-transcript-feed': LyraComponentTypeMap['lr-transcript-feed']['element'];
+  'lr-transfer-manager': LyraComponentTypeMap['lr-transfer-manager']['element'];
   'lr-tree': LyraComponentTypeMap['lr-tree']['element'];
   'lr-tree-item': LyraComponentTypeMap['lr-tree-item']['element'];
   'lr-treemap': LyraComponentTypeMap['lr-treemap']['element'];

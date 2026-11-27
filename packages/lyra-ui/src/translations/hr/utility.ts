@@ -104,6 +104,24 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Podaci',
   styleLookTerminal: 'Terminal',
   styleLookHighContrast: 'Visoki kontrast',
+  transferManagerLabel: 'Prijenosi',
+  transferManagerCount: {
+    one: '{count} prijenos',
+    few: '{count} prijenosa',
+    other: '{count} prijenosa',
+  },
+  transferManagerResume: 'Nastavi',
+  transferManagerPauseAll: 'Pauziraj sve',
+  transferManagerResumeAll: 'Nastavi sve',
+  transferManagerCancelAll: 'Otkaži sve',
+  transferManagerRetryAll: 'Pokušaj sve ponovno',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} od {total}',
+  transferManagerEta: 'Preostalo vrijeme: {duration}',
+  transferManagerUnknownEta: 'Preostalo vrijeme nije poznato',
+  transferManagerPaused: 'Pauzirano',
+  transferManagerCancelled: 'Otkazano',
+  transferManagerEmpty: 'Nema prijenosa',
 };
 
 registerLyraLocale('hr', strings);

@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'ډېټا',
   styleLookTerminal: 'ټرمینل',
   styleLookHighContrast: 'لوړ تضاد',
+  transferManagerLabel: 'لېږدونه',
+  transferManagerCount: {
+    one: '{count} لېږد',
+    other: '{count} لېږدونه',
+  },
+  transferManagerResume: 'بیا پیل کړئ',
+  transferManagerPauseAll: 'ټول لنډمهاله ودروئ',
+  transferManagerResumeAll: 'ټول بیا پیل کړئ',
+  transferManagerCancelAll: 'ټول لغوه کړئ',
+  transferManagerRetryAll: 'ټول بیا وازمویئ',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: 'له {total} څخه {done}',
+  transferManagerEta: 'پاتې وخت: {duration}',
+  transferManagerUnknownEta: 'پاتې وخت معلوم نه دی',
+  transferManagerPaused: 'لنډمهاله درول شوی',
+  transferManagerCancelled: 'لغوه شوی',
+  transferManagerEmpty: 'هېڅ لېږد نشته',
 };
 
 registerLyraLocale('ps', strings, { dir: 'rtl', name: 'پښتو' });

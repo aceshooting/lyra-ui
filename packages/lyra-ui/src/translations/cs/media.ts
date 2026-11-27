@@ -90,7 +90,6 @@ const strings: LyraLocaleStrings = {
   videoPlaylistLabel: 'Seznam videí',
   videoPlaylistUntitled: 'Video {position}',
   videoTimeReadout: '{current} z {duration}',
-  pause: 'Pozastavit',
   qrCodeMissingLibrary: 'Tato komponenta vyžaduje k vykreslení QR kódů nainstalovaný volitelný balíček „qrcode“.',
   qrCodeGenerationFailed: 'Tuto hodnotu nelze zakódovat jako QR kód.',
   mapMissingLibrary: 'Tato komponenta vyžaduje k vykreslení mapy nainstalovaný volitelný balíček „{package}“.',

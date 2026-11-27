@@ -18,7 +18,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'گراف دیاں علامتاں',
   entityChipWithType: '{label}, {type}',
   showMore: 'ہور وکھاؤ',
-  showMoreCount: '{count} ہور وکھاؤ',
   embeddingExplorerSpatialBounds: 'افقی طور تے {minX} توں {maxX}؛ عمودی طور تے {minY} توں {maxY}',
   embeddingExplorerSpatialSummary: 'پورے ماخذ وچ {total} نقطے ({global})۔ نظر آؤن والے حصے وچ {matched} نقطے ({viewport})۔ کثافت دے علاقے ساریاں مطابقتاں دی گنتی کردے نیں؛ نقطیاں دیاں اوورلے تہواں ایہناں گنتیاں وچ وادھا نئیں کردیاں۔',
   embeddingExplorerSpatialBin: 'کثافت دے علاقے وچ {count} نقطے: {bounds}',

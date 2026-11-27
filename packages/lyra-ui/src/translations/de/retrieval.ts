@@ -21,7 +21,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Graph-Legende',
   entityChipWithType: '{label}, {type}',
   showMore: 'Mehr anzeigen',
-  showMoreCount: '{count} weitere anzeigen',
   embeddingExplorerSpatialBounds: '{minX} bis {maxX} horizontal; {minY} bis {maxY} vertikal',
   embeddingExplorerSpatialSummary: '{total} Punkte in der gesamten Quelle ({global}). {matched} Punkte im sichtbaren Ausschnitt ({viewport}). Dichteregionen zählen alle Treffer; überlagerte Punkte werden nicht zusätzlich gezählt.',
   embeddingExplorerSpatialBin: '{count} Punkte in der Dichteregion: {bounds}',

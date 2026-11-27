@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Data',
   styleLookTerminal: 'Terminal',
   styleLookHighContrast: 'Høy kontrast',
+  transferManagerLabel: 'Overføringer',
+  transferManagerCount: {
+    one: '{count} overføring',
+    other: '{count} overføringer',
+  },
+  transferManagerResume: 'Fortsett',
+  transferManagerPauseAll: 'Sett alle på pause',
+  transferManagerResumeAll: 'Fortsett alle',
+  transferManagerCancelAll: 'Avbryt alle',
+  transferManagerRetryAll: 'Prøv alle på nytt',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} av {total}',
+  transferManagerEta: '{duration} igjen',
+  transferManagerUnknownEta: 'Ukjent gjenstående tid',
+  transferManagerPaused: 'På pause',
+  transferManagerCancelled: 'Avbrutt',
+  transferManagerEmpty: 'Ingen overføringer',
 };
 
 registerLyraLocale('nb', strings);

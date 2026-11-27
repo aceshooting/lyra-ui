@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Daataa',
   styleLookTerminal: 'Terminaala',
   styleLookHighContrast: 'Walfaallaa olaanaa',
+  transferManagerLabel: 'Dabarsa faayilaa',
+  transferManagerCount: {
+    one: 'Dabarsa {count}',
+    other: 'Dabarsa {count}',
+  },
+  transferManagerResume: 'Itti fufi',
+  transferManagerPauseAll: 'Hunda yeroo muraasaaf dhaabi',
+  transferManagerResumeAll: 'Hunda itti fufi',
+  transferManagerCancelAll: 'Hunda haqi',
+  transferManagerRetryAll: 'Hunda irra deebi’ii yaali',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{total} keessaa {done}',
+  transferManagerEta: 'Yeroo hafe: {duration}',
+  transferManagerUnknownEta: 'Yeroon hafe hin beekamu',
+  transferManagerPaused: 'Yeroo muraasaaf dhaabate',
+  transferManagerCancelled: 'Haqame',
+  transferManagerEmpty: 'Dabarsi faayilaa hin jiru',
 };
 
 registerLyraLocale('om', strings);

@@ -21,7 +21,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Gráf jelmagyarázata',
   entityChipWithType: '{label}, {type}',
   showMore: 'Több megjelenítése',
-  showMoreCount: 'További {count} megjelenítése',
   embeddingExplorerSpatialBounds: 'vízszintesen {minX}–{maxX}; függőlegesen {minY}–{maxY}',
   embeddingExplorerSpatialSummary: '{total} pont a teljes forrásban ({global}). {matched} pont a látható területen ({viewport}). A sűrűségi régiók minden találatot beleszámítanak; a rájuk rajzolt pontok nem növelik ezeket a számokat.',
   embeddingExplorerSpatialBin: '{count} pont a sűrűségi régióban: {bounds}',

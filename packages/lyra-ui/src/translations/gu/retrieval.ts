@@ -21,7 +21,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'ગ્રાફની સંજ્ઞા',
   entityChipWithType: '{label}, {type}',
   showMore: 'વધુ બતાવો',
-  showMoreCount: 'વધુ {count} બતાવો',
   embeddingExplorerSpatialBounds: 'આડી દિશામાં {minX}થી {maxX}; ઊભી દિશામાં {minY}થી {maxY}',
   embeddingExplorerSpatialSummary: 'સંપૂર્ણ સ્રોતમાં {total} બિંદુ ({global}). દૃશ્ય વિસ્તારમાં {matched} બિંદુ ({viewport}). ઘનતા વિસ્તારો બધા મેળ ગણાવે છે; બિંદુઓના ઉપરના સ્તરો આ ગણતરીમાં ઉમેરાતા નથી.',
   embeddingExplorerSpatialBin: 'ઘનતા વિસ્તારમાં {count} બિંદુ: {bounds}',

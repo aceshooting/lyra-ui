@@ -947,7 +947,7 @@
       "module": "src/autoloader.ts",
       "exportName": "AutoloaderErrorEventDetail",
       "kind": "interface",
-      "fingerprint": "d6c6fd7c7776e176f601",
+      "fingerprint": "144fee1911679b0f818e",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -963,7 +963,7 @@
       "module": "src/autoloader.ts",
       "exportName": "AutoloaderEventDetail",
       "kind": "interface",
-      "fingerprint": "0a19742ae8af65e05d4c",
+      "fingerprint": "51051400ccff7478cc6a",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -1011,7 +1011,7 @@
       "module": "src/autoloader.ts",
       "exportName": "discover",
       "kind": "function",
-      "fingerprint": "c86b4da3239db75ad7ed",
+      "fingerprint": "d7a54510aef94eb541ea",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -1027,7 +1027,7 @@
       "module": "src/autoloader.ts",
       "exportName": "start",
       "kind": "function",
-      "fingerprint": "3449de82c47882dd1d27",
+      "fingerprint": "5f19142e57cb7783544e",
       "routes": [
         "src/autoloader.ts"
       ],
@@ -12835,6 +12835,48 @@
       }
     },
     {
+      "module": "src/components/utility/transfer-manager/transfer-manager-metrics.ts",
+      "exportName": "LyraTransfer",
+      "kind": "interface",
+      "fingerprint": "0e617bc908c27f905c9c",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-transfer-manager.ts",
+        "src/components/utility/index.ts",
+        "src/components/utility/transfer-manager/transfer-manager.class.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/utility.md",
+      "family": "utility",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-transfer-manager",
+        "declaration": "LyraTransfer"
+      }
+    },
+    {
+      "module": "src/components/utility/transfer-manager/transfer-manager.class.ts",
+      "exportName": "LyraTransferActionDetail",
+      "kind": "interface",
+      "fingerprint": "327667ce6a59cfe6c9e2",
+      "routes": [
+        "src/all.ts",
+        "src/components/lr-transfer-manager.ts",
+        "src/components/utility/index.ts",
+        "src/components/utility/transfer-manager/transfer-manager.class.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts"
+      ],
+      "document": "llms/utility.md",
+      "family": "utility",
+      "locator": {
+        "kind": "component",
+        "tag": "lr-transfer-manager",
+        "declaration": "LyraTransferActionDetail"
+      }
+    },
+    {
       "module": "src/components/viewers/archive-viewer/archive-viewer.class.ts",
       "exportName": "ArchiveEntry",
       "kind": "interface",
@@ -14531,7 +14573,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "1c3196ce9befe9327454",
+      "fingerprint": "3e9bdd788ef95cd7e57c",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -15477,7 +15519,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocale",
       "kind": "function",
-      "fingerprint": "643aae070d693c4faa9f",
+      "fingerprint": "873f5616bd55c567152e",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -15611,7 +15653,7 @@
       "module": "src/internal/localization.ts",
       "exportName": "resolveLyraString",
       "kind": "function",
-      "fingerprint": "014e628250b263efb49c",
+      "fingerprint": "f3c97757b8981c103c9f",
       "routes": [
         "src/all.ts",
         "src/localization.ts",
@@ -16213,7 +16255,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "67ca2e5268cf5d088ea6",
+      "fingerprint": "dfddf82a3392771441f5",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16229,7 +16271,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "ccf5d60354a3bb3527c0",
+      "fingerprint": "29f456699b349ebba134",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16245,7 +16287,7 @@
       "module": "src/testing/event-factory.ts",
       "exportName": "createLyraEvent",
       "kind": "function",
-      "fingerprint": "c42c6cd63db1befb10f6",
+      "fingerprint": "8734f10812b797561a59",
       "routes": [
         "src/testing/index.ts"
       ],
@@ -16772,7 +16814,7 @@
       "module": "src/localization.ts",
       "exportName": "resolveLyraScopedString",
       "kind": "function",
-      "fingerprint": "1919f87b9eff717b9ae5",
+      "fingerprint": "6b9b89fb0071fa44c4b2",
       "routes": [
         "src/localization.ts",
         "src/utilities/index.ts"
@@ -16789,7 +16831,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "26476be16457d3264094",
+      "fingerprint": "7724ad4543015f15db32",
       "routes": [
         "src/vue.ts"
       ],
@@ -17181,7 +17223,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "1cfadfef7831e730d845",
+      "fingerprint": "f93b29f17d93f414bd3e",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -17206,7 +17248,7 @@
       "module": "src/internal/localization-runtime.ts",
       "exportName": "registerLyraLocaleDelta",
       "kind": "function",
-      "fingerprint": "2ed6a5cea3eabd9c3780",
+      "fingerprint": "a7fb41afe5992d2a8ff5",
       "routes": [
         "src/localization.ts"
       ],
@@ -23086,7 +23128,7 @@
       "module": "src/theme/theme.ts",
       "exportName": "LyraLookEntry",
       "kind": "interface",
-      "fingerprint": "5e15da1375c0057e789c",
+      "fingerprint": "8ecee14133226219f4ed",
       "routes": [
         "src/all.ts",
         "src/lyra.ts",

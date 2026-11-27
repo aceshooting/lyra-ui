@@ -21,7 +21,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'ഗ്രാഫ് ലെജൻഡ്',
   entityChipWithType: '{label}, {type}',
   showMore: 'കൂടുതൽ കാണിക്കുക',
-  showMoreCount: '{count} കൂടി കാണിക്കുക',
   embeddingExplorerSpatialBounds: 'തിരശ്ചീനമായി {minX} മുതൽ {maxX} വരെ; ലംബമായി {minY} മുതൽ {maxY} വരെ',
   embeddingExplorerSpatialSummary: 'മുഴുവൻ ഉറവിടത്തിൽ {total} ബിന്ദുക്കൾ ({global}). ദൃശ്യപ്രദേശത്ത് {matched} ബിന്ദുക്കൾ ({viewport}). സാന്ദ്രതാ പ്രദേശങ്ങൾ എല്ലാ പൊരുത്തങ്ങളും എണ്ണുന്നു; ബിന്ദുക്കളുടെ മേൽപ്പാളികൾ ഈ എണ്ണങ്ങളിൽ ചേർക്കുന്നില്ല.',
   embeddingExplorerSpatialBin: 'സാന്ദ്രതാ പ്രദേശത്ത് {count} ബിന്ദുക്കൾ: {bounds}',

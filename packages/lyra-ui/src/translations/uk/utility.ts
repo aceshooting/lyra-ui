@@ -109,6 +109,25 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Дані',
   styleLookTerminal: 'Термінал',
   styleLookHighContrast: 'Висока контрастність',
+  transferManagerLabel: 'Передавання',
+  transferManagerCount: {
+    one: '{count} передавання',
+    few: '{count} передавання',
+    many: '{count} передавань',
+    other: '{count} передавання',
+  },
+  transferManagerResume: 'Відновити',
+  transferManagerPauseAll: 'Призупинити всі',
+  transferManagerResumeAll: 'Відновити всі',
+  transferManagerCancelAll: 'Скасувати всі',
+  transferManagerRetryAll: 'Повторити всі',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} з {total}',
+  transferManagerEta: 'Залишилося: {duration}',
+  transferManagerUnknownEta: 'Час, що залишився, невідомий',
+  transferManagerPaused: 'Призупинено',
+  transferManagerCancelled: 'Скасовано',
+  transferManagerEmpty: 'Немає передавань',
 };
 
 registerLyraLocale('uk', strings);

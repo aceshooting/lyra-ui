@@ -440,6 +440,10 @@
       "family": "utility"
     },
     {
+      "id": "utility-transfer-manager--default",
+      "family": "utility"
+    },
+    {
       "id": "utility-visually-hidden--skip-link",
       "family": "utility"
     },
@@ -547,6 +551,7 @@
     "lr-toast",
     "lr-tool-approval-dialog",
     "lr-tooltip",
+    "lr-transfer-manager",
     "lr-tree-item",
     "lr-video",
     "lr-video-playlist",

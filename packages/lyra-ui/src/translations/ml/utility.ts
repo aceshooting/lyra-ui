@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'ഡാറ്റ',
   styleLookTerminal: 'ടെർമിനൽ',
   styleLookHighContrast: 'ഉയർന്ന കോൺട്രാസ്റ്റ്',
+  transferManagerLabel: 'കൈമാറ്റങ്ങൾ',
+  transferManagerCount: {
+    one: '{count} കൈമാറ്റം',
+    other: '{count} കൈമാറ്റങ്ങൾ',
+  },
+  transferManagerResume: 'തുടരുക',
+  transferManagerPauseAll: 'എല്ലാം താൽക്കാലികമായി നിർത്തുക',
+  transferManagerResumeAll: 'എല്ലാം തുടരുക',
+  transferManagerCancelAll: 'എല്ലാം റദ്ദാക്കുക',
+  transferManagerRetryAll: 'എല്ലാം വീണ്ടും ശ്രമിക്കുക',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{total} ൽ {done}',
+  transferManagerEta: 'ശേഷിക്കുന്ന സമയം: {duration}',
+  transferManagerUnknownEta: 'ശേഷിക്കുന്ന സമയം അറിയില്ല',
+  transferManagerPaused: 'താൽക്കാലികമായി നിർത്തി',
+  transferManagerCancelled: 'റദ്ദാക്കി',
+  transferManagerEmpty: 'കൈമാറ്റങ്ങളൊന്നുമില്ല',
 };
 
 registerLyraLocale('ml', strings);

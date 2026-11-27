@@ -18,7 +18,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Legenda grafului',
   entityChipWithType: '{label}, {type}',
   showMore: 'Afișează mai multe',
-  showMoreCount: 'Afișează încă {count}',
   embeddingExplorerSpatialBounds: 'de la {minX} la {maxX} pe orizontală; de la {minY} la {maxY} pe verticală',
   embeddingExplorerSpatialSummary: '{total} puncte în sursa completă ({global}). {matched} puncte în zona de vizualizare ({viewport}). Regiunile de densitate numără toate potrivirile; suprapunerile de puncte nu măresc aceste numere.',
   embeddingExplorerSpatialBin: '{count} puncte în regiunea de densitate: {bounds}',

@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'ውሂብ',
   styleLookTerminal: 'ተርሚናል',
   styleLookHighContrast: 'ከፍተኛ ንፅፅር',
+  transferManagerLabel: 'ዝውውሮች',
+  transferManagerCount: {
+    one: '{count} ዝውውር',
+    other: '{count} ዝውውሮች',
+  },
+  transferManagerResume: 'ቀጥል',
+  transferManagerPauseAll: 'ሁሉን ለጊዜው አቁም',
+  transferManagerResumeAll: 'ሁሉን ቀጥል',
+  transferManagerCancelAll: 'ሁሉን ሰርዝ',
+  transferManagerRetryAll: 'ሁሉን እንደገና ሞክር',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: 'ከ{total} ውስጥ {done}',
+  transferManagerEta: '{duration} ቀርቷል',
+  transferManagerUnknownEta: 'የቀረው ጊዜ አይታወቅም',
+  transferManagerPaused: 'ለጊዜው ቆሟል',
+  transferManagerCancelled: 'ተሰርዟል',
+  transferManagerEmpty: 'ምንም ዝውውር የለም',
 };
 
 registerLyraLocale('am', strings);

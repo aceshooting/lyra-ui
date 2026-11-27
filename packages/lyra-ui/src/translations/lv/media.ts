@@ -88,7 +88,6 @@ const strings: LyraLocaleStrings = {
   videoPlaylistLabel: 'Video atskaņošanas saraksts',
   videoPlaylistUntitled: 'Video {position}',
   videoTimeReadout: '{current} no {duration}',
-  pause: 'Pauzēt',
   qrCodeMissingLibrary: 'Lai atveidotu QR kodus, šim komponentam ir jāinstalē neobligātā pakotne “qrcode”.',
   qrCodeGenerationFailed: 'Šo vērtību neizdevās kodēt kā QR kodu.',
   mapMissingLibrary: 'Lai atveidotu karti, šim komponentam ir jāinstalē neobligātā pakotne “{package}”.',

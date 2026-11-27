@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Bayanai',
   styleLookTerminal: 'Tashar umarni',
   styleLookHighContrast: 'Babban bambanci',
+  transferManagerLabel: 'Canja wurin fayiloli',
+  transferManagerCount: {
+    one: 'Canja wuri {count}',
+    other: 'Canja wuri {count}',
+  },
+  transferManagerResume: 'Ci gaba',
+  transferManagerPauseAll: 'Dakata da duka',
+  transferManagerResumeAll: 'Ci gaba da duka',
+  transferManagerCancelAll: 'Soke duka',
+  transferManagerRetryAll: 'Sake gwada duka',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} cikin {total}',
+  transferManagerEta: 'Lokacin da ya rage: {duration}',
+  transferManagerUnknownEta: 'Ba a san lokacin da ya rage ba',
+  transferManagerPaused: 'An dakatar na ɗan lokaci',
+  transferManagerCancelled: 'An soke',
+  transferManagerEmpty: 'Babu canja wurin fayiloli',
 };
 
 registerLyraLocale('ha', strings);

@@ -86,7 +86,6 @@ const strings: LyraLocaleStrings = {
   videoPlaylistLabel: 'Video oynatma listesi',
   videoPlaylistUntitled: '{position}. video',
   videoTimeReadout: '{current} / {duration}',
-  pause: 'Duraklat',
   qrCodeMissingLibrary: 'QR kodları oluşturmak için bu bileşenin isteğe bağlı "qrcode" paketine ihtiyacı vardır.',
   qrCodeGenerationFailed: 'Bu değer QR kodu olarak kodlanamadı.',
   mapMissingLibrary: 'Haritayı görüntülemek için bu bileşenin isteğe bağlı "{package}" paketine ihtiyacı vardır.',

@@ -1392,6 +1392,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-tour': LyraTourReactProps;
   'lr-trace-tree': LyraTraceTreeReactProps;
   'lr-transcript-feed': LyraTranscriptFeedReactProps;
+  'lr-transfer-manager': LyraTransferManagerReactProps;
   'lr-tree': LyraTreeReactProps;
   'lr-tree-item': LyraTreeItemReactProps;
   'lr-treemap': LyraTreemapReactProps;
@@ -1848,6 +1849,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-tour': LyraComponentTypeMap['lr-tour']['element'];
   'lr-trace-tree': LyraComponentTypeMap['lr-trace-tree']['element'];
   'lr-transcript-feed': LyraComponentTypeMap['lr-transcript-feed']['element'];
+  'lr-transfer-manager': LyraComponentTypeMap['lr-transfer-manager']['element'];
   'lr-tree': LyraComponentTypeMap['lr-tree']['element'];
   'lr-tree-item': LyraComponentTypeMap['lr-tree-item']['element'];
   'lr-treemap': LyraComponentTypeMap['lr-treemap']['element'];
@@ -2175,6 +2177,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-tour': LyraTourSvelteProps;
   'lr-trace-tree': LyraTraceTreeSvelteProps;
   'lr-transcript-feed': LyraTranscriptFeedSvelteProps;
+  'lr-transfer-manager': LyraTransferManagerSvelteProps;
   'lr-tree': LyraTreeSvelteProps;
   'lr-tree-item': LyraTreeItemSvelteProps;
   'lr-treemap': LyraTreemapSvelteProps;
@@ -2661,6 +2664,7 @@ These named interfaces and helper signatures are available to typed integrations
   'lr-tour': LyraTourVueProps;
   'lr-trace-tree': LyraTraceTreeVueProps;
   'lr-transcript-feed': LyraTranscriptFeedVueProps;
+  'lr-transfer-manager': LyraTransferManagerVueProps;
   'lr-tree': LyraTreeVueProps;
   'lr-tree-item': LyraTreeItemVueProps;
   'lr-treemap': LyraTreemapVueProps;

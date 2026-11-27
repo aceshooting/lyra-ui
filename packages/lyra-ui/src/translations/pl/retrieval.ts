@@ -18,7 +18,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Legenda grafu',
   entityChipWithType: '{label}, {type}',
   showMore: 'Pokaż więcej',
-  showMoreCount: 'Pokaż jeszcze {count}',
   embeddingExplorerSpatialBounds: 'od {minX} do {maxX} w poziomie; od {minY} do {maxY} w pionie',
   embeddingExplorerSpatialSummary: '{total} punktów w pełnym źródle ({global}). {matched} punktów w obszarze widoku ({viewport}). Obszary gęstości zliczają wszystkie dopasowania; nakładki punktów nie zwiększają tych liczb.',
   embeddingExplorerSpatialBin: '{count} punktów w obszarze gęstości: {bounds}',

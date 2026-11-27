@@ -22,7 +22,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Legenda grafa',
   entityChipWithType: '{label}, {type}',
   showMore: 'Prikaži više',
-  showMoreCount: 'Prikaži još {count}',
   embeddingExplorerSpatialBounds: 'od {minX} do {maxX} horizontalno; od {minY} do {maxY} vertikalno',
   embeddingExplorerSpatialSummary: 'Tačaka u celom izvoru: {total} ({global}). Tačaka u vidljivoj oblasti: {matched} ({viewport}). Oblasti gustine broje sva podudaranja; preklopljene tačke se ne uračunavaju u ove brojeve.',
   embeddingExplorerSpatialBin: 'Tačaka u oblasti gustine: {count}; {bounds}',

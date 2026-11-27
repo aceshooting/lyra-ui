@@ -21,7 +21,6 @@ const strings: LyraLocaleStrings = {
   graphLegendLabel: 'Υπόμνημα γραφήματος',
   entityChipWithType: '{label}, {type}',
   showMore: 'Εμφάνιση περισσότερων',
-  showMoreCount: 'Εμφάνιση {count} ακόμη',
   embeddingExplorerSpatialBounds: '{minX} έως {maxX} οριζόντια· {minY} έως {maxY} κατακόρυφα',
   embeddingExplorerSpatialSummary: '{total} σημεία σε ολόκληρη την πηγή ({global}). {matched} σημεία στην περιοχή προβολής ({viewport}). Οι περιοχές πυκνότητας μετρούν όλες τις αντιστοιχίες· τα επικαλυπτόμενα σημεία δεν προστίθενται σε αυτές τις μετρήσεις.',
   embeddingExplorerSpatialBin: '{count} σημεία στην περιοχή πυκνότητας: {bounds}',

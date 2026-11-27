@@ -104,6 +104,24 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Date',
   styleLookTerminal: 'Terminal',
   styleLookHighContrast: 'Contrast ridicat',
+  transferManagerLabel: 'Transferuri',
+  transferManagerCount: {
+    one: '{count} transfer',
+    few: '{count} transferuri',
+    other: '{count} de transferuri',
+  },
+  transferManagerResume: 'Reia',
+  transferManagerPauseAll: 'Întrerupe-le pe toate',
+  transferManagerResumeAll: 'Reia-le pe toate',
+  transferManagerCancelAll: 'Anulează-le pe toate',
+  transferManagerRetryAll: 'Încearcă-le pe toate din nou',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} din {total}',
+  transferManagerEta: 'Timp rămas: {duration}',
+  transferManagerUnknownEta: 'Timp rămas necunoscut',
+  transferManagerPaused: 'În pauză',
+  transferManagerCancelled: 'Anulat',
+  transferManagerEmpty: 'Niciun transfer',
 };
 
 registerLyraLocale('ro', strings);

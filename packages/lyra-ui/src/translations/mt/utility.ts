@@ -114,6 +114,26 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Data',
   styleLookTerminal: 'Terminal',
   styleLookHighContrast: 'Kuntrast għoli',
+  transferManagerLabel: 'Trasferimenti',
+  transferManagerCount: {
+    one: '{count} trasferiment',
+    two: '{count} trasferimenti',
+    few: '{count} trasferimenti',
+    many: '{count} trasferiment',
+    other: '{count} trasferiment',
+  },
+  transferManagerResume: 'Kompli',
+  transferManagerPauseAll: 'Issospendi kollox',
+  transferManagerResumeAll: 'Kompli kollox',
+  transferManagerCancelAll: 'Ikkanċella kollox',
+  transferManagerRetryAll: 'Erġa’ pprova kollox',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} minn {total}',
+  transferManagerEta: 'Ħin li fadal: {duration}',
+  transferManagerUnknownEta: 'Il-ħin li fadal mhux magħruf',
+  transferManagerPaused: 'Sospiż',
+  transferManagerCancelled: 'Ikkanċellat',
+  transferManagerEmpty: 'Ebda trasferiment',
 };
 
 registerLyraLocale('mt', strings);

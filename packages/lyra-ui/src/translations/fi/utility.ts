@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Data',
   styleLookTerminal: 'Pääte',
   styleLookHighContrast: 'Suuri kontrasti',
+  transferManagerLabel: 'Siirrot',
+  transferManagerCount: {
+    one: '{count} siirto',
+    other: '{count} siirtoa',
+  },
+  transferManagerResume: 'Jatka',
+  transferManagerPauseAll: 'Keskeytä kaikki',
+  transferManagerResumeAll: 'Jatka kaikkia',
+  transferManagerCancelAll: 'Peruuta kaikki',
+  transferManagerRetryAll: 'Yritä kaikkia uudelleen',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} / {total}',
+  transferManagerEta: 'Jäljellä {duration}',
+  transferManagerUnknownEta: 'Jäljellä oleva aika ei ole tiedossa',
+  transferManagerPaused: 'Keskeytetty',
+  transferManagerCancelled: 'Peruutettu',
+  transferManagerEmpty: 'Ei siirtoja',
 };
 
 registerLyraLocale('fi', strings);

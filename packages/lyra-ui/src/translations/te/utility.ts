@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'డేటా',
   styleLookTerminal: 'టెర్మినల్',
   styleLookHighContrast: 'అధిక కాంట్రాస్ట్',
+  transferManagerLabel: 'బదిలీలు',
+  transferManagerCount: {
+    one: '{count} బదిలీ',
+    other: '{count} బదిలీలు',
+  },
+  transferManagerResume: 'కొనసాగించండి',
+  transferManagerPauseAll: 'అన్నింటినీ తాత్కాలికంగా ఆపండి',
+  transferManagerResumeAll: 'అన్నింటినీ కొనసాగించండి',
+  transferManagerCancelAll: 'అన్నింటినీ రద్దు చేయండి',
+  transferManagerRetryAll: 'అన్నింటినీ మళ్లీ ప్రయత్నించండి',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{total}లో {done}',
+  transferManagerEta: 'మిగిలిన సమయం: {duration}',
+  transferManagerUnknownEta: 'మిగిలిన సమయం తెలియదు',
+  transferManagerPaused: 'తాత్కాలికంగా ఆపబడింది',
+  transferManagerCancelled: 'రద్దు చేయబడింది',
+  transferManagerEmpty: 'బదిలీలు లేవు',
 };
 
 registerLyraLocale('te', strings);

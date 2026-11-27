@@ -651,6 +651,8 @@ export type LyraTraceTreeVueProps = LyraVueCustomElement<'lr-trace-tree'>;
 
 export type LyraTranscriptFeedVueProps = LyraVueCustomElement<'lr-transcript-feed'>;
 
+export type LyraTransferManagerVueProps = LyraVueCustomElement<'lr-transfer-manager'>;
+
 export type LyraTreeVueProps = LyraVueCustomElement<'lr-tree'>;
 
 export type LyraTreeItemVueProps = LyraVueCustomElement<'lr-tree-item'>;
@@ -993,6 +995,7 @@ export interface LyraVueGlobalComponents {
   'lr-tour': LyraTourVueProps;
   'lr-trace-tree': LyraTraceTreeVueProps;
   'lr-transcript-feed': LyraTranscriptFeedVueProps;
+  'lr-transfer-manager': LyraTransferManagerVueProps;
   'lr-tree': LyraTreeVueProps;
   'lr-tree-item': LyraTreeItemVueProps;
   'lr-treemap': LyraTreemapVueProps;

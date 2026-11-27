@@ -99,6 +99,23 @@ const strings: LyraLocaleStrings = {
   styleLookData: 'Data',
   styleLookTerminal: 'Terminal',
   styleLookHighContrast: 'Mataas na contrast',
+  transferManagerLabel: 'Mga paglilipat',
+  transferManagerCount: {
+    one: '{count} paglilipat',
+    other: '{count} paglilipat',
+  },
+  transferManagerResume: 'Ipagpatuloy',
+  transferManagerPauseAll: 'Ihinto muna ang lahat',
+  transferManagerResumeAll: 'Ipagpatuloy ang lahat',
+  transferManagerCancelAll: 'Kanselahin ang lahat',
+  transferManagerRetryAll: 'Subukan muli ang lahat',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} sa {total}',
+  transferManagerEta: 'Natitirang oras: {duration}',
+  transferManagerUnknownEta: 'Hindi alam ang natitirang oras',
+  transferManagerPaused: 'Pansamantalang inihinto',
+  transferManagerCancelled: 'Kinansela',
+  transferManagerEmpty: 'Walang paglilipat',
 };
 
 registerLyraLocale('tl', strings);

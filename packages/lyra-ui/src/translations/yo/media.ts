@@ -84,7 +84,6 @@ const strings: LyraLocaleStrings = {
   videoPlaylistLabel: 'Àtòjọ eré fídíò',
   videoPlaylistUntitled: 'Fídíò {position}',
   videoTimeReadout: '{current} nínú {duration}',
-  pause: 'Dúró díẹ̀',
   qrCodeMissingLibrary: 'Apá yìí nílò àpò "qrcode" àṣàyàn láti fi àwọn kóòdù QR hàn.',
   qrCodeGenerationFailed: 'A kò lè yí iye yìí padà sí kóòdù QR.',
   mapMissingLibrary: 'Apá yìí nílò àpò "{package}" àṣàyàn láti fi màpù hàn.',

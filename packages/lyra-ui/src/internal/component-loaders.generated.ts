@@ -313,6 +313,7 @@ export const COMPONENT_LOADERS: Readonly<Record<AutoloadableTagName, () => Promi
   'lr-tour': () => import('../components/utility/tour/tour.class.js').then((module) => module.LyraTour),
   'lr-trace-tree': () => import('../components/agent-tools/trace-tree/trace-tree.class.js').then((module) => module.LyraTraceTree),
   'lr-transcript-feed': () => import('../components/conversation/transcript-feed/transcript-feed.class.js').then((module) => module.LyraTranscriptFeed),
+  'lr-transfer-manager': () => import('../components/utility/transfer-manager/transfer-manager.class.js').then((module) => module.LyraTransferManager),
   'lr-tree': () => import('../components/data/tree/tree.class.js').then((module) => module.LyraTree),
   'lr-tree-item': () => import('../components/data/tree/tree-item.class.js').then((module) => module.LyraTreeItem),
   'lr-treemap': () => import('../components/data/treemap/treemap.class.js').then((module) => module.LyraTreemap),

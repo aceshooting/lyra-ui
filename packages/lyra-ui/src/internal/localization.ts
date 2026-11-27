@@ -1916,6 +1916,23 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   styleLookData: 'Data',
   styleLookTerminal: 'Terminal',
   styleLookHighContrast: 'High contrast',
+  transferManagerLabel: 'Transfers',
+  transferManagerCount: {
+    one: '{count} transfer',
+    other: '{count} transfers',
+  },
+  transferManagerResume: 'Resume',
+  transferManagerPauseAll: 'Pause all',
+  transferManagerResumeAll: 'Resume all',
+  transferManagerCancelAll: 'Cancel all',
+  transferManagerRetryAll: 'Retry all',
+  transferManagerItemAction: '{action}: {name}',
+  transferManagerBytes: '{done} of {total}',
+  transferManagerEta: '{duration} remaining',
+  transferManagerUnknownEta: 'Time remaining unknown',
+  transferManagerPaused: 'Paused',
+  transferManagerCancelled: 'Cancelled',
+  transferManagerEmpty: 'No transfers',
 };
 
 export {

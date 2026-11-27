@@ -86,7 +86,6 @@ const strings: LyraLocaleStrings = {
   videoPlaylistLabel: 'د ویډیووو لړ',
   videoPlaylistUntitled: 'ویډیو {position}',
   videoTimeReadout: '{current} د {duration} څخه',
-  pause: 'ځنډول',
   qrCodeMissingLibrary: 'د QR کوډونو جوړولو لپاره د "qrcode" اختیاري بسته نصب کړئ.',
   qrCodeGenerationFailed: 'دا ارزښت د QR کوډ په بڼه نه شو کوډ کېدای.',
   mapMissingLibrary: 'د نقشې ښودلو لپاره د "{package}" اختیاري بسته نصب کړئ.',

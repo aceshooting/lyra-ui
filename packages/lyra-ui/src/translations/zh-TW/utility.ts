@@ -94,6 +94,22 @@ const strings: LyraLocaleStrings = {
   styleLookData: '資料',
   styleLookTerminal: '終端機',
   styleLookHighContrast: '高對比',
+  transferManagerLabel: '傳輸',
+  transferManagerCount: {
+    other: '{count} 項傳輸',
+  },
+  transferManagerResume: '繼續',
+  transferManagerPauseAll: '全部暫停',
+  transferManagerResumeAll: '全部繼續',
+  transferManagerCancelAll: '全部取消',
+  transferManagerRetryAll: '全部重試',
+  transferManagerItemAction: '{action}：{name}',
+  transferManagerBytes: '{done} / {total}',
+  transferManagerEta: '剩餘時間：{duration}',
+  transferManagerUnknownEta: '剩餘時間未知',
+  transferManagerPaused: '已暫停',
+  transferManagerCancelled: '已取消',
+  transferManagerEmpty: '沒有傳輸項目',
 };
 
 registerLyraLocale('zh-TW', strings);
