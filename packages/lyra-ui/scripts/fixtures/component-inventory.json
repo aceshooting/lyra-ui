@@ -154625,6 +154625,16 @@
             "default": false
           },
           {
+            "name": "overflow",
+            "property": "overflow",
+            "type": "LyraTabGroupOverflow",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "scroll"
+          },
+          {
             "name": "placement",
             "property": "placement",
             "type": "LyraTabGroupPlacement",
@@ -154735,6 +154745,16 @@
             "default": false
           },
           {
+            "name": "overflow",
+            "attribute": "overflow",
+            "type": "LyraTabGroupOverflow",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "scroll"
+          },
+          {
             "name": "placement",
             "attribute": "placement",
             "type": "LyraTabGroupPlacement",
@@ -154808,6 +154828,18 @@
           },
           {
             "name": "nav",
+            "deprecated": null
+          },
+          {
+            "name": "overflow-item",
+            "deprecated": null
+          },
+          {
+            "name": "overflow-menu",
+            "deprecated": null
+          },
+          {
+            "name": "overflow-trigger",
             "deprecated": null
           },
           {
@@ -178369,6 +178401,16 @@
       "surface": {
         "attributes": [
           {
+            "name": "aspect-ratio",
+            "property": "aspectRatio",
+            "type": "LyraVideoAspectRatio",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "fixed"
+          },
+          {
             "name": "autoplay",
             "property": "autoplay",
             "type": "boolean",
@@ -178437,6 +178479,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "builtin"
+          },
+          {
+            "name": "fit",
+            "property": "fit",
+            "type": "LyraVideoFit",
+            "reflects": true,
+            "inferred": false,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "default"
           },
           {
             "name": "icon-library",
@@ -178561,6 +178613,16 @@
         ],
         "properties": [
           {
+            "name": "aspectRatio",
+            "attribute": "aspect-ratio",
+            "type": "LyraVideoAspectRatio",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "fixed"
+          },
+          {
             "name": "autoplay",
             "attribute": "autoplay",
             "type": "boolean",
@@ -178629,6 +178691,16 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "builtin"
+          },
+          {
+            "name": "fit",
+            "attribute": "fit",
+            "type": "LyraVideoFit",
+            "readonly": false,
+            "reflects": true,
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "default"
           },
           {
             "name": "hotspots",
