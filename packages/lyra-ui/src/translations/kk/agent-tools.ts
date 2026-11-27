@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'Қосылу {name}',
   connectorManagerDisconnectFor: '{name} ажырату',
   connectorManagerRetryFor: '{name} үшін қосылымды қайталап көріңіз',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Фондық іске қосулар',
   backgroundRunsEmpty: 'Ешқандай фондық жұмыс қол жетімді емес.',
   backgroundRunsLimit: 'Алғашқы {count} фондық жүгіріс көрсетілуде.',

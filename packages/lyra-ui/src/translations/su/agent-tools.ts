@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'Sambungkeun ka {name}',
   connectorManagerDisconnectFor: 'Pegatkeun ti {name}',
   connectorManagerRetryFor: 'Cobian deui nyambung ka {name}',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Pagawéan latar tukang',
   backgroundRunsEmpty: 'Teu aya pagawéan latar tukang nu sadia.',
   backgroundRunsLimit: 'Némbongkeun {count} pagawéan latar tukang munggaran.',

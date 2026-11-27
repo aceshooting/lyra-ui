@@ -1699,6 +1699,8 @@ export class LyraCombobox<
     this._isFirstUpdate = !this.hasUpdated;
     this.enforceMinimumQuery(false);
     this.announceOpenTransition(changed);
+    // Rows public loading hid do not keep a stale highlight for the list that returns.
+    if (changed.has('loading')) this.normalizeActiveIndex();
     if (this.open) {
       this.listboxHidden = false;
       this.listboxRendered = true;

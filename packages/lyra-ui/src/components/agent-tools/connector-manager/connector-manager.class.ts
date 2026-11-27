@@ -14,8 +14,8 @@ import { shadowFocusTarget } from '../../../internal/active-element.js';
 import type { LyraFrame } from '../../../internal/variants.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_connectorManagerConnect, LYRA_DEFAULT_connectorManagerConnectFor, LYRA_DEFAULT_connectorManagerDisconnect, LYRA_DEFAULT_connectorManagerDisconnectFor, LYRA_DEFAULT_connectorManagerEmpty, LYRA_DEFAULT_connectorManagerKindConnector, LYRA_DEFAULT_connectorManagerKindMcp, LYRA_DEFAULT_connectorManagerLabel, LYRA_DEFAULT_connectorManagerLimit, LYRA_DEFAULT_connectorManagerRetryFor, LYRA_DEFAULT_connectorManagerStatusChanged, LYRA_DEFAULT_connectorManagerStatusConnected, LYRA_DEFAULT_connectorManagerStatusConnecting, LYRA_DEFAULT_connectorManagerStatusDisconnected } from '../../../internal/default-strings/agent-tools.generated.js';
-import { LYRA_DEFAULT_retry, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusUnknown } from '../../../internal/default-strings/shared.generated.js';
+import { LYRA_DEFAULT_connectorManagerConnect, LYRA_DEFAULT_connectorManagerConnectFor, LYRA_DEFAULT_connectorManagerDisconnect, LYRA_DEFAULT_connectorManagerDisconnectFor, LYRA_DEFAULT_connectorManagerEmpty, LYRA_DEFAULT_connectorManagerKindConnector, LYRA_DEFAULT_connectorManagerKindMcp, LYRA_DEFAULT_connectorManagerLabel, LYRA_DEFAULT_connectorManagerLimit, LYRA_DEFAULT_connectorManagerRetryFor, LYRA_DEFAULT_connectorManagerStatusConnected, LYRA_DEFAULT_connectorManagerStatusConnecting, LYRA_DEFAULT_connectorManagerStatusDisconnected } from '../../../internal/default-strings/agent-tools.generated.js';
+import { LYRA_DEFAULT_connectorManagerStatusChanged, LYRA_DEFAULT_retry, LYRA_DEFAULT_statusError, LYRA_DEFAULT_statusUnknown } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type AgentConnectorKind = 'mcp' | 'connector';

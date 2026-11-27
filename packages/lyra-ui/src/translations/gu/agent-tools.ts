@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'કનેક્ટ કરો {name}',
   connectorManagerDisconnectFor: 'ડિસ્કનેક્ટ કરો {name}',
   connectorManagerRetryFor: '{name} માટે કનેક્શનનો ફરી પ્રયાસ કરો',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'પૃષ્ઠભૂમિમાં ચાલતી પ્રક્રિયાઓ',
   backgroundRunsEmpty: 'કોઈ પૃષ્ઠભૂમિ રન ઉપલબ્ધ નથી.',
   backgroundRunsLimit: 'પ્રથમ {count} પૃષ્ઠભૂમિ રન દર્શાવે છે.',

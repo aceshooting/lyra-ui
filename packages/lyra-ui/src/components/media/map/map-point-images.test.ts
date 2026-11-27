@@ -10,6 +10,12 @@ class PhotoMap extends AnchorMapEngine {
   setLayoutProperty(id: string, name: string, value: unknown): void { this.layouts.set(`${id}:${name}`, value); }
 }
 
+const svgResponse = (markup: string): Response => {
+  const response = new Response(markup, { headers: { 'content-type': 'image/svg+xml' } });
+  Object.defineProperty(response, 'type', { value: 'basic' });
+  return response;
+};
+
 const photos: LyraMapGeoJsonDataLayer = { sourceId: 'gallery', cluster: { zoomOnClick: true },
   geojson: { type: 'FeatureCollection', features: Array.from({ length: 2000 }, (_, id) => ({
     type: 'Feature', id, properties: { thumb: `/photos/${id}.png` }, geometry: { type: 'Point', coordinates: [id / 100, 0] },
@@ -142,13 +148,56 @@ describe('map per-feature thumbnails', () => {
     const { engine, map } = await mountMap(el => { el.dataLayers = [photos, { ...photos, sourceId: 'places' }]; }, PhotoMap);
     engine.hits = Array.from({ length: 500 }, (_, id) => ({ properties: { thumb: `/photos/${id}.png` } }));
     engine.fire('idle');
-    await map.whenIdle();
-    expect(attempts).to.equal(128);
+    await waitUntil(() => attempts === 128, 'every visible thumbnail is attempted');
+    await new Promise(resolve => setTimeout(resolve, 50));
     engine.fire('idle');
     await map.whenIdle();
+    await new Promise(resolve => setTimeout(resolve, 50));
     expect(attempts).to.equal(128);
     expect(engine.order.filter(id => id.endsWith('-circle')).length).to.equal(2);
     expect(engine.images.size).to.equal(0);
+  });
+
+  it('settles the map while thumbnail scanning throws or a transfer stalls', async () => {
+    let release: ((response: Response) => void) | undefined;
+    window.fetch = () => new Promise(resolve => { release = resolve; });
+    const { map, engine } = await mountMap(el => { el.dataLayers = [photos]; }, PhotoMap);
+    const settles = () => Promise.race([map.whenIdle().then(() => 'idle', () => 'failed'),
+      new Promise(resolve => setTimeout(resolve, 1000, 'held'))]);
+    engine.hits = [{ properties: { thumb: '/photos/slow.svg' } }];
+    engine.queryError = true;
+    engine.fire('idle');
+    expect(await settles()).to.equal('idle');
+    engine.queryError = false;
+    engine.fire('idle');
+    await waitUntil(() => !!release, 'thumbnail transfer starts');
+    expect(await settles()).to.equal('idle');
+    release!(svgResponse('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2 2"><rect width="2" height="2" fill="red"/></svg>'));
+    await waitUntil(() => engine.images.size === 1, 'the stalled thumbnail still installs');
+  });
+
+  it('rasterizes thumbnails for the display density within the atlas pixel-ratio bound', async () => {
+    const own = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio');
+    window.fetch = async () => svgResponse('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2 2"><rect width="2" height="2" fill="red"/></svg>');
+    const { engine } = await mountMap(el => { el.dataLayers = [photos]; }, PhotoMap);
+    const installs: { width: number; ratio: unknown }[] = [];
+    const install = engine.addImage.bind(engine);
+    engine.addImage = (id: string, pixels: ImageData, options?: { pixelRatio?: number }) => {
+      installs.push({ width: pixels.width, ratio: options?.pixelRatio });
+      install(id, pixels);
+    };
+    try {
+      for (const ratio of [2, 9]) {
+        Object.defineProperty(window, 'devicePixelRatio', { configurable: true, value: ratio });
+        engine.hits = [{ properties: { thumb: `/photos/${ratio}.svg` } }];
+        engine.fire('idle');
+        await waitUntil(() => installs.length === (ratio === 2 ? 1 : 2), 'density thumbnail installs');
+      }
+    } finally {
+      if (own) Object.defineProperty(window, 'devicePixelRatio', own);
+      else delete (window as { devicePixelRatio?: number }).devicePixelRatio;
+    }
+    expect(installs).to.deep.equal([{ width: 64, ratio: 2 }, { width: 128, ratio: 4 }]);
   });
 
   it('limits parallel transfers and aborts retired viewport requests', async () => {
@@ -214,9 +263,9 @@ describe('point thumbnails with native map engines', function () {
       map.dataLayers = [{ ...photos, cluster: undefined, geojson: { type: 'Feature', id: 9,
         properties: { thumb: '/photos/single.svg', point_count: 4 }, geometry: { type: 'Point', coordinates: [0, 0] } } }];
       await map.updateComplete;
-      await map.whenIdle();
-      expect(native.queryRenderedFeatures([170, 120]).some(hit =>
-        hit.layer.id.endsWith('-point-image') && (hit as { id?: number }).id === 9)).to.equal(true);
+      // Thumbnail transfers do not hold readiness, so wait for the progressive repaint itself.
+      await waitUntil(() => native.queryRenderedFeatures([170, 120]).some(hit =>
+        hit.layer.id.endsWith('-point-image') && (hit as { id?: number }).id === 9), 'the ordinary photo is placed', { timeout: 10000 });
     });
   }
 });

@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'Sopọ̀ mọ́ {name}',
   connectorManagerDisconnectFor: 'Gé asopọ̀ mọ́ {name}',
   connectorManagerRetryFor: 'Tún gbìyànjú láti sopọ̀ mọ́ {name}',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Àwọn iṣẹ́ abẹ́lẹ̀',
   backgroundRunsEmpty: 'Kò sí iṣẹ́ abẹ́lẹ̀ kankan tó wà.',
   backgroundRunsLimit: 'Ó ń fi àwọn iṣẹ́ abẹ́lẹ̀ {count} àkọ́kọ́ hàn.',

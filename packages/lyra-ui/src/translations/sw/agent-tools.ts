@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'Unganisha kwenye {name}',
   connectorManagerDisconnectFor: 'Tenganisha kutoka {name}',
   connectorManagerRetryFor: 'Jaribu kuunganisha kwenye {name} tena',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Kazi zinazoendeshwa chinichini',
   backgroundRunsEmpty: 'Hakuna kazi zinazoendeshwa chinichini zinazopatikana.',
   backgroundRunsLimit: 'Inaonyesha kazi {count} za kwanza zinazoendeshwa chinichini.',

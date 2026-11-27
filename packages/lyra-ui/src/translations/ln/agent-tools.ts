@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'Bozala na boyokani {name} .',
   connectorManagerDisconnectFor: 'Kokata boyokani {name}',
   connectorManagerRetryFor: 'Meka lisusu boyokani mpo na {name}',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Misala ya nsima',
   backgroundRunsEmpty: 'Misala ya nsima ezali te.',
   backgroundRunsLimit: 'Kolakisa misala ya nsima {count} ya liboso.',

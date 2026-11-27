@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'Nyambung {name}',
   connectorManagerDisconnectFor: 'Putus sambungan {name}',
   connectorManagerRetryFor: 'Coba maneh sambungan kanggo {name}',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Operasi latar mburi',
   backgroundRunsEmpty: 'Ora ana latar mburi sing kasedhiya.',
   backgroundRunsLimit: 'Nuduhake {count} latar mburi pisanan.',

@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  connectorManagerStatusChanged: '{name}: {status}',
   noData: 'لا توجد بيانات',
   legendTypeShown: '{label} معروض',
   legendTypeHidden: '{label} مخفي',

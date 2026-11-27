@@ -6382,7 +6382,11 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
             if (!active || !current()) return;
             try {
               if (event === 'style-ready') startRestoration();
-              if (event === 'idle') this.pointImages?.refresh();
+              // Thumbnails are decorative: a peer failure while scanning keeps the fallback circles
+              // instead of failing the map's readiness.
+              if (event === 'idle') {
+                try { this.pointImages?.refresh(); } catch { /* Keep the current markers. */ }
+              }
               if (active && current()) listener();
             } catch { if (current()) this.readiness.fail(); }
           }));
@@ -8270,8 +8274,7 @@ export class LyraMap extends LyraElement<LyraMapEventMap> {
     this.applyPointIcons(sourceId, layer);
     if (!current()) throw new DOMException('Map update superseded.', 'AbortError');
     if (layer.point?.image && this._map) {
-      this.pointImages ??= new (layerRuntime().MapPointImages)(this, this._map, work => this.trackFeatureLoad(work),
-        id => this.removeMapLayer(id));
+      this.pointImages ??= new (layerRuntime().MapPointImages)(this, this._map, id => this.removeMapLayer(id));
       this.paintPointImage(sourceId, layer);
     } else {
       this.pointImages?.remove(sourceId);

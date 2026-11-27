@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  connectorManagerStatusChanged: '{name}: {status}',
   noData: 'Kò sí dátà',
   legendTypeShown: 'A ti fi {label} hàn',
   legendTypeHidden: 'A ti fi {label} pamọ́',

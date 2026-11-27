@@ -99,24 +99,36 @@ describe('lr-stepper child mode', () => {
     expect(b.hasAttribute('hidden')).to.equal(true);
   });
 
-  it('reconciles a focused child that becomes hidden and restores it when shown', async () => {
+  it('moves a focused current step that becomes hidden to its neighbour and reports the change', async () => {
     const el = await fixture<LyraStepper>(three(true));
     el.active = 'shipping';
     await el.updateComplete;
     const [cart, shipping, pay] = stepsOf(el) as [LyraStep, LyraStep, LyraStep];
     const button = (step: LyraStep) => step.shadowRoot!.querySelector<HTMLButtonElement>('button')!;
+    const changes: string[] = [];
+    el.addEventListener('lr-before-step-change', () => changes.push('before'));
+    el.addEventListener('lr-step-change', (event) => {
+      const { name, previousName, step, previousStep } = event.detail;
+      changes.push(`${previousName}>${name}:${step === pay}:${previousStep === shipping}:${el.active}:${pay.active}`);
+    });
     await focusByKeyboard(button(shipping));
     shipping.hidden = true;
-    await waitUntil(() => document.activeElement === cart && button(cart).tabIndex === 0);
-    expect(activeNames(el)).to.deep.equal(['cart']);
+    await waitUntil(() => document.activeElement === pay && button(pay).tabIndex === 0);
+    await waitUntil(() => changes.length === 1);
+    expect(changes).to.deep.equal(['shipping>pay:true:true:pay:true']);
+    expect(activeNames(el)).to.deep.equal(['pay']);
     expect(button(shipping).tabIndex).to.equal(-1);
     expect(pay.position).to.equal(2);
-    expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal('Step 1 of 2');
+    expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal('Step 2 of 2');
+    pay.hidden = true;
+    await waitUntil(() => changes.length === 2);
+    expect(changes[1]).to.equal('pay>cart:false:false:cart:false');
+    expect(activeNames(el)).to.deep.equal(['cart']);
     shipping.hidden = false;
-    await waitUntil(() => button(shipping).tabIndex === 0);
-    expect(activeNames(el)).to.deep.equal(['shipping']);
-    expect(pay.position).to.equal(3);
-    expect(document.activeElement === cart).to.equal(true);
+    await el.updateComplete;
+    expect(activeNames(el)).to.deep.equal(['cart']);
+    expect(changes.length).to.equal(2);
+    expect(cart.contains(document.activeElement) || document.activeElement === cart).to.equal(true);
   });
 
   it('keeps an empty child strip until a step is shown again', async () => {

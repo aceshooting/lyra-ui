@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'Prijungti {name}',
   connectorManagerDisconnectFor: 'Atjungti {name}',
   connectorManagerRetryFor: 'Bandyti dar kartą prijungti {name}',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Foniniai paleidimai',
   backgroundRunsEmpty: 'Foninių paleidimų nėra.',
   backgroundRunsLimit: 'Rodomi pirmieji foniniai paleidimai: {count}.',

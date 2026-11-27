@@ -1364,6 +1364,13 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     this.moreFocused = event.composedPath().includes(this.moreButton()!);
   };
 
+  /** Leaving the strip hands its tab stop back to the roving tab; opening More's menu does not. */
+  private onMenuStripFocusOut = (event: FocusEvent): void => {
+    const next = event.relatedTarget as Node | null;
+    if (next && ((event.currentTarget as Node).contains(next) || this.menuPanel()?.contains(next))) return;
+    this.moreFocused = false;
+  };
+
   private moreButton(): HTMLButtonElement | null {
     return this.renderRoot.querySelector('[part="overflow-trigger"]');
   }
@@ -1750,6 +1757,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
             aria-label=${(hostAriaLabel(this) === '' || this.accessibleLabel === '') ? '' : resolveAccessibleName(this, this.label) ?? nothing}
             aria-orientation=${this.isVertical ? 'vertical' : 'horizontal'}
             @focusin=${this.menuMode ? this.onMenuStripFocus : nothing}
+            @focusout=${this.menuMode ? this.onMenuStripFocusOut : nothing}
             @keydown=${this.onTabListKeyDown}
             @scroll=${this.onTabListScroll}
           >

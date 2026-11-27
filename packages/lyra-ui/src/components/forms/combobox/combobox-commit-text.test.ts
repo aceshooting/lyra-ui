@@ -148,6 +148,19 @@ describe('lr-combobox commit="text"', () => {
     expect({ active, value: el.value }).to.deep.equal({ active: null, value: 'bolt' });
   });
 
+  it('does not restore a highlight that public loading hid once the list returns', async () => {
+    const { el } = await mount();
+    const input = await typeText(el, 'Steel');
+    key(input, 'ArrowDown');
+    await el.updateComplete;
+    expect(input.hasAttribute('aria-activedescendant')).to.equal(true);
+    el.loading = true;
+    await el.updateComplete;
+    el.loading = false;
+    await el.updateComplete;
+    expect(input.hasAttribute('aria-activedescendant')).to.equal(false);
+  });
+
   it('commits free text on Enter while closed and still submits the form', async () => {
     const { form, el } = await mount();
     const input = await typeText(el, 'Zzz');

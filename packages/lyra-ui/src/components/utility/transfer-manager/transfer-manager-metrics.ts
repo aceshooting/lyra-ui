@@ -28,6 +28,8 @@ export interface TransferMetrics {
   readonly etaSeconds?: number;
   /** Percentage between 0 and 100, absent for indeterminate progress. */
   readonly progress?: number;
+  /** Whether bytes are currently moving, so a remaining time is meaningful. */
+  readonly active: boolean;
 }
 
 const statuses: ReadonlySet<string> = new Set<LyraTransferStatus>(['queued', 'active', 'paused', 'done', 'error', 'cancelled']);
@@ -110,38 +112,51 @@ export function sampleTransfers(
 }
 
 function metrics(bytesDone: number, bytesTotal: number | undefined, bytesPerSecond: number | undefined,
-  complete: boolean, estimating: boolean): TransferMetrics {
+  complete: boolean, active: boolean, remaining: number | undefined): TransferMetrics {
   const progress = bytesTotal === undefined ? undefined : bytesTotal > 0 ? 100 * (bytesDone / bytesTotal) : complete ? 100 : 0;
   let etaSeconds: number | undefined;
-  if (bytesTotal !== undefined && (complete || estimating)) {
-    const remaining = Math.max(0, bytesTotal - bytesDone);
+  if (active && remaining !== undefined) {
     if (remaining === 0) etaSeconds = 0;
     else if (bytesPerSecond && Number.isFinite(remaining / bytesPerSecond)) etaSeconds = Math.ceil(remaining / bytesPerSecond);
   }
-  return { bytesDone, bytesTotal, bytesPerSecond, progress, etaSeconds };
+  return { bytesDone, bytesTotal, bytesPerSecond, progress, etaSeconds, active };
 }
 
 export function transferMetrics(row: LyraTransfer, sample?: TransferSample): TransferMetrics {
-  const rate = row.status === 'active' && sample?.status === 'active' ? sample.bytesPerSecond : undefined;
-  return metrics(row.bytesDone, row.bytesTotal, rate, row.status === 'done', row.status === 'active');
+  const active = row.status === 'active';
+  const rate = active && sample?.status === 'active' ? sample.bytesPerSecond : undefined;
+  const remaining = row.bytesTotal === undefined ? undefined : Math.max(0, row.bytesTotal - row.bytesDone);
+  return metrics(row.bytesDone, row.bytesTotal, rate, row.status === 'done', active, remaining);
 }
 
+/** Failed and cancelled rows leave the aggregate: they will not move further bytes unless retried.
+ *  The overall ETA covers only bytes still due from active and queued rows; paused rows wait for
+ *  the user, so their remainder is excluded. */
 export function totalTransferMetrics(
   transfers: readonly LyraTransfer[], samples: ReadonlyMap<string, TransferSample>,
 ): TransferMetrics {
   let bytesDone = 0;
   let bytesTotal: number | undefined = 0;
+  let remaining: number | undefined = 0;
   let rate: number | undefined;
   let active = false;
-  let complete = transfers.length > 0;
+  let counted = 0;
+  let complete = true;
   for (const row of transfers) {
+    if (row.status === 'error' || row.status === 'cancelled') continue;
+    counted += 1;
     bytesDone += row.bytesDone;
     bytesTotal = bytesTotal !== undefined && row.bytesTotal !== undefined ? bytesTotal + row.bytesTotal : undefined;
     if (row.status !== 'done') complete = false;
+    if (row.status === 'active' || row.status === 'queued') {
+      remaining = remaining !== undefined && row.bytesTotal !== undefined
+        ? remaining + Math.max(0, row.bytesTotal - row.bytesDone) : undefined;
+    }
     if (row.status !== 'active') continue;
     active = true;
     const sample = samples.get(row.id);
     if (sample?.bytesPerSecond !== undefined && sample.status === 'active') rate = (rate ?? 0) + sample.bytesPerSecond;
   }
-  return metrics(bytesDone, bytesTotal, rate !== undefined && Number.isFinite(rate) ? rate : undefined, complete, active);
+  return metrics(bytesDone, bytesTotal, rate !== undefined && Number.isFinite(rate) ? rate : undefined,
+    counted > 0 && complete, active, remaining);
 }

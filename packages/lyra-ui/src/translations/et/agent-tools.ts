@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'Ühenda {name}',
   connectorManagerDisconnectFor: 'Katkesta ühendus: {name}',
   connectorManagerRetryFor: 'Proovi uuesti ühendada: {name}',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Taustakäivitused',
   backgroundRunsEmpty: 'Taustakäivitusi pole saadaval.',
   backgroundRunsLimit: 'Kuvatakse esimesed {count} taustakäivitust.',

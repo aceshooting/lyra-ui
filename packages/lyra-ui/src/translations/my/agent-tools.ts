@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: '{name} ချိတ်ဆက်ပါ',
   connectorManagerDisconnectFor: '{name} အဆက်ဖြတ်ရန်',
   connectorManagerRetryFor: '{name} အတွက် ပြန်လည်ချိတ်ဆက်ကြည့်ပါ။',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'နောက်ခံအပြေး',
   backgroundRunsEmpty: 'နောက်ခံအပြေးများကို မရရှိနိုင်ပါ။',
   backgroundRunsLimit: 'ပထမဆုံး {count} နောက်ခံအပြေးများကိုပြသထားသည်။',

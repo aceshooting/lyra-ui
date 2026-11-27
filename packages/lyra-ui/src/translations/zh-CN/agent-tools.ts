@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: '连接到 {name}',
   connectorManagerDisconnectFor: '断开与 {name} 的连接',
   connectorManagerRetryFor: '重试连接到 {name}',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: '后台运行',
   backgroundRunsEmpty: '没有可用的后台运行。',
   backgroundRunsLimit: '显示前 {count} 个后台运行。',

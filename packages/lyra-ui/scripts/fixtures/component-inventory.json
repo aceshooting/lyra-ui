@@ -88194,7 +88194,7 @@
           {
             "name": "details-placement",
             "property": "detailsPlacement",
-            "type": "'end' | 'bottom'",
+            "type": "LyraLightboxDetailsPlacement",
             "reflects": false,
             "inferred": false,
             "deprecated": null,
@@ -88365,7 +88365,7 @@
           {
             "name": "detailsPlacement",
             "attribute": "details-placement",
-            "type": "'end' | 'bottom'",
+            "type": "LyraLightboxDetailsPlacement",
             "readonly": false,
             "reflects": false,
             "deprecated": null,

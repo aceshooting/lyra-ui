@@ -1,11 +1,13 @@
 import { html, nothing, type PropertyValues, type TemplateResult } from 'lit';
 import { property, state } from 'lit/decorators.js';
 import { keyed } from 'lit/directives/keyed.js';
+import { live } from 'lit/directives/live.js';
 import { hostAriaLabel } from '../../../internal/a11y.js';
 import { AnnouncementSinkController } from '../../../internal/announcer.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
 import { finiteRange } from '../../../internal/numbers.js';
 import { safeMediaSrc } from '../../../internal/safe-url.js';
+import { OwnerAnimationFrameWaiter } from '../../../internal/owner-animation-frame.js';
 import { defaultEditorSettings, renderEditorImage, type EditorSettings } from './image-editor-pixels.js';
 import { styles } from './image-editor.styles.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
@@ -90,6 +92,19 @@ export class LyraImageEditor extends LyraElement<LyraImageEditorEventMap> {
   @state() private failed = false;
   @state() private exportFailed = false;
   private readonly announcements = new AnnouncementSinkController(this, { eager: ['assertive'] });
+  private readonly previewFrame = new OwnerAnimationFrameWaiter(this);
+  private previewQueued = false;
+
+  override connectedCallback(): void {
+    super.connectedCallback();
+    // A disconnect cancels a queued redraw, so repaint the latest edit on return.
+    if (this.hasUpdated && this.image) this.queuePreview();
+  }
+
+  override disconnectedCallback(): void {
+    this.previewFrame.cancel();
+    super.disconnectedCallback();
+  }
 
   protected override willUpdate(changed: PropertyValues): void {
     super.willUpdate(changed);
@@ -116,13 +131,28 @@ export class LyraImageEditor extends LyraElement<LyraImageEditorEventMap> {
         });
       }
     }
-    if (!this.image || !(changed.has('image') || changed.has('settings') || changed.has('showOriginal'))) return;
+    if (!this.image) return;
+    // A new picture paints at once; edits coalesce into one redraw per frame.
+    if (changed.has('image')) this.drawPreview();
+    else if (changed.has('settings') || changed.has('showOriginal')) this.queuePreview();
+  }
+
+  private queuePreview(): void {
+    if (this.previewQueued) return;
+    this.previewQueued = true;
+    void this.previewFrame.wait().then(current => {
+      this.previewQueued = false;
+      if (current) this.drawPreview();
+    });
+  }
+
+  private drawPreview(): void {
+    const image = this.image;
     const canvas = this.renderRoot.querySelector('canvas');
-    if (!canvas) return;
+    if (!image || !canvas) return;
     try {
-      renderEditorImage(canvas, this.image, this.showOriginal ? defaultEditorSettings() : this.settings, 1024);
+      renderEditorImage(canvas, image, this.showOriginal ? defaultEditorSettings() : this.settings, 1024);
     } catch {
-      const image = this.image;
       queueMicrotask(() => {
         if (this.image === image && image.getAttribute('src') === safeMediaSrc(this.src)) this.loadFailed();
       });
@@ -194,9 +224,10 @@ export class LyraImageEditor extends LyraElement<LyraImageEditorEventMap> {
       : { ...settings, flipY: !settings.flipY, cropY: 100 - settings.cropY };
   }
 
-  private range(key: Adjustment | CropControl, label: string, value: number, min: number): TemplateResult {
+  private range(key: Adjustment | CropControl, label: string, value: number, min: number, mirrored = false): TemplateResult {
     const onInput = (event: Event) => {
-      const next = (event.currentTarget as HTMLInputElement).valueAsNumber;
+      const input = (event.currentTarget as HTMLInputElement).valueAsNumber;
+      const next = mirrored ? 100 - input : input;
       if (key === 'cropScale' || key === 'cropX' || key === 'cropY') {
         this.settings = { ...this.settings, [key]: next };
       } else {
@@ -205,7 +236,7 @@ export class LyraImageEditor extends LyraElement<LyraImageEditorEventMap> {
       }
     };
     return html`<label><span>${label}</span><input name=${key} type="range" min=${min}
-      max="100" .value=${String(value)} @input=${onInput}></label>`;
+      max="100" .value=${String(mirrored ? 100 - value : value)} @input=${onInput}></label>`;
   }
 
   override render(): TemplateResult {
@@ -226,21 +257,21 @@ export class LyraImageEditor extends LyraElement<LyraImageEditorEventMap> {
           <button type="button" aria-pressed=${String(!this.showOriginal)} @click=${() => { this.showOriginal = false; }}>${this.localize('imageEditorAfter')}</button>
         </div>
         <label>${this.localize('imageEditorPreset')}<select name="preset" @change=${(e: Event) => this.setPreset((e.currentTarget as HTMLSelectElement).value as Preset)}>
-          <option value="original" ?selected=${this.preset === 'original'}>${this.localize('imageEditorOriginal')}</option>
-          <option value="monochrome" ?selected=${this.preset === 'monochrome'}>${this.localize('imageEditorMonochrome')}</option>
-          <option value="vivid" ?selected=${this.preset === 'vivid'}>${this.localize('imageEditorVivid')}</option>
-          <option value="custom" disabled ?selected=${this.preset === 'custom'}>${this.localize('imageEditorCustom')}</option>
+          <option value="original" .selected=${live(this.preset === 'original')}>${this.localize('imageEditorOriginal')}</option>
+          <option value="monochrome" .selected=${live(this.preset === 'monochrome')}>${this.localize('imageEditorMonochrome')}</option>
+          <option value="vivid" .selected=${live(this.preset === 'vivid')}>${this.localize('imageEditorVivid')}</option>
+          <option value="custom" disabled .selected=${live(this.preset === 'custom')}>${this.localize('imageEditorCustom')}</option>
         </select></label>
         <div class="ranges">${(Object.keys(adjustmentLabels) as Adjustment[]).map(key =>
           this.range(key, this.localize(adjustmentLabels[key]), settings.adjustments[key], key === 'vignette' ? 0 : -100))}</div>
         <label>${this.localize('imageEditorAspect')}<select name="aspect" @change=${(e: Event) => {
           this.settings = { ...this.settings, aspect: Number((e.currentTarget as HTMLSelectElement).value) };
-        }}><option value="0" ?selected=${settings.aspect === 0}>${this.localize('imageEditorOriginal')}</option>
-          ${([[1,1],[4,3],[3,4],[16,9],[9,16]] as const).map(([w,h]) => html`<option value=${w / h} ?selected=${settings.aspect === w / h}>${w}:${h}</option>`)}
+        }}><option value="0" .selected=${live(settings.aspect === 0)}>${this.localize('imageEditorOriginal')}</option>
+          ${([[1,1],[4,3],[3,4],[16,9],[9,16]] as const).map(([w,h]) => html`<option value=${w / h} .selected=${live(settings.aspect === w / h)}>${w}:${h}</option>`)}
         </select></label>
         <div class="ranges">
           ${this.range('cropScale', this.localize('imageEditorCropScale'), settings.cropScale, 1)}
-          ${this.range('cropX', this.localize('imageEditorCropX'), settings.cropX, 0)}
+          ${this.range('cropX', this.localize('imageEditorCropX'), settings.cropX, 0, this.effectiveDirection === 'rtl')}
           ${this.range('cropY', this.localize('imageEditorCropY'), settings.cropY, 0)}
         </div>
         <div class="actions">

@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'وصل کنید {name}',
   connectorManagerDisconnectFor: 'قطع کنید {name}',
   connectorManagerRetryFor: 'اتصال را برای {name} دوباره امتحان کنید',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'اجراهای پس زمینه',
   backgroundRunsEmpty: 'هیچ اجرای پس زمینه موجود نیست.',
   backgroundRunsLimit: 'نشان دادن {count} پس زمینه اول.',

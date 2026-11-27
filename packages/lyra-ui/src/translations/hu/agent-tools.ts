@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'Csatlakozás {name}',
   connectorManagerDisconnectFor: 'Leválasztás {name}',
   connectorManagerRetryFor: 'Próbálja újra a {name} csatlakoztatását',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Háttérfuttatások',
   backgroundRunsEmpty: 'Nem állnak rendelkezésre háttérfuttatások.',
   backgroundRunsLimit: 'Az első {count} háttérfutás megjelenítése.',

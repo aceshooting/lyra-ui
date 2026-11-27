@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'Poveži z {name}',
   connectorManagerDisconnectFor: 'Prekini povezavo z {name}',
   connectorManagerRetryFor: 'Znova poskusi povezavo z {name}',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Opravila v ozadju',
   backgroundRunsEmpty: 'Na voljo ni nobenega opravila v ozadju.',
   backgroundRunsLimit: 'Prikazanih je prvih {count} opravil v ozadju.',

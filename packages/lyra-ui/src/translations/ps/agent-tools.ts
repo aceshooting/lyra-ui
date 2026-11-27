@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: '{name} ونښلوئ',
   connectorManagerDisconnectFor: 'د {name} اړیکه پرې کړئ',
   connectorManagerRetryFor: 'له {name} سره د نښلولو هڅه بیا وکړئ',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'شالید کې روان کارونه',
   backgroundRunsEmpty: 'هېڅ شالیدي کار شتون نه لري.',
   backgroundRunsLimit: 'لومړي {count} شالیدي کارونه ښودل کېږي.',

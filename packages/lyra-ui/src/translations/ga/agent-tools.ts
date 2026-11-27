@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'Ceangail {name}',
   connectorManagerDisconnectFor: 'Dícheangail {name}',
   connectorManagerRetryFor: 'Bain triail eile as an gceangal le {name}',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Rití cúlra',
   backgroundRunsEmpty: 'Níl aon rití cúlra ar fáil.',
   backgroundRunsLimit: 'An chéad {count} rith cúlra á dtaispeáint.',

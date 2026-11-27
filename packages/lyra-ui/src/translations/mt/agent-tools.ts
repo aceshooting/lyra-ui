@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'Qabbad {name}',
   connectorManagerDisconnectFor: 'Skonnettja {name}',
   connectorManagerRetryFor: 'Erġa’ pprova l-konnessjoni għal {name}',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Eżekuzzjonijiet fl-isfond',
   backgroundRunsEmpty: 'M’hemm l-ebda eżekuzzjoni fl-isfond disponibbli.',
   backgroundRunsLimit: 'Qed jintwerew l-ewwel {count} eżekuzzjonijiet fl-isfond.',

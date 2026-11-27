@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'Pripojiť {name}',
   connectorManagerDisconnectFor: 'Odpojiť {name}',
   connectorManagerRetryFor: 'Skúsiť znova pripojiť {name}',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Behy na pozadí',
   backgroundRunsEmpty: 'Nie sú k dispozícii žiadne behy na pozadí.',
   backgroundRunsLimit: 'Zobrazuje sa prvých {count} behov na pozadí.',

@@ -1,6 +1,7 @@
 import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
+import { sinkTexts } from '../../../../test/announcements.js';
 import { setReducedMotion } from '../../../../test/wtr-media.js';
 import type { LyraTransferManager } from '../../lr-transfer-manager.js';
 import '../../lr-transfer-manager.js';
@@ -29,7 +30,8 @@ describe('lr-transfer-manager', () => {
     const root = el.shadowRoot!;
     const overall = byPart<HTMLProgressElement>(root, 'overall-progress');
     const progress = byPart<HTMLProgressElement>(row(el, 'second'), 'progress');
-    expect(overall.position).to.equal(150 / 800);
+    // Failed and cancelled rows leave the aggregate.
+    expect(overall.position).to.equal(150 / 400);
     expect(progress.position).to.equal(0.3);
     expect(progress.getAttribute('aria-label')).to.equal('Mountain.tif');
     expect(root.querySelectorAll('[part~="item"]').length).to.equal(6);
@@ -178,6 +180,40 @@ describe('lr-transfer-manager', () => {
     expect(root.textContent).to.not.match(/NaN|Infinity/);
   });
 
+  it('shows remaining time only while bytes move, and lets a stalled rate expire', async () => {
+    const Ctor = customElements.get('lr-transfer-manager') as unknown as { staleRateMs: number };
+    const saved = Ctor.staleRateMs;
+    Ctor.staleRateMs = 150;
+    try {
+      const el = await mount();
+      for (const id of ['first', 'hold', 'bad', 'stop', 'ok']) {
+        expect(row(el, id).querySelector('[part~="eta"]') === null, id).to.equal(true);
+      }
+      const sampleTime = performance.now();
+      await waitUntil(() => performance.now() > sampleTime + 1, 'a distinct clock sample is available');
+      el.transfers = [{ ...queue[0], bytesDone: 80 }];
+      await el.updateComplete;
+      const item = row(el, 'second');
+      expect(byPart(item, 'rate').textContent).to.match(/\/s/);
+      await waitUntil(() => item.querySelector('[part~="rate"]') === null, 'the rate expires without a new snapshot');
+      expect(byPart(item, 'eta').textContent).to.contain('Time remaining unknown');
+    } finally {
+      Ctor.staleRateMs = saved;
+    }
+  });
+
+  it('announces completion and failure but not the initial state or counter updates', async () => {
+    const el = await mount();
+    const before = [sinkTexts('polite').length, sinkTexts('assertive').length];
+    el.transfers = [{ ...queue[0], bytesDone: 60 }, ...queue.slice(1)];
+    await el.updateComplete;
+    expect([sinkTexts('polite').length, sinkTexts('assertive').length]).to.deep.equal(before);
+    el.transfers = [{ ...queue[0], status: 'done', bytesDone: 100 }, { ...queue[1], status: 'error' }, ...queue.slice(2)];
+    await el.updateComplete;
+    await waitUntil(() => sinkTexts('polite').some(text => text.includes('Mountain.tif'))
+      && sinkTexts('assertive').some(text => text.includes('River.tif')), 'status changes are announced');
+  });
+
   it('localizes the section and the empty state and honors the host accessible name', async () => {
     const el = await fixture<LyraTransferManager>(html`<lr-transfer-manager
       .strings=${{ transferManagerLabel: 'My transfers', transferManagerEmpty: 'Nothing to transfer' }}>
@@ -198,7 +234,9 @@ describe('lr-transfer-manager', () => {
     el.placement = 'floating';
     await el.updateComplete;
     expect(getComputedStyle(el).position).to.equal('fixed');
-    expect(getComputedStyle(el).left).to.not.equal('auto');
+    const host = el.getBoundingClientRect();
+    expect(host.left).to.be.below(innerWidth / 2);
+    expect(host.right).to.be.below(innerWidth / 2);
     expect(base.scrollWidth).to.be.at.most(base.clientWidth + 1);
   });
 

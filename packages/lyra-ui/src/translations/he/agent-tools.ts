@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'חבר את {name}',
   connectorManagerDisconnectFor: 'נתק את {name}',
   connectorManagerRetryFor: 'נסה שוב להתחבר עבור {name}',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'ריצות רקע',
   backgroundRunsEmpty: 'אין ריצות רקע זמינות.',
   backgroundRunsLimit: 'מציג את {count} ריצות הרקע הראשונות.',

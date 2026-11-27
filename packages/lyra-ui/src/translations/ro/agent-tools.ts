@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'Conectează la {name}',
   connectorManagerDisconnectFor: 'Deconectează de la {name}',
   connectorManagerRetryFor: 'Reîncearcă conectarea la {name}',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Execuții în fundal',
   backgroundRunsEmpty: 'Nu sunt disponibile execuții în fundal.',
   backgroundRunsLimit: 'Se afișează primele {count} execuții în fundal.',

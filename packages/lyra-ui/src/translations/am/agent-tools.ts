@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'አገናኝ {name}',
   connectorManagerDisconnectFor: 'ግንኙነት አቋርጥ {name}',
   connectorManagerRetryFor: 'ለ{name} ግንኙነት እንደገና ይሞክሩ',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'የበስተጀርባ ሩጫዎች',
   backgroundRunsEmpty: 'ምንም የጀርባ ሩጫዎች አይገኙም።',
   backgroundRunsLimit: 'የመጀመሪያዎቹን {count} የጀርባ ሩጫዎችን በማሳየት ላይ።',

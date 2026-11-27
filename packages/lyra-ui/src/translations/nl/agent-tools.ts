@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'Verbinden met {name}',
   connectorManagerDisconnectFor: 'Verbinding met {name} verbreken',
   connectorManagerRetryFor: 'Opnieuw proberen verbinding te maken met {name}',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Achtergrondtaken',
   backgroundRunsEmpty: 'Er zijn geen achtergrondtaken beschikbaar.',
   backgroundRunsLimit: 'De eerste {count} achtergrondtaken worden weergegeven.',

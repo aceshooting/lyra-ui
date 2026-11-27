@@ -268,7 +268,8 @@ function snapshotSteps(value: unknown, reportOmitted: (count: number) => void): 
  * @event lr-before-step-change - Child mode. Cancelable; `detail: { name, previousName, step,
  *   previousStep }`, fired before `active` changes. `preventDefault()` keeps the current step.
  * @event lr-step-change - Child mode. `detail` as `lr-before-step-change`; fired after `active`
- *   changed and the steps re-rendered.
+ *   changed and the steps re-rendered. Also fires, without a preceding request, when hiding the
+ *   current step moves `active` to a neighbouring step.
  * @slot - Child mode: one or more `<lr-step>` elements.
  * @csspart stepper - Child mode: the outer wrapper, a `<nav>` landmark while `clickable`, otherwise
  *   a labelled `role="group"`.
@@ -487,7 +488,8 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
 
   /** Child mode: the `name` of the current `<lr-step>`. Falls back to the first visible step when
    *  unset or when it matches no visible step. Changing it from script moves the step without the veto event;
-   *  `goTo()`, `next()` and `previous()` ask first. */
+   *  `goTo()`, `next()` and `previous()` ask first. Hiding the current step moves `active` to the next
+   *  reachable visible step (else the previous one) and emits `lr-step-change` without a veto. */
   @property({ reflect: true }) active = '';
 
   /** Child mode: steps must be completed in order. `next()`, `goTo()`, an invoker and a click
@@ -500,6 +502,8 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
 
   private childSteps: LyraStep[] = [];
   private focusedChildStep?: LyraStep;
+  /** The step last rendered as current, so hiding it can be reported as a forced move. */
+  private currentChildStep?: LyraStep;
   private readonly stepperInternals = attachInternalsSafely(this);
   @state() private childCount = 0;
   private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
@@ -881,7 +885,15 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     const countChanged = visible.length !== this.childCount;
     this.childCount = visible.length;
     if (hadChildren !== (steps.length > 0)) this.requestUpdate();
+    const displaced = this.displacedStepChange(visible);
+    if (displaced) this.active = displaced.name;
     const stop = this.applyChildState(visible);
+    if (displaced) {
+      void this.updateComplete.then(() => {
+        if (this.isConnected && this.childMode && displaced.step === this.currentChildStep)
+          this.emit('lr-step-change', displaced);
+      });
+    }
     if (this.focusedChildStep?.hasAttribute('hidden')) {
       this.focusedChildStep = undefined;
       const owner = this.ownerDocument;
@@ -914,6 +926,20 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     return steps.find((step) => step.name === this.active) ?? steps[0];
   }
 
+  /** When the rendered current step was just hidden, the move to the next reachable visible step
+   *  (else the previous one), matching how `lr-tab-group` repairs a hidden selected tab. */
+  private displacedStepChange(visible: readonly LyraStep[]): LyraStepChangeDetail | undefined {
+    const previous = this.currentChildStep;
+    const at = previous ? this.childSteps.indexOf(previous) : -1;
+    if (!this.hasUpdated || !this.childMode || at < 0 || !previous!.hasAttribute('hidden')) return undefined;
+    const reachable = (step: LyraStep) => visible.includes(step) && this.isReachable(step, visible);
+    const target = this.childSteps.slice(at + 1).find(reachable) ??
+      this.childSteps.slice(0, at).reverse().find(reachable);
+    return target
+      ? { name: target.name, previousName: previous!.name, step: target, previousStep: previous! }
+      : undefined;
+  }
+
   /** In `linear` mode the 0-based index of the last step that may be reached. */
   private linearBoundary(steps: readonly LyraStep[]): number {
     const firstIncomplete = steps.findIndex((step) => !step.completed);
@@ -929,6 +955,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   private applyChildState(steps = this.visibleChildSteps): LyraStep | undefined {
     if (!this.childMode) return;
     const activeStep = this.resolveActiveStep(steps);
+    this.currentChildStep = activeStep;
     const boundary = this.linearBoundary(steps);
     this.activeIndex = activeStep ? steps.indexOf(activeStep) : 0;
     const stop =

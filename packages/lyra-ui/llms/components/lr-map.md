@@ -572,6 +572,9 @@ Paint-only data-layer and choropleth changes request one repaint per synchronous
 Equal paint produces no repaint; camera movement is not needed to show a metric or theme change.
 
 **Interactions:** owned overlay layers enter hit testing only with `interactive: true`.
+Migration: an overlay layer without the flag no longer receives `lr-map-click`, `lr-map-contextmenu`,
+or feature enter/leave events, and `priority` alone does not enroll it. Add `interactive: true` to
+each overlay layer that must stay clickable.
 Data layers and the choropleth are interactive by default and accept `interactive: false`.
 Interactive layers accept an optional `priority`. Enroll basemap layers explicitly through
 `interactiveBasemapLayers`.
@@ -1265,7 +1268,12 @@ intensity?: LyraMapHeatmapZoomValue; opacity?: number }`, where `LyraMapHeatmapZ
   while loading or after a failed request. Clusters retain their count, click and expansion behavior.
   After the map settles, up to 128 visible thumbnails across layers are retained, with
   four concurrent transfers. Panning away releases their atlas entries. Relative URLs resolve
-  against the map's document. The same HTTP(S), CORS, format and per-image limits as `images` apply.
+  against the map's document. Thumbnails rasterize at the display's pixel density (up to 4×).
+  Transfers do not delay `whenIdle()`; the map repaints once a batch finishes.
+  The URL must point to a pre-sized thumbnail, not an original photo. It must be an HTTP(S)
+  PNG, JPEG, WebP or SVG response served with CORS headers that allow this origin, at most 1 MiB
+  encoded and 2048 pixels per side (4,194,304 pixels in total), the same limits as `images`. A
+  larger, cross-origin-blocked or unsupported file fails and that point keeps its circle.
 
   `point.icons` maps exact category values to `LyraMapPointIcon { value: string; path: string;
   viewBox?: readonly [number, number, number, number]; mode?: LyraMapPointIconMode;

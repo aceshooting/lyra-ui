@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: '{name} ਨਾਲ ਕਨੈਕਟ ਕਰੋ',
   connectorManagerDisconnectFor: '{name} ਤੋਂ ਡਿਸਕਨੈਕਟ ਕਰੋ',
   connectorManagerRetryFor: '{name} ਨਾਲ ਕਨੈਕਸ਼ਨ ਦੁਬਾਰਾ ਅਜ਼ਮਾਓ',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'ਬੈਕਗ੍ਰਾਊਂਡ ਰਨ',
   backgroundRunsEmpty: 'ਕੋਈ ਬੈਕਗ੍ਰਾਊਂਡ ਰਨ ਉਪਲਬਧ ਨਹੀਂ ਹਨ।',
   backgroundRunsLimit: 'ਪਹਿਲੇ {count} ਬੈਕਗ੍ਰਾਊਂਡ ਰਨ ਦਿਖਾਏ ਜਾ ਰਹੇ ਹਨ।',

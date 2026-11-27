@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
+import { expect, fixture, html, nextFrame, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import type { LyraImageEditor } from './image-editor.class.js';
@@ -12,6 +12,31 @@ function photo(): string {
   ctx.fillStyle = 'rgb(196, 84, 38)';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   return canvas.toDataURL();
+}
+
+async function gradientEditor(dir: 'ltr' | 'rtl' = 'ltr') {
+  const source = document.createElement('canvas');
+  source.width = 8;
+  source.height = 6;
+  const pixels = source.getContext('2d')!;
+  for (let row = 0; row < 6; row++) {
+    for (let col = 0; col < 8; col++) {
+      pixels.fillStyle = `rgb(${col * 30}, ${row * 40}, 50)`;
+      pixels.fillRect(col, row, 1, 1);
+    }
+  }
+  const el = await fixture<LyraImageEditor>(html`<lr-image-editor dir=${dir} .src=${source.toDataURL()}></lr-image-editor>`);
+  const root = el.shadowRoot!;
+  await waitUntil(() => !!root.querySelector('canvas'));
+  const setControl = async (name: string, value: string, event: string) => {
+    const node = root.querySelector<HTMLInputElement | HTMLSelectElement>(`[name="${name}"]`)!;
+    node.value = value;
+    node.dispatchEvent(new Event(event));
+    await el.updateComplete;
+    await nextFrame();
+  };
+  const color = (x: number, y: number) => [...root.querySelector('canvas')!.getContext('2d')!.getImageData(x, y, 1, 1).data];
+  return { el, root, setControl, color };
 }
 
 describe('<lr-image-editor>', () => {
@@ -40,42 +65,61 @@ describe('<lr-image-editor>', () => {
     expect(root.querySelector<HTMLSelectElement>('[name="preset"]')!.value).to.equal('custom');
   });
 
-  it('rotates the displayed crop after a flip', async () => {
-    const source = document.createElement('canvas');
-    source.width = 8;
-    source.height = 6;
-    const pixels = source.getContext('2d')!;
-    for (let row = 0; row < 6; row++) {
-      for (let col = 0; col < 8; col++) {
-        pixels.fillStyle = `rgb(${col * 30}, ${row * 40}, 50)`;
-        pixels.fillRect(col, row, 1, 1);
-      }
-    }
-    const el = await fixture<LyraImageEditor>(html`<lr-image-editor .src=${source.toDataURL()}></lr-image-editor>`);
-    const root = el.shadowRoot!;
-    await waitUntil(() => !!root.querySelector('canvas'));
-    const setControl = async (name: string, value: string, event: string) => {
-      const node = root.querySelector<HTMLInputElement | HTMLSelectElement>(`[name="${name}"]`)!;
-      node.value = value;
-      node.dispatchEvent(new Event(event));
-      await el.updateComplete;
-    };
+  it('rotates the displayed crop after a flip and keeps the chosen aspect selected', async () => {
+    const { el, root, setControl, color } = await gradientEditor();
     await setControl('aspect', String(4 / 3), 'change');
     await setControl('cropScale', '50', 'input');
     await setControl('cropX', '0', 'input');
     await setControl('cropY', '0', 'input');
-    const button = (name: string) => Array.from(root.querySelectorAll('button')).find(b => b.textContent?.trim() === name)!;
-    button('Flip horizontally').click();
-    await el.updateComplete;
+    const press = async (name: string) => {
+      Array.from(root.querySelectorAll('button')).find(b => b.textContent?.trim() === name)!.click();
+      await el.updateComplete;
+      await nextFrame();
+    };
+    await press('Flip horizontally');
     const canvas = root.querySelector('canvas')!;
-    const color = (x: number, y: number) => [...canvas.getContext('2d')!.getImageData(x, y, 1, 1).data];
     const originalCorner = color(0, 0);
     expect(originalCorner).to.deep.equal([90, 0, 50, 255]);
-    button('Rotate').click();
-    await el.updateComplete;
+    await press('Rotate');
     expect([canvas.width, canvas.height]).to.deep.equal([3, 4]);
     expect(color(2, 0)).to.deep.equal(originalCorner);
-    expect(root.querySelector<HTMLSelectElement>('[name="aspect"]')!.value).to.equal(String(3 / 4));
+    const aspect = root.querySelector<HTMLSelectElement>('[name="aspect"]')!;
+    expect(aspect.value).to.equal(String(3 / 4));
+    // The user-chosen option must still follow the state after a second turn.
+    await press('Rotate');
+    expect([canvas.width, canvas.height]).to.deep.equal([4, 3]);
+    expect(aspect.value).to.equal(String(4 / 3));
+  });
+
+  it('moves the crop with the slider thumb under RTL', async () => {
+    const { root, setControl, color } = await gradientEditor('rtl');
+    await setControl('cropScale', '50', 'input');
+    await setControl('cropY', '0', 'input');
+    await setControl('cropX', '0', 'input');
+    // An RTL range puts its minimum at the inline-start (right) edge, so the crop sits at the right.
+    expect(color(0, 0)).to.deep.equal([120, 0, 50, 255]);
+    expect(root.querySelector<HTMLInputElement>('[name="cropX"]')!.value).to.equal('0');
+  });
+
+  it('redraws the preview once per frame for consecutive slider inputs', async () => {
+    const { el, root } = await gradientEditor();
+    const draw = CanvasRenderingContext2D.prototype.drawImage;
+    let draws = 0;
+    try {
+      CanvasRenderingContext2D.prototype.drawImage = function (this: CanvasRenderingContext2D, ...args: unknown[]) {
+        draws++;
+        return (draw as (...values: unknown[]) => void).apply(this, args);
+      } as typeof draw;
+      const input = root.querySelector<HTMLInputElement>('[name="exposure"]')!;
+      for (const value of ['10', '20', '30']) {
+        input.value = value;
+        input.dispatchEvent(new Event('input'));
+        await el.updateComplete;
+      }
+      expect(draws).to.equal(0);
+      await nextFrame();
+      expect(draws).to.equal(1);
+    } finally { CanvasRenderingContext2D.prototype.drawImage = draw; }
   });
 
   it('exports the full edited crop while the original preview is selected', async () => {
@@ -100,10 +144,12 @@ describe('<lr-image-editor>', () => {
     crop.value = '50';
     crop.dispatchEvent(new Event('input'));
     await el.updateComplete;
+    await nextFrame();
     expect(root.querySelector('canvas')!.width).to.equal(400);
     const button = (text: string) => Array.from(root.querySelectorAll('button')).find(item => item.textContent?.trim() === text)!;
     button('Before').click();
     await el.updateComplete;
+    await nextFrame();
     expect(root.querySelector('canvas')!.width).to.equal(1024);
     const completion = oneEvent(el, 'lr-export');
     button('Export image').click();

@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'Подключить {name}',
   connectorManagerDisconnectFor: 'Отключить {name}',
   connectorManagerRetryFor: 'Повторить подключение к {name}',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Фоновые задачи',
   backgroundRunsEmpty: 'Нет доступных фоновых задач.',
   backgroundRunsLimit: 'Показаны первые {count} фоновых задач.',

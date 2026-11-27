@@ -23,14 +23,16 @@ describe('transfer metrics', () => {
         if (item.bytesTotal !== undefined) expect(item.bytesDone <= item.bytesTotal).to.equal(true);
       }
       const totals = totalTransferMetrics(rows, new Map());
-      expect(totals.bytesDone).to.equal(rows.reduce((sum, item) => sum + item.bytesDone, 0));
-      if (rows.some(item => item.bytesTotal === undefined)) {
+      const live = rows.filter(item => item.status !== 'error' && item.status !== 'cancelled');
+      expect(totals.bytesDone).to.equal(live.reduce((sum, item) => sum + item.bytesDone, 0));
+      if (live.some(item => item.bytesTotal === undefined)) {
         expect(totals.bytesTotal).to.equal(undefined);
         expect(totals.progress).to.equal(undefined);
-        expect(totals.etaSeconds).to.equal(undefined);
       } else {
         expect(totals.progress).to.be.within(0, 100);
       }
+      const due = live.filter(item => item.status === 'active' || item.status === 'queued');
+      if (due.some(item => item.bytesTotal === undefined)) expect(totals.etaSeconds).to.equal(undefined);
     }), propertyRuns());
   });
 
@@ -105,9 +107,21 @@ describe('transfer metrics', () => {
     const initial = sampleTransfers(rows.map(item => ({ ...item, bytesDone: 0 })), new Map(), 0);
     const samples = sampleTransfers(rows, initial, 1000);
     expect(totalTransferMetrics(rows, samples)).to.deep.equal({
-      bytesDone: 300, bytesTotal: 1000, progress: 30, bytesPerSecond: 300, etaSeconds: 3,
+      bytesDone: 300, bytesTotal: 1000, progress: 30, bytesPerSecond: 300, etaSeconds: 3, active: true,
     });
     expect(transferMetrics(rows[0]!, initial.get('one')).etaSeconds).to.equal(undefined);
+  });
+
+  it('leaves failed and cancelled rows out of the aggregate and paused remainders out of the ETA', () => {
+    const rows = [active(100, 400), { ...active(0, 300), id: 'gone', status: 'cancelled' as const },
+      { ...active(0, 300), id: 'bad', status: 'error' as const }, { ...active(50, 1000), id: 'held', status: 'paused' as const },
+      { ...active(0, 200), id: 'next', status: 'queued' as const }];
+    const samples = sampleTransfers(rows, sampleTransfers(rows.map(item => ({ ...item, bytesDone: 0 })), new Map(), 0), 1000);
+    const totals = totalTransferMetrics(rows, samples);
+    expect([totals.bytesDone, totals.bytesTotal, totals.bytesPerSecond, totals.etaSeconds]).to.deep.equal([150, 1600, 100, 5]);
+    const finished = [{ ...active(400, 400), status: 'done' as const }, { ...active(0, 300), id: 'gone', status: 'cancelled' as const }];
+    expect(totalTransferMetrics(finished, new Map()).progress).to.equal(100);
+    expect(transferMetrics(finished[0]!).etaSeconds).to.equal(undefined);
   });
 
   it('returns exactly the eligible IDs in host order for each bulk action', () => {

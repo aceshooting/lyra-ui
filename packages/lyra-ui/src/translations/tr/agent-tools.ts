@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: '{name} öğesine bağlan',
   connectorManagerDisconnectFor: '{name} bağlantısını kes',
   connectorManagerRetryFor: '{name} ile bağlantıyı yeniden dene',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Arka plan çalıştırmaları',
   backgroundRunsEmpty: 'Kullanılabilir arka plan çalıştırması yok.',
   backgroundRunsLimit: 'İlk {count} arka plan çalıştırması gösteriliyor.',

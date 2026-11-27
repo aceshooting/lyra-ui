@@ -32559,7 +32559,7 @@
           "evidence": [
             {
               "file": "src/components/media/lightbox/lightbox.class.ts",
-              "line": 859,
+              "line": 862,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -32748,7 +32748,7 @@
           "evidence": [
             {
               "file": "src/components/media/lightbox/lightbox.class.ts",
-              "line": 859,
+              "line": 862,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

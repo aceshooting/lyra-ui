@@ -439,8 +439,17 @@ export const styles = css`
       grid-template-rows: minmax(0, 1fr) auto;
     }
 
+    /* The media row, not the whole stage, carries the ratio, so an unbounded host keeps full width. */
+    :host([fit='contain']:not([controls='none'])) .sizing-stage {
+      container-type: normal;
+      aspect-ratio: auto;
+    }
+
     :host([fit='contain']:not([controls='none'])) .media-allocation {
       grid-area: media;
+      inline-size: 100%;
+      block-size: 100%;
+      aspect-ratio: var(--_lr-video-ratio);
       display: grid;
       container-type: size;
       place-items: center;

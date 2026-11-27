@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: '{name} ସହିତ ସଂଯୋଗ କରନ୍ତୁ',
   connectorManagerDisconnectFor: '{name} ସହିତ ସଂଯୋଗ ବିଚ୍ଛିନ୍ନ କରନ୍ତୁ',
   connectorManagerRetryFor: '{name} ସହିତ ସଂଯୋଗ ପୁନଃଚେଷ୍ଟା କରନ୍ତୁ',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'ପୃଷ୍ଠଭୂମି କାର୍ଯ୍ୟଗୁଡ଼ିକ',
   backgroundRunsEmpty: 'କୌଣସି ପୃଷ୍ଠଭୂମି କାର୍ଯ୍ୟ ଉପଲବ୍ଧ ନାହିଁ।',
   backgroundRunsLimit: 'ପ୍ରଥମ {count}ଟି ପୃଷ୍ଠଭୂମି କାର୍ଯ୍ୟ ଦେଖାଯାଉଛି।',

@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: '{name} نال جوڑو',
   connectorManagerDisconnectFor: '{name} نالوں کنکشن توڑو',
   connectorManagerRetryFor: '{name} نال کنکشن دی کوشش فیر کرو',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'پس منظر وچ چلن والے کم',
   backgroundRunsEmpty: 'پس منظر وچ کوئی کم دستیاب نئیں۔',
   backgroundRunsLimit: 'پہلے {count} پس منظر والے کم دکھائے جا رہے نیں۔',

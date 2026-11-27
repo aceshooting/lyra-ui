@@ -99,6 +99,16 @@ describe('lr-video source geometry', () => {
     expect(controls.top).to.be.at.least(video.bottom - 1);
     expect(controls.bottom).to.be.at.most(stage.getBoundingClientRect().bottom + 1);
   });
+
+  it('keeps contained media at full inline size above the control bar without a bounded block size', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video fit="contain" controls="full" style="width: 320px"></lr-video>`);
+    const video = bounds(el, 'video');
+    const controls = bounds(el, 'controls-overlay');
+    expect(video.width).to.be.closeTo(320, 1);
+    expectRatio(video, 16 / 9);
+    expect(controls.top).to.be.at.least(video.bottom - 1);
+    expect(el.getBoundingClientRect().bottom).to.be.closeTo(controls.bottom, 1);
+  });
 });
 
 describe('lr-video same-task playback', () => {
@@ -119,6 +129,22 @@ describe('lr-video same-task playback', () => {
     expect(await rejection === failure).to.equal(true);
     await el.updateComplete;
     expect(sources).to.deep.equal([clip]);
+  });
+
+  it('reloads for a changed source child but not for a track-only attribute edit', async () => {
+    const el = await fixture<LyraVideo>(html`<lr-video muted>
+      <source src=${clip} type="video/mp4"><track kind="captions" srclang="en" label="English">
+    </lr-video>`);
+    const media = el.getVideoElement()!;
+    let loads = 0;
+    Object.defineProperty(media, 'load', { configurable: true, value: () => { loads++; } });
+    Object.defineProperty(media, 'play', { configurable: true, value: () => Promise.resolve() });
+    el.querySelector('track')!.setAttribute('label', 'English (US)');
+    await el.play();
+    expect(loads).to.equal(0);
+    el.querySelector('source')!.setAttribute('src', clip + '?next');
+    await el.play();
+    expect(loads).to.equal(1);
   });
 
   it('starts playback on the replacement clip and keeps playing after the pending update', async function () {

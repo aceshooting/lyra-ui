@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'Conectar {name}',
   connectorManagerDisconnectFor: 'Desconectar {name}',
   connectorManagerRetryFor: 'Reintentar la conexión para {name}',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Ejecuciones en segundo plano',
   backgroundRunsEmpty: 'No hay ejecuciones en segundo plano disponibles.',
   backgroundRunsLimit: 'Mostrando las primeras {count} ejecuciones en segundo plano.',

@@ -119,7 +119,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-button-group` · lr-button-group.js · `stable` since `4.0.0` · ~28 KiB gzip — a responsive grouping primitive for related actions.
 - `lr-scroller` · lr-scroller.js · `stable` since `4.0.0` · ~32 KiB gzip — a responsive overflow surface with optional previous and next controls.
 - `lr-tab-group` · lr-tab-group.js · `stable` since `8.0.0` · ~65 KiB gzip — a tab strip composed from direct `<lr-tab panel="x">` and `<lr-tab-panel name="x">` children.
-- `lr-stepper` · lr-stepper.js · `stable` since `4.0.0` · ~44 KiB gzip — ordered multi-step wizard/form navigation: label + index per step, current/completed/locked/error state, click-to-jump.
+- `lr-stepper` · lr-stepper.js · `stable` since `4.0.0` · ~45 KiB gzip — ordered multi-step wizard/form navigation: label + index per step, current/completed/locked/error state, click-to-jump.
 - `lr-tab` · lr-tab.js · `stable` since `8.0.0` · ~25 KiB gzip — one tab in a `<lr-tab-group>`'s strip.
 - `lr-step` · lr-step.js · `experimental` since `32.1.0` · ~29 KiB gzip — one stage inside a child-driven `<lr-stepper>`: its position marker, label, optional description and completion status.
 - `lr-tab-panel` · lr-tab-panel.js · `stable` since `8.0.0` · ~24 KiB gzip — the content revealed by the `<lr-tab>` whose `panel` matches this element's `name`.
@@ -204,7 +204,7 @@ and optional peers are excluded, so a second component usually costs much less t
 - `lr-style-panel` · lr-style-panel.js · `experimental` since `32.0.0` · ~129 KiB gzip — ready-made appearance controls bound to the document style runtime (`setLyraStyle()`/`getLyraStyle()` from `theme.js`): colour mode...
 - `lr-counter` · lr-counter.js · `experimental` since `32.1.0` · ~27 KiB gzip — counts down to a date (or for a duration) or up from one, ticking through years, months, days, hours, minutes and seconds with...
 - `lr-number-ticker` · lr-number-ticker.js · `experimental` since `32.1.0` · ~30 KiB gzip — counts to `value` when it scrolls into view, formatting every frame with `Intl.NumberFormat` in the effective locale.
-- `lr-transfer-manager` · lr-transfer-manager.js · `experimental` since `unreleased` · ~34 KiB gzip — Displays caller-controlled transfers, per-item and overall progress, throughput and remaining time.
+- `lr-transfer-manager` · lr-transfer-manager.js · `experimental` since `unreleased` · ~37 KiB gzip — Displays caller-controlled transfers, per-item and overall progress, throughput and remaining time.
 
 ## Media, files & maps — `components/media/` (25)
 

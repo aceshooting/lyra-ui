@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'Свържи {name}',
   connectorManagerDisconnectFor: 'Прекъсни връзката с {name}',
   connectorManagerRetryFor: 'Опитай отново връзката с {name}',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Изпълнения във фонов режим',
   backgroundRunsEmpty: 'Няма налични изпълнения във фонов режим.',
   backgroundRunsLimit: 'Показани са първите {count} изпълнения във фонов режим.',

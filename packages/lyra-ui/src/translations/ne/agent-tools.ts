@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: '{name} जडान गर्नुहोस्',
   connectorManagerDisconnectFor: '{name} को जडान विच्छेद गर्नुहोस्',
   connectorManagerRetryFor: '{name} सँगको जडान फेरि प्रयास गर्नुहोस्',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'पृष्ठभूमिमा चलिरहेका कामहरू',
   backgroundRunsEmpty: 'पृष्ठभूमिमा चलिरहेका कुनै काम उपलब्ध छैनन्।',
   backgroundRunsLimit: 'पहिला {count} पृष्ठभूमिका कामहरू देखाइँदै छन्।',

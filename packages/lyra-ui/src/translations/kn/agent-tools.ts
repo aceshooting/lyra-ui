@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: '{name} ಸಂಪರ್ಕಿಸಿ',
   connectorManagerDisconnectFor: 'ಸಂಪರ್ಕ ಕಡಿತಗೊಳಿಸಿ {name}',
   connectorManagerRetryFor: '{name} ಗಾಗಿ ಸಂಪರ್ಕವನ್ನು ಮರುಪ್ರಯತ್ನಿಸಿ',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'ಹಿನ್ನೆಲೆ ರನ್ಗಳು',
   backgroundRunsEmpty: 'ಯಾವುದೇ ಹಿನ್ನೆಲೆ ರನ್‌ಗಳು ಲಭ್ಯವಿಲ್ಲ.',
   backgroundRunsLimit: 'ಮೊದಲ {count} ಹಿನ್ನೆಲೆ ರನ್‌ಗಳನ್ನು ತೋರಿಸಲಾಗುತ್ತಿದೆ.',

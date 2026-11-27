@@ -373,6 +373,7 @@ export type {
   LyraLightboxEventMap,
   LyraLightboxCloseDetail,
   LyraLightboxItemChangeDetail,
+  LyraLightboxDetailsPlacement,
 } from './components/media/lightbox/lightbox.class.js';
 export type { LyraLightboxItemType } from './components/media/lightbox/lightbox-item.class.js';
 export type { LyraQrCodeErrorCorrection } from './components/media/qr-code/qr-code.class.js';

@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'Xhuma ku-{name}',
   connectorManagerDisconnectFor: 'Nqamula ku-{name}',
   connectorManagerRetryFor: 'Zama ukuxhuma ku-{name} futhi',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Imisebenzi yangemuva',
   backgroundRunsEmpty: 'Ayikho imisebenzi yangemuva etholakalayo.',
   backgroundRunsLimit: 'Kuboniswa imisebenzi yokuqala yangemuva engu-{count}.',

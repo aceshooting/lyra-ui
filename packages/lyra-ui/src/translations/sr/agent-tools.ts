@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'Повежи {name}',
   connectorManagerDisconnectFor: 'Прекини везу: {name}',
   connectorManagerRetryFor: 'Поново покушај повезивање: {name}',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Извршавања у позадини',
   backgroundRunsEmpty: 'Нема доступних извршавања у позадини.',
   backgroundRunsLimit: 'Приказује се првих {count} извршавања у позадини.',

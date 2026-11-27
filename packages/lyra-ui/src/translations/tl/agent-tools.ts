@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'Ikonekta ang {name}',
   connectorManagerDisconnectFor: 'Idiskonekta ang {name}',
   connectorManagerRetryFor: 'Subukang ikonekta muli ang {name}',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Mga pagtakbo sa background',
   backgroundRunsEmpty: 'Walang available na pagtakbo sa background.',
   backgroundRunsLimit: 'Ipinapakita ang unang {count} pagtakbo sa background.',

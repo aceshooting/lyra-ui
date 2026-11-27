@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'Σύνδεση {name}',
   connectorManagerDisconnectFor: 'Αποσύνδεση {name}',
   connectorManagerRetryFor: 'Δοκιμάστε ξανά τη σύνδεση για {name}',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Εκτελείται το φόντο',
   backgroundRunsEmpty: 'Δεν υπάρχουν διαθέσιμες εκτελέσεις στο παρασκήνιο.',
   backgroundRunsLimit: 'Εμφάνιση των πρώτων {count} εκτελέσεων φόντου.',

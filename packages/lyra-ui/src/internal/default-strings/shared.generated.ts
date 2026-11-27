@@ -26,6 +26,7 @@ export const LYRA_DEFAULT_close: LyraMessage = 'Close';
 export const LYRA_DEFAULT_collapse: LyraMessage = 'Collapse';
 export const LYRA_DEFAULT_comparePanel: LyraMessage = 'Comparison';
 export const LYRA_DEFAULT_confirm: LyraMessage = 'Confirm';
+export const LYRA_DEFAULT_connectorManagerStatusChanged: LyraMessage = '{name}: {status}';
 export const LYRA_DEFAULT_copied: LyraMessage = 'Copied!';
 export const LYRA_DEFAULT_copy: LyraMessage = 'Copy';
 export const LYRA_DEFAULT_copyFailed: LyraMessage = 'Copy failed';

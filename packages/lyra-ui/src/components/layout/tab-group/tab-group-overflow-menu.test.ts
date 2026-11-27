@@ -70,6 +70,20 @@ describe('lr-tab-group menu overflow', () => {
     expect(strip(el).map(text)).to.deep.equal(names);
   });
 
+  it('returns the strip tab stop to the selected tab once focus leaves More', async () => {
+    const el = await mount();
+    const more = trigger(el)!;
+    await focusByKeyboard(strip(el).at(-1)!);
+    await sendKeys({ press: 'ArrowRight' });
+    expect(focused(el) === more).to.equal(true);
+    await sendKeys({ press: 'Tab' });
+    expect(focused(el)?.getAttribute('role')).to.equal('tabpanel');
+    await el.updateComplete;
+    expect(more.tabIndex).to.equal(-1);
+    await sendKeys({ press: 'Shift+Tab' });
+    expect(focused(el)?.getAttribute('data-slot')).to.equal('Overview');
+  });
+
   it('partitions the measured row in source order and restores every tab after expansion', async () => {
     const el = await mount();
     const prefix = strip(el).map(text);
@@ -86,7 +100,7 @@ describe('lr-tab-group menu overflow', () => {
     el.style.width = '1200px';
     await waitUntil(() => strip(el).length === names.length && !trigger(el), 'all tabs fit after widening');
     expect(Boolean(menu(el))).to.equal(false);
-    el.style.width = '260px';
+    el.style.width = '200px';
     await waitUntil(() => Boolean(trigger(el)) && strip(el).length < prefix.length, 'fewer tabs fit after narrowing');
     expect(strip(el).map(text)).to.deep.equal(names.slice(0, strip(el).length));
   });

@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'Sambungkan {name}',
   connectorManagerDisconnectFor: 'Putuskan sambungan {name}',
   connectorManagerRetryFor: 'Cuba semula sambungan untuk {name}',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Larian latar belakang',
   backgroundRunsEmpty: 'Tiada larian latar belakang tersedia.',
   backgroundRunsLimit: 'Menunjukkan {count} latar belakang yang pertama dijalankan.',

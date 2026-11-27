@@ -79,6 +79,9 @@ function snapshotLightboxImages(value: unknown): readonly LyraLightboxImage[] {
   }
 }
 
+/** Where data-mode details sit relative to the image. */
+export type LyraLightboxDetailsPlacement = 'end' | 'bottom';
+
 /**
  * Reason a lightbox was dismissed, forwarded as the `lr-close-request` and `lr-close` event detail --
  * 1:1 copy of `<lr-dialog>`'s own `DialogCloseReason` contract. `'escape'` and `'backdrop'`
@@ -548,7 +551,7 @@ export class LyraLightbox extends LyraElement<LyraLightboxEventMap> {
   @property({ attribute: 'aria-label' }) accessibleLabel: string | null = null;
 
   /** Place data-mode details at inline-end when space allows, or always below the image. */
-  @property({ attribute: 'details-placement' }) detailsPlacement: 'end' | 'bottom' = 'end';
+  @property({ attribute: 'details-placement' }) detailsPlacement: LyraLightboxDetailsPlacement = 'end';
 
   private readonly slotPresence = new SlotPresenceController(this);
   @state() private itemsVersion = 0;

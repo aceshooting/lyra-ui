@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  connectorManagerStatusChanged: '{name}: {status}',
   noData: 'ไม่มีข้อมูล',
   legendTypeShown: 'แสดง {label} แล้ว',
   legendTypeHidden: 'ซ่อน {label} แล้ว',

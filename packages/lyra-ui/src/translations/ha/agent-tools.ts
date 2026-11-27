@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'Haɗa {name}',
   connectorManagerDisconnectFor: 'Cire haɗin {name}',
   connectorManagerRetryFor: 'Sake gwada haɗin kai don {name}',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Ayyukan bayan fage',
   backgroundRunsEmpty: 'Babu gudanar da bayanan baya da akwai.',
   backgroundRunsLimit: 'Nuna farkon {count} baya yana gudana.',

@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: '{name} ga ulash',
   connectorManagerDisconnectFor: '{name} dan uzish',
   connectorManagerRetryFor: '{name} ga ulanishni qayta urinish',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Orqa fondagi ishlar',
   backgroundRunsEmpty: 'Orqa fonda bajarilayotgan ishlar yo‘q.',
   backgroundRunsLimit: 'Birinchi {count} ta orqa fon ishi ko‘rsatilmoqda.',

@@ -434,6 +434,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   private visibilityPaused = false;
   private captionListeners: Array<{ track: TextTrack; listener: EventListener }> = [];
   private lastSourceSignature?: string;
+  private lastMediaSignature?: string;
   private listenerDocument?: Document;
 
   override attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
@@ -623,9 +624,9 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     this.mediaController.muted = true;
   }
 
-  private sourceSignature(): string {
+  private sourceSignature(kinds: readonly string[] = ['source', 'track']): string {
     const nodes = [...this.children]
-      .filter((child) => child.localName === 'source' || child.localName === 'track')
+      .filter((child) => kinds.includes(child.localName))
       .map((child) => ({
         tag: child.localName,
         src: child.getAttribute('src'),
@@ -644,6 +645,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     const signature = this.sourceSignature();
     if (!force && signature === this.lastSourceSignature) return;
     this.lastSourceSignature = signature;
+    this.lastMediaSignature = this.sourceSignature(['source']);
     this.onPanoramaMediaReset();
     this.visibilityPaused = false;
     this.unbindCaptionTracks();
@@ -703,7 +705,8 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     // Keep the browser's user activation and native promise. A synchronous media relay
     // may itself call play while Lit is committing the new controls or media properties.
     if (this.isUpdatePending && !this.committingUpdate) this.performUpdate();
-    this.syncSources();
+    // Only a changed media resource needs loading first; caption-only edits must not restart it.
+    if (this.sourceSignature(['source']) !== this.lastMediaSignature) this.syncSources();
   }
 
   /** Applies pending media and playback preferences before returning the exact native play promise. */
@@ -736,6 +739,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     this.mediaController.unload();
     this.currentTime = 0;
     this.lastSourceSignature = undefined;
+    this.lastMediaSignature = undefined;
     this.unbindCaptionTracks();
     this.captionTracks = [];
     this.captionText = '';

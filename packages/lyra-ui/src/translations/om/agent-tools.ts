@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: '{name} wajjin walqabsiisi',
   connectorManagerDisconnectFor: '{name} wajjin addaan kuti',
   connectorManagerRetryFor: '{name} wajjin walqunnamuu irra deebi’i yaali',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Hojii duubbee',
   backgroundRunsEmpty: 'Hojiin duubbee hin jiru.',
   backgroundRunsLimit: 'Hojii duubbee {count} jalqabaa agarsiisaa jira.',

@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'Savienot {name}',
   connectorManagerDisconnectFor: 'Atvienot {name}',
   connectorManagerRetryFor: 'Atkārtoti mēģināt savienot {name}',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'Fona izpildes',
   backgroundRunsEmpty: 'Nav pieejamu fona izpilžu.',
   backgroundRunsLimit: 'Tiek rādītas pirmās {count} fona izpildes.',

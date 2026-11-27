@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: 'ബന്ധിപ്പിക്കുക {name}',
   connectorManagerDisconnectFor: 'വിച്ഛേദിക്കുക {name}',
   connectorManagerRetryFor: '{name} എന്നതിനായുള്ള കണക്ഷൻ വീണ്ടും ശ്രമിക്കുക',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: 'പശ്ചാത്തല റണ്ണുകൾ',
   backgroundRunsEmpty: 'പശ്ചാത്തല റണ്ണുകളൊന്നും ലഭ്യമല്ല.',
   backgroundRunsLimit: 'ആദ്യ {count} പശ്ചാത്തല റണ്ണുകൾ കാണിക്കുന്നു.',

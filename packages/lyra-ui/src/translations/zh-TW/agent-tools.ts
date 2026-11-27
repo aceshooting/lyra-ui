@@ -19,7 +19,6 @@ const strings: LyraLocaleStrings = {
   connectorManagerConnectFor: '連線至 {name}',
   connectorManagerDisconnectFor: '中斷與 {name} 的連線',
   connectorManagerRetryFor: '重試連線至 {name}',
-  connectorManagerStatusChanged: '{name}: {status}',
   backgroundRunsLabel: '背景執行',
   backgroundRunsEmpty: '沒有可用的背景執行。',
   backgroundRunsLimit: '顯示前 {count} 個背景執行。',

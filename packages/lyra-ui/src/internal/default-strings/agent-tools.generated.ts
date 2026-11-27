@@ -101,7 +101,6 @@ export const LYRA_DEFAULT_connectorManagerKindMcp: LyraMessage = 'MCP server';
 export const LYRA_DEFAULT_connectorManagerLabel: LyraMessage = 'Connectors';
 export const LYRA_DEFAULT_connectorManagerLimit: LyraMessage = 'Showing the first {count} connectors.';
 export const LYRA_DEFAULT_connectorManagerRetryFor: LyraMessage = 'Retry connection for {name}';
-export const LYRA_DEFAULT_connectorManagerStatusChanged: LyraMessage = '{name}: {status}';
 export const LYRA_DEFAULT_connectorManagerStatusConnected: LyraMessage = 'Connected';
 export const LYRA_DEFAULT_connectorManagerStatusConnecting: LyraMessage = 'Connecting';
 export const LYRA_DEFAULT_connectorManagerStatusDisconnected: LyraMessage = 'Disconnected';

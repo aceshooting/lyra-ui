@@ -6,6 +6,7 @@ import { registerLyraLocale } from '../../internal/localization-runtime.js';
 import type { LyraLocaleStrings } from '../../internal/localization.js';
 
 const strings: LyraLocaleStrings = {
+  connectorManagerStatusChanged: '{name}: {status}',
   noData: '데이터가 없습니다.',
   legendTypeShown: '{label} 표시됨',
   legendTypeHidden: '{label} 숨김',

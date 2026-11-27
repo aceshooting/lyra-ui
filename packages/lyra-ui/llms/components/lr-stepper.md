@@ -172,7 +172,9 @@ Child steps with a native `hidden` attribute are omitted from numbering, progres
 linear sequencing, and navigation. `goTo()` ignores a hidden destination, and `next()`,
 `previous()` and the direction keys skip hidden children. If `active` names a hidden step,
 the first visible step is shown as current until the named step is visible again. Hiding
-the focused step moves focus to an available step without changing the authored `active` value.
+the current step instead moves `active` to the next reachable visible step (else the previous
+one) and fires `lr-step-change` without a preceding `lr-before-step-change`; focus on the hidden
+step follows it. Showing the step again does not move `active` back.
 
 **CSS parts:** `base` (root wrapper, `role="list"`), `step-item` (the `role="listitem"` wrapper for
 one step), `step` (a single native button — or a non-interactive `<div>` carrying the same part

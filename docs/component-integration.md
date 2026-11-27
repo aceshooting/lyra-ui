@@ -115,7 +115,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-docx-viewer"></a>`lr-docx-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-docx-viewer.js';` | `dompurify`, `mammoth` | none | none | 60.1 KiB |
 | <a id="lr-doughnut-chart"></a>`lr-doughnut-chart` | charts | `import '@aceshooting/lyra-ui/components/lr-doughnut-chart.js';` | `chart.js`, `chartjs-plugin-annotation`, `chartjs-plugin-datalabels`, `chartjs-plugin-zoom` | `lr-chart`, `lr-skeleton` | none | 97.6 KiB |
 | <a id="lr-drawer"></a>`lr-drawer` | overlays | `import '@aceshooting/lyra-ui/components/lr-drawer.js';` | none | `lr-icon-button` | none | 58.5 KiB |
-| <a id="lr-drilldown-panel"></a>`lr-drilldown-panel` | layout | `import '@aceshooting/lyra-ui/components/lr-drilldown-panel.js';` | none | `lr-breadcrumb`, `lr-breadcrumb-item`, `lr-button`, `lr-document-preview`, `lr-empty`, `lr-entity-card`, `lr-source-card`, `lr-tab`, `lr-tab-group`, `lr-tab-panel` | `lr-badge`, `lr-chip`, `lr-pan-zoom`, `lr-result-field` | 119.9 KiB |
+| <a id="lr-drilldown-panel"></a>`lr-drilldown-panel` | layout | `import '@aceshooting/lyra-ui/components/lr-drilldown-panel.js';` | none | `lr-breadcrumb`, `lr-breadcrumb-item`, `lr-button`, `lr-document-preview`, `lr-empty`, `lr-entity-card`, `lr-source-card`, `lr-tab`, `lr-tab-group`, `lr-tab-panel` | `lr-badge`, `lr-chip`, `lr-pan-zoom`, `lr-result-field` | 120 KiB |
 | <a id="lr-drop-zone"></a>`lr-drop-zone` | media | `import '@aceshooting/lyra-ui/components/lr-drop-zone.js';` | none | none | none | 35.8 KiB |
 | <a id="lr-dropdown"></a>`lr-dropdown` | overlays | `import '@aceshooting/lyra-ui/components/lr-dropdown.js';` | none | `lr-menu` | `lr-menu-item` | 84.8 KiB |
 | <a id="lr-dropdown-item"></a>`lr-dropdown-item` | layout | `import '@aceshooting/lyra-ui/components/lr-dropdown-item.js';` | none | `lr-menu` | `lr-menu-item` | 68.4 KiB |
@@ -126,7 +126,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-empty"></a>`lr-empty` | overlays | `import '@aceshooting/lyra-ui/components/lr-empty.js';` | none | none | none | 35.4 KiB |
 | <a id="lr-entity-card"></a>`lr-entity-card` | retrieval | `import '@aceshooting/lyra-ui/components/lr-entity-card.js';` | none | `lr-badge`, `lr-button`, `lr-chip`, `lr-empty`, `lr-result-field` | none | 64.6 KiB |
 | <a id="lr-entity-chip"></a>`lr-entity-chip` | retrieval | `import '@aceshooting/lyra-ui/components/lr-entity-chip.js';` | none | none | none | 49.4 KiB |
-| <a id="lr-entity-dossier"></a>`lr-entity-dossier` | retrieval | `import '@aceshooting/lyra-ui/components/lr-entity-dossier.js';` | none | `lr-chunk-inspector`, `lr-empty`, `lr-entity-card`, `lr-neighbor-list`, `lr-provenance-panel`, `lr-stat`, `lr-tab`, `lr-tab-group`, `lr-tab-panel` | `lr-badge`, `lr-button`, `lr-chip`, `lr-community-card`, `lr-entity-chip`, `lr-pagination`, `lr-path-strip`, `lr-result-field`, `lr-scroller`, `lr-virtual-list` | 146.4 KiB |
+| <a id="lr-entity-dossier"></a>`lr-entity-dossier` | retrieval | `import '@aceshooting/lyra-ui/components/lr-entity-dossier.js';` | none | `lr-chunk-inspector`, `lr-empty`, `lr-entity-card`, `lr-neighbor-list`, `lr-provenance-panel`, `lr-stat`, `lr-tab`, `lr-tab-group`, `lr-tab-panel` | `lr-badge`, `lr-button`, `lr-chip`, `lr-community-card`, `lr-entity-chip`, `lr-pagination`, `lr-path-strip`, `lr-result-field`, `lr-scroller`, `lr-virtual-list` | 146.5 KiB |
 | <a id="lr-env-list"></a>`lr-env-list` | data | `import '@aceshooting/lyra-ui/components/lr-env-list.js';` | none | `lr-empty` | none | 38.6 KiB |
 | <a id="lr-eval-dataset"></a>`lr-eval-dataset` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-eval-dataset.js';` | none | `lr-chip`, `lr-chip-group`, `lr-export-button`, `lr-file-input`, `lr-input`, `lr-table` | `lr-empty`, `lr-pagination`, `lr-skeleton`, `lr-spinner` | 152.9 KiB |
 | <a id="lr-eval-result"></a>`lr-eval-result` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-eval-result.js';` | `shiki` | `lr-diff-view`, `lr-rubric-form`, `lr-table` | `lr-checkbox`, `lr-checkbox-group`, `lr-empty`, `lr-option`, `lr-pagination`, `lr-segmented`, `lr-select`, `lr-skeleton`, `lr-slider`, `lr-spinner`, `lr-textarea` | 184.3 KiB |
@@ -135,7 +135,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-file-icon"></a>`lr-file-icon` | media | `import '@aceshooting/lyra-ui/components/lr-file-icon.js';` | none | none | none | 29 KiB |
 | <a id="lr-file-input"></a>`lr-file-input` | media | `import '@aceshooting/lyra-ui/components/lr-file-input.js';` | none | none | none | 52.4 KiB |
 | <a id="lr-file-tree"></a>`lr-file-tree` | data | `import '@aceshooting/lyra-ui/components/lr-file-tree.js';` | none | `lr-file-icon`, `lr-tree`, `lr-virtual-list` | `lr-empty`, `lr-live-region`, `lr-tree-item` | 95.5 KiB |
-| <a id="lr-filter-bar"></a>`lr-filter-bar` | layout | `import '@aceshooting/lyra-ui/components/lr-filter-bar.js';` | none | `lr-button`, `lr-chip`, `lr-chip-group`, `lr-combobox`, `lr-date-input`, `lr-dropdown`, `lr-dropdown-item`, `lr-input`, `lr-option`, `lr-select`, `lr-spinner` | `lr-date-picker`, `lr-empty`, `lr-menu`, `lr-menu-item` | 188.5 KiB |
+| <a id="lr-filter-bar"></a>`lr-filter-bar` | layout | `import '@aceshooting/lyra-ui/components/lr-filter-bar.js';` | none | `lr-button`, `lr-chip`, `lr-chip-group`, `lr-combobox`, `lr-date-input`, `lr-dropdown`, `lr-dropdown-item`, `lr-input`, `lr-option`, `lr-select`, `lr-spinner` | `lr-date-picker`, `lr-empty`, `lr-menu`, `lr-menu-item` | 188.6 KiB |
 | <a id="lr-flag"></a>`lr-flag` | media | `import '@aceshooting/lyra-ui/components/lr-flag.js';` | none | `lr-skeleton` | none | 34.3 KiB |
 | <a id="lr-flow-canvas"></a>`lr-flow-canvas` | data | `import '@aceshooting/lyra-ui/components/lr-flow-canvas.js';` | none | `lr-empty`, `lr-flow-node` | none | 77.4 KiB |
 | <a id="lr-flow-controls"></a>`lr-flow-controls` | data | `import '@aceshooting/lyra-ui/components/lr-flow-controls.js';` | none | none | none | 27.8 KiB |
@@ -148,7 +148,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-funnel"></a>`lr-funnel` | data | `import '@aceshooting/lyra-ui/components/lr-funnel.js';` | none | none | none | 31.4 KiB |
 | <a id="lr-gauge"></a>`lr-gauge` | data | `import '@aceshooting/lyra-ui/components/lr-gauge.js';` | none | none | none | 27.9 KiB |
 | <a id="lr-generation-metrics"></a>`lr-generation-metrics` | conversation | `import '@aceshooting/lyra-ui/components/lr-generation-metrics.js';` | none | none | none | 27.2 KiB |
-| <a id="lr-geojson-viewer"></a>`lr-geojson-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-geojson-viewer.js';` | `@aceshooting/lyra-map`, `dompurify`, `maplibre-gl` | `lr-json-viewer`, `lr-map`, `lr-skeleton` | `lr-virtual-list` | 276.3 KiB |
+| <a id="lr-geojson-viewer"></a>`lr-geojson-viewer` | viewers | `import '@aceshooting/lyra-ui/components/lr-geojson-viewer.js';` | `@aceshooting/lyra-map`, `dompurify`, `maplibre-gl` | `lr-json-viewer`, `lr-map`, `lr-skeleton` | `lr-virtual-list` | 276.4 KiB |
 | <a id="lr-graph"></a>`lr-graph` | retrieval | `import '@aceshooting/lyra-ui/components/lr-graph.js';` | `@aceshooting/lyra-3d`, `d3-drag`, `d3-force`, `d3-selection`, `d3-zoom` | `lr-pagination`, `lr-skeleton` | none | 115.5 KiB |
 | <a id="lr-graph-legend"></a>`lr-graph-legend` | retrieval | `import '@aceshooting/lyra-ui/components/lr-graph-legend.js';` | none | none | none | 35.6 KiB |
 | <a id="lr-graph-query-builder"></a>`lr-graph-query-builder` | data | `import '@aceshooting/lyra-ui/components/lr-graph-query-builder.js';` | none | `lr-chip`, `lr-chip-group`, `lr-input`, `lr-option`, `lr-select` | none | 112.6 KiB |
@@ -162,7 +162,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-icon"></a>`lr-icon` | utility | `import '@aceshooting/lyra-ui/components/lr-icon.js';` | `dompurify` | none | none | 35.7 KiB |
 | <a id="lr-icon-button"></a>`lr-icon-button` | forms | `import '@aceshooting/lyra-ui/components/lr-icon-button.js';` | `dompurify` | `lr-icon` | none | 40.5 KiB |
 | <a id="lr-image-comparer"></a>`lr-image-comparer` | media | `import '@aceshooting/lyra-ui/components/lr-image-comparer.js';` | none | none | none | 30.4 KiB |
-| <a id="lr-image-editor"></a>`lr-image-editor` | media | `import '@aceshooting/lyra-ui/components/lr-image-editor.js';` | none | none | none | 31.8 KiB |
+| <a id="lr-image-editor"></a>`lr-image-editor` | media | `import '@aceshooting/lyra-ui/components/lr-image-editor.js';` | none | none | none | 32.3 KiB |
 | <a id="lr-image-viewer"></a>`lr-image-viewer` | media | `import '@aceshooting/lyra-ui/components/lr-image-viewer.js';` | `@aceshooting/lyra-3d` | `lr-live-region`, `lr-pan-zoom` | none | 61.5 KiB |
 | <a id="lr-include"></a>`lr-include` | viewers | `import '@aceshooting/lyra-ui/components/lr-include.js';` | `dompurify` | none | none | 49.2 KiB |
 | <a id="lr-ingestion-queue"></a>`lr-ingestion-queue` | retrieval | `import '@aceshooting/lyra-ui/components/lr-ingestion-queue.js';` | none | `lr-badge`, `lr-empty`, `lr-pagination`, `lr-progress-bar`, `lr-virtual-list` | none | 81.2 KiB |
@@ -181,7 +181,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-lite-chart"></a>`lr-lite-chart` | charts | `import '@aceshooting/lyra-ui/components/lr-lite-chart.js';` | none | `lr-live-region` | none | 72.7 KiB |
 | <a id="lr-live-region"></a>`lr-live-region` | utility | `import '@aceshooting/lyra-ui/components/lr-live-region.js';` | none | none | none | 27.7 KiB |
 | <a id="lr-locale-picker"></a>`lr-locale-picker` | forms | `import '@aceshooting/lyra-ui/components/lr-locale-picker.js';` | none | `lr-flag` | `lr-skeleton` | 80.4 KiB |
-| <a id="lr-map"></a>`lr-map` | media | `import '@aceshooting/lyra-ui/components/lr-map.js';` | `@aceshooting/lyra-map`, `dompurify`, `maplibre-gl` | `lr-skeleton` | none | 218.5 KiB |
+| <a id="lr-map"></a>`lr-map` | media | `import '@aceshooting/lyra-ui/components/lr-map.js';` | `@aceshooting/lyra-map`, `dompurify`, `maplibre-gl` | `lr-skeleton` | none | 218.6 KiB |
 | <a id="lr-map-anchor"></a>`lr-map-anchor` | media | `import '@aceshooting/lyra-ui/components/lr-map-anchor.js';` | none | none | none | 26.8 KiB |
 | <a id="lr-markdown"></a>`lr-markdown` | conversation | `import '@aceshooting/lyra-ui/components/lr-markdown.js';` | `dompurify`, `katex`, `marked`, `shiki` | none | none | 77.2 KiB |
 | <a id="lr-markdown-core"></a>`lr-markdown-core` | conversation | `import '@aceshooting/lyra-ui/components/lr-markdown-core.js';` | `dompurify`, `katex`, `marked`, `shiki` | none | none | 75.9 KiB |
@@ -282,7 +282,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-stack-trace"></a>`lr-stack-trace` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-stack-trace.js';` | none | none | none | 34.2 KiB |
 | <a id="lr-stat"></a>`lr-stat` | data | `import '@aceshooting/lyra-ui/components/lr-stat.js';` | none | none | none | 37.5 KiB |
 | <a id="lr-step"></a>`lr-step` | layout | `import '@aceshooting/lyra-ui/components/lr-step.js';` | none | none | none | 28.7 KiB |
-| <a id="lr-stepper"></a>`lr-stepper` | layout | `import '@aceshooting/lyra-ui/components/lr-stepper.js';` | none | none | none | 44.4 KiB |
+| <a id="lr-stepper"></a>`lr-stepper` | layout | `import '@aceshooting/lyra-ui/components/lr-stepper.js';` | none | none | none | 44.6 KiB |
 | <a id="lr-stream-status"></a>`lr-stream-status` | conversation | `import '@aceshooting/lyra-ui/components/lr-stream-status.js';` | none | `lr-button`, `lr-live-region` | none | 47.2 KiB |
 | <a id="lr-streaming-text"></a>`lr-streaming-text` | conversation | `import '@aceshooting/lyra-ui/components/lr-streaming-text.js';` | `dompurify`, `katex`, `marked`, `shiki` | `lr-markdown` | none | 80 KiB |
 | <a id="lr-streaming-text-core"></a>`lr-streaming-text-core` | conversation | `import '@aceshooting/lyra-ui/components/lr-streaming-text-core.js';` | `dompurify`, `katex`, `marked`, `shiki` | `lr-markdown-core` | none | 78.7 KiB |
@@ -293,7 +293,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-swatch-picker"></a>`lr-swatch-picker` | forms | `import '@aceshooting/lyra-ui/components/lr-swatch-picker.js';` | none | none | none | 30 KiB |
 | <a id="lr-switch"></a>`lr-switch` | forms | `import '@aceshooting/lyra-ui/components/lr-switch.js';` | none | none | none | 47.8 KiB |
 | <a id="lr-tab"></a>`lr-tab` | layout | `import '@aceshooting/lyra-ui/components/lr-tab.js';` | none | none | none | 24.9 KiB |
-| <a id="lr-tab-group"></a>`lr-tab-group` | layout | `import '@aceshooting/lyra-ui/components/lr-tab-group.js';` | none | none | none | 65.1 KiB |
+| <a id="lr-tab-group"></a>`lr-tab-group` | layout | `import '@aceshooting/lyra-ui/components/lr-tab-group.js';` | none | none | none | 65.2 KiB |
 | <a id="lr-tab-panel"></a>`lr-tab-panel` | layout | `import '@aceshooting/lyra-ui/components/lr-tab-panel.js';` | none | none | none | 24.1 KiB |
 | <a id="lr-table"></a>`lr-table` | data | `import '@aceshooting/lyra-ui/components/lr-table.js';` | none | `lr-empty`, `lr-pagination`, `lr-skeleton`, `lr-spinner` | none | 75.1 KiB |
 | <a id="lr-tag"></a>`lr-tag` | overlays | `import '@aceshooting/lyra-ui/components/lr-tag.js';` | none | none | none | 39.4 KiB |
@@ -325,15 +325,15 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-tour"></a>`lr-tour` | utility | `import '@aceshooting/lyra-ui/components/lr-tour.js';` | none | none | none | 59.7 KiB |
 | <a id="lr-trace-tree"></a>`lr-trace-tree` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-trace-tree.js';` | none | `lr-empty`, `lr-live-region`, `lr-virtual-list` | none | 79.5 KiB |
 | <a id="lr-transcript-feed"></a>`lr-transcript-feed` | conversation | `import '@aceshooting/lyra-ui/components/lr-transcript-feed.js';` | none | none | none | 36.8 KiB |
-| <a id="lr-transfer-manager"></a>`lr-transfer-manager` | utility | `import '@aceshooting/lyra-ui/components/lr-transfer-manager.js';` | none | none | none | 34 KiB |
+| <a id="lr-transfer-manager"></a>`lr-transfer-manager` | utility | `import '@aceshooting/lyra-ui/components/lr-transfer-manager.js';` | none | none | none | 36.9 KiB |
 | <a id="lr-tree"></a>`lr-tree` | data | `import '@aceshooting/lyra-ui/components/lr-tree.js';` | none | `lr-empty`, `lr-live-region`, `lr-tree-item`, `lr-virtual-list` | none | 87.4 KiB |
 | <a id="lr-tree-item"></a>`lr-tree-item` | data | `import '@aceshooting/lyra-ui/components/lr-tree-item.js';` | none | none | none | 42.6 KiB |
 | <a id="lr-treemap"></a>`lr-treemap` | data | `import '@aceshooting/lyra-ui/components/lr-treemap.js';` | none | none | none | 45.9 KiB |
 | <a id="lr-typing-indicator"></a>`lr-typing-indicator` | conversation | `import '@aceshooting/lyra-ui/components/lr-typing-indicator.js';` | none | none | none | 28.2 KiB |
-| <a id="lr-unit-picker"></a>`lr-unit-picker` | forms | `import '@aceshooting/lyra-ui/components/lr-unit-picker.js';` | none | `lr-option`, `lr-select` | `lr-combobox`, `lr-empty` | 122.3 KiB |
+| <a id="lr-unit-picker"></a>`lr-unit-picker` | forms | `import '@aceshooting/lyra-ui/components/lr-unit-picker.js';` | none | `lr-option`, `lr-select` | `lr-combobox`, `lr-empty` | 122.4 KiB |
 | <a id="lr-usage-badge"></a>`lr-usage-badge` | conversation | `import '@aceshooting/lyra-ui/components/lr-usage-badge.js';` | none | none | none | 51 KiB |
-| <a id="lr-video"></a>`lr-video` | media | `import '@aceshooting/lyra-ui/components/lr-video.js';` | `@aceshooting/lyra-3d`, `dompurify` | `lr-icon` | none | 65.9 KiB |
-| <a id="lr-video-playlist"></a>`lr-video-playlist` | media | `import '@aceshooting/lyra-ui/components/lr-video-playlist.js';` | `dompurify` | `lr-icon`, `lr-video` | none | 71.2 KiB |
+| <a id="lr-video"></a>`lr-video` | media | `import '@aceshooting/lyra-ui/components/lr-video.js';` | `@aceshooting/lyra-3d`, `dompurify` | `lr-icon` | none | 66 KiB |
+| <a id="lr-video-playlist"></a>`lr-video-playlist` | media | `import '@aceshooting/lyra-ui/components/lr-video-playlist.js';` | `dompurify` | `lr-icon`, `lr-video` | none | 71.3 KiB |
 | <a id="lr-virtual-list"></a>`lr-virtual-list` | layout | `import '@aceshooting/lyra-ui/components/lr-virtual-list.js';` | none | none | none | 44.7 KiB |
 | <a id="lr-visually-hidden"></a>`lr-visually-hidden` | utility | `import '@aceshooting/lyra-ui/components/lr-visually-hidden.js';` | none | none | none | 24.1 KiB |
 | <a id="lr-voice-picker"></a>`lr-voice-picker` | conversation | `import '@aceshooting/lyra-ui/components/lr-voice-picker.js';` | none | none | none | 77.6 KiB |

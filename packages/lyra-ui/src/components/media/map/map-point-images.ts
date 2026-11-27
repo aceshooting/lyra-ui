@@ -1,6 +1,11 @@
 import type { MapLibreMapCapability } from './map-loader.js';
 import { mapOwnValue } from './map-readers.js';
 import { loadMapImageRuntime } from './map-resource-feature-loaders.js';
+import { MAP_IMAGE_MAX_DIMENSION } from './map-image-limits.js';
+import { finiteRange } from '../../../internal/numbers.js';
+
+/** Image admission accepts atlas pixel ratios up to 4. */
+const MAX_THUMBNAIL_PIXEL_RATIO = 4;
 
 export interface CanonicalPointImage {
   readonly field: string;
@@ -23,14 +28,15 @@ interface PhotoLayer {
   readonly thumbnails: Map<string, Thumbnail>;
 }
 
-/** Viewport-scoped thumbnails share a single atlas and transfer budget across all data layers. */
+/** Viewport-scoped thumbnails share a single atlas and transfer budget across all data layers.
+ * Transfers are progressive decoration: they never hold map readiness, and a finished batch repaints. */
 export class MapPointImages {
   private readonly layers = new Map<string, PhotoLayer>();
   private active = 0;
   private nextId = 0;
 
   constructor(private readonly owner: Element, private readonly map: MapLibreMapCapability,
-    private readonly track: (work: Promise<void>) => void, private readonly removeLayer: (id: string) => void) {}
+    private readonly removeLayer: (id: string) => void) {}
 
   configure(source: string, clustered: boolean, options: CanonicalPointImage, border: string | undefined): boolean {
     const old = this.layers.get(source);
@@ -109,14 +115,14 @@ export class MapPointImages {
         if (item.state !== 'queued') continue;
         item.state = 'loading';
         this.active++;
-        this.track(this.load(layer, item).catch(() => {
+        void this.load(layer, item).catch(() => {
           if (item.state === 'ready') this.release(item);
           item.state = 'failed';
         }).finally(() => {
           this.active--;
           this.pump();
           if (!this.active && this.layers.size) this.map.triggerRepaint?.();
-        }));
+        }).catch(() => { /* A peer failure while scheduling keeps the fallback circles. */ });
       }
     }
   }
@@ -127,8 +133,12 @@ export class MapPointImages {
     const runtime = await loadMapImageRuntime();
     if (!current()) return;
     const size = layer.options.size;
+    // Rasterize for the display density so thumbnails stay sharp on high-density screens.
+    const density = finiteRange(this.owner.ownerDocument.defaultView?.devicePixelRatio ?? 1, 1, 1, MAX_THUMBNAIL_PIXEL_RATIO);
+    const backing = Math.min(MAP_IMAGE_MAX_DIMENSION, Math.round(size * density));
+    const pixelRatio = backing / size;
     const result = await runtime.prepareMapImages([{ id: item.id, source: { kind: 'url', url: item.url },
-      width: size, height: size, pixelRatio: 1 }], { owner: this.owner, signal: item.controller.signal,
+      width: backing, height: backing, pixelRatio }], { owner: this.owner, signal: item.controller.signal,
       fetchController: item.controller, isCurrent: current, thumbnail: { shape: layer.options.shape, border: layer.border } });
     if (!result.ok) { item.state = 'failed'; return; }
     try {
@@ -136,7 +146,7 @@ export class MapPointImages {
       if (!pixels || !current() || this.map.hasImage?.(item.id)) return;
       // A peer can throw or retire the layer synchronously after installing the pixels.
       item.state = 'ready';
-      this.map.addImage!(item.id, pixels, { pixelRatio: 1 });
+      this.map.addImage!(item.id, pixels, { pixelRatio });
       if (current()) this.paint(layer);
       else this.release(item);
     } finally { result.dispose(); }
