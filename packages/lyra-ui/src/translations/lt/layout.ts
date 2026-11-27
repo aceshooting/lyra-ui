@@ -61,6 +61,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} komandų',
   },
   tabCloseAction: 'Uždaryti {label}',
+  tabGroupMore: 'Daugiau',
   stepperStateCompleted: 'Užbaigta',
   stepperStateError: 'Klaida',
   stepperStatePending: 'Nepradėta',

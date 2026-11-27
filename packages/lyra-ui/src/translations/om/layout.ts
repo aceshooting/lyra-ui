@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} ajajoota',
   },
   tabCloseAction: '{label} cufi',
+  tabGroupMore: 'Dabalata',
   stepperStateCompleted: 'Xumurameera',
   stepperStateError: 'Dogoggora',
   stepperStatePending: 'Hin jalqabamne',

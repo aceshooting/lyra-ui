@@ -58,6 +58,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} paréntah',
   },
   tabCloseAction: 'Tutup {label}',
+  tabGroupMore: 'Séjénna',
   stepperStateCompleted: 'Réngsé',
   stepperStateError: 'Kasalahan',
   stepperStatePending: 'Can dimimitian',

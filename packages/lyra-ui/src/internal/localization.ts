@@ -1727,6 +1727,7 @@ const DEFAULT_STRINGS: Record<LyraMessageKey, LyraMessage> = {
   },
   tableAdditionalColumns: 'Additional columns',
   tabCloseAction: 'Close {label}',
+  tabGroupMore: 'More',
   treeLimit: 'Only the first {count} items are shown.',
   treeSourceError: 'Unable to load tree data.',
   treeSourceSummary: { one: '{visible} visible of {total} node.', other: '{visible} visible of {total} nodes.' },

@@ -62,6 +62,7 @@ const strings: LyraLocaleStrings = {
     two: '{count} kmandi',
   },
   tabCloseAction: 'Agħlaq {label}',
+  tabGroupMore: 'Aktar',
   stepperStateCompleted: 'Komplut',
   stepperStateError: 'Żball',
   stepperStatePending: 'Għadu ma nbediex',

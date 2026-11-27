@@ -58,6 +58,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} nyere iwu',
   },
   tabCloseAction: 'Mechie {label}',
+  tabGroupMore: 'Ndị ọzọ',
   stepperStateCompleted: 'Emechara',
   stepperStateError: 'Njehie',
   stepperStatePending: 'Amalitebeghị',

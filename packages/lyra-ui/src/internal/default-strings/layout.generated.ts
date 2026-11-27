@@ -53,6 +53,7 @@ export const LYRA_DEFAULT_stepperStatePending: LyraMessage = 'Not started';
 export const LYRA_DEFAULT_stepperStepPosition: LyraMessage = 'Step {current} of {total}';
 export const LYRA_DEFAULT_stepperSteps: LyraMessage = 'Steps';
 export const LYRA_DEFAULT_tabCloseAction: LyraMessage = 'Close {label}';
+export const LYRA_DEFAULT_tabGroupMore: LyraMessage = 'More';
 export const LYRA_DEFAULT_toggleNavigation: LyraMessage = 'Toggle navigation';
 export const LYRA_DEFAULT_widgetExitFullscreen: LyraMessage = 'Exit fullscreen';
 export const LYRA_DEFAULT_widgetExitFullscreenWithLabel: LyraMessage = 'Exit fullscreen: {label}';

@@ -46,6 +46,8 @@ import { LYRA_DEFAULT_engine3dContextLost, LYRA_DEFAULT_engine3dError, LYRA_DEFA
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraVideoControls = 'none' | 'standard' | 'full';
+export type LyraVideoAspectRatio = 'fixed' | 'auto';
+export type LyraVideoFit = 'default' | 'contain';
 export type LyraVideoPreload = 'auto' | 'metadata' | 'none';
 
 export interface VideoState {
@@ -175,7 +177,7 @@ function unsupportedPromise(host: Element, message: string): Promise<never> {
  * @csspart video-title-overlay - Title positioning layer.
  * @csspart video-wrapper - Alias on the same root node as `base`.
  * @cssprop [--aspect-ratio=16 / 9] - Aspect ratio of the player surface (the media area when the
- *   toolbar is placed below it).
+ *   toolbar is placed below it). In auto mode it supplies the fallback until native dimensions are available.
  * @cssprop [--controls-background=var(--lr-color-overlay-strong)] - Controls, captions, and title
  *   overlay background.
  * @cssprop [--controls-color=var(--lr-color-on-strong-overlay)] - Custom-control foreground color.
@@ -299,6 +301,18 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     super.requestUpdate(name, oldValue, options);
   }
 
+  /** Choose the CSS aspect ratio or use the video's native display dimensions once available. */
+  @property({ attribute: 'aspect-ratio', reflect: true, useDefault: true }) aspectRatio: LyraVideoAspectRatio = 'fixed';
+  /** Center the player inside the available inline and block space when set to contain. */
+  @property({ reflect: true, useDefault: true }) fit: LyraVideoFit = 'default';
+  @state() private intrinsicRatio?: number;
+
+  private readVideoRatio = (): void => {
+    const video = this.videoEl;
+    const ratio = video && video.videoHeight > 0 ? video.videoWidth / video.videoHeight : 0;
+    this.intrinsicRatio = this.aspectRatio === 'auto' && Number.isFinite(ratio) && ratio > 0 ? ratio : undefined;
+  };
+
   /** Starts playback as soon as the browser's autoplay policy allows. */
   @property({ type: Boolean }) autoplay = false;
   /** Starts muted autoplay without changing the authored `muted` property. */
@@ -357,7 +371,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
 
   private panoramaVideoReady = false;
   private onPanoramaMediaReady = (): void => { this.panoramaVideoReady = true; this.scheduleAfterUpdate(() => super.requestUpdate('panoramaMedia', undefined, { hasChanged: () => true }), 'panorama-media'); };
-  private onPanoramaMediaReset = (): void => { this.panoramaVideoReady = false; this.panoramaRevision++; this.panorama.invalidate(); this.scheduleAfterUpdate(() => super.requestUpdate('panoramaMedia', undefined, { hasChanged: () => true }), 'panorama-media'); };
+  private onPanoramaMediaReset = (): void => { this.intrinsicRatio = undefined; this.panoramaVideoReady = false; this.panoramaRevision++; this.panorama.invalidate(); this.scheduleAfterUpdate(() => super.requestUpdate('panoramaMedia', undefined, { hasChanged: () => true }), 'panorama-media'); };
 
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
@@ -525,6 +539,11 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     super.willUpdate(changed);
     // A host aria-label names the whole player, so the host needs a role to carry that name.
     this.semanticInternals.role = normalizeLabel(hostAriaLabel(this)) === undefined ? null : 'region';
+    if (changed.has('fit') && this.fit !== 'contain') this.fit = 'default';
+    if (changed.has('aspectRatio')) {
+      if (this.aspectRatio !== 'auto') this.aspectRatio = 'fixed';
+      this.readVideoRatio();
+    }
     if (changed.has('controls')) this.controls = safeControls(this.controls);
     if (changed.has('preload')) this.preload = safePreload(this.preload);
 
@@ -564,6 +583,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     }
 
     if (changed.has('src')) {
+      this.intrinsicRatio = undefined;
       this.visibilityPaused = false;
       this.posterVisible = true;
       if (this.hasUpdated) {
@@ -667,8 +687,28 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     };
   }
 
-  /** Preserves the exact native `play()` promise and rejection. */
+  private committingUpdate = false;
+
+  protected override performUpdate(): void {
+    this.committingUpdate = true;
+    try {
+      super.performUpdate();
+    } finally {
+      this.committingUpdate = false;
+    }
+  }
+
+  private preparePlayback(): void {
+    if (!this.isConnected) return;
+    // Keep the browser's user activation and native promise. A synchronous media relay
+    // may itself call play while Lit is committing the new controls or media properties.
+    if (this.isUpdatePending && !this.committingUpdate) this.performUpdate();
+    this.syncSources();
+  }
+
+  /** Applies pending media and playback preferences before returning the exact native play promise. */
   play(): Promise<void> {
+    this.preparePlayback();
     return this.mediaController.play();
   }
 
@@ -788,6 +828,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
 
   /** Plays when paused and pauses when playing. */
   togglePlay(): void {
+    this.preparePlayback();
     if (this.videoEl?.paused ?? true) this.playFromControl();
     else this.pause();
   }
@@ -825,6 +866,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   private onNativeMediaEvent(event: Event): void {
     const video = this.videoEl;
     if (!video) return;
+    if (event.type === 'loadedmetadata') this.readVideoRatio();
     switch (event.type) {
       case 'loadedmetadata':
       case 'durationchange':
@@ -891,6 +933,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   };
 
   private onPosterPlay = (): void => {
+    this.preparePlayback();
     this.playFromControl();
   };
 
@@ -899,7 +942,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
   private playFromControl(): void {
     const media = this.videoEl;
     const generation = this.mediaController.generation;
-    void this.play().catch((error: unknown) => {
+    void this.mediaController.play().catch((error: unknown) => {
       if (!this.isConnected || !this.mediaController.isCurrentGeneration(generation, media)) return;
       if ((error as { name?: unknown } | null)?.name === 'AbortError') return;
       this.sourceFailed = true;
@@ -1342,12 +1385,14 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
     const posterActive = Boolean(safePoster && this.posterVisible);
     return html`
       ${this.panorama.renderNotice()}
+      <div class="sizing-stage" style=${styleMap({ '--_lr-video-source-ratio': this.intrinsicRatio?.toString() })}>
       <div part="base video-wrapper player">
-        <video
+        <div class="media-allocation"><video
           ${ref(this.mediaRef)}
           part="video body"
           ?data-panorama=${this.panorama.ready}
           aria-hidden=${this.panorama.ready ? 'true' : nothing}
+          @resize=${this.readVideoRatio}
           @loadeddata=${this.onPanoramaMediaReady}
           @emptied=${this.onPanoramaMediaReset}
           @error=${this.onPanoramaMediaReset}
@@ -1361,7 +1406,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
           preload=${safePreload(this.preload)}
           poster=${safePoster ?? nothing}
           aria-label=${label}
-        ></video>
+        ></video></div>
         ${this.panorama.renderViewport(label, this.panoramaEnabled)}
         ${this.sourceFailed ? html`<div part="error">${this.localize('avPlayerFailedToLoad')}</div>` : nothing}
         ${posterActive
@@ -1388,6 +1433,7 @@ export class LyraVideo extends LyraElement<LyraVideoEventMap> {
           : nothing}
         ${this.renderControls(posterActive)}
         <span hidden><slot @slotchange=${this.onSourceSlotChange}></slot></span>
+      </div>
       </div>
       ${this.panorama.renderHotspots(this.projection === 'equirectangular')}
     `;

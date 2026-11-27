@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
     other: 'دستورات {count}',
   },
   tabCloseAction: 'بستن {label}',
+  tabGroupMore: 'بیشتر',
   stepperStateCompleted: 'تکمیل شد',
   stepperStateError: 'خطا',
   stepperStatePending: 'شروع نشده',

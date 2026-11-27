@@ -58,6 +58,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} perintah',
   },
   tabCloseAction: 'Tutup {label}',
+  tabGroupMore: 'Lainnya',
   stepperStateCompleted: 'Selesai',
   stepperStateError: 'Galat',
   stepperStatePending: 'Belum dimulai',

@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} ያዛል',
   },
   tabCloseAction: '{label}ን ዝጋ',
+  tabGroupMore: 'ተጨማሪ',
   stepperStateCompleted: 'ተጠናቀቀ',
   stepperStateError: 'ስህተት',
   stepperStatePending: 'አልተጀመረም',

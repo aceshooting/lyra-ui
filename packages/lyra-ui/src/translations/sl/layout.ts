@@ -61,6 +61,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} ukazov',
   },
   tabCloseAction: 'Zapri {label}',
+  tabGroupMore: 'Več',
   stepperStateCompleted: 'Dokončano',
   stepperStateError: 'Napaka',
   stepperStatePending: 'Ni začeto',

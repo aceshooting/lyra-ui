@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} imiyalo',
   },
   tabCloseAction: 'Vala u-{label}',
+  tabGroupMore: 'Okwengeziwe',
   stepperStateCompleted: 'Kuqediwe',
   stepperStateError: 'Iphutha',
   stepperStatePending: 'Akuqalwa',

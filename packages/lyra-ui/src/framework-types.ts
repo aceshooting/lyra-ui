@@ -14236,6 +14236,7 @@ export interface LyraComponentTypeMap {
       | 'label'
       | 'locale'
       | 'noScrollControls'
+      | 'overflow'
       | 'placement'
       | 'strings'
       | 'withoutScrollControls',
@@ -16343,6 +16344,7 @@ export interface LyraComponentTypeMap {
     element: LyraVideo;
     properties: LyraElementProperties<
       LyraVideo,
+      | 'aspectRatio'
       | 'autoplay'
       | 'autoplayMuted'
       | 'autoplayOnVisible'
@@ -16350,6 +16352,7 @@ export interface LyraComponentTypeMap {
       | 'currentTime'
       | 'duration'
       | 'engine'
+      | 'fit'
       | 'hotspots'
       | 'iconLibrary'
       | 'locale'
@@ -16392,6 +16395,7 @@ export interface LyraComponentTypeMap {
       | '--lr-video-poster-play-button-hover-border-color'
       | '--poster-play-button-background';
     attributeAliases: {
+      'aspect-ratio'?: LyraVideo['aspectRatio'];
       'autoplay-muted'?: LyraVideo['autoplayMuted'];
       'autoplay-on-visible'?: LyraVideo['autoplayOnVisible'];
       'icon-library'?: LyraVideo['iconLibrary'];

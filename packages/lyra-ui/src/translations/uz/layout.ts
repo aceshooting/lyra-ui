@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} ta buyruq',
   },
   tabCloseAction: '{label}ni yopish',
+  tabGroupMore: 'Yana',
   stepperStateCompleted: 'Bajarildi',
   stepperStateError: 'Xato',
   stepperStatePending: 'Boshlanmagan',

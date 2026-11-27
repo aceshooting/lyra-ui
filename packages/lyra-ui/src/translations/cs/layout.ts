@@ -61,6 +61,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} příkazů',
   },
   tabCloseAction: 'Zavřít {label}',
+  tabGroupMore: 'Další',
   stepperStateCompleted: 'Dokončeno',
   stepperStateError: 'Chyba',
   stepperStatePending: 'Nezahájeno',

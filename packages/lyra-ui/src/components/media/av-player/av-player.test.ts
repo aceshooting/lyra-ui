@@ -909,6 +909,54 @@ describe('playback controls', () => {
     }
   });
 
+  for (const operation of ['play', 'toggle'] as const) {
+    it(`commits a replaced source before same-task ${operation}()`, async () => {
+      const el = await fixture<LyraAvPlayer>(html`<lr-av-player kind="audio" preload="none" src=${MP3_SRC}></lr-av-player>`);
+      const oldMedia = mediaEl(el);
+      // The toggle must read paused from the fresh element, not pause the superseded source.
+      if (operation === 'toggle') Object.defineProperty(oldMedia, 'paused', { value: false, configurable: true });
+      const promise = Promise.resolve();
+      const play = HTMLMediaElement.prototype.play;
+      const played: Array<{ src: string | null; kind: string }> = [];
+      HTMLMediaElement.prototype.play = function (this: HTMLMediaElement) {
+        played.push({ src: this.getAttribute('src'), kind: this.localName });
+        return promise;
+      };
+      try {
+        el.kind = 'video';
+        el.src = MP4_SRC;
+        const result = el[operation]();
+        expect(played).to.deep.equal([{ src: MP4_SRC, kind: 'video' }]);
+        expect(mediaEl(el) === oldMedia).to.equal(false);
+        if (operation === 'play') expect(result).to.equal(promise);
+        await el.updateComplete;
+        expect(played).to.have.length(1);
+        expect(mediaEl(el).getAttribute('src')).to.equal(MP4_SRC);
+      } finally {
+        HTMLMediaElement.prototype.play = play;
+      }
+    });
+  }
+
+  it('never plays the superseded source when the pending URL is rejected', async () => {
+    const el = await fixture<LyraAvPlayer>(html`<lr-av-player preload="none" src=${MP4_SRC}></lr-av-player>`);
+    const media = mediaEl(el);
+    let oldPlayback = 0;
+    Object.defineProperty(media, 'play', {
+      value: () => { oldPlayback++; return Promise.resolve(); },
+      configurable: true,
+    });
+    let nestedPlay: Promise<void> | undefined;
+    el.addEventListener('lr-render-error', () => { nestedPlay = el.play(); }, { once: true });
+    el.src = 'javascript:alert(1)';
+    await el.play();
+    await nestedPlay;
+    el.toggle();
+    await el.updateComplete;
+    expect(oldPlayback).to.equal(0);
+    expect(el.shadowRoot!.querySelector('[part="media"]') === null).to.equal(true);
+  });
+
   it('relays native media events from the host exactly once without bubbling or composing', async () => {
     const el = (await fixture(html`<lr-av-player src=${MP3_SRC}></lr-av-player>`)) as LyraAvPlayer;
     const media = mediaEl(el);

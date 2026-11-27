@@ -61,6 +61,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} polecenia',
   },
   tabCloseAction: 'Zamknij {label}',
+  tabGroupMore: 'Więcej',
   stepperStateCompleted: 'Ukończono',
   stepperStateError: 'Błąd',
   stepperStatePending: 'Nierozpoczęte',

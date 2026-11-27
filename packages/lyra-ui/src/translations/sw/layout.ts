@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} amri',
   },
   tabCloseAction: 'Funga {label}',
+  tabGroupMore: 'Zaidi',
   stepperStateCompleted: 'Imekamilika',
   stepperStateError: 'Hitilafu',
   stepperStatePending: 'Haijaanza',

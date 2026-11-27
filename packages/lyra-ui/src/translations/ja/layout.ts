@@ -58,6 +58,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} コマンド',
   },
   tabCloseAction: '{label} を閉じる',
+  tabGroupMore: 'その他',
   stepperStateCompleted: '完了',
   stepperStateError: 'エラー',
   stepperStatePending: '未開始',

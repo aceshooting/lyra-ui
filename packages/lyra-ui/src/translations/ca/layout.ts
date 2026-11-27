@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} ordres',
   },
   tabCloseAction: 'Tanca {label}',
+  tabGroupMore: 'Més',
   stepperStateCompleted: 'Completat',
   stepperStateError: 'Error',
   stepperStatePending: 'No iniciat',

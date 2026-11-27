@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} kommandoar',
   },
   tabCloseAction: 'Lukk {label}',
+  tabGroupMore: 'Meir',
   stepperStateCompleted: 'Fullført',
   stepperStateError: 'Feil',
   stepperStatePending: 'Ikkje starta',

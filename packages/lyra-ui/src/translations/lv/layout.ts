@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     zero: '{count} komandas',
   },
   tabCloseAction: 'Aizvērt {label}',
+  tabGroupMore: 'Vairāk',
   stepperStateCompleted: 'Pabeigts',
   stepperStateError: 'Kļūda',
   stepperStatePending: 'Nav sākts',

@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} command dem dey',
   },
   tabCloseAction: 'Close di {label}',
+  tabGroupMore: 'More tabs',
   stepperStateCompleted: 'E don finish',
   stepperStateError: 'Wahala',
   stepperStatePending: 'E never start',

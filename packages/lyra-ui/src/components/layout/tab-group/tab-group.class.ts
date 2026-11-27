@@ -1,3 +1,6 @@
+import type { mountTabOverflowMenu } from './tab-group-overflow-menu.js';
+import { DocumentPointerListener } from '../../../internal/document-pointer.js';
+import { OwnerAnimationFrameWaiter } from '../../../internal/owner-animation-frame.js';
 import { OwnedMutationObserver } from '../../../internal/owned-observer.js';
 import { resolveIdReferencesIn } from '../../../internal/aria-reflection.js';
 import { HostDescriptionController } from '../../../internal/aria-controls.js';
@@ -28,7 +31,7 @@ import { requestThenCommit } from '../../../internal/request-commit.js';
 import { markVetoGuardWrite, VetoWriteGuard } from '../../../internal/veto-write-guard.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
-import { LYRA_DEFAULT_scrollNext, LYRA_DEFAULT_scrollPrevious, LYRA_DEFAULT_tabCloseAction } from '../../../internal/default-strings/layout.generated.js';
+import { LYRA_DEFAULT_scrollNext, LYRA_DEFAULT_scrollPrevious, LYRA_DEFAULT_tabCloseAction, LYRA_DEFAULT_tabGroupMore } from '../../../internal/default-strings/layout.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 /** One canonical tab descriptor derived from a direct `<lr-tab>` child. */
@@ -91,6 +94,9 @@ function isTabLabelSubtreeExcludedWithoutInert(element: Element): boolean {
 
 /** Which edge the tab strip sits on. `start`/`end` are logical, so they mirror under RTL. */
 export type LyraTabGroupPlacement = 'top' | 'bottom' | 'start' | 'end';
+
+/** Horizontal overflow treatment for the tab strip. */
+export type LyraTabGroupOverflow = 'scroll' | 'menu';
 
 /**
  * `auto` moves selection with focus (the APG's automatic activation). `manual` moves focus only,
@@ -159,6 +165,11 @@ export interface LyraTabGroupEventMap {
  * `defaultSlot` exposes the real unnamed shadow slot expected by mapped integrations. Lyra keeps
  * it hidden because every accepted child is assigned to a deterministic named projection slot.
  *
+ * With `overflow="menu"`, a horizontal strip places the trailing tabs that cannot fit in a
+ * localized More menu. More participates in the strip's roving focus and carries the selected
+ * indicator when the active tab is in the menu. Selecting a menu item uses the same cancelable
+ * request as selecting its tab. Vertical placements retain their normal navigation.
+ *
  * **Overflow.** A horizontal tab row that does not fit stays natively scrollable and gains two
  * scroll controls flanking the tablist inside `[part="nav"]`, mirroring both upstreams. They are
  * rendered only for a horizontal `placement` (a vertical strip scrolls in the block direction,
@@ -213,6 +224,9 @@ export interface LyraTabGroupEventMap {
  * @csspart tabs - Upstream name on the same scroll container as `tablist`.
  * @csspart body - Wrapper around all tab panels.
  * @csspart tablist - The `role="tablist"` row of tab buttons.
+ * @csspart overflow-trigger - Trailing More control in menu overflow mode.
+ * @csspart overflow-menu - The popup listing tabs that do not fit in the strip.
+ * @csspart overflow-item - A tab choice inside the overflow menu.
  * @csspart scroll-button - Shared part on both overflow scroll controls.
  * @csspart scroll-button__base - Export-compatible base name on both scroll controls.
  * @csspart scroll-button__button - Upstream name for the inner native button of a scroll control; on the same node as `scroll-button`.
@@ -277,6 +291,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     scrollNext: LYRA_DEFAULT_scrollNext,
     scrollPrevious: LYRA_DEFAULT_scrollPrevious,
     tabCloseAction: LYRA_DEFAULT_tabCloseAction,
+    tabGroupMore: LYRA_DEFAULT_tabGroupMore,
   };
   // GENERATED DEFAULT-STRING SLICE: END
 
@@ -321,6 +336,9 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   /** `auto` (the default) moves selection with focus. `manual` moves focus only and waits for
    *  Enter or Space — the APG requirement for panels that are expensive to reveal. */
   @property({ reflect: true }) activation: LyraTabGroupActivation = 'auto';
+
+  /** Horizontal strips scroll by default. In menu mode the trailing tabs that do not fit are available through More. */
+  @property({ reflect: true }) overflow: LyraTabGroupOverflow = 'scroll';
 
   /** Suppresses the overflow scroll controls, leaving an overflowing tab row natively scrollable
    *  with the edge fade as its only affordance. Web Awesome's spelling of the flag. */
@@ -440,6 +458,14 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   private rehomeTabFocus = false;
   /** Focus held inside the shown panel when a selection change is about to hide it. */
   private panelFocusRepair: ComposedFocusRepairSnapshot | null = null;
+  @state() private collapsedTabs: ReadonlySet<string> = new Set();
+  @state() private menuOpen = false;
+  @state() private moreFocused = false;
+  private menuMeasureFrame?: OwnerAnimationFrameWaiter;
+  private menuMeasurePending = false;
+  private menuSession?: ReturnType<typeof mountTabOverflowMenu>;
+  private menuRuntime?: Promise<typeof import('./tab-group-overflow-menu.js')>;
+  private pendingMenu?: DocumentPointerListener;
   @state() private scrollStartAvailable = false;
   @state() private scrollEndAvailable = false;
   /** Shares its single `ResizeObserver` instance with the tab-scroll-edge bookkeeping below via
@@ -449,7 +475,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   private scrollOverflow = observeScrollOverflow(
     this,
     () => this.renderRoot.querySelector('[part~="tablist"]'),
-    () => this.measureTabScrollEdges()
+    () => this.menuMode ? this.queueMenuMeasurement() : this.measureTabScrollEdges()
   );
 
   override connectedCallback(): void {
@@ -486,6 +512,9 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   }
 
   override disconnectedCallback(): void {
+    this.menuMeasureFrame?.cancel();
+    this.closeOverflow(false);
+    this.moreFocused = false;
     this.stopLabelObservation?.();
     this.stopLabelObservation = undefined;
     this.labelTargets.clear();
@@ -498,6 +527,8 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   }
 
   override adoptedCallback(): void {
+    this.menuMeasureFrame?.cancel();
+    this.closeOverflow(false);
     super.adoptedCallback();
     this.hostDescription.adopted();
     this.mutationObserver.clear();
@@ -982,6 +1013,13 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     // Assignment must settle before the initial active value or source SSR hints are repaired.
     // A server render and its hydrating first update cannot see the tabs yet, so neither repairs.
     if (this.projectionPending || this.renderSlotPresence(false)) return;
+    if (this.hasUpdated && !this.menuMode && (changed.has('overflow') || changed.has('placement'))) {
+      const focus = shadowFocusTarget(this);
+      this.rehomeTabFocus ||= !!focus && (focus === this.moreButton() || !!this.menuPanel()?.contains(focus));
+      this.moreFocused = false;
+      this.closeOverflow(false);
+    }
+    if (changed.has('active') && !this.isCollapsed(this.active)) this.moreFocused = false;
     if (!changed.has('tabs') && !changed.has('active')) return;
     // A programmatic selection (a "Next" button inside the panel calling `show()`) hides the panel
     // that holds focus; capture it so `updated()` can hand focus to the newly selected tab.
@@ -992,6 +1030,15 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     // Manual activation can focus an unselected occurrence: its removal needs focus repair even
     // while the selected tab remains valid. Inspect the old button before keyed rendering removes it.
     const focused = shadowFocusTarget(this);
+    if (this.menuOpen && focused?.getAttribute('part') === 'overflow-item') {
+      const name = focused.getAttribute('data-slot');
+      if (!this.tabs.some(tab => tab.slotName === name && this.isNavigable(tab))) {
+        this.scheduleAfterUpdate(() => {
+          const panel = this.menuPanel();
+          (panel?.querySelector<HTMLButtonElement>('button:enabled') ?? panel)?.focus();
+        }, 'tab-overflow-item-focus');
+      }
+    }
     const focusedSlot = focused?.getAttribute('part') === 'tab'
       ? focused.getAttribute('data-slot')
       : null;
@@ -1042,21 +1089,22 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     // `[part~="tablist"]` observer above only watches that one container, so every current tab
     // rides along on its single ResizeObserver instance instead of a second one of its own.
     this.scrollOverflow.observeExtra(
-      this.renderRoot.querySelectorAll('[part="tab"]')
+      this.renderRoot.querySelectorAll('[part="tab"], [part="overflow-trigger"]')
     );
     this.measureTabScrollEdges();
+    if (this.menuOpen && (!this.menuMode || !this.collapsedTabs.size)) this.closeOverflow(false);
     const panelFocus = this.panelFocusRepair;
     this.panelFocusRepair = null;
     if (panelFocus?.owner.hasAttribute('hidden')) {
       applyComposedFocusRepair(panelFocus, () => [
-        this.renderRoot.querySelector<HTMLElement>('[part="tab"][tabindex="0"]'),
+        this.renderRoot.querySelector<HTMLElement>('[role="tab"][tabindex="0"]'),
         this.renderRoot.querySelector<HTMLElement>('[part="panel"]:not([hidden])'),
       ]);
     }
     if (!this.rehomeTabFocus) return;
     this.rehomeTabFocus = false;
     this.renderRoot
-      .querySelector<HTMLElement>('[part="tab"][tabindex="0"]')
+      .querySelector<HTMLElement>('[role="tab"][tabindex="0"]')
       ?.focus();
   }
 
@@ -1173,7 +1221,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
 
   /** Moves real DOM focus to tab `slotName`'s button. Safe to call immediately (no `updateComplete` wait): every tab button already exists in the DOM regardless of its current `tabindex`, and `tabindex="-1"` elements are still focusable via script. */
   private focusTabButton(slotName: string, options?: FocusOptions): boolean {
-    const button = this.tabButton(slotName);
+    const button = this.isCollapsed(slotName) ? this.moreButton() : this.tabButton(slotName);
     if (!button) return false;
     button.focus(options);
     return true;
@@ -1223,8 +1271,21 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
 
   private onTabListKeyDown = (e: KeyboardEvent): void => {
     if (e.defaultPrevented || shouldIgnoreNavigationKey(e)) return;
-    const navigable = this.tabs.filter((t) => this.isNavigable(t));
-    if (navigable.length === 0) return;
+    const navigable = this.tabs.filter((t) => this.isNavigable(t) && !this.isCollapsed(t.slotName));
+    const hasMore = this.menuMode && this.collapsedTabs.size > 0;
+    const onMore = hasMore && e.composedPath().includes(this.moreButton()!);
+    if (onMore && this.pendingMenu && (e.key === 'Tab' || e.key === 'Escape')) {
+      if (e.key === 'Escape') e.preventDefault();
+      this.closeOverflow(false);
+      return;
+    }
+    if (onMore && ['ArrowDown', 'ArrowUp', 'Enter', ' ', 'Spacebar'].includes(e.key)) {
+      e.preventDefault();
+      if (!isRepeatedActivationKey(e)) void this.openOverflow(e.key === 'ArrowUp');
+      return;
+    }
+    if (onMore && e.key === 'Delete') return;
+    if (!hasMore && navigable.length === 0) return;
     const origin = this.keyboardOriginTab(e, navigable);
     const currentIndex = origin ? navigable.indexOf(origin) : -1;
 
@@ -1253,13 +1314,17 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     }
 
     const targetIndex = resolveListMove(e, {
-      count: navigable.length,
-      current: currentIndex,
+      count: navigable.length + Number(hasMore),
+      current: onMore ? navigable.length : currentIndex,
       orientation: this.isVertical ? 'vertical' : 'horizontal',
       direction: this.effectiveDirection,
     });
     if (targetIndex === null) return;
     e.preventDefault();
+    if (hasMore && targetIndex === navigable.length) {
+      this.moreButton()?.focus();
+      return;
+    }
     const target = navigable[targetIndex]!; // safe: navigable non-empty (checked) and targetIndex in [0, length)
     if (this.activation === 'manual') {
       this.focusOnly(target);
@@ -1287,6 +1352,182 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     return `${slotName}-tab`;
   }
 
+  private get menuMode(): boolean {
+    return this.overflow === 'menu' && !this.isVertical;
+  }
+
+  private isCollapsed(name: string): boolean {
+    return this.menuMode && this.collapsedTabs.has(name);
+  }
+
+  private onMenuStripFocus = (event: FocusEvent): void => {
+    this.moreFocused = event.composedPath().includes(this.moreButton()!);
+  };
+
+  private moreButton(): HTMLButtonElement | null {
+    return this.renderRoot.querySelector('[part="overflow-trigger"]');
+  }
+
+  private menuPanel(): HTMLElement | null {
+    return this.renderRoot.querySelector('[part="overflow-menu"]');
+  }
+
+  private queueMenuMeasurement(): void {
+    if (this.menuMeasurePending) return;
+    this.menuMeasurePending = true;
+    this.menuMeasureFrame ??= new OwnerAnimationFrameWaiter(this);
+    void this.menuMeasureFrame.wait().then(current => {
+      this.menuMeasurePending = false;
+      if (current && this.menuMode) this.measureTabScrollEdges();
+    });
+  }
+
+  private measureMenuTabs(list: HTMLElement): void {
+    const trigger = this.moreButton();
+    const win = this.ownerDocument.defaultView;
+    if (!trigger || !win || !list.clientWidth) return;
+    const css = win.getComputedStyle(list);
+    const gap = Number.parseFloat(css.columnGap) || 0;
+    const available = list.clientWidth - (Number.parseFloat(css.paddingInlineStart) || 0)
+      - (Number.parseFloat(css.paddingInlineEnd) || 0);
+    // All original buttons stay measurable, including rich slotted labels. Read layout once
+    // before changing the partition. Fractional widths matter across a long row of tabs.
+    const buttons = Array.from(list.querySelectorAll<HTMLElement>('[part="tab"]'));
+    const widths = buttons.map(button => button.getBoundingClientRect().width);
+    const fullWidth = widths.reduce((sum, width, index) => sum + width + (index ? gap : 0), 0);
+    const next = new Set<string>();
+    if (fullWidth > available) {
+      let used = trigger.getBoundingClientRect().width;
+      for (let i = 0; i < buttons.length; i++) {
+        used += widths[i]! + gap;
+        if (used > available) next.add(buttons[i]!.dataset['slot']!);
+      }
+    }
+    this.setCollapsedTabs(next);
+  }
+
+  private setCollapsedTabs(next: Set<string>): void {
+    const before = this.collapsedTabs;
+    if (before.size === next.size && [...next].every(name => before.has(name))) return;
+    const focused = shadowFocusTarget(this);
+    const onMore = focused === this.moreButton() && focused !== null;
+    const focusedName = focused?.getAttribute('data-slot');
+    const inMenu = !!focused && this.menuPanel()?.contains(focused);
+    this.collapsedTabs = next;
+    if ((inMenu && focusedName && !next.has(focusedName)) || !next.size) this.closeOverflow(false);
+    if (!next.size) this.moreFocused = false;
+    if ((focusedName && before.has(focusedName) !== next.has(focusedName)) || (onMore && !next.size)) {
+      const name = focusedName ?? this.rovingTab;
+      this.scheduleAfterUpdate(() => this.focusTabButton(name), 'tab-overflow-focus');
+    }
+  }
+
+  private renderMore(rovingTab: string): TemplateResult {
+    const shown = this.collapsedTabs.size > 0;
+    const selected = this.isCollapsed(this.active);
+    return html`<button type="button" part="overflow-trigger"
+      role=${shown ? 'tab' : 'presentation'}
+      ?hidden=${!shown}
+      aria-hidden=${shown ? nothing : 'true'}
+      aria-haspopup="menu" aria-expanded=${String(this.menuOpen)}
+      aria-selected=${String(selected)}
+      aria-controls=${this.menuOpen ? this.baseId + '-overflow' : selected ? this.panelId(this.active) : nothing}
+      tabindex=${shown && (this.moreFocused || this.isCollapsed(rovingTab)) ? 0 : -1}
+      @click=${() => { if (this.menuOpen || this.pendingMenu) this.closeOverflow(true); else void this.openOverflow(); }}
+    >${this.localize('tabGroupMore')}${selected ? html`<span part="active-tab-indicator" aria-hidden="true"></span>` : nothing}</button>`;
+  }
+
+  private renderOverflowMenu(): TemplateResult {
+    return html`<div part="overflow-menu" role="menu" id=${this.baseId + '-overflow'}
+      aria-label=${this.localize('tabGroupMore')} tabindex="-1" @keydown=${this.onMenuKeyDown}>
+      ${repeat(this.tabs.filter(tab => !tab.hidden && this.isCollapsed(tab.slotName)), tab => tab.slotName,
+        tab => html`<button type="button" part="overflow-item" role="menuitemradio" tabindex="-1"
+          data-slot=${tab.slotName} aria-checked=${String(tab.slotName === this.active)}
+          aria-keyshortcuts=${this.isNavigable(tab) && tab.element.closable ? 'Delete' : nothing}
+          aria-disabled=${String(!this.isNavigable(tab))} ?disabled=${!this.isNavigable(tab)}
+          @click=${() => { if (this.activateTab(tab)) this.closeOverflow(true); }}
+        >${tab.label}</button>`)}
+    </div>`;
+  }
+
+  private async openOverflow(last = false): Promise<void> {
+    if (this.menuOpen || this.pendingMenu || !this.menuMode || !this.collapsedTabs.size) return;
+    const previousFocus = this.ownerDocument.activeElement;
+    const previousShadowFocus = shadowFocusTarget(this);
+    const focusMoved = () => previousFocus !== this.ownerDocument.activeElement || previousShadowFocus !== shadowFocusTarget(this);
+    // A first open can wait on the lazy menu chunk. Light-dismiss and invalidate that request
+    // while it is pending, just as the registered overlay will once it owns the popup.
+    const pending = this.pendingMenu = new DocumentPointerListener(this, event => {
+      if (!event.composedPath().includes(this.moreButton()!)) this.closeOverflow(false);
+    });
+    pending.bind();
+    const runtime = this.menuRuntime ??= import('./tab-group-overflow-menu.js');
+    let mountMenu: typeof mountTabOverflowMenu;
+    try {
+      ({ mountTabOverflowMenu: mountMenu } = await runtime);
+    } catch {
+      if (this.menuRuntime === runtime) this.menuRuntime = undefined;
+      if (this.pendingMenu === pending) this.closeOverflow(false);
+      return;
+    }
+    if (this.pendingMenu !== pending) return;
+    if (focusMoved() || !this.isConnected || !this.menuMode || !this.collapsedTabs.size) {
+      this.closeOverflow(false);
+      return;
+    }
+    this.menuOpen = true;
+    await this.updateComplete;
+    const trigger = this.moreButton();
+    const panel = this.menuPanel();
+    if (this.pendingMenu !== pending) return;
+    pending.unbind();
+    this.pendingMenu = undefined;
+    if (!this.menuOpen || !this.isConnected || !panel || !trigger) return;
+    const session = this.menuSession = mountMenu(this, trigger, panel, this.placement === 'bottom',
+      restoreFocus => this.closeOverflow(restoreFocus));
+    const placed = await session.ready;
+    if (this.menuSession !== session) return;
+    if (!placed || focusMoved()) {
+      this.closeOverflow(!focusMoved());
+      return;
+    }
+    const items = panel.querySelectorAll<HTMLButtonElement>('button:enabled');
+    const target = last ? items[items.length - 1] : panel.querySelector<HTMLButtonElement>('button:enabled[aria-checked="true"]') ?? items[0];
+    (target ?? panel).focus();
+  }
+
+  private closeOverflow(restoreFocus: boolean): void {
+    this.pendingMenu?.unbind();
+    this.pendingMenu = undefined;
+    this.menuOpen = false;
+    this.menuSession?.close(restoreFocus);
+    this.menuSession = undefined;
+  }
+
+  private onMenuKeyDown = (event: KeyboardEvent): void => {
+    if (shouldIgnoreNavigationKey(event)) return;
+    if (event.key === 'Tab') {
+      // Put native sequential navigation back at the trigger before the browser handles Tab.
+      this.closeOverflow(true);
+      return;
+    }
+    const items = Array.from(this.menuPanel()?.querySelectorAll<HTMLButtonElement>('button:enabled') ?? []);
+    const current = items.findIndex(item => event.composedPath().includes(item));
+    if (event.key === 'Delete') {
+      const name = items[current]?.dataset['slot'];
+      const tab = this.tabs.find(candidate => candidate.slotName === name);
+      if (!tab?.element.closable || !this.isNavigable(tab)) return;
+      event.preventDefault();
+      if (!isRepeatedActivationKey(event)) tab.element.requestCloseFromOwner();
+      return;
+    }
+    const index = resolveListMove(event, { current, count: items.length, orientation: 'vertical' });
+    if (index !== null) {
+      event.preventDefault();
+      items[index]?.focus();
+    }
+  };
+
   /** Whether either upstream's opt-out attribute is set. Both are read; neither wins. */
   private get scrollControlsSuppressed(): boolean {
     return this.withoutScrollControls || this.noScrollControls;
@@ -1295,7 +1536,9 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   private measureTabScrollEdges(): void {
     const tablist =
       this.renderRoot.querySelector<HTMLElement>('[part~="tablist"]');
-    if (!tablist || this.isVertical) {
+    if (tablist && this.menuMode) this.measureMenuTabs(tablist);
+    else if (this.collapsedTabs.size) this.setCollapsedTabs(new Set());
+    if (!tablist || this.isVertical || this.menuMode) {
       this.setTabScrollEdges(false, false, tablist);
       return;
     }
@@ -1375,7 +1618,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
   private renderScrollControl(
     edge: 'start' | 'end'
   ): TemplateResult | typeof nothing {
-    if (this.isVertical || this.scrollControlsSuppressed) return nothing;
+    if (this.menuMode || this.isVertical || this.scrollControlsSuppressed) return nothing;
     const available =
       edge === 'start' ? this.scrollStartAvailable : this.scrollEndAvailable;
     const part =
@@ -1440,25 +1683,28 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
    *  visible label or the `aria-label` name. */
   private renderTab(tab: TabDef, rovingTab: string): TemplateResult {
     const selected = tab.slotName === this.active;
+    const collapsed = this.isCollapsed(tab.slotName);
     const closable = this.isNavigable(tab) && tab.element.closable;
     return html`<button
       type="button"
       part="tab"
       id=${this.tabId(tab.slotName)}
       data-slot=${tab.slotName}
-      role="tab"
-      ?inert=${tab.inert}
+      role=${collapsed ? 'presentation' : 'tab'}
+      ?data-measure-only=${collapsed}
+      aria-hidden=${collapsed ? 'true' : nothing}
+      ?inert=${tab.inert || collapsed}
       aria-selected=${selected ? 'true' : 'false'}
       aria-disabled=${tab.disabled ? 'true' : 'false'}
       aria-label=${tab.label ? tab.label : nothing}
       aria-controls=${this.panelId(tab.slotName)}
       aria-keyshortcuts=${closable ? 'Delete' : nothing}
-      tabindex=${tab.slotName === rovingTab ? '0' : '-1'}
+      tabindex=${!collapsed && !this.moreFocused && tab.slotName === rovingTab ? '0' : '-1'}
       @click=${() => this.activateTab(tab)}
     >
       <span data-tab-label><slot name=${this.tabSlotName(tab.slotName)} @slotchange=${this.queueProjectionReconciliation}></slot></span>${tab.label
         ? html`<span hidden aria-hidden="true">${tab.label}</span>`
-        : nothing}${selected
+        : nothing}${selected && !collapsed
         ? html`<span part="active-tab-indicator" aria-hidden="true"></span>`
         : nothing}
     </button>`;
@@ -1470,8 +1716,8 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       part="panel"
       id=${this.panelId(tab.slotName)}
       role="tabpanel"
-      aria-labelledby=${tab.hidden ? nothing : this.tabId(tab.slotName)}
-      aria-label=${tab.hidden ? tab.label : nothing}
+      aria-labelledby=${tab.hidden || this.isCollapsed(tab.slotName) ? nothing : this.tabId(tab.slotName)}
+      aria-label=${tab.hidden || this.isCollapsed(tab.slotName) ? tab.label : nothing}
       tabindex="0"
       ?hidden=${!selected}
     >
@@ -1499,9 +1745,11 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
           <div
             part="tablist tabs"
             ?hidden=${this.tabs.length > 0 && !stripTabs.length}
+            ?data-menu-mode=${this.menuMode}
             role="tablist"
             aria-label=${(hostAriaLabel(this) === '' || this.accessibleLabel === '') ? '' : resolveAccessibleName(this, this.label) ?? nothing}
             aria-orientation=${this.isVertical ? 'vertical' : 'horizontal'}
+            @focusin=${this.menuMode ? this.onMenuStripFocus : nothing}
             @keydown=${this.onTabListKeyDown}
             @scroll=${this.onTabListScroll}
           >
@@ -1510,8 +1758,10 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
               (tab) => tab.slotName,
               (tab) => this.renderTab(tab, rovingTab)
             )}
+            ${this.menuMode ? this.renderMore(rovingTab) : nothing}
           </div>
           ${this.renderScrollControl('end')}
+          ${this.menuOpen ? this.renderOverflowMenu() : nothing}
         </div>
         ${this.tabs.filter(tab => tab.element.closable && this.isNavigable(tab)).map(tab => html`
           <button data-close-tab type="button" tabindex="-1"

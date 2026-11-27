@@ -52,6 +52,79 @@ export const styles = css`
     flex: 1 1 auto;
     min-inline-size: 0;
   }
+  [part~="tablist"][data-menu-mode] {
+    overflow: clip;
+    position: relative;
+    mask-image: none;
+  }
+  [data-menu-mode] > button {
+    flex: none;
+    inline-size: max-content;
+  }
+  /* Keep slotted rich content in the same measurement context as visible tabs. */
+  [data-menu-mode] > [data-measure-only] {
+    position: absolute;
+    inset-inline-end: 100%;
+    inset-block-start: 0;
+    clip-path: inset(50%);
+    pointer-events: none;
+  }
+  [part="overflow-trigger"], [part="overflow-item"] {
+    ${iconHitTarget}
+    appearance: none;
+    font: inherit;
+    color: var(--lr-color-text);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: background-color var(--lr-transition-fast), color var(--lr-transition-fast);
+  }
+  [part="overflow-trigger"] {
+    position: relative;
+    margin-inline-start: auto;
+    padding: var(--lr-tab-group-tab-padding, var(--lr-space-s) var(--lr-space-xs));
+    color: var(--lr-color-text-quiet);
+    font-weight: var(--lr-font-weight-medium);
+  }
+  [part="overflow-trigger"]:where([aria-selected="true"]) {
+    color: var(--lr-tab-group-selected-color, var(--lr-color-brand));
+  }
+  [part="overflow-trigger"][hidden] { display: none; }
+  [part="overflow-trigger"] [part="active-tab-indicator"] { inset-block-end: 0; }
+  [part="overflow-menu"] {
+    position: fixed;
+    z-index: var(--lr-overlay-stack-index, var(--lr-layer-dropdown));
+    box-sizing: border-box;
+    overflow: auto;
+    max-inline-size: var(--lr-positioner-available-inline-size, 100vi);
+    max-block-size: var(--lr-positioner-available-block-size, 100vb);
+    background: var(--lr-color-surface);
+    border: var(--lr-border-width-thin) solid var(--lr-color-border-subtle);
+    border-radius: var(--lr-radius);
+    box-shadow: var(--lr-overlay-shadow-anchored, var(--lr-shadow-m));
+    padding: var(--lr-space-xs);
+  }
+  [part="overflow-item"] {
+    display: block;
+    inline-size: 100%;
+    text-align: start;
+    overflow-wrap: anywhere;
+    padding: var(--lr-space-xs) var(--lr-space-s);
+  }
+  [part="overflow-item"]:where([aria-checked="true"]) { font-weight: var(--lr-font-weight-bold); }
+  [part="overflow-item"]:where(:disabled) { opacity: var(--lr-opacity-disabled); }
+  [part="overflow-trigger"]:where(:hover),
+  [part="overflow-item"]:where(:hover:not(:disabled)) {
+    background: var(--lr-color-surface-raised);
+  }
+  [part="overflow-trigger"]:where(:active),
+  [part="overflow-item"]:where(:active:not(:disabled)) {
+    background: ${activeFill('transparent')};
+  }
+  [part="overflow-trigger"]:focus-visible,
+  [part="overflow-item"]:focus-visible {
+    ${focusRingInwardOffset}
+  }
   /* The leading scroll control is present only on horizontal strips using custom controls. */
   :where([part~="scroll-button"]) + [part~="tablist"] {
     scrollbar-width: none;
@@ -269,6 +342,8 @@ export const styles = css`
   }
   @media (prefers-reduced-motion: reduce) {
     [part="tab"],
+    [part="overflow-trigger"],
+    [part="overflow-item"],
     [part~="scroll-button"] {
       transition: none !important;
     }

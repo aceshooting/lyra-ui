@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} حکمونه',
   },
   tabCloseAction: '{label} وتړئ',
+  tabGroupMore: 'نور',
   stepperStateCompleted: 'بشپړ شو',
   stepperStateError: 'تېروتنه',
   stepperStatePending: 'نه دی پیل شوی',

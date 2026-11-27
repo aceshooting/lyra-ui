@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} आदेश',
   },
   tabCloseAction: '{label} बंद करें',
+  tabGroupMore: 'और',
   stepperStateCompleted: 'पूरा हुआ',
   stepperStateError: 'त्रुटि',
   stepperStatePending: 'शुरू नहीं हुआ',

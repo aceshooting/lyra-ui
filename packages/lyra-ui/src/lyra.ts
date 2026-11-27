@@ -926,6 +926,7 @@ export type { ConfirmOptions } from './components/overlays/dialog/confirm.js';
 export type {
   LyraTabGroupPlacement,
   LyraTabGroupActivation,
+  LyraTabGroupOverflow,
   LyraTabGroupSelectRequestDetail,
 } from './components/layout/tab-group/tab-group.class.js';
 export type { LyraTabEventMap } from './components/layout/tab-group/tab.class.js';
@@ -1666,6 +1667,8 @@ export type {
 } from './components/media/av-player/av-player.class.js';
 export type {
   LyraVideoControls,
+  LyraVideoAspectRatio,
+  LyraVideoFit,
   LyraVideoEventMap,
   LyraVideoPreload,
   VideoState,

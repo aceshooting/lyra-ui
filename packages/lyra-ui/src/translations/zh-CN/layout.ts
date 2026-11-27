@@ -58,6 +58,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} 命令',
   },
   tabCloseAction: '关闭{label}',
+  tabGroupMore: '更多',
   stepperStateCompleted: '已完成',
   stepperStateError: '错误',
   stepperStatePending: '未开始',

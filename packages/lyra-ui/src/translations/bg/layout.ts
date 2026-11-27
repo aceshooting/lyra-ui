@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} команди',
   },
   tabCloseAction: 'Затвори {label}',
+  tabGroupMore: 'Още',
   stepperStateCompleted: 'Завършено',
   stepperStateError: 'Грешка',
   stepperStatePending: 'Не е започнато',

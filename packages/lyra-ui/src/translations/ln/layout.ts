@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} mitindo',
   },
   tabCloseAction: 'Kanga {label}',
+  tabGroupMore: 'Mosusu',
   stepperStateCompleted: 'Esili',
   stepperStateError: 'Libunga',
   stepperStatePending: 'Ebandaki naino te',

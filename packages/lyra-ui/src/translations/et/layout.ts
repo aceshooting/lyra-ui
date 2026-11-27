@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} käsku',
   },
   tabCloseAction: 'Sulge {label}',
+  tabGroupMore: 'Veel',
   stepperStateCompleted: 'Lõpetatud',
   stepperStateError: 'Viga',
   stepperStatePending: 'Alustamata',

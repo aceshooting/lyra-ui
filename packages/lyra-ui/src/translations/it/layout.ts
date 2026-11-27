@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} comandi',
   },
   tabCloseAction: 'Chiudi {label}',
+  tabGroupMore: 'Altro',
   stepperStateCompleted: 'Completato',
   stepperStateError: 'Errore',
   stepperStatePending: 'Non iniziato',

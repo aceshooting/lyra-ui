@@ -1115,10 +1115,37 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
     this.mediaController.attach(media);
   };
 
+  private committingMediaUpdate = false;
+
+  protected override performUpdate(): void {
+    this.committingMediaUpdate = true;
+    try {
+      super.performUpdate();
+    } finally {
+      this.committingMediaUpdate = false;
+    }
+  }
+
+  private nativeMediaForPlayback(): HTMLMediaElement | undefined {
+    const current = (): HTMLMediaElement | undefined => {
+      const media = this.mediaEl;
+      const safeSrc = this.src ? safeMediaSrc(this.src) : null;
+      if (media && (!this.src || safeSrc) &&
+          media.localName === this.detectedKind() && media.getAttribute('src') === safeSrc) return media;
+      return undefined;
+    };
+    const media = current();
+    if (media || !this.hasUpdated || !this.isConnected || !this.isUpdatePending || this.committingMediaUpdate) return media;
+    // The source is Lit-keyed, so changing it replaces the native element. Commit the pending
+    // render before forwarding play, in the caller's task, to preserve its activation and promise.
+    this.performUpdate();
+    return current();
+  }
+
   /** Proxies the native media element's `play()` and preserves its promise/rejection. Resolves
    *  immediately before the element mounts. */
   play(): Promise<void> {
-    return this.mediaController.play();
+    return this.nativeMediaForPlayback() ? this.mediaController.play() : Promise.resolve();
   }
   /** Proxies the native media element's `pause()`. A no-op before the element mounts. */
   pause(): void {
@@ -1126,8 +1153,9 @@ export class LyraAvPlayer extends DocumentAnchorTarget(LyraAvPlayerBase) {
   }
   /** Plays if paused, pauses if playing. A no-op before the element mounts. */
   toggle(): void {
-    const media = this.mediaEl;
-    if (media?.paused) {
+    const media = this.nativeMediaForPlayback();
+    if (!media) return;
+    if (media.paused) {
       const generation = this.mediaController.generation;
       void this.play().catch((error: unknown) => {
         if (

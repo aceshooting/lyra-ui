@@ -62,6 +62,7 @@ const strings: LyraLocaleStrings = {
     two: '{count} ordú',
   },
   tabCloseAction: 'Dún {label}',
+  tabGroupMore: 'Tuilleadh',
   stepperStateCompleted: 'Críochnaithe',
   stepperStateError: 'Earráid',
   stepperStatePending: 'Gan tosú',

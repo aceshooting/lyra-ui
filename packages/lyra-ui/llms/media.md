@@ -5753,9 +5753,11 @@ off-screen coalesce into one paint on re-entry; environments without that API re
 painting.
 
 **Methods:** `play(): Promise<void>` proxies the native media element and preserves its native
-promise/rejection (before the media mounts it returns an already-resolved promise). `pause()` and
-`toggle()` proxy the native element; an internal toggle that cannot start playback renders the
-error state and emits `lr-render-error`. `seek(seconds)` sets `currentTime` and forces an immediate
+promise/rejection (before the media mounts it returns an already-resolved promise). On a mounted
+player, `play()` and `toggle()` apply a pending source assignment before acting. Assign `src` and
+call either method in the same task when switching clips. `pause()` proxies the native element.
+A toggle that cannot start playback renders the error state and emits `lr-render-error`.
+`seek(seconds)` sets `currentTime` and forces an immediate
 `lr-time-change`. `search(query)` resolves the match count; `searchNext()`/`searchPrevious()` wrap
 and reveal the active match in the virtualized transcript without seeking playback; `clearSearch()`
 resets the query and match state. `focus(options?)`, `blur()`, and `click()` forward to the native
@@ -5918,11 +5920,32 @@ instead of browser-name-gated and are probed through the concrete native element
 realm. While the poster is visible, its button is the only exposed play action; the ordinary
 control-bar play toggle is hidden until the poster is dismissed.
 
+**Player sizing:** `aspectRatio: 'fixed' | 'auto' = 'fixed'` (`aspect-ratio`, reflected) uses
+`--aspect-ratio` by default. In `auto`, the player adopts the native video's display dimensions
+when metadata arrives and updates on native video resize. It uses the CSS ratio while those
+dimensions are unavailable. `fit: 'default' | 'contain' = 'default'` (reflected) controls how the
+player fills its allocation. `contain` centers the player within the available width and height
+while preserving its ratio. Give the stage a definite block size to bound the height.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/lr-video.js';
+</script>
+
+<div style="block-size: 16rem;">
+  <lr-video src="/clips/portrait.mp4" aspect-ratio="auto" fit="contain" controls="full"
+    title="Portrait clip"></lr-video>
+</div>
+```
+
 **Methods:** `getState(): VideoState` returns a fresh synchronous
 `{ playing, currentTime, duration, volume, muted, playbackRate }` snapshot. `VideoState` is the
 canonical upstream-compatible authoring type.
 `getVideoElement(): HTMLVideoElement | undefined` returns the private native element after mount;
-`play(): Promise<void>` returns the exact native promise and preserves its rejection; `pause()`,
+`play(): Promise<void>` applies a pending source assignment before starting native playback and
+returns the native promise, including any rejection. It also applies pending media when called
+on a connected player before its first render settles. Call `player.play()` immediately after
+assigning `player.src` from a click handler and handle rejection as usual. `pause()`,
 `togglePlay()` (alias `toggle()`, matching `lr-av-player`), `toggleMute()`, `seek(time)`, `setPlaybackRate(rate)`, and `setVolume(volume)` proxy
 finite, clamped media state; `requestFullscreen()` and `exitFullscreen()` preserve the platform
 promise/rejection and reject with an owner-realm `DOMException` named `NotSupportedError` when the
@@ -5985,7 +6008,8 @@ than a raw number of seconds; `aria-describedby` points to the same text. The vo
 remains in the DOM as a disabled `0..0` control with its value text and description intact,
 avoiding a disappearing/reappearing semantic target.
 
-**Themeable custom properties:** `--aspect-ratio` (default `16 / 9`, the player surface ratio),
+**Themeable custom properties:** `--aspect-ratio` (default `16 / 9`, the fixed player surface
+ratio and the fallback while auto dimensions are unavailable),
 `--controls-background` (default
 `var(--lr-color-overlay-strong)`), `--controls-color` (default
 `var(--lr-color-on-strong-overlay)`), and

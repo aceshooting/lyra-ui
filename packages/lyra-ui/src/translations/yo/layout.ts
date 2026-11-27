@@ -58,6 +58,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} pase',
   },
   tabCloseAction: 'Pa {label} dé',
+  tabGroupMore: 'Síwájú sí i',
   stepperStateCompleted: 'Ó parí',
   stepperStateError: 'Àṣìṣe',
   stepperStatePending: 'Kò tíì bẹ̀rẹ̀',

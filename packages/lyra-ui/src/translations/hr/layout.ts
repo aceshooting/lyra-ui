@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} naredbi',
   },
   tabCloseAction: 'Zatvori: {label}',
+  tabGroupMore: 'Više',
   stepperStateCompleted: 'Završeno',
   stepperStateError: 'Pogreška',
   stepperStatePending: 'Nije započeto',

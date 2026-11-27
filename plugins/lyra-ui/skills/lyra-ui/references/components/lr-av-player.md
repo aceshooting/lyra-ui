@@ -265,9 +265,11 @@ off-screen coalesce into one paint on re-entry; environments without that API re
 painting.
 
 **Methods:** `play(): Promise<void>` proxies the native media element and preserves its native
-promise/rejection (before the media mounts it returns an already-resolved promise). `pause()` and
-`toggle()` proxy the native element; an internal toggle that cannot start playback renders the
-error state and emits `lr-render-error`. `seek(seconds)` sets `currentTime` and forces an immediate
+promise/rejection (before the media mounts it returns an already-resolved promise). On a mounted
+player, `play()` and `toggle()` apply a pending source assignment before acting. Assign `src` and
+call either method in the same task when switching clips. `pause()` proxies the native element.
+A toggle that cannot start playback renders the error state and emits `lr-render-error`.
+`seek(seconds)` sets `currentTime` and forces an immediate
 `lr-time-change`. `search(query)` resolves the match count; `searchNext()`/`searchPrevious()` wrap
 and reveal the active match in the virtualized transcript without seeking playback; `clearSearch()`
 resets the query and match state. `focus(options?)`, `blur()`, and `click()` forward to the native

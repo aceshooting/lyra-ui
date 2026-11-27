@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} opdrachten',
   },
   tabCloseAction: '{label} sluiten',
+  tabGroupMore: 'Meer',
   stepperStateCompleted: 'Voltooid',
   stepperStateError: 'Fout',
   stepperStatePending: 'Niet gestart',

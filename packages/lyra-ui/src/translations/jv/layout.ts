@@ -58,6 +58,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} prentah',
   },
   tabCloseAction: 'Tutup {label}',
+  tabGroupMore: 'Liyane',
   stepperStateCompleted: 'Rampung',
   stepperStateError: 'Kasalahan',
   stepperStatePending: 'Durung diwiwiti',

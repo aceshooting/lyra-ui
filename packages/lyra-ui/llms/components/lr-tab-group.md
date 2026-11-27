@@ -10,7 +10,7 @@
 - **Release history** [CHANGELOG.md](../../CHANGELOG.md)
 - **Deprecations** none
 - **Optional peers** none
-- **Themeable via** 17 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
+- **Themeable via** 20 parts, 21 custom properties — see this component's own `@csspart`/`@cssprop` list below
 - **Tokens by part** (prefer these over a `::part()` rule) `panel`: `--lr-tab-group-panel-hover-outline-color`, `--lr-tab-group-panel-hover-outline-offset`, `--lr-tab-group-panel-hover-outline-style`, `--lr-tab-group-panel-hover-outline-width`
 - **Library-wide behavior** (events, form association, `locale`/`strings`, tokens, TS types): `llms/shared.md`
 
@@ -107,6 +107,10 @@ selection.
   scroll controls described below, and neither is deprecated: a consumer arriving from either
   upstream finds their own attribute working. Left unset, an overflowing horizontal strip gets the
   controls.
+- `overflow: LyraTabGroupOverflow = 'scroll'` (reflected) — `'scroll'` and `'menu'` control
+  overflow in horizontal strips.
+  Set `overflow="menu"` to show the tabs that fit and place the trailing tabs in a More menu.
+  Vertical strips use native scrolling.
 - `fixedScrollControls: boolean = false` (reflected, attribute `fixed-scroll-controls`) —
   keeps both controls laid out across an overflowing range. Without it, the start control is hidden
   at the logical start and the end control is hidden at the logical end; an exhausted control is a
@@ -133,7 +137,34 @@ group.show("activity");
 group.focusTab("activity");
 ```
 
-**Overflow and scrolling.** The tablist is a native scroll container (`overflow-x: auto`). A
+**Overflow menu.** A horizontal group with `overflow="menu"` reserves room for the More trigger
+when its tabs exceed the available inline size. The trigger represents the active tab when that
+tab is inside the menu. Under either activation mode, Arrow keys and Home/End move among the
+visible tabs and the More trigger. Enter, Space or ArrowDown opens the menu. Within it, Up/Down and
+Home/End move through the choices, Enter or Space selects, and Escape returns to the trigger.
+A disabled or inert tab cannot be selected. Author-hidden descriptors stay out of both the
+strip and the menu. `show(name)` can still select a tab by name, and `focusTab(name)` can
+focus the More trigger for a tab inside the menu. Override the `tabGroupMore` message to name the
+trigger, and set `--lr-tab-group-tab-padding` to tighten spacing in a compact header.
+
+```html
+<script type="module">
+  import '@aceshooting/lyra-ui/components/lr-tab-group.js';
+  import '@aceshooting/lyra-ui/components/lr-tab.js';
+  import '@aceshooting/lyra-ui/components/lr-tab-panel.js';
+</script>
+
+<lr-tab-group overflow="menu" aria-label="Workspace" style="inline-size: min(100%, 18rem);">
+  <lr-tab panel="overview">Overview</lr-tab>
+  <lr-tab panel="history">Activity history</lr-tab>
+  <lr-tab panel="exports">Saved exports</lr-tab>
+  <lr-tab-panel name="overview">Workspace overview</lr-tab-panel>
+  <lr-tab-panel name="history">Recent activity</lr-tab-panel>
+  <lr-tab-panel name="exports">Files ready to download</lr-tab-panel>
+</lr-tab-group>
+```
+
+**Overflow scrolling.** The tablist is a native scroll container (`overflow-x: auto`). A
 horizontal row that does not fit additionally gets two pointer scroll controls flanking it inside
 `[part="nav"]`. Horizontal tablists hide the browser scrollbar when these controls are enabled.
 Touch, trackpad and keyboard scrolling still work. Set `without-scroll-controls` or
@@ -209,9 +240,10 @@ controls that scroll the tabs toward their inline start and end — under RTL "s
 right-hand one), `scroll-button-glyph` (the chevron wrapper inside a control; this wrapper is what
 mirrors under RTL, never the icon), `tab` (a single tab button), `active-tab-indicator` (the selected
 tab's directional indicator), and `panel`
-(a single `role="tabpanel"` wrapper, one per tab, hidden unless active).
-The two controls exist in the DOM whenever the group can have them at all (horizontal `placement`,
-no opt-out). Non-overflow and inactive-edge qualifiers are wrapped in `:where()`, so a consumer's
+(a single `role="tabpanel"` wrapper, one per tab, hidden unless active). Menu mode additionally
+exposes `overflow-trigger` (More), `overflow-menu` (the popup) and `overflow-item` (a menu choice).
+The two scroll controls exist in the DOM for horizontal `placement` in scroll mode when no
+scroll-control opt-out is set. Non-overflow and inactive-edge qualifiers are wrapped in `:where()`, so a consumer's
 own `::part(scroll-button)` rule can override presentation without `!important`.
 
 **Themeable custom properties:** `--lr-scroll-fade-size` (default `2rem`) — width of the mask fade

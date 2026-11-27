@@ -1654,6 +1654,7 @@ export type LyraMessageKey =
   | 'tableRowLimit'
   | 'tableAdditionalColumns'
   | 'tabCloseAction'
+  | 'tabGroupMore'
   | 'treeLimit'
   | 'treeSourceError'
   | 'treeSourceSummary'

@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} Befehle',
   },
   tabCloseAction: '{label} schließen',
+  tabGroupMore: 'Mehr',
   stepperStateCompleted: 'Abgeschlossen',
   stepperStateError: 'Fehler',
   stepperStatePending: 'Nicht begonnen',

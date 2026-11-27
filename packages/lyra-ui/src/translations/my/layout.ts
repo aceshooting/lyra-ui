@@ -58,6 +58,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} အမိန့်များ',
   },
   tabCloseAction: '{label} ကို ပိတ်ရန်',
+  tabGroupMore: 'နောက်ထပ်',
   stepperStateCompleted: 'ပြီးသွားပြီ',
   stepperStateError: 'အမှား',
   stepperStatePending: 'မစသေးပါ',

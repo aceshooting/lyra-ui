@@ -39,6 +39,34 @@ export const Standard: Story = {
   `,
 };
 
+export const BoundedPlayer: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'The player stays centered in a stage with a fixed height and takes its ratio from the clip. The button assigns the source and calls play() in the same task.',
+      },
+    },
+  },
+  render: () => html`
+    <div>
+      <div style="block-size: var(--lr-size-12rem);">
+        <lr-video aspect-ratio="auto" fit="contain" controls="full" title="Lyra video demo"></lr-video>
+      </div>
+      <button type="button" @click=${(event: Event) => {
+        const button = event.currentTarget as HTMLButtonElement;
+        const player = button.parentElement?.querySelector('lr-video');
+        const status = button.parentElement?.querySelector('[role="status"]');
+        if (!player || !status) return;
+        status.textContent = '';
+        player.src = VIDEO_SRC;
+        void player.play().catch(() => { status.textContent = 'Playback could not start.'; });
+      }}>Load and play clip</button>
+      <p role="status"></p>
+    </div>
+  `,
+};
+
 export const FullControls: Story = {
   render: () => html`
     <lr-video controls="full" src=${VIDEO_SRC} poster=${POSTER} title="Full controls">

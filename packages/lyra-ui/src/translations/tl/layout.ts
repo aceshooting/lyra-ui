@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} mga utos',
   },
   tabCloseAction: 'Isara ang {label}',
+  tabGroupMore: 'Higit pa',
   stepperStateCompleted: 'Nakumpleto',
   stepperStateError: 'Error',
   stepperStatePending: 'Hindi pa nasimulan',

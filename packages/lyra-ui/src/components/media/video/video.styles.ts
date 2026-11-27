@@ -12,10 +12,36 @@ export const styles = css`
     display: block;
     color: var(--controls-color, var(--lr-color-on-strong-overlay));
     ${inlineSizeContainer}
+    container-name: lr-video;
   }
 
   :host([hidden]) {
     display: none;
+  }
+
+  .sizing-stage, .media-allocation { display: contents; }
+
+  .sizing-stage, [part~='video-wrapper'], [part~='video'] {
+    --_lr-video-ratio: var(--_lr-video-source-ratio, var(--aspect-ratio, 16 / 9));
+  }
+
+  :host(:where([fit='contain'])) {
+    block-size: 100%;
+    min-block-size: 0;
+  }
+
+  :host(:where([fit='contain'])) .sizing-stage {
+    display: grid;
+    container-type: size;
+    place-items: center;
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+    inline-size: 100%;
+    block-size: 100%;
+    aspect-ratio: var(--_lr-video-ratio);
+  }
+
+  :host(:where([fit='contain'])) [part~='video-wrapper'] {
+    inline-size: min(100%, calc(100cqb * (var(--_lr-video-ratio))));
   }
 
   [part~='video-wrapper'] {
@@ -23,7 +49,7 @@ export const styles = css`
     isolation: isolate;
     overflow: hidden;
     inline-size: 100%;
-    aspect-ratio: var(--aspect-ratio, 16 / 9);
+    aspect-ratio: var(--_lr-video-ratio);
     border-radius: var(--lr-radius);
     background: var(--lr-color-overlay-strong);
   }
@@ -371,7 +397,7 @@ export const styles = css`
 
   /* The full toolbar can wrap well before the compact threshold. Put those controls below the
      media at the medium allocation so wrapped rows never cover active captions. */
-  @container ${mediumContainerQuery} {
+  @container lr-video ${mediumContainerQuery} {
     :host(:not([controls='none'])) [part~='video-wrapper'] {
       aspect-ratio: auto;
       display: grid;
@@ -384,7 +410,7 @@ export const styles = css`
     :host(:not([controls='none'])) [part~='video'] {
       grid-area: media;
       block-size: auto;
-      aspect-ratio: var(--aspect-ratio, 16 / 9);
+      aspect-ratio: var(--_lr-video-ratio);
     }
 
     :host(:not([controls='none'])) :is([part='poster-overlay'], [part='panorama']) {
@@ -406,6 +432,27 @@ export const styles = css`
       inset: auto;
       grid-area: controls;
     }
+
+    :host([fit='contain']:not([controls='none'])) [part~='video-wrapper'] {
+      inline-size: 100%;
+      block-size: 100%;
+      grid-template-rows: minmax(0, 1fr) auto;
+    }
+
+    :host([fit='contain']:not([controls='none'])) .media-allocation {
+      grid-area: media;
+      display: grid;
+      container-type: size;
+      place-items: center;
+      grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+    }
+
+    :host([fit='contain']:not([controls='none'])) [part~='video'] {
+      grid-area: 1 / 1;
+      inline-size: min(100%, calc(100cqb * (var(--_lr-video-ratio))));
+    }
+
+    :host([fit='contain']) [part='poster-overlay'] img { object-fit: contain; }
 
     [part='controls-overlay'] {
       padding: var(--lr-space-xs);

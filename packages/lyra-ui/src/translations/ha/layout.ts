@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} umarni',
   },
   tabCloseAction: 'Rufe {label}',
+  tabGroupMore: 'Ƙari',
   stepperStateCompleted: 'An kammala',
   stepperStateError: 'Kuskure',
   stepperStatePending: 'Ba a fara ba',

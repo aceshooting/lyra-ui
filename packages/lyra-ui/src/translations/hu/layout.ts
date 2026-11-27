@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} parancsot',
   },
   tabCloseAction: 'Bezárás: {label}',
+  tabGroupMore: 'Továbbiak',
   stepperStateCompleted: 'Befejezve',
   stepperStateError: 'Hiba',
   stepperStatePending: 'Nincs elkezdve',

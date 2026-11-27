@@ -58,6 +58,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} 명령',
   },
   tabCloseAction: '{label} 닫기',
+  tabGroupMore: '더 보기',
   stepperStateCompleted: '완료됨',
   stepperStateError: '오류',
   stepperStatePending: '시작 안 됨',

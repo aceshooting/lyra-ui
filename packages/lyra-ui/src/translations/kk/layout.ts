@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} пәрмендер',
   },
   tabCloseAction: 'Жабу: {label}',
+  tabGroupMore: 'Тағы',
   stepperStateCompleted: 'Аяқталды',
   stepperStateError: 'Қате',
   stepperStatePending: 'Басталмаған',

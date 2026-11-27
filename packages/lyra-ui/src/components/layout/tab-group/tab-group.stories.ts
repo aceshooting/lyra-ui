@@ -162,6 +162,25 @@ export const ScrollableOverflow: Story = {
   `,
 };
 
+export const MoreMenuOverflow: Story = {
+  name: "Overflow menu",
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Tabs that do not fit move into More. Permissions and access starts selected, so the trigger shows the active state until its tab fits in the strip.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="inline-size: var(--lr-size-20rem); max-inline-size: 100%;">
+      <lr-tab-group overflow="menu" active="permissions" aria-label="Workspace">
+        ${crowdedPanels()}
+      </lr-tab-group>
+    </div>
+  `,
+};
+
 export const ScrollableOverflowRtl: Story = {
   name: "Scrollable overflow under RTL",
   parameters: {

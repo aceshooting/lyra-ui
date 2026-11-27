@@ -59,6 +59,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} komut',
   },
   tabCloseAction: '{label} sekmesini kapat',
+  tabGroupMore: 'Diğer',
   stepperStateCompleted: 'Tamamlandı',
   stepperStateError: 'Hata',
   stepperStatePending: 'Başlamadı',

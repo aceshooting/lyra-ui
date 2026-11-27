@@ -60,6 +60,7 @@ const strings: LyraLocaleStrings = {
     other: '{count} komandi',
   },
   tabCloseAction: 'Zatvori {label}',
+  tabGroupMore: 'Još',
   stepperStateCompleted: 'Završeno',
   stepperStateError: 'Greška',
   stepperStatePending: 'Nije započeto',
