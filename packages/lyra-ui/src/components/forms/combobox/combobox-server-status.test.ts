@@ -84,6 +84,22 @@ describe('lr-combobox server mode', () => {
     expect(el.matches(':state(showing-loading-row)')).to.equal(false);
   });
 
+  it('keeps a rendered option keyboard-selectable while the server request is pending', async () => {
+    const el = await fixture<LyraCombobox>(html`
+      <lr-combobox server filter-debounce="0" open commit="text">
+        <lr-option value="a">Alpha</lr-option>
+      </lr-combobox>`);
+    await waitUntil(() => el.loading && rowTexts(el).join() === 'Alpha', 'server mode retains a rendered option');
+    arrowDown(el);
+    await el.updateComplete;
+    const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="combobox-input"]')!;
+    const active = el.shadowRoot!.getElementById(input.getAttribute('aria-activedescendant') ?? '');
+    expect(active?.textContent?.trim()).to.equal('Alpha');
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    await el.updateComplete;
+    expect(el.value).to.equal('Alpha');
+  });
+
   it('re-requests on reload() and does nothing when server is unset', async () => {
     const el = await fixture<LyraCombobox>(html`<lr-combobox filter-debounce="0" open></lr-combobox>`);
     let count = 0;

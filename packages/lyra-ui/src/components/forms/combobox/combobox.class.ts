@@ -2826,6 +2826,10 @@ export class LyraCombobox<
   /** Filtered suggestions capped to `maxRender`, keeping the current selection visible. */
   private lastRenderedRows: readonly ComboboxSourceRow[] = [];
   private get renderedRows(): { rows: readonly ComboboxSourceRow[]; overflow: number } {
+    // A server request keeps its slotted options visible. Other pending lists render only status.
+    if (this.sourceFailed || (!this.serverRequests && (this.loading || this.sourceLoading))) {
+      return { rows: [], overflow: 0 };
+    }
     const active = this.navigableRows(this.lastRenderedRows)[this.activeIndex]?.value;
     const result = this.memo.get('renderedRows', [this.callbackRefreshEpoch, this.options, this.asyncRows, this.source, this.query,
       this._selected, this.multiple, this.multiplePreferences, this.maxRender, this._sourceTotal, this.withUnknownOption,
@@ -2864,9 +2868,7 @@ export class LyraCombobox<
   private normalizeActiveIndex(): void {
     if (this.activeIndex < 0) return;
     const navigableCount = this.navigableRows(this.renderedRows.rows).length;
-    const next =
-      navigableCount > 0 ? Math.min(this.activeIndex, navigableCount - 1) : -1;
-    if (next !== this.activeIndex) this.activeIndex = next;
+    this.activeIndex = Math.min(this.activeIndex, navigableCount - 1);
   }
 
   private get filtered(): LyraOption[] {
@@ -3571,7 +3573,6 @@ export class LyraCombobox<
         void this.sanitizeRowHtml(normalized.rows, isCurrent);
         this.sourceFailed = false;
         this.sourceEverSettled = true;
-        this.normalizeActiveIndex();
         this.applyPendingSelectedRows(true);
         const selected = new Set(this._selected);
         for (const row of normalized.rows) {
@@ -3602,7 +3603,10 @@ export class LyraCombobox<
         if (DEV_DIAGNOSTICS) devWarnOnce('lr-combobox-source-rejected', '<lr-combobox> source() rejected:', err);
       })
       .finally(() => {
-        if (token === this.sourceToken) this.sourceLoading = false;
+        if (token === this.sourceToken) {
+          this.sourceLoading = false;
+          this.normalizeActiveIndex();
+        }
       });
   }
 
@@ -3679,7 +3683,7 @@ export class LyraCombobox<
 
   private onKeyDown = (e: KeyboardEvent): void => {
     if (e.defaultPrevented || shouldIgnoreNavigationKey(e) || isLiveDisabled(this) || this.readonly) return;
-    const navigable = ['ArrowDown', 'ArrowUp', 'Enter', 'End'].includes(e.key)
+    const navigable = ['ArrowDown', 'ArrowUp', 'Enter', 'Home', 'End'].includes(e.key)
       ? this.navigableRows(this.renderedRows.rows)
       : [];
     switch (e.key) {
@@ -3697,11 +3701,11 @@ export class LyraCombobox<
           this.activeIndex = Math.min(navigable.length - 1, this.activeIndex + 1);
           break;
         }
-        this.activeIndex = Math.max(0, this.activeIndex - 1);
+        this.activeIndex = navigable.length ? Math.max(0, this.activeIndex - 1) : -1;
         break;
       case 'Enter': {
         const activeRow = navigable[this.activeIndex];
-        if (this.open && this.activeIndex >= 0 && activeRow) {
+        if (this.open && activeRow) {
           e.preventDefault();
           this.pickRow(activeRow);
           break;
@@ -3714,10 +3718,10 @@ export class LyraCombobox<
             break;
           }
         }
-        const create = this.createRow;
-        if (this.open && create) {
+        const create = this.open && this.allowCreate && navigable.find(row => row.createInput)?.createInput;
+        if (create) {
           e.preventDefault();
-          this.createOption(create.createInput!);
+          this.createOption(create);
           break;
         }
         if (
@@ -3746,15 +3750,10 @@ export class LyraCombobox<
         }
         break;
       case 'Home':
-        if (this.open) {
-          e.preventDefault();
-          this.activeIndex = 0;
-        }
-        break;
       case 'End':
         if (this.open) {
           e.preventDefault();
-          this.activeIndex = navigable.length - 1;
+          this.activeIndex = e.key === 'Home' && navigable.length ? 0 : navigable.length - 1;
         }
         break;
       case 'Backspace':
@@ -3936,9 +3935,8 @@ export class LyraCombobox<
   override render(): TemplateResult {
     const { rows, overflow } = this.listboxRendered ? this.renderedRows : { rows: [], overflow: 0 };
     this._renderedRows = rows;
-    const navigable = rows.filter((r) => !r.disabled);
-    const active =
-      this.activeIndex >= 0 ? navigable[this.activeIndex] : undefined;
+    const navigable = this.navigableRows(rows);
+    const active = navigable[this.activeIndex];
     const activeId = active ? `${this.listId}-opt-${rows.indexOf(active)}` : '';
 
     const shownTags = this.multiple
@@ -3976,9 +3974,7 @@ export class LyraCombobox<
     const invalid =
       supporting.hasError || (this.touched && !this.internals.validity.valid);
     const pending = this.loading || this.sourceLoading;
-    // Server mode keeps the options it already shows while a request is pending; the in-field
-    // spinner reports it instead. Every other mode keeps its loading row.
-    const showLoadingRow = pending && !(this.serverRequests && rows.length > 0);
+    const showLoadingRow = pending && rows.length === 0;
     this.loadingRowShown = this.listboxRendered && this.open && showLoadingRow;
 
     return html`
@@ -4026,7 +4022,7 @@ export class LyraCombobox<
               aria-expanded=${this.open ? 'true' : 'false'}
               aria-controls=${this.listId}
               aria-haspopup=${this.sourceFailed ? 'dialog' : nothing}
-              aria-activedescendant=${this.sourceFailed ? nothing : activeId || nothing}
+              aria-activedescendant=${activeId || nothing}
               aria-autocomplete="list"
               aria-required=${this.required ? 'true' : 'false'}
               aria-invalid=${invalid ? 'true' : 'false'}

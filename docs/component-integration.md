@@ -79,7 +79,7 @@ imports directly. Transitive edges are other registrations reachable through tho
 | <a id="lr-code-block-core"></a>`lr-code-block-core` | conversation | `import '@aceshooting/lyra-ui/components/lr-code-block-core.js';` | `shiki` | `lr-icon-button`, `lr-skeleton` | none | 61.4 KiB |
 | <a id="lr-code-editor"></a>`lr-code-editor` | forms | `import '@aceshooting/lyra-ui/components/lr-code-editor.js';` | none | none | none | 46.1 KiB |
 | <a id="lr-color-picker"></a>`lr-color-picker` | forms | `import '@aceshooting/lyra-ui/components/lr-color-picker.js';` | none | none | none | 73.9 KiB |
-| <a id="lr-combobox"></a>`lr-combobox` | forms | `import '@aceshooting/lyra-ui/components/lr-combobox.js';` | `dompurify` | `lr-empty`, `lr-option` | none | 99.1 KiB |
+| <a id="lr-combobox"></a>`lr-combobox` | forms | `import '@aceshooting/lyra-ui/components/lr-combobox.js';` | `dompurify` | `lr-empty`, `lr-option` | none | 99.2 KiB |
 | <a id="lr-command-palette"></a>`lr-command-palette` | layout | `import '@aceshooting/lyra-ui/components/lr-command-palette.js';` | none | none | none | 54.8 KiB |
 | <a id="lr-commit-card"></a>`lr-commit-card` | agent-tools | `import '@aceshooting/lyra-ui/components/lr-commit-card.js';` | none | none | none | 37 KiB |
 | <a id="lr-community-card"></a>`lr-community-card` | retrieval | `import '@aceshooting/lyra-ui/components/lr-community-card.js';` | none | `lr-button`, `lr-chip`, `lr-empty` | none | 62 KiB |

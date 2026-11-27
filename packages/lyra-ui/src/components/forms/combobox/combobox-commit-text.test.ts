@@ -1,4 +1,4 @@
-import { expect, fixture, html, oneEvent } from '@open-wc/testing';
+import { expect, fixture, html, oneEvent, waitUntil } from '@open-wc/testing';
 import { sendKeys, sendMouse, resetMouse } from '@web/test-runner-commands';
 import '../../lr-combobox.js';
 import '../../lr-option.js';
@@ -78,6 +78,74 @@ describe('lr-combobox commit="text"', () => {
     expect(detail.data).to.deep.equal([undefined]);
     await el.updateComplete;
     expect(inputOf(el).value).to.equal('Custom part 2');
+  });
+
+  async function pendingSearch() {
+    let resolveResults!: (options: { value: string; label: string }[]) => void;
+    const pending = new Promise<{ value: string; label: string }[]>(resolve => { resolveResults = resolve; });
+    const el = await fixture<LyraCombobox>(html`
+      <lr-combobox label="Search" commit="text" source-delay="0" open
+        .source=${async (query: string) => query === 'Pending' ? pending : [{ value: 'a', label: 'Alpha' }]}>
+      </lr-combobox>`);
+    const rowLabel = () => el.shadowRoot!.querySelector('[part~="option"]')?.textContent?.trim();
+    await waitUntil(() => rowLabel() === 'Alpha', 'initial results render');
+    const input = await typeText(el, 'Pending');
+    await waitUntil(() => el.matches(':state(showing-loading-row)'), 'pending request replaces the list with a status row');
+    expect(rowLabel()).to.equal(undefined);
+    return { el, input, resolveResults, rowLabel };
+  }
+
+  it('commits the draft after ArrowDown and Enter on a loading-only source', async () => {
+    const { el, input } = await pendingSearch();
+    const changes: (string | readonly string[])[] = [];
+    const activations: string[] = [];
+    el.addEventListener('lr-change-request', event => changes.push(event.detail.value));
+    el.addEventListener('lr-activate', event => activations.push(event.detail.value));
+    key(input, 'ArrowDown');
+    await el.updateComplete;
+    const active = input.getAttribute('aria-activedescendant');
+    key(input, 'Enter');
+    await el.updateComplete;
+    expect({ active, value: el.value, open: el.open }).to.deep.equal({ active: null, value: 'Pending', open: false });
+    expect(changes).to.deep.equal(['Pending']);
+    expect(activations).to.deep.equal([]);
+  });
+
+  it('navigates and commits the returned row after a loading-only source settles', async () => {
+    const { el, input, resolveResults, rowLabel } = await pendingSearch();
+    for (const name of ['End', 'ArrowUp', 'Home']) {
+      key(input, name);
+      await el.updateComplete;
+      expect(input.hasAttribute('aria-activedescendant'), name).to.equal(false);
+    }
+    resolveResults([{ value: 'p', label: 'Pending result' }]);
+    await waitUntil(() => rowLabel() === 'Pending result', 'new result renders');
+    expect(input.hasAttribute('aria-activedescendant')).to.equal(false);
+    key(input, 'ArrowDown');
+    await el.updateComplete;
+    const active = input.getAttribute('aria-activedescendant');
+    expect(el.shadowRoot!.getElementById(active ?? '')?.textContent?.trim()).to.equal('Pending result');
+    const activations: string[] = [];
+    el.addEventListener('lr-activate', event => activations.push(event.detail.value));
+    key(input, 'Enter');
+    await el.updateComplete;
+    expect(el.value).to.equal('Pending result');
+    expect(activations).to.deep.equal(['p']);
+  });
+
+  it('removes a highlighted local option from keyboard navigation when public loading hides it', async () => {
+    const { el } = await mount();
+    const input = await typeText(el, 'bolt');
+    key(input, 'ArrowDown');
+    await el.updateComplete;
+    expect(input.hasAttribute('aria-activedescendant')).to.equal(true);
+    el.loading = true;
+    await el.updateComplete;
+    expect(el.matches(':state(showing-loading-row)')).to.equal(true);
+    const active = input.getAttribute('aria-activedescendant');
+    key(input, 'Enter');
+    await el.updateComplete;
+    expect({ active, value: el.value }).to.deep.equal({ active: null, value: 'bolt' });
   });
 
   it('commits free text on Enter while closed and still submits the form', async () => {

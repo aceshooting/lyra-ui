@@ -26,6 +26,25 @@ const optionCount = (el: LyraCombobox): number =>
   el.shadowRoot!.querySelectorAll('[part~="option"]').length;
 
 describe('lr-combobox async source failures', () => {
+  it('does not create an option with Enter while the retry control replaces the suggestions', async () => {
+    const el = await fixture<LyraCombobox>(html`<lr-combobox allow-create source-delay="0" open></lr-combobox>`);
+    await withSilencedWarning(async () => {
+      el.inputValue = 'Draft';
+      el.source = async () => { throw new Error('offline'); };
+      await waitUntil(() => retryButton(el) !== null, 'the retry control renders');
+      const created: string[] = [];
+      el.addEventListener('lr-create', event => created.push(event.detail.inputValue));
+      const input = el.shadowRoot!.querySelector<HTMLInputElement>('[part="combobox-input"]')!;
+      for (const key of ['ArrowDown', 'Enter']) {
+        input.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+        await el.updateComplete;
+      }
+      expect(created).to.deep.equal([]);
+      expect(el.value).to.equal('');
+      expect(optionCount(el)).to.equal(0);
+    });
+  });
+
   it('renders the shared error row with a retry control instead of an empty listbox', async () => {
     const el = await fixture<LyraCombobox>(
       html`<lr-combobox source-delay="0" open></lr-combobox>`

@@ -30,7 +30,7 @@
     "dist/localization.js": 28396,
     "dist/lyra.js": 156091,
     "dist/ssr.js": 4566,
-    "dist/ssr/all.js": 1882232,
+    "dist/ssr/all.js": 1882243,
     "dist/theme/theme.js": 14477
   },
   "$componentP95GzipKb": 150.375,
@@ -39,7 +39,7 @@
   "dist/autoloader.js": 1816.0625,
   "dist/hydration.js": 5.43359375,
   "dist/ssr.js": 4.5,
-  "dist/ssr/all.js": 1838.125,
+  "dist/ssr/all.js": 1838.1875,
   "dist/localization.js": 27.75,
   "dist/lyra.js": 152.4375,
   "dist/all.js": 1577.625,
