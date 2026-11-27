@@ -54874,7 +54874,7 @@
           "evidence": [
             {
               "file": "src/components/layout/stepper/stepper-child-mode.test.ts",
-              "test": "moves focus with arrow keys, swapping them under RTL, and Home/End",
+              "test": "skips native-hidden children for keyboard and programmatic navigation",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -55100,7 +55100,7 @@
           "evidence": [
             {
               "file": "src/components/layout/stepper/stepper-child-mode.test.ts",
-              "test": "moves focus with arrow keys, swapping them under RTL, and Home/End",
+              "test": "skips native-hidden children for keyboard and programmatic navigation",
               "kind": "component keyboard exercise signal"
             }
           ]
@@ -57000,6 +57000,18 @@
               "state": "populated"
             },
             {
+              "file": "src/components/layout/tab-group/tab-group-hidden-descriptor.test.ts",
+              "test": "omits the hidden tab and close action while show() exposes its named panel",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/tab-group/tab-group-hidden-descriptor.test.ts",
+              "test": "skips a leading hidden default and supports controlled selection when all descriptors are hidden",
+              "target": "el",
+              "state": "populated"
+            },
+            {
               "file": "src/components/layout/tab-group/tab-group.test.ts",
               "test": "builds one tab per <lr-tab> and activates the first enabled one",
               "target": "el",
@@ -57152,7 +57164,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.class.ts",
-              "line": 542,
+              "line": 545,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -57191,6 +57203,7 @@
           "src/components/layout/tab-group/tab-group-emit-timing.test.ts",
           "src/components/layout/tab-group/tab-group-focus.test.ts",
           "src/components/layout/tab-group/tab-group-hidden-ancestor.test.ts",
+          "src/components/layout/tab-group/tab-group-hidden-descriptor.test.ts",
           "src/components/layout/tab-group/tab-group-key-guards.test.ts",
           "src/components/layout/tab-group/tab-group-part-aliases.test.ts",
           "src/components/layout/tab-group/tab-group-projected-label.test.ts",
@@ -57241,6 +57254,18 @@
             {
               "file": "src/components/layout/tab-group/tab-group-focus.test.ts",
               "test": "focusTab after show() lands focus on the newly selected tab",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/tab-group/tab-group-hidden-descriptor.test.ts",
+              "test": "omits the hidden tab and close action while show() exposes its named panel",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/tab-group/tab-group-hidden-descriptor.test.ts",
+              "test": "skips a leading hidden default and supports controlled selection when all descriptors are hidden",
               "target": "el",
               "state": "populated"
             },
@@ -57415,7 +57440,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.class.ts",
-              "line": 542,
+              "line": 545,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -57454,6 +57479,7 @@
           "src/components/layout/tab-group/tab-group-emit-timing.test.ts",
           "src/components/layout/tab-group/tab-group-focus.test.ts",
           "src/components/layout/tab-group/tab-group-hidden-ancestor.test.ts",
+          "src/components/layout/tab-group/tab-group-hidden-descriptor.test.ts",
           "src/components/layout/tab-group/tab-group-key-guards.test.ts",
           "src/components/layout/tab-group/tab-group-part-aliases.test.ts",
           "src/components/layout/tab-group/tab-group-projected-label.test.ts",
@@ -57505,6 +57531,18 @@
             {
               "file": "src/components/layout/tab-group/tab-group-focus.test.ts",
               "test": "focusTab after show() lands focus on the newly selected tab",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/tab-group/tab-group-hidden-descriptor.test.ts",
+              "test": "omits the hidden tab and close action while show() exposes its named panel",
+              "target": "el",
+              "state": "populated"
+            },
+            {
+              "file": "src/components/layout/tab-group/tab-group-hidden-descriptor.test.ts",
+              "test": "skips a leading hidden default and supports controlled selection when all descriptors are hidden",
               "target": "el",
               "state": "populated"
             },
@@ -57673,7 +57711,7 @@
           "evidence": [
             {
               "file": "src/components/layout/tab-group/tab-group.class.ts",
-              "line": 542,
+              "line": 545,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -57712,6 +57750,7 @@
           "src/components/layout/tab-group/tab-group-emit-timing.test.ts",
           "src/components/layout/tab-group/tab-group-focus.test.ts",
           "src/components/layout/tab-group/tab-group-hidden-ancestor.test.ts",
+          "src/components/layout/tab-group/tab-group-hidden-descriptor.test.ts",
           "src/components/layout/tab-group/tab-group-key-guards.test.ts",
           "src/components/layout/tab-group/tab-group-part-aliases.test.ts",
           "src/components/layout/tab-group/tab-group-projected-label.test.ts",

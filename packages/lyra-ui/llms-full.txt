@@ -25377,7 +25377,10 @@ native or authored semantics, and an explicit `role`, `aria-roledescription`, or
 `<lr-carousel-item>` wins over generated metadata. Later author changes to those attributes and to
 `hidden`, `inert`, or `aria-hidden` remain in effect across carousel updates. The carousel
 temporarily makes off-page slides inert and aria-hidden, then restores their retained author state
-when they become visible, are removed, or the carousel disconnects.
+when they become visible, are removed, or the carousel disconnects. Assigned elements with the
+native `hidden` attribute are excluded from slide counts, navigation, pagination, loop copies and
+announcements. Removing `hidden` restores the slide at its position in slot order. The current
+slide stays selected when its index shifts and the page can still start there.
 
 **Keyboard:** focus the `scroll-container` viewport to navigate with Arrow keys (horizontal LTR/RTL
 or vertical), Home, and End. The viewport's accessible name uses the `carouselViewport` string
@@ -25418,7 +25421,7 @@ slide itself; they do not change the active slide or move focus away from it.
   cancellation releases capture, removes drag state, and returns to the active snap position.
   Gestures begin only for a primary left-mouse pointer on noninteractive slide content; native,
   custom, shadow-wrapped, labelled, disabled, and editable controls retain their own pointer input.
-- `slides: number` (read-only) — live assigned-slide count, updated after dynamic child changes.
+- `slides: number` (read-only) — live count of assigned slides without `hidden`, updated after child and visibility changes.
 - `aria-label` (host attribute) — names the carousel landmark, taking precedence by presence,
   including an explicitly empty value; when absent, the component uses the localized
   `carouselLabel` default. The focusable scroll container always keeps a name: an empty host value
@@ -25722,6 +25725,13 @@ the single shape shared with both upstreams, so markup renames mechanically. The
 `<div slot="x" label="…">` data/attribute model is removed; migrate each former child into one
 descriptor and one matching panel. An unpaired panel never creates a tab.
 
+Set the native `hidden` attribute on an `<lr-tab>` to omit its button from the strip and keyboard
+navigation while keeping its paired panel available. An external control can call `show(name)` to
+open that panel. The group's `active` property and a child's explicit initial `active` hint can
+also select it. Hidden tabs are skipped when picking a default selection. Hiding the selected
+visible tab selects the next visible enabled tab, or the previous one when there is no following
+candidate. A shown panel whose tab is hidden takes its accessible name from the descriptor.
+
 The group assigns private projection `slot` values itself; consumers do not need to write them.
 Those writes are temporary ownership, not destructive normalization: when a descriptor or panel is
 removed, moved to another group, disconnected/reconnected, or adopted into another document, the
@@ -25783,15 +25793,16 @@ selection.
   integrations. Lyra exposes it for slot observation but keeps it hidden because every accepted
   tab and panel is projected through a deterministic named slot.
 
-**Methods:** `show(name: string): void` activates the matching enabled tab through the same
-`lr-tab-hide` then `lr-tab-show` sequence as pointer/keyboard selection. Unknown, disabled, and
+**Methods:** `show(name: string): void` activates the matching enabled, non-inert tab through the
+same `lr-tab-hide` then `lr-tab-show` sequence as pointer/keyboard selection. A hidden descriptor
+with a matching panel is eligible and stays out of the strip. Unknown, disabled, inert, and
 already-active names are no-ops. `focusTab(name: string, options?: FocusOptions): boolean` moves
 keyboard focus to the real `role="tab"` button of the matching enabled, non-inert tab and moves the
 roving `tabindex` with it — for example after `show(name)`, or when closing an overlay opened from a
 tab. Under `activation="auto"` focus and selection move together, so focusing an unselected tab
 also selects it exactly as `show()` does (`lr-tab-hide`/`lr-tab-show`, never `lr-activate`); under
 `activation="manual"` only focus moves. It returns `false` and changes nothing for an unknown,
-disabled or inert name, or for a tab added since the group last read its children (await
+hidden, disabled or inert name, or for a tab added since the group last read its children (await
 `updateComplete` first). Calling `focus()` on an `<lr-tab>` descriptor does the same for that tab.
 
 ```js
@@ -25831,7 +25842,7 @@ focus off the tab the user was on.
   assigning `active` itself, which also suppresses the built-in switch. Re-picking the active tab
   and `show()` never ask.
 - `lr-tab-show` (`detail: { name: string }`) — a tab became active via click, keyboard, or `show()`,
-  or because the active tab was removed, disabled or made inert and selection moved to its following
+  or because the active tab was removed, hidden, disabled or made inert and selection moved to its following
   (else preceding) tab. Not fired for the initial default or a direct `active` write.
 - `lr-tab-hide` (`detail: { name: string }`) — the outgoing tab, emitted immediately _before_ the
   matching `lr-tab-show`, so a listener that tears down the old panel always runs before the one
@@ -25933,16 +25944,24 @@ Otherwise shared tokens — `--lr-space-xs/-s/-m`,
 **Optional peer deps:** none.
 
 ```html
-<lr-tab-group active="general">
+<lr-tab-group aria-label="Settings" active="general">
   <lr-tab panel="general">General</lr-tab>
   <lr-tab panel="advanced" disabled>Advanced</lr-tab>
+  <lr-tab panel="downloads" hidden>Downloads</lr-tab>
   <lr-tab-panel name="general">General settings…</lr-tab-panel>
   <lr-tab-panel name="advanced">Advanced settings…</lr-tab-panel>
+  <lr-tab-panel name="downloads">Saved downloads…</lr-tab-panel>
 </lr-tab-group>
+<button id="show-downloads" type="button">Show downloads</button>
 <script type="module">
-  const group = document.querySelector("lr-tab-group");
-  group.addEventListener("lr-tab-show", (e) => console.log(e.detail.name));
-  group.show("general");
+  import '@aceshooting/lyra-ui/components/lr-tab-group.js';
+  import '@aceshooting/lyra-ui/components/lr-tab.js';
+  import '@aceshooting/lyra-ui/components/lr-tab-panel.js';
+
+  const group = document.querySelector('lr-tab-group');
+  document.querySelector('#show-downloads').addEventListener('click', () => {
+    group.show('downloads');
+  });
 </script>
 ```
 
@@ -26127,6 +26146,12 @@ changed and the steps re-rendered.
 
 **Slots:** none in data-driven mode; the default slot takes `<lr-step>` children in child mode.
 
+Child steps with a native `hidden` attribute are omitted from numbering, progress summaries,
+linear sequencing, and navigation. `goTo()` ignores a hidden destination, and `next()`,
+`previous()` and the direction keys skip hidden children. If `active` names a hidden step,
+the first visible step is shown as current until the named step is visible again. Hiding
+the focused step moves focus to an available step without changing the authored `active` value.
+
 **CSS parts:** `base` (root wrapper, `role="list"`), `step-item` (the `role="listitem"` wrapper for
 one step), `step` (a single native button — or a non-interactive `<div>` carrying the same part
 while `readonly`; the current step carries `aria-current="step"` and every
@@ -26235,7 +26260,9 @@ disabled under forced-colors while the native scroll owner remains available. Ot
 
 ## `lr-tab`
 
-One tab in a `<lr-tab-group>`'s strip. Mirrors `wa-tab` / `sl-tab`.
+One tab descriptor for `<lr-tab-group>`. Mirrors `wa-tab` / `sl-tab`. The native `hidden`
+attribute omits the button from the strip while leaving a paired panel reachable through the
+group's `show(name)` method.
 
 The close button of a closable tab is themed with `--lr-tab-close-hover-bg` and `--lr-tab-close-active-bg`.
 
@@ -26254,7 +26281,7 @@ affordance.
 
 **Methods:** `focus(options?: FocusOptions): void` forwards to the owning group's real tab button,
 exactly as the group's `focusTab(panel)` (under `activation="auto"` that also selects the tab); a
-disabled or inert tab, or a descriptor outside an upgraded group, is not focusable and is left
+hidden, disabled or inert tab, or a descriptor outside an upgraded group, is not focusable and is left
 alone. `blur(): void` removes focus from that button when it has it.
 
 **Events:** `lr-close` (no detail) — the Lyra-convention mapping of Shoelace's `sl-close`, emitted

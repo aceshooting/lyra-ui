@@ -135,7 +135,7 @@ describe('lr-carousel interactions', () => {
     slide.hidden = true;
     await frame();
     await el.updateComplete;
-    await waitUntil(() => el.slides === 2, 'slides settle');
+    await waitUntil(() => el.slides === 1, 'only the visible slide participates');
     expect(slide.hidden).to.equal(true);
   });
 

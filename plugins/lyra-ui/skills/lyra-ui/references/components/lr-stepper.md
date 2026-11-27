@@ -168,6 +168,12 @@ changed and the steps re-rendered.
 
 **Slots:** none in data-driven mode; the default slot takes `<lr-step>` children in child mode.
 
+Child steps with a native `hidden` attribute are omitted from numbering, progress summaries,
+linear sequencing, and navigation. `goTo()` ignores a hidden destination, and `next()`,
+`previous()` and the direction keys skip hidden children. If `active` names a hidden step,
+the first visible step is shown as current until the named step is visible again. Hiding
+the focused step moves focus to an available step without changing the authored `active` value.
+
 **CSS parts:** `base` (root wrapper, `role="list"`), `step-item` (the `role="listitem"` wrapper for
 one step), `step` (a single native button — or a non-interactive `<div>` carrying the same part
 while `readonly`; the current step carries `aria-current="step"` and every

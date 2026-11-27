@@ -1,4 +1,5 @@
 import { expect, fixture, html, waitUntil } from '@open-wc/testing';
+import { sendKeys } from '@web/test-runner-commands';
 import type { LyraStepper, LyraStepChangeDetail } from './stepper.class.js';
 import type { LyraStep } from './step.class.js';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
@@ -74,6 +75,81 @@ describe('lr-stepper child mode', () => {
     stepsOf(el)[0]!.remove();
     await waitUntil(() => added.position === 3);
     expect(stepsOf(el)[0]!.first).to.equal(true);
+  });
+
+  it('skips native-hidden children for keyboard and programmatic navigation', async () => {
+    const el = await fixture<LyraStepper>(html`<lr-stepper clickable linear>
+      <lr-step name="a" completed>A</lr-step><lr-step name="b" hidden>B</lr-step>
+      <lr-step name="c">C</lr-step>
+    </lr-stepper>`);
+    const [a, b, c] = stepsOf(el) as [LyraStep, LyraStep, LyraStep];
+    await Promise.all([a.updateComplete, b.updateComplete, c.updateComplete]);
+    const button = (step: LyraStep) => step.shadowRoot!.querySelector<HTMLButtonElement>('button')!;
+    expect(c.position).to.equal(2);
+    expect(c.locked).to.equal(false);
+    await focusByKeyboard(button(a));
+    await sendKeys({ press: 'ArrowRight' });
+    await waitUntil(() => document.activeElement === c);
+    el.goTo('b');
+    expect(el.active).to.equal('');
+    el.next();
+    expect(el.active).to.equal('c');
+    el.previous();
+    expect(el.active).to.equal('a');
+    expect(b.hasAttribute('hidden')).to.equal(true);
+  });
+
+  it('reconciles a focused child that becomes hidden and restores it when shown', async () => {
+    const el = await fixture<LyraStepper>(three(true));
+    el.active = 'shipping';
+    await el.updateComplete;
+    const [cart, shipping, pay] = stepsOf(el) as [LyraStep, LyraStep, LyraStep];
+    const button = (step: LyraStep) => step.shadowRoot!.querySelector<HTMLButtonElement>('button')!;
+    await focusByKeyboard(button(shipping));
+    shipping.hidden = true;
+    await waitUntil(() => document.activeElement === cart && button(cart).tabIndex === 0);
+    expect(activeNames(el)).to.deep.equal(['cart']);
+    expect(button(shipping).tabIndex).to.equal(-1);
+    expect(pay.position).to.equal(2);
+    expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal('Step 1 of 2');
+    shipping.hidden = false;
+    await waitUntil(() => button(shipping).tabIndex === 0);
+    expect(activeNames(el)).to.deep.equal(['shipping']);
+    expect(pay.position).to.equal(3);
+    expect(document.activeElement === cart).to.equal(true);
+  });
+
+  it('keeps an empty child strip until a step is shown again', async () => {
+    const el = await fixture<LyraStepper>(html`<lr-stepper active="a" clickable>
+      <lr-step name="a" hidden>A</lr-step><lr-step name="b" hidden>B</lr-step>
+    </lr-stepper>`);
+    const [a, b] = stepsOf(el) as [LyraStep, LyraStep];
+    expect(el.shadowRoot!.querySelectorAll('[part~="steps"] slot').length).to.equal(1);
+    expect(el.shadowRoot!.querySelectorAll('[part="summary"]').length).to.equal(0);
+    el.next();
+    expect(el.active).to.equal('a');
+    b.hidden = false;
+    await waitUntil(() => b.active && b.tabStop);
+    expect(b.position).to.equal(1);
+    expect(el.shadowRoot!.querySelector('[part="summary"]')!.textContent!.trim()).to.equal('Step 1 of 1');
+    a.hidden = false;
+    await waitUntil(() => a.active && a.tabStop && !b.active && !b.tabStop);
+    expect(b.position).to.equal(2);
+  });
+
+  it('abandons a step change if the request listener hides its destination', async () => {
+    const el = await fixture<LyraStepper>(three());
+    const [, shipping] = stepsOf(el);
+    let changes = 0;
+    el.addEventListener('lr-before-step-change', () => { shipping!.hidden = true; }, { once: true });
+    el.addEventListener('lr-step-change', () => { changes++; });
+    el.next();
+    await el.updateComplete;
+    expect(el.active).to.equal('');
+    expect(changes).to.equal(0);
+    el.next();
+    await waitUntil(() => changes === 1);
+    expect(el.active).to.equal('pay');
   });
 
   it('renders status text and markers for each step state', async () => {

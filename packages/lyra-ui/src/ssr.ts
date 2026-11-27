@@ -549,6 +549,7 @@ export const LYRA_SSR_AUDITED_STATIC_SAFE_TAGS = Object.freeze([
   'lr-tour',
   'lr-trace-tree',
   'lr-transcript-feed',
+  'lr-transfer-manager',
   'lr-tree-item',
   'lr-treemap',
   'lr-typing-indicator',

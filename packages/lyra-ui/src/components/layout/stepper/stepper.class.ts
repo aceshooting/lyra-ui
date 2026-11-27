@@ -29,10 +29,12 @@ import { scrollOverflowFadeStyles } from '../../../internal/scroll-overflow.styl
 import { styles } from './stepper.styles.js';
 import { getListFormat, getNumberFormat } from '../../../internal/intl-cache.js';
 import { restoreComposedFocus } from '../../../internal/focus-repair.js';
+import { collectComposedFocusTargets } from '../../../internal/focus-navigation.js';
 import { shadowFocusTarget } from '../../../internal/active-element.js';
 import { syncAriaDescribedByElements } from '../../../internal/aria-reflection.js';
 import { setCustomState } from '../../../internal/custom-states.js';
 import { attachInternalsSafely } from '../../../internal/element-internals.js';
+import { isElementNode } from '../../../internal/dom-guards.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_stepperStateCompleted, LYRA_DEFAULT_stepperStateError, LYRA_DEFAULT_stepperStateLocked, LYRA_DEFAULT_stepperStatePending, LYRA_DEFAULT_stepperStepPosition, LYRA_DEFAULT_stepperSteps } from '../../../internal/default-strings/layout.generated.js';
@@ -483,13 +485,13 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
    *  navigation landmark (a localized "Steps" when unset). */
   @property() label?: string;
 
-  /** Child mode: the `name` of the current `<lr-step>`. Falls back to the first step when unset or
-   *  when it matches no step. Changing it from script moves the step without the veto event;
+  /** Child mode: the `name` of the current `<lr-step>`. Falls back to the first visible step when
+   *  unset or when it matches no visible step. Changing it from script moves the step without the veto event;
    *  `goTo()`, `next()` and `previous()` ask first. */
   @property({ reflect: true }) active = '';
 
   /** Child mode: steps must be completed in order. `next()`, `goTo()`, an invoker and a click
-   *  cannot reach a step until every step before it is `completed`; later steps render locked. */
+   *  cannot reach a step until every visible step before it is `completed`; later steps render locked. */
   @property({ type: Boolean, reflect: true }) linear = false;
 
   /** Child mode: each step becomes a button, so a click (or Enter/Space on a focused step) jumps to
@@ -497,26 +499,35 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   @property({ type: Boolean, reflect: true }) clickable = false;
 
   private childSteps: LyraStep[] = [];
+  private focusedChildStep?: LyraStep;
   private readonly stepperInternals = attachInternalsSafely(this);
   @state() private childCount = 0;
   private readonly announcements = new AnnouncementSinkController(this, { eager: ['polite'] });
 
   /** True while child mode is in effect: `<lr-step>` children and an empty `steps` array. */
   private get childMode(): boolean {
-    return this.childCount > 0 && this.steps.length === 0;
+    return this.childSteps.length > 0 && this.steps.length === 0;
+  }
+
+  private get visibleChildSteps(): LyraStep[] {
+    return this.childSteps.filter((step) => !step.hasAttribute('hidden'));
   }
 
   constructor() {
     super();
     this.addEventListener('click', this.onChildClick);
     this.addEventListener('keydown', this.onChildKeyDown);
+    this.addEventListener('focusin', this.onChildFocusIn);
+    this.addEventListener('focusout', this.onChildFocusOut);
     // Keeps the child list current; the controller registers itself with the host.
     new HostChildrenObserver(this, {
       subtree: true,
-      attributeFilter: ['name', 'completed', 'loading', 'disabled', 'variant'],
+      attributeFilter: ['name', 'completed', 'loading', 'disabled', 'variant', 'hidden'],
       onChange: (records) => {
         const own = records.some((record) => {
           const target = record.target as Element;
+          if (record.attributeName === 'hidden')
+            return target.parentElement === this && target.localName === tag('step');
           return target === this || target.closest?.(tag('stepper')) === this;
         });
         if (own) this.syncChildSteps();
@@ -615,6 +626,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    this.focusedChildStep = undefined;
     this.resetResizeObserver();
     this.unregisterInvokers();
   }
@@ -830,7 +842,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
    *  or zero) width never stacks, so the first paint is a row. */
   private autoStacks(width: number): boolean {
     if (!Number.isFinite(width) || width <= 0) return false;
-    const count = this.childMode ? this.childSteps.length : this.steps.length;
+    const count = this.childMode ? this.childCount : this.steps.length;
     if (count < 2) return false;
     const fontSize = Number.parseFloat(getComputedStyle(this).fontSize) || 16;
     const gap = this.baseEl ? Number.parseFloat(getComputedStyle(this.baseEl).columnGap) || 0 : 0;
@@ -863,10 +875,22 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     const steps = Array.from(this.children).filter(
       (child): child is LyraStep => child.localName === tag('step')
     );
-    const countChanged = steps.length !== this.childSteps.length;
+    const hadChildren = this.childSteps.length > 0;
     this.childSteps = steps;
-    this.childCount = steps.length;
-    this.applyChildState();
+    const visible = this.visibleChildSteps;
+    const countChanged = visible.length !== this.childCount;
+    this.childCount = visible.length;
+    if (hadChildren !== (steps.length > 0)) this.requestUpdate();
+    const stop = this.applyChildState(visible);
+    if (this.focusedChildStep?.hasAttribute('hidden')) {
+      this.focusedChildStep = undefined;
+      const owner = this.ownerDocument;
+      if (stop) void stop.updateComplete.then(() => {
+        if (!this.isConnected || this.ownerDocument !== owner || !this.childMode || !this.clickable) return;
+        const preferred = collectComposedFocusTargets(stop, { includeRoot: false, mode: 'programmatic' }).elements[0];
+        restoreComposedFocus(this, true, preferred);
+      });
+    }
     this.syncCustomStates();
     // The step count feeds `orientation="auto"`, so a changed count re-derives the axis too.
     if (countChanged && this.orientation === 'auto')
@@ -876,15 +900,16 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
   /** Publishes the `completed`, `loading` and `stacked` custom states. */
   private syncCustomStates(): void {
     const child = this.childMode;
+    const visible = child ? this.visibleChildSteps : [];
     const completed = child
-      ? this.childSteps.every((step) => step.completed)
+      ? visible.length > 0 && visible.every((step) => step.completed)
       : this.steps.length > 0 && this.steps.every((step) => step.state === 'completed');
     setCustomState(this.stepperInternals, 'completed', completed);
-    setCustomState(this.stepperInternals, 'loading', child && this.childSteps.some((step) => step.loading));
+    setCustomState(this.stepperInternals, 'loading', visible.some((step) => step.loading));
     setCustomState(this.stepperInternals, 'stacked', this.effectiveOrientation === 'vertical');
   }
 
-  /** The step `active` resolves to: the one it names, else the first. */
+  /** The visible step `active` resolves to: the one it names, else the first. */
   private resolveActiveStep(steps: readonly LyraStep[]): LyraStep | undefined {
     return steps.find((step) => step.name === this.active) ?? steps[0];
   }
@@ -895,15 +920,14 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     return firstIncomplete === -1 ? steps.length - 1 : firstIncomplete;
   }
 
-  private isReachable(step: LyraStep, steps: readonly LyraStep[] = this.childSteps): boolean {
-    if (step.disabled) return false;
+  private isReachable(step: LyraStep, steps: readonly LyraStep[]): boolean {
+    if (step.disabled || step.hasAttribute('hidden')) return false;
     if (!this.linear) return true;
     return steps.indexOf(step) <= this.linearBoundary(steps);
   }
 
-  private applyChildState(): void {
-    const steps = this.childSteps;
-    if (steps.length === 0 || this.steps.length > 0) return;
+  private applyChildState(steps = this.visibleChildSteps): LyraStep | undefined {
+    if (!this.childMode) return;
     const activeStep = this.resolveActiveStep(steps);
     const boundary = this.linearBoundary(steps);
     this.activeIndex = activeStep ? steps.indexOf(activeStep) : 0;
@@ -912,6 +936,11 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
         ? activeStep
         : steps.find((step) => this.isReachable(step, steps));
     const vertical = this.effectiveOrientation === 'vertical';
+    for (const step of this.childSteps) {
+      if (!step.hasAttribute('hidden')) continue;
+      step.active = false;
+      step.tabStop = false;
+    }
     steps.forEach((step, index) => {
       step.position = index + 1;
       step.active = step === activeStep;
@@ -924,16 +953,17 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
       const previous = steps[index - 1];
       step.connectorStartVariant = previous?.completed ? (previous.variant as LyraVariant) : undefined;
     });
+    return stop;
   }
 
   @state() private activeIndex = 0;
 
   /** Child mode: requests a change to the named step. Emits a cancelable `lr-before-step-change`;
    *  unless vetoed, updates `active`, emits `lr-step-change` and announces the new position. Does
-   *  nothing when the step does not exist, is `disabled`, or (while `linear`) cannot be reached yet. */
+   *  nothing when the step does not exist, is hidden or disabled, or (while `linear`) cannot be reached yet. */
   goTo(name: string): void {
     if (!this.childMode) return;
-    const steps = this.childSteps;
+    const steps = this.visibleChildSteps;
     const target = steps.find((step) => step.name === name);
     if (!target || !this.isReachable(target, steps)) return;
     const previousStep = this.resolveActiveStep(steps) ?? null;
@@ -945,6 +975,7 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
       previousStep,
     };
     if (this.emit('lr-before-step-change', detail, { cancelable: true }).defaultPrevented) return;
+    if (target.hasAttribute('hidden')) return;
     this.active = target.name;
     void this.updateComplete.then(() => {
       this.emit('lr-step-change', detail);
@@ -952,23 +983,23 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
       this.announcements.announcePolite(
         this.localize('stepperStepPosition', undefined, {
           current: format.format(this.activeIndex + 1),
-          total: format.format(this.childSteps.length),
+          total: format.format(this.childCount),
         })
       );
     });
   }
 
-  /** Child mode: goes to the step after the current one, if any. */
+  /** Child mode: goes to the visible step after the current one, if any. */
   next(): void {
-    const steps = this.childSteps;
+    const steps = this.visibleChildSteps;
     const index = steps.findIndex((step) => step === this.resolveActiveStep(steps));
     const target = steps[index + 1];
     if (index >= 0 && target) this.goTo(target.name);
   }
 
-  /** Child mode: goes back to the step before the current one, if any. */
+  /** Child mode: goes back to the visible step before the current one, if any. */
   previous(): void {
-    const steps = this.childSteps;
+    const steps = this.visibleChildSteps;
     const index = steps.findIndex((step) => step === this.resolveActiveStep(steps));
     const target = index > 0 ? steps[index - 1] : undefined;
     if (target) this.goTo(target.name);
@@ -976,10 +1007,19 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
 
   private ownStepOf(event: Event): LyraStep | undefined {
     const origin = event.target;
-    if (!(origin instanceof Element)) return undefined;
+    if (!isElementNode(origin)) return undefined;
     const step = origin.closest(tag('step')) as LyraStep | null;
     return step && step.parentNode === this ? step : undefined;
   }
+
+  private readonly onChildFocusIn = (event: FocusEvent): void => {
+    this.focusedChildStep = this.ownStepOf(event);
+  };
+
+  private readonly onChildFocusOut = (event: FocusEvent): void => {
+    // A browser may drop focus before the hidden-attribute observer runs.
+    if (event.relatedTarget || !this.focusedChildStep?.hasAttribute('hidden')) this.focusedChildStep = undefined;
+  };
 
   private readonly onChildClick = (event: MouseEvent): void => {
     if (!this.childMode || !this.clickable) return;
@@ -991,7 +1031,8 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     if (!this.childMode || !this.clickable || event.defaultPrevented || shouldIgnoreNavigationKey(event)) return;
     const current = this.ownStepOf(event);
     if (!current) return;
-    const navigable = this.childSteps.filter((step) => this.isReachable(step));
+    const steps = this.visibleChildSteps;
+    const navigable = steps.filter((step) => this.isReachable(step, steps));
     const target = resolveListMove(event, {
       count: navigable.length,
       current: navigable.indexOf(current),
@@ -1010,12 +1051,12 @@ export class LyraStepper extends LyraElement<LyraStepperEventMap> {
     const format = getNumberFormat(this.effectiveLocale);
     const name = this.accessibleLabel || this.label || this.localize('stepperSteps');
     const body = html`
-      <span part="summary" class="visually-hidden"
+      ${this.childCount > 0 ? html`<span part="summary" class="visually-hidden"
         >${this.localize('stepperStepPosition', undefined, {
           current: format.format(this.activeIndex + 1),
           total: format.format(this.childCount),
         })}</span
-      >
+      >` : nothing}
       <div part="base steps" class="child-steps" role="list"><slot></slot></div>
     `;
     // A landmark earns its keep only when its steps are buttons to navigate between.

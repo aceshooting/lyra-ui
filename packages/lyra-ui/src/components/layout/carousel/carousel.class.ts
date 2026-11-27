@@ -41,7 +41,6 @@ import { LYRA_DEFAULT_next, LYRA_DEFAULT_previous } from '../../../internal/defa
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 interface SlideSnapshot {
-  hidden: boolean | 'until-found';
   inert: boolean;
   role: string | null;
   label: string | null;
@@ -71,7 +70,6 @@ const CAROUSEL_MANAGED_SLIDE_ATTRIBUTES = new Set([
   'role',
 ]);
 const SLIDE_SNAPSHOT_KEYS = [
-  'hidden',
   'inert',
   'role',
   'label',
@@ -106,13 +104,13 @@ export interface LyraCarouselEventMap {
  * duplicates component lifecycles, network/playback owners, or stateful controls.
  *
  * @customElement lr-carousel
- * @slot - Slide elements. Each assigned element becomes one slide.
+ * @slot - Slide elements in navigation order. Assigned elements with the native hidden attribute are skipped.
  * @slot next-icon - Optional decorative next-navigation icon. Its flattened subtree remains
  *   visible but is inert and hidden from assistive technology; the native button is the action.
  * @slot previous-icon - Optional decorative previous-navigation icon, with the same inert visual
  *   content contract as `next-icon`.
  * @event lr-slide-change - Active slide changed. `detail: { index, slide }`. Also fires when a
- *   `slidesPerPage` change or a slide's removal forces the active index onto a different slide.
+ *   page-size, removal, or native visibility change moves the active slide or changes its index.
  *   Not fired when a consumer sets `currentSlide` directly to an out-of-range value; the
  *   assignment is clamped silently.
  * @attr {number} currentSlide - Web Awesome compatibility alias for `current-slide`; HTML
@@ -212,8 +210,9 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   private _currentSlide = 0;
   private _pagination = false;
   private _slides = 0;
+  private participatingSlides: HTMLElement[] = [];
 
-  /** Zero-based start of the active slide page.
+  /** Zero-based start of the active page among slides without the native hidden attribute.
    * @default 0 */
   @property({ converter: blankNumberConverter(0), attribute: 'current-slide', reflect: true })
   get currentSlide(): number {
@@ -267,7 +266,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   /** Slides advanced by one previous or next step.
    * @default 1 */
   @property({ converter: blankNumberConverter(1), attribute: 'slides-per-move', useDefault: true }) slidesPerMove = 1;
-  /** Live count of assigned slides.
+  /** Live count of assigned slides without the native hidden attribute.
    * @default 0 */
   get slides(): number {
     return this._slides;
@@ -408,6 +407,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     );
     this.visibilityDocument = undefined;
     this.contentObserver.clear();
+    this.participatingSlides = [];
     this.restoreSlides();
     this.lastFocusedSlide = undefined;
     super.disconnectedCallback();
@@ -418,6 +418,10 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   );
 
   private onContentMutation(records: MutationRecord[]): void {
+    if (records.some(record => record.attributeName === 'hidden' && this.snapshots.has(record.target as HTMLElement))) {
+      this.handleSlidesChanged(true);
+      return;
+    }
     const snapshotChanged = records.some((record) => {
       if (record.target === this) return record.type !== 'attributes';
       if (
@@ -584,12 +588,16 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     return this.orientation === 'vertical' ? 'vertical' : 'horizontal';
   }
 
-  private slideElements(): HTMLElement[] {
+  private assignedSlideElements(): HTMLElement[] {
     return (this.slideSlot?.assignedElements({ flatten: true }) ?? []).filter(
       (element): element is HTMLElement =>
         element.nodeType === 1 &&
         element.namespaceURI === 'http://www.w3.org/1999/xhtml'
     );
+  }
+
+  private slideElements(): HTMLElement[] {
+    return this.assignedSlideElements().filter(slide => !slide.hasAttribute('hidden'));
   }
 
   private pageSize(count = this.slideElements().length): number {
@@ -685,7 +693,6 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
 
   private snapshotSlide(slide: HTMLElement): SlideSnapshot {
     return {
-      hidden: slide.hidden,
       inert: slide.inert,
       role: slide.getAttribute('role'),
       label: slide.getAttribute('aria-label'),
@@ -712,7 +719,6 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   }
 
   private restoreSlide(slide: HTMLElement, snapshot: SlideSnapshot): void {
-    slide.hidden = snapshot.hidden;
     slide.inert = snapshot.inert;
     this.restoreAttribute(slide, 'role', snapshot.role);
     this.restoreAttribute(slide, 'aria-label', snapshot.label);
@@ -733,8 +739,8 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
   }
 
   private syncSlides(clampActive = true): void {
-    const slides = this.slideElements();
-    const assigned = new Set(slides);
+    const assigned = new Set(this.assignedSlideElements());
+    const slides = [...assigned].filter(slide => !slide.hasAttribute('hidden'));
     let removedSlide = false;
     for (const [slide, snapshot] of this.snapshots) {
       if (this.adoptChanges(slide, snapshot)) {
@@ -747,9 +753,21 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       }
     }
     if (removedSlide && !this.loop) this.armSlideContentObserver();
+    for (const slide of assigned) {
+      let snapshot = this.snapshots.get(slide);
+      if (!snapshot) {
+        snapshot = this.snapshotSlide(slide);
+        this.snapshots.set(slide, snapshot);
+        if (!this.loop) this.observeSlideAttributes(slide);
+      }
+      if (slide.hasAttribute('hidden')) {
+        this.restoreSlide(slide, snapshot);
+        this.appliedSnapshots.set(slide, this.snapshotSlide(slide));
+      }
+    }
     const current = this.normalizedIndex(slides.length);
     if (clampActive && this.currentSlide !== current) {
-      // Reached when a light-DOM mutation (a slide removed, or made inert/hidden) shrinks the
+      // Reached when a light-DOM mutation (a slide removed or hidden) shrinks the
       // slide set out from under the active index -- never from a direct `currentSlide` write,
       // which `willUpdate()` already normalizes earlier in the same update cycle. Emit so a
       // consumer tracking the active slide only via this event stays in sync.
@@ -762,13 +780,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     const format = getNumberFormat(this.effectiveLocale);
 
     slides.forEach((slide, slideIndex) => {
-      const existing = this.snapshots.get(slide);
-      const snapshot = existing ?? this.snapshotSlide(slide);
-      if (!existing) {
-        this.snapshots.set(slide, snapshot);
-        if (!this.loop) this.observeSlideAttributes(slide);
-      }
-
+      const snapshot = this.snapshots.get(slide)!;
       if (slide.localName === tag('carousel-item')) {
         this.restoreAttribute(slide, 'role', snapshot.role ?? 'group');
         this.restoreAttribute(
@@ -795,7 +807,6 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
         this.restoreAttribute(slide, 'aria-label', snapshot.label);
       }
 
-      slide.hidden = snapshot.hidden;
       if (visible.has(slideIndex)) {
         slide.inert = snapshot.inert;
         this.restoreAttribute(slide, 'aria-hidden', snapshot.ariaHidden);
@@ -821,15 +832,31 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
     const focusedSlideWasRemoved =
       focusedIndex < 0 &&
       this.lastFocusedSlide !== undefined &&
-      !this.lastFocusedSlide.isConnected &&
-      (active === null || active === this.ownerDocument.body);
+      (!this.lastFocusedSlide.isConnected || this.lastFocusedSlide.hasAttribute('hidden')) &&
+      (active === null || active === this.ownerDocument.body || composedContains(this.lastFocusedSlide, active));
     if (!focusedSlideWillBeExcluded && !focusedSlideWasRemoved) return;
     this.viewport?.focus();
     this.lastFocusedSlide = undefined;
   }
 
-  private handleSlidesChanged(): void {
-    const count = this.slideElements().length;
+  private handleSlidesChanged(visibilityChange = false): void {
+    const slides = this.slideElements();
+    const count = slides.length;
+    const previousSlide = this.participatingSlides[this.currentSlide];
+    this.participatingSlides = slides;
+    if (visibilityChange) {
+      this.cancelScrollSettle();
+      this.clearAlignment();
+      this.hasAlignedOnce = false;
+      if (previousSlide) {
+        const retained = slides.indexOf(previousSlide);
+        const index = retained < 0 ? this.normalizedIndex(count) : Math.min(retained, this.loop ? count - 1 : this.maxStartIndex(count));
+        if (index !== this.currentSlide || slides[index] !== previousSlide) {
+          this.currentSlide = index;
+          if (slides[index]) this.emit('lr-slide-change', { index, slide: slides[index] });
+        }
+      }
+    }
     const active = shadowFocusTarget(this);
     if (active?.matches('[part~="pagination-item"]')) {
       const children = active.parentElement!.children;
@@ -1206,7 +1233,7 @@ export class LyraCarousel extends LyraElement<LyraCarouselEventMap> {
       if (
         this.lastFocusedSlide &&
         !composedContains(this.lastFocusedSlide, active) &&
-        (this.lastFocusedSlide.isConnected ||
+        ((this.lastFocusedSlide.isConnected && !this.lastFocusedSlide.hasAttribute('hidden')) ||
           (active !== null && active !== this.ownerDocument.body))
       ) {
         this.lastFocusedSlide = undefined;

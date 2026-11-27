@@ -48,6 +48,13 @@ the single shape shared with both upstreams, so markup renames mechanically. The
 `<div slot="x" label="…">` data/attribute model is removed; migrate each former child into one
 descriptor and one matching panel. An unpaired panel never creates a tab.
 
+Set the native `hidden` attribute on an `<lr-tab>` to omit its button from the strip and keyboard
+navigation while keeping its paired panel available. An external control can call `show(name)` to
+open that panel. The group's `active` property and a child's explicit initial `active` hint can
+also select it. Hidden tabs are skipped when picking a default selection. Hiding the selected
+visible tab selects the next visible enabled tab, or the previous one when there is no following
+candidate. A shown panel whose tab is hidden takes its accessible name from the descriptor.
+
 The group assigns private projection `slot` values itself; consumers do not need to write them.
 Those writes are temporary ownership, not destructive normalization: when a descriptor or panel is
 removed, moved to another group, disconnected/reconnected, or adopted into another document, the
@@ -109,15 +116,16 @@ selection.
   integrations. Lyra exposes it for slot observation but keeps it hidden because every accepted
   tab and panel is projected through a deterministic named slot.
 
-**Methods:** `show(name: string): void` activates the matching enabled tab through the same
-`lr-tab-hide` then `lr-tab-show` sequence as pointer/keyboard selection. Unknown, disabled, and
+**Methods:** `show(name: string): void` activates the matching enabled, non-inert tab through the
+same `lr-tab-hide` then `lr-tab-show` sequence as pointer/keyboard selection. A hidden descriptor
+with a matching panel is eligible and stays out of the strip. Unknown, disabled, inert, and
 already-active names are no-ops. `focusTab(name: string, options?: FocusOptions): boolean` moves
 keyboard focus to the real `role="tab"` button of the matching enabled, non-inert tab and moves the
 roving `tabindex` with it — for example after `show(name)`, or when closing an overlay opened from a
 tab. Under `activation="auto"` focus and selection move together, so focusing an unselected tab
 also selects it exactly as `show()` does (`lr-tab-hide`/`lr-tab-show`, never `lr-activate`); under
 `activation="manual"` only focus moves. It returns `false` and changes nothing for an unknown,
-disabled or inert name, or for a tab added since the group last read its children (await
+hidden, disabled or inert name, or for a tab added since the group last read its children (await
 `updateComplete` first). Calling `focus()` on an `<lr-tab>` descriptor does the same for that tab.
 
 ```js
@@ -157,7 +165,7 @@ focus off the tab the user was on.
   assigning `active` itself, which also suppresses the built-in switch. Re-picking the active tab
   and `show()` never ask.
 - `lr-tab-show` (`detail: { name: string }`) — a tab became active via click, keyboard, or `show()`,
-  or because the active tab was removed, disabled or made inert and selection moved to its following
+  or because the active tab was removed, hidden, disabled or made inert and selection moved to its following
   (else preceding) tab. Not fired for the initial default or a direct `active` write.
 - `lr-tab-hide` (`detail: { name: string }`) — the outgoing tab, emitted immediately _before_ the
   matching `lr-tab-show`, so a listener that tears down the old panel always runs before the one
@@ -259,16 +267,24 @@ Otherwise shared tokens — `--lr-space-xs/-s/-m`,
 **Optional peer deps:** none.
 
 ```html
-<lr-tab-group active="general">
+<lr-tab-group aria-label="Settings" active="general">
   <lr-tab panel="general">General</lr-tab>
   <lr-tab panel="advanced" disabled>Advanced</lr-tab>
+  <lr-tab panel="downloads" hidden>Downloads</lr-tab>
   <lr-tab-panel name="general">General settings…</lr-tab-panel>
   <lr-tab-panel name="advanced">Advanced settings…</lr-tab-panel>
+  <lr-tab-panel name="downloads">Saved downloads…</lr-tab-panel>
 </lr-tab-group>
+<button id="show-downloads" type="button">Show downloads</button>
 <script type="module">
-  const group = document.querySelector("lr-tab-group");
-  group.addEventListener("lr-tab-show", (e) => console.log(e.detail.name));
-  group.show("general");
+  import '@aceshooting/lyra-ui/components/lr-tab-group.js';
+  import '@aceshooting/lyra-ui/components/lr-tab.js';
+  import '@aceshooting/lyra-ui/components/lr-tab-panel.js';
+
+  const group = document.querySelector('lr-tab-group');
+  document.querySelector('#show-downloads').addEventListener('click', () => {
+    group.show('downloads');
+  });
 </script>
 ```
 

@@ -26,7 +26,10 @@ native or authored semantics, and an explicit `role`, `aria-roledescription`, or
 `<lr-carousel-item>` wins over generated metadata. Later author changes to those attributes and to
 `hidden`, `inert`, or `aria-hidden` remain in effect across carousel updates. The carousel
 temporarily makes off-page slides inert and aria-hidden, then restores their retained author state
-when they become visible, are removed, or the carousel disconnects.
+when they become visible, are removed, or the carousel disconnects. Assigned elements with the
+native `hidden` attribute are excluded from slide counts, navigation, pagination, loop copies and
+announcements. Removing `hidden` restores the slide at its position in slot order. The current
+slide stays selected when its index shifts and the page can still start there.
 
 **Keyboard:** focus the `scroll-container` viewport to navigate with Arrow keys (horizontal LTR/RTL
 or vertical), Home, and End. The viewport's accessible name uses the `carouselViewport` string
@@ -67,7 +70,7 @@ slide itself; they do not change the active slide or move focus away from it.
   cancellation releases capture, removes drag state, and returns to the active snap position.
   Gestures begin only for a primary left-mouse pointer on noninteractive slide content; native,
   custom, shadow-wrapped, labelled, disabled, and editable controls retain their own pointer input.
-- `slides: number` (read-only) — live assigned-slide count, updated after dynamic child changes.
+- `slides: number` (read-only) — live count of assigned slides without `hidden`, updated after child and visibility changes.
 - `aria-label` (host attribute) — names the carousel landmark, taking precedence by presence,
   including an explicitly empty value; when absent, the component uses the localized
   `carouselLabel` default. The focusable scroll container always keeps a name: an empty host value

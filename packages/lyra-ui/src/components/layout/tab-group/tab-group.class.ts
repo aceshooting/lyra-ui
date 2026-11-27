@@ -37,6 +37,7 @@ interface TabDef {
   panel: string;
   label: string;
   disabled: boolean;
+  hidden: boolean;
   /** The source child's own `inert` state — see `isInertChild()`. */
   inert: boolean;
   /** Canonical upstream descriptor whose rich content is projected into the real tab button. */
@@ -143,6 +144,8 @@ export interface LyraTabGroupEventMap {
  * default-slot text name the real tab button in that order. Author
  * `aria-hidden`, hidden, inert, and CSS-hidden branches never leak into that name, and visibility
  * or text changes refresh it.
+ * A direct tab with native `hidden` has no strip or close control. Its explicit panel stays
+ * selectable through `show()` or `active` while enabled and non-inert.
  * A labeled direct tab without `panel` receives a stable synthetic panel key that cannot collide
  * with an authored tab or panel name. An unpaneled descriptor with no accessibility-exposed label
  * is omitted instead of speaking that internal key; an explicitly paneled empty descriptor retains
@@ -620,7 +623,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       next.some((tab, index) => {
         const previous = this.tabs[index]!;
         return tab.element !== previous.element || tab.slotName !== previous.slotName || tab.panel !== previous.panel ||
-          tab.label !== previous.label || tab.disabled !== previous.disabled || tab.inert !== previous.inert;
+          tab.label !== previous.label || tab.disabled !== previous.disabled || tab.inert !== previous.inert || tab.hidden !== previous.hidden;
       })
     ) this.tabs = next;
     if (this.projectionPending || this.projectionTimer !== undefined)
@@ -702,7 +705,8 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
         continue;
       }
       const visibleLabel = this.readElementLabel(child as LyraTab);
-      if (!authoredPanel && !visibleLabel) {
+      const hidden = child.hasAttribute('hidden');
+      if (!authoredPanel && (hidden || !visibleLabel)) {
         this.excludedUnnamedDescriptors.add(child);
         this.projectSlot(child, this.stagingSlotName, projectedSlots);
         continue;
@@ -717,6 +721,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
         slotName,
         panel: authoredPanel ?? '',
         label,
+        hidden,
         disabled: child.hasAttribute('disabled'),
         inert: isInertChild(child),
         element: child as LyraTab,
@@ -732,7 +737,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       return this.tabs;
     }
     for (const tab of next)
-      this.projectSlot(tab.element, this.tabSlotName(tab.slotName), projectedSlots);
+      this.projectSlot(tab.element, tab.hidden ? this.stagingSlotName : this.tabSlotName(tab.slotName), projectedSlots);
     return next;
   }
 
@@ -759,7 +764,13 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     );
     return composedAccessibilityText(labelNodes, {
       ancestorBoundary: tab,
-      isSubtreeExcluded: (element) => this.isTabLabelSubtreeExcluded(element),
+      isSubtreeExcluded: (element) => {
+        // A hidden descriptor still names its programmatically selected panel.
+        if (element === tab && tab.hasAttribute('hidden')) {
+          return tab.hasAttribute('inert') || tab.getAttribute('aria-hidden')?.trim().toLowerCase() === 'true';
+        }
+        return this.isTabLabelSubtreeExcluded(element);
+      },
       // A tab's name comes from its own label text, not from whether the group is currently
       // displayed; without this a hidden group falls back to the bare panel id.
       ignoreInheritedVisibility: true,
@@ -768,7 +779,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       // kept that name once shown. Apply it only while the group itself renders; author exclusion
       // (`hidden`, `aria-hidden`, `inert`, own `display: none`/`content-visibility: hidden`) is
       // pruned by the subtree predicate either way.
-      requireRendered: isHostLayoutRendered(this),
+      requireRendered: !tab.hasAttribute('hidden') && isHostLayoutRendered(this),
     })
       .replace(/\s+/g, ' ')
       .trim();
@@ -955,11 +966,14 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     }
   }
 
-  /** Whether a tab can hold selection, the roving `tabindex`, and arrow-key focus. `inert` counts
-   *  alongside `disabled` — see `isInertChild()` for why, and for why only the child's own inert
-   *  state is consulted. */
+  /** Disabled and inert descriptors cannot select their panels, including through show(). */
+  private canSelect(tab: TabDef): boolean {
+    return !tab.disabled && !tab.inert && !tab.element.hasAttribute('disabled') && !isInertChild(tab.element);
+  }
+
+  /** Only descriptors with a visible strip button can participate in user navigation. */
   private isNavigable(tab: TabDef): boolean {
-    return !tab.disabled && !tab.inert;
+    return !tab.hidden && !tab.element.hasAttribute('hidden') && this.canSelect(tab);
   }
 
   /** Keeps `active` resolved to a real, navigable tab -- covers the initial default, a tab disappearing/becoming disabled or inert underneath the current selection, and a consumer assigning `.active` directly. Only a rendered selection displaced by its tab leaving reports `lr-tab-hide`/`lr-tab-show`, moving to the following tab (else the preceding one); the initial default and a direct `.active` write stay silent. Reading the focused element *before* the render that marks the outgoing button `inert` is what lets `updated()` rehome real focus rather than leaving it stranded on `<body>`. */
@@ -986,10 +1000,14 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       this.focusedTab = this.active;
     }
     const current = this.tabs.find((t) => t.slotName === this.active);
-    if (current && this.isNavigable(current)) return;
+    // A hidden descriptor remains a valid programmatic selection. When an existing strip tab
+    // becomes hidden, repair the selection just as if its button had been removed.
+    const before = (changed.get('tabs') as TabDef[] | undefined) ?? this.tabs;
+    const justHidden = current?.hidden && !changed.has('active') &&
+      before.some(tab => tab.element === current.element && !tab.hidden);
+    if (current && this.canSelect(current) && !justHidden) return;
     this.rehomeTabFocus = this.rehomeTabFocus || focusedSlot !== null;
     const outgoing = this.active;
-    const before = (changed.get('tabs') as TabDef[] | undefined) ?? this.tabs;
     const at = this.hasUpdated && changed.has('tabs') && !changed.has('active')
       ? before.findIndex((t) => t.slotName === outgoing)
       : -1;
@@ -1051,10 +1069,10 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
    *  `lr-tab-hide` for the outgoing tab before `lr-tab-show` for the incoming one, so a listener
    *  that tears down the old panel always runs before the one that builds the new one. */
   private selectTab(tab: TabDef): void {
-    if (!this.isNavigable(tab) || tab.slotName === this.active) return;
+    if (!this.canSelect(tab) || tab.slotName === this.active) return;
     const previous = this.active;
     this.active = tab.slotName;
-    this.focusedTab = tab.slotName;
+    if (this.isNavigable(tab)) this.focusedTab = tab.slotName;
     if (previous) this.emit('lr-tab-hide', { name: previous });
     if (!this.isCurrentTab(tab)) return;
     this.emit('lr-tab-show', { name: tab.slotName });
@@ -1072,15 +1090,16 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
         emitRequest: (detail, init: { cancelable: true }) =>
           this.emit('lr-tab-group-select-request', detail, init),
         guard: this.selectGuard,
-        commit: () => this.selectTab(tab),
+        commit: () => { if (this.isNavigable(tab)) this.selectTab(tab); },
       });
       if (request.defaultPrevented || this.active !== tab.slotName) return false;
     }
+    if (!this.isNavigable(tab)) return false;
     if (this.isCurrentTab(tab)) this.emit('lr-activate', { value: tab.slotName });
     return true;
   }
 
-  /** Show the panel named by an `<lr-tab panel>`. */
+  /** Show the panel named by an enabled, non-inert `<lr-tab panel>`, including a hidden tab. */
   show(panel: string): void {
     const tab = this.tabs.find((candidate) => candidate.slotName === panel);
     if (tab) this.selectTab(tab);
@@ -1118,11 +1137,10 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
    *  under `manual` focus may sit elsewhere, and it must fall back to the selection whenever the
    *  remembered tab has gone away or become disabled. */
   private get rovingTab(): string {
-    if (this.activation !== 'manual') return this.active;
-    const candidate = this.tabs.find(
-      (t) => t.slotName === this.focusedTab && this.isNavigable(t)
-    );
-    return candidate ? candidate.slotName : this.active;
+    const selected = this.tabs.find(tab => tab.slotName === this.active && this.isNavigable(tab));
+    if (this.activation !== 'manual' && selected) return selected.slotName;
+    const remembered = this.tabs.find(tab => tab.slotName === this.focusedTab && this.isNavigable(tab));
+    return (remembered ?? selected ?? this.tabs.find(tab => this.isNavigable(tab)))?.slotName ?? '';
   }
 
   /** The event-target tab is authoritative even when a controlled `active` write or manual-mode
@@ -1170,7 +1188,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
    *  `panel`, and moves the roving tab stop with it. Under `activation="auto"` focus and selection
    *  move together, so focusing an unselected tab also selects it exactly as `show()` does
    *  (`lr-tab-hide`/`lr-tab-show`, never `lr-activate`); under `manual` only focus moves. A missing,
-   *  disabled or inert tab leaves focus and selection unchanged, and so does a tab added since the
+   *  hidden, disabled or inert tab leaves focus and selection unchanged, and so does a tab added since the
    *  group last read its children (await `updateComplete` first). Returns `true` when focus moved. */
   focusTab(panel: string, options?: FocusOptions): boolean {
     const tab = this.tabs.find((candidate) => candidate.slotName === panel);
@@ -1420,7 +1438,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
    *  text node purely so `textContent` has something real to read; `hidden` (a real UA-default
    *  `display: none`) keeps it invisible and out of the accessibility tree, so it never doubles the
    *  visible label or the `aria-label` name. */
-  private renderTab(tab: TabDef): TemplateResult {
+  private renderTab(tab: TabDef, rovingTab: string): TemplateResult {
     const selected = tab.slotName === this.active;
     const closable = this.isNavigable(tab) && tab.element.closable;
     return html`<button
@@ -1435,7 +1453,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       aria-label=${tab.label ? tab.label : nothing}
       aria-controls=${this.panelId(tab.slotName)}
       aria-keyshortcuts=${closable ? 'Delete' : nothing}
-      tabindex=${tab.slotName === this.rovingTab ? '0' : '-1'}
+      tabindex=${tab.slotName === rovingTab ? '0' : '-1'}
       @click=${() => this.activateTab(tab)}
     >
       <span data-tab-label><slot name=${this.tabSlotName(tab.slotName)} @slotchange=${this.queueProjectionReconciliation}></slot></span>${tab.label
@@ -1452,7 +1470,8 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
       part="panel"
       id=${this.panelId(tab.slotName)}
       role="tabpanel"
-      aria-labelledby=${this.tabId(tab.slotName)}
+      aria-labelledby=${tab.hidden ? nothing : this.tabId(tab.slotName)}
+      aria-label=${tab.hidden ? tab.label : nothing}
       tabindex="0"
       ?hidden=${!selected}
     >
@@ -1469,6 +1488,8 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
     // the tab it used to represent. Keying by identity keeps each tab's own
     // DOM node (and any focus on it) attached to that same tab across
     // additions/removals anywhere in the list.
+    const stripTabs = this.tabs.filter(tab => !tab.hidden);
+    const rovingTab = this.rovingTab;
     return html`
       <slot ?hidden=${this.tabs.length > 0}></slot>
       <div part="base tab-group">
@@ -1477,6 +1498,7 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
           ${this.renderScrollControl('start')}
           <div
             part="tablist tabs"
+            ?hidden=${this.tabs.length > 0 && !stripTabs.length}
             role="tablist"
             aria-label=${(hostAriaLabel(this) === '' || this.accessibleLabel === '') ? '' : resolveAccessibleName(this, this.label) ?? nothing}
             aria-orientation=${this.isVertical ? 'vertical' : 'horizontal'}
@@ -1484,9 +1506,9 @@ export class LyraTabGroup extends LyraElement<LyraTabGroupEventMap> {
             @scroll=${this.onTabListScroll}
           >
             ${repeat(
-              this.tabs,
+              stripTabs,
               (tab) => tab.slotName,
-              (tab) => this.renderTab(tab)
+              (tab) => this.renderTab(tab, rovingTab)
             )}
           </div>
           ${this.renderScrollControl('end')}

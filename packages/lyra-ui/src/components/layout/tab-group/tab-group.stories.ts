@@ -347,27 +347,25 @@ export const ProgrammaticShow: StoryObj = {
     docs: {
       description: {
         story:
-          "`show(name)` activates a matching enabled panel through the same hide/show event pair as pointer or keyboard input. Child `active` attributes stay synchronized for serialization and SSR handoff.",
+          "The Activity tab is hidden from the strip. The Show activity button opens its paired panel through `show(name)`, which emits the usual hide/show events and keeps the child `active` attributes synchronized.",
       },
     },
   },
   render: () => html`
     <div>
-      <lr-tab-group id="programmatic-tabs">
+      <lr-tab-group aria-label="Workspace">
         <lr-tab panel="overview" active>Overview</lr-tab>
-        <lr-tab panel="activity">Activity</lr-tab>
+        <lr-tab panel="notes">Notes</lr-tab>
+        <lr-tab panel="activity" hidden>Activity</lr-tab>
         <lr-tab-panel name="overview" active>Overview content.</lr-tab-panel>
+        <lr-tab-panel name="notes">Notes content.</lr-tab-panel>
         <lr-tab-panel name="activity">Activity content.</lr-tab-panel>
       </lr-tab-group>
       <button
         type="button"
-        @click=${() => {
-          const group = document.getElementById(
-            "programmatic-tabs"
-          ) as HTMLElement & {
-            show(name: string): void;
-          };
-          group.show("activity");
+        @click=${(event: Event) => {
+          const button = event.currentTarget as HTMLButtonElement;
+          button.parentElement?.querySelector("lr-tab-group")?.show("activity");
         }}
       >
         Show activity

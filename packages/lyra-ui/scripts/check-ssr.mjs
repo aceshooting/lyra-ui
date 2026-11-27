@@ -497,6 +497,24 @@ assert.doesNotMatch(
   'populated lr-document-library SSR serialized a false empty table'
 );
 
+const renderTransferQueue = async (transfers) => replaceHtmlComments(await collectResult(
+  render(html`<lr-transfer-manager .transfers=${transfers}></lr-transfer-manager>`, {
+    elementRenderers: animatedImageContext.elementRenderers,
+  })
+), () => '');
+const emptyQueue = await renderTransferQueue([]);
+assert.match(emptyQueue, /<p part="empty">No transfers<\/p>/);
+assert.doesNotMatch(emptyQueue, /<li\b/);
+const populatedQueue = await renderTransferQueue([
+  { id: 'archive', name: 'Archive.zip', status: 'active', bytesDone: 25, bytesTotal: 100 },
+  { id: 'notes', name: 'Notes.txt', status: 'done', bytesDone: 100, bytesTotal: 100 },
+]);
+assert.match(populatedQueue, /<bdi part="name">Archive\.zip<\/bdi><span part="status">Running<\/span>/);
+assert.match(populatedQueue, /<bdi part="name">Notes\.txt<\/bdi>/);
+assert.match(populatedQueue, /<progress part="progress"[^>]*value="25"/);
+assert.match(populatedQueue, /<progress part="overall-progress"[^>]*value="62\.5"/);
+assert.doesNotMatch(populatedQueue, /<p part="empty">/);
+
 const emojiGroups = (count) => [
   {
     key: 'faces',

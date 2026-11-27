@@ -16,7 +16,9 @@
 
 ## `lr-tab`
 
-One tab in a `<lr-tab-group>`'s strip. Mirrors `wa-tab` / `sl-tab`.
+One tab descriptor for `<lr-tab-group>`. Mirrors `wa-tab` / `sl-tab`. The native `hidden`
+attribute omits the button from the strip while leaving a paired panel reachable through the
+group's `show(name)` method.
 
 The close button of a closable tab is themed with `--lr-tab-close-hover-bg` and `--lr-tab-close-active-bg`.
 
@@ -35,7 +37,7 @@ affordance.
 
 **Methods:** `focus(options?: FocusOptions): void` forwards to the owning group's real tab button,
 exactly as the group's `focusTab(panel)` (under `activation="auto"` that also selects the tab); a
-disabled or inert tab, or a descriptor outside an upgraded group, is not focusable and is left
+hidden, disabled or inert tab, or a descriptor outside an upgraded group, is not focusable and is left
 alone. `blur(): void` removes focus from that button when it has it.
 
 **Events:** `lr-close` (no detail) — the Lyra-convention mapping of Shoelace's `sl-close`, emitted

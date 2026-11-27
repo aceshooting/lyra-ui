@@ -1491,15 +1491,8 @@ it("excludes accessibility-hidden slide roots and descendants from page announce
 
   el.next("instant");
   await el.updateComplete;
-  expect(
-    sink.childElementCount,
-    "an author-hidden selected slide emits no position or content"
-  ).to.equal(0);
-
-  el.next("instant");
-  await el.updateComplete;
   expect(sink.lastElementChild?.textContent).to.equal(
-    "Slide 3 of 3: Visible content Visibility override"
+    "Slide 2 of 2: Visible content Visibility override"
   );
 });
 
@@ -2017,8 +2010,8 @@ it("retains late off-page visibility metadata through activation and disconnect"
   el.strings = { carouselSlidePosition: "Page {index}/{total}" };
   await el.updateComplete;
   expect(second.hidden).to.be.true;
-  expect(second.inert).to.be.true;
-  expect(second.getAttribute("aria-hidden")).to.equal("true");
+  expect(second.inert).to.be.false;
+  expect(second.getAttribute("aria-hidden")).to.equal("false");
 
   el.currentSlide = 1;
   await el.updateComplete;
@@ -2834,7 +2827,7 @@ describe("touch scrolling and scroll-snap", () => {
     original.hidden = true;
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     await el.updateComplete;
-    expect(clone()?.hidden).to.be.true;
+    expect(clone() === null).to.equal(true);
   });
 
   it("synchronizes loop snapshots after a late slide visibility change in the same update", async () => {
@@ -2855,7 +2848,7 @@ describe("touch scrolling and scroll-snap", () => {
     original.hidden = true;
     el.strings = { carouselSlidePosition: "Page {index}/{total}" };
     await el.updateComplete;
-    expect(clone()?.hidden).to.be.true;
+    expect(clone() === null).to.equal(true);
   });
 });
 
@@ -4011,4 +4004,52 @@ describe('lr-carousel: focus, observation and listeners', () => {
     expect(seen.map((entry) => entry.type).sort()).to.deep.equal(['touchstart', 'wheel']);
     expect(seen.every((entry) => entry.passive === true)).to.equal(true);
   });
+});
+
+it('uses visible slide indices for pagination, navigation and live native visibility changes', async () => {
+  const el = await carousel(html`<lr-carousel pagination navigation>
+    <lr-carousel-item>A</lr-carousel-item><lr-carousel-item hidden>B</lr-carousel-item><lr-carousel-item>C</lr-carousel-item>
+  </lr-carousel>`);
+  const [a, b, c] = Array.from(el.children) as HTMLElement[];
+  const pages = () => el.shadowRoot!.querySelectorAll('[part~="pagination-item"]').length;
+  expect(el.slides).to.equal(2);
+  expect(pages()).to.equal(2);
+  expect(b!.getBoundingClientRect().width).to.equal(0);
+  const moved = oneEvent(el, 'lr-slide-change');
+  el.next('instant');
+  expect((await moved).detail.slide === c).to.equal(true);
+  expect(el.currentSlide).to.equal(1);
+  b!.hidden = false;
+  await waitUntil(() => el.slides === 3 && pages() === 3);
+  expect(el.currentSlide).to.equal(2);
+  expect(c!.inert).to.equal(false);
+  el.previous('instant');
+  await el.updateComplete;
+  expect(el.currentSlide).to.equal(1);
+  expect(b!.inert).to.equal(false);
+  const replaced = oneEvent(el, 'lr-slide-change');
+  b!.hidden = true;
+  expect((await replaced).detail.slide === c).to.equal(true);
+  await el.updateComplete;
+  expect(el.currentSlide).to.equal(1);
+  expect(a!.inert).to.equal(true);
+  expect(c!.inert).to.equal(false);
+});
+
+it('parks focus on the viewport when the focused slide is hidden and restores an empty carousel', async () => {
+  const el = await carousel(html`<lr-carousel pagination loop>
+    <div><button type="button">Action</button></div><div hidden>Other</div>
+  </lr-carousel>`);
+  const first = el.firstElementChild as HTMLElement;
+  await focusByKeyboard(first.querySelector('button')!);
+  first.hidden = true;
+  await waitUntil(() => el.slides === 0);
+  const viewport = el.shadowRoot!.querySelector<HTMLElement>('[part~="scroll-container"]')!;
+  expect(el.shadowRoot!.activeElement === viewport).to.equal(true);
+  expect(el.shadowRoot!.querySelectorAll('[data-carousel-clone]').length).to.equal(0);
+  el.next('instant');
+  expect(el.currentSlide).to.equal(0);
+  (el.lastElementChild as HTMLElement).hidden = false;
+  await waitUntil(() => el.slides === 1);
+  expect((el.lastElementChild as HTMLElement).inert).to.equal(false);
 });
