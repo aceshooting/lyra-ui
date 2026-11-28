@@ -121,3 +121,28 @@ export const InputLimit: Story = {
     date: `2026-07-${String(1 + index % 28).padStart(2, '0')}`, title: `Event ${index + 1}`,
   }))}></lr-calendar>`,
 };
+
+/** Light custom fills get a derived readable foreground; `textColor` pins one explicitly. */
+export const EventTextColor: Story = {
+  render: () => html`
+    <lr-calendar
+      view-date="2026-07-01"
+      .events=${[
+        { date: '2026-07-14', title: 'Quiet fill', color: 'var(--lr-color-brand-quiet)' },
+        { date: '2026-07-15', title: 'Yellow fill', color: '#ffeb3b' },
+        { date: '2026-07-16', title: 'Pinned text', color: '#ffe4e6', textColor: '#9f1239' },
+      ]}
+    ></lr-calendar>
+  `,
+};
+
+/** `dayContent` renders extra per-day content under the day number, described on the cell. */
+export const DayContent: Story = {
+  render: () => html`
+    <lr-calendar
+      view-date="2026-07-01"
+      .dayContent=${(date: Date, { outside }: { outside: boolean }) =>
+        outside || date.getDay() === 0 || date.getDay() === 6 ? null : html`<span>${90 + date.getDate()} EUR</span>`}
+    ></lr-calendar>
+  `,
+};

@@ -65,7 +65,8 @@ export const styles = css`
   [part='week'] { display: contents; }
   [part='day'] { display: flex; flex-direction: column; align-items: stretch; min-block-size: var(--lr-calendar-day-min-block-size, var(--lr-size-6rem)); padding: var(--lr-space-xs); border-block-start: 0; border-inline-start: 0; text-align: start; }
   [part='date'] { font-weight: var(--lr-font-weight-semibold); }
-  [part='event'] { overflow: hidden; box-sizing: border-box; inline-size: 100%; min-inline-size: var(--lr-size-1-5rem); min-block-size: var(--lr-size-1-5rem); margin-block-start: var(--lr-space-2xs); padding: var(--lr-space-2xs); border: 0; border-radius: var(--lr-radius); background: var(--lr-color-brand); color: var(--lr-color-on-brand); font: inherit; font-size: var(--lr-font-size-sm); text-align: start; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+  [part='event'] { overflow: hidden; box-sizing: border-box; inline-size: 100%; min-inline-size: var(--lr-size-1-5rem); min-block-size: var(--lr-size-1-5rem); margin-block-start: var(--lr-space-2xs); padding: var(--lr-space-2xs); border: 0; border-radius: var(--lr-radius); background: var(--lr-calendar-event-bg, var(--lr-color-brand)); color: var(--lr-calendar-event-color, var(--lr-color-on-brand)); font: inherit; font-size: var(--lr-font-size-sm); text-align: start; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+  [part='day-content'] { min-inline-size: 0; margin-block-start: var(--lr-space-2xs); font-size: var(--lr-font-size-xs); overflow-wrap: anywhere; }
   [part='event-limit'] { display: block; margin-block-start: var(--lr-space-2xs); color: var(--lr-color-text-quiet); font-size: var(--lr-font-size-xs); }
   [part='agenda-event']:hover { background: var(--lr-calendar-agenda-event-hover-bg, var(--_lr-calendar-agenda-event-background, var(--lr-color-brand-quiet))); }
   [part='agenda-event']:active { background: var(--lr-calendar-agenda-event-active-bg, var(--_lr-calendar-agenda-event-background, ${activeFill('var(--lr-calendar-agenda-event-hover-bg, var(--lr-color-brand-quiet))')})); }
@@ -113,7 +114,8 @@ export const styles = css`
       forced-color-adjust: none;
       border: var(--lr-border-width-thin) solid ButtonText;
       background: ButtonFace !important;
-      color: ButtonText;
+      /* !important: a per-event textColor or derived foreground is an inline declaration. */
+      color: ButtonText !important;
     }
   }
 

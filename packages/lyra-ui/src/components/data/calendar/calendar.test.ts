@@ -89,7 +89,7 @@ it('projects calendar event fields once from own data descriptors while retainin
   await el.updateComplete;
   const marker = el.shadowRoot!.querySelector<HTMLButtonElement>('[part~="event"]')!;
   expect(marker.textContent?.trim()).to.equal('Safe event');
-  expect(descriptorReads, 'only date, title, and color are projected').to.equal(3);
+  expect(descriptorReads, 'only date, title, color, and textColor are projected').to.equal(4);
 
   target.title = 'Mutated after assignment';
   el.value = '2026-07-15';
