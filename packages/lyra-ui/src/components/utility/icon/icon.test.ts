@@ -40,6 +40,15 @@ it('renders the built-in refresh glyph without an accessible name', async () => 
   expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-hidden')).to.equal('true');
 });
 
+for (const name of ['sun', 'moon', 'monitor', 'gem', 'sliders-horizontal']) {
+  it(`renders the built-in ${name} glyph as decorative`, async () => {
+    const el = (await fixture(html`<lr-icon name=${name}></lr-icon>`)) as LyraIcon;
+    expect(el.shadowRoot!.querySelectorAll('svg path')).to.have.length(1);
+    expect(el.shadowRoot!.querySelector('path')!.getAttribute('d')!.length).to.be.greaterThan(10);
+    expect(el.shadowRoot!.querySelector('svg')!.getAttribute('aria-hidden')).to.equal('true');
+  });
+}
+
 it('keeps an unknown built-in name blank while preserving its accessible label', async () => {
   const el = (await fixture(
     html`<lr-icon name="gear" label="Settings"></lr-icon>`,

@@ -7,6 +7,18 @@ const meta: Meta = { title: 'Icon', component: 'lr-icon', tags: ['autodocs'] };
 export default meta;
 type Story = StoryObj;
 
+export const AppearanceIcons: Story = {
+  render: () => html`
+    <div style="display:flex;gap:1rem;font-size:1.5rem">
+      <lr-icon name="sun"></lr-icon>
+      <lr-icon name="moon"></lr-icon>
+      <lr-icon name="monitor"></lr-icon>
+      <lr-icon name="gem"></lr-icon>
+      <lr-icon name="sliders-horizontal"></lr-icon>
+    </div>
+  `,
+};
+
 export const CommonIcons: Story = {
   render: () => html`
     <div style="display:flex;gap:1rem;font-size:1.5rem">

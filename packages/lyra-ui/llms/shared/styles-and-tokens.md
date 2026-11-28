@@ -154,8 +154,8 @@ Application and OS reduced motion still take precedence; persist Shine independe
 See the composition guide for the controlled picker and preference wiring.
 
 The four separate topbar controls—gemstone, mode, design, language—stay square `2.75rem` targets
-(44px at a 16px root), with localized names and tooltips. Use gemstone, sun/moon and horizontal-slider
-icons, and a country flag for language. Dense gemstone options do not reduce
+(44px at a 16px root), with localized names and tooltips. Use the built-in `gem`, `sun`/`moon` (`monitor` for System) and `sliders-horizontal`
+`<lr-icon>` glyphs, and a country flag for language. Dense gemstone options do not reduce
 those launcher targets. Size icon launchers through their tokens and keep their glyphs bounded:
 
 ```css

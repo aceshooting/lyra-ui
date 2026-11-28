@@ -39,6 +39,11 @@ const PATHS: Record<string, string> = {
   calendar: 'M6 3v3M18 3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v13H4V6a1 1 0 0 1 1-1Z',
   command: 'M6 6h4v4H6zM14 6h4v4h-4zM6 14h4v4H6zM14 14h4v4h-4z',
   trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 14h10l1-14M9 7V4h6v3',
+  sun: 'M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0ZM12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4m0-12.8L17 7M7 17l-1.4 1.4',
+  moon: 'M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5Z',
+  monitor: 'M4 5h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM8 21h8m-4-5v5',
+  gem: 'M7 4h10l4 5-9 11L3 9ZM3 9h18M9.5 4 8 9l4 11 4-11-1.5-5',
+  'sliders-horizontal': 'M4 7h8m4 0h4M4 17h4m4 0h8M14 4.5v5M10 14.5v5',
 };
 
 /** Which side of a remote load failed, so the alert stays localized (and re-localizes when the
@@ -93,7 +98,8 @@ export interface LyraIconEventMap {
  * canonical node before its trusted library mutator runs, so cached state is never mutated.
  * The mirrored upstreams' icon-name vocabularies are not bundled. The default library contains
  * only `add`, `check`, `close`, `search`, `menu`, `chevron-left`, `chevron-right`, `chevron-down`,
- * `calendar`, `command`, `trash`, and `refresh`; any other name renders no glyph unless a matching
+ * `calendar`, `command`, `trash`, `refresh`, `sun`, `moon`, `monitor`, `gem`, and
+ * `sliders-horizontal`; any other name renders no glyph unless a matching
  * library is registered, including through `registerIconLibrary('default', { resolver })`.
  * @customElement lr-icon
  * @slot - Optional custom SVG/path content when no `name`, `path`, `library`, or `src` resolves.
