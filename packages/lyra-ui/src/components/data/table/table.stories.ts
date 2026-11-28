@@ -674,6 +674,29 @@ export const GroupedRows: Story = {
     ></lr-table>`,
 };
 
+export const GroupSubtotals: Story = {
+  parameters: {
+    docs: {
+      description: {
+        story:
+          "`groupFooter` adds a subtotal row after each group's last row. `true` reuses every column's `footer(rows)` with that group's rows; a callback returns the cells keyed by column key instead. Subtotal rows stay at their group's end when sorting and are never selectable or focusable.",
+      },
+    },
+  },
+  render: () =>
+    html`<lr-table
+      aria-label="Scores by group"
+      .columns=${columns.map((col) =>
+        col.key === 'score'
+          ? { ...col, footer: (grouped: readonly DemoRow[]) => `Avg ${Math.round(grouped.reduce((sum, r) => sum + r.score, 0) / Math.max(grouped.length, 1))}` }
+          : col
+      )}
+      .rows=${rows}
+      .groupBy=${(r: DemoRow) => (r.score > 80 ? 'Passing' : 'Needs review')}
+      .groupFooter=${true}
+    ></lr-table>`,
+};
+
 interface DetailRow extends DemoRow {
   region: string;
   updated: string;

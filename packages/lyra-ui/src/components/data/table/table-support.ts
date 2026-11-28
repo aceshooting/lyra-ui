@@ -68,7 +68,8 @@ export const TABLE_PART_NAMES: readonly string[] = Object.freeze([
   'empty-actions', 'empty-base', 'empty-description', 'empty-heading', 'empty-icon', 'error',
   'error-actions', 'error-base', 'error-cell', 'error-description', 'error-heading', 'error-icon',
   'error-row', 'expanded-cell', 'expanded-row', 'expand-toggle-cell', 'filter', 'filter-clear',
-  'filter-label', 'foot', 'footer-cell', 'footer-row', 'group-cell', 'group-row', 'head',
+  'filter-label', 'foot', 'footer-cell', 'footer-row', 'group-cell', 'group-footer',
+  'group-footer-cell', 'group-row', 'head',
   'header-cell', 'loading', 'more-button', 'pagination', 'pagination-button', 'pagination-controls',
   'pagination-page', 'pagination-page-count', 'pagination-page-current', 'pagination-page-field',
   'pagination-page-input', 'pagination-pages', 'pagination-summary', 'resize-handle',
@@ -89,6 +90,12 @@ export function reservedCellPartNames(names: string): string[] {
 export type TableRowAttributeValue = string | number | boolean | null | undefined;
 /** What `rowAttributes(row, index)` returns: attribute name to value, for one body row. */
 export type TableRowAttributes = Readonly<Record<string, TableRowAttributeValue>>;
+/** `<lr-table>`'s `groupFooter`: `true` reuses every column's `footer(rows)` (and `grandTotal(rows)`
+ *  for the `rowTotal` column) with one group's rows; a callback returns one group's subtotal cell
+ *  content keyed by column key, or `null`/`undefined` for no subtotal row under that group. */
+export type TableGroupFooter<T> =
+  | boolean
+  | ((groupKey: string | number, rows: readonly T[]) => Readonly<Record<string, unknown>> | null | undefined);
 
 /** The ARIA attributes `rowAttributes` may set on a body row; everything else ARIA on the row
  *  (`aria-selected`, the row role's state) is owned by the table. */

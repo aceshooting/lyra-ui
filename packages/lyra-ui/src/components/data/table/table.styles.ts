@@ -188,7 +188,8 @@ export const styles = css`
   }
   [part='row'],
   [part='head'] > tr,
-  [part='footer-row'] {
+  [part='footer-row'],
+  [part='group-footer'] {
     /* A table-row height is a minimum: content and cell padding still grow it above the
        interactive target floor, without imposing a shared baseline on different table sizes. */
     block-size: max(
@@ -690,6 +691,16 @@ export const styles = css`
   [part='footer-cell'][data-align='end'] {
     text-align: end;
   }
+  /* groupFooter: a group's subtotal row closes its group inside the body, so its rule sits below. */
+  [part='group-footer-cell'] {
+    padding: var(--lr-table-cell-padding-compact, var(--lr-space-xs) var(--lr-space-s));
+    border-block-end: var(--lr-border-width-thin) solid var(--lr-table-cell-border-color, var(--lr-color-border-subtle));
+    font-weight: var(--lr-font-weight-semibold);
+    text-align: start;
+  }
+  [part='group-footer-cell'][data-align='end'] {
+    text-align: end;
+  }
   [part='more-button'],
   [part='reveal-columns-button'] {
     display: block;
@@ -751,6 +762,7 @@ export const styles = css`
   [part='base'][data-stacked] [part='row'],
   [part='base'][data-stacked] [part='footer-row'],
   [part='base'][data-stacked] [part='expanded-row'],
+  [part='base'][data-stacked] [part='group-footer'],
   [part='base'][data-stacked] [part='group-row'] {
     display: block;
     block-size: auto;
@@ -773,7 +785,8 @@ export const styles = css`
   [part='base'][data-stacked] [part='head'] > tr {
     border-block-end: var(--lr-border-width-thin) solid var(--lr-table-cell-border-color, var(--lr-color-border-subtle));
   }
-  [part='base'][data-stacked] [part='row'] {
+  [part='base'][data-stacked] [part='row'],
+  [part='base'][data-stacked] [part='group-footer'] {
     padding-block: var(--lr-space-xs);
     border-block-end: var(--lr-border-width-thin) solid var(--lr-table-cell-border-color, var(--lr-color-border-subtle));
   }
@@ -782,6 +795,7 @@ export const styles = css`
   [part='base'][data-stacked] [part='expand-toggle-cell'],
   [part='base'][data-stacked] [part='footer-cell'],
   [part='base'][data-stacked] [part='expanded-cell'],
+  [part='base'][data-stacked] [part='group-footer-cell'],
   [part='base'][data-stacked] [part='group-cell'] {
     display: block;
     padding-block: var(--lr-space-2xs);

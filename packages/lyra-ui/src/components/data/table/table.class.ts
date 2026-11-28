@@ -45,14 +45,14 @@ import { requestThenCommit } from '../../../internal/request-commit.js';
 import { ColumnResizePointerSession, columnResizeAriaValues, columnResizeKeyboardWidth, columnResizePointerWidth, columnResizeWidth } from '../../../internal/column-resize.js';
 import { isRepeatedActivationKey, isRovingTargetAvailable, shouldIgnoreNavigationKey } from '../../../internal/list-navigation.js';
 import { renderDataState } from '../../../internal/data-state-renderer.js';
-import { DEFAULT_SKELETON_ROWS, TABLE_OVERRIDE_MESSAGE_KEYS, MAX_SKELETON_ROWS, MAX_PAGE_SIZE, MAX_TABLE_COLLECTION_ENTRIES, MAX_TABLE_ROWS, TABLE_SCROLL_OVERFLOW_TOLERANCE_PX, DEFAULT_RESIZE_MIN_WIDTH_PX, MISSING_CELL_RENDERER_WARNING, MISSING_ACCESSIBLE_NAME_WARNING, INERT_PRIORITY_COLUMN_CONFIG_WARNING, RESERVED_CELL_PART_WARNING, REJECTED_ROW_ATTRIBUTE_WARNING, HEADER_CELL_SELECTOR, BODY_CELL_SELECTOR, reservedCellPartNames, normalizeRowAttributes, frozenArray, keySet, storedKeySetFacade, isCompactEmptySize, TABLE_LAYOUT, TABLE_STACK, TABLE_STACK_HEADER, TABLE_PAGINATION_FORMAT, cellContentPartNames, stickyDirection, columnWrap, sanitizeCellStyle, normalizedEditTrigger, encodeKey, isImmutableSearchRow, createFilterStringifier, eventInteractiveTarget, type TableLoadingAppearance, type OwnedAnimationFrame, type TableResizeState, type TableRovingFocusSnapshot, type TableRowEntry, type TableSelectionMode, type TableExpansionMode, type TableSortMode, type TableSortIndicators, type TableScrollMode, type TableSortDirection, type TableStackMode, type TableStackHeader, type TableRowAttributes, type TableColumn, type LyraTableEventMap } from './table-support.js';
+import { DEFAULT_SKELETON_ROWS, TABLE_OVERRIDE_MESSAGE_KEYS, MAX_SKELETON_ROWS, MAX_PAGE_SIZE, MAX_TABLE_COLLECTION_ENTRIES, MAX_TABLE_ROWS, TABLE_SCROLL_OVERFLOW_TOLERANCE_PX, DEFAULT_RESIZE_MIN_WIDTH_PX, MISSING_CELL_RENDERER_WARNING, MISSING_ACCESSIBLE_NAME_WARNING, INERT_PRIORITY_COLUMN_CONFIG_WARNING, RESERVED_CELL_PART_WARNING, REJECTED_ROW_ATTRIBUTE_WARNING, HEADER_CELL_SELECTOR, BODY_CELL_SELECTOR, reservedCellPartNames, normalizeRowAttributes, frozenArray, keySet, storedKeySetFacade, isCompactEmptySize, TABLE_LAYOUT, TABLE_STACK, TABLE_STACK_HEADER, TABLE_PAGINATION_FORMAT, cellContentPartNames, stickyDirection, columnWrap, sanitizeCellStyle, normalizedEditTrigger, encodeKey, isImmutableSearchRow, createFilterStringifier, eventInteractiveTarget, type TableLoadingAppearance, type OwnedAnimationFrame, type TableResizeState, type TableRovingFocusSnapshot, type TableRowEntry, type TableSelectionMode, type TableExpansionMode, type TableSortMode, type TableSortIndicators, type TableScrollMode, type TableSortDirection, type TableStackMode, type TableStackHeader, type TableRowAttributes, type TableGroupFooter, type TableColumn, type LyraTableEventMap } from './table-support.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: START
 import type { LyraLocaleStrings } from '../../../internal/localization.js';
 import { LYRA_DEFAULT_dataGridToggleRow, LYRA_DEFAULT_noColumns, LYRA_DEFAULT_resizeColumn, LYRA_DEFAULT_showAllColumns, LYRA_DEFAULT_showFewerColumns, LYRA_DEFAULT_tableAdditionalColumns, LYRA_DEFAULT_tableEditCell, LYRA_DEFAULT_tableEditCellInRow, LYRA_DEFAULT_tableFilterLabel, LYRA_DEFAULT_tableFilterPlaceholder, LYRA_DEFAULT_tableLoading, LYRA_DEFAULT_tableLoadingMore, LYRA_DEFAULT_tableRowLimit, LYRA_DEFAULT_tableRowTotal } from '../../../internal/default-strings/data.generated.js';
 import { LYRA_DEFAULT_clear, LYRA_DEFAULT_details, LYRA_DEFAULT_loadMore, LYRA_DEFAULT_loading, LYRA_DEFAULT_noData, LYRA_DEFAULT_noMatches, LYRA_DEFAULT_resizeValuePixels, LYRA_DEFAULT_retry, LYRA_DEFAULT_tableLoadFailed, LYRA_DEFAULT_viewerSearchMatchCount } from '../../../internal/default-strings/shared.generated.js';
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
-export type { TableLoadingAppearance, TableEdgeAlign, TableColumnEditTrigger, TableColumnEditOption, TableSelectionMode, TableExpansionMode, TableSortMode, TableSortIndicators, TableScrollMode, TableSortDirection, TableStackMode, TableStackHeader, TableRowAttributes, TableRowAttributeValue, TableColumnWrap, TableSortRequestDetail, TableSortCommitDetail, TableSortDetail, TableColumn, LyraTableEventMap } from './table-support.js';
+export type { TableLoadingAppearance, TableEdgeAlign, TableColumnEditTrigger, TableColumnEditOption, TableSelectionMode, TableExpansionMode, TableSortMode, TableSortIndicators, TableScrollMode, TableSortDirection, TableStackMode, TableStackHeader, TableRowAttributes, TableRowAttributeValue, TableGroupFooter, TableColumnWrap, TableSortRequestDetail, TableSortCommitDetail, TableSortDetail, TableColumn, LyraTableEventMap } from './table-support.js';
 /** Bounded client projection used by a bare table. Pagination keeps every row reachable while
  * avoiding an unbounded row-by-column DOM allocation. */
 const DEFAULT_PAGE_SIZE = 100;
@@ -165,6 +165,9 @@ const DEFAULT_PAGE_SIZE = 100;
  * @csspart foot - The `<tfoot>`, only rendered when at least one column defines `footer`.
  * @csspart footer-row - The single footer row.
  * @csspart footer-cell - A single footer cell.
+ * @csspart group-footer - A group's subtotal row, rendered after the group's last row only when
+ *   `groupBy` and `groupFooter` are both set.
+ * @csspart group-footer-cell - A single cell of a group's subtotal row.
  * @csspart cell-editor - The native inline cell editor -- an `<input>` for `editType: 'text'`/
  *   `'number'`, a `<select>` for `editType: 'select'`: shown after a double-click on an
  *   `editTrigger: 'double-click'` cell, and rendered persistently in every body cell of an
@@ -732,6 +735,26 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
   @property({ attribute: false }) groupBy?: (row: T) => string | number;
   /** Renders the label for a group of rows. */
   @property({ attribute: false }) groupLabel?: (key: string | number, rows: readonly T[]) => unknown;
+  /** Per-group subtotal rows, rendered only alongside `groupBy` (ignored without it). Unset (the
+   *  default) renders no subtotal rows, unchanged output. `true` reuses the table-wide footer
+   *  callbacks per group: each column's `footer(rows)` -- and, with `rowTotal` set, `grandTotal(rows)`
+   *  for the trailing total column -- is called with one group's rows, and renders nothing when no
+   *  column defines `footer`, exactly like the `<tfoot>`. A callback `(groupKey, rows)` instead
+   *  returns that group's cells keyed by column key (a missing key renders an empty cell, and the
+   *  `rowTotal` column stays empty), or `null`/`undefined` for no subtotal row under that group.
+   *  Cell content renders as returned, like `footer(rows)`: format it in the callback.
+   *
+   *  `rows` is the group's contiguous run of rows after filtering and client sorting, ignoring
+   *  pagination -- the same set `footer(rows)` sees, narrowed to the group -- so a group split
+   *  across pages is still summarized whole, and its subtotal row renders once, after the group's
+   *  last row (and that row's expanded panel), on the page that holds it. Sorting reorders rows
+   *  inside their groups, so the subtotal row always stays at its group's end. The row is
+   *  `part="group-footer"` with `part="group-footer-cell"` cells: a `role="row"` announced as the
+   *  localized `tableRowTotal` role description, never selectable, focusable or sortable, and not
+   *  part of `viewRows`, `pageRows`, the row counts or pagination -- so, like the `<tfoot>`, it is
+   *  not exported through `viewRows`. Groups cannot collapse in this table, so every group with a
+   *  subtotal shows it. */
+  @property({ attribute: false }) groupFooter?: TableGroupFooter<T>;
   /** Maximum rows mounted per page. Defaults to 100 and normalizes into 1..500 so a bare table
    * never creates an unbounded row-by-column DOM projection. */
   @property({ converter: blankNumberConverter(DEFAULT_PAGE_SIZE), attribute: 'page-size' }) pageSize = DEFAULT_PAGE_SIZE;
@@ -1938,6 +1961,40 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     return sorted;
   });
 
+  /** One subtotal per contiguous group run, keyed by the run's last row key; see `groupFooter`. */
+  private readonly groupFooterValues = createInputMemo((
+    entries: TableRowEntry<T>[], groupBy: (row: T) => string | number, groupFooter: TableGroupFooter<T>,
+    columns: readonly TableColumn<T>[], grandTotal: LyraTable<T>['grandTotal'], withRowTotal: boolean,
+    _locale: string
+  ): Map<string | number, { cells: unknown[]; total: unknown }> => {
+    const footers = new Map<string | number, { cells: unknown[]; total: unknown }>();
+    if (groupFooter === true && !columns.some((col) => col.footer)) return footers;
+    const keys = entries.map((entry) => groupBy(entry.row));
+    let start = 0;
+    for (let index = 1; index <= entries.length; index++) {
+      if (index < entries.length && keys[index] === keys[start]) continue;
+      const rows: readonly T[] = Object.freeze(entries.slice(start, index).map((entry) => entry.row));
+      const groupKey = keys[start]!;
+      const last = entries[index - 1]!;
+      start = index;
+      if (groupFooter === true) {
+        footers.set(last.key, {
+          cells: columns.map((col) => (col.footer ? col.footer.call(col, rows) : '')),
+          total: withRowTotal && grandTotal ? grandTotal.call(this, rows) : '',
+        });
+        continue;
+      }
+      if (typeof groupFooter !== 'function') continue;
+      const record = groupFooter(groupKey, rows);
+      if (record === null || typeof record !== 'object') continue;
+      footers.set(last.key, {
+        cells: columns.map((col) => (Object.hasOwn(record, col.key) ? record[col.key] : '')),
+        total: '',
+      });
+    }
+    return footers;
+  });
+
   private readonly pageEntries = createInputMemo((entries: TableRowEntry<T>[], start: number, size: number) =>
     entries.slice(start, start + size));
 
@@ -1973,6 +2030,19 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     }
     if (!this.aggregateValues.has(key)) this.aggregateValues.set(key, callback.call(receiver, rows));
     return this.aggregateValues.get(key);
+  }
+
+  private renderGroupFooter(
+    footer: { cells: unknown[]; total: unknown } | undefined, hasExpand: boolean, hasRowTotal: boolean
+  ): TemplateResult | typeof nothing {
+    if (!footer) return nothing;
+    return html`<tr part="group-footer" role="row" aria-roledescription=${this.localize('tableRowTotal')}>
+      ${hasExpand ? html`<td part="group-footer-cell" role="gridcell" aria-hidden="true"></td>` : nothing}
+      ${this.columns.map(
+        (col, index) => html`<td part="group-footer-cell" role="gridcell" data-col-key=${col.key} data-priority=${col.priority ?? nothing} data-align=${col.align ?? 'start'} data-wrap=${columnWrap(col.wrap) ?? nothing}>${footer.cells[index] ?? ''}</td>`
+      )}
+      ${hasRowTotal ? html`<td part="group-footer-cell" role="gridcell" data-align="end">${footer.total ?? ''}</td>` : nothing}
+    </tr>`;
   }
 
   /** `rows` after filtering and (client-mode) sorting, ignoring pagination -- the same set
@@ -3447,6 +3517,11 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
     const renderedEntries = this.renderedEntries();
     const stacked = this.stacked;
     const renderedGroupKeys = this.groupBy ? renderedEntries.map((entry) => this.groupBy!(entry.row)) : [];
+    const groupFooters =
+      this.groupBy && this.groupFooter
+        ? this.groupFooterValues(this.matchingEntries(), this.groupBy, this.groupFooter, this.columns,
+            this.grandTotal, hasRowTotal, this.effectiveLocale)
+        : undefined;
     const renderedGroupRows = new Map<string | number, T[]>();
     if (this.groupLabel) {
       renderedEntries.forEach((entry, index) => {
@@ -3676,6 +3751,7 @@ export class LyraTable<T = unknown, K extends string | number = string | number>
                               </td>
                             </tr>`
                           : nothing,
+                        this.renderGroupFooter(groupFooters?.get(key), hasExpand, hasRowTotal),
                       ];
                     }
                   )}
