@@ -107,7 +107,7 @@
   "dependencies": {
     "@mapbox/point-geometry": "1.1.0",
     "@mapbox/tiny-sdf": "2.3.0",
-    "@maplibre/maplibre-gl-style-spec": "26.11.0",
+    "@maplibre/maplibre-gl-style-spec": "27.0.0",
     "@types/geojson": "^7946.0.16",
     "gl-matrix": "3.4.4",
     "kdbush": "4.1.0"

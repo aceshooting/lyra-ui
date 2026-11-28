@@ -1554,7 +1554,7 @@ This product includes software developed at
 The Apache Software Foundation (https://www.apache.org/).
 ```
 
-## emoji-picker-element-data 1.8.0
+## emoji-picker-element-data 1.9.0
 
 License: Apache-2.0
 
@@ -3446,7 +3446,7 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
-## maplibre-gl 6.19.0
+## maplibre-gl 6.20.0
 
 License: BSD-3-Clause
 
