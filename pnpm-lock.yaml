@@ -195,6 +195,8 @@ overrides:
   prosemirror-commands@1.7.2>prosemirror-transform: 1.12.4
   prosemirror-state@1.4.4>prosemirror-transform: 1.12.4
   prosemirror-view@1.42.7>prosemirror-transform: 1.12.4
+  fast-xml-builder@1.3.2>xml-naming: 0.3.0
+  fast-xml-parser@5.12.1>xml-naming: 0.3.0
   '@xmldom/xmldom': ^0.8.15
   epubjs@0.3.93>@types/localforage: '-'
   js-yaml@>=3.0.0 <3.15.2: 3.15.2
@@ -6928,8 +6930,8 @@ packages:
     resolution: {integrity: sha512-EvGK8EJ3DhaHfbRlETOWAS5pO9MZITeauHKJyb8wyajUfQUenkIg2MvLDTZ4T/TgIcm3HU0TFBgWWboAZ30UHg==}
     engines: {node: '>=18'}
 
-  xml-naming@0.3.1:
-    resolution: {integrity: sha512-EJ9yNAfjrIz2z7chbVlj4CD3HkPxXNPD6U6LzhKEfIFlRmEHtl7CN6C0qdPGL4hplTuj2wePPgIZN8aklE/2Og==}
+  xml-naming@0.3.0:
+    resolution: {integrity: sha512-ghig2TBE/H11aOVgmahA3MhimvkBr6JIYknH/Dhdk10nXwdbIqBJsbfMxpvFPG8bAw77gN29aQWvKpmVoPlvPQ==}
     engines: {node: '>=16.0.0'}
 
   xml@1.0.1:
@@ -10660,7 +10662,7 @@ snapshots:
   fast-xml-builder@1.3.2:
     dependencies:
       path-expression-matcher: 1.6.2
-      xml-naming: 0.3.1
+      xml-naming: 0.3.0
 
   fast-xml-parser@5.12.1:
     dependencies:
@@ -10669,7 +10671,7 @@ snapshots:
       is-unsafe: 2.0.3
       path-expression-matcher: 1.6.2
       strnum: 2.5.1
-      xml-naming: 0.3.1
+      xml-naming: 0.3.0
 
   fastq@1.20.3:
     dependencies:
@@ -13187,7 +13189,7 @@ snapshots:
 
   xml-name-validator@5.0.0: {}
 
-  xml-naming@0.3.1: {}
+  xml-naming@0.3.0: {}
 
   xml@1.0.1: {}
 
