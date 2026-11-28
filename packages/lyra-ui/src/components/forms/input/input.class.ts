@@ -24,6 +24,9 @@ export type { LyraInputType, LyraInputEventMap } from './input-shared.js';
  * — as do `minlength`/`maxlength`/`pattern`, which constrain the text-bearing types.
  * `type="date"`/`type="datetime-local"`/`type="search"`/`type="tel"`/`type="time"`/`type="url"`
  * forward straight through to the matching native input behavior, the same as `type="text"`.
+ * The date/time types render the browser's native control, whose displayed format follows the
+ * browser/OS locale, not the active Lyra locale; use `<lr-date-input>` for dates formatted in the
+ * active locale, `<lr-time-input>` for a segmented locale-aware time, or `<lr-native-time-input>`.
  *
  * A host `aria-label` is forwarded to the internal textbox via the typed `accessibleLabel` property.
  * A host `aria-describedby` is resolved onto that native input, ahead of its own hint/error/

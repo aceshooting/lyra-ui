@@ -3265,6 +3265,10 @@ shared hit target (42px including the row border at the default theme); `l` and 
 - `type: LyraInputType = 'text'` — `'text' | 'password' | 'email' | 'number' | 'time' | 'search' |
 'date' | 'datetime-local' | 'tel' | 'url'`. Unsupported attribute or direct-property strings
   normalize to reflected `text` before native validity and type-dependent chrome are projected
+  - `date`, `datetime-local` and `time` render the browser's native control, so the displayed format follows
+    the browser/OS locale, not the active Lyra locale (a French UI on an en-US system shows `11/01/2026`). For
+    dates formatted in the active locale use `lr-date-input`; for a segmented locale-aware time use
+    `lr-time-input` (or `lr-native-time-input`).
 - `size: LyraSize = 'm'` (reflected — see "Shared form vocabulary" below)
 - `appearance: 'accent' | 'filled' | 'outlined' | 'filled-outlined' | 'plain' = 'outlined'`
   (reflected) — the shared field-surface vocabulary, painted the same on every text and date field:
