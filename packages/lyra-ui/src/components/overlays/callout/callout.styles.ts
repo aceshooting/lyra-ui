@@ -32,9 +32,15 @@ export const styles = css`
     /* Unset nested callouts inherit the generic semantic and size slots. The second arms are the
        standalone brand/m defaults; explicit attributes re-point the generic slots in the
        contextual vocabulary sheets. */
+    /* The tone the appearances spend: ink (text), edge (border), solid and on-solid (the accent
+       fill and its label). Every variant reads its loud tier, except neutral below. */
+    --_lr-callout-ink: var(--lr-color-fill-loud, var(--lr-color-brand-fill-loud));
+    --_lr-callout-edge: var(--lr-color-fill-loud, var(--lr-color-brand-fill-loud));
+    --_lr-callout-solid: var(--lr-color-fill-loud, var(--lr-color-brand-fill-loud));
+    --_lr-callout-on-solid: var(--lr-color-on-loud, var(--lr-color-brand-on-loud));
     --_lr-callout-background: var(--lr-color-fill-quiet, var(--lr-color-brand-fill-quiet));
-    --_lr-callout-border: var(--lr-color-fill-loud, var(--lr-color-brand-fill-loud));
-    --_lr-callout-color: var(--lr-color-fill-loud, var(--lr-color-brand-fill-loud));
+    --_lr-callout-border: var(--_lr-callout-edge);
+    --_lr-callout-color: var(--_lr-callout-ink);
     --_lr-callout-font-size: var(--lr-form-control-font-size, var(--lr-font-size-m));
     --_lr-callout-padding: var(--lr-form-control-padding-inline, var(--lr-space-m));
     /* Separates three adjacent boxes rather than setting the panel's density, so it deliberately
@@ -64,30 +70,40 @@ export const styles = css`
     font-size: inherit;
   }
 
+  /* The neutral row's loud tier follows the brand in the default look (it is the primary-action
+     colour), so neutral text and borders painted from it read as brand. Neutral keeps the body text
+     colour and the row's normal border, and its accent solid uses the row's normal fill. */
+  :host([variant='neutral']) {
+    --_lr-callout-ink: var(--lr-color-text);
+    --_lr-callout-edge: var(--lr-color-neutral-border-normal);
+    --_lr-callout-solid: var(--lr-color-neutral-fill-normal);
+    --_lr-callout-on-solid: var(--lr-color-neutral-on-normal);
+  }
+
   :host([appearance='filled-outlined']) {
     --_lr-callout-background: var(--lr-color-fill-quiet, var(--lr-color-brand-fill-quiet));
-    --_lr-callout-border: var(--lr-color-fill-loud, var(--lr-color-brand-fill-loud));
-    --_lr-callout-color: var(--lr-color-fill-loud, var(--lr-color-brand-fill-loud));
+    --_lr-callout-border: var(--_lr-callout-edge);
+    --_lr-callout-color: var(--_lr-callout-ink);
   }
   :host([appearance='filled']) {
     --_lr-callout-background: var(--lr-color-fill-quiet, var(--lr-color-brand-fill-quiet));
     --_lr-callout-border: transparent;
-    --_lr-callout-color: var(--lr-color-fill-loud, var(--lr-color-brand-fill-loud));
+    --_lr-callout-color: var(--_lr-callout-ink);
   }
   :host([appearance='outlined']) {
     --_lr-callout-background: transparent;
-    --_lr-callout-border: var(--lr-color-fill-loud, var(--lr-color-brand-fill-loud));
-    --_lr-callout-color: var(--lr-color-fill-loud, var(--lr-color-brand-fill-loud));
+    --_lr-callout-border: var(--_lr-callout-edge);
+    --_lr-callout-color: var(--_lr-callout-ink);
   }
   :host([appearance='accent']) {
-    --_lr-callout-background: var(--lr-color-fill-loud, var(--lr-color-brand-fill-loud));
-    --_lr-callout-border: var(--lr-color-fill-loud, var(--lr-color-brand-fill-loud));
-    --_lr-callout-color: var(--lr-color-on-loud, var(--lr-color-brand-on-loud));
+    --_lr-callout-background: var(--_lr-callout-solid);
+    --_lr-callout-border: var(--_lr-callout-solid);
+    --_lr-callout-color: var(--_lr-callout-on-solid);
   }
   :host([appearance='plain']) {
     --_lr-callout-background: transparent;
     --_lr-callout-border: transparent;
-    --_lr-callout-color: var(--lr-color-fill-loud, var(--lr-color-brand-fill-loud));
+    --_lr-callout-color: var(--_lr-callout-ink);
   }
   [part='icon'] { display: inline-flex; grid-column: 1; margin-inline-end: var(--_lr-callout-item-gap); min-inline-size: 0; max-inline-size: var(--lr-icon-button-size); overflow: hidden; font-size: var(--lr-font-size-lg); line-height: var(--lr-line-height-none); }
   [part='icon'] ::slotted(*) { max-inline-size: 100%; }

@@ -180,7 +180,9 @@ export class LyraCallout extends LyraElement<LyraCalloutEventMap> {
   /** Semantic palette. The property defaults to `brand` without forcing an attribute, allowing an
    *  unset nested callout to inherit its containing semantic context. Explicitly assigning
    *  `brand` reflects it, making the standalone default an intentional local override. Unsupported
-   *  values normalize to `brand`. */
+   *  values normalize to `brand`. An explicit `neutral` paints its text in `--lr-color-text`, its
+   *  border in `--lr-color-neutral-border-normal` and its `accent` solid in the neutral row's normal
+   *  fill, never the neutral loud tier, which follows the brand in the default look. */
   @property({ reflect: true, useDefault: true, converter: CALLOUT_VARIANT })
   get variant(): CalloutVariant {
     return this._variant;

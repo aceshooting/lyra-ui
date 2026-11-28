@@ -3282,7 +3282,12 @@ and padding.
 `--lr-callout-border-color` read the inherited generic semantic quiet/loud slots, with brand quiet/loud
 as their standalone fallback. An explicit `variant` maps all generic slots locally; leaving it
 unset preserves an ancestor's mapping. Explicit `appearance` works with either source and uses the
-same brand fallback when there is no surrounding context. Public callout hooks are consumed at use
+same brand fallback when there is no surrounding context. An explicit `variant="neutral"` is the
+exception to the loud-tier ink: the neutral loud tier follows the brand in the default look, so a
+neutral callout paints its text in `--lr-color-text`, its border in
+`--lr-color-neutral-border-normal`, and its `appearance="accent"` fill and label in
+`--lr-color-neutral-fill-normal` / `--lr-color-neutral-on-normal`, keeping it grey rather than
+brand-coloured. Public callout hooks are consumed at use
 sites through private defaults, so a value inherited from a theme ancestor has the same authority
 as one set directly on the callout. The close button's hover fill defaults to a translucent
 `color-mix(in oklab, transparent, var(--lr-color-mix-partner) var(--lr-color-mix-hover))`, so the

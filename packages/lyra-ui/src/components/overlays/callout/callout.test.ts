@@ -5,6 +5,7 @@ import { ANNOUNCEMENT_SINK_ATTRIBUTE } from '../../../internal/announcer.js';
 import { hoverUntilMatched, resetMouse } from '../../../../test/wtr-mouse.js';
 import '../../lr-callout.js';
 import type { LyraCallout } from '../../lr-callout.js';
+import { contrastRatio, resolvedColorToken, toRgba } from '../../../../test/color-contrast.js';
 
 // These fixtures deliberately verify that retired attributes remain inert.
 expectStaleAttribute('lr-callout', 'accessible-label');
@@ -1066,17 +1067,22 @@ it('inherits contextual variant and size only while their attributes are unset',
   expect(rendered().paddingBlockStart).to.equal('8px');
 });
 
-it('maps explicit neutral to its semantic quiet/loud palette', async () => {
+it('maps explicit neutral to its quiet fill, normal border and body text, never its loud tier', async () => {
   const el = (await fixture(html`
     <lr-callout data-lr-theme-scope
       variant="neutral"
-      style="--lr-color-neutral-fill-quiet: rgb(11, 22, 33); --lr-color-neutral-fill-loud: rgb(44, 55, 66)"
+      style="
+        --lr-color-neutral-fill-quiet: rgb(11, 22, 33);
+        --lr-color-neutral-fill-loud: rgb(44, 55, 66);
+        --lr-color-neutral-border-normal: rgb(77, 88, 99);
+        --lr-color-text: rgb(200, 201, 202);
+      "
     >Neutral</lr-callout>
   `)) as LyraCallout;
   const rendered = getComputedStyle(el);
   expect(rendered.backgroundColor).to.equal('rgb(11, 22, 33)');
-  expect(rendered.borderColor).to.equal('rgb(44, 55, 66)');
-  expect(rendered.color).to.equal('rgb(44, 55, 66)');
+  expect(rendered.borderColor).to.equal('rgb(77, 88, 99)');
+  expect(rendered.color).to.equal('rgb(200, 201, 202)');
 });
 
 it('gives close-button a rendered hover state', async () => {
@@ -1501,3 +1507,39 @@ for (const update of ['open', 'closable', 'remove'] as const) {
     expect(commits).to.equal(0);
   });
 }
+
+describe('neutral variant palette', () => {
+  const appearances = [undefined, 'filled', 'outlined', 'accent', 'plain', 'filled-outlined'] as const;
+
+  for (const mode of ['lr-light', 'lr-dark'] as const) {
+    it(`keeps neutral text and border off the brand colour with readable text (${mode})`, async () => {
+      const wrapper = await fixture(html`
+        <div class=${mode}>
+          <lr-callout variant="neutral">Neutral note</lr-callout>
+          <lr-callout variant="success">Success note</lr-callout>
+        </div>
+      `);
+      const [neutral, success] = Array.from(wrapper.querySelectorAll('lr-callout')) as LyraCallout[];
+      const brand = toRgba(resolvedColorToken(wrapper, '--lr-color-brand-fill-loud')).join();
+      const surface = resolvedColorToken(wrapper, '--lr-color-surface');
+
+      for (const appearance of appearances) {
+        if (appearance) neutral!.appearance = appearance;
+        await neutral!.updateComplete;
+        const style = getComputedStyle(neutral!);
+        const label = `${mode} ${appearance ?? 'default'}`;
+        expect(toRgba(style.color).join(), `${label} text`).to.not.equal(brand);
+        if (toRgba(style.borderTopColor)[3] !== 0) {
+          expect(toRgba(style.borderTopColor).join(), `${label} border`).to.not.equal(brand);
+        }
+        const background = toRgba(style.backgroundColor)[3] === 0 ? surface : style.backgroundColor;
+        expect(contrastRatio(style.color, background), `${label} contrast`).to.be.at.least(4.5);
+      }
+
+      // Every other variant still paints from its own loud fill.
+      const successLoud = resolvedColorToken(wrapper, '--lr-color-success-fill-loud');
+      expect(getComputedStyle(success!).color).to.equal(successLoud);
+      expect(getComputedStyle(success!).borderTopColor).to.equal(successLoud);
+    });
+  }
+});
