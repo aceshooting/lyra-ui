@@ -14573,7 +14573,7 @@
       "module": "src/custom-elements-jsx.ts",
       "exportName": "LyraReactIntrinsicElements",
       "kind": "interface",
-      "fingerprint": "55cbe2c0666819cfa76b",
+      "fingerprint": "1c2f139b6abbce93e63a",
       "routes": [
         "src/custom-elements-jsx.ts"
       ],
@@ -16255,7 +16255,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraElementTagNameMap",
       "kind": "interface",
-      "fingerprint": "5bddbfa2dde38deadbd7",
+      "fingerprint": "a6e8fb70e8e654c05a68",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16271,7 +16271,7 @@
       "module": "src/svelte.ts",
       "exportName": "LyraSvelteElements",
       "kind": "interface",
-      "fingerprint": "eddf1f1a8f9c0a19e5c8",
+      "fingerprint": "2cfe456788556cdf1282",
       "routes": [
         "src/svelte.ts"
       ],
@@ -16486,7 +16486,7 @@
       "module": "src/theme/theme.ts",
       "exportName": "createLyraThemeBootstrap",
       "kind": "function",
-      "fingerprint": "aa4950128d2707a871dd",
+      "fingerprint": "fb9d27e4dd5143d9bb1d",
       "routes": [
         "src/theme/theme.ts"
       ],
@@ -16502,7 +16502,7 @@
       "module": "src/theme/theme.ts",
       "exportName": "LyraThemeBootstrapOptions",
       "kind": "interface",
-      "fingerprint": "68690da133e5147ea547",
+      "fingerprint": "22901f4c0fb292bb1e65",
       "routes": [
         "src/theme/theme.ts"
       ],
@@ -16831,7 +16831,7 @@
       "module": "src/vue.ts",
       "exportName": "LyraVueGlobalComponents",
       "kind": "interface",
-      "fingerprint": "4b3cfbbe7b11ca28ccb5",
+      "fingerprint": "6494112e6543147562d1",
       "routes": [
         "src/vue.ts"
       ],
@@ -17223,7 +17223,7 @@
       "module": "src/framework-types.ts",
       "exportName": "LyraComponentTypeMap",
       "kind": "interface",
-      "fingerprint": "f17493db8b5904476b7a",
+      "fingerprint": "7650633baabfc5e1e115",
       "routes": [
         "src/framework-types.ts"
       ],
@@ -18571,7 +18571,7 @@
       "module": "src/theme/theme.ts",
       "exportName": "startLyraStyle",
       "kind": "function",
-      "fingerprint": "2bad03a81b1b4984c431",
+      "fingerprint": "ed3a0ac057e066d4f96e",
       "routes": [
         "src/theme/theme.ts"
       ],
@@ -23561,6 +23561,25 @@
         "kind": "utility",
         "name": "components-data-calendar-calendar-contracts",
         "declaration": "LyraCalendarDayContext"
+      }
+    },
+    {
+      "module": "src/theme/theme.ts",
+      "exportName": "LyraStyleStartOptions",
+      "kind": "interface",
+      "fingerprint": "cca6454b6c9a7d3e83b5",
+      "routes": [
+        "src/all.ts",
+        "src/lyra.ts",
+        "src/ssr/all.ts",
+        "src/theme/theme.ts"
+      ],
+      "document": "llms/shared.md",
+      "family": "shared",
+      "locator": {
+        "kind": "utility",
+        "name": "theme-theme-contracts",
+        "declaration": "LyraStyleStartOptions"
       }
     }
   ],
