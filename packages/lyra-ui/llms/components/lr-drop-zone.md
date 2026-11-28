@@ -30,7 +30,8 @@ reimplemented.
 
 **Properties:**
 
-- `disabled: boolean = false` (reflected) — disables drag/drop handling entirely; the wrapped
+- `disabled: boolean = false` (reflected) — disables drag/drop handling entirely, leaving every
+  drag's native behavior (including the browser's own file-drop handling) in place; the wrapped
   content keeps its own interactivity
 - `multiple: boolean = false` (reflected) — opts into more than one file per drop and recursive
   folder-drop traversal, matching `lr-file-input`. Explicit `multiple="false"` remains false;
@@ -55,8 +56,9 @@ reimplemented.
   caller-owned outcome copy with `{count}`; unset uses the localized default.
 - `for: string = ''` — id of an existing element, resolved in the zone's own root (like a label's
   `for`), to attach to instead of the default slot. The zone then handles drags over that element,
-  lays its overlay over the element's box (a fixed box measured from the element, also correct
-  inside a transformed ancestor, following a region that scrolls mid-drag), adds no box of its own
+  lays its overlay over the element's box (a fixed box measured from the element and clamped to
+  the viewport, so a region taller than the viewport keeps the message on screen; also correct
+  inside a transformed ancestor, re-measured on scroll and resize during the drag), adds no box of its own
   (`display: contents`) and still emits `lr-files` from itself. An id matching nothing binds nothing
   and is re-resolved when elements or ids in the root change, so a region rendered later is picked
   up. The default slot is not a drop target while a target is bound.
@@ -150,11 +152,14 @@ layout tree, and the zone's script can load after first paint:
 
 **Known gotchas:**
 
-- In `for`/`target` mode the overlay is a fixed box at the content layer (`--lr-layer-content`)
-  painted in the zone's own place in the tree; when the region has positioned descendants with a
-  higher `z-index`, raise the overlay with `::part(overlay) { z-index: … }`. The overlay never takes
-  pointer events, so drags keep reaching the region. A visible `rejection` list renders where the
-  zone itself sits.
+- Only file drags are claimed: a text or link drag (and any drag while `disabled`) is left to the
+  browser, so an `<input>` or `<textarea>` inside a large region still accepts ordinary drops. The
+  zone accepts no non-file payloads.
+- In `for`/`target` mode the overlay is a fixed box stacked by `--lr-drop-zone-overlay-z-index`
+  (default `var(--lr-layer-dropdown)`) and painted in the zone's own place in the tree; when the
+  region has positioned descendants stacked higher, raise that token on the zone rather than
+  overriding `::part(overlay)`. The overlay never takes pointer events, so drags keep reaching the
+  region. A visible `rejection` list renders where the zone itself sits.
 - No paste-from-clipboard handling (unlike `lr-file-input`, which accepts pasted files unless
   `without-paste` is set) — this component is drag/drop only.
 - Dragged folders are traversed recursively while `multiple` (not the default here), with the same

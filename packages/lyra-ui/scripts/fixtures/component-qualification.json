@@ -60804,8 +60804,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/overlays/toast/toast.test.ts",
-              "test": "keeps an English message and action in logical order inside an RTL page",
+              "file": "src/components/overlays/toast/toast-item.test.ts",
+              "line": 2286,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -60826,8 +60826,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/overlays/toast/toast.test.ts",
-              "test": "positions every logical placement inside an asymmetric safe-area rectangle at 319px and 320px",
+              "file": "src/components/overlays/toast/toast-item.test.ts",
+              "test": "centres a one-line message on the close control and top-aligns a wrapped one (${dir})",
               "kind": "320px allocation test signal"
             }
           ]
@@ -60901,7 +60901,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast-item.class.ts",
-              "line": 525,
+              "line": 530,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],
@@ -61004,8 +61004,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/overlays/toast/toast.test.ts",
-              "test": "keeps an English message and action in logical order inside an RTL page",
+              "file": "src/components/overlays/toast/toast-item.test.ts",
+              "line": 2286,
               "kind": "rendered RTL test signal"
             }
           ]
@@ -61026,8 +61026,8 @@
           "status": "source-evidence",
           "evidence": [
             {
-              "file": "src/components/overlays/toast/toast.test.ts",
-              "test": "positions every logical placement inside an asymmetric safe-area rectangle at 319px and 320px",
+              "file": "src/components/overlays/toast/toast-item.test.ts",
+              "test": "centres a one-line message on the close control and top-aligns a wrapped one (${dir})",
               "kind": "320px allocation test signal"
             }
           ]
@@ -61090,7 +61090,7 @@
           "evidence": [
             {
               "file": "src/components/overlays/toast/toast-item.class.ts",
-              "line": 525,
+              "line": 530,
               "kind": "remote-content or trust-boundary source signal"
             }
           ],

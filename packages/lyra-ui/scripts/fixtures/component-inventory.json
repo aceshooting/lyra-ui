@@ -166742,6 +166742,12 @@
             "default": "var(--lr-transition-base, 180ms ease-out)"
           },
           {
+            "name": "--lr-toast-icon-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
+          },
+          {
             "name": "--lr-toast-inset-block",
             "deprecated": null,
             "hasDefault": true,
@@ -167237,6 +167243,12 @@
             "deprecated": null,
             "hasDefault": true,
             "default": "var(--lr-transition-base, 180ms ease-out)"
+          },
+          {
+            "name": "--lr-toast-icon-color",
+            "deprecated": null,
+            "hasDefault": true,
+            "default": "var(--lr-color-text-quiet)"
           },
           {
             "name": "--lr-toast-item-gap",
