@@ -54,6 +54,10 @@ export interface LyraBuildCsvOptions {
    *  makes Excel detect UTF-8 and decode correctly. Google Sheets, LibreOffice, and Numbers
    *  already sniff UTF-8 correctly with or without it. Defaults to `false` (no BOM is written). Never apply this to JSON -- RFC 8259 forbids a BOM there. */
   readonly bom?: boolean;
+  /** Field separator; an empty string falls back to `,`. Defaults to `,`. */
+  readonly delimiter?: string;
+  /** Row terminator. Defaults to CRLF (`\r\n`). */
+  readonly lineEnding?: string;
 }
 
 /** Builds a CRLF-joined CSV string with a header row, optionally prefixed with a UTF-8
@@ -63,9 +67,12 @@ export function buildCsv(
   columns: readonly LyraCsvColumn[],
   options?: LyraBuildCsvOptions,
 ): string {
-  const header = columns.map((c) => escapeCsvField(c.label)).join(',');
-  const body = rows.map((row) => columns.map((c) => escapeCsvField(row[c.key])).join(','));
-  const csv = [header, ...body].join('\r\n');
+  const delimiter = options?.delimiter || ',';
+  const lineEnding = options?.lineEnding || '\r\n';
+  const field = (value: unknown): string => escapeDelimitedField(value, { delimiter });
+  const header = columns.map((c) => field(c.label)).join(delimiter);
+  const body = rows.map((row) => columns.map((c) => field(row[c.key])).join(delimiter));
+  const csv = [header, ...body].join(lineEnding);
   return options?.bom ? UTF8_BOM + csv : csv;
 }
 

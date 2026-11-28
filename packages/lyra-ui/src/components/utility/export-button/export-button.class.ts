@@ -1,6 +1,6 @@
 import { GlassScrollLayer } from '../../../internal/glass-scroll-layer.js';
 import { waitForTransitionSettle } from '../../../internal/css-motion-time.js';
-import { html, nothing, type TemplateResult, type PropertyValues } from 'lit';
+import { html, nothing, type ComplexAttributeConverter, type TemplateResult, type PropertyValues } from 'lit';
 import { property, query, state } from 'lit/decorators.js';
 import { repeat } from 'lit/directives/repeat.js';
 import { LyraElement } from '../../../internal/lyra-element.js';
@@ -44,6 +44,27 @@ import { LYRA_DEFAULT_exportButtonLabel, LYRA_DEFAULT_exportFailed, LYRA_DEFAULT
 // GENERATED DEFAULT-STRING SLICE IMPORT: END
 
 export type LyraExportFormat = 'csv' | 'json';
+
+/** Field separator of the built-in CSV download; `'auto'` picks `';'` when the effective locale's decimal separator is a comma, else `','`. */
+export type LyraExportDelimiter = ',' | ';' | '\t' | 'auto';
+
+/** Row terminator of the built-in CSV download. */
+export type LyraExportLineEnding = '\n' | '\r\n';
+
+const EXPORT_DELIMITER: ComplexAttributeConverter<LyraExportDelimiter> = {
+  fromAttribute: (value) => {
+    const v = (value ?? '').trim().toLowerCase();
+    if (v === 'tab' || v === '\t') return '\t';
+    return v === ';' || v === 'auto' ? v : ',';
+  },
+};
+
+const EXPORT_LINE_ENDING: ComplexAttributeConverter<LyraExportLineEnding> = {
+  fromAttribute: (value) => {
+    const v = (value ?? '').trim().toLowerCase();
+    return v === 'lf' || v === '\n' ? '\n' : '\r\n';
+  },
+};
 
 /** The export trigger's compact treatments. Unset preserves its established chrome. */
 export type LyraExportButtonAppearance = Extract<LyraAppearance, 'outlined' | 'plain'> | 'quiet';
@@ -307,6 +328,14 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
    *  LibreOffice, and Numbers already sniff UTF-8 correctly with or without it. Never applies to
    *  the built-in JSON download -- RFC 8259 forbids a BOM there. */
   @property({ type: Boolean, reflect: true }) bom = false;
+  /** Field separator of the built-in CSV download: `','` (default), `';'`, `'\t'` (attribute `tab`)
+   *  or `'auto'` (`';'` when the effective locale's decimal separator is a comma, else `','`).
+   *  A field containing the active delimiter, a quote, CR or LF is quoted. Unknown values behave
+   *  as `','`. Never applies to JSON. */
+  @property({ converter: EXPORT_DELIMITER }) delimiter: LyraExportDelimiter = ',';
+  /** Row terminator of the built-in CSV download: `'\r\n'` (default, attribute `crlf`) or `'\n'`
+   *  (attribute `lf`). Never applies to JSON. */
+  @property({ attribute: 'line-ending', converter: EXPORT_LINE_ENDING }) lineEnding: LyraExportLineEnding = '\r\n';
   private _formats: readonly LyraExportFormatOption[] = Object.freeze(['csv']);
   private formatsSource?: unknown;
 
@@ -826,6 +855,18 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
    *  only the JSON path having one. Takes the rows the current download resolved rather than
    *  reading `this.rows`, so a lazy `getRows` source derives its own header row instead of one
    *  built from a stale eager property. */
+  private resolveCsvDelimiter(): string {
+    const d = this.delimiter;
+    if (d === ';' || d === '\t') return d;
+    if (d !== 'auto') return ',';
+    try {
+      const decimal = new Intl.NumberFormat(this.effectiveLocale).formatToParts(1.1).find((p) => p.type === 'decimal');
+      return decimal?.value === ',' ? ';' : ',';
+    } catch {
+      return ',';
+    }
+  }
+
   private effectiveColumns(rows: readonly Readonly<Record<string, unknown>>[]): readonly Readonly<LyraCsvColumn>[] {
     if (this.columns.length > 0) return this.columns;
     const keys = new Set<string>();
@@ -893,7 +934,11 @@ export class LyraExportButton extends LyraElement<LyraExportButtonEventMap> {
       if (generation !== this.connectionGeneration) return;
       const csv = format === 'csv';
       const contents = csv
-        ? buildCsv(this.rowsForExport(rows), this.effectiveColumns(rows), { bom: this.bom })
+        ? buildCsv(this.rowsForExport(rows), this.effectiveColumns(rows), {
+          bom: this.bom,
+          delimiter: this.resolveCsvDelimiter(),
+          lineEnding: this.lineEnding === '\n' ? '\n' : '\r\n',
+        })
         : JSON.stringify(this.rowsForExport(rows), null, 2);
       if (generation !== this.connectionGeneration) return;
       downloadBlob(

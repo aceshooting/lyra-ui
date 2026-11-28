@@ -4,6 +4,7 @@ import { render } from 'lit';
 import { sendKeys } from '@web/test-runner-commands';
 import { focusByKeyboard } from '../../../../test/wtr-focus.js';
 import '../../lr-export-button.js';
+import { LYRA_DEFAULT_STRINGS, registerLyraLocale } from '../../../internal/localization.js';
 import type {
   LyraExportButton,
   LyraExportFormatDescriptor,
@@ -2331,4 +2332,85 @@ it('uses the configured interaction transition on the trigger and menu options',
     const button = el.shadowRoot!.querySelector<HTMLElement>(`[part~="${part}"]`)!;
     expect(getComputedStyle(button).transitionDuration).to.equal('0.123s');
   }
+});
+
+async function exportedCsv(el: LyraExportButton): Promise<string> {
+  await el.updateComplete;
+  const trigger = el.shadowRoot!.querySelector('[part="trigger"]') as HTMLButtonElement;
+  const originalCreateObjectURL = URL.createObjectURL.bind(URL);
+  let capturedBlob: Blob | undefined;
+  URL.createObjectURL = (blob: Blob) => {
+    capturedBlob = blob;
+    return originalCreateObjectURL(blob);
+  };
+  const completeEvent = oneEvent(el, 'lr-export-complete');
+  try {
+    trigger.click();
+    await completeEvent;
+  } finally {
+    URL.createObjectURL = originalCreateObjectURL;
+  }
+  return decodeKeepingBom(await capturedBlob!.arrayBuffer());
+}
+
+describe('lr-export-button delimiter and line ending', () => {
+  const data = [{ id: 'a;b', name: 'x,y', note: 'q"r' }];
+  const cols = [
+    { key: 'id', label: 'ID' },
+    { key: 'name', label: 'Name' },
+    { key: 'note', label: 'Note' },
+  ];
+
+  it('keeps the default output (comma, CRLF) unchanged when unset', async () => {
+    const el = (await fixture(html`<lr-export-button></lr-export-button>`)) as LyraExportButton;
+    el.rows = data;
+    el.columns = cols;
+    expect(el.delimiter).to.equal(',');
+    expect(el.lineEnding).to.equal('\r\n');
+    expect(await exportedCsv(el)).to.equal('ID,Name,Note\r\na;b,"x,y","q""r"');
+  });
+
+  it('uses a semicolon and quotes only fields containing it', async () => {
+    const el = (await fixture(html`<lr-export-button delimiter=";"></lr-export-button>`)) as LyraExportButton;
+    el.rows = data;
+    el.columns = cols;
+    expect(await exportedCsv(el)).to.equal('ID;Name;Note\r\n"a;b";x,y;"q""r"');
+  });
+
+  it('accepts the tab alias attribute and the literal tab property', async () => {
+    const el = (await fixture(html`<lr-export-button delimiter="tab"></lr-export-button>`)) as LyraExportButton;
+    expect(el.delimiter).to.equal('\t');
+    el.rows = data;
+    el.columns = cols;
+    expect(await exportedCsv(el)).to.equal('ID\tName\tNote\r\na;b\tx,y\t"q""r"');
+  });
+
+  it('auto picks semicolon for a comma-decimal locale and comma otherwise', async () => {
+    registerLyraLocale('de-x-csv', { ...LYRA_DEFAULT_STRINGS });
+    const de = (await fixture(html`<lr-export-button delimiter="auto" lang="de-x-csv"></lr-export-button>`)) as LyraExportButton;
+    de.rows = rows;
+    de.columns = columns;
+    expect(await exportedCsv(de)).to.equal('ID;Name\r\na;Alpha');
+    const en = (await fixture(html`<lr-export-button delimiter="auto" lang="en"></lr-export-button>`)) as LyraExportButton;
+    en.rows = rows;
+    en.columns = columns;
+    expect(await exportedCsv(en)).to.equal('ID,Name\r\na,Alpha');
+  });
+
+  it('supports lf and crlf line endings and quotes embedded line breaks', async () => {
+    const el = (await fixture(html`<lr-export-button line-ending="lf"></lr-export-button>`)) as LyraExportButton;
+    expect(el.lineEnding).to.equal('\n');
+    el.rows = [{ id: 'a', name: 'l1\nl2' }];
+    el.columns = columns;
+    expect(await exportedCsv(el)).to.equal('ID,Name\na,"l1\nl2"');
+    el.lineEnding = '\r\n';
+    expect(await exportedCsv(el)).to.equal('ID,Name\r\na,"l1\nl2"');
+  });
+
+  it('still guards formula injection under a custom delimiter', async () => {
+    const el = (await fixture(html`<lr-export-button delimiter=";"></lr-export-button>`)) as LyraExportButton;
+    el.rows = [{ id: '=1+1', name: 'ok' }];
+    el.columns = columns;
+    expect(await exportedCsv(el)).to.equal("ID;Name\r\n'=1+1;ok");
+  });
 });

@@ -36,6 +36,13 @@ export const SingleFormat: Story = {
   `,
 };
 
+/** Semicolon-separated CSV for spreadsheet apps in comma-decimal locales; `delimiter="auto"` derives it from the locale. */
+export const SemicolonDelimiter: Story = {
+  render: () => html`
+    <lr-export-button filename="demo" delimiter=";" bom .rows=${rows} .columns=${columns}></lr-export-button>
+  `,
+};
+
 /** Empty caller-owned visible copy keeps the localized default as the native button's name. */
 export const EmptyVisibleLabel: Story = {
   parameters: {
