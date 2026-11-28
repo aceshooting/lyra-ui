@@ -102,6 +102,9 @@ export interface LyraToastEventMap {
  *   Read by `<lr-toast-item>`'s own stylesheet, so set it on the item.
  * @cssprop [--lr-toast-accent-color=var(--lr-color-border)] - Accent bar / icon color of a slotted
  *   item. Its private default follows `variant`; an inherited or direct public value wins.
+ * @cssprop [--lr-toast-icon-color=var(--lr-color-text-quiet)] - Icon-only color of a slotted
+ *   item, ahead of `--lr-toast-accent-color`. Its private default follows `variant` (quiet text
+ *   for `neutral`, the loud fill otherwise); an inherited or direct public value wins.
  * @cssprop [--lr-toast-padding=var(--lr-space-m)] - Padding of a slotted item. Its private default
  *   follows `size`; an inherited or direct public value wins.
  * @cssprop [--lr-toast-font-size=var(--lr-font-size-m)] - Font size of a slotted item. Its private

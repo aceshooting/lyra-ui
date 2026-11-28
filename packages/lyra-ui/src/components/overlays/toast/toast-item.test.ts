@@ -2227,3 +2227,85 @@ it('exposes the upstream progress-ring__progress-ring part on the ring SVG and s
   expect(getComputedStyle(ring).opacity).to.equal('0.5');
   el.duration = 0;
 });
+
+const iconSquare = () => html`<span slot="icon" style="display:block;inline-size:16px;block-size:16px;background:currentColor"></span>`;
+
+it('paints a neutral slotted icon in the quiet text tone while the accent keeps its border colour', async () => {
+  const el = await fixture<LyraToastItem>(html`<lr-toast-item with-icon duration="0">${iconSquare()}Saved</lr-toast-item>`);
+  const icon = el.shadowRoot!.querySelector<HTMLElement>('[part="icon"]')!;
+  const accent = el.shadowRoot!.querySelector<HTMLElement>('[part="accent"]')!;
+  const probe = document.createElement('span');
+  probe.style.color = 'var(--lr-color-text-quiet)';
+  probe.style.backgroundColor = 'var(--lr-color-border)';
+  el.shadowRoot!.append(probe);
+  const quiet = getComputedStyle(probe).color;
+  const border = getComputedStyle(probe).backgroundColor;
+  probe.remove();
+  expect(toRgba(getComputedStyle(icon).color)).to.deep.equal(toRgba(quiet));
+  expect(toRgba(getComputedStyle(accent).backgroundColor)).to.deep.equal(toRgba(border));
+});
+
+it('keeps each non-neutral icon on the accent colour', async () => {
+  for (const variant of ['brand', 'success', 'warning', 'danger'] as const) {
+    const el = await fixture<LyraToastItem>(html`<lr-toast-item variant=${variant} with-icon duration="0">${iconSquare()}Saved</lr-toast-item>`);
+    const icon = getComputedStyle(el.shadowRoot!.querySelector<HTMLElement>('[part="icon"]')!).color;
+    const accent = getComputedStyle(el.shadowRoot!.querySelector<HTMLElement>('[part="accent"]')!).backgroundColor;
+    expect(toRgba(icon), variant).to.deep.equal(toRgba(accent));
+  }
+});
+
+it('resolves --lr-toast-icon-color ahead of --lr-toast-accent-color for the icon only', async () => {
+  const el = await fixture<LyraToastItem>(html`<lr-toast-item with-icon duration="0" style="--lr-toast-accent-color: rgb(1, 2, 3)">${iconSquare()}Saved</lr-toast-item>`);
+  const icon = el.shadowRoot!.querySelector<HTMLElement>('[part="icon"]')!;
+  const accent = el.shadowRoot!.querySelector<HTMLElement>('[part="accent"]')!;
+  expect(toRgba(getComputedStyle(icon).color), 'accent hook still reaches the icon').to.deep.equal([1, 2, 3, 255]);
+  el.style.setProperty('--lr-toast-icon-color', 'rgb(4, 5, 6)');
+  expect(toRgba(getComputedStyle(icon).color)).to.deep.equal([4, 5, 6, 255]);
+  expect(toRgba(getComputedStyle(accent).backgroundColor), 'the accent bar ignores the icon hook').to.deep.equal([1, 2, 3, 255]);
+});
+
+it('paints the default slotted icon at 3:1 non-text contrast in every variant and color scheme', async () => {
+  const surfaces = new Set<string>();
+  for (const scheme of ['light', 'dark']) {
+    for (const variant of ['neutral', 'brand', 'success', 'warning', 'danger'] as const) {
+      const el = await fixture<LyraToastItem>(html`
+        <lr-toast-item data-lr-theme=${scheme} variant=${variant} with-icon duration="0">${iconSquare()}Saved</lr-toast-item>
+      `);
+      const surface = el.shadowRoot!.querySelector('[part="toast-item"]')!;
+      const ratio = contrastRatio(
+        getComputedStyle(el.shadowRoot!.querySelector('[part="icon"]')!).color,
+        getComputedStyle(surface).backgroundColor,
+      );
+      expect(ratio, `${variant} ${scheme}`).to.be.at.least(3);
+      surfaces.add(toRgba(getComputedStyle(surface).backgroundColor).join());
+    }
+  }
+  expect(surfaces.size, 'both schemes must resolve distinct surfaces').to.be.at.least(2);
+});
+
+for (const dir of ['ltr', 'rtl'] as const) {
+  it(`centres a one-line message on the close control and top-aligns a wrapped one (${dir})`, async () => {
+    const wrapper = await fixture<HTMLElement>(html`
+      <div dir=${dir} style="inline-size: 320px">
+        <lr-toast-item with-icon duration="60000">${iconSquare()}<span class="msg" style="display: inline-block">Saved</span></lr-toast-item>
+        <lr-toast-item with-icon duration="60000">${iconSquare()}<span class="msg" style="display: inline-block">${'A long notification that wraps onto several lines of text. '.repeat(3)}</span></lr-toast-item>
+      </div>
+    `);
+    const [single, multi] = Array.from(wrapper.querySelectorAll<LyraToastItem>('lr-toast-item'));
+    await waitUntil(() => single!.hasAttribute('data-visible') && multi!.hasAttribute('data-visible'));
+    const centre = (rect: DOMRect): number => rect.top + rect.height / 2;
+    const parts = (item: LyraToastItem) => ({
+      text: item.querySelector('.msg')!.getBoundingClientRect(),
+      close: item.shadowRoot!.querySelector('[part="close-button"]')!.getBoundingClientRect(),
+      icon: item.querySelector('[slot="icon"]')!.getBoundingClientRect(),
+    });
+    const one = parts(single!);
+    expect(one.close.height, 'close control is taller than one text line').to.be.greaterThan(one.text.height);
+    expect(Math.abs(centre(one.text) - centre(one.close)), 'one-line text centre').to.be.at.most(1);
+    expect(Math.abs(centre(one.icon) - centre(one.close)), 'icon centre').to.be.at.most(1);
+    const many = parts(multi!);
+    expect(many.text.height, 'the long message wraps').to.be.greaterThan(many.close.height);
+    expect(Math.abs(many.text.top - many.close.top), 'wrapped text starts at the close control top').to.be.at.most(1);
+    expect(many.close.bottom, 'close control stays at the top').to.be.lessThan(many.text.bottom - 1);
+  });
+}

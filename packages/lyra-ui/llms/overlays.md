@@ -281,8 +281,17 @@ auto-dismiss timer on hover or focus.
 transition duration and uses it for its completion fallback), `--lr-toast-padding`
 (`var(--lr-space-m)`) and `--lr-toast-font-size` (`var(--lr-font-size-m)`) — their private defaults
 follow `size`, from a compact `2xs` up to a roomier `xl` — and `--lr-toast-accent-color` (default
-`var(--lr-color-border)`, with a private default that follows `variant` to that variant's loud
-fill). Inherited or direct public values remain authoritative across every size and variant.
+`var(--lr-color-border)`, with a private default that follows each non-neutral `variant` to that
+variant's loud fill; `neutral` keeps the border color) for the accent bar and progress indicator.
+The slotted icon reads `--lr-toast-icon-color` first (icon only, default `var(--lr-color-text-quiet)`),
+then a set `--lr-toast-accent-color`, then a private default: the loud fill for non-neutral variants
+and the quiet text tone for `neutral`, whose faint border color would fall below 3:1 non-text
+contrast. Inherited or direct public values remain authoritative across every size and variant.
+
+The row aligns its items to the start, and the message part stretches to the row and centers its
+content, so a one-line message sits on the close control's centre line while a wrapped message
+starts at the top beside the close control. The icon wrapper is one close-control-tall band
+(`--lr-icon-button-size`), centering the glyph on that same line.
 
 `--lr-toast-item-gap` (default `var(--lr-space-s)`) controls the gap between the item's icon,
 message, and close action; `--lr-toast-item-radius` (default `var(--lr-radius-container)`) controls the item

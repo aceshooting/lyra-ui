@@ -139,10 +139,15 @@ export interface LyraToastItemEventMap {
  * @cssprop --show-duration - Mapped alias for `--lr-toast-show-duration`.
  * @cssprop [--lr-toast-accent-width=var(--lr-size-4px)] - Width of the accent bar, and the extra
  *   inline-start padding reserved for it.
- * @cssprop [--lr-toast-accent-color=var(--lr-color-border)] - Color of the accent bar and the icon.
- *   Its private default follows each non-neutral `variant`'s loud fill from the shared semantic
- *   grid; `neutral` keeps the plain border color, so an informational toast reads as unaccented.
- *   An inherited or direct public value remains authoritative.
+ * @cssprop [--lr-toast-accent-color=var(--lr-color-border)] - Color of the accent bar, the
+ *   progress indicator and, unless `--lr-toast-icon-color` is set, the icon. Its private default
+ *   follows each non-neutral `variant`'s loud fill from the shared semantic grid; `neutral` keeps
+ *   the plain border color, so an informational toast reads as unaccented. An inherited or direct
+ *   public value remains authoritative.
+ * @cssprop [--lr-toast-icon-color=var(--lr-color-text-quiet)] - Color of the slotted icon only,
+ *   ahead of `--lr-toast-accent-color`. Unset, the icon follows a set `--lr-toast-accent-color`;
+ *   otherwise each non-neutral `variant` paints it in that variant's loud fill and `neutral` in the
+ *   quiet text tone, keeping 3:1 non-text contrast where the neutral accent border would not.
  * @cssprop [--lr-toast-padding=var(--lr-space-m)] - Padding of the item. Its private default follows
  *   `size` across the shared six-step ladder; an inherited or direct public value wins.
  * @cssprop [--lr-toast-font-size=var(--lr-font-size-m)] - Font size of the item. Its private default

@@ -97,3 +97,27 @@ export const DismissalReason: StoryObj = {
     <output aria-label="Dismissal reason"></output>
   </div>`,
 };
+
+const infoGlyph = html`<svg slot="icon" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v6M12 7.5v.5"></path></svg>`;
+
+export const IconColorAndAlignment: StoryObj = {
+  name: 'Icon colour and alignment (cssprops)',
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'A neutral icon takes the quiet text tone while its accent bar stays unaccented; other variants paint it in their loud fill. `--lr-toast-icon-color` recolours the icon alone. One-line messages centre on the close control; wrapped ones start at the top.',
+      },
+    },
+  },
+  render: () => html`
+    <div style="display: grid; gap: var(--lr-space-s); inline-size: var(--lr-size-20rem);">
+      <lr-toast-item with-icon duration="60000">${infoGlyph}Saved.</lr-toast-item>
+      <lr-toast-item with-icon duration="60000" variant="success">${infoGlyph}Upload complete.</lr-toast-item>
+      <lr-toast-item with-icon duration="60000" style="--lr-toast-icon-color: var(--lr-color-brand);">${infoGlyph}Icon-only colour hook.</lr-toast-item>
+      <lr-toast-item with-icon duration="0" variant="warning">
+        ${infoGlyph}A longer message wraps onto several lines and stays aligned to the top, beside the close control.
+      </lr-toast-item>
+    </div>
+  `,
+};

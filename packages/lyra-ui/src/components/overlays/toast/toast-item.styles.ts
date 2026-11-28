@@ -19,6 +19,9 @@ export const styles = css`
     --_lr-toast-padding: var(--padding, var(--lr-space-m));
     --_lr-toast-font-size: var(--lr-font-size-m);
     --_lr-toast-accent-color: var(--lr-color-border);
+    /* The neutral accent border is a deliberately faint stripe, below the 3:1 non-text contrast a
+       slotted icon needs against the surface; the icon takes the quiet text tone instead. */
+    --_lr-toast-icon-color: var(--lr-color-text-quiet);
   }
   /* One rule for all four non-neutral variants: the shared variants sheet already points
      --lr-color-fill-* at the active variant's semantic-grid row. Neutral is excluded, not mapped,
@@ -27,6 +30,7 @@ export const styles = css`
      neutral. */
   :host([variant]:not([variant="neutral"])) {
     --_lr-toast-accent-color: var(--lr-color-fill-loud);
+    --_lr-toast-icon-color: var(--lr-color-fill-loud);
   }
   :host([data-effective-size="2xs"]) {
     --_lr-toast-padding: var(--padding, var(--lr-space-2xs));
@@ -112,13 +116,24 @@ export const styles = css`
     flex: 0 1 auto;
     min-inline-size: 0;
     max-inline-size: var(--lr-icon-button-size);
+    /* One close-control-tall band at the row start, centering the glyph on the close control
+       and on a one-line message; a wrapped message grows below it. */
+    align-items: center;
+    min-block-size: var(--lr-icon-button-size);
     overflow: hidden;
-    color: var(--lr-toast-accent-color, var(--_lr-toast-accent-color));
+    /* The accent hook keeps reaching the icon for existing themes; the icon-only hook wins. */
+    color: var(--lr-toast-icon-color, var(--lr-toast-accent-color, var(--_lr-toast-icon-color)));
   }
   [part="icon"] ::slotted(*) {
     max-inline-size: 100%;
   }
+  /* Stretched to the row (at least the close control's height) and centering its one block, so a
+     one-line message sits on the close control's centre line while a wrapped message, the
+     tallest item, fills the row from its top. */
   [part="content"] {
+    display: flex;
+    align-items: center;
+    align-self: stretch;
     flex: 1 1 auto;
     min-inline-size: 0;
     overflow-wrap: anywhere;
@@ -126,6 +141,15 @@ export const styles = css`
        wrapper cannot inspect assigned light-DOM text in every browser, while plaintext joins the
        flattened text run, keeping an English message/action ordered inside an RTL page and Arabic
        inside LTR. */
+    unicode-bidi: plaintext;
+  }
+  /* The slot is the content part's single flex item: as one block box it keeps slotted text and
+     an inline action in one inline formatting context rather than separate flex items. The bidi
+     rule is repeated because unicode-bidi does not inherit and this block now owns the paragraph. */
+  [part="content"] > slot {
+    display: block;
+    flex: 1 1 auto;
+    min-inline-size: 0;
     unicode-bidi: plaintext;
   }
   /* toaster.ts's action option and the WithIcon/Triggers stories append a plain light-DOM button
