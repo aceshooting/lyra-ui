@@ -36,8 +36,8 @@ export const styles = css`
     display: none;
   }
   /* Attached to a for/target element: the zone adds no box of its own, and the overlay is a fixed
-     box laid over the target's border box from script (drop-zone.class.ts positionTargetOverlay),
-     so it can sit anywhere in the tree relative to the region it covers. */
+     box laid over the visible part of the target's border box from script (drop-zone.class.ts
+     positionTargetOverlay), so it can sit anywhere in the tree relative to the region it covers. */
   :host(:state(targeted)) {
     display: contents;
   }

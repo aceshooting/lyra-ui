@@ -27,6 +27,18 @@ function dragEnterWith(el: HTMLElement, files: File[]): void {
   el.dispatchEvent(ev);
 }
 
+/** Dispatches a drag event carrying either files or a plain-text payload; returns the event so the
+ *  caller can read `defaultPrevented`. */
+function dragWith(el: HTMLElement, type: string, payload: File[] | string): DragEvent {
+  const dt = new DataTransfer();
+  if (typeof payload === 'string') dt.setData('text/plain', payload);
+  else for (const f of payload) dt.items.add(f);
+  const ev = new DragEvent(type, { bubbles: true, cancelable: true });
+  Object.defineProperty(ev, 'dataTransfer', { value: dt });
+  el.dispatchEvent(ev);
+  return ev;
+}
+
 function dropWith(el: HTMLElement, files: File[]): void {
   const dt = new DataTransfer();
   for (const f of files) dt.items.add(f);
@@ -607,13 +619,39 @@ it('treats multiple="false" as false on lr-file-input like on lr-drop-zone', asy
   const input = await fixture<LyraFileInput>(html`<lr-file-input multiple="false"></lr-file-input>`);
   expect(input.multiple).to.equal(false);
 });
-it('suppresses browser dragover navigation even while disabled', async () => {
+it('leaves every drag native while disabled, file drags included', async () => {
   const el = await fixture<LyraDropZone>(html`<lr-drop-zone disabled><div>region</div></lr-drop-zone>`);
-  const event = new DragEvent('dragover', { bubbles: true, cancelable: true });
+  for (const type of ['dragenter', 'dragover', 'drop']) {
+    expect(dragWith(base(el), type, [makeFile('a.txt')]).defaultPrevented, type).to.equal(false);
+    expect(dragWith(base(el), type, 'hello').defaultPrevented, `${type} text`).to.equal(false);
+  }
+  await el.updateComplete;
+  expect(el.dragging).to.equal(false);
+});
 
-  base(el).dispatchEvent(event);
+it('leaves a text drag over a wrapped textarea native and shows no overlay', async () => {
+  const el = await fixture<LyraDropZone>(html`<lr-drop-zone><textarea></textarea></lr-drop-zone>`);
+  const area = el.querySelector('textarea')!;
+  let fired = false;
+  el.addEventListener('lr-files', () => { fired = true; });
+  for (const type of ['dragenter', 'dragover', 'dragleave', 'drop']) {
+    expect(dragWith(area, type, 'quoted text').defaultPrevented, type).to.equal(false);
+  }
+  await el.updateComplete;
+  expect(el.dragging).to.equal(false);
+  expect((el.shadowRoot!.querySelector('[part="overlay"]') as HTMLElement).hidden).to.equal(true);
+  expect(fired).to.equal(false);
+});
 
-  expect(event.defaultPrevented).to.equal(true);
+it('still claims a file drag over the wrapped region', async () => {
+  const el = await fixture<LyraDropZone>(html`<lr-drop-zone><div>region</div></lr-drop-zone>`);
+  expect(dragWith(base(el), 'dragenter', [makeFile('a.txt')]).defaultPrevented).to.equal(true);
+  expect(dragWith(base(el), 'dragover', [makeFile('a.txt')]).defaultPrevented).to.equal(true);
+  await el.updateComplete;
+  expect(el.dragging).to.equal(true);
+  const result = oneEvent(el, 'lr-files');
+  expect(dragWith(base(el), 'drop', [makeFile('a.txt')]).defaultPrevented).to.equal(true);
+  expect((await result).detail.files.length).to.equal(1);
 });
 
 describe('for / target', () => {
@@ -653,8 +691,7 @@ describe('for / target', () => {
     // targeting test leaves that shared paint out of scope.
     await expect(zone).to.be.accessible({ ignoredRules: ['color-contrast'] });
 
-    const over = new DragEvent('dragover', { bubbles: true, cancelable: true });
-    region.dispatchEvent(over);
+    const over = dragWith(region, 'dragover', [makeFile('photo.png', 'image/png')]);
     expect(over.defaultPrevented, 'dragover on the region allows the drop').to.equal(true);
 
     const result = oneEvent<LyraDropZoneFilesEvent>(zone, 'lr-files');
@@ -761,9 +798,126 @@ describe('for / target', () => {
     expect(fired).to.equal(1);
 
     zone.remove();
-    const over = new DragEvent('dragover', { bubbles: true, cancelable: true });
-    second.dispatchEvent(over);
+    const over = dragWith(second, 'dragover', [makeFile('a.txt')]);
     expect(over.defaultPrevented, 'a disconnected zone leaves the region alone').to.equal(false);
+  });
+
+  it('leaves a text drag into an input inside a large target native', async () => {
+    const root = await fixture<HTMLElement>(html`
+      <div><section id="text-region"><input id="field"></section><lr-drop-zone for="text-region"></lr-drop-zone></div>
+    `);
+    const zone = root.querySelector('lr-drop-zone') as LyraDropZone;
+    await zone.updateComplete;
+    const field = root.querySelector<HTMLElement>('#field')!;
+    for (const type of ['dragenter', 'dragover', 'dragleave', 'drop']) {
+      expect(dragWith(field, type, 'https://example.com').defaultPrevented, type).to.equal(false);
+    }
+    await zone.updateComplete;
+    expect(zone.dragging).to.equal(false);
+    expect(overlayOf(zone).hidden).to.equal(true);
+    expect(dragWith(field, 'dragover', [makeFile('a.txt')]).defaultPrevented, 'a file drag is still claimed').to.equal(true);
+  });
+
+  it('keeps the overlay of a target taller than the viewport within the viewport while scrolling', async () => {
+    const root = await fixture<HTMLElement>(html`
+      <div><section id="tall-region" style="block-size: 300vh;">tall</section><lr-drop-zone for="tall-region"></lr-drop-zone></div>
+    `);
+    const zone = root.querySelector('lr-drop-zone') as LyraDropZone;
+    const region = root.querySelector<HTMLElement>('#tall-region')!;
+    const scroller = document.scrollingElement ?? document.documentElement;
+    const viewportHeight = document.documentElement.clientHeight;
+    const startScroll = scroller.scrollTop;
+    try {
+      await zone.updateComplete;
+      dragEnterWith(region, [makeFile('a.txt')]);
+      await zone.updateComplete;
+      const overlay = overlayOf(zone);
+      const text = zone.shadowRoot!.querySelector<HTMLElement>('[part="overlay-text"]')!;
+      const inViewport = (): boolean => {
+        const box = overlay.getBoundingClientRect();
+        const message = text.getBoundingClientRect();
+        return box.top >= -1 && box.bottom <= viewportHeight + 1
+          && message.top >= 0 && message.bottom <= viewportHeight;
+      };
+      expect(inViewport(), 'clamped at dragenter').to.equal(true);
+      expect(Math.round(overlay.getBoundingClientRect().top)).to.equal(Math.round(Math.max(0, region.getBoundingClientRect().top)));
+
+      scroller.scrollTop = startScroll + viewportHeight;
+      await waitUntil(() => Math.abs(overlay.getBoundingClientRect().top) < 1, 'the overlay was not re-measured on scroll');
+      expect(inViewport(), 'clamped after scrolling').to.equal(true);
+    } finally {
+      scroller.scrollTop = startScroll;
+    }
+  });
+
+  it('re-measures the overlay on resize during a drag', async () => {
+    const root = await fixture<HTMLElement>(html`
+      <div><section id="resize-region" style="block-size: 80px; inline-size: 200px;">region</section><lr-drop-zone for="resize-region"></lr-drop-zone></div>
+    `);
+    const zone = root.querySelector('lr-drop-zone') as LyraDropZone;
+    const region = root.querySelector<HTMLElement>('#resize-region')!;
+    await zone.updateComplete;
+    dragEnterWith(region, [makeFile('a.txt')]);
+    await zone.updateComplete;
+    region.style.inlineSize = '260px';
+    region.style.blockSize = '120px';
+    window.dispatchEvent(new Event('resize'));
+    expect(rounded(overlayOf(zone).getBoundingClientRect())).to.deep.equal(rounded(region.getBoundingClientRect()));
+  });
+
+  it('tracks viewport scroll and resize only while a targeted drag is active', async () => {
+    const added: Array<{ type: string; listener: EventListenerOrEventListenerObject; capture: boolean }> = [];
+    const removed: typeof added = [];
+    const add = window.addEventListener;
+    const remove = window.removeEventListener;
+    const captureOf = (options?: boolean | AddEventListenerOptions | EventListenerOptions): boolean =>
+      typeof options === 'boolean' ? options : Boolean(options?.capture);
+    window.addEventListener = function (this: Window, type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions) {
+      if (type === 'scroll' || type === 'resize') {
+        added.push({ type, listener, capture: captureOf(options) });
+        if (typeof options === 'object') expect(options.passive, `${type} passive`).to.equal(true);
+      }
+      add.call(this, type, listener, options);
+    } as typeof window.addEventListener;
+    window.removeEventListener = function (this: Window, type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions) {
+      if (type === 'scroll' || type === 'resize') removed.push({ type, listener, capture: captureOf(options) });
+      remove.call(this, type, listener, options);
+    } as typeof window.removeEventListener;
+    // Adds minus matching removes, so a listener re-added by a second drag counts again.
+    const outstanding = (): number => {
+      const pending = [...added];
+      for (const gone of removed) {
+        const index = pending.findIndex((entry) =>
+          entry.type === gone.type && entry.listener === gone.listener && entry.capture === gone.capture);
+        if (index >= 0) pending.splice(index, 1);
+      }
+      return pending.length;
+    };
+    try {
+      const root = await fixture<HTMLElement>(html`
+        <div><section id="track-region">region</section><lr-drop-zone for="track-region"></lr-drop-zone></div>
+      `);
+      const zone = root.querySelector('lr-drop-zone') as LyraDropZone;
+      const region = root.querySelector<HTMLElement>('#track-region')!;
+      await zone.updateComplete;
+      expect(added.length, 'nothing tracked before a drag').to.equal(0);
+      dragEnterWith(region, [makeFile('a.txt')]);
+      await zone.updateComplete;
+      expect(added.map((entry) => `${entry.type}:${entry.capture}`).sort()).to.deep.equal(['resize:false', 'scroll:true']);
+      dragLeave(region);
+      await zone.updateComplete;
+      expect(outstanding(), 'removed when the drag ends').to.equal(0);
+
+      dragEnterWith(region, [makeFile('a.txt')]);
+      await zone.updateComplete;
+      expect(outstanding()).to.equal(2);
+      zone.remove();
+      await zone.updateComplete;
+      expect(outstanding(), 'removed on disconnect').to.equal(0);
+    } finally {
+      window.addEventListener = add;
+      window.removeEventListener = remove;
+    }
   });
 
   it('leaves the wrapper behavior unchanged while for and target are unset', async () => {
@@ -774,8 +928,7 @@ describe('for / target', () => {
     expect(zone.for).to.equal('');
     expect(zone.target === null).to.equal(true);
     expect(getComputedStyle(zone).display).to.equal('block');
-    const over = new DragEvent('dragover', { bubbles: true, cancelable: true });
-    root.querySelector('#unrelated')!.dispatchEvent(over);
+    const over = dragWith(root.querySelector<HTMLElement>('#unrelated')!, 'dragover', [makeFile('a.txt')]);
     expect(over.defaultPrevented).to.equal(false);
     dragEnterWith(base(zone), [makeFile('a.txt')]);
     await zone.updateComplete;

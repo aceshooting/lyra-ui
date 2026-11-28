@@ -70,8 +70,13 @@ export interface LyraDropZoneEventMap {
  * label's `for`) or `target` to the element itself. The zone then attaches its drag listeners to
  * that element, lays its overlay over the element's box, adds no box of its own (`display:
  * contents`) and still emits `lr-files` from itself. Static markup keeps its layout tree, and the
- * definition can load after first paint. A `for` id that matches nothing binds nothing and is
+ * definition can load after first paint. The overlay covers the part of the target inside the
+ * viewport, re-measured on scroll and resize during the drag, so a target taller than the viewport
+ * keeps its message on screen. A `for` id that matches nothing binds nothing and is
  * re-resolved when the root's elements or ids change.
+ *
+ * **Only file drags are claimed.** A text or link drag, and every drag while `disabled`, keeps its
+ * native behavior, so an input or textarea inside the region still accepts ordinary drops.
  *
  * The drag-session mechanics (nested-depth tracking, accept/reject preview, legacy File System API
  * folder traversal) are the exact ones `lr-file-input` uses, shared through
@@ -90,7 +95,7 @@ export interface LyraDropZoneEventMap {
  * `event.target`/`event.currentTarget` are `LyraDropZone` without a cast.
  * @csspart base - The wrapping element wrapping the default slot and the overlay.
  * @csspart overlay - The drag-over overlay, layered above the slotted content (or, while targeting,
- * fixed over the target's box). Hidden outside an active drag session.
+ * fixed over the target's box, clamped to the viewport). Hidden outside an active drag session.
  * @csspart overlay-icon - The default decorative overlay icon.
  * @csspart overlay-text - Wrapper around the overlay slot/text content.
  * @csspart status - The visually-hidden, `aria-hidden` mirror of the drag accept/reject state and
@@ -160,7 +165,8 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
 
   static override styles = [LyraElement.styles, styles, srOnly];
 
-  /** Disables drag/drop handling entirely; the wrapped content keeps its own interactivity. */
+  /** Disables drag/drop handling entirely, leaving every drag's native behavior in place; the
+   *  wrapped content keeps its own interactivity. Defaults to `false`. */
   @property({ type: Boolean, reflect: true }) disabled = false;
   /** Accepts more than one file per drop, and enables recursive folder-drop traversal -- same
    *  contract as `lr-file-input`'s `multiple`. Defaults to `false`; opt in for batches or folders. */
@@ -225,6 +231,8 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
   /** The element the drag listeners are currently attached to, if any. */
   private boundTarget?: Element;
   private stopObservingRoot?: () => void;
+  /** The window whose scroll/resize re-measures the targeted overlay during an active drag. */
+  private viewportWindow?: Window;
 
   @state() private dragState: DropSessionState = 'default';
   @state() private rejectedFiles: readonly LyraDropZoneRejectedFile[] = Object.freeze([]);
@@ -246,7 +254,7 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
         this.dragState = this.dropSession.state;
         setCustomState(this.internals, 'dragging', this.dropSession.dragging);
       },
-    });
+    }, { fileDragsOnly: true });
   }
 
   /** Readonly state derived from the current drag session. Assignment is ignored, so a framework
@@ -313,21 +321,42 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
     });
   }
 
-  /** Lays the fixed overlay over the target's border box. A transformed or filtered ancestor makes
-   *  itself the containing block of a fixed box, so the box's actual origin is measured first and
-   *  subtracted rather than assumed to be the viewport's. */
+  /** Lays the fixed overlay over the part of the target's border box inside the viewport, so a
+   *  target taller or wider than the viewport keeps its centred message on screen. A transformed or
+   *  filtered ancestor makes itself the containing block of a fixed box, so the box's actual origin
+   *  is measured first and subtracted rather than assumed to be the viewport's. The offsets are
+   *  physical because both rects are; the result is the same under either direction. */
   private positionTargetOverlay(): void {
     const overlay = this.overlayEl;
     const target = this.boundTarget;
     if (!overlay || !target || overlay.hidden) return;
     const rect = target.getBoundingClientRect();
+    const viewport = this.ownerDocument.documentElement;
+    const left = Math.max(rect.left, 0);
+    const top = Math.max(rect.top, 0);
+    const right = Math.min(rect.right, viewport.clientWidth);
+    const bottom = Math.min(rect.bottom, viewport.clientHeight);
     overlay.style.left = '0px';
     overlay.style.top = '0px';
     const origin = overlay.getBoundingClientRect();
-    overlay.style.left = `${rect.left - origin.left}px`;
-    overlay.style.top = `${rect.top - origin.top}px`;
-    overlay.style.width = `${rect.width}px`;
-    overlay.style.height = `${rect.height}px`;
+    overlay.style.left = `${left - origin.left}px`;
+    overlay.style.top = `${top - origin.top}px`;
+    overlay.style.width = `${Math.max(0, right - left)}px`;
+    overlay.style.height = `${Math.max(0, bottom - top)}px`;
+  }
+
+  private readonly onViewportChange = (): void => this.positionTargetOverlay();
+
+  /** Re-measures the targeted overlay on any scroll (captured, so a scrolling ancestor counts) and
+   *  on resize, only while a targeted drag session is active. */
+  private syncViewportTracking(): void {
+    const view = this.isConnected && this.boundTarget && this.dragging ? this.ownerDocument.defaultView ?? undefined : undefined;
+    if (view === this.viewportWindow) return;
+    this.viewportWindow?.removeEventListener('scroll', this.onViewportChange, { capture: true });
+    this.viewportWindow?.removeEventListener('resize', this.onViewportChange);
+    this.viewportWindow = view;
+    view?.addEventListener('scroll', this.onViewportChange, { capture: true, passive: true });
+    view?.addEventListener('resize', this.onViewportChange, { passive: true });
   }
 
   override connectedCallback(): void {
@@ -345,6 +374,7 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
     this.stopObservingRoot?.();
     this.stopObservingRoot = undefined;
     this.syncTarget();
+    this.syncViewportTracking();
     // Re-arm so a reconnect never replays the state it disconnected holding. The drag session
     // itself is reset automatically: `DropSessionController.hostDisconnected()`.
     this.announcementsArmed = false;
@@ -355,7 +385,10 @@ export class LyraDropZone extends LyraElement<LyraDropZoneEventMap> {
   // on private `@state()` fields, which `keyof this` does not include.
   protected override updated(changed: PropertyValues): void {
     super.updated(changed);
-    if (changed.has('dragState')) this.positionTargetOverlay();
+    if (changed.has('dragState')) {
+      this.positionTargetOverlay();
+      this.syncViewportTracking();
+    }
     if (this.announcementsArmed) {
       if (changed.has('dragState') && this.dragState !== 'default') {
         this.announcements.announcePolite(dragInstruction(this.dragState, this.intakeMessage));

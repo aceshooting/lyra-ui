@@ -21,6 +21,29 @@ export interface DropSessionCallbacks {
   onStateChange(): void;
 }
 
+export interface DropSessionOptions {
+  /** When `true`, the controller claims a drag (suppresses its browser default, previews it, and
+   *  intakes its drop) only while the host is enabled and the drag carries files. A text or link
+   *  drag, and every drag over a disabled host, keeps its native behavior, so editable content
+   *  inside a large drop region still accepts ordinary drops. Defaults to `false`: every drag's
+   *  default is suppressed, even while disabled, as a compact file control expects. */
+  readonly fileDragsOnly?: boolean;
+}
+
+/** Whether a drag payload carries files: a `'Files'` entry in `types` (readable during
+ *  dragenter/dragover), or a `kind === 'file'` item for a payload that exposes only `items`. */
+export function dragCarriesFiles(dataTransfer: DataTransfer | null | undefined): boolean {
+  if (!dataTransfer) return false;
+  const types = dataTransfer.types as readonly string[] | undefined;
+  if (types && Array.prototype.includes.call(types, 'Files')) return true;
+  const items = dataTransfer.items as DataTransferItemList | undefined;
+  if (!items) return false;
+  for (let index = 0; index < items.length; index++) {
+    if (items[index]?.kind === 'file') return true;
+  }
+  return false;
+}
+
 const MAX_DROPPED_FOLDER_ENTRIES = 10_000;
 
 export type DroppedFolderReadResult =
@@ -90,8 +113,16 @@ export class DropSessionController implements ReactiveController {
   constructor(
     private readonly host: DropSessionHost,
     private readonly callbacks: DropSessionCallbacks,
+    private readonly options: DropSessionOptions = {},
   ) {
     host.addController(this);
+  }
+
+  /** Whether this drag is one the controller acts on. Without `fileDragsOnly`, every drag (and its
+   *  browser default) is claimed; with it, only a file drag over an enabled host. */
+  private claims(e: DragEvent): boolean {
+    if (!this.options.fileDragsOnly) return true;
+    return !this.callbacks.isDisabled() && dragCarriesFiles(e.dataTransfer);
   }
 
   /** Current preview/outcome state. */
@@ -120,6 +151,7 @@ export class DropSessionController implements ReactiveController {
   }
 
   onDragEnter = (e: DragEvent): void => {
+    if (!this.claims(e)) return;
     e.preventDefault();
     if (this.callbacks.isDisabled()) return;
     this.counter++;
@@ -131,13 +163,17 @@ export class DropSessionController implements ReactiveController {
   };
 
   onDragOver = (e: DragEvent): void => {
-    // Always suppress the browser's default drop action (e.g. navigating the whole page to the
-    // dropped file), even while disabled -- only classification/emission is gated on disabled.
+    // Without `fileDragsOnly`, always suppress the browser's default drop action (e.g. navigating
+    // the whole page to the dropped file), even while disabled -- only classification/emission is
+    // gated on disabled.
+    if (!this.claims(e)) return;
     e.preventDefault();
   };
 
   onDragLeave = (e: DragEvent): void => {
     if (this.callbacks.isDisabled()) return;
+    // A drag this controller never claimed never entered the session, so leave it native too.
+    if (this.options.fileDragsOnly && this.counter === 0) return;
     e.preventDefault();
     this.counter = Math.max(0, this.counter - 1);
     if (this.counter === 0) {
@@ -146,11 +182,12 @@ export class DropSessionController implements ReactiveController {
     }
   };
 
-  /** Synchronous drop intake: suppresses the browser default (unconditionally, before the
-   *  disabled gate), resets the session, and separates files already available from
+  /** Synchronous drop intake: suppresses the browser default (before the disabled gate, unless
+   *  `fileDragsOnly` leaves a non-file or disabled drop native), resets the session, and separates files already available from
    *  `dataTransfer.files` from top-level directory entries needing a follow-up async walk.
    *  Returns `undefined` while disabled -- the caller does nothing further in that case. */
   beginDrop(e: DragEvent): DropSessionBeginResult | undefined {
+    if (!this.claims(e)) return undefined;
     e.preventDefault();
     if (this.callbacks.isDisabled()) return undefined;
     this.reset();

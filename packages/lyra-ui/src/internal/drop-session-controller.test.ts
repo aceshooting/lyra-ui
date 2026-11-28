@@ -91,6 +91,83 @@ it('onDragOver always suppresses the browser default, including while disabled',
   expect(prevented).to.equal(true);
 });
 
+describe('fileDragsOnly', () => {
+  function tracked(dataTransfer?: unknown): { event: DragEvent; prevented: () => boolean } {
+    let prevented = false;
+    const event = { preventDefault: () => { prevented = true; }, dataTransfer } as unknown as DragEvent;
+    return { event, prevented: () => prevented };
+  }
+  const textDrag = { types: ['text/plain'], items: [fileItem('string')], files: [] };
+  const fileDrag = { types: ['Files'], items: [fileItem()], files: [] };
+
+  function controllerFor(disabled: () => boolean, stateChanges: string[] = []): DropSessionController {
+    const controller: DropSessionController = new DropSessionController(controllerHost(), {
+      isDisabled: disabled,
+      previewRejects: () => false,
+      onStateChange: () => stateChanges.push(controller.state),
+    }, { fileDragsOnly: true });
+    return controller;
+  }
+
+  it('leaves the native default of a non-file drag untouched and never starts a session', () => {
+    const stateChanges: string[] = [];
+    const controller = controllerFor(() => false, stateChanges);
+    for (const handler of ['onDragEnter', 'onDragOver', 'onDragLeave'] as const) {
+      const drag = tracked(textDrag);
+      controller[handler](drag.event);
+      expect(drag.prevented(), handler).to.equal(false);
+    }
+    const missing = tracked(undefined);
+    controller.onDragOver(missing.event);
+    expect(missing.prevented(), 'no dataTransfer').to.equal(false);
+    const drop = tracked(textDrag);
+    expect(controller.beginDrop(drop.event)).to.equal(undefined);
+    expect(drop.prevented(), 'drop').to.equal(false);
+    expect(stateChanges).to.deep.equal([]);
+  });
+
+  it('leaves every drag alone while disabled, file drags included', () => {
+    const controller = controllerFor(() => true);
+    for (const handler of ['onDragEnter', 'onDragOver'] as const) {
+      const drag = tracked(fileDrag);
+      controller[handler](drag.event);
+      expect(drag.prevented(), handler).to.equal(false);
+    }
+    const drop = tracked(fileDrag);
+    expect(controller.beginDrop(drop.event)).to.equal(undefined);
+    expect(drop.prevented()).to.equal(false);
+    expect(controller.state).to.equal('default');
+  });
+
+  it('still claims a file drag while enabled, recognized by types or by file items', () => {
+    const controller = controllerFor(() => false);
+    const enter = tracked(fileDrag);
+    controller.onDragEnter(enter.event);
+    expect(enter.prevented()).to.equal(true);
+    expect(controller.state).to.equal('accept');
+    const over = tracked({ types: [], items: [fileItem()] });
+    controller.onDragOver(over.event);
+    expect(over.prevented(), 'a file item without a Files type').to.equal(true);
+    const drop = tracked(fileDrag);
+    expect(controller.beginDrop(drop.event) !== undefined).to.equal(true);
+    expect(drop.prevented()).to.equal(true);
+  });
+});
+
+it('keeps suppressing every drag by default (fileDragsOnly unset)', () => {
+  const controller = new DropSessionController(controllerHost(), {
+    isDisabled: () => false,
+    previewRejects: () => false,
+    onStateChange: () => {},
+  });
+  let prevented = 0;
+  const event = { preventDefault: () => { prevented++; }, dataTransfer: { types: ['text/plain'], items: [], files: [] } } as unknown as DragEvent;
+  controller.onDragEnter(event);
+  controller.onDragOver(event);
+  controller.beginDrop(event);
+  expect(prevented).to.equal(3);
+});
+
 it('beginDrop separates synchronously available files from top-level directory entries and resets the session', () => {
   const stateChanges: string[] = [];
   const controller = new DropSessionController(controllerHost(), {
